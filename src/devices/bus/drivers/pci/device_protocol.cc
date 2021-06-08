@@ -66,8 +66,6 @@ zx_status_t Device::DdkRxrpc(zx_handle_t channel) {
       return RpcConfigWrite(ch);
     case PCI_OP_CONFIGURE_IRQ_MODE:
       return RpcConfigureIrqMode(ch);
-    case PCI_OP_CONNECT_SYSMEM:
-      return RpcConnectSysmem(ch, handle);
     case PCI_OP_ENABLE_BUS_MASTER:
       return RpcEnableBusMaster(ch);
     case PCI_OP_GET_BAR:
@@ -233,14 +231,6 @@ zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
   zxlogf(DEBUG, "[%s] GetBar { bar_id = %u, status = %s }", cfg_->addr(), bar_id,
          zx_status_get_string(status));
   return RpcReply(ch, status, &handle, handle_cnt);
-}
-
-zx_status_t Device::RpcConnectSysmem(const zx::unowned_channel& ch, zx_handle_t channel) {
-  fbl::AutoLock dev_lock(&dev_lock_);
-
-  zx_status_t st = bdi_->ConnectSysmem(zx::channel(channel));
-  zxlogf(DEBUG, "[%s] ConnectSysmem { status = %s }", cfg_->addr(), zx_status_get_string(st));
-  return RpcReply(ch, st);
 }
 
 zx_status_t Device::RpcGetBti(const zx::unowned_channel& ch) {

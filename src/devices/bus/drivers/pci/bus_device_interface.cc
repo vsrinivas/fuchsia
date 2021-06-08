@@ -40,11 +40,6 @@ zx_status_t Bus::GetBti(const pci::Device* device, uint32_t index, zx::bti* bti)
   return pciroot().GetBti(device->packed_addr(), index, bti);
 }
 
-zx_status_t Bus::ConnectSysmem(zx::channel channel) {
-  fbl::AutoLock _(&devices_lock_);
-  return pciroot().ConnectSysmem(std::move(channel));
-}
-
 zx_status_t Bus::AddToSharedIrqList(pci::Device* device, uint32_t vector) {
   ZX_DEBUG_ASSERT(vector);
   fbl::AutoLock _(&devices_lock_);

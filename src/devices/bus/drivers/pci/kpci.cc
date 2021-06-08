@@ -59,14 +59,9 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device) 
       {BIND_PCI_TOPO, 0, pci_bind_topo},
   };
 
-  char name[ZX_DEVICE_NAME_MAX];
-  snprintf(name, sizeof(device.name), "%s", device.name);
-
-  // Add the device that will provide ddk::PciProtocol and bind to Fragment. These are
-  // named based on BDF, ie BB:DD.F.
   auto kpci = std::unique_ptr<KernelPci>(new KernelPci(parent, device));
   zx_status_t status = kpci->DdkAdd(
-      ddk::DeviceAddArgs(name).set_props(fragment_props).set_proto_id(ZX_PROTOCOL_PCI));
+      ddk::DeviceAddArgs(device.name).set_props(fragment_props).set_proto_id(ZX_PROTOCOL_PCI));
   if (status != ZX_OK) {
     return status;
   }
@@ -110,11 +105,10 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device) 
       .coresident_device_index = UINT32_MAX,  // create a new devhost
   };
 
-  // Add the composite device that PCI device drivers will bind to. These are
-  // named after BDF as well, but with a pci- suffix. ie: pci-BB:DD.F.
-  snprintf(name, sizeof(device.name), "pci-%s", device.name);
+  char composite_name[ZX_DEVICE_NAME_MAX];
+  snprintf(composite_name, sizeof(composite_name), "pci-%s", device.name);
   auto kpci_composite = std::unique_ptr<KernelPci>(new KernelPci(parent, device));
-  status = kpci_composite->DdkAddComposite(name, &composite_desc);
+  status = kpci_composite->DdkAddComposite(composite_name, &composite_desc);
   if (status != ZX_OK) {
     return status;
   }
@@ -130,12 +124,6 @@ zx_status_t KernelPci::DdkGetProtocol(uint32_t proto_id, void* out) {
       auto proto = static_cast<pci_protocol_t*>(out);
       proto->ctx = this;
       proto->ops = &pci_protocol_ops_;
-      return ZX_OK;
-    }
-    case ZX_PROTOCOL_SYSMEM: {
-      auto proto = static_cast<sysmem_protocol_t*>(out);
-      proto->ctx = this;
-      proto->ops = &sysmem_protocol_ops_;
       return ZX_OK;
     }
   }
@@ -326,17 +314,6 @@ zx_status_t KernelPci::PciGetBti(uint32_t index, zx::bti* out_bti) {
     st = pdev_get_bti(&device_.pdev, 0, out_bti->reset_and_get_address());
   }
 
-  return st;
-}
-
-zx_status_t KernelPci::SysmemConnect(zx::channel allocator_request) {
-  zx_status_t st = ZX_ERR_NOT_SUPPORTED;
-  if (device_.pciroot.ops) {
-    st = pciroot_connect_sysmem(&device_.pciroot, allocator_request.get());
-    if (st == ZX_OK) {
-      static_cast<void>(allocator_request.release());
-    }
-  }
   return st;
 }
 

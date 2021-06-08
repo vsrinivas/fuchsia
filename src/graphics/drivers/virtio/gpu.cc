@@ -602,7 +602,13 @@ zx_status_t GpuDevice::virtio_gpu_start() {
 zx_status_t GpuDevice::Init() {
   LTRACE_ENTRY;
 
-  zx_status_t status = device_get_protocol(bus_device(), ZX_PROTOCOL_SYSMEM, &sysmem_);
+  zx_device_t* fragment = nullptr;
+  if (!device_get_fragment(bus_device(), "sysmem", &fragment)) {
+    zxlogf(ERROR, "%s: could not find PCI fragment", tag());
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  zx_status_t status = device_get_protocol(fragment, ZX_PROTOCOL_SYSMEM, &sysmem_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not get Display SYSMEM protocol", tag());
     return status;

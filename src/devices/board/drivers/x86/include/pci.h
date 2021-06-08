@@ -61,7 +61,6 @@ class x64Pciroot : public PcirootBase {
 
   static zx_status_t Create(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent,
                             const char* name);
-  zx_status_t PcirootConnectSysmem(zx::channel connection) final;
   zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) final;
   zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) final;
   zx_status_t PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset, uint8_t* value) final;

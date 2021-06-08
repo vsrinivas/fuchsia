@@ -46,7 +46,6 @@ class PcirootBase : public ddk::Device<PcirootBase>,
   virtual zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  virtual zx_status_t PcirootConnectSysmem(zx::channel connection) { return ZX_ERR_NOT_SUPPORTED; }
   virtual zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
     return ZX_ERR_NOT_SUPPORTED;
   }

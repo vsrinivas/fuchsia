@@ -35,17 +35,12 @@ namespace pci {
 
 class KernelPci;
 using KernelPciType = ddk::Device<pci::KernelPci, ddk::GetProtocolable>;
-class KernelPci : public KernelPciType,
-                  public ddk::PciProtocol<pci::KernelPci>,
-                  ddk::SysmemProtocol<pci::KernelPci> {
+class KernelPci : public KernelPciType, public ddk::PciProtocol<pci::KernelPci> {
  public:
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   void DdkRelease();
 
   static zx_status_t CreateComposite(zx_device_t* parent, kpci_device device);
-  zx_status_t RpcReply(zx_handle_t ch, zx_status_t status, zx_handle_t* handle, PciRpcMsg* req,
-                       PciRpcMsg* resp);
-
   // Pci Protocol
   zx_status_t PciGetBar(uint32_t bar_id, pci_bar_t* out_res);
   zx_status_t PciEnableBusMaster(bool enable);
@@ -67,16 +62,6 @@ class KernelPci : public KernelPciType,
   zx_status_t PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset);
   zx_status_t PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset, uint16_t* out_offset);
   zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti);
-
-  // Sysmem Protocol
-  zx_status_t SysmemConnect(zx::channel allocator_request);
-  zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t SysmemUnregisterSecureMem() { return ZX_ERR_NOT_SUPPORTED; }
 
  private:
   KernelPci(zx_device_t* parent, kpci_device device) : KernelPciType(parent), device_(device) {}

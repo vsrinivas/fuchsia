@@ -86,7 +86,6 @@ class Bus : public PciBusType,
   zx_status_t LinkDevice(fbl::RefPtr<pci::Device> device) __TA_EXCLUDES(devices_lock_) final;
   zx_status_t UnlinkDevice(pci::Device* device) __TA_EXCLUDES(devices_lock_) final;
   zx_status_t AllocateMsi(uint32_t count, zx::msi* msi) __TA_EXCLUDES(devices_lock_) final;
-  zx_status_t ConnectSysmem(zx::channel channel) __TA_EXCLUDES(devices_lock_) final;
   zx_status_t GetBti(const pci::Device* device, uint32_t index, zx::bti* bti)
       __TA_EXCLUDES(devices_lock_) final;
   zx_status_t AddToSharedIrqList(pci::Device* device, uint32_t vector)

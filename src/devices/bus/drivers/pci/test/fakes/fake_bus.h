@@ -43,7 +43,6 @@ class FakeBus : public BusDeviceInterface {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t ConnectSysmem(zx::channel channel) final { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t AddToSharedIrqList(pci::Device* device, uint32_t vector) final { return ZX_OK; }
   zx_status_t RemoveFromSharedIrqList(pci::Device* device, uint32_t vector) final { return ZX_OK; }
 

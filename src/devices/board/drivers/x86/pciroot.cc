@@ -43,33 +43,9 @@ static zx_status_t pciroot_op_get_bti(void* /*context*/, uint32_t bdf, uint32_t 
   return zx_bti_create(iommu_handle, 0, bdf, bti);
 }
 
-// TODO(fxbug.dev/32978): Remove this when removing kpci, it removes a warning
-// about pciroot_op_connect_sysmem being unused. Unlike the other methods, the
-// get_protocol parameters differ.
-__UNUSED
-static zx_status_t pciroot_op_connect_sysmem(void* context, zx_handle_t handle) {
-  auto* dev = static_cast<acpi::Device*>(context);
-  sysmem_protocol_t sysmem;
-  zx_status_t status = device_get_protocol(dev->platform_bus(), ZX_PROTOCOL_SYSMEM, &sysmem);
-  if (status != ZX_OK) {
-    zx_handle_close(handle);
-    return status;
-  }
-  return sysmem_connect(&sysmem, handle);
-}
-
 #ifdef ENABLE_USER_PCI
 zx_status_t x64Pciroot::PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
   return pciroot_op_get_bti(nullptr, bdf, index, bti->reset_and_get_address());
-}
-
-zx_status_t x64Pciroot::PcirootConnectSysmem(zx::channel connection) {
-  sysmem_protocol_t sysmem;
-  zx_status_t status = device_get_protocol(context_.platform_bus, ZX_PROTOCOL_SYSMEM, &sysmem);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return sysmem_connect(&sysmem, connection.release());
 }
 
 zx_status_t x64Pciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
@@ -157,7 +133,6 @@ static zx_status_t pciroot_op_get_address_space(void*, size_t, zx_paddr_t, pci_a
 }
 
 static pciroot_protocol_ops_t pciroot_proto = {
-    .connect_sysmem = pciroot_op_connect_sysmem,
     .get_bti = pciroot_op_get_bti,
     .get_pci_platform_info = pciroot_op_get_pci_platform_info,
     .driver_should_proxy_config = pciroot_op_driver_should_proxy_config,

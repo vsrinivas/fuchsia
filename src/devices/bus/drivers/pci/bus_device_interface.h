@@ -27,8 +27,6 @@ class BusDeviceInterface {
   virtual zx_status_t GetBti(const pci::Device* device, uint32_t index, zx::bti* bti) = 0;
   // Allocate |count| messagge signaled interrupts for a device.
   virtual zx_status_t AllocateMsi(uint32_t count, zx::msi* msi) = 0;
-  // Request a channel for a sysmem connection.
-  virtual zx_status_t ConnectSysmem(zx::channel channel) = 0;
   // Add device to the Bus device tree.
   virtual zx_status_t LinkDevice(fbl::RefPtr<pci::Device> device) = 0;
   // Remove a device from the Bus device tree.
