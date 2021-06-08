@@ -140,7 +140,6 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     /// Handler for keeping track of property value changes
     /// so that local state stays in sync with the device.
     pub(super) fn on_prop_value_is(&self, prop: Prop, mut value: &[u8]) -> Result<(), Error> {
-        fx_log_debug!("on_prop_value_is: {:?} {:02x?}", prop, value);
         match prop {
             Prop::Mac(PropMac::LongAddr) => {
                 let mac_addr = EUI64::try_unpack_from_slice(value)?;

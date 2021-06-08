@@ -7,6 +7,7 @@ use super::{Correlated, CorrelatedBox, NetFlags, RouteFlags};
 use anyhow::{format_err, Context as _};
 use core::convert::{TryFrom, TryInto};
 use fidl_fuchsia_lowpan_device::{AllCounters, MacCounters};
+use hex;
 use net_types::ip::IpAddress;
 use spinel_pack::*;
 use std::collections::HashSet;
@@ -107,11 +108,62 @@ impl<'a> TryUnpack<'a> for Header {
 /// Struct that represents a decoded Spinel command frame with a
 /// borrowed reference to the payload.
 #[spinel_packed("CiD")]
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct SpinelFrameRef<'a> {
     pub header: Header,
     pub cmd: Cmd,
     pub payload: &'a [u8],
+}
+
+impl<'a> std::fmt::Debug for SpinelFrameRef<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(tid) = self.header.tid() {
+            write!(f, "[{}/{} {:?}", self.header.nli(), tid, self.cmd)?;
+        } else {
+            write!(f, "[{} {:?}", self.header.nli(), self.cmd)?;
+        }
+
+        match self.cmd {
+            Cmd::PropValueGet => match Prop::try_unpack_from_slice(self.payload) {
+                Ok(x) => write!(f, " {:?}", x)?,
+                Err(e) => write!(f, " {:?}", e)?,
+            },
+
+            Cmd::PropValueSet
+            | Cmd::PropValueInsert
+            | Cmd::PropValueRemove
+            | Cmd::PropValueIs
+            | Cmd::PropValueInserted
+            | Cmd::PropValueRemoved => {
+                match SpinelPropValueRef::try_unpack_from_slice(self.payload) {
+                    Ok(SpinelPropValueRef { prop, value }) if prop == Prop::LastStatus => {
+                        write!(f, " {:?}", &prop)?;
+                        match Status::try_unpack_from_slice(value) {
+                            Ok(x) => write!(f, " {:?}", x)?,
+                            Err(e) => write!(f, " {:?}", e)?,
+                        }
+                    }
+                    Ok(SpinelPropValueRef { prop, value }) if prop == Prop::NcpVersion => {
+                        write!(f, " {:?}", &prop)?;
+                        match String::try_unpack_from_slice(value) {
+                            Ok(x) => write!(f, " {:?}", x)?,
+                            Err(e) => write!(f, " {:?}", e)?,
+                        }
+                    }
+                    Ok(x) => write!(f, " {:?} {}", &x.prop, hex::encode(x.value))?,
+                    Err(e) => write!(f, " {:?}", e)?,
+                }
+            }
+
+            _ => {
+                if !self.payload.is_empty() {
+                    write!(f, " {}", hex::encode(self.payload))?;
+                }
+            }
+        }
+
+        write!(f, "]")
+    }
 }
 
 /// Struct that represents a decoded Spinel property payload with a

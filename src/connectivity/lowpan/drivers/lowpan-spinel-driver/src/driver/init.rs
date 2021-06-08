@@ -170,7 +170,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         ] {
             if let Err(err) = self.frame_handler.send_request(CmdPropValueGet(*prop)).await {
                 // See the above comment regarding error handling.
-                fx_log_err!("init_task: Error fetching {:?}: {:?}", prop, err);
+                fx_log_info!("init_task: Unable to fetch {:?}: {:?}", prop, err);
             }
         }
 

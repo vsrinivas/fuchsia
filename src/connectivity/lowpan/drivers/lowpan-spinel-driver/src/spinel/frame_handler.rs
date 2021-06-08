@@ -307,8 +307,6 @@ where
         // Now that we have a TID, set the header byte
         buffer[0] = Header::new(0, Some(tid)).expect("Invalid NLI/TID").into();
 
-        traceln!("FrameHandler::send_request: Sending frame: {:02x?}", buffer);
-
         // Actually send our request.
         self.send_raw_frame(&buffer).await?;
 
@@ -330,8 +328,6 @@ where
         // Append the actual request to the rest of the buffer.
         request.write_request(&mut buffer)?;
 
-        traceln!("FrameHandler::send_request_ignore_response: Sending frame: {:02x?}", buffer);
-
         // Actually send our request.
         self.send_raw_frame(&buffer).await?;
 
@@ -339,6 +335,8 @@ where
     }
 
     pub async fn send_raw_frame(&self, frame: &[u8]) -> Result<(), Error> {
+        traceln!("[->NCP] {:?}", SpinelFrameRef::try_unpack_from_slice(frame).unwrap());
+
         self.spinel_sink.lock().await.send(&frame).await
     }
 }
