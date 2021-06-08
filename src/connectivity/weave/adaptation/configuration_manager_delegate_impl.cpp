@@ -178,15 +178,10 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetManufacturerDeviceCertificate(u
 }
 
 bool ConfigurationManagerDelegateImpl::IsFullyProvisioned() {
-  if (!ConnectivityMgr().IsThreadProvisioned() && IsPairedToAccount()) {
-    FX_LOGS(WARNING) << "Paired to account without Thread provisioning.";
-  }
-
   return ConnectivityMgr().IsWiFiStationProvisioned() &&
-         // TODO(fxbug.dev/58252) Due to incomplete implementation of ThreadStackManager, this
-         // predicate does not yet include the line `ConnectivityMgr().IsThreadProvisioned() &&`,
-         // but should once complete.
-         ConfigurationMgr().IsPairedToAccount() && ConfigurationMgr().IsMemberOfFabric();
+         ConfigurationMgr().IsPairedToAccount() &&
+         ConfigurationMgr().IsMemberOfFabric() &&
+         (!IsThreadEnabled() || ConnectivityMgr().IsThreadProvisioned());
 }
 
 bool ConfigurationManagerDelegateImpl::IsPairedToAccount() {
