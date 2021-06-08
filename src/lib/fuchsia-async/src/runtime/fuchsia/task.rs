@@ -7,8 +7,16 @@ use futures::prelude::*;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-/// A spawned future.
-/// When a task is dropped the future will stop being polled by the executor.
+/// A handle to a future that is owned and polled by the executor.
+///
+/// Once a task is created, the executor will poll it until completion,
+/// even if the task handle itself is not polled.
+///
+/// When a task is dropped its future will no longer be polled by the
+/// executor. See [`Task::cancel`] for cancellation semantics.
+///
+/// Polling (or attempting to extract the value from) a task after the
+/// executor is dropped may trigger a panic.
 #[must_use]
 pub struct Task<T> {
     remote_handle: RemoteHandle<T>,
@@ -44,9 +52,14 @@ impl Task<()> {
 }
 
 impl<T: Send> Task<T> {
-    /// Spawn a new task on the current executor. The passed future will live until
-    /// it completes, the returned `Task` is dropped while the executor is running,
-    /// or the executor is destroyed, whichever comes first.
+    /// Spawn a new task on the current executor.
+    ///
+    /// The task may be executed on any thread(s) owned by the current executor.
+    /// See [`Task::local`] for an equivalent that ensures locality.
+    ///
+    /// The passed future will live until either (a) the future completes,
+    /// (b) the returned [`Task`] is dropped while the executor is running, or
+    /// (c) the executor is destroyed; whichever comes first.
     pub fn spawn(future: impl Future<Output = T> + Send + 'static) -> Task<T> {
         // Fuse is a combinator that will drop the underlying future as soon as it has been
         // completed to ensure resources are reclaimed as soon as possible. That gives callers that
@@ -60,9 +73,24 @@ impl<T: Send> Task<T> {
         Task { remote_handle }
     }
 
-    /// Spawn a new task backed by a thread
-    /// TODO: Consider using a backing thread pool to alleviate the cost of spawning new threads
-    /// if this proves to be a bottleneck.
+    /// Spawn a new *blocking* task backed by a thread.
+    ///
+    /// This function can be called from an asynchronous function without blocking
+    /// it, returning a task handle that can be `.await`ed normally. The provided
+    /// future should contain at least one blocking operation, such as:
+    ///
+    /// - A synchronous syscall that does not yet have an async counterpart.
+    /// - A compute operation which risks blocking the executor for an unacceptable
+    ///   amount of time.
+    ///
+    /// If neither of these conditions are satisfied, use [`Task::spawn`] instead.
+    ///
+    /// NOTE: Unlike regular async tasks, cancelling the task through dropping the
+    /// task handle can take longer to take effect, since a synchronous operation
+    /// has no yield points and thus will run to completion.
+    ///
+    // TODO(fxbug.dev/78332): Consider using a backing thread pool to alleviate the cost of
+    // spawning new threads if this proves to be a bottleneck.
     pub fn blocking(future: impl Future<Output = T> + Send + 'static) -> Task<T> {
         // Fuse is a combinator that will drop the underlying future as soon as it has been
         // completed to ensure resources are reclaimed as soon as possible. That gives callers that
@@ -90,6 +118,13 @@ impl<T: Send> Task<T> {
 
 impl<T> Task<T> {
     /// Spawn a new task on the thread local executor.
+    ///
+    /// The passed future will live until either (a) the future completes,
+    /// (b) the returned [`Task`] is dropped while the executor is running, or
+    /// (c) the executor is destroyed; whichever comes first.
+    ///
+    /// NOTE: This is not supported with a [`SendExecutor`] and will cause a
+    /// runtime panic. Use [`Task::spawn`] instead.
     pub fn local(future: impl Future<Output = T> + 'static) -> Task<T> {
         // Fuse is a combinator that will drop the underlying future as soon as it has been
         // completed to ensure resources are reclaimed as soon as possible. That gives callers that
@@ -105,8 +140,14 @@ impl<T> Task<T> {
 }
 
 impl<T: 'static> Task<T> {
-    /// Cancel this task.
+    /// Initiate cancellation of this task.
+    ///
     /// Returns the tasks output if it was available prior to cancelation.
+    ///
+    /// NOTE: If `None` is returned, the underlying future may continue executing for a
+    /// short period before getting dropped. If so, do not assume any resources held
+    /// by the task's future are released. If `Some(..)` is returned, such resources
+    /// are guaranteed to be released.
     pub async fn cancel(self) -> Option<T> {
         self.remote_handle.now_or_never()
     }
