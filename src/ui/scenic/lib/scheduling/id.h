@@ -34,6 +34,11 @@ SessionId GetNextSessionId();
 // Generates a new global id. Thread-safe.
 PresentId GetNextPresentId();
 
+// Used for testing.  In a general multi-threaded setting, the returned value might become stale
+// immediately.  Use this only when you know that the calling thread will be the next one to call
+// GetNextPresentId().
+SessionId PeekNextPresentId();
+
 // Id pair for Present call identification.
 struct SchedulingIdPair {
   SessionId session_id;

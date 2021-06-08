@@ -83,10 +83,10 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
       // the new topology. This can occur if a new UberStruct has not been registered for the
       // corresponding instance ID but the link to it has resolved.
       const auto& new_vector = uber_struct_kv->second->local_topology;
+      // TODO(fxbug.dev/76640): figure out why this invariant must be true, and add a comment to
+      // to explain it.
       FX_DCHECK(!new_vector.empty());
-      const auto new_entry = new_vector[0];
-
-      if (new_entry.handle != link_kv->second) {
+      if (new_vector[0].handle != link_kv->second) {
         continue;
       }
 

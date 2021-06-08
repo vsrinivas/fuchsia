@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_MANAGER_H_
 
 #include <fuchsia/hardware/display/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "src/lib/fxl/macros.h"
 #include "src/ui/scenic/lib/display/display.h"
@@ -46,11 +47,19 @@ class DisplayManager {
     default_display_ = std::move(display);
   }
 
+  // TODO(fxbug.dev/76640): we may want to have multiple clients of this, so a single setter that
+  // stomps previous callbacks may not be what we want.
+  using VsyncCallback = fit::function<void(uint64_t display_id, zx::time timestamp,
+                                           const std::vector<uint64_t>& image_ids)>;
+  void SetVsyncCallback(VsyncCallback callback);
+
  private:
+  VsyncCallback vsync_callback_;
+
   void OnDisplaysChanged(std::vector<fuchsia::hardware::display::Info> added,
                          std::vector<uint64_t> removed);
   void OnClientOwnershipChange(bool has_ownership);
-  void OnVsync(uint64_t display_id, uint64_t timestamp, std::vector<uint64_t> images,
+  void OnVsync(uint64_t display_id, uint64_t timestamp, std::vector<uint64_t> image_ids,
                uint64_t cookie);
 
   std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> default_display_controller_;

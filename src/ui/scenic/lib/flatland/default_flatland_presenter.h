@@ -72,8 +72,6 @@ class DefaultFlatlandPresenter final
   std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
   std::map<scheduling::SchedulingIdPair, std::vector<zx::event>> release_fences_;
   std::vector<zx::event> accumulated_release_fences_;
-  // Ensures that we receive alternating calls of UpdateSessions() and TakeReleaseFences().
-  bool sessions_updated_ = false;
 
   // Ask for 8 frames of information for GetFuturePresentationInfos().
   const int64_t kDefaultPredictionInfos = 8;

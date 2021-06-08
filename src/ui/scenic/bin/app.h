@@ -13,11 +13,13 @@
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/ui/lib/display/get_hardware_display_controller.h"
 #include "src/ui/lib/escher/escher.h"
+#include "src/ui/scenic/bin/temporary_frame_renderer_delegator.h"
 #include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/annotation/annotation_registry.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/flatland/default_flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/engine/display_compositor.h"
+#include "src/ui/scenic/lib/flatland/engine/engine.h"
 #include "src/ui/scenic/lib/flatland/flatland_manager.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
@@ -96,6 +98,9 @@ class App {
   std::shared_ptr<flatland::DefaultFlatlandPresenter> flatland_presenter_;
   std::shared_ptr<flatland::FlatlandManager> flatland_manager_;
   std::shared_ptr<flatland::DisplayCompositor> flatland_compositor_;
+  std::shared_ptr<flatland::Engine> flatland_engine_;
+
+  std::shared_ptr<TemporaryFrameRendererDelegator> frame_renderer_;
 
   std::shared_ptr<input::InputSystem> input_;
   std::unique_ptr<focus::FocusManager> focus_manager_;

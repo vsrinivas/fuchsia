@@ -15,6 +15,8 @@ source_set("engine") {
   sources = [
     "display_compositor.cc",
     "display_compositor.h",
+    "engine.cc",
+    "engine.h",
     "engine_types.cc",
     "engine_types.h",
     "release_fence_manager.cc",

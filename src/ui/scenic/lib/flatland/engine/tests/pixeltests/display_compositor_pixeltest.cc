@@ -17,6 +17,7 @@
 #include "src/ui/scenic/lib/flatland/buffers/util.h"
 #include "src/ui/scenic/lib/flatland/engine/tests/common.h"
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 using ::testing::_;
 using ::testing::Return;
@@ -197,7 +198,7 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
 
   // Sets up the buffer collection information for collections that will be imported
   // into the engine.
-  fuchsia::sysmem::BufferCollectionSyncPtr SetupTextures(
+  fuchsia::sysmem::BufferCollectionSyncPtr SetupClientTextures(
       DisplayCompositor* display_compositor, allocation::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::PixelFormatType pixel_type, uint32_t width, uint32_t height,
       uint32_t num_vmos, fuchsia::sysmem::BufferCollectionInfo_2* collection_info) {
@@ -353,7 +354,8 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenRectangleTest) {
   // directly by the display controller hardware, and not the software renderer.
   auto [escher, renderer] = NewVkRenderer();
   auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
-      display_manager_->default_display_controller(), renderer);
+      dispatcher(), display_manager_->default_display_controller(), renderer,
+      utils::CreateSysmemAllocatorSyncPtr("display_compositor_pixeltest"));
 
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();
@@ -380,8 +382,8 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenRectangleTest) {
   const uint32_t kRectHeight = display->height_in_px(), kTextureHeight = display->height_in_px();
   fuchsia::sysmem::BufferCollectionInfo_2 texture_collection_info;
   auto texture_collection =
-      SetupTextures(display_compositor.get(), kTextureCollectionId, GetParam(), kTextureWidth,
-                    kTextureHeight, 1, &texture_collection_info);
+      SetupClientTextures(display_compositor.get(), kTextureCollectionId, GetParam(), kTextureWidth,
+                          kTextureHeight, 1, &texture_collection_info);
   if (!texture_collection) {
     GTEST_SKIP();
   }
@@ -436,8 +438,7 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenRectangleTest) {
   DisplayInfo display_info{
       .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
-  display_compositor->AddDisplay(display->display_id(), display_info, sysmem_allocator_.get(),
-                                 /*num_vmos*/ 0);
+  display_compositor->AddDisplay(display->display_id(), display_info, /*num_vmos*/ 0);
 
   // Setup the uberstruct data.
   auto uberstruct = session.CreateUberStructWithCurrentTopology(root_handle);
@@ -447,8 +448,11 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenRectangleTest) {
   session.PushUberStruct(std::move(uberstruct));
 
   // Now we can finally render.
-  display_compositor->RenderFrame(GenerateDisplayListForTest(
-      {{display->display_id(), std::make_pair(display_info, root_handle)}}));
+  display_compositor->RenderFrame(
+      1, zx::time(1),
+      GenerateDisplayListForTest(
+          {{display->display_id(), std::make_pair(display_info, root_handle)}}),
+      {}, [](const scheduling::FrameRenderer::Timestamps&) {});
 
   // Grab the capture vmo data.
   std::vector<uint8_t> read_values;
@@ -513,11 +517,12 @@ VK_TEST_P(DisplayCompositorFallbackParameterizedPixelTest, SoftwareRenderingTest
   // Use the VK renderer here so we can make use of software rendering.
   auto [escher, renderer] = NewVkRenderer();
   auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
-      display_manager_->default_display_controller(), renderer);
+      dispatcher(), display_manager_->default_display_controller(), renderer,
+      utils::CreateSysmemAllocatorSyncPtr("display_compositor_pixeltest"));
 
-  auto texture_collection = SetupTextures(display_compositor.get(), kTextureCollectionId,
-                                          GetParam(), kTextureWidth, kTextureHeight,
-                                          /*num_vmos*/ 2, &texture_collection_info);
+  auto texture_collection = SetupClientTextures(display_compositor.get(), kTextureCollectionId,
+                                                GetParam(), kTextureWidth, kTextureHeight,
+                                                /*num_vmos*/ 2, &texture_collection_info);
 
   // Write to the two textures. Make the first blue and the second red.
   const uint32_t num_pixels = kTextureWidth * kTextureHeight;
@@ -581,9 +586,8 @@ VK_TEST_P(DisplayCompositorFallbackParameterizedPixelTest, SoftwareRenderingTest
   DisplayInfo display_info{
       .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
-  auto render_target_collection_id =
-      display_compositor->AddDisplay(display->display_id(), display_info, sysmem_allocator_.get(),
-                                     /*num_vmos*/ 2, &render_target_info);
+  auto render_target_collection_id = display_compositor->AddDisplay(
+      display->display_id(), display_info, /*num_vmos*/ 2, &render_target_info);
   EXPECT_NE(render_target_collection_id, 0U);
 
   // Now we can finally render.
@@ -599,7 +603,8 @@ VK_TEST_P(DisplayCompositorFallbackParameterizedPixelTest, SoftwareRenderingTest
     render_data.images.push_back(image_metadatas[0]);
     render_data.images.push_back(image_metadatas[1]);
   }
-  display_compositor->RenderFrame({std::move(render_data)});
+  display_compositor->RenderFrame(1, zx::time(1), {std::move(render_data)}, {},
+                                  [](const scheduling::FrameRenderer::Timestamps&) {});
   renderer->WaitIdle();
 
   // Make sure the render target has the same data as what's being put on the display.
@@ -685,12 +690,13 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
   // Use the VK renderer here so we can make use of software rendering.
   auto [escher, renderer] = NewVkRenderer();
   auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
-      display_manager_->default_display_controller(), renderer);
+      dispatcher(), display_manager_->default_display_controller(), renderer,
+      utils::CreateSysmemAllocatorSyncPtr("display_compositor_pixeltest"));
 
   auto texture_collection =
-      SetupTextures(display_compositor.get(), kTextureCollectionId,
-                    fuchsia::sysmem::PixelFormatType::BGRA32, kTextureWidth, kTextureHeight,
-                    /*num_vmos*/ 2, &texture_collection_info);
+      SetupClientTextures(display_compositor.get(), kTextureCollectionId,
+                          fuchsia::sysmem::PixelFormatType::BGRA32, kTextureWidth, kTextureHeight,
+                          /*num_vmos*/ 2, &texture_collection_info);
 
   // Write to the two textures. Make the first blue and opaque and the second red and
   // half transparent. Format is ARGB.
@@ -715,9 +721,8 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
   DisplayInfo display_info{
       .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
-  auto render_target_collection_id =
-      display_compositor->AddDisplay(display->display_id(), display_info, sysmem_allocator_.get(),
-                                     /*num_vmos*/ 2, &render_target_info);
+  auto render_target_collection_id = display_compositor->AddDisplay(
+      display->display_id(), display_info, /*num_vmos*/ 2, &render_target_info);
   EXPECT_NE(render_target_collection_id, 0U);
 
   // Now we can finally render.
@@ -738,7 +743,8 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
     render_data.images.push_back(image_metadatas[0]);
     render_data.images.push_back(image_metadatas[1]);
   }
-  display_compositor->RenderFrame({std::move(render_data)});
+  display_compositor->RenderFrame(1, zx::time(1), {std::move(render_data)}, {},
+                                  [](const scheduling::FrameRenderer::Timestamps&) {});
   renderer->WaitIdle();
 
   // Make sure the render target has the same data as what's being put on the display.

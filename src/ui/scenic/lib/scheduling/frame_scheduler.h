@@ -71,6 +71,8 @@ class FrameRenderer {
   // TODO(fxbug.dev/24669): If there are multiple render passes, |render_done_time| is the time
   // furthest forward in time. Solving 24669 may involve expanding this struct to support multiple
   // passes in data.
+  // TODO(fxbug.dev/70283): when there are multiple displays, there is no single "actual
+  // presentation time" that the FrameRenderer can return.
   struct Timestamps {
     zx::time render_done_time;
     zx::time actual_presentation_time;

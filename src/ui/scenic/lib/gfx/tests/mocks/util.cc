@@ -73,6 +73,18 @@ std::vector<zx::event> CreateEventArray(size_t n) {
   return events;
 }
 
+std::vector<zx::event> CopyEventArray(const std::vector<zx::event>& originals) {
+  std::vector<zx::event> copies(originals.size());
+  for (size_t i = 0; i < originals.size(); ++i) {
+    zx_status_t status = originals[i].duplicate(ZX_RIGHT_SAME_RIGHTS, &copies[i]);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Copying zx::event failed, status: " << status;
+      return {};
+    }
+  }
+  return copies;
+}
+
 fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(size, 0u, &vmo);

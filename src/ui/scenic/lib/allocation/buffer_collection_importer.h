@@ -48,6 +48,13 @@ struct ImageMetadata {
   }
 };
 
+inline std::ostream& operator<<(std::ostream& str, const ImageMetadata& m) {
+  str << "size=" << m.width << "x" << m.height << "  is_opaque=" << m.is_opaque
+      << "  multiply_color=(" << m.multiply_color[0] << "," << m.multiply_color[1] << ","
+      << m.multiply_color[2] << "," << m.multiply_color[3] << ")";
+  return str;
+}
+
 // This interface is used for importing Flatland buffer collections and images to external services
 // that would like to also have access to the collection and set their own constraints. This
 // interface allows Flatland to remain agnostic as to the implementation details of a

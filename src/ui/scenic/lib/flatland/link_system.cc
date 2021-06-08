@@ -51,8 +51,7 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
 
   importer.Initialize(
       /* link_resolved = */
-      [ref = shared_from_this(), impl = impl, graph_handle = graph_handle,
-       link_handle = link_handle,
+      [ref = shared_from_this(), impl, graph_handle, link_handle,
        initial_properties = std::move(initial_properties)](GraphLinkRequest request) {
         // TODO(fxbug.dev/76712): Remove this check after relinking is fixed.
         if (request.error_callback)
@@ -120,8 +119,7 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
 
   exporter.Initialize(
       /* link_resolved = */
-      [ref = shared_from_this(), impl = impl,
-       link_origin = link_origin](ContentLinkRequest request) {
+      [ref = shared_from_this(), impl, link_origin](ContentLinkRequest request) {
         // TODO(fxbug.dev/76712): Remove this check after relinking is fixed.
         if (request.error_callback)
           impl->SetErrorCallback(request.error_callback);

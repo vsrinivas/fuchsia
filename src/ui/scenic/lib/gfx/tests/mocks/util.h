@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_UTIL_H_
-#define SRC_UI_SCENIC_LIB_GFX_TESTS_UTIL_H_
+#ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_MOCKS_UTIL_H_
+#define SRC_UI_SCENIC_LIB_GFX_TESTS_MOCKS_UTIL_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -83,4 +83,4 @@ class SessionWrapper {
 
 }  // namespace scenic_impl::gfx::test
 
-#endif  // SRC_UI_SCENIC_LIB_GFX_TESTS_UTIL_H_
+#endif  // SRC_UI_SCENIC_LIB_GFX_TESTS_MOCKS_UTIL_H_

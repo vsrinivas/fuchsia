@@ -10,6 +10,7 @@
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/files/file.h"
 #include "src/ui/lib/escher/vk/pipeline_builder.h"
+#include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 #include "src/ui/scenic/lib/gfx/api/internal_snapshot_impl.h"
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
 #include "src/ui/scenic/lib/scheduling/frame_metrics_registry.cb.h"
@@ -266,22 +267,8 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
     escher_->set_pipeline_builder(std::move(pipeline_builder));
   }
 
-  // Allocator sets constraints from both gfx and flatland. |enable_allocator_for_flatland| check
-  // allows us to disable flatland support via config while it is still in development, so it does
-  // not affect Image3 use in gfx.
-
-  // Create Allocator with the available importers.
-  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers;
-  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> screenshot_importers;
   auto gfx_buffer_collection_importer =
       std::make_shared<gfx::GfxBufferCollectionImporter>(escher_->GetWeakPtr());
-  importers.push_back(gfx_buffer_collection_importer);
-  if (config_values_.enable_allocator_for_flatland && flatland_compositor_)
-    importers.push_back(flatland_compositor_);
-  allocator_ =
-      std::make_shared<allocation::Allocator>(app_context_.get(), importers, screenshot_importers,
-                                              utils::CreateSysmemAllocatorSyncPtr("Allocator"));
-
   {
     TRACE_DURATION("gfx", "App::InitializeServices[engine]");
     engine_ =
@@ -294,6 +281,7 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
                                                focus::FocusChangeStatus::kAccept;
                                       });
   }
+
   scenic_->SetFrameScheduler(frame_scheduler_);
   annotation_registry_.InitializeWithGfxAnnotationManager(engine_->annotation_manager());
 
@@ -314,17 +302,67 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
   scenic_->InitializeSnapshotService(std::move(snapshotter));
   scenic_->SetViewFocuserRegistry(engine_->scene_graph());
 
-  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> flatland_importers;
-  flatland_importers.push_back(flatland_compositor_);
-  flatland_manager_ = std::make_shared<flatland::FlatlandManager>(
-      async_get_default_dispatcher(), flatland_presenter_, uber_struct_system_, link_system_,
-      display, flatland_importers);
-  // TODO(fxbug.dev/67206): this should be moved into FlatlandManager.
-  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland>)>
-      flatland_handler =
+  // Flatland compositor must be made first; it is needed by the manager and the engine.
+  {
+    TRACE_DURATION("gfx", "App::InitializeServices[flatland_display_compositor]");
+
+    auto flatland_renderer = std::make_shared<flatland::VkRenderer>(escher_->GetWeakPtr());
+
+    flatland_compositor_ = std::make_shared<flatland::DisplayCompositor>(
+        async_get_default_dispatcher(), display_manager_->default_display_controller(),
+        flatland_renderer, utils::CreateSysmemAllocatorSyncPtr("flatland::DisplayCompositor"));
+  }
+
+  // Flatland manager depends on compositor, and is required by engine.
+  {
+    TRACE_DURATION("gfx", "App::InitializeServices[flatland_manager]");
+
+    std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers{
+        flatland_compositor_};
+
+    flatland_manager_ = std::make_shared<flatland::FlatlandManager>(
+        async_get_default_dispatcher(), flatland_presenter_, uber_struct_system_, link_system_,
+        display, std::move(importers));
+
+    // TODO(fxbug.dev/67206): these should be moved into FlatlandManager.
+    {
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland>)> handler =
           fit::bind_member(flatland_manager_.get(), &flatland::FlatlandManager::CreateFlatland);
-  zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(flatland_handler));
-  FX_DCHECK(status == ZX_OK);
+      zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));
+      FX_DCHECK(status == ZX_OK);
+    }
+    {
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::FlatlandDisplay>)>
+          handler = fit::bind_member(flatland_manager_.get(),
+                                     &flatland::FlatlandManager::CreateFlatlandDisplay);
+      zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));
+      FX_DCHECK(status == ZX_OK);
+    }
+  }
+
+  // Allocator service needs Flatland DisplayCompositor to act as a BufferCollectionImporter.
+  {
+    std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers;
+    std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> screenshot_importers;
+    importers.push_back(gfx_buffer_collection_importer);
+    if (config_values_.enable_allocator_for_flatland && flatland_compositor_)
+      importers.push_back(flatland_compositor_);
+
+    allocator_ = std::make_shared<allocation::Allocator>(
+        app_context_.get(), importers, screenshot_importers,
+        utils::CreateSysmemAllocatorSyncPtr("ScenicAllocator"));
+  }
+
+  // Flatland engine requires FlatlandManager and DisplayCompositor to be constructed first.
+  {
+    TRACE_DURATION("gfx", "App::InitializeServices[flatland_engine]");
+
+    flatland_engine_ = std::make_shared<flatland::Engine>(flatland_compositor_, flatland_presenter_,
+                                                          uber_struct_system_, link_system_);
+
+    frame_renderer_ = std::make_shared<TemporaryFrameRendererDelegator>(flatland_manager_,
+                                                                        flatland_engine_, engine_);
+  }
 }
 
 void App::InitializeInput() {
@@ -386,8 +424,8 @@ void App::InitializeHeartbeat() {
 
   // |session_updaters| will be updated in submission order.
   frame_scheduler_->Initialize(
-      /*frame_renderer*/ engine_,
-      /*session_updaters*/ {scenic_, image_pipe_updater_, flatland_manager_,
+      /*frame_renderer*/ frame_renderer_,
+      /*session_updaters*/ {scenic_, image_pipe_updater_, flatland_manager_, flatland_presenter_,
                             view_tree_snapshotter_});
 }
 

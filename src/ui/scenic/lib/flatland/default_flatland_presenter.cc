@@ -24,8 +24,6 @@ scheduling::SessionUpdater::UpdateResults DefaultFlatlandPresenter::UpdateSessio
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
     uint64_t trace_id) {
   FX_DCHECK(main_dispatcher_ == async_get_default_dispatcher());
-  FX_DCHECK(!sessions_updated_);
-  sessions_updated_ = true;
 
   for (const auto& [session_id, present_id] : sessions_to_update) {
     const auto begin_it = release_fences_.lower_bound({session_id, 0});
@@ -48,8 +46,6 @@ scheduling::SessionUpdater::UpdateResults DefaultFlatlandPresenter::UpdateSessio
 
 std::vector<zx::event> DefaultFlatlandPresenter::TakeReleaseFences() {
   FX_DCHECK(main_dispatcher_ == async_get_default_dispatcher());
-  FX_DCHECK(sessions_updated_);
-  sessions_updated_ = false;
 
   std::vector<zx::event> result(std::move(accumulated_release_fences_));
   accumulated_release_fences_.clear();

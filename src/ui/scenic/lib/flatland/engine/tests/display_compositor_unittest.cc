@@ -58,7 +58,8 @@ class DisplayCompositorTest : public DisplayCompositorTestBase {
     shared_display_controller->Bind(std::move(controller_channel_client));
 
     display_compositor_ = std::make_unique<flatland::DisplayCompositor>(
-        std::move(shared_display_controller), renderer_);
+        dispatcher(), std::move(shared_display_controller), renderer_,
+        utils::CreateSysmemAllocatorSyncPtr("display_compositor_unittest"));
   }
 
   void TearDown() override {
@@ -537,11 +538,12 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
   EXPECT_CALL(*mock, ApplyConfig()).WillOnce(Return());
 
   DisplayInfo display_info = {resolution, {kPixelFormat}};
-  display_compositor_->AddDisplay(display_id, display_info, sysmem_allocator_.get(),
-                                  /*num_vmos*/ 0);
+  display_compositor_->AddDisplay(display_id, display_info, /*num_vmos*/ 0);
 
   display_compositor_->RenderFrame(
-      GenerateDisplayListForTest({{display_id, {display_info, parent_root_handle}}}));
+      1, zx::time(1),
+      GenerateDisplayListForTest({{display_id, {display_info, parent_root_handle}}}), {},
+      [](const scheduling::FrameRenderer::Timestamps&) {});
 
   for (uint32_t i = 0; i < 2; i++) {
     EXPECT_CALL(*mock, DestroyLayer(layers[i]));

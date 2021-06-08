@@ -6,7 +6,6 @@
 #define SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_H_
 
 #include <fuchsia/scenic/allocation/cpp/fidl.h>
-#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
@@ -36,6 +35,9 @@
 #include "src/ui/scenic/lib/scheduling/id.h"
 #include "src/ui/scenic/lib/scheduling/present2_helper.h"
 #include "src/ui/scenic/lib/utils/dispatcher_holder.h"
+
+#include <glm/mat3x3.hpp>
+#include <glm/vec2.hpp>
 
 namespace flatland {
 
@@ -166,14 +168,14 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   async_dispatcher_t* dispatcher() const { return dispatcher_holder_->dispatcher(); }
   std::shared_ptr<utils::DispatcherHolder> dispatcher_holder_;
 
-  // The FIDL bindings for this Flatland instance, which reference |this| as the implementation and
+  // The FIDL binding for this Flatland instance, which references |this| as the implementation and
   // run on |dispatcher_|.
   fidl::Binding<fuchsia::ui::scenic::internal::Flatland> binding_;
 
   // Users are not allowed to use zero as a TransformId or ContentId.
   static constexpr uint64_t kInvalidId = 0;
 
-  // The unique SessionId for this Flatland instance. Used to schedule Presents and register
+  // The unique SessionId for this Flatland session. Used to schedule Presents and register
   // UberStructs with the UberStructSystem.
   const scheduling::SessionId session_id_;
 

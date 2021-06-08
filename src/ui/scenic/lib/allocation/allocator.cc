@@ -102,7 +102,6 @@ void Allocator::RegisterBufferCollection(
       usage == fuchsia::scenic::allocation::RegisterBufferCollectionUsage::DEFAULT
           ? &default_buffer_collection_importers_
           : &screenshot_buffer_collection_importers_;
-
   for (uint32_t i = 0; i < importers->size(); i++) {
     fuchsia::sysmem::BufferCollectionTokenSyncPtr extra_token;
     zx_status_t status =

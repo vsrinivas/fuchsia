@@ -5,9 +5,13 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_DISPLAY_COMPOSITOR_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_DISPLAY_COMPOSITOR_H_
 
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
+
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/display/util.h"
 #include "src/ui/scenic/lib/flatland/engine/engine_types.h"
+#include "src/ui/scenic/lib/flatland/engine/release_fence_manager.h"
 
 namespace flatland {
 
@@ -35,8 +39,10 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
   // display-controller clients could be accessing the same functions and/or state at the same time
   // as the DisplayCompositor without making use of locks.
   DisplayCompositor(
+      async_dispatcher_t* dispatcher,
       std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
-      const std::shared_ptr<Renderer>& renderer);
+      const std::shared_ptr<Renderer>& renderer,
+      fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
 
   ~DisplayCompositor() override;
 
@@ -55,9 +61,13 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
   // |BufferCollectionImporter|
   void ReleaseBufferImage(allocation::GlobalImageId image_id) override;
 
-  // TODO(fxbug.dev/59646): Add in parameters for scheduling, etc. Right now we're just making sure
-  // the data is processed correctly.
-  void RenderFrame(const std::vector<RenderData>& render_data_list);
+  // Generates frame and presents it to display.  This may involve directly scanning out client
+  // images, or it may involve first using the GPU to composite (some of) these images into a single
+  // image which is then scanned out.
+  void RenderFrame(uint64_t frame_number, zx::time presentation_time,
+                   const std::vector<RenderData>& render_data_list,
+                   std::vector<zx::event> release_fences,
+                   scheduling::FrameRenderer::FramePresentedCallback callback);
 
   // Register a new display to the DisplayCompositor, which also generates the render targets to be
   // presented on the display when compositing on the GPU. If num_vmos is 0, this function will not
@@ -67,12 +77,17 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
   // TODO(fxbug.dev/59646): We need to figure out exactly how we want the display to anchor
   // to the Flatland hierarchy.
   allocation::GlobalBufferCollectionId AddDisplay(
-      uint64_t display_id, DisplayInfo info, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
-      uint32_t num_vmos, fuchsia::sysmem::BufferCollectionInfo_2* collection_info = nullptr);
+      uint64_t display_id, DisplayInfo info, uint32_t num_vmos,
+      fuchsia::sysmem::BufferCollectionInfo_2* collection_info = nullptr);
 
  private:
   friend class test::DisplayCompositorPixelTest;
   friend class test::DisplayCompositorTest;
+
+  // Notifies the compositor that a vsync has occurred, in response to a display configuration
+  // applied by the compositor.  It is the compositor's responsibility to signal any release fences
+  // corresponding to the frame identified by |frame_number|.
+  void OnVsync(uint64_t display_id, uint64_t frame_number, zx::time timestamp);
 
   struct DisplayConfigResponse {
     // Whether or not the config can be successfully applied or not.
@@ -176,6 +191,16 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
   // Maps a buffer collection ID to a boolean indicating if it can be imported into display.
   std::unordered_map<allocation::GlobalBufferCollectionId, bool>
       buffer_collection_supports_display_;
+
+  ReleaseFenceManager release_fence_manager_;
+
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
+
+  // TODO(fxbug.dev/77414): we use a weak ptr to safely post a task that might outlive this
+  // DisplayCompositor, see RenderFrame().  This task simulates a vsync callback that we aren't yet
+  // receiving because the display controller doesn't yet implement the ApplyConfig2() method. It's
+  // likely that this weak_factory_ will become unnecessary at that time.
+  fxl::WeakPtrFactory<DisplayCompositor> weak_factory_;  // must be last
 };
 
 }  // namespace flatland

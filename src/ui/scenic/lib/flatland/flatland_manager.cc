@@ -8,6 +8,10 @@
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 
+#include <utility>
+
+#include "lib/syslog/cpp/macros.h"
+
 namespace flatland {
 
 FlatlandManager::FlatlandManager(
@@ -15,14 +19,23 @@ FlatlandManager::FlatlandManager(
     const std::shared_ptr<UberStructSystem>& uber_struct_system,
     const std::shared_ptr<LinkSystem>& link_system,
     std::shared_ptr<scenic_impl::display::Display> display,
-    const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
-        buffer_collection_importers)
+    std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers)
     : flatland_presenter_(flatland_presenter),
       uber_struct_system_(uber_struct_system),
       link_system_(link_system),
-      buffer_collection_importers_(buffer_collection_importers),
+      buffer_collection_importers_(std::move(buffer_collection_importers)),
       executor_(dispatcher),
-      primary_display_(std::move(display)) {}
+      primary_display_(std::move(display)) {
+  FX_DCHECK(dispatcher);
+  FX_DCHECK(flatland_presenter_);
+  FX_DCHECK(uber_struct_system_);
+  FX_DCHECK(link_system_);
+#ifndef NDEBUG
+  for (auto& buffer_collection_importer : buffer_collection_importers_) {
+    FX_DCHECK(buffer_collection_importer);
+  }
+#endif
+}
 
 FlatlandManager::~FlatlandManager() {
   // Clean up externally managed resources.
@@ -39,6 +52,7 @@ void FlatlandManager::CreateFlatland(
 
   const scheduling::SessionId id = uber_struct_system_->GetNextInstanceId();
   FX_DCHECK(flatland_instances_.find(id) == flatland_instances_.end());
+  FX_DCHECK(flatland_display_instances_.find(id) == flatland_display_instances_.end());
 
   // Allocate the worker Loop first so that the Flatland impl can be bound to its dispatcher.
   auto result = flatland_instances_.emplace(id, std::make_unique<FlatlandInstance>());
@@ -79,6 +93,43 @@ void FlatlandManager::CreateFlatland(
       });
 }
 
+void FlatlandManager::CreateFlatlandDisplay(
+    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::FlatlandDisplay> request) {
+  const scheduling::SessionId id = uber_struct_system_->GetNextInstanceId();
+  FX_DCHECK(flatland_instances_.find(id) == flatland_instances_.end());
+  FX_DCHECK(flatland_display_instances_.find(id) == flatland_display_instances_.end());
+
+  // TODO(fxbug.dev/76985): someday there will be a DisplayToken or something for the client to
+  // identify which hardware display this FlatlandDisplay is associated with.  For now: hard-coded.
+  auto hw_display = primary_display_;
+
+  if (hw_display->is_claimed()) {
+    // TODO(fxbug.dev/76640): error reporting direct to client somehow?
+    FX_LOGS(ERROR) << "Display id=" << hw_display->display_id()
+                   << " is already claimed, cannot instantiate FlatlandDisplay.";
+    return;
+  }
+  hw_display->Claim();
+
+  // Allocate the worker Loop first so that the impl can be bound to its dispatcher.
+  auto result =
+      flatland_display_instances_.emplace(id, std::make_unique<FlatlandDisplayInstance>());
+  FX_DCHECK(result.second);
+
+  auto& instance = result.first->second;
+  instance->loop =
+      std::make_shared<utils::LoopDispatcherHolder>(&kAsyncLoopConfigNoAttachToCurrentThread);
+  instance->display = hw_display;
+  instance->impl = FlatlandDisplay::New(
+      instance->loop, std::move(request), id, hw_display,
+      std::bind(&FlatlandManager::DestroyInstanceFunction, this, id), flatland_presenter_,
+      link_system_, uber_struct_system_->AllocateQueueForSession(id));
+
+  const std::string name = "Flatland Display ID=" + std::to_string(id);
+  zx_status_t status = instance->loop->loop().StartThread(name.c_str());
+  FX_DCHECK(status == ZX_OK);
+}
+
 scheduling::SessionUpdater::UpdateResults FlatlandManager::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
     uint64_t trace_id) {
@@ -89,7 +140,14 @@ scheduling::SessionUpdater::UpdateResults FlatlandManager::UpdateSessions(
   // Prepares the return of tokens to each session that didn't fail to update.
   for (const auto& [session_id, num_present_tokens] : results.present_tokens) {
     auto instance_kv = flatland_instances_.find(session_id);
-    FX_DCHECK(instance_kv != flatland_instances_.end());
+    FX_DCHECK((flatland_instances_.find(session_id) != flatland_instances_.end()) ||
+              (flatland_display_instances_.find(session_id) != flatland_display_instances_.end()));
+
+    // TODO(fxbug.dev/76640): we currently only keep track of present tokens for Flatland sessions,
+    // not FlatlandDisplay sessions.  It's not clear what we could do with them for FlatlandDisplay:
+    // there is no API that would allow sending them to the client.  Maybe the current approach is
+    // OK?  Maybe we should DCHECK that |num_present_tokens| is only non-zero for Flatlands, not
+    // FlatlandDisplays?
 
     // Add the session to the map of updated_sessions, and increment the number of present tokens it
     // should receive after the firing of the OnCpuWorkDone() is issued from the scheduler.
@@ -202,17 +260,39 @@ void FlatlandManager::SendFramePresented(
 void FlatlandManager::RemoveFlatlandInstance(scheduling::SessionId session_id) {
   CheckIsOnMainThread();
 
-  auto instance_kv = flatland_instances_.find(session_id);
-  FX_DCHECK(instance_kv != flatland_instances_.end());
+  bool found = false;
 
-  // The Flatland impl must be destroyed on the thread that owns the looper it is bound to. Remove
-  // the instance from the map, then push cleanup onto the worker thread. Note that the closure
-  // exists only to transfer the cleanup responsibilities to the worker thread.
-  async::PostTask(instance_kv->second->loop->dispatcher(),
-                  [instance = std::move(instance_kv->second)]() {});
+  {
+    auto instance_kv = flatland_instances_.find(session_id);
+    if (instance_kv != flatland_instances_.end()) {
+      found = true;
+      // The Flatland impl must be destroyed on the thread that owns the looper it is bound to.
+      // Remove the instance from the map, then push cleanup onto the worker thread. Note that the
+      // closure exists only to transfer the cleanup responsibilities to the worker thread.
+      async::PostTask(instance_kv->second->loop->dispatcher(),
+                      [instance = std::move(instance_kv->second)]() {});
+      flatland_instances_.erase(session_id);
+    }
+  }
+  {
+    auto instance_kv = flatland_display_instances_.find(session_id);
+    if (instance_kv != flatland_display_instances_.end()) {
+      found = true;
+      // Below, we push destruction of the object to a different thread.  But first, we need to
+      // relinquish ownership of the display.
+      instance_kv->second->display->Unclaim();
+
+      // The Flatland impl must be destroyed on the thread that owns the looper it is
+      // bound to. Remove the instance from the map, then push cleanup onto the worker thread. Note
+      // that the closure exists only to transfer the cleanup responsibilities to the worker thread.
+      async::PostTask(instance_kv->second->loop->dispatcher(),
+                      [instance = std::move(instance_kv->second)]() {});
+      flatland_display_instances_.erase(session_id);
+    }
+  }
+  FX_DCHECK(found) << "No instance or display with ID: " << session_id;
 
   // Other resource cleanup can safely occur on the main thread.
-  flatland_instances_.erase(session_id);
   uber_struct_system_->RemoveSession(session_id);
   flatland_presenter_->RemoveSession(session_id);
 }
@@ -222,6 +302,12 @@ void FlatlandManager::DestroyInstanceFunction(scheduling::SessionId session_id) 
   // triggered from the main thread since it accesses and modifies the |flatland_instances_| map.
   executor_.schedule_task(
       fit::make_promise([this, session_id] { this->RemoveFlatlandInstance(session_id); }));
+}
+
+std::shared_ptr<FlatlandDisplay> FlatlandManager::GetPrimaryFlatlandDisplayForRendering() {
+  FX_CHECK(flatland_display_instances_.size() <= 1);
+  return flatland_display_instances_.empty() ? nullptr
+                                             : flatland_display_instances_.begin()->second->impl;
 }
 
 }  // namespace flatland

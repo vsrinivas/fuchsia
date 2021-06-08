@@ -79,11 +79,23 @@ void DisplayManager::OnClientOwnershipChange(bool has_ownership) {
   }
 }
 
-void DisplayManager::OnVsync(uint64_t display_id, uint64_t timestamp, std::vector<uint64_t> images,
-                             uint64_t cookie) {
+void DisplayManager::SetVsyncCallback(VsyncCallback callback) {
+  FX_DCHECK(!(static_cast<bool>(callback) && static_cast<bool>(vsync_callback_)))
+      << "cannot stomp vsync callback.";
+
+  vsync_callback_ = std::move(callback);
+}
+
+void DisplayManager::OnVsync(uint64_t display_id, uint64_t timestamp,
+                             std::vector<uint64_t> image_ids, uint64_t cookie) {
   if (cookie) {
     (*default_display_controller_)->AcknowledgeVsync(cookie);
   }
+
+  if (vsync_callback_) {
+    vsync_callback_(display_id, zx::time(timestamp), image_ids);
+  }
+
   if (!default_display_) {
     return;
   }
@@ -91,7 +103,7 @@ void DisplayManager::OnVsync(uint64_t display_id, uint64_t timestamp, std::vecto
     FX_LOGS(INFO) << "DisplayManager received Vsync for unknown display: " << display_id;
     return;
   }
-  default_display_->OnVsync(zx::time(timestamp), std::move(images));
+  default_display_->OnVsync(zx::time(timestamp), std::move(image_ids));
 }
 
 }  // namespace display

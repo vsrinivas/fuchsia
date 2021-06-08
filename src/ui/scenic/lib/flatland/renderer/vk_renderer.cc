@@ -99,7 +99,7 @@ bool VkRenderer::RegisterCollection(
     GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
     vk::ImageUsageFlags usage) {
-  TRACE_DURATION("flatland", "VkRenderer::RegisterCollection");
+  TRACE_DURATION("gfx", "VkRenderer::RegisterCollection");
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
   FX_DCHECK(vk_device);
@@ -264,7 +264,7 @@ void VkRenderer::ReleaseBufferImage(allocation::GlobalImageId image_id) {
 escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metadata,
                                           vk::BufferCollectionFUCHSIA collection,
                                           vk::ImageUsageFlags usage) {
-  TRACE_DURATION("flatland", "VkRenderer::ExtractImage");
+  TRACE_DURATION("gfx", "VkRenderer::ExtractImage");
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
 
@@ -395,7 +395,9 @@ void VkRenderer::Render(const ImageMetadata& render_target,
                         const std::vector<Rectangle2D>& rectangles,
                         const std::vector<ImageMetadata>& images,
                         const std::vector<zx::event>& release_fences) {
-  TRACE_DURATION("flatland", "VkRenderer::Render");
+  TRACE_DURATION("gfx", "VkRenderer::Render");
+
+  FX_DCHECK(rectangles.size() == images.size());
 
   // Copy over the texture and render target data to local containers that do not need
   // to be accessed via a lock. We're just doing a shallow copy via the copy assignment

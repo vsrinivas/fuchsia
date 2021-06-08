@@ -9,6 +9,7 @@
 
 #include <optional>
 
+#include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 
 // clang-format off

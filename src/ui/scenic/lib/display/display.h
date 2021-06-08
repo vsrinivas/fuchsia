@@ -52,7 +52,7 @@ class Display {
   // changes. This event backs Scenic's GetDisplayOwnershipEvent API.
   const zx::event& ownership_event() { return ownership_event_; };
 
-  // Called by DisplayManager, other users of Display should probably not call this.
+  // Called by DisplayManager, other users of Display should probably not call this.  Except tests.
   void OnVsync(zx::time timestamp, std::vector<uint64_t> images);
 
  protected:

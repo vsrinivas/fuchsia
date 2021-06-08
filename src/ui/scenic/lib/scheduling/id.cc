@@ -19,4 +19,6 @@ namespace scheduling {
 SessionId GetNextSessionId() { return next_session_id++; }
 PresentId GetNextPresentId() { return next_present_id++; }
 
+SessionId PeekNextPresentId() { return next_present_id; }
+
 }  // namespace scheduling

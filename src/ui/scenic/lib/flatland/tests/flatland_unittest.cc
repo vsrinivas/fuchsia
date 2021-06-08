@@ -18,6 +18,7 @@
 #include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
 #include "src/ui/scenic/lib/allocation/mock_buffer_collection_importer.h"
+#include "src/ui/scenic/lib/flatland/flatland_display.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 #include "src/ui/scenic/lib/flatland/tests/mock_flatland_presenter.h"
@@ -38,6 +39,7 @@ using allocation::BufferCollectionImportExportTokens;
 using allocation::ImageMetadata;
 using allocation::MockBufferCollectionImporter;
 using flatland::Flatland;
+using flatland::FlatlandDisplay;
 using flatland::FlatlandPresenter;
 using flatland::GlobalMatrixVector;
 using flatland::GlobalTopologyData;
@@ -207,6 +209,11 @@ float GetOrientationAngle(fuchsia::ui::scenic::internal::Orientation orientation
   }
 }
 
+// Testing FlatlandDisplay requires much of the same setup as testing Flatland, so we use the same
+// test fixture class (defined immediately below), but renamed to group FlatlandDisplay tests.
+class FlatlandTest;
+using FlatlandDisplayTest = FlatlandTest;
+
 class FlatlandTest : public gtest::TestLoopFixture {
  public:
   FlatlandTest()
@@ -269,6 +276,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
     buffer_collection_importer_.reset();
     flatland_presenter_.reset();
     flatlands_.clear();
+    flatland_displays_.clear();
   }
 
   std::shared_ptr<Allocator> CreateAllocator() {
@@ -289,6 +297,19 @@ class FlatlandTest : public gtest::TestLoopFixture {
         flatlands_.back().NewRequest(), session_id,
         /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
         uber_struct_system_->AllocateQueueForSession(session_id), importers);
+  }
+
+  std::shared_ptr<FlatlandDisplay> CreateFlatlandDisplay(uint32_t width_in_px,
+                                                         uint32_t height_in_px) {
+    auto session_id = scheduling::GetNextSessionId();
+    auto display =
+        std::make_shared<scenic_impl::display::Display>(/*id*/ 1, width_in_px, height_in_px);
+    flatland_displays_.push_back({});
+    return FlatlandDisplay::New(
+        std::make_shared<utils::UnownedDispatcherHolder>(dispatcher()),
+        flatland_displays_.back().NewRequest(), session_id, std::move(display),
+        /*destroy_display_function*/ []() {}, flatland_presenter_, link_system_,
+        uber_struct_system_->AllocateQueueForSession(session_id));
   }
 
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> CreateToken() {
@@ -422,6 +443,31 @@ class FlatlandTest : public gtest::TestLoopFixture {
     PRESENT(child, true);
   }
 
+  void SetDisplayContent(FlatlandDisplay* display, Flatland* child,
+                         fidl::InterfacePtr<ContentLink>* content_link,
+                         fidl::InterfacePtr<GraphLink>* graph_link) {
+    FX_CHECK(display);
+    FX_CHECK(child);
+    FX_CHECK(content_link);
+    FX_CHECK(graph_link);
+    ContentLinkToken parent_token;
+    GraphLinkToken child_token;
+    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+    auto present_id = scheduling::PeekNextPresentId();
+    EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(display->session_id(), _));
+    // TODO(fxbug.dev/76640): we would like to verify that the returned id matches |present_id|.
+    // However, using WillOnce() as below causes important stuff in the default mock implementation
+    // to not happen.  This is not a big deal, because the the |present_id| is also validated by the
+    // mock call to ScheduleUpdateForSession().
+    //    .WillOnce(Return(present_id));
+    EXPECT_CALL(
+        *mock_flatland_presenter_,
+        ScheduleUpdateForSession(
+            zx::time(0), scheduling::SchedulingIdPair{display->session_id(), present_id}, true));
+    display->SetContent(std::move(parent_token), content_link->NewRequest());
+    child->LinkToParent(std::move(child_token), graph_link->NewRequest());
+  }
+
   // Creates an image in |flatland| with the specified |image_id| and backing properties.
   // This function also returns the GlobalBufferCollectionId that will be in the ImageMetadata
   // struct for that Image.
@@ -460,6 +506,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
 
  private:
   std::vector<fuchsia::ui::scenic::internal::FlatlandPtr> flatlands_;
+  std::vector<fuchsia::ui::scenic::internal::FlatlandDisplayPtr> flatland_displays_;
   glm::vec2 display_pixel_scale_ = kDefaultPixelScale;
 
   // Storage for |mock_flatland_presenter_|.
@@ -3936,6 +3983,63 @@ TEST_F(FlatlandTest, UnsquashableUpdates_ShouldBeReflectedInScheduleUpdates) {
     PRESENT_WITH_ARGS(flatland, std::move(args), true);
   }
 }
+
+TEST_F(FlatlandDisplayTest, SimpleSetContent) {
+  constexpr uint32_t kWidth = 800;
+  constexpr uint32_t kHeight = 600;
+
+  std::shared_ptr<FlatlandDisplay> display = CreateFlatlandDisplay(kWidth, kHeight);
+  std::shared_ptr<Flatland> child = CreateFlatland();
+
+  const ContentId kLinkId1 = {1};
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  fidl::InterfacePtr<GraphLink> graph_link;
+
+  SetDisplayContent(display.get(), child.get(), &content_link, &graph_link);
+
+  std::optional<LayoutInfo> layout_info;
+  graph_link->GetLayout([&](LayoutInfo new_info) { layout_info = std::move(new_info); });
+
+  std::optional<GraphLinkStatus> graph_link_status;
+  graph_link->GetStatus([&](GraphLinkStatus new_status) { graph_link_status = new_status; });
+
+  RunLoopUntilIdle();
+
+  // LayoutInfo is sent as soon as the content/graph link is established, to allow clients to
+  // generate their first frame with minimal latency.
+  EXPECT_TRUE(layout_info.has_value());
+  EXPECT_EQ(layout_info.value().logical_size().x, kWidth);
+  EXPECT_EQ(layout_info.value().logical_size().y, kHeight);
+
+  // The GraphLink's status must wait until the first frame is generated (represented here by the
+  // call to UpdateLinks() below).
+  EXPECT_FALSE(graph_link_status.has_value());
+
+  UpdateLinks(display->root_transform());
+
+  // UpdateLinks() causes us to receive the status notification.  The link is considered to be
+  // disconnected because the child has not yet presented its first frame.
+  EXPECT_TRUE(graph_link_status.has_value());
+  EXPECT_EQ(graph_link_status.value(), GraphLinkStatus::DISCONNECTED_FROM_DISPLAY);
+  graph_link_status.reset();
+
+  PRESENT(child, true);
+
+  // The status won't change to "connected" until UpdateLinks() is called again.
+  graph_link->GetStatus([&](GraphLinkStatus new_status) { graph_link_status = new_status; });
+  RunLoopUntilIdle();
+  EXPECT_FALSE(graph_link_status.has_value());
+
+  UpdateLinks(display->root_transform());
+
+  EXPECT_TRUE(graph_link_status.has_value());
+  EXPECT_EQ(graph_link_status.value(), GraphLinkStatus::CONNECTED_TO_DISPLAY);
+}
+
+// TODO(fxbug.dev/76640): other FlatlandDisplayTests that should be written:
+// - version of SimpleSetContent where the child presents before SetDisplayContent() is called.
+// - call SetDisplayContent() multiple times.
 
 #undef EXPECT_MATRIX
 #undef PRESENT

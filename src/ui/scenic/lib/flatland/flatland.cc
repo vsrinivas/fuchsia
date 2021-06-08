@@ -9,6 +9,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/eventpair.h>
 
+#include <functional>
 #include <memory>
 #include <utility>
 
@@ -40,8 +41,9 @@ std::shared_ptr<Flatland> Flatland::New(
     const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
         buffer_collection_importers) {
   return std::shared_ptr<Flatland>(new Flatland(
-      dispatcher_holder, std::move(request), session_id, std::move(destroy_instance_function),
-      flatland_presenter, link_system, uber_struct_queue, buffer_collection_importers));
+      std::move(dispatcher_holder), std::move(request), session_id,
+      std::move(destroy_instance_function), std::move(flatland_presenter), std::move(link_system),
+      std::move(uber_struct_queue), buffer_collection_importers));
 }
 
 Flatland::Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
@@ -119,8 +121,15 @@ void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args, PresentC
   // TODO(fxbug.dev/36166): Once the 2D scene graph is externalized, don't commit changes if a cycle
   // is detected. Instead, kill the channel and remove the sub-graph from the global graph.
   failure_since_previous_present_ |= !data.cyclical_edges.empty();
-
-  if (!failure_since_previous_present_) {
+  if (failure_since_previous_present_) {
+    // TODO(fxbug.dev/56869): determine if pending link operations should still be run here.
+    callback(fit::error(Error::BAD_OPERATION));
+    failure_since_previous_present_ = false;
+    return;
+  }
+  // TODO(fxbug.dev/76640): this doesn't need to be a else block, since there is a return in the if
+  // block.  Leaving it this way for now to avoid messing with indentation.
+  else {
     FX_DCHECK(data.sorted_transforms[0].handle == root_handle);
 
     // Cleanup released resources. Here we also collect the list of unused images so they can be
@@ -199,6 +208,7 @@ void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args, PresentC
 
     // Safe to capture |this| because the Flatland is guaranteed to outlive |fence_queue_|,
     // Flatland is non-movable and FenceQueue does not fire closures after destruction.
+    // TODO(fxbug.dev/76640): make the fences be the first arg, and the closure be the second.
     fence_queue_->QueueTask(
         [this, present_id, requested_presentation_time = args.requested_presentation_time(),
          squashable = args.squashable(), uber_struct = std::move(uber_struct),
@@ -219,13 +229,12 @@ void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args, PresentC
         },
         std::move(*args.mutable_acquire_fences()));
 
+    // We exited early in this method if there was a failure, and none of the subsequent operations
+    // are allowed to trigger a failure (all failure possibilities should be checked before the
+    // early exit).
+    FX_DCHECK(!failure_since_previous_present_);
     callback(fit::ok());
-  } else {
-    // TODO(fxbug.dev/56869): determine if pending link operations should still be run here.
-    callback(fit::error(Error::BAD_OPERATION));
   }
-
-  failure_since_previous_present_ = false;
 }
 
 void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLink> graph_link) {
@@ -552,12 +561,14 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
           impl->ReportLinkProtocolError();
       });
 
+  // TODO(fxbug.dev/76640): probably move this up before creating the child-link.
   if (link_id.value == kInvalidId) {
     FX_LOGS(ERROR) << "CreateLink called with ContentId zero";
     ReportError();
     return;
   }
 
+  // TODO(fxbug.dev/76640): probably move this up before creating the child-link.
   if (content_handles_.count(link_id.value)) {
     FX_LOGS(ERROR) << "CreateLink called with existing ContentId " << link_id.value;
     ReportError();
@@ -626,7 +637,7 @@ void Flatland::CreateImage(ContentId image_id,
   for (uint32_t i = 0; i < buffer_collection_importers_.size(); i++) {
     auto& importer = buffer_collection_importers_[i];
 
-    // TODO(62240): Give more detailed errors.
+    // TODO(fxbug.dev/62240): Give more detailed errors.
     auto result = importer->ImportBufferImage(metadata);
     if (!result) {
       // If this importer fails, we need to release the image from
