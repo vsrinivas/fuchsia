@@ -142,10 +142,10 @@ async fn create_realm_instance(
             match uses {
                 ChildUses::All(fnetemul::Empty {}) => {
                     // Route all built-in netemul services to the child.
-                    // TODO(https://fxbug.dev/76380): route netemul-provided `/dev`.
                     // TODO(https://fxbug.dev/72403): route netemul-provided `SyncManager`.
                     let () = route_log_sink_to_component(&mut builder, &name)?;
                     let () = route_network_context_to_component(&mut builder, &name)?;
+                    let () = route_devfs_to_component(&mut builder, &name)?;
                     let () = components_using_all.push(name);
                 }
                 ChildUses::Capabilities(caps) => {
@@ -153,6 +153,10 @@ async fn create_realm_instance(
                     type HashSet<T> = HashMap<T, ()>;
                     let mut unique_caps: HashSet<Cow<'_, _>> = HashSet::new();
                     for cap in caps {
+                        // TODO(https://fxbug.dev/77069): consider introducing an abstraction here
+                        // over the (fnetemul::Capability, CapabilityRoute, String) triple that is
+                        // defined here for each of the built-in netemul capabilities, corresponding
+                        // to their FIDL representation, routing logic, and capability name.
                         let service_name = match cap {
                             fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
                                 let () = route_log_sink_to_component(&mut builder, &name)?;
@@ -162,8 +166,11 @@ async fn create_realm_instance(
                                 let () = route_network_context_to_component(&mut builder, &name)?;
                                 fnetemul_network::NetworkContextMarker::SERVICE_NAME.into()
                             }
+                            fnetemul::Capability::NetemulDevfs(fnetemul::Empty {}) => {
+                                let () = route_devfs_to_component(&mut builder, &name)?;
+                                DEVFS.into()
+                            }
                             fnetemul::Capability::NetemulSyncManager(fnetemul::Empty {}) => todo!(),
-                            fnetemul::Capability::NetemulDevfs(fnetemul::Empty {}) => todo!(),
                             fnetemul::Capability::ChildDep(fnetemul::ChildDep {
                                 name: source,
                                 capability,
@@ -233,7 +240,18 @@ async fn create_realm_instance(
             cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                 dependency_type,
                 source,
-                ..
+                source_name: _,
+                target: _,
+                target_name: _,
+            })
+            | cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
+                dependency_type,
+                source,
+                source_name: _,
+                target: _,
+                target_name: _,
+                rights: _,
+                subdir: _,
             }) => {
                 // No need to mark dependencies on the built-in netemul services component as weak,
                 // since it doesn't depend on any services exposed by other components in the test
@@ -246,13 +264,12 @@ async fn create_realm_instance(
                     }
                     _ => (),
                 }
-                *dependency_type = cm_rust::DependencyType::WeakForMigration;
+                *dependency_type = cm_rust::DependencyType::Weak;
             }
             offer => {
                 error!(
-                    "there should only be protocol offers from the root of the managed realm; \
-                    found {:?}",
-                    offer
+                    "unexpected type of capability offer from the root of the managed realm; found \
+                    {:?}", offer,
                 );
             }
         }
@@ -413,6 +430,20 @@ fn route_network_context_to_component(
 ) -> Result<(), fcomponent::error::Error> {
     let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
         capability: Capability::protocol(fnetemul_network::NetworkContextMarker::SERVICE_NAME),
+        source: RouteEndpoint::component(NETEMUL_SERVICES_COMPONENT_NAME),
+        targets: vec![RouteEndpoint::component(component)],
+    })?;
+    Ok(())
+}
+
+fn route_devfs_to_component(
+    builder: &mut RealmBuilder,
+    component: &str,
+) -> Result<(), fcomponent::error::Error> {
+    let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
+        // TODO(https://fxbug.dev/77059): remove write permissions once they are
+        // no longer required to connect to services.
+        capability: Capability::directory(DEVFS, DEVFS_PATH, fio2::RW_STAR_DIR),
         source: RouteEndpoint::component(NETEMUL_SERVICES_COMPONENT_NAME),
         targets: vec![RouteEndpoint::component(component)],
     })?;
@@ -1084,7 +1115,7 @@ mod tests {
 
     #[fixture(with_sandbox)]
     #[fuchsia::test]
-    async fn child_uses_all_netemul_services(sandbox: fnetemul::SandboxProxy) {
+    async fn child_uses_all_netemul_capabilities(sandbox: fnetemul::SandboxProxy) {
         let realm = TestRealm::new(
             &sandbox,
             fnetemul::RealmOptions {
@@ -1099,6 +1130,8 @@ mod tests {
             },
         );
         let counter = realm.connect_to_service::<CounterMarker>();
+
+        // ================= Capability::NetemulNetworkContext =================
         let (network_context, server_end) =
             fidl::endpoints::create_proxy::<fnetemul_network::NetworkContextMarker>()
                 .expect("failed to create network context proxy");
@@ -1112,8 +1145,26 @@ mod tests {
             network_context.setup(&mut Vec::new().iter_mut()).await,
             Ok((zx::sys::ZX_OK, Some(_setup_handle)))
         );
-        // TODO(https://fxbug.dev/76380): ensure that `counter` has access to `/dev` through
-        // Capability::NetemulDevfs.
+
+        // ===================== Capability::NetemulDevfs =====================
+        let (devfs, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("create directory marker");
+        let () = counter
+            .connect_to_service_at(DEVFS_PATH, server_end.into_channel())
+            .expect("failed to connect to devfs through counter");
+        let (status, mut buf) =
+            devfs.read_dirents(fio::MAX_BUF).await.expect("calling read dirents");
+        let () = zx::Status::ok(status).expect("failed reading directory entries");
+        assert_eq!(
+            files_async::parse_dir_entries(&mut buf)
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()
+                .expect("failed parsing directory entries"),
+            &[files_async::DirEntry {
+                name: ".".to_string(),
+                kind: files_async::DirentKind::Directory
+            }],
+        );
     }
 
     #[fixture(with_sandbox)]
@@ -1562,6 +1613,20 @@ mod tests {
             });
     }
 
+    fn format_topological_path(
+        backing: &fnetemul_network::EndpointBacking,
+        device_name: &str,
+    ) -> String {
+        match backing {
+            fnetemul_network::EndpointBacking::Ethertap => {
+                format!("@/dev/test/tapctl/{}/ethernet", device_name)
+            }
+            fnetemul_network::EndpointBacking::NetworkDevice => {
+                format!("/netemul/{}", device_name)
+            }
+        }
+    }
+
     #[fixture(with_sandbox)]
     #[fuchsia::test]
     async fn devfs(sandbox: fnetemul::SandboxProxy) {
@@ -1575,15 +1640,6 @@ mod tests {
         let mut watcher = get_devfs_watcher(&realm).await;
 
         const TEST_DEVICE_NAME: &str = "test";
-        let format_topological_path =
-            |backing: &fnetemul_network::EndpointBacking, device_name: &str| match backing {
-                fnetemul_network::EndpointBacking::Ethertap => {
-                    format!("@/dev/test/tapctl/{}/ethernet", device_name)
-                }
-                fnetemul_network::EndpointBacking::NetworkDevice => {
-                    format!("/netemul/{}", device_name)
-                }
-            };
         let backings = [
             fnetemul_network::EndpointBacking::Ethertap,
             fnetemul_network::EndpointBacking::NetworkDevice,
@@ -1720,10 +1776,76 @@ mod tests {
                 .into_iter()
                 .collect::<Result<Vec<_>, _>>()
                 .expect("failed parsing directory entries"),
-            vec![files_async::DirEntry {
+            &[files_async::DirEntry {
                 name: ".".to_string(),
                 kind: files_async::DirentKind::Directory
             }],
         );
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn devfs_used_by_child(sandbox: fnetemul::SandboxProxy) {
+        let realm = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                children: Some(vec![
+                    fnetemul::ChildDef {
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        name: Some("counter-with-devfs".to_string()),
+                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
+                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                            fnetemul::Capability::NetemulDevfs(fnetemul::Empty {}),
+                        ])),
+                        ..fnetemul::ChildDef::EMPTY
+                    },
+                    // TODO(https://fxbug.dev/74868): when we can allow ERROR logs for routing
+                    // errors, add a child component that does not `use` `devfs`, and verify that we
+                    // cannot get at the realm's `devfs` through it. It should result in a
+                    // zx::Status::UNAVAILABLE error.
+                ]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let counter = realm.connect_to_service::<CounterMarker>();
+
+        let backings = [
+            fnetemul_network::EndpointBacking::Ethertap,
+            fnetemul_network::EndpointBacking::NetworkDevice,
+        ];
+        for (i, backing) in backings.iter().enumerate() {
+            let name = format!("test{}", i);
+            let endpoint = create_endpoint(
+                &sandbox,
+                &name,
+                fnetemul_network::EndpointConfig { mtu: 1500, mac: None, backing: *backing },
+            )
+            .await;
+            let () = realm
+                .realm
+                .add_device(&name, get_device_proxy(&endpoint))
+                .await
+                .expect("FIDL error")
+                .map_err(zx::Status::from_raw)
+                .expect("error adding device");
+
+            // Expect the device to implement `fuchsia.device/Controller.GetTopologicalPath`.
+            let (controller, server_end) = zx::Channel::create().expect("failed to create channel");
+            let () = counter
+                .connect_to_service_at(&format!("{}/{}", DEVFS_PATH, name), server_end)
+                .expect("failed to connect to device through counter");
+            let controller =
+                fidl::endpoints::ClientEnd::<fdevice::ControllerMarker>::new(controller)
+                    .into_proxy()
+                    .expect("failed to create controller proxy from channel");
+            let path = controller
+                .get_topological_path()
+                .await
+                .expect("FIDL error")
+                .map_err(zx::Status::from_raw)
+                .expect("failed to get topological path");
+            assert_eq!(path, format_topological_path(backing, &name));
+        }
     }
 }

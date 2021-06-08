@@ -22,6 +22,14 @@
             ],
             from: "parent",
         },
+        {
+            directory: "dev",
+
+            // TODO(https://fxbug.dev/77059): remove write permissions once they
+            // are no longer required to connect to services.
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
     ],
     expose: [
         {

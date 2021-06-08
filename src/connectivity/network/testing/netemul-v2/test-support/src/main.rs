@@ -4,6 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_netemul_test::{CounterRequest, CounterRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -48,6 +49,20 @@ async fn handle_counter(
                             "error connecting request to protocol '{}' in '{}' directory: {:?}",
                             service_name, SVC_DIR, e,
                         )
+                    });
+                }
+                CounterRequest::ConnectToServiceAt { path, request, control_handle: _ } => {
+                    info!("connecting to service at '{}'", path);
+                    let () = fdio::open(
+                        &path,
+                        // TODO(https://fxbug.dev/77059): remove write
+                        // permissions once they are no longer required to
+                        // connect to services.
+                        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                        request,
+                    )
+                    .unwrap_or_else(|e| {
+                        error!("error connecting request to service at path '{}': {:?}", path, e,)
                     });
                 }
             }

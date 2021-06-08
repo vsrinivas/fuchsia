@@ -14,4 +14,8 @@ protocol Counter {
     Increment() -> (uint32 value);
     /// Connects `request` to a service named `service_name`.
     ConnectToService(string:fuchsia.component.MAX_PATH_LENGTH service_name, zx.handle:CHANNEL request);
+    /// Connects `request` to a service found at `path`.
+    ///
+    /// `path` is the absolute path from the server's namespace.
+    ConnectToServiceAt(string:fuchsia.component.MAX_PATH_LENGTH path, zx.handle:CHANNEL request);
 };
