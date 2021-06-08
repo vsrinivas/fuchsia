@@ -15,7 +15,7 @@ CacheConsistencyContext::~CacheConsistencyContext() {
   // address and must resort to invalidating the entirety of the instruction
   // cache.
   if (!CacheTypeEl0::Read().dic() && possible_aliasing_) {
-    __asm__ volatile("ic ialluis");
+    InvalidateInstructionCache();
     __isb(ARM_MB_SY);
   }
 }

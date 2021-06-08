@@ -44,6 +44,22 @@ class CacheConsistencyContext {
   const bool possible_aliasing_ = CacheTypeEl0::Read().l1_ip() == ArmL1ICachePolicy::VIPT;
 };
 
+// Invalidate the entire instruction cache.
+//
+// Caller must perform an instruction barrier (e.g., `__isb(ARM_MB_SY)`)
+// prior to relying on the operation being complete.
+inline void InvalidateInstructionCache() {
+  // Instruction cache: invalidate all ("iall") inner-sharable ("is") caches
+  // to point of unification ("u").
+  asm volatile("ic ialluis" ::: "memory");
+}
+
+// Invalidate both the instruction and data TLBs.
+//
+// Caller must perform an instruction barrier (e.g., `__isb(ARM_MB_SY)`)
+// prior to relying on the operation being complete.
+inline void InvalidateTlbs() { asm volatile("tlbi vmalle1" ::: "memory"); }
+
 // Local per-cpu cache flush routines.
 //
 // These clean or invalidate the data and instruction caches from the point
