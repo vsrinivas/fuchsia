@@ -24,6 +24,7 @@
                 "fuchsia.settings.Accessibility",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.accessibility.view.Registry",
+                "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.policy.accessibility.PointerEventRegistry",
             ],
         },
