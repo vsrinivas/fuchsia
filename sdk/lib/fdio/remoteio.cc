@@ -53,14 +53,14 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
   // The type of storage (fdio subclass) depends on the type of the object until
   // https://fxbug.dev/43267 is resolved, so this has to switch on the type.
   switch (type) {
-    case ZXIO_OBJECT_TYPE_VMO:
-      io = fbl::MakeRefCounted<fdio_internal::remote>();
-      break;
     case ZXIO_OBJECT_TYPE_DEBUGLOG:
       io = fbl::MakeRefCounted<fdio_internal::zxio>();
       break;
     case ZXIO_OBJECT_TYPE_PIPE:
       io = fbl::MakeRefCounted<fdio_internal::pipe>();
+      break;
+    case ZXIO_OBJECT_TYPE_VMO:
+      io = fbl::MakeRefCounted<fdio_internal::remote>();
       break;
     default:
       // Unknown type - allocate a generic fdio object so that zxio_create can
@@ -77,6 +77,32 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
 }
 
 zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo info) {
+  void* context = nullptr;
+  zx_status_t status =
+      zxio_create_with_allocator(std::move(node), info, ZxioAllocator, &context);
+  switch (status) {
+    case ZX_OK: {
+      return zx::ok(fbl::ImportFromRawPtr(static_cast<fdio*>(context)));
+    }
+    case ZX_ERR_NO_MEMORY: {
+      ZX_ASSERT(context == nullptr);
+      return zx::error(status);
+    }
+    case ZX_ERR_NOT_SUPPORTED: {
+      fdio_ptr io = fbl::ImportFromRawPtr(static_cast<fdio*>(context));
+      zx::handle retrieved_handle;
+      status = io->unwrap(retrieved_handle.reset_and_get_address());
+      if (status != ZX_OK) {
+        return zx::error(status);
+      }
+      node = fidl::ClientEnd<fio::Node>(zx::channel(std::move(retrieved_handle)));
+      break;
+    }
+    default: {
+      return zx::error(status);
+    }
+  }
+
   switch (info.which()) {
     case fio::wire::NodeInfo::Tag::kDirectory:
       return fdio_internal::dir::create(fidl::ClientEnd<fio::Directory>(node.TakeChannel()));
@@ -110,10 +136,6 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
       }
       return fdio_internal::remote::create(std::move(control), std::move(file.vmo), file.offset,
                                            file.length, result->offset);
-    }
-    case fio::wire::NodeInfo::Tag::kPipe: {
-      auto& pipe = info.mutable_pipe();
-      return fdio_internal::pipe::create(std::move(pipe.socket));
     }
     case fio::wire::NodeInfo::Tag::kDatagramSocket: {
       auto& socket = info.mutable_datagram_socket();

@@ -29,16 +29,16 @@ zx_status_t zxio_create_with_allocator(zx::handle handle, const zx_info_handle_b
   zxio_storage_t* storage = nullptr;
   zxio_object_type_t type = ZXIO_OBJECT_TYPE_NONE;
   switch (handle_info.type) {
-    case ZX_OBJ_TYPE_VMO: {
-      type = ZXIO_OBJECT_TYPE_VMO;
-      break;
-    }
     case ZX_OBJ_TYPE_LOG: {
       type = ZXIO_OBJECT_TYPE_DEBUGLOG;
       break;
     }
     case ZX_OBJ_TYPE_SOCKET: {
       type = ZXIO_OBJECT_TYPE_PIPE;
+      break;
+    }
+    case ZX_OBJ_TYPE_VMO: {
+      type = ZXIO_OBJECT_TYPE_VMO;
       break;
     }
   }
