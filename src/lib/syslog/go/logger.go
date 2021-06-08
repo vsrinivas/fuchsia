@@ -21,8 +21,7 @@ import (
 	"syscall/zx"
 	"unicode/utf8"
 
-	"go.fuchsia.dev/fuchsia/src/lib/component"
-
+	"fidl/fuchsia/diagnostics"
 	"fidl/fuchsia/logger"
 )
 
@@ -135,38 +134,17 @@ func (l *Writer) Write(data []byte) (n int, err error) {
 	return origLen, nil
 }
 
-func ConnectToLogger(c *component.Connector) (zx.Socket, error) {
-	localS, peerS, err := zx.NewSocket(zx.SocketDatagram)
-	if err != nil {
-		return zx.Socket(zx.HandleInvalid), err
-	}
-	req, logSink, err := logger.NewLogSinkWithCtxInterfaceRequest()
-	if err != nil {
-		_ = localS.Close()
-		_ = peerS.Close()
-		return zx.Socket(zx.HandleInvalid), err
-	}
-	c.ConnectToEnvService(req)
-	{
-		err := logSink.Connect(context.Background(), peerS)
-		_ = logSink.Close()
-		if err != nil {
-			_ = localS.Close()
-			return zx.Socket(zx.HandleInvalid), err
-		}
-	}
-	return localS, nil
-}
-
 type LogInitOptions struct {
-	LogLevel                      LogLevel // Accessed atomically.
-	MinSeverityForFileAndLineInfo LogLevel
-	Socket                        zx.Socket
-	Tags                          []string
-	Writer                        io.Writer
+	LogSink                                 *logger.LogSinkWithCtxInterface
+	LogLevel, MinSeverityForFileAndLineInfo LogLevel
+	Tags                                    []string
+	Writer                                  io.Writer
 }
 
 type Logger struct {
+	socket zx.Socket
+	cancel context.CancelFunc
+
 	droppedLogs uint32
 	options     LogInitOptions
 	pid         uint64
@@ -181,23 +159,74 @@ func NewLogger(options LogInitOptions) (*Logger, error) {
 			return nil, fmt.Errorf("tag too long: %d/%d", l, max)
 		}
 	}
-	return &Logger{
+	l := Logger{
 		options: options,
 		pid:     uint64(os.Getpid()),
-	}, nil
+	}
+	if logSink := options.LogSink; logSink != nil {
+		const tag = "syslog"
+		ctx, cancel := context.WithCancel(context.Background())
+		l.cancel = func() {
+			cancel()
+			if err := logSink.Close(); err != nil {
+				_ = l.WarnTf(tag, "fuchsia.logger/LogSink.Close(): %s", err)
+			}
+		}
+
+		localS, peerS, err := zx.NewSocket(zx.SocketDatagram)
+		if err != nil {
+			_ = l.Close()
+			return nil, err
+		}
+		l.socket = localS
+		if err := logSink.Connect(context.Background(), peerS); err != nil {
+			_ = l.Close()
+			return nil, err
+		}
+
+		initLevel := options.LogLevel
+		go func() {
+			for {
+				_ = l.InfoTf(tag, "waiting for fuchsia.logger/LogSink.OnRegisterInterest...")
+				interest, err := logSink.ExpectOnRegisterInterest(ctx)
+				if err != nil {
+					func() {
+						switch err := err.(type) {
+						case *zx.Error:
+							switch err.Status {
+							case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+								return
+							}
+							_ = l.WarnTf(tag, "fuchsia.logger/LogSink.OnRegisterInterest(): %s", err)
+						}
+					}()
+					break
+				}
+				if interest.HasMinSeverity() {
+					minSeverity := interest.GetMinSeverity()
+					l.SetSeverity(minSeverity)
+					_ = l.InfoTf(tag, "fuchsia.logger/LogSink.OnRegisterInterest({MinSeverity: %s})", minSeverity)
+				} else {
+					_ = l.InfoTf(tag, "fuchsia.logger/LogSink.OnRegisterInterest({})")
+					l.SetSeverity(diagnostics.Severity(initLevel))
+				}
+			}
+		}()
+	}
+	return &l, nil
 }
 
-func NewLoggerWithDefaults(c *component.Connector, tags ...string) (*Logger, error) {
-	s, err := ConnectToLogger(c)
-	if err != nil {
-		return nil, err
-	}
+func NewLoggerWithDefaults(tags ...string) (*Logger, error) {
 	return NewLogger(LogInitOptions{
 		LogLevel:                      InfoLevel,
 		MinSeverityForFileAndLineInfo: ErrorLevel,
-		Socket:                        s,
 		Tags:                          tags,
 	})
+}
+
+func (l *Logger) Close() error {
+	l.cancel()
+	return l.socket.Close()
 }
 
 func (l *Logger) logToWriter(writer io.Writer, time zx.Time, logLevel LogLevel, tag, msg string) error {
@@ -276,7 +305,7 @@ func (l *Logger) logToSocket(time zx.Time, logLevel LogLevel, tag, msg string) e
 
 		// Remove the last byte until the result is valid UTF-8.
 		for {
-			if rune, _ := utf8.DecodeLastRuneInString(payload); rune != utf8.RuneError {
+			if lastRune, _ := utf8.DecodeLastRuneInString(payload); lastRune != utf8.RuneError {
 				break
 			}
 			payload = payload[:len(payload)-1]
@@ -290,7 +319,7 @@ func (l *Logger) logToSocket(time zx.Time, logLevel LogLevel, tag, msg string) e
 	buffer[pos] = 0
 	pos += 1
 
-	if _, err := l.options.Socket.Write(buffer[:pos], 0); err != nil {
+	if _, err := l.socket.Write(buffer[:pos], 0); err != nil {
 		atomic.AddUint32(&l.droppedLogs, 1)
 		return err
 	}
@@ -330,12 +359,12 @@ func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format strin
 	if logLevel == FatalLevel {
 		defer os.Exit(1)
 	}
-	if atomic.LoadUint32((*uint32)(&l.options.Socket)) != uint32(zx.HandleInvalid) {
+	if atomic.LoadUint32((*uint32)(&l.socket)) != uint32(zx.HandleInvalid) {
 		switch err := l.logToSocket(time, logLevel, tag, msg).(type) {
 		case *zx.Error:
 			switch err.Status {
 			case zx.ErrPeerClosed, zx.ErrBadState:
-				atomic.StoreUint32((*uint32)(&l.options.Socket), uint32(zx.HandleInvalid))
+				atomic.StoreUint32((*uint32)(&l.socket), uint32(zx.HandleInvalid))
 			default:
 				return err
 			}
@@ -346,8 +375,8 @@ func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format strin
 	return l.logToWriter(l.options.Writer, time, logLevel, tag, msg)
 }
 
-func (l *Logger) SetSeverity(logLevel LogLevel) {
-	atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(logLevel))
+func (l *Logger) SetSeverity(severity diagnostics.Severity) {
+	atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(severity))
 }
 
 // severityFromVerbosity provides the severity corresponding to the given

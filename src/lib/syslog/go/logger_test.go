@@ -8,6 +8,7 @@ package syslog_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"io/ioutil"
@@ -15,11 +16,15 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall/zx"
+	"syscall/zx/fidl"
+	"syscall/zx/zxwait"
 	"testing"
 	"unicode/utf8"
 
+	"fidl/fuchsia/diagnostics"
 	"fidl/fuchsia/logger"
 
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 )
 
@@ -27,17 +32,32 @@ const format = "integer: %d"
 
 var pid = uint64(os.Getpid())
 
+var _ logger.LogSinkWithCtx = (*logSinkImpl)(nil)
+
+type logSinkImpl struct {
+	onConnect func(fidl.Context, zx.Socket) error
+}
+
+func (impl *logSinkImpl) Connect(ctx fidl.Context, socket zx.Socket) error {
+	return impl.onConnect(ctx, socket)
+}
+
+func (*logSinkImpl) ConnectStructured(fidl.Context, zx.Socket) error {
+	return nil
+}
+
 func TestLogSimple(t *testing.T) {
 	actual := bytes.Buffer{}
-	options := syslog.LogInitOptions{
+	log, err := syslog.NewLogger(syslog.LogInitOptions{
 		MinSeverityForFileAndLineInfo: syslog.ErrorLevel,
 		Writer:                        &actual,
-	}
-	logger, err := syslog.NewLogger(options)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	logger.Infof(format, 10)
+	if err := log.Infof(format, 10); err != nil {
+		t.Fatal(err)
+	}
 	expected := "INFO: integer: 10\n"
 	got := string(actual.Bytes())
 	if !strings.HasSuffix(got, expected) {
@@ -48,39 +68,68 @@ func TestLogSimple(t *testing.T) {
 	}
 }
 
-func TestLogSimple_Socket(t *testing.T) {
-	sin, sout, err := zx.NewSocket(zx.SocketDatagram)
+func setup(t *testing.T, tags ...string) (*logger.LogSinkEventProxy, zx.Socket, *syslog.Logger) {
+	req, logSink, err := logger.NewLogSinkWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
-	options := syslog.LogInitOptions{
-		MinSeverityForFileAndLineInfo: syslog.ErrorLevel,
-		Writer:                        &bytes.Buffer{},
-		Socket:                        sout,
-	}
-	logger, err := syslog.NewLogger(options)
-	if err != nil {
-		t.Fatal(err)
-	}
-	logger.Infof(format, 10)
-	checkoutput(t, sin, fmt.Sprintf(format, 10), syslog.InfoLevel)
-}
 
-func setup(t *testing.T, tags ...string) (zx.Socket, *syslog.Logger) {
-	sin, sout, err := zx.NewSocket(zx.SocketDatagram)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan struct{})
+	t.Cleanup(func() {
+		cancel()
+		<-ch
+	})
+
+	sinChan := make(chan zx.Socket, 1)
+	defer close(sinChan)
+	go func() {
+		defer close(ch)
+
+		component.ServeExclusive(ctx, &logger.LogSinkWithCtxStub{
+			Impl: &logSinkImpl{
+				onConnect: func(_ fidl.Context, socket zx.Socket) error {
+					sinChan <- socket
+					return nil
+				},
+			},
+		}, req.Channel, func(err error) {
+			switch err := err.(type) {
+			case *zx.Error:
+				if err.Status == zx.ErrCanceled {
+					return
+				}
+			}
+			t.Error(err)
+		})
+	}()
+
 	log, err := syslog.NewLogger(syslog.LogInitOptions{
+		LogSink:                       logSink,
 		LogLevel:                      syslog.InfoLevel,
 		MinSeverityForFileAndLineInfo: syslog.ErrorLevel,
-		Socket:                        sout,
 		Tags:                          tags,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return sin, log
+
+	s := <-sinChan
+
+	// Throw away system-generated messages.
+	for i := 0; i < 1; i++ {
+		if _, err := zxwait.Wait(zx.Handle(s), zx.SignalSocketReadable, zx.TimensecInfinite); err != nil {
+			t.Fatal(err)
+		}
+		var data [logger.MaxDatagramLenBytes]byte
+		if _, err := s.Read(data[:], 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	return &logger.LogSinkEventProxy{
+		Channel: req.Channel,
+	}, s, log
 }
 
 func checkoutput(t *testing.T, sin zx.Socket, expectedMsg string, severity syslog.LogLevel, tags ...string) {
@@ -90,7 +139,7 @@ func checkoutput(t *testing.T, sin zx.Socket, expectedMsg string, severity syslo
 		t.Fatal(err)
 	}
 	if n <= 32 {
-		t.Fatalf("got invalid data: %v", data[:n])
+		t.Fatalf("got invalid data: %x", data[:n])
 	}
 	gotpid := binary.LittleEndian.Uint64(data[0:8])
 	gotTid := binary.LittleEndian.Uint64(data[8:16])
@@ -132,7 +181,7 @@ func checkoutput(t *testing.T, sin zx.Socket, expectedMsg string, severity syslo
 	}
 
 	if data[pos] != 0 {
-		t.Fatalf("byte before msg start should be zero, got: %d, %v", data[pos], data[32:n])
+		t.Fatalf("byte before msg start should be zero, got: %d, %x", data[pos], data[pos:n])
 	}
 
 	msgGot := string(data[pos+1 : n-1])
@@ -140,48 +189,161 @@ func checkoutput(t *testing.T, sin zx.Socket, expectedMsg string, severity syslo
 		t.Fatalf("expected msg:%q, got %q", expectedMsg, msgGot)
 	}
 	if data[n-1] != 0 {
-		t.Fatalf("last byte should be zero, got: %d, %v", data[pos], data[32:n])
+		t.Fatalf("last byte should be zero, got: %d, %x", data[pos], data[32:n])
 	}
 }
 
+func TestLog(t *testing.T) {
+	_, sin, log := setup(t)
+	defer func() {
+		if err := log.Close(); err != nil {
+			t.Error(err)
+		}
+		if err := sin.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	if err := log.Infof(format, 10); err != nil {
+		t.Fatal(err)
+	}
+	checkoutput(t, sin, fmt.Sprintf(format, 10), syslog.InfoLevel)
+}
+
 func TestLogWithLocalTag(t *testing.T) {
-	sin, log := setup(t)
-	log.InfoTf("local_tag", format, 10)
+	_, sin, log := setup(t)
+	defer func() {
+		if err := log.Close(); err != nil {
+			t.Error(err)
+		}
+		if err := sin.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	if err := log.InfoTf("local_tag", format, 10); err != nil {
+		t.Fatal(err)
+	}
 	expectedMsg := fmt.Sprintf(format, 10)
 	checkoutput(t, sin, expectedMsg, syslog.InfoLevel, "local_tag")
 }
 
 func TestLogWithGlobalTags(t *testing.T) {
-	sin, log := setup(t, "gtag1", "gtag2")
-	log.InfoTf("local_tag", format, 10)
+	_, sin, log := setup(t, "gtag1", "gtag2")
+	defer func() {
+		if err := log.Close(); err != nil {
+			t.Error(err)
+		}
+		if err := sin.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	if err := log.InfoTf("local_tag", format, 10); err != nil {
+		t.Fatal(err)
+	}
 	expectedMsg := fmt.Sprintf(format, 10)
 	checkoutput(t, sin, expectedMsg, syslog.InfoLevel, "gtag1", "gtag2", "local_tag")
 }
 
 func TestLoggerSeverity(t *testing.T) {
-	sin, log := setup(t)
-	log.SetSeverity(syslog.WarningLevel)
-	log.Infof(format, 10)
-	_, err := sin.Read(make([]byte, 0), 0)
+	_, sin, log := setup(t)
+	defer func() {
+		if err := log.Close(); err != nil {
+			t.Error(err)
+		}
+		if err := sin.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	log.SetSeverity(diagnostics.Severity(syslog.WarningLevel))
+	if err := log.Infof(format, 10); err != nil {
+		t.Fatal(err)
+	}
+	_, err := sin.Read(nil, 0)
 	if err, ok := err.(*zx.Error); !ok || err.Status != zx.ErrShouldWait {
 		t.Fatal(err)
 	}
-	log.Warnf(format, 10)
+	if err := log.Warnf(format, 10); err != nil {
+		t.Fatal(err)
+	}
 	expectedMsg := fmt.Sprintf(format, 10)
 	checkoutput(t, sin, expectedMsg, syslog.WarningLevel)
 }
 
 func TestLoggerVerbosity(t *testing.T) {
-	sin, log := setup(t)
-	log.VLogf(syslog.DebugVerbosity, format, 10)
-	_, err := sin.Read(make([]byte, 0), 0)
+	_, sin, log := setup(t)
+	defer func() {
+		if err := log.Close(); err != nil {
+			t.Error(err)
+		}
+		if err := sin.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	if err := log.VLogf(syslog.DebugVerbosity, format, 10); err != nil {
+		t.Fatal(err)
+	}
+	_, err := sin.Read(nil, 0)
 	if err, ok := err.(*zx.Error); !ok || err.Status != zx.ErrShouldWait {
 		t.Fatal(err)
 	}
 	log.SetVerbosity(syslog.DebugVerbosity)
-	log.VLogf(syslog.DebugVerbosity, format, 10)
+	if err := log.VLogf(syslog.DebugVerbosity, format, 10); err != nil {
+		t.Fatal(err)
+	}
 	expectedMsg := fmt.Sprintf(format, 10)
-	checkoutput(t, sin, expectedMsg, (syslog.InfoLevel - 1))
+	checkoutput(t, sin, expectedMsg, syslog.InfoLevel-1)
+}
+
+func TestLoggerRegisterInterest(t *testing.T) {
+	proxy, sin, log := setup(t)
+	defer func() {
+		if err := log.Close(); err != nil {
+			t.Error(err)
+		}
+		if err := sin.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	registerInterest := func(interest diagnostics.Interest) {
+		t.Helper()
+
+		if err := proxy.OnRegisterInterest(interest); err != nil {
+			t.Fatal(err)
+		}
+		// Consume the system-generated messages.
+		for i := 0; i < 2; i++ {
+			if _, err := zxwait.Wait(zx.Handle(sin), zx.SignalSocketReadable, zx.TimensecInfinite); err != nil {
+				t.Fatal(err)
+			}
+			var data [logger.MaxDatagramLenBytes]byte
+			if _, err := sin.Read(data[:], 0); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	// Register interest and observe that the log is emitted.
+	{
+		var interest diagnostics.Interest
+		interest.SetMinSeverity(diagnostics.SeverityDebug)
+		registerInterest(interest)
+	}
+	if err := log.VLogf(syslog.DebugVerbosity, format, 10); err != nil {
+		t.Fatal(err)
+	}
+	expectedMsg := fmt.Sprintf(format, 10)
+	checkoutput(t, sin, expectedMsg, syslog.InfoLevel-1)
+
+	// Register empty interest and observe that severity resets to initial.
+	registerInterest(diagnostics.Interest{})
+	if err := log.VLogf(syslog.DebugVerbosity, format, 10); err != nil {
+		t.Fatal(err)
+	}
+	_, err := sin.Read(nil, 0)
+	if err, ok := err.(*zx.Error); !ok || err.Status != zx.ErrShouldWait {
+		t.Fatal(err)
+	}
 }
 
 func TestGlobalTagLimits(t *testing.T) {
@@ -208,19 +370,36 @@ func TestGlobalTagLimits(t *testing.T) {
 }
 
 func TestLocalTagLimits(t *testing.T) {
-	sin, log := setup(t)
+	_, sin, log := setup(t)
+	defer func() {
+		if err := log.Close(); err != nil {
+			t.Error(err)
+		}
+		if err := sin.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 	var tag [logger.MaxTagLenBytes + 1]byte
 	for i := 0; i < len(tag); i++ {
 		tag[i] = 65
 	}
-	log.InfoTf(string(tag[:]), format, 10)
+	if err := log.InfoTf(string(tag[:]), format, 10); err != nil {
+		t.Fatal(err)
+	}
 	expectedMsg := fmt.Sprintf(format, 10)
 	checkoutput(t, sin, expectedMsg, syslog.InfoLevel, string(tag[:logger.MaxTagLenBytes]))
 }
 
 func TestLogToWriterWhenSocketCloses(t *testing.T) {
-	sin, log := setup(t, "gtag1", "gtag2")
-	sin.Close()
+	_, sin, log := setup(t, "gtag1", "gtag2")
+	defer func() {
+		if err := log.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	if err := sin.Close(); err != nil {
+		t.Fatal(err)
+	}
 	old := os.Stderr
 	defer func() {
 		os.Stderr = old
@@ -231,10 +410,14 @@ func TestLogToWriterWhenSocketCloses(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() {
-		f.Close()
+		if err := f.Close(); err != nil {
+			t.Error(err)
+		}
 	}()
 	os.Stderr = f
-	log.InfoTf("local_tag", format, 10)
+	if err := log.InfoTf("local_tag", format, 10); err != nil {
+		t.Fatal(err)
+	}
 	if err := f.Sync(); err != nil {
 		t.Fatal(err)
 	}
@@ -251,7 +434,15 @@ func TestLogToWriterWhenSocketCloses(t *testing.T) {
 }
 
 func TestMessageLenLimit(t *testing.T) {
-	sin, log := setup(t)
+	_, sin, log := setup(t)
+	defer func() {
+		if err := log.Close(); err != nil {
+			t.Error(err)
+		}
+		if err := sin.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 	// 1 for starting and ending null bytes.
 	msgLen := int(logger.MaxDatagramLenBytes) - 32 - 1 - 1
 
@@ -264,7 +455,7 @@ func TestMessageLenLimit(t *testing.T) {
 			t.Fatalf("unexpected truncation: %s", err.Msg)
 		}
 	default:
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("unexpected error: %#v", err)
 	}
 
 	const ellipsis = "..."

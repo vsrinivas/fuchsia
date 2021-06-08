@@ -24,7 +24,6 @@ import (
 
 	fidlethernet "fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/hardware/network"
-	"fidl/fuchsia/logger"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
@@ -526,14 +525,7 @@ func (ni *stackImpl) GetDnsServerWatcher(ctx_ fidl.Context, watcher name.DnsServ
 var _ stack.LogWithCtx = (*logImpl)(nil)
 
 type logImpl struct {
-	logger     *syslog.Logger
 	logPackets *uint32
-}
-
-func (li *logImpl) SetLogLevel(_ fidl.Context, level logger.LogLevelFilter) (stack.LogSetLogLevelResult, error) {
-	li.logger.SetSeverity(syslog.LogLevel(level))
-	syslog.VLogTf(syslog.DebugVerbosity, "fuchsia_net_stack", "SetLogLevel: %s", level)
-	return stack.LogSetLogLevelResultWithResponse(stack.LogSetLogLevelResponse{}), nil
 }
 
 func (li *logImpl) SetLogPackets(_ fidl.Context, enabled bool) error {

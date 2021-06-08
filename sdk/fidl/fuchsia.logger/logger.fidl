@@ -81,7 +81,7 @@ struct LogFilterOptions {
 /// Max number of LogInterestSelectors that can be specified via a listener.
 const uint8 MAX_LOG_SELECTORS = 5;
 
-/// Conveyance to couple a specified Interest with it's designated target,
+/// Conveyance to couple a specified Interest with its designated target,
 /// specified via a ComponentSelector.
 struct LogInterestSelector {
     fuchsia.diagnostics.ComponentSelector selector;

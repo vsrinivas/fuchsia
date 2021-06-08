@@ -503,13 +503,6 @@ async fn do_ip_fwd<C: NetCliDepsConnector>(
 async fn do_log<C: NetCliDepsConnector>(cmd: opts::LogEnum, connector: &C) -> Result<(), Error> {
     let log = connect_with_context::<fstack::LogMarker, _>(connector).await?;
     match cmd {
-        LogEnum::SetLevel(LogSetLevel { log_level }) => {
-            let () = fstack_ext::exec_fidl!(
-                log.set_log_level(log_level.into()),
-                "error setting log level"
-            )?;
-            info!("log level set to {:?}", log_level);
-        }
         LogEnum::SetPackets(LogSetPackets { enabled }) => {
             let () = log.set_log_packets(enabled).await.context("error setting log packets")?;
             info!("log packets set to {:?}", enabled);

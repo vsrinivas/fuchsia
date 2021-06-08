@@ -10,7 +10,6 @@ fidl("fuchsia.net.stack") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet",
     "//sdk/fidl/fuchsia.hardware.network",
-    "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.name",
     "//sdk/fidl/fuchsia.posix.socket",

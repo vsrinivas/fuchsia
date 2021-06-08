@@ -31,6 +31,7 @@ import (
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/device"
+	"fidl/fuchsia/logger"
 	"fidl/fuchsia/net/interfaces"
 	"fidl/fuchsia/net/neighbor"
 	"fidl/fuchsia/net/routes"
@@ -196,21 +197,26 @@ func Main() {
 
 	appCtx := component.NewContextFromStartupInfo()
 
-	s, err := syslog.ConnectToLogger(appCtx.Connector())
-	if err != nil {
-		panic(fmt.Sprintf("failed to connect to syslog: %s", err))
+	{
+		req, logSink, err := logger.NewLogSinkWithCtxInterfaceRequest()
+		if err != nil {
+			panic(fmt.Sprintf("failed to create syslog request: %s", err))
+		}
+		appCtx.ConnectToEnvService(req)
+
+		l, err := syslog.NewLogger(syslog.LogInitOptions{
+			LogSink:                       logSink,
+			LogLevel:                      logLevel,
+			MinSeverityForFileAndLineInfo: logLevel,
+			Tags:                          []string{"netstack"},
+		})
+		if err != nil {
+			panic(err)
+		}
+		syslog.SetDefaultLogger(l)
+		log.SetOutput(&syslog.Writer{Logger: l})
 	}
-	l, err := syslog.NewLogger(syslog.LogInitOptions{
-		LogLevel:                      logLevel,
-		MinSeverityForFileAndLineInfo: logLevel,
-		Socket:                        s,
-		Tags:                          []string{"netstack"},
-	})
-	if err != nil {
-		panic(err)
-	}
-	syslog.SetDefaultLogger(l)
-	log.SetOutput(&syslog.Writer{Logger: l})
+
 	log.SetFlags(log.Lshortfile)
 	glog.SetTarget(&glogEmitter{})
 
@@ -455,7 +461,6 @@ func Main() {
 
 	{
 		stub := stack.LogWithCtxStub{Impl: &logImpl{
-			logger:     l,
 			logPackets: &sniffer.LogPackets,
 		}}
 		appCtx.OutgoingService.AddService(

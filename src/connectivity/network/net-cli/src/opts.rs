@@ -2,23 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_logger as flogger;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_ext as fnet_ext;
 
 use argh::FromArgs;
-
-fn parse_log_level_str(value: &str) -> Result<flogger::LogLevelFilter, String> {
-    match &value.to_lowercase()[..] {
-        "trace" => Ok(flogger::LogLevelFilter::Trace),
-        "debug" => Ok(flogger::LogLevelFilter::Debug),
-        "info" => Ok(flogger::LogLevelFilter::Info),
-        "warn" => Ok(flogger::LogLevelFilter::Warn),
-        "error" => Ok(flogger::LogLevelFilter::Error),
-        "fatal" => Ok(flogger::LogLevelFilter::Fatal),
-        _ => Err("invalid log level".to_string()),
-    }
-}
 
 fn parse_ip_version_str(value: &str) -> Result<fnet::IpVersion, String> {
     match &value.to_lowercase()[..] {
@@ -376,16 +363,7 @@ pub struct Log {
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand)]
 pub enum LogEnum {
-    SetLevel(LogSetLevel),
     SetPackets(LogSetPackets),
-}
-
-#[derive(FromArgs, Clone, Debug, PartialEq)]
-#[argh(subcommand, name = "set-level")]
-/// syslog severity level / loglevel
-pub struct LogSetLevel {
-    #[argh(positional, from_str_fn(parse_log_level_str))]
-    pub log_level: flogger::LogLevelFilter,
 }
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]

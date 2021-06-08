@@ -22,6 +22,7 @@ import (
 
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/io"
+	"fidl/fuchsia/logger"
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/interfaces"
 	"fidl/fuchsia/net/stack"
@@ -64,14 +65,15 @@ func TestMain(m *testing.M) {
 	flag.Parse()
 	if testing.Verbose() {
 		appCtx := component.NewContextFromStartupInfo()
-		s, err := syslog.ConnectToLogger(appCtx.Connector())
+		req, logSink, err := logger.NewLogSinkWithCtxInterfaceRequest()
 		if err != nil {
-			panic(fmt.Sprintf("syslog.ConnectToLogger() = %s", err))
+			panic(err)
 		}
+		appCtx.ConnectToEnvService(req)
 		options := syslog.LogInitOptions{
+			LogSink:                       logSink,
 			LogLevel:                      syslog.AllLevel,
 			MinSeverityForFileAndLineInfo: syslog.AllLevel,
-			Socket:                        s,
 		}
 		l, err := syslog.NewLogger(options)
 		if err != nil {

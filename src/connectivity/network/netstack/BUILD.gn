@@ -128,6 +128,7 @@ go_library("netstack_lib") {
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",
     "//sdk/fidl/fuchsia.inspect.deprecated($go_toolchain)",
+    "//sdk/fidl/fuchsia.logger($go_toolchain)",
     "//sdk/fidl/fuchsia.net($go_toolchain)",
     "//sdk/fidl/fuchsia.net.dhcp($go_toolchain)",
     "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
