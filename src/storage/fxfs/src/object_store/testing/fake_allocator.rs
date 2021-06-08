@@ -61,13 +61,13 @@ impl Allocator for FakeAllocator {
         &self,
         _transaction: &mut Transaction<'_>,
         device_range: Range<u64>,
-    ) -> u64 {
+    ) -> Result<u64, Error> {
         let mut inner = self.0.lock().unwrap();
         assert!(device_range.end <= inner.next_offset);
         let len = device_range.end - device_range.start;
         inner.dealloc_bytes += len as usize;
         assert!(inner.dealloc_bytes <= inner.alloc_bytes);
-        len
+        Ok(len)
     }
 
     async fn mark_allocated(

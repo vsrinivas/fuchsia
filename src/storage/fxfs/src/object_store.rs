@@ -413,7 +413,7 @@ impl ObjectStore {
             )) = item.into()
             {
                 let device_range = *device_offset..*device_offset + (range.end - range.start);
-                allocator.deallocate(transaction, device_range).await;
+                allocator.deallocate(transaction, device_range).await?;
                 // Stop if the transaction is getting too big.  At time of writing, this threshold
                 // limits transactions to about 10,000 bytes.
                 const TRANSACTION_MUTATION_THRESHOLD: usize = 200;
@@ -1150,7 +1150,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                             range
                         );
                     }
-                    allocator.deallocate(transaction, range).await;
+                    allocator.deallocate(transaction, range).await?;
                     deallocated += overlap.end - overlap.start;
                 } else {
                     break;
