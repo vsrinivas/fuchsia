@@ -303,6 +303,14 @@ pub enum PropCntr {
 impl_sub_enum!(Prop::Cntr, PropCntr);
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum PropNestLegacy {
+    UlaPrefix,
+    LastNodeJoined,
+    Unknown(u32),
+}
+impl_sub_enum!(Prop::NestLegacy, PropNestLegacy);
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum PropIpv6 {
     LlAddr,
     MlAddr,
@@ -340,6 +348,7 @@ pub enum Prop {
     Thread(PropThread),
     Cntr(PropCntr),
     Ipv6(PropIpv6),
+    NestLegacy(PropNestLegacy),
     Unknown(u32),
 }
 impl_spinel_pack_uint!(Prop);
@@ -465,6 +474,10 @@ impl From<Prop> for u32 {
             Thread(PropThread::Unknown(x)) => x,
 
             Cntr(PropCntr::AllMacCounters) => 0x691,
+
+            NestLegacy(PropNestLegacy::UlaPrefix) => 0x3BC1,
+            NestLegacy(PropNestLegacy::LastNodeJoined) => 0x3BC2,
+            NestLegacy(PropNestLegacy::Unknown(x)) => x,
 
             Ipv6(PropIpv6::LlAddr) => 0x60,
             Ipv6(PropIpv6::MlAddr) => 0x61,
@@ -617,6 +630,10 @@ impl From<u32> for Prop {
             x if (x >= 0x70 && x < 0x80) || (x >= 0x1700 && x < 0x1800) => {
                 Stream(PropStream::Unknown(x))
             }
+
+            0x3BC1 => NestLegacy(PropNestLegacy::UlaPrefix),
+            0x3BC2 => NestLegacy(PropNestLegacy::LastNodeJoined),
+            x if (x >= 0x3BC0 && x < 0x3C00) => NestLegacy(PropNestLegacy::Unknown(x)),
 
             x => Unknown(x),
         }
