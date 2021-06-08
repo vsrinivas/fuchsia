@@ -136,14 +136,14 @@ class _TabsWidgetState extends State<TabsWidget>
             return Container(
               height: _kTabBarHeight,
               decoration: BoxDecoration(
-                color: _browserTheme.primaryColor,
+                color: _browserTheme.colorScheme.primary,
                 border: Border(
                   top: BorderSide(
-                    color: _browserTheme.highlightColor,
+                    color: _browserTheme.colorScheme.secondary,
                     width: _kBorderWidth,
                   ),
                   bottom: BorderSide(
-                    color: _browserTheme.highlightColor,
+                    color: _browserTheme.colorScheme.secondary,
                     width: _kBorderWidth,
                   ),
                 ),
@@ -197,14 +197,15 @@ class _TabsWidgetState extends State<TabsWidget>
         child: Container(
           width: _kTabBarHeight,
           height: _kTabBarHeight,
+          color: _browserTheme.colorScheme.secondaryVariant,
           child: Center(
             child: AnimatedBuilder(
               animation: button.isEnabled,
               builder: (_, __) => Icon(
                 button.icon,
                 color: button.isEnabled.value
-                    ? _browserTheme.primaryColor
-                    : _browserTheme.primaryColor.withOpacity(0.2),
+                    ? _browserTheme.colorScheme.primary
+                    : _browserTheme.colorScheme.primary.withOpacity(0.2),
                 size: _kIconSize,
               ),
             ),
@@ -310,8 +311,8 @@ class _TabsWidgetState extends State<TabsWidget>
       height: _kTabBarHeight,
       decoration: BoxDecoration(
         color: (index == widget.bloc.currentTabIdx)
-            ? _browserTheme.highlightColor
-            : _browserTheme.primaryColor,
+            ? _browserTheme.colorScheme.secondary
+            : _browserTheme.colorScheme.primary,
         border: _buildBorder(index != widget.bloc.currentTabIdx &&
             !((!_isAnimating) && renderingIndex == 0) &&
             !(_isAnimating &&
@@ -333,7 +334,9 @@ class _TabsWidgetState extends State<TabsWidget>
 
   Border _buildBorder(bool hasBorder) => Border(
         left: BorderSide(
-          color: hasBorder ? _browserTheme.highlightColor : Colors.transparent,
+          color: hasBorder
+              ? _browserTheme.colorScheme.secondary
+              : Colors.transparent,
           width: _kBorderWidth,
         ),
       );
@@ -651,8 +654,8 @@ class _TabWidgetState extends State<_TabWidget> {
       child: DefaultTextStyle(
         style: baseTheme.textTheme.bodyText2!.copyWith(
           color: widget.selected
-              ? baseTheme.primaryColor
-              : baseTheme.highlightColor,
+              ? baseTheme.colorScheme.primary
+              : baseTheme.colorScheme.secondary,
         ),
         child: Stack(
           children: <Widget>[
@@ -688,8 +691,8 @@ class _TabWidgetState extends State<_TabWidget> {
                       child: Icon(
                         Icons.clear,
                         color: widget.selected
-                            ? baseTheme.primaryColor
-                            : baseTheme.highlightColor,
+                            ? baseTheme.colorScheme.primary
+                            : baseTheme.colorScheme.secondary,
                         size: _kIconSize,
                       ),
                     ),

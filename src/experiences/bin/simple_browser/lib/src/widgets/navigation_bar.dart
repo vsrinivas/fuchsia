@@ -45,6 +45,7 @@ class NavigationBar extends StatelessWidget {
               width: double.infinity,
               height: 4.0,
               child: LinearProgressIndicator(
+                color: Theme.of(context).colorScheme.secondary,
                 backgroundColor: Colors.transparent,
               ),
             ),
@@ -81,12 +82,12 @@ class NavigationBar extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(1.0),
             child: Container(
-              color: Theme.of(context).highlightColor,
+              color: Theme.of(context).colorScheme.secondary,
               alignment: Alignment.center,
               child: Icon(
                 Icons.add,
                 key: Key('new_tab'),
-                color: Theme.of(context).primaryColor,
+                color: Theme.of(context).colorScheme.primary,
                 size: _kIconSize,
               ),
             ),

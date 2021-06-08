@@ -22,6 +22,7 @@ import 'src/widgets/tabs_widget.dart';
 // TODO(fxb/45264): Replace these with colors from the central Ermine styles.
 const _kErmineColor100 = Color(0xFFE5E5E5);
 const _kErmineColor200 = Color(0xFFBDBDBD);
+const _kErmineColor300 = Color(0xFF282828);
 const _kErmineColor400 = Color(0xFF0C0C0C);
 
 const _kTextStyle = TextStyle(color: _kErmineColor400, fontSize: 14.0);
@@ -45,16 +46,24 @@ class App extends StatelessWidget {
                 return MaterialApp(
                   title: Strings.browser,
                   theme: ThemeData(
+                    colorScheme: ColorScheme.light(
+                      background: _kErmineColor100,
+                      onBackground: _kErmineColor400,
+                      primary: _kErmineColor100,
+                      primaryVariant: _kErmineColor200,
+                      onPrimary: _kErmineColor400,
+                      secondary: _kErmineColor400,
+                      secondaryVariant: _kErmineColor300,
+                      onSecondary: _kErmineColor100,
+                      surface: _kErmineColor100,
+                      onSurface: _kErmineColor400,
+                    ),
                     fontFamily: 'RobotoMono',
                     textSelectionTheme: TextSelectionThemeData(
                       selectionColor: _kErmineColor200,
                       cursorColor: _kErmineColor400,
                       selectionHandleColor: _kErmineColor400,
                     ),
-                    hintColor: _kErmineColor400,
-                    primaryColor: _kErmineColor100,
-                    canvasColor: _kErmineColor100,
-                    highlightColor: _kErmineColor400,
                     textTheme: TextTheme(
                       bodyText2: _kTextStyle,
                       subtitle1: _kTextStyle,
