@@ -14,9 +14,6 @@
         "binary": "bin/memory_monitor_unittests"
     },
     "sandbox": {
-        "features": [
-            "config-data"
-        ],
         "services": [
             "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats"
