@@ -12,7 +12,6 @@ use crate::{
     repository::DataRepo,
 };
 use async_trait::async_trait;
-use byteorder::{ByteOrder, LittleEndian};
 use diagnostics_log_encoding::{encode::Encoder, Record};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_io::DirectoryProxy;
@@ -440,17 +439,12 @@ pub fn copy_log_message(log_message: &LogMessage) -> LogMessage {
 pub struct TestDebugLog {
     read_responses: parking_lot::Mutex<VecDeque<ReadResponse>>,
 }
-type ReadResponse = Result<Vec<u8>, zx::Status>;
+type ReadResponse = Result<zx::sys::zx_log_record_t, zx::Status>;
 
 #[async_trait]
 impl crate::logs::debuglog::DebugLog for TestDebugLog {
-    async fn read(&self, buffer: &'_ mut Vec<u8>) -> Result<(), zx::Status> {
-        let next_result =
-            self.read_responses.lock().pop_front().expect("Got more read requests than enqueued");
-        let buf_contents = next_result?;
-        buffer.clear();
-        buffer.extend_from_slice(&buf_contents);
-        Ok(())
+    async fn read(&self) -> Result<zx::sys::zx_log_record_t, zx::Status> {
+        self.read_responses.lock().pop_front().expect("Got more read requests than enqueued")
     }
 
     async fn ready_signal(&self) -> Result<(), zx::Status> {
@@ -467,12 +461,12 @@ impl TestDebugLog {
         TestDebugLog { read_responses: parking_lot::Mutex::new(VecDeque::new()) }
     }
 
-    pub fn enqueue_read(&self, response: Vec<u8>) {
+    pub fn enqueue_read(&self, response: zx::sys::zx_log_record_t) {
         self.read_responses.lock().push_back(Ok(response));
     }
 
     pub fn enqueue_read_entry(&self, entry: &TestDebugEntry) {
-        self.enqueue_read(entry.to_vec());
+        self.enqueue_read(entry.record);
     }
 
     pub fn enqueue_read_fail(&self, error: zx::Status) {
@@ -481,46 +475,26 @@ impl TestDebugLog {
 }
 
 pub struct TestDebugEntry {
-    pub header: u32,
-    pub flags: u16,
-    pub timestamp: i64,
-    pub pid: u64,
-    pub tid: u64,
-    pub log: Vec<u8>,
+    pub record: zx::sys::zx_log_record_t,
 }
 
-pub const TEST_KLOG_HEADER: u32 = 29;
-pub const TEST_KLOG_FLAGS: u16 = 47;
+pub const TEST_KLOG_FLAGS: u8 = 47;
 pub const TEST_KLOG_TIMESTAMP: i64 = 12345i64;
 pub const TEST_KLOG_PID: u64 = 0xad01u64;
 pub const TEST_KLOG_TID: u64 = 0xbe02u64;
 
 impl TestDebugEntry {
-    pub fn new(log: &[u8]) -> Self {
-        TestDebugEntry {
-            header: TEST_KLOG_HEADER,
-            flags: TEST_KLOG_FLAGS,
-            timestamp: TEST_KLOG_TIMESTAMP,
-            pid: TEST_KLOG_PID,
-            tid: TEST_KLOG_TID,
-            log: log.to_vec(),
-        }
-    }
-
-    /// Creates a byte representation of the klog, following format in zircon
-    /// https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/kernel/lib/debuglog/include/lib/debuglog.h#52
-    pub fn to_vec(&self) -> Vec<u8> {
-        let datalen = self.log.len() as u16;
-
-        let mut klog = vec![0; 32];
-        LittleEndian::write_u32(&mut klog[0..4], self.header);
-        LittleEndian::write_u16(&mut klog[4..6], datalen);
-        LittleEndian::write_u16(&mut klog[6..8], self.flags);
-        LittleEndian::write_i64(&mut klog[8..16], self.timestamp);
-        LittleEndian::write_u64(&mut klog[16..24], self.pid);
-        LittleEndian::write_u64(&mut klog[24..32], self.tid);
-        klog.extend_from_slice(&self.log);
-        klog
+    pub fn new(log_data: &[u8]) -> Self {
+        let mut rec = zx::sys::zx_log_record_t::default();
+        let len = rec.data.len().min(log_data.len());
+        rec.rollout = 0;
+        rec.datalen = len as u16;
+        rec.flags = TEST_KLOG_FLAGS;
+        rec.timestamp = TEST_KLOG_TIMESTAMP;
+        rec.pid = TEST_KLOG_PID;
+        rec.tid = TEST_KLOG_TID;
+        rec.data[..len].copy_from_slice(&log_data[..len]);
+        TestDebugEntry { record: rec }
     }
 }
 

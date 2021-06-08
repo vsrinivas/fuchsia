@@ -251,6 +251,7 @@ rustc_fuzzer("convert_debuglog_to_log_message_fuzzer") {
     ":lib",
     "//src/lib/fuzzing/rust:fuzz",
     "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//zircon/system/ulib/syslog",
   ]
 

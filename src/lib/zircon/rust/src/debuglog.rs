@@ -63,23 +63,25 @@ impl DebugLog {
     /// syscall.
     // TODO(fxbug.dev/32998): Return a safe wrapper type for zx_log_record_t rather than raw bytes
     // depending on resolution.
-    pub fn read(&self, record: &mut Vec<u8>) -> Result<(), Status> {
-        use std::convert::TryInto;
-
-        let mut buf = [0; sys::ZX_LOG_RECORD_MAX];
-
+    pub fn read(&self) -> Result<sys::zx_log_record_t, Status> {
+        let mut record = sys::zx_log_record_t::default();
         // zx_debuglog_read options appear to be unused.
         // zx_debuglog_read returns either an error status or, on success, the actual size of bytes
         // read into the buffer.
-        let status_or_actual =
-            unsafe { sys::zx_debuglog_read(self.raw_handle(), 0, buf.as_mut_ptr(), buf.len()) };
-        let actual = status_or_actual
-            .try_into()
-            .map_err(|std::num::TryFromIntError { .. }| Status::from_raw(status_or_actual))?;
-
-        record.clear();
-        record.extend_from_slice(&buf[0..actual]);
-        Ok(())
+        let raw_status = unsafe {
+            sys::zx_debuglog_read(
+                self.raw_handle(),
+                0,
+                &mut record as *mut _ as *mut u8,
+                std::mem::size_of_val(&record),
+            )
+        };
+        // On error, zx_debuglog_read returns a negative value. All other values indicate success.
+        if raw_status < 0 {
+            Err(Status::from_raw(raw_status))
+        } else {
+            Ok(record)
+        }
     }
 }
 
@@ -94,16 +96,11 @@ mod tests {
     fn expect_message_in_debuglog(sent_msg: String) {
         let resource = Resource::from(Handle::invalid());
         let debuglog = DebugLog::create(&resource, DebugLogOpts::READABLE).unwrap();
-        let mut record = Vec::with_capacity(sys::ZX_LOG_RECORD_MAX);
         for _ in 0..10000 {
-            match debuglog.read(&mut record) {
-                Ok(()) => {
-                    // TODO(fxbug.dev/32998): Manually unpack log record until DebugLog::read returns
-                    // an wrapper type.
-                    let mut len_bytes = [0; 2];
-                    len_bytes.copy_from_slice(&record[4..6]);
-                    let data_len = u16::from_le_bytes(len_bytes) as usize;
-                    let log = &record[32..(32 + data_len)];
+            match debuglog.read() {
+                Ok(record) => {
+                    let len = record.datalen as usize;
+                    let log = &record.data[0..len];
                     if log == sent_msg.as_bytes() {
                         // We found our log!
                         return;
@@ -125,10 +122,9 @@ mod tests {
 
     #[test]
     fn read_from_nonreadable() {
-        let mut data = vec![];
         let resource = Resource::from(Handle::invalid());
         let debuglog = DebugLog::create(&resource, DebugLogOpts::empty()).unwrap();
-        assert!(debuglog.read(&mut data).err() == Some(Status::ACCESS_DENIED));
+        assert!(debuglog.read().err() == Some(Status::ACCESS_DENIED));
     }
 
     #[test]

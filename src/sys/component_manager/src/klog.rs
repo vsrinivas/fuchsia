@@ -106,16 +106,10 @@ mod tests {
     fn expect_message_in_debuglog(sent_msg: String) {
         let resource = zx::Resource::from(zx::Handle::invalid());
         let debuglog = zx::DebugLog::create(&resource, zx::DebugLogOpts::READABLE).unwrap();
-        let mut record = Vec::with_capacity(zx::sys::ZX_LOG_RECORD_MAX);
         for _ in 0..10000 {
-            match debuglog.read(&mut record) {
-                Ok(()) => {
-                    // TODO(fxbug.dev/32998): Manually unpack log record until zx::DebugLog::read returns
-                    // an wrapper type.
-                    let mut len_bytes = [0; 2];
-                    len_bytes.copy_from_slice(&record[4..6]);
-                    let data_len = u16::from_le_bytes(len_bytes) as usize;
-                    let log = &record[32..(32 + data_len)];
+            match debuglog.read() {
+                Ok(record) => {
+                    let log = &record.data[..record.datalen as usize];
                     if log == sent_msg.as_bytes() {
                         // We found our log!
                         return;

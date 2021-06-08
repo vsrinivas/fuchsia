@@ -161,8 +161,7 @@ mod tests {
         let handle = client.get().await?;
         assert_ne!(handle.raw_handle(), sys::ZX_HANDLE_INVALID);
 
-        let mut record = Vec::new();
-        handle.read(&mut record)?;
+        handle.read()?;
         let message: [u8; 0] = [];
         assert!(handle.write(&message).is_err());
 
@@ -228,8 +227,7 @@ mod tests {
         let handle = client.get().await?;
         assert_ne!(handle.raw_handle(), sys::ZX_HANDLE_INVALID);
 
-        let mut record = Vec::new();
-        assert!(handle.read(&mut record).is_err());
+        assert!(handle.read().is_err());
         let message: [u8; 0] = [];
         handle.write(&message)?;
 

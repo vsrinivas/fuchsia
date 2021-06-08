@@ -13,7 +13,6 @@ use crate::{
     },
 };
 use async_trait::async_trait;
-use byteorder::{ByteOrder, LittleEndian};
 use diagnostics_data::{BuilderArgs, LogsDataBuilder};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
@@ -38,7 +37,7 @@ lazy_static! {
 pub trait DebugLog {
     /// Reads a single entry off the debug log into `buffer`.  Any existing
     /// contents in `buffer` are overwritten.
-    async fn read(&self, buffer: &'_ mut Vec<u8>) -> Result<(), zx::Status>;
+    async fn read(&self) -> Result<zx::sys::zx_log_record_t, zx::Status>;
 
     /// Returns a future that completes when there is another log to read.
     async fn ready_signal(&self) -> Result<(), zx::Status>;
@@ -50,8 +49,8 @@ pub struct KernelDebugLog {
 
 #[async_trait]
 impl DebugLog for KernelDebugLog {
-    async fn read(&self, buffer: &'_ mut Vec<u8>) -> Result<(), zx::Status> {
-        self.debuglogger.read(buffer)
+    async fn read(&self) -> Result<zx::sys::zx_log_record_t, zx::Status> {
+        self.debuglogger.read()
     }
 
     async fn ready_signal(&self) -> Result<(), zx::Status> {
@@ -73,18 +72,17 @@ impl KernelDebugLog {
 
 pub struct DebugLogBridge<K: DebugLog> {
     debug_log: K,
-    buf: Vec<u8>,
 }
 
 impl<K: DebugLog> DebugLogBridge<K> {
     pub fn create(debug_log: K) -> Self {
-        DebugLogBridge { debug_log, buf: Vec::with_capacity(zx::sys::ZX_LOG_RECORD_MAX) }
+        DebugLogBridge { debug_log }
     }
 
     async fn read_log(&mut self) -> Result<Message, zx::Status> {
         loop {
-            self.debug_log.read(&mut self.buf).await?;
-            if let Some(message) = convert_debuglog_to_log_message(self.buf.as_slice()) {
+            let record = self.debug_log.read().await?;
+            if let Some(message) = convert_debuglog_to_log_message(&record) {
                 return Ok(message);
             }
         }
@@ -124,20 +122,9 @@ impl<K: DebugLog> DebugLogBridge<K> {
 
 /// Parses a raw debug log read from the kernel.  Returns the parsed message and
 /// its size in memory on success, and None if parsing fails.
-pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
-    if buf.len() < 32 {
-        return None;
-    }
-    let data_len = LittleEndian::read_u16(&buf[4..6]) as usize;
-    if buf.len() != 32 + data_len {
-        return None;
-    }
-
-    let time = zx::Time::from_nanos(LittleEndian::read_i64(&buf[8..16]));
-    let pid = LittleEndian::read_u64(&buf[16..24]);
-    let tid = LittleEndian::read_u64(&buf[24..32]);
-
-    let mut contents = match String::from_utf8(buf[32..(32 + data_len)].to_vec()) {
+pub fn convert_debuglog_to_log_message(record: &zx::sys::zx_log_record_t) -> Option<Message> {
+    let data_len = record.datalen as usize;
+    let mut contents = match String::from_utf8(record.data[0..data_len].to_vec()) {
         Err(e) => {
             warn!(?e, "Received non-UTF8 from the debuglog.");
             return None;
@@ -172,14 +159,14 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
     let size = METADATA_SIZE + 5 /*'klog' tag*/ + contents.len() + 1;
     Some(Message::from(
         LogsDataBuilder::new(BuilderArgs {
-            timestamp_nanos: time.into(),
+            timestamp_nanos: record.timestamp.into(),
             component_url: KERNEL_IDENTITY.url.to_string(),
             moniker: KERNEL_IDENTITY.to_string(),
             severity,
             size_bytes: size,
         })
-        .set_pid(pid)
-        .set_tid(tid)
+        .set_pid(record.pid)
+        .set_tid(record.tid)
         .add_tag("klog".to_string())
         .set_dropped(0)
         .set_message(contents)
@@ -198,19 +185,19 @@ mod tests {
     #[test]
     fn convert_debuglog_to_log_message_test() {
         let klog = TestDebugEntry::new("test log".as_bytes());
-        let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
+        let log_message = convert_debuglog_to_log_message(&klog.record).unwrap();
         assert_eq!(
             log_message,
             Message::from(
                 LogsDataBuilder::new(BuilderArgs {
-                    timestamp_nanos: klog.timestamp.into(),
+                    timestamp_nanos: klog.record.timestamp.into(),
                     component_url: KERNEL_IDENTITY.url.clone(),
                     moniker: KERNEL_IDENTITY.to_string(),
                     severity: Severity::Info,
                     size_bytes: METADATA_SIZE + 6 + "test log".len(),
                 })
-                .set_pid(klog.pid)
-                .set_tid(klog.tid)
+                .set_pid(klog.record.pid)
+                .set_tid(klog.record.tid)
                 .add_tag("klog")
                 .set_message("test log".to_string())
                 .build()
@@ -220,9 +207,9 @@ mod tests {
         assert_eq!(
             log_message.for_listener(),
             LogMessage {
-                pid: klog.pid,
-                tid: klog.tid,
-                time: klog.timestamp,
+                pid: klog.record.pid,
+                tid: klog.record.tid,
+                time: klog.record.timestamp,
                 severity: fuchsia_syslog::levels::INFO,
                 dropped_logs: 0,
                 tags: vec!["klog".to_string()],
@@ -231,20 +218,20 @@ mod tests {
         );
 
         // maximum allowed klog size
-        let klog = TestDebugEntry::new(&vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32]);
-        let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
+        let klog = TestDebugEntry::new(&vec!['a' as u8; zx::sys::ZX_LOG_RECORD_DATA_MAX]);
+        let log_message = convert_debuglog_to_log_message(&klog.record).unwrap();
         assert_eq!(
             log_message,
             Message::from(
                 LogsDataBuilder::new(BuilderArgs {
-                    timestamp_nanos: klog.timestamp.into(),
+                    timestamp_nanos: klog.record.timestamp.into(),
                     component_url: KERNEL_IDENTITY.url.clone(),
                     moniker: KERNEL_IDENTITY.to_string(),
                     severity: Severity::Info,
                     size_bytes: METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32,
                 })
-                .set_pid(klog.pid)
-                .set_tid(klog.tid)
+                .set_pid(klog.record.pid)
+                .set_tid(klog.record.tid)
                 .add_tag("klog")
                 .set_message(
                     String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32]).unwrap()
@@ -255,36 +242,28 @@ mod tests {
 
         // empty message
         let klog = TestDebugEntry::new(&vec![]);
-        let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
+        let log_message = convert_debuglog_to_log_message(&klog.record).unwrap();
         assert_eq!(
             log_message,
             Message::from(
                 LogsDataBuilder::new(BuilderArgs {
-                    timestamp_nanos: klog.timestamp.into(),
+                    timestamp_nanos: klog.record.timestamp.into(),
                     component_url: KERNEL_IDENTITY.url.clone(),
                     moniker: KERNEL_IDENTITY.to_string(),
                     severity: Severity::Info,
                     size_bytes: METADATA_SIZE + 6,
                 })
-                .set_pid(klog.pid)
-                .set_tid(klog.tid)
+                .set_pid(klog.record.pid)
+                .set_tid(klog.record.tid)
                 .add_tag("klog")
                 .set_message("".to_string())
                 .build()
             ),
         );
 
-        // truncated header
-        let klog = vec![3u8; 4];
-        assert!(convert_debuglog_to_log_message(&klog).is_none());
-
         // invalid utf-8
-        let klog = TestDebugEntry::new(&vec![0, 159, 146, 150]);
-        assert!(convert_debuglog_to_log_message(&klog.to_vec()).is_none());
-
-        // malformed
-        let klog = vec![0xffu8; 64];
-        assert!(convert_debuglog_to_log_message(&klog).is_none());
+        let klog = TestDebugEntry::new(b"\x00\x9f\x92");
+        assert!(convert_debuglog_to_log_message(&klog.record).is_none());
     }
 
     #[fasync::run_until_stalled(test)]
@@ -299,23 +278,26 @@ mod tests {
             log_bridge.existing_logs().await.unwrap(),
             vec![Message::from(
                 LogsDataBuilder::new(BuilderArgs {
-                    timestamp_nanos: klog.timestamp.into(),
+                    timestamp_nanos: klog.record.timestamp.into(),
                     component_url: KERNEL_IDENTITY.url.clone(),
                     moniker: KERNEL_IDENTITY.to_string(),
                     severity: Severity::Info,
                     size_bytes: METADATA_SIZE + 6 + "test log".len(),
                 })
-                .set_pid(klog.pid)
-                .set_tid(klog.tid)
+                .set_pid(klog.record.pid)
+                .set_tid(klog.record.tid)
                 .add_tag("klog")
                 .set_message("test log".to_string())
                 .build()
             )]
         );
 
-        // unprocessable logs should be skipped.
+        // Unprocessable logs should be skipped.
         let debug_log = TestDebugLog::new();
-        debug_log.enqueue_read(vec![]);
+        // This is a malformed record because the message contains invalid UTF8.
+        let malformed_klog = TestDebugEntry::new(b"\x80");
+        debug_log.enqueue_read_entry(&malformed_klog);
+
         debug_log.enqueue_read_fail(zx::Status::SHOULD_WAIT);
         let mut log_bridge = DebugLogBridge::create(debug_log);
         assert!(log_bridge.existing_logs().await.unwrap().is_empty());
@@ -334,9 +316,12 @@ mod tests {
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "second test log");
 
-        // unprocessable logs should be skipped.
+        // Unprocessable logs should be skipped.
         let debug_log = TestDebugLog::new();
-        debug_log.enqueue_read(vec![]);
+        // This is a malformed record because the message contains invalid UTF8.
+        let malformed_klog = TestDebugEntry::new(b"\x80");
+        debug_log.enqueue_read_entry(&malformed_klog);
+
         debug_log.enqueue_read_entry(&TestDebugEntry::new("test log".as_bytes()));
         let log_bridge = DebugLogBridge::create(debug_log);
         let mut log_stream = Box::pin(log_bridge.listen());
@@ -386,8 +371,13 @@ mod tests {
         assert_eq!(log_message.msg().unwrap(), "fourth log");
         assert_eq!(log_message.metadata.severity, Severity::Info);
 
-        let log_message = log_stream.try_next().await.unwrap().unwrap();
-        assert_eq!(log_message.msg().unwrap(), &long_log);
-        assert_eq!(log_message.metadata.severity, Severity::Info);
+        // TODO(fxbug.dev/74601): Once 74601 is resolved, uncomment the lines below. Prior to 74601
+        // being resolved, the follow case may fail because the line is very long, may be truncated,
+        // and if it is truncated, may no longer be valid UTF8 because the truncation may occur in
+        // the middle of a multi-byte character.
+        //
+        // let log_message = log_stream.try_next().await.unwrap().unwrap();
+        // assert_eq!(log_message.msg().unwrap(), &long_log);
+        // assert_eq!(log_message.metadata.severity, Severity::Info);
     }
 }

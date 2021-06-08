@@ -1224,6 +1224,38 @@ multiconst!(zx_guest_trap_t, [
 pub const ZX_LOG_RECORD_MAX: usize = 256;
 pub const ZX_LOG_RECORD_DATA_MAX: usize = 224;
 
+struct_decl_macro! {
+    #[repr(C)]
+    #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct <zx_log_record_t> {
+        pub rollout: u32,
+        pub datalen: u16,
+        pub severity: u8,
+        pub flags: u8,
+        pub timestamp: zx_time_t,
+        pub pid: u64,
+        pub tid: u64,
+        pub data: [u8; ZX_LOG_RECORD_DATA_MAX],
+    }
+}
+
+zx_log_record_t!(zx_log_record_t);
+
+impl Default for zx_log_record_t {
+    fn default() -> zx_log_record_t {
+        zx_log_record_t {
+            rollout: 0,
+            datalen: 0,
+            severity: 0,
+            flags: 0,
+            timestamp: 0,
+            pid: 0,
+            tid: 0,
+            data: [0; ZX_LOG_RECORD_DATA_MAX],
+        }
+    }
+}
+
 multiconst!(u32, [
     ZX_LOG_FLAG_READABLE = 0x40000000;
 ]);
