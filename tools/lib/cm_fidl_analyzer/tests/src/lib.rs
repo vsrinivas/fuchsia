@@ -5,3 +5,4 @@
 pub mod rights;
 pub mod routing;
 pub mod storage;
+pub mod storage_admin;

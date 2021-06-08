@@ -11,7 +11,8 @@ use {
     cm_rust::{
         CapabilityDecl, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDeclCommon, UseDecl,
     },
-    fuchsia_zircon_status as zx_status,
+    fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     moniker::AbsoluteMoniker,
     routing::{
         component_instance::ComponentInstanceInterface,
@@ -170,7 +171,20 @@ impl RoutingTestForAnalyzer {
                     .ok_or(TestModelError::UseDeclNotFound),
                 expected_res,
             ),
-            CheckUse::StorageAdmin { .. } => unimplemented![],
+            CheckUse::StorageAdmin { expected_res, .. } => (
+                decl.uses
+                    .iter()
+                    .find_map(|u| match u {
+                        UseDecl::Protocol(d)
+                            if d.source_name.to_string() == fsys::StorageAdminMarker::NAME =>
+                        {
+                            Some(u.clone())
+                        }
+                        _ => None,
+                    })
+                    .ok_or(TestModelError::UseDeclNotFound),
+                expected_res,
+            ),
         }
     }
 
@@ -213,11 +227,11 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
         match &find_decl {
             Err(err) => {
                 match expected {
-                    ExpectedResult::Ok => panic!("expected ExposeDecl was not found"),
+                    ExpectedResult::Ok => panic!("expected UseDecl was not found"),
                     ExpectedResult::Err(status) => {
                         assert_eq!(err.as_zx_status(), status);
                     }
-                    _ => unimplemented![],
+                    ExpectedResult::ErrWithNoEpitaph => {}
                 };
                 return;
             }
@@ -227,7 +241,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
                     ExpectedResult::Err(status) => {
                         assert_eq!(err.as_zx_status(), status);
                     }
-                    _ => unimplemented![],
+                    ExpectedResult::ErrWithNoEpitaph => {}
                 },
                 Ok(()) => match expected {
                     ExpectedResult::Ok => {}

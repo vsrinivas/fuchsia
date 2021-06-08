@@ -6,11 +6,13 @@ use {
     crate::component_tree::{ComponentNode, ComponentTree, NodeEnvironment, NodePath},
     async_trait::async_trait,
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
-    fuchsia_zircon_status as zx_status,
+    fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     moniker::{AbsoluteMoniker, ChildMoniker, PartialChildMoniker},
     routing::{
         capability_source::{
-            CapabilitySourceInterface, NamespaceCapabilities, StorageCapabilitySource,
+            CapabilitySourceInterface, ComponentCapability, NamespaceCapabilities,
+            StorageCapabilitySource,
         },
         component_id_index::ComponentIdIndex,
         component_instance::{
@@ -35,6 +37,9 @@ pub enum AnalyzerModelError {
     #[error("the source instance `{0}` is not executable")]
     SourceInstanceNotExecutable(String),
 
+    #[error("the capability `{0}` is not a valid source for the capability `{1}`")]
+    InvalidSourceCapability(String, String),
+
     #[error(transparent)]
     ComponentInstanceError(#[from] ComponentInstanceError),
 
@@ -46,6 +51,7 @@ impl AnalyzerModelError {
     pub fn as_zx_status(&self) -> zx_status::Status {
         match self {
             Self::SourceInstanceNotExecutable(_) => zx_status::Status::UNAVAILABLE,
+            Self::InvalidSourceCapability(_, _) => zx_status::Status::UNAVAILABLE,
             Self::ComponentInstanceError(err) => err.as_zx_status(),
             Self::RoutingError(err) => err.as_zx_status(),
         }
@@ -249,6 +255,9 @@ impl ComponentModelForAnalyzer {
 
     /// If the source of a protocol capability is a component instance, checks that that
     /// instance is executable.
+    ///
+    /// If the source is a capability, checks that the protocol is the `StorageAdmin`
+    /// protocol and that the source is a valid storage capability.
     async fn check_protocol_source(
         &self,
         source: &CapabilitySourceInterface<ComponentInstanceForAnalyzer>,
@@ -258,7 +267,40 @@ impl ComponentModelForAnalyzer {
                 self.check_executable(&weak.upgrade()?).await
             }
             CapabilitySourceInterface::Namespace { .. } => Ok(()),
+            CapabilitySourceInterface::Capability { source_capability, component: weak } => {
+                self.check_protocol_capability_source(&weak.upgrade()?, &source_capability).await
+            }
+
             _ => unimplemented![],
+        }
+    }
+
+    // A helper function validating a source of type `Capability` for a protocol capability.
+    async fn check_protocol_capability_source(
+        &self,
+        source_component: &Arc<ComponentInstanceForAnalyzer>,
+        source_capability: &ComponentCapability,
+    ) -> Result<(), AnalyzerModelError> {
+        let source_capability_name = source_capability
+            .source_capability_name()
+            .expect("failed to get source capability name");
+
+        match source_capability.source_name().map(|name| name.to_string()).as_deref() {
+            Some(fsys::StorageAdminMarker::NAME) => {
+                match source_component.decl().await?.find_storage_source(source_capability_name) {
+                    Some(_) => Ok(()),
+                    None => Err(AnalyzerModelError::InvalidSourceCapability(
+                        source_capability_name.to_string(),
+                        fsys::StorageAdminMarker::NAME.to_string(),
+                    )),
+                }
+            }
+            _ => Err(AnalyzerModelError::InvalidSourceCapability(
+                source_capability_name.to_string(),
+                source_capability
+                    .source_name()
+                    .map_or_else(|| "".to_string(), |name| name.to_string()),
+            )),
         }
     }
 
