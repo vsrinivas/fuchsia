@@ -494,7 +494,7 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
   conditions[0].InitEquals(address, 0xdeadbeef);
   conditions[1].InitMaskAndEquals(length, 0, 1);
 
-  initial.breakpoint.instructions[0].InitLoopLoadMemory(
+  initial.breakpoint.instructions[0].InitLoadLoopMemory(
       address, length, struct_pointer_offset, struct_length_offset, item_size, conditions);
 
   ProcessBreakpointSettings& pr_settings = initial.breakpoint.locations.back();

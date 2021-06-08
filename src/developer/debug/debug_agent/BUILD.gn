@@ -18,8 +18,6 @@ static_library("lib") {
     "align.h",
     "arch.cc",
     "arch.h",
-    "automation_instruction_executor.cc",
-    "automation_instruction_executor.h",
     "binary_launcher.h",
     "breakpoint.cc",
     "breakpoint.h",
@@ -214,7 +212,6 @@ test("unit_tests") {
 
   sources = [
     "align_unittest.cc",
-    "automation_instruction_executor_unittest.cc",
     "breakpoint_unittest.cc",
     "debug_agent_unittest.cc",
     "debugged_job_unittest.cc",

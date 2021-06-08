@@ -7,10 +7,7 @@
 
 #include <zircon/syscalls/debug.h>
 
-#include <optional>
 #include <vector>
-
-#include <src/developer/debug/ipc/register_desc.h>
 
 namespace debug_ipc {
 struct Register;
@@ -47,11 +44,6 @@ class GeneralRegisters {
 
   zx_thread_state_general_regs& GetNativeRegisters() { return regs_; }
   const zx_thread_state_general_regs& GetNativeRegisters() const { return regs_; }
-
-  // TODO: Maintain a better id <-> platform register mapping and use here and in the arch files to
-  // avoid this unnecessary std::vector creation and unify with the arch::SaveGeneralRegisters()
-  // implementation.
-  std::optional<uint64_t> GetRegister(debug_ipc::RegisterID reg_id) const;
 
  private:
   zx_thread_state_general_regs regs_;

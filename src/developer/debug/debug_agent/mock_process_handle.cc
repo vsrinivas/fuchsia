@@ -84,15 +84,8 @@ zx_status_t MockProcessHandle::WriteMemory(uintptr_t address, const void* buffer
 
 std::vector<debug_ipc::MemoryBlock> MockProcessHandle::ReadMemoryBlocks(uint64_t address,
                                                                         uint32_t size) const {
-  auto mem_vect = mock_memory_.ReadMemory(address, size);
-  debug_ipc::MemoryBlock mem_block;
-  mem_block.data = std::move(mem_vect);
-  mem_block.size = size;
-  mem_block.valid = true;
-  mem_block.address = address;
-  std::vector<debug_ipc::MemoryBlock> mem_blocks;
-  mem_blocks.emplace_back(std::move(mem_block));
-  return mem_blocks;
+  // Not currently implemented in this mock.
+  return {};
 }
 
 }  // namespace debug_agent
