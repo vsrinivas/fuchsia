@@ -71,9 +71,9 @@ int main(int argc, char* argv[]) {
   camera::MetricsReporter::Initialize(*context);
 
   // Create the device and publish its service.
-  auto result = camera::DeviceImpl::Create(loop.dispatcher(), executor, std::move(controller),
-                                           std::move(allocator), std::move(registry),
-                                           std::move(event));
+  auto result =
+      camera::DeviceImpl::Create(loop.dispatcher(), executor, std::move(controller),
+                                 std::move(allocator), std::move(registry), std::move(event));
   std::unique_ptr<camera::DeviceImpl> device;
   executor.schedule_task(
       result.then([&context, &device, &loop, &outgoing_service_name](

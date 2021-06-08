@@ -207,10 +207,10 @@ MetricsReporter::ImageFormatRecord::ImageFormatRecord(inspect::Node& parent)
 
 void MetricsReporter::ImageFormatRecord::Set(const fuchsia::sysmem::ImageFormat_2& format) {
   pixel_format_.Set(ConvertPixelFormatToString(format.pixel_format));
-  output_resolution_.Set(ConvertResolutionToString(format.coded_width, format.coded_height,
-                                                   format.bytes_per_row));
-  display_resolution_.Set(ConvertResolutionToString(format.display_width, format.display_height,
-                                                    format.display_width));
+  output_resolution_.Set(
+      ConvertResolutionToString(format.coded_width, format.coded_height, format.bytes_per_row));
+  display_resolution_.Set(
+      ConvertResolutionToString(format.display_width, format.display_height, format.display_width));
   color_space_.Set(ConvertColorSpaceToString(format.color_space));
   if (format.has_pixel_aspect_ratio) {
     pixel_aspect_ratio_.Set(ConvertResolutionToString(format.pixel_aspect_ratio_width,

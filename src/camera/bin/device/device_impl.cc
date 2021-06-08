@@ -114,8 +114,8 @@ fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
               }
 
               auto num_streams = result.value().streams().size();
-              auto config_metrics = MetricsReporter::Get().CreateConfigurationRecord(
-                  config_index, num_streams);
+              auto config_metrics =
+                  MetricsReporter::Get().CreateConfigurationRecord(config_index, num_streams);
               for (uint32_t stream_index = 0; stream_index < result.value().streams().size();
                    ++stream_index) {
                 config_metrics->GetStreamRecord(stream_index)

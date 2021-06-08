@@ -61,10 +61,8 @@ TEST_F(MetricsReporterTest, InitialState) {
   EXPECT_THAT(hierarchy,
               ChildrenMatch(UnorderedElementsAre(AllOf(
                   // configuration node
-                  NodeMatches(AllOf(
-                      NameMatches(kConfigurationInspectorNodeName),
-                      PropertyList(IsEmpty()),
-                      PropertyList(IsEmpty())))))));
+                  NodeMatches(AllOf(NameMatches(kConfigurationInspectorNodeName),
+                                    PropertyList(IsEmpty()), PropertyList(IsEmpty())))))));
 }
 
 TEST_F(MetricsReporterTest, StreamFrameMetrics) {
@@ -83,24 +81,23 @@ TEST_F(MetricsReporterTest, StreamFrameMetrics) {
                   NodeMatches(NameMatches(kStreamInspectorNodeName)),
                   ChildrenMatch(UnorderedElementsAre(
                       // stream 0
-                      NodeMatches(AllOf(
-                          NameMatches("0"),
-                          PropertyList(IsSupersetOf(
-                              {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
-                               UintIs(kStreamInspectorFramesDroppedPropertyName, 0)})))),
+                      NodeMatches(
+                          AllOf(NameMatches("0"),
+                                PropertyList(IsSupersetOf(
+                                    {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
+                                     UintIs(kStreamInspectorFramesDroppedPropertyName, 0)})))),
                       // stream 1
-                      NodeMatches(AllOf(
-                          NameMatches("1"),
-                          PropertyList(IsSupersetOf(
-                              {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
-                               UintIs(kStreamInspectorFramesDroppedPropertyName, 0)})))),
+                      NodeMatches(
+                          AllOf(NameMatches("1"),
+                                PropertyList(IsSupersetOf(
+                                    {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
+                                     UintIs(kStreamInspectorFramesDroppedPropertyName, 0)})))),
                       // stream 2
-                      NodeMatches(AllOf(
-                          NameMatches("2"),
-                          PropertyList(IsSupersetOf(
-                              {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
-                               UintIs(kStreamInspectorFramesDroppedPropertyName, 0)}))))
-                  ))))))))))));
+                      NodeMatches(AllOf(NameMatches("2"),
+                                        PropertyList(IsSupersetOf(
+                                            {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
+                                             UintIs(kStreamInspectorFramesDroppedPropertyName,
+                                                    0)}))))))))))))))));
 
   // Receive 4 frames and drop 1 on stream 1
   config->GetStreamRecord(1).FrameReceived();
@@ -122,44 +119,40 @@ TEST_F(MetricsReporterTest, StreamFrameMetrics) {
                   NodeMatches(NameMatches(kStreamInspectorNodeName)),
                   ChildrenMatch(UnorderedElementsAre(
                       // stream 0
-                      NodeMatches(AllOf(
-                          NameMatches("0"),
-                          PropertyList(IsSupersetOf(
-                              {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
-                               UintIs(kStreamInspectorFramesDroppedPropertyName, 0)})))),
+                      NodeMatches(
+                          AllOf(NameMatches("0"),
+                                PropertyList(IsSupersetOf(
+                                    {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
+                                     UintIs(kStreamInspectorFramesDroppedPropertyName, 0)})))),
                       // stream 1
-                      NodeMatches(AllOf(
-                          NameMatches("1"),
-                          PropertyList(IsSupersetOf(
-                              {UintIs(kStreamInspectorFramesReceivedPropertyName, 4),
-                               UintIs(kStreamInspectorFramesDroppedPropertyName, 1)})))),
+                      NodeMatches(
+                          AllOf(NameMatches("1"),
+                                PropertyList(IsSupersetOf(
+                                    {UintIs(kStreamInspectorFramesReceivedPropertyName, 4),
+                                     UintIs(kStreamInspectorFramesDroppedPropertyName, 1)})))),
                       // stream 2
-                      NodeMatches(AllOf(
-                          NameMatches("2"),
-                          PropertyList(IsSupersetOf(
-                              {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
-                               UintIs(kStreamInspectorFramesDroppedPropertyName, 0)}))))
-                  ))))))))))));
+                      NodeMatches(AllOf(NameMatches("2"),
+                                        PropertyList(IsSupersetOf(
+                                            {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
+                                             UintIs(kStreamInspectorFramesDroppedPropertyName,
+                                                    0)}))))))))))))))));
 }
 
 TEST_F(MetricsReporterTest, StreamProperties) {
   auto config = MetricsReporter::Get().CreateConfigurationRecord(0, 1);
 
   fuchsia::sysmem::ImageFormat_2 format = {
-    .pixel_format = {
-      .type = fuchsia::sysmem::PixelFormatType::NV12,
-      .has_format_modifier = false
-    },
-    .coded_width = 1920,
-    .coded_height = 1080,
-    .bytes_per_row = 3840,
-    .display_width = 1920,
-    .display_height = 1080,
-    .color_space = { .type = fuchsia::sysmem::ColorSpaceType::SRGB },
-    .has_pixel_aspect_ratio = true,
-    .pixel_aspect_ratio_width = 2,
-    .pixel_aspect_ratio_height = 3
-  };
+      .pixel_format = {.type = fuchsia::sysmem::PixelFormatType::NV12,
+                       .has_format_modifier = false},
+      .coded_width = 1920,
+      .coded_height = 1080,
+      .bytes_per_row = 3840,
+      .display_width = 1920,
+      .display_height = 1080,
+      .color_space = {.type = fuchsia::sysmem::ColorSpaceType::SRGB},
+      .has_pixel_aspect_ratio = true,
+      .pixel_aspect_ratio_width = 2,
+      .pixel_aspect_ratio_height = 3};
 
   fuchsia::camera3::StreamProperties2 properties;
   properties.set_image_format(format);
@@ -170,46 +163,43 @@ TEST_F(MetricsReporterTest, StreamProperties) {
   config->GetStreamRecord(0).SetProperties(properties);
 
   // Expect nodes for each stream.
-  EXPECT_THAT(
-      GetHierarchy(),
-      ChildrenMatch(UnorderedElementsAre(AllOf(
-          // configuration node
-          NodeMatches(NameMatches(kConfigurationInspectorNodeName)),
-          ChildrenMatch(UnorderedElementsAre(AllOf(
-              // configuration 0
-              NodeMatches(NameMatches("0")),
+  EXPECT_THAT(GetHierarchy(),
               ChildrenMatch(UnorderedElementsAre(AllOf(
-                  // stream node
-                  NodeMatches(NameMatches(kStreamInspectorNodeName)),
+                  // configuration node
+                  NodeMatches(NameMatches(kConfigurationInspectorNodeName)),
                   ChildrenMatch(UnorderedElementsAre(AllOf(
-                      // stream 0
-                      NodeMatches(AllOf(
-                          NameMatches("0"),
-                          PropertyList(IsSupersetOf(
-                              {StringIs(kStreamInspectorFrameratePropertyName, "30/10"),
-                               BoolIs(kStreamInspectorCropPropertyName, true)})))),
-                      ChildrenMatch(UnorderedElementsAre(
-                          AllOf(NodeMatches(AllOf(
-                              NameMatches(kStreamInspectorResolutionNodeName),
-                              PropertyList(UnorderedElementsAre(
-                                  StringIs("1024x768", ""),
-                                  StringIs("1920x1080", "")))))),
-                          AllOf(NodeMatches(AllOf(
-                              NameMatches(kStreamInspectorImageFormatNodeName),
-                              PropertyList(UnorderedElementsAre(
-                                  StringIs(kFormatInspectorPixelformatPropertyName, "NV12"),
-                                  StringIs(kFormatInspectorOutputResolutionPropertyName,
-                                           "1920x1080, stride = 3840"),
-                                  StringIs(kFormatInspectorDisplayResolutionPropertyName,
-                                           "1920x1080, stride = 1920"),
-                                  StringIs(kFormatInspectorColorSpacePropertyName, "SRGB"),
-                                  StringIs(kFormatInspectorAspectRatioPropertyName, "2x3")
-                                  )))))
-                      )) // stream 0 ChildrenMatch
-                  ))) // stream node ChildrenMatch
-              ))) // configuration 0 ChildrenMatch
-          ))) // configuration node ChildrenMatch
-      ))));
+                      // configuration 0
+                      NodeMatches(NameMatches("0")),
+                      ChildrenMatch(UnorderedElementsAre(AllOf(
+                          // stream node
+                          NodeMatches(NameMatches(kStreamInspectorNodeName)),
+                          ChildrenMatch(UnorderedElementsAre(AllOf(
+                              // stream 0
+                              NodeMatches(AllOf(
+                                  NameMatches("0"),
+                                  PropertyList(IsSupersetOf(
+                                      {StringIs(kStreamInspectorFrameratePropertyName, "30/10"),
+                                       BoolIs(kStreamInspectorCropPropertyName, true)})))),
+                              ChildrenMatch(UnorderedElementsAre(
+                                  AllOf(NodeMatches(AllOf(
+                                      NameMatches(kStreamInspectorResolutionNodeName),
+                                      PropertyList(UnorderedElementsAre(
+                                          StringIs("1024x768", ""), StringIs("1920x1080", "")))))),
+                                  AllOf(NodeMatches(AllOf(
+                                      NameMatches(kStreamInspectorImageFormatNodeName),
+                                      PropertyList(UnorderedElementsAre(
+                                          StringIs(kFormatInspectorPixelformatPropertyName, "NV12"),
+                                          StringIs(kFormatInspectorOutputResolutionPropertyName,
+                                                   "1920x1080, stride = 3840"),
+                                          StringIs(kFormatInspectorDisplayResolutionPropertyName,
+                                                   "1920x1080, stride = 1920"),
+                                          StringIs(kFormatInspectorColorSpacePropertyName, "SRGB"),
+                                          StringIs(kFormatInspectorAspectRatioPropertyName,
+                                                   "2x3"))))))))  // stream 0 ChildrenMatch
+                              )))                                 // stream node ChildrenMatch
+                          )))                                     // configuration 0 ChildrenMatch
+                      )))  // configuration node ChildrenMatch
+                  ))));
 }
 
 }  // namespace
