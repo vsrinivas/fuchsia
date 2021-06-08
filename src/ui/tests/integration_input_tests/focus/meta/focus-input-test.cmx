@@ -1,0 +1,24 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.scheduler.ProfileProvider"
+            ]
+        }
+    },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/focus-input-test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

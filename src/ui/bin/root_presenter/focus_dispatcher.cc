@@ -23,7 +23,7 @@ FocusDispatcher::FocusDispatcher(const std::shared_ptr<ServiceDirectory>& svc) {
   // Connect to `fuchsia.ui.keyboard.focus.Controller`.
   keyboard_focus_ctl_ = svc->Connect<Controller>();
   keyboard_focus_ctl_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(WARNING) << "Error from fuchsia.ui.keyboard.focus.Controller: "
+    FX_LOGS(WARNING) << "Unable to connect to fuchsia.ui.keyboard.focus.Controller: "
                      << zx_status_get_string(status);
   });
 
@@ -31,7 +31,7 @@ FocusDispatcher::FocusDispatcher(const std::shared_ptr<ServiceDirectory>& svc) {
   // a client-side handle to `fuchsia.ui.focus.FocusChainListener`.
   focus_chain_listener_registry_ = svc->Connect<FocusChainListenerRegistry>();
   focus_chain_listener_registry_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(WARNING) << "Error from fuchsia.ui.focus.FocusChainListenerRegistry: "
+    FX_LOGS(WARNING) << "Unable to connect to fuchsia.ui.focus.FocusChainListenerRegistry: "
                      << zx_status_get_string(status);
   });
   auto handle = focus_chain_listeners_.AddBinding(this);
@@ -47,9 +47,11 @@ void FocusDispatcher::OnFocusChange(FocusChain new_focus_chain,
     } else {
       auto& last_view_ref = focus_chain.back();
 
-      keyboard_focus_ctl_->Notify(fidl::Clone(last_view_ref), [] {
-        FX_LOGS(DEBUG) << "FocusDispatcher::OnFocusChange: notify succeeded.";
-      });
+      if (keyboard_focus_ctl_) {
+        keyboard_focus_ctl_->Notify(fidl::Clone(last_view_ref), [] {
+          FX_LOGS(DEBUG) << "FocusDispatcher::OnFocusChange: notify succeeded.";
+        });
+      }
     }
   }
   // Callback is invoked regardless of whether `Notify` succeeds, and

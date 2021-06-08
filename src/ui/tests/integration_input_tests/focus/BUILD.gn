@@ -1,0 +1,66 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/fidl/fidl.gni")
+
+fidl("test.focus") {
+  sdk_category = "internal"
+  sources = [ "response_listener.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
+executable("focus-input-test-bin") {
+  testonly = true
+  sources = [ "focus-input-test.cc" ]
+  output_name = "focus-input-test"
+  deps = [
+    ":test.focus",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_test_component("focus-input-test-component") {
+  manifest = "meta/focus-input-test.cmx"
+  deps = [ ":focus-input-test-bin" ]
+}
+
+fuchsia_test_package("focus-input-test") {
+  test_components = [ ":focus-input-test-component" ]
+  deps = [
+    "//src/ui/bin/root_presenter:component_v1_for_test",
+    "//src/ui/tests/integration_input_tests/focus/focus-gfx-client",
+  ]
+  test_specs = {
+    environments = [
+      {
+        dimensions = {
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":focus-input-test",
+
+    # The deps below are necessary on minimal product configs.
+    "//src/graphics/bin/vulkan_loader",
+    "//src/ui/scenic",
+  ]
+}

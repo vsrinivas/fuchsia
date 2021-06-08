@@ -1,0 +1,15 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/focus-gfx-client"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.scenic.Scenic",
+            "test.focus.ResponseListener"
+        ]
+    }
+}
