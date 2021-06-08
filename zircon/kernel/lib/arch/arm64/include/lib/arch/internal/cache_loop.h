@@ -11,11 +11,11 @@
 
 #ifdef __ASSEMBLER__
 
-// Routine to iterate over all ways/sets across all levels of data caches
-// from level 0 to the point of coherence.
+// Export a routine to iterate over all ways/sets across all levels of data
+// caches from level 0 to the point of coherence.
 //
 // Adapted from example code in the ARM Architecture Reference Manual ARMv8.
-.macro cache_way_set_op, op name
+.macro cache_way_set_op_impl, op name
     mrs     x0, clidr_el1
     and     w3, w0, #0x07000000     // get 2x level of coherence
     lsr     w3, w3, #23

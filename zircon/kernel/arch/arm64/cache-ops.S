@@ -9,7 +9,6 @@
 #include <asm.h>
 #include <arch/ops.h>
 #include <arch/defines.h>
-#include <arch/arm64/cache_loop.h>
 
 .text
 
@@ -68,43 +67,4 @@ FUNCTION(arch_sync_cache_range)
     ret
     SPECULATION_POSTFENCE
 END_FUNCTION(arch_sync_cache_range)
-
-// Below are 3 variants of cache flushing routines by way/set for
-// an individual cpu.
-
-    // void arm64_local_invalidate_cache_all()
-FUNCTION(arm64_local_invalidate_cache_all)
-    cache_way_set_op isw, invalidate
-
-    // dump the instruction cache as well
-    ic      iallu
-    isb
-
-    ret
-    SPECULATION_POSTFENCE
-END_FUNCTION(arm64_local_invalidate_cache_all)
-
-    // void arm64_local_clean_cache_all()
-FUNCTION(arm64_local_clean_cache_all)
-    cache_way_set_op csw, clean
-
-    // dump the instruction cache as well
-    ic      iallu
-    isb
-
-    ret
-    SPECULATION_POSTFENCE
-END_FUNCTION(arm64_local_clean_cache_all)
-
-    // void arm64_local_clean_invalidate_cache_all()
-FUNCTION(arm64_local_clean_invalidate_cache_all)
-    cache_way_set_op cisw, clean_invalidate
-
-    // dump the instruction cache as well
-    ic      iallu
-    isb
-
-    ret
-    SPECULATION_POSTFENCE
-END_FUNCTION(arm64_local_clean_invalidate_cache_all)
 

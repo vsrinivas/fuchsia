@@ -102,6 +102,28 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
 #endif
 .endm  // adr_global
 
+/// ARM "straight-line speculation" mitigation.
+//
+/// Certain ARM processors may speculatively execute instructions immediately
+/// following what should be a change in control flow, including
+/// exception-generating instructions (SVC, HVC, SMC, UNDEF, BRK), exception
+/// returns (ERET), unconditional branches (B, BL, BR, BLR), and function
+/// returns (RET).
+///
+/// A "dsb nsh / isb" instruction sequence will prevent the CPU from speculating
+/// beyond the point of the instructions. The cost of such instructions is high
+/// if actually executed, but in the case of instructions that unconditionally
+/// branch to another point in the program, these instructions will never
+/// actually be executed by the CPU.
+//
+/// See also:
+///   * CVE2020-13844
+///   * "Straight-line Speculation", Arm Limited, June 2020
+.macro speculation_postfence
+  dsb nsh
+  isb
+.endm // speculation_postfence
+
 #endif  // clang-format on
 
 #endif  // ZIRCON_KERNEL_LIB_ARCH_ARM64_INCLUDE_LIB_ARCH_ASM_H_

@@ -133,6 +133,7 @@ if (toolchain.environment == "physmem" ||
     ]
     deps = [
       ":boot-mmu",
+      ":tests",
       "//sdk/lib/fit",
       "//zircon/kernel/dev/coresight",
       "//zircon/kernel/dev/interrupt/arm_gic/common",
@@ -166,5 +167,15 @@ if (toolchain.environment == "physmem" ||
     # Everything in this file runs too early to use the full ABI.  Per-function
     # attribute suppression of sanitizer modes doesn't work for C++ lambda.
     configs += [ "//build/config/zircon:no_sanitizers" ]
+  }
+
+  source_set("tests") {
+    sources = [ "cache_test.cc" ]
+    deps = [
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/unittest",
+      "//zircon/kernel/vm",
+    ]
   }
 }

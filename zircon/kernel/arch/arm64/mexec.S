@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <arch/arm64/cache_loop.h>
+#include <lib/arch/cache.h>
 #include <arch/asm_macros.h>
 #include <arch/defines.h>
 #include <asm.h>

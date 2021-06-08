@@ -8,7 +8,10 @@
 #define ZIRCON_KERNEL_LIB_ARCH_ARM64_INCLUDE_LIB_ARCH_CACHE_H_
 
 #include <lib/arch/arm64/cache.h>
+#include <lib/arch/internal/cache_loop.h>
 #include <lib/arch/intrin.h>
+
+#ifndef __ASSEMBLER__
 
 #include <cstddef>
 #include <cstdint>
@@ -41,5 +44,36 @@ class CacheConsistencyContext {
   const bool possible_aliasing_ = CacheTypeEl0::Read().l1_ip() == ArmL1ICachePolicy::VIPT;
 };
 
+// Local per-cpu cache flush routines.
+//
+// These clean or invalidate the data and instruction caches from the point
+// of view of a single CPU to the point of coherence.
+//
+// These are typically only useful during system setup or shutdown when
+// the MMU is not enabled. Other use-cases should use range-based cache operation.
+extern "C" void Arm64LocalCleanAndInvalidateAllCaches();
+extern "C" void Arm64LocalCleanAllCaches();
+extern "C" void Arm64LocalInvalidateAllCaches();
+
 }  // namespace arch
+
+#else // __ASSEMBLER__
+
+// clang-format off
+
+// Generate assembly to iterate over all ways/sets across all levels of data
+// caches from level 0 to the point of coherence.
+//
+// "op" should be an ARM64 operation that is called on each set/way, such as
+// "csw" (i.e., "Clean by Set and Way").
+//
+// Generated assembly does not use the stack, but clobbers registers [x0 -- x13].
+.macro cache_way_set_op op, name
+cache_way_set_op_impl \op, \name
+.endm
+
+// clang-format on
+
+#endif  // __ASSEMBLER__
+
 #endif  // ZIRCON_KERNEL_LIB_ARCH_ARM64_INCLUDE_LIB_ARCH_CACHE_H_

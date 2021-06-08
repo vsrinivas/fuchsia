@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_ARM64_CACHE_H_
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_ARM64_CACHE_H_
 
+#ifndef __ASSEMBLER__
+
 #include <lib/arch/sysreg.h>
 
 #include <hwreg/bitfields.h>
@@ -44,5 +46,7 @@ struct CacheTypeEl0 : public SysRegBase<CacheTypeEl0> {
 ARCH_ARM64_SYSREG(CacheTypeEl0, "ctr_el0");
 
 }  // namespace arch
+
+#endif  // __ASSEMBLER__
 
 #endif  // ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_ARM64_CACHE_H_
