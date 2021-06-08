@@ -7,12 +7,16 @@ import 'package:flutter_driver/driver_extension.dart';
 
 import 'main.dart' as entrypoint;
 
-Future<void> main() async {
+void main() {
   final handler = OptionalMethodChannel('flutter_driver/handler');
   enableFlutterDriverExtension(
       enableTextEntryEmulation: false,
-      handler: (String? data) {
-        return handler.invokeMethod(data!) as Future<String>;
+      handler: (String? data) async {
+        if (data != null) {
+          final result = await handler.invokeMethod(data);
+          return result.toString();
+        }
+        return '';
       });
   entrypoint.main();
 }
