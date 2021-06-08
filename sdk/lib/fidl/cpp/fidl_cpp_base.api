@@ -5,7 +5,7 @@
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/comparison.h": "83af4784b1593fac21e25504f4309614",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/decoder.h": "cd5ba3e6efb24f9b8efb1ee33d738248",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/encoder.h": "294b20973cfceba644c5394066600ddc",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/enum.h": "d9039e86401698b33c8b039779b429ad",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/enum.h": "ad164c5cd66ea3db9d5df386b47755a4",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/interface_handle.h": "02f9e4626875d412d4f0bc3af559ee04",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/interface_request.h": "e3f0a95d694733d3625e2e2f14abb070",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/bitset.h": "112110f8080e0a5fa560f7e5403f2609",
