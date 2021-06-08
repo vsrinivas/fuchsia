@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    analytics::{add_crash_event, get_notice},
+    analytics::{add_crash_event, get_notice, opt_out_for_this_invocation},
     anyhow::{Context as _, Result},
     async_once::Once,
     async_trait::async_trait,
@@ -266,7 +266,13 @@ async fn run() -> Result<i32> {
         std::env::set_var("ASCENDD", sockpath);
     });
 
+    let analytics_disabled = ffx_config::get("ffx.analytics.disabled").await.unwrap_or(false);
+
     init_metrics_svc().await; // one time call to initialize app analytics
+    if analytics_disabled {
+        opt_out_for_this_invocation().await?
+    }
+
     if let Some(note) = get_notice().await {
         eprintln!("{}", note);
     }

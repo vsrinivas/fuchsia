@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
+use anyhow::{Error, Result};
 use std::fs::{create_dir_all, read_to_string, remove_file, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -140,6 +140,16 @@ impl MetricsState {
             MetricsStatus::OptedIn | MetricsStatus::NewToTool => true,
             _ => false,
         }
+    }
+
+    // disable analytics for this invocation only
+    // this does not affect the global analytics state
+    pub fn opt_out_for_this_invocation(&mut self) -> Result<()> {
+        if self.status == MetricsStatus::Disabled {
+            return Ok(());
+        }
+        self.status = MetricsStatus::OptedOut;
+        Ok(())
     }
 }
 

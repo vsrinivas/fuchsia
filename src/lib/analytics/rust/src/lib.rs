@@ -71,6 +71,19 @@ pub async fn is_opted_in() -> bool {
     }
 }
 
+// disable analytics for this invocation only
+// this does not affect the global analytics state
+pub async fn opt_out_for_this_invocation() -> Result<()> {
+    let mut svc = METRICS_SERVICE.lock().await;
+    match &svc.init_state {
+        MetricsServiceInitStatus::INITIALIZED => svc.inner_opt_out_for_this_invocation(),
+        MetricsServiceInitStatus::UNINITIALIZED => {
+            log::error!("opt_out_for_this_incocation called on uninitialized METRICS_SERVICE");
+            bail!(INIT_ERROR)
+        }
+    }
+}
+
 /// Records a launch event with the command line args used to launch app.
 /// Returns an error if init has not been called.
 pub async fn add_launch_event(args: Option<&str>) -> Result<()> {

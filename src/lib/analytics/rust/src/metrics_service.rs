@@ -70,6 +70,12 @@ impl MetricsService {
         self.state.is_opted_in()
     }
 
+    // disable analytics for this invocation only
+    // this does not affect the global analytics state
+    pub fn inner_opt_out_for_this_invocation(&mut self) -> Result<()> {
+        self.state.opt_out_for_this_invocation()
+    }
+
     fn uuid_as_str(&self) -> String {
         self.state.uuid.map_or("No uuid".to_string(), |u| u.to_string())
     }
