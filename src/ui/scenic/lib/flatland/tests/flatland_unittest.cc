@@ -1145,19 +1145,21 @@ TEST_F(FlatlandTest, SetOrientationErrorCases) {
   PRESENT(flatland, false);
 }
 
-TEST_F(FlatlandTest, SetScaleErrorCases) {
+TEST_F(FlatlandTest, SetImageDestinationSizeErrorCases) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  const TransformId kIdNotCreated = {1};
+  const ContentId kIdNotCreated = {1};
 
-  // Zero is not a valid transform ID.
-  flatland->SetScale({0}, {1.f, 2.f});
+  // Zero is not a valid content ID.
+  flatland->SetImageDestinationSize({0}, {1, 2});
   PRESENT(flatland, false);
 
-  // Transform does not exist.
-  flatland->SetScale(kIdNotCreated, {1.f, 2.f});
+  // Content does not exist.
+  flatland->SetImageDestinationSize(kIdNotCreated, {1, 2});
   PRESENT(flatland, false);
 }
+
+TEST_F(FlatlandTest, SetImageDestinationSizeTest) {}
 
 // Test that changing geometric transform properties affects the local matrix of Transforms.
 TEST_F(FlatlandTest, SetGeometricTransformProperties) {
@@ -1190,17 +1192,14 @@ TEST_F(FlatlandTest, SetGeometricTransformProperties) {
 
   // Set up one property per transform.
   flatland->SetTranslation(kId1, {1.f, 2.f});
-  flatland->SetScale(kId2, {2.f, 3.f});
   PRESENT(flatland, true);
 
   // The two handles should have the expected matrices.
   uber_struct = GetUberStruct(flatland.get());
   EXPECT_MATRIX(uber_struct, handle1, glm::translate(glm::mat3(), {1.f, 2.f}));
-  EXPECT_MATRIX(uber_struct, handle2, glm::scale(glm::mat3(), {2.f, 3.f}));
 
   // Fill out the remaining properties on both transforms.
   flatland->SetOrientation(kId1, Orientation::CCW_90_DEGREES);
-  flatland->SetScale(kId1, {4.f, 5.f});
 
   flatland->SetTranslation(kId2, {6.f, 7.f});
   flatland->SetOrientation(kId2, Orientation::CCW_270_DEGREES);
@@ -1213,13 +1212,11 @@ TEST_F(FlatlandTest, SetGeometricTransformProperties) {
   glm::mat3 matrix1 = glm::mat3();
   matrix1 = glm::translate(matrix1, {1.f, 2.f});
   matrix1 = glm::rotate(matrix1, GetOrientationAngle(Orientation::CCW_90_DEGREES));
-  matrix1 = glm::scale(matrix1, {4.f, 5.f});
   EXPECT_MATRIX(uber_struct, handle1, matrix1);
 
   glm::mat3 matrix2 = glm::mat3();
   matrix2 = glm::translate(matrix2, {6.f, 7.f});
   matrix2 = glm::rotate(matrix2, GetOrientationAngle(Orientation::CCW_270_DEGREES));
-  matrix2 = glm::scale(matrix2, {2.f, 3.f});
   EXPECT_MATRIX(uber_struct, handle2, matrix2);
 }
 
@@ -2366,7 +2363,9 @@ TEST_F(FlatlandTest, LinkSizesAffectPixelScale) {
   }
 }
 
-TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
+// TODO(fxbug.dev/77887): Reintroduce this test once the effects API is able to handle
+// floating point scaling.
+TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
@@ -2386,7 +2385,10 @@ TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
 
   // Set a scale on the parent transform.
   const Vec2 scale = {2.f, 3.f};
-  parent->SetScale(kTransformId, scale);
+
+  // TODO(fxbug.dev/77887): Reintroduce this once the effects API is able to handle
+  // floating point scaling.
+  // parent->SetScale(kTransformId, scale);
   PRESENT(parent, true);
 
   // Call and ignore GetLayout() to guarantee the next call hangs.
@@ -2407,7 +2409,9 @@ TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
   }
 
   // Set a negative scale, but confirm that pixel scale is still positive.
-  parent->SetScale(kTransformId, {-scale.x, -scale.y});
+  // TODO(fxbug.dev/77887): Reintroduce this once the effects API is able to handle
+  // floating point scaling.
+  // parent->SetScale(kTransformId, {-scale.x, -scale.y});
   PRESENT(parent, true);
 
   // Call and ignore GetLayout() to guarantee the next call hangs.

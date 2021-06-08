@@ -98,8 +98,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   void SetOrientation(TransformId transform_id,
                       fuchsia::ui::scenic::internal::Orientation orientation) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void SetScale(TransformId transform_id, fuchsia::ui::scenic::internal::Vec2 scale) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
   void AddChild(TransformId parent_transform_id, TransformId child_transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void RemoveChild(TransformId parent_transform_id, TransformId child_transform_id) override;
@@ -115,6 +113,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
                    fuchsia::scenic::allocation::BufferCollectionImportToken import_token,
                    uint32_t vmo_index,
                    fuchsia::ui::scenic::internal::ImageProperties properties) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
+  void SetImageDestinationSize(ContentId image_id,
+                               fuchsia::ui::scenic::internal::SizeU size) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void SetOpacity(TransformId transform_id, float val) override;
   // |fuchsia::ui::scenic::internal::Flatland|
@@ -297,6 +298,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
 
   // A geometric transform for each TransformHandle. If not present, that TransformHandle has the
   // identity matrix for its transform.
+  // TODO(fxbug.dev/77993): Remove matrices from flatland and make this a translation + size.
   std::unordered_map<TransformHandle, MatrixData> matrices_;
 
   // A map of transform handles to opacity values where the values are strictly in the range

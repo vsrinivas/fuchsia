@@ -54,8 +54,8 @@ async fn main() {
     const TRANSFORM_ID: fland::TransformId = fland::TransformId { value: 3 };
     const IMAGE_WIDTH: u32 = 2;
     const IMAGE_HEIGHT: u32 = 2;
-    const RECT_WIDTH: f32 = 400.0;
-    const RECT_HEIGHT: f32 = 600.0;
+    const RECT_WIDTH: u32 = 400;
+    const RECT_HEIGHT: u32 = 600;
 
     syslog::init_with_tags(&["flatland-display"]).expect("failed to initialize logger");
 
@@ -201,11 +201,16 @@ async fn main() {
     // Populate the rest of the Flatland scene.  There is a single transform which is set as the
     // root transform; the newly-created image is set as the content of that transform.
     flatland.create_transform(&mut TRANSFORM_ID.clone()).expect("fidl error");
-    flatland
-        .set_scale(&mut TRANSFORM_ID.clone(), &mut fland::Vec2 { x: RECT_WIDTH, y: RECT_HEIGHT })
-        .expect("fidl error");
     flatland.set_root_transform(&mut TRANSFORM_ID.clone()).expect("fidl error");
     flatland.set_content(&mut TRANSFORM_ID.clone(), &mut IMAGE_ID.clone()).expect("fidl error");
+
+    // Set the display size of the image.
+    flatland
+        .set_image_destination_size(
+            &mut IMAGE_ID.clone(),
+            &mut fland::SizeU { width: RECT_WIDTH, height: RECT_HEIGHT },
+        )
+        .expect("fidl error");
 
     // Now that the Flatland session is linked to the FlatlandDisplay, and the session's scene has
     // been populated, we can present the session in order to display everything on-screen.

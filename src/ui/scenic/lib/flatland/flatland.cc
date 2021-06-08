@@ -406,24 +406,6 @@ void Flatland::SetOrientation(TransformId transform_id, Orientation orientation)
   matrices_[transform_kv->second].SetOrientation(orientation);
 }
 
-void Flatland::SetScale(TransformId transform_id, Vec2 scale) {
-  if (transform_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "SetScale called with transform_id 0";
-    ReportError();
-    return;
-  }
-
-  auto transform_kv = transforms_.find(transform_id.value);
-
-  if (transform_kv == transforms_.end()) {
-    FX_LOGS(ERROR) << "SetScale failed, transform_id " << transform_id.value << " not found";
-    ReportError();
-    return;
-  }
-
-  matrices_[transform_kv->second].SetScale(scale);
-}
-
 void Flatland::AddChild(TransformId parent_transform_id, TransformId child_transform_id) {
   if (parent_transform_id.value == kInvalidId || child_transform_id.value == kInvalidId) {
     FX_LOGS(ERROR) << "AddChild called with transform_id zero";
@@ -660,6 +642,33 @@ void Flatland::CreateImage(ContentId image_id,
   auto handle = transform_graph_.CreateTransform();
   content_handles_[image_id.value] = handle;
   image_metadatas_[handle] = metadata;
+}
+
+void Flatland::SetImageDestinationSize(ContentId image_id,
+                                       fuchsia::ui::scenic::internal::SizeU size) {
+  if (image_id.value == kInvalidId) {
+    FX_LOGS(ERROR) << "SetImageSize called with image_id 0";
+    ReportError();
+    return;
+  }
+
+  auto content_kv = content_handles_.find(image_id.value);
+
+  if (content_kv == content_handles_.end()) {
+    FX_LOGS(ERROR) << "SetImageSize called with non-existent image_id " << image_id.value;
+    ReportError();
+    return;
+  }
+
+  auto image_kv = image_metadatas_.find(content_kv->second);
+  if (image_kv == image_metadatas_.end()) {
+    FX_LOGS(ERROR) << "SetImageSize called on non-image content.";
+    return;
+  }
+
+  // TODO(fxbug.dev/77993): Remove matrices from flatland and make this a vec.
+  matrices_[content_kv->second].SetScale(
+      {static_cast<float>(size.width), static_cast<float>(size.height)});
 }
 
 void Flatland::SetOpacity(TransformId transform_id, float val) {

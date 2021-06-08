@@ -21,6 +21,7 @@ using GlobalMatrixVector = std::vector<glm::mat3>;
 // matrices in the |uber_structs|. If a transform doesn't have a local matrix present in the
 // appropriate UberStruct, this function assumes that transform's local matrix is the identity
 // matrix.
+// TODO(fxbug.dev/77993): Remove matrices from flatland and make this a translation + size.
 GlobalMatrixVector ComputeGlobalMatrices(
     const GlobalTopologyData::TopologyVector& global_topology,
     const GlobalTopologyData::ParentIndexVector& parent_indices,
