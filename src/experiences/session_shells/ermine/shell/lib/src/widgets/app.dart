@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:internationalization/localizations_delegate.dart'
@@ -47,6 +49,9 @@ class App extends StatelessWidget {
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
             ],
+            scrollBehavior: MaterialScrollBehavior().copyWith(
+              dragDevices: {PointerDeviceKind.mouse, PointerDeviceKind.touch},
+            ),
             supportedLocales: supported_locales.locales,
             home: Material(
                 color: ErmineStyle.kBackgroundColor,

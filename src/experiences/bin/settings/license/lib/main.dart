@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:fuchsia_logger/logger.dart';
 
@@ -21,6 +23,9 @@ void main() {
   runApp(
     MaterialApp(
       title: 'Open Source License',
+      scrollBehavior: MaterialScrollBehavior().copyWith(
+        dragDevices: {PointerDeviceKind.mouse, PointerDeviceKind.touch},
+      ),
       theme: ThemeData(
         fontFamily: 'RobotoMono',
         textSelectionTheme: TextSelectionThemeData(
@@ -42,7 +47,6 @@ void main() {
         body: Column(
           children: [
             Expanded(
-              // TODO(fxb/78071): Update once scroll is fixed
               child: SingleChildScrollView(
                 scrollDirection: Axis.vertical,
                 child: License(),

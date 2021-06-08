@@ -67,6 +67,12 @@ class App extends StatelessWidget {
                     GlobalWidgetsLocalizations.delegate,
                   ],
                   supportedLocales: supported_locales.locales,
+                  scrollBehavior: MaterialScrollBehavior().copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.touch
+                    },
+                  ),
                   home: Scaffold(
                     body: Column(
                       children: <Widget>[
