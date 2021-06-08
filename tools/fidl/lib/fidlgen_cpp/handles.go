@@ -20,8 +20,10 @@ func (c *compiler) fieldHandleInformation(val *fidlgen.Type) *HandleInformation 
 		return c.fieldHandleInformation(val.ElementType)
 	}
 	if val.Kind == fidlgen.RequestType {
-		// TODO(fxbug.dev/72222): Implement handle rights on server protocol endpoints.
-		return nil
+		return &HandleInformation{
+			ObjectType: "ZX_OBJ_TYPE_CHANNEL",
+			Rights:     "ZX_DEFAULT_CHANNEL_RIGHTS",
+		}
 	}
 	if val.Kind == fidlgen.IdentifierType {
 		declInfo, ok := c.decls[val.Identifier]
@@ -29,8 +31,10 @@ func (c *compiler) fieldHandleInformation(val *fidlgen.Type) *HandleInformation 
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
 		if declInfo.Type == fidlgen.ProtocolDeclType {
-			// TODO(fxbug.dev/72222): Implement handle rights on client protocol endpoints.
-			return nil
+			return &HandleInformation{
+				ObjectType: "ZX_OBJ_TYPE_CHANNEL",
+				Rights:     "ZX_DEFAULT_CHANNEL_RIGHTS",
+			}
 		}
 		// Handle rights are only attached to handle fields or vector/arrays thereof.
 		return nil

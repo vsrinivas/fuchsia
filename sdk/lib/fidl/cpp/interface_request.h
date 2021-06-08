@@ -100,8 +100,9 @@ class InterfaceRequest final {
 
   void Encode(Encoder* encoder, size_t offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(!maybe_handle_info);
-    encoder->EncodeHandle(&channel_, ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, offset);
+    ZX_DEBUG_ASSERT(maybe_handle_info);
+    encoder->EncodeHandle(&channel_, maybe_handle_info->object_type, maybe_handle_info->rights,
+                          offset);
   }
 
   static void Decode(Decoder* decoder, InterfaceRequest<Interface>* value, size_t offset) {

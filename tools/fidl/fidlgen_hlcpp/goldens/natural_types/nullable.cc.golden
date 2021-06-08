@@ -155,7 +155,11 @@ void StructWithNullableRequest::Encode(
     memcpy(_encoder->template GetPtr<StructWithNullableRequest>(_offset), this,
            sizeof(StructWithNullableRequest));
   } else {
-    ::fidl::Encode(_encoder, &val, _offset + 0);
+    ::fidl::Encode(_encoder, &val, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
   }
 }
 
@@ -192,7 +196,11 @@ void StructWithNullableProtocol::Encode(
     memcpy(_encoder->template GetPtr<StructWithNullableProtocol>(_offset), this,
            sizeof(StructWithNullableProtocol));
   } else {
-    ::fidl::Encode(_encoder, &val, _offset + 0);
+    ::fidl::Encode(_encoder, &val, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
   }
 }
 
