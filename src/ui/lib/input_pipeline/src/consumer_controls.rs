@@ -12,23 +12,24 @@ use {
     futures::channel::mpsc::Sender,
 };
 
-/// A [`MediaButtonsEvent`] represents an event where one or more media buttons were pressed.
+/// A [`ConsumerControlsEvent`] represents an event where one or more consumer control buttons
+/// were pressed.
 ///
 /// # Example
-/// The following MediaButtonsEvents represents an event where the volume up button was pressed.
+/// The following ConsumerControlsEvents represents an event where the volume up button was pressed.
 ///
 /// ```
-/// let volume_event = input_device::InputDeviceEvent::MediaButton(MediaButtonsEvent::new(
+/// let volume_event = input_device::InputDeviceEvent::ConsumerControls(ConsumerControlsEvent::new(
 ///     vec![fidl_input_report::ConsumerControlButton::VOLUME_UP],
 /// ));
 /// ```
 #[derive(Clone, Debug, PartialEq)]
-pub struct MediaButtonsEvent {
+pub struct ConsumerControlsEvent {
     pub pressed_buttons: Vec<fidl_input_report::ConsumerControlButton>,
 }
 
-impl MediaButtonsEvent {
-    /// Creates a new [`MediaButtonsEvent`] with the relevant buttons.
+impl ConsumerControlsEvent {
+    /// Creates a new [`ConsumerControlsEvent`] with the relevant buttons.
     ///
     /// # Parameters
     /// - `pressed_buttons`: The buttons relevant to this event.
@@ -37,38 +38,38 @@ impl MediaButtonsEvent {
     }
 }
 
-/// A [`MediaButtonsBinding`] represents a connection to a consumer control input device with
-/// media buttons. The buttons supported by this binding is returned by `supported_buttons()`.
+/// A [`ConsumerControlsBinding`] represents a connection to a consumer controls input device with
+/// consumer controls. The buttons supported by this binding is returned by `supported_buttons()`.
 ///
-/// The [`MediaButtonsBinding`] parses and exposes consumer control descriptor properties
+/// The [`ConsumerControlsBinding`] parses and exposes consumer control descriptor properties
 /// for the device it is associated with. It also parses [`InputReport`]s
 /// from the device, and sends them to the device binding owner over `event_sender`.
-pub struct MediaButtonsBinding {
+pub struct ConsumerControlsBinding {
     /// The channel to stream InputEvents to.
     event_sender: Sender<input_device::InputEvent>,
 
     /// Holds information about this device.
-    device_descriptor: MediaButtonsDeviceDescriptor,
+    device_descriptor: ConsumerControlsDeviceDescriptor,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct MediaButtonsDeviceDescriptor {
+pub struct ConsumerControlsDeviceDescriptor {
     /// The list of buttons that this device contains.
     pub buttons: Vec<fidl_input_report::ConsumerControlButton>,
 }
 
 #[async_trait]
-impl input_device::InputDeviceBinding for MediaButtonsBinding {
+impl input_device::InputDeviceBinding for ConsumerControlsBinding {
     fn input_event_sender(&self) -> Sender<input_device::InputEvent> {
         self.event_sender.clone()
     }
 
     fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
-        input_device::InputDeviceDescriptor::MediaButtons(self.device_descriptor.clone())
+        input_device::InputDeviceDescriptor::ConsumerControls(self.device_descriptor.clone())
     }
 }
 
-impl MediaButtonsBinding {
+impl ConsumerControlsBinding {
     /// Creates a new [`InputDeviceBinding`] from the `device_proxy`.
     ///
     /// The binding will start listening for input reports immediately and send new InputEvents
@@ -111,19 +112,23 @@ impl MediaButtonsBinding {
         let device_descriptor: fidl_input_report::DeviceDescriptor =
             device.get_descriptor().await?;
 
-        let media_buttons_descriptor = device_descriptor.consumer_control.ok_or_else(|| {
+        let consumer_controls_descriptor = device_descriptor.consumer_control.ok_or_else(|| {
             format_err!("DeviceDescriptor does not have a ConsumerControlDescriptor")
         })?;
 
-        let media_buttons_input_descriptor = media_buttons_descriptor.input.ok_or_else(|| {
-            format_err!("ConsumerControlDescriptor does not have a ConsumerControlInputDescriptor")
-        })?;
+        let consumer_controls_input_descriptor =
+            consumer_controls_descriptor.input.ok_or_else(|| {
+                format_err!(
+                    "ConsumerControlDescriptor does not have a ConsumerControlInputDescriptor"
+                )
+            })?;
 
-        let device_descriptor: MediaButtonsDeviceDescriptor = MediaButtonsDeviceDescriptor {
-            buttons: media_buttons_input_descriptor.buttons.unwrap_or_default(),
-        };
+        let device_descriptor: ConsumerControlsDeviceDescriptor =
+            ConsumerControlsDeviceDescriptor {
+                buttons: consumer_controls_input_descriptor.buttons.unwrap_or_default(),
+            };
 
-        Ok(MediaButtonsBinding { event_sender: input_event_sender, device_descriptor })
+        Ok(ConsumerControlsBinding { event_sender: input_event_sender, device_descriptor })
     }
 
     /// Parses an [`InputReport`] into one or more [`InputEvent`]s. Sends the [`InputEvent`]s
@@ -161,7 +166,7 @@ impl MediaButtonsBinding {
         let event_time: input_device::EventTime =
             input_device::event_time_or_now(report.event_time);
 
-        send_media_buttons_event(
+        send_consumer_controls_event(
             pressed_buttons,
             device_descriptor,
             event_time,
@@ -174,11 +179,12 @@ impl MediaButtonsBinding {
     /// Returns the [`fidl_input_report::ConsumerControlButton`]s that this binding supports.
     pub fn supported_buttons() -> Vec<fidl_input_report::ConsumerControlButton> {
         vec![
-            fidl_input_report::ConsumerControlButton::VolumeUp,
-            fidl_input_report::ConsumerControlButton::VolumeDown,
-            fidl_input_report::ConsumerControlButton::Pause,
-            fidl_input_report::ConsumerControlButton::MicMute,
             fidl_input_report::ConsumerControlButton::CameraDisable,
+            fidl_input_report::ConsumerControlButton::FactoryReset,
+            fidl_input_report::ConsumerControlButton::MicMute,
+            fidl_input_report::ConsumerControlButton::Pause,
+            fidl_input_report::ConsumerControlButton::VolumeDown,
+            fidl_input_report::ConsumerControlButton::VolumeUp,
         ]
     }
 }
@@ -189,21 +195,21 @@ impl MediaButtonsBinding {
 /// - `pressed_buttons`: The buttons relevant to the event.
 /// - `device_descriptor`: The descriptor for the input device generating the input reports.
 /// - `event_time`: The time in nanoseconds when the event was first recorded.
-/// - `sender`: The stream to send the MouseEvent to.
-fn send_media_buttons_event(
+/// - `sender`: The stream to send the InputEvent to.
+fn send_consumer_controls_event(
     pressed_buttons: Vec<fidl_input_report::ConsumerControlButton>,
     device_descriptor: &input_device::InputDeviceDescriptor,
     event_time: input_device::EventTime,
     sender: &mut Sender<input_device::InputEvent>,
 ) {
     if let Err(e) = sender.try_send(input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::MediaButtons(MediaButtonsEvent::new(
+        device_event: input_device::InputDeviceEvent::ConsumerControls(ConsumerControlsEvent::new(
             pressed_buttons,
         )),
         device_descriptor: device_descriptor.clone(),
         event_time,
     }) {
-        fx_log_err!("Failed to send MediaButtonsEvent with error: {:?}", e);
+        fx_log_err!("Failed to send ConsumerControlsEvent with error: {:?}", e);
     }
 }
 
@@ -211,8 +217,8 @@ fn send_media_buttons_event(
 mod tests {
     use {super::*, crate::testing_utilities, fuchsia_async as fasync, futures::StreamExt};
 
-    // Tests that an InputReport containing one media button generates an InputEvent containing
-    // the same media button.
+    // Tests that an InputReport containing one consumer control button generates an InputEvent
+    // containing the same consumer control button.
     #[fasync::run_singlethreaded(test)]
     async fn volume_up_only() {
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
@@ -221,10 +227,10 @@ mod tests {
             pressed_buttons.clone(),
             event_time_i64,
         );
-        let descriptor = testing_utilities::media_buttons_device_descriptor();
+        let descriptor = testing_utilities::consumer_controls_device_descriptor();
 
         let input_reports = vec![first_report];
-        let expected_events = vec![testing_utilities::create_media_buttons_event(
+        let expected_events = vec![testing_utilities::create_consumer_controls_event(
             pressed_buttons,
             event_time_u64,
             &descriptor,
@@ -234,12 +240,12 @@ mod tests {
             input_reports: input_reports,
             expected_events: expected_events,
             device_descriptor: descriptor,
-            device_type: MediaButtonsBinding,
+            device_type: ConsumerControlsBinding,
         );
     }
 
-    // Tests that an InputReport containing two media button generates an InputEvent containing
-    // both media buttons.
+    // Tests that an InputReport containing two consumer control buttons generates an InputEvent
+    // containing both consumer control buttons.
     #[fasync::run_singlethreaded(test)]
     async fn volume_up_and_down() {
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
@@ -251,10 +257,10 @@ mod tests {
             pressed_buttons.clone(),
             event_time_i64,
         );
-        let descriptor = testing_utilities::media_buttons_device_descriptor();
+        let descriptor = testing_utilities::consumer_controls_device_descriptor();
 
         let input_reports = vec![first_report];
-        let expected_events = vec![testing_utilities::create_media_buttons_event(
+        let expected_events = vec![testing_utilities::create_consumer_controls_event(
             pressed_buttons,
             event_time_u64,
             &descriptor,
@@ -264,12 +270,12 @@ mod tests {
             input_reports: input_reports,
             expected_events: expected_events,
             device_descriptor: descriptor,
-            device_type: MediaButtonsBinding,
+            device_type: ConsumerControlsBinding,
         );
     }
 
-    // Tests that three InputReports containing one media button generates three InputEvents
-    // containing the same media buttons.
+    // Tests that three InputReports containing one consumer control button generates three
+    // InputEvents containing the same consumer control button.
     #[fasync::run_singlethreaded(test)]
     async fn sequence_of_buttons() {
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
@@ -285,21 +291,21 @@ mod tests {
             vec![fidl_input_report::ConsumerControlButton::CameraDisable],
             event_time_i64,
         );
-        let descriptor = testing_utilities::media_buttons_device_descriptor();
+        let descriptor = testing_utilities::consumer_controls_device_descriptor();
 
         let input_reports = vec![first_report, second_report, third_report];
         let expected_events = vec![
-            testing_utilities::create_media_buttons_event(
+            testing_utilities::create_consumer_controls_event(
                 vec![fidl_input_report::ConsumerControlButton::VolumeUp],
                 event_time_u64,
                 &descriptor,
             ),
-            testing_utilities::create_media_buttons_event(
+            testing_utilities::create_consumer_controls_event(
                 vec![fidl_input_report::ConsumerControlButton::VolumeDown],
                 event_time_u64,
                 &descriptor,
             ),
-            testing_utilities::create_media_buttons_event(
+            testing_utilities::create_consumer_controls_event(
                 vec![fidl_input_report::ConsumerControlButton::CameraDisable],
                 event_time_u64,
                 &descriptor,
@@ -310,7 +316,7 @@ mod tests {
             input_reports: input_reports,
             expected_events: expected_events,
             device_descriptor: descriptor,
-            device_type: MediaButtonsBinding,
+            device_type: ConsumerControlsBinding,
         );
     }
 }

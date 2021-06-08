@@ -8,9 +8,9 @@ mod fake_input_device_binding;
 mod fake_input_handler;
 mod utils;
 
+pub mod consumer_controls;
 pub mod input_device;
 pub mod keyboard;
-pub mod media_buttons;
 pub mod mouse;
 pub mod touch;
 

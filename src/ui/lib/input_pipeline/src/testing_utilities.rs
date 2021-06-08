@@ -5,7 +5,7 @@
 #[cfg(test)]
 use {
     crate::utils::Position,
-    crate::{input_device, keyboard, media_buttons, mouse, touch},
+    crate::{consumer_controls, input_device, keyboard, mouse, touch},
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_input3 as fidl_ui_input3, fidl_fuchsia_ui_pointerinjector as pointerinjector,
     fuchsia_zircon as zx,
@@ -106,18 +106,21 @@ pub fn create_keyboard_event(
     )
 }
 
-/// Creates an [`input_device::InputDeviceDescriptor`] for a media button device.
+/// Creates an [`input_device::InputDeviceDescriptor`] for a consumer controls device.
 #[cfg(test)]
-pub fn media_buttons_device_descriptor() -> input_device::InputDeviceDescriptor {
-    input_device::InputDeviceDescriptor::MediaButtons(media_buttons::MediaButtonsDeviceDescriptor {
-        buttons: vec![
-            fidl_input_report::ConsumerControlButton::VolumeUp,
-            fidl_input_report::ConsumerControlButton::VolumeDown,
-            fidl_input_report::ConsumerControlButton::Pause,
-            fidl_input_report::ConsumerControlButton::MicMute,
-            fidl_input_report::ConsumerControlButton::CameraDisable,
-        ],
-    })
+pub fn consumer_controls_device_descriptor() -> input_device::InputDeviceDescriptor {
+    input_device::InputDeviceDescriptor::ConsumerControls(
+        consumer_controls::ConsumerControlsDeviceDescriptor {
+            buttons: vec![
+                fidl_input_report::ConsumerControlButton::CameraDisable,
+                fidl_input_report::ConsumerControlButton::FactoryReset,
+                fidl_input_report::ConsumerControlButton::MicMute,
+                fidl_input_report::ConsumerControlButton::Pause,
+                fidl_input_report::ConsumerControlButton::VolumeDown,
+                fidl_input_report::ConsumerControlButton::VolumeUp,
+            ],
+        },
+    )
 }
 
 /// Creates a [`fidl_input_report::InputReport`] with a consumer control report.
@@ -145,21 +148,21 @@ pub fn create_consumer_control_input_report(
     }
 }
 
-/// Creates a [`media_buttons::MediaButtonEvent`] with the provided parameters.
+/// Creates a [`consumer_controls::ConsumerControlsEvent`] with the provided parameters.
 ///
 /// # Parameters
 /// - `pressed_buttons`: The buttons to report in the event.
 /// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
 #[cfg(test)]
-pub fn create_media_buttons_event(
+pub fn create_consumer_controls_event(
     pressed_buttons: Vec<fidl_input_report::ConsumerControlButton>,
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::MediaButtons(
-            media_buttons::MediaButtonsEvent::new(pressed_buttons),
+        device_event: input_device::InputDeviceEvent::ConsumerControls(
+            consumer_controls::ConsumerControlsEvent::new(pressed_buttons),
         ),
         device_descriptor: device_descriptor.clone(),
         event_time,

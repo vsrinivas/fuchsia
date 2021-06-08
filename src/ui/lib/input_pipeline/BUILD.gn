@@ -48,6 +48,7 @@ rustc_library("input_pipeline") {
   test_deps = [ "//third_party/rust_crates:test-case" ]
 
   sources = [
+    "src/consumer_controls.rs",
     "src/fake_input_device_binding.rs",
     "src/fake_input_handler.rs",
     "src/focus_listening.rs",
@@ -58,7 +59,6 @@ rustc_library("input_pipeline") {
     "src/keyboard.rs",
     "src/keymap.rs",
     "src/lib.rs",
-    "src/media_buttons.rs",
     "src/media_buttons_handler.rs",
     "src/mouse.rs",
     "src/mouse_handler.rs",

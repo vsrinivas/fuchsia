@@ -85,7 +85,7 @@ impl Handler {
 mod tests {
     use super::*;
 
-    use crate::{media_buttons, testing_utilities};
+    use crate::{consumer_controls, testing_utilities};
     use fuchsia_async as fasync;
 
     // A mod-specific version of `testing_utilities::create_keyboard_event`.
@@ -143,11 +143,11 @@ mod tests {
             },
             TestCase {
                 // A non-keyboard event.
-                events: vec![testing_utilities::create_media_buttons_event(
+                events: vec![testing_utilities::create_consumer_controls_event(
                     vec![],
                     0,
-                    &input_device::InputDeviceDescriptor::MediaButtons(
-                        media_buttons::MediaButtonsDeviceDescriptor { buttons: vec![] },
+                    &input_device::InputDeviceDescriptor::ConsumerControls(
+                        consumer_controls::ConsumerControlsDeviceDescriptor { buttons: vec![] },
                     ),
                 )],
                 expected: vec![None],

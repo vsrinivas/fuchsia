@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{keyboard, media_buttons, mouse, touch},
+    crate::{consumer_controls, keyboard, mouse, touch},
     anyhow::{format_err, Error},
     async_trait::async_trait,
     async_utils::hanging_get::client::HangingGetStream,
@@ -31,7 +31,8 @@ pub struct InputEvent {
     /// The `device_event` contains the device-specific input event information.
     pub device_event: InputDeviceEvent,
 
-    /// The `device_descriptor` contains static information about the device that generated the input event.
+    /// The `device_descriptor` contains static information about the device that generated the
+    /// input event.
     pub device_descriptor: InputDeviceDescriptor,
 
     /// The time in nanoseconds when the event was first recorded.
@@ -49,7 +50,7 @@ pub struct InputEvent {
 #[derive(Clone, Debug, PartialEq)]
 pub enum InputDeviceEvent {
     Keyboard(keyboard::KeyboardEvent),
-    MediaButtons(media_buttons::MediaButtonsEvent),
+    ConsumerControls(consumer_controls::ConsumerControlsEvent),
     Mouse(mouse::MouseEvent),
     Touch(touch::TouchEvent),
 }
@@ -66,7 +67,7 @@ pub enum InputDeviceEvent {
 #[derive(Clone, Debug, PartialEq)]
 pub enum InputDeviceDescriptor {
     Keyboard(keyboard::KeyboardDeviceDescriptor),
-    MediaButtons(media_buttons::MediaButtonsDeviceDescriptor),
+    ConsumerControls(consumer_controls::ConsumerControlsDeviceDescriptor),
     Mouse(mouse::MouseDeviceDescriptor),
     Touch(touch::TouchDeviceDescriptor),
 }
@@ -74,7 +75,7 @@ pub enum InputDeviceDescriptor {
 #[derive(Clone, Copy, PartialEq)]
 pub enum InputDeviceType {
     Keyboard,
-    MediaButtons,
+    ConsumerControls,
     Mouse,
     Touch,
 }
@@ -175,8 +176,8 @@ pub async fn is_device_type(
 
     // Return if the device type matches the desired `device_type`.
     match device_type {
-        InputDeviceType::MediaButtons => {
-            let supported_buttons = media_buttons::MediaButtonsBinding::supported_buttons();
+        InputDeviceType::ConsumerControls => {
+            let supported_buttons = consumer_controls::ConsumerControlsBinding::supported_buttons();
             if let Some(fidl_input_report::ConsumerControlDescriptor {
                 input: Some(input), ..
             }) = device_descriptor.consumer_control
@@ -209,8 +210,9 @@ pub async fn get_device_binding(
     input_event_sender: Sender<InputEvent>,
 ) -> Result<Box<dyn InputDeviceBinding>, Error> {
     match device_type {
-        InputDeviceType::MediaButtons => Ok(Box::new(
-            media_buttons::MediaButtonsBinding::new(device_proxy, input_event_sender).await?,
+        InputDeviceType::ConsumerControls => Ok(Box::new(
+            consumer_controls::ConsumerControlsBinding::new(device_proxy, input_event_sender)
+                .await?,
         )),
         InputDeviceType::Mouse => Ok(Box::new(
             mouse::MouseBinding::new(device_proxy, device_id, input_event_sender).await?,
@@ -278,10 +280,10 @@ mod tests {
         assert_eq!(event_time, std::i64::MIN as EventTime);
     }
 
-    // Tests that is_device_type() returns true for InputDeviceType::MediaButtons when a media
-    // button device exists.
+    // Tests that is_device_type() returns true for InputDeviceType::ConsumerControls when a
+    // consumer controls device exists.
     #[fasync::run_singlethreaded(test)]
-    async fn media_buttons_input_device_exists() {
+    async fn consumer_controls_input_device_exists() {
         let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
             match input_device_request {
                 fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
@@ -309,13 +311,13 @@ mod tests {
         })
         .unwrap();
 
-        assert!(is_device_type(&input_device_proxy, InputDeviceType::MediaButtons).await);
+        assert!(is_device_type(&input_device_proxy, InputDeviceType::ConsumerControls).await);
     }
 
-    // Tests that is_device_type() returns true for InputDeviceType::MediaButtons when a media
-    // button device doesn't exist.
+    // Tests that is_device_type() returns true for InputDeviceType::ConsumerControls when a
+    // consumer controls device doesn't exist.
     #[fasync::run_singlethreaded(test)]
-    async fn media_buttons_input_device_doesnt_exists() {
+    async fn consumer_controls_input_device_doesnt_exists() {
         let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
             match input_device_request {
                 fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
@@ -342,7 +344,7 @@ mod tests {
         })
         .unwrap();
 
-        assert!(!is_device_type(&input_device_proxy, InputDeviceType::MediaButtons).await);
+        assert!(!is_device_type(&input_device_proxy, InputDeviceType::ConsumerControls).await);
     }
 
     // Tests that is_device_type() returns true for InputDeviceType::Mouse when a mouse exists.
@@ -580,7 +582,7 @@ mod tests {
         })
         .unwrap();
 
-        assert!(is_device_type(&input_device_proxy, InputDeviceType::MediaButtons).await);
+        assert!(is_device_type(&input_device_proxy, InputDeviceType::ConsumerControls).await);
         assert!(is_device_type(&input_device_proxy, InputDeviceType::Mouse).await);
         assert!(is_device_type(&input_device_proxy, InputDeviceType::Touch).await);
         assert!(is_device_type(&input_device_proxy, InputDeviceType::Keyboard).await);

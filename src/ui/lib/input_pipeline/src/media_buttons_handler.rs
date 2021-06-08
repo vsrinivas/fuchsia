@@ -4,7 +4,7 @@
 
 use {
     crate::input_handler::InputHandler,
-    crate::{input_device, media_buttons},
+    crate::{consumer_controls, input_device},
     anyhow::{Context, Error},
     async_trait::async_trait,
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
@@ -33,8 +33,8 @@ impl InputHandler for MediaButtonsHandler {
     ) -> Vec<input_device::InputEvent> {
         match input_event {
             input_device::InputEvent {
-                device_event: input_device::InputDeviceEvent::MediaButtons(media_buttons_event),
-                device_descriptor: input_device::InputDeviceDescriptor::MediaButtons(_),
+                device_event: input_device::InputDeviceEvent::ConsumerControls(media_buttons_event),
+                device_descriptor: input_device::InputDeviceDescriptor::ConsumerControls(_),
                 event_time: _,
             } => {
                 let media_buttons_event = Self::create_media_buttons_event(media_buttons_event);
@@ -113,7 +113,7 @@ impl MediaButtonsHandler {
     /// # Parameters
     /// -  `event`: The MediaButtonEvent to create a MediaButtonsEvent from.
     fn create_media_buttons_event(
-        event: media_buttons::MediaButtonsEvent,
+        event: consumer_controls::ConsumerControlsEvent,
     ) -> fidl_ui_input::MediaButtonsEvent {
         let mut new_event = fidl_ui_input::MediaButtonsEvent {
             volume: None,
@@ -275,9 +275,9 @@ mod tests {
         let _ = device_listener_proxy.register_listener(listener).await;
 
         // Setup events and expectations.
-        let descriptor = testing_utilities::media_buttons_device_descriptor();
+        let descriptor = testing_utilities::consumer_controls_device_descriptor();
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
-        let input_events = vec![testing_utilities::create_media_buttons_event(
+        let input_events = vec![testing_utilities::create_consumer_controls_event(
             vec![
                 fidl_input_report::ConsumerControlButton::VolumeUp,
                 fidl_input_report::ConsumerControlButton::VolumeDown,
@@ -320,9 +320,9 @@ mod tests {
         let _ = device_listener_proxy.register_listener(second_listener).await;
 
         // Setup events and expectations.
-        let descriptor = testing_utilities::media_buttons_device_descriptor();
+        let descriptor = testing_utilities::consumer_controls_device_descriptor();
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
-        let input_events = vec![testing_utilities::create_media_buttons_event(
+        let input_events = vec![testing_utilities::create_consumer_controls_event(
             vec![fidl_input_report::ConsumerControlButton::VolumeUp],
             event_time,
             &descriptor,

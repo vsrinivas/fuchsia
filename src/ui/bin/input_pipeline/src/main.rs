@@ -25,7 +25,7 @@ async fn main() -> Result<(), Error> {
 
     // Declare the types of input to support.
     let device_types =
-        vec![input_device::InputDeviceType::Touch, input_device::InputDeviceType::MediaButtons];
+        vec![input_device::InputDeviceType::Touch, input_device::InputDeviceType::ConsumerControls];
 
     // Create a new input pipeline.
     let input_handlers = input_handlers::create().await;
