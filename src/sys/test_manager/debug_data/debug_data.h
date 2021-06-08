@@ -56,7 +56,8 @@ class DebugDataImpl {
 
   class Inner : public fuchsia::debugdata::DebugData {
    public:
-    void Publish(::std::string data_sink, zx::vmo data) override;
+    void Publish(::std::string data_sink, zx::vmo data,
+                 fidl::InterfaceRequest<fuchsia::debugdata::DebugDataVmoToken> vmo_token) override;
     void LoadConfig(::std::string config_name, LoadConfigCallback callback) override;
     Inner(fidl::InterfaceRequest<fuchsia::debugdata::DebugData> request,
           fxl::WeakPtr<DebugDataImpl> parent, std::string moniker, std::string test_url,

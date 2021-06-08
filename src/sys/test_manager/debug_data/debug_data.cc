@@ -67,7 +67,9 @@ std::unique_ptr<DebugDataImpl::Inner> DebugDataImpl::Remove(DebugDataImpl::Inner
   return nullptr;
 }
 
-void DebugDataImpl::Inner::Publish(::std::string data_sink, zx::vmo data) {
+void DebugDataImpl::Inner::Publish(
+    ::std::string data_sink, zx::vmo data,
+    fidl::InterfaceRequest<fuchsia::debugdata::DebugDataVmoToken> /*unused*/) {
   FX_CHECK(parent_) << "parent object should not die before this object";
   parent_->AddData(moniker_, test_url_, std::move(data_sink), std::move(data));
 }

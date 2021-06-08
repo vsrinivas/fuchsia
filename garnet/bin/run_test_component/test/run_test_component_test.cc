@@ -35,7 +35,11 @@ TEST(Run, TestHermeticEnv) {
 
 class FakeDebugData : public fuchsia::debugdata::DebugData {
  public:
-  void Publish(std::string /*unused*/, ::zx::vmo /*unused*/) override { call_count_++; }
+  void Publish(std::string /*unused*/, ::zx::vmo /*unused*/,
+               fidl::InterfaceRequest<fuchsia::debugdata::DebugDataVmoToken> /*unused*/
+               ) override {
+    call_count_++;
+  }
 
   void LoadConfig(std::string /*unused*/, LoadConfigCallback /*unused*/) override {
     call_count_++;

@@ -28,10 +28,18 @@ void DebugData::Publish(PublishRequestView request, PublishCompleter::Sync&) {
   std::lock_guard<std::mutex> lock(lock_);
   std::string name(request->data_sink.data(), request->data_sink.size());
   data_[name].push_back(std::move(request->data));
+  vmo_token_channels_.push_back(request->vmo_token.TakeChannel());
 }
 
 std::unordered_map<std::string, std::vector<zx::vmo>> DebugData::TakeData() {
   std::lock_guard<std::mutex> lock(lock_);
+  for (zx::channel& channel : vmo_token_channels_) {
+    zx_status_t status = channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
+    if (status != ZX_OK) {
+      fprintf(stderr, "debugdata: error: Unable to wait for token channel to close");
+    }
+  }
+  vmo_token_channels_.clear();
   auto temp = std::move(data_);
   data_ = std::unordered_map<std::string, std::vector<zx::vmo>>();
   return temp;

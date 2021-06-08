@@ -14,6 +14,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
+#include <vector>
+
 #include "fuchsia-io-constants.h"
 
 __attribute__((visibility("hidden"))) zx_handle_t __zircon_namespace_svc = ZX_HANDLE_INVALID;
@@ -52,8 +54,9 @@ _fuchsia_io_DirectoryOpen(zx_handle_t channel, uint32_t flags, uint32_t mode, co
 [[clang::no_sanitize("address")]]
 #endif
 zx_status_t
-_fuchsia_debugdata_DebugDataPublish(zx_handle_t channel, const char* data_sink_data,
-                                    size_t data_sink_size, zx_handle_t data) {
+_fuchsia_debugdata_DebugDataPublish(zx_handle_t debug_data_channel, const char* data_sink_data,
+                                    size_t data_sink_size, zx_handle_t data,
+                                    zx_handle_t vmo_token) {
   if (data_sink_size > fuchsia_debugdata_MAX_NAME) {
     _zx_handle_close(data);
     return ZX_ERR_INVALID_ARGS;
@@ -69,11 +72,15 @@ _fuchsia_debugdata_DebugDataPublish(zx_handle_t channel, const char* data_sink_d
   request->data_sink.data = (char*)FIDL_ALLOC_PRESENT;
   request->data_sink.size = data_sink_size;
   request->data = FIDL_HANDLE_PRESENT;
+  request->vmo_token = FIDL_HANDLE_PRESENT;
+
+  zx_handle_t handles[2] = {data, vmo_token};
+
   memcpy(&wr_bytes[sizeof(*request)], data_sink_data, data_sink_size);
-  return _zx_channel_write(channel, 0u, wr_bytes,
+  return _zx_channel_write(debug_data_channel, 0u, wr_bytes,
                            static_cast<uint32_t>(sizeof(fuchsia_debugdata_DebugDataPublishRequest) +
                                                  FIDL_ALIGN(data_sink_size)),
-                           &data, 1);
+                           handles, std::size(handles));
 }
 
 #if __has_feature(address_sanitizer)
@@ -149,18 +156,26 @@ zx_handle_t __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
     return ZX_HANDLE_INVALID;
   }
 
-  zx_handle_t h = sanitizer_debugdata_connect();
-  zx_status_t status = _fuchsia_debugdata_DebugDataPublish(h, sink_name, strlen(sink_name), vmo);
-  _zx_handle_close(h);
+  zx_handle_t vmo_token_client, vmo_token_server;
+  if (_zx_channel_create(0, &vmo_token_client, &vmo_token_server) != ZX_OK) {
+    constexpr const char kErrorChannelCreate[] = "Failed to create channel for debugdata VMO token";
+    __sanitizer_log_write(kErrorChannelCreate, sizeof(kErrorChannelCreate) - 1);
+    return ZX_HANDLE_INVALID;
+  }
+
+  zx_handle_t debugdata_channel = sanitizer_debugdata_connect();
+  zx_status_t status = _fuchsia_debugdata_DebugDataPublish(
+      debugdata_channel, sink_name, strlen(sink_name), vmo, vmo_token_server);
+  _zx_handle_close(debugdata_channel);
 
   if (status != ZX_OK) {
     constexpr const char kErrorPublish[] = "Failed to publish data";
     __sanitizer_log_write(kErrorPublish, sizeof(kErrorPublish) - 1);
+    _zx_handle_close(vmo_token_client);
+    return ZX_HANDLE_INVALID;
   }
 
-  // TODO(fxbug.dev/75686): Make a "token" channel and pass one end in the
-  // protocol, return the other end here.
-  return ZX_HANDLE_INVALID;
+  return vmo_token_client;
 }
 
 __EXPORT

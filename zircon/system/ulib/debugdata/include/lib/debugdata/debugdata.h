@@ -31,12 +31,14 @@ class DebugData : public fidl::WireServer<fuchsia_debugdata::DebugData> {
   void Publish(PublishRequestView request, PublishCompleter::Sync& completer) override;
   void LoadConfig(LoadConfigRequestView request, LoadConfigCompleter::Sync& completer) override;
 
-  const auto& data() const { return data_; }
-
+  // Wait for DebugData publishers to indicate vmos are ready, then take data.
+  // Note this may wait indefinitely if any publishing processes are active and have not closed
+  // their control channels passed through DebugData::Publish.
   std::unordered_map<std::string, std::vector<zx::vmo>> TakeData();
 
  private:
   std::unordered_map<std::string, std::vector<zx::vmo>> data_ __TA_GUARDED(lock_);
+  std::vector<zx::channel> vmo_token_channels_ __TA_GUARDED(lock_);
   std::mutex lock_;
   fbl::unique_fd root_dir_fd_;
 };

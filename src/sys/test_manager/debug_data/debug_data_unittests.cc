@@ -30,7 +30,9 @@ TEST_F(DebugDataTest, ConnectAndPublish) {
   zx::vmo vmo, vmo_clone;
   ASSERT_EQ(ZX_OK, zx::vmo::create(1024, 0, &vmo));
   ASSERT_EQ(ZX_OK, vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_clone));
-  debug_data_proxy->Publish("data_sink", std::move(vmo_clone));
+  fuchsia::debugdata::DebugDataVmoTokenPtr token_proxy;
+  debug_data_proxy->Publish("data_sink", std::move(vmo_clone),
+                            token_proxy.NewRequest(dispatcher()));
 
   RunLoopUntilIdle();
   std::string message = "msg1";
@@ -79,7 +81,9 @@ TEST_F(DebugDataTest, MultiplePublish) {
     for (uint j = 0; j < times[i]; j++) {
       zx::vmo vmo_clone;
       ASSERT_EQ(ZX_OK, vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_clone));
-      debug_data_proxy[i]->Publish(fxl::StringPrintf("data_sink_%d", j), std::move(vmo_clone));
+      fuchsia::debugdata::DebugDataVmoTokenPtr token_proxy;
+      debug_data_proxy[i]->Publish(fxl::StringPrintf("data_sink_%d", j), std::move(vmo_clone),
+                                   token_proxy.NewRequest(dispatcher()));
       RunLoopUntilIdle();
     }
   }
@@ -113,7 +117,9 @@ TEST_F(DebugDataTest, PublishAfterTake) {
   zx::vmo vmo, vmo_clone;
   ASSERT_EQ(ZX_OK, zx::vmo::create(1024, 0, &vmo));
   ASSERT_EQ(ZX_OK, vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_clone));
-  debug_data_proxy->Publish("data_sink", std::move(vmo_clone));
+  fuchsia::debugdata::DebugDataVmoTokenPtr token_proxy;
+  debug_data_proxy->Publish("data_sink", std::move(vmo_clone),
+                            token_proxy.NewRequest(dispatcher()));
 
   RunLoopUntilIdle();
 
@@ -131,7 +137,9 @@ TEST_F(DebugDataTest, PublishAfterTake) {
   ASSERT_FALSE(info.has_value());
 
   ASSERT_EQ(ZX_OK, vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_clone));
-  debug_data_proxy->Publish("data_sink1", std::move(vmo_clone));
+  fuchsia::debugdata::DebugDataVmoTokenPtr token_proxy_2;
+  debug_data_proxy->Publish("data_sink1", std::move(vmo_clone),
+                            token_proxy_2.NewRequest(dispatcher()));
 
   RunLoopUntilIdle();
 
@@ -183,7 +191,8 @@ TEST_F(DebugDataTest, NotifyOnClose) {
 
   zx::vmo vmo;
   ASSERT_EQ(ZX_OK, zx::vmo::create(1024, 0, &vmo));
-  debug_data_proxy->Publish("data_sink", std::move(vmo));
+  fuchsia::debugdata::DebugDataVmoTokenPtr token_proxy;
+  debug_data_proxy->Publish("data_sink", std::move(vmo), token_proxy.NewRequest(dispatcher()));
   debug_data_proxy.Unbind();
   RunLoopUntilIdle();
 
@@ -217,7 +226,8 @@ TEST_F(DebugDataTest, NullNotifyOnUnbind) {
 
   zx::vmo vmo;
   ASSERT_EQ(ZX_OK, zx::vmo::create(1024, 0, &vmo));
-  debug_data_proxy->Publish("data_sink", std::move(vmo));
+  fuchsia::debugdata::DebugDataVmoTokenPtr token_proxy;
+  debug_data_proxy->Publish("data_sink", std::move(vmo), token_proxy.NewRequest(dispatcher()));
   debug_data_proxy.Unbind();
   RunLoopUntilIdle();
 

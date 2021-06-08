@@ -123,9 +123,10 @@ TEST_F(EventStreamTest, Test) {
 
   // Test simple case, where events are in order
   auto foo_bar_ptr = SendCapabilityRequestedEvent(event_stream_ptr, "foo/bar");
-  foo_bar_ptr->Publish("foo_bar_sink1", GetVmo());
-  foo_bar_ptr->Publish("foo_bar_sink2", GetVmo());
-  foo_bar_ptr->Publish("foo_bar_sink3", GetVmo());
+  fuchsia::debugdata::DebugDataVmoTokenPtr token_1, token_2, token_3;
+  foo_bar_ptr->Publish("foo_bar_sink1", GetVmo(), token_1.NewRequest());
+  foo_bar_ptr->Publish("foo_bar_sink2", GetVmo(), token_2.NewRequest());
+  foo_bar_ptr->Publish("foo_bar_sink3", GetVmo(), token_3.NewRequest());
 
   RunLoopUntilIdle();
   // as we have not closed the connection, we should not get the VMOs
@@ -139,11 +140,12 @@ TEST_F(EventStreamTest, Test) {
   ASSERT_EQ(shared_vec->at(0).first, "foo_bar.cm");
   shared_vec->clear();
 
-  // Test  case, where events are out of order
+  // Test case, where events are out of order
+  fuchsia::debugdata::DebugDataVmoTokenPtr token_4, token_5, token_6;
   foo_bar_ptr = SendCapabilityRequestedEvent(event_stream_ptr, "foo/bar");
-  foo_bar_ptr->Publish("foo_bar_sink1", GetVmo());
-  foo_bar_ptr->Publish("foo_bar_sink2", GetVmo());
-  foo_bar_ptr->Publish("foo_bar_sink3", GetVmo());
+  foo_bar_ptr->Publish("foo_bar_sink1", GetVmo(), token_4.NewRequest());
+  foo_bar_ptr->Publish("foo_bar_sink2", GetVmo(), token_5.NewRequest());
+  foo_bar_ptr->Publish("foo_bar_sink3", GetVmo(), token_6.NewRequest());
 
   RunLoopUntilIdle();
   // as we have not closed the conenction, we should not get the VMOs
@@ -156,8 +158,9 @@ TEST_F(EventStreamTest, Test) {
   ASSERT_EQ(shared_vec->at(0).first, "foo_bar.cm");
 
   // send publish after stop was sent
-  foo_bar_ptr->Publish("foo_bar_sink1", GetVmo());
-  foo_bar_ptr->Publish("foo_bar_sink2", GetVmo());
+  fuchsia::debugdata::DebugDataVmoTokenPtr token_7, token_8;
+  foo_bar_ptr->Publish("foo_bar_sink1", GetVmo(), token_7.NewRequest());
+  foo_bar_ptr->Publish("foo_bar_sink2", GetVmo(), token_8.NewRequest());
   foo_bar_ptr.Unbind();
 
   // make sure we get those VMOs.
@@ -181,7 +184,8 @@ TEST_F(EventStreamTest, Test) {
   for (size_t i = 0; i < SIZE; i++) {
     for (size_t j = 0; j < count[monikers[i]]; j++) {
       auto data_sink = fxl::StringPrintf("ds_%zu_%zu", i, j);
-      ptrs[i]->Publish(data_sink, GetVmo());
+      fuchsia::debugdata::DebugDataVmoTokenPtr token;
+      ptrs[i]->Publish(data_sink, GetVmo(), token.NewRequest());
     }
   }
   RunLoopUntilIdle();

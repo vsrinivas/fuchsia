@@ -47,14 +47,18 @@ TEST(DebugDataTest, PublishData) {
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
   ASSERT_OK(vmo.write(kTestData, 0, sizeof(kTestData)));
 
+  zx::channel token_client, token_server;
+  ASSERT_OK(zx::channel::create(0, &token_client, &token_server));
   ASSERT_OK(fidl::WireCall<fuchsia_debugdata::DebugData>(zx::unowned_channel(client))
-                .Publish(kTestSink, std::move(vmo))
+                .Publish(kTestSink, std::move(vmo), std::move(token_server))
                 .status());
+  // close the client channel to indicate the VMO is ready to process.
+  token_client.reset();
 
   ASSERT_OK(loop.RunUntilIdle());
   loop.Shutdown();
 
-  const auto& data = svc.data();
+  const auto data = svc.TakeData();
   ASSERT_EQ(data.size(), 1);
 
   ASSERT_NE(data.find(kTestSink), data.end());

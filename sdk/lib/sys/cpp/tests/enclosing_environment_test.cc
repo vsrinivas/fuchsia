@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/debugdata/cpp/fidl.h>
-#include <test/placeholders/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -15,6 +14,8 @@
 #include <zircon/processargs.h>
 
 #include <memory>
+
+#include <test/placeholders/cpp/fidl.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -321,7 +322,10 @@ TEST_F(EnclosingEnvTest, CanLaunchMoreThanOneService) {
 
 class FakeDebugData : public fuchsia::debugdata::DebugData {
  public:
-  void Publish(std::string data_sink, ::zx::vmo data) override { call_count_++; }
+  void Publish(std::string data_sink, ::zx::vmo data,
+               fidl::InterfaceRequest<fuchsia::debugdata::DebugDataVmoToken> token) override {
+    call_count_++;
+  }
 
   void LoadConfig(std::string config_name, LoadConfigCallback callback) override {
     // not implemented
@@ -357,7 +361,8 @@ TEST_F(EnclosingEnvTest, DebugDataServicePlumbedCorrectly) {
   // make sure out fake servcie can be called.
   env->ConnectToService(ptr.NewRequest());
   ASSERT_EQ(ZX_OK, zx::vmo::create(8, 0, &data));
-  ptr->Publish("data_sink", std::move(data));
+  fuchsia::debugdata::DebugDataVmoTokenPtr token_ptr;
+  ptr->Publish("data_sink", std::move(data), token_ptr.NewRequest());
 
   RunLoopUntil([&debug_data]() { return debug_data.call_count() == 1; });
 
@@ -368,7 +373,8 @@ TEST_F(EnclosingEnvTest, DebugDataServicePlumbedCorrectly) {
 
   sub_env->ConnectToService(ptr.NewRequest());
   ASSERT_EQ(ZX_OK, zx::vmo::create(8, 0, &data));
-  ptr->Publish("data_sink", std::move(data));
+  fuchsia::debugdata::DebugDataVmoTokenPtr token_ptr_2;
+  ptr->Publish("data_sink", std::move(data), token_ptr_2.NewRequest());
 
   RunLoopUntil([&debug_data]() { return debug_data.call_count() == 2; });
 }

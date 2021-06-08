@@ -25,11 +25,13 @@ protocol DebugData {
     /// transfer the only handle to the VMO (which prevents the VMO being
     /// resized without the receiver's knowledge), but it might still have the
     /// VMO mapped in and continue to write data to it.  Code instrumentation
-    /// runtimes use this to deliver large binary trace results.
-    // TODO(mcgrathr): Consider dropping the "sole handle" wording and instead
-    // just say the receiver is expected to wait for the process to die before
-    // consuming the VMO.
-    Publish(string:MAX_NAME data_sink, zx.handle:VMO data);
+    /// runtimes use this to deliver large binary trace results. In such cases,
+    /// the client should use the `vmo_token` channel to signal when the VMO
+    /// is ready for processing by the recipient.  The receiver will not
+    /// process the VMO until the `vmo_token` channel is closed. Therefore,
+    /// the client should retain the `vmo_token` channel until it has
+    /// completed all writes to the VMO.
+    Publish(string:MAX_NAME data_sink, zx.handle:VMO data, request<DebugDataVmoToken> vmo_token);
 
     /// The program runtime names a `config_name` referring to a debug
     /// configuration of some kind and gets back a VMO to read configuration
@@ -37,4 +39,10 @@ protocol DebugData {
     /// text to be stored in a file rather than passed directly in environment
     /// strings.
     LoadConfig(string:MAX_NAME config_name) -> (zx.handle:VMO? config);
+};
+
+/// DebugDataVmoToken is an empty protocol used by a client calling
+/// `DebugData.Publish` to indicate when the reciever may begin processing a
+/// VMO. See `DebugData.Publish` for more details.
+protocol DebugDataVmoToken {
 };
