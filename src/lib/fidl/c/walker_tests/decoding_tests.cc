@@ -1577,6 +1577,27 @@ TEST(UnknownEnvelope, NumUnknownHandlesOverflows) {
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "number of unknown handles overflows");
 }
+
+TEST(UnknownEnvelope, NumIncomingHandlesOverflows) {
+  uint8_t bytes[] = {
+      2,   0,   0,   0,   0,   0,   0,   0,    // max ordinal
+      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+
+      0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: num bytes / num handles
+      0,   0,   0,   0,   0,   0,   0,   0,  // alloc absent
+
+      0,   0,   0,   0,   1,   0,   0,   0,    // envelope 2: num bytes / num handles
+      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+  };
+  zx_handle_t handles[1] = {};
+
+  const char* error = nullptr;
+  auto status = fidl_decode(&fidl_test_coding::wire::fidl_test_coding_ResourceSimpleTableTable,
+                            bytes, ArrayCount(bytes), handles, 0, &error);
+
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_STR_EQ(error, "number of incoming handles exceeds incoming handle array size");
+}
 #endif
 
 #ifdef __Fuchsia__

@@ -271,6 +271,15 @@ class FidlDecoder final : public BaseVisitor<Byte> {
         SetError("number of unknown handles exceeds unknown handle array size");
         return Status::kConstraintViolationError;
       }
+      uint32_t end_incoming_handle;
+      if (add_overflow(handle_idx_, envelope->num_handles, &end_incoming_handle)) {
+        SetError("number of incoming handles overflows");
+        return Status::kConstraintViolationError;
+      }
+      if (end_incoming_handle > num_handles_) {
+        SetError("number of incoming handles exceeds incoming handle array size");
+        return Status::kConstraintViolationError;
+      }
       // If skip_unknown_handles_ is true, leave the unknown handles intact
       // for something else to process (e.g. HLCPP Decode)
       if (skip_unknown_handles_ && is_resource == kFidlIsResource_Resource) {
@@ -288,11 +297,10 @@ class FidlDecoder final : public BaseVisitor<Byte> {
       if (has_handles()) {
         memcpy(&unknown_handles_[unknown_handle_idx_], &handles()[handle_idx_],
                envelope->num_handles * sizeof(zx_handle_t));
-        handle_idx_ += envelope->num_handles;
-        unknown_handle_idx_ += envelope->num_handles;
+        handle_idx_ = end_incoming_handle;
+        unknown_handle_idx_ = total_unknown_handles;
       } else if (has_handle_infos()) {
-        uint32_t end = handle_idx_ + envelope->num_handles;
-        for (; handle_idx_ < end; handle_idx_++, unknown_handle_idx_++) {
+        for (; handle_idx_ < end_incoming_handle; handle_idx_++, unknown_handle_idx_++) {
           unknown_handles_[unknown_handle_idx_] = handle_infos()[handle_idx_].handle;
         }
       }
