@@ -2073,7 +2073,12 @@ TEST_F(NetworkDeviceTest, PortWatcherEnforcesQueueLimit) {
 
   // Add and remove ports until we've used up all the event queue.
   std::unique_ptr<FakeNetworkPortImpl> port;
-  for (size_t event_count = 0; event_count <= internal::PortWatcher::kMaximumQueuedEvents + 1;
+  auto remove_port = fit::defer([&port]() {
+    if (port) {
+      port->RemoveSync();
+    }
+  });
+  for (size_t event_count = 0; event_count <= internal::PortWatcher::kMaximumQueuedEvents;
        event_count++) {
     zx_signals_t pending = 0;
     ASSERT_STATUS(watcher.channel().wait_one(ZX_CHANNEL_PEER_CLOSED | ZX_CHANNEL_READABLE,
