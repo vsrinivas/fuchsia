@@ -29,12 +29,14 @@ TEST(NewFormatterTests, AliasFormatted) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
+
 alias MyAlias_Abcdefghijklmnopqr = bool;
 )FIDL";
 
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
 alias MyAlias_Abcdefghijklmnopqr = bool;
 )FIDL";
 
@@ -46,12 +48,14 @@ TEST(NewFormatterTests, AliasOverflow) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
+
 alias MyAlias_Abcdefghijklmnopqrs = bool;
 )FIDL";
 
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
 alias MyAlias_Abcdefghijklmnopqrs
         = bool;
 )FIDL";
@@ -64,6 +68,7 @@ TEST(NewFormatterTests, AliasMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
+
 alias
 MyAlias_Abcdefghijklmnopqr
 =
@@ -74,6 +79,7 @@ bool
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
 alias MyAlias_Abcdefghijklmnopqr = bool;
 )FIDL";
 
@@ -86,9 +92,12 @@ TEST(NewFormatterTests, ConstFormatted) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
+
 const MY_TRUE_ABCDEFGHIJKLM bool = true;
 const MY_FALSE_ABCDEFGHIJK bool = false;
 const MY_UINT64_AB uint64 = 12345678900;
+
+
 const MY_FLOAT64_ABCDEF float64 = 12.34;
 const MY_STRING_ABCDEFGH string = "foo";
 const MY_OR_A uint64 = 1 | MY_UINT64_AB;
@@ -99,9 +108,12 @@ const MY_REF_ABCD uint64 = MY_UINT64_AB;
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
 const MY_TRUE_ABCDEFGHIJKLM bool = true;
 const MY_FALSE_ABCDEFGHIJK bool = false;
 const MY_UINT64_AB uint64 = 12345678900;
+
+
 const MY_FLOAT64_ABCDEF float64 = 12.34;
 const MY_STRING_ABCDEFGH string = "foo";
 const MY_OR_A uint64 = 1 | MY_UINT64_AB;
@@ -120,9 +132,12 @@ TEST(NewFormatterTests, ConstPartialOverflow) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
+
 const MY_TRUE_ABCDEFGHIJKLMN bool = true;
 const MY_FALSE_ABCDEFGHIJKL bool = false;
 const MY_UINT64_ABC uint64 = 12345678900;
+
+
 const MY_FLOAT64_ABCDEFG float64 = 12.34;
 const MY_STRING_ABCDEFGHI string = "foo";
 const MY_REF_ABCD uint64 = MY_UINT64_ABC;
@@ -131,12 +146,15 @@ const MY_REF_ABCD uint64 = MY_UINT64_ABC;
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
 const MY_TRUE_ABCDEFGHIJKLMN bool
         = true;
 const MY_FALSE_ABCDEFGHIJKL bool
         = false;
 const MY_UINT64_ABC uint64
         = 12345678900;
+
+
 const MY_FLOAT64_ABCDEFG float64
         = 12.34;
 const MY_STRING_ABCDEFGHI string
@@ -156,9 +174,12 @@ TEST(NewFormatterTests, ConstTotalOverflow) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
+
 const MY_WAY_TOO_LONG_TRUE_ABCDEFGHIJKLMN bool = true;
 const MY_WAY_TOO_LONG_FALSE_ABCDEFGHIJKLM bool = false;
 const MY_WAY_TOO_LONG_UINT64_ABCDEFGHIJKL uint64 = 12345678900;
+
+
 const MY_WAY_TOO_LONG_FLOAT64_ABCDEFGHIJK float64 = 12.34;
 const MY_WAY_TOO_LONG_STRING_ABCDEFGHIJKL string = "foo";
 const MY_WAY_TOO_LONG_REF_ABCDEFGHIJKLMNO uint64 = MY_WAY_TOO_LONG_UINT64_ABCDEFGHIJKL;
@@ -167,6 +188,7 @@ const MY_WAY_TOO_LONG_REF_ABCDEFGHIJKLMNO uint64 = MY_WAY_TOO_LONG_UINT64_ABCDEF
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
 const MY_WAY_TOO_LONG_TRUE_ABCDEFGHIJKLMN
         bool
         = true;
@@ -176,6 +198,8 @@ const MY_WAY_TOO_LONG_FALSE_ABCDEFGHIJKLM
 const MY_WAY_TOO_LONG_UINT64_ABCDEFGHIJKL
         uint64
         = 12345678900;
+
+
 const MY_WAY_TOO_LONG_FLOAT64_ABCDEFGHIJK
         float64
         = 12.34;
@@ -195,6 +219,7 @@ TEST(NewFormatterTests, ConstMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
+
 const
 MY_TRUE_ABCDEFGHIJKLM
 bool
@@ -213,6 +238,8 @@ uint64
 =
 12345678900
 ;
+
+
 const
 MY_FLOAT64_ABCDEF
 float64
@@ -254,9 +281,12 @@ MY_UINT64_AB
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
 const MY_TRUE_ABCDEFGHIJKLM bool = true;
 const MY_FALSE_ABCDEFGHIJK bool = false;
 const MY_UINT64_AB uint64 = 12345678900;
+
+
 const MY_FLOAT64_ABCDEF float64 = 12.34;
 const MY_STRING_ABCDEFGH string = "foo";
 const MY_OR_A uint64 = 1 | MY_UINT64_AB;
@@ -323,12 +353,14 @@ TEST(NewFormatterTests, UsingFormatted) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
+
 using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
 using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
@@ -340,12 +372,14 @@ TEST(NewFormatterTests, UsingOverflow) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
+
 using imported.abcdefhijklmnopqrstubwxyz;
 )FIDL";
 
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
 using imported.abcdefhijklmnopqrstubwxyz;
 )FIDL";
 
@@ -357,6 +391,7 @@ TEST(NewFormatterTests, UsingMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
+
 using
 imported
 .
@@ -367,6 +402,7 @@ abcdefhijklmnopqrstubwxy
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
 using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
@@ -379,12 +415,14 @@ TEST(NewFormatterTests, UsingWithAliasFormatted) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
+
 using baz.qux as abcdefghijklmnopqrstuv;
 )FIDL";
 
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
 using baz.qux as abcdefghijklmnopqrstuv;
 )FIDL";
 
@@ -396,12 +434,14 @@ TEST(NewFormatterTests, UsingWithAliasOverflow) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
+
 using baz.qux as abcdefghijklmnopqrstuvw;
 )FIDL";
 
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
 using baz.qux
         as abcdefghijklmnopqrstuvw;
 )FIDL";
@@ -414,6 +454,7 @@ TEST(NewFormatterTests, UsingWithAliasMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
+
 using
 baz
 .
@@ -426,6 +467,7 @@ abcdefghijklmnopqrstuv
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
 using baz.qux as abcdefghijklmnopqrstuv;
 )FIDL";
 
@@ -497,6 +539,26 @@ using // F
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+TEST(NewFormatterTests, CommentsNormal) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+// C1
+library foo.bar; // C2
+// C3
+using baz.qux; // C4
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+// C1
+library foo.bar; // C2
+// C3
+using baz.qux; // C4
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 TEST(NewFormatterTests, CommentsWeird) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
@@ -532,6 +594,86 @@ using // C4
         baz;
 
 // C5
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, NewlinesAbsent) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(library foo.bar;
+using imported.abcdefhijklmnopqrstubwxy;
+alias MyAlias_Abcdefghijklmnopqr = bool;
+const MY_TRUE_ABCDEFGHIJKLM bool = true;)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+using imported.abcdefhijklmnopqrstubwxy;
+alias MyAlias_Abcdefghijklmnopqr = bool;
+const MY_TRUE_ABCDEFGHIJKLM bool = true;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, NewlinesSingle) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+using imported.abcdefhijklmnopqrstubwxy;
+
+alias MyAlias_Abcdefghijklmnopqr = bool;
+
+const MY_TRUE_ABCDEFGHIJKLM bool = true;
+
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+using imported.abcdefhijklmnopqrstubwxy;
+
+alias MyAlias_Abcdefghijklmnopqr = bool;
+
+const MY_TRUE_ABCDEFGHIJKLM bool = true;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, NewlinesDouble) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+
+library foo.bar;
+
+
+using imported.abcdefhijklmnopqrstubwxy;
+
+
+alias MyAlias_Abcdefghijklmnopqr = bool;
+
+
+const MY_TRUE_ABCDEFGHIJKLM bool = true;
+
+
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+
+using imported.abcdefhijklmnopqrstubwxy;
+
+
+alias MyAlias_Abcdefghijklmnopqr = bool;
+
+
+const MY_TRUE_ABCDEFGHIJKLM bool = true;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));

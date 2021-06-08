@@ -81,13 +81,17 @@ class SpanSequence {
   Position GetPosition() const { return position_; }
   bool HasTrailingSpace() const { return has_trailing_space_; }
   bool IsClosed() const { return closed_; }
+  void SetLeadingBlankLines(size_t leading_blanks) { leading_blank_lines_ = leading_blanks; }
   void SetRequiredSize(size_t required_size) { required_size_ = required_size; }
   void SetTrailingSpace(bool has_trailing_space) { has_trailing_space_ = has_trailing_space; }
 
  private:
   const enum Kind kind_;
   const enum Position position_;
-  const size_t leading_blank_lines_;
+
+  // Tracks the number of leading new lines to print before this SpanSequence is added to the
+  // printer's output string,
+  size_t leading_blank_lines_;
 
   // A "closed" SpanSequence can no longer be modified.  When the Close() method is called, the
   // required_size_ and has_trailing_space_ members are calculated, and may then be accessed by

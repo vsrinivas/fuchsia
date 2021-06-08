@@ -251,16 +251,21 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
                   "T of SpanBuilder<T> must inherit from CompositeSpanSequence");
 
    public:
+    // Use this constructor when the entire SourceElement will be ingested by the SpanBuilder.
     SpanBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element,
                 SpanSequence::Position position = SpanSequence::Position::kDefault)
         : Builder<T>(ftv, element.start_, element.end_, true), position_(position) {}
+
+    // Use this constructor when the SourceElement will only be partially ingested by the
+    // SpanBuilder.  For example, a ConstDeclaration's identifier and type_ctor members are ingested
+    // into one SpanSequence, but the constant member should be in another.  Since the second
+    // SpanSequence starts before the end of the SourceElement, we should use a constructor that
+    // only ingests up to the start of SourceElement, but no further.
     SpanBuilder(SpanSequenceTreeVisitor* ftv, const Token& start,
                 SpanSequence::Position position = SpanSequence::Position::kDefault)
         : Builder<T>(ftv, start, start, true), position_(position) {}
-    ~SpanBuilder();
 
-   protected:
-    SpanSequence::Position GetPosition() const { return position_; }
+    ~SpanBuilder();
 
    private:
     const SpanSequence::Position position_;
@@ -289,16 +294,21 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   template <typename T>
   class StatementBuilder : public Builder<T> {
    public:
+    // Use this constructor when the entire SourceElement will be ingested by the StatementBuilder.
     StatementBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element,
                      SpanSequence::Position position = SpanSequence::Position::kDefault)
         : Builder<T>(ftv, element.start_, element.end_, true), position_(position) {}
+
+    // Use this constructor when the SourceElement will only be partially ingested by the
+    // StatementBuilder.  For example, a ConstDeclaration's identifier and type_ctor members are
+    // ingested into one SpanSequence, but the constant member should be in another.  Since the
+    // second SpanSequence starts before the end of the SourceElement, we should use a constructor
+    // that only ingests up to the start of SourceElement, but no further.
     StatementBuilder(SpanSequenceTreeVisitor* ftv, const Token& start,
                      SpanSequence::Position position = SpanSequence::Position::kDefault)
         : Builder<T>(ftv, start, start, true), position_(position) {}
-    ~StatementBuilder();
 
-   protected:
-    SpanSequence::Position GetPosition() const { return position_; }
+    ~StatementBuilder();
 
    private:
     const SpanSequence::Position position_;

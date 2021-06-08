@@ -58,7 +58,7 @@ void TokenSpanSequence::Close() {
 std::optional<SpanSequence::Kind> TokenSpanSequence::Print(
     const size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind,
     size_t indentation, bool wrapped, std::string* out) const {
-  if (GetLeadingBlankLines() > 0 && last_printed_kind != SpanSequence::Kind::kToken) {
+  if (GetLeadingBlankLines() > 0 && last_printed_kind == SpanSequence::Kind::kStandaloneComment) {
     for (size_t i = 0; i < GetLeadingBlankLines(); i++) {
       *out += "\n";
     }
@@ -103,23 +103,31 @@ size_t CompositeSpanSequence::CalculateRequiredSize() const {
 }
 
 void CompositeSpanSequence::Close() {
-  if (!IsClosed()) {
-    for (auto& child : children_) {
-      child->Close();
-      if (child->IsComment()) {
-        has_comments_ = true;
-      } else {
-        has_tokens_ = true;
-      }
-    }
-    SetRequiredSize(CalculateRequiredSize());
+  CloseChildren();
 
+  if (!IsClosed()) {
+    // If the first child is a token, delete its leading new lines value and hoist it up to the
+    // parent that is currently being built.  This prevents duplication of leading new lines, as the
+    // leading new new lines for a composite span are now always the parent's responsibility, not
+    // that of the first child.
+    auto first_non_comment_index = FirstNonCommentChildIndex(children_);
+    if (first_non_comment_index.has_value() && first_non_comment_index == 0) {
+      SetLeadingBlankLines(GetLeadingBlankLines() + children_[0]->GetLeadingBlankLines());
+      children_[0]->SetLeadingBlankLines(0);
+    }
+
+    // If the last child is a token with a trailing space, reset its trailing space boolean and
+    // set that of the parent (ie, the SpanSequence currently being closed).  This prevents
+    // duplication of trailing spaces, as the trailing space for a composite span is now always the
+    // parent's responsibility, not that of the last child.
     auto last_non_comment_index = LastNonCommentChildIndex(children_);
     if (last_non_comment_index.has_value() && last_non_comment_index == children_.size() - 1 &&
         children_[last_non_comment_index.value()]->HasTrailingSpace()) {
       SetTrailingSpace(true);
       children_[last_non_comment_index.value()]->SetTrailingSpace(false);
     }
+
+    SetRequiredSize(CalculateRequiredSize());
     SpanSequence::Close();
   }
 }
@@ -127,7 +135,14 @@ void CompositeSpanSequence::Close() {
 void CompositeSpanSequence::CloseChildren() {
   if (!IsClosed()) {
     for (auto& child : children_) {
-      child->Close();
+      if (!child->IsClosed())
+        child->Close();
+
+      if (child->IsComment()) {
+        has_comments_ = true;
+      } else {
+        has_tokens_ = true;
+      }
     }
   }
 }
@@ -324,8 +339,11 @@ std::optional<SpanSequence::Kind> MultilineSpanSequence::Print(
   for (auto& child : GetChildren()) {
     auto child_indentation = indentation;
     if (child->GetPosition() != SpanSequence::Position::kDefault) {
-      if (last_printed_kind == SpanSequence::Kind::kToken) {
+      if (last_printed_kind.has_value() && last_printed_kind == SpanSequence::Kind::kToken) {
         *out += "\n";
+        for (size_t i = 0; i < child->GetLeadingBlankLines(); i++) {
+          *out += "\n";
+        }
       }
       if (child->GetPosition() == SpanSequence::Position::kNewlineIndented) {
         child_indentation += kIndentation;

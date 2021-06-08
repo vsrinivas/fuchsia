@@ -226,9 +226,9 @@ void AddSpacesBetweenChildren(const std::vector<std::unique_ptr<SpanSequence>>& 
 
 std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestUntil(
     const char* limit, bool stop_at_semicolon) {
-  const size_t leading_blank_lines = empty_lines_;
-  bool is_partial_line = !leading_blank_lines && uningested_.data() > file_.data() &&
-                         *(uningested_.data() - 1) != '\n';
+  bool is_partial_line =
+      !empty_lines_ && uningested_.data() > file_.data() && *(uningested_.data() - 1) != '\n';
+  const size_t leading_blank_lines = is_partial_line ? 0 : empty_lines_;
   const auto ingesting = std::string_view(uningested_.data(), (limit - uningested_.data()) + 1);
   size_t chars_seen = 0;
   size_t empty_lines = 0;
@@ -240,6 +240,7 @@ std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestUnti
         IngestLine(ingesting.substr(chars_seen), is_partial_line, empty_lines, atomic.get());
     chars_seen += result.chars_seen;
     if (stop_at_semicolon && result.semi_colon_seen) {
+      empty_lines = 0;
       break;
     }
     if (is_partial_line) {
@@ -249,12 +250,13 @@ std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestUnti
     }
   }
   uningested_ = uningested_.substr(std::min(chars_seen, uningested_.size()));
-  empty_lines_ = empty_lines;
 
   if (!atomic->IsEmpty()) {
+    empty_lines_ = empty_lines;
     atomic->Close();
     return std::move(atomic);
   }
+  empty_lines_ += empty_lines;
   return std::nullopt;
 }
 
@@ -295,6 +297,7 @@ SpanSequenceTreeVisitor::Builder<T>::~Builder<T>() {
   if (tracking >= ftv_->uningested_.data()) {
     ftv_->uningested_ = tracking;
   }
+  ftv_->empty_lines_ = 0;
 }
 
 SpanSequenceTreeVisitor::TokenBuilder::TokenBuilder(SpanSequenceTreeVisitor* ftv,
@@ -311,8 +314,7 @@ SpanSequenceTreeVisitor::TokenBuilder::TokenBuilder(SpanSequenceTreeVisitor* ftv
 template <typename T>
 SpanSequenceTreeVisitor::SpanBuilder<T>::~SpanBuilder<T>() {
   auto parts = std::move(this->GetFormattingTreeVisitor()->building_.top());
-  auto composite_span_sequence = std::make_unique<T>(
-      std::move(parts), this->position_, this->GetFormattingTreeVisitor()->empty_lines_);
+  auto composite_span_sequence = std::make_unique<T>(std::move(parts), this->position_);
   composite_span_sequence->CloseChildren();
 
   this->GetFormattingTreeVisitor()->building_.pop();
@@ -322,9 +324,8 @@ SpanSequenceTreeVisitor::SpanBuilder<T>::~SpanBuilder<T>() {
 template <typename T>
 SpanSequenceTreeVisitor::StatementBuilder<T>::~StatementBuilder<T>() {
   auto parts = std::move(this->GetFormattingTreeVisitor()->building_.top());
+  auto composite_span_sequence = std::make_unique<T>(std::move(parts), this->position_);
   auto semicolon_span_sequence = this->GetFormattingTreeVisitor()->IngestUntilSemicolon().value();
-  auto composite_span_sequence = std::make_unique<T>(
-      std::move(parts), this->position_, this->GetFormattingTreeVisitor()->empty_lines_);
 
   // Append the semicolon_span_sequence to the last child in the composite_span_sequence, if it
   // exists.
