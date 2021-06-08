@@ -1,8 +1,17 @@
 {
     select: {
-        disconnects: "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:@time",
-        connected_durations: "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:connected_duration",
-        scan_failures: "INSPECT:wlanstack.cmx:root/client_stats/scan_failures/*:@time",
+        disconnects: [
+            "INSPECT:core/wlanstack:root/client_stats/disconnect/*:@time",
+            "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:@time"
+        ],
+        connected_durations: [
+            "INSPECT:core/wlanstack:root/client_stats/disconnect/*:connected_duration",
+            "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:connected_duration"
+        ],
+        scan_failures: [
+            "INSPECT:core/wlanstack:root/client_stats/scan_failures/*:@time",
+            "INSPECT:wlanstack.cmx:root/client_stats/scan_failures/*:@time"
+        ],
     },
     eval: {
         last_24_hours: "Fn([time], time > Now() - Hours(24))",
