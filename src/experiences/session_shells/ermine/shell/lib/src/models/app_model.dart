@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ignore_for_file: unused_import
+
 import 'dart:async';
 import 'dart:convert' show json;
 import 'dart:io';
@@ -13,6 +15,7 @@ import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_scenic/views.dart';

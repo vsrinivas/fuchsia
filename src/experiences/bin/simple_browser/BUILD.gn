@@ -58,6 +58,7 @@ dart_library("lib") {
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/html_unescape",
     "//third_party/dart-pkg/pub/http",
     "//third_party/dart-pkg/pub/intl",
