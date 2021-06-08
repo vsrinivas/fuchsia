@@ -3,32 +3,51 @@
 // found in the LICENSE file.
 
 use {
+    crate::terminal::Terminal,
     anyhow::{Context as _, Error},
     fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_hardware_pty::DeviceMarker,
     fidl_fuchsia_virtualconsole::{SessionManagerRequest, SessionManagerRequestStream},
     fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::io::AsyncReadExt,
     futures::prelude::*,
-    futures::{io::AsyncReadExt, select},
     pty::Pty,
-    std::{cell::RefCell, rc::Rc, vec::Vec},
+    std::fs::File,
+    std::{cell::RefCell, rc::Rc},
+    term_model::{ansi::Processor, event::EventListener},
 };
 
 const BYTE_BUFFER_MAX_SIZE: usize = 128;
 
-#[derive(Default)]
+pub trait SessionManagerClient: 'static + Clone {
+    type Listener;
+
+    fn create_terminal(
+        &self,
+        id: u32,
+        pty_fd: File,
+        title: String,
+    ) -> Result<Terminal<Self::Listener>, Error>;
+    fn request_update(&self, id: u32);
+}
+
 pub struct SessionManager {
-    ptys: Rc<RefCell<Vec<Pty>>>,
+    next_session_id: Rc<RefCell<u32>>,
 }
 
 impl SessionManager {
-    pub fn new() -> Self {
-        let ptys = Rc::new(RefCell::new(vec![]));
-        SessionManager { ptys }
+    pub fn new(first_session_id: u32) -> Self {
+        let next_session_id = Rc::new(RefCell::new(first_session_id));
+
+        Self { next_session_id }
     }
 
-    pub fn bind(&mut self, channel: fasync::Channel) {
-        let ptys = Rc::clone(&self.ptys);
+    pub fn bind<T: SessionManagerClient>(&mut self, client: &T, channel: fasync::Channel)
+    where
+        <T as SessionManagerClient>::Listener: EventListener,
+    {
+        let next_session_id = Rc::clone(&self.next_session_id);
+        let client = client.clone();
 
         fasync::Task::local(
             async move {
@@ -36,12 +55,17 @@ impl SessionManager {
                 while let Some(request) = stream.try_next().await? {
                     match request {
                         SessionManagerRequest::CreateSession { session, responder } => {
-                            match Self::create_session(session).await {
-                                Ok(pty) => {
+                            let id = {
+                                let mut next_session_id = next_session_id.borrow_mut();
+                                let id = *next_session_id;
+                                *next_session_id += 1;
+                                id
+                            };
+                            match Self::create_session(session, &client, id).await {
+                                Ok(_) => {
                                     responder
                                         .send(zx::Status::OK.into_raw())
                                         .context("error sending response")?;
-                                    ptys.borrow_mut().push(pty);
                                 }
                                 _ => {
                                     responder
@@ -64,9 +88,21 @@ impl SessionManager {
         .detach();
     }
 
-    async fn create_session(session: ServerEnd<DeviceMarker>) -> Result<Pty, Error> {
+    async fn create_session<T: SessionManagerClient>(
+        session: ServerEnd<DeviceMarker>,
+        client: &T,
+        id: u32,
+    ) -> Result<(), Error>
+    where
+        <T as SessionManagerClient>::Listener: EventListener,
+    {
+        let client = client.clone();
         let pty = Pty::with_server_end(session).await.expect("failed to create PTY");
         let fd = pty.try_clone_fd().expect("unable to clone PTY fd");
+        let terminal =
+            client.create_terminal(id, fd, String::new()).expect("failed to create terminal");
+        let term = terminal.clone_term();
+        let read_fd = pty.try_clone_fd().expect("unable to clone PTY write fd");
 
         fasync::Task::local(async move {
             let mut evented_fd = unsafe {
@@ -74,32 +110,31 @@ impl SessionManager {
                 // the file descriptor passed to it exceeds the lifetime of the EventedFd.
                 // Since we're cloning the file when passing it in, the EventedFd
                 // effectively owns that file descriptor and thus controls it's lifetime.
-                fasync::net::EventedFd::new(fd).expect("failed to create evented_fd")
+                fasync::net::EventedFd::new(read_fd).expect("failed to create evented_fd")
             };
+
+            let mut write_fd = pty.try_clone_fd().expect("unable to clone PTY write fd");
+            let mut parser = Processor::new();
 
             let mut read_buf = [0u8; BYTE_BUFFER_MAX_SIZE];
             loop {
-                let mut read_fut = evented_fd.read(&mut read_buf).fuse();
-                select!(
-                    result = read_fut => {
-                        let read_count = result.unwrap_or_else(|e: std::io::Error| {
-                            println!(
-                                "vc: failed to read bytes, dropping current message: {:?}",
-                                e
-                            );
-                            0
-                        });
-                        if read_count > 0 {
-                            // TODO(fxb/74628): Write to console.
-                            println!("vc: read_count {:?}", read_count);
-                        }
+                let result = evented_fd.read(&mut read_buf).await;
+                let read_count = result.unwrap_or_else(|e: std::io::Error| {
+                    println!("vc: failed to read bytes, dropping current message: {:?}", e);
+                    0
+                });
+                let mut term = term.borrow_mut();
+                if read_count > 0 {
+                    for byte in &read_buf[0..read_count] {
+                        parser.advance(&mut *term, *byte, &mut write_fd);
                     }
-                );
+                    client.request_update(id);
+                }
             }
         })
         .detach();
 
-        Ok(pty)
+        Ok(())
     }
 
     fn has_primary_connected() -> bool {
@@ -110,12 +145,41 @@ impl SessionManager {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        fuchsia_async as fasync,
+        term_model::event::{Event, EventListener},
+    };
+
+    #[derive(Default)]
+    struct TestListener;
+
+    impl EventListener for TestListener {
+        fn send_event(&self, _event: Event) {}
+    }
+
+    #[derive(Default, Clone)]
+    struct TestSessionManagerClient;
+
+    impl SessionManagerClient for TestSessionManagerClient {
+        type Listener = TestListener;
+
+        fn create_terminal(
+            &self,
+            _id: u32,
+            pty_fd: File,
+            title: String,
+        ) -> Result<Terminal<Self::Listener>, Error> {
+            Ok(Terminal::new(TestListener::default(), pty_fd, title))
+        }
+        fn request_update(&self, _id: u32) {}
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn can_create_session() -> Result<(), Error> {
+        let client = TestSessionManagerClient::default();
         let (_, server_end) = fidl::endpoints::create_endpoints()?;
-        let _ = SessionManager::create_session(server_end).await?;
+        let _ = SessionManager::create_session(server_end, &client, 0).await?;
         Ok(())
     }
 }

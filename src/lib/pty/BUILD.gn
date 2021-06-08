@@ -31,6 +31,7 @@ rustc_library("pty") {
   ]
 
   sources = [
+    "src/key_util.rs",
     "src/lib.rs",
     "src/pty.rs",
   ]

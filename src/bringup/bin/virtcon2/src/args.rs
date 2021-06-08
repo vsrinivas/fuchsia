@@ -10,12 +10,17 @@ use {
     std::str::FromStr,
 };
 
+pub const MIN_FONT_SIZE: f32 = 6.0;
+pub const MAX_FONT_SIZE: f32 = 128.0;
+
 #[derive(Debug, Default)]
 pub struct VirtualConsoleArgs {
     pub disable: bool,
     pub rounded_corners: bool,
+    pub animation: bool,
     pub color_scheme: ColorScheme,
     pub display_rotation: DisplayRotation,
+    pub font_size: f32,
 }
 
 impl VirtualConsoleArgs {
@@ -23,18 +28,23 @@ impl VirtualConsoleArgs {
         let mut bool_keys = [
             BoolPair { key: "virtcon.disable".to_string(), defaultval: false },
             BoolPair { key: "virtcon.rounded_corners".to_string(), defaultval: false },
+            BoolPair { key: "virtcon.animation".to_string(), defaultval: false },
         ];
         let bool_key_refs: Vec<_> = bool_keys.iter_mut().collect();
         let mut disable = false;
         let mut rounded_corners = false;
+        let mut animation = false;
         if let Ok(values) = boot_args.get_bools(&mut bool_key_refs.into_iter()).await {
             disable = values[0];
             rounded_corners = values[1];
+            animation = values[2];
         }
 
-        let string_keys = vec!["virtcon.colorscheme", "virtcon.display_rotation"];
+        let string_keys =
+            vec!["virtcon.colorscheme", "virtcon.display_rotation", "virtcon.font_size"];
         let mut color_scheme = ColorScheme::default();
         let mut display_rotation = DisplayRotation::default();
+        let mut font_size = 14.0;
         if let Ok(values) = boot_args.get_strings(&mut string_keys.into_iter()).await {
             if let Some(value) = values[0].as_ref() {
                 color_scheme = ColorScheme::from_str(value)?;
@@ -42,9 +52,19 @@ impl VirtualConsoleArgs {
             if let Some(value) = values[1].as_ref() {
                 display_rotation = DisplayRotation::from_str(value)?;
             }
+            if let Some(value) = values[2].as_ref() {
+                font_size = value.parse::<f32>()?.clamp(MIN_FONT_SIZE, MAX_FONT_SIZE);
+            }
         }
 
-        Ok(VirtualConsoleArgs { disable, rounded_corners, color_scheme, display_rotation })
+        Ok(VirtualConsoleArgs {
+            disable,
+            rounded_corners,
+            animation,
+            color_scheme,
+            display_rotation,
+            font_size,
+        })
     }
 }
 
@@ -140,6 +160,27 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn check_animation() -> Result<(), Error> {
+        let vars: HashMap<String, String> = [("virtcon.animation", "true")]
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect();
+        let proxy = serve_bootargs(vars)?;
+        let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
+        assert_eq!(args.animation, true);
+
+        let vars: HashMap<String, String> = [("virtcon.animation", "false")]
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect();
+        let proxy = serve_bootargs(vars)?;
+        let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
+        assert_eq!(args.animation, false);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn check_color_scheme() -> Result<(), Error> {
         let vars: HashMap<String, String> = [("virtcon.colorscheme", "light")]
             .iter()
@@ -174,6 +215,27 @@ mod tests {
         let proxy = serve_bootargs(vars)?;
         let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
         assert_eq!(args.display_rotation, DisplayRotation::Deg0);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn check_font_size() -> Result<(), Error> {
+        let vars: HashMap<String, String> = [("virtcon.font_size", "32.0")]
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect();
+        let proxy = serve_bootargs(vars)?;
+        let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
+        assert_eq!(args.font_size, 32.0);
+
+        let vars: HashMap<String, String> = [("virtcon.font_size", "1000000.0")]
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect();
+        let proxy = serve_bootargs(vars)?;
+        let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
+        assert_eq!(args.font_size, MAX_FONT_SIZE);
 
         Ok(())
     }

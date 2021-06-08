@@ -16,7 +16,7 @@ pub struct ColorScheme {
 
 const WHITE_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
 const BLACK_COLOR: Color = Color { r: 0, g: 0, b: 0, a: 255 };
-const BLUE_COLOR: Color = Color { r: 0, g: 0, b: 255, a: 255 };
+const BLUE_COLOR: Color = Color { r: 0, g: 0, b: 170, a: 255 };
 
 pub const DARK_COLOR_SCHEME: ColorScheme = ColorScheme { front: WHITE_COLOR, back: BLACK_COLOR };
 pub const LIGHT_COLOR_SCHEME: ColorScheme = ColorScheme { front: BLACK_COLOR, back: WHITE_COLOR };

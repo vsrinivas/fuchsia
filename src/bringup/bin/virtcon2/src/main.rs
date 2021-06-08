@@ -39,9 +39,9 @@ fn main() -> Result<(), Error> {
 
     println!("vc: started with args {:?}", args);
 
-    App::run(Box::new(|_| {
+    App::run(Box::new(|app_context| {
         let f = async move {
-            let assistant = Box::new(VirtualConsoleAppAssistant::new(args)?);
+            let assistant = Box::new(VirtualConsoleAppAssistant::new(app_context, args)?);
             Ok::<AppAssistantPtr, Error>(assistant)
         };
         Box::pin(f)

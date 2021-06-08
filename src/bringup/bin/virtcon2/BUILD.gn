@@ -35,9 +35,12 @@ rustc_library("lib") {
     "src/colors.rs",
     "src/lib.rs",
     "src/session_manager.rs",
+    "src/terminal.rs",
+    "src/text_grid.rs",
     "src/view.rs",
   ]
   deps = [
+    "//garnet/bin/terminal/third_party/term-model",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty-rustc",
@@ -57,6 +60,11 @@ rustc_library("lib") {
   ]
 }
 
+resource("font") {
+  sources = [ virtcon_font_path ]
+  outputs = [ "data/font.ttf" ]
+}
+
 resource("logo") {
   sources = [ virtcon_logo_path ]
   outputs = [ "data/logo.riv" ]
@@ -68,6 +76,7 @@ rustc_binary("bin") {
   source_root = "src/main.rs"
   sources = [ "src/main.rs" ]
   deps = [
+    ":font",
     ":lib",
     ":logo",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
@@ -81,6 +90,11 @@ rustc_binary("bin") {
   ]
 }
 
+resource("font_test") {
+  sources = [ "data/test.ttf" ]
+  outputs = [ "data/font.ttf" ]
+}
+
 resource("logo_test") {
   sources = [ "data/test.riv" ]
   outputs = [ "data/logo.riv" ]
@@ -88,6 +102,7 @@ resource("logo_test") {
 
 fuchsia_test_component("virtual_console_tests_component") {
   deps = [
+    ":font_test",
     ":lib_test",
     ":logo_test",
   ]

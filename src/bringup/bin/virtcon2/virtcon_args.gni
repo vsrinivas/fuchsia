@@ -3,6 +3,10 @@
 # found in the LICENSE file.
 
 declare_args() {
+  # Path to file to use for font
+  virtcon_font_path =
+      "//prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf"
+
   # Path to file to use for logo
   virtcon_logo_path = "//src/bringup/bin/virtcon2/data/fuchsia.riv"
 }

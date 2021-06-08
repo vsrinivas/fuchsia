@@ -8,6 +8,8 @@ mod app;
 mod args;
 mod colors;
 mod session_manager;
+mod terminal;
+mod text_grid;
 mod view;
 
 pub use app::VirtualConsoleAppAssistant;
