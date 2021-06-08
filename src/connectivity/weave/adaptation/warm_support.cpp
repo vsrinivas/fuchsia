@@ -52,6 +52,11 @@ std::optional<std::string> GetInterfaceName(InterfaceType interface_type) {
   }
 }
 
+// Returns whether IPv6 forwarding is allowed for the given interface type.
+bool ShouldEnableV6Forwarding(InterfaceType interface_type) {
+  return (interface_type == kInterfaceTypeThread) || (interface_type == kInterfaceTypeTunnel);
+}
+
 // Returns the interface id associated with the given interface name. On
 // failures to fetch the list, no value will be returned. When the interface
 // does not exist, the interface ID '0' will be returned (it is guaranteed by
@@ -288,6 +293,43 @@ PlatformResult AddRemoveHostRoute(InterfaceType interface_type, const Inet::IPPr
 
   FX_LOGS(INFO) << (add ? "Added" : "Removed") << " host route to/from interface id "
                 << interface_id.value();
+
+#if WARM_CONFIG_SUPPORT_BORDER_ROUTING
+  // Set IPv6 forwarding on interface. Note that IPv6 forwarding is only ever
+  // enabled and never disabled. Once an interface is being managed, routes may
+  // be added and removed over time, so do not thrash the forwarding state
+  // during these transitions.
+  //
+  // TODO(https://fxbug.dev/78254): Enabling V6 forwarding should ideally happen
+  // elsewhere, as this function's contract does not make any specific mention about
+  // forwarding. However, implementations must enable forwarding when border routing
+  // is enabled, signaled by ThreadThreadRouteAction and ThreadThreadPriorityAction
+  // in WARM. As we defer those route changes to this function, this is done here for
+  // now. Long term, this bug tracks proposing upstream changes that would create a
+  // targeted action to enable forwarding / border-routing to clarify this contract.
+  if (add && ShouldEnableV6Forwarding(interface_type)) {
+    fuchsia::net::stack::StackSyncPtr net_stack_sync_ptr;
+    status = svc->Connect(net_stack_sync_ptr.NewRequest());
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to connect to netstack: " << zx_status_get_string(status);
+      return kPlatformResultFailure;
+    }
+
+    fuchsia::net::stack::Stack_SetInterfaceIpForwarding_Result forwarding_result;
+    status = net_stack_sync_ptr->SetInterfaceIpForwarding(
+        interface_id.value(), fuchsia::net::IpVersion::V6, true /* enable */, &forwarding_result);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to enable IPv6 forwarding on interface id " << interface_id.value()
+                     << ": " << zx_status_get_string(status);
+      return kPlatformResultFailure;
+    } else if (forwarding_result.is_err()) {
+      FX_LOGS(ERROR) << "Unable to enable IPv6 forwarding on interface id " << interface_id.value()
+                     << ": " << static_cast<uint32_t>(forwarding_result.err());
+      return kPlatformResultFailure;
+    }
+  }
+#endif  // WARM_CONFIG_SUPPORT_BORDER_ROUTING
+
   return kPlatformResultSuccess;
 }
 

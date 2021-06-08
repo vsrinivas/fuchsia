@@ -4,6 +4,7 @@
 
 #include <fuchsia/lowpan/device/cpp/fidl_test_base.h>
 #include <fuchsia/net/cpp/fidl.h>
+#include <fuchsia/net/stack/cpp/fidl_test_base.h>
 #include <fuchsia/netstack/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
@@ -23,6 +24,7 @@
 #include <Warm/Warm.h>
 // clang-format on
 
+#include "src/connectivity/weave/adaptation/connectivity_manager_delegate_impl.h"
 #include "src/connectivity/weave/adaptation/thread_stack_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
 
@@ -44,12 +46,14 @@ using fuchsia::netstack::NetInterface;
 using fuchsia::netstack::RouteTableEntry;
 using fuchsia::netstack::Status;
 
+using DeviceLayer::ConnectivityMgrImpl;
 using DeviceLayer::PlatformMgrImpl;
 using DeviceLayer::ThreadStackMgrImpl;
 using DeviceLayer::Internal::testing::WeaveTestFixture;
 
 constexpr char kTunInterfaceName[] = "weav-tun0";
 constexpr char kThreadInterfaceName[] = "lowpan0";
+constexpr char kWiFiInterfaceName[] = "wlan0";
 
 constexpr uint32_t kRouteMetric_HighPriority = 0;
 constexpr uint32_t kRouteMetric_MediumPriority = 99;
@@ -153,6 +157,12 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
   fidl::Binding<Lookup> binding_{this};
 };
 
+// Fake implementation of CM delegate, only provides an interface name.
+class FakeConnectivityManagerDelegate : public DeviceLayer::ConnectivityManagerDelegateImpl {
+ public:
+  std::optional<std::string> GetWiFiInterfaceName() override { return kWiFiInterfaceName; }
+};
+
 // Fake implementation of TSM delegate, only provides an interface name.
 class FakeThreadStackManagerDelegate : public DeviceLayer::ThreadStackManagerDelegateImpl {
  public:
@@ -160,14 +170,14 @@ class FakeThreadStackManagerDelegate : public DeviceLayer::ThreadStackManagerDel
   std::string GetInterfaceName() const override { return kThreadInterfaceName; }
 };
 
-// Fake implementation of fuchsia::netstack::Netstack that provides the minimal
-// functionality required for WARM to run.
+// Fake implementation of the fuchsia::netstack::Netstack that provides
+// the minimal functionality required for WARM to run.
 class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
                      public fuchsia::netstack::testing::RouteTableTransaction_TestBase {
  private:
   void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
 
-  // FIDL interface definitions.
+  // fuchsia::netstack::Netstack interface definitions.
   void GetInterfaces(GetInterfacesCallback callback) override {
     std::vector<NetInterface> result(interfaces_.size());
     for (size_t i = 0; i < result.size(); ++i) {
@@ -315,6 +325,57 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
   uint32_t last_id_assigned = 0;
 };
 
+// Fake implementation of he fuchsia::net::stack::Stack and that provides
+// the minimal functionality required for WARM to run.
+class FakeStack : public fuchsia::net::stack::testing::Stack_TestBase {
+ private:
+  void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
+
+  // fuchsia::net::stack::Stack interface definitions.
+  void SetInterfaceIpForwarding(uint64_t id, fuchsia::net::IpVersion ip_version, bool enabled,
+                                SetInterfaceIpForwardingCallback callback) override {
+    fuchsia::net::stack::Stack_SetInterfaceIpForwarding_Result result;
+    fuchsia::net::stack::Stack_SetInterfaceIpForwarding_Response response;
+
+    EXPECT_EQ(ip_version, fuchsia::net::IpVersion::V6);
+    EXPECT_TRUE(enabled);
+
+    if (forwarding_success_) {
+      ip_forwarded_interfaces_.push_back(id);
+      result.set_response(std::move(response));
+    } else {
+      result.set_err(fuchsia::net::stack::Error::INTERNAL);
+    }
+    callback(std::move(result));
+  }
+
+ public:
+  // Mutators, accessors, and helpers for tests.
+
+  // Set the success of an IP forwarding request.
+  void SetForwardingSuccess(bool forwarding_success) { forwarding_success_ = forwarding_success; }
+
+  // Check if interface is forwarded.
+  bool IsInterfaceForwarded(uint64_t id) {
+    return std::find(ip_forwarded_interfaces_.begin(), ip_forwarded_interfaces_.end(), id) !=
+           ip_forwarded_interfaces_.end();
+  }
+
+  fidl::InterfaceRequestHandler<fuchsia::net::stack::Stack> GetHandler(
+      async_dispatcher_t* dispatcher) {
+    dispatcher_ = dispatcher;
+    return [this](fidl::InterfaceRequest<fuchsia::net::stack::Stack> request) {
+      binding_.Bind(std::move(request), dispatcher_);
+    };
+  }
+
+ private:
+  fidl::Binding<fuchsia::net::stack::Stack> binding_{this};
+  async_dispatcher_t* dispatcher_;
+  std::vector<uint64_t> ip_forwarded_interfaces_;
+  bool forwarding_success_ = true;
+};
+
 class WarmTest : public testing::WeaveTestFixture<> {
  public:
   void SetUp() override {
@@ -325,21 +386,26 @@ class WarmTest : public testing::WeaveTestFixture<> {
         fake_lowpan_lookup_.GetHandler(dispatcher()));
     context_provider_.service_directory_provider()->AddService(
         fake_net_stack_.GetHandler(dispatcher()));
+    context_provider_.service_directory_provider()->AddService(
+        fake_stack_.GetHandler(dispatcher()));
 
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
+    ConnectivityMgrImpl().SetDelegate(std::make_unique<FakeConnectivityManagerDelegate>());
     ThreadStackMgrImpl().SetDelegate(std::make_unique<FakeThreadStackManagerDelegate>());
     ThreadStackMgrImpl().InitThreadStack();
     Warm::Platform::Init(nullptr);
 
     // Populate initial fake interfaces
     fake_net_stack().AddFakeInterface(kTunInterfaceName);
-    fake_net_stack().AddFakeInterface(ThreadStackMgrImpl().GetInterfaceName());
+    fake_net_stack().AddFakeInterface(kThreadInterfaceName);
+    fake_net_stack().AddFakeInterface(kWiFiInterfaceName);
 
     RunFixtureLoop();
   }
 
   void TearDown() override {
     StopFixtureLoop();
+    ConnectivityMgrImpl().SetDelegate(nullptr);
     ThreadStackMgrImpl().SetDelegate(nullptr);
     WeaveTestFixture<>::TearDown();
   }
@@ -347,9 +413,10 @@ class WarmTest : public testing::WeaveTestFixture<> {
  protected:
   FakeLowpanLookup& fake_lowpan_lookup() { return fake_lowpan_lookup_; }
   FakeNetstack& fake_net_stack() { return fake_net_stack_; }
+  FakeStack& fake_stack() { return fake_stack_; }
 
   NetInterface& GetThreadInterface(NetInterface& interface) {
-    fake_net_stack().GetInterfaceByName(ThreadStackMgrImpl().GetInterfaceName(), interface);
+    fake_net_stack().GetInterfaceByName(kThreadInterfaceName, interface);
     return interface;
   }
 
@@ -368,9 +435,20 @@ class WarmTest : public testing::WeaveTestFixture<> {
     return GetTunnelInterface(interface).id;
   }
 
+  NetInterface& GetWiFiInterface(NetInterface& interface) {
+    fake_net_stack().GetInterfaceByName(kWiFiInterfaceName, interface);
+    return interface;
+  }
+
+  uint32_t GetWiFiInterfaceId() {
+    NetInterface interface;
+    return GetWiFiInterface(interface).id;
+  }
+
  private:
   FakeLowpanLookup fake_lowpan_lookup_;
   FakeNetstack fake_net_stack_;
+  FakeStack fake_stack_;
   sys::testing::ComponentContextProvider context_provider_;
 };
 
@@ -434,6 +512,35 @@ TEST_F(WarmTest, AddRemoveAddressTunnel) {
   EXPECT_EQ(weave_tun.ipv6addrs.size(), 0u);
 }
 
+TEST_F(WarmTest, AddRemoveAddressWiFi) {
+  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
+  constexpr uint8_t kPrefixLength = 48;
+  NetInterface wlan;
+  Inet::IPAddress addr;
+
+  // Sanity check - no addresses assigned.
+  GetWiFiInterface(wlan);
+  EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
+
+  // Attempt to add the address.
+  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
+  auto result = AddRemoveHostAddress(kInterfaceTypeWiFi, addr, kPrefixLength, /*add*/ true);
+  EXPECT_EQ(result, kPlatformResultSuccess);
+
+  // Confirm that it worked.
+  GetWiFiInterface(wlan);
+  ASSERT_EQ(wlan.ipv6addrs.size(), 1u);
+  EXPECT_TRUE(CompareIpAddress(addr, wlan.ipv6addrs[0].addr));
+
+  // Attempt to remove the address.
+  result = AddRemoveHostAddress(kInterfaceTypeWiFi, addr, kPrefixLength, /*add*/ false);
+  EXPECT_EQ(result, kPlatformResultSuccess);
+
+  // Confirm that it worked.
+  GetWiFiInterface(wlan);
+  EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
+}
+
 TEST_F(WarmTest, RemoveAddressThreadNotFound) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
@@ -473,6 +580,26 @@ TEST_F(WarmTest, RemoveAddressTunnelNotFound) {
   // Sanity check - still no addresses assigned.
   GetTunnelInterface(weave_tun);
   EXPECT_EQ(weave_tun.ipv6addrs.size(), 0u);
+}
+
+TEST_F(WarmTest, RemoveAddressWiFiNotFound) {
+  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
+  constexpr uint8_t kPrefixLength = 48;
+  NetInterface wlan;
+  Inet::IPAddress addr;
+
+  // Sanity check - no addresses assigned.
+  GetWiFiInterface(wlan);
+  EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
+
+  // Attempt to remove the address, expecting failure.
+  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
+  auto result = AddRemoveHostAddress(kInterfaceTypeWiFi, addr, kPrefixLength, /*add*/ false);
+  EXPECT_EQ(result, kPlatformResultFailure);
+
+  // Sanity check - still no addresses assigned.
+  GetWiFiInterface(wlan);
+  EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
 }
 
 TEST_F(WarmTest, AddAddressThreadNoInterface) {
@@ -529,6 +656,32 @@ TEST_F(WarmTest, RemoveAddressTunnelNoInterface) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 }
 
+TEST_F(WarmTest, AddAddressWiFiNoInterface) {
+  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
+  constexpr uint8_t kPrefixLength = 48;
+  Inet::IPAddress addr;
+
+  fake_net_stack().RemoveFakeInterface(kWiFiInterfaceName);
+
+  // Attempt to add to the interface when there's no WiFi interface. Expect failure.
+  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
+  auto result = AddRemoveHostAddress(kInterfaceTypeWiFi, addr, kPrefixLength, /*add*/ true);
+  EXPECT_EQ(result, kPlatformResultFailure);
+}
+
+TEST_F(WarmTest, RemoveAddressWiFiNoInterface) {
+  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
+  constexpr uint8_t kPrefixLength = 48;
+  Inet::IPAddress addr;
+
+  fake_net_stack().RemoveFakeInterface(kWiFiInterfaceName);
+
+  // Attempt to remove from the interface when there's no WiFi interface. Expect success.
+  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
+  auto result = AddRemoveHostAddress(kInterfaceTypeWiFi, addr, kPrefixLength, /*add*/ false);
+  EXPECT_EQ(result, kPlatformResultSuccess);
+}
+
 TEST_F(WarmTest, AddRemoveHostRouteThread) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
@@ -548,6 +701,9 @@ TEST_F(WarmTest, AddRemoveHostRouteThread) {
 
   // Confirm that a route exists to the Thread interface with the given IP.
   EXPECT_TRUE(fake_net_stack().FindRouteTableEntry(thread_iface_id, prefix.IPAddr));
+
+  // Confirm that this interface is now forwarded.
+  EXPECT_TRUE(fake_stack().IsInterfaceForwarded(thread_iface_id));
 
   // Remove the route to the Thread interface.
   result = AddRemoveHostRoute(kInterfaceTypeThread, prefix, kRoutePriorityHigh, /*add*/ false);
@@ -577,12 +733,46 @@ TEST_F(WarmTest, AddRemoveHostRouteTunnel) {
   // Confirm that a route exists to the Tunnel interface with the given IP.
   EXPECT_TRUE(fake_net_stack().FindRouteTableEntry(tunnel_iface_id, prefix.IPAddr));
 
+  // Confirm that this interface is now forwarded.
+  EXPECT_TRUE(fake_stack().IsInterfaceForwarded(tunnel_iface_id));
+
   // Remove the route to the Tunnel interface.
   result = AddRemoveHostRoute(kInterfaceTypeTunnel, prefix, kRoutePriorityHigh, /*add*/ false);
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that the removal worked.
   EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(tunnel_iface_id, prefix.IPAddr));
+}
+
+TEST_F(WarmTest, AddRemoveHostRouteWiFi) {
+  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
+  constexpr uint8_t kPrefixLength = 48;
+  Inet::IPPrefix prefix;
+
+  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, prefix.IPAddr));
+  prefix.Length = kPrefixLength;
+
+  // Sanity check - confirm no routes to the WiFi interface exist.
+  uint64_t wlan_iface_id = GetWiFiInterfaceId();
+  ASSERT_NE(wlan_iface_id, 0u);
+  EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(wlan_iface_id, prefix.IPAddr));
+
+  // Attempt to add a route to the WiFi interface.
+  auto result = AddRemoveHostRoute(kInterfaceTypeWiFi, prefix, kRoutePriorityHigh, /*add*/ true);
+  EXPECT_EQ(result, kPlatformResultSuccess);
+
+  // Confirm that a route exists to the WiFi interface with the given IP.
+  EXPECT_TRUE(fake_net_stack().FindRouteTableEntry(wlan_iface_id, prefix.IPAddr));
+
+  // Confirm that this interface is NOT forwarded.
+  EXPECT_FALSE(fake_stack().IsInterfaceForwarded(wlan_iface_id));
+
+  // Remove the route to the WiFi interface.
+  result = AddRemoveHostRoute(kInterfaceTypeWiFi, prefix, kRoutePriorityHigh, /*add*/ false);
+  EXPECT_EQ(result, kPlatformResultSuccess);
+
+  // Confirm that the removal worked.
+  EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(wlan_iface_id, prefix.IPAddr));
 }
 
 TEST_F(WarmTest, RemoveHostRouteThreadNotFound) {
@@ -601,6 +791,9 @@ TEST_F(WarmTest, RemoveHostRouteThreadNotFound) {
   // Remove the non-existent route to the Thread interface, expect failure.
   auto result = AddRemoveHostRoute(kInterfaceTypeThread, prefix, kRoutePriorityHigh, /*add*/ false);
   EXPECT_EQ(result, kPlatformResultFailure);
+
+  // Confirm that the interface is not forwarded.
+  EXPECT_FALSE(fake_stack().IsInterfaceForwarded(thread_iface_id));
 
   // Sanity check - confirm still no routes to the Thread interface exist.
   EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(thread_iface_id, prefix.IPAddr));
@@ -623,8 +816,62 @@ TEST_F(WarmTest, RemoveHostRouteTunnelNotFound) {
   auto result = AddRemoveHostRoute(kInterfaceTypeTunnel, prefix, kRoutePriorityHigh, /*add*/ false);
   EXPECT_EQ(result, kPlatformResultFailure);
 
+  // Confirm that the interface is not forwarded.
+  EXPECT_FALSE(fake_stack().IsInterfaceForwarded(tunnel_iface_id));
+
   // Sanity check - confirm still no routes to the Tunnel interface exist.
   EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(tunnel_iface_id, prefix.IPAddr));
+}
+
+TEST_F(WarmTest, RemoveHostRouteWiFiNotFound) {
+  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
+  constexpr uint8_t kPrefixLength = 48;
+  Inet::IPPrefix prefix;
+
+  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, prefix.IPAddr));
+  prefix.Length = kPrefixLength;
+
+  // Sanity check - confirm no routes to the WiFi interface exist.
+  uint64_t wlan_iface_id = GetWiFiInterfaceId();
+  ASSERT_NE(wlan_iface_id, 0u);
+  EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(wlan_iface_id, prefix.IPAddr));
+
+  // Remove the non-existent route to the WiFi interface, expect failure.
+  auto result = AddRemoveHostRoute(kInterfaceTypeWiFi, prefix, kRoutePriorityHigh, /*add*/ false);
+  EXPECT_EQ(result, kPlatformResultFailure);
+
+  // Confirm that the interface is not forwarded.
+  EXPECT_FALSE(fake_stack().IsInterfaceForwarded(wlan_iface_id));
+
+  // Sanity check - confirm still no routes to the WiFi interface exist.
+  EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(wlan_iface_id, prefix.IPAddr));
+}
+
+TEST_F(WarmTest, AddHostRouteThreadForwardingFailure) {
+  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
+  constexpr uint8_t kPrefixLength = 48;
+  Inet::IPPrefix prefix;
+
+  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, prefix.IPAddr));
+  prefix.Length = kPrefixLength;
+
+  // Sanity check - confirm no routes to the Thread interface exist.
+  uint64_t thread_iface_id = GetThreadInterfaceId();
+  ASSERT_NE(thread_iface_id, 0u);
+  EXPECT_FALSE(fake_net_stack().FindRouteTableEntry(thread_iface_id, prefix.IPAddr));
+
+  // Simulate a forwarding failure.
+  fake_stack().SetForwardingSuccess(false);
+
+  // Attempt to add a route to the Thread interface, expect failure.
+  auto result = AddRemoveHostRoute(kInterfaceTypeThread, prefix, kRoutePriorityHigh, /*add*/ true);
+  EXPECT_EQ(result, kPlatformResultFailure);
+
+  // Confirm that a route exists to the Thread interface with the given IP.
+  EXPECT_TRUE(fake_net_stack().FindRouteTableEntry(thread_iface_id, prefix.IPAddr));
+
+  // Confirm that this interface is not forwarded.
+  EXPECT_FALSE(fake_stack().IsInterfaceForwarded(thread_iface_id));
 }
 
 TEST_F(WarmTest, AddHostRouteTunnelRoutePriorities) {
