@@ -26,9 +26,12 @@
  * SUCH DAMAGE.
  */
 
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <zircon/hw/pci.h>
+#include <zircon/syscalls/pci.h>
+
 #include "e1000_api.h"
-#include "lib/ddk/device.h"
-#include "lib/ddk/driver.h"
 #include "src/lib/listnode/listnode.h"
 #include "zircon/third_party/dev/ethernet/e1000/e1000_bind.h"
 
@@ -566,40 +569,27 @@ static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
   adapter->hw.hw_addr = (u8*)&adapter->osdep.membase;
 
   /* Only older adapters use IO mapping */
-  uint32_t iorid;
   if (adapter->hw.mac.type < em_mac_min && adapter->hw.mac.type > e1000_82543) {
-    /* Figure our where our IO BAR is ? */
-    uint32_t rid;
-    uint32_t val;
-    for (rid = PCI_CONFIG_BASE_ADDRESSES; rid < PCI_CONFIG_CARDBUS_CIS_PTR;) {
-      pci_config_read32(pci, rid, &val);
-
-      if (EM_BAR_TYPE(val) == EM_BAR_TYPE_IO) {
-        iorid = (rid - PCI_CONFIG_BASE_ADDRESSES) / 4;
+    /* Figure our where our IO BAR is. We've already mapped the first BAR as
+     * MMIO, so it must be one of the remaining five. */
+    pci_bar_t bar = {};
+    bool found_io_bar = false;
+    for (uint32_t i = 1; i < PCI_MAX_BAR_REGS; i++) {
+      if ((status = pci_get_bar(pci, i, &bar)) == ZX_OK && bar.type == ZX_PCI_BAR_TYPE_PIO) {
+        adapter->osdep.iobase = bar.address;
+        adapter->hw.io_base = 0;
+        found_io_bar = true;
         break;
       }
-      rid += 4;
-      /* check for 64bit BAR */
-      if (EM_BAR_MEM_TYPE(val) == EM_BAR_MEM_TYPE_64BIT)
-        rid += 4;
     }
-    if (rid >= PCI_CONFIG_CARDBUS_CIS_PTR) {
+
+    if (!found_io_bar) {
       zxlogf(ERROR, "Unable to locate IO BAR");
       return ZX_ERR_IO_NOT_PRESENT;
     }
-
-    pci_bar_t bar;
-    status = pci_get_bar(pci, iorid, &bar);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Unable to allocate bus resource: ioport (%d)", status);
-    }
-
-    adapter->osdep.iobase = bar.address;
-    adapter->hw.io_base = 0;
   }
 
   adapter->hw.back = &adapter->osdep;
-
   return ZX_OK;
 }
 
