@@ -25,7 +25,13 @@ if (is_host) {
     script = "make_ffx_env.py"
     inputs = []
     deps = []
-    args = [ ".ffx.env" ]
-    outputs = [ "$root_build_dir/.ffx.env" ]
+    args = [
+      ".ffx.env",
+      ".ffx.build_config",
+    ]
+    outputs = [
+      "$root_build_dir/.ffx.env",
+      "$root_build_dir/.ffx.build_config",
+    ]
   }
 }
