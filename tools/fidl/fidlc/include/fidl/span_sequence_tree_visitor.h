@@ -19,104 +19,7 @@ namespace fidl::fmt {
 class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
  public:
   explicit SpanSequenceTreeVisitor(std::string_view file)
-      : empty_lines_(0), file_(file), uningested_(file) {
-    building_.push(std::vector<std::unique_ptr<SpanSequence>>());
-  }
-
-  // An RAII-ed base class for constructing SpanSequence's from inside On* visitor methods.  Each
-  // instance of a Builder is roughly saying "make a SpanSequence out of text between the end of the
-  // last processed node and the one currently being visited."
-  template <typename T>
-  class Builder {
-    static_assert(std::is_base_of<SpanSequence, T>::value,
-                  "T of Builder<T> must inherit from SpanSequence");
-
-   public:
-    Builder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element);
-    virtual ~Builder();
-
-   protected:
-    SpanSequenceTreeVisitor* GetFormattingTreeVisitor() { return ftv_; }
-
-   private:
-    SpanSequenceTreeVisitor* ftv_;
-    const raw::SourceElement& el_;
-  };
-
-  // Builds a single TokenSpanSequence.  For example, consider the following FIDL:
-  //
-  //   // My standalone comment.
-  //   using foo.bar as qux; // My inline comment.
-  //
-  // All three of `foo`, `baz,` and `qux` will be visited by the OnIdentifier method.  Each instance
-  // of this method will instantiate a TokenBuilder, as entire span covered by an Identifier node
-  // consists of a single token.
-  class TokenBuilder : public Builder<TokenSpanSequence> {
-   public:
-    TokenBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element);
-  };
-
-  // Builds a CompositeSpanSequence that is smaller than a standalone statement (see the comment on
-  // StatementBuilder for more on what that means), but still contains multiple tokens.  Using the
-  // same example as above:
-  //
-  //   // My standalone comment.
-  //   using foo.bar as qux; // My inline comment.
-  //
-  // The span `foo.bar` is a raw::CompoundIdentifier consisting of multiple tokens (`foo`, `.`, and
-  // `bar`).  Since this span is not meant to be divisible, it should be constructed by a
-  // SpanBuilder<AtomicSpanSequence>.  In contrast, a sub-statement length span that IS meant to be
-  // divisible, like `@attr(foo="bar)`, should be constructed by SpanBuilder<DivisibleSpanSequence>
-  // instead.
-  template <typename T>
-  class SpanBuilder : public Builder<T> {
-    static_assert(std::is_base_of<CompositeSpanSequence, T>::value,
-                  "T of SpanBuilder<T> must inherit from CompositeSpanSequence");
-
-   public:
-    SpanBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element,
-                SpanSequence::Position position = SpanSequence::Position::kDefault);
-    ~SpanBuilder();
-
-   protected:
-    SpanSequence::Position GetPosition() const { return position_; }
-
-   private:
-    const SpanSequence::Position position_;
-  };
-
-  // Builds a SpanSequence to represent a FIDL statement (ie any chain of tokens that ends in a
-  // semicolon).  As illustration, both the protocol and method declarations here are statements,
-  // one wrapping the other:
-  //
-  //   protocol {
-  //     DoFoo(MyRequest) -> (MyResponse) error uint32;
-  //   };
-  //
-  // The purpose of this Builder is to make a SpanSequence from all text from the end of the last
-  // statement, up to and including the semicolon that ends this statement (as well as any inline
-  // comments that may follow that semicolon).  Again taking the 'using...' example, the entirety of
-  // the text below would become a single SpanSequence when passed through
-  // StatementBuilder<AtomicSpanSequence>:
-  //
-  //   // My standalone comment.
-  //   using foo.bar as qux; // My inline comment.
-  //
-  // For the `protocol...` example, `protocol ...` would be processed by
-  // StatementBuilder<MultilineSpanSequence> (since protocols are multiline by default), whereas
-  // `DoFoo...` would be handled by StatementBuilder<DivisibleSpanSequence> instead.
-  template <typename T>
-  class StatementBuilder : public SpanBuilder<T> {
-   public:
-    StatementBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element,
-                     const Token& start,
-                     SpanSequence::Position position = SpanSequence::Position::kDefault);
-    ~StatementBuilder();
-
-   private:
-    const Token& start_;
-    size_t statement_new_lines_;
-  };
+      : empty_lines_(0), file_(file), uningested_(file) {}
 
   // These "On*" methods may be called on files written in the new syntax.
   void OnAttributeListNew(std::unique_ptr<raw::AttributeListNew> const& element) override {
@@ -266,6 +169,132 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   MultilineSpanSequence Result();
 
  private:
+  enum struct VisitorKind {
+    kCompoundIdentifier,
+    kFile,
+    kIdentifier,
+    kLibrary,
+    kUsing,
+  };
+
+  // As we descend down a particular branch of the raw AST, we record the VisitorKind of each node
+  // we visit in the ast_path_ member set.  Later, we can use this function to check if we are
+  // "inside" of some raw AST node.  For example, we handle raw::Identifiers differently if they are
+  // inside of a raw::CompoundIdentifier.  Running `IsInsideOf(VisitorKind::kCompoundIndentifier)`
+  // allows us to deduce if this special handling is necessary for any raw::Identifier we visit.
+  bool IsInsideOf(VisitorKind visitor_kind);
+
+  // An RAII-ed tracking class, invoked at the start of each On*-like visitor.  It appends the
+  // VisitorKind of the visitor to the ast_path_ for the life time of the On* visitor's execution,
+  // allowing downstream visitors to orient themselves.  For example, OnIdentifier behaves slightly
+  // differently depending on whether or not it is inside of a CompoundIdentifier.  By adding
+  // VisitorKinds as we go down the tree, we're able to deduce from within OnIdentifier whether or
+  // not it is contained in this node.
+  class Visiting {
+   public:
+    Visiting(SpanSequenceTreeVisitor* ftv, VisitorKind visitor_kind);
+    virtual ~Visiting();
+
+   private:
+    SpanSequenceTreeVisitor* ftv_;
+  };
+
+  // An RAII-ed base class for constructing SpanSequence's from inside On* visitor methods.  Each
+  // instance of a Builder is roughly saying "make a SpanSequence out of text between the end of the
+  // last processed node and the one currently being visited."
+  template <typename T>
+  class Builder {
+    static_assert(std::is_base_of<SpanSequence, T>::value,
+                  "T of Builder<T> must inherit from SpanSequence");
+
+   public:
+    Builder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element, bool new_list);
+    virtual ~Builder();
+
+   protected:
+    SpanSequenceTreeVisitor* GetFormattingTreeVisitor() { return ftv_; }
+
+   private:
+    SpanSequenceTreeVisitor* ftv_;
+    const raw::SourceElement& el_;
+  };
+
+  // Builds a single TokenSpanSequence.  For example, consider the following FIDL:
+  //
+  //   // My standalone comment.
+  //   using foo.bar as qux; // My inline comment.
+  //
+  // All three of `foo`, `baz,` and `qux` will be visited by the OnIdentifier method.  Each instance
+  // of this method will instantiate a TokenBuilder, as entire span covered by an Identifier node
+  // consists of a single token.
+  class TokenBuilder : public Builder<TokenSpanSequence> {
+   public:
+    TokenBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element);
+  };
+
+  // Builds a CompositeSpanSequence that is smaller than a standalone statement (see the comment on
+  // StatementBuilder for more on what that means), but still contains multiple tokens.  Using the
+  // same example as above:
+  //
+  //   // My standalone comment.
+  //   using foo.bar as qux; // My inline comment.
+  //
+  // The span `foo.bar` is a raw::CompoundIdentifier consisting of multiple tokens (`foo`, `.`, and
+  // `bar`).  Since this span is not meant to be divisible, it should be constructed by a
+  // SpanBuilder<AtomicSpanSequence>.  In contrast, a sub-statement length span that IS meant to be
+  // divisible, like `@attr(foo="bar)`, should be constructed by SpanBuilder<DivisibleSpanSequence>
+  // instead.
+  template <typename T>
+  class SpanBuilder : public Builder<T> {
+    static_assert(std::is_base_of<CompositeSpanSequence, T>::value,
+                  "T of SpanBuilder<T> must inherit from CompositeSpanSequence");
+
+   public:
+    SpanBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element, const Token& start,
+                SpanSequence::Position position = SpanSequence::Position::kDefault);
+    ~SpanBuilder();
+
+   protected:
+    SpanSequence::Position GetPosition() const { return position_; }
+
+   private:
+    const SpanSequence::Position position_;
+  };
+
+  // Builds a SpanSequence to represent a FIDL statement (ie any chain of tokens that ends in a
+  // semicolon).  As illustration, both the protocol and method declarations here are statements,
+  // one wrapping the other:
+  //
+  //   protocol {
+  //     DoFoo(MyRequest) -> (MyResponse) error uint32;
+  //   };
+  //
+  // The purpose of this Builder is to make a SpanSequence from all text from the end of the last
+  // statement, up to and including the semicolon that ends this statement (as well as any inline
+  // comments that may follow that semicolon).  Again taking the 'using...' example, the entirety of
+  // the text below would become a single SpanSequence when passed through
+  // StatementBuilder<AtomicSpanSequence>:
+  //
+  //   // My standalone comment.
+  //   using foo.bar as qux; // My inline comment.
+  //
+  // For the `protocol...` example, `protocol ...` would be processed by
+  // StatementBuilder<MultilineSpanSequence> (since protocols are multiline by default), whereas
+  // `DoFoo...` would be handled by StatementBuilder<DivisibleSpanSequence> instead.
+  template <typename T>
+  class StatementBuilder : public Builder<T> {
+   public:
+    StatementBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element,
+                     SpanSequence::Position position = SpanSequence::Position::kDefault);
+    ~StatementBuilder();
+
+   protected:
+    SpanSequence::Position GetPosition() const { return position_; }
+
+   private:
+    const SpanSequence::Position position_;
+  };
+
   // Given a pointer to character in our source file, ingest up to and including that character.  If
   // the stop_at_semicolon flag is set, only ingest until we reach the end of a line containing a
   // semicolon, rather than going all the way up to the limit character.
@@ -286,6 +315,10 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   //
   // This call is just sugar around IngestUntil(LAST_CHAR_OF_FILE, true);
   std::optional<std::unique_ptr<SpanSequence>> IngestUntilSemicolon();
+
+  // Stores that path in the raw AST of the node currently being visited.  See the comment on the
+  // `Visiting` class for more on why this is useful.
+  std::vector<VisitorKind> ast_path_;
 
   // A stack that keeps track of the CompositeSpanSequence we are currently building.  It is a list
   // of that CompositeSpanSequence's children.  When the child list has been filled out, it is

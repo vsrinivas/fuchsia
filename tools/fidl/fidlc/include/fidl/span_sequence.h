@@ -63,6 +63,7 @@ class SpanSequence {
   //  more opinionated Builder classes.
   virtual void Close();
   virtual bool HasComments() const = 0;
+  virtual bool HasTokens() const = 0;
   virtual bool IsComment() const = 0;
   virtual bool IsComposite() const = 0;
 
@@ -144,6 +145,7 @@ class TokenSpanSequence final : public SpanSequence {
 
   void Close() override;
   bool HasComments() const override { return false; }
+  bool HasTokens() const override { return false; }
   bool IsComment() const override { return false; }
   bool IsComposite() const override { return false; }
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
@@ -164,17 +166,23 @@ class TokenSpanSequence final : public SpanSequence {
 class CompositeSpanSequence : public SpanSequence {
  protected:
   explicit CompositeSpanSequence(Kind kind, Position position, size_t leading_blank_lines)
-      : SpanSequence(kind, position, leading_blank_lines), has_comments_(false) {}
+      : SpanSequence(kind, position, leading_blank_lines),
+        has_comments_(false),
+        has_tokens_(false) {}
   explicit CompositeSpanSequence(Kind kind, std::vector<std::unique_ptr<SpanSequence>> children,
                                  Position position, size_t leading_blank_lines)
       : SpanSequence(kind, position, leading_blank_lines),
         children_(std::move(children)),
-        has_comments_(false) {}
+        has_comments_(false),
+        has_tokens_(false) {}
 
  public:
   void AddChild(std::unique_ptr<SpanSequence> child);
   void Close() override;
+  void CloseChildren();
+  SpanSequence* GetLastChild();
   bool HasComments() const override { return has_comments_; }
+  bool HasTokens() const override { return has_tokens_; }
   bool IsComment() const override { return false; }
   bool IsComposite() const override { return true; }
   bool IsEmpty();
@@ -185,6 +193,7 @@ class CompositeSpanSequence : public SpanSequence {
  private:
   std::vector<std::unique_ptr<SpanSequence>> children_;
   bool has_comments_;
+  bool has_tokens_;
 };
 
 // Wrapping of AtomicSpanSequences must never occur, except when comments are encountered, in which
@@ -229,7 +238,6 @@ class AtomicSpanSequence final : public CompositeSpanSequence {
       : CompositeSpanSequence(SpanSequence::Kind::kAtomic, std::move(children), position,
                               leading_blank_lines) {}
 
-  SpanSequence* GetLastChild();
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
                                           std::optional<SpanSequence::Kind> last_printed_kind,
                                           size_t indentation, bool wrapped,
@@ -306,6 +314,7 @@ class CommentSpanSequence : public SpanSequence {
 
  public:
   bool HasComments() const override { return false; }
+  bool HasTokens() const override { return false; }
   bool IsComment() const override { return true; }
   bool IsComposite() const override { return false; }
 };

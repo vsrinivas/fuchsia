@@ -39,6 +39,21 @@ library foo.bar;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// Test that the library declaration is never wrapped.
+TEST(NewFormatterTests, LibraryOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library my.overlong.severely.overflowing.name;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library my.overlong.severely.overflowing.name;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Test a library declaration in which every token is placed on a newline.
 TEST(NewFormatterTests, LibraryMaximalNewlines) {
   // ---------------40---------------- |
@@ -58,16 +73,116 @@ library foo.bar;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
-// Test that the library declaration is never wrapped.
-TEST(NewFormatterTests, LibraryOverflow) {
+// Ensure that an already properly formatted using declaration is not modified by another run
+// through the formatter.
+TEST(NewFormatterTests, UsingFormatted) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
-library my.overlong.severely.overflowing.name;
+library foo.bar;
+using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
-library my.overlong.severely.overflowing.name;
+library foo.bar;
+using imported.abcdefhijklmnopqrstubwxy;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test that a using declaration with no alias does not get wrapped.
+TEST(NewFormatterTests, UsingOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+using imported.abcdefhijklmnopqrstubwxyz;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+using imported.abcdefhijklmnopqrstubwxyz;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test a using declaration in which every token is placed on a newline.
+TEST(NewFormatterTests, UsingMaximalNewlines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+using
+imported
+.
+abcdefhijklmnopqrstubwxy
+;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+using imported.abcdefhijklmnopqrstubwxy;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Ensure that an already properly formatted aliased using declaration is not modified by another
+// run through the formatter.
+TEST(NewFormatterTests, UsingWithAliasFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+using baz.qux as abcdefghijklmnopqrstuv;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+using baz.qux as abcdefghijklmnopqrstuv;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test that the aliased using declaration is properly wrapped
+TEST(NewFormatterTests, UsingWithAliasOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+using baz.qux as abcdefghijklmnopqrstuvwxyz;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+using baz.qux
+        as abcdefghijklmnopqrstuvwxyz;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test an aliased using declaration in which every token is placed on a newline.
+TEST(NewFormatterTests, UsingWithAliasMaximalNewlines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+using
+baz
+.
+qux
+as
+abcdefghijklmnopqrstuv
+;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+using baz.qux as abcdefghijklmnopqrstuv;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
@@ -99,7 +214,10 @@ using // F
 // 8
 baz // G
 // 9
-; // H
+as // H
+// 10
+quz // I
+; // 11
 )FIDL";
 
   // ---------------40---------------- |
@@ -126,7 +244,10 @@ using // F
         // 8
         baz // G
         // 9
-        ; // H
+        as // H
+        // 10
+        quz // I
+        ; // 11
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));

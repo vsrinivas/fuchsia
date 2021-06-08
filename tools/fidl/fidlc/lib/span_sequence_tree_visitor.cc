@@ -240,10 +240,24 @@ std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestUnti
   return IngestUntil(file_.data() + (file_.size() - 1), true);
 }
 
+bool SpanSequenceTreeVisitor::IsInsideOf(VisitorKind visitor_kind) {
+  return std::find(ast_path_.begin(), ast_path_.end(), visitor_kind) != ast_path_.end();
+}
+
+SpanSequenceTreeVisitor::Visiting::Visiting(SpanSequenceTreeVisitor* ftv, VisitorKind visitor_kind)
+    : ftv_(ftv) {
+  this->ftv_->ast_path_.push_back(visitor_kind);
+}
+
+SpanSequenceTreeVisitor::Visiting::~Visiting() { this->ftv_->ast_path_.pop_back(); }
+
 template <typename T>
 SpanSequenceTreeVisitor::Builder<T>::Builder(SpanSequenceTreeVisitor* ftv,
-                                             const raw::SourceElement& element)
+                                             const raw::SourceElement& element, bool new_list)
     : ftv_(ftv), el_(element) {
+  if (new_list)
+    this->GetFormattingTreeVisitor()->building_.push(std::vector<std::unique_ptr<SpanSequence>>());
+
   auto prelude = ftv_->IngestUntil(el_.start_.data().data() - 1);
   if (prelude.has_value())
     ftv_->building_.top().push_back(std::move(prelude.value()));
@@ -259,7 +273,7 @@ SpanSequenceTreeVisitor::Builder<T>::~Builder<T>() {
 
 SpanSequenceTreeVisitor::TokenBuilder::TokenBuilder(SpanSequenceTreeVisitor* ftv,
                                                     const raw::SourceElement& element)
-    : Builder<TokenSpanSequence>(ftv, element) {
+    : Builder<TokenSpanSequence>(ftv, element, false) {
   auto token = std::make_unique<TokenSpanSequence>(element.span().data(), false,
                                                    this->GetFormattingTreeVisitor()->empty_lines_);
   token->Close();
@@ -269,30 +283,11 @@ SpanSequenceTreeVisitor::TokenBuilder::TokenBuilder(SpanSequenceTreeVisitor* ftv
 template <typename T>
 SpanSequenceTreeVisitor::SpanBuilder<T>::SpanBuilder(SpanSequenceTreeVisitor* ftv,
                                                      const raw::SourceElement& element,
+                                                     const Token& start,
                                                      SpanSequence::Position position)
-    : Builder<T>(ftv, element), position_(position) {
-  this->GetFormattingTreeVisitor()->building_.push(std::vector<std::unique_ptr<SpanSequence>>());
-}
-
-template <typename T>
-SpanSequenceTreeVisitor::SpanBuilder<T>::~SpanBuilder<T>() {
-  auto parts = std::move(this->GetFormattingTreeVisitor()->building_.top());
-  auto composite_span_sequence = std::make_unique<T>(
-      std::move(parts), this->position_, this->GetFormattingTreeVisitor()->empty_lines_);
-  composite_span_sequence->Close();
-  this->GetFormattingTreeVisitor()->building_.pop();
-  this->GetFormattingTreeVisitor()->building_.top().push_back(std::move(composite_span_sequence));
-}
-
-template <typename T>
-SpanSequenceTreeVisitor::StatementBuilder<T>::StatementBuilder(SpanSequenceTreeVisitor* ftv,
-                                                               const raw::SourceElement& element,
-                                                               const Token& start,
-                                                               SpanSequence::Position position)
-    : SpanBuilder<T>(ftv, element, position), start_(start), statement_new_lines_(0) {
-  statement_new_lines_ = this->GetFormattingTreeVisitor()->empty_lines_;
+    : Builder<T>(ftv, element, true), position_(position) {
   auto before_starting_token =
-      this->GetFormattingTreeVisitor()->IngestUntil(start_.data().data() - 1);
+      this->GetFormattingTreeVisitor()->IngestUntil(start.data().data() - 1);
   if (before_starting_token.has_value()) {
     this->GetFormattingTreeVisitor()->building_.top().push_back(
         std::move(before_starting_token.value()));
@@ -300,12 +295,47 @@ SpanSequenceTreeVisitor::StatementBuilder<T>::StatementBuilder(SpanSequenceTreeV
 }
 
 template <typename T>
+SpanSequenceTreeVisitor::SpanBuilder<T>::~SpanBuilder<T>() {
+  auto parts = std::move(this->GetFormattingTreeVisitor()->building_.top());
+  auto composite_span_sequence = std::make_unique<T>(
+      std::move(parts), this->position_, this->GetFormattingTreeVisitor()->empty_lines_);
+  composite_span_sequence->CloseChildren();
+
+  this->GetFormattingTreeVisitor()->building_.pop();
+  this->GetFormattingTreeVisitor()->building_.top().push_back(std::move(composite_span_sequence));
+}
+
+template <typename T>
+SpanSequenceTreeVisitor::StatementBuilder<T>::StatementBuilder(SpanSequenceTreeVisitor* ftv,
+                                                               const raw::SourceElement& element,
+                                                               SpanSequence::Position position)
+    : Builder<T>(ftv, element, true), position_(position) {}
+
+template <typename T>
 SpanSequenceTreeVisitor::StatementBuilder<T>::~StatementBuilder<T>() {
-  this->GetFormattingTreeVisitor()->building_.top().push_back(
-      this->GetFormattingTreeVisitor()->IngestUntilSemicolon().value());
+  auto parts = std::move(this->GetFormattingTreeVisitor()->building_.top());
+  auto semicolon_span_sequence = this->GetFormattingTreeVisitor()->IngestUntilSemicolon().value();
+  auto composite_span_sequence = std::make_unique<T>(
+      std::move(parts), this->position_, this->GetFormattingTreeVisitor()->empty_lines_);
+
+  // Append the semicolon_span_sequence to the last child in the composite_span_sequence, if it
+  // exists.
+  auto last_child = composite_span_sequence->GetLastChild();
+  if (last_child != nullptr && !last_child->IsClosed()) {
+    assert(last_child->IsComposite() && "cannot append semicolon to non-composite SpanSequence");
+    auto last_child_as_composite = static_cast<CompositeSpanSequence*>(last_child);
+    last_child_as_composite->AddChild(std::move(semicolon_span_sequence));
+  }
+  composite_span_sequence->Close();
+
+  this->GetFormattingTreeVisitor()->building_.pop();
+  this->GetFormattingTreeVisitor()->building_.top().push_back(std::move(composite_span_sequence));
 }
 
 void SpanSequenceTreeVisitor::OnFile(const std::unique_ptr<raw::File>& element) {
+  auto visiting = Visiting(this, VisitorKind::kFile);
+  building_.push(std::vector<std::unique_ptr<SpanSequence>>());
+
   DeclarationOrderTreeVisitor::OnFile(element);
 
   if (!uningested_.empty()) {
@@ -316,26 +346,36 @@ void SpanSequenceTreeVisitor::OnFile(const std::unique_ptr<raw::File>& element) 
 }
 
 void SpanSequenceTreeVisitor::OnLibraryDecl(const std::unique_ptr<raw::LibraryDecl>& element) {
-  auto builder = StatementBuilder<AtomicSpanSequence>(this, *element, element->path->start_,
+  auto visiting = Visiting(this, VisitorKind::kLibrary);
+  auto builder = StatementBuilder<AtomicSpanSequence>(this, *element,
                                                       SpanSequence::Position::kNewlineUnindented);
   TreeVisitor::OnLibraryDecl(element);
 }
 
 void SpanSequenceTreeVisitor::OnUsing(const std::unique_ptr<raw::Using>& element) {
-  auto builder = StatementBuilder<AtomicSpanSequence>(this, *element, element->using_path->start_,
-                                                      SpanSequence::Position::kNewlineUnindented);
+  auto visiting = Visiting(this, VisitorKind::kUsing);
+  auto builder = StatementBuilder<DivisibleSpanSequence>(
+      this, *element, SpanSequence::Position::kNewlineUnindented);
   TreeVisitor::OnUsing(element);
 }
 
 void SpanSequenceTreeVisitor::OnCompoundIdentifier(
     const std::unique_ptr<raw::CompoundIdentifier>& element) {
-  auto builder = SpanBuilder<AtomicSpanSequence>(this, *element);
+  auto visiting = Visiting(this, VisitorKind::kCompoundIdentifier);
+  auto builder = SpanBuilder<AtomicSpanSequence>(this, *element, element->start_);
   TreeVisitor::OnCompoundIdentifier(element);
 }
 
 void SpanSequenceTreeVisitor::OnIdentifier(const std::unique_ptr<raw::Identifier>& element) {
-  auto builder = TokenBuilder(this, *element);
-  TreeVisitor::OnIdentifier(element);
+  auto visiting = Visiting(this, VisitorKind::kIdentifier);
+  if (IsInsideOf(VisitorKind::kCompoundIdentifier)) {
+    auto builder = TokenBuilder(this, *element);
+    TreeVisitor::OnIdentifier(element);
+  } else {
+    auto span_builder = SpanBuilder<AtomicSpanSequence>(this, *element, element->start_);
+    auto token_builder = TokenBuilder(this, *element);
+    TreeVisitor::OnIdentifier(element);
+  }
 }
 
 MultilineSpanSequence SpanSequenceTreeVisitor::Result() {

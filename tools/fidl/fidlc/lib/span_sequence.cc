@@ -4,7 +4,6 @@
 
 #include "fidl/span_sequence.h"
 
-#include "fidl/new_formatter.h"
 #include "fidl/raw_ast.h"
 
 namespace fidl::fmt {
@@ -114,8 +113,11 @@ void CompositeSpanSequence::Close() {
   if (!IsClosed()) {
     for (auto& child : children_) {
       child->Close();
-      if (child->IsComment())
+      if (child->IsComment()) {
         has_comments_ = true;
+      } else {
+        has_tokens_ = true;
+      }
     }
     SetRequiredSize(CalculateRequiredSize());
 
@@ -127,19 +129,27 @@ void CompositeSpanSequence::Close() {
   }
 }
 
-bool CompositeSpanSequence::IsEmpty() { return children_.empty(); }
-
-const std::vector<std::unique_ptr<SpanSequence>>& CompositeSpanSequence::GetChildren() const {
-  return children_;
+void CompositeSpanSequence::CloseChildren() {
+  if (!IsClosed()) {
+    for (auto& child : children_) {
+      child->Close();
+    }
+  }
 }
 
-SpanSequence* AtomicSpanSequence::GetLastChild() {
+SpanSequence* CompositeSpanSequence::GetLastChild() {
   assert(!IsClosed() && "cannot GetLastChild of closed AtomicSpanSequence");
   const auto& children = GetChildren();
   if (!children.empty()) {
     return children.at(children.size() - 1).get();
   }
   return nullptr;
+}
+
+bool CompositeSpanSequence::IsEmpty() { return children_.empty(); }
+
+const std::vector<std::unique_ptr<SpanSequence>>& CompositeSpanSequence::GetChildren() const {
+  return children_;
 }
 
 std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
@@ -159,7 +169,7 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
 
         // If the child AtomicSpanSequence had comments, we know that it forces a wrapping, so
         // all future printing for this AtomicSpanSequence must be wrapped as well.
-        if (!wrapped && child->HasComments()) {
+        if (!wrapped && child->HasComments() && child->HasTokens()) {
           wrapped = true;
           wrapped_indentation += kWrappedIndentation;
         }
@@ -192,9 +202,9 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
         if (!out->empty() && out->at(out->size() - 1) == ' ')
           out->pop_back();
 
-        // A standalone comment always forces the rest of the AtomicSpanSequence content to be\
+        // A standalone comment always forces the rest of the AtomicSpanSequence content to be
         // wrapped, unless that comment precedes the first non-comment token in the span.
-        if (!wrapped && i > first.value_or(SIZE_MAX)) {
+        if (!wrapped && first.has_value() && i >= first.value()) {
           wrapped = true;
           wrapped_indentation += kWrappedIndentation;
         }
@@ -222,9 +232,81 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
 std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
     const size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind,
     size_t indentation, bool wrapped, std::string* out) const {
-  // TODO(fxbug.dev/73507): implement this.
-  assert(false && "not yet implemented");
-  return std::nullopt;
+  const auto& children = GetChildren();
+  const auto required_size = GetRequiredSize();
+  const auto last = LastNonCommentChildIndex(children);
+  auto wrapped_indentation = indentation + (wrapped ? kWrappedIndentation : 0);
+  auto space_available = max_col_width - wrapped_indentation;
+  assert(wrapped_indentation <= max_col_width && "indentation overflow");
+
+  if (required_size > space_available) {
+    // We can't fit this DivisibleSpanSequence on a single line, either due to a lack of space, or
+    // otherwise because it has a MultiSpanSequence somewhere in the middle of its child nodes,
+    // which forces line breaks.
+    for (size_t i = 0; i < children.size(); ++i) {
+      const auto& child = children[i];
+      MaybeIndentLine(wrapped_indentation, out);
+      last_printed_kind = child->Print(max_col_width, last_printed_kind, indentation, wrapped, out);
+      if (i < last.value_or(0)) {
+        *out += "\n";
+      }
+      if (i == 0 && !wrapped) {
+        wrapped = true;
+      }
+    }
+
+    return last_printed_kind;
+  }
+
+  // We can fit this DivisibleSpanSequence on a single line!
+  // TODO(fxbug.dev/73507): this partially duplicates the code in AtomicSpanSequence::Print.
+  //  Investigate using CompositeSpanSequence::Print for both cases instead.
+  for (size_t i = 0; i < children.size(); ++i) {
+    auto& child = children[i];
+    switch (child->GetKind()) {
+      case SpanSequence::Kind::kInlineComment:
+      case SpanSequence::Kind::kStandaloneComment: {
+        assert(false && "comments may not be children of DivisibleSpanSequence");
+        break;
+      }
+      case SpanSequence::Kind::kAtomic:
+      case SpanSequence::Kind::kDivisible: {
+        MaybeIndentLine(wrapped_indentation, out);
+        last_printed_kind =
+            child->Print(max_col_width, last_printed_kind, indentation, wrapped, out);
+
+        // If the child AtomicSpanSequence had comments, we know that it forces a wrapping, so
+        // all future printing for this AtomicSpanSequence must be wrapped as well.
+        if (!wrapped && child->HasComments() && child->HasTokens()) {
+          wrapped = true;
+          wrapped_indentation += kWrappedIndentation;
+        }
+        break;
+      }
+      case SpanSequence::Kind::kToken: {
+        last_printed_kind =
+            child->Print(max_col_width, last_printed_kind, indentation, wrapped, out);
+        break;
+      }
+      case SpanSequence::Kind::kMultiline: {
+        MaybeIndentLine(wrapped_indentation, out);
+        last_printed_kind =
+            child->Print(max_col_width, last_printed_kind, indentation, wrapped, out);
+        if (!wrapped) {
+          wrapped = true;
+        }
+        break;
+      }
+    }
+
+    // Always put spaces between the unwrapped elements of the DivisibleSpanSequence if they are
+    // tokens.
+    if (last_printed_kind == SpanSequence::Kind::kToken && i < last.value_or(0)) {
+      *out += " ";
+    }
+  }
+
+  return last_printed_kind;
 }
 
 // For MultilineSpanSequences, we only require enough space on a given line to fit the first line of
