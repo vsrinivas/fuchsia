@@ -26,6 +26,7 @@ action("installer") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         name = "installer"
         path = dest_image
         type = "installer"

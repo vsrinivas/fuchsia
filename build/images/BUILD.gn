@@ -421,6 +421,7 @@ compiled_action("blob.blk") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         name = "blob"
         path = rebased_blob_path
         type = "blk"
@@ -655,6 +656,7 @@ copy("fuchsia") {
   metadata = {
     images = [
       {
+        label = get_label_info(":fuchsia", "label_with_toolchain")
         name = "zircon-a"
         path = "fuchsia.zbi"
         type = "zbi"
@@ -840,6 +842,7 @@ if (custom_signing_script != "") {
     metadata = {
       images = [
         {
+          label = get_label_info(":$target_name", "label_with_toolchain")
           archive = true
           bootserver_pave = [ "--zircona" ]
           name = "zircon-a.signed"
@@ -868,6 +871,7 @@ if (custom_signing_script != "") {
     metadata = {
       images = [
         {
+          label = get_label_info(":$target_name", "label_with_toolchain")
           archive = true
           bootserver_pave = [ "--zircona" ]
           name = "zircon-a.signed"
@@ -948,6 +952,7 @@ if (use_vbmeta) {
     metadata = {
       images = [
         {
+          label = get_label_info(":$target_name", "label_with_toolchain")
           archive = true
           name = "zircon-a"
           path = "fuchsia.vbmeta"
@@ -1030,6 +1035,7 @@ compiled_action("data.blk") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         name = "data"
         path = rebased_data_image_path
         type = "blk"
@@ -1117,6 +1123,7 @@ generate_fvm("fvm.blk") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         archive = add_qemu_to_build_archives
         name = "storage-full"
         path = rebased_output_name
@@ -1151,6 +1158,7 @@ generate_fvm("fvm.sparse.blk") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         archive = true
         bootserver_pave = [ "--fvm" ]
         name = "storage-sparse"
@@ -1227,6 +1235,8 @@ generate_fvm("fvm.blob.sparse.blk") {
     if (include_fvm_blob_sparse) {
       images = [
         {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+
           # Hack: Infra expects bootserver_pave to be present
           # in the GN graph for this image to be built.
           bootserver_pave = []
@@ -1309,6 +1319,7 @@ if (fvm_partition != "") {
     metadata = {
       images = [
         {
+          label = get_label_info(":$target_name", "label_with_toolchain")
           archive = true
           name = "fvm.fastboot"
           path = rebased_output_name
@@ -1356,6 +1367,7 @@ zbi("netboot") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         archive = enable_netboot
         bootserver_netboot = [ "--boot" ]
         name = "netboot"
@@ -1393,6 +1405,7 @@ if (use_gigaboot) {
     metadata = {
       images = [
         {
+          label = get_label_info(":$target_name", "label_with_toolchain")
           archive = true
           bootserver_pave = [ "--bootloader" ]
           bootserver_pave_zedboot = [ "--bootloader" ]
@@ -1476,6 +1489,7 @@ foreach(firmware, firmware_prebuilts) {
     metadata = {
       images = [
         {
+          label = get_label_info(":$name", "label_with_toolchain")
           archive = true
           bootserver_pave = [ bootserver_arg ]
           bootserver_pave_zedboot = [ bootserver_arg ]
@@ -1525,6 +1539,7 @@ if (gpt_image != "") {
     metadata = {
       images = [
         {
+          label = get_label_info(":gpt", "label_with_toolchain")
           archive = true
           name = "gpt"
           path = "gpt.bin"
@@ -1551,6 +1566,8 @@ group("board_tools") {
       metadata = {
         images = [
           {
+            label =
+                get_label_info(":board_tool_$basename", "label_with_toolchain")
             archive = true
             name = "$basename"
             path = "board_tools/$basename"
@@ -1752,6 +1769,7 @@ action("flash_script") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         name = "flash-script"
         path = "flash.sh"
         type = "script"
@@ -1794,6 +1812,7 @@ generated_file("fastboot_manifest") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         name = "flash-manifest"
         path = "flash.json"
         type = "manifest"
@@ -1939,6 +1958,7 @@ action("flash_script_archive") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         archive = true
         name = "flash"
         type = "sh"
@@ -1980,6 +2000,7 @@ generated_file("fastboot_manifest_archive") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         archive = true
         name = "flash-manifest"
         path = "flash_archive.json"
@@ -2012,6 +2033,7 @@ paver_targets = [
     metadata = {
       images = [
         {
+          label = get_label_info(":$name", "label_with_toolchain")
           name = name
           path = "netboot.sh"
           type = "script"
@@ -2038,6 +2060,7 @@ paver_targets = [
     metadata = {
       images = [
         {
+          label = get_label_info(":$name", "label_with_toolchain")
           name = name
           path = "pave.sh"
           type = "script"
@@ -2068,6 +2091,7 @@ if (recovery_is_zedboot) {
       metadata = {
         images = [
           {
+            label = get_label_info(":$name", "label_with_toolchain")
             name = name
             path = "pave-zedboot.sh"
             type = "script"
@@ -2659,6 +2683,7 @@ group("bootserver") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         archive = true
         name = "bootserver"
         path = rebase_path("$host_out_dir/bootserver", root_build_dir)
@@ -2686,6 +2711,7 @@ copy("fastboot") {
 
     images = [
       {
+        label = get_label_info(":fastboot", "label_with_toolchain")
         archive = true
         name = "fastboot"
         path = rebase_path(outputs[0], root_build_dir)
@@ -2710,6 +2736,7 @@ group("build_args_metadata") {
     # the relevant build archives.
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         archive = true
         name = "buildargs"
         type = "gn"
@@ -2745,6 +2772,7 @@ compiled_action("uefi-disk") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         archive = false
         name = "uefi-disk"
         path = rebase_path(uefi_disk_path, root_build_dir)

@@ -52,6 +52,7 @@ zbi("bringup") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         name = "zircon-a"
         path = "bringup.zbi"
         type = "zbi"
@@ -127,6 +128,7 @@ if (use_vbmeta) {
     metadata = {
       images = [
         {
+          label = get_label_info(":$target_name", "label_with_toolchain")
           name = "zircon-a"
           path = "bringup.vbmeta"
           type = "vbmeta"

@@ -113,6 +113,7 @@ assemble_system("recovery-eng") {
   metadata = {
     images = [
       {
+        label = get_label_info(":$target_name", "label_with_toolchain")
         name = "recovery-eng"
         path = rebase_path("$target_out_dir/recovery-eng.zbi", root_build_dir)
         type = "zbi"
