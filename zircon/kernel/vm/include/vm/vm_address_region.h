@@ -123,6 +123,11 @@ class VmAddressRegionOrMapping
   Lock<Mutex>* lock() const TA_RET_CAP(aspace_->lock()) { return aspace_->lock(); }
   Lock<Mutex>& lock_ref() const TA_RET_CAP(aspace_->lock()) { return aspace_->lock_ref(); }
 
+  bool is_in_range(vaddr_t base, size_t size) const {
+    const size_t offset = base - base_;
+    return base >= base_ && offset < size_ && size_ - offset >= size;
+  }
+
  private:
   fbl::Canary<fbl::magic("VMRM")> canary_;
   const bool is_mapping_;
@@ -155,11 +160,6 @@ class VmAddressRegionOrMapping
   // Check if the given *arch_mmu_flags* are allowed under this
   // regions *flags_*
   bool is_valid_mapping_flags(uint arch_mmu_flags);
-
-  bool is_in_range(vaddr_t base, size_t size) const {
-    const size_t offset = base - base_;
-    return base >= base_ && offset < size_ && size_ - offset >= size;
-  }
 
   // Returns true if the instance is alive and reporting information that
   // reflects the address space layout. |aspace()->lock()| must be held.

@@ -377,6 +377,10 @@ zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags, PageRequest* p
   while (VmAddressRegionOrMapping* next = vmar->subregions_.FindRegion(va)) {
     if (auto mapping = next->as_vm_mapping_ptr()) {
       AssertHeld(mapping->lock_ref());
+      // Stash the mapping we found as the most recent fault. As we just found this mapping in the
+      // VMAR tree we know it's in the ALIVE state, satisfying that requirement that allows us to
+      // record this as a raw pointer.
+      aspace_->last_fault_ = mapping;
       return mapping->PageFault(va, pf_flags, page_request);
     }
     vmar = next->as_vm_address_region_ptr();

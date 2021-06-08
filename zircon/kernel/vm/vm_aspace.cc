@@ -550,9 +550,15 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
       // which stops any other operations on the address space from moving
       // the region out from underneath it
       Guard<Mutex> guard{&lock_};
-
-      AssertHeld(root_vmar_->lock_ref());
-      status = root_vmar_->PageFault(va, flags, &page_request);
+      // First check if we're faulting on the same mapping as last time to short-circuit the vmar
+      // walk.
+      if (likely(last_fault_ && last_fault_->is_in_range(va, 1))) {
+        AssertHeld(last_fault_->lock_ref());
+        status = last_fault_->PageFault(va, flags, &page_request);
+      } else {
+        AssertHeld(root_vmar_->lock_ref());
+        status = root_vmar_->PageFault(va, flags, &page_request);
+      }
     }
 
     if (status == ZX_ERR_SHOULD_WAIT) {

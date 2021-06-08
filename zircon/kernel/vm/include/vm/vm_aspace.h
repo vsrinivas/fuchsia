@@ -242,6 +242,16 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   mutable DECLARE_MUTEX(VmAspace) lock_;
 
+  // Keep a cache of the VmMapping of the last PageFault that occurred. On a page fault this can be
+  // checked to see if it matches more quickly than walking the full vmar tree. Mappings that are
+  // stored here must be in the ALIVE state, implying that they are in the VMAR tree. It is then the
+  // responsibility of the VmMapping to remove itself from here should it transition out of ALIVE,
+  // and remove itself from the VMAR tree.
+  // A raw pointer is stored here since the VmMapping must be alive and in tree anyway and if it
+  // were a RefPtr we would not be able to handle being the one to drop the last ref and perform
+  // destruction.
+  VmMapping* last_fault_ TA_GUARDED(lock_) = nullptr;
+
   // root of virtual address space
   // Access to this reference is guarded by lock_.
   fbl::RefPtr<VmAddressRegion> root_vmar_;

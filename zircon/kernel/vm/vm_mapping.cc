@@ -713,6 +713,13 @@ zx_status_t VmMapping::DestroyLocked() {
   // subregions_.erase below).
   fbl::RefPtr<VmMapping> self(this);
 
+  // If this is the last_fault_ then clear it before removing from the VMAR tree. Even if this
+  // destroy fails, it's always safe to clear last_fault_, so we preference doing it upfront for
+  // clarity.
+  if (aspace_->last_fault_ == this) {
+    aspace_->last_fault_ = nullptr;
+  }
+
   // The vDSO code mapping can never be unmapped, not even
   // by VMAR destruction (except for process exit, of course).
   // TODO(mcgrathr): Turn this into a policy-driven process-fatal case
@@ -760,7 +767,7 @@ zx_status_t VmMapping::DestroyLocked() {
 zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* page_request) {
   canary_.Assert();
 
-  DEBUG_ASSERT(va >= base_ && va <= base_ + size_ - 1);
+  DEBUG_ASSERT(is_in_range(va, 1));
 
   va = ROUNDDOWN(va, PAGE_SIZE);
   uint64_t vmo_offset = va - base_ + object_offset_locked();
