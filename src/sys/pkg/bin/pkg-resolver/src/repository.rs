@@ -300,7 +300,7 @@ mod tests {
         http_sse::Event,
         matches::assert_matches,
         std::sync::Arc,
-        updating_tuf_client::METADATA_CACHE_STALE_TIMEOUT,
+        updating_tuf_client::SUBSCRIBE_CACHE_STALE_TIMEOUT,
     };
 
     const TEST_REPO_URL: &str = "fuchsia-pkg://test";
@@ -558,7 +558,7 @@ mod tests {
             .unwrap();
 
         // cache will now be stale, should trigger an update
-        clock::mock::set(initial_time + METADATA_CACHE_STALE_TIMEOUT);
+        clock::mock::set(initial_time + SUBSCRIBE_CACHE_STALE_TIMEOUT);
         repo.get_merkle_at_path(&TargetPath::new("just-meta-far/0".to_string()).unwrap())
             .await
             .unwrap();
@@ -612,58 +612,6 @@ mod tests {
         let dir = env.persisted_repos_dir().unwrap().join("test").join("metadata");
 
         assert!(dir.join("1.root.json").exists());
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn resolve_caches_metadata() {
-        clock::mock::set(zx::Time::from_nanos(0));
-
-        let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let env = TestEnv::builder().add_package(&pkg).build().await;
-
-        let target_path =
-            TargetPath::new("just-meta-far/0".to_string()).expect("created target path");
-
-        let (responder, history) = responder::Record::new();
-        let (_served_repository, repo_config) =
-            env.serve_repo().response_overrider(responder).start(TEST_REPO_URL);
-        let mut repo = env.repo(&repo_config).await.expect("created opened repo");
-
-        // Resolve the package, which should succeed.
-        assert_matches!(repo.get_merkle_at_path(&target_path).await, Ok(_));
-
-        let entries = history.take();
-        let uri_paths = entries.iter().map(|e| e.uri_path().to_str().unwrap()).collect::<Vec<_>>();
-        assert_eq!(
-            uri_paths,
-            vec![
-                "/1.root.json",
-                "/2.root.json",
-                "/timestamp.json",
-                "/2.snapshot.json",
-                "/2.targets.json",
-            ],
-        );
-
-        // Advance time right before the timeout, and make sure we don't access the server.
-        clock::mock::set(
-            zx::Time::from_nanos(0) + METADATA_CACHE_STALE_TIMEOUT - zx::Duration::from_seconds(1),
-        );
-        assert_matches!(repo.get_merkle_at_path(&target_path).await, Ok(_));
-
-        let entries = history.take();
-        assert!(entries.is_empty(), "{:#?}", entries);
-
-        // Advance time right after the timeout, and make sure we access the server.
-        clock::mock::set(
-            zx::Time::from_nanos(0) + METADATA_CACHE_STALE_TIMEOUT + zx::Duration::from_seconds(1),
-        );
-        assert_matches!(repo.get_merkle_at_path(&target_path).await, Ok(_));
-
-        let entries = history.take();
-        assert_eq!(entries.len(), 2, "{:#?}", entries);
-        assert_eq!(entries[0].uri_path(), Path::new("/2.root.json"), "{:#?}", entries);
-        assert_eq!(entries[1].uri_path(), Path::new("/timestamp.json"), "{:#?}", entries);
     }
 }
 

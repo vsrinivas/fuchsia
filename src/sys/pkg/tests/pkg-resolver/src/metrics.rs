@@ -791,6 +791,7 @@ async fn pkg_resolver_update_tuf_client_status_ranges() {
         .uri_path_override_handler(handler::ForPath::new("/2.root.json", handler))
         .start()
         .unwrap();
+    env.register_repo(&served_repository).await;
 
     struct StatusTest {
         min_code: u16,
@@ -855,12 +856,6 @@ async fn pkg_resolver_update_tuf_client_status_ranges() {
 
     for ent in test_table.iter() {
         for code in ent.min_code..=ent.max_code {
-            // After the package resolver successfully updates TUF, it will automatically cache the
-            // fetched metadata for a period of time in order to reduce load on the repository
-            // server. Since we want each of these resolves to talk to our test server, we'll
-            // re-register the repository before each request in order to reset the timer.
-            env.register_repo(&served_repository).await;
-
             response_code.set(code);
             let _ = env.resolve_package(&pkg_url).await;
             statuses.push(ent.status);

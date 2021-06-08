@@ -44,7 +44,7 @@ pub struct UpdatingTufClient {
     last_update_successfully_checked_time: InspectableDebugString<Option<zx::Time>>,
 
     /// `Some` if there is an AutoClient task, dropping it stops the task.
-    _auto_client_aborter: Option<AbortHandleOnDrop>,
+    auto_client_aborter: Option<AbortHandleOnDrop>,
 
     tuf_metadata_timeout: Duration,
 
@@ -144,7 +144,7 @@ impl UpdatingTufClient {
                 &node,
                 "last_update_successfully_checked_time",
             ),
-            _auto_client_aborter: auto_client_aborter,
+            auto_client_aborter,
             tuf_metadata_timeout,
             inspect: UpdatingTufClientInspectState {
                 update_check_failure_count: inspect_util::Counter::new(
@@ -222,8 +222,11 @@ impl UpdatingTufClient {
     }
 
     fn is_stale(&self) -> bool {
+        if self.auto_client_aborter.is_none() {
+            return true;
+        }
         if let Some(last_update_time) = *self.last_update_successfully_checked_time {
-            last_update_time + METADATA_CACHE_STALE_TIMEOUT <= clock::now()
+            last_update_time + SUBSCRIBE_CACHE_STALE_TIMEOUT <= clock::now()
         } else {
             true
         }
@@ -270,7 +273,7 @@ impl UpdatingTufClient {
     }
 }
 
-pub const METADATA_CACHE_STALE_TIMEOUT: zx::Duration = zx::Duration::from_minutes(5);
+pub const SUBSCRIBE_CACHE_STALE_TIMEOUT: zx::Duration = zx::Duration::from_minutes(5);
 
 struct AutoClient {
     updating_client: Weak<AsyncMutex<UpdatingTufClient>>,
