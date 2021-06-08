@@ -7,7 +7,9 @@ use crate::{
     update_manager::TargetChannelUpdater,
 };
 use anyhow::{anyhow, Context as _};
-use fidl_fuchsia_paver::{Asset, BootManagerMarker, DataSinkMarker, PaverMarker, PaverProxy};
+use fidl_fuchsia_paver::{
+    Asset, BootManagerMarker, Configuration, DataSinkMarker, PaverMarker, PaverProxy,
+};
 use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface};
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_hash::Hash;
@@ -173,9 +175,16 @@ async fn is_image_up_to_date(
 
     let (boot_manager, server_end) = fidl::endpoints::create_proxy::<BootManagerMarker>()?;
     let () = paver.find_boot_manager(server_end).context("connect to fuchsia.paver.BootManager")?;
-    let configuration = boot_manager.query_current_configuration().await?.map_err(|status| {
-        anyhow!("error querying current configuration {}", zx::Status::from_raw(status))
-    })?;
+    let configuration = match boot_manager.query_current_configuration().await {
+        Ok(response) => response
+            .map_err(|status| zx::Status::from_raw(status))
+            .context("querying current configuration")?,
+        Err(fidl::Error::ClientChannelClosed { status: zx::Status::NOT_SUPPORTED, .. }) => {
+            fx_log_warn!("device does not support ABR. Checking image in slot A");
+            Configuration::A
+        }
+        Err(err) => return Err(err).context("querying current configuration"),
+    };
 
     let (data_sink, server_end) = fidl::endpoints::create_proxy::<DataSinkMarker>()?;
     let () = paver.find_data_sink(server_end).context("connect to fuchsia.paver.DataSink")?;
@@ -876,6 +885,82 @@ pub mod test_check_for_system_update_impl {
         let mock_paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .active_config(Configuration::A)
+                .insert_hook(mock_paver::hooks::read_asset(|configuration, asset| {
+                    assert_eq!(configuration, Configuration::A);
+                    match asset {
+                        Asset::Kernel => Ok(vec![0]),
+                        Asset::VerifiedBootMetadata => panic!("no vbmeta available"),
+                    }
+                }))
+                .build(),
+        );
+        let paver = mock_paver.spawn_paver_service();
+
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
+
+        assert_matches!(
+            result,
+            Ok(SystemUpdateStatus::UpToDate { system_image, update_package: _ })
+                if system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                .parse()
+                .expect("active system image string literal")
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_zbi_only_no_abr_update_available() {
+        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
+        let package_resolver = PackageResolverProxyTempDir::new_with_zbi([1]);
+        let mock_paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .boot_manager_close_with_epitaph(zx::Status::NOT_SUPPORTED)
+                .insert_hook(mock_paver::hooks::read_asset(|configuration, asset| {
+                    assert_eq!(configuration, Configuration::A);
+                    match asset {
+                        Asset::Kernel => Ok(vec![0]),
+                        Asset::VerifiedBootMetadata => panic!("no vbmeta available"),
+                    }
+                }))
+                .build(),
+        );
+        let paver = mock_paver.spawn_paver_service();
+
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+        )
+        .await;
+
+        assert_matches!(
+            result,
+            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image })
+            if
+                current_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                    .parse()
+                    .expect("active system image string literal") &&
+                latest_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                    .parse()
+                    .expect("new system image string literal")
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_zbi_no_abr_did_not_require_update() {
+        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
+        let package_resolver = PackageResolverProxyTempDir::new_with_zbi([0]);
+        let mock_paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .boot_manager_close_with_epitaph(zx::Status::NOT_SUPPORTED)
                 .insert_hook(mock_paver::hooks::read_asset(|configuration, asset| {
                     assert_eq!(configuration, Configuration::A);
                     match asset {
