@@ -5,16 +5,33 @@
 import("//build/compiled_action.gni")
 
 declare_args() {
+  # NOTE: These variables are in the process of transitioning from strings to
+  # integers. Some product and board definitions are still providing values as
+  # strings, therefore we have a pattern of converting the integer value to a
+  # string before using it. This is the current pattern used throughout this
+  # file and build/images/BUILD.gn.
+  #
+  # Declaration:
+  #   fvm_image_size = false
+  # Board1:
+  #   fvm_image_size = "100"
+  # Board2:
+  #   fvm_image_size = 100
+  # Check for valid value:
+  #   if (fvm_image_size != false)
+  # Usage:
+  #   "$fvm_image_size"
+
   # The size in bytes of the FVM partition image to create. Normally this is
   # computed to be just large enough to fit the blob and data images. The
-  # default value is "", which means to size based on inputs. Specifying a size
+  # default value is false, which means to size based on inputs. Specifying a size
   # that is too small will result in build failure.
-  fvm_image_size = ""
+  fvm_image_size = false
 
   # The size in bytes of the FVM partition on the target eMMC devices.
   # Specifying this parameter will lead build to generate a fvm.fastboot.blk
   # suitable for flashing through fastboot for eMMC devices.
-  fvm_emmc_partition_size = ""
+  fvm_emmc_partition_size = false
 
   # The max size of the disk where the FVM is written. This is used for
   # preallocating metadata to determine how much the FVM can expand on disk.
@@ -25,23 +42,23 @@ declare_args() {
   # the FVM will resize up to `fvm_max_disk_size`. During paving, if the target
   # FVM has declared a smaller size than `fvm_max_disk_size`, the FVM is
   # reinitialized to the larger size.
-  # The default value is "" which sets the max disk size to the size of the disk
+  # The default value is false which sets the max disk size to the size of the disk
   # at pave/format time.
-  fvm_max_disk_size = ""
+  fvm_max_disk_size = false
 
   # The size of the FVM partition images "slice size". The FVM slice size is a
   # minimum size of a particular chunk of a partition that is stored within
   # FVM. A very small slice size may lead to decreased throughput. A very large
   # slice size may lead to wasted space. The selected default size of 8mb is
   # selected for conservation of space, rather than performance.
-  fvm_slice_size = "8388608"
+  fvm_slice_size = 8388608
 
   # Number of slices reserved by FVM for internal usage. A reservation
   # partition will be added to the FVM image, containing this many slices.
   # If set to the empty string, then no reservation partition will be added.
   # Set to 1 by default so that we exercise this feature on all product
   # configurations.
-  fvm_reserved_slices = "1"
+  fvm_reserved_slices = 1
 
   # The following blobfs_* and minfs_* arguments are used to determine the
   # initial dimensions of the blobfs and minfs partitions added to an FVM
@@ -56,22 +73,22 @@ declare_args() {
   # product-level overrides, if set, will take precedence.
 
   # minimum_inodes is the number of inodes to reserve for the fs
-  # An empty string does not reserve any additional space than minimum
+  # A value of false does not reserve any additional space than minimum
   # required for the filesystem.
-  blobfs_board_minimum_inodes = ""
-  blobfs_product_minimum_inodes = ""
-  minfs_board_minimum_inodes = ""
-  minfs_product_minimum_inodes = ""
+  blobfs_board_minimum_inodes = false
+  blobfs_product_minimum_inodes = false
+  minfs_board_minimum_inodes = false
+  minfs_product_minimum_inodes = false
 
   # Number of bytes to reserve for data in the fs. This is in addition
   # to what is reserved, if any, for the inodes. Data bytes constitutes
   # "usable" space of the fs.
-  # An empty string does not reserve any additional space than minimum
+  # A value of false does not reserve any additional space than minimum
   # required for the filesystem.
-  blobfs_board_minimum_data_bytes = ""
-  blobfs_product_minimum_data_bytes = ""
-  minfs_board_minimum_data_bytes = ""
-  minfs_product_minimum_data_bytes = ""
+  blobfs_board_minimum_data_bytes = false
+  blobfs_product_minimum_data_bytes = false
+  minfs_board_minimum_data_bytes = false
+  minfs_product_minimum_data_bytes = false
 
   # In addition to reserving space for inodes and data, fs needs additional
   # space for maintaining some internal data structures. So the
@@ -79,12 +96,12 @@ declare_args() {
   # needed for inodes and data.
   # maximum_bytes puts an upper bound on the total bytes reserved for inodes,
   # data bytes and reservation for all other internal fs metadata.
-  # An empty string does not put any upper bound. A filesystem may
+  # A value of false does not put any upper bound. A filesystem may
   # reserve few blocks required for its operations.
-  blobfs_board_maximum_bytes = ""
-  blobfs_product_maximum_bytes = ""
-  minfs_board_maximum_bytes = ""
-  minfs_product_maximum_bytes = ""
+  blobfs_board_maximum_bytes = false
+  blobfs_product_maximum_bytes = false
+  minfs_board_maximum_bytes = false
+  minfs_product_maximum_bytes = false
 
   # End of variables for blobfs/minfs dimensions
 
@@ -93,10 +110,10 @@ declare_args() {
   # in order to properly initialize the FTL metadata in the OOB area.
   # `max_fvm_size` should also be nonzero or else minfs will not have any
   # room to initialize on boot.
-  fvm_ftl_nand_page_size = ""
-  fvm_ftl_nand_oob_size = ""
-  fvm_ftl_nand_pages_per_block = ""
-  fvm_ftl_nand_block_count = ""
+  fvm_ftl_nand_page_size = false
+  fvm_ftl_nand_oob_size = false
+  fvm_ftl_nand_pages_per_block = false
+  fvm_ftl_nand_block_count = false
 }
 
 # Build an FVM partition
@@ -145,10 +162,10 @@ template("generate_fvm") {
     if (defined(invoker.with_empty_minfs) && invoker.with_empty_minfs) {
       args += [ "--with-empty-minfs" ]
     }
-    if (fvm_reserved_slices != "") {
+    if (fvm_reserved_slices != false) {
       args += [
         "--reserve-slices",
-        fvm_reserved_slices,
+        "$fvm_reserved_slices",
       ]
     }
     if (defined(invoker.partitions)) {
@@ -159,20 +176,20 @@ template("generate_fvm") {
         dep_outputs = get_target_outputs(part.dep)
         sources += [ dep_outputs[0] ]
         args += [ rebase_path(dep_outputs[0], root_build_dir) ]
-        if (defined(part.minimum_inodes) && "${part.minimum_inodes}" != "") {
+        if (defined(part.minimum_inodes) && part.minimum_inodes != false) {
           args += [
             "--minimum-inodes",
             "${part.minimum_inodes}",
           ]
         }
         if (defined(part.minimum_data_bytes) &&
-            "${part.minimum_data_bytes}" != "") {
+            part.minimum_data_bytes != false) {
           args += [
             "--minimum-data-bytes",
             "${part.minimum_data_bytes}",
           ]
         }
-        if (defined(part.maximum_bytes) && "${part.maximum_bytes}" != "") {
+        if (defined(part.maximum_bytes) && part.maximum_bytes != false) {
           args += [
             "--maximum-bytes",
             "${part.maximum_bytes}",
@@ -185,7 +202,7 @@ template("generate_fvm") {
 
 fvm_slice_args = [
   "--slice",
-  fvm_slice_size,
+  "$fvm_slice_size",
 ]
 
 fvm_create_args = [ "create" ] + fvm_slice_args
@@ -196,9 +213,9 @@ fvm_sparse_args = [
                     "lz4",
                   ] + fvm_slice_args
 
-if (fvm_max_disk_size != "") {
+if (fvm_max_disk_size != false) {
   fvm_sparse_args += [
     "--max-disk-size",
-    fvm_max_disk_size,
+    "$fvm_max_disk_size",
   ]
 }

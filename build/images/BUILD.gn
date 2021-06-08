@@ -1050,21 +1050,21 @@ fvm_blob_partition = {
   type = "blob"
   dep = ":blob.blk"
 
-  if (blobfs_product_minimum_inodes != "") {
+  if (blobfs_product_minimum_inodes != false) {
     minimum_inodes = blobfs_product_minimum_inodes
-  } else if (blobfs_board_minimum_inodes != "") {
+  } else if (blobfs_board_minimum_inodes != false) {
     minimum_inodes = blobfs_board_minimum_inodes
   }
 
-  if (blobfs_product_minimum_data_bytes != "") {
+  if (blobfs_product_minimum_data_bytes != false) {
     minimum_data_bytes = blobfs_product_minimum_data_bytes
-  } else if (blobfs_board_minimum_data_bytes != "") {
+  } else if (blobfs_board_minimum_data_bytes != false) {
     minimum_data_bytes = blobfs_board_minimum_data_bytes
   }
 
-  if (blobfs_product_maximum_bytes != "") {
+  if (blobfs_product_maximum_bytes != false) {
     maximum_bytes = blobfs_product_maximum_bytes
-  } else if (blobfs_board_maximum_bytes != "") {
+  } else if (blobfs_board_maximum_bytes != false) {
     maximum_bytes = blobfs_board_maximum_bytes
   }
 }
@@ -1073,21 +1073,21 @@ fvm_data_partition = {
   type = "data"
   dep = ":data.blk"
 
-  if (minfs_product_minimum_inodes != "") {
+  if (minfs_product_minimum_inodes != false) {
     minimum_inodes = minfs_product_minimum_inodes
-  } else if (minfs_board_minimum_inodes != "") {
+  } else if (minfs_board_minimum_inodes != false) {
     minimum_inodes = minfs_board_minimum_inodes
   }
 
-  if (minfs_product_minimum_data_bytes != "") {
+  if (minfs_product_minimum_data_bytes != false) {
     minimum_data_bytes = minfs_product_minimum_data_bytes
-  } else if (minfs_board_minimum_data_bytes != "") {
+  } else if (minfs_board_minimum_data_bytes != false) {
     minimum_data_bytes = minfs_board_minimum_data_bytes
   }
 
-  if (minfs_product_maximum_bytes != "") {
+  if (minfs_product_maximum_bytes != false) {
     maximum_bytes = minfs_product_maximum_bytes
-  } else if (minfs_board_maximum_bytes != "") {
+  } else if (minfs_board_maximum_bytes != false) {
     maximum_bytes = minfs_board_maximum_bytes
   }
 }
@@ -1104,7 +1104,7 @@ generate_fvm("fvm.blk") {
   rebased_output_name = rebase_path(output_name, root_build_dir)
 
   args = fvm_create_args
-  if (fvm_image_size != "") {
+  if (fvm_image_size != false) {
     args += [
       "--length",
       "${fvm_image_size}",
@@ -1247,40 +1247,40 @@ if (fvm_partition != "") {
   fvm_partitions = []
   fvm_inputs = []
   fvm_deps = []
-  if (fvm_emmc_partition_size != "") {
+  if (fvm_emmc_partition_size != false) {
     # If "fvm_emmc_partition_size" is specified, generate for emmc devices.
     fvm_generation_args = fvm_create_args
     fvm_generation_args += [
       "--compress",
       "lz4",
       "--length",
-      fvm_emmc_partition_size,
+      "$fvm_emmc_partition_size",
       "--resize-image-file-to-fit",
     ]
     fvm_partitions = [
       fvm_blob_partition,
       fvm_data_partition,
     ]
-  } else if (fvm_ftl_nand_page_size != "") {
+  } else if (fvm_ftl_nand_page_size != false) {
     # For raw NAND devices that support flashing via fastboot, generate the NAND
     # FVM image as well which contains the necessary OOB bytes to initialize the
     # FTL.
-    assert(fvm_ftl_nand_oob_size != "",
+    assert(fvm_ftl_nand_oob_size != false,
            "fvm_ftl_nand_oob_size must be specified")
-    assert(fvm_ftl_nand_pages_per_block != "",
+    assert(fvm_ftl_nand_pages_per_block != false,
            "fvm_ftl_nand_pages_per_block must be specified")
-    assert(fvm_ftl_nand_block_count != "",
+    assert(fvm_ftl_nand_block_count != false,
            "fvm_ftl_nand_block_count must be specified")
     fvm_generation_args = [
       "ftl-raw-nand",
       "--nand-page-size",
-      fvm_ftl_nand_page_size,
+      "$fvm_ftl_nand_page_size",
       "--nand-oob-size",
-      fvm_ftl_nand_oob_size,
+      "$fvm_ftl_nand_oob_size",
       "--nand-pages-per-block",
-      fvm_ftl_nand_pages_per_block,
+      "$fvm_ftl_nand_pages_per_block",
       "--nand-block-count",
-      fvm_ftl_nand_block_count,
+      "$fvm_ftl_nand_block_count",
       "--max-disk-size",
       max_fvm_size,
 

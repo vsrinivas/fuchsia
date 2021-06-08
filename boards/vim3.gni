@@ -82,4 +82,4 @@ fastboot_product = "galilei"
 # shows a 29G size user block for the 32Gb version). To avoid the risk of overflowing
 # available size, here we set it to be the same as sherlock (3280mb), which is clearly safe
 # and sufficient for now.
-fvm_emmc_partition_size = "3439329280"
+fvm_emmc_partition_size = 3439329280
