@@ -11,6 +11,7 @@ group("tests") {
 
   deps = [
     ":hw_tests",
+    "goldfish_benchmark",
     "goldfish_test",
     "vkreadback:linux_arm64",
   ]

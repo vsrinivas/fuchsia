@@ -102,10 +102,20 @@ void RunAndMeasure(const char* test_name, unsigned iterations, const T& closure)
 }
 
 void RunPingPongBenchmark(fidl::WireSyncClient<fuchsia_hardware_goldfish::Pipe>& pipe,
-                          unsigned size, unsigned iterations) {
+                          unsigned size, unsigned iterations, bool skip_if_out_of_memory) {
   {
     auto result = pipe.SetBufferSize(size);
-    ZX_ASSERT(result.ok() && result.value().res == ZX_OK);
+    ZX_ASSERT(result.ok());
+
+    if (skip_if_out_of_memory && result.value().res == ZX_ERR_NO_MEMORY) {
+      fprintf(stderr,
+              "Failed to allocate memory (ZX_ERR_NO_MEMORY). "
+              "buffer size: %u (bytes). Test skipped.\n",
+              size);
+      return;
+    }
+
+    ZX_ASSERT(result.value().res == ZX_OK);
   }
 
   zx::vmo vmo;
@@ -175,11 +185,15 @@ int main(int argc, char** argv) {
       unsigned size = atoi(argv[i]);
       unsigned iterations = atoi(argv[i + 1]);
 
-      RunPingPongBenchmark(pipe, size, iterations);
+      RunPingPongBenchmark(pipe, size, iterations, /* skip_if_out_of_memory */ false);
     }
   } else {
-    RunPingPongBenchmark(pipe, ZX_PAGE_SIZE, 500);
-    RunPingPongBenchmark(pipe, kMb, 5);
+    RunPingPongBenchmark(pipe, ZX_PAGE_SIZE, 500, /* skip_if_out_of_memory */ false);
+
+    // In some cases the system might not be able to allocate a contiguous
+    // memory space of 1MB due to out of memory. In that case we should just
+    // skip the test.
+    RunPingPongBenchmark(pipe, kMb, 5, /* skip_if_out_of_memory */ true);
   }
 
   printf("\nGoldfish benchmarks completed.\n");
