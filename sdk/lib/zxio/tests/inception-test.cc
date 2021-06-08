@@ -82,8 +82,10 @@ TEST(CreateWithAllocator, Vmo) {
 }
 
 TEST(CreateWithInfo, Unsupported) {
-  zx::channel channel0, channel1;
-  ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
+  auto node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
+  ASSERT_OK(node_ends.status_value());
+  auto [node_client, node_server] = std::move(node_ends.value());
+
   zx::socket socket0, socket1;
   ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
 
@@ -100,7 +102,7 @@ TEST(CreateWithInfo, Unsupported) {
 
   void* context = nullptr;
   zx_status_t status =
-      zxio_create_with_allocator(std::move(channel1), &node_info, allocator, &context);
+      zxio_create_with_allocator(std::move(node_client), node_info, allocator, &context);
   EXPECT_EQ(status, ZX_ERR_NOT_SUPPORTED);
   ASSERT_NE(context, nullptr);
 
@@ -118,14 +120,15 @@ TEST(CreateWithInfo, Unsupported) {
 }
 
 TEST(CreateWithInfo, Pipe) {
-  zx::channel channel0, channel1;
+  auto node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
+  ASSERT_OK(node_ends.status_value());
+  auto [node_client, node_server] = std::move(node_ends.value());
+
   zx::socket socket0, socket1;
   ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
   fuchsia_io::wire::Pipe pipe = {.socket = std::move(socket0)};
   fidl::FidlAllocator fidl_allocator;
   auto node_info = fuchsia_io::wire::NodeInfo::WithPipe(fidl_allocator, std::move(pipe));
-
-  ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
     if (type != ZXIO_OBJECT_TYPE_PIPE) {
@@ -137,7 +140,7 @@ TEST(CreateWithInfo, Pipe) {
   };
 
   void* context = nullptr;
-  ASSERT_OK(zxio_create_with_allocator(std::move(channel1), &node_info, allocator, &context));
+  ASSERT_OK(zxio_create_with_allocator(std::move(node_client), node_info, allocator, &context));
   ASSERT_NE(context, nullptr);
 
   // The socket in node_info should be consumed by zxio.

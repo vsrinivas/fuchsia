@@ -117,11 +117,11 @@ zx_status_t zxio_create(zx_handle_t raw_handle, zxio_storage_t* storage) {
 
 namespace fio = fuchsia_io;
 
-zx_status_t zxio_create_with_nodeinfo(zx::channel channel, fio::wire::NodeInfo* info,
+zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo& info,
                                       zxio_storage_t* storage) {
-  switch (info->which()) {
+  switch (info.which()) {
     case fio::wire::NodeInfo::Tag::kPipe: {
-      auto& pipe = info->mutable_pipe();
+      auto& pipe = info.mutable_pipe();
       zx::socket socket = std::move(pipe.socket);
       zx_info_socket_t socket_info;
       zx_status_t status =
@@ -132,7 +132,7 @@ zx_status_t zxio_create_with_nodeinfo(zx::channel channel, fio::wire::NodeInfo* 
       return zxio_pipe_init(storage, std::move(socket), socket_info);
     }
     default:
-      zxio_handle_holder_init(storage, std::move(channel));
+      zxio_handle_holder_init(storage, node.TakeChannel());
       return ZX_ERR_NOT_SUPPORTED;
   }
 }

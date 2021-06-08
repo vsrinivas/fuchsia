@@ -49,11 +49,12 @@ zx_status_t zxio_create_with_allocator(zx::handle handle, const zx_info_handle_b
   return zxio_create_with_info(handle.release(), &handle_info, storage);
 }
 
-zx_status_t zxio_create_with_allocator(zx::channel channel, fuchsia_io::wire::NodeInfo* info,
+zx_status_t zxio_create_with_allocator(fidl::ClientEnd<fuchsia_io::Node> node,
+                                       fuchsia_io::wire::NodeInfo& info,
                                        zxio_storage_alloc allocator, void** out_context) {
   zxio_storage_t* storage = nullptr;
   zxio_object_type_t type = ZXIO_OBJECT_TYPE_NONE;
-  switch (info->which()) {
+  switch (info.which()) {
     case fio::wire::NodeInfo::Tag::kPipe:
       type = ZXIO_OBJECT_TYPE_PIPE;
       break;
@@ -64,5 +65,5 @@ zx_status_t zxio_create_with_allocator(zx::channel channel, fuchsia_io::wire::No
   if (status != ZX_OK || storage == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
-  return zxio_create_with_nodeinfo(std::move(channel), info, storage);
+  return zxio_create_with_nodeinfo(std::move(node), info, storage);
 }
