@@ -143,9 +143,9 @@ async fn create_realm_instance(
                 ChildUses::All(fnetemul::Empty {}) => {
                     // Route all built-in netemul services to the child.
                     // TODO(https://fxbug.dev/72403): route netemul-provided `SyncManager`.
-                    let () = route_log_sink_to_component(&mut builder, &name)?;
-                    let () = route_network_context_to_component(&mut builder, &name)?;
                     let () = route_devfs_to_component(&mut builder, &name)?;
+                    let () = route_network_context_to_component(&mut builder, &name)?;
+                    let () = route_log_sink_to_component(&mut builder, &name)?;
                     let () = components_using_all.push(name);
                 }
                 ChildUses::Capabilities(caps) => {
@@ -158,19 +158,19 @@ async fn create_realm_instance(
                         // defined here for each of the built-in netemul capabilities, corresponding
                         // to their FIDL representation, routing logic, and capability name.
                         let service_name = match cap {
-                            fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
-                                let () = route_log_sink_to_component(&mut builder, &name)?;
-                                flogger::LogSinkMarker::SERVICE_NAME.into()
-                            }
-                            fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
-                                let () = route_network_context_to_component(&mut builder, &name)?;
-                                fnetemul_network::NetworkContextMarker::SERVICE_NAME.into()
-                            }
                             fnetemul::Capability::NetemulDevfs(fnetemul::Empty {}) => {
                                 let () = route_devfs_to_component(&mut builder, &name)?;
                                 DEVFS.into()
                             }
                             fnetemul::Capability::NetemulSyncManager(fnetemul::Empty {}) => todo!(),
+                            fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
+                                let () = route_network_context_to_component(&mut builder, &name)?;
+                                fnetemul_network::NetworkContextMarker::SERVICE_NAME.into()
+                            }
+                            fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
+                                let () = route_log_sink_to_component(&mut builder, &name)?;
+                                flogger::LogSinkMarker::SERVICE_NAME.into()
+                            }
                             fnetemul::Capability::ChildDep(fnetemul::ChildDep {
                                 name: source,
                                 capability,
@@ -412,13 +412,15 @@ impl ManagedRealm {
     }
 }
 
-fn route_log_sink_to_component(
+fn route_devfs_to_component(
     builder: &mut RealmBuilder,
     component: &str,
 ) -> Result<(), fcomponent::error::Error> {
     let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
-        capability: Capability::protocol(flogger::LogSinkMarker::SERVICE_NAME),
-        source: RouteEndpoint::AboveRoot,
+        // TODO(https://fxbug.dev/77059): remove write permissions once they are
+        // no longer required to connect to services.
+        capability: Capability::directory(DEVFS, DEVFS_PATH, fio2::RW_STAR_DIR),
+        source: RouteEndpoint::component(NETEMUL_SERVICES_COMPONENT_NAME),
         targets: vec![RouteEndpoint::component(component)],
     })?;
     Ok(())
@@ -436,15 +438,13 @@ fn route_network_context_to_component(
     Ok(())
 }
 
-fn route_devfs_to_component(
+fn route_log_sink_to_component(
     builder: &mut RealmBuilder,
     component: &str,
 ) -> Result<(), fcomponent::error::Error> {
     let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
-        // TODO(https://fxbug.dev/77059): remove write permissions once they are
-        // no longer required to connect to services.
-        capability: Capability::directory(DEVFS, DEVFS_PATH, fio2::RW_STAR_DIR),
-        source: RouteEndpoint::component(NETEMUL_SERVICES_COMPONENT_NAME),
+        capability: Capability::protocol(flogger::LogSinkMarker::SERVICE_NAME),
+        source: RouteEndpoint::AboveRoot,
         targets: vec![RouteEndpoint::component(component)],
     })?;
     Ok(())
