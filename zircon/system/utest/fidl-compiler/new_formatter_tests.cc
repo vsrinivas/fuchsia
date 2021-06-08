@@ -23,6 +23,63 @@ std::string Format(const std::string& source) {
   return "\n" + result.value();
 }
 
+// Ensure that an already properly formatted alias declaration is not modified by another run
+// through the formatter.
+TEST(NewFormatterTests, AliasFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+alias MyAlias_Abcdefghijklmnopqr = bool;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+alias MyAlias_Abcdefghijklmnopqr = bool;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test that an alias declaration gets wrapped properly.
+TEST(NewFormatterTests, AliasOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+alias MyAlias_Abcdefghijklmnopqrs = bool;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+alias MyAlias_Abcdefghijklmnopqrs
+        = bool;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test an alias declaration in which every token is placed on a newline.
+TEST(NewFormatterTests, AliasMaximalNewlines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+alias
+MyAlias_Abcdefghijklmnopqr
+=
+bool
+;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+alias MyAlias_Abcdefghijklmnopqr = bool;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Ensure that an already properly formatted library declaration is not modified by another run
 // through the formatter.
 TEST(NewFormatterTests, LibraryFormatted) {
@@ -152,14 +209,14 @@ TEST(NewFormatterTests, UsingWithAliasOverflow) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 library foo.bar;
-using baz.qux as abcdefghijklmnopqrstuvwxyz;
+using baz.qux as abcdefghijklmnopqrstuvw;
 )FIDL";
 
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
 using baz.qux
-        as abcdefghijklmnopqrstuvwxyz;
+        as abcdefghijklmnopqrstuvw;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));

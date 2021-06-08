@@ -332,31 +332,12 @@ SpanSequenceTreeVisitor::StatementBuilder<T>::~StatementBuilder<T>() {
   this->GetFormattingTreeVisitor()->building_.top().push_back(std::move(composite_span_sequence));
 }
 
-void SpanSequenceTreeVisitor::OnFile(const std::unique_ptr<raw::File>& element) {
-  auto visiting = Visiting(this, VisitorKind::kFile);
-  building_.push(std::vector<std::unique_ptr<SpanSequence>>());
-
-  DeclarationOrderTreeVisitor::OnFile(element);
-
-  if (!uningested_.empty()) {
-    auto footer = IngestUntilEndOfFile();
-    if (footer.has_value())
-      building_.top().push_back(std::move(footer.value()));
-  }
-}
-
-void SpanSequenceTreeVisitor::OnLibraryDecl(const std::unique_ptr<raw::LibraryDecl>& element) {
-  auto visiting = Visiting(this, VisitorKind::kLibrary);
-  auto builder = StatementBuilder<AtomicSpanSequence>(this, *element,
-                                                      SpanSequence::Position::kNewlineUnindented);
-  TreeVisitor::OnLibraryDecl(element);
-}
-
-void SpanSequenceTreeVisitor::OnUsing(const std::unique_ptr<raw::Using>& element) {
-  auto visiting = Visiting(this, VisitorKind::kUsing);
+void SpanSequenceTreeVisitor::OnAliasDeclaration(
+    const std::unique_ptr<raw::AliasDeclaration>& element) {
+  auto visiting = Visiting(this, VisitorKind::kAliasDeclaration);
   auto builder = StatementBuilder<DivisibleSpanSequence>(
       this, *element, SpanSequence::Position::kNewlineUnindented);
-  TreeVisitor::OnUsing(element);
+  TreeVisitor::OnAliasDeclaration(element);
 }
 
 void SpanSequenceTreeVisitor::OnCompoundIdentifier(
@@ -376,6 +357,47 @@ void SpanSequenceTreeVisitor::OnIdentifier(const std::unique_ptr<raw::Identifier
     auto token_builder = TokenBuilder(this, *element);
     TreeVisitor::OnIdentifier(element);
   }
+}
+
+void SpanSequenceTreeVisitor::OnFile(const std::unique_ptr<raw::File>& element) {
+  auto visiting = Visiting(this, VisitorKind::kFile);
+  building_.push(std::vector<std::unique_ptr<SpanSequence>>());
+
+  DeclarationOrderTreeVisitor::OnFile(element);
+
+  if (!uningested_.empty()) {
+    auto footer = IngestUntilEndOfFile();
+    if (footer.has_value())
+      building_.top().push_back(std::move(footer.value()));
+  }
+}
+
+void SpanSequenceTreeVisitor::OnLibraryDecl(const std::unique_ptr<raw::LibraryDecl>& element) {
+  auto visiting = Visiting(this, VisitorKind::kLibraryDecl);
+  auto builder = StatementBuilder<AtomicSpanSequence>(this, *element,
+                                                      SpanSequence::Position::kNewlineUnindented);
+  TreeVisitor::OnLibraryDecl(element);
+}
+
+void SpanSequenceTreeVisitor::OnNamedLayoutReference(
+    const std::unique_ptr<raw::NamedLayoutReference>& element) {
+  auto visiting = Visiting(this, VisitorKind::kNamedLayoutReference);
+  auto builder = SpanBuilder<AtomicSpanSequence>(this, *element, element->start_);
+  TreeVisitor::OnNamedLayoutReference(element);
+}
+
+void SpanSequenceTreeVisitor::OnTypeConstructorNew(
+    const std::unique_ptr<raw::TypeConstructorNew>& element) {
+  auto visiting = Visiting(this, VisitorKind::kTypeConstructorNew);
+  auto builder = SpanBuilder<AtomicSpanSequence>(this, *element, element->start_);
+  TreeVisitor::OnTypeConstructorNew(element);
+}
+
+void SpanSequenceTreeVisitor::OnUsing(const std::unique_ptr<raw::Using>& element) {
+  auto visiting = Visiting(this, VisitorKind::kUsing);
+  auto builder = StatementBuilder<DivisibleSpanSequence>(
+      this, *element, SpanSequence::Position::kNewlineUnindented);
+  TreeVisitor::OnUsing(element);
 }
 
 MultilineSpanSequence SpanSequenceTreeVisitor::Result() {

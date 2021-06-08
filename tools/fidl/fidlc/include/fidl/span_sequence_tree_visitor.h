@@ -22,6 +22,7 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
       : empty_lines_(0), file_(file), uningested_(file) {}
 
   // These "On*" methods may be called on files written in the new syntax.
+  void OnAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> const& element) override;
   void OnAttributeListNew(std::unique_ptr<raw::AttributeListNew> const& element) override {
     NotYetImplemented();
   };
@@ -60,9 +61,7 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnLayoutParameterList(std::unique_ptr<raw::LayoutParameterList> const& element) override {
     NotYetImplemented();
   }
-  void OnLayoutReference(std::unique_ptr<raw::LayoutReference> const& element) override {
-    NotYetImplemented();
-  }
+  // void OnLayoutReference(std::unique_ptr<raw::LayoutReference> const& element) override;
   void OnLibraryDecl(std::unique_ptr<raw::LibraryDecl> const& element) override;
   void OnLiteral(std::unique_ptr<raw::Literal> const& element) override { NotYetImplemented(); };
   void OnLiteralConstant(std::unique_ptr<raw::LiteralConstant> const& element) override {
@@ -72,9 +71,7 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
       std::unique_ptr<raw::LiteralLayoutParameter> const& element) override {
     NotYetImplemented();
   }
-  void OnNamedLayoutReference(std::unique_ptr<raw::NamedLayoutReference> const& element) override {
-    NotYetImplemented();
-  }
+  void OnNamedLayoutReference(std::unique_ptr<raw::NamedLayoutReference> const& element) override;
   void OnNullability(types::Nullability nullability) override { NotYetImplemented(); };
   void OnOrdinaledLayoutMember(
       std::unique_ptr<raw::OrdinaledLayoutMember> const& element) override {
@@ -109,9 +106,7 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnTypeConstraints(std::unique_ptr<raw::TypeConstraints> const& element) override {
     NotYetImplemented();
   }
-  void OnTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> const& element) override {
-    NotYetImplemented();
-  }
+  void OnTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> const& element) override;
   void OnTypeDecl(std::unique_ptr<raw::TypeDecl> const& element) override { NotYetImplemented(); }
   void OnTypeLayoutParameter(std::unique_ptr<raw::TypeLayoutParameter> const& element) override {
     NotYetImplemented();
@@ -170,10 +165,13 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
 
  private:
   enum struct VisitorKind {
+    kAliasDeclaration,
     kCompoundIdentifier,
     kFile,
     kIdentifier,
-    kLibrary,
+    kLibraryDecl,
+    kNamedLayoutReference,
+    kTypeConstructorNew,
     kUsing,
   };
 

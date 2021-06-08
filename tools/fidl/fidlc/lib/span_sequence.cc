@@ -88,25 +88,26 @@ void CompositeSpanSequence::AddChild(std::unique_ptr<SpanSequence> child) {
 //   foo // comment
 //   bar
 size_t CompositeSpanSequence::CalculateRequiredSize() const {
-  size_t accumulator = 0;
+  size_t required_size = 0;
   const auto last = LastNonCommentChildIndex(children_);
   for (size_t i = 0; i < children_.size(); i++) {
     auto& child = children_[i];
     switch (child->GetKind()) {
       case SpanSequence::Kind::kMultiline: {
-        accumulator += child->GetRequiredSize();
-        return accumulator;
+        required_size += child->GetRequiredSize();
+        return required_size;
       }
       default: {
-        accumulator += child->GetRequiredSize();
-        if (i < last.value_or(0) && child->HasTrailingSpace()) {
-          accumulator += 1;
+        required_size += child->GetRequiredSize();
+        if (i < last.value_or(0) &&
+            (child->HasTrailingSpace() || GetKind() == SpanSequence::Kind::kDivisible)) {
+          required_size += 1;
         }
         break;
       }
     }
   }
-  return accumulator;
+  return required_size;
 }
 
 void CompositeSpanSequence::Close() {
