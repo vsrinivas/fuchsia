@@ -212,6 +212,8 @@ mod tests {
                 current_size: 4096u64,
                 maximum_size: constants::DEFAULT_VMO_SIZE_BYTES as u64,
                 total_dynamic_children: 2u64,
+                allocated_blocks: 7u64,
+                deallocated_blocks: 0u64,
             }
         });
     }

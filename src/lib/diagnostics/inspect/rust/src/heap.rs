@@ -20,6 +20,8 @@ pub struct Heap {
     mapping: Arc<Mapping>,
     current_size_bytes: usize,
     free_head_per_order: [u32; constants::NUM_ORDERS],
+    allocated_blocks: usize,
+    deallocated_blocks: usize,
 }
 
 impl Heap {
@@ -29,6 +31,8 @@ impl Heap {
             mapping: mapping,
             current_size_bytes: 0,
             free_head_per_order: [0; constants::NUM_ORDERS],
+            allocated_blocks: 0,
+            deallocated_blocks: 0,
         };
         heap.grow_heap(constants::PAGE_SIZE_BYTES)?;
         Ok(heap)
@@ -42,6 +46,16 @@ impl Heap {
     /// Returns the maximum size of this heap in bytes.
     pub fn maximum_size(&self) -> usize {
         self.mapping.len()
+    }
+
+    /// Returns the number of blocks allocated since the creation of this heap.
+    pub fn total_allocated_blocks(&self) -> usize {
+        self.allocated_blocks
+    }
+
+    /// Returns the number blocks deallocated since the creation of this heap.
+    pub fn total_deallocated_blocks(&self) -> usize {
+        self.deallocated_blocks
     }
 
     /// Allocates a new block of the given `min_size`.
@@ -67,6 +81,7 @@ impl Heap {
         }
         self.remove_free(&block)?;
         block.become_reserved().expect("Failed to reserve make block reserved");
+        self.allocated_blocks += 1;
         Ok(block)
     }
 
@@ -93,6 +108,7 @@ impl Heap {
         }
         block_to_free.become_free(self.free_head_per_order[block_to_free.order()]);
         self.free_head_per_order[block_to_free.order()] = block_to_free.index();
+        self.deallocated_blocks += 1;
         Ok(())
     }
 
@@ -344,6 +360,34 @@ mod tests {
         assert_eq!(heap.free_head_per_order[7], 128);
         assert_eq!(heap.get_block(0).unwrap().free_next_index().unwrap(), 0);
         assert_eq!(heap.get_block(128).unwrap().free_next_index().unwrap(), 0);
+    }
+
+    #[test]
+    fn allocatation_counters_work() {
+        let (mapping, _) = Mapping::allocate(4096).unwrap();
+        let mut heap = Heap::new(Arc::new(mapping)).unwrap();
+
+        let block_count_to_allocate: usize = 50;
+        for _ in 0..block_count_to_allocate {
+            heap.allocate_block(constants::MIN_ORDER_SIZE).unwrap();
+        }
+
+        assert_eq!(heap.total_allocated_blocks(), block_count_to_allocate);
+
+        let block_count_to_free: usize = 5;
+        for i in 0..block_count_to_free {
+            heap.free_block(heap.get_block(i as u32).unwrap()).unwrap();
+        }
+
+        assert_eq!(heap.total_allocated_blocks(), block_count_to_allocate);
+        assert_eq!(heap.total_deallocated_blocks(), block_count_to_free);
+
+        for i in block_count_to_free..block_count_to_allocate {
+            heap.free_block(heap.get_block(i as u32).unwrap()).unwrap();
+        }
+
+        assert_eq!(heap.total_allocated_blocks(), block_count_to_allocate);
+        assert_eq!(heap.total_deallocated_blocks(), block_count_to_allocate);
     }
 
     #[test]

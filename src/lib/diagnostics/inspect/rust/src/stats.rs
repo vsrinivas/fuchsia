@@ -31,6 +31,8 @@ const FUCHSIA_INSPECT_STATS: &str = "fuchsia.inspect.Stats";
 const CURRENT_SIZE_KEY: &str = "current_size";
 const MAXIMUM_SIZE_KEY: &str = "maximum_size";
 const TOTAL_DYNAMIC_CHILDREN_KEY: &str = "total_dynamic_children";
+const ALLOCATED_BLOCKS_KEY: &str = "allocated_blocks";
+const DEALLOCATED_BLOCKS_KEY: &str = "deallocated_blocks";
 
 impl<T: InspectType> Node<T> {
     /// Unwraps the underlying lazy node and returns it.
@@ -75,6 +77,8 @@ fn write_stats(state: &State, node: &super::Node) {
         node.record_uint(CURRENT_SIZE_KEY, stats.current_size as u64);
         node.record_uint(MAXIMUM_SIZE_KEY, stats.maximum_size as u64);
         node.record_uint(TOTAL_DYNAMIC_CHILDREN_KEY, stats.total_dynamic_children as u64);
+        node.record_uint(ALLOCATED_BLOCKS_KEY, stats.allocated_blocks as u64);
+        node.record_uint(DEALLOCATED_BLOCKS_KEY, stats.deallocated_blocks as u64);
     }
 }
 
@@ -107,12 +111,16 @@ mod tests {
                     current_size: 4096u64,
                     maximum_size: constants::DEFAULT_VMO_SIZE_BYTES as u64,
                     total_dynamic_children: 0u64,  // snapshot was taken before adding any lazy node.
+                    allocated_blocks: 5u64,
+                    deallocated_blocks: 0u64,
                 },
             },
             "fuchsia.inspect.Stats": {
                 current_size: 4096u64,
                 maximum_size: constants::DEFAULT_VMO_SIZE_BYTES as u64,
                 total_dynamic_children: 2u64,
+                allocated_blocks: 21u64,
+                deallocated_blocks: 0u64,
             }
         });
 
@@ -120,11 +128,18 @@ mod tests {
             inspector.root().record_string(format!("testing-{}", i), "testing".repeat(i + 1));
         }
 
+        {
+            let _ = inspector.root().create_int("dropped", 1);
+        }
+
         assert_data_tree!(inspector, root: contains {
             "fuchsia.inspect.Stats": {
                 current_size: 61440u64,
                 maximum_size: constants::DEFAULT_VMO_SIZE_BYTES as u64,
                 total_dynamic_children: 2u64,
+                allocated_blocks: 323u64,
+                // 2 blocks are deallocated because of the "dropped" int block and its NAME
+                deallocated_blocks: 2u64,
             }
         });
     }

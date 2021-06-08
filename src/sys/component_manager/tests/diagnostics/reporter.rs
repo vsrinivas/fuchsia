@@ -50,6 +50,8 @@ async fn main() {
                     current_size: 4096u64,
                     maximum_size: 2097152u64,
                     total_dynamic_children: 0u64,
+                    allocated_blocks: 49u64,
+                    deallocated_blocks: 0u64,
                 },
                 components: {
                     "<component_manager>": contains {},
@@ -82,6 +84,8 @@ async fn main() {
             current_size: 4096u64,
             maximum_size: 262144u64,
             total_dynamic_children: 3u64,
+            allocated_blocks: 40u64,
+            deallocated_blocks: 1u64,
         }
     });
 }

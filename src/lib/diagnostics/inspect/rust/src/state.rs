@@ -300,6 +300,13 @@ pub struct Stats {
 
     /// Current size of the vmo backing inspect.
     pub current_size: usize,
+
+    /// Total number of allocated blocks. This includes blocks that might have already been
+    /// deallocated. That is, `allocated_blocks` - `deallocated_blocks` = currently allocated.
+    pub allocated_blocks: usize,
+
+    /// Total number of deallocated blocks.
+    pub deallocated_blocks: usize,
 }
 
 pub struct LockedStateGuard<'a> {
@@ -324,6 +331,8 @@ impl<'a> LockedStateGuard<'a> {
             total_dynamic_children: self.inner_lock.callbacks.len(),
             current_size: self.inner_lock.heap.current_size(),
             maximum_size: self.inner_lock.heap.maximum_size(),
+            allocated_blocks: self.inner_lock.heap.total_allocated_blocks(),
+            deallocated_blocks: self.inner_lock.heap.total_deallocated_blocks(),
         }
     }
 
@@ -1403,7 +1412,13 @@ mod tests {
         let _block2 = state_guard.create_uint_metric("test", 3, 0).unwrap();
         assert_eq!(
             state_guard.stats(),
-            Stats { total_dynamic_children: 1, maximum_size: 12288, current_size: 4096 }
+            Stats {
+                total_dynamic_children: 1,
+                maximum_size: 12288,
+                current_size: 4096,
+                allocated_blocks: 6, // HEADER, state_guard, _block1, "link-name", _block2, "test"
+                deallocated_blocks: 0
+            }
         )
     }
 
