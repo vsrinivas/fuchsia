@@ -80,6 +80,6 @@ impl LayerGroup {
     /// Eventually layer group might provide more incremental ways to modify the contents of
     /// the group.
     pub fn replace_all(&mut self, new_layers: impl IntoIterator<Item = Layer>) {
-        self.0 = new_layers.into_iter().collect();
+        self.0.splice(.., new_layers.into_iter());
     }
 }
