@@ -18,6 +18,8 @@ toc:
   path:  /docs/concepts/testing/entropy_quality_tests.md
 - title: "Test coverage"
   path:  /docs/concepts/testing/coverage.md
+- title: "Sanitizers"
+  path:  /docs/concepts/testing/sanitizers.md
 - title: "Policy"
   section:
   - title: "Testability rubrics"
