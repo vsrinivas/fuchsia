@@ -17,6 +17,9 @@ use {
 /// The maximum number of denied connection reasons we will store for one network at a time.
 /// For now this number is chosen arbitrarily.
 const NUM_DENY_REASONS: usize = 20;
+/// The max number of quick disconnects we will store for one network at a time. For now this
+/// number is chosen arbitrarily.
+const NUM_DISCONNECTS: usize = 20;
 /// constants for the constraints on valid credential values
 const WEP_40_ASCII_LEN: usize = 5;
 const WEP_40_HEX_LEN: usize = 10;
@@ -61,11 +64,13 @@ pub struct PerformanceStats {
     /// List of recent connection failures, used to determine whether we should try connecting
     /// to a network again. Capacity of list is at least NUM_DENY_REASONS.
     pub failure_list: ConnectFailureList,
+    /// List of recent disconnects where the connect duration was short.
+    pub disconnect_list: DisconnectList,
 }
 
 impl PerformanceStats {
     pub fn new() -> Self {
-        Self { failure_list: ConnectFailureList::new() }
+        Self { failure_list: ConnectFailureList::new(), disconnect_list: DisconnectList::new() }
     }
 }
 
@@ -97,7 +102,6 @@ impl ConnectFailureList {
         Self(VecDeque::with_capacity(NUM_DENY_REASONS))
     }
 
-    /// This function will be used in future work when Network Denial reasons are recorded.
     /// Record network denial information in the network config, dropping the oldest information
     /// if the list of denial reasons is already full before adding.
     pub fn add(&mut self, bssid: types::Bssid, reason: FailureReason) {
@@ -107,10 +111,41 @@ impl ConnectFailureList {
         self.0.push_back(ConnectFailure { time: zx::Time::get_monotonic(), reason, bssid });
     }
 
-    /// This function will be used when Network Denial reasons are used to select a network.
     /// Returns a list of the denials that happened at or after the given monotonic time.
     pub fn get_recent(&self, earliest_time: zx::Time) -> Vec<ConnectFailure> {
         self.0.iter().skip_while(|denial| denial.time < earliest_time).cloned().collect()
+    }
+}
+
+/// Unexpected disconnects, either from the AP sending a disconnect or a loss of signal.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Disconnect {
+    /// The time of the disconnect, used to determe whether this disconnect is still relevant.
+    pub time: zx::Time,
+    /// The BSSID that we only had a short connection uptime on.
+    pub bssid: types::Bssid,
+    /// The time between connection starting and disconnecting.
+    pub uptime: zx::Duration,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DisconnectList(VecDeque<Disconnect>);
+
+impl DisconnectList {
+    pub fn new() -> Self {
+        Self(VecDeque::with_capacity(NUM_DISCONNECTS))
+    }
+
+    /// Add the disconnect, dropping the oldest value if the list is already full.
+    pub fn add(&mut self, bssid: types::Bssid, uptime: zx::Duration, curr_time: zx::Time) {
+        if self.0.len() == self.0.capacity() {
+            let _ = self.0.pop_front();
+        }
+        self.0.push_back(Disconnect { time: curr_time, bssid, uptime });
+    }
+
+    pub fn get_recent(&self, earliest_time: zx::Time) -> Vec<Disconnect> {
+        self.0.iter().skip_while(|d| d.time < earliest_time).cloned().collect()
     }
 }
 
@@ -750,6 +785,62 @@ mod tests {
             assert_eq!(FailureReason::GeneralFailure, failure.reason);
             assert_eq!(bssid, failure.bssid);
         }
+    }
+
+    #[test]
+    fn test_disconnect_list_add_and_get() {
+        let mut disconnects = DisconnectList::new();
+
+        let curr_time = zx::Time::get_monotonic();
+        assert!(disconnects.get_recent(curr_time).is_empty());
+        let bssid = [1; 6];
+        let uptime = zx::Duration::from_seconds(2);
+
+        // Add a disconnect and check that we get it back.
+        disconnects.add(bssid, uptime, curr_time);
+
+        // We should get back the added disconnect when specifying the same or an earlier time.
+        let expected_disconnect = Disconnect { bssid, uptime, time: curr_time };
+        assert_eq!(disconnects.get_recent(curr_time).len(), 1);
+        assert_variant!(disconnects.get_recent(curr_time).as_slice(), [d] => {
+            assert_eq!(d, &expected_disconnect.clone());
+        });
+        let earlier_time = curr_time - zx::Duration::from_seconds(1);
+        assert_variant!(disconnects.get_recent(earlier_time).as_slice(), [d] => {
+            assert_eq!(d, &expected_disconnect.clone());
+        });
+        // The results should be empty if the requested time is after the disconnect's time.
+        // The disconnect is considered stale.
+        let later_time = curr_time + zx::Duration::from_seconds(1);
+        assert!(disconnects.get_recent(later_time).is_empty());
+    }
+
+    #[test]
+    fn test_disconnect_list_add_removes_oldest_when_full() {
+        let mut disconnects = DisconnectList::new();
+
+        assert!(disconnects.get_recent(zx::Time::ZERO).is_empty());
+        let disconnect_list_capacity = disconnects.0.capacity();
+        // VecDequeue::with_capacity allocates at least the specified amount, not necessarily
+        // equal to the specified amount.
+        assert!(disconnect_list_capacity >= NUM_DISCONNECTS);
+
+        // Insert first disconnect, which we will check was pushed out of the list
+        let first_bssid = [10; 6];
+        disconnects.add(first_bssid, zx::Duration::from_seconds(1), zx::Time::get_monotonic());
+        assert_variant!(disconnects.get_recent(zx::Time::ZERO).as_slice(), [d] => {
+            assert_eq!(d.bssid, first_bssid);
+        });
+
+        let bssid = [0; 6];
+        for _i in 0..disconnect_list_capacity {
+            disconnects.add(bssid, zx::Duration::from_seconds(2), zx::Time::get_monotonic());
+        }
+        let all_disconnects = disconnects.get_recent(zx::Time::ZERO);
+        for d in &all_disconnects {
+            assert_eq!(d.bssid, bssid);
+        }
+        assert_eq!(all_disconnects.len(), disconnect_list_capacity);
     }
 
     #[test]

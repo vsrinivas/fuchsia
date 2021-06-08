@@ -9,7 +9,7 @@ use {
             types,
         },
         config_management::{
-            self, ConnectFailure, Credential, FailureReason, SavedNetworksManager,
+            self, ConnectFailure, Credential, Disconnect, FailureReason, SavedNetworksManager,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
     },
@@ -42,6 +42,7 @@ use {
 };
 
 const RECENT_FAILURE_WINDOW: zx::Duration = zx::Duration::from_seconds(60 * 5); // 5 minutes
+const RECENT_DISCONNECT_WINDOW: zx::Duration = zx::Duration::from_seconds(60 * 15); // 15 minutes
 
 // TODO(fxbug.dev/67791) Remove code or rework cache to be useful
 // TODO(fxbug.dev/61992) Tweak duration
@@ -56,6 +57,12 @@ const SCORE_PENALTY_FOR_RECENT_FAILURE: i8 = 5;
 /// This penalty is much higher than for a general failure because we are not likely to succeed
 /// on a retry.
 const SCORE_PENALTY_FOR_RECENT_CREDENTIAL_REJECTED: i8 = 30;
+/// The amount to decrease the score for each time we are connected for only a short amount
+/// of time before disconncting. This amount is the same as the penalty for 4 failed connect
+/// attempts to a BSS.
+const SCORE_PENALTY_FOR_SHORT_CONNECTION: i8 = 20;
+// Threshold for what we consider a short time to be connected
+const SHORT_CONNECT_DURATION: zx::Duration = zx::Duration::from_seconds(7 * 60);
 
 const INSPECT_EVENT_LIMIT_FOR_NETWORK_SELECTIONS: usize = 10;
 
@@ -79,6 +86,7 @@ struct InternalSavedNetworkData {
     credential: Credential,
     has_ever_connected: bool,
     recent_failures: Vec<ConnectFailure>,
+    recent_disconnects: Vec<Disconnect>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -117,8 +125,13 @@ impl InternalBss<'_> {
                 }
             })
             .sum();
+        let short_connection_score: i8 = self
+            .recent_short_connections()
+            .try_into()
+            .unwrap_or_else(|_| i8::MAX)
+            .saturating_mul(SCORE_PENALTY_FOR_SHORT_CONNECTION);
 
-        return score.saturating_sub(failure_score);
+        return score.saturating_sub(failure_score).saturating_sub(short_connection_score);
     }
 
     fn recent_failure_count(&self) -> u64 {
@@ -132,6 +145,15 @@ impl InternalBss<'_> {
                 error!("{}", e);
                 u64::MAX
             })
+    }
+
+    fn recent_short_connections(&self) -> usize {
+        self.saved_network_info
+            .recent_disconnects
+            .iter()
+            .filter(|d| d.bssid == self.scanned_bss_info.bssid && d.uptime < SHORT_CONNECT_DURATION)
+            .collect::<Vec<_>>()
+            .len()
     }
 
     fn saved_security_type_to_string(&self) -> String {
@@ -149,8 +171,9 @@ impl InternalBss<'_> {
         let channel = Channel::from_fidl(self.scanned_bss_info.channel);
         let rssi = self.scanned_bss_info.rssi;
         let recent_failure_count = self.recent_failure_count();
+        let recent_short_connection_count = self.recent_short_connections();
         format!(
-            "{}({:4}), {}, {:>4}dBm, chan {:8}, score {:4}{}{}{}",
+            "{}({:4}), {}, {:>4}dBm, chan {:8}, score {:4}{}{}{}{}",
             self.hasher.hash_ssid(&self.saved_network_info.network_id.ssid),
             self.saved_security_type_to_string(),
             self.hasher.hash_mac_addr(&self.scanned_bss_info.bssid),
@@ -160,6 +183,11 @@ impl InternalBss<'_> {
             if !self.scanned_bss_info.compatible { ", NOT compatible" } else { "" },
             if recent_failure_count > 0 {
                 format!(", {} recent failures", recent_failure_count)
+            } else {
+                "".to_string()
+            },
+            if recent_short_connection_count > 0 {
+                format!(", {} recent short disconnects", recent_short_connection_count)
             } else {
                 "".to_string()
             },
@@ -387,6 +415,10 @@ async fn merge_saved_networks_and_scan_data<'a>(
                             .perf_stats
                             .failure_list
                             .get_recent(zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW),
+                        recent_disconnects: saved_config
+                            .perf_stats
+                            .disconnect_list
+                            .get_recent(zx::Time::get_monotonic() - RECENT_DISCONNECT_WINDOW),
                     },
                     hasher: hasher.clone(),
                 })
@@ -900,6 +932,7 @@ mod tests {
             credential: credential_1.clone(),
             has_ever_connected: true,
             recent_failures: recent_failures.clone(),
+            recent_disconnects: Vec::new(),
         };
         let expected_result = vec![
             InternalBss {
@@ -926,6 +959,7 @@ mod tests {
                     credential: credential_2.clone(),
                     has_ever_connected: false,
                     recent_failures: Vec::new(),
+                    recent_disconnects: Vec::new(),
                 },
                 scanned_bss_info: &mock_scan_results[1].entries[0],
                 multiple_bss_candidates: false,
@@ -973,7 +1007,8 @@ mod tests {
                 network_id: network_id,
                 credential: Credential::None,
                 has_ever_connected: rng.gen::<bool>(),
-                recent_failures: vec![],
+                recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss,
             multiple_bss_candidates: false,
@@ -981,6 +1016,36 @@ mod tests {
         };
 
         assert_eq!(internal_bss.score(), expected_score)
+    }
+
+    #[test]
+    fn test_score_bss_prefers_less_short_connections() {
+        let bss_info_worse =
+            types::Bss { rssi: -60, channel: generate_channel(3), ..generate_random_bss() };
+        let bss_info_better =
+            types::Bss { rssi: -60, channel: generate_channel(3), ..generate_random_bss() };
+        let (_test_id, mut internal_data) = generate_random_saved_network();
+        let short_uptime = zx::Duration::from_seconds(30);
+        let okay_uptime = zx::Duration::from_minutes(100);
+        // Record a short uptime for the worse network and a long enough uptime for the better one.
+        let mut disconnects =
+            vec![disconnect_with_bssid_uptime(bss_info_worse.bssid, short_uptime)];
+        disconnects.push(disconnect_with_bssid_uptime(bss_info_better.bssid, okay_uptime));
+        internal_data.recent_disconnects = disconnects;
+        let bss_worse = InternalBss {
+            saved_network_info: internal_data.clone(),
+            scanned_bss_info: &bss_info_worse,
+            multiple_bss_candidates: true,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
+        };
+        let bss_better = InternalBss {
+            saved_network_info: internal_data,
+            scanned_bss_info: &bss_info_better,
+            multiple_bss_candidates: true,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
+        };
+        // Check that the better BSS has a higher score than the worse BSS.
+        assert!(bss_better.score() > bss_worse.score());
     }
 
     #[test]
@@ -1104,6 +1169,7 @@ mod tests {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss_info1,
             multiple_bss_candidates: true,
@@ -1122,6 +1188,7 @@ mod tests {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss_info2,
             multiple_bss_candidates: true,
@@ -1140,6 +1207,7 @@ mod tests {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss_info3,
             multiple_bss_candidates: false,
@@ -1222,6 +1290,7 @@ mod tests {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss_info1,
             multiple_bss_candidates: false,
@@ -1240,6 +1309,7 @@ mod tests {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss_info2,
             multiple_bss_candidates: false,
@@ -1344,6 +1414,7 @@ mod tests {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss_info1,
             multiple_bss_candidates: true,
@@ -1362,6 +1433,7 @@ mod tests {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss_info2,
             multiple_bss_candidates: true,
@@ -1380,6 +1452,7 @@ mod tests {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss_info3,
             multiple_bss_candidates: false,
@@ -1457,6 +1530,7 @@ mod tests {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss_info1,
             multiple_bss_candidates: false,
@@ -1470,6 +1544,7 @@ mod tests {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss_info2,
             multiple_bss_candidates: false,
@@ -1549,6 +1624,7 @@ mod tests {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss_info1,
             multiple_bss_candidates: true,
@@ -1567,6 +1643,7 @@ mod tests {
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss_info2,
             multiple_bss_candidates: true,
@@ -1585,6 +1662,7 @@ mod tests {
                 credential: credential_2.clone(),
                 has_ever_connected: true,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &bss_info3,
             multiple_bss_candidates: false,
@@ -2450,6 +2528,7 @@ mod tests {
                 ),
                 has_ever_connected: false,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
         )
     }
@@ -2476,6 +2555,7 @@ mod tests {
             credential: Credential::Password("foo_pass".as_bytes().to_vec()),
             has_ever_connected: false,
             recent_failures: Vec::new(),
+            recent_disconnects: Vec::new(),
         };
         let test_bss_1 = types::Bss { observed_in_passive_scan: true, ..generate_random_bss() };
         mock_scan_results.push(InternalBss {
@@ -2509,6 +2589,7 @@ mod tests {
                 credential: Credential::Password("bar_pass".as_bytes().to_vec()),
                 has_ever_connected: false,
                 recent_failures: Vec::new(),
+                recent_disconnects: Vec::new(),
             },
             scanned_bss_info: &test_bss_4,
             multiple_bss_candidates: false,
@@ -2606,10 +2687,14 @@ mod tests {
     }
 
     fn connect_failure_with_bssid(bssid: types::Bssid) -> ConnectFailure {
-        ConnectFailure {
-            reason: FailureReason::GeneralFailure,
-            time: zx::Time::INFINITE,
-            bssid: bssid,
+        ConnectFailure { reason: FailureReason::GeneralFailure, time: zx::Time::INFINITE, bssid }
+    }
+
+    fn disconnect_with_bssid_uptime(bssid: types::Bssid, uptime: zx::Duration) -> Disconnect {
+        Disconnect {
+            time: zx::Time::INFINITE, // disconnect never expires
+            bssid,
+            uptime,
         }
     }
 }
