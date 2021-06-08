@@ -28,9 +28,8 @@ table AddressConfig {
     /// with different addresses instead, the DHCPv6 client's behaviour is to
     /// accept the assigned addresses.
     ///
-    /// If the size of `preferred_addresses` is greater than `address_count`,
-    /// the client will pick from `preferred_addresses` until `address_count`
-    /// addresses are assigned to it.
+    /// The size of `preferred_addresses` must be less than or equal to
+    /// `address_count`, otherwise the `AddressConfig` is invalid.
     ///
     /// Optional field. If not set, or if `preferred_addresses` is empty, no
     /// address hints are provided.
@@ -114,7 +113,7 @@ table NewClientParams {
     /// The [`fuchsia.net.dhcpv6/ClientConfig`] the client starts with.
     ///
     /// Client creation will fail if `config` is not requesting any
-    /// information.
+    /// information, or if it contains invalid fields.
     ///
     /// Required.
     3: ClientConfig config;
