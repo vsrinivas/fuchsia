@@ -22,7 +22,7 @@ executable("bin") {
     "//src/chromium/web_engine/meta/shards:web_engine_view",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/ui/tests/integration_input_tests/touch:fuchsia.test.ui",
+    "//src/ui/tests/integration_input_tests/touch:test.touch",
     "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

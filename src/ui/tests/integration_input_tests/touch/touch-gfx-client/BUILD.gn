@@ -4,15 +4,17 @@
 
 import("//build/components.gni")
 
-fuchsia_package_with_single_component("cpp-gfx-client") {
-  manifest = "meta/cpp-gfx-client.cmx"
-  deps = [ ":cpp-gfx-client-binary" ]
+fuchsia_package_with_single_component("touch-gfx-client") {
+  testonly = true
+  manifest = "meta/touch-gfx-client.cmx"
+  deps = [ ":touch-gfx-client-binary" ]
 }
 
-executable("cpp-gfx-client-binary") {
-  output_name = "cpp-gfx-client"
+executable("touch-gfx-client-binary") {
+  testonly = true
+  output_name = "touch-gfx-client"
 
-  sources = [ "cpp-gfx-client.cc" ]
+  sources = [ "touch-gfx-client.cc" ]
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
@@ -26,7 +28,7 @@ executable("cpp-gfx-client-binary") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
-    "//src/ui/tests/integration_input_tests/touch:fuchsia.test.ui",
+    "//src/ui/tests/integration_input_tests/touch:test.touch",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

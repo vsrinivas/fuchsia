@@ -3,13 +3,13 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/cpp-gfx-client"
+        "binary": "bin/touch-gfx-client"
     },
     "sandbox": {
         "services": [
             "fuchsia.sys.Environment",
-            "fuchsia.test.ui.ResponseListener",
-            "fuchsia.ui.scenic.Scenic"
+            "fuchsia.ui.scenic.Scenic",
+            "test.touch.ResponseListener"
         ]
     }
 }

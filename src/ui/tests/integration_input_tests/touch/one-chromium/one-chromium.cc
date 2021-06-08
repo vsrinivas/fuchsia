@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/test/ui/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/web/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -18,6 +17,8 @@
 #include <zircon/status.h>
 
 #include <string>
+
+#include <test/touch/cpp/fidl.h>
 
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -142,8 +143,8 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     FX_CHECK(tap_resp["device_pixel_ratio"].IsDouble());
 
     // Relay response to parent.
-    fuchsia::test::ui::ResponseListenerSyncPtr response_listener_proxy;
-    fuchsia::test::ui::PointerData pointer_data;
+    test::touch::ResponseListenerSyncPtr response_listener_proxy;
+    test::touch::PointerData pointer_data;
     context_->svc()->Connect(response_listener_proxy.NewRequest());
     pointer_data.set_time_received(tap_resp["epoch_msec"].GetInt64() * 1000 * 1000);
     pointer_data.set_local_x(tap_resp["x"].GetInt());

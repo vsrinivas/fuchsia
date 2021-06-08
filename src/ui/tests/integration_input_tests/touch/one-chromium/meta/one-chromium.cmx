@@ -10,7 +10,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.test.ui.ResponseListener"
+            "test.touch.ResponseListener"
         ]
     }
 }

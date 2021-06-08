@@ -4,7 +4,7 @@
 
 import 'dart:ui' as ui;
 
-import 'package:fidl_fuchsia_test_ui/fidl_async.dart' as fidl_test_ui;
+import 'package:fidl_test_touch/fidl_async.dart' as test_touch;
 import 'package:flutter/material.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart';
@@ -44,7 +44,7 @@ class _MyHomePageState extends State<MyHomePage> {
     Colors.purple,
   ];
 
-  final _responseListener = fidl_test_ui.ResponseListenerProxy();
+  final _responseListener = test_touch.ResponseListenerProxy();
 
   _MyHomePageState() {
     Incoming.fromSvcPath()
@@ -63,7 +63,7 @@ class _MyHomePageState extends State<MyHomePage> {
           setState(() {
             _touchCounter++; // Trigger color change on DOWN event.
           });
-          _respond(fidl_test_ui.PointerData(
+          _respond(test_touch.PointerData(
               // Notify test that input was seen.
               localX: data.physicalX,
               localY: data.physicalY,
@@ -73,7 +73,7 @@ class _MyHomePageState extends State<MyHomePage> {
     };
   }
 
-  void _respond(fidl_test_ui.PointerData pointerData) async {
+  void _respond(test_touch.PointerData pointerData) async {
     await _responseListener.respond(pointerData);
   }
 

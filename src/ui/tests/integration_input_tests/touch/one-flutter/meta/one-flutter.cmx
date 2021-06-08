@@ -5,8 +5,8 @@
     "sandbox": {
         "services": [
             "fuchsia.sys.Environment",
-            "fuchsia.test.ui.ResponseListener",
-            "fuchsia.ui.scenic.Scenic"
+            "fuchsia.ui.scenic.Scenic",
+            "test.touch.ResponseListener"
         ]
     }
 }

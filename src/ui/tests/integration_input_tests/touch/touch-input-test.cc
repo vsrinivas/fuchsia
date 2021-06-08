@@ -10,7 +10,6 @@
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/test/ui/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
@@ -28,7 +27,7 @@
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
-#include <zircon/time.h>
+#include <lib/zx/time.h>
 #include <zircon/types.h>
 #include <zircon/utc.h>
 
@@ -36,6 +35,7 @@
 #include <type_traits>
 
 #include <gtest/gtest.h>
+#include <test/touch/cpp/fidl.h>
 
 // This test exercises the touch input dispatch path from Root Presenter to a Scenic client. It is a
 // multi-component test, and carefully avoids sleeping or polling for component coordination.
@@ -65,7 +65,7 @@
 
 namespace {
 
-using fuchsia::test::ui::ResponseListener;
+using test::touch::ResponseListener;
 using ScenicEvent = fuchsia::ui::scenic::Event;
 using GfxEvent = fuchsia::ui::gfx::Event;
 
@@ -170,13 +170,13 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
     view_holder_ = std::make_unique<scenic::ViewHolder>(session_.get(), std::move(token), name);
   }
 
-  void SetRespondCallback(fit::function<void(fuchsia::test::ui::PointerData)> callback) {
+  void SetRespondCallback(fit::function<void(test::touch::PointerData)> callback) {
     respond_callback_ = std::move(callback);
   }
 
-  // |fuchsia::test::ui::ResponseListener|
-  void Respond(fuchsia::test::ui::PointerData pointer_data) override {
-    FX_CHECK(respond_callback_) << "Expected callback to be set for Respond().";
+  // |test::touch::ResponseListener|
+  void Respond(test::touch::PointerData pointer_data) override {
+    FX_CHECK(respond_callback_) << "Expected callback to be set for test.touch.Respond().";
     respond_callback_(std::move(pointer_data));
   }
 
@@ -229,21 +229,6 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
 
   int injection_count() const { return injection_count_; }
 
-  static bool IsViewPropertiesChangedEvent(const ScenicEvent& event) {
-    return event.Which() == ScenicEvent::Tag::kGfx &&
-           event.gfx().Which() == GfxEvent::Tag::kViewPropertiesChanged;
-  }
-
-  static bool IsViewStateChangedEvent(const ScenicEvent& event) {
-    return event.Which() == ScenicEvent::Tag::kGfx &&
-           event.gfx().Which() == GfxEvent::Tag::kViewStateChanged;
-  }
-
-  static bool IsViewDisconnectedEvent(const ScenicEvent& event) {
-    return event.Which() == ScenicEvent::Tag::kGfx &&
-           event.gfx().Which() == GfxEvent::Tag::kViewDisconnected;
-  }
-
  private:
   template <typename TimeT>
   TimeT RealNow();
@@ -267,7 +252,7 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
     return static_cast<uint64_t>(time.get());
   };
 
-  fidl::Binding<fuchsia::test::ui::ResponseListener> response_listener_;
+  fidl::Binding<test::touch::ResponseListener> response_listener_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> test_env_;
   std::unique_ptr<scenic::Session> session_;
   int injection_count_ = 0;
@@ -275,7 +260,7 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
   // Child view's ViewHolder.
   std::unique_ptr<scenic::ViewHolder> view_holder_;
 
-  fit::function<void(fuchsia::test::ui::PointerData)> respond_callback_;
+  fit::function<void(test::touch::PointerData)> respond_callback_;
 };
 
 class TouchInputTest : public TouchInputBase {
@@ -305,7 +290,7 @@ TEST_F(TouchInputTest, FlutterTap) {
 
   // Define test expectations for when Flutter calls back with "Respond()".
   SetRespondCallback([this, display_width, display_height,
-                      &input_injection_time](fuchsia::test::ui::PointerData pointer_data) {
+                      &input_injection_time](test::touch::PointerData pointer_data) {
     // The /config/data/display_rotation (90) specifies how many degrees to rotate the
     // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
     // the user observes the child view to rotate *clockwise* by that amount (90).
@@ -339,22 +324,25 @@ TEST_F(TouchInputTest, FlutterTap) {
   scenic::Session::EventHandler handler =
       [this, &input_injection_time](const std::vector<fuchsia::ui::scenic::Event>& events) {
         for (const auto& event : events) {
-          if (IsViewPropertiesChangedEvent(event)) {
+          if (!event.is_gfx())
+            continue;  // skip non-gfx events
+
+          if (event.gfx().is_view_properties_changed()) {
             auto properties = event.gfx().view_properties_changed().properties;
             FX_VLOGS(1) << "Test received its view properties; transfer to child view: "
                         << properties;
             FX_CHECK(view_holder()) << "Expect that view holder is already set up.";
             view_holder()->SetViewProperties(properties);
-            session()->Present(zx_clock_get_monotonic(), [](auto info) {});
+            session()->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
 
-          } else if (IsViewStateChangedEvent(event)) {
+          } else if (event.gfx().is_view_state_changed()) {
             bool hittable = event.gfx().view_state_changed().state.is_rendering;
             FX_VLOGS(1) << "Child's view content is hittable: " << std::boolalpha << hittable;
             if (hittable) {
               input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_MONOTONIC>>();
             }
 
-          } else if (IsViewDisconnectedEvent(event)) {
+          } else if (event.gfx().is_view_disconnected()) {
             // Save time, terminate the test immediately if we know that Flutter's view is borked.
             FX_CHECK(injection_count() > 0)
                 << "Expected to have completed input injection, but Flutter view terminated early.";
@@ -380,7 +368,7 @@ TEST_F(TouchInputTest, FlutterTap) {
   MakeViewHolder(std::move(tokens_tf.view_holder_token), "test's viewholder for flutter");
   view.AddChild(*view_holder());
   // Request to make test's view; this will trigger dispatch of view properties.
-  session()->Present(zx_clock_get_monotonic(), [](auto info) {
+  session()->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {
     FX_VLOGS(1) << "test's view and view holder created by Scenic.";
   });
 
@@ -405,7 +393,7 @@ TEST_F(TouchInputTest, FlutterTap) {
 
 TEST_F(TouchInputTest, CppGfxClientTap) {
   const std::string kCppGfxClient =
-      "fuchsia-pkg://fuchsia.com/cpp-gfx-client#meta/cpp-gfx-client.cmx";
+      "fuchsia-pkg://fuchsia.com/touch-gfx-client#meta/touch-gfx-client.cmx";
   uint32_t display_width = 0;
   uint32_t display_height = 0;
 
@@ -426,7 +414,7 @@ TEST_F(TouchInputTest, CppGfxClientTap) {
 
   // Define test expectations for when CppGfxClient calls back with "Respond()".
   SetRespondCallback([this, display_width, display_height,
-                      &input_injection_time](fuchsia::test::ui::PointerData pointer_data) {
+                      &input_injection_time](test::touch::PointerData pointer_data) {
     // The /config/data/display_rotation (90) specifies how many degrees to rotate the
     // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
     // the user observes the child view to rotate *clockwise* by that amount (90).
@@ -461,22 +449,25 @@ TEST_F(TouchInputTest, CppGfxClientTap) {
   scenic::Session::EventHandler handler =
       [this, &input_injection_time](const std::vector<fuchsia::ui::scenic::Event>& events) {
         for (const auto& event : events) {
-          if (IsViewPropertiesChangedEvent(event)) {
+          if (!event.is_gfx())
+            continue;  // skip non-gfx events
+
+          if (event.gfx().is_view_properties_changed()) {
             auto properties = event.gfx().view_properties_changed().properties;
             FX_VLOGS(1) << "Test received its view properties; transfer to child view: "
                         << properties;
             FX_CHECK(view_holder()) << "Expect that view holder is already set up.";
             view_holder()->SetViewProperties(properties);
-            session()->Present(zx_clock_get_monotonic(), [](auto info) {});
+            session()->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
 
-          } else if (IsViewStateChangedEvent(event)) {
+          } else if (event.gfx().is_view_state_changed()) {
             bool hittable = event.gfx().view_state_changed().state.is_rendering;
             FX_VLOGS(1) << "Child's view content is hittable: " << std::boolalpha << hittable;
             if (hittable) {
               input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_MONOTONIC>>();
             }
 
-          } else if (IsViewDisconnectedEvent(event)) {
+          } else if (event.gfx().is_view_disconnected()) {
             // Save time, terminate the test immediately if we know that CppGfxClient's view is
             // borked.
             FX_CHECK(injection_count() > 0) << "Expected to have completed input injection, but "
@@ -503,7 +494,7 @@ TEST_F(TouchInputTest, CppGfxClientTap) {
   MakeViewHolder(std::move(tokens_tf.view_holder_token), "test's viewholder for CppGfxClient");
   view.AddChild(*view_holder());
   // Request to make test's view; this will trigger dispatch of view properties.
-  session()->Present(zx_clock_get_monotonic(), [](auto info) {
+  session()->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {
     FX_LOGS(INFO) << "test's view and view holder created by Scenic.";
   });
 
@@ -620,7 +611,7 @@ TEST_F(WebEngineTest, ChromiumTap) {
 
   // Define test expectations for when Chromium calls back with "Respond()".
   SetRespondCallback([this, display_width, display_height,
-                      &input_injection_time](fuchsia::test::ui::PointerData pointer_data) {
+                      &input_injection_time](test::touch::PointerData pointer_data) {
     // The /config/data/display_rotation (90) specifies how many degrees to rotate the
     // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
     // the user observes the child view to rotate *clockwise* by that amount (90).
@@ -664,13 +655,16 @@ TEST_F(WebEngineTest, ChromiumTap) {
                                               const std::vector<fuchsia::ui::scenic::Event>&
                                                   events) {
     for (const auto& event : events) {
-      if (IsViewPropertiesChangedEvent(event)) {
+      if (!event.is_gfx())
+        continue;  // skip non-gfx events
+
+      if (event.gfx().is_view_properties_changed()) {
         auto properties = event.gfx().view_properties_changed().properties;
         FX_VLOGS(1) << "Test received its view properties; transfer to child view: " << properties;
         FX_CHECK(view_holder()) << "Expect that view holder is already set up.";
         view_holder()->SetViewProperties(properties);
-        session()->Present(zx_clock_get_monotonic(), [](auto info) {});
-      } else if (IsViewStateChangedEvent(event)) {
+        session()->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
+      } else if (event.gfx().is_view_state_changed()) {
         // Note well: unlike one-flutter and cpp-gfx-client, the web app may be rendering before
         // it is hittable. Nonetheless, waiting for rendering is better than injecting the touch
         // immediately. In the event that the app is not hittable, `TryInject()` will retry.
@@ -679,7 +673,7 @@ TEST_F(WebEngineTest, ChromiumTap) {
         if (rendering) {
           TryInject(&input_injection_time);
         }
-      } else if (IsViewDisconnectedEvent(event)) {
+      } else if (event.gfx().is_view_disconnected()) {
         // Save time, terminate the test immediately if we know that Chromium's view is borked.
         FX_CHECK(injection_count() > 0)
             << "Expected to have completed input injection, but Chromium view terminated early.";
@@ -705,7 +699,7 @@ TEST_F(WebEngineTest, ChromiumTap) {
   MakeViewHolder(std::move(tokens_tc.view_holder_token), "test's viewholder for chromium");
   view.AddChild(*view_holder());
   // Request to make test's view; this will trigger dispatch of view properties.
-  session()->Present(zx_clock_get_monotonic(), [](auto info) {
+  session()->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {
     FX_VLOGS(1) << "test's view and view holder created by Scenic.";
   });
 
