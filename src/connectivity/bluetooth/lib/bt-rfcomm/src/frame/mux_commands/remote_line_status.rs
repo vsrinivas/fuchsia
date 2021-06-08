@@ -4,7 +4,7 @@
 
 use {
     bitfield::bitfield,
-    packet_encoding::{Decodable, Encodable},
+    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
     std::convert::TryFrom,
 };
 
@@ -15,36 +15,59 @@ use crate::{frame::FrameParseError, DLCI};
 const REMOTE_LINE_STATUS_COMMAND_LENGTH: usize = 2;
 
 bitfield! {
-    struct RLSAddressField(u8);
+    struct RlsAddressField(u8);
     impl Debug;
     pub bool, ea_bit, set_ea_bit: 0;
     pub bool, cr_bit, set_cr_bit: 1;
     pub u8, dlci_raw, set_dlci: 7, 2;
 }
 
-impl RLSAddressField {
+impl RlsAddressField {
     fn dlci(&self) -> Result<DLCI, FrameParseError> {
         DLCI::try_from(self.dlci_raw())
     }
 }
 
-// TODO(fxbug.dev/59582): Handling of the RLS command is implementation specific. It may be beneficial
-// to provide better accessors/types for the RlsError. However, for now, we envision simply
-// acknowledging the command, in which case the fields will never be used.
-bitfield! {
-    pub struct RlsError(u8);
-    impl Debug;
-    pub bool, error_occurred, _: 0;
-    pub u8, error, _: 3,1;
+pub_decodable_enum! {
+    /// The error types supported in the Remote Line Status command.
+    /// See GSM 07.10 Section 5.4.6.3.10 for the defined variants.
+    RlsError<u8, FrameParseError, OutOfRange> {
+        /// Received character overwrote an unread character.
+        Overrun => 0b001,
+        /// Received character's parity was incorrect.
+        Parity => 0b010,
+        /// Received character did not terminate with a stop bit.
+        Framing => 0b100,
+    }
 }
 
-impl PartialEq for RlsError {
+bitfield! {
+    pub struct RlsErrorField(u8);
+    impl Debug;
+    pub bool, error_occurred, set_error_occurred: 0;
+    pub u8, error, set_error: 3,1;
+}
+
+impl RlsErrorField {
+    fn from_error(error: RlsError) -> Self {
+        let mut field = Self(0);
+        field.set_error_occurred(true);
+        field.set_error(u8::from(&error));
+        field
+    }
+
+    const fn no_error() -> Self {
+        Self(0)
+    }
+}
+
+impl PartialEq for RlsErrorField {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
     }
 }
 
-impl Clone for RlsError {
+impl Clone for RlsErrorField {
     fn clone(&self) -> Self {
         Self(self.0)
     }
@@ -57,7 +80,18 @@ impl Clone for RlsError {
 pub struct RemoteLineStatusParams {
     pub dlci: DLCI,
     /// The status associated with the remote port line.
-    pub status: RlsError,
+    pub status: RlsErrorField,
+}
+
+impl RemoteLineStatusParams {
+    pub fn new(dlci: DLCI, status: Option<RlsError>) -> Self {
+        let status = if let Some(e) = status {
+            RlsErrorField::from_error(e)
+        } else {
+            RlsErrorField::no_error()
+        };
+        Self { dlci, status }
+    }
 }
 
 impl Decodable for RemoteLineStatusParams {
@@ -72,11 +106,11 @@ impl Decodable for RemoteLineStatusParams {
         }
 
         // Address field.
-        let address_field = RLSAddressField(buf[0]);
+        let address_field = RlsAddressField(buf[0]);
         let dlci = address_field.dlci()?;
 
         // Status field.
-        let status = RlsError(buf[1]);
+        let status = RlsErrorField(buf[1]);
 
         Ok(RemoteLineStatusParams { dlci, status })
     }
@@ -95,7 +129,7 @@ impl Encodable for RemoteLineStatusParams {
         }
 
         // E/A bit = 1, C/R bit = 1 (always). See GSM 7.10 Section 5.4.6.3.10 Table 14.
-        let mut address_field = RLSAddressField(0);
+        let mut address_field = RlsAddressField(0);
         address_field.set_ea_bit(true);
         address_field.set_cr_bit(true);
         address_field.set_dlci(u8::from(self.dlci));
@@ -140,7 +174,7 @@ mod tests {
             0b00000000, // Bit1 = 0 -> No status.
         ];
         let expected =
-            RemoteLineStatusParams { dlci: DLCI::try_from(2).unwrap(), status: RlsError(0) };
+            RemoteLineStatusParams { dlci: DLCI::try_from(2).unwrap(), status: RlsErrorField(0) };
         let res = RemoteLineStatusParams::decode(&buf[..]).unwrap();
         assert_eq!(res, expected);
         assert_eq!(res.status.error_occurred(), false);
@@ -153,7 +187,7 @@ mod tests {
             0b00000101, // Bit1 = 1 -> Status. Status = 010 (Parity Error).
         ];
         let expected =
-            RemoteLineStatusParams { dlci: DLCI::try_from(2).unwrap(), status: RlsError(5) };
+            RemoteLineStatusParams { dlci: DLCI::try_from(2).unwrap(), status: RlsErrorField(5) };
         let res = RemoteLineStatusParams::decode(&buf[..]).unwrap();
         assert_eq!(res, expected);
         assert_eq!(res.status.error_occurred(), true);
@@ -162,35 +196,41 @@ mod tests {
 
     #[test]
     fn test_encode_rls_invalid_buf() {
-        let command =
-            RemoteLineStatusParams { dlci: DLCI::try_from(7).unwrap(), status: RlsError(0) };
+        let command = RemoteLineStatusParams::new(DLCI::try_from(7).unwrap(), None);
         let mut buf = [0x01]; // Too small.
         assert_matches!(command.encode(&mut buf), Err(FrameParseError::BufferTooSmall));
     }
 
     #[test]
     fn test_encode_rls_with_no_status() {
-        let command =
-            RemoteLineStatusParams { dlci: DLCI::try_from(7).unwrap(), status: RlsError(0b0000) };
+        let command = RemoteLineStatusParams::new(DLCI::try_from(7).unwrap(), None);
         let mut buf = vec![0; command.encoded_len()];
         assert!(command.encode(&mut buf).is_ok());
         let expected = [
             0b00011111, // DLCI = 7, E/A = 1, Bit2 = 1 always.
-            0b00000000, // Bit1 = 0 -> No Status.
+            0b00000000, // Bit1 = 0 -> No error status.
         ];
         assert_eq!(buf, expected);
     }
 
     #[test]
-    fn test_encode_rls_with_status() {
-        let command =
-            RemoteLineStatusParams { dlci: DLCI::try_from(7).unwrap(), status: RlsError(0b0011) };
-        let mut buf = vec![0; command.encoded_len()];
-        assert!(command.encode(&mut buf).is_ok());
-        let expected = [
-            0b00011111, // DLCI = 7, E/A = 1, Bit2 = 1 always.
-            0b00000011, // Bit1 = 1 -> Status.
-        ];
-        assert_eq!(buf, expected);
+    fn test_encode_rls_with_error_status() {
+        let errors = vec![RlsError::Overrun, RlsError::Parity, RlsError::Framing];
+        // Bit1 = 1 indicates error status. Bits 2-4 specify the error. Bits 5-8 are reserved.
+        let expected_error_bits = vec![0b00000011, 0b00000101, 0b00001001];
+
+        for (error_status, expected_bits) in errors.into_iter().zip(expected_error_bits.into_iter())
+        {
+            let command =
+                RemoteLineStatusParams::new(DLCI::try_from(7).unwrap(), Some(error_status));
+            let mut buf = vec![0; command.encoded_len()];
+            assert!(command.encode(&mut buf).is_ok());
+
+            let mut expected = vec![
+                0b00011111, // DLCI = 7, Bit2 = 1 always, E/A = 1.
+            ];
+            expected.push(expected_bits);
+            assert_eq!(buf, expected);
+        }
     }
 }

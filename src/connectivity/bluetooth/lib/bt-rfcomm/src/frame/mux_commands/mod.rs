@@ -28,7 +28,7 @@ pub use non_supported::NonSupportedCommandParams;
 
 /// The Remote Line Status frame definition.
 mod remote_line_status;
-pub use remote_line_status::RemoteLineStatusParams;
+pub use remote_line_status::{RemoteLineStatusParams, RlsError};
 
 /// The Remote Port Negotiation frame definition.
 mod remote_port_negotiation;
@@ -351,10 +351,7 @@ mod tests {
 
     use matches::assert_matches;
 
-    use {
-        dlc_parameter_negotiation::CreditBasedFlowHandshake, modem_status::ModemStatusSignals,
-        remote_line_status::RlsError,
-    };
+    use {dlc_parameter_negotiation::CreditBasedFlowHandshake, modem_status::ModemStatusSignals};
 
     #[test]
     fn test_decode_mux_command_empty_buf() {
@@ -538,10 +535,10 @@ mod tests {
             0b00000000, // Data octet2: Bit1 = 0 -> No Status.
         ];
         let expected = MuxCommand {
-            params: MuxCommandParams::RemoteLineStatus(RemoteLineStatusParams {
-                dlci: DLCI::try_from(7).unwrap(),
-                status: RlsError(0b0000),
-            }),
+            params: MuxCommandParams::RemoteLineStatus(RemoteLineStatusParams::new(
+                DLCI::try_from(7).unwrap(),
+                None,
+            )),
             command_response: CommandResponse::Command,
         };
         assert_eq!(MuxCommand::decode(&buf[..]).unwrap(), expected);
