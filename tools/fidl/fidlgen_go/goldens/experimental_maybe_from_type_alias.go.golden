@@ -7,7 +7,7 @@ import (
 )
 
 type Testing struct {
-	_   struct{}                             `fidl:"s" fidl_size_v1:"784" fidl_alignment_v1:"8"`
+	_   struct{}                             `fidl:"s" fidl_size_v1:"704" fidl_alignment_v1:"8"`
 	U1  uint64                               `fidl_offset_v1:"0"`
 	U2  []uint64                             `fidl_offset_v1:"8" fidl_bounds:"1"`
 	U3  [1]uint64                            `fidl_offset_v1:"24"`
@@ -21,27 +21,21 @@ type Testing struct {
 	A1  [1]uint64                            `fidl_offset_v1:"256"`
 	A2  [][1]uint64                          `fidl_offset_v1:"264" fidl_bounds:""`
 	A3  [4][1]uint64                         `fidl_offset_v1:"280"`
-	P1  MyProtocolWithCtxInterfaceRequest    `fidl_offset_v1:"312" fidl_handle_subtype:"4" fidl_bounds:"0"`
-	P2  []MyProtocolWithCtxInterfaceRequest  `fidl_offset_v1:"320" fidl_handle_subtype:"4" fidl_bounds:",0"`
-	P3  [4]MyProtocolWithCtxInterfaceRequest `fidl_offset_v1:"336" fidl_handle_subtype:"4" fidl_bounds:"0"`
-	R1  MyProtocolWithCtxInterfaceRequest    `fidl_offset_v1:"352" fidl_handle_subtype:"4" fidl_bounds:"1"`
-	R2  []MyProtocolWithCtxInterfaceRequest  `fidl_offset_v1:"360" fidl_handle_subtype:"4" fidl_bounds:",1"`
-	R3  [4]MyProtocolWithCtxInterfaceRequest `fidl_offset_v1:"376" fidl_handle_subtype:"4" fidl_bounds:"1"`
-	B1  []uint8                              `fidl_offset_v1:"392" fidl_bounds:""`
-	B2  [][]uint8                            `fidl_offset_v1:"408" fidl_bounds:""`
-	B3  [4][]uint8                           `fidl_offset_v1:"424" fidl_bounds:""`
-	S1  string                               `fidl_offset_v1:"488" fidl_bounds:""`
-	S2  []string                             `fidl_offset_v1:"504" fidl_bounds:""`
-	S3  [4]string                            `fidl_offset_v1:"520" fidl_bounds:""`
-	Vv1 []uint64                             `fidl_offset_v1:"584" fidl_bounds:"2"`
-	Vv2 [][]uint64                           `fidl_offset_v1:"600" fidl_bounds:"3,2"`
-	Vv3 [3][]uint64                          `fidl_offset_v1:"616" fidl_bounds:"2"`
-	Aa1 [2]uint64                            `fidl_offset_v1:"664"`
-	Aa2 [][2]uint64                          `fidl_offset_v1:"680" fidl_bounds:"3"`
-	Aa3 [3][2]uint64                         `fidl_offset_v1:"696"`
-	Rr1 MyProtocolWithCtxInterfaceRequest    `fidl_offset_v1:"744" fidl_handle_subtype:"4" fidl_bounds:"0"`
-	Rr2 []MyProtocolWithCtxInterfaceRequest  `fidl_offset_v1:"752" fidl_handle_subtype:"4" fidl_bounds:"3,0"`
-	Rr3 [3]MyProtocolWithCtxInterfaceRequest `fidl_offset_v1:"768" fidl_handle_subtype:"4" fidl_bounds:"0"`
+	R1  MyProtocolWithCtxInterfaceRequest    `fidl_offset_v1:"312" fidl_handle_subtype:"4" fidl_bounds:"1"`
+	R2  []MyProtocolWithCtxInterfaceRequest  `fidl_offset_v1:"320" fidl_handle_subtype:"4" fidl_bounds:",1"`
+	R3  [4]MyProtocolWithCtxInterfaceRequest `fidl_offset_v1:"336" fidl_handle_subtype:"4" fidl_bounds:"1"`
+	B1  []uint8                              `fidl_offset_v1:"352" fidl_bounds:""`
+	B2  [][]uint8                            `fidl_offset_v1:"368" fidl_bounds:""`
+	B3  [4][]uint8                           `fidl_offset_v1:"384" fidl_bounds:""`
+	S1  string                               `fidl_offset_v1:"448" fidl_bounds:""`
+	S2  []string                             `fidl_offset_v1:"464" fidl_bounds:""`
+	S3  [4]string                            `fidl_offset_v1:"480" fidl_bounds:""`
+	Vv1 []uint64                             `fidl_offset_v1:"544" fidl_bounds:"2"`
+	Vv2 [][]uint64                           `fidl_offset_v1:"560" fidl_bounds:"3,2"`
+	Vv3 [3][]uint64                          `fidl_offset_v1:"576" fidl_bounds:"2"`
+	Aa1 [2]uint64                            `fidl_offset_v1:"624"`
+	Aa2 [][2]uint64                          `fidl_offset_v1:"640" fidl_bounds:"3"`
+	Aa3 [3][2]uint64                         `fidl_offset_v1:"656"`
 }
 
 var _mTesting = _bindings.CreateLazyMarshaler(Testing{})

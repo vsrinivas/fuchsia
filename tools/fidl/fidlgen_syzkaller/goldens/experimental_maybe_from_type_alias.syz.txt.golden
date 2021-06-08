@@ -18,9 +18,6 @@ fidl_test_experimentalmaybefromtypealias_TestingInLine {
        a1InLine array[int64, 1]
        a2InLine fidl_vector
        a3InLine array[array[int64, 1], 4]
-       p1 flags[fidl_handle_presence, int32]
-       p2InLine fidl_vector
-       p3InLine array[flags[fidl_handle_presence, int32], 4]
        r1 flags[fidl_handle_presence, int32]
        r2InLine fidl_vector
        r3InLine array[flags[fidl_handle_presence, int32], 4]
@@ -36,9 +33,6 @@ fidl_test_experimentalmaybefromtypealias_TestingInLine {
        aa1InLine array[int64, 2]
        aa2InLine fidl_vector
        aa3InLine array[array[int64, 2], 3]
-       rr1 flags[fidl_handle_presence, int32]
-       rr2InLine fidl_vector
-       rr3InLine array[flags[fidl_handle_presence, int32], 3]
 } [packed]
 fidl_test_experimentalmaybefromtypealias_TestingOutOfLine {
        u2OutOfLine array[int64]
@@ -49,7 +43,6 @@ fidl_test_experimentalmaybefromtypealias_TestingOutOfLine {
        v2OutOfLine parallel_array[fidl_vector, array[int64]]
        v3OutOfLine array[array[int64], 4]
        a2OutOfLine array[array[int64, 1]]
-       p2OutOfLine array[flags[fidl_handle_presence, int32]]
        r2OutOfLine array[flags[fidl_handle_presence, int32]]
        b1OutOfLine array[int8]
        b2OutOfLine parallel_array[fidl_vector, array[int8]]
@@ -61,18 +54,11 @@ fidl_test_experimentalmaybefromtypealias_TestingOutOfLine {
        vv2OutOfLine parallel_array[fidl_vector, array[int64]]
        vv3OutOfLine array[array[int64], 3]
        aa2OutOfLine array[array[int64, 2]]
-       rr2OutOfLine array[flags[fidl_handle_presence, int32]]
 } [packed]
 fidl_test_experimentalmaybefromtypealias_TestingHandles {
-       p1 zx_chan_fidl_test_experimentalmaybefromtypealias_MyProtocol_server
-       p2 array[zx_chan_fidl_test_experimentalmaybefromtypealias_MyProtocol_server]
-       p3Handles array[zx_chan_fidl_test_experimentalmaybefromtypealias_MyProtocol_server, 4]
        r1 zx_chan_fidl_test_experimentalmaybefromtypealias_MyProtocol_server
        r2 array[zx_chan_fidl_test_experimentalmaybefromtypealias_MyProtocol_server]
        r3Handles array[zx_chan_fidl_test_experimentalmaybefromtypealias_MyProtocol_server, 4]
-       rr1 zx_chan_fidl_test_experimentalmaybefromtypealias_MyProtocol_server
-       rr2 array[zx_chan_fidl_test_experimentalmaybefromtypealias_MyProtocol_server]
-       rr3Handles array[zx_chan_fidl_test_experimentalmaybefromtypealias_MyProtocol_server, 3]
 } [packed]
 
 

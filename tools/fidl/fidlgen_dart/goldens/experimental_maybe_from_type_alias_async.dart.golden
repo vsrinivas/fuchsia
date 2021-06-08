@@ -54,9 +54,6 @@ class Testing extends $fidl.Struct {
     required this.a1,
     required this.a2,
     required this.a3,
-    required this.p1,
-    required this.p2,
-    required this.p3,
     this.r1,
     required this.r2,
     required this.r3,
@@ -72,9 +69,6 @@ class Testing extends $fidl.Struct {
     required this.aa1,
     required this.aa2,
     required this.aa3,
-    required this.rr1,
-    required this.rr2,
-    required this.rr3,
   });
   Testing.clone(
     Testing $orig, {
@@ -91,9 +85,6 @@ class Testing extends $fidl.Struct {
     Uint64List? a1,
     List<Uint64List>? a2,
     List<Uint64List>? a3,
-    $fidl.InterfaceRequest<MyProtocol>? p1,
-    List<$fidl.InterfaceRequest<MyProtocol>>? p2,
-    List<$fidl.InterfaceRequest<MyProtocol>>? p3,
     $fidl.InterfaceRequest<MyProtocol>? r1,
     List<$fidl.InterfaceRequest<MyProtocol>?>? r2,
     List<$fidl.InterfaceRequest<MyProtocol>?>? r3,
@@ -109,9 +100,6 @@ class Testing extends $fidl.Struct {
     Uint64List? aa1,
     List<Uint64List>? aa2,
     List<Uint64List>? aa3,
-    $fidl.InterfaceRequest<MyProtocol>? rr1,
-    List<$fidl.InterfaceRequest<MyProtocol>>? rr2,
-    List<$fidl.InterfaceRequest<MyProtocol>>? rr3,
   }) : this(
           u1: u1 ?? $orig.u1,
           u2: u2 ?? $orig.u2,
@@ -126,9 +114,6 @@ class Testing extends $fidl.Struct {
           a1: a1 ?? $orig.a1,
           a2: a2 ?? $orig.a2,
           a3: a3 ?? $orig.a3,
-          p1: p1 ?? $orig.p1,
-          p2: p2 ?? $orig.p2,
-          p3: p3 ?? $orig.p3,
           r1: r1 ?? $orig.r1,
           r2: r2 ?? $orig.r2,
           r3: r3 ?? $orig.r3,
@@ -144,9 +129,6 @@ class Testing extends $fidl.Struct {
           aa1: aa1 ?? $orig.aa1,
           aa2: aa2 ?? $orig.aa2,
           aa3: aa3 ?? $orig.aa3,
-          rr1: rr1 ?? $orig.rr1,
-          rr2: rr2 ?? $orig.rr2,
-          rr3: rr3 ?? $orig.rr3,
         );
 
   Testing.cloneWithout(
@@ -167,9 +149,6 @@ class Testing extends $fidl.Struct {
           a1: $orig.a1,
           a2: $orig.a2,
           a3: $orig.a3,
-          p1: $orig.p1,
-          p2: $orig.p2,
-          p3: $orig.p3,
           r1: r1 ? null : $orig.r1,
           r2: $orig.r2,
           r3: $orig.r3,
@@ -185,9 +164,6 @@ class Testing extends $fidl.Struct {
           aa1: $orig.aa1,
           aa2: $orig.aa2,
           aa3: $orig.aa3,
-          rr1: $orig.rr1,
-          rr2: $orig.rr2,
-          rr3: $orig.rr3,
         );
 
   final int u1;
@@ -203,9 +179,6 @@ class Testing extends $fidl.Struct {
   final Uint64List a1;
   final List<Uint64List> a2;
   final List<Uint64List> a3;
-  final $fidl.InterfaceRequest<MyProtocol> p1;
-  final List<$fidl.InterfaceRequest<MyProtocol>> p2;
-  final List<$fidl.InterfaceRequest<MyProtocol>> p3;
   final $fidl.InterfaceRequest<MyProtocol>? r1;
   final List<$fidl.InterfaceRequest<MyProtocol>?> r2;
   final List<$fidl.InterfaceRequest<MyProtocol>?> r3;
@@ -221,9 +194,6 @@ class Testing extends $fidl.Struct {
   final Uint64List aa1;
   final List<Uint64List> aa2;
   final List<Uint64List> aa3;
-  final $fidl.InterfaceRequest<MyProtocol> rr1;
-  final List<$fidl.InterfaceRequest<MyProtocol>> rr2;
-  final List<$fidl.InterfaceRequest<MyProtocol>> rr3;
 
   @override
   List<Object?> get $fields {
@@ -241,9 +211,6 @@ class Testing extends $fidl.Struct {
       a1,
       a2,
       a3,
-      p1,
-      p2,
-      p3,
       r1,
       r2,
       r3,
@@ -259,9 +226,6 @@ class Testing extends $fidl.Struct {
       aa1,
       aa2,
       aa3,
-      rr1,
-      rr2,
-      rr3,
     ];
   }
 
@@ -306,72 +270,53 @@ class Testing extends $fidl.Struct {
       element: $fidl.ArrayType<int, Uint64List>(
           element: $fidl.Uint64Type(), elementCount: 1),
       elementCount: 4);
-  static const $fieldType13 = $fidl.InterfaceRequestType<MyProtocol>();
+  static const $fieldType13 = $fidl.NullableInterfaceRequestType<MyProtocol>();
   static const $fieldType14 = $fidl.VectorType<
-          $fidl.InterfaceRequest<MyProtocol>,
-          List<$fidl.InterfaceRequest<MyProtocol>>>(
-      element: $fidl.InterfaceRequestType<MyProtocol>(),
+          $fidl.InterfaceRequest<MyProtocol>?,
+          List<$fidl.InterfaceRequest<MyProtocol>?>>(
+      element: $fidl.NullableInterfaceRequestType<MyProtocol>(),
       maybeElementCount: null);
   static const $fieldType15 = $fidl.ArrayType<
-          $fidl.InterfaceRequest<MyProtocol>,
-          List<$fidl.InterfaceRequest<MyProtocol>>>(
-      element: $fidl.InterfaceRequestType<MyProtocol>(), elementCount: 4);
-  static const $fieldType16 = $fidl.NullableInterfaceRequestType<MyProtocol>();
-  static const $fieldType17 = $fidl.VectorType<
-          $fidl.InterfaceRequest<MyProtocol>?,
-          List<$fidl.InterfaceRequest<MyProtocol>?>>(
-      element: $fidl.NullableInterfaceRequestType<MyProtocol>(),
-      maybeElementCount: null);
-  static const $fieldType18 = $fidl.ArrayType<
           $fidl.InterfaceRequest<MyProtocol>?,
           List<$fidl.InterfaceRequest<MyProtocol>?>>(
       element: $fidl.NullableInterfaceRequestType<MyProtocol>(),
       elementCount: 4);
-  static const $fieldType19 = $fidl.VectorType<int, Uint8List>(
+  static const $fieldType16 = $fidl.VectorType<int, Uint8List>(
       element: $fidl.Uint8Type(), maybeElementCount: null);
-  static const $fieldType20 = $fidl.VectorType<Uint8List, List<Uint8List>>(
+  static const $fieldType17 = $fidl.VectorType<Uint8List, List<Uint8List>>(
       element: $fidl.VectorType<int, Uint8List>(
           element: $fidl.Uint8Type(), maybeElementCount: null),
       maybeElementCount: null);
-  static const $fieldType21 = $fidl.ArrayType<Uint8List, List<Uint8List>>(
+  static const $fieldType18 = $fidl.ArrayType<Uint8List, List<Uint8List>>(
       element: $fidl.VectorType<int, Uint8List>(
           element: $fidl.Uint8Type(), maybeElementCount: null),
       elementCount: 4);
-  static const $fieldType22 = $fidl.StringType(maybeElementCount: null);
-  static const $fieldType23 = $fidl.VectorType<String, List<String>>(
+  static const $fieldType19 = $fidl.StringType(maybeElementCount: null);
+  static const $fieldType20 = $fidl.VectorType<String, List<String>>(
       element: $fidl.StringType(maybeElementCount: null),
       maybeElementCount: null);
-  static const $fieldType24 = $fidl.ArrayType<String, List<String>>(
+  static const $fieldType21 = $fidl.ArrayType<String, List<String>>(
       element: $fidl.StringType(maybeElementCount: null), elementCount: 4);
-  static const $fieldType25 = $fidl.VectorType<int, Uint64List>(
+  static const $fieldType22 = $fidl.VectorType<int, Uint64List>(
       element: $fidl.Uint64Type(), maybeElementCount: 2);
-  static const $fieldType26 = $fidl.VectorType<Uint64List, List<Uint64List>>(
+  static const $fieldType23 = $fidl.VectorType<Uint64List, List<Uint64List>>(
       element: $fidl.VectorType<int, Uint64List>(
           element: $fidl.Uint64Type(), maybeElementCount: 2),
+      maybeElementCount: 3);
+  static const $fieldType24 = $fidl.ArrayType<Uint64List, List<Uint64List>>(
+      element: $fidl.VectorType<int, Uint64List>(
+          element: $fidl.Uint64Type(), maybeElementCount: 2),
+      elementCount: 3);
+  static const $fieldType25 = $fidl.ArrayType<int, Uint64List>(
+      element: $fidl.Uint64Type(), elementCount: 2);
+  static const $fieldType26 = $fidl.VectorType<Uint64List, List<Uint64List>>(
+      element: $fidl.ArrayType<int, Uint64List>(
+          element: $fidl.Uint64Type(), elementCount: 2),
       maybeElementCount: 3);
   static const $fieldType27 = $fidl.ArrayType<Uint64List, List<Uint64List>>(
-      element: $fidl.VectorType<int, Uint64List>(
-          element: $fidl.Uint64Type(), maybeElementCount: 2),
-      elementCount: 3);
-  static const $fieldType28 = $fidl.ArrayType<int, Uint64List>(
-      element: $fidl.Uint64Type(), elementCount: 2);
-  static const $fieldType29 = $fidl.VectorType<Uint64List, List<Uint64List>>(
-      element: $fidl.ArrayType<int, Uint64List>(
-          element: $fidl.Uint64Type(), elementCount: 2),
-      maybeElementCount: 3);
-  static const $fieldType30 = $fidl.ArrayType<Uint64List, List<Uint64List>>(
       element: $fidl.ArrayType<int, Uint64List>(
           element: $fidl.Uint64Type(), elementCount: 2),
       elementCount: 3);
-  static const $fieldType31 = $fidl.InterfaceRequestType<MyProtocol>();
-  static const $fieldType32 = $fidl.VectorType<
-          $fidl.InterfaceRequest<MyProtocol>,
-          List<$fidl.InterfaceRequest<MyProtocol>>>(
-      element: $fidl.InterfaceRequestType<MyProtocol>(), maybeElementCount: 3);
-  static const $fieldType33 = $fidl.ArrayType<
-          $fidl.InterfaceRequest<MyProtocol>,
-          List<$fidl.InterfaceRequest<MyProtocol>>>(
-      element: $fidl.InterfaceRequestType<MyProtocol>(), elementCount: 3);
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
@@ -388,27 +333,21 @@ class Testing extends $fidl.Struct {
     $fieldType10.encode($encoder, a1, $offset + 256, $depth);
     $fieldType11.encode($encoder, a2, $offset + 264, $depth);
     $fieldType12.encode($encoder, a3, $offset + 280, $depth);
-    $fieldType13.encode($encoder, p1, $offset + 312, $depth);
-    $fieldType14.encode($encoder, p2, $offset + 320, $depth);
-    $fieldType15.encode($encoder, p3, $offset + 336, $depth);
-    $fieldType16.encode($encoder, r1, $offset + 352, $depth);
-    $fieldType17.encode($encoder, r2, $offset + 360, $depth);
-    $fieldType18.encode($encoder, r3, $offset + 376, $depth);
-    $fieldType19.encode($encoder, b1, $offset + 392, $depth);
-    $fieldType20.encode($encoder, b2, $offset + 408, $depth);
-    $fieldType21.encode($encoder, b3, $offset + 424, $depth);
-    $fieldType22.encode($encoder, s1, $offset + 488, $depth);
-    $fieldType23.encode($encoder, s2, $offset + 504, $depth);
-    $fieldType24.encode($encoder, s3, $offset + 520, $depth);
-    $fieldType25.encode($encoder, vv1, $offset + 584, $depth);
-    $fieldType26.encode($encoder, vv2, $offset + 600, $depth);
-    $fieldType27.encode($encoder, vv3, $offset + 616, $depth);
-    $fieldType28.encode($encoder, aa1, $offset + 664, $depth);
-    $fieldType29.encode($encoder, aa2, $offset + 680, $depth);
-    $fieldType30.encode($encoder, aa3, $offset + 696, $depth);
-    $fieldType31.encode($encoder, rr1, $offset + 744, $depth);
-    $fieldType32.encode($encoder, rr2, $offset + 752, $depth);
-    $fieldType33.encode($encoder, rr3, $offset + 768, $depth);
+    $fieldType13.encode($encoder, r1, $offset + 312, $depth);
+    $fieldType14.encode($encoder, r2, $offset + 320, $depth);
+    $fieldType15.encode($encoder, r3, $offset + 336, $depth);
+    $fieldType16.encode($encoder, b1, $offset + 352, $depth);
+    $fieldType17.encode($encoder, b2, $offset + 368, $depth);
+    $fieldType18.encode($encoder, b3, $offset + 384, $depth);
+    $fieldType19.encode($encoder, s1, $offset + 448, $depth);
+    $fieldType20.encode($encoder, s2, $offset + 464, $depth);
+    $fieldType21.encode($encoder, s3, $offset + 480, $depth);
+    $fieldType22.encode($encoder, vv1, $offset + 544, $depth);
+    $fieldType23.encode($encoder, vv2, $offset + 560, $depth);
+    $fieldType24.encode($encoder, vv3, $offset + 576, $depth);
+    $fieldType25.encode($encoder, aa1, $offset + 624, $depth);
+    $fieldType26.encode($encoder, aa2, $offset + 640, $depth);
+    $fieldType27.encode($encoder, aa3, $offset + 656, $depth);
   }
 
   @override
@@ -439,12 +378,6 @@ class Testing extends $fidl.Struct {
         a2.toString() +
         r', a3: ' +
         a3.toString() +
-        r', p1: ' +
-        p1.toString() +
-        r', p2: ' +
-        p2.toString() +
-        r', p3: ' +
-        p3.toString() +
         r', r1: ' +
         r1.toString() +
         r', r2: ' +
@@ -475,12 +408,6 @@ class Testing extends $fidl.Struct {
         aa2.toString() +
         r', aa3: ' +
         aa3.toString() +
-        r', rr1: ' +
-        rr1.toString() +
-        r', rr2: ' +
-        rr2.toString() +
-        r', rr3: ' +
-        rr3.toString() +
         r')';
   }
 
@@ -500,34 +427,28 @@ class Testing extends $fidl.Struct {
         a1: $fieldType10.decode($decoder, $offset + 256, $depth),
         a2: $fieldType11.decode($decoder, $offset + 264, $depth),
         a3: $fieldType12.decode($decoder, $offset + 280, $depth),
-        p1: $fieldType13.decode($decoder, $offset + 312, $depth),
-        p2: $fieldType14.decode($decoder, $offset + 320, $depth),
-        p3: $fieldType15.decode($decoder, $offset + 336, $depth),
-        r1: $fieldType16.decode($decoder, $offset + 352, $depth),
-        r2: $fieldType17.decode($decoder, $offset + 360, $depth),
-        r3: $fieldType18.decode($decoder, $offset + 376, $depth),
-        b1: $fieldType19.decode($decoder, $offset + 392, $depth),
-        b2: $fieldType20.decode($decoder, $offset + 408, $depth),
-        b3: $fieldType21.decode($decoder, $offset + 424, $depth),
-        s1: $fieldType22.decode($decoder, $offset + 488, $depth),
-        s2: $fieldType23.decode($decoder, $offset + 504, $depth),
-        s3: $fieldType24.decode($decoder, $offset + 520, $depth),
-        vv1: $fieldType25.decode($decoder, $offset + 584, $depth),
-        vv2: $fieldType26.decode($decoder, $offset + 600, $depth),
-        vv3: $fieldType27.decode($decoder, $offset + 616, $depth),
-        aa1: $fieldType28.decode($decoder, $offset + 664, $depth),
-        aa2: $fieldType29.decode($decoder, $offset + 680, $depth),
-        aa3: $fieldType30.decode($decoder, $offset + 696, $depth),
-        rr1: $fieldType31.decode($decoder, $offset + 744, $depth),
-        rr2: $fieldType32.decode($decoder, $offset + 752, $depth),
-        rr3: $fieldType33.decode($decoder, $offset + 768, $depth));
+        r1: $fieldType13.decode($decoder, $offset + 312, $depth),
+        r2: $fieldType14.decode($decoder, $offset + 320, $depth),
+        r3: $fieldType15.decode($decoder, $offset + 336, $depth),
+        b1: $fieldType16.decode($decoder, $offset + 352, $depth),
+        b2: $fieldType17.decode($decoder, $offset + 368, $depth),
+        b3: $fieldType18.decode($decoder, $offset + 384, $depth),
+        s1: $fieldType19.decode($decoder, $offset + 448, $depth),
+        s2: $fieldType20.decode($decoder, $offset + 464, $depth),
+        s3: $fieldType21.decode($decoder, $offset + 480, $depth),
+        vv1: $fieldType22.decode($decoder, $offset + 544, $depth),
+        vv2: $fieldType23.decode($decoder, $offset + 560, $depth),
+        vv3: $fieldType24.decode($decoder, $offset + 576, $depth),
+        aa1: $fieldType25.decode($decoder, $offset + 624, $depth),
+        aa2: $fieldType26.decode($decoder, $offset + 640, $depth),
+        aa3: $fieldType27.decode($decoder, $offset + 656, $depth));
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Testing> kTesting_Type = $fidl.StructType<Testing>(
-  inlineSize: 784,
+  inlineSize: 704,
   structDecode: Testing._structDecode,
 );
 

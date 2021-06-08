@@ -14,7 +14,7 @@
 ## **STRUCTS**
 
 ### Testing {#Testing}
-*Defined in [fidl.test.experimentalmaybefromtypealias/experimental_maybe_from_type_alias.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=17)*
+*Defined in [fidl.test.experimentalmaybefromtypealias/experimental_maybe_from_type_alias.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=15)*
 
 
 
@@ -107,27 +107,6 @@
             <td><code>a3</code></td>
             <td>
                 <code>[4]</code>
-            </td>
-            <td></td>
-            <td>No default</td>
-        </tr><tr id="Testing.p1">
-            <td><code>p1</code></td>
-            <td>
-                <code>request&lt;<a class='link' href='#MyProtocol'>MyProtocol</a>&gt;</code>
-            </td>
-            <td></td>
-            <td>No default</td>
-        </tr><tr id="Testing.p2">
-            <td><code>p2</code></td>
-            <td>
-                <code>vector&lt;fidl.test.experimentalmaybefromtypealias/MyProtocol&gt;</code>
-            </td>
-            <td></td>
-            <td>No default</td>
-        </tr><tr id="Testing.p3">
-            <td><code>p3</code></td>
-            <td>
-                <code>fidl.test.experimentalmaybefromtypealias/MyProtocol[4]</code>
             </td>
             <td></td>
             <td>No default</td>
@@ -236,27 +215,6 @@
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr id="Testing.rr1">
-            <td><code>rr1</code></td>
-            <td>
-                <code><a class='link' href='#AliasOfRequestContainingAliasOfProtocol'>AliasOfRequestContainingAliasOfProtocol</a></code>
-            </td>
-            <td></td>
-            <td>No default</td>
-        </tr><tr id="Testing.rr2">
-            <td><code>rr2</code></td>
-            <td>
-                <code>vector&lt;fidl.test.experimentalmaybefromtypealias/MyProtocol&gt;[3]</code>
-            </td>
-            <td></td>
-            <td>No default</td>
-        </tr><tr id="Testing.rr3">
-            <td><code>rr3</code></td>
-            <td>
-                <code>fidl.test.experimentalmaybefromtypealias/MyProtocol[3]</code>
-            </td>
-            <td></td>
-            <td>No default</td>
         </tr>
 </table>
 
@@ -276,12 +234,12 @@
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="AliasOfArray">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=11">AliasOfArray</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=10">AliasOfArray</a></td>
             <td>
                 <code>array</code>[<code>1</code>]</td>
             <td></td>
         </tr><tr id="AliasOfArrayContainingAliasOfArray">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=14">AliasOfArrayContainingAliasOfArray</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=13">AliasOfArrayContainingAliasOfArray</a></td>
             <td>
                 <code>array</code>[<code>2</code>]</td>
             <td></td>
@@ -290,18 +248,8 @@
             <td>
                 <code>vector</code></td>
             <td></td>
-        </tr><tr id="AliasOfProtocol">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=9">AliasOfProtocol</a></td>
-            <td>
-                <code>fidl.test.experimentalmaybefromtypealias/MyProtocol</code></td>
-            <td></td>
         </tr><tr id="AliasOfRequest">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=12">AliasOfRequest</a></td>
-            <td>
-                <code>request</code></td>
-            <td></td>
-        </tr><tr id="AliasOfRequestContainingAliasOfProtocol">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=15">AliasOfRequestContainingAliasOfProtocol</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=11">AliasOfRequest</a></td>
             <td>
                 <code>request</code></td>
             <td></td>
@@ -311,7 +259,7 @@
                 <code>string</code></td>
             <td></td>
         </tr><tr id="AliasOfVectorContainingAliasOfVector">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=13">AliasOfVectorContainingAliasOfVector</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=12">AliasOfVectorContainingAliasOfVector</a></td>
             <td>
                 <code>vector</code>[<code>2</code>]</td>
             <td></td>
@@ -321,7 +269,7 @@
                 <code>uint64</code></td>
             <td></td>
         </tr><tr id="Vector">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=10">Vector</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/experimental_maybe_from_type_alias.test.fidl;l=9">Vector</a></td>
             <td>
                 <code>vector</code></td>
             <td></td>

@@ -6,13 +6,11 @@ protocol MyProtocol {
 alias AliasOfBytes = bytes;
 alias AliasOfString = string;
 alias U64 = uint64;
-alias AliasOfProtocol = MyProtocol;
 alias Vector = vector<uint64>?;
 alias AliasOfArray = array<uint64>:1;
-alias AliasOfRequest = request<MyProtocol?>?;
+alias AliasOfRequest = request<MyProtocol>?;
 alias AliasOfVectorContainingAliasOfVector = vector<U64>:2;
 alias AliasOfArrayContainingAliasOfArray = array<U64>:2;
-alias AliasOfRequestContainingAliasOfProtocol = request<AliasOfProtocol>;
 
 resource struct Testing {
     U64 u1;
@@ -30,10 +28,6 @@ resource struct Testing {
     AliasOfArray a1;
     vector<AliasOfArray> a2;
     array<AliasOfArray>:4 a3;
-
-    request<AliasOfProtocol> p1;
-    vector<request<AliasOfProtocol>> p2;
-    array<request<AliasOfProtocol>>:4 p3;
 
     AliasOfRequest r1;
     vector<AliasOfRequest> r2;
@@ -54,8 +48,4 @@ resource struct Testing {
     AliasOfArrayContainingAliasOfArray aa1;
     vector<AliasOfArrayContainingAliasOfArray>:3 aa2;
     array<AliasOfArrayContainingAliasOfArray>:3 aa3;
-
-    AliasOfRequestContainingAliasOfProtocol rr1;
-    vector<AliasOfRequestContainingAliasOfProtocol>:3 rr2;
-    array<AliasOfRequestContainingAliasOfProtocol>:3 rr3;
 };

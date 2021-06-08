@@ -42,9 +42,6 @@ pub struct Testing {
     pub a1: [u64; 1],
     pub a2: Vec<[u64; 1]>,
     pub a3: [[u64; 1]; 4],
-    pub p1: fidl::endpoints::ServerEnd<MyProtocolMarker>,
-    pub p2: Vec<fidl::endpoints::ServerEnd<MyProtocolMarker>>,
-    pub p3: [fidl::endpoints::ServerEnd<MyProtocolMarker>; 4],
     pub r1: Option<fidl::endpoints::ServerEnd<MyProtocolMarker>>,
     pub r2: Vec<Option<fidl::endpoints::ServerEnd<MyProtocolMarker>>>,
     pub r3: [Option<fidl::endpoints::ServerEnd<MyProtocolMarker>>; 4],
@@ -60,9 +57,6 @@ pub struct Testing {
     pub aa1: [u64; 2],
     pub aa2: Vec<[u64; 2]>,
     pub aa3: [[u64; 2]; 3],
-    pub rr1: fidl::endpoints::ServerEnd<MyProtocolMarker>,
-    pub rr2: Vec<fidl::endpoints::ServerEnd<MyProtocolMarker>>,
-    pub rr3: [fidl::endpoints::ServerEnd<MyProtocolMarker>; 3],
 }
 
 fidl_struct! {
@@ -120,33 +114,9 @@ fidl_struct! {
       ty: [[u64; 1]; 4],
       offset_v1: 280,
     },
-    p1 {
-      ty: fidl::endpoints::ServerEnd<MyProtocolMarker>,
-      offset_v1: 312,
-      handle_metadata: {
-        handle_subtype: fidl::ObjectType::CHANNEL,
-        handle_rights: fidl::Rights::CHANNEL_DEFAULT,
-      },
-    },
-    p2 {
-      ty: Vec<fidl::endpoints::ServerEnd<MyProtocolMarker>>,
-      offset_v1: 320,
-      handle_metadata: {
-        handle_subtype: fidl::ObjectType::CHANNEL,
-        handle_rights: fidl::Rights::CHANNEL_DEFAULT,
-      },
-    },
-    p3 {
-      ty: [fidl::endpoints::ServerEnd<MyProtocolMarker>; 4],
-      offset_v1: 336,
-      handle_metadata: {
-        handle_subtype: fidl::ObjectType::CHANNEL,
-        handle_rights: fidl::Rights::CHANNEL_DEFAULT,
-      },
-    },
     r1 {
       ty: Option<fidl::endpoints::ServerEnd<MyProtocolMarker>>,
-      offset_v1: 352,
+      offset_v1: 312,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::CHANNEL_DEFAULT,
@@ -154,7 +124,7 @@ fidl_struct! {
     },
     r2 {
       ty: Vec<Option<fidl::endpoints::ServerEnd<MyProtocolMarker>>>,
-      offset_v1: 360,
+      offset_v1: 320,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::CHANNEL_DEFAULT,
@@ -162,7 +132,7 @@ fidl_struct! {
     },
     r3 {
       ty: [Option<fidl::endpoints::ServerEnd<MyProtocolMarker>>; 4],
-      offset_v1: 376,
+      offset_v1: 336,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::CHANNEL_DEFAULT,
@@ -170,75 +140,51 @@ fidl_struct! {
     },
     b1 {
       ty: Vec<u8>,
-      offset_v1: 392,
+      offset_v1: 352,
     },
     b2 {
       ty: Vec<Vec<u8>>,
-      offset_v1: 408,
+      offset_v1: 368,
     },
     b3 {
       ty: [Vec<u8>; 4],
-      offset_v1: 424,
+      offset_v1: 384,
     },
     s1 {
       ty: String,
-      offset_v1: 488,
+      offset_v1: 448,
     },
     s2 {
       ty: Vec<String>,
-      offset_v1: 504,
+      offset_v1: 464,
     },
     s3 {
       ty: [String; 4],
-      offset_v1: 520,
+      offset_v1: 480,
     },
     vv1 {
       ty: Vec<u64>,
-      offset_v1: 584,
+      offset_v1: 544,
     },
     vv2 {
       ty: Vec<Vec<u64>>,
-      offset_v1: 600,
+      offset_v1: 560,
     },
     vv3 {
       ty: [Vec<u64>; 3],
-      offset_v1: 616,
+      offset_v1: 576,
     },
     aa1 {
       ty: [u64; 2],
-      offset_v1: 664,
+      offset_v1: 624,
     },
     aa2 {
       ty: Vec<[u64; 2]>,
-      offset_v1: 680,
+      offset_v1: 640,
     },
     aa3 {
       ty: [[u64; 2]; 3],
-      offset_v1: 696,
-    },
-    rr1 {
-      ty: fidl::endpoints::ServerEnd<MyProtocolMarker>,
-      offset_v1: 744,
-      handle_metadata: {
-        handle_subtype: fidl::ObjectType::CHANNEL,
-        handle_rights: fidl::Rights::CHANNEL_DEFAULT,
-      },
-    },
-    rr2 {
-      ty: Vec<fidl::endpoints::ServerEnd<MyProtocolMarker>>,
-      offset_v1: 752,
-      handle_metadata: {
-        handle_subtype: fidl::ObjectType::CHANNEL,
-        handle_rights: fidl::Rights::CHANNEL_DEFAULT,
-      },
-    },
-    rr3 {
-      ty: [fidl::endpoints::ServerEnd<MyProtocolMarker>; 3],
-      offset_v1: 768,
-      handle_metadata: {
-        handle_subtype: fidl::ObjectType::CHANNEL,
-        handle_rights: fidl::Rights::CHANNEL_DEFAULT,
-      },
+      offset_v1: 656,
     },
   ],
   padding: [
@@ -246,23 +192,8 @@ fidl_struct! {
       ty: u64,
       offset: 312,
       mask: 0xffffffff00000000u64,
-  },
-  {
-      ty: u64,
-      offset: 352,
-      mask: 0xffffffff00000000u64,
-  },
-  {
-      ty: u64,
-      offset: 744,
-      mask: 0xffffffff00000000u64,
-  },
-  {
-      ty: u64,
-      offset: 776,
-      mask: 0xffffffff00000000u64,
   },],
-  size_v1: 784,
+  size_v1: 704,
   align_v1: 8,
 }
 
