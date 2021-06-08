@@ -14,34 +14,46 @@
 namespace debug_ipc {
 
 enum AutomationOperandKind : uint32_t {
+  // This type is just used as a default value. It outputs zero when evaluated.
+  kZero = 0,
+
   // A kRegister takes a register index (in index_), and outputs the 64 bit value stored in that
   // register.
-  kRegister = 0,
+  kRegister = 1,
 
   // A kConstant takes a uint32_t constant value (in value_), and outputs that value extended to a
   // uint64_t.
-  kConstant = 1,
+  kConstant = 2,
 
   // A kStackSlot takes an offset into the stack (in index_), and returns the 64 bit value at that
   // stack location.
-  kStackSlot = 2,
+  kStackSlot = 3,
 
   // A kRegisterTimesConstant takes a register index (in index_) and a constant value (in value_),
   // and outputs the value of that register multiplied by the value.
-  kRegisterTimesConstant = 3,
+  kRegisterTimesConstant = 4,
 
-  // TODO(michaelrj): Implement the indirect operands.
-  // kIndirectUInt32 = 4,
-  // kIndirectUInt64 = 5,
-  // kIndirectUInt32Loop = 6,
-  // kIndirectUInt64Loop = 7,
+  // a kIndirectUInt32 takes a register index (in index_) and a constant offset (in value_), and
+  // outputs the 32 bit value at *(register + offset)
+  kIndirectUInt32 = 5,
+
+  // a kIndirectUInt64 takes a register index (in index_) and a constant offset (in value_), and
+  // outputs the 64 bit value at *(register + offset)
+  kIndirectUInt64 = 6,
+
+  // a kIndirectUInt32Loop is a special operand that is only valid for kLoopLoadMemory instructions.
+  // It takes a constant offset (in value_), and outputs the 32 bit value at
+  // *(address + cur_struct + offset)
+  kIndirectUInt32Loop = 7,
+
+  // a kIndirectUInt64Loop is a special operand that is only valid for kLoopLoadMemory instructions.
+  // It takes a constant offset (in value_), and outputs the 64 bit value at
+  // *(address + cur_struct + offset)
+  kIndirectUInt64Loop = 8,
 
   // A kStoredValue takes a slot in the list of stored values (in index_), and outputs the 64 bit
   // value stored in that slot.
-  kStoredValue = 8,
-
-  // This type is just used as a default value. It outputs zero when evaluated.
-  kDefaultOperand = 16
+  kStoredValue = 9,
 };
 
 struct AutomationOperand {
@@ -54,22 +66,36 @@ struct AutomationOperand {
     kind_ = AutomationOperandKind::kConstant;
     value_ = value;
   }
-  void InitStackSlot(uint32_t slot_index) {
+  void InitStackSlot(uint32_t slot_offset) {
     kind_ = AutomationOperandKind::kStackSlot;
-    index_ = slot_index;
+    index_ = slot_offset;
   }
   void InitRegisterTimesConstant(debug_ipc::RegisterID index, uint32_t value) {
     kind_ = AutomationOperandKind::kRegisterTimesConstant;
     index_ = static_cast<uint32_t>(index);
     value_ = value;
   }
-  // void InitIndirectUInt32() {kind_ = AutomationOperandKind::kIndirectUInt32;}
-  // void InitIndirectUInt64() {kind_ = AutomationOperandKind::kIndirectUInt64;}
-  // void InitIndirectUInt32Loop() {kind_ = AutomationOperandKind::kIndirectUInt32Loop;}
-  // void InitIndirectUInt64Loop() {kind_ = AutomationOperandKind::kIndirectUInt64Loop;}
-  void InitStoredValue(uint32_t slot_index) {
+  void InitIndirectUInt32(debug_ipc::RegisterID index, uint32_t value) {
+    kind_ = AutomationOperandKind::kIndirectUInt32;
+    index_ = static_cast<uint32_t>(index);
+    value_ = value;
+  }
+  void InitIndirectUInt64(debug_ipc::RegisterID index, uint32_t value) {
+    kind_ = AutomationOperandKind::kIndirectUInt64;
+    index_ = static_cast<uint32_t>(index);
+    value_ = value;
+  }
+  void InitIndirectUInt32Loop(uint32_t value) {
+    kind_ = AutomationOperandKind::kIndirectUInt32Loop;
+    value_ = value;
+  }
+  void InitIndirectUInt64Loop(uint32_t value) {
+    kind_ = AutomationOperandKind::kIndirectUInt64Loop;
+    value_ = value;
+  }
+  void InitStoredValue(uint32_t slot_offset) {
     kind_ = AutomationOperandKind::kStoredValue;
-    index_ = slot_index;
+    index_ = slot_offset;
   }
 
   void InitRaw(AutomationOperandKind kind, uint32_t index, uint32_t value) {
@@ -81,7 +107,7 @@ struct AutomationOperand {
   debug_ipc::RegisterID register_index() const {
     return static_cast<debug_ipc::RegisterID>(index_);
   }
-  uint32_t slot_index() const { return index_; }
+  uint32_t slot_offset() const { return index_; }
   uint32_t index() const { return index_; }
 
   uint32_t value() const { return value_; }
@@ -90,30 +116,30 @@ struct AutomationOperand {
   AutomationOperandKind kind() const { return kind_; }
 
  private:
-  AutomationOperandKind kind_ = AutomationOperandKind::kDefaultOperand;
+  AutomationOperandKind kind_ = AutomationOperandKind::kZero;
   uint32_t index_ = 0;
   uint32_t value_ = 0;
 };
 
 enum AutomationConditionKind : uint32_t {
+  // This type is just used as a default value. It always returns false.
+  kFalse = 0,
+
   // A kEquals condition takes an operand and a uint64 constant.
   // It is true when operand == constant.
-  kEquals = 0,
+  kEquals = 1,
 
   // A kNotEquals condition takes an operand and a uint64 constant.
   // It is true when operand != constant.
-  kNotEquals = 1,
+  kNotEquals = 2,
 
   // A kMaskAndEquals condition takes an operand, a uint64 mask, and a uint64 constant.
   // It is true when (operand & mask) == constant.
-  kMaskAndEquals = 2,
+  kMaskAndEquals = 3,
 
   // A kMaskAndNotEquals condition takes an operand, a uint64 mask, and a uint64 constant.
   // It is true when (operand & mask) != constant.
-  kMaskAndNotEquals = 3,
-
-  // This type is just used as a default value. Has no effect if sent.
-  kDefaultCondition = 16,
+  kMaskAndNotEquals = 4,
 };
 
 struct AutomationCondition {
@@ -155,19 +181,22 @@ struct AutomationCondition {
   AutomationConditionKind kind() const { return kind_; }
 
  private:
-  AutomationConditionKind kind_ = AutomationConditionKind::kDefaultCondition;
+  AutomationConditionKind kind_ = AutomationConditionKind::kFalse;
   AutomationOperand operand_;
   uint64_t constant_ = 0;
   uint64_t mask_ = 0;
 };
 
 enum AutomationInstructionKind : uint32_t {
+  // This type is just used as a default value. Has no effect if sent.
+  kNop = 0,
+
   // A kLoadMemory instruction takes two Operands:
   //  address (in address_) is the address of some memory.
   //  length (in length_) is the number of bytes to load from that memory.
   // It preloads length bytes from the memory at address.
   // It also takes a vector of conditions and only executes if it has no false conditions.
-  kLoadMemory = 0,
+  kLoadMemory = 1,
 
   // A kLoopLoadMemory instruction takes four Operands and a uint32_t:
   //  address (in address_) is the address of an array of structs.
@@ -179,7 +208,7 @@ enum AutomationInstructionKind : uint32_t {
   // Next it iterates through each of the structs, preloading the number of bytes specified at
   // address[index] + struct_size_offset from the address at address[index] + struct_pointer_offset
   // It also takes a vector of conditions and only executes if it has no false conditions.
-  kLoopLoadMemory = 1,
+  kLoopLoadMemory = 2,
 
   // A kComputeAndStore instruction takes one Operand and a uint32_t:
   //  value (in extra_1_) is the operand to be stored.
@@ -187,15 +216,12 @@ enum AutomationInstructionKind : uint32_t {
   // It stores the value of the operand in that slot to be used by later operands. Nothing is
   // preloaded from this command.
   // It also takes a vector of conditions and only executes if it has no false conditions.
-  kComputeAndStore = 2,
+  kComputeAndStore = 3,
 
   // A kClearStoredValues instruction takes no Operands.
   // It clears all values stored by kComputeAndStore commands.
   // It also takes a vector of conditions and only executes if it has no false conditions.
-  kClearStoredValues = 3,
-
-  // This type is just used as a default value. Has no effect if sent.
-  kDefaultInstruction = 16
+  kClearStoredValues = 4,
 };
 
 // An instruction for automatically handling a breakpoint
@@ -209,7 +235,7 @@ struct AutomationInstruction {
     conditions_ = std::move(conditions);
   }
 
-  void InitLoadLoopMemory(AutomationOperand address, AutomationOperand length,
+  void InitLoopLoadMemory(AutomationOperand address, AutomationOperand length,
                           AutomationOperand struct_pointer_offset,
                           AutomationOperand struct_length_offset, uint32_t item_size,
                           std::vector<AutomationCondition> conditions) {
@@ -266,7 +292,7 @@ struct AutomationInstruction {
   AutomationInstructionKind kind() const { return kind_; }
 
  private:
-  AutomationInstructionKind kind_ = AutomationInstructionKind::kDefaultInstruction;
+  AutomationInstructionKind kind_ = AutomationInstructionKind::kNop;
   AutomationOperand address_;
   AutomationOperand length_;
   AutomationOperand extra_1_;

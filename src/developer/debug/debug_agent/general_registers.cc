@@ -12,4 +12,15 @@ void GeneralRegisters::CopyTo(std::vector<debug_ipc::Register>& dest) const {
   arch::SaveGeneralRegs(regs_, dest);
 }
 
+std::optional<uint64_t> GeneralRegisters::GetRegister(const debug_ipc::RegisterID reg_id) const {
+  std::vector<debug_ipc::Register> reg_vect;
+  CopyTo(reg_vect);
+  for (const auto& reg : reg_vect) {
+    if (reg.id == reg_id) {
+      return std::optional<uint64_t>(reg.GetValue());
+    }
+  }
+  return std::nullopt;
+}
+
 }  // namespace debug_agent
