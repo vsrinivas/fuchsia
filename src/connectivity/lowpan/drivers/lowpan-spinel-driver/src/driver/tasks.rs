@@ -197,6 +197,46 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         })
     }
 
+    async fn handle_network_interface_event(
+        &self,
+        event: NetworkInterfaceEvent,
+    ) -> Result<(), Error> {
+        Ok(match event {
+            NetworkInterfaceEvent::InterfaceEnabledChanged(enabled) => {
+                let mut driver_state = self.driver_state.lock();
+
+                let new_connectivity_state = if enabled {
+                    driver_state.connectivity_state.activated()
+                } else {
+                    driver_state.connectivity_state.deactivated()
+                };
+
+                if new_connectivity_state != driver_state.connectivity_state {
+                    let old_connectivity_state = driver_state.connectivity_state;
+                    driver_state.connectivity_state = new_connectivity_state;
+                    std::mem::drop(driver_state);
+                    self.driver_state_change.trigger();
+                    self.on_connectivity_state_change(
+                        new_connectivity_state,
+                        old_connectivity_state,
+                    );
+                }
+            }
+            NetworkInterfaceEvent::AddressWasAdded(x) => {
+                self.handle_netstack_added_address(x).await?
+            }
+            NetworkInterfaceEvent::AddressWasRemoved(x) => {
+                self.handle_netstack_removed_address(x).await?
+            }
+            NetworkInterfaceEvent::RouteToSubnetProvided(x) => {
+                self.handle_netstack_added_route(x).await?
+            }
+            NetworkInterfaceEvent::RouteToSubnetRevoked(x) => {
+                self.handle_netstack_removed_route(x).await?
+            }
+        })
+    }
+
     /// Main loop task that handles the high-level tasks for the driver.
     ///
     /// This task is intended to run continuously and will not normally
@@ -208,46 +248,26 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     ///
     /// This method is called from `wrap_inbound_stream()` in `inbound.rs`.
     pub(super) async fn take_main_task(&self) -> Result<(), Error> {
-        if self.did_vend_main_task.swap(true, std::sync::atomic::Ordering::Relaxed) {
-            panic!("take_main_task must only be called once");
-        }
+        let pending_outbound_frame_handler = self
+            .pending_outbound_frame_receiver
+            .lock()
+            .take()
+            .expect("take_main_task must only be called once")
+            .then(|x| async move {
+                if self.driver_state.lock().is_initialized() {
+                    self.frame_handler
+                        .send_raw_frame(&x)
+                        .await
+                        .context("pending_outbound_frame_handler")
+                } else {
+                    Ok(())
+                }
+            });
 
-        let net_if_event_stream = self.net_if.take_event_stream().and_then(|x| async move {
-            Ok(match x {
-                NetworkInterfaceEvent::InterfaceEnabledChanged(enabled) => {
-                    let mut driver_state = self.driver_state.lock();
-
-                    let new_connectivity_state = if enabled {
-                        driver_state.connectivity_state.activated()
-                    } else {
-                        driver_state.connectivity_state.deactivated()
-                    };
-
-                    if new_connectivity_state != driver_state.connectivity_state {
-                        let old_connectivity_state = driver_state.connectivity_state;
-                        driver_state.connectivity_state = new_connectivity_state;
-                        std::mem::drop(driver_state);
-                        self.driver_state_change.trigger();
-                        self.on_connectivity_state_change(
-                            new_connectivity_state,
-                            old_connectivity_state,
-                        );
-                    }
-                }
-                NetworkInterfaceEvent::AddressWasAdded(x) => {
-                    self.handle_netstack_added_address(x).await?
-                }
-                NetworkInterfaceEvent::AddressWasRemoved(x) => {
-                    self.handle_netstack_removed_address(x).await?
-                }
-                NetworkInterfaceEvent::RouteToSubnetProvided(x) => {
-                    self.handle_netstack_added_route(x).await?
-                }
-                NetworkInterfaceEvent::RouteToSubnetRevoked(x) => {
-                    self.handle_netstack_removed_route(x).await?
-                }
-            })
-        });
+        let net_if_event_stream = self
+            .net_if
+            .take_event_stream()
+            .and_then(|event| self.handle_network_interface_event(event));
 
         let main_loop_stream = futures::stream::try_unfold((), move |_| {
             self.single_main_loop()
@@ -255,9 +275,12 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                 .map_err(|x| x.context("single_main_loop"))
         });
 
-        futures::stream::select(main_loop_stream.into_stream(), net_if_event_stream)
-            .try_collect::<()>()
-            .await
+        futures::stream::select(
+            futures::stream::select(main_loop_stream.into_stream(), net_if_event_stream),
+            pending_outbound_frame_handler,
+        )
+        .try_collect::<()>()
+        .await
     }
 
     async fn sync_addresses(&self) -> Result<(), Error> {

@@ -62,14 +62,17 @@ pub struct AsyncConditionWait<'a> {
     trigger_after: usize,
 }
 
+impl<'a> AsyncConditionWait<'a> {
+    pub fn is_triggered(&self) -> bool {
+        self.is_terminated()
+            || self.trigger_after != self.condition.trigger_counter.load(Ordering::Acquire)
+    }
+}
+
 impl<'a> Future for AsyncConditionWait<'a> {
     type Output = ();
     fn poll(mut self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
-        if self.is_terminated() {
-            return Poll::Ready(());
-        }
-
-        if self.trigger_after != self.condition.trigger_counter.load(Ordering::Acquire) {
+        if self.is_triggered() {
             self.trigger_after = 0;
             return Poll::Ready(());
         }

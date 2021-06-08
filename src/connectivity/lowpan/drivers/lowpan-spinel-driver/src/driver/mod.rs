@@ -79,16 +79,22 @@ pub struct SpinelDriver<DS, NI> {
     /// don't step on each other.
     exclusive_task_lock: futures::lock::Mutex<()>,
 
-    did_vend_main_task: std::sync::atomic::AtomicBool,
-
     /// Debug Output Buffer
     ncp_debug_buffer: parking_lot::Mutex<Vec<u8>>,
 
+    /// Network Interface
     net_if: NI,
+
+    pending_outbound_frame_sender: futures::channel::mpsc::UnboundedSender<Vec<u8>>,
+
+    /// This gets used by `take_main_task()`.
+    pending_outbound_frame_receiver:
+        parking_lot::Mutex<Option<futures::channel::mpsc::UnboundedReceiver<Vec<u8>>>>,
 }
 
 impl<DS: SpinelDeviceClient, NI> SpinelDriver<DS, NI> {
     pub fn new(device_sink: DS, net_if: NI) -> Self {
+        let (sender, receiver) = futures::channel::mpsc::unbounded();
         SpinelDriver {
             frame_handler: FrameHandler::new(device_sink.clone()),
             device_sink,
@@ -96,9 +102,10 @@ impl<DS: SpinelDeviceClient, NI> SpinelDriver<DS, NI> {
             driver_state_change: AsyncCondition::new(),
             ncp_did_reset: AsyncCondition::new(),
             exclusive_task_lock: Default::default(),
-            did_vend_main_task: Default::default(),
             ncp_debug_buffer: Default::default(),
             net_if,
+            pending_outbound_frame_sender: sender,
+            pending_outbound_frame_receiver: parking_lot::Mutex::new(Some(receiver)),
         }
     }
 }

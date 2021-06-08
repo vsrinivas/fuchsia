@@ -292,9 +292,6 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
     async fn get_supported_network_types(&self) -> ZxResult<Vec<String>> {
         fx_log_info!("Got get_supported_network_types command");
 
-        // Wait for our turn.
-        let _lock = self.wait_for_api_task_lock("get_supported_network_types").await?;
-
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
 
@@ -313,11 +310,6 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         use fidl_fuchsia_lowpan::ChannelInfo;
 
         fx_log_info!("Got get_supported_channels command");
-
-        // Wait for our turn.
-        let _lock = self.wait_for_api_task_lock("get_supported_channels").await?;
-
-        traceln!("Got API task lock, waiting until we are ready.");
 
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
@@ -575,7 +567,8 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
 
             traceln!("energy_scan: Scan started!");
 
-            Ok(lock)
+            Ok(lock
+                .with_cleanup_request(CmdPropValueSet(PropMac::ScanState.into(), ScanState::Idle)))
         };
 
         let stream = self.frame_handler.inspect_as_stream(|frame| {
@@ -666,7 +659,8 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                 )
                 .await?;
 
-            Ok(lock)
+            Ok(lock
+                .with_cleanup_request(CmdPropValueSet(PropMac::ScanState.into(), ScanState::Idle)))
         };
 
         let stream = self.frame_handler.inspect_as_stream(|frame| {
@@ -1384,9 +1378,6 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
     async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>> {
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
-
-        // Wait for our turn.
-        let _lock = self.wait_for_api_task_lock("get_neighbor_table").await?;
 
         Ok(self
             .get_property_simple::<NeighborTable, _>(PropThread::NeighborTable)

@@ -19,6 +19,9 @@ use static_assertions::_core::pin::Pin;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+const MAX_FRAME_CHANNEL_DEPTH: usize = 4;
+const INITIAL_INSPECTOR_CAPACITY: usize = 4;
+
 /// Implements outbound Spinel frame handling and response tracking.
 ///
 /// Note that this type doesn't handle state tracking: that is
@@ -55,7 +58,7 @@ impl<S> FrameHandler<S> {
         FrameHandler {
             requests: Default::default(),
             spinel_sink: futures::lock::Mutex::new(spinel_sink),
-            inspectors: Mutex::new(Slab::with_capacity(4)),
+            inspectors: Mutex::new(Slab::with_capacity(INITIAL_INSPECTOR_CAPACITY)),
         }
     }
 
@@ -224,7 +227,7 @@ where
         R: Send + Sized + Debug + 'static,
     {
         // Create a one-shot channel to handle our response.
-        let (sender, receiver) = mpsc::channel(4);
+        let (sender, receiver) = mpsc::channel(MAX_FRAME_CHANNEL_DEPTH);
 
         // Put the sender in an option so that we can close it.
         let mut sender = Some(sender);
@@ -307,7 +310,7 @@ where
         traceln!("FrameHandler::send_request: Sending frame: {:02x?}", buffer);
 
         // Actually send our request.
-        self.spinel_sink.lock().await.send(&buffer).await?;
+        self.send_raw_frame(&buffer).await?;
 
         // Wait for the response
         receiver.await?
@@ -330,9 +333,13 @@ where
         traceln!("FrameHandler::send_request_ignore_response: Sending frame: {:02x?}", buffer);
 
         // Actually send our request.
-        self.spinel_sink.lock().await.send(&buffer).await?;
+        self.send_raw_frame(&buffer).await?;
 
         Ok(())
+    }
+
+    pub async fn send_raw_frame(&self, frame: &[u8]) -> Result<(), Error> {
+        self.spinel_sink.lock().await.send(&frame).await
     }
 }
 

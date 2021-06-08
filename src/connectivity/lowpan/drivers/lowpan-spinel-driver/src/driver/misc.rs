@@ -11,9 +11,51 @@ use anyhow::Error;
 use fasync::Time;
 use fuchsia_async::TimeoutExt;
 use futures::TryFutureExt;
+use lowpan_driver_common::AsyncConditionWait;
 use lowpan_driver_common::{FutureExt as _, ZxResult};
 use spinel_pack::TryOwnedUnpack;
 use spinel_pack::EUI64;
+
+pub struct ApiTaskLock<'a> {
+    #[allow(unused)]
+    lock: futures::lock::MutexGuard<'a, ()>,
+    description: &'static str,
+    pending_outbound_frame_sender: futures::channel::mpsc::UnboundedSender<Vec<u8>>,
+    cleanup_frames: Vec<Vec<u8>>,
+    ncp_did_reset: AsyncConditionWait<'a>,
+}
+
+impl<'a> ApiTaskLock<'a> {
+    pub fn queue_cleanup_request<RD: RequestDesc>(&mut self, request: RD) {
+        let mut buffer: Vec<u8> = vec![Header::new(0, None).unwrap().into()];
+
+        // Append the actual request to the rest of the buffer.
+        request
+            .write_request(&mut buffer)
+            .expect("ApiTaskLock: Unable to write cleanup request to vector");
+
+        self.cleanup_frames.push(buffer);
+    }
+
+    #[must_use]
+    pub fn with_cleanup_request<RD: RequestDesc>(mut self, request: RD) -> Self {
+        self.queue_cleanup_request(request);
+        self
+    }
+}
+
+impl<'a> std::ops::Drop for ApiTaskLock<'a> {
+    fn drop(&mut self) {
+        fx_log_debug!("API Task Lock: {:?} has released the lock", self.description);
+
+        // We only send the cleanup frames if we haven't been reset.
+        if !self.ncp_did_reset.is_triggered() {
+            for frame in self.cleanup_frames.drain(..) {
+                self.pending_outbound_frame_sender.unbounded_send(frame).unwrap();
+            }
+        }
+    }
+}
 
 /// Miscellaneous private methods
 impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
@@ -37,12 +79,20 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     ///
     /// The `description` field is used to describe who is holding
     /// the lock. It is used only for debugging purposes.
+    #[must_use]
     pub(super) async fn wait_for_api_task_lock(
         &self,
-        _description: &'static str,
-    ) -> ZxResult<futures::lock::MutexGuard<'_, ()>> {
-        // In the future, `description` will be used for debugging purposes.
-        Ok(self.exclusive_task_lock.lock().await)
+        description: &'static str,
+    ) -> ZxResult<ApiTaskLock<'_>> {
+        let lock = self.exclusive_task_lock.lock().await;
+        fx_log_debug!("API Task Lock: Locked by {:?}", description);
+        Ok(ApiTaskLock {
+            lock,
+            description,
+            pending_outbound_frame_sender: self.pending_outbound_frame_sender.clone(),
+            cleanup_frames: vec![],
+            ncp_did_reset: self.ncp_did_reset.wait(),
+        })
     }
 
     /// Decorates the given future with error mapping,
