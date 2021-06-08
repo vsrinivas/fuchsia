@@ -14,7 +14,7 @@ use fidl_fuchsia_lowpan::BeaconInfo;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
     AllCounters, DeviceState, EnergyScanParameters, ExternalRoute, NetworkScanParameters,
-    OnMeshPrefix, ProvisioningMonitorMarker,
+    OnMeshPrefix, ProvisionError, ProvisioningProgress,
 };
 use fidl_fuchsia_lowpan_test::*;
 use fuchsia_async::TimeoutExt;
@@ -45,22 +45,24 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         Ok(())
     }
 
-    fn start_generic_scan<'a, R, FInit, SStream>(
+    /// Helper function for methods that return streams. Allows you
+    /// to have an initialization method that returns a lock which can be
+    /// held while another stream is running (presumably from `inspect_as_stream`)
+    fn start_ongoing_stream_process<'a, R, FInit, SStream, L>(
         &'a self,
         init_task: FInit,
         stream: SStream,
+        timeout: Time,
     ) -> BoxStream<'a, ZxResult<R>>
     where
         R: Send + 'a,
-        FInit: Send + Future<Output = Result<futures::lock::MutexGuard<'a, ()>, Error>> + 'a,
+        FInit: Send + Future<Output = Result<L, Error>> + 'a,
         SStream: Send + Stream<Item = Result<R, Error>> + 'a,
+        L: Send + 'a,
     {
-        enum InternalScanState<'a, R> {
-            Init(
-                crate::future::BoxFuture<'a, ZxResult<futures::lock::MutexGuard<'a, ()>>>,
-                BoxStream<'a, ZxResult<R>>,
-            ),
-            Running(futures::lock::MutexGuard<'a, ()>, BoxStream<'a, ZxResult<R>>),
+        enum InternalState<'a, R, L> {
+            Init(crate::future::BoxFuture<'a, ZxResult<L>>, BoxStream<'a, ZxResult<R>>),
+            Running(L, BoxStream<'a, ZxResult<R>>),
             Done,
         }
 
@@ -71,36 +73,36 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         let stream = stream.map_err(|e| ZxStatus::from(ErrorAdapter(e)));
 
         futures::stream::unfold(
-            InternalScanState::Init(init_task.boxed(), stream.boxed()),
-            move |mut last_state: InternalScanState<'_, R>| async move {
+            InternalState::Init(init_task.boxed(), stream.boxed()),
+            move |mut last_state: InternalState<'_, R, L>| async move {
                 last_state = match last_state {
-                    InternalScanState::Init(init_task, stream) => {
-                        fx_log_info!("generic_scan: initializing");
+                    InternalState::Init(init_task, stream) => {
+                        traceln!("ongoing_stream_process: initializing");
                         match init_task.await {
-                            Ok(lock) => InternalScanState::Running(lock, stream),
-                            Err(err) => return Some((Err(err), InternalScanState::Done)),
+                            Ok(lock) => InternalState::Running(lock, stream),
+                            Err(err) => return Some((Err(err), InternalState::Done)),
                         }
                     }
                     last_state => last_state,
                 };
 
-                if let InternalScanState::Running(lock, mut stream) = last_state {
-                    fx_log_info!("generic_scan: getting next");
+                if let InternalState::Running(lock, mut stream) = last_state {
+                    traceln!("ongoing_stream_process: getting next");
                     if let Some(next) = stream
                         .next()
                         .cancel_upon(self.ncp_did_reset.wait(), Some(Err(ZxStatus::CANCELED)))
-                        .on_timeout(Time::after(DEFAULT_TIMEOUT), move || {
-                            fx_log_err!("generic_scan: Timeout");
+                        .on_timeout(timeout, move || {
+                            fx_log_err!("ongoing_stream_process: Timeout");
                             self.ncp_is_misbehaving();
                             Some(Err(ZxStatus::TIMED_OUT))
                         })
                         .await
                     {
-                        return Some((next, InternalScanState::Running(lock, stream)));
+                        return Some((next, InternalState::Running(lock, stream)));
                     }
                 }
 
-                fx_log_info!("generic_scan: Done");
+                traceln!("ongoing_stream_process: Done");
 
                 None
             },
@@ -431,54 +433,80 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         .boxed()
     }
 
-    async fn form_network(
+    fn form_network(
         &self,
         params: ProvisioningParams,
-        progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
-    ) {
+    ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>> {
         fx_log_info!("Got form command: {:?}", params);
 
-        // Wait for our turn.
-        let _lock = match self.wait_for_api_task_lock("form_network").await {
-            Ok(x) => x,
-            Err(x) => {
-                fx_log_info!("Failed waiting for API task lock: {:?}", x);
-                return;
-            }
+        let init_task = async move {
+            // Wait for our turn.
+            let _lock = self.wait_for_api_task_lock("form_network").await?;
+
+            // Wait until we are ready.
+            self.wait_for_state(DriverState::is_initialized).await;
+
+            // TODO: Uncomment this line once implemented and remove the error line below
+            // Ok(_lock)
+            Result::<(), _>::Err(ZxStatus::NOT_SUPPORTED.into())
         };
 
-        // Wait until we are ready.
-        self.wait_for_state(DriverState::is_initialized).await;
+        let stream = self.frame_handler.inspect_as_stream(|frame| {
+            fx_log_debug!("form_network: Inspecting {:?}", frame);
 
-        // TODO: Implement form_network()
-        // We don't care about errors here because
-        // we are simply reporting that this isn't implemented.
-        let _ = progress.close_with_epitaph(ZxStatus::NOT_SUPPORTED);
+            // This method may return the following values:
+            //
+            // * Normal Conditions:
+            //    * None: Keep processing and emit nothing from the stream.
+            //    * Some(Ok(Some(Ok(progress)))): Emit the given progress value from the stream.
+            //    * Some(Ok(None)): Close the stream with no error.
+            // * Error Conditions:
+            //    * Some(Err(zx_error)): Close the stream with a `ZxStatus`.
+            //    * Some(Ok(Some(Err(provision_err)))): Close the stream with a `ProvisionError`
+
+            // TODO: Add code to monitor and emit results here.
+            None
+        });
+
+        self.start_ongoing_stream_process(init_task, stream, Time::after(DEFAULT_TIMEOUT))
     }
 
-    async fn join_network(
+    fn join_network(
         &self,
         params: ProvisioningParams,
-        progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
-    ) {
+    ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>> {
         fx_log_info!("Got join command: {:?}", params);
 
-        // Wait for our turn.
-        let _lock = match self.wait_for_api_task_lock("join_network").await {
-            Ok(x) => x,
-            Err(x) => {
-                fx_log_info!("Failed waiting for API task lock: {:?}", x);
-                return;
-            }
+        let init_task = async move {
+            // Wait for our turn.
+            let _lock = self.wait_for_api_task_lock("join_network").await?;
+
+            // Wait until we are ready.
+            self.wait_for_state(DriverState::is_initialized).await;
+
+            // TODO: Uncomment this line once implemented and remove the error line below
+            // Ok(_lock)
+            Result::<(), _>::Err(ZxStatus::NOT_SUPPORTED.into())
         };
 
-        // Wait until we are ready.
-        self.wait_for_state(DriverState::is_initialized).await;
+        let stream = self.frame_handler.inspect_as_stream(|frame| {
+            fx_log_debug!("join_network: Inspecting {:?}", frame);
 
-        // TODO: Implement join_network()
-        // We don't care about errors here because
-        // we are simply reporting that this isn't implemented.
-        let _ = progress.close_with_epitaph(ZxStatus::NOT_SUPPORTED);
+            // This method may return the following values:
+            //
+            // * Normal Conditions:
+            //    * None: Keep processing and emit nothing from the stream.
+            //    * Some(Ok(Some(Ok(progress)))): Emit the given progress value from the stream.
+            //    * Some(Ok(None)): Close the stream with no error.
+            // * Error Conditions:
+            //    * Some(Err(zx_error)): Close the stream with a `ZxStatus`.
+            //    * Some(Ok(Some(Err(provision_err)))): Close the stream with a `ProvisionError`
+
+            // TODO: Add code to monitor and emit results here.
+            None
+        });
+
+        self.start_ongoing_stream_process(init_task, stream, Time::after(DEFAULT_TIMEOUT))
     }
 
     async fn get_credential(&self) -> ZxResult<Option<fidl_fuchsia_lowpan::Credential>> {
@@ -594,7 +622,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             }
         });
 
-        self.start_generic_scan(init_task, stream)
+        self.start_ongoing_stream_process(init_task, stream, Time::after(DEFAULT_TIMEOUT))
     }
 
     fn start_network_scan(
@@ -704,7 +732,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             }
         });
 
-        self.start_generic_scan(init_task, stream)
+        self.start_ongoing_stream_process(init_task, stream, Time::after(DEFAULT_TIMEOUT))
     }
 
     async fn reset(&self) -> ZxResult<()> {
@@ -1050,12 +1078,42 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             .await
     }
 
-    async fn commission_network(
+    fn commission_network(
         &self,
         _secret: &[u8],
-        _progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
-    ) {
+    ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>> {
         fx_log_info!("Got commission command");
+
+        let init_task = async move {
+            // Wait for our turn.
+            let _lock = self.wait_for_api_task_lock("commission_network").await?;
+
+            // Wait until we are ready.
+            self.wait_for_state(DriverState::is_initialized).await;
+
+            // TODO: Uncomment this line once implemented and remove the error line below
+            // Ok(_lock)
+            Result::<(), _>::Err(ZxStatus::NOT_SUPPORTED.into())
+        };
+
+        let stream = self.frame_handler.inspect_as_stream(|frame| {
+            fx_log_debug!("commission_network: Inspecting {:?}", frame);
+
+            // This method may return the following values:
+            //
+            // * Normal Conditions:
+            //    * None: Keep processing and emit nothing from the stream.
+            //    * Some(Ok(Some(Ok(progress)))): Emit the given progress value from the stream.
+            //    * Some(Ok(None)): Close the stream with no error.
+            // * Error Conditions:
+            //    * Some(Err(zx_error)): Close the stream with a `ZxStatus`.
+            //    * Some(Ok(Some(Err(provision_err)))): Close the stream with a `ProvisionError`
+
+            // TODO: Add code to monitor and emit results here.
+            None
+        });
+
+        self.start_ongoing_stream_process(init_task, stream, Time::INFINITE)
     }
 
     async fn replace_mac_address_filter_settings(
@@ -1080,7 +1138,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             .send_request(CmdPropValueSet(PropMac::DenyListEnabled.into(), false).verify())
             .await
             .map_err(|err| {
-                fx_log_err!("Error disbale denylist: {}", err);
+                fx_log_err!("Error disable denylist: {}", err);
                 ZxStatus::INTERNAL
             })?;
 

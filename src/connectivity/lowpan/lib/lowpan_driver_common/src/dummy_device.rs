@@ -6,12 +6,10 @@
 
 use super::*;
 
-use anyhow::Error;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
     AllCounters, DeviceState, EnergyScanParameters, EnergyScanResult, ExternalRoute, MacCounters,
-    NetworkScanParameters, OnMeshPrefix, ProvisionError, ProvisioningMonitorMarker,
-    ProvisioningMonitorRequest, ProvisioningProgress,
+    NetworkScanParameters, OnMeshPrefix, ProvisionError, ProvisioningProgress,
 };
 use fidl_fuchsia_lowpan_test::*;
 use fuchsia_zircon_status as zx_status;
@@ -65,93 +63,35 @@ impl Driver for DummyDevice {
         Ok(vec![channel_info])
     }
 
-    async fn form_network(
+    fn form_network(
         &self,
         params: ProvisioningParams,
-        progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
-    ) {
+    ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>> {
         fx_log_info!("Got form command: {:?}", params);
-        let mut request_stream = progress.into_stream().expect("progress into stream");
 
-        let fut = async move {
-            match request_stream.try_next().await? {
-                Some(ProvisioningMonitorRequest::WatchProgress { responder: r }) => {
-                    r.send(&mut Ok(dummy_device::ProvisioningProgress::Progress(0.4)))?;
-                }
-                None => {
-                    return Err(format_err!("invalid request"));
-                }
-            };
-
-            match request_stream.try_next().await? {
-                Some(ProvisioningMonitorRequest::WatchProgress { responder: r }) => {
-                    r.send(&mut Ok(dummy_device::ProvisioningProgress::Progress(0.6)))?;
-                }
-                None => {
-                    return Err(format_err!("invalid request"));
-                }
-            };
-
-            match request_stream.try_next().await? {
-                Some(ProvisioningMonitorRequest::WatchProgress { responder: r }) => {
-                    r.send(&mut Ok(dummy_device::ProvisioningProgress::Identity(params.identity)))?;
-                }
-                None => {
-                    return Err(format_err!("invalid request"));
-                }
-            };
-
-            Ok::<(), Error>(())
-        };
-
-        match fut.await {
-            Ok(()) => {
-                fx_log_info!("Replied to ProvisioningProgress requests");
-            }
-            Err(e) => {
-                fx_log_info!("Error replying to ProvisioningProgress requests: {:?}", e);
-            }
-        }
+        futures::stream::empty()
+            .chain(ready(Ok(Ok(dummy_device::ProvisioningProgress::Progress(0.4)))).into_stream())
+            .chain(ready(Ok(Ok(dummy_device::ProvisioningProgress::Progress(0.6)))).into_stream())
+            .chain(
+                ready(Ok(Ok(dummy_device::ProvisioningProgress::Identity(params.identity))))
+                    .into_stream(),
+            )
+            .boxed()
     }
 
-    async fn join_network(
+    fn join_network(
         &self,
         params: ProvisioningParams,
-        progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
-    ) {
+    ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>> {
         fx_log_info!("Got join command: {:?}", params);
-        let mut request_stream = progress.into_stream().expect("progress into stream");
 
-        let fut = async move {
-            match request_stream.try_next().await? {
-                Some(ProvisioningMonitorRequest::WatchProgress { responder: r }) => {
-                    r.send(&mut Ok(dummy_device::ProvisioningProgress::Progress(0.5)))?;
-                }
-                None => {
-                    return Err(format_err!("invalid request"));
-                }
-            };
-
-            match request_stream.try_next().await? {
-                Some(ProvisioningMonitorRequest::WatchProgress { responder: r }) => {
-                    r.send(&mut Ok(dummy_device::ProvisioningProgress::Identity(params.identity)))?;
-                }
-                None => {
-                    return Err(format_err!("invalid request"));
-                }
-            };
-
-            Ok::<(), Error>(())
-        };
-
-        match fut.await {
-            Ok(()) => {
-                fx_log_info!("Replied to ProvisioningProgress requests");
-            }
-            Err(e) => {
-                fx_log_info!("Error replying to ProvisioningProgress requests: {:?}", e);
-            }
-        }
+        futures::stream::empty()
+            .chain(ready(Ok(Ok(dummy_device::ProvisioningProgress::Progress(0.5)))).into_stream())
+            .chain(
+                ready(Ok(Ok(dummy_device::ProvisioningProgress::Identity(params.identity))))
+                    .into_stream(),
+            )
+            .boxed()
     }
 
     async fn get_credential(&self) -> ZxResult<Option<fidl_fuchsia_lowpan::Credential>> {
@@ -361,40 +301,16 @@ impl Driver for DummyDevice {
         Ok("error: The dummy driver currently has no manufacturing commands.".to_string())
     }
 
-    async fn commission_network(
+    fn commission_network(
         &self,
         secret: &[u8],
-        progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
-    ) {
+    ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>> {
         fx_log_info!("Got commission command with secret {:?}", secret);
-        let mut request_stream = progress.into_stream().expect("progress into stream");
 
-        let fut = async move {
-            let ProvisioningMonitorRequest::WatchProgress { responder } = request_stream
-                .try_next()
-                .await?
-                .ok_or(format_err!("Provisioning monitor closed"))?;
-
-            responder.send(&mut Ok(dummy_device::ProvisioningProgress::Progress(0.5)))?;
-
-            let ProvisioningMonitorRequest::WatchProgress { responder } = request_stream
-                .try_next()
-                .await?
-                .ok_or(format_err!("Provisioning monitor closed"))?;
-
-            responder.send(&mut Err(ProvisionError::NetworkNotFound))?;
-
-            Ok::<(), Error>(())
-        };
-
-        match fut.await {
-            Ok(()) => {
-                fx_log_info!("Replied to ProvisioningProgress requests");
-            }
-            Err(e) => {
-                fx_log_info!("Error replying to ProvisioningProgress requests: {:?}", e);
-            }
-        }
+        futures::stream::empty()
+            .chain(ready(Ok(Ok(dummy_device::ProvisioningProgress::Progress(0.5)))).into_stream())
+            .chain(ready(Ok(Err(ProvisionError::NetworkNotFound))).into_stream())
+            .boxed()
     }
 
     async fn replace_mac_address_filter_settings(
