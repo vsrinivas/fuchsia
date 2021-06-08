@@ -13,6 +13,7 @@
 #include <acpica/acpi.h>
 
 #include "acpi-private.h"
+#include "acpi/device.h"
 #include "methods.h"
 #include "pci.h"
 #include "resources.h"

@@ -19,6 +19,7 @@
 #include <acpica/acpi.h>
 
 #include "acpi-private.h"
+#include "acpi/device.h"
 #include "dev.h"
 #include "errors.h"
 #include "pci.h"

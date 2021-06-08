@@ -14,9 +14,15 @@ group("x86") {
 }
 
 config("config") {
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+    "acpi/*",
+  ]
 
-  include_dirs = [ "include" ]
+  include_dirs = [
+    "include",
+    ".",
+  ]
 
   if (platform_enable_user_pci) {
     defines = [ "ENABLE_USER_PCI" ]
@@ -103,6 +109,7 @@ driver_module("platform-bus-x86") {
   deps = [
     ":smbios",
     ":x64-bind",
+    "acpi",
     "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",

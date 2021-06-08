@@ -1,0 +1,17 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("acpi") {
+  configs += [ "..:config" ]
+  sources = [ "device.cc" ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
+    "//src/devices/lib/iommu",
+    "//src/lib/ddk",
+    "//third_party/acpica",
+    "//zircon/public/lib/fbl",
+  ]
+}
