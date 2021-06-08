@@ -14,8 +14,8 @@
 
 #include <acpica/acpi.h>
 
-#include "acpi-buffer.h"
 #include "acpi-private.h"
+#include "acpi/util.h"
 #include "pci.h"
 
 // Legacy PCI device functions have a single interrupt that was traditionally

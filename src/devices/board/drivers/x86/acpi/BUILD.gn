@@ -1,6 +1,16 @@
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import("//build/components.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = []
+  if (target_cpu == "x64") {
+    deps += [ ":x86-acpi-tests" ]
+  }
+}
 
 source_set("acpi") {
   configs += [ "..:config" ]
@@ -14,4 +24,16 @@ source_set("acpi") {
     "//third_party/acpica",
     "//zircon/public/lib/fbl",
   ]
+}
+
+test("acpi-test") {
+  sources = [ "util-test.cc" ]
+  deps = [
+    "//third_party/acpica",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("x86-acpi-tests") {
+  deps = [ ":acpi-test" ]
 }

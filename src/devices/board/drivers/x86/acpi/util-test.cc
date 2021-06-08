@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "util.h"
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,8 +11,6 @@
 #include <unistd.h>
 
 #include <zxtest/zxtest.h>
-
-#include "../include/acpi-buffer.h"
 
 // These tests exercise custom types and methods added to make using ACPI easier.
 namespace {

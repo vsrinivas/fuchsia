@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 // An RAII wrapper around ACPI_BUFFER to handle memory ownership and allow easy iteration.
-#ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_BUFFER_H_
-#define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_BUFFER_H_
+#ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_UTIL_H_
+#define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_UTIL_H_
+
+#include <memory>
 
 #include <acpica/acpi.h>
 
@@ -48,6 +50,15 @@ class AcpiBuffer : public ACPI_BUFFER {
   auto end() const { return AcpiBuffer::iterator(); }
 };
 
+// An RAII unique pointer type for resources allocated from the ACPICA library.
+template <typename T>
+struct UniquePtrDeleter {
+  void operator()(T* mem) { ACPI_FREE(mem); }
+};
+
+template <typename T>
+using UniquePtr = std::unique_ptr<T, UniquePtrDeleter<T>>;
+
 }  // namespace acpi
 
-#endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_BUFFER_H_
+#endif  // SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_UTIL_H_

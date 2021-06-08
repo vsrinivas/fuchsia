@@ -11,6 +11,7 @@
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
+#include "acpi/util.h"
 #include "resources.h"
 
 #define MAX_NAMESPACE_DEPTH 100
@@ -46,15 +47,6 @@ static inline size_t UnusedPropsCount(const T& props, uint32_t propcount) {
 }
 
 }  // namespace internal
-
-// An RAII unique pointer type for resources allocated from the ACPICA library.
-template <typename T>
-struct UniquePtrDeleter {
-  void operator()(T* mem) { ACPI_FREE(mem); }
-};
-
-template <typename T>
-using UniquePtr = std::unique_ptr<T, UniquePtrDeleter<T>>;
 
 // A free standing function which can be used to fetch the Info structure of an
 // ACPI device.  It returns a fitx::result which either holds a managed pointer

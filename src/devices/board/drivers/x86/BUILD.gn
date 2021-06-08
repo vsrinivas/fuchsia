@@ -307,7 +307,10 @@ fuchsia_unittest_package("x86-battery-test-pkg") {
 
 group("tests") {
   testonly = true
-  deps = [ ":x64-bind_test" ]
+  deps = [
+    ":x64-bind_test",
+    "acpi:tests",
+  ]
   if (target_cpu == "x64") {
     deps += [
       ":x86-battery-test-pkg",
