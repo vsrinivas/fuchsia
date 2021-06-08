@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_CONSTANTS_H_
 #define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_CONSTANTS_H_
 
+#include <lib/zx/time.h>
+
 #include "src/developer/forensics/utils/storage_size.h"
 
 namespace forensics {
@@ -46,6 +48,16 @@ constexpr StorageSize kStoreMaxSize = StorageSize::Megabytes(5u);
 // in the order of 64 - 128KiB. This lets a device store 4-8 of them on disk.
 constexpr StorageSize kStoreMaxCacheSize = StorageSize::Kilobytes(512);
 constexpr StorageSize kStoreMaxTmpSize = kStoreMaxSize - kStoreMaxCacheSize;
+
+// If a crash report arrives within |kSnapshotSharedRequestWindow| of a call to
+// SnapshotManager::GetSnapshotUuid that schedules a call to
+// fuchsia.feedback.DataProvider/GetSnapshot, the returned snapshot will be used in the resulting
+// report.
+//
+// If the value it too large, crash reports may take too long to generate, but if the value is too
+// small, the benefits of combining calls to fuchsia.feedback.DataProvider/GetSnapshot may not be
+// fully realized.
+constexpr zx::duration kSnapshotSharedRequestWindow = zx::sec(5);
 
 }  // namespace crash_reports
 }  // namespace forensics

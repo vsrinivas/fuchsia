@@ -15,6 +15,7 @@ source_set("main_service") {
 
   public_deps = [
     ":config",
+    ":constants",
     ":crash_register",
     ":crash_reporter",
     "//sdk/fidl/fuchsia.feedback",
@@ -64,7 +65,10 @@ source_set("config") {
 source_set("constants") {
   sources = [ "constants.h" ]
 
-  public_deps = [ "//src/developer/forensics/utils:storage_size" ]
+  public_deps = [
+    "//src/developer/forensics/utils:storage_size",
+    "//zircon/public/lib/zx",
+  ]
 }
 
 source_set("crash_register") {
@@ -188,6 +192,7 @@ source_set("main") {
   ]
 
   deps = [
+    ":constants",
     ":main_service",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/syslog/cpp",

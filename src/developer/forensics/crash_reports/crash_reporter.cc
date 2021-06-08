@@ -44,16 +44,6 @@ using fuchsia::feedback::CrashReport;
 constexpr zx::duration kChannelOrDeviceIdTimeout = zx::sec(30);
 constexpr zx::duration kSnapshotTimeout = zx::min(2);
 
-// If a crash report arrives within |kSnapshotSharedRequestWindow| of a call to
-// SnapshotManager::GetSnapshotUuid that schedules a call to
-// fuchsia.feedback.DataProvider/GetSnapshot, the returned snapshot will be used in the resulting
-// report.
-//
-// If the value it too large, crash reports may take too long to generate, but if the value is too
-// small, the benefits of combining calls to fuchsia.feedback.DataProvider/GetSnapshot may not be
-// fully realized.
-constexpr zx::duration kSnapshotSharedRequestWindow = zx::sec(5);
-
 // Returns what the initial ReportId should be, based on the contents of the store in the
 // filesystem.
 //
@@ -92,42 +82,23 @@ std::unique_ptr<ReportingPolicyWatcher> MakeReportingPolicyWatcher(
 
 }  // namespace
 
-std::unique_ptr<CrashReporter> CrashReporter::Create(
-    async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
-    timekeeper::Clock* clock, const std::shared_ptr<InfoContext>& info_context, Config config,
-    AnnotationMap default_annotations, CrashRegister* crash_register) {
-  SnapshotManager snapshot_manager(dispatcher, services, clock, kSnapshotSharedRequestWindow,
-                                   kGarbageCollectedSnapshotsPath, kSnapshotAnnotationsMaxSize,
-                                   kSnapshotArchivesMaxSize);
-
-  auto tags = std::make_unique<LogTags>();
-
-  auto crash_server = std::make_unique<CrashServer>(services, kCrashServerUrl, tags.get());
-
-  return std::make_unique<CrashReporter>(
-      dispatcher, std::move(services), clock, std::move(info_context), config,
-      std::move(default_annotations), crash_register, std::move(tags), std::move(snapshot_manager),
-      std::move(crash_server));
-}
-
 CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
                              const std::shared_ptr<sys::ServiceDirectory>& services,
                              timekeeper::Clock* clock,
                              const std::shared_ptr<InfoContext>& info_context, Config config,
                              AnnotationMap default_annotations, CrashRegister* crash_register,
-                             std::unique_ptr<LogTags> tags, SnapshotManager snapshot_manager,
-                             std::unique_ptr<CrashServer> crash_server)
+                             LogTags* tags, SnapshotManager* snapshot_manager,
+                             CrashServer* crash_server)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),
-      tags_(std::move(tags)),
+      tags_(tags),
       default_annotations_(std::move(default_annotations)),
       crash_register_(crash_register),
       utc_provider_(dispatcher_, zx::unowned_clock(zx_utc_reference_get()), clock),
-      snapshot_manager_(std::move(snapshot_manager)),
-      crash_server_(std::move(crash_server)),
-      queue_(dispatcher_, services_, info_context, tags_.get(), crash_server_.get(),
-             &snapshot_manager_),
+      snapshot_manager_(snapshot_manager),
+      crash_server_(crash_server),
+      queue_(dispatcher_, services_, info_context, tags_, crash_server_, snapshot_manager_),
       product_quotas_(dispatcher_, config.daily_per_product_quota),
       info_(info_context),
       network_watcher_(dispatcher_, *services_),
@@ -154,7 +125,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
 
 void CrashReporter::PersistAllCrashReports() {
   queue_.StopUploading();
-  snapshot_manager_.Shutdown();
+  snapshot_manager_->Shutdown();
 }
 
 void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
@@ -205,7 +176,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
 
             product_quotas_.DecrementRemainingQuota(product);
 
-            auto snapshot_uuid_promise = snapshot_manager_.GetSnapshotUuid(kSnapshotTimeout);
+            auto snapshot_uuid_promise = snapshot_manager_->GetSnapshotUuid(kSnapshotTimeout);
             auto device_id_promise = device_id_provider_ptr_.GetId(kChannelOrDeviceIdTimeout);
             auto product_promise = ::fit::make_ok_promise(std::move(product));
 
@@ -230,7 +201,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
 
                 std::optional<Report> final_report = MakeReport(
                     std::move(report), report_id, snapshot_uuid,
-                    snapshot_manager_.GetSnapshot(snapshot_uuid), utc_provider_.CurrentTime(),
+                    snapshot_manager_->GetSnapshot(snapshot_uuid), utc_provider_.CurrentTime(),
                     device_id, default_annotations_, product, is_hourly_snapshot);
                 if (!final_report.has_value()) {
                   return ::fit::error(

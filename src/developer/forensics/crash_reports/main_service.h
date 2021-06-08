@@ -29,12 +29,9 @@ namespace crash_reports {
 // etc.
 class MainService {
  public:
-  // Static factory method. Never returns a nullptr.
-  static std::unique_ptr<MainService> Create(async_dispatcher_t* dispatcher,
-                                             std::shared_ptr<sys::ServiceDirectory> services,
-                                             timekeeper::Clock* clock,
-                                             std::shared_ptr<InfoContext> info_context,
-                                             Config config);
+  MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+              inspect::Node* inspect_root, timekeeper::Clock* clock, Config config,
+              ErrorOr<std::string> build_version, AnnotationMap default_annotations);
 
   // Place the component in a state where it expects to be stopped soon. This includes:
   //  * Immediately persisting all future and pending crash reports without snapshots.
@@ -50,22 +47,19 @@ class MainService {
       ::fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request);
 
  private:
-  MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-              std::shared_ptr<InfoContext> info_context, Config config,
-              const ErrorOr<std::string>& build_version,
-              std::unique_ptr<CrashRegister> crash_register,
-              std::unique_ptr<CrashReporter> crash_reporter);
-
   async_dispatcher_t* dispatcher_;
+  std::shared_ptr<InfoContext> info_context_;
   MainServiceInfo info_;
 
-  std::unique_ptr<CrashRegister> crash_register_;
+  LogTags tags_;
+  CrashServer crash_server_;
+  SnapshotManager snapshot_manager_;
+
+  CrashRegister crash_register_;
   ::fidl::BindingSet<fuchsia::feedback::CrashReportingProductRegister> crash_register_connections_;
 
-  std::unique_ptr<CrashReporter> crash_reporter_;
+  CrashReporter crash_reporter_;
   ::fidl::BindingSet<fuchsia::feedback::CrashReporter> crash_reporter_connections_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(MainService);
 };
 
 }  // namespace crash_reports

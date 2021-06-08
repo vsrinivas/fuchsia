@@ -153,17 +153,15 @@ class CrashReporterTest : public UnitTestFixture {
   // Sets up the underlying crash reporter using the given |config| and |crash_server|.
   void SetUpCrashReporter(
       Config config, const std::vector<CrashServer::UploadStatus>& upload_attempt_results = {}) {
-    SnapshotManager snapshot_manager(dispatcher(), services(), &clock_,
-                                     kSnapshotSharedRequestWindow, kGarbageCollectedSnapshotsPath,
-                                     StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u));
-    auto crash_server = std::make_unique<StubCrashServer>(upload_attempt_results);
-
-    crash_server_ = crash_server.get();
+    snapshot_manager_ = std::make_unique<SnapshotManager>(
+        dispatcher(), services(), &clock_, kSnapshotSharedRequestWindow,
+        kGarbageCollectedSnapshotsPath, StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u)),
+    crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results);
 
     crash_reporter_ = std::make_unique<CrashReporter>(
         dispatcher(), services(), &clock_, info_context_, config,
         AnnotationMap({{"osName", "Fuchsia"}, {"osVersion", kBuildVersion}}), crash_register_.get(),
-        std::make_unique<LogTags>(), std::move(snapshot_manager), std::move(crash_server));
+        &tags_, snapshot_manager_.get(), crash_server_.get());
     FX_CHECK(crash_reporter_);
   }
 
@@ -418,6 +416,8 @@ class CrashReporterTest : public UnitTestFixture {
  private:
   files::ScopedTempDir tmp_dir_;
 
+  LogTags tags_;
+
   // Stubs and fake servers.
   std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
@@ -426,13 +426,14 @@ class CrashReporterTest : public UnitTestFixture {
   std::unique_ptr<fakes::PrivacySettings> privacy_settings_server_;
 
  protected:
-  StubCrashServer* crash_server_;
+  std::unique_ptr<StubCrashServer> crash_server_;
 
  private:
   timekeeper::TestClock clock_;
   std::shared_ptr<InfoContext> info_context_;
 
  protected:
+  std::unique_ptr<SnapshotManager> snapshot_manager_;
   std::unique_ptr<CrashRegister> crash_register_;
   std::unique_ptr<CrashReporter> crash_reporter_;
 };

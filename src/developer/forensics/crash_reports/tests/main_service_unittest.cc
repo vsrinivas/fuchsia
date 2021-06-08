@@ -40,22 +40,19 @@ using testing::UnorderedElementsAreArray;
 class MainServiceTest : public UnitTestFixture {
  public:
   void SetUp() override {
-    info_context_ =
-        std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
-
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     SetUpDeviceIdProviderServer();
     SetUpNetworkReachabilityProviderServer();
 
-    main_service_ =
-        MainService::Create(dispatcher(), services(), &clock_, info_context_,
-                            Config{
-                                .crash_server = CrashServerConfig{
-                                    /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-                                },
-                                .daily_per_product_quota = 100u,
-                            });
-    FX_CHECK(main_service_);
+    main_service_ = std::make_unique<MainService>(
+        dispatcher(), services(), &InspectRoot(), &clock_,
+        Config{
+            .crash_server = CrashServerConfig{
+                /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
+            },
+            .daily_per_product_quota = 100u,
+        },
+        Error::kMissingValue, AnnotationMap({}));
     RunLoopUntilIdle();
   }
 
@@ -72,7 +69,6 @@ class MainServiceTest : public UnitTestFixture {
 
  protected:
   timekeeper::TestClock clock_;
-  std::shared_ptr<InfoContext> info_context_;
 
   // Stubs servers.
   std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
