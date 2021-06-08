@@ -319,17 +319,18 @@ impl ScenicViewStrategy {
         .detach();
     }
 
-    fn make_view_assistant_context(
+    fn make_view_assistant_context_with_time(
         view_details: &ViewDetails,
         image_id: ImageId,
         image_index: u32,
         app_sender: UnboundedSender<MessageInternal>,
+        presentation_time: Time,
     ) -> ViewAssistantContext {
         ViewAssistantContext {
             key: view_details.key,
             size: view_details.logical_size,
             metrics: view_details.metrics,
-            presentation_time: Time::get_monotonic(),
+            presentation_time,
             messages: Vec::new(),
             buffer_count: None,
             image_id,
@@ -338,6 +339,21 @@ impl ScenicViewStrategy {
             app_sender,
             mouse_cursor_position: None,
         }
+    }
+
+    fn make_view_assistant_context(
+        view_details: &ViewDetails,
+        image_id: ImageId,
+        image_index: u32,
+        app_sender: UnboundedSender<MessageInternal>,
+    ) -> ViewAssistantContext {
+        Self::make_view_assistant_context_with_time(
+            view_details,
+            image_id,
+            image_index,
+            app_sender,
+            Time::get_monotonic(),
+        )
     }
 
     async fn create_plumber(&mut self, size: UintSize) -> Result<(), Error> {
@@ -401,6 +417,7 @@ impl ScenicViewStrategy {
         view_details: &ViewDetails,
         view_assistant: &mut ViewAssistantPtr,
     ) -> bool {
+        let presentation_time = self.next_presentation_time();
         let plumber = self.plumber.as_mut().expect("plumber");
         if let Some(available) = plumber.frame_set.get_available_image() {
             duration!("gfx", "ScenicViewStrategy::render.render_to_image");
@@ -408,11 +425,12 @@ impl ScenicViewStrategy {
             let available_index = plumber.image_indexes.get(&available).expect("index for image");
             let image2 = plumber.images.get(&available).expect("image2");
             self.content_material.set_texture_resource(Some(&image2));
-            let render_context = ScenicViewStrategy::make_view_assistant_context(
+            let render_context = ScenicViewStrategy::make_view_assistant_context_with_time(
                 view_details,
                 available,
                 *available_index,
                 self.app_sender.clone(),
+                Time::from_nanos(presentation_time),
             );
             let buffer_ready_event = Event::create().expect("Event.create");
             view_assistant

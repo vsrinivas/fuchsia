@@ -274,6 +274,7 @@ impl Facet for TestFacet {
         _size: Size,
         layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
+        _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let line_raster = self.raster.take().unwrap_or_else(|| {
             let line_path = path_for_rectangle(&Rect::from_size(self.size), render_context);

@@ -218,6 +218,7 @@ impl Facet for ClockFaceFacet {
         size: Size,
         layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
+        _view_context: &ViewAssistantContext,
     ) -> std::result::Result<(), anyhow::Error> {
         const SHADOW_COLOR: Color = Color { r: 0, g: 0, b: 0, a: 13 };
         const ELEVATION: f32 = 0.01;

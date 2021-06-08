@@ -111,6 +111,7 @@ impl Facet for SpinningSquareFacet {
         size: Size,
         layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
+        view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         const SPEED: f32 = 0.25;
         const SECONDS_PER_NANOSECOND: f32 = 1e-9;
@@ -122,7 +123,7 @@ impl Facet for SpinningSquareFacet {
         let center_y = size.height * 0.5;
         self.size = size;
         let square_size = size.width.min(size.height) * 0.6;
-        let presentation_time = Time::get_monotonic();
+        let presentation_time = view_context.presentation_time;
         let t = ((presentation_time.into_nanos() - self.start.into_nanos()) as f32
             * SECONDS_PER_NANOSECOND
             * SPEED)

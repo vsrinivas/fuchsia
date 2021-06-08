@@ -349,7 +349,7 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
         });
 
         if let Some(animation) = &mut self.animation {
-            let presentation_time = zx::Time::get_monotonic();
+            let presentation_time = context.presentation_time;
             let elapsed = if let Some(last_presentation_time) = animation.last_presentation_time {
                 const NANOS_PER_SECOND: f32 = 1_000_000_000.0;
                 (presentation_time - last_presentation_time).into_nanos() as f32 / NANOS_PER_SECOND

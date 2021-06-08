@@ -77,6 +77,7 @@ impl Facet for GammaFacet {
         size: Size,
         layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
+        _view_context: &ViewAssistantContext,
     ) -> std::result::Result<(), anyhow::Error> {
         self.size = size;
         let transform = Transform2D::scale(size.width * 0.5, size.height * 0.5);

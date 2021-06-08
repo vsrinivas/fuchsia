@@ -19,7 +19,7 @@ use {
         ViewAssistantPtr, ViewKey,
     },
     fuchsia_trace_provider,
-    fuchsia_zircon::{self as zx, Event, Time},
+    fuchsia_zircon::{Event, Time},
     rive_rs::{self as rive},
     std::path::Path,
 };
@@ -192,7 +192,7 @@ impl ViewAssistant for RiveViewAssistant {
             SceneDetails { scene, rive, artboard, animations }
         });
 
-        let presentation_time = zx::Time::get_monotonic();
+        let presentation_time = context.presentation_time;
         let elapsed = if let Some(last_presentation_time) = self.last_presentation_time {
             const NANOS_PER_SECOND: f32 = 1_000_000_000.0;
             (presentation_time - last_presentation_time).into_nanos() as f32 / NANOS_PER_SECOND

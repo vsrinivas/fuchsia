@@ -185,7 +185,12 @@ impl Scene {
         self.groups.set_group_arranger(group_id, arranger);
     }
 
-    pub(crate) fn layers(&mut self, size: Size, render_context: &mut RenderContext) -> Vec<Layer> {
+    pub(crate) fn layers(
+        &mut self,
+        size: Size,
+        render_context: &mut RenderContext,
+        view_context: &ViewAssistantContext,
+    ) -> Vec<Layer> {
         let mut layers = Vec::new();
 
         for facet_id in &self.facet_order {
@@ -198,7 +203,7 @@ impl Scene {
             let mut layer_group = LayerGroup(facet_layers);
             facet_entry
                 .facet
-                .update_layers(size, &mut layer_group, render_context)
+                .update_layers(size, &mut layer_group, render_context, view_context)
                 .expect("update_layers");
             for layer in &mut layer_group.0 {
                 layer.raster =
@@ -291,7 +296,7 @@ impl Scene {
         }
 
         Self::update_composition(
-            self.layers(size, render_context),
+            self.layers(size, render_context, context),
             &context.mouse_cursor_position,
             &self.mouse_cursor_raster,
             &corner_knockouts,

@@ -9,7 +9,7 @@ use {
         drawing::{FontFace, GlyphMap, TextGrid, TextGridCell},
         render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Style},
         scene::{facets::Facet, LayerGroup},
-        Size,
+        Size, ViewAssistantContext,
     },
     std::{any::Any, cell::RefCell, rc::Rc},
     term_model::{
@@ -102,6 +102,7 @@ impl<T: 'static> Facet for TextGridFacet<T> {
         size: Size,
         layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
+        _: &ViewAssistantContext,
     ) -> std::result::Result<(), anyhow::Error> {
         self.size = size;
 

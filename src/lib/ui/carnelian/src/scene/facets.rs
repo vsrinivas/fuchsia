@@ -10,7 +10,7 @@ use crate::{
         rive::RenderCache as RiveRenderCache, BlendMode, Context as RenderContext, Fill, FillRule,
         Layer, Raster, Shed, Style,
     },
-    Coord, Rect, Size,
+    Coord, Rect, Size, ViewAssistantContext,
 };
 use anyhow::Error;
 use euclid::{default::Transform2D, size2, vec2};
@@ -59,6 +59,7 @@ pub trait Facet {
         size: Size,
         layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
+        view_context: &ViewAssistantContext,
     ) -> Result<(), Error>;
 
     /// Method for receiving arbitrary message, like `SetColorMessage` or `SetTextMessage`.
@@ -103,6 +104,7 @@ impl Facet for RectangleFacet {
         _size: Size,
         layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
+        _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let line_raster = self.raster.take().unwrap_or_else(|| {
             let line_path = path_for_rectangle(&Rect::from_size(self.size), render_context);
@@ -243,6 +245,7 @@ impl Facet for TextFacet {
         _size: Size,
         layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
+        _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let rendered_text = self.rendered_text.take().unwrap_or_else(|| {
             Text::new_with_lines(
@@ -324,6 +327,7 @@ impl Facet for RasterFacet {
         _size: Size,
         layer_group: &mut LayerGroup,
         _render_context: &mut RenderContext,
+        _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         layer_group.replace_all(std::iter::once(Layer {
             raster: self.raster.clone(),
@@ -357,6 +361,7 @@ impl Facet for ShedFacet {
         _size: Size,
         layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
+        _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let rasters = self.rasters.take().unwrap_or_else(|| {
             if let Some(shed) = Shed::open(&self.path).ok() {
@@ -417,6 +422,7 @@ impl Facet for SpacingFacet {
         _size: Size,
         _layer_group: &mut LayerGroup,
         _render_context: &mut RenderContext,
+        _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         Ok(())
     }
@@ -446,6 +452,7 @@ impl Facet for RiveFacet {
         _size: Size,
         layer_group: &mut LayerGroup,
         render_context: &mut RenderContext,
+        _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let artboard_ref = self.artboard.as_ref();
         let width = self.size.width as f32;
