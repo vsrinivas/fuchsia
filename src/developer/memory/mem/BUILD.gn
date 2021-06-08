@@ -23,7 +23,7 @@ executable("bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-fuchsia_shell_package("mem") {
+fuchsia_package_with_single_component("mem") {
   manifest = "meta/mem.cmx"
   deps = [
     ":bin",

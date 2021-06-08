@@ -90,7 +90,6 @@ _METRICS_TRACK_COMMAND_OPS=(
     "shell ls"
     "shell md5sum"
     "shell mediasession_cli_tool"
-    "shell mem"
     "shell mkdir"
     "shell mktemp"
     "shell mv"

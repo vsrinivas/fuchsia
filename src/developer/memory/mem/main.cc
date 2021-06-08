@@ -36,17 +36,8 @@ using namespace memory;
 
 // Returns a Digester using the memory monitor configuration if available.
 std::vector<BucketMatch> GetBucketMatchesFromConfig() {
-  if (!std::filesystem::exists("/hub/c/memory_monitor.cmx")) {
-    FX_LOGS(WARNING) << "No memory monitor component found, no bucket will be used.";
-    return {};
-  }
-
-  std::string instance_id =
-      std::filesystem::directory_iterator("/hub/c/memory_monitor.cmx")->path();
-  std::string full_path = instance_id + "/out/debug/buckets.json";
-
   std::string config_str;
-  if (!files::ReadFileToString(full_path, &config_str)) {
+  if (!files::ReadFileToString("/config/data/buckets.json", &config_str)) {
     FX_LOGS(ERROR) << "Unable to read configuration, no bucket will be used";
     return {};
   }

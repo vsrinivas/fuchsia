@@ -104,16 +104,6 @@ uint64_t TotalReadWriteCycles(const fuchsia::hardware::ram::metrics::BandwidthIn
   return total_readwrite_cycles;
 }
 
-fsl::SizedVmo ReadBucketConfiguration() {
-  fsl::SizedVmo sized_vmo;
-
-  if (std::filesystem::exists(kBucketConfigPath)) {
-    FX_CHECK(fsl::VmoFromFilename(kBucketConfigPath, &sized_vmo));
-  }
-
-  return sized_vmo;
-}
-
 std::vector<memory::BucketMatch> CreateBucketMatchesFromConfigData() {
   if (!std::filesystem::exists(kBucketConfigPath)) {
     FX_LOGS(WARNING) << "Bucket configuration file not found; no buckets will be available.";
@@ -140,9 +130,9 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       dispatcher_(dispatcher),
       component_context_(std::move(context)),
       inspector_(component_context_.get()),
-      logger_(dispatcher_,
-              [this](Capture* c) { return GetCapture(c); },
-              [this](const Capture& c, Digest* d) { GetDigest(c, d); }),
+      logger_(
+          dispatcher_, [this](Capture* c) { return GetCapture(c); },
+          [this](const Capture& c, Digest* d) { GetDigest(c, d); }),
       level_(Level::kNumLevels) {
   auto bucket_matches = CreateBucketMatchesFromConfigData();
   digester_ = std::make_unique<Digester>(Digester(bucket_matches));
@@ -168,7 +158,6 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       &inspector_);
 
   component_context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
-  PublishBucketConfiguration();
 
   if (command_line.HasOption("help")) {
     PrintHelp();
@@ -253,8 +242,8 @@ void Monitor::CreateMetrics(const std::vector<memory::BucketMatch>& bucket_match
   // Create a Cobalt Logger. The ID name is the one we specified in the
   // Cobalt metrics registry.
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  factory->CreateLoggerFromProjectId(cobalt_registry::kProjectId,
-                                     cobalt_logger_.NewRequest(), &status);
+  factory->CreateLoggerFromProjectId(cobalt_registry::kProjectId, cobalt_logger_.NewRequest(),
+                                     &status);
   if (status != fuchsia::cobalt::Status::OK) {
     FX_LOGS(ERROR) << "Unable to get cobalt.Logger from factory.";
     return;
@@ -296,17 +285,6 @@ void Monitor::NotifyWatchers(const zx_info_kmem_stats_t& kmem_stats) {
   for (auto& watcher : watchers_) {
     watcher->OnChange(stats);
   }
-}
-
-void Monitor::PublishBucketConfiguration() {
-  fsl::SizedVmo sized_vmo = ReadBucketConfiguration();
-  if (!sized_vmo) {
-    return;
-  }
-
-  fuchsia::mem::Buffer buffer = std::move(sized_vmo).ToTransport();
-  component_context_->outgoing()->debug_dir()->AddEntry(
-      "buckets.json", std::make_unique<vfs::VmoFile>(std::move(buffer.vmo), 0, buffer.size));
 }
 
 void Monitor::PrintHelp() {
@@ -545,9 +523,7 @@ void Monitor::PressureLevelChanged(Level level) {
   if (level == level_) {
     return;
   }
-  FX_LOGS(INFO) << "Memory pressure level changed from "
-                << kLevelNames[level_]
-                << " to "
+  FX_LOGS(INFO) << "Memory pressure level changed from " << kLevelNames[level_] << " to "
                 << kLevelNames[level];
   level_ = level;
   logger_.SetPressureLevel(level_);
