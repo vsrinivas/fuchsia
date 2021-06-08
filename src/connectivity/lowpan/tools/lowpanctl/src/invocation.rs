@@ -10,8 +10,10 @@ pub use crate::energy_scan_command::*;
 pub use crate::form_command::*;
 pub use crate::get_counters_command::*;
 pub use crate::get_credential::*;
+pub use crate::get_external_routes_command::*;
 pub use crate::get_mac_filter_settings_command::*;
 pub use crate::get_neighbor_table_command::*;
+pub use crate::get_on_mesh_nets_command::*;
 pub use crate::get_supported_channels::*;
 pub use crate::get_supported_network_types::*;
 pub use crate::join_command::*;
@@ -21,12 +23,15 @@ pub use crate::make_joinable_command::*;
 pub use crate::mfg_command::*;
 pub use crate::network_scan_command::*;
 pub use crate::provision_command::*;
+pub use crate::register_external_route_command::*;
 pub use crate::register_on_mesh_net_command::*;
 pub use crate::repeat_command::*;
 pub use crate::replace_mac_filter_settings_command::*;
 pub use crate::reset_command::*;
 pub use crate::set_active_comamnd::*;
 pub use crate::status_command::*;
+pub use crate::unregister_external_route_command::*;
+pub use crate::unregister_on_mesh_net_command::*;
 
 /// This struct contains the arguments decoded from the command
 /// line invocation of `lowpanctl`.
@@ -80,6 +85,11 @@ pub enum CommandEnumWithRepeat {
     GetCounters(GetCountersCommand),
     MakeJoinable(MakeJoinableCommand),
     RegisterOnMeshNet(RegisterOnMeshNetCommand),
+    UnregisterOnMeshNet(UnregisterOnMeshNetCommand),
+    GetOnMeshNets(GetOnMeshNetsCommand),
+    RegisterExternalRoute(RegisterExternalRouteCommand),
+    UnregisterExternalRoute(UnregisterExternalRouteCommand),
+    GetExternalRoutes(GetExternalRoutesCommand),
 }
 
 impl CommandEnumWithRepeat {
@@ -106,6 +116,11 @@ impl CommandEnumWithRepeat {
             CommandEnumWithRepeat::GetCounters(x) => x.exec(context).await,
             CommandEnumWithRepeat::MakeJoinable(x) => x.exec(context).await,
             CommandEnumWithRepeat::RegisterOnMeshNet(x) => x.exec(context).await,
+            CommandEnumWithRepeat::UnregisterOnMeshNet(x) => x.exec(context).await,
+            CommandEnumWithRepeat::GetOnMeshNets(x) => x.exec(context).await,
+            CommandEnumWithRepeat::RegisterExternalRoute(x) => x.exec(context).await,
+            CommandEnumWithRepeat::UnregisterExternalRoute(x) => x.exec(context).await,
+            CommandEnumWithRepeat::GetExternalRoutes(x) => x.exec(context).await,
         }
     }
 }
@@ -135,6 +150,11 @@ pub enum CommandEnum {
     GetNeighborTable(GetNeighborTableCommand),
     GetCounters(GetCountersCommand),
     RegisterOnMeshNet(RegisterOnMeshNetCommand),
+    UnregisterOnMeshNet(UnregisterOnMeshNetCommand),
+    GetOnMeshNets(GetOnMeshNetsCommand),
+    RegisterExternalRoute(RegisterExternalRouteCommand),
+    UnregisterExternalRoute(UnregisterExternalRouteCommand),
+    GetExternalRoutes(GetExternalRoutesCommand),
 }
 
 impl CommandEnum {
@@ -159,6 +179,11 @@ impl CommandEnum {
             CommandEnum::GetNeighborTable(x) => x.exec(context).await,
             CommandEnum::GetCounters(x) => x.exec(context).await,
             CommandEnum::RegisterOnMeshNet(x) => x.exec(context).await,
+            CommandEnum::UnregisterOnMeshNet(x) => x.exec(context).await,
+            CommandEnum::GetOnMeshNets(x) => x.exec(context).await,
+            CommandEnum::RegisterExternalRoute(x) => x.exec(context).await,
+            CommandEnum::UnregisterExternalRoute(x) => x.exec(context).await,
+            CommandEnum::GetExternalRoutes(x) => x.exec(context).await,
         }
     }
 }

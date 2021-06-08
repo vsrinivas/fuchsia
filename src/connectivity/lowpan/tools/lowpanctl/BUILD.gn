@@ -37,8 +37,10 @@ rustc_binary("bin") {
     "src/form_command.rs",
     "src/get_counters_command.rs",
     "src/get_credential.rs",
+    "src/get_external_routes_command.rs",
     "src/get_mac_filter_settings_command.rs",
     "src/get_neighbor_table_command.rs",
+    "src/get_on_mesh_nets_command.rs",
     "src/get_supported_channels.rs",
     "src/get_supported_network_types.rs",
     "src/invocation.rs",
@@ -50,12 +52,15 @@ rustc_binary("bin") {
     "src/mfg_command.rs",
     "src/network_scan_command.rs",
     "src/provision_command.rs",
+    "src/register_external_route_command.rs",
     "src/register_on_mesh_net_command.rs",
     "src/repeat_command.rs",
     "src/replace_mac_filter_settings_command.rs",
     "src/reset_command.rs",
     "src/set_active_comamnd.rs",
     "src/status_command.rs",
+    "src/unregister_external_route_command.rs",
+    "src/unregister_on_mesh_net_command.rs",
   ]
 }
 
