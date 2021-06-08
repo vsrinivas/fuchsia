@@ -12,8 +12,6 @@ toc:
   path: /docs/contribute/open_projects/template.md
 - title: "Build projects"
   section:
-  - title: "package() migration"
-    path: /docs/contribute/open_projects/build/package_migration.md
   - title: "Bringup test modernization"
     path: /docs/contribute/open_projects/build/bringup_test_modernization.md
   - title: "zx_* wrappers deprecation"
@@ -44,3 +42,5 @@ toc:
   section:
   - title: "Overview"
     path: /docs/contribute/open_projects/graduated/README.md
+  - title: "package() migration"
+    path: /docs/contribute/open_projects/graduated/package_migration.md
