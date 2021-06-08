@@ -18,6 +18,7 @@ use {
     fidl_fuchsia_wlan_common::ScanType,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_cobalt::CobaltSender,
+    fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::{error, info, warn},
     rand::Rng,
@@ -468,6 +469,31 @@ impl SavedNetworksManager {
         info!("Failed to find network to record result of connect attempt.");
     }
 
+    /// Record the disconnect from a network, to be used for things such as avoiding connections
+    /// that drop soon after starting.
+    pub async fn record_disconnect(
+        &self,
+        id: &NetworkIdentifier,
+        credential: &Credential,
+        bssid: types::Bssid,
+        uptime: zx::Duration,
+        curr_time: zx::Time,
+    ) {
+        let mut saved_networks = self.saved_networks.lock().await;
+        let networks = match saved_networks.get_mut(&id) {
+            Some(networks) => networks,
+            None => {
+                info!("Failed to find network to record disconnect stats");
+                return;
+            }
+        };
+        for network in networks.iter_mut() {
+            if &network.credential == credential {
+                network.perf_stats.disconnect_list.add(bssid, uptime, curr_time);
+            }
+        }
+    }
+
     pub async fn record_periodic_metrics(&self) {
         let saved_networks = self.saved_networks.lock().await;
         let mut cobalt_api = self.cobalt_api.lock().await;
@@ -678,8 +704,8 @@ mod tests {
         super::*,
         crate::{
             config_management::{
-                PROB_HIDDEN_DEFAULT, PROB_HIDDEN_IF_CONNECT_ACTIVE, PROB_HIDDEN_IF_CONNECT_PASSIVE,
-                PROB_HIDDEN_IF_SEEN_PASSIVE,
+                Disconnect, PROB_HIDDEN_DEFAULT, PROB_HIDDEN_IF_CONNECT_ACTIVE,
+                PROB_HIDDEN_IF_CONNECT_PASSIVE, PROB_HIDDEN_IF_SEEN_PASSIVE,
             },
             util::testing::cobalt::{
                 create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
@@ -689,7 +715,6 @@ mod tests {
         fidl_fuchsia_cobalt::CobaltEvent,
         fidl_fuchsia_stash as fidl_stash, fuchsia_async as fasync,
         fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
-        fuchsia_zircon as zx,
         futures::{task::Poll, TryStreamExt},
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
@@ -1325,6 +1350,45 @@ mod tests {
             .expect("Failed to get saved network config");
         let connect_failures = saved_config.perf_stats.failure_list.get_recent(before_recording);
         assert_eq!(0, connect_failures.len());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_disconnect() {
+        let stash_id = "test_record_connect_failure";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
+        let credential = Credential::Psk(vec![1; 32]);
+        let bssid = [1; 6];
+        let recording_time = zx::Time::get_monotonic();
+        let uptime = zx::Duration::from_seconds(1);
+
+        saved_networks.record_disconnect(&id, &credential, bssid, uptime, recording_time).await;
+        // Verify that nothing happens if the network was not already saved.
+        assert_eq!(saved_networks.known_network_count().await, 0);
+
+        // Save the network and record a disconnect.
+        assert!(saved_networks
+            .store(id.clone(), credential.clone())
+            .await
+            .expect("Failed to save network")
+            .is_none());
+        saved_networks.record_disconnect(&id, &credential, bssid, uptime, recording_time).await;
+
+        // Check that a disconnect was recorded for the network
+        let disconnects = saved_networks
+            .lookup(id)
+            .await
+            .pop()
+            .expect("Failed to get saved network")
+            .perf_stats
+            .disconnect_list
+            .get_recent(zx::Time::ZERO);
+        assert_variant!(disconnects.as_slice(), [disconnect] => {
+            assert_eq!(disconnect, &Disconnect {uptime, bssid, time: recording_time});
+        })
     }
 
     #[fasync::run_singlethreaded(test)]
