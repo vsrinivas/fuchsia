@@ -34,13 +34,8 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_test_component("bt-a2dp-loopback-component") {
-  component_name = "bt-a2dp-loopback"
+fuchsia_shell_package("bt-a2dp-loopback") {
+  testonly = true
   manifest = "meta/bt-a2dp-loopback.cmx"
   deps = [ ":bin" ]
-}
-
-fuchsia_package("bt-a2dp-loopback") {
-  testonly = true
-  deps = [ ":bt-a2dp-loopback-component" ]
 }
