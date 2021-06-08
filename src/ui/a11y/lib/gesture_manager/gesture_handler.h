@@ -32,6 +32,7 @@ class GestureHandler {
     kOneFingerSingleTap,
     kOneFingerDoubleTap,
     kOneFingerTripleTap,
+    kOneFingerDoubleTapDrag,
     kOneFingerTripleTapDrag,
     kOneFingerDrag,
     kOneFingerUpSwipe,

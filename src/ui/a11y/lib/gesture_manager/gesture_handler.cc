@@ -82,6 +82,10 @@ bool GestureHandler::BindMFingerNTapAction(uint32_t num_fingers, uint32_t num_ta
       break;
   }
 
+  if (gesture_type == kUnknown) {
+    return false;
+  }
+
   if (gesture_recognizers_.find(gesture_type) != gesture_recognizers_.end()) {
     FX_LOGS(INFO) << "Action already exists for GestureType: " << gesture_type;
     return false;
@@ -360,9 +364,12 @@ bool GestureHandler::BindMFingerNTapDragAction(OnGestureCallback on_recognize,
   // Since m and n are always <= 3, we can uniquely identify the type of an
   // m-finger-n-tap with the integer (10m + n). E.g. a 3-finger-double-tap would
   // be type 32.
-  auto gesture_type_id = 10 * num_fingers + num_taps;
+  const int32_t gesture_type_id = 10 * num_fingers + num_taps;
 
   switch (gesture_type_id) {
+    case 12:
+      gesture_type = kOneFingerDoubleTapDrag;
+      break;
     case 13:
       gesture_type = kOneFingerTripleTapDrag;
       break;
@@ -371,6 +378,10 @@ bool GestureHandler::BindMFingerNTapDragAction(OnGestureCallback on_recognize,
       break;
     default:
       break;
+  }
+
+  if (gesture_type == kUnknown) {
+    return false;
   }
 
   if (gesture_recognizers_.find(gesture_type) != gesture_recognizers_.end()) {

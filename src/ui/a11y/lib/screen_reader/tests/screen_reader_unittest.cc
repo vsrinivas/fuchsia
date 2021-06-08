@@ -169,7 +169,8 @@ TEST_F(ScreenReaderTest, GestureHandlersAreRegisteredIntheRightOrder) {
                           GestureType::kOneFingerDownSwipe, GestureType::kOneFingerUpSwipe,
                           GestureType::kOneFingerLeftSwipe, GestureType::kOneFingerRightSwipe,
                           GestureType::kOneFingerDoubleTap, GestureType::kOneFingerSingleTap,
-                          GestureType::kOneFingerDrag, GestureType::kTwoFingerSingleTap));
+                          GestureType::kOneFingerDoubleTapDrag, GestureType::kOneFingerDrag,
+                          GestureType::kTwoFingerSingleTap));
 }
 
 TEST_F(ScreenReaderTest, RegisteredActionsAreInvokedWhenGestureTriggers) {
@@ -194,6 +195,10 @@ TEST_F(ScreenReaderTest, RegisteredActionsAreInvokedWhenGestureTriggers) {
   // Note that since one finger single tap and drag both trigger the explore action, we expect to
   // see it twice in the list of called actions.
   mock_gesture_handler_->TriggerGesture(GestureType::kOneFingerSingleTap);
+
+  // Corresponds to five times the action being invoked! 2 to start a new stream, one to inject one
+  // event from the stream, two to end the stream.
+  mock_gesture_handler_->TriggerGesture(GestureType::kOneFingerDoubleTapDrag);
   mock_gesture_handler_->TriggerGesture(GestureType::kOneFingerDrag);
   RunLoopUntilIdle();
   EXPECT_THAT(
@@ -202,7 +207,10 @@ TEST_F(ScreenReaderTest, RegisteredActionsAreInvokedWhenGestureTriggers) {
                   StrEq("Three finger Up Swipe Action"), StrEq("Three finger Down Swipe Action"),
                   StrEq("Next Action"), StrEq("Previous Action"),
                   StrEq("Previous Semantic Level Action"), StrEq("Next Semantic Level Action"),
-                  StrEq("Default Action"), StrEq("Explore Action"), StrEq("Explore Action")));
+                  StrEq("Default Action"), StrEq("Explore Action"),
+                  StrEq("Inject Pointer Event Action"), StrEq("Inject Pointer Event Action"),
+                  StrEq("Inject Pointer Event Action"), StrEq("Inject Pointer Event Action"),
+                  StrEq("Inject Pointer Event Action"), StrEq("Explore Action")));
 }
 
 TEST_F(ScreenReaderTest, TrivialActionsAreInvokedWhenGestureTriggers) {
@@ -248,7 +256,7 @@ TEST_F(ScreenReaderTest, ScreenReaderSpeaksWhenInitializedAfterEngineAndSpeakerC
   // When the screen reader's destructor was called above
   // (via sceen_reader_.reset()), screen_reader_'s callback should have been
   // unregistered from the tts manager. If not, the tts manager would have
-  // invoekd the stale callback. This check ensures that the unregistration was
+  // invoked the stale callback. This check ensures that the unregistration was
   // handled correctly.
   EXPECT_TRUE(mock_speaker_ptr_->message_ids().empty());
 

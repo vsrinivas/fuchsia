@@ -14,6 +14,7 @@
 #include "src/ui/a11y/lib/screen_reader/change_semantic_level_action.h"
 #include "src/ui/a11y/lib/screen_reader/default_action.h"
 #include "src/ui/a11y/lib/screen_reader/explore_action.h"
+#include "src/ui/a11y/lib/screen_reader/inject_pointer_event_action.h"
 #include "src/ui/a11y/lib/screen_reader/linear_navigation_action.h"
 #include "src/ui/a11y/lib/screen_reader/recover_a11y_focus_action.h"
 #include "src/ui/a11y/lib/screen_reader/three_finger_swipe_action.h"
@@ -34,6 +35,7 @@ constexpr char kNextSemanticLevelActionLabel[] = "Next Semantic Level Action";
 constexpr char kIncrementRangeValueActionLabel[] = "Increment Range Value Action";
 constexpr char kDecrementRangeValueActionLabel[] = "Decrement Range Value Action";
 constexpr char kRecoverA11YFocusActionLabel[] = "Recover A11Y Focus Action";
+constexpr char kInjectPointerEventActionLabel[] = "Inject Pointer Event Action";
 
 // Returns the appropriate next action based on the semantic level.
 std::string NextActionFromSemanticLevel(ScreenReaderContext::SemanticLevel semantic_level) {
@@ -202,6 +204,29 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
       [this](GestureContext context) { ExecuteAction(kExploreActionLabel, std::move(context)); });
   FX_DCHECK(gesture_bind_status);
 
+  // Add MFingerNTapDragRecognizer (1 finger, 2 taps), recognizer.
+  gesture_bind_status = gesture_handler->BindMFingerNTapDragAction(
+      [this](GestureContext context) {
+        // When the gesture detects, events are already under way. We need to inject an (ADD ->
+        // DOWN) event here to simulate the beginning of the stream that will be injected.
+        context.last_event_phase = fuchsia::ui::input::PointerEventPhase::ADD;
+        ExecuteAction(kInjectPointerEventActionLabel, context);
+        context.last_event_phase = fuchsia::ui::input::PointerEventPhase::DOWN;
+        ExecuteAction(kInjectPointerEventActionLabel, context);
+      }, /*on_start*/
+      [this](GestureContext context) {
+        ExecuteAction(kInjectPointerEventActionLabel, context);
+      }, /*on_update*/
+      [this](GestureContext context) {
+        // Simulate the end of the stream.
+        context.last_event_phase = fuchsia::ui::input::PointerEventPhase::UP;
+        ExecuteAction(kInjectPointerEventActionLabel, context);
+        context.last_event_phase = fuchsia::ui::input::PointerEventPhase::REMOVE;
+        ExecuteAction(kInjectPointerEventActionLabel, context);
+      } /*on_complete*/,
+      1u /*num_fingers*/, 2u /*num_taps*/);
+  FX_DCHECK(gesture_bind_status);
+
   // Add OneFingerDrag recognizer.
   gesture_bind_status = gesture_handler->BindOneFingerDragAction(
       [this](GestureContext context) {
@@ -222,7 +247,6 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
           ExecuteAction(kDefaultActionLabel, std::move(context));
         }
       } /*on_complete*/);
-
   FX_DCHECK(gesture_bind_status);
 
   // Add TwoFingerSingleTap recognizer.
@@ -290,6 +314,10 @@ void ScreenReader::InitializeActions() {
   action_registry_->AddAction(
       kRecoverA11YFocusActionLabel,
       std::make_unique<RecoverA11YFocusAction>(action_context_.get(), context_.get()));
+
+  action_registry_->AddAction(
+      kInjectPointerEventActionLabel,
+      std::make_unique<InjectPointerEventAction>(action_context_.get(), context_.get()));
 }
 
 bool ScreenReader::ExecuteAction(const std::string& action_name, GestureContext gesture_context) {

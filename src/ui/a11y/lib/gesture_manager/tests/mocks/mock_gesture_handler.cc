@@ -120,6 +120,14 @@ bool MockGestureHandler::BindMFingerNTapDragAction(OnGestureCallback on_recogniz
                                                    OnGestureCallback on_update,
                                                    OnGestureCallback on_complete,
                                                    uint32_t num_fingers, uint32_t num_taps) {
+  if (num_fingers == 1 && num_taps == 2) {
+    gesture_handlers_[GestureType::kOneFingerDoubleTapDrag] = {
+        .on_recognize = std::move(on_recognize),
+        .on_update = std::move(on_update),
+        .on_complete = std::move(on_complete)};
+    bound_gestures_.push_back(GestureType::kOneFingerDoubleTapDrag);
+    return true;
+  }
   if (num_fingers == 1 && num_taps == 3) {
     gesture_handlers_[GestureType::kOneFingerTripleTapDrag] = {
         .on_recognize = std::move(on_recognize),
