@@ -1,5 +1,5 @@
 {
   "vsync_offset_in_us" : 13200,
-  "use_legacy_renderer": true,
+  "use_legacy_renderer": false,
   "intercept_all_input" : false
 }

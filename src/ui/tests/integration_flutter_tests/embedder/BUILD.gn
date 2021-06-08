@@ -35,7 +35,7 @@ fuchsia_unittest_package("flutter-embedder-test") {
     log_settings = {
       max_severity = "ERROR"
     }
-    environments = [ nuc_env ]
+    environments = [ aemu_env ]
   }
 }
 
