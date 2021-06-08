@@ -35,17 +35,26 @@ void magma_indriver_test(magma::PlatformPciDevice* platform_device);
 #endif
 
 struct sysdrv_device_t;
-static int magma_start(sysdrv_device_t* dev);
-#if MAGMA_TEST_DRIVER
-static int magma_stop(sysdrv_device_t* dev);
-#endif
 
 using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
 struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
  public:
+  template <typename T>
+  bool CheckSystemDevice(T& completer) MAGMA_REQUIRES(magma_mutex) {
+    if (!magma_system_device) {
+      MAGMA_LOG(WARNING, "Got message on torn-down device");
+      completer.Close(ZX_ERR_BAD_STATE);
+      return false;
+    }
+    return true;
+  }
+
   void Query2(Query2RequestView request, Query2Completer::Sync& _completer) override {
     DLOG("sysdrv_device_t::Query2");
+    std::lock_guard lock(magma_mutex);
+    if (!CheckSystemDevice(_completer))
+      return;
     DASSERT(this->magma_system_device);
 
     uint64_t result;
@@ -72,6 +81,9 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
   void QueryReturnsBuffer(QueryReturnsBufferRequestView request,
                           QueryReturnsBufferCompleter::Sync& _completer) override {
     DLOG("sysdrv_device_t::QueryReturnsBuffer");
+    std::lock_guard lock(magma_mutex);
+    if (!CheckSystemDevice(_completer))
+      return;
 
     zx_handle_t result;
     magma::Status status =
@@ -86,6 +98,9 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
 
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) override {
     DLOG("sysdrv_device_t::Connect");
+    std::lock_guard lock(magma_mutex);
+    if (!CheckSystemDevice(_completer))
+      return;
 
     auto connection = MagmaSystemDevice::Open(this->magma_system_device, request->client_id,
                                               /*thread_profile*/ nullptr);
@@ -104,18 +119,23 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
 
   void DumpState(DumpStateRequestView request, DumpStateCompleter::Sync& _completer) override {
     DLOG("sysdrv_device_t::DumpState");
+    std::lock_guard lock(magma_mutex);
+    if (!CheckSystemDevice(_completer))
+      return;
     if (request->dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
                                MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
       DLOG("Invalid dump type %d", request->dump_type);
       return;
     }
 
-    std::unique_lock<std::mutex> lock(this->magma_mutex);
     if (this->magma_system_device)
       this->magma_system_device->DumpStatus(request->dump_type);
   }
 
   void GetIcdList(GetIcdListRequestView request, GetIcdListCompleter::Sync& completer) override {
+    std::lock_guard lock(magma_mutex);
+    if (!CheckSystemDevice(completer))
+      return;
     fidl::FidlAllocator allocator;
     std::vector<msd_icd_info_t> msd_icd_infos;
     this->magma_system_device->GetIcdList(&msd_icd_infos);
@@ -138,13 +158,15 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
                    TestRestartCompleter::Sync& _completer) override {
 #if MAGMA_TEST_DRIVER
     DLOG("sysdrv_device_t::TestRestart");
-    std::unique_lock<std::mutex> lock(this->magma_mutex);
-    zx_status_t status = magma_stop(this);
+    std::lock_guard lock(magma_mutex);
+    if (!CheckSystemDevice(_completer))
+      return;
+    zx_status_t status = MagmaStop();
     if (status != ZX_OK) {
       DLOG("magma_stop failed: %d", status);
       return;
     }
-    status = magma_start(this);
+    status = MagmaStart();
     if (status != ZX_OK) {
       DLOG("magma_start failed: %d", status);
     }
@@ -157,13 +179,37 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
     _completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
 
+  int MagmaStart() MAGMA_REQUIRES(magma_mutex) {
+    DLOG("magma_start");
+
+    this->magma_system_device = this->magma_driver->CreateDevice(&this->gpu_core_protocol);
+    if (!this->magma_system_device)
+      return DRET_MSG(ZX_ERR_NO_RESOURCES, "Failed to create device");
+
+    DLOG("Created device %p", this->magma_system_device.get());
+    this->magma_system_device->set_perf_count_access_token_id(this->perf_count_access_token_id);
+
+    return ZX_OK;
+  }
+
+#if MAGMA_TEST_DRIVER
+  int MagmaStop() MAGMA_REQUIRES(magma_mutex) {
+    DLOG("magma_stop");
+
+    this->magma_system_device->Shutdown();
+    this->magma_system_device.reset();
+
+    return ZX_OK;
+  }
+#endif
+
   zx_device_t* parent_device;
   zx_device_t* zx_device_gpu;
 
   zx_intel_gpu_core_protocol_t gpu_core_protocol;
 
-  std::unique_ptr<MagmaDriver> magma_driver;
-  std::shared_ptr<MagmaSystemDevice> magma_system_device;
+  std::unique_ptr<MagmaDriver> magma_driver MAGMA_GUARDED(magma_mutex);
+  std::shared_ptr<MagmaSystemDevice> magma_system_device MAGMA_GUARDED(magma_mutex);
   std::mutex magma_mutex;
   zx_koid_t perf_count_access_token_id = 0;
 };
@@ -172,6 +218,7 @@ sysdrv_device_t* get_device(void* context) { return static_cast<sysdrv_device_t*
 
 static void sysdrv_gpu_init(void* context) {
   auto* gpu = static_cast<sysdrv_device_t*>(context);
+  std::lock_guard lock(gpu->magma_mutex);
   if (!magma::MagmaPerformanceCounterDevice::AddDevice(gpu->zx_device_gpu,
                                                        &gpu->perf_count_access_token_id)) {
     device_init_reply(gpu->zx_device_gpu, ZX_ERR_INTERNAL, nullptr);
@@ -217,6 +264,7 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device) {
   if (status != ZX_OK)
     return DRET_MSG(status, "device_get_protocol failed: %d", status);
 
+  std::lock_guard lock(device->magma_mutex);
   device->magma_driver = MagmaDriver::Create();
   if (!device->magma_driver)
     return DRET_MSG(ZX_ERR_INTERNAL, "MagmaDriver::Create failed");
@@ -234,7 +282,7 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device) {
 
   device->parent_device = zx_device;
 
-  status = magma_start(device.get());
+  status = device->MagmaStart();
   if (status != ZX_OK)
     return DRET_MSG(status, "magma_start failed");
 
@@ -263,29 +311,5 @@ static constexpr zx_driver_ops_t msd_driver_ops = []() {
   ops.bind = sysdrv_bind;
   return ops;
 }();
-
-static int magma_start(sysdrv_device_t* device) {
-  DLOG("magma_start");
-
-  device->magma_system_device = device->magma_driver->CreateDevice(&device->gpu_core_protocol);
-  if (!device->magma_system_device)
-    return DRET_MSG(ZX_ERR_NO_RESOURCES, "Failed to create device");
-
-  DLOG("Created device %p", device->magma_system_device.get());
-  device->magma_system_device->set_perf_count_access_token_id(device->perf_count_access_token_id);
-
-  return ZX_OK;
-}
-
-#if MAGMA_TEST_DRIVER
-static int magma_stop(sysdrv_device_t* device) {
-  DLOG("magma_stop");
-
-  device->magma_system_device->Shutdown();
-  device->magma_system_device.reset();
-
-  return ZX_OK;
-}
-#endif
 
 ZIRCON_DRIVER(gpu, msd_driver_ops, "magma", "0.1");
