@@ -133,6 +133,8 @@ pub enum JournalRecord {
     Mutation { object_id: u64, mutation: Mutation },
     // Commits records in the transaction.
     Commit,
+    // Discard all mutations with offsets greater than or equal to the given offset.
+    Discard(u64),
 }
 
 pub(super) fn journal_handle_options() -> HandleOptions {
@@ -334,6 +336,21 @@ impl Journal {
                                 }
                             }
                         }
+                        JournalRecord::Discard(offset) => {
+                            if let Some(transaction) = current_transaction.as_ref() {
+                                if transaction.0.file_offset < offset {
+                                    // Odd, but OK.
+                                    continue;
+                                }
+                            }
+                            current_transaction = None;
+                            while let Some(transaction) = mutations.last() {
+                                if transaction.0.file_offset < offset {
+                                    break;
+                                }
+                                mutations.pop();
+                            }
+                        }
                     }
                 }
                 // This is expected when we reach the end of the journal stream.
@@ -367,9 +384,6 @@ impl Journal {
             }
         };
 
-        // TODO(csuter): If we rejected some mutations because of a checksum failure, we need to do
-        // something so that when we next replay, we don't try and verify again.
-
         // Configure the journal writer so that we can continue.
         {
             if last_checkpoint.file_offset < super_block.super_block_journal_file_offset {
@@ -397,8 +411,14 @@ impl Journal {
             if !end_block {
                 last_checkpoint.checksum ^= RESET_XOR;
             }
-            self.inner.lock().unwrap().journal_file_offset = last_checkpoint.file_offset;
+            let offset = last_checkpoint.file_offset;
+            self.inner.lock().unwrap().journal_file_offset = offset;
             writer.seek_to_checkpoint(last_checkpoint);
+            if offset < reader.journal_file_checkpoint().file_offset {
+                // TODO(csuter): We need to make sure that this is tested.  If a corruption test
+                // does not trigger this, we may have to add a targeted test.
+                serialize_into(&mut *writer, &JournalRecord::Discard(offset))?;
+            }
         }
 
         let root_store = self.objects.root_store();
