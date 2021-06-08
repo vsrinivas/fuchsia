@@ -14,6 +14,7 @@ group("tests") {
 if (is_host) {
   test("arch-tests") {
     sources = [
+      "arm64-system-tests.cc",
       "bug-tests.cc",
       "cpuid-basic-tests.cc",
       "cpuid-corpus-tests.cc",

@@ -25,7 +25,26 @@ bool IsPage(uint64_t level, PageTableEntry entry) {
   return entry.type() == PageTableEntryType::kBlockDescriptor;
 }
 
+// Get the Memory Attribute Indirection Register (MAIR) index of the given
+// CacheAttribute.
+//
+// The MAIR is installed globally, and maps indices specified in a page table
+// entry to a set of cache attributes.
+size_t ToMairIndex(CacheAttributes cache_attrs) {
+  size_t index = static_cast<size_t>(cache_attrs);
+  ZX_DEBUG_ASSERT(index < arch::ArmMemoryAttrIndirectionRegister::kNumAttributes);
+  return index;
+}
+
 }  // namespace
+
+arch::ArmMemoryAttrIndirectionRegister GetArmMemoryAttrIndirectionRegister() {
+  return arch::ArmMemoryAttrIndirectionRegister::Get()
+      .FromValue(0)
+      .SetAttribute(ToMairIndex(CacheAttributes::kNormal), arch::ArmMemoryAttribute::kNormalCached)
+      .SetAttribute(ToMairIndex(CacheAttributes::kDevice),
+                    arch::ArmMemoryAttribute::kDevice_nGnRnE);
+}
 
 std::optional<LookupPageResult> LookupPage(MemoryManager& allocator, const PageTableLayout& layout,
                                            PageTableNode node, Vaddr virt_addr) {
@@ -74,7 +93,8 @@ std::optional<LookupPageResult> LookupPage(MemoryManager& allocator, const PageT
 }
 
 zx_status_t MapPage(MemoryManager& allocator, const PageTableLayout& layout, PageTableNode node,
-                    Vaddr virt_addr, Paddr phys_addr, PageSize page_size) {
+                    Vaddr virt_addr, Paddr phys_addr, PageSize page_size,
+                    CacheAttributes cache_attrs) {
   ZX_ASSERT(phys_addr <= kMaxPhysAddress);
   ZX_ASSERT(virt_addr.value() < layout.AddressSpaceSize());
   ZX_ASSERT(IsAligned(virt_addr.value(), PageBytes(page_size)));
@@ -87,6 +107,13 @@ zx_status_t MapPage(MemoryManager& allocator, const PageTableLayout& layout, Pag
   if (PageBits(page_size) > layout.region_size_bits) {
     return ZX_ERR_INVALID_ARGS;
   }
+
+  // Calculate the desired attributes for the page.
+  PteLowerAttrs lower_attrs = PteLowerAttrs{}
+                                  .set_sh(Shareability::kInnerShareable)
+                                  .set_attr_indx(ToMairIndex(cache_attrs))
+                                  .set_ap(PagePermissions::kSupervisorReadWrite)
+                                  .set_af(1);
 
   // Walk down the page table.
   ZX_DEBUG_ASSERT(layout.NumLevels() >= 1);
@@ -106,12 +133,7 @@ zx_status_t MapPage(MemoryManager& allocator, const PageTableLayout& layout, Pag
     if (level == 0) {
       ZX_DEBUG_ASSERT(pte_range_bits == PageBits(page_size));
       PageTableEntry new_entry = PageTableEntry::PageAtAddress(phys_addr);
-      new_entry.as_page().set_lower_attrs(
-          PteLowerAttrs{}
-              .set_sh(0)         // TODO(fxbug.dev/67632): Support caching.
-              .set_attr_indx(0)  // TODO(fxbug.dev/67632): Support non-0 attribute index.
-              .set_ap(PagePermissions::SupervisorReadWrite)
-              .set_af(1));
+      new_entry.as_page().set_lower_attrs(lower_attrs);
       node.set(index, new_entry);
       return ZX_OK;
     }
@@ -119,8 +141,7 @@ zx_status_t MapPage(MemoryManager& allocator, const PageTableLayout& layout, Pag
     // If we've hit the correct level for a large page, set it up.
     if (pte_range_bits == PageBits(page_size)) {
       PageTableEntry new_entry = PageTableEntry::BlockAtAddress(phys_addr);
-      new_entry.as_block().set_lower_attrs(
-          PteLowerAttrs{}.set_ap(PagePermissions::SupervisorReadWrite).set_af(1));
+      new_entry.as_block().set_lower_attrs(lower_attrs);
       node.set(index, new_entry);
       return ZX_OK;
     }

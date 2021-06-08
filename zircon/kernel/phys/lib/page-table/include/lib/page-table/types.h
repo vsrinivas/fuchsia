@@ -59,6 +59,14 @@ DEFINE_OP(Paddr, +)
 DEFINE_OP(Paddr, -)
 #undef DEFINE_OP
 
+// Caching attributes of memory.
+//
+// The following values will have architecture-specific interpretations.
+enum class CacheAttributes {
+  kNormal = 0,  // Normal, cached memory.
+  kDevice = 1,  // Memory suitable for MMIO and communication with devices.
+};
+
 }  // namespace page_table
 
 #endif  // ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_INCLUDE_LIB_PAGE_TABLE_TYPES_H_

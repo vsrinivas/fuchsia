@@ -45,18 +45,23 @@ TEST(Builder, InvalidArgs) {
   ASSERT_TRUE(builder.has_value());
 
   // Unaligned vaddr / paddr.
-  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(1), kPageSize4KiB), ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(builder->MapRegion(Vaddr(1), Paddr(0), kPageSize4KiB), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(1), kPageSize4KiB, CacheAttributes::kNormal),
+            ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(builder->MapRegion(Vaddr(1), Paddr(0), kPageSize4KiB, CacheAttributes::kNormal),
+            ZX_ERR_INVALID_ARGS);
 
   // Size not page aligned.
-  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0), kPageSize4KiB + 1), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0), kPageSize4KiB + 1, CacheAttributes::kNormal),
+            ZX_ERR_INVALID_ARGS);
 
   // Non-canonical address.
-  EXPECT_EQ(builder->MapRegion(Vaddr(0xf000'0000'0000'0000), Paddr(0), kPageSize4KiB),
+  EXPECT_EQ(builder->MapRegion(Vaddr(0xf000'0000'0000'0000), Paddr(0), kPageSize4KiB,
+                               CacheAttributes::kNormal),
             ZX_ERR_INVALID_ARGS);
 
   // Overflow the address space.
-  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0xffff'ffff'ffff'f000), kPageSize4KiB * 10),
+  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0xffff'ffff'ffff'f000), kPageSize4KiB * 10,
+                               CacheAttributes::kNormal),
             ZX_ERR_INVALID_ARGS);
 }
 
@@ -66,7 +71,9 @@ TEST(Builder, SinglePage) {
   // Create a builder, and map a single page.
   std::optional builder = AddressSpaceBuilder::Create(allocator, FullFeatureCpuid());
   ASSERT_TRUE(builder.has_value());
-  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0xaaaa'0000), kPageSize4KiB), ZX_OK);
+  EXPECT_EQ(
+      builder->MapRegion(Vaddr(0), Paddr(0xaaaa'0000), kPageSize4KiB, CacheAttributes::kNormal),
+      ZX_OK);
 
   // Ensure we can lookup the page.
   EXPECT_EQ(LookupPage(allocator, builder->root_node(), Vaddr(0x0))->phys_addr,
@@ -80,7 +87,9 @@ TEST(Builder, MultiplePages) {
   // Create a builder, and map in a range of pages.
   std::optional builder = AddressSpaceBuilder::Create(allocator, FullFeatureCpuid());
   ASSERT_TRUE(builder.has_value());
-  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0xaaaa'0000), kPageSize4KiB * kNumPages), ZX_OK);
+  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0xaaaa'0000), kPageSize4KiB * kNumPages,
+                               CacheAttributes::kNormal),
+            ZX_OK);
 
   // Ensure we can look up the pages.
   EXPECT_EQ(LookupPage(allocator, builder->root_node(), Vaddr(0x0000))->phys_addr,
@@ -99,7 +108,9 @@ TEST(Builder, LastPage) {
   // Create a builder, and map a single page.
   std::optional builder = AddressSpaceBuilder::Create(allocator, FullFeatureCpuid());
   ASSERT_TRUE(builder.has_value());
-  EXPECT_EQ(builder->MapRegion(kLastPage, Paddr(0xaaaa'0000), kPageSize4KiB), ZX_OK);
+  EXPECT_EQ(
+      builder->MapRegion(kLastPage, Paddr(0xaaaa'0000), kPageSize4KiB, CacheAttributes::kNormal),
+      ZX_OK);
 
   // Ensure we can lookup the page.
   EXPECT_EQ(LookupPage(allocator, builder->root_node(), kLastPage)->phys_addr, Paddr(0xaaaa'0000u));
@@ -111,7 +122,8 @@ TEST(Builder, LargePage) {
   // Create a builder, and map a large region with 1:1 phys/virt.
   std::optional builder = AddressSpaceBuilder::Create(allocator, FullFeatureCpuid());
   ASSERT_TRUE(builder.has_value());
-  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0), kPageSize1GiB * 4), ZX_OK);
+  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0), kPageSize1GiB * 4, CacheAttributes::kNormal),
+            ZX_OK);
 
   // Lookup an address in the range, and ensure that large pages were used to construct
   // the entries.
@@ -127,7 +139,8 @@ TEST(Builder, DisableGigabyteMappings) {
   // Create a builder, and map a large region with 1:1 phys/virt.
   std::optional builder = AddressSpaceBuilder::Create(allocator, No1GibMappingsCpuid());
   ASSERT_TRUE(builder.has_value());
-  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0), kPageSize1GiB * 4), ZX_OK);
+  EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0), kPageSize1GiB * 4, CacheAttributes::kNormal),
+            ZX_OK);
 
   // Lookup an address in the range, and ensure that 2MiB pages were used to construct
   // the entries.

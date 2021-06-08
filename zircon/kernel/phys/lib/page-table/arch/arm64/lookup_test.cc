@@ -202,8 +202,7 @@ TEST(Arm64MapPage, SingleMapping) {
   PageTableNodeStorage<GranuleSize::k4KiB> root;
 
   EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x1234'5678'9000),
-                    Paddr(0x1234'5678'9000),
-                    /*page_size=*/PageSize::k4KiB),
+                    Paddr(0x1234'5678'9000), PageSize::k4KiB, CacheAttributes::kNormal),
             ZX_OK);
   EXPECT_THAT(LookupPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x1234'5678'9000)),
               MapsToPaddr(0x1234'5678'9000u));
@@ -215,10 +214,10 @@ TEST(Arm64MapPage, ReplaceMapping) {
 
   // Attempt to map the same vaddr twice.
   EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x0), Paddr(0xaaaa'0000),
-                    /*page_size=*/PageSize::k4KiB),
+                    PageSize::k4KiB, CacheAttributes::kNormal),
             ZX_OK);
   EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x0), Paddr(0xbbbb'0000),
-                    /*page_size=*/PageSize::k4KiB),
+                    PageSize::k4KiB, CacheAttributes::kNormal),
             ZX_ERR_ALREADY_EXISTS);
 
   // Should still have the original mapping.
@@ -231,10 +230,10 @@ TEST(Arm64MapPage, MultipleMappings) {
   PageTableNodeStorage<GranuleSize::k4KiB> root{};
 
   EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x0000), Paddr(0xaaaa'0000),
-                    /*page_size=*/PageSize::k4KiB),
+                    PageSize::k4KiB, CacheAttributes::kNormal),
             ZX_OK);
   EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x1000), Paddr(0xbbbb'0000),
-                    /*page_size=*/PageSize::k4KiB),
+                    PageSize::k4KiB, CacheAttributes::kNormal),
             ZX_OK);
   EXPECT_THAT(LookupPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x0000)),
               MapsToPaddr(0xaaaa'0000));
@@ -248,12 +247,12 @@ TEST(Arm64MapPage, LargePage) {
 
   // Map in a 2MiB page.
   EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x0000), Paddr(0xaaa0'0000),
-                    /*page_size=*/PageSize::k2MiB),
+                    PageSize::k2MiB, CacheAttributes::kNormal),
             ZX_OK);
 
   // We shouldn't be able to map in a smaller page in the middle.
   EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x1000), Paddr(0xbbbb'0000),
-                    /*page_size=*/PageSize::k4KiB),
+                    PageSize::k4KiB, CacheAttributes::kNormal),
             ZX_ERR_ALREADY_EXISTS);
 
   // We should be able to lookup different parts of the page.
@@ -272,7 +271,7 @@ TEST(Arm64MapPage, BadPageSize) {
 
   // Map in a 16 kiB page, which isn't valid with 4 kiB granules.
   EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x0000), Paddr(0xaaa0'0000),
-                    /*page_size=*/PageSize::k16KiB),
+                    PageSize::k16KiB, CacheAttributes::kNormal),
             ZX_ERR_INVALID_ARGS);
 }
 

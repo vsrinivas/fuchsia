@@ -43,9 +43,17 @@ std::optional<LookupPageResult> LookupPage(MemoryManager& allocator, const PageT
 // Returns ZX_ERR_ALREADY_EXISTS if part of the input range has already
 // been mapped.
 //
-// TODO(fxbug.dev/67632): Add support for permissions, page attributes.
+// TODO(fxbug.dev/67632): Add support for permissions.
 zx_status_t MapPage(MemoryManager& allocator, const PageTableLayout& layout, PageTableNode node,
-                    Vaddr virt_addr, Paddr phys_addr, PageSize page_size);
+                    Vaddr virt_addr, Paddr phys_addr, PageSize page_size,
+                    CacheAttributes cache_attrs);
+
+// Get the Memory Attribute Index Register (MAIR) assumed by this library.
+//
+// Page table entries have cache attributes that index into this MAIR. For
+// the entries to be valid, the value returned by this function must be
+// installed in the MAIR.
+arch::ArmMemoryAttrIndirectionRegister GetArmMemoryAttrIndirectionRegister();
 
 }  // namespace page_table::arm64
 

@@ -32,7 +32,8 @@ class AddressSpaceBuilder final : public AddressSpaceBuilderInterface {
   PageTableNode* root_node() { return pml4_; }
 
   // |AddressSpaceBuilder| implementation.
-  zx_status_t MapRegion(Vaddr virt_start, Paddr phys_start, uint64_t size) override;
+  zx_status_t MapRegion(Vaddr virt_start, Paddr phys_start, uint64_t size,
+                        CacheAttributes cache_attrs) override;
   Paddr root_paddr() override { return allocator_.PtrToPhys(reinterpret_cast<std::byte*>(pml4_)); }
 
  private:

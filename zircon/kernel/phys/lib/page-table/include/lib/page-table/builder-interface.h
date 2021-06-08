@@ -29,7 +29,8 @@ class AddressSpaceBuilderInterface {
   // `phys_start` are similarly aligned).
   //
   // Returns errors if input arguments are invalid.
-  virtual zx_status_t MapRegion(Vaddr virt_start, Paddr phys_start, uint64_t size) = 0;
+  virtual zx_status_t MapRegion(Vaddr virt_start, Paddr phys_start, uint64_t size,
+                                CacheAttributes cache_attrs) = 0;
 
   // Return the Paddr of the root node of the translation table.
   virtual Paddr root_paddr() = 0;

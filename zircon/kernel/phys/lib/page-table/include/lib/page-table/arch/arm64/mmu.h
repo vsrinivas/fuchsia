@@ -92,10 +92,19 @@ enum class PageTableEntryType {
 //
 // [arm/v8]: Table D5-28 Data access permissions for stage 1 translations
 enum class PagePermissions {
-  SupervisorReadWrite = 0b00,  // EL1+ can read/write, EL0 no access.
-  ReadWrite = 0b01,            // All levels can read/write.
-  SupervisorReadOnly = 0b10,   // EL1+ can read, EL0 no access.
-  ReadOnly = 0b11,             // All levels can read.
+  kSupervisorReadWrite = 0b00,  // EL1+ can read/write, EL0 no access.
+  kReadWrite = 0b01,            // All levels can read/write.
+  kSupervisorReadOnly = 0b10,   // EL1+ can read, EL0 no access.
+  kReadOnly = 0b11,             // All levels can read.
+};
+
+// Shareability attribute for Normal memory
+//
+// Table D5-36 SH[1:0] field encoding for Normal memory, VMSAv8-64 translation table format
+enum class Shareability {
+  kNonShareable = 0b00,
+  kOuterShareable = 0b10,
+  kInnerShareable = 0b11,
 };
 
 // Page table entry upper and lower attributes.
@@ -118,7 +127,7 @@ struct PteLowerAttrs {
 
   DEF_SUBBIT(raw, 11, ng);                            // Not global
   DEF_SUBBIT(raw, 10, af);                            // Access flag
-  DEF_SUBFIELD(raw, 9, 8, sh);                        // Shareability
+  DEF_ENUM_SUBFIELD(raw, Shareability, 9, 8, sh);     // Shareability
   DEF_ENUM_SUBFIELD(raw, PagePermissions, 7, 6, ap);  // Access permissions
   DEF_SUBBIT(raw, 5, ns);                             // Non-secure
   DEF_SUBFIELD(raw, 4, 2, attr_indx);                 // Memory attributes index

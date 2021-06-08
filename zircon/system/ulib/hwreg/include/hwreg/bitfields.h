@@ -123,7 +123,7 @@ class RegisterBase {
   uint32_t reg_addr() const { return reg_addr_; }
   void set_reg_addr(uint32_t addr) { reg_addr_ = addr; }
 
-  ValueType reg_value() const { return reg_value_; }
+  constexpr ValueType reg_value() const { return reg_value_; }
   ValueType* reg_value_ptr() { return &reg_value_; }
   const ValueType* reg_value_ptr() const { return &reg_value_; }
   SelfType& set_reg_value(IntType value) {

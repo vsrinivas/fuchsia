@@ -64,7 +64,8 @@ void InstallIdentityMapPageTables(page_table::MemoryManager& allocator,
   // Map in the physical range.
   uint64_t start = fbl::round_down(min_addr, ZX_MAX_PAGE_SIZE);
   uint64_t end = fbl::round_up(max_addr, ZX_MAX_PAGE_SIZE);
-  zx_status_t result = builder->MapRegion(Vaddr(start), Paddr(start), end - start);
+  zx_status_t result = builder->MapRegion(Vaddr(start), Paddr(start), end - start,
+                                          page_table::CacheAttributes::kNormal);
   if (result != ZX_OK) {
     ZX_PANIC("Failed to map in range.");
   }

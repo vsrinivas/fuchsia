@@ -6,6 +6,7 @@
 
 #include "lib/page-table/arch/arm64/builder.h"
 
+#include <lib/arch/arm64/system.h>
 #include <lib/page-table/arch/arm64/mmu.h>
 #include <lib/page-table/internal/bits.h>
 
@@ -70,6 +71,10 @@ void* AllocateGranule(MemoryManager& allocator, GranuleSize granule_size) {
 
 }  // namespace
 
+arch::ArmMemoryAttrIndirectionRegister AddressSpaceBuilder::GetArmMemoryAttrIndirectionRegister() {
+  return page_table::arm64::GetArmMemoryAttrIndirectionRegister();
+}
+
 std::optional<AddressSpaceBuilder> AddressSpaceBuilder::Create(MemoryManager& allocator,
                                                                const PageTableLayout& layout) {
   void* top_level = AllocateGranule(allocator, layout.granule_size);
@@ -81,7 +86,8 @@ std::optional<AddressSpaceBuilder> AddressSpaceBuilder::Create(MemoryManager& al
       layout);
 }
 
-zx_status_t AddressSpaceBuilder::MapRegion(Vaddr virt_start, Paddr phys_start, uint64_t size) {
+zx_status_t AddressSpaceBuilder::MapRegion(Vaddr virt_start, Paddr phys_start, uint64_t size,
+                                           CacheAttributes cache_attrs) {
   // Zero-sized regions are trivially mapped.
   if (size == 0) {
     return ZX_OK;
@@ -118,8 +124,8 @@ zx_status_t AddressSpaceBuilder::MapRegion(Vaddr virt_start, Paddr phys_start, u
     PageSize page_size = GetLargestPageSize(layout_, virt_start, phys_start, size);
 
     // Map it in.
-    if (zx_status_t result =
-            MapPage(allocator_, layout_, root_node_, virt_start, phys_start, page_size);
+    if (zx_status_t result = MapPage(allocator_, layout_, root_node_, virt_start, phys_start,
+                                     page_size, cache_attrs);
         result != ZX_OK) {
       return result;
     }

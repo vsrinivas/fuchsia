@@ -54,10 +54,18 @@ std::optional<AddressSpaceBuilder> AddressSpaceBuilder::Create(MemoryManager& al
                              /*use_1gib_mappings=*/use_1gib_mappings);
 }
 
-zx_status_t AddressSpaceBuilder::MapRegion(Vaddr virt_start, Paddr phys_start, uint64_t size) {
+zx_status_t AddressSpaceBuilder::MapRegion(Vaddr virt_start, Paddr phys_start, uint64_t size,
+                                           CacheAttributes cache_attrs) {
   // Zero-sized regions are trivially mapped.
   if (size == 0) {
     return ZX_OK;
+  }
+
+  // We currently only support normal mappings.
+  //
+  // TODO(fxbug.dev/67632): Add support for other attributes.
+  if (cache_attrs != CacheAttributes::kNormal) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Ensure neither the physical or virtual address ranges overflow.
