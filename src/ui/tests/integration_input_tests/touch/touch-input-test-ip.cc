@@ -1,10 +1,11 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
 #include <fuchsia/hardware/display/cpp/fidl.h>
+#include <fuchsia/input/injection/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
@@ -37,19 +38,23 @@
 
 #include <gtest/gtest.h>
 
-// This test exercises the touch input dispatch path from Root Presenter to a Scenic client. It is a
+#include "src/ui/input/testing/fake_input_report_device/fake.h"
+#include "src/ui/input/testing/fake_input_report_device/reports_reader.h"
+
+// This test exercises the touch input dispatch path from Input Pipeline to a Scenic client. It is a
 // multi-component test, and carefully avoids sleeping or polling for component coordination.
-// - It runs real Root Presenter and Scenic components.
+// - It runs real Root Presenter, Input Pipeline, and Scenic components.
 // - It uses a fake display controller; the physical device is unused.
 //
 // Components involved
 // - This test program
+// - Input Pipeline
 // - Root Presenter
 // - Scenic
 // - Child view, a Scenic client
 //
 // Touch dispatch path
-// - Test program's injection -> Root Presenter -> Scenic -> Child view
+// - Test program's injection -> Input Pipeline -> Scenic -> Child view
 //
 // Setup sequence
 // - The test sets up a view hierarchy with three views:
@@ -57,8 +62,8 @@
 //   - Middle view, owned by this test.
 //   - Bottom view, owned by the child view.
 // - The test waits for a Scenic event that verifies the child has UI content in the scene graph.
-// - The test injects input into Root Presenter, emulating a display's touch report.
-// - Root Presenter dispatches the touch event to Scenic, which in turn dispatches it to the child.
+// - The test injects input into Input Pipeline, emulating a display's touch report.
+// - Input Pipeline dispatches the touch event to Scenic, which in turn dispatches it to the child.
 // - The child receives the touch event and reports back to the test over a custom test-only FIDL.
 // - Test waits for the child to report a touch; when the test receives the report, the test quits
 //   successfully.
@@ -76,12 +81,17 @@ constexpr zx::duration kTimeout = zx::min(5);
 // Common services for each test.
 const std::map<std::string, std::string> LocalServices() {
   return {
-      // Root presenter is included in this test's package so the two components have the same
-      // /config/data. This allows the test to control the display rotation read by root presenter.
-      {"fuchsia.ui.input.InputDeviceRegistry",
-       "fuchsia-pkg://fuchsia.com/touch-input-test#meta/root_presenter.cmx"},
+      // Test-only variants of the input pipeline and root presenter are included in this tests's
+      // package for component hermeticity, and to avoid reading /dev/class/input-report. Reading
+      // the input device driver in a test can cause conflicts with real input devices. This also
+      // allows root presenter to share /config/data with the test. This allows the test to control
+      // the display rotation read by root presenter.
+      {"fuchsia.input.injection.InputDeviceRegistry",
+       "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/input_pipeline.cmx"},
       {"fuchsia.ui.policy.Presenter",
-       "fuchsia-pkg://fuchsia.com/touch-input-test#meta/root_presenter.cmx"},
+       "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/root_presenter.cmx"},
+      {"fuchsia.ui.pointerinjector.configuration.Setup",
+       "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/root_presenter.cmx"},
       // Scenic protocols.
       {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
       {"fuchsia.ui.pointerinjector.Registry", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
@@ -145,6 +155,8 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
 
     FX_VLOGS(1) << "Created test environment.";
 
+    RegisterInjectionDevice();
+
     // Post a "just in case" quit task, if the test hangs.
     async::PostDelayedTask(
         dispatcher(),
@@ -180,51 +192,67 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
     respond_callback_(std::move(pointer_data));
   }
 
-  // Inject directly into Root Presenter, using fuchsia.ui.input FIDLs.
-  // Returns the timestamp on the first injected InputReport.
+  void RegisterInjectionDevice() {
+    registry_ = test_env()->ConnectToService<fuchsia::input::injection::InputDeviceRegistry>();
+
+    // Create a FakeInputDevice
+    fake_input_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>(
+        input_device_ptr_.NewRequest(), dispatcher());
+
+    // Set descriptor
+    auto device_descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
+    auto touch = device_descriptor->mutable_touch()->mutable_input();
+    touch->set_touch_type(fuchsia::input::report::TouchType::TOUCHSCREEN);
+    touch->set_max_contacts(10);
+
+    fuchsia::input::report::Axis axis;
+    axis.unit.type = fuchsia::input::report::UnitType::NONE;
+    axis.unit.exponent = 0;
+    axis.range.min = -1000;
+    axis.range.max = 1000;
+
+    fuchsia::input::report::ContactInputDescriptor contact;
+    contact.set_position_x(axis);
+    contact.set_position_y(axis);
+    contact.set_pressure(axis);
+
+    touch->mutable_contacts()->push_back(std::move(contact));
+
+    fake_input_device_->SetDescriptor(std::move(device_descriptor));
+
+    // Register the FakeInputDevice
+    registry_->Register(std::move(input_device_ptr_));
+  }
+
+  // Inject directly into Input Pipeline, using fuchsia.input.injection FIDLs.
   template <typename TimeT>
   TimeT InjectInput() {
-    using fuchsia::ui::input::InputReport;
-    // Device parameters
-    auto parameters = fuchsia::ui::input::TouchscreenDescriptor::New();
-    *parameters = {.x = {.range = {.min = -1000, .max = 1000}},
-                   .y = {.range = {.min = -1000, .max = 1000}},
-                   .max_finger_id = 10};
+    // Set InputReports to inject. One contact at the center of the top right quadrant, followed
+    // by no contacts.
+    fuchsia::input::report::ContactInputReport contact_input_report;
+    contact_input_report.set_contact_id(1);
+    contact_input_report.set_position_x(500);
+    contact_input_report.set_position_y(-500);
 
-    // Register it against Root Presenter.
-    fuchsia::ui::input::DeviceDescriptor device{.touchscreen = std::move(parameters)};
-    auto registry = test_env()->ConnectToService<fuchsia::ui::input::InputDeviceRegistry>();
-    fuchsia::ui::input::InputDevicePtr connection;
-    registry->RegisterDevice(std::move(device), connection.NewRequest());
-    FX_LOGS(INFO) << "Registered touchscreen with x touch range = (-1000, 1000) "
-                  << "and y touch range = (-1000, 1000).";
+    fuchsia::input::report::TouchInputReport touch_input_report;
+    auto contacts = touch_input_report.mutable_contacts();
+    contacts->push_back(std::move(contact_input_report));
 
-    TimeT injection_time;
+    fuchsia::input::report::InputReport input_report;
+    input_report.set_touch(std::move(touch_input_report));
 
-    {
-      // Inject one input report, then a conclusion (empty) report.
-      // RotateTouchEvent() depends on this sending a touch event at the same location.
-      auto touch = fuchsia::ui::input::TouchscreenReport::New();
-      *touch = {
-          .touches = {{.finger_id = 1, .x = 500, .y = -500}}};  // center of top right quadrant
-      // Use system clock, instead of dispatcher clock, for measurement purposes.
-      injection_time = RealNow<TimeT>();
-      InputReport report{.event_time = TimeToUint(injection_time), .touchscreen = std::move(touch)};
-      connection->DispatchReport(std::move(report));
-      FX_LOGS(INFO) << "Dispatching touch report at (500, -500)";
-    }
+    std::vector<fuchsia::input::report::InputReport> input_reports;
+    input_reports.push_back(std::move(input_report));
 
-    {
-      auto touch = fuchsia::ui::input::TouchscreenReport::New();
-      InputReport report{.event_time = TimeToUint(RealNow<TimeT>()),
-                         .touchscreen = std::move(touch)};
-      connection->DispatchReport(std::move(report));
-    }
+    fuchsia::input::report::TouchInputReport remove_touch_input_report;
+    fuchsia::input::report::InputReport remove_input_report;
+    remove_input_report.set_touch(std::move(remove_touch_input_report));
+    input_reports.push_back(std::move(remove_input_report));
+    fake_input_device_->SetReports(std::move(input_reports));
 
     ++injection_count_;
     FX_LOGS(INFO) << "*** Tap injected, count: " << injection_count_;
-
-    return injection_time;
+    return RealNow<TimeT>();
   }
 
   int injection_count() const { return injection_count_; }
@@ -270,6 +298,9 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
   fidl::Binding<fuchsia::test::ui::ResponseListener> response_listener_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> test_env_;
   std::unique_ptr<scenic::Session> session_;
+  fuchsia::input::injection::InputDeviceRegistryPtr registry_;
+  std::unique_ptr<fake_input_report_device::FakeInputDevice> fake_input_device_;
+  fuchsia::input::report::InputDevicePtr input_device_ptr_;
   int injection_count_ = 0;
 
   // Child view's ViewHolder.
@@ -278,12 +309,12 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
   fit::function<void(fuchsia::test::ui::PointerData)> respond_callback_;
 };
 
-class TouchInputTest : public TouchInputBase {
+class TouchInputTest_IP : public TouchInputBase {
  protected:
-  TouchInputTest() : TouchInputBase({}) {}
+  TouchInputTest_IP() : TouchInputBase({}) {}
 };
 
-TEST_F(TouchInputTest, FlutterTap) {
+TEST_F(TouchInputTest_IP, FlutterTap) {
   const std::string kOneFlutter = "fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx";
   uint32_t display_width = 0;
   uint32_t display_height = 0;
@@ -403,7 +434,7 @@ TEST_F(TouchInputTest, FlutterTap) {
   RunLoop();  // Go!
 }
 
-TEST_F(TouchInputTest, CppGfxClientTap) {
+TEST_F(TouchInputTest_IP, CppGfxClientTap) {
   const std::string kCppGfxClient =
       "fuchsia-pkg://fuchsia.com/cpp-gfx-client#meta/cpp-gfx-client.cmx";
   uint32_t display_width = 0;
@@ -526,9 +557,9 @@ TEST_F(TouchInputTest, CppGfxClientTap) {
   RunLoop();  // Go!
 }
 
-class WebEngineTest : public TouchInputBase {
+class WebEngineTest_IP : public TouchInputBase {
  public:
-  WebEngineTest()
+  WebEngineTest_IP()
       : TouchInputBase({
             {.url = kFontsProvider, .name = fuchsia::fonts::Provider::Name_},
             {.url = kImeService, .name = fuchsia::ui::input::ImeService::Name_},
@@ -598,7 +629,7 @@ class WebEngineTest : public TouchInputBase {
   static constexpr auto kTapRetryInterval = zx::sec(1);
 };
 
-TEST_F(WebEngineTest, ChromiumTap) {
+TEST_F(WebEngineTest_IP, ChromiumTap) {
   const std::string kOneChromium = "fuchsia-pkg://fuchsia.com/one-chromium#meta/one-chromium.cmx";
   uint32_t display_width = 0;
   uint32_t display_height = 0;

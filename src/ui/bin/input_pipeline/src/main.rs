@@ -24,12 +24,14 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
 
     // Declare the types of input to support.
-    let device_types = vec![input_device::InputDeviceType::MediaButtons];
+    let device_types =
+        vec![input_device::InputDeviceType::Touch, input_device::InputDeviceType::MediaButtons];
 
     // Create a new input pipeline.
+    let input_handlers = input_handlers::create().await;
     let input_pipeline = input_pipeline_lib::input_pipeline::InputPipeline::new(
         device_types.clone(),
-        input_handlers::create(),
+        input_handlers,
     )
     .await
     .expect("Failed to create input pipeline");
@@ -40,7 +42,8 @@ async fn main() -> Result<(), Error> {
     // Handle input events.
     fasync::Task::local(input_pipeline.handle_input_events()).detach();
 
-    // Handle incoming injection input devices.
+    // Handle incoming injection input devices. Start with u32::Max to avoid conflicting device ids.
+    let mut injected_device_id = u32::MAX;
     while let Some(service_request) = fs.next().await {
         match service_request {
             ExposedServices::InputDeviceRegistry(stream) => {
@@ -49,9 +52,11 @@ async fn main() -> Result<(), Error> {
                     device_types.clone(),
                     input_event_sender.clone(),
                     bindings.clone(),
+                    injected_device_id,
                 );
 
                 fasync::Task::local(input_device_registry_fut).detach();
+                injected_device_id -= 1;
             }
         }
     }
@@ -66,12 +71,14 @@ async fn handle_input_device_registry_request_stream(
         input_pipeline_lib::input_device::InputEvent,
     >,
     bindings: input_pipeline_lib::input_pipeline::InputDeviceBindingHashMap,
+    device_id: u32,
 ) {
     match input_pipeline_lib::input_pipeline::InputPipeline::handle_input_device_registry_request_stream(
         stream,
         &device_types,
         &input_event_sender,
         &bindings,
+        device_id,
     )
     .await
     {

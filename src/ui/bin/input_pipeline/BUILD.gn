@@ -11,11 +11,13 @@ group("tests") {
 }
 
 rustc_binary("input_pipeline_bin") {
+  output_name = "input_pipeline"
   with_unit_tests = true
   edition = "2018"
 
   deps = [
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -32,9 +34,20 @@ rustc_binary("input_pipeline_bin") {
   ]
 }
 
-fuchsia_package_with_single_component("input_pipeline") {
+fuchsia_component("component_for_test") {
+  component_name = "input_pipeline"
+  manifest = "meta/input_pipeline_base.cmx"
+  deps = [ ":input_pipeline_bin" ]
+}
+
+fuchsia_component("component") {
+  component_name = "input_pipeline"
   manifest = "meta/input_pipeline.cmx"
   deps = [ ":input_pipeline_bin" ]
+}
+
+fuchsia_package("input_pipeline") {
+  deps = [ ":component" ]
 }
 
 fuchsia_unittest_package("input_pipeline_tests") {

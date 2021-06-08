@@ -201,35 +201,36 @@ async fn add_touch_hack(
 }
 
 pub async fn handle_input_device_registry_request_streams(
-    stream_receiver: futures::channel::mpsc::UnboundedReceiver<InputDeviceRegistryRequestStream>,
+    mut stream_receiver: futures::channel::mpsc::UnboundedReceiver<
+        InputDeviceRegistryRequestStream,
+    >,
     input_device_types: Vec<input_device::InputDeviceType>,
     input_event_sender: futures::channel::mpsc::Sender<input_device::InputEvent>,
     input_device_bindings: InputDeviceBindingHashMap,
 ) {
-    // It's unlikely that multiple clients will concurrently connect to the InputDeviceRegistry.
-    // However, if multiple clients do connect concurrently, we don't want said clients
-    // depending on the serialization that would be provided by `for_each()`.
-    stream_receiver
-        .for_each_concurrent(None, |stream| async {
-            match InputPipeline::handle_input_device_registry_request_stream(
-                stream,
-                &input_device_types,
-                &input_event_sender,
-                &input_device_bindings,
-            )
-            .await
-            {
-                Ok(()) => (),
-                Err(e) => {
-                    fx_log_warn!(
-                        "failure while serving InputDeviceRegistry: {}; \
-                         will continue serving other clients",
-                        e
-                    );
-                }
+    // Use a high value device id to avoid conflicting device ids.
+    let mut device_id = u32::MAX;
+    while let Some(stream) = stream_receiver.next().await {
+        match InputPipeline::handle_input_device_registry_request_stream(
+            stream,
+            &input_device_types,
+            &input_event_sender,
+            &input_device_bindings,
+            device_id,
+        )
+        .await
+        {
+            Ok(()) => (),
+            Err(e) => {
+                fx_log_warn!(
+                    "failure while serving InputDeviceRegistry: {}; \
+                     will continue serving other clients",
+                    e
+                );
             }
-        })
-        .await;
+        }
+        device_id -= 1;
+    }
 }
 
 #[cfg(test)]

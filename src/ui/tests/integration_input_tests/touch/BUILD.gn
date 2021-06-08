@@ -80,10 +80,81 @@ fuchsia_test_package("touch-input-test") {
   }
 }
 
+config_data("touch-input-test-display_rotation-ip") {
+  for_pkg = "touch-input-test-ip"
+
+  sources = [ "data/display_rotation" ]
+  outputs = [ "display_rotation" ]
+}
+
+executable("touch-input-test-ip-bin") {
+  testonly = true
+  sources = [ "touch-input-test-ip.cc" ]
+  output_name = "touch-input-test-ip"
+  deps = [
+    ":fuchsia.test.ui",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.fonts",
+    "//sdk/fidl/fuchsia.hardware.display",
+    "//sdk/fidl/fuchsia.input.injection",
+    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.memorypressure",
+    "//sdk/fidl/fuchsia.net.interfaces",
+    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/fidl/fuchsia.web",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fit",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/input/testing/fake_input_report_device",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_test_component("touch-input-test-ip-component") {
+  manifest = "meta/touch-input-test-ip.cmx"
+  deps = [ ":touch-input-test-ip-bin" ]
+}
+
+fuchsia_test_package("touch-input-test-ip") {
+  test_components = [ ":touch-input-test-ip-component" ]
+  deps = [
+    ":touch-input-test-display_rotation-ip",
+    "//src/ui/bin/input_pipeline:component_for_test",
+    "//src/ui/bin/root_presenter:component_v1_for_test",
+  ]
+  test_specs = {
+    environments = [
+      {
+        dimensions = {
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
+}
+
 group("tests") {
   testonly = true
   deps = [
     ":touch-input-test",
+    ":touch-input-test-ip",
 
     # The deps below are necessary on minimal product configs.
     "//garnet/examples/intl/manager:intl_property_manager",

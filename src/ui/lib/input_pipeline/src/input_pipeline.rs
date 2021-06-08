@@ -93,20 +93,23 @@ impl InputPipeline {
             input_device_bindings: Arc::new(Mutex::new(HashMap::new())),
         };
 
-        // Watches the input device directory for new input devices. Creates new InputDeviceBindings
-        // that send InputEvents to `input_event_receiver`.
-        let device_watcher = Self::get_device_watcher().await?;
-        let dir_proxy =
-            open_directory_in_namespace(input_device::INPUT_REPORT_PATH, OPEN_RIGHT_READABLE)?;
-
         let bindings: InputDeviceBindingHashMap = Arc::new(Mutex::new(HashMap::new()));
-
         let device_types = input_pipeline.input_device_types.clone();
         let input_event_sender = input_pipeline.input_event_sender.clone();
         let device_bindings = bindings.clone();
         fasync::Task::spawn(async move {
+            // Watches the input device directory for new input devices. Creates new InputDeviceBindings
+            // that send InputEvents to `input_event_receiver`.
+            let device_watcher = Self::get_device_watcher().await;
+            if device_watcher.is_err() {
+                fx_log_err!("Input pipeline is unable to watch the input report directory. New input devices will not be supported.");
+                return;
+            }
+            let dir_proxy =
+                open_directory_in_namespace(input_device::INPUT_REPORT_PATH, OPEN_RIGHT_READABLE)
+                    .expect("Unable to open input report directory.");
             let _ = Self::watch_for_devices(
-                device_watcher,
+                device_watcher.unwrap(),
                 dir_proxy,
                 device_types,
                 input_event_sender,
@@ -215,11 +218,13 @@ impl InputPipeline {
     /// - `device_types`: The types of devices to watch for.
     /// - `input_event_sender`: The channel new InputDeviceBindings will send InputEvents to.
     /// - `bindings`: Holds all the InputDeviceBindings associated with the InputPipeline.
+    /// - `device_id`: The device id of the associated bindings.
     pub async fn handle_input_device_registry_request_stream(
         mut stream: fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
         device_types: &Vec<input_device::InputDeviceType>,
         input_event_sender: &Sender<input_device::InputEvent>,
         bindings: &InputDeviceBindingHashMap,
+        device_id: u32,
     ) -> Result<(), Error> {
         while let Some(request) = stream
             .try_next()
@@ -239,7 +244,7 @@ impl InputPipeline {
                         device_proxy,
                         input_event_sender,
                         bindings,
-                        u32::MAX, // Max value that's unlikely to conflict.
+                        device_id,
                     )
                     .await;
                 }
@@ -257,7 +262,7 @@ impl InputPipeline {
 /// - `device_proxy`: A proxy to the input device.
 /// - `input_event_sender`: The channel new InputDeviceBindings will send InputEvents to.
 /// - `bindings`: Holds all the InputDeviceBindings associated with the InputPipeline.
-/// - `device_id`: The device name of the associated bindings.
+/// - `device_id`: The device id of the associated bindings.
 async fn add_device_bindings(
     device_types: &Vec<input_device::InputDeviceType>,
     device_proxy: fidl_fuchsia_input_report::InputDeviceProxy,
@@ -662,6 +667,7 @@ mod tests {
             &device_types,
             &input_event_sender,
             &bindings_clone,
+            0,
         )
         .await;
 
