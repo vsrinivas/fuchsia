@@ -760,3 +760,52 @@ impl RangeUriPathHandler for RecordingRange {
         ready(response).boxed()
     }
 }
+
+/// Information saved by Record for each request it handles.
+#[derive(Debug)]
+pub struct HistoryEntry {
+    uri_path: PathBuf,
+}
+
+impl HistoryEntry {
+    /// The uri_path of the request.
+    pub fn uri_path(&self) -> &Path {
+        &self.uri_path
+    }
+}
+
+/// The request history recorded by Record.
+pub struct History(Arc<Mutex<Vec<HistoryEntry>>>);
+
+impl History {
+    /// Take the recorded history, clearing it from the Record.
+    pub fn take(&self) -> Vec<HistoryEntry> {
+        std::mem::replace(&mut self.0.lock(), vec![])
+    }
+}
+
+/// Responder that records the requests.
+pub struct Record {
+    history: History,
+}
+
+impl Record {
+    /// Creates a responder that records all the requests.
+    pub fn new() -> (Self, History) {
+        let history = Arc::new(Mutex::new(vec![]));
+        (Self { history: History(Arc::clone(&history)) }, History(history))
+    }
+}
+
+impl UriPathHandler for Record {
+    fn handle<'a>(
+        &'a self,
+        uri_path: &Path,
+        response: Response<Body>,
+    ) -> BoxFuture<'_, Response<Body>> {
+        self.history.0.lock().push(HistoryEntry {
+            uri_path: uri_path.to_owned(),
+        });
+        ready(response).boxed()
+    }
+}
