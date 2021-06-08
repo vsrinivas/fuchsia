@@ -28,6 +28,13 @@
 #define FTLN_3B_PN TRUE  // If true, use 3B page numbers.
 #endif
 
+// Prefer to use this function rather than #if FTLN_DEBUG directly because this will
+// ensure what's within will actually build whilst any reasonable compiler will ensure
+// the code is not actually included.
+static inline int ftln_debug() {
+  return FTLN_DEBUG;
+}
+
 //
 // Symbol Definitions.
 //
@@ -215,8 +222,7 @@ struct ftln {
 #endif
   char vol_name[FTL_NAME_MAX];  // Volume name.
 
-  // Logger used by the FTL.
-  Logger logger;
+  FtlLogger logger;
 };
 
 __BEGIN_CDECLS
@@ -245,6 +251,10 @@ int FtlnRecCheck(FTLN ftl, int wr_cnt);
 int FtlnRecNeeded(CFTLN ftl, int wr_cnt);
 int FtlnRdPage(FTLN ftl, ui32 pn, void* buf);
 
+ui8 FtlnCalculateSpareValidity(const ui8* spare_buf, const ui8* data_buf, ui32 page_size);
+void FtlnSetSpareValidity(ui8* spare_buf, const ui8* data_buf, ui32 page_size);
+int FtlnCheckSpareValidity(const ui8* spare_bu, const ui8* data_buf, ui32 page_size);
+int FtlnIncompleteWrite(const ui8* spare_buf, const ui8* data_buf, ui32 page_size);
 int FtlnMapWr(void* vol, ui32 mpn, void* buf);
 int FtlnMetaWr(FTLN ftl, ui32 type);
 

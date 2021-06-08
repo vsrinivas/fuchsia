@@ -5,6 +5,7 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 
 #include <random>
@@ -24,27 +25,47 @@ TEST(CorruptTest, CorruptTest) {
   // 768 blocks containing 64 pages of 4 KiB with 8 bytes OOB
   constexpr int kSize = 768 * 64 * (4096 + 8);
 
-  fzl::OwnedVmoMapper vmo;
-  ASSERT_EQ(vmo.CreateAndMap(kSize, "corrupt-test-vmo"), ZX_OK);
-  memset(vmo.start(), 0xff, kSize);
+  for (int pass = 0; pass < 2; ++pass) {
+    fzl::OwnedVmoMapper vmo;
+    ASSERT_EQ(vmo.CreateAndMap(kSize, "corrupt-test-vmo"), ZX_OK);
+    memset(vmo.start(), 0xff, kSize);
 
-  TestFilesystemOptions options = TestFilesystemOptions::DefaultMinfs();
-  options.device_block_size = 8192;
-  options.device_block_count = 0;  // Use VMO size.
-  options.use_ram_nand = true;
-  options.ram_nand_vmo = zx::unowned_vmo(vmo.vmo());
+    TestFilesystemOptions options = TestFilesystemOptions::DefaultMinfs();
+    options.device_block_size = 8192;
+    options.device_block_count = 0;  // Use VMO size.
+    options.use_ram_nand = true;
+    options.ram_nand_vmo = zx::unowned_vmo(vmo.vmo());
+    std::random_device random;
 
-  // In one thread, repeatedly create a file, write to it, sync and then delete two files.  Then,
-  // some random amount of time later, tear down the Ram Nand driver, then rebind and fsck.  The
-  // journal should ensure the file system remains consistent.
-  {
-    auto fs_or = TestFilesystem::Create(options);
-    ASSERT_TRUE(fs_or.is_ok()) << fs_or.status_string();
-    TestFilesystem fs = std::move(fs_or).value();
+    if (pass == 0) {
+      // In this first pass, a write failure is closely targeted such that the failure is more
+      // likely to occur just as the FTL is writing the first page of a new map block.  If things
+      // change with the write pattern for minfs, then this range might not be right, so on the
+      // second pass, we target a much wider range.
+      std::uniform_int_distribution distribution(1325, 1400);
 
-    const std::string file1 = fs.mount_path() + "/file1";
-    const std::string file2 = fs.mount_path() + "/file2";
-    std::thread thread([&]() {
+      // Deliberately fail after an odd number so that we always fail half-way through an 8 KiB
+      // write.
+      options.fail_after = distribution(random) | 1;
+    } else {
+      // On the second pass, we use a wider random range in case a change in the system means that
+      // the first pass no longer targets weak spots.
+      std::uniform_int_distribution distribution(1300, 2300);
+      options.fail_after = distribution(random);
+    }
+
+    // Create a dummy FVM partition that shifts the location of the minfs partition such that the
+    // offsets being used will hit the second half of the FTL's 8 KiB map pages.
+    options.dummy_fvm_partition_size = 8'388'608;
+
+    {
+      auto fs_or = TestFilesystem::Create(options);
+      ASSERT_TRUE(fs_or.is_ok()) << fs_or.status_string();
+      TestFilesystem fs = std::move(fs_or).value();
+
+      // Loop until we encounter write failures.
+      const std::string file1 = fs.mount_path() + "/file1";
+      const std::string file2 = fs.mount_path() + "/file2";
       for (;;) {
         {
           fbl::unique_fd fd(open(file1.c_str(), O_RDWR | O_CREAT, 0644));
@@ -61,30 +82,16 @@ TEST(CorruptTest, CorruptTest) {
           }
         }
       }
-    });
+    }
 
-    std::random_device random;
-    std::uniform_int_distribution distribution(0, 20000);
-    const int usec = distribution(random);
-    std::cout << "sleeping for " << usec << "us" << std::endl;
-    zx_nanosleep(zx_deadline_after(zx::usec(usec).get()));
-
-    // Unbind the NAND driver.
-    zx::channel local, remote;
-    ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
-    ASSERT_EQ(fdio_service_connect(fs.GetRamNand()->path(), remote.release()), ZX_OK);
-    auto resp = fidl::WireCall<device::Controller>(local.borrow()).ScheduleUnbind();
-    ASSERT_EQ(resp.status(), ZX_OK);
-    ASSERT_FALSE(resp->result.is_err());
-
-    thread.join();
+    std::cout << "Remounting" << std::endl;
+    options.fail_after = 0;
+    auto fs_or = TestFilesystem::Open(options);
+    ASSERT_TRUE(fs_or.is_ok()) << fs_or.status_string();
+    TestFilesystem fs = std::move(fs_or).value();
+    EXPECT_EQ(fs.Unmount().status_value(), ZX_OK);
+    EXPECT_EQ(fs.Fsck().status_value(), ZX_OK);
   }
-
-  auto fs_or = TestFilesystem::Open(options);
-  ASSERT_TRUE(fs_or.is_ok()) << fs_or.status_string();
-  TestFilesystem fs = std::move(fs_or).value();
-  EXPECT_EQ(fs.Unmount().status_value(), ZX_OK);
-  EXPECT_EQ(fs.Fsck().status_value(), ZX_OK);
 }
 
 }  // namespace

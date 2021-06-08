@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_FTL_FTL_H_
 #define ZIRCON_SYSTEM_ULIB_FTL_FTL_H_
 
+#include <lib/ftl/logger.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 
@@ -189,18 +190,6 @@ typedef struct {
 typedef struct ndm* NDM;
 typedef const struct ndm* CNDM;
 
-typedef void (*LogFunction)(const char*, int, const char*, ...) __PRINTFLIKE(3, 4);
-
-typedef struct {
-  // Logger interface for different log levels.
-  LogFunction trace;
-  LogFunction debug;
-  LogFunction info;
-  LogFunction warning;
-  LogFunction error;
-  LogFunction fatal;
-} Logger;
-
 // FTL NDM structure holding all driver information.
 typedef struct {
   uint32_t block_size;        // Size of a block in bytes.
@@ -213,7 +202,7 @@ typedef struct {
   uint32_t read_wear_limit;   // Device read-wear limit.
   void* ndm;                  // Driver's NDM pointer.
   uint32_t flags;             // Option flags.
-  Logger logger;
+  FtlLogger logger;
 } FtlNdmVol;
 
 // TargetNDM Configuration Structure.
@@ -252,7 +241,7 @@ typedef struct NDMDrvr {
   int (*rd_raw_spare)(uint32_t p, uint8_t* spare, void* dev);
   int (*rd_raw_page)(uint32_t p, void* data, void* dev);
 #endif
-  Logger logger;
+  FtlLogger logger;
 } NDMDrvr;
 
 // Driver count statistics for TargetFTL-NDM volumes.

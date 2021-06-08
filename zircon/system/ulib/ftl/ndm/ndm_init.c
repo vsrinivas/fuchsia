@@ -984,7 +984,7 @@ static int init_ndm(NDM ndm) {
 
   // Else device is NDM formatted. Find latest control information.
   if (find_last_ctrl_info(ndm)) {
-    ndm->logger.warning(__FILE__, __LINE__, "Failed to obtain valid NDM Control Block.");
+    ndm->logger.warn(__FILE__, __LINE__, "Failed to obtain valid NDM Control Block.");
     return -1;
   }
 
@@ -1096,7 +1096,7 @@ static int ndm_xfr_page(ui32 old_pn, ui32 new_pn, ui8* buf, ui8* old_spare, ui8*
       FsError2(NDM_RD_ECC_FAIL, EIO);
       return 1;
     }
-    ndm->logger.error(__FILE__, __LINE__, "Failed to read page %d. IO Error.");
+    ndm->logger.error(__FILE__, __LINE__, "Failed to read page %d. IO Error.", old_pn);
     FsError2(NDM_EIO, EIO);
     return -2;
   }

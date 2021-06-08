@@ -190,8 +190,10 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
       __TA_REQUIRES(mutex_);
   // Returns the maximum bitflips corrected on this NAND page
   // (the maximum bitflips across all of the ECC pages in this page).
-  zx_status_t AmlGetECCCorrections(int ecc_pages, uint32_t nand_page, uint32_t* ecc_corrected)
-      __TA_REQUIRES(mutex_);
+  // erased will indicate whether the page was registered as an erased page, as
+  // those should completely fail ECC.
+  zx_status_t AmlGetECCCorrections(int ecc_pages, uint32_t nand_page, uint32_t* ecc_corrected,
+                                   bool* erased) __TA_REQUIRES(mutex_);
   zx_status_t AmlCheckECCPages(int ecc_pages) __TA_REQUIRES(mutex_);
   void AmlSetClockRate(uint32_t clk_freq);
   void AmlClockInit();

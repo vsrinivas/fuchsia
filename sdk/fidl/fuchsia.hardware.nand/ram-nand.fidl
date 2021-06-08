@@ -64,6 +64,9 @@ resource struct RamNandInfo {
     bool export_nand_config;
     /// if true, export a boot partition map as metadata.
     bool export_partition_map;
+
+    /// If non-zero, fail after `fail_after` writes.
+    uint32 fail_after;
 };
 
 [ForDeprecatedCBindings]

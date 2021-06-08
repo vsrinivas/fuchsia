@@ -583,10 +583,9 @@ static ui32 next_recycle_blk(FTLN ftl, int should_boost_low_wear) {
 static int recycle_vblk(FTLN ftl, ui32 recycle_b) {
   ui32 pn, past_end;
 
-#if FTLN_DEBUG > 1
-  if (ftl->flags & FTLN_VERBOSE)
+  if (ftln_debug() > 1 && ftl->flags & FTLN_VERBOSE) {
     printf("recycle_vblk: block# %u\n", recycle_b);
-#endif
+  }
 
   // Transfer all used pages from recycle block to free block.
   pn = recycle_b * ftl->pgs_per_blk;
@@ -924,10 +923,9 @@ int FtlnRecNeeded(CFTLN ftl, int wr_cnt) {
 int FtlnRecycleMapBlk(FTLN ftl, ui32 recycle_b) {
   ui32 i, pn;
 
-#if FTLN_DEBUG > 1
-  if (ftl->flags & FTLN_VERBOSE)
+  if (ftln_debug() > 1 && ftl->flags & FTLN_VERBOSE) {
     printf("FtlnRecycleMapBlk: block# %u\n", recycle_b);
-#endif
+  }
 
   // Transfer all used pages from recycle block to free block.
   pn = recycle_b * ftl->pgs_per_blk;
@@ -984,6 +982,104 @@ int FtlnRecycleMapBlk(FTLN ftl, ui32 recycle_b) {
   return 0;
 }
 
+//  FtlnCalculateSpareValidity: Returns a validity byte for the spare using
+//                              a bitwise check where each bit covers 2
+//                              bytes of the spare and 1/8th of the page data.
+//                              1 if all bytes are 0xffff and 0 otherwise.
+//                              When performing this, we ensure that the byte
+//                              this will write out to is read as 0, ensuring a
+//                              non-0xff result.
+//
+//              Inputs: spare_buf = The pointer to the spare data to be read and
+//                                  validated.
+//
+//                       data_buf = The pointer to the page data to be
+//                                  validated.
+//
+//                      page_size = The size of the data page in bytes.
+//
+//              Returns: The calculated validity byte.
+ui8 FtlnCalculateSpareValidity(const ui8* spare_buf, const ui8* data_buf, ui32 page_size) {
+  ui16* oob_to_check = (ui16*)spare_buf;
+  ui8 result = 0;
+  const ui32 page_chunk = page_size / 8;
+
+  // Only check 7/8 byte pairs and shift at the end. Since we interpret
+  // where this check byte goes as zero, so it will always be a zero.
+  for (ui32 i = 0; i < 7; i++) {
+    if (oob_to_check[i] == 0xffff) {
+      // Breaking 32 bit constraint here, because fuchsia expects at least 64
+      // bit support anyways. Allows us to move at 8 byte strides.
+      uint64_t* data_to_check = (uint64_t*)&data_buf[page_chunk * i];
+      for (ui32 j = 0; j < page_chunk / 8; j++) {
+        if (data_to_check[j] != 0xffffffffffffffff) {
+          break;
+        }
+      }
+      result |= 1;
+    }
+    result <<= 1;
+  }
+  return result;
+}
+
+//  FtlnSetSpareValidity: Sets the last validity byte of the spare to the
+//                        result of FtlnCalculateSpareValidity.
+//
+//              Inputs: spare_buf = The pointer to the spare data to be read and
+//                                  updated.
+//
+//                       data_buf = The pointer to the page data to be
+//                                  validated.
+//
+//                      page_size = The size of the data page in bytes.
+//
+void FtlnSetSpareValidity(ui8* spare_buf, const ui8* data_buf, ui32 page_size) {
+  spare_buf[14] = FtlnCalculateSpareValidity(spare_buf, data_buf, page_size);
+}
+
+//  FtlnSetSpareValidity: Verifies that the last validity byte of the spare is
+//                        the result of FtlnCalculateSpareValidity.
+//
+//              Inputs: spare_buf = The pointer to the spare data to be read and
+//                                  validated.
+//
+//                       data_buf = The pointer to the page data to be
+//                                  validated.
+//
+//                      page_size = The size of the data page in bytes.
+//
+//              Returns: 1 if true, and 0 if false.
+//
+int FtlnCheckSpareValidity(const ui8* spare_buf, const ui8* data_buf, ui32 page_size) {
+  return spare_buf[14] == FtlnCalculateSpareValidity(spare_buf, data_buf, page_size);
+}
+
+//  FtlnIncompleteWrite: Verifies a complete write by checking the validity
+//                       byte if populated, otherwise checks that wear count
+//                       isn't maxed out. The wear count is used as a less
+//                       reliable, but reverse-compatible check for
+//                       incomplete oob data for before the validity byte was
+//                       used.
+//
+//              Inputs: spare_buf = The pointer to the spare data to be read and
+//                                  validated.
+//
+//                       data_buf = The pointer to the page data to be
+//                                  validated.
+//
+//                      page_size = The size of the data page in bytes.
+//
+//              Returns: 1 if incomplete write detected, and 0 if otherwise.
+//
+int FtlnIncompleteWrite(const ui8* spare_buf, const ui8* data_buf, ui32 page_size) {
+  if (spare_buf[14] != 0xff) {
+    return !FtlnCheckSpareValidity(spare_buf, data_buf, page_size);
+  } else {
+    return GET_SA_WC(spare_buf) == 0xfffffff ? 1 : 0;
+  }
+}
+
 //  FtlnMetaWr: Write FTL meta information page
 //
 //      Inputs: ftl = pointer to FTL control block
@@ -1032,14 +1128,13 @@ int FtlnRecCheck(FTLN ftl, int wr_cnt) {
     // Count number of times any recycle is done in FtlnRecCheck().
     ++ftl->recycle_needed;
 
-#if FTLN_DEBUG > 1
-    if (ftl->flags & FTLN_VERBOSE)
+    if (ftln_debug() > 1 && ftl->flags & FTLN_VERBOSE) {
       printf(
           "\n0 rec begin: free vpn = %5u (%3u), free mpn = %5u (%3u)"
           " free blocks = %2u\n",
           ftl->free_vpn, free_vol_list_pgs(ftl), ftl->free_mpn, free_map_list_pgs(ftl),
           ftl->num_free_blks);
-#endif
+    }
 
     // Loop until enough pages are free.
     for (count = 1;; ++count) {
@@ -1055,20 +1150,19 @@ int FtlnRecCheck(FTLN ftl, int wr_cnt) {
       // Record the highest number of consecutive recycles.
       if (ftl->wear_data.max_consec_rec < count) {
         ftl->wear_data.max_consec_rec = count;
-#if FTLN_DEBUG > 2
-        printf("max_consec_rec=%u, avg_wc_lag=%u\n", ftl->wear_data.max_consec_rec,
-               ftl->wear_data.avg_wc_lag);
-#endif
+        if (ftln_debug() > 2) {
+          printf("max_consec_rec=%u, avg_wc_lag=%u\n", ftl->wear_data.max_consec_rec,
+                 ftl->wear_data.avg_wc_lag);
+        }
       }
 
-#if FTLN_DEBUG > 1
-      if (ftl->flags & FTLN_VERBOSE)
+      if (ftln_debug() > 1 && ftl->flags & FTLN_VERBOSE) {
         printf(
             "%u rec begin: free vpn = %5u (%3u), free mpn = %5u (%3u)"
             " free blocks = %2u\n",
             count, ftl->free_vpn, free_vol_list_pgs(ftl), ftl->free_mpn, free_map_list_pgs(ftl),
             ftl->num_free_blks);
-#endif
+      }
 
       // Break if enough pages have been freed.
       if (FtlnRecNeeded(ftl, wr_cnt) == FALSE)
@@ -1085,10 +1179,10 @@ int FtlnRecCheck(FTLN ftl, int wr_cnt) {
       // Ensure we haven't recycled too many times.
       PfAssert(count <= 2 * ftl->num_blks);
       if (count > 2 * ftl->num_blks) {
-#if FTLN_DEBUG
-        printf("FTL NDM too many consec recycles = %u\n", count);
-        FtlnBlkStats(ftl);
-#endif
+        if (ftln_debug() > 0) {
+          printf("FTL NDM too many consec recycles = %u\n", count);
+          FtlnBlkStats(ftl);
+        }
         return FsError2(FTL_RECYCLE_CNT, ENOSPC);
       }
     }

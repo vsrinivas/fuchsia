@@ -5,6 +5,7 @@
 #ifndef LIB_FTL_NDM_DRIVER_H_
 #define LIB_FTL_NDM_DRIVER_H_
 
+#include <lib/ftl/logger.h>
 #include <zircon/compiler.h>
 
 #include <cstdint>
@@ -40,14 +41,7 @@ struct VolumeOptions {
   uint32_t flags;
 };
 
-// Helper for overriding default logging routines.
-struct LoggerProxy {
-  __PRINTFLIKE(3, 4) void (*trace)(const char*, int, const char*, ...) = nullptr;
-  __PRINTFLIKE(3, 4) void (*debug)(const char*, int, const char*, ...) = nullptr;
-  __PRINTFLIKE(3, 4) void (*info)(const char*, int, const char*, ...) = nullptr;
-  __PRINTFLIKE(3, 4) void (*warn)(const char*, int, const char*, ...) = nullptr;
-  __PRINTFLIKE(3, 4) void (*error)(const char*, int, const char*, ...) = nullptr;
-};
+FtlLogger DefaultLogger();
 
 // Encapsulates the lower layer TargetFtl-Ndm driver.
 class __EXPORT NdmDriver {
@@ -91,12 +85,22 @@ class __EXPORT NdmDriver {
   // Returns whether a given page is empty or not. |data| and |spare| store
   // the contents of the page.
   virtual bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) = 0;
+
+  // Returns the number of bytes in a page.
+  virtual uint32_t PageSize() = 0;
+
+  // Returns the number of bytes available for spare data storage.
+  virtual uint8_t SpareSize() = 0;
+
+  // Looks at the spare  and data buffer to try to determine if the write may
+  // have been incomplete. Return true if it appears to have been incomplete.
+  virtual bool IncompletePageWrite(uint8_t* spare, uint8_t* data) = 0;
 };
 
 // Base functionality for a driver implementation.
 class __EXPORT NdmBaseDriver : public NdmDriver {
  public:
-  NdmBaseDriver() {}
+  NdmBaseDriver(FtlLogger logger) : logger_(logger) {}
   virtual ~NdmBaseDriver();
 
   // Returns true if known data appears to be present on the device. This does
@@ -126,10 +130,6 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
   const char* CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options,
                               bool save_volume_data = true);
 
-  // Just like |CreateNdmVolume| but provides an override for default logging routines.
-  const char* CreateNdmVolumeWithLogger(const Volume* ftl_volume, const VolumeOptions& options,
-                                        bool save_volume_data, std::optional<LoggerProxy> logger);
-
   // Deletes the underlying NDM volume.
   bool RemoveNdmVolume();
 
@@ -155,6 +155,11 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
   // save_volume_data set to true.
   bool WriteVolumeData();
 
+  bool IncompletePageWrite(uint8_t* spare, uint8_t* data) override;
+
+  uint32_t PageSize() override;
+  uint8_t SpareSize() override;
+
  protected:
   // This is exposed for unit tests only.
   ndm* GetNdmForTest() const { return ndm_; }
@@ -165,7 +170,7 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
  private:
   ndm* ndm_ = nullptr;
   bool volume_data_saved_ = false;
-  std::optional<LoggerProxy> logger_ = std::nullopt;
+  const FtlLogger logger_;
 };
 
 // Performs global module initialization. This is exposed to support unit tests,

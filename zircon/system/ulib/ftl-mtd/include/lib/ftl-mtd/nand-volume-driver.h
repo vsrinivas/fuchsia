@@ -39,6 +39,8 @@ class NandVolumeDriver : public ftl::NdmBaseDriver {
   int NandErase(uint32_t page_num);
   int IsBadBlock(uint32_t page_num);
   bool IsEmptyPage(uint32_t page_num, const uint8_t* page_buffer, const uint8_t* oob_buffer);
+  uint32_t PageSize() final;
+  uint8_t SpareSize() final;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(NandVolumeDriver);
 
@@ -54,8 +56,6 @@ class NandVolumeDriver : public ftl::NdmBaseDriver {
   uint32_t GetByteOffsetForPage(uint32_t real_page);
 
   uint32_t ByteOffset();
-  uint32_t MappedPageSize();
-  uint32_t MappedOobSize();
 
   uint32_t block_offset_;
   uint32_t page_multiplier_;
