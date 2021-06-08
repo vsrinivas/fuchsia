@@ -31,21 +31,19 @@ DataProcessor::DataProcessor(fbl::unique_fd dir_fd, async_dispatcher_t* dispatch
 
 DataProcessor::~DataProcessor() = default;
 
-void DataProcessor::ProcessData(std::string test_url, std::vector<DataSinkDump> data_sink_vec) {
+void DataProcessor::ProcessData(std::string test_url, DataSinkDump data_sink_dump) {
   // we want to run below task on local loop.
 
   async::PostTask(dispatcher_, [this, test_url = std::move(test_url),
-                                data_sink_vec = std::move(data_sink_vec)]() mutable {
-    Add(std::move(test_url), std::move(data_sink_vec));
+                                data_sink_dump = std::move(data_sink_dump)]() mutable {
+    Add(std::move(test_url), std::move(data_sink_dump));
   });
 }
 
-void DataProcessor::Add(std::string test_url, std::vector<DataSinkDump> data_sink_vec) {
+void DataProcessor::Add(std::string test_url, DataSinkDump data_sink_dump) {
   auto schedule_processor = data_sink_map_.empty();
   auto& map = data_sink_map_[std::move(test_url)];
-  for (auto& d : data_sink_vec) {
-    map[std::move(d.data_sink)].push_back(std::move(d.vmo));
-  }
+  map[std::move(data_sink_dump.data_sink)].push_back(std::move(data_sink_dump.vmo));
 
   if (schedule_processor) {
     async::PostTask(dispatcher_, [this]() { ProcessDataInner(); });

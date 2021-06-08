@@ -20,10 +20,8 @@ EventStreamImpl::EventStreamImpl(fidl::InterfaceRequest<fuchsia::sys2::EventStre
                                  async_dispatcher_t* dispatcher)
     : test_info_(std::move(test_info)),
       binding_(this),
-      moniker_url_cache_(zx::sec(10), dispatcher),
-      dead_component_cache_(zx::min(1), dispatcher),
-      data_processor_(std::move(data_processor)),
-      dispatcher_(dispatcher) {
+      debug_data_(dispatcher, std::move(data_processor)),
+      moniker_url_cache_(zx::sec(10), dispatcher) {
   binding_.Bind(std::move(request), dispatcher);
 }
 
@@ -34,22 +32,13 @@ void EventStreamImpl::BindDebugData(std::string moniker, std::string url,
                               .capability_requested()
                               .mutable_capability()
                               ->release());
-  debug_data_.BindChannel(std::move(chan), std::move(moniker), std::move(url), dispatcher_,
-                          [this](const std::string& moniker) {
-                            auto dead = dead_component_cache_.GetValue(moniker);
-                            // Component was already stopped so all debug data is ready to process.
-                            if (dead.has_value() && dead.value()) {
-                              ProcessDataSink(moniker);
-                            }
-                          });
+  debug_data_.BindChannel(std::move(chan), std::move(moniker), std::move(url));
 }
 
 void EventStreamImpl::OnEvent(fuchsia::sys2::Event event) {
   auto type = event.header().event_type();
 
-  if (type == fuchsia::sys2::EventType::STOPPED) {
-    ProcessComponentStopEvent(std::move(event));
-  } else if (type == fuchsia::sys2::EventType::CAPABILITY_REQUESTED) {
+  if (type == fuchsia::sys2::EventType::CAPABILITY_REQUESTED) {
     ProcessCapabilityRequestedEvent(std::move(event));
   } else {
     FX_LOGS(FATAL) << "got invalid event: " << static_cast<uint32_t>(type);
@@ -76,23 +65,4 @@ void EventStreamImpl::ProcessCapabilityRequestedEvent(fuchsia::sys2::Event event
         moniker_url_cache_.Add(event.header().moniker(), url);
         BindDebugData(event.header().moniker(), std::move(url), std::move(event));
       });
-}
-
-void EventStreamImpl::ProcessComponentStopEvent(fuchsia::sys2::Event event) {
-  // TODO(http://fxbug.dev/71952): We don't expect to receive stop event more than once for a test
-  // because of how test manager handles running test. The code below assumes this assumption and
-  // should be fixed if the assumption is no longer valid.
-
-  FX_LOGS(DEBUG) << "Handling stop event from " << event.header().moniker();
-  dead_component_cache_.Add(event.header().moniker(), true);
-  // Process current debug data. If there are Publish requests in the channel that haven't been
-  // processed yet, they would be handled by callback in `BindChannel` call above.
-  ProcessDataSink(event.header().moniker());
-}
-
-void EventStreamImpl::ProcessDataSink(const std::string& moniker) {
-  auto debug_info = debug_data_.TakeData(moniker);
-  if (debug_info.has_value()) {
-    data_processor_->ProcessData(std::move(debug_info->first), std::move(debug_info->second));
-  }
 }

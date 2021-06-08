@@ -15,32 +15,35 @@
 
 #include "event_stream.h"
 
-DebugDataImpl::DebugDataImpl() : weak_factory_(this) {}
+DebugDataImpl::DebugDataImpl(async_dispatcher_t* dispatcher,
+                             std::unique_ptr<AbstractDataProcessor> data_processor)
+    : weak_factory_(this), data_processor_(std::move(data_processor)), dispatcher_(dispatcher) {}
 
 DebugDataImpl::~DebugDataImpl() = default;
 
-void DebugDataImpl::AddData(const std::string& moniker, const std::string& test_url,
-                            std::string data_sink, zx::vmo vmo) {
-  auto it = data_.find(moniker);
+void DebugDataImpl::AddData(
+    const std::string& moniker, const std::string& test_url, std::string data_sink, zx::vmo vmo,
+    fidl::InterfaceRequest<fuchsia::debugdata::DebugDataVmoToken> vmo_token) {
+  zx::channel token_channel = vmo_token.TakeChannel();
   auto data_sink_data = DataSinkDump{.data_sink = std::move(data_sink), .vmo = std::move(vmo)};
-  if (it != data_.end()) {
-    it->second.second.push_back(std::move(data_sink_data));
-    return;
-  }
-  std::vector<DataSinkDump> data_sink_data_vec;
-  data_sink_data_vec.push_back(std::move(data_sink_data));
-  auto pair = std::make_pair(test_url, std::move(data_sink_data_vec));
-  data_.emplace(moniker, std::move(pair));
-}
+  std::string url_owned(test_url);
 
-std::optional<DebugInfo> DebugDataImpl::TakeData(const std::string& moniker) {
-  auto it = data_.find(moniker);
-  if (it != data_.end()) {
-    auto info = std::move(it->second);
-    data_.erase(it);
-    return info;
-  }
-  return std::nullopt;
+  // Using a shared pointer here ensures WaitOnce has a reference to itself, preventing it from
+  // going out of scope.
+  FX_LOGS(DEBUG) << "Got VMO for " << url_owned;
+  auto wait = std::make_shared<async::WaitOnce>(token_channel.get(), ZX_CHANNEL_PEER_CLOSED);
+  wait->Begin(dispatcher_,
+              [this, wait_cpy = wait, data_sink_data = std::move(data_sink_data),
+               url_owned = std::move(url_owned), token_channel = std::move(token_channel)](
+                  async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
+                  const zx_packet_signal_t* signal) mutable {
+                if (status != ZX_OK) {
+                  FX_LOGS(WARNING) << "Error while waiting for VMO token to close: " << status;
+                }
+                token_channel.reset();
+                FX_LOGS(DEBUG) << "Processing VMO for " << url_owned;
+                data_processor_->ProcessData(std::move(url_owned), std::move(data_sink_data));
+              });
 }
 
 DebugDataImpl::Inner::Inner(fidl::InterfaceRequest<fuchsia::debugdata::DebugData> request,
@@ -69,9 +72,9 @@ std::unique_ptr<DebugDataImpl::Inner> DebugDataImpl::Remove(DebugDataImpl::Inner
 
 void DebugDataImpl::Inner::Publish(
     ::std::string data_sink, zx::vmo data,
-    fidl::InterfaceRequest<fuchsia::debugdata::DebugDataVmoToken> /*unused*/) {
+    fidl::InterfaceRequest<fuchsia::debugdata::DebugDataVmoToken> token) {
   FX_CHECK(parent_) << "parent object should not die before this object";
-  parent_->AddData(moniker_, test_url_, std::move(data_sink), std::move(data));
+  parent_->AddData(moniker_, test_url_, std::move(data_sink), std::move(data), std::move(token));
 }
 
 void DebugDataImpl::Inner::LoadConfig(::std::string config_name, LoadConfigCallback callback) {

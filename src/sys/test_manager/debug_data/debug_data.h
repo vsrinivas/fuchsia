@@ -6,6 +6,7 @@
 #define SRC_SYS_TEST_MANAGER_DEBUG_DATA_DEBUG_DATA_H_
 
 #include <fuchsia/debugdata/cpp/fidl.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
@@ -19,6 +20,7 @@
 #include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "common.h"
+#include "data_processor.h"
 
 /// Pair of test url corresponding to moniker and data sinks.
 using DebugInfo = std::pair<std::string, std::vector<DataSinkDump>>;
@@ -29,30 +31,33 @@ using NotifyOnClose = fit::function<void(std::string moniker)>;
 /// This class is not thread safe.
 class DebugDataImpl {
  public:
-  DebugDataImpl();
+  DebugDataImpl(async_dispatcher_t* dispatcher,
+                std::unique_ptr<AbstractDataProcessor> data_processor);
   ~DebugDataImpl();
 
   void Bind(fidl::InterfaceRequest<fuchsia::debugdata::DebugData> request, std::string moniker,
-            std::string test_url, async_dispatcher_t* dispatcher, NotifyOnClose notify = nullptr) {
+            std::string test_url, NotifyOnClose notify = nullptr) {
     auto inner =
         std::make_unique<Inner>(std::move(request), weak_factory_.GetWeakPtr(), std::move(moniker),
-                                std::move(test_url), std::move(notify), dispatcher);
+                                std::move(test_url), std::move(notify), dispatcher_);
     auto ptr = inner.get();
     inners_.emplace(ptr, std::move(inner));
   }
 
   void BindChannel(zx::channel request, std::string moniker, std::string test_url,
-                   async_dispatcher_t* dispatcher, NotifyOnClose notify = nullptr) {
+                   NotifyOnClose notify = nullptr) {
     Bind(fidl::InterfaceRequest<fuchsia::debugdata::DebugData>(std::move(request)),
-         std::move(moniker), std::move(test_url), dispatcher, std::move(notify));
+         std::move(moniker), std::move(test_url), std::move(notify));
   }
 
-  std::optional<DebugInfo> TakeData(const std::string& moniker);
   void AddData(const std::string& moniker, const std::string& test_url, std::string data_sink,
-               zx::vmo vmo);
+               zx::vmo vmo,
+               fidl::InterfaceRequest<fuchsia::debugdata::DebugDataVmoToken> vmo_token);
 
  private:
   fxl::WeakPtrFactory<DebugDataImpl> weak_factory_;
+  std::unique_ptr<AbstractDataProcessor> data_processor_;
+  async_dispatcher_t* dispatcher_;
 
   class Inner : public fuchsia::debugdata::DebugData {
    public:

@@ -163,12 +163,6 @@
             filter: { name: "fuchsia.debugdata.DebugData" },
         },
         {
-            event: [ "stopped" ],
-            from: "framework",
-            to: "#debug_data",
-            modes: [ "async" ],
-        },
-        {
             protocol: "fuchsia.diagnostics.ArchiveAccessor",
             from: "parent",
             as: "fuchsia.diagnostics.RealArchiveAccessor",

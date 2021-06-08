@@ -47,7 +47,7 @@ class DataProcessor : public AbstractDataProcessor {
   ~DataProcessor() override;
 
   /// Process data on internal dispacther.
-  void ProcessData(std::string test_url, std::vector<DataSinkDump> data_sink_vec) override;
+  void ProcessData(std::string test_url, DataSinkDump data_sink) override;
 
   /// Loads current summary.json if available, merges it with the passed map and writes the map back
   /// to summary.json.
@@ -86,7 +86,7 @@ class DataProcessor : public AbstractDataProcessor {
 
  private:
   /// Add to `data_sink_map_` and schedule a call to `ProcessDataInner`
-  void Add(std::string test_url, std::vector<DataSinkDump> data_sink_vec);
+  void Add(std::string test_url, DataSinkDump data_sink_vec);
 
   /// Process data present in `data_sink_map_`.
   void ProcessDataInner();

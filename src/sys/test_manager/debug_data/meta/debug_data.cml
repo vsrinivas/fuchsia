@@ -24,20 +24,10 @@
             modes: [ "async" ],
         },
         {
-            event: "stopped",
-            from: "parent",
-            as: "component_stopped",
-            modes: [ "async" ],
-        },
-        {
             event_stream: "EventStream",
             subscriptions: [
                 {
                     event: "debug_data_requested",
-                    mode: "async",
-                },
-                {
-                    event: "component_stopped",
                     mode: "async",
                 },
             ],

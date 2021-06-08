@@ -63,6 +63,7 @@ executable("test_bin") {
     "data_processor_unittests.cc",
     "debug_data_unittests.cc",
     "event_stream_unittests.cc",
+    "test_data_processor.h",
   ]
 
   deps = [

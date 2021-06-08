@@ -238,7 +238,6 @@ void AssertStorage(const std::map<std::string, std::map<std::string, std::string
 
 TEST_F(ProcessDataTest, ProcessData) {
   TestDebugDataMap map;
-  std::vector<DataSinkDump> data_sink_vec;
   std::map<std::string, std::string> sink_data_map;
   std::map<std::string, std::map<std::string, std::string>> expected_map;
   for (int i = 0; i < 5; i++) {
@@ -247,17 +246,16 @@ TEST_F(ProcessDataTest, ProcessData) {
     auto str = fxl::StringPrintf("data for vmo %d", i);
     auto sink_name = fxl::StringPrintf("data_sink%d", i);
     vmo.write(str.c_str(), 0, str.length());
-    data_sink_vec.push_back(DataSinkDump{.data_sink = sink_name, .vmo = std::move(vmo)});
+    processor()->ProcessData("test_url1",
+                             DataSinkDump{.data_sink = sink_name, .vmo = std::move(vmo)});
     sink_data_map[std::move(sink_name)] = std::move(str);
   }
-  processor()->ProcessData("test_url1", std::move(data_sink_vec));
   expected_map["test_url1"] = std::move(sink_data_map);
   RunLoopUntilIdle();
 
   AssertStorage(expected_map, GetTempDirFd());
   ASSERT_FALSE(testing::Test::HasFailure());
 
-  data_sink_vec = std::vector<DataSinkDump>();
   sink_data_map = std::map<std::string, std::string>();
   for (int i = 0; i < 5; i++) {
     zx::vmo vmo;
@@ -265,10 +263,11 @@ TEST_F(ProcessDataTest, ProcessData) {
     auto str = fxl::StringPrintf("data for vmo for second test %d", i);
     auto sink_name = fxl::StringPrintf("data_sink%d", i);
     vmo.write(str.c_str(), 0, str.length());
-    data_sink_vec.push_back(DataSinkDump{.data_sink = sink_name, .vmo = std::move(vmo)});
+    processor()->ProcessData("test_url2",
+                             DataSinkDump{.data_sink = sink_name, .vmo = std::move(vmo)});
     sink_data_map[std::move(sink_name)] = std::move(str);
   }
-  processor()->ProcessData("test_url2", std::move(data_sink_vec));
+
   expected_map["test_url2"] = std::move(sink_data_map);
   RunLoopUntilIdle();
 
