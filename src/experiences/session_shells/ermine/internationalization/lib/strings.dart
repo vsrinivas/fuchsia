@@ -650,4 +650,14 @@ class Strings {
         name: 'error',
         desc: 'The label for the "error" text field.',
       );
+  static String get openSource => Intl.message(
+        'Open Source',
+        name: 'open source',
+        desc: 'The label for the "open source" text field.',
+      );
+  static String get license => Intl.message(
+        'License',
+        name: 'license',
+        desc: 'The label for the "license" text field.',
+      );
 }

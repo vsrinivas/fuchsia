@@ -24,12 +24,14 @@ dart_library("settings") {
   ]
 
   deps = [
+    "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
     "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.power",
+    "//sdk/fidl/fuchsia.session",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ui.brightness",
     "//sdk/fidl/fuchsia.ui.remotewidgets",

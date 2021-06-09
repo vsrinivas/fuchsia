@@ -5,13 +5,18 @@
 import 'dart:async';
 
 import 'package:fidl_fuchsia_memory/fidl_async.dart';
+import 'package:fidl_fuchsia_session/fidl_async.dart' as session;
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:flutter/material.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
 
 import 'memory.dart' as memory;
+
+const licenseUrl =
+    'fuchsia-pkg://fuchsia.com/license_settings#meta/license_settings.cmx';
 
 // ignore_for_file: prefer_constructors_over_static_methods
 
@@ -25,12 +30,14 @@ class SystemInformation extends UiSpec {
   static String get _feedback => Strings.feedback;
   static String get _please => Strings.please;
   static String get _visit => Strings.visit;
+  static String get _openSource => Strings.openSource;
+  static String get _license => Strings.license;
 
   // Icon for system information title.
   static IconValue get _icon =>
       IconValue(codePoint: Icons.info_outlined.codePoint);
 
-  // Action to change channel.
+  // Action to launch license.
   static int changeAction = QuickAction.details.$value;
 
   // Memory model and variables
@@ -68,6 +75,7 @@ class SystemInformation extends UiSpec {
       if (value.text!.action == changeAction) {
         spec = await _specForSystemInformation(changeAction);
       } else {
+        await launchLicense();
         spec = await _specForSystemInformation();
       }
     }
@@ -76,6 +84,24 @@ class SystemInformation extends UiSpec {
   @override
   void dispose() {
     memoryModel.dispose();
+  }
+
+  Future<void> launchLicense() async {
+    final proxy = session.ElementManagerProxy();
+    final elementController = session.ElementControllerProxy();
+
+    final incoming = Incoming.fromSvcPath()..connectToService(proxy);
+
+    final spec = session.ElementSpec(componentUrl: licenseUrl);
+
+    await proxy
+        .proposeElement(spec, elementController.ctrl.request())
+        .catchError((err) {
+      log.shout('$err: Failed to propose element <$licenseUrl>');
+    });
+
+    proxy.ctrl.close();
+    await incoming.close();
   }
 
   Future<Spec> _specForSystemInformation([int action = 0]) async {
@@ -104,6 +130,13 @@ class SystemInformation extends UiSpec {
               TextValue(
                   text:
                       '$_please ${_visit.toLowerCase()} https://fuchsia.dev/fuchsia-src/contribute/report-issue'),
+              TextValue(
+                text: '${_openSource.toUpperCase()} ${_license.toUpperCase()}',
+              ),
+              TextValue(
+                text: '${_view.toUpperCase()}',
+                action: QuickAction.submit.$value,
+              )
             ],
           )),
         ]),
