@@ -95,6 +95,8 @@ class FakeDevMgr {
   const DeviceId fake_root_dev_id_;
 
  private:
+  enum class DdkCallState;
+
   bool DeviceUnreference(devices_t::iterator iter);
   void DeviceUnbind(zx_device_t* device);
 
@@ -103,8 +105,9 @@ class FakeDevMgr {
   devices_t devices_;
   std::thread::id init_thread_id_;
   std::thread::id unbind_thread_id_;
-  bool init_reply_;
-  bool unbind_reply_;
+  DdkCallState init_state_;
+  DdkCallState unbind_state_;
+  zx_status_t init_result_;
 };
 }  // namespace wlan::simulation
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_DEVICE_DEVICE_H_

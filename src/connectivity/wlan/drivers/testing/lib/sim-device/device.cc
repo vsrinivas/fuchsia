@@ -9,9 +9,23 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
+#include <vector>
+
 namespace wlan::simulation {
 
-FakeDevMgr::FakeDevMgr() : fake_root_dev_id_(1) {
+enum class FakeDevMgr::DdkCallState {
+  kInvalid = 0,
+  kIdle = 1,
+  kCallPending = 2,
+  kReplyPending = 3,
+  kComplete = 4,
+};
+
+FakeDevMgr::FakeDevMgr()
+    : fake_root_dev_id_(1),
+      init_state_(DdkCallState::kIdle),
+      unbind_state_(DdkCallState::kIdle),
+      init_result_(ZX_OK) {
   // This is the fake root device, which is the parent of all first-level devices added to
   // FakeDevMgr.
   wlan_sim_dev_info_t fake_root = {
@@ -26,7 +40,7 @@ FakeDevMgr::FakeDevMgr() : fake_root_dev_id_(1) {
 FakeDevMgr::~FakeDevMgr() {
   auto root_iter = devices_.find(fake_root_dev_id_);
   if (root_iter == devices_.end()) {
-    DBG_PRT("%s Fake root device is missing.\n" __func__);
+    DBG_PRT("%s Fake root device is missing.\n", __func__);
     return;
   }
 
@@ -51,8 +65,9 @@ FakeDevMgr::~FakeDevMgr() {
   // The only remaining device in the device tree should be the fake root.  Any outstanding
   // child devices are leaks.
   if (devices_.size() != 1) {
-    DBG_PRT("%s The number of devices is %d, only fake root device should be left at this point.\n",
-            __func__, devices_.size());
+    DBG_PRT(
+        "%s The number of devices is %zu, only fake root device should be left at this point.\n",
+        __func__, devices_.size());
   }
 }
 
@@ -60,13 +75,16 @@ void FakeDevMgr::DeviceInitReply(zx_device_t* device, zx_status_t status,
                                  const device_init_reply_args_t* args) {
   // FakeDevMgr relies on synchronous completion of the init() reply.
   ZX_DEBUG_ASSERT(std::this_thread::get_id() == init_thread_id_);
-  init_reply_ = true;
+  ZX_DEBUG_ASSERT(init_state_ == DdkCallState::kReplyPending);
+  init_state_ = DdkCallState::kComplete;
+  init_result_ = status;
 }
 
 void FakeDevMgr::DeviceUnbindReply(zx_device_t* device) {
   // FakeDevMgr relies on synchronous completion of the unbind() reply.
   ZX_DEBUG_ASSERT(std::this_thread::get_id() == unbind_thread_id_);
-  unbind_reply_ = true;
+  ZX_DEBUG_ASSERT(unbind_state_ == DdkCallState::kReplyPending);
+  unbind_state_ = DdkCallState::kComplete;
 }
 
 zx_status_t FakeDevMgr::DeviceAdd(zx_device_t* parent, device_add_args_t* args, zx_device_t** out) {
@@ -85,9 +103,10 @@ zx_status_t FakeDevMgr::DeviceAdd(zx_device_t* parent, device_add_args_t* args, 
     (iter->second).ref_count++;
   }
 
-  if (out) {
-    *out = id.as_device();
-  }
+  // Set the device in *out, since the synchronous call to init() may rely on it
+  // being set.
+  zx_device_t* const old_out = *out;
+  *out = id.as_device();
 
   DBG_PRT("%s: Added SIM device. proto %d # devices: %lu Handle: %p\n", __func__,
           args ? args->proto_id : 0, devices_.size(), out ? *out : nullptr);
@@ -95,11 +114,28 @@ zx_status_t FakeDevMgr::DeviceAdd(zx_device_t* parent, device_add_args_t* args, 
   // TODO(fxbug.dev/76420) - Add async support for Init()
   if (args && args->ops && args->ops->init) {
     init_thread_id_ = std::this_thread::get_id();
-    init_reply_ = false;
+    ZX_DEBUG_ASSERT(init_state_ == DdkCallState::kIdle);
+    init_state_ = DdkCallState::kReplyPending;
     args->ops->init(args->ctx);
-    ZX_ASSERT(init_reply_ == true);
+
+    // The init reply should have arrived synchronously.
+    ZX_ASSERT(init_state_ == DdkCallState::kComplete);
+
+    // If the init failed, or an unbind was requested during the init call, do it now.
+    if (init_result_ != ZX_OK || unbind_state_ == DdkCallState::kCallPending) {
+      DeviceUnbind(id.as_device());
+    }
+  }
+  init_state_ = DdkCallState::kIdle;
+
+  // If the init reply was a failure, we restore the old value of the argument.
+  if (init_result_ != ZX_OK && out) {
+    *out = old_out;
   }
 
+  // In the actual device manager, the call to the init hook is scheduled for after the device_add()
+  // call is complete.  So the status we return is the status of the device_add() operation, without
+  // any consideration as to what the init reply returned.
   return ZX_OK;
 }
 
@@ -113,31 +149,28 @@ void FakeDevMgr::DeviceUnbind(zx_device_t* device) {
   auto args = iter->second.dev_args;
   if (args.ops && args.ops->unbind) {
     unbind_thread_id_ = std::this_thread::get_id();
-    unbind_reply_ = false;
+    unbind_state_ = DdkCallState::kReplyPending;
     (*args.ops->unbind)(args.ctx);
-    ZX_ASSERT(unbind_reply_ == true);
-  }
 
-  // Invoke unbind on its child devices.
-  for (const auto& [key, value] : devices_) {
-    if (value.parent != device) {
-      continue;
+    // The unbind reply should have arrived synchronously.
+    ZX_ASSERT(unbind_state_ == DdkCallState::kComplete);
+  }
+  unbind_state_ = DdkCallState::kIdle;
+
+  // Invoke unbind on a list of child devices.
+  {
+    std::vector<zx_device_t*> children;
+    for (const auto& [key, value] : devices_) {
+      if (value.parent == device) {
+        children.emplace_back(key.as_device());
+      }
     }
-
-    DeviceUnbind(key.as_device());
-  }
-}
-
-void FakeDevMgr::DeviceAsyncRemove(zx_device_t* device) {
-  auto iter = devices_.find(DeviceId::FromDevice(device));
-  if (iter == devices_.end()) {
-    DBG_PRT("%s device %p does not exist\n", __func__, device);
-    return;
+    for (auto child : children) {
+      DeviceUnbind(child);
+    }
   }
 
-  // TODO(fxbug.dev/76420) - Add async support for DeviceUnbind()
-  DeviceUnbind(device);
-
+  // Now that all children have been unbound, we can unreference this device.
   while (true) {
     const auto parent_device = iter->second.parent;
     if (!DeviceUnreference(iter)) {
@@ -150,6 +183,23 @@ void FakeDevMgr::DeviceAsyncRemove(zx_device_t* device) {
       return;
     }
   }
+}
+
+void FakeDevMgr::DeviceAsyncRemove(zx_device_t* device) {
+  auto iter = devices_.find(DeviceId::FromDevice(device));
+  if (iter == devices_.end()) {
+    DBG_PRT("%s device %p does not exist\n", __func__, device);
+    return;
+  }
+
+  // If we're in an init call, wait until it is complete to start unbinding.
+  if (init_state_ == DdkCallState::kReplyPending) {
+    unbind_state_ = DdkCallState::kCallPending;
+    return;
+  }
+
+  // TODO(fxbug.dev/76420) - Add async support for DeviceUnbind()
+  DeviceUnbind(device);
 }
 
 bool FakeDevMgr::DeviceUnreference(devices_t::iterator iter) {

@@ -241,21 +241,12 @@ TEST_F(TestDeviceOps, RemoveParentBeforeChild) {
   // Check number of devices is THREE
   EXPECT_EQ(dev_mgr_.DeviceCount(), static_cast<size_t>(3));
 
-  // We remove level one device first, the refcount will decreased, but since its child(level two
-  // device) still existing, it will not be release immediately, thus the device count will not
-  // change.
-  dev_mgr_.DeviceAsyncRemove(level_one_dev);
-  EXPECT_EQ(dev_mgr_.DeviceCount(), static_cast<size_t>(3));
-
-  // then remove level two device , the refcount will decreased, but since its child(level three
-  // device) still existing, it will not be release immediately, thus the device count will not
-  // change.
+  // Removing the midlevel device will cause it and its child to be removed, but not the parent.
   dev_mgr_.DeviceAsyncRemove(level_two_dev);
-  EXPECT_EQ(dev_mgr_.DeviceCount(), static_cast<size_t>(3));
+  EXPECT_EQ(dev_mgr_.DeviceCount(), static_cast<size_t>(1));
 
-  // Once we remove the leaf device(level three device), the devices above in the tree will be
-  // recursively release, device count will decrease to zero.
-  dev_mgr_.DeviceAsyncRemove(level_three_dev);
+  // Now removing the toplevel device should also succeed.
+  dev_mgr_.DeviceAsyncRemove(level_one_dev);
   EXPECT_EQ(dev_mgr_.DeviceCount(), static_cast<size_t>(0));
 }
 
