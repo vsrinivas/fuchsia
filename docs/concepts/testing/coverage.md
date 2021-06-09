@@ -134,7 +134,7 @@ group("tests") {
     ":foo_test",
     ":bar_test",
   ]
-  // TODO(fxbug.dev/12345): This test is intentionally disabled on coverage.
+  # TODO(fxbug.dev/12345): This test is intentionally disabled on coverage.
   if (!is_coverage) {
     deps += [ ":qux_test" ]
   }
