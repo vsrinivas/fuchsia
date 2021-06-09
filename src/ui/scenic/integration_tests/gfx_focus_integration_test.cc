@@ -36,13 +36,14 @@
 namespace integration_tests {
 
 const std::map<std::string, std::string> LocalServices() {
-  return {
-      {"fuchsia.scenic.allocation.Allocator", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-      {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-      {"fuchsia.ui.focus.FocusChainListenerRegistry",
-       "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-      {"fuchsia.hardware.display.Provider",
-       "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
+  return {{"fuchsia.scenic.allocation.Allocator",
+           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
+          {"fuchsia.ui.scenic.Scenic",
+           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
+          {"fuchsia.ui.focus.FocusChainListenerRegistry",
+           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
+          {"fuchsia.hardware.display.Provider",
+           "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
 }
 
 // Allow these global services from outside the test environment.
@@ -367,8 +368,8 @@ TEST_F(GfxFocusIntegrationTest, ViewFocuserDisconnectDoesNotKillSession) {
 TEST_F(GfxFocusIntegrationTest, ViewRefFocused_HappyCase) {
   std::optional<bool> root_focused;
   root_focused_->Watch([&root_focused](auto update) {
-      ASSERT_TRUE(update.has_focused());
-      root_focused = update.focused();
+    ASSERT_TRUE(update.has_focused());
+    root_focused = update.focused();
   });
 
   RunLoopUntilIdle();

@@ -39,12 +39,14 @@ using fuchsia::ui::input::PointerEventType;
 static constexpr fuchsia::ui::gfx::ViewProperties k5x5x1 = {.bounding_box = {.max = {5, 5, 1}}};
 
 const std::map<std::string, std::string> LocalServices() {
-  return {
-      {"fuchsia.scenic.allocation.Allocator", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-      {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-      {"fuchsia.ui.views.ViewRefInstalled", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-      {"fuchsia.hardware.display.Provider",
-       "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
+  return {{"fuchsia.scenic.allocation.Allocator",
+           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
+          {"fuchsia.ui.scenic.Scenic",
+           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
+          {"fuchsia.ui.views.ViewRefInstalled",
+           "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
+          {"fuchsia.hardware.display.Provider",
+           "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
 }
 
 // Allow these global services.

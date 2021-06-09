@@ -115,4 +115,5 @@ fuchsia_test_package("gfx_integration_tests") {
   test_specs = {
     environments = [ aemu_env ] + magma_libvulkan_hardware_envs
   }
+  deps = [ "//src/ui/scenic:component" ]
 }
