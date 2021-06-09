@@ -24,6 +24,17 @@ usually invoke it with [`fx log`](https://fuchsia.dev/reference/tools/fx/cmd/log
    </td>
   </tr>
   <tr>
+   <td><code>--select &lt;comma-separated-component-interests></code>
+   </td>
+   <td>
+       Specify the runtime log level for components as 'component interest' using the form
+       <code>&lt;component>#&lt;interest></code> where component is the component moniker and
+       interest is the specified selection criteria, e.g. 'log-level' as one of
+       FATAL|ERROR|WARN|INFO|DEBUG|TRACE. Multiple component interest selections are delimited by
+       commas.
+   </td>
+  </tr>
+  <tr>
    <td><code>--begin &lt;comma-separated-words></code>
    </td>
    <td>Include blocks starting with at least one of the specified words. Pair with the <code>--end</code> flag. Defaults to off.
@@ -72,7 +83,7 @@ usually invoke it with [`fx log`](https://fuchsia.dev/reference/tools/fx/cmd/log
 <p>
 Does not have any impact on the logs produced by components.
 <p>
-<code><level></code> must be one of <code>TRACE|DEBUG|INFO|WARN_ERROR|FATAL</code>.
+<code>&lt;level></code> must be one of <code>TRACE|DEBUG|INFO|WARN_ERROR|FATAL</code>.
    </td>
   </tr>
   <tr>

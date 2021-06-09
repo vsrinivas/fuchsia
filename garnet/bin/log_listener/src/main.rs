@@ -322,7 +322,8 @@ fn help(name: &str) -> String {
 
         --select <comma-separated-component-interests>
             Specify the runtime log level for components as 'component interest'
-            using the form <component>#<interest> where component is the component name and interest is the specified selection criteria,
+            using the form <component>#<interest> where component is the
+            component moniker and interest is the specified selection criteria,
             e.g. 'log-level' as one of FATAL|ERROR|WARN|INFO|DEBUG|TRACE.
             Multiple component interest selections are delimited by commas.
             Example: --select audio_core.cmx#DEBUG,scenic.cmx#WARN
