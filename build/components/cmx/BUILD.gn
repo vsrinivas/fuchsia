@@ -283,6 +283,7 @@ group("cmx_allowlist") {
     "//zircon/kernel/lib/acpi_lite/*",
     "//zircon/kernel/lib/boot-options/*",
     "//zircon/kernel/lib/devicetree/*",
+    "//zircon/kernel/phys/lib/memalloc/*",
     "//zircon/system/ulib/affine/*",
     "//zircon/system/ulib/bitmap/*",
     "//zircon/system/ulib/cmdline/*",

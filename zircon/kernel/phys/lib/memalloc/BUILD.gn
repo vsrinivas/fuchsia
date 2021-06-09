@@ -5,21 +5,30 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/components.gni")
+import("//build/cpp/cpp_fuzzer.gni")
 import("//build/test.gni")
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("memalloc") {
   sdk = "source"
-  sdk_headers = [ "lib/memalloc/allocator.h" ]
+  sdk_headers = [
+    "lib/memalloc/allocator.h",
+    "lib/memalloc/range.h",
+  ]
   sdk_migrated = true
 
   host = true
   kernel = true
   static = true
 
-  sources = [ "allocator.cc" ]
+  sources = [
+    "algorithm.cc",
+    "allocator.cc",
+    "range.cc",
+  ]
 
   deps = [
+    "//sdk/lib/fit",
     "//sdk/lib/stdcompat",
     "//src/zircon/lib/zircon",
     "//zircon/system/ulib/fbl",
@@ -27,6 +36,8 @@ zx_library("memalloc") {
   ]
   if (is_kernel) {
     deps += [ "//zircon/kernel/lib/libc" ]
+  } else {
+    sources += [ "ostream.cc" ]
   }
 
   public_deps = [
@@ -44,7 +55,10 @@ zx_library("memalloc") {
 }
 
 test("memalloc-test") {
-  sources = [ "allocator-test.cc" ]
+  sources = [
+    "algorithm-test.cc",
+    "allocator-test.cc",
+  ]
   deps = [
     ":memalloc",
     "//src/lib/fxl/test:gtest_main",
@@ -58,9 +72,20 @@ fuchsia_unittest_package("memalloc-test-package") {
   deps = [ ":memalloc-test" ]
 }
 
+fuzzer_package("memalloc-fuzzers") {
+  fuzz_host = true
+  cpp_fuzzers = [ ":find-fuzzer" ]
+}
+
+cpp_fuzzer("find-fuzzer") {
+  sources = [ "find-fuzzer.cc" ]
+  deps = [ ":memalloc" ]
+}
+
 group("tests") {
   testonly = true
   deps = [
+    ":memalloc-fuzzers",
     ":memalloc-test($host_toolchain)",
     ":memalloc-test-package",
   ]
