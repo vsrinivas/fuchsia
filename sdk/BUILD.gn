@@ -620,5 +620,6 @@ sdk("ddk") {
     ":bind",
     ":ddk_host_tools",
     "//src/lib/ddk:ddk_sdk",
+    "//src/lib/ddktl:ddktl_sdk",
   ]
 }

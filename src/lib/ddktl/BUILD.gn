@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_source_set.gni")
 import("//build/unification/zx_library.gni")
 
 group("tests") {
@@ -13,7 +14,9 @@ config("include") {
   include_dirs = [ "include" ]
 }
 
-source_set("ddktl") {
+sdk_source_set("ddktl") {
+  category = "partner"
+  sdk_name = "ddktl-experimental-driver-only"
   sources = [
     "include/ddktl/device-internal.h",
     "include/ddktl/device.h",
@@ -38,9 +41,7 @@ source_set("ddktl") {
     "//src/lib/ddk",
   ]
   deps = [
-    "//src/devices/lib/mmio",
     "//src/lib/ddk",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
