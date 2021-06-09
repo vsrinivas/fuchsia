@@ -337,7 +337,7 @@ association" that adds the complexity in terms of your design process.
 Now that we have an understanding of the IPC models and how they interact with
 FIDL's asynchronous messaging, let's see how they're defined.
 
-We'll add the other models (fire and forget, and async call) to the protocol
+We'll add the other models (fire and forget, and async call or event) to the protocol
 definition file:
 
 
@@ -370,8 +370,8 @@ return associated with it.
 
 **Line 7** is the `ReceiveString` method. It's a little different &mdash; it
 doesn't have the method name in the first part, but rather it's given after the
-`->` operator. This tells the FIDL compiler that this is an "async call" model
-declaration.
+`->` operator. This tells the FIDL compiler that this is an "async call" or
+"event" model declaration.
 
 ### FIDL Bindings
 
