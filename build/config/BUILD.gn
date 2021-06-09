@@ -580,7 +580,6 @@ config("Wno-conversion") {
     "//garnet/bin/run_test_component/*",
     "//garnet/bin/sched/*",
     "//garnet/bin/trace/*",
-    "//garnet/bin/trace2json/*",
     "//garnet/bin/trace_manager/*",
     "//garnet/bin/ui/benchmarks/*",
     "//garnet/bin/ui/benchmarks/transparency_benchmark/*",
