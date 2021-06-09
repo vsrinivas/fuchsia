@@ -111,18 +111,12 @@ fbl::String GetTestFilter() {
     return "*Mt8167sRef*";
   } else if (!strcmp(board_name, "msm8x53-som")) {
     return "*Msm8x53Som*";
-  } else if (!strcmp(board_name, "as370")) {
-    return "*As370*";
-  } else if (!strcmp(board_name, "visalia")) {
-    return "*Visalia*";
   } else if (!strcmp(board_name, "Nocturne")) {
     return "*Nocturne*";
   } else if (!strcmp(board_name, "c18")) {
     return "*C18*";
   } else if (!strcmp(board_name, "nelson")) {
     return "*Nelson*";
-  } else if (!strcmp(board_name, "vs680-evk")) {
-    return "*Vs680Evk*";
   } else if (!strcmp(board_name, "luis")) {
     return "*Luis*";
   } else if (!strcmp(board_name, "Eve")) {
@@ -641,116 +635,6 @@ TEST_F(DeviceEnumerationTest, Mt8167sRefTest) {
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
-}
-
-TEST_F(DeviceEnumerationTest, As370Test) {
-  static const char* kDevicePaths[] = {
-      "sys/platform/as370",
-      "sys/platform/14:01:1",
-      "sys/platform/14:01:1/as370-gpio",
-      "sys/platform/00:00:9",
-      "sys/platform/00:00:9/dw-i2c",
-      "sys/platform/14:01:2/as370-usb-phy",
-      "sys/platform/14:01:a/as370-sdhci/sdhci/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
-      "dwc2-usb",
-      "audio-max98373",
-      "as370-audio-out",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/fvm/ftl/block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/tzk_normal/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/tzk_normalB/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/bl_normal/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/bl_normalB/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/boot/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/recovery/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/fts/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/factory_store/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/key_1st/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/key_2nd/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_1st/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_2nd/skip-block",
-      "power/as370-power",
-      "power/as370-power/fragment-0",
-      "class/thermal/000",
-  };
-
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
-  EXPECT_EQ(zx_system_get_num_cpus(), 4);
-}
-
-TEST_F(DeviceEnumerationTest, Vs680EvkTest) {
-  static const char* kDevicePaths[] = {
-      "sys/platform/vs680-evk",
-      "sys/platform/14:02:1/as370-gpio",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/boot1/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/boot2/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/rpmb",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-000/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-001/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-002/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-003/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-004/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-005/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-006/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-007/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-008/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-009/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-010/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-011/block",
-      "sys/platform/14:02:b/vs680-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-012/block",
-      "sys/platform/14:02:d/vs680-usb-phy",
-      "sys/platform/00:00:5",
-      "sys/platform/00:00:9/dw-i2c/i2c/i2c-1-98",
-      "sys/platform/00:00:28/dw-spi-0/spi/spi-0-0",
-      "sys/platform/00:00:28/dw-spi-0/spi/spi-0-1",
-      "sys/platform/14:00:e/vs680-clk",
-      "sys/platform/14:02:c",
-      "vs680-sdio/as370-sdhci/sdhci",
-      "class/thermal/000",
-      "vs680-thermal/vs680-thermal",
-      "class/power/000",
-      "power/vs680-power",
-      "composite-pd-vcpu/power-0",
-  };
-
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
-  EXPECT_EQ(zx_system_get_num_cpus(), 4);
-}
-
-TEST_F(DeviceEnumerationTest, VisaliaTest) {
-  static const char* kDevicePaths[] = {
-      "sys/platform/as370",
-      "sys/platform/14:01:1",
-      "sys/platform/14:01:1/as370-gpio",
-      "sys/platform/00:00:9",
-      "sys/platform/00:00:9/dw-i2c",
-      "sys/platform/14:01:2/as370-usb-phy",
-      "sys/platform/14:01:a/as370-sdhci/sdhci/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
-      "sys/platform/14:01:a/as370-sdhci/sdhci/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
-      "dwc2-usb",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/fvm/ftl/block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/tzk_normal/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/tzk_normalB/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/bl_normal/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/bl_normalB/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/boot/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/recovery/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/fts/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/factory_store/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/key_1st/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/key_2nd/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_1st/skip-block",
-      "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_2nd/skip-block",
-      "power/as370-power",
-      "power/as370-power/fragment-0",
-      "class/thermal/000",
-      "lp5018-light",
-      "lp5018-light/lp50xx-light",
-      "as370-touch",
-      "as370-touch/cy8cmbr3108",
-  };
-
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
-  EXPECT_EQ(zx_system_get_num_cpus(), 4);
 }
 
 TEST_F(DeviceEnumerationTest, NocturneTest) {

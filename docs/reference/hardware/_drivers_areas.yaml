@@ -6,12 +6,15 @@
 - Block
 - Board
 - Clock
+- Dma
 - Firmware
 - Gpio
 - Graphics
 - Kernel
 - Media
+- Nand
 - Power
 - Testing
+- Thermal
 - Uart
 - Usb

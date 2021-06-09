@@ -17,7 +17,6 @@ source_set("generic-arm") {
     "//zircon/kernel/dev/pcie",
     "//zircon/kernel/dev/pdev",
     "//zircon/kernel/dev/pdev/power",
-    "//zircon/kernel/dev/power/as370",
     "//zircon/kernel/dev/psci",
     "//zircon/kernel/dev/timer/arm_generic",
     "//zircon/kernel/dev/uart/amlogic_s905",

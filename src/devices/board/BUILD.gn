@@ -4,7 +4,6 @@
 
 group("drivers") {
   deps = [
-    "drivers/as370",
     "drivers/astro",
     "drivers/c18",
     "drivers/integration-test",
@@ -20,7 +19,6 @@ group("drivers") {
     "drivers/sherlock:sherlock-factory-rndis",
     "drivers/vim2",
     "drivers/vim3",
-    "drivers/vs680-evk",
   ]
 
   if (current_cpu == "x64") {

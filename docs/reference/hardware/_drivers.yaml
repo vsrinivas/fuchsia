@@ -28,22 +28,6 @@
   status: 'Supported'
   path: '/src/media/audio/drivers/aml-g12-tdm'
 
-- short_description: 'Synaptics AS370 audio subsystem driver for PDM'
-  vendor: ['Synaptics']
-  families: ['']
-  platforms: ['As370']
-  areas: ['Media', 'Audio']
-  status: 'Supported'
-  path: '/src/media/audio/drivers/as370-pdm-input'
-
-- short_description: 'Synaptics AS370 audio subsystem driver for TDM'
-  vendor: ['Synaptics']
-  families: ['']
-  platforms: ['As370']
-  areas: ['Media', 'Audio']
-  status: 'Supported'
-  path: '/src/media/audio/drivers/as370-tdm-output'
-
 - short_description: 'Realtek Alc5514 audio hardware codec driver'
   vendor: ['Realtek']
   families: ['']

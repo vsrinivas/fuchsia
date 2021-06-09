@@ -131,7 +131,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//src/devices/i2c/testing/fake-i2c/*",
     "//src/devices/i2c/testing/mock-i2c/*",
     "//src/devices/lib/amlogic/*",
-    "//src/devices/lib/as370/*",
     "//src/devices/lib/broadcom/*",
     "//src/devices/lib/dev-operation/*",
     "//src/devices/lib/dma-buffer/*",

@@ -8,7 +8,6 @@ group("tests") {
   deps = [
     "aml-rawnand:tests",
     "broker:tests",
-    "cadence-hpnfc:tests",
     "nand:tests",
     "nandpart:tests",
     "ram-nand:tests",

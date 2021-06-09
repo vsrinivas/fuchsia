@@ -7,7 +7,6 @@ group("drivers") {
   deps = [
     "drivers/aml-axg-gpio",
     "drivers/aml-gxl-gpio",
-    "drivers/as370-gpio",
     "drivers/gpio",
     "drivers/gpio-test",
     "drivers/mt-8167",

@@ -7,9 +7,7 @@ group("tests") {
 
   deps = [
     "amlogic-clk:tests",
-    "as370-clk:tests",
     "clock:tests",
     "mtk-clk:tests",
-    "vs680-clk:tests",
   ]
 }

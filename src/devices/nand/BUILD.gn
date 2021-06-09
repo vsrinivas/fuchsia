@@ -7,7 +7,6 @@ group("drivers") {
   deps = [
     "drivers/aml-rawnand",
     "drivers/broker:nand-broker",
-    "drivers/cadence-hpnfc",
     "drivers/nand",
     "drivers/nandpart",
     "drivers/ram-nand",

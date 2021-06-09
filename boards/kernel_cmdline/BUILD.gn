@@ -96,10 +96,6 @@ kernel_cmdline("gce") {
   args = [ "kernel.serial=legacy" ]
 }
 
-kernel_cmdline("vs680") {
-  args = [ "kernel.bypass-debuglog=true" ]
-}
-
 kernel_cmdline("c18") {
   args = [ "kernel.bypass-debuglog=true" ]
 }

@@ -38,7 +38,6 @@ group("tests") {
     "scpi:tests",
     "securemem:tests",
     "serial:tests",
-    "shareddma:tests",
     "spi:tests",
     "sysmem:tests",
     "tee:tests",

@@ -5,7 +5,6 @@
 group("tests") {
   testonly = true
   deps = [
-    "as370:tests",
     "astro:tests",
     "c18:tests",
     "machina:tests",
@@ -15,7 +14,6 @@ group("tests") {
     "sherlock:tests",
     "vim2:tests",
     "vim3:tests",
-    "vs680-evk:tests",
     "x86:tests",
   ]
 

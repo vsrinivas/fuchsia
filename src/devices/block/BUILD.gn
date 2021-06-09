@@ -6,7 +6,6 @@ group("drivers") {
   deps = [
     "drivers/ahci",
     "drivers/aml-sdmmc",
-    "drivers/as370-sdhci",
     "drivers/block-verity",
     "drivers/bootpart",
     "drivers/core",

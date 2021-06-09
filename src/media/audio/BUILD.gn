@@ -22,8 +22,6 @@ group("drivers") {
   testonly = true
   deps = [
     "drivers/aml-g12-tdm",
-    "drivers/as370-pdm-input",
-    "drivers/as370-tdm-output",
     "drivers/codecs/alc5514",
     "drivers/codecs/alc5663",
     "drivers/codecs/max98373",
