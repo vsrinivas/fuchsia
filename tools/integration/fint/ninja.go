@@ -312,6 +312,23 @@ func affectedTestsNoWork(
 		testsByStamp[stamp] = append(testsByStamp[stamp], test.Name)
 	}
 
+	// Keep track of the files' original modification times so we can reset them
+	// before exiting. Otherwise they will affect the results of the
+	// affected_tests.py script.
+	// TODO(fxbug.dev/75371): Stop resetting the mtimes once we stop running
+	// affected_tests.py after fint.
+	originalModTimes := map[string]time.Time{}
+	for _, path := range affectedFiles {
+		fi, err := os.Stat(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return nil, false, err
+		}
+		originalModTimes[path] = fi.ModTime()
+	}
+
 	var gnFiles, nonGNFiles []string
 	for _, path := range affectedFiles {
 		ext := filepath.Ext(path)
@@ -379,6 +396,20 @@ func affectedTestsNoWork(
 		ninjaOutput = strings.Join([]string{stdout, stderr}, "\n\n")
 	}
 	noWork := strings.Contains(ninjaOutput, noWorkString)
+
+	// TODO(fxbug.dev/75371): Stop resetting the mtimes once we stop running
+	// affected_tests.py after fint.
+	for _, path := range affectedFiles {
+		mtime, ok := originalModTimes[path]
+		if !ok {
+			// If the file doesn't exist, it won't be present in `originalModTimes`.
+			continue
+		}
+		err := os.Chtimes(path, mtime, mtime)
+		if err != nil {
+			return nil, false, err
+		}
+	}
 
 	return removeDuplicates(affectedTests), noWork, nil
 }
