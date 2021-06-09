@@ -63,7 +63,11 @@ function fetch_remote_artifacts {
   mkdir -p "${local_dir}"
   # --relative ensures that the artifacts are copied to out/fetched relative to
   # the '/./' (i.e., the build directory).
-  rsync --compress --partial --progress --relative "${host}:${remote_build_dir}/./{${joined}}" "${local_dir}" || exit $?
+  # --times preserves the modification timestamp, which rsync uses in conjunction
+  # with filesize to determine if the file changed (unless the --checksum
+  # parameter is used). Without one of either --times or --checksum, identical
+  # files will be re-transfered on each rsync invocation.
+  rsync --compress --partial --progress --relative --times "${host}:${remote_build_dir}/./{${joined}}" "${local_dir}" || exit $?
 }
 
 # Fetch all build artifacts for a given mode, optionally building them first
