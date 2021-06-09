@@ -33,6 +33,7 @@ bool IsPii(const minfs::Inode& inode, minfs::BlockType type) {
   return inode.magic == minfs::kMinfsMagicFile && type == minfs::BlockType::kDirect;
 }
 
+// Walks the file system and collects interesting metadata.
 class FsWalker {
  public:
   static zx::status<std::unique_ptr<FsWalker>> Create(fbl::unique_fd input_fd,
