@@ -92,14 +92,16 @@ class ScreenReader::ScreenReaderActionRegistryImpl : public ScreenReaderActionRe
 
 ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
                            SemanticsSource* semantics_source,
+                           InjectorManagerInterface* injector_manager,
                            GestureListenerRegistry* gesture_listener_registry,
                            TtsManager* tts_manager, bool announce_screen_reader_enabled)
-    : ScreenReader(std::move(context), semantics_source, gesture_listener_registry, tts_manager,
-                   announce_screen_reader_enabled,
+    : ScreenReader(std::move(context), semantics_source, injector_manager,
+                   gesture_listener_registry, tts_manager, announce_screen_reader_enabled,
                    std::make_unique<ScreenReaderActionRegistryImpl>()) {}
 
 ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
                            SemanticsSource* semantics_source,
+                           InjectorManagerInterface* injector_manager,
                            GestureListenerRegistry* gesture_listener_registry,
                            TtsManager* tts_manager, bool announce_screen_reader_enabled,
                            std::unique_ptr<ScreenReaderActionRegistry> action_registry)
@@ -110,6 +112,7 @@ ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
       weak_ptr_factory_(this) {
   action_context_ = std::make_unique<ScreenReaderAction::ActionContext>();
   action_context_->semantics_source = semantics_source;
+  action_context_->injector_manager = injector_manager;
   InitializeActions();
   FX_DCHECK(tts_manager_);
 
@@ -199,11 +202,6 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
       [this](GestureContext context) { ExecuteAction(kDefaultActionLabel, std::move(context)); });
   FX_DCHECK(gesture_bind_status);
 
-  // Add OneFingerSingleTap recognizer.
-  gesture_bind_status = gesture_handler->BindOneFingerSingleTapAction(
-      [this](GestureContext context) { ExecuteAction(kExploreActionLabel, std::move(context)); });
-  FX_DCHECK(gesture_bind_status);
-
   // Add MFingerNTapDragRecognizer (1 finger, 2 taps), recognizer.
   gesture_bind_status = gesture_handler->BindMFingerNTapDragAction(
       [this](GestureContext context) {
@@ -225,6 +223,11 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
         ExecuteAction(kInjectPointerEventActionLabel, context);
       } /*on_complete*/,
       1u /*num_fingers*/, 2u /*num_taps*/);
+  FX_DCHECK(gesture_bind_status);
+
+  // Add OneFingerSingleTap recognizer.
+  gesture_bind_status = gesture_handler->BindOneFingerSingleTapAction(
+      [this](GestureContext context) { ExecuteAction(kExploreActionLabel, std::move(context)); });
   FX_DCHECK(gesture_bind_status);
 
   // Add OneFingerDrag recognizer.

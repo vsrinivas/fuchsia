@@ -269,8 +269,8 @@ std::unique_ptr<a11y::ScreenReader> App::InitializeScreenReader() {
   auto screen_reader_context = screen_reader_context_factory_->CreateScreenReaderContext(
       std::move(a11y_focus_manager), tts_manager_, view_manager_, locale_id);
   auto screen_reader = std::make_unique<a11y::ScreenReader>(
-      std::move(screen_reader_context), view_manager_, gesture_listener_registry_, tts_manager_,
-      state_.announce_screen_reader_enabled());
+      std::move(screen_reader_context), view_manager_, view_manager_, gesture_listener_registry_,
+      tts_manager_, state_.announce_screen_reader_enabled());
   view_manager_->GetSemanticsEventManager()->Register(
       screen_reader->GetSemanticsEventListenerWeakPtr());
   return screen_reader;

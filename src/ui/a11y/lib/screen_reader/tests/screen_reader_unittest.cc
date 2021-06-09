@@ -84,8 +84,9 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
 
   void InitializeScreenReader() {
     screen_reader_ = std::make_unique<a11y::ScreenReader>(
-        std::move(context_), view_manager_.get(), gesture_listener_registry_.get(),
-        mock_tts_manager_.get(), announce_screen_reader_enabled_, std::move(mock_action_registry_));
+        std::move(context_), view_manager_.get(), view_manager_.get(),
+        gesture_listener_registry_.get(), mock_tts_manager_.get(), announce_screen_reader_enabled_,
+        std::move(mock_action_registry_));
     screen_reader_->BindGestures(mock_gesture_handler_.get());
     gesture_listener_registry_->Register(mock_gesture_listener_->NewBinding(), []() {});
 
@@ -168,8 +169,8 @@ TEST_F(ScreenReaderTest, GestureHandlersAreRegisteredIntheRightOrder) {
                           GestureType::kThreeFingerLeftSwipe, GestureType::kThreeFingerRightSwipe,
                           GestureType::kOneFingerDownSwipe, GestureType::kOneFingerUpSwipe,
                           GestureType::kOneFingerLeftSwipe, GestureType::kOneFingerRightSwipe,
-                          GestureType::kOneFingerDoubleTap, GestureType::kOneFingerSingleTap,
-                          GestureType::kOneFingerDoubleTapDrag, GestureType::kOneFingerDrag,
+                          GestureType::kOneFingerDoubleTap, GestureType::kOneFingerDoubleTapDrag,
+                          GestureType::kOneFingerSingleTap, GestureType::kOneFingerDrag,
                           GestureType::kTwoFingerSingleTap));
 }
 
