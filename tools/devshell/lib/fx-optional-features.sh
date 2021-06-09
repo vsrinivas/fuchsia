@@ -122,3 +122,19 @@ function is_feature_enabled {
     test "${!disabled_env}" != "1"
   fi
 }
+
+function get_env_vars_non_default_features {
+  local out=()
+  for el in $(list_optional_features); do
+    local default=false
+    local current=false
+    is_feature_enabled_by_default $el && default=true
+    is_feature_enabled $el && current=true
+    if $default && ! $current; then
+      out+=("$(get_disable_feature_env_name $el)=1")
+    elif ! $default && $current; then
+      out+=("$(get_disable_feature_env_name $el)=0")
+    fi
+  done
+  echo "${out[@]}"
+}

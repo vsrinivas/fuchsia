@@ -227,6 +227,11 @@ if "${serve}"; then
   # Ctrl-C will exit the ssh remote command and this ssh session. Then script exit will trigger
   # `trap_exit` to close the ssh connection.
   echo -e "Press Ctrl-C to stop remote serving and tunneling.\n"
+
+  # Set the experimental environment variables to ensure they're passed to `fx
+  # set` and `fx serve-updates`.
+  experimental_vars=$(get_env_vars_non_default_features)
+
   if "${verbose}"; then
     serve_verbose_arg=" -v"
   else
@@ -234,7 +239,7 @@ if "${serve}"; then
   fi
   ssh_serve_args=(
     "-tt" # explicitly force a pty, for HUP'ing on the remote
-    "cd ${dir} && FX_REMOTE_INVOCATION=1 ./.jiri_root/bin/fx set-device '${_FX_REMOTE_WORKFLOW_DEVICE_ADDR}' && FX_REMOTE_INVOCATION=1 ./.jiri_root/bin/fx serve-updates${serve_verbose_arg} ${serve_persist_arg}"
+    "cd ${dir} && FX_REMOTE_INVOCATION=1 ${experimental_vars} ./.jiri_root/bin/fx set-device '${_FX_REMOTE_WORKFLOW_DEVICE_ADDR}' && FX_REMOTE_INVOCATION=1 ${experimental_vars} ./.jiri_root/bin/fx serve-updates ${serve_verbose_arg} ${serve_persist_arg}"
   )
   ssh "${host}" "${ssh_base_args[@]}" "${ssh_serve_args[@]}"
 else
