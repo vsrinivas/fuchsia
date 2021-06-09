@@ -28,7 +28,6 @@ template("generate_cast_targets") {
 
   prebuilt_archive_base_path =
       "//prebuilt/third_party/cast_runner${invoker.archive_path_suffix}"
-  debug_archive_base_path = "//prebuilt/build_ids/${target_cpu}/chromium${invoker.archive_path_suffix}"
 
   # TODO(fxbug.dev/70573): Remove when use_cast_runner_canary is deprecated.
   if (use_cast_runner_canary) {
@@ -51,7 +50,6 @@ template("generate_cast_targets") {
 
   generate_pkg_and_config("cast_runner") {
     prebuilt_archive_base_path = prebuilt_archive_base_path
-    debug_archive_base_path = debug_archive_base_path
     custom_package_path = "/gen/fuchsia/runners/cast_runner/cast_runner.far"
     selections = package_flavor_selections
 

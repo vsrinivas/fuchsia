@@ -11,7 +11,6 @@ import("//src/chromium/build_args.gni")
 #
 # Parameters:
 #   prebuilt_archive_base_path: Base path for the prebuilt archive.
-#   debug_archive_base_path: Base path for the debug archive.
 #   custom_package_path: The path to the package inside a custom chromium
 #       build output directory.
 #   selections (optional): Flavor choice. This allows flavor to be changed based
@@ -32,7 +31,6 @@ template("generate_flavors") {
         name = "release"
         archive = "${invoker.prebuilt_archive_base_path}/arch/$target_cpu/${invoker.target_name}.far"
         production_safe = true
-        debug_archive = "${invoker.debug_archive_base_path}/${invoker.target_name}.symbols.tar.bz2"
       },
       {
         name = "canary"
@@ -72,7 +70,6 @@ template("generate_pkg_and_config") {
     forward_variables_from(invoker,
                            [
                              "custom_package_path",
-                             "debug_archive_base_path",
                              "prebuilt_archive_base_path",
                              "selections",
                              "testonly",
