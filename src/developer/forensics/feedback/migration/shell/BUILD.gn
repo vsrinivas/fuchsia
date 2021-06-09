@@ -1,0 +1,44 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("main") {
+  sources = [ "main.h" ]
+
+  public_deps = [
+    ":shell",
+    "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
+    "//src/developer/forensics/utils/component",
+  ]
+}
+
+source_set("shell") {
+  visibility = [ "//src/developer/forensics/feedback/migration/shell/*" ]
+
+  sources = [
+    "directory_migrator.h",
+    "directory_migrator_impl.cc",
+    "directory_migrator_impl.h",
+    "main_service.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fbl",
+  ]
+
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/developer/forensics/feedback/migration/utils",
+    "//src/lib/files",
+    "//zircon/public/lib/fbl",
+  ]
+}

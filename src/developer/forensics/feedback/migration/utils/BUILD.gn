@@ -1,0 +1,29 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("utils") {
+  sources = [
+    "directory_migrator_ptr.h",
+    "file_utils.cc",
+    "file_utils.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fit",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
+    "//src/developer/forensics/utils:errors",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fbl",
+  ]
+
+  deps = [
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+    "//src/lib/fxl",
+  ]
+}

@@ -1,0 +1,48 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+###############################################################################
+# GROUPS
+###############################################################################
+group("tests") {
+  testonly = true
+  deps = [ ":feedback-migration-shell-tests" ]
+}
+
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("directory_migrator_impl_unittest_exe") {
+  testonly = true
+  sources = [ "directory_migrator_impl_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback/migration/shell",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/lib/files",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("directory_migrator_impl_unittest") {
+  testonly = true
+
+  manifest = "meta/directory_migrator_impl_unittest.cmx"
+
+  deps = [ ":directory_migrator_impl_unittest_exe" ]
+}
+
+###############################################################################
+# PACKAGES
+###############################################################################
+fuchsia_test_package("feedback-migration-shell-tests") {
+  test_components = [ ":directory_migrator_impl_unittest" ]
+}

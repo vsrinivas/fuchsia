@@ -1,0 +1,9 @@
+{
+    "sandbox": {
+        "features": [
+            "isolated-cache-storage",
+            "isolated-persistent-storage",
+            "isolated-temp"
+        ]
+    }
+}

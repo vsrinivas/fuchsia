@@ -9,7 +9,7 @@ group("tests") {
   testonly = true
 
   deps = [
-    "migration:tests",
-    "reboot_log/tests",
+    "shell/tests",
+    "utils/tests",
   ]
 }
