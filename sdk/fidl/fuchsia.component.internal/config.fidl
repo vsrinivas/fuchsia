@@ -196,6 +196,18 @@ table CapabilityAllowlistEntry {
 
     /// The set of absolute monikers that are allowed to use this specific
     /// capability.
+    /// The monikers that are allowed to use this specific capability. Entries
+    /// can take one of three forms:
+    ///   1. Exact absolute moniker - Most entries should fall under this case,
+    ///      where the exact absolute monikers of allowed components are listed.
+    ///      For example, "/foo/bar".
+    ///   2. Realm - Realms can be allowlisted such that any descendant will be
+    ///      allowed without being listed explicitly. For example, "/foo/**"
+    ///      allows any descendant of "/foo" (but not foo itself).
+    ///   3. Collection - Individual collections can also be allowlisted. For
+    ///      example, "/foo/bar:**" will allow any child in foo's "bar"
+    ///      collection and any descendant thereof, but not foo or other
+    ///      children of foo.
     4: vector<string:fuchsia.component.MAX_MONIKER_LENGTH>:MAX_ALLOWLIST_SIZE target_monikers;
 
     /// The original source type of this capability, self or framework.

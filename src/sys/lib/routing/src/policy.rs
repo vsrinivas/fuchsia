@@ -6,11 +6,13 @@ use {
     crate::{
         capability_source::CapabilitySourceInterface,
         component_instance::ComponentInstanceInterface,
-        config::{CapabilityAllowlistKey, CapabilityAllowlistSource, RuntimeConfig},
+        config::{
+            AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource, RuntimeConfig,
+        },
     },
     fuchsia_zircon_status as zx,
     log::{error, warn},
-    moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker},
+    moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker, RelativeMoniker},
     std::sync::{Arc, Weak},
     thiserror::Error,
 };
@@ -196,9 +198,36 @@ impl GlobalPolicyChecker {
         })?;
 
         match self.config.security_policy.capability_policy.get(&policy_key) {
-            Some(allowed_monikers) => match allowed_monikers.get(&target_moniker) {
-                Some(_) => Ok(()),
-                None => {
+            Some(entries) => {
+                // Use the HashSet to find any exact matches quickly.
+                if entries.contains(&AllowlistEntry::Exact(target_moniker.clone())) {
+                    return Ok(());
+                }
+
+                // Otherwise linear search for any non-exact matches.
+                if entries.iter().any(|x| match x {
+                    AllowlistEntry::Realm(realm) => {
+                        // For a Realm entry we are looking for the target_moniker to be
+                        // contained in the realm (i.e. empty up path) and the down_path to be
+                        // non-empty (i.e. children are allowed but not the realm itself).
+                        let relative = RelativeMoniker::from_absolute(realm, &target_moniker);
+                        relative.up_path().is_empty() && !relative.down_path().is_empty()
+                    }
+                    AllowlistEntry::Collection(realm, collection) => {
+                        // For a Collection entry we are looking for the target_moniker to be
+                        // contained in the realm (i.e. empty up path) and that the first element of
+                        // the down path is in a collection with a matching name.
+                        let relative = RelativeMoniker::from_absolute(realm, &target_moniker);
+                        relative.up_path().is_empty()
+                            && relative
+                                .down_path()
+                                .first()
+                                .map_or(false, |first| first.collection() == Some(collection))
+                    }
+                    _ => false,
+                }) {
+                    Ok(())
+                } else {
                     warn!(
                         "Security policy prevented `{}` from `{}` being routed to `{}`.",
                         policy_key.source_name, policy_key.source_moniker, target_moniker
@@ -209,7 +238,7 @@ impl GlobalPolicyChecker {
                         &target_moniker,
                     ))
                 }
-            },
+            }
             None => Ok(()),
         }
     }

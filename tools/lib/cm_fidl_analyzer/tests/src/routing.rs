@@ -16,7 +16,7 @@ use {
     moniker::AbsoluteMoniker,
     routing::{
         component_instance::ComponentInstanceInterface,
-        config::{CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},
+        config::{AllowlistEntry, CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},
     },
     routing_test_helpers::{CheckUse, ExpectedResult, RoutingTestModel, RoutingTestModelBuilder},
     std::{
@@ -38,7 +38,7 @@ pub struct RoutingTestBuilderForAnalyzer {
     root_url: String,
     decls_by_url: HashMap<String, ComponentDecl>,
     namespace_capabilities: Vec<CapabilityDecl>,
-    capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AbsoluteMoniker>>,
+    capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>,
     debug_capability_policy: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
     component_id_index_path: Option<String>,
 }
@@ -72,7 +72,7 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
     fn add_capability_policy(
         &mut self,
         key: CapabilityAllowlistKey,
-        allowlist: HashSet<AbsoluteMoniker>,
+        allowlist: HashSet<AllowlistEntry>,
     ) {
         self.capability_policy.insert(key, allowlist);
     }

@@ -27,7 +27,7 @@ use {
     moniker::{AbsoluteMoniker, ExtendedMoniker, RelativeMoniker},
     routing::{
         component_id_index::ComponentInstanceId,
-        config::{CapabilityAllowlistKey, CapabilityAllowlistSource},
+        config::{AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource},
         event::EventSubscription,
         rights::READ_RIGHTS,
     },
@@ -213,7 +213,7 @@ pub trait RoutingTestModelBuilder {
     fn add_capability_policy(
         &mut self,
         key: CapabilityAllowlistKey,
-        allowlist: HashSet<AbsoluteMoniker>,
+        allowlist: HashSet<AllowlistEntry>,
     );
 
     /// Add a custom debug capability security policy to restrict routing of certain caps.
@@ -3152,7 +3152,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert(AbsoluteMoniker::from(vec!["b:0"]));
+        allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b:0"])));
 
         let mut builder = T::new("a", components);
         builder.add_capability_policy(
@@ -3256,8 +3256,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert(AbsoluteMoniker::from(vec!["b:0"]));
-        allowlist.insert(AbsoluteMoniker::from(vec!["b:0", "c:0"]));
+        allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b:0"])));
+        allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b:0", "c:0"])));
 
         let mut builder = T::new("a", components);
         builder.add_capability_policy(

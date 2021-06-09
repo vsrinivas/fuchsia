@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Context, Error},
     cm_rust::{CapabilityName, CapabilityTypeName, FidlIntoNative},
-    cm_types::Url,
+    cm_types::{Name, Url},
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_internal::{
         self as component_internal, BuiltinBootResolver, BuiltinPkgResolver,
@@ -18,6 +18,7 @@ use {
         convert::TryFrom,
         iter::FromIterator,
         path::Path,
+        str::FromStr,
     },
     thiserror::Error,
 };
@@ -89,6 +90,22 @@ pub struct RuntimeConfig {
     pub builtin_boot_resolver: BuiltinBootResolver,
 }
 
+/// A single security policy allowlist entry.
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub enum AllowlistEntry {
+    /// Allow the component with this exact AbsoluteMoniker.
+    /// Example string form in config: "/foo/bar", "/foo/bar/baz"
+    Exact(AbsoluteMoniker),
+    /// Allow any components that are children of this AbsoluteMoniker. In other words, a prefix
+    /// match against the target moniker.
+    /// Example string form in config: "/foo/**", "/foo/bar/**"
+    Realm(AbsoluteMoniker),
+    /// Allow any components that are in AbsoluteMoniker's collection with the given name. Also a
+    /// prefix match against the target moniker but additionally scoped ot a specific collection.
+    /// Example string form in config: "/foo/tests:**", "/bootstrap/drivers:**"
+    Collection(AbsoluteMoniker, String),
+}
+
 /// Runtime security policy.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct SecurityPolicy {
@@ -98,7 +115,7 @@ pub struct SecurityPolicy {
     /// to uniquely identify any routable capability and the set of monikers
     /// define the set of component paths that are allowed to access this specific
     /// capability.
-    pub capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AbsoluteMoniker>>,
+    pub capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>,
 
     /// Debug Capability routing policies. The key contains all the information required
     /// to uniquely identify any routable capability and the set of (monikers, environment_name)
@@ -210,6 +227,60 @@ fn parse_absolute_monikers_from_strings(
     result.context(format!("Moniker parsing error for {:?}", strs))
 }
 
+#[derive(Debug, Clone, Error, PartialEq, Eq)]
+pub enum AllowlistEntryError {
+    #[error("Moniker parsing error in realm allowlist entry: {0:?}")]
+    RealmEntryInvalidMoniker(String, #[source] MonikerError),
+    #[error("Collection allowlist entry missing a realm: {0:?}")]
+    CollectionEntryMissingRealm(String),
+    #[error("Invalid collection name ({1:?}) in allowlist entry: {0:?}")]
+    InvalidCollectionName(String, String),
+    #[error("Moniker parsing error in collection allowlist entry: {0:?}")]
+    CollectionEntryInvalidMoniker(String, #[source] MonikerError),
+    #[error("Moniker parsing error in allowlist entry: {0:?}")]
+    OtherInvalidMoniker(String, #[source] MonikerError),
+}
+
+fn parse_allowlist_entries(strs: &Option<Vec<String>>) -> Result<Vec<AllowlistEntry>, Error> {
+    let strs = match strs {
+        Some(strs) => strs,
+        None => return Ok(Vec::new()),
+    };
+    strs.iter()
+        .map(|s| {
+            if let Some(prefix) = s.strip_suffix("/**") {
+                let realm = if prefix.is_empty() {
+                    AbsoluteMoniker::root()
+                } else {
+                    AbsoluteMoniker::parse_string_without_instances(prefix)
+                        .map_err(|e| AllowlistEntryError::RealmEntryInvalidMoniker(s.clone(), e))?
+                };
+                Ok(AllowlistEntry::Realm(realm))
+            } else if let Some(prefix) = s.strip_suffix(":**") {
+                let (realm, collection) = prefix
+                    .rsplit_once('/')
+                    .ok_or_else(|| AllowlistEntryError::CollectionEntryMissingRealm(s.clone()))?;
+                Name::from_str(&collection).map_err(|_| {
+                    AllowlistEntryError::InvalidCollectionName(s.clone(), collection.into())
+                })?;
+
+                let realm = if realm.is_empty() {
+                    AbsoluteMoniker::root()
+                } else {
+                    AbsoluteMoniker::parse_string_without_instances(realm).map_err(|e| {
+                        AllowlistEntryError::CollectionEntryInvalidMoniker(s.clone(), e)
+                    })?
+                };
+                Ok(AllowlistEntry::Collection(realm, collection.to_string()))
+            } else {
+                let realm = AbsoluteMoniker::parse_string_without_instances(s)
+                    .map_err(|e| AllowlistEntryError::OtherInvalidMoniker(s.clone(), e))?;
+                Ok(AllowlistEntry::Exact(realm))
+            }
+        })
+        .collect()
+}
+
 fn as_usize_or_default(value: Option<u32>, default: usize) -> usize {
     match value {
         Some(value) => value as usize,
@@ -291,7 +362,7 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
 
 fn parse_capability_policy(
     capability_policy: Option<CapabilityPolicyAllowlists>,
-) -> Result<HashMap<CapabilityAllowlistKey, HashSet<AbsoluteMoniker>>, Error> {
+) -> Result<HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>, Error> {
     let capability_policy = if let Some(capability_policy) = capability_policy {
         if let Some(allowlist) = capability_policy.allowlist {
             let mut policies = HashMap::new();
@@ -342,9 +413,8 @@ fn parse_capability_policy(
                     Err(Error::new(PolicyConfigError::EmptyAllowlistedCapability))
                 }?;
 
-                let target_monikers = HashSet::from_iter(
-                    parse_absolute_monikers_from_strings(&e.target_monikers)?.iter().cloned(),
-                );
+                let target_monikers =
+                    HashSet::from_iter(parse_allowlist_entries(&e.target_monikers)?);
 
                 policies.insert(
                     CapabilityAllowlistKey { source_moniker, source_name, source, capability },
@@ -461,33 +531,37 @@ mod tests {
 
     const FOO_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx";
 
-    macro_rules! test_config_ok {
-        (
-            $(
-                $test_name:ident => ($input:expr, $expected:expr),
-            )+
-        ) => {
+    macro_rules! test_function_ok {
+        ( $function:path, $($test_name:ident => ($input:expr, $expected:expr)),+ ) => {
             $(
                 #[test]
                 fn $test_name() {
-                    assert_matches!(RuntimeConfig::try_from($input), Ok(v) if v == $expected);
+                    assert_matches!($function($input), Ok(v) if v == $expected);
                 }
             )+
         };
     }
 
-    macro_rules! test_config_err {
-        (
-            $(
-                $test_name:ident => ($input:expr, $type:ty, $expected:expr),
-            )+
-        ) => {
+    macro_rules! test_function_err {
+        ( $function:path, $($test_name:ident => ($input:expr, $type:ty, $expected:expr)),+ ) => {
             $(
                 #[test]
                 fn $test_name() {
-                    assert_eq!(*RuntimeConfig::try_from($input).unwrap_err().downcast_ref::<$type>().unwrap(), $expected);
+                    assert_eq!(*$function($input).unwrap_err().downcast_ref::<$type>().unwrap(), $expected);
                 }
             )+
+        };
+    }
+
+    macro_rules! test_config_ok {
+        ( $($test_name:ident => ($input:expr, $expected:expr)),+ $(,)? ) => {
+            test_function_ok! { RuntimeConfig::try_from, $($test_name => ($input, $expected)),+ }
+        };
+    }
+
+    macro_rules! test_config_err {
+        ( $($test_name:ident => ($input:expr, $type:ty, $expected:expr)),+ $(,)? ) => {
+            test_function_err! { RuntimeConfig::try_from, $($test_name => ($input, $type, $expected)),+ }
         };
     }
 
@@ -557,9 +631,9 @@ mod tests {
                             source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                             capability: Some(component_internal::AllowlistedCapability::Protocol(component_internal::AllowlistedProtocol::EMPTY)),
                             target_monikers: Some(vec![
-                                "/root".to_string(),
-                                "/root/bootstrap".to_string(),
-                                "/root/core".to_string()
+                                "/bootstrap".to_string(),
+                                "/core/**".to_string(),
+                                "/core/test_manager/tests:**".to_string()
                             ]),
                             ..component_internal::CapabilityAllowlistEntry::EMPTY
                         },
@@ -570,7 +644,7 @@ mod tests {
                             capability: Some(component_internal::AllowlistedCapability::Event(component_internal::AllowlistedEvent::EMPTY)),
                             target_monikers: Some(vec![
                                 "/foo/bar".to_string(),
-                                "/foo/bar/baz".to_string()
+                                "/foo/bar/**".to_string()
                             ]),
                             ..component_internal::CapabilityAllowlistEntry::EMPTY
                         },
@@ -659,9 +733,9 @@ mod tests {
                             capability: CapabilityTypeName::Protocol,
                         },
                         HashSet::from_iter(vec![
-                            AbsoluteMoniker::from(vec!["root:0"]),
-                            AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]),
-                            AbsoluteMoniker::from(vec!["root:0", "core:0"]),
+                            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["bootstrap:0"])),
+                            AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["core:0"])),
+                            AllowlistEntry::Collection(AbsoluteMoniker::from(vec!["core:0", "test_manager:0"]), "tests".into()),
                         ].iter().cloned())
                         ),
                         (CapabilityAllowlistKey {
@@ -671,8 +745,8 @@ mod tests {
                             capability: CapabilityTypeName::Event,
                         },
                         HashSet::from_iter(vec![
-                            AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
-                            AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"]),
+                            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
+                            AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
                         ].iter().cloned())
                         ),
                     ].iter().cloned()),
@@ -762,7 +836,7 @@ mod tests {
                         source_name: Some("fuchsia.kernel.RootResource".to_string()),
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                         capability: None,
-                        target_monikers: Some(vec!["/root".to_string()]),
+                        target_monikers: Some(vec!["/core".to_string()]),
                         ..component_internal::CapabilityAllowlistEntry::EMPTY
                     }]),
                     ..component_internal::CapabilityPolicyAllowlists::EMPTY
@@ -790,7 +864,7 @@ mod tests {
                     source_moniker: None,
                     source_name: Some("fuchsia.kernel.RootResource".to_string()),
                     capability: Some(component_internal::AllowlistedCapability::Protocol(component_internal::AllowlistedProtocol::EMPTY)),
-                    target_monikers: Some(vec!["/root".to_string()]),
+                    target_monikers: Some(vec!["/core".to_string()]),
                     ..component_internal::CapabilityAllowlistEntry::EMPTY
                 }]),
                 ..component_internal::CapabilityPolicyAllowlists::EMPTY
@@ -883,5 +957,75 @@ mod tests {
 
         assert_matches!(RuntimeConfig::load_from_file(&path), Err(_));
         Ok(())
+    }
+
+    macro_rules! test_entries_ok {
+        ( $($test_name:ident => ($input:expr, $expected:expr)),+ $(,)? ) => {
+            test_function_ok! { parse_allowlist_entries, $($test_name => ($input, $expected)),+ }
+        };
+    }
+
+    macro_rules! test_entries_err {
+        ( $($test_name:ident => ($input:expr, $type:ty, $expected:expr)),+ $(,)? ) => {
+            test_function_err! { parse_allowlist_entries, $($test_name => ($input, $type, $expected)),+ }
+        };
+    }
+
+    test_entries_ok! {
+        missing_entries => (&None, vec![]),
+        empty_entries => (&Some(vec![]), vec![]),
+        all_entry_types => (&Some(vec![
+            "/core".into(),
+            "/**".into(),
+            "/foo/**".into(),
+            "/coll:**".into(),
+            "/core/test_manager/tests:**".into(),
+        ]), vec![
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["core:0"])),
+            AllowlistEntry::Realm(AbsoluteMoniker::root()),
+            AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["foo:0"])),
+            AllowlistEntry::Collection(AbsoluteMoniker::root(), "coll".into()),
+            AllowlistEntry::Collection(AbsoluteMoniker::from(vec!["core:0", "test_manager:0"]), "tests".into())
+        ])
+    }
+
+    test_entries_err! {
+        invalid_realm_entry => (
+            &Some(vec!["/foo/**".into(), "bar/**".into()]),
+            AllowlistEntryError,
+            AllowlistEntryError::RealmEntryInvalidMoniker(
+                "bar/**".into(),
+                MonikerError::InvalidMoniker { rep: "bar".into() })),
+        invalid_realm_in_collection_entry => (
+            &Some(vec!["/foo/coll:**".into(), "bar/coll:**".into()]),
+            AllowlistEntryError,
+            AllowlistEntryError::CollectionEntryInvalidMoniker(
+                "bar/coll:**".into(),
+                MonikerError::InvalidMoniker { rep: "bar".into() })),
+        missing_realm_in_collection_entry => (
+            &Some(vec!["coll:**".into()]),
+            AllowlistEntryError,
+            AllowlistEntryError::CollectionEntryMissingRealm("coll:**".into())),
+        missing_collection_name => (
+            &Some(vec!["/foo/coll:**".into(), "/:**".into()]),
+            AllowlistEntryError,
+            AllowlistEntryError::InvalidCollectionName(
+                "/:**".into(),
+                "".into(),
+            )),
+        invalid_collection_name => (
+            &Some(vec!["/foo/coll:**".into(), "/*:**".into()]),
+            AllowlistEntryError,
+            AllowlistEntryError::InvalidCollectionName(
+                "/*:**".into(),
+                "*".into(),
+            )),
+        invalid_exact_entry => (
+            &Some(vec!["/foo/bar*".into()]),
+            AllowlistEntryError,
+            AllowlistEntryError::OtherInvalidMoniker(
+                "/foo/bar*".into(),
+                MonikerError::InvalidMonikerPart("bar*".into()))),
+
     }
 }

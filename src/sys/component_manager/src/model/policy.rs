@@ -24,8 +24,7 @@ mod tests {
         fidl_fuchsia_sys2 as fsys,
         moniker::AbsoluteMoniker,
         routing_test_helpers::{
-            instantiate_global_policy_checker_tests,
-            policy::GlobalPolicyCheckerTest,
+            instantiate_global_policy_checker_tests, policy::GlobalPolicyCheckerTest,
         },
         std::sync::Arc,
     };

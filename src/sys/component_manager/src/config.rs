@@ -9,3 +9,4 @@ pub type JobPolicyAllowlists = ::routing::config::JobPolicyAllowlists;
 pub type CapabilityAllowlistSource = ::routing::config::CapabilityAllowlistSource;
 pub type CapabilityAllowlistKey = ::routing::config::CapabilityAllowlistKey;
 pub type PolicyConfigError = ::routing::config::PolicyConfigError;
+pub type AllowlistEntry = ::routing::config::AllowlistEntry;

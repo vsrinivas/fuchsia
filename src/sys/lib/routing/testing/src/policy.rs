@@ -14,8 +14,8 @@ use {
         capability_source::{CapabilitySourceInterface, ComponentCapability, InternalCapability},
         component_instance::ComponentInstanceInterface,
         config::{
-            CapabilityAllowlistKey, CapabilityAllowlistSource, JobPolicyAllowlists, RuntimeConfig,
-            SecurityPolicy,
+            AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource, JobPolicyAllowlists,
+            RuntimeConfig, SecurityPolicy,
         },
         policy::GlobalPolicyChecker,
     },
@@ -42,6 +42,8 @@ macro_rules! instantiate_global_policy_checker_tests {
             global_policy_checker_can_route_debug_capability_capability_cap,
             global_policy_checker_can_route_capability_builtin_cap,
             global_policy_checker_can_route_capability_with_instance_ids_cap,
+            global_policy_checker_can_route_capability_with_realm_allowlist_entry,
+            global_policy_checker_can_route_capability_with_collection_allowlist_entry,
         }
     };
     ($fixture_impl:path, $test:ident, $($remaining:ident),+ $(,)?) => {
@@ -77,8 +79,8 @@ where
                 capability: CapabilityTypeName::Event,
             },
             vec![
-                AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
-                AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"]),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"])),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -123,9 +125,9 @@ where
                 capability: CapabilityTypeName::Protocol,
             },
             vec![
-                AbsoluteMoniker::from(vec!["root:0"]),
-                AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]),
-                AbsoluteMoniker::from(vec!["root:0", "core:0"]),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0"])),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"])),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "core:0"])),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -179,9 +181,9 @@ where
                 capability: CapabilityTypeName::Protocol,
             },
             vec![
-                AbsoluteMoniker::from(vec!["foo:0"]),
-                AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]),
-                AbsoluteMoniker::from(vec!["root:0", "core:0"]),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo:0"])),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"])),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "core:0"])),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -231,9 +233,9 @@ where
                 capability: CapabilityTypeName::Storage,
             },
             vec![
-                AbsoluteMoniker::from(vec!["foo:0"]),
-                AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]),
-                AbsoluteMoniker::from(vec!["root:0", "core:0"]),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo:0"])),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"])),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "core:0"])),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -358,8 +360,8 @@ where
                 capability: CapabilityTypeName::Directory,
             },
             vec![
-                AbsoluteMoniker::from(vec!["root:0"]),
-                AbsoluteMoniker::from(vec!["root:0", "core:0"]),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0"])),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "core:0"])),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -406,8 +408,8 @@ where
                 capability: CapabilityTypeName::Directory,
             },
             vec![
-                AbsoluteMoniker::from(vec!["root:0"]),
-                AbsoluteMoniker::from(vec!["root:0", "core:0"]),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0"])),
+                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "core:0"])),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -438,12 +440,107 @@ where
         );
         Ok(())
     }
+
+    // Tests `GlobalPolicyChecker::can_route_capability()` for policy that includes non-exact
+    // `AllowlistEntry::Realm` entries.
+    fn global_policy_checker_can_route_capability_with_realm_allowlist_entry(
+        &self,
+    ) -> Result<(), Error> {
+        let mut config_builder = CapabilityAllowlistConfigBuilder::new();
+        config_builder.add_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentManager,
+                source_name: CapabilityName::from("fuchsia.kernel.RootResource"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+            },
+            vec![
+                AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["tests:0"])),
+                AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["core:0", "tests:0"])),
+            ],
+        );
+        let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
+        let protocol_capability = CapabilitySourceInterface::<C>::Namespace {
+            capability: ComponentCapability::Protocol(ProtocolDecl {
+                name: "fuchsia.kernel.RootResource".into(),
+                source_path: "/svc/fuchsia.kernel.RootResource".parse().unwrap(),
+            }),
+            top_instance: Weak::new(),
+        };
+
+        macro_rules! can_route {
+            ($moniker:expr) => {
+                global_policy_checker.can_route_capability(&protocol_capability, $moniker)
+            };
+        }
+
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:0", "test1:0"])).is_ok());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:0", "coll:test1:0"])).is_ok());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:0", "test1:0", "util:0"])).is_ok());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:0", "test2:0"])).is_ok());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "tests:0", "test:0"])).is_ok());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "tests:0", "coll:t:0"])).is_ok());
+
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["foo:0"])).is_err());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:0"])).is_err());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "foo:0"])).is_err());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "tests:0"])).is_err());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "tests:test:0"])).is_err());
+        Ok(())
+    }
+
+    // Tests `GlobalPolicyChecker::can_route_capability()` for policy that includes non-exact
+    // `AllowlistEntry::Collection` entries.
+    fn global_policy_checker_can_route_capability_with_collection_allowlist_entry(
+        &self,
+    ) -> Result<(), Error> {
+        let mut config_builder = CapabilityAllowlistConfigBuilder::new();
+        config_builder.add_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentManager,
+                source_name: CapabilityName::from("fuchsia.kernel.RootResource"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+            },
+            vec![
+                AllowlistEntry::Collection(AbsoluteMoniker::root(), "tests".into()),
+                AllowlistEntry::Collection(AbsoluteMoniker::from(vec!["core:0"]), "tests".into()),
+            ],
+        );
+        let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
+        let protocol_capability = CapabilitySourceInterface::<C>::Namespace {
+            capability: ComponentCapability::Protocol(ProtocolDecl {
+                name: "fuchsia.kernel.RootResource".into(),
+                source_path: "/svc/fuchsia.kernel.RootResource".parse().unwrap(),
+            }),
+            top_instance: Weak::new(),
+        };
+
+        macro_rules! can_route {
+            ($moniker:expr) => {
+                global_policy_checker.can_route_capability(&protocol_capability, $moniker)
+            };
+        }
+
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:t1:0"])).is_ok());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:t2:0"])).is_ok());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:t1:0", "util:0"])).is_ok());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "tests:t1:0"])).is_ok());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "tests:t2:0"])).is_ok());
+
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["foo:0"])).is_err());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:0"])).is_err());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["coll:foo:0"])).is_err());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "foo:0"])).is_err());
+        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "coll:tests:0"])).is_err());
+        Ok(())
+    }
 }
 
 // Creates a RuntimeConfig based on the capability allowlist entries provided during
 // construction.
 struct CapabilityAllowlistConfigBuilder {
-    capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AbsoluteMoniker>>,
+    capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>,
     debug_capability_policy: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
 }
 
@@ -456,7 +553,7 @@ impl CapabilityAllowlistConfigBuilder {
     pub fn add_capability_policy<'a>(
         &'a mut self,
         key: CapabilityAllowlistKey,
-        value: Vec<AbsoluteMoniker>,
+        value: Vec<AllowlistEntry>,
     ) -> &'a mut Self {
         let value_set = HashSet::from_iter(value.iter().cloned());
         self.capability_policy.insert(key, value_set);

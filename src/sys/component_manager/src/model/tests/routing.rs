@@ -19,7 +19,7 @@ use {
             OptionalTask,
         },
         channel,
-        config::{CapabilityAllowlistKey, CapabilityAllowlistSource},
+        config::{AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource},
         framework::REALM_SERVICE,
         model::{
             actions::{
@@ -1554,7 +1554,7 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
     ];
 
     let mut allowlist = HashSet::new();
-    allowlist.insert(AbsoluteMoniker::from(vec!["b:0"]));
+    allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b:0"])));
 
     let test = RoutingTestBuilder::new("a", components)
         .add_capability_policy(
