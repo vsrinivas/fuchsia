@@ -26,6 +26,36 @@ use {
     },
 };
 
+/// These GlobalPolicyChecker tests are run under multiple contexts, e.g. both on Fuchsia under
+/// component_manager and on the build host under cm_fidl_analyzer. This macro helps ensure that all
+/// tests are run in each context.
+#[macro_export]
+macro_rules! instantiate_global_policy_checker_tests {
+    ($fixture_impl:path) => {
+        // New GlobalPolicyCheckerTest tests must be added to this list to run.
+        instantiate_global_policy_checker_tests! {
+            $fixture_impl,
+            global_policy_checker_can_route_capability_framework_cap,
+            global_policy_checker_can_route_capability_namespace_cap,
+            global_policy_checker_can_route_capability_component_cap,
+            global_policy_checker_can_route_capability_capability_cap,
+            global_policy_checker_can_route_debug_capability_capability_cap,
+            global_policy_checker_can_route_capability_builtin_cap,
+            global_policy_checker_can_route_capability_with_instance_ids_cap,
+        }
+    };
+    ($fixture_impl:path, $test:ident, $($remaining:ident),+ $(,)?) => {
+        instantiate_global_policy_checker_tests! { $fixture_impl, $test }
+        instantiate_global_policy_checker_tests! { $fixture_impl, $($remaining),+ }
+    };
+    ($fixture_impl:path, $test:ident) => {
+        #[test]
+        fn $test() -> Result<(), Error> {
+            <$fixture_impl as Default>::default().$test()
+        }
+    };
+}
+
 // Tests `GlobalPolicyChecker` for implementations of `ComponentInstanceInterface`.
 pub trait GlobalPolicyCheckerTest<C>
 where

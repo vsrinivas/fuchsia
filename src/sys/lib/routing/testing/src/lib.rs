@@ -229,6 +229,81 @@ pub trait RoutingTestModelBuilder {
     async fn build(self) -> Self::Model;
 }
 
+/// The CommonRoutingTests are run under multiple contexts, e.g. both on Fuchsia under
+/// component_manager and on the build host under cm_fidl_analyzer. This macro helps ensure that all
+/// tests are run in each context.
+#[macro_export]
+macro_rules! instantiate_common_routing_tests {
+    ($builder_impl:path) => {
+        // New CommonRoutingTest tests must be added to this list to run.
+        instantiate_common_routing_tests! {
+            $builder_impl,
+            test_use_from_parent,
+            test_use_from_child,
+            test_use_from_self,
+            test_use_from_grandchild,
+            test_use_from_grandparent,
+            test_use_from_sibling_no_root,
+            test_use_from_sibling_root,
+            test_use_from_niece,
+            test_use_kitchen_sink,
+            test_use_from_component_manager_namespace,
+            test_offer_from_component_manager_namespace,
+            test_use_not_offered,
+            test_use_offer_source_not_exposed,
+            test_use_offer_source_not_offered,
+            test_use_from_expose,
+            test_use_from_expose_to_framework,
+            test_offer_from_non_executable,
+            test_use_directory_with_subdir_from_grandparent,
+            test_use_directory_with_subdir_from_sibling,
+            test_expose_directory_with_subdir,
+            test_expose_from_self_and_child,
+            test_use_not_exposed,
+            test_use_protocol_denied_by_capability_policy,
+            test_use_directory_with_alias_denied_by_capability_policy,
+            test_use_protocol_partial_chain_allowed_by_capability_policy,
+            test_use_protocol_component_provided_capability_policy,
+            test_use_from_component_manager_namespace_denied_by_policy,
+            test_use_protocol_component_provided_debug_capability_policy_at_root_from_self,
+            test_use_protocol_component_provided_debug_capability_policy_from_self,
+            test_use_protocol_component_provided_debug_capability_policy_from_child,
+            test_use_protocol_component_provided_debug_capability_policy_from_grandchild,
+        }
+
+        // TODO(fxbug.dev/77649): These tests exercise features not currently supported under
+        // cm_fidl_analyzer
+        #[cfg(target_os = "fuchsia")]
+        instantiate_common_routing_tests! {
+            $builder_impl,
+            test_use_builtin_from_grandparent,
+            test_invalid_use_from_component_manager,
+            test_invalid_offer_from_component_manager,
+            test_use_event_from_framework,
+            test_can_offer_capability_requested_event,
+            test_use_event_from_parent,
+            test_use_event_from_grandparent,
+            test_event_filter_routing,
+            test_event_mode_routing_failure,
+            test_event_mode_routing_success,
+        }
+    };
+    ($builder_impl:path, $test:ident, $($remaining:ident),+ $(,)?) => {
+        instantiate_common_routing_tests! { $builder_impl, $test }
+        instantiate_common_routing_tests! { $builder_impl, $($remaining),+ }
+    };
+    ($builder_impl:path, $test:ident) => {
+        // TODO(fxbug.dev/77647): #[fuchsia::test] did not work inside a declarative macro, so this
+        // falls back on fuchsia_async and manual logging initialization for now.
+        #[fuchsia_async::run_singlethreaded(test)]
+        async fn $test() {
+            fuchsia::init_logging_for_component_with_executor(|| {})();
+
+            $crate::CommonRoutingTest::<$builder_impl>::new().$test().await
+        }
+    };
+}
+
 pub struct CommonRoutingTest<T: RoutingTestModelBuilder> {
     builder: PhantomData<T>,
 }

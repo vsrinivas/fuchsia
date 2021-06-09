@@ -23,7 +23,10 @@ mod tests {
         anyhow::Error,
         fidl_fuchsia_sys2 as fsys,
         moniker::AbsoluteMoniker,
-        routing_test_helpers::policy::GlobalPolicyCheckerTest,
+        routing_test_helpers::{
+            instantiate_global_policy_checker_tests,
+            policy::GlobalPolicyCheckerTest,
+        },
         std::sync::Arc,
     };
 
@@ -51,44 +54,5 @@ mod tests {
         }
     }
 
-    fn new_test() -> GlobalPolicyCheckerTestForCm {
-        GlobalPolicyCheckerTestForCm::default()
-    }
-
-    #[test]
-    fn global_policy_checker_can_route_capability_framework_cap_for_cm() -> Result<(), Error> {
-        new_test().global_policy_checker_can_route_capability_framework_cap()
-    }
-
-    #[test]
-    fn global_policy_checker_can_route_capability_namespace_cap_for_cm() -> Result<(), Error> {
-        new_test().global_policy_checker_can_route_capability_namespace_cap()
-    }
-
-    #[test]
-    fn global_policy_checker_can_route_capability_component_cap_for_cm() -> Result<(), Error> {
-        new_test().global_policy_checker_can_route_capability_component_cap()
-    }
-
-    #[test]
-    fn global_policy_checker_can_route_capability_capability_cap_for_cm() -> Result<(), Error> {
-        new_test().global_policy_checker_can_route_capability_capability_cap()
-    }
-
-    #[test]
-    fn global_policy_checker_can_route_debug_capability_capability_cap_for_cm() -> Result<(), Error>
-    {
-        new_test().global_policy_checker_can_route_debug_capability_capability_cap()
-    }
-
-    #[test]
-    fn global_policy_checker_can_route_capability_builtin_cap_for_cm() -> Result<(), Error> {
-        new_test().global_policy_checker_can_route_capability_builtin_cap()
-    }
-
-    #[test]
-    fn global_policy_checker_can_route_capability_with_instance_ids_cap_for_cm() -> Result<(), Error>
-    {
-        new_test().global_policy_checker_can_route_capability_with_instance_ids_cap()
-    }
+    instantiate_global_policy_checker_tests!(GlobalPolicyCheckerTestForCm);
 }

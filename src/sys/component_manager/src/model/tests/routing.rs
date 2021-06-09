@@ -47,7 +47,9 @@ use {
     matches::assert_matches,
     moniker::{AbsoluteMoniker, ExtendedMoniker},
     routing::{error::ComponentInstanceError, route_capability},
-    routing_test_helpers::{default_service_capability, CommonRoutingTest, RoutingTestModel},
+    routing_test_helpers::{
+        default_service_capability, instantiate_common_routing_tests, RoutingTestModel,
+    },
     std::{
         collections::HashSet,
         convert::{TryFrom, TryInto},
@@ -56,6 +58,8 @@ use {
     },
     vfs::pseudo_directory,
 };
+
+instantiate_common_routing_tests! { RoutingTestBuilder }
 
 ///   a
 ///    \
@@ -208,26 +212,6 @@ async fn use_framework_service() {
     test.check_use_realm(vec!["b:0"].into(), realm_service_host.bind_calls()).await;
 }
 
-#[fuchsia::test]
-async fn use_from_parent() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_parent().await
-}
-
-#[fuchsia::test]
-async fn use_from_child() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_child().await
-}
-
-#[fuchsia::test]
-async fn use_from_self() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_self().await;
-}
-
-#[fuchsia::test]
-async fn use_from_grandchild() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_grandchild().await
-}
-
 ///   a
 ///    \
 ///     b
@@ -337,78 +321,6 @@ async fn capability_requested_event_at_parent() {
 
     if *name == "foo_svc".to_string()
     );
-}
-
-#[fuchsia::test]
-async fn use_from_grandparent() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_grandparent().await
-}
-
-#[fuchsia::test]
-async fn use_builtin_from_grandparent() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_builtin_from_grandparent().await
-}
-
-#[fuchsia::test]
-async fn use_from_sibling_no_root() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_sibling_no_root().await
-}
-
-#[fuchsia::test]
-async fn use_from_sibling_root() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_sibling_root().await
-}
-
-#[fuchsia::test]
-async fn use_from_niece() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_niece().await
-}
-
-#[fuchsia::test]
-async fn use_kitchen_sink() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_kitchen_sink().await
-}
-
-#[fuchsia::test]
-async fn use_from_component_manager_namespace() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_component_manager_namespace().await
-}
-
-#[fuchsia::test]
-async fn offer_from_component_manager_namespace() {
-    CommonRoutingTest::<RoutingTestBuilder>::new()
-        .test_offer_from_component_manager_namespace()
-        .await
-}
-
-#[fuchsia::test]
-async fn use_not_offered() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_not_offered().await
-}
-
-#[fuchsia::test]
-async fn use_offer_source_not_exposed() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_offer_source_not_exposed().await
-}
-
-#[fuchsia::test]
-async fn use_offer_source_not_offered() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_offer_source_not_offered().await
-}
-
-#[fuchsia::test]
-async fn use_from_expose() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_expose().await
-}
-
-#[fuchsia::test]
-async fn use_from_expose_to_framework() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_expose_to_framework().await
-}
-
-#[fuchsia::test]
-async fn offer_from_non_executable() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_offer_from_non_executable().await
 }
 
 ///   a
@@ -621,13 +533,6 @@ async fn use_in_collection_not_offered() {
 }
 
 #[fuchsia::test]
-async fn use_directory_with_subdir_from_grandparent() {
-    CommonRoutingTest::<RoutingTestBuilder>::new()
-        .test_use_directory_with_subdir_from_grandparent()
-        .await
-}
-
-#[fuchsia::test]
 async fn destroying_instance_kills_framework_service_task() {
     let components = vec![
         ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
@@ -662,18 +567,6 @@ async fn destroying_instance_kills_framework_service_task() {
         .expect("destroy failed");
     let mut event_stream = proxy.take_event_stream();
     assert_matches!(event_stream.next().await, None);
-}
-
-#[fuchsia::test]
-async fn use_directory_with_subdir_from_sibling() {
-    CommonRoutingTest::<RoutingTestBuilder>::new()
-        .test_use_directory_with_subdir_from_sibling()
-        .await
-}
-
-#[fuchsia::test]
-async fn expose_directory_with_subdir() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_expose_directory_with_subdir().await
 }
 
 ///  a
@@ -1091,16 +984,6 @@ async fn use_runner_from_environment_not_found() {
 // straightforward because resolver routing is not implemented yet, which makes it impossible to
 // register a new resolver and have it be usable.
 
-#[fuchsia::test]
-async fn expose_from_self_and_child() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_expose_from_self_and_child().await
-}
-
-#[fuchsia::test]
-async fn use_not_exposed() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_not_exposed().await
-}
-
 ///   a
 ///    \
 ///    [b]
@@ -1257,51 +1140,6 @@ async fn use_from_destroyed_but_not_removed() {
         },
     )
     .await;
-}
-
-#[fuchsia::test]
-async fn invalid_use_from_component_manager() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_invalid_use_from_component_manager().await
-}
-
-#[fuchsia::test]
-async fn test_invalid_offer_from_component_manager() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_invalid_offer_from_component_manager().await
-}
-
-#[fuchsia::test]
-async fn use_event_from_framework() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_event_from_framework().await
-}
-
-#[fuchsia::test]
-async fn can_offer_capability_requested_event() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_can_offer_capability_requested_event().await
-}
-
-#[fuchsia::test]
-async fn use_event_from_parent() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_event_from_parent().await
-}
-
-#[fuchsia::test]
-async fn use_event_from_grandparent() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_event_from_grandparent().await
-}
-
-#[fuchsia::test]
-async fn event_filter_routing() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_event_filter_routing().await
-}
-
-#[fuchsia::test]
-async fn event_mode_routing_failure() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_event_mode_routing_failure().await
-}
-
-#[fuchsia::test]
-async fn event_mode_routing_success() {
-    CommonRoutingTest::<RoutingTestBuilder>::new().test_event_mode_routing_success().await
 }
 
 ///   a
@@ -1652,34 +1490,6 @@ async fn resolver_component_decl_is_validated() {
     );
 }
 
-#[fuchsia::test]
-async fn use_protocol_denied_by_capability_policy() {
-    CommonRoutingTest::<RoutingTestBuilder>::new()
-        .test_use_protocol_denied_by_capability_policy()
-        .await
-}
-
-#[fuchsia::test]
-async fn use_directory_with_alias_denied_by_capability_policy() {
-    CommonRoutingTest::<RoutingTestBuilder>::new()
-        .test_use_directory_with_alias_denied_by_capability_policy()
-        .await
-}
-
-#[fuchsia::test]
-async fn use_protocol_partial_chain_allowed_by_capability_policy() {
-    CommonRoutingTest::<RoutingTestBuilder>::new()
-        .test_use_protocol_partial_chain_allowed_by_capability_policy()
-        .await
-}
-
-#[fuchsia::test]
-async fn use_protocol_component_provided_capability_policy() {
-    CommonRoutingTest::<RoutingTestBuilder>::new()
-        .test_use_protocol_component_provided_capability_policy()
-        .await
-}
-
 ///   a
 ///    \
 ///     b
@@ -1791,13 +1601,6 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
     .await
 }
 
-#[fuchsia::test]
-async fn use_from_component_manager_namespace_denied_by_policy() {
-    CommonRoutingTest::<RoutingTestBuilder>::new()
-        .test_use_from_component_manager_namespace_denied_by_policy()
-        .await
-}
-
 // a
 //  \
 //   b
@@ -1848,34 +1651,6 @@ async fn route_protocol_from_expose() {
             })
         ) if protocol_decl == expected_protocol_decl && component.moniker == expected_source_moniker
     );
-}
-
-#[fuchsia::test]
-async fn use_protocol_component_provided_debug_capability_policy_at_root_from_self() {
-    CommonRoutingTest::<RoutingTestBuilder>::new()
-        .test_use_protocol_component_provided_debug_capability_policy_at_root_from_self()
-        .await
-}
-
-#[fuchsia::test]
-async fn use_protocol_component_provided_debug_capability_policy_from_self() {
-    CommonRoutingTest::<RoutingTestBuilder>::new()
-        .test_use_protocol_component_provided_debug_capability_policy_from_self()
-        .await
-}
-
-#[fuchsia::test]
-async fn use_protocol_component_provided_debug_capability_policy_from_child() {
-    CommonRoutingTest::<RoutingTestBuilder>::new()
-        .test_use_protocol_component_provided_debug_capability_policy_from_child()
-        .await
-}
-
-#[fuchsia::test]
-async fn use_protocol_component_provided_debug_capability_policy_from_grandchild() {
-    CommonRoutingTest::<RoutingTestBuilder>::new()
-        .test_use_protocol_component_provided_debug_capability_policy_from_grandchild()
-        .await
 }
 
 ///   a

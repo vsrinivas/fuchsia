@@ -16,6 +16,7 @@ rustc_test("tests") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
 
     # Depend on fuchsia_zircon_status crate instead of fuchsia_zircon so that this builds for host.
     "//src/lib/zircon/rust:fuchsia-zircon-status",
