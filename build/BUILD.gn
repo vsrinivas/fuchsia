@@ -210,7 +210,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/kernel/lib/gfx/*",
     "//zircon/kernel/lib/gfxconsole/*",
     "//zircon/kernel/lib/heap/*",
-    "//zircon/kernel/lib/heap/cmpctmalloc/*",
     "//zircon/kernel/lib/init/*",
     "//zircon/kernel/lib/instrumentation/*",
     "//zircon/kernel/lib/io/*",
