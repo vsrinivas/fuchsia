@@ -37,32 +37,11 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnFile(std::unique_ptr<raw::File> const& element) override;
   void OnIdentifier(std::unique_ptr<raw::Identifier> const& element) override;
   void OnIdentifierConstant(std::unique_ptr<raw::IdentifierConstant> const& element) override;
-  void OnIdentifierLayoutParameter(
-      std::unique_ptr<raw::IdentifierLayoutParameter> const& element) override {
-    NotYetImplemented();
-  }
-  void OnInlineLayoutReference(
-      std::unique_ptr<raw::InlineLayoutReference> const& element) override {
-    NotYetImplemented();
-  }
-  void OnLayout(std::unique_ptr<raw::Layout> const& element) override { NotYetImplemented(); }
-  void OnLayoutMember(std::unique_ptr<raw::LayoutMember> const& element) override {
-    NotYetImplemented();
-  }
-  void OnLayoutParameter(std::unique_ptr<raw::LayoutParameter> const& element) override {
-    NotYetImplemented();
-  }
-  void OnLayoutParameterList(std::unique_ptr<raw::LayoutParameterList> const& element) override {
-    NotYetImplemented();
-  }
-  // void OnLayoutReference(std::unique_ptr<raw::LayoutReference> const& element) override;
+  void OnLayout(std::unique_ptr<raw::Layout> const& element) override;
+  void OnLayoutMember(std::unique_ptr<raw::LayoutMember> const& element) override;
   void OnLibraryDecl(std::unique_ptr<raw::LibraryDecl> const& element) override;
   void OnLiteral(std::unique_ptr<raw::Literal> const& element) override;
   void OnLiteralConstant(std::unique_ptr<raw::LiteralConstant> const& element) override;
-  void OnLiteralLayoutParameter(
-      std::unique_ptr<raw::LiteralLayoutParameter> const& element) override {
-    NotYetImplemented();
-  }
   void OnNamedLayoutReference(std::unique_ptr<raw::NamedLayoutReference> const& element) override;
   void OnNullability(types::Nullability nullability) override { NotYetImplemented(); };
   void OnOrdinaledLayoutMember(
@@ -92,17 +71,9 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnServiceMember(std::unique_ptr<raw::ServiceMember> const& element) override {
     NotYetImplemented();
   }
-  void OnStructLayoutMember(std::unique_ptr<raw::StructLayoutMember> const& element) override {
-    NotYetImplemented();
-  }
-  void OnTypeConstraints(std::unique_ptr<raw::TypeConstraints> const& element) override {
-    NotYetImplemented();
-  }
+  void OnStructLayoutMember(std::unique_ptr<raw::StructLayoutMember> const& element) override;
   void OnTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> const& element) override;
-  void OnTypeDecl(std::unique_ptr<raw::TypeDecl> const& element) override { NotYetImplemented(); }
-  void OnTypeLayoutParameter(std::unique_ptr<raw::TypeLayoutParameter> const& element) override {
-    NotYetImplemented();
-  }
+  void OnTypeDecl(std::unique_ptr<raw::TypeDecl> const& element) override;
   void OnUsing(std::unique_ptr<raw::Using> const& element) override;
   void OnValueLayoutMember(std::unique_ptr<raw::ValueLayoutMember> const& element) override {
     NotYetImplemented();
@@ -169,11 +140,15 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
     kFile,
     kIdentifier,
     kIdentifierConstant,
+    kLayout,
+    kLayoutMember,
     kLibraryDecl,
     kLiteral,
     kLiteralConstant,
     kNamedLayoutReference,
+    kStructLayoutMember,
     kTypeConstructorNew,
+    kTypeDecl,
     kUsing,
   };
 
@@ -215,6 +190,8 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
 
    protected:
     SpanSequenceTreeVisitor* GetFormattingTreeVisitor() { return ftv_; }
+    const Token& GetStartToken() { return start_; }
+    const Token& GetEndToken() { return end_; }
 
    private:
     SpanSequenceTreeVisitor* ftv_;
@@ -254,10 +231,13 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
                   "T of SpanBuilder<T> must inherit from CompositeSpanSequence");
 
    public:
-    // Use this constructor when the entire SourceElement will be ingested by the SpanBuilder.
+    // Use these constructors when the entire SourceElement will be ingested by the SpanBuilder.
     SpanBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element,
                 SpanSequence::Position position = SpanSequence::Position::kDefault)
         : Builder<T>(ftv, element.start_, element.end_, true), position_(position) {}
+    SpanBuilder(SpanSequenceTreeVisitor* ftv, const Token& start, const Token& end,
+                SpanSequence::Position position = SpanSequence::Position::kDefault)
+        : Builder<T>(ftv, start, end, true), position_(position) {}
 
     // Use this constructor when the SourceElement will only be partially ingested by the
     // SpanBuilder.  For example, a ConstDeclaration's identifier and type_ctor members are ingested

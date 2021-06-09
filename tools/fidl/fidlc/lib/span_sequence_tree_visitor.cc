@@ -73,7 +73,7 @@ void AppendToken(std::string_view word, size_t leading_blank_lines, AtomicSpanSe
   if (!word.empty() && word[0] != '\0') {
     // TODO(fxbug.dev/73507): add more variants to the regex as we run across them when adding
     //  support for more raw AST node types.
-    static std::regex needs_trailing_space_regex("[a-z_]+|=|:|\\|");
+    static std::regex needs_trailing_space_regex("[a-z_]+|=|\\|");
     auto token_span_sequence = std::make_unique<TokenSpanSequence>(word, leading_blank_lines);
     if (std::regex_match(std::string(word), needs_trailing_space_regex)) {
       token_span_sequence->SetTrailingSpace(true);
@@ -204,6 +204,21 @@ IngestLineResult IngestLine(std::string_view text, size_t leading_newlines,
   return IngestLineResult{chars_seen, semi_colon_seen, !source_seen};
 }
 
+// Is the last leaf of the SpanSequence tree with its root at the provided SpanSequence a
+// CommentSpanSequence?
+bool EndsWithComment(const std::unique_ptr<SpanSequence>& span_sequence) {
+  if (span_sequence->IsComposite()) {
+    auto as_composite = static_cast<CompositeSpanSequence*>(span_sequence.get());
+    if (as_composite->IsEmpty())
+      return false;
+
+    const auto& children = as_composite->GetChildren();
+    return EndsWithComment(children.back());
+  }
+
+  return span_sequence->IsComment();
+}
+
 // Adds in spaces between all of the non-comment children of a list of SpanSequences.  This means
 // that a trailing space is added to every non-comment child SpanSequence, except the last one.
 void AddSpacesBetweenChildren(const std::vector<std::unique_ptr<SpanSequence>>& list) {
@@ -217,7 +232,7 @@ void AddSpacesBetweenChildren(const std::vector<std::unique_ptr<SpanSequence>>& 
 
   for (size_t i = 0; i < list.size(); i++) {
     const auto& child = list[i];
-    if (!child->IsComment() && i < last_non_comment_index.value_or(0)) {
+    if (!EndsWithComment(child) && i < last_non_comment_index.value_or(0)) {
       child->SetTrailingSpace(true);
     }
   }
@@ -357,6 +372,21 @@ SpanSequenceTreeVisitor::TokenBuilder::TokenBuilder(SpanSequenceTreeVisitor* ftv
 
 template <typename T>
 SpanSequenceTreeVisitor::SpanBuilder<T>::~SpanBuilder<T>() {
+  // Ingest any remaining text between the last processed child and the end token of the span.  This
+  // text may not retain any leading blank lines or trailing spaces.
+  auto end_view = this->GetEndToken().data();
+  auto postscript = this->GetFormattingTreeVisitor()->IngestUntil(
+      end_view.data() + (end_view.size() - 1), false, SpanSequence::Position::kNewlineUnindented);
+  if (postscript.has_value()) {
+    const auto& top = this->GetFormattingTreeVisitor()->building_.top();
+    if (!top.empty() && !EndsWithComment(top.back())) {
+      postscript.value()->SetLeadingBlankLines(0);
+    }
+
+    postscript.value()->SetTrailingSpace(false);
+    this->GetFormattingTreeVisitor()->building_.top().push_back(std::move(postscript.value()));
+  }
+
   auto parts = std::move(this->GetFormattingTreeVisitor()->building_.top());
   auto composite_span_sequence = std::make_unique<T>(std::move(parts), this->position_);
   composite_span_sequence->CloseChildren();
@@ -481,8 +511,10 @@ void SpanSequenceTreeVisitor::OnAttributeListNew(
     const std::unique_ptr<raw::AttributeListNew>& element) {
   if (attribute_lists_seen_.insert(element.get()).second) {
     const auto visiting = Visiting(this, VisitorKind::kAttributeList);
-    const auto builder = SpanBuilder<MultilineSpanSequence>(
-        this, *element, SpanSequence::Position::kNewlineUnindented);
+    const auto indent = IsInsideOf(VisitorKind::kLayoutMember)
+                            ? SpanSequence::Position::kNewlineIndented
+                            : SpanSequence::Position::kNewlineUnindented;
+    const auto builder = SpanBuilder<MultilineSpanSequence>(this, *element, indent);
     TreeVisitor::OnAttributeListNew(element);
 
     // Remove all blank lines between attributes.
@@ -600,6 +632,25 @@ void SpanSequenceTreeVisitor::OnIdentifierConstant(
   TreeVisitor::OnIdentifierConstant(element);
 }
 
+void SpanSequenceTreeVisitor::OnLayout(const std::unique_ptr<raw::Layout>& element) {
+  const auto visiting = Visiting(this, VisitorKind::kLayout);
+
+  // Special case: an empty layout (ex: `struct {}`) should always be atomic.
+  if (element->members.empty()) {
+    const auto builder = SpanBuilder<AtomicSpanSequence>(this, *element);
+    return;
+  }
+
+  const auto builder =
+      SpanBuilder<MultilineSpanSequence>(this, element->members[0]->start_, element->end_);
+  TreeVisitor::OnLayout(element);
+}
+
+void SpanSequenceTreeVisitor::OnLayoutMember(const std::unique_ptr<raw::LayoutMember>& element) {
+  const auto visiting = Visiting(this, VisitorKind::kLayoutMember);
+  TreeVisitor::OnLayoutMember(element);
+}
+
 void SpanSequenceTreeVisitor::OnLibraryDecl(const std::unique_ptr<raw::LibraryDecl>& element) {
   const auto visiting = Visiting(this, VisitorKind::kLibraryDecl);
   const auto& attrs = std::get<std::unique_ptr<raw::AttributeListNew>>(element->attributes);
@@ -626,11 +677,43 @@ void SpanSequenceTreeVisitor::OnNamedLayoutReference(
   TreeVisitor::OnNamedLayoutReference(element);
 }
 
+void SpanSequenceTreeVisitor::OnStructLayoutMember(
+    const std::unique_ptr<raw::StructLayoutMember>& element) {
+  const auto visiting = Visiting(this, VisitorKind::kStructLayoutMember);
+  if (element->attributes != nullptr) {
+    OnAttributeListNew(element->attributes);
+  }
+
+  const auto builder = StatementBuilder<DivisibleSpanSequence>(
+      this, *element, SpanSequence::Position::kNewlineIndented);
+  TreeVisitor::OnStructLayoutMember(element);
+  AddSpacesBetweenChildren(building_.top());
+  ClearBlankLinesAfterAttributeList(element->attributes, building_.top());
+}
+
 void SpanSequenceTreeVisitor::OnTypeConstructorNew(
     const std::unique_ptr<raw::TypeConstructorNew>& element) {
   const auto visiting = Visiting(this, VisitorKind::kTypeConstructorNew);
-  const auto builder = SpanBuilder<AtomicSpanSequence>(this, *element);
-  TreeVisitor::OnTypeConstructorNew(element);
+
+  if (element->layout_ref->kind == raw::LayoutReference::Kind::kInline) {
+    TreeVisitor::OnTypeConstructorNew(element);
+  } else {
+    const auto builder = SpanBuilder<AtomicSpanSequence>(this, *element);
+    TreeVisitor::OnTypeConstructorNew(element);
+  }
+}
+
+void SpanSequenceTreeVisitor::OnTypeDecl(const std::unique_ptr<raw::TypeDecl>& element) {
+  const auto visiting = Visiting(this, VisitorKind::kTypeDecl);
+  if (element->attributes != nullptr) {
+    OnAttributeListNew(element->attributes);
+  }
+
+  const auto builder = StatementBuilder<DivisibleSpanSequence>(
+      this, *element, SpanSequence::Position::kNewlineUnindented);
+  TreeVisitor::OnTypeDecl(element);
+  AddSpacesBetweenChildren(building_.top());
+  ClearBlankLinesAfterAttributeList(element->attributes, building_.top());
 }
 
 void SpanSequenceTreeVisitor::OnUsing(const std::unique_ptr<raw::Using>& element) {

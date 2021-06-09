@@ -13,6 +13,19 @@ namespace {
 const size_t kIndentation = 4;
 const size_t kWrappedIndentation = kIndentation * 2;
 
+// If the last printed entity was a StandaloneCommentSpanSequence, we need to make sure we print the
+// leading_blank_lines_ of whatever SpanSequence we are currently looking at.
+void MaybeAddBlankLinesAfterStandaloneComment(const SpanSequence* printing,
+                                              std::optional<SpanSequence::Kind> last_printed_kind,
+                                              std::string* out) {
+  if (printing->GetLeadingBlankLines() > 0 &&
+      last_printed_kind == SpanSequence::Kind::kStandaloneComment) {
+    for (size_t i = 0; i < printing->GetLeadingBlankLines(); i++) {
+      *out += "\n";
+    }
+  }
+}
+
 // Before printing some text after a newline, we want to make sure to indent to the proper position.
 // No indentation is performed if we are not on a newline, or are on the first line of the output.
 void MaybeIndentLine(size_t indentation, std::string* out) {
@@ -58,12 +71,7 @@ void TokenSpanSequence::Close() {
 std::optional<SpanSequence::Kind> TokenSpanSequence::Print(
     const size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind,
     size_t indentation, bool wrapped, std::string* out) const {
-  if (GetLeadingBlankLines() > 0 && last_printed_kind == SpanSequence::Kind::kStandaloneComment) {
-    for (size_t i = 0; i < GetLeadingBlankLines(); i++) {
-      *out += "\n";
-    }
-  }
-
+  MaybeAddBlankLinesAfterStandaloneComment(this, last_printed_kind, out);
   MaybeIndentLine(indentation, out);
   *out += std::string(span_);
   return SpanSequence::Kind::kToken;
@@ -107,9 +115,9 @@ void CompositeSpanSequence::Close() {
 
   if (!IsClosed()) {
     // If the first child is a token, delete its leading new lines value and hoist it up to the
-    // parent that is currently being built.  This prevents duplication of leading new lines, as the
-    // leading new new lines for a composite span are now always the parent's responsibility, not
-    // that of the first child.
+    // parent that is currently being closed.  This prevents duplication of leading new lines, as
+    // the leading new new lines for a composite span are now always the parent's responsibility,
+    // not that of the first child.
     auto first_non_comment_index = FirstNonCommentChildIndex(children_);
     if (first_non_comment_index.has_value() && first_non_comment_index == 0) {
       SetLeadingBlankLines(GetLeadingBlankLines() + children_[0]->GetLeadingBlankLines());
@@ -173,6 +181,9 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
   const auto first = FirstNonCommentChildIndex(children);
   const auto last = LastNonCommentChildIndex(children);
   auto wrapped_indentation = indentation + (wrapped ? kWrappedIndentation : 0);
+
+  MaybeAddBlankLinesAfterStandaloneComment(this, last_printed_kind, out);
+
   for (size_t i = 0; i < children.size(); ++i) {
     const auto& child = children[i];
     switch (child->GetKind()) {
@@ -181,9 +192,19 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
         last_printed_kind =
             child->Print(max_col_width, last_printed_kind, indentation, wrapped, out);
 
+        // In certain weird circumstances (ie, comments placed in unexpected areas), a child
+        // AtomicSpanSequence may start with an inline comment.  If this is the case, make sure to
+        // wrap the rest of this SpanSequence.
+        auto as_composite = static_cast<CompositeSpanSequence*>(child.get());
+        auto starts_with_inline = false;
+        if (!as_composite->IsEmpty()) {
+          const auto& inner_children = as_composite->GetChildren();
+          starts_with_inline = inner_children[0]->GetKind() == SpanSequence::Kind::kInlineComment;
+        }
+
         // If the child AtomicSpanSequence had comments, we know that it forces a wrapping, so
         // all future printing for this AtomicSpanSequence must be wrapped as well.
-        if (!wrapped && child->HasComments() && child->HasTokens()) {
+        if (!wrapped && child->HasComments() && (child->HasTokens() || starts_with_inline)) {
           wrapped = true;
           wrapped_indentation += kWrappedIndentation;
         }
@@ -212,7 +233,7 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
       case SpanSequence::Kind::kStandaloneComment: {
         // A standalone comment always forces the rest of the AtomicSpanSequence content to be
         // wrapped, unless that comment precedes the first non-comment token in the span.
-        if (!wrapped && first.has_value() && i >= first.value()) {
+        if (!wrapped && i >= first.value_or(children.size())) {
           wrapped = true;
           wrapped_indentation += kWrappedIndentation;
         }
@@ -247,6 +268,8 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
   auto space_available = max_col_width - wrapped_indentation;
   assert(wrapped_indentation <= max_col_width && "indentation overflow");
 
+  MaybeAddBlankLinesAfterStandaloneComment(this, last_printed_kind, out);
+
   if (required_size > space_available) {
     // We can't fit this DivisibleSpanSequence on a single line, either due to a lack of space, or
     // otherwise because it has a MultiSpanSequence somewhere in the middle of its child nodes,
@@ -260,6 +283,7 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
       }
       if (i == 0 && !wrapped) {
         wrapped = true;
+        wrapped_indentation += kWrappedIndentation;
       }
     }
 
@@ -283,9 +307,19 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
         last_printed_kind =
             child->Print(max_col_width, last_printed_kind, indentation, wrapped, out);
 
+        // In certain weird circumstances (ie, comments placed in unexpected areas), a child
+        // AtomicSpanSequence may start with an inline comment.  If this is the case, make sure to
+        // wrap the rest of this SpanSequence.
+        auto as_composite = static_cast<CompositeSpanSequence*>(child.get());
+        auto starts_with_inline = false;
+        if (!as_composite->IsEmpty()) {
+          const auto& inner_children = as_composite->GetChildren();
+          starts_with_inline = inner_children[0]->GetKind() == SpanSequence::Kind::kInlineComment;
+        }
+
         // If the child AtomicSpanSequence had comments, we know that it forces a wrapping, so
         // all future printing for this AtomicSpanSequence must be wrapped as well.
-        if (!wrapped && child->HasComments() && child->HasTokens()) {
+        if (!wrapped && child->HasComments() && (child->HasTokens() || starts_with_inline)) {
           wrapped = true;
           wrapped_indentation += kWrappedIndentation;
         }
@@ -334,14 +368,17 @@ size_t MultilineSpanSequence::CalculateRequiredSize() const {
 std::optional<SpanSequence::Kind> MultilineSpanSequence::Print(
     const size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind,
     size_t indentation, bool wrapped, std::string* out) const {
-  for (auto& child : GetChildren()) {
+  const auto& children = GetChildren();
+  const auto first_non_comment_index = FirstNonCommentChildIndex(children);
+  for (size_t i = 0; i < children.size(); ++i) {
+    auto& child = children[i];
     auto child_indentation = indentation;
     if (child->GetPosition() != SpanSequence::Position::kDefault) {
       if (last_printed_kind == SpanSequence::Kind::kToken) {
         // Omit one of the blank lines in cases where a MultilineSpanSequence is the first child of
         // another MultilineSpanSequence, meaning that the first newline has already been printed.
         auto blanks = child->GetLeadingBlankLines();
-        for (size_t i = !out->empty() && out->back() == '\n' ? 1 : 0; i <= blanks; i++) {
+        for (size_t n = !out->empty() && out->back() == '\n' ? 1 : 0; n <= blanks; n++) {
           *out += "\n";
         }
       }
@@ -350,11 +387,18 @@ std::optional<SpanSequence::Kind> MultilineSpanSequence::Print(
       }
       MaybeIndentLine(child_indentation, out);
     }
+
+    const bool keep_wrapped = wrapped && i == first_non_comment_index.value_or(children.size());
     last_printed_kind =
-        child->Print(max_col_width, last_printed_kind, child_indentation, false, out);
+        child->Print(max_col_width, last_printed_kind, child_indentation, keep_wrapped, out);
   }
 
   return last_printed_kind;
+}
+
+void CommentSpanSequence::Close() {
+  SetTrailingSpace(false);
+  SpanSequence::Close();
 }
 
 std::optional<SpanSequence::Kind> InlineCommentSpanSequence::Print(

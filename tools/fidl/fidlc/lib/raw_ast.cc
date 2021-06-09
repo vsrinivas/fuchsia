@@ -446,6 +446,9 @@ void OrdinaledLayoutMember::Accept(TreeVisitor* visitor) const {
   }
 
   visitor->OnOrdinal64(*ordinal);
+  if (!reserved) {
+    visitor->OnIdentifier(identifier);
+  }
   if (type_ctor != nullptr) {
     visitor->OnTypeConstructorNew(type_ctor);
   }
@@ -457,6 +460,7 @@ void StructLayoutMember::Accept(TreeVisitor* visitor) const {
     visitor->OnAttributeListNew(attributes);
   }
 
+  visitor->OnIdentifier(identifier);
   visitor->OnTypeConstructorNew(type_ctor);
   if (default_value != nullptr) {
     visitor->OnConstant(default_value);
@@ -469,6 +473,7 @@ void ValueLayoutMember::Accept(TreeVisitor* visitor) const {
     visitor->OnAttributeListNew(attributes);
   }
 
+  visitor->OnIdentifier(identifier);
   visitor->OnConstant(value);
 }
 

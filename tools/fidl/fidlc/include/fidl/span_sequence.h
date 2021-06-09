@@ -307,6 +307,7 @@ class CommentSpanSequence : public SpanSequence {
       : SpanSequence(kind, position, leading_blank_lines) {}
 
  public:
+  void Close() override;
   bool HasComments() const override { return false; }
   bool HasTokens() const override { return false; }
   bool IsComment() const override { return true; }

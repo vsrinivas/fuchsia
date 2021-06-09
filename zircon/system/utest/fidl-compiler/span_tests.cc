@@ -862,6 +862,25 @@ const std::vector<TestCase> new_syntax_test_cases = {
           }:optional»;
          )FIDL",
      }},
+    {ElementType::Identifier,
+     {
+         R"FIDL(library «x»;
+          type «MyEnum» = strict enum {
+            «A» = 1;
+          };
+         )FIDL",
+         R"FIDL(library «x»;
+          type «MyStruct» = resource struct {
+            «boolval» «bool»;
+          };
+         )FIDL",
+         R"FIDL(library «x»;
+          type «MyUnion» = flexible union {
+            1: «intval» «int64»;
+            2: reserved;
+          };
+         )FIDL",
+     }},
 };
 // --- end new syntax ---
 
@@ -887,13 +906,14 @@ void RunParseTests(const std::vector<TestCase>& cases, const std::string& insert
                           kMarkerRight.data() + insert_right_padding, kMarkerLeft, kMarkerRight);
       auto source_with_decl_token_markers_removed =
           replace_markers(marked_source, "", "", kDeclStartTokenLeft, kDeclStartTokenRight);
+      auto clean_source = remove_markers(marked_source);
 
       // Parse the source with markers removed
       fidl::ExperimentalFlags experimental_flags;
       if (syntax == fidl::utils::Syntax::kNew) {
         experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
       }
-      TestLibrary library(remove_markers(marked_source), experimental_flags);
+      TestLibrary library(clean_source, experimental_flags);
       std::unique_ptr<fidl::raw::File> ast;
       if (!library.Parse(&ast)) {
         errors.push_back("failed to parse");

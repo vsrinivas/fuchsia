@@ -102,6 +102,19 @@ alias MyAlias_Abcdefghijklmnopqr = bool;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+TEST(NewFormatterTests, AliasMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(library foo.bar;alias MyAlias_Abcdefghijklmnopqr=bool;)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+alias MyAlias_Abcdefghijklmnopqr = bool;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Test an alias declaration in which every token is placed on a newline.
 TEST(NewFormatterTests, AliasMaximalNewlines) {
   // ---------------40---------------- |
@@ -222,6 +235,21 @@ library foo.bar;
   std::string formatted = R"FIDL(
 /// doc comment 1
 /// doc comment 2
+@attr_without_args
+@attr_with_one_arg("abcdefghijklmnopqr")
+library foo.bar;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, AttributesMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted =
+      R"FIDL(@attr_without_args @attr_with_one_arg("abcdefghijklmnopqr")library foo.bar;)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
 @attr_without_args
 @attr_with_one_arg("abcdefghijklmnopqr")
 library foo.bar;
@@ -450,6 +478,27 @@ const MY_TRUE_ABCDEFGHIJKLM bool = true;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+TEST(NewFormatterTests, ConstMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted =
+      R"FIDL(library foo.bar;const MY_TRUE_ABCDEFGHIJKLM bool=true;const MY_FALSE_ABCDEFGHIJK bool=false;const MY_UINT64_AB uint64=12345678900;const MY_FLOAT64_ABCDEF float64=12.34;const MY_STRING_ABCDEFGH string="foo";const MY_OR_A uint64=1|MY_UINT64_AB;const MY_ORS_ABCDEFG uint64=1|2|3;const MY_REF_ABCD uint64=MY_UINT64_AB;)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+const MY_TRUE_ABCDEFGHIJKLM bool = true;
+const MY_FALSE_ABCDEFGHIJK bool = false;
+const MY_UINT64_AB uint64 = 12345678900;
+const MY_FLOAT64_ABCDEF float64 = 12.34;
+const MY_STRING_ABCDEFGH string = "foo";
+const MY_OR_A uint64 = 1 | MY_UINT64_AB;
+const MY_ORS_ABCDEFG uint64 = 1 | 2 | 3;
+const MY_REF_ABCD uint64 = MY_UINT64_AB;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Test const declarations where every token is placed on a newline.
 TEST(NewFormatterTests, ConstMaximalNewlines) {
   // ---------------40---------------- |
@@ -606,6 +655,18 @@ library foo.bar;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+TEST(NewFormatterTests, LibraryMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(library foo.bar;)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Test a library declaration in which every token is placed on a newline.
 TEST(NewFormatterTests, LibraryMaximalNewlines) {
   // ---------------40---------------- |
@@ -620,6 +681,284 @@ bar
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Ensure that an already properly formatted struct declaration is not modified by another run
+// through the formatter.
+TEST(NewFormatterTests, StructFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyEmptyStruct_Abcdefgh = struct {};
+
+type MyPopulatedStruct_Abcdef = struct {
+    field1_abcdefghijklmnopqrstuvw bool;
+    field2_abcdefghijklmno bool = false;
+
+    field3_abcdefghijklmnopqrst struct {
+        nested1_abcdef vector<uint8>:16;
+        nested2_abcdef string = "abcde";
+    };
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyEmptyStruct_Abcdefgh = struct {};
+
+type MyPopulatedStruct_Abcdef = struct {
+    field1_abcdefghijklmnopqrstuvw bool;
+    field2_abcdefghijklmno bool = false;
+
+    field3_abcdefghijklmnopqrst struct {
+        nested1_abcdef vector<uint8>:16;
+        nested2_abcdef string = "abcde";
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, StructOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyEmptyStruct_Abcdefghi = struct {};
+type MyPopulatedStruct_Abcdefg = struct {
+    field1_abcdefghijklmnopqrstuvwx bool;
+    field2_abcdefghijklmnop bool = false;
+
+    field3_abcdefghijklmnopqrstu struct {
+        nested1_abcdefg vector<uint8>:16;
+        nested2_abcdef string = "abcdef";
+    };
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyEmptyStruct_Abcdefghi
+        = struct {};
+type MyPopulatedStruct_Abcdefg
+        = struct {
+    field1_abcdefghijklmnopqrstuvwx
+            bool;
+    field2_abcdefghijklmnop
+            bool
+            = false;
+
+    field3_abcdefghijklmnopqrstu
+            struct {
+        nested1_abcdefg
+                vector<uint8>:16;
+        nested2_abcdef
+                string
+                = "abcdef";
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, StructUnformatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyEmptyStruct_Abcdefgh = struct {
+};
+
+type MyStruct_Abcdef= resource struct {
+ field1_abcdefghijklmnopqrstuvw bool;
+      field2_abcdefghijklmno bool = false;
+
+       field3_abcdefghijklmnopqrst struct {
+ nested1_abcdef vector<  uint8>:16;
+   nested2_abcdef string = "abcde";};
+
+
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyEmptyStruct_Abcdefgh = struct {};
+
+type MyStruct_Abcdef = resource struct {
+    field1_abcdefghijklmnopqrstuvw bool;
+    field2_abcdefghijklmno bool = false;
+
+    field3_abcdefghijklmnopqrst struct {
+        nested1_abcdef vector<uint8>:16;
+        nested2_abcdef string = "abcde";
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test with comments, doc comments, and attributes added.
+TEST(NewFormatterTests, StructWithAllAnnotations) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+ // comment 1
+  /// doc comment 1
+
+   @foo
+
+    type MyEmptyStruct_Abcdefgh = struct {};
+
+type MyPopulatedStruct_Abcdef = struct {
+    field1_abcdefghijklmnopqrstuvw bool;
+
+  // comment 2
+
+   /// doc comment 2
+
+     @bar
+
+      field2_abcdefghijklmno bool = false;
+    field3_abcdefghijklmnopqrst struct {
+      /// doc comment 3
+       @baz("qux")
+        nested1_abcdef vector<uint8>:16;
+        nested2_abcdef string = "abcde";
+    };
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+// comment 1
+/// doc comment 1
+@foo
+type MyEmptyStruct_Abcdefgh = struct {};
+
+type MyPopulatedStruct_Abcdef = struct {
+    field1_abcdefghijklmnopqrstuvw bool;
+
+    // comment 2
+
+    /// doc comment 2
+    @bar
+    field2_abcdefghijklmno bool = false;
+    field3_abcdefghijklmnopqrst struct {
+        /// doc comment 3
+        @baz("qux")
+        nested1_abcdef vector<uint8>:16;
+        nested2_abcdef string = "abcde";
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
+//  `=struct{` does not get split into `= struct {` properly.  This should be fixed when proper
+//  token parsing is used.
+TEST(NewFormatterTests, StructMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted =
+      R"FIDL(library foo.bar;type MyEmptyStruct_Abcdefgh=struct{};type MyPopulatedStruct_Abcdef=struct{field1_abcdefghijklmnopqrstuvw bool;field2_abcdefghijklmno bool=false;field3_abcdefghijklmnopqrst struct{nested1_abcdef vector<uint8>:16;nested2_abcdef string="abcde";};};)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+type MyEmptyStruct_Abcdefgh = struct{};
+type MyPopulatedStruct_Abcdef =struct{
+    field1_abcdefghijklmnopqrstuvw bool;
+    field2_abcdefghijklmno bool = false;
+    field3_abcdefghijklmnopqrst struct{
+        nested1_abcdef vector<uint8>:16;
+        nested2_abcdef string = "abcde";
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, StructMaximalNewlines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library
+foo
+.
+bar
+;
+type
+MyEmptyStruct_Abcdefgh
+=
+struct
+{
+}
+;
+type
+MyPopulatedStruct_Abcdef
+=
+struct
+{
+field1_abcdefghijklmnopqrstuvw
+bool
+;
+field2_abcdefghijklmno
+bool
+=
+false
+;
+field3_abcdefghijklmnopqrst
+struct
+{
+nested1_abcdef
+vector
+<
+uint8
+>
+:
+16
+;
+nested2_abcdef
+string
+=
+"abcde"
+;
+}
+;
+}
+;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+type MyEmptyStruct_Abcdefgh = struct {};
+type MyPopulatedStruct_Abcdef = struct {
+    field1_abcdefghijklmnopqrstuvw bool;
+    field2_abcdefghijklmno bool = false;
+    field3_abcdefghijklmnopqrst struct {
+        nested1_abcdef vector<uint8>:16;
+        nested2_abcdef string = "abcde";
+    };
+};
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
@@ -712,6 +1051,19 @@ using imported.abcdefhijklmnopqrstubwxy;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+TEST(NewFormatterTests, UsingMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(library foo.bar;using imported.abcdefhijklmnopqrstubwxy;)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+using imported.abcdefhijklmnopqrstubwxy;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Test a using declaration in which every token is placed on a newline.
 TEST(NewFormatterTests, UsingMaximalNewlines) {
   // ---------------40---------------- |
@@ -789,6 +1141,19 @@ library foo.bar;
 
 using baz.qux
         as abcdefghijklmnopqrstuvw;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, UsingWithAliasMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(library foo.bar;using baz.qux as abcdefghijklmnopqrstuv;)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+using baz.qux as abcdefghijklmnopqrstuv;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
@@ -986,7 +1351,20 @@ baz;
 using qux // C7
 ;
 
-   // C8
+type // C8
+MyStruct = struct
+
+// C9
+
+{ my_field // C10
+bool;
+
+// C11
+
+
+}
+
+   // C12
 
 
 
@@ -1016,7 +1394,21 @@ using // C6
 using qux // C7
         ;
 
-// C8
+type // C8
+        MyStruct = struct
+
+        // C9
+
+        {
+    my_field // C10
+            bool;
+
+// C11
+
+
+}
+
+// C12
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
@@ -1025,16 +1417,19 @@ using qux // C7
 TEST(NewFormatterTests, NewlinesAbsent) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(library foo.bar;
+// comment
 using imported.abcdefhijklmnopqrstubwxy;
 /// doc comment
 alias MyAlias_Abcdefghijklmnopqr = bool;
 @foo
 @bar
-const MY_TRUE_ABCDEFGHIJKLM bool = true;)FIDL";
+const MY_TRUE_ABCDEFGHIJKLM bool = true;
+)FIDL";
 
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+// comment
 using imported.abcdefhijklmnopqrstubwxy;
 /// doc comment
 alias MyAlias_Abcdefghijklmnopqr = bool;
@@ -1054,6 +1449,8 @@ TEST(NewFormatterTests, NewlinesSingle) {
   std::string unformatted = R"FIDL(
 library foo.bar;
 
+// comment
+
 using imported.abcdefhijklmnopqrstubwxy;
 
 /// doc comment
@@ -1071,6 +1468,8 @@ const MY_TRUE_ABCDEFGHIJKLM bool = true;
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
+// comment
 
 using imported.abcdefhijklmnopqrstubwxy;
 
@@ -1092,6 +1491,9 @@ TEST(NewFormatterTests, NewlinesDouble) {
 library foo.bar;
 
 
+// comment
+
+
 using imported.abcdefhijklmnopqrstubwxy;
 
 
@@ -1115,6 +1517,9 @@ const MY_TRUE_ABCDEFGHIJKLM bool = true;
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
+
+
+// comment
 
 
 using imported.abcdefhijklmnopqrstubwxy;
