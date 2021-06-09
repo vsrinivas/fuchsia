@@ -32,7 +32,7 @@ class Interrupts {
   void Destroy();
 
   void EnablePipeVsync(registers::Pipe pipe, bool enable);
-  zx_status_t SetInterruptCallback(const zx_intel_gpu_core_interrupt_t* callback,
+  zx_status_t SetInterruptCallback(const intel_gpu_core_interrupt_t* callback,
                                    uint32_t interrupt_mask);
 
   int IrqLoop();
@@ -50,7 +50,7 @@ class Interrupts {
   pci_irq_mode_t irq_mode_;
   std::optional<thrd_t> irq_thread_;  // Valid while irq_ is valid.
 
-  zx_intel_gpu_core_interrupt_t interrupt_cb_ __TA_GUARDED(lock_) = {};
+  intel_gpu_core_interrupt_t interrupt_cb_ __TA_GUARDED(lock_) = {};
   uint32_t interrupt_mask_ __TA_GUARDED(lock_) = 0;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Interrupts);

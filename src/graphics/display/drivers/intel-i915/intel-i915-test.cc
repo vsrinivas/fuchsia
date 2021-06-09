@@ -66,7 +66,7 @@ TEST(IntelI915Display, SetInterruptCallback) {
   memset(&mem, 0xff, sizeof(i915::Interrupts));
   auto interrupts = new (&mem) i915::Interrupts(&controller);
 
-  zx_intel_gpu_core_interrupt_t callback = {.callback = empty_callback, .ctx = nullptr};
+  intel_gpu_core_interrupt_t callback = {.callback = empty_callback, .ctx = nullptr};
   EXPECT_EQ(ZX_OK, interrupts->SetInterruptCallback(&callback, 0 /* interrupt_mask */));
   interrupts->~Interrupts();
 }

@@ -206,7 +206,7 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
   zx_device_t* parent_device;
   zx_device_t* zx_device_gpu;
 
-  zx_intel_gpu_core_protocol_t gpu_core_protocol;
+  intel_gpu_core_protocol_t gpu_core_protocol;
 
   std::unique_ptr<MagmaDriver> magma_driver MAGMA_GUARDED(magma_mutex);
   std::shared_ptr<MagmaSystemDevice> magma_system_device MAGMA_GUARDED(magma_mutex);

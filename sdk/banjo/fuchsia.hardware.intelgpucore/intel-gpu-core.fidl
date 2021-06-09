@@ -11,12 +11,12 @@ const uint32 IMAGE_TYPE_Y_LEGACY_TILED = 2;
 const uint32 IMAGE_TYPE_YF_TILED = 3;
 
 [Transport = "Banjo", BanjoLayout = "ddk-callback"]
-protocol ZxIntelGpuCoreInterrupt {
+protocol IntelGpuCoreInterrupt {
     Callback(uint32 master_interrupt_control, uint64 timestamp) -> ();
 };
 
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
-protocol ZxIntelGpuCore {
+protocol IntelGpuCore {
     /// Reads 16 bits from pci config space; returned in |value_out|.
     ReadPciConfig16(uint16 addr) -> (zx.status s, uint16 value);
 
@@ -32,7 +32,7 @@ protocol ZxIntelGpuCore {
 
     /// Registers the given |callback| to be invoked with parameter |data| when an interrupt occurs
     /// matching |interrupt_mask|.
-    RegisterInterruptCallback(ZxIntelGpuCoreInterrupt callback,
+    RegisterInterruptCallback(IntelGpuCoreInterrupt callback,
                               uint32 interrupt_mask) -> (zx.status s);
 
     /// Un-registers a previously registered interrupt callback.

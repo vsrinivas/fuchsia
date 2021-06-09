@@ -9,7 +9,7 @@
 
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
-#include <fuchsia/hardware/intelgpucore/c/banjo.h>
+#include <fuchsia/hardware/intelgpucore/cpp/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/ddk/mmio-buffer.h>
@@ -65,7 +65,8 @@ using DeviceType = ddk::Device<Controller, ddk::Unbindable, ddk::Suspendable, dd
                                ddk::GetProtocolable, ddk::ChildPreReleaseable>;
 
 class Controller : public DeviceType,
-                   public ddk::DisplayControllerImplProtocol<Controller, ddk::base_protocol> {
+                   public ddk::DisplayControllerImplProtocol<Controller, ddk::base_protocol>,
+                   public ddk::IntelGpuCoreProtocol<Controller> {
  public:
   Controller(zx_device_t* parent);
   ~Controller();
@@ -114,19 +115,19 @@ class Controller : public DeviceType,
   }
 
   // gpu core ops
-  zx_status_t ReadPciConfig16(uint16_t addr, uint16_t* value_out);
-  zx_status_t MapPciMmio(uint32_t pci_bar, uint8_t** addr_out, uint64_t* size_out);
-  zx_status_t UnmapPciMmio(uint32_t pci_bar);
-  zx_status_t GetPciBti(uint32_t index, zx_handle_t* bti_out);
-  zx_status_t RegisterInterruptCallback(const zx_intel_gpu_core_interrupt_t* callback,
-                                        uint32_t interrupt_mask);
-  zx_status_t UnregisterInterruptCallback();
-  uint64_t GttGetSize();
-  zx_status_t GttAlloc(uint64_t page_count, uint64_t* addr_out);
-  zx_status_t GttFree(uint64_t addr);
-  zx_status_t GttClear(uint64_t addr);
-  zx_status_t GttInsert(uint64_t addr, zx_handle_t buffer, uint64_t page_offset,
-                        uint64_t page_count);
+  zx_status_t IntelGpuCoreReadPciConfig16(uint16_t addr, uint16_t* value_out);
+  zx_status_t IntelGpuCoreMapPciMmio(uint32_t pci_bar, uint8_t** addr_out, uint64_t* size_out);
+  zx_status_t IntelGpuCoreUnmapPciMmio(uint32_t pci_bar);
+  zx_status_t IntelGpuCoreGetPciBti(uint32_t index, zx::bti* bti_out);
+  zx_status_t IntelGpuCoreRegisterInterruptCallback(const intel_gpu_core_interrupt_t* callback,
+                                                    uint32_t interrupt_mask);
+  zx_status_t IntelGpuCoreUnregisterInterruptCallback();
+  uint64_t IntelGpuCoreGttGetSize();
+  zx_status_t IntelGpuCoreGttAlloc(uint64_t page_count, uint64_t* addr_out);
+  zx_status_t IntelGpuCoreGttFree(uint64_t addr);
+  zx_status_t IntelGpuCoreGttClear(uint64_t addr);
+  zx_status_t IntelGpuCoreGttInsert(uint64_t addr, zx::vmo buffer, uint64_t page_offset,
+                                    uint64_t page_count);
   void GpuRelease();
 
   // i2c ops

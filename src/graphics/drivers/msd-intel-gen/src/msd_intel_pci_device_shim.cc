@@ -10,7 +10,7 @@ class GttIntelGpuCore : public Gtt {
  public:
   class Owner : public Gtt::Owner {
    public:
-    virtual zx_intel_gpu_core_protocol_ops_t* ops() = 0;
+    virtual intel_gpu_core_protocol_ops_t* ops() = 0;
     virtual void* context() = 0;
   };
 
@@ -73,7 +73,7 @@ class MsdIntelPciMmio : public magma::PlatformMmio {
  public:
   class Owner {
    public:
-    virtual zx_intel_gpu_core_protocol_ops_t* ops() = 0;
+    virtual intel_gpu_core_protocol_ops_t* ops() = 0;
     virtual void* context() = 0;
   };
 
@@ -96,7 +96,7 @@ class MsdIntelPciDeviceShim : public MsdIntelPciDevice,
                               public GttIntelGpuCore::Owner,
                               public MsdIntelPciMmio::Owner {
  public:
-  MsdIntelPciDeviceShim(zx_intel_gpu_core_protocol_t* intel_gpu_core)
+  MsdIntelPciDeviceShim(intel_gpu_core_protocol_t* intel_gpu_core)
       : intel_gpu_core_(intel_gpu_core), gtt_(this) {}
 
   void* GetDeviceHandle() override { return intel_gpu_core_; }
@@ -136,7 +136,7 @@ class MsdIntelPciDeviceShim : public MsdIntelPciDevice,
 
   bool RegisterInterruptCallback(InterruptManager::InterruptCallback callback, void* data,
                                  uint32_t interrupt_mask) override {
-    const zx_intel_gpu_core_interrupt_t kCallback = {callback, data};
+    const intel_gpu_core_interrupt_t kCallback = {callback, data};
     zx_status_t status = ops()->register_interrupt_callback(context(), &kCallback, interrupt_mask);
     if (status != ZX_OK)
       return DRETF(false, "register_interrupt_callback failed: %d", status);
@@ -147,12 +147,12 @@ class MsdIntelPciDeviceShim : public MsdIntelPciDevice,
 
   Gtt* GetGtt() override { return &gtt_; }
 
-  zx_intel_gpu_core_protocol_ops_t* ops() override { return intel_gpu_core_->ops; }
+  intel_gpu_core_protocol_ops_t* ops() override { return intel_gpu_core_->ops; }
 
   void* context() override { return intel_gpu_core_->ctx; }
 
  private:
-  zx_intel_gpu_core_protocol_t* intel_gpu_core_;
+  intel_gpu_core_protocol_t* intel_gpu_core_;
   GttIntelGpuCore gtt_;
 };
 
@@ -163,5 +163,5 @@ std::unique_ptr<MsdIntelPciDevice> MsdIntelPciDevice::CreateShim(void* platform_
     return DRETP(nullptr, "null platform_device_handle");
 
   return std::make_unique<MsdIntelPciDeviceShim>(
-      reinterpret_cast<zx_intel_gpu_core_protocol_t*>(platform_device_handle));
+      reinterpret_cast<intel_gpu_core_protocol_t*>(platform_device_handle));
 }
