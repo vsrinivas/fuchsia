@@ -76,9 +76,10 @@ async fn main() -> Result<(), Error> {
             server.run(zx::Channel::from(startup_handle)).await
         }
         TopLevel { nested: SubCommand::Fsck(_) } => {
-            let fs =
-                mount::mount(DeviceHolder::new(BlockDevice::new(Box::new(client), true).await?))
-                    .await?;
+            let fs = mount::mount_read_only(DeviceHolder::new(
+                BlockDevice::new(Box::new(client), true).await?,
+            ))
+            .await?;
             fsck(fs.as_ref()).await
         }
     }

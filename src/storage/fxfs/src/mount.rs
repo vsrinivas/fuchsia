@@ -10,3 +10,8 @@ pub async fn mount(device: DeviceHolder) -> Result<Arc<FxFilesystem>, Error> {
     let fs = FxFilesystem::open(device).await?;
     Ok(fs)
 }
+
+pub async fn mount_read_only(device: DeviceHolder) -> Result<Arc<FxFilesystem>, Error> {
+    let fs = FxFilesystem::open_read_only(device).await?;
+    Ok(fs)
+}

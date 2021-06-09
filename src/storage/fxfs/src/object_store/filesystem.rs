@@ -88,6 +88,12 @@ enum Compaction {
     Task(fasync::Task<()>),
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct OpenOptions {
+    pub trace: bool,
+    pub read_only: bool,
+}
+
 impl FxFilesystem {
     pub async fn new_empty(device: DeviceHolder) -> Result<Arc<FxFilesystem>, Error> {
         let objects = Arc::new(ObjectManager::new());
@@ -107,13 +113,13 @@ impl FxFilesystem {
         Ok(filesystem)
     }
 
-    pub async fn open_with_trace(
+    async fn open_with_options(
         device: DeviceHolder,
-        trace: bool,
+        options: OpenOptions,
     ) -> Result<Arc<FxFilesystem>, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
-        journal.set_trace(trace);
+        journal.set_trace(options.trace);
         let filesystem = Arc::new(FxFilesystem {
             device: OnceCell::new(),
             objects,
@@ -126,9 +132,11 @@ impl FxFilesystem {
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await?;
         let _ = filesystem.flush_reservation.set(filesystem.allocator().reserve_at_most(0));
-        if let Some(graveyard) = filesystem.objects.graveyard() {
-            // Purge the graveyard of old entries in a background task.
-            graveyard.reap_async(filesystem.journal.journal_file_offset());
+        if !options.read_only {
+            if let Some(graveyard) = filesystem.objects.graveyard() {
+                // Purge the graveyard of old entries in a background task.
+                graveyard.reap_async(filesystem.journal.journal_file_offset());
+            }
         }
         Ok(filesystem)
     }
@@ -138,7 +146,11 @@ impl FxFilesystem {
     }
 
     pub async fn open(device: DeviceHolder) -> Result<Arc<FxFilesystem>, Error> {
-        Self::open_with_trace(device, false).await
+        Self::open_with_options(device, OpenOptions { trace: false, read_only: false }).await
+    }
+
+    pub async fn open_read_only(device: DeviceHolder) -> Result<Arc<FxFilesystem>, Error> {
+        Self::open_with_options(device, OpenOptions { trace: false, read_only: true }).await
     }
 
     pub fn root_parent_store(&self) -> Arc<ObjectStore> {
