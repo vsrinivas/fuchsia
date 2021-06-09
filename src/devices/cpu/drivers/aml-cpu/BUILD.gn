@@ -11,7 +11,10 @@ bind_rules("aml-cpu-bind") {
   rules = "aml-cpu.bind"
   output = "aml-cpu-bind.h"
   tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.google.platform" ]
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.google.platform",
+  ]
 }
 
 driver_module("aml-cpu") {

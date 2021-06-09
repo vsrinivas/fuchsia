@@ -38,6 +38,8 @@ static const clock_id_t clock_ids[] = {
     {g12b_clk::G12B_CLK_SYS_CPUB_CLK_DIV16},
     {g12b_clk::G12B_CLK_DOS_GCLK_VDEC},
     {g12b_clk::G12B_CLK_DOS},
+    {g12b_clk::CLK_SYS_CPU_BIG_CLK},
+    {g12b_clk::CLK_SYS_CPU_LITTLE_CLK},
 };
 // clang-format on
 

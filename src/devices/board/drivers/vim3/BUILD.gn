@@ -23,6 +23,7 @@ driver_module("vim3") {
   sources = [
     "vim3-canvas.cc",
     "vim3-clk.cc",
+    "vim3-cpu.cc",
     "vim3-display.cc",
     "vim3-emmc.cc",
     "vim3-eth.cc",

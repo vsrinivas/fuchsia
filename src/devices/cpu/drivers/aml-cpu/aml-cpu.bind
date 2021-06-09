@@ -3,18 +3,20 @@
 // found in the LICENSE file.
 
 using fuchsia.google.platform;
+using amlogic.platform;
 
 // The device must be a composite protocol device.
 fuchsia.BIND_COMPOSITE == 1;
 
-// Vendor must be Google.
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
-
-// Device ID Must be Google Amlogic CPU.
-fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.google.platform.BIND_PLATFORM_DEV_DID.GOOGLE_AMLOGIC_CPU;
-
-// This driver is applicable for Astro and Luis only.
-accept fuchsia.BIND_PLATFORM_DEV_PID {
-  fuchsia.google.platform.BIND_PLATFORM_DEV_PID.ASTRO,
-  fuchsia.google.platform.BIND_PLATFORM_DEV_PID.LUIS,
+if fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE {
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.google.platform.BIND_PLATFORM_DEV_DID.GOOGLE_AMLOGIC_CPU;
+  accept fuchsia.BIND_PLATFORM_DEV_PID {
+    fuchsia.google.platform.BIND_PLATFORM_DEV_PID.ASTRO,
+    fuchsia.google.platform.BIND_PLATFORM_DEV_PID.LUIS,
+  }
+} else if fuchsia.BIND_PLATFORM_DEV_VID == amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC {
+  fuchsia.BIND_PLATFORM_DEV_DID == amlogic.platform.BIND_PLATFORM_DEV_DID.CPU;
+  fuchsia.BIND_PLATFORM_DEV_PID == amlogic.platform.BIND_PLATFORM_DEV_PID.A311D;
+} else {
+  false;
 }
