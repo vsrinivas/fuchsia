@@ -607,7 +607,9 @@ void BufferCollage::UpdateLayout() {
         view.description_node->material.SetColor(32, 32, 32, 255);
       } else {
         view.material->SetColor(255, 255, 255, 255);
-        view.description_node->material.SetColor(255, 255, 255, 255);
+        // TODO(fxbug.dev/54004): workaround for transparency issues
+        constexpr uint32_t kAlphaWorkaround = 254;
+        view.description_node->material.SetColor(255, 255, 255, kAlphaWorkaround);
       }
       float display_width = view.image_format.coded_width;
       float display_height = view.image_format.coded_height;
