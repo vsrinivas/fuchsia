@@ -155,7 +155,7 @@ class VmObjectPaged final : public VmObject {
   }
 
   zx_status_t LookupPagesLocked(uint64_t offset, uint pf_flags, uint64_t max_out_pages,
-                                list_node* alloc_list, PageRequest* page_request,
+                                list_node* alloc_list, LazyPageRequest* page_request,
                                 LookupInfo* out) override TA_REQ(lock_) {
     return cow_pages_locked()->LookupPagesLocked(offset, pf_flags, max_out_pages, alloc_list,
                                                  page_request, out);

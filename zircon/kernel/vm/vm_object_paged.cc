@@ -716,7 +716,7 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
     }
   });
 
-  PageRequest page_request(true);
+  __UNINITIALIZED LazyPageRequest page_request(true);
   // As we may need to wait on arbitrary page requests we just keep running this until the commit
   // process finishes with success.
   for (;;) {
@@ -763,7 +763,7 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
     // with ZX_ERR_SHOULD_WAIT after queueing a page request for the absent page.
     // - The second call to VmCowPages::CommitRangeLocked() calls GetPageLocked() which copies out
     // the now present page (if required).
-    guard.CallUnlocked([&page_request, &status]() mutable { status = page_request.Wait(); });
+    guard.CallUnlocked([&page_request, &status]() mutable { status = page_request->Wait(); });
     if (status != ZX_OK) {
       if (status == ZX_ERR_TIMED_OUT) {
         DumpLocked(0, false);
@@ -978,7 +978,7 @@ zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, 
   // The PageRequest is a non-trivial object so we declare it outside the loop to avoid having to
   // construct and deconstruct it each iteration. It is tolerant of being reused and will
   // reinitialize itself if needed.
-  PageRequest page_request;
+  __UNINITIALIZED LazyPageRequest page_request;
   while (len > 0) {
     const size_t first_page_offset = ROUNDDOWN(src_offset, PAGE_SIZE);
     const size_t last_page_offset = ROUNDDOWN(src_offset + len - 1, PAGE_SIZE);
@@ -990,7 +990,7 @@ zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, 
         ktl::min(max_pages, LookupInfo::kMaxPages), nullptr, &page_request, &pages);
     if (status == ZX_ERR_SHOULD_WAIT) {
       // Must block on asynchronous page requests whilst not holding the lock.
-      guard->CallUnlocked([&status, &page_request]() { status = page_request.Wait(); });
+      guard->CallUnlocked([&status, &page_request]() { status = page_request->Wait(); });
       if (status != ZX_OK) {
         if (status == ZX_ERR_TIMED_OUT) {
           DumpLocked(0, false);

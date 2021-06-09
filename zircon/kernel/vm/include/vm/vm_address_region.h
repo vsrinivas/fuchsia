@@ -63,7 +63,7 @@ class VmAddressRegion;
 class VmMapping;
 class VmEnumerator;
 
-class PageRequest;
+class LazyPageRequest;
 
 // A VmAddressRegion represents a contiguous region of the virtual address
 // space.  It is partitioned by non-overlapping children of the following types:
@@ -110,7 +110,7 @@ class VmAddressRegionOrMapping
   // the regions to find the target mapping, if it exists.
   // If this returns ZX_ERR_SHOULD_WAIT, then the caller should wait on |page_request|
   // and try again.
-  virtual zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request)
+  virtual zx_status_t PageFault(vaddr_t va, uint pf_flags, LazyPageRequest* page_request)
       TA_REQ(lock()) = 0;
 
   // WAVL tree key function
@@ -515,7 +515,7 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   bool has_parent() const;
 
   void DumpLocked(uint depth, bool verbose) const TA_REQ(lock()) override;
-  zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request)
+  zx_status_t PageFault(vaddr_t va, uint pf_flags, LazyPageRequest* page_request)
       TA_REQ(lock()) override;
 
   // Constructors are public as LazyInit cannot use them otherwise, even if friended, but
@@ -633,7 +633,7 @@ class VmMapping final : public VmAddressRegionOrMapping,
   zx_status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags);
 
   void DumpLocked(uint depth, bool verbose) const TA_REQ(lock()) override;
-  zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request)
+  zx_status_t PageFault(vaddr_t va, uint pf_flags, LazyPageRequest* page_request)
       TA_REQ(lock()) override;
 
   // Apis intended for use by VmObject

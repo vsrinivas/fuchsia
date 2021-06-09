@@ -392,6 +392,13 @@ zx_status_t PageRequest::Wait() {
   return status;
 }
 
+PageRequest* LazyPageRequest::get() {
+  if (!request_.has_value()) {
+    request_.emplace(allow_batching_);
+  }
+  return &*request_;
+}
+
 static int cmd_page_source(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 2) {
   notenoughargs:

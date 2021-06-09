@@ -125,8 +125,8 @@ class VmCowPages final
   //  * Our VmObjectPaged backlink and our *slice* children are allowed to have writable mappings,
   //    and will be informed to either unmap or remove writability when needed.
   zx_status_t LookupPagesLocked(uint64_t offset, uint pf_flags, uint64_t max_out_pages,
-                                list_node* alloc_list, PageRequest* page_request, LookupInfo* out)
-      TA_REQ(lock_);
+                                list_node* alloc_list, LazyPageRequest* page_request,
+                                LookupInfo* out) TA_REQ(lock_);
 
   // Adds an allocated page to this cow pages at the specified offset, can be optionally zeroed and
   // any mappings invalidated. If an error is returned the caller retains ownership of |page|.
@@ -162,7 +162,7 @@ class VmCowPages final
   //  * => Any other error, the number of pages committed is undefined.
   // The |offset| and |len| are assumed to be page aligned and within the range of |size_|.
   zx_status_t CommitRangeLocked(uint64_t offset, uint64_t len, uint64_t* committed_len,
-                                PageRequest* page_request) TA_REQ(lock_);
+                                LazyPageRequest* page_request) TA_REQ(lock_);
 
   // Increases the pin count of the range of pages given by |offset| and |len|. The full range must
   // already be committed and this either pins all pages in the range, or pins no pages and returns

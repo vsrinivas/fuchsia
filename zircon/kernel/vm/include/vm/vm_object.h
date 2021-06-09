@@ -32,7 +32,7 @@
 #include <vm/vm_page_list.h>
 
 class VmMapping;
-class PageRequest;
+class LazyPageRequest;
 class VmObjectPaged;
 class VmAspace;
 class VmObject;
@@ -442,14 +442,14 @@ class VmObject : public VmHierarchyBase,
   // TODO: Currently the caller can also pass null if it knows that the vm object has no
   // page source. This will no longer be the case once page allocations can be delayed.
   zx_status_t GetPage(uint64_t offset, uint pf_flags, list_node* alloc_list,
-                      PageRequest* page_request, vm_page_t** page, paddr_t* pa) {
+                      LazyPageRequest* page_request, vm_page_t** page, paddr_t* pa) {
     Guard<Mutex> guard{&lock_};
     return GetPageLocked(offset, pf_flags, alloc_list, page_request, page, pa);
   }
 
   // See VmObject::GetPage
   zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* alloc_list,
-                            PageRequest* page_request, vm_page_t** page, paddr_t* pa)
+                            LazyPageRequest* page_request, vm_page_t** page, paddr_t* pa)
       TA_REQ(lock_) {
     __UNINITIALIZED LookupInfo lookup;
     zx_status_t status = LookupPagesLocked(offset, pf_flags, 1, alloc_list, page_request, &lookup);
@@ -497,7 +497,7 @@ class VmObject : public VmHierarchyBase,
   // The additional lookups treating the VMO immutable makes this suitable for performing optimistic
   // lookups without impacting memory usage.
   virtual zx_status_t LookupPagesLocked(uint64_t offset, uint pf_flags, uint64_t max_out_pages,
-                                        list_node* alloc_list, PageRequest* page_request,
+                                        list_node* alloc_list, LazyPageRequest* page_request,
                                         LookupInfo* out) TA_REQ(lock_) {
     return ZX_ERR_NOT_SUPPORTED;
   }

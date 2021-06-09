@@ -369,7 +369,7 @@ size_t VmAddressRegion::AllocatedPagesLocked() const {
   return sum;
 }
 
-zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request) {
+zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags, LazyPageRequest* page_request) {
   canary_.Assert();
 
   VmAddressRegion* vmar = this;

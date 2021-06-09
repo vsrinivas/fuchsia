@@ -16,6 +16,7 @@
 #include <kernel/event.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
+#include <ktl/optional.h>
 #include <ktl/unique_ptr.h>
 #include <vm/page.h>
 #include <vm/page_request.h>
@@ -251,6 +252,28 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
 
   friend PageSource;
   friend fbl::DefaultKeyedObjectTraits<uint64_t, PageRequest>;
+};
+
+// Wrapper around PageRequest that performs construction on first access. This is useful when a
+// PageRequest needs to be allocated eagerly in case it is used, even if the common case is that it
+// will not be needed.
+class LazyPageRequest {
+ public:
+  // If |allow_batching| is true, then a single request can be used to service
+  // multiple consecutive pages.
+  explicit LazyPageRequest(bool allow_batching = false) : allow_batching_(allow_batching) {}
+  ~LazyPageRequest() = default;
+
+  // Initialize and return the internal PageRequest.
+  PageRequest* get();
+
+  PageRequest* operator->() { return get(); }
+
+  PageRequest& operator*() { return *get(); }
+
+ private:
+  const bool allow_batching_;
+  ktl::optional<PageRequest> request_ = ktl::nullopt;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_SOURCE_H_

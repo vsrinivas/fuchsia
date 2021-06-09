@@ -543,7 +543,7 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
   }
 
   zx_status_t status = ZX_OK;
-  PageRequest page_request;
+  __UNINITIALIZED LazyPageRequest page_request;
   do {
     {
       // for now, hold the aspace lock across the page fault operation,
@@ -562,7 +562,7 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
     }
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      zx_status_t st = page_request.Wait();
+      zx_status_t st = page_request->Wait();
       if (st != ZX_OK) {
         if (st == ZX_ERR_TIMED_OUT) {
           Guard<Mutex> guard{&lock_};

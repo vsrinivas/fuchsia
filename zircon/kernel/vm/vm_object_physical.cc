@@ -168,7 +168,7 @@ void VmObjectPhysical::Dump(uint depth, bool verbose) {
 // get the physical address of pages starting at offset
 zx_status_t VmObjectPhysical::LookupPagesLocked(uint64_t offset, uint pf_flags,
                                                 uint64_t max_out_pages, list_node* alloc_list,
-                                                PageRequest* page_request, LookupInfo* out) {
+                                                LazyPageRequest* page_request, LookupInfo* out) {
   canary_.Assert();
 
   DEBUG_ASSERT(out);

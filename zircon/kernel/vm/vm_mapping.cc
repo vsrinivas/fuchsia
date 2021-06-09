@@ -764,7 +764,7 @@ zx_status_t VmMapping::DestroyLocked() {
   return ZX_OK;
 }
 
-zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* page_request) {
+zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageRequest* page_request) {
   canary_.Assert();
 
   DEBUG_ASSERT(is_in_range(va, 1));

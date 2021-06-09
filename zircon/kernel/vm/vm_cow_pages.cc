@@ -1555,7 +1555,7 @@ void VmCowPages::UpdateOnAccessLocked(vm_page_t* page, uint64_t offset) {
 // and will not fail if |alloc_list| is a non-empty list, faulting in was requested,
 // and offset is in range.
 zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64_t max_out_pages,
-                                          list_node* alloc_list, PageRequest* page_request,
+                                          list_node* alloc_list, LazyPageRequest* page_request,
                                           LookupInfo* out) {
   canary_.Assert();
   DEBUG_ASSERT(!is_hidden_locked());
@@ -1691,7 +1691,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
       }
       VmoDebugInfo vmo_debug_info = {.vmo_ptr = reinterpret_cast<uintptr_t>(page_owner->paged_ref_),
                                      .vmo_id = user_id};
-      zx_status_t status = page_owner->page_source_->GetPage(owner_offset, page_request,
+      zx_status_t status = page_owner->page_source_->GetPage(owner_offset, page_request->get(),
                                                              vmo_debug_info, &p, nullptr);
       // Pager page sources will never synchronously return a page.
       DEBUG_ASSERT(status != ZX_OK);
@@ -1781,7 +1781,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
 }
 
 zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_t* committed_len,
-                                          PageRequest* page_request) {
+                                          LazyPageRequest* page_request) {
   canary_.Assert();
   LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
 
@@ -1891,7 +1891,7 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
 
   if (have_page_request) {
     // commited_len was set when have_page_request was set so can just return.
-    return root_source->FinalizeRequest(page_request);
+    return root_source->FinalizeRequest(page_request->get());
   }
 
   // Processed the full range successfully
