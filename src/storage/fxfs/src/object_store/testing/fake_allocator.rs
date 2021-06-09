@@ -18,7 +18,7 @@ use {
     },
 };
 
-const ALLOCATOR_OBJECT_ID: u64 = 1;
+const ALLOCATOR_OBJECT_ID: u64 = 2;
 
 #[derive(Debug)]
 struct Inner {

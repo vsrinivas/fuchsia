@@ -19,6 +19,7 @@ impl From<FxfsError> for Status {
             FxfsError::Deleted => Status::ACCESS_DENIED,
             FxfsError::InvalidArgs => Status::INVALID_ARGS,
             FxfsError::TooBig => Status::FILE_BIG,
+            FxfsError::InvalidVersion => Status::NOT_SUPPORTED,
         }
     }
 }

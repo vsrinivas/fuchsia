@@ -2,5 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This only exists in the root store.
-pub const SUPER_BLOCK_OBJECT_ID: u64 = 1;
+// These only exist in the root store.
+pub const SUPER_BLOCK_A_OBJECT_ID: u64 = 1;
+pub const SUPER_BLOCK_B_OBJECT_ID: u64 = 2;

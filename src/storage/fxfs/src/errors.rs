@@ -30,6 +30,8 @@ pub enum FxfsError {
     InvalidArgs,
     #[error("Too big")]
     TooBig,
+    #[error("Invalid version")]
+    InvalidVersion,
 }
 
 impl FxfsError {

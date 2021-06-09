@@ -478,7 +478,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_create_directory() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let object_id = {
             let mut transaction = fs
@@ -548,7 +548,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_delete_child() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let mut transaction = fs
             .clone()
@@ -580,7 +580,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_delete_child_with_children_fails() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let mut transaction = fs
             .clone()
@@ -641,7 +641,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_delete_and_reinsert_child() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let mut transaction = fs
             .clone()
@@ -681,7 +681,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_delete_child_persists() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let object_id = {
             let mut transaction = fs
@@ -724,7 +724,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_replace_child() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let mut transaction = fs
             .clone()
@@ -828,7 +828,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_replace_child_fails_if_would_overwrite_nonempty_dir() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let mut transaction = fs
             .clone()
@@ -874,7 +874,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_replace_child_within_dir() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let mut transaction = fs
             .clone()
@@ -906,7 +906,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_iterate() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let mut transaction = fs
             .clone()
@@ -951,7 +951,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_sub_dir_count() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let mut transaction = fs
             .clone()

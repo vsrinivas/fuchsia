@@ -146,7 +146,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lookup_nonexistent_volume() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
+        let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
         root_volume.volume("vol").await.err().expect("Volume shouldn't exist");
@@ -155,7 +155,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_add_volume() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
+        let device = DeviceHolder::new(FakeDevice::new(16384, 512));
         let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         {
             let root_volume = root_volume(&filesystem).await.expect("root_volume failed");

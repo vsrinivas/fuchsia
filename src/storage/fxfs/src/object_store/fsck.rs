@@ -12,7 +12,7 @@ use {
             allocator::{
                 self, Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
             },
-            constants::SUPER_BLOCK_OBJECT_ID,
+            constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             filesystem::{Filesystem, FxFilesystem},
             graveyard::Graveyard,
             record::{
@@ -64,8 +64,11 @@ pub async fn fsck(filesystem: &FxFilesystem) -> Result<(), Error> {
 
     let root_store = &object_manager.root_store();
     let mut root_store_root_objects = Vec::new();
-    root_store_root_objects
-        .append(&mut vec![super_block.allocator_object_id, SUPER_BLOCK_OBJECT_ID]);
+    root_store_root_objects.append(&mut vec![
+        super_block.allocator_object_id,
+        SUPER_BLOCK_A_OBJECT_ID,
+        SUPER_BLOCK_B_OBJECT_ID,
+    ]);
     root_store_root_objects.append(&mut root_store.root_objects());
 
     // TODO(csuter): We could maybe iterate over stores concurrently.
@@ -257,7 +260,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_extra_allocation() {
         let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            4096,
+            8192,
             TEST_DEVICE_BLOCK_SIZE,
         )))
         .await
@@ -267,7 +270,7 @@ mod tests {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        let offset = 2047 * TEST_DEVICE_BLOCK_SIZE as u64;
+        let offset = 4095 * TEST_DEVICE_BLOCK_SIZE as u64;
         fs.allocator()
             .mark_allocated(&mut transaction, offset..offset + TEST_DEVICE_BLOCK_SIZE as u64)
             .await
@@ -280,7 +283,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_allocation_mismatch() {
         let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            4096,
+            8192,
             TEST_DEVICE_BLOCK_SIZE,
         )))
         .await
@@ -309,7 +312,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_missing_allocation() {
         let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            4096,
+            8192,
             TEST_DEVICE_BLOCK_SIZE,
         )))
         .await
@@ -338,7 +341,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_too_many_object_refs() {
         let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            4096,
+            8192,
             TEST_DEVICE_BLOCK_SIZE,
         )))
         .await
@@ -377,7 +380,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_too_few_object_refs() {
         let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            4096,
+            8192,
             TEST_DEVICE_BLOCK_SIZE,
         )))
         .await
