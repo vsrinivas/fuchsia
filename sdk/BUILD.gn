@@ -563,6 +563,7 @@ sdk_molecule("ddk_host_tools") {
   cross_compiled = [
     "//src/devices/tools/fidlgen_banjo:fidlgen_banjo_bin_sdk",
     "//tools/bindc:bindc_sdk",
+    "//tools/fidl/fidlgen_llcpp:fidlgen_llcpp_sdk",
   ]
 
   toolchains = []

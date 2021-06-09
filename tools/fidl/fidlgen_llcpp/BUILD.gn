@@ -52,6 +52,8 @@ if (is_host) {
   }
 
   go_binary("fidlgen_llcpp") {
+    sdk_category = "partner"
+    sdk_name = "fidlgen_llcpp_experimental_driver_only_toolchain"
     gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp"
     deps = [ ":gopkg" ]
   }
