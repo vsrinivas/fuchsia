@@ -40,8 +40,12 @@ rustc_library("input-synthesis") {
   ]
 
   sources = [
+    # TODO(fxbug.dev/78366): factor inverse_keymap and src/keymaps/* into own
+    # library.
     "src/inverse_keymap.rs",
-    "src/keymaps.rs",
+    "src/keymaps/config.rs",
+    "src/keymaps/defs.rs",
+    "src/keymaps/mod.rs",
     "src/legacy_backend.rs",
     "src/lib.rs",
     "src/modern_backend/input_device.rs",

@@ -5,286 +5,20 @@
 use crate::usages;
 use anyhow::{format_err, Result};
 use fidl_fuchsia_input;
-use fidl_fuchsia_ui_input3;
 use fuchsia_syslog::fx_log_err;
 use lazy_static::lazy_static;
 use std::collections;
-use std::convert::Into;
+
+mod defs;
+
+pub mod config;
 
 lazy_static! {
     /// A US QWERTY keymap.
-    pub static ref US_QWERTY: Keymap<'static> = Keymap::new(&QWERTY_MAP);
+    pub static ref US_QWERTY: Keymap<'static> = Keymap::new(&defs::QWERTY_MAP);
 
     /// A FR AZERTY keymap.
-    pub static ref FR_AZERTY: Keymap<'static> = Keymap::new(&FR_AZERTY_MAP);
-
-    /// Standard [qwerty] keymap.
-    ///
-    /// The value of this array at index `u`, where `u` is the usage, can be:
-    ///
-    ///  * `None` if the key maps to no `char` (Esc key)
-    ///  * `Some((c, None))` if the key maps to `c`, but does not map to any `char` when shift is pressed
-    ///  * `Some((c, Some(cs)))` if the key maps to `c` when shift is not pressed and to `cs` when it is
-    ///    pressed
-    ///
-    /// [qwerty]: https://en.wikipedia.org/wiki/Keyboard_layout#QWERTY-based_Latin-script_keyboard_layouts
-    static ref QWERTY_MAP: Vec<Option<KeyLevels>> = vec![
-        // 0x00
-        None,
-        None,
-        None,
-        None,
-        // HID_USAGE_KEY_A
-        Some(('a', Some('A'), true).into()),
-        Some(('b', Some('B'), true).into()),
-        Some(('c', Some('C'), true).into()),
-        Some(('d', Some('D'), true).into()),
-        // 0x08
-        Some(('e', Some('E'), true).into()),
-        Some(('f', Some('F'), true).into()),
-        Some(('g', Some('G'), true).into()),
-        Some(('h', Some('H'), true).into()),
-        // 0x0c
-        Some(('i', Some('I'), true).into()),
-        Some(('j', Some('J'), true).into()),
-        Some(('k', Some('K'), true).into()),
-        Some(('l', Some('L'), true).into()),
-        // 0x10
-        Some(('m', Some('M'), true).into()),
-        Some(('n', Some('N'), true).into()),
-        Some(('o', Some('O'), true).into()),
-        Some(('p', Some('P'), true).into()),
-        // 0x14
-        Some(('q', Some('Q'), true).into()),
-        Some(('r', Some('R'), true).into()),
-        Some(('s', Some('S'), true).into()),
-        Some(('t', Some('T'), true).into()),
-        // 0x18
-        Some(('u', Some('U'), true).into()),
-        Some(('v', Some('V'), true).into()),
-        Some(('w', Some('W'), true).into()),
-        Some(('x', Some('X'), true).into()),
-        // 0x1c
-        Some(('y', Some('Y'), true).into()),
-        Some(('z', Some('Z'), true).into()),
-        Some(('1', Some('!')).into()),
-        Some(('2', Some('@')).into()),
-        // 0x20
-        Some(('3', Some('#')).into()),
-        Some(('4', Some('$')).into()),
-        Some(('5', Some('%')).into()),
-        Some(('6', Some('^')).into()),
-        // 0x24
-        Some(('7', Some('&')).into()),
-        Some(('8', Some('*')).into()),
-        Some(('9', Some('(')).into()),
-        Some(('0', Some(')')).into()),
-        // 0x28
-        None,
-        None,
-        None,
-        None,
-        // 0x2c
-        Some((' ', Some(' ')).into()),
-        Some(('-', Some('_')).into()),
-        Some(('=', Some('+')).into()),
-        Some(('[', Some('{')).into()),
-        // 0x30
-        Some((']', Some('}')).into()),
-        Some(('\\', Some('|')).into()),
-        None,
-        Some((';', Some(':')).into()),
-        // 0x34
-        Some(('\'', Some('"')).into()),
-        Some(('`', Some('~')).into()),
-        Some((',', Some('<')).into()),
-        Some(('.', Some('>')).into()),
-        // 0x38
-        Some(('/', Some('?')).into()),
-        None,
-        None,
-        None,
-        // 0x3c
-        None,
-        None,
-        None,
-        None,
-        // 0x40
-        None,
-        None,
-        None,
-        None,
-        // 0x44
-        None,
-        None,
-        None,
-        None,
-        // 0x48
-        None,
-        None,
-        None,
-        None,
-        // 0x4c
-        None,
-        None,
-        None,
-        None,
-        // 0x50
-        None,
-        None,
-        None,
-        None,
-        // 0x54
-        Some(('/', None).into()),
-        Some(('*', None).into()),
-        Some(('-', None).into()),
-        Some(('+', None).into()),
-        // 0x58
-        None,
-        Some(('1', None).into()),
-        Some(('2', None).into()),
-        Some(('3', None).into()),
-        // 0x5c
-        Some(('4', None).into()),
-        Some(('5', None).into()),
-        Some(('6', None).into()),
-        Some(('7', None).into()),
-        // 0x60
-        Some(('8', None).into()),
-        Some(('9', None).into()),
-        Some(('0', None).into()),
-        Some(('.', None).into()),
-    ];
-
-    /// TODO(75723): This map is incomplete, and is here only temporarily for
-    /// kicks.
-    static ref FR_AZERTY_MAP: Vec<Option<KeyLevels>> = vec![
-        // 0x00
-        None,
-        None,
-        None,
-        None,
-        // HID_USAGE_KEY_A
-        Some(('q', Some('Q'), true).into()),
-        Some(('b', Some('B'), true).into()),
-        Some(('c', Some('C'), true).into()),
-        Some(('d', Some('D'), true).into()),
-        // 0x08
-        Some(('e', Some('E'), true).into()),
-        Some(('f', Some('F'), true).into()),
-        Some(('g', Some('G'), true).into()),
-        Some(('h', Some('H'), true).into()),
-        // 0x0c
-        Some(('i', Some('I'), true).into()),
-        Some(('j', Some('J'), true).into()),
-        Some(('k', Some('K'), true).into()),
-        Some(('l', Some('L'), true).into()),
-        // 0x10
-        Some((',', Some('?'), true).into()),
-        Some(('n', Some('N'), true).into()),
-        Some(('o', Some('O'), true).into()),
-        Some(('p', Some('P'), true).into()),
-        // 0x14
-        Some(('a', Some('A'), true).into()),
-        Some(('r', Some('R'), true).into()),
-        Some(('s', Some('S'), true).into()),
-        Some(('t', Some('T'), true).into()),
-        // 0x18
-        Some(('u', Some('U'), true).into()),
-        Some(('v', Some('V'), true).into()),
-        Some(('z', Some('Z'), true).into()),
-        Some(('x', Some('X'), true).into()),
-        // 0x1c
-        Some(('y', Some('Y'), true).into()),
-        Some(('w', Some('W'), true).into()),
-        Some(('&', Some('1')).into()),
-        Some(('é', Some('2')).into()),
-        // 0x20
-        Some(('"', Some('3')).into()),
-        Some(('\'', Some('4')).into()),
-        Some(('(', Some('5')).into()),
-        Some(('-', Some('6')).into()),
-        // 0x24
-        Some(('è', Some('7')).into()),
-        Some(('—', Some('8')).into()),
-        Some(('ç', Some('9')).into()),
-        Some(('à', Some('0')).into()),
-        // 0x28
-        None,
-        None,
-        None,
-        None,
-        // 0x2c
-        Some((' ', Some(' ')).into()),
-        Some((')', Some('°')).into()),
-        Some(('=', Some('+')).into()),
-        Some(('\u{0302}', Some('\u{0308}')).into()),  // Unicode combining characters circumflex and dieresis.
-        // 0x30
-        Some(('$', Some('£')).into()),
-        Some(('\\', Some('|')).into()),  // Not present on French Azerty?
-        None,
-        Some(('m', Some('M')).into()),
-        // 0x34
-        Some(('\'', Some('"')).into()),
-        Some(('²', None).into()),
-        Some((';', Some('.')).into()),
-        Some((':', Some('/')).into()),
-        // 0x38
-        Some(('!', Some('§')).into()),
-        None,
-        None,
-        None,
-        // 0x3c
-        None,
-        None,
-        None,
-        None,
-        // 0x40
-        None,
-        None,
-        None,
-        None,
-        // 0x44
-        None,
-        None,
-        None,
-        None,
-        // 0x48
-        None,
-        None,
-        None,
-        None,
-        // 0x4c
-        None,
-        None,
-        None,
-        None,
-        // 0x50
-        None,
-        None,
-        None,
-        None,
-        // 0x54
-        Some(('/', None).into()),
-        Some(('*', None).into()),
-        Some(('-', None).into()),
-        Some(('+', None).into()),
-        // 0x58
-        None,
-        Some(('1', None).into()),
-        Some(('2', None).into()),
-        Some(('3', None).into()),
-        // 0x5c
-        Some(('4', None).into()),
-        Some(('5', None).into()),
-        Some(('6', None).into()),
-        Some(('7', None).into()),
-        // 0x60
-        Some(('8', None).into()),
-        Some(('9', None).into()),
-        Some(('0', None).into()),
-        Some(('.', None).into()),
-    ];
+    pub static ref FR_AZERTY: Keymap<'static> = Keymap::new(&defs::FR_AZERTY_MAP);
 }
 
 /// Gets a keymap based on the supplied `keymap` selector.  If no keymap is
@@ -300,52 +34,20 @@ pub fn select_keymap(keymap: &Option<String>) -> &Keymap<'_> {
 /// not have an associated code point, e.g. Alt.
 pub(crate) const EMPTY_CODEPOINT: u32 = 0;
 
-/// Levels corresponding to each defined key.
-pub struct KeyLevels {
-    /// The base, unshifted character.
-    pub(crate) ch: char,
-    /// The shifted character, if present
-    pub(crate) shift_ch: Option<char>,
-    /// Is it a letter?  Letters are affected by Caps Lock, while other keys
-    /// are not.
-    is_letter: bool,
-}
-
-impl From<(char, Option<char>)> for KeyLevels {
-    fn from(s: (char, Option<char>)) -> Self {
-        KeyLevels { ch: s.0, shift_ch: s.1, is_letter: false }
-    }
-}
-
-impl From<(char, Option<char>, bool)> for KeyLevels {
-    fn from(s: (char, Option<char>, bool)) -> Self {
-        KeyLevels { ch: s.0, shift_ch: s.1, is_letter: s.2 }
-    }
-}
-
-impl KeyLevels {
-    fn get_key(&self, m: &ModifierState) -> Option<char> {
-        if m.is_caps_lock_active() && self.is_letter || m.is_shift_active() {
-            return self.shift_ch;
-        }
-        Some(self.ch)
-    }
-}
-
 /// A Us Qwerty keymap
 pub struct Keymap<'a> {
-    map: &'a [Option<KeyLevels>],
+    map: &'a [Option<defs::KeyLevels>],
 }
 
-impl AsRef<[Option<KeyLevels>]> for Keymap<'_> {
-    fn as_ref(&self) -> &[Option<KeyLevels>] {
+impl AsRef<[Option<defs::KeyLevels>]> for Keymap<'_> {
+    fn as_ref(&self) -> &[Option<defs::KeyLevels>] {
         self.map
     }
 }
 
 impl<'a> Keymap<'a> {
     /// Creates a new keymap.
-    fn new(map: &'a [Option<KeyLevels>]) -> Self {
+    fn new(map: &'a [Option<defs::KeyLevels>]) -> Self {
         Keymap { map }
     }
 
