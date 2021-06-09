@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mac-device.h"
 
@@ -30,15 +31,22 @@ class FakeDdkTester : public fake_ddk::Bind {
   fake_ddk::Bind& ddk();
   const fake_ddk::Bind& ddk() const;
   std::string GetFirmware() const;
+  int DeviceCount();
 
   // Trampoline for the load_firmware() DDK call.
   zx_status_t LoadFirmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size);
 
  protected:
   // fake_ddk overrides.
+  void DeviceAsyncRemove(zx_device_t* device) override;
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) override;
+  void DeviceInitReply(zx_device_t* device, zx_status_t status,
+                       const device_init_reply_args_t* args) override;
+  void DeviceUnbindReply(zx_device_t* device) override;
 
+ private:
+  simulation::FakeDevMgr fake_dev_mgr_;
   wlan::iwlwifi::Device* dev_ = nullptr;
   std::vector<wlan::iwlwifi::MacDevice*> macdevs_;
   std::string firmware_;

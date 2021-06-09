@@ -31,7 +31,7 @@ class PcieDevice : public Device {
 
   // Creates and binds PcieDevice instance. On success hands device off to device lifecycle
   // management.
-  static zx_status_t Create(zx_device_t* parent_device, bool load_firmware);
+  static zx_status_t Create(zx_device_t* parent_device);
 
   // Device implementation.
   iwl_trans* drvdata() override;

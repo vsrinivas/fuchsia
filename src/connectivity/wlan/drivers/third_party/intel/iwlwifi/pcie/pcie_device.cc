@@ -26,7 +26,7 @@ PcieDevice::PcieDevice(zx_device_t* parent) : Device(parent) { pci_dev_ = {}; }
 
 PcieDevice::~PcieDevice() { ZX_DEBUG_ASSERT(pci_dev_.drvdata == nullptr); }
 
-zx_status_t PcieDevice::Create(zx_device_t* parent_device, bool load_firmware) {
+zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
   zx_status_t status = ZX_OK;
 
   fbl::AllocChecker ac;

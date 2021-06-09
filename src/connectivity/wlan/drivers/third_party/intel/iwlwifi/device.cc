@@ -29,7 +29,10 @@ zx_status_t Device::WlanphyImplQuery(wlanphy_impl_info_t* out_info) {
 
 zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t* req,
                                            uint16_t* out_iface_id) {
-  zx_status_t status = ZX_OK;
+  if (req == nullptr || out_iface_id == nullptr) {
+    IWL_ERR(this, "%s() invalid input args req:%p out_iface_id:%p\n", __func__, req, out_iface_id);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   fbl::AllocChecker ac;
   auto mac_device = fbl::make_unique_checked<MacDevice>(&ac, zxdev());
@@ -38,7 +41,7 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = phy_create_iface(drvdata(), req, out_iface_id);
+  zx_status_t status = phy_create_iface(drvdata(), req, out_iface_id);
   if (status != ZX_OK) {
     IWL_ERR(this, "%s() failed phy create: %s\n", __func__, zx_status_get_string(status));
     return status;

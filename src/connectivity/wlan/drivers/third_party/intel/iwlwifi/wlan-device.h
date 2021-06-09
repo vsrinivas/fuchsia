@@ -19,7 +19,6 @@ extern "C" {
 
 extern wlanmac_protocol_ops_t wlanmac_ops;
 extern zx_protocol_device_t device_mac_ops;  // for testing only
-extern wlanphy_impl_protocol_ops_t wlanphy_ops;
 
 // for testing
 size_t compose_band_list(const struct iwl_nvm_data* nvm_data,

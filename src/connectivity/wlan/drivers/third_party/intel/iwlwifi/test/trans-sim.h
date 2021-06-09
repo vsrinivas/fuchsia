@@ -14,6 +14,8 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_TRANS_SIM_H_
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-mvm.h"
 
@@ -41,16 +43,14 @@ class TransportSim : public SimMvm {
   // This function must be called before starting using other functions.
   zx_status_t Init();
 
-  void Release();
-
   // Note that the user cannot take the ownership of trans. This class still holds it.
-  struct iwl_trans* iwl_trans() {
-    return iwl_trans_;
-  }
+  struct iwl_trans* iwl_trans();
+  wlan::iwlwifi::Device* sim_device();
 
  private:
   struct device device_;
   struct iwl_trans* iwl_trans_;
+  wlan::iwlwifi::Device* sim_device_;
 };
 
 }  // namespace testing

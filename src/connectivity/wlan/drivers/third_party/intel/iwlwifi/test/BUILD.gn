@@ -53,6 +53,7 @@ group("test") {
 # Definition for simulated transportation layer + gtest
 testing_deps = [
   ":iwlwifi_sim_trans_ss",
+  "//src/connectivity/wlan/drivers/testing/lib/sim-device",
   "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
   "//src/devices/testing/fake-bti",
   "//src/devices/testing/fake_ddk",

@@ -47,17 +47,18 @@ namespace {
 TEST(FakeDdkTesterPci, DeviceLifeCycle) {
   wlan::testing::FakeDdkTesterPci tester;
 
-  // Set up a fake firmware of non-zero size.
+  // TODO(fxbug.dev/76744) since device initialization will fail (as there is no hardware backing
+  // this PcieDevice), we are free to use a fake firmware here that does not pass driver validation
+  // anyways.
   tester.SetFirmware(std::string(4, '\0'));
 
   // Create() allocates and binds the device.
-  ASSERT_OK(wlan::iwlwifi::PcieDevice::Create(fake_ddk::kFakeParent, false), "Bind failed");
+  ASSERT_OK(wlan::iwlwifi::PcieDevice::Create(fake_ddk::kFakeParent), "Bind failed");
 
-  tester.dev()->DdkAsyncRemove();
-  EXPECT_OK(tester.ddk().WaitUntilRemove());
-  tester.dev()->DdkRelease();
-
-  EXPECT_TRUE(tester.Ok());
+  // TODO(fxbug.dev/76744) the Create() call will succeed, but since there is no hardware backing
+  // this PcieDevice, initialization will ultimately fail and the PcieDevice instance will be
+  // automatically removed without explicitly reporting an error.  This means an explicit
+  // DdkAsyncRemove() is not necessary.
 }
 
 class PcieTest;

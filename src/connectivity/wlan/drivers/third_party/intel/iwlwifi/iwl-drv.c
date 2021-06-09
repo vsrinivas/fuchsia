@@ -1858,7 +1858,6 @@ void iwl_drv_stop(struct iwl_drv* drv) {
   kfree(drv);
 }
 
-
 /* shared module parameters */
 struct iwl_mod_params iwlwifi_mod_params = {
     .fw_restart = true,

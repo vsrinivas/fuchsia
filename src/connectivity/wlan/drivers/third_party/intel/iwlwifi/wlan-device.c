@@ -479,9 +479,7 @@ void mac_unbind(void* ctx) {
     return;
   }
 
-  zx_device_t* zxdev = mvmvif->zxdev;
   mvmvif->zxdev = NULL;
-  device_unbind_reply(zxdev);
 }
 
 void mac_release(void* ctx) {
@@ -637,48 +635,6 @@ unlock:
   return ret;
 }
 
-// This function unifies the create and start of MAC interface.
-// TODO (fxbug.dev/63618) - can be removed once we get rid of ops structure.
-zx_status_t phy_create_and_start_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
-                                       uint16_t* out_iface_id) {
-  struct iwl_trans* iwl_trans = ctx;
-  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
-
-  zx_status_t status = phy_create_iface(ctx, req, out_iface_id);
-  if (status != ZX_OK) {
-    IWL_ERR(ctx, "%s() failed to create phy iface - %s\n", __func__, zx_status_get_string(status));
-    return status;
-  }
-
-  // Add MAC interface
-  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[*out_iface_id];
-  device_add_args_t mac_args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "iwlwifi-wlanmac",
-      .ctx = mvmvif,
-      .ops = &device_mac_ops,
-      .proto_id = ZX_PROTOCOL_WLANMAC,
-      .proto_ops = &wlanmac_ops,
-  };
-
-  // Add this MAC device into the tree. The parent device is the PHY device.
-  zx_device_t* zxdev;
-  status = device_add(iwl_trans->zxdev, &mac_args, &zxdev);
-  if (status != ZX_OK) {
-    phy_create_iface_undo(iwl_trans, out_iface_id);
-    return status;
-  }
-
-  status = phy_start_iface(ctx, zxdev, *out_iface_id);
-  if (status != ZX_OK) {
-    IWL_ERR(ctx, "%s() failed to start phy iface %d - %s\n", __func__, *out_iface_id,
-            zx_status_get_string(status));
-    return status;
-  }
-
-  return status;
-}
-
 // This function is working with a PHY context ('ctx') to delete a MAC interface ('id').
 // The 'id' is the value assigned by phy_create_iface().
 zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
@@ -736,13 +692,3 @@ zx_status_t phy_get_country(void* ctx, wlanphy_country_t* out_country) {
   IWL_ERR(ctx, "%s() needs porting ...\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
-
-// PHY interface
-// TODO (fxbug.dev/63618) - to be removed.
-wlanphy_impl_protocol_ops_t wlanphy_ops = {
-    .query = phy_query,
-    .create_iface = phy_create_and_start_iface,
-    .destroy_iface = phy_destroy_iface,
-    .set_country = phy_set_country,
-    .get_country = phy_get_country,
-};

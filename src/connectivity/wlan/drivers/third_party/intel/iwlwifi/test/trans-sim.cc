@@ -33,13 +33,37 @@ extern "C" {
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ddk-tester.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 
 using wlan::testing::IWL_TRANS_GET_TRANS_SIM;
 using wlan::testing::SimMvm;
 using wlan::testing::trans_sim_priv;
+
+namespace {
+// TransSimDevice to appropriately handle unbind and release.
+class TransSimDevice : public ::wlan::iwlwifi::Device {
+ public:
+  explicit TransSimDevice(zx_device_t* parent, iwl_trans* drvdata)
+      : Device(parent), drvdata_(drvdata){};
+  void DdkInit(::ddk::InitTxn txn) override { txn.Reply(ZX_OK); }
+  void DdkUnbind(::ddk::UnbindTxn txn) override {
+    struct iwl_trans* trans = drvdata_;
+    if (trans->drv) {
+      iwl_drv_stop(trans->drv);
+    }
+    free(trans);
+    txn.Reply();
+  };
+
+  iwl_trans* drvdata() override { return drvdata_; }
+  const iwl_trans* drvdata() const override { return drvdata_; }
+
+ private:
+  iwl_trans* drvdata_ = nullptr;
+};
+}  // namespace
 
 // Send a fake packet from FW to unblock one wait in mvm->notif_wait.
 static void rx_fw_notification(struct iwl_trans* trans, uint8_t cmd, const void* data,
@@ -230,31 +254,12 @@ static struct iwl_trans* iwl_trans_transport_sim_alloc(struct device* dev,
   return iwl_trans;
 }
 
-static void transport_sim_unbind(void* ctx) {
-  struct iwl_trans* trans = (struct iwl_trans*)ctx;
-  device_unbind_reply(trans->zxdev);
-}
-
-static void transport_sim_release(void* ctx) {
-  struct iwl_trans* trans = (struct iwl_trans*)ctx;
-
-  iwl_drv_stop(trans->drv);
-
-  free(trans);
-}
-
-// TODO(fxbug.dev/36795): move to wlan-device.c
-static zx_protocol_device_t device_ops = {
-    .version = DEVICE_OPS_VERSION,
-    .unbind = transport_sim_unbind,
-    .release = transport_sim_release,
-};
-
 // This function intends to be like this because we want to mimic the transport_pcie_bind().
 // But definitely can be refactored into the TransportSim::Init().
 // 'out_trans' is used to return the new allocated 'struct iwl_trans'.
 static zx_status_t transport_sim_bind(SimMvm* fw, struct device* dev,
-                                      struct iwl_trans** out_iwl_trans) {
+                                      struct iwl_trans** out_iwl_trans,
+                                      wlan::iwlwifi::Device** out_device) {
   const struct iwl_cfg* cfg = &iwl7265_2ac_cfg;
   struct iwl_trans* iwl_trans = iwl_trans_transport_sim_alloc(dev, cfg, fw);
   zx_status_t status;
@@ -264,22 +269,13 @@ static zx_status_t transport_sim_bind(SimMvm* fw, struct device* dev,
   }
   ZX_ASSERT(out_iwl_trans);
 
-  device_add_args_t args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "sim-iwlwifi-wlanphy",
-      .ctx = iwl_trans,
-      .ops = &device_ops,
-      .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
-      .proto_ops = &wlanphy_ops,
-      .flags = DEVICE_ADD_NON_BINDABLE,
-  };
-
-  status = device_add(dev->zxdev, &args, &iwl_trans->zxdev);
+  auto device = std::make_unique<TransSimDevice>(dev->zxdev, iwl_trans);
+  status = device->DdkAdd("sim-iwlwifi-wlanphy", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to create device: %s", zx_status_get_string(status));
-    free(iwl_trans);
+    zxlogf(ERROR, "Failed to add phy device: %s", zx_status_get_string(status));
     return status;
   }
+  iwl_trans->zxdev = device->zxdev();
 
   status = iwl_drv_init();
   if (status != ZX_OK) {
@@ -293,31 +289,41 @@ static zx_status_t transport_sim_bind(SimMvm* fw, struct device* dev,
     goto remove_dev;
   }
 
-  {
-    *out_iwl_trans = iwl_trans;
-    struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(iwl_trans->op_mode);
-    return iwl_mvm_mac_start(mvm);
+  status = iwl_mvm_mac_start(IWL_OP_MODE_GET_MVM(iwl_trans->op_mode));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to start mac: %s", zx_status_get_string(status));
+    goto remove_dev;
   }
 
-remove_dev:
-  device_async_remove(iwl_trans->zxdev);
+  *out_iwl_trans = iwl_trans;
+  *out_device = device.release();
 
+  return ZX_OK;
+
+remove_dev:
+  device.release()->DdkAsyncRemove();
   return status;
 }
 
-namespace wlan {
-namespace testing {
+namespace wlan::testing {
+wlan::iwlwifi::Device* TransportSim::sim_device() { return sim_device_; }
+struct iwl_trans* TransportSim::iwl_trans() {
+  return iwl_trans_;
+}
 
 TransportSim::TransportSim(::wlan::simulation::Environment* env)
     : SimMvm(env), device_{}, iwl_trans_(nullptr) {
   device_.zxdev = ::fake_ddk::kFakeParent;
+  sim_device_ = nullptr;
 }
 
-TransportSim::~TransportSim() { Release(); }
+TransportSim::~TransportSim() {
+  if (sim_device_) {
+    sim_device_->DdkAsyncRemove();
+  }
+}
 
-zx_status_t TransportSim::Init() { return transport_sim_bind(this, &device_, &iwl_trans_); }
-
-void TransportSim::Release() { transport_sim_release(iwl_trans_); }
-
-}  // namespace testing
-}  // namespace wlan
+zx_status_t TransportSim::Init() {
+  return transport_sim_bind(this, &device_, &iwl_trans_, &sim_device_);
+}
+}  // namespace wlan::testing

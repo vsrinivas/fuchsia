@@ -33,6 +33,8 @@ const fake_ddk::Bind& FakeDdkTester::ddk() const { return *this; }
 
 std::string FakeDdkTester::GetFirmware() const { return firmware_; }
 
+int FakeDdkTester::DeviceCount() { return static_cast<int>(fake_dev_mgr_.DeviceCount()); }
+
 // FakeDdkTester implementation of the load_firmware() DDK entry point.
 zx_status_t FakeDdkTester::LoadFirmware(zx_device_t* device, const char* path, zx_handle_t* fw,
                                         size_t* size) {
@@ -50,10 +52,15 @@ zx_status_t FakeDdkTester::LoadFirmware(zx_device_t* device, const char* path, z
   return ZX_OK;
 }
 
+// FakeDdkTester implementation of the device_async_remove() entry point.
+void FakeDdkTester::DeviceAsyncRemove(zx_device_t* device) {
+  fake_dev_mgr_.DeviceAsyncRemove(device);
+}
+
 // FakeDdkTester implementation of the device_add() entry point.
 zx_status_t FakeDdkTester::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                                      zx_device_t** out) {
-  zx_status_t ret = Bind::DeviceAdd(drv, parent, args, out);
+  zx_status_t ret = fake_dev_mgr_.DeviceAdd(parent, args, out);
   if (ret == ZX_OK) {
     // On successful DeviceAdd() we save off the devices so that we can access them in the test
     // to take subsequent actions or to release its resources at the end of the test.
@@ -67,6 +74,17 @@ zx_status_t FakeDdkTester::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, devi
     }
   }
   return ret;
+}
+
+// FakeDdkTester implementation of the device_init_reply() entry point.
+void FakeDdkTester::DeviceInitReply(zx_device_t* device, zx_status_t status,
+                                    const device_init_reply_args_t* args) {
+  fake_dev_mgr_.DeviceInitReply(device, status, args);
+}
+
+// FakeDdkTester implementation of the device_unbind_reply() entry point.
+void FakeDdkTester::DeviceUnbindReply(zx_device_t* device) {
+  fake_dev_mgr_.DeviceUnbindReply(device);
 }
 
 }  // namespace wlan::testing

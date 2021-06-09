@@ -40,20 +40,6 @@ void recv_wrapper(void* cookie, uint32_t flags, const uint8_t* data, size_t leng
   recv->Call(cookie, flags, data, length, info);
 }
 
-// This stub version of a Device provides an unowned drvdata() member from another source.
-class StubDevice : public ::wlan::iwlwifi::Device {
- public:
-  explicit StubDevice(zx_device_t* parent, iwl_trans* drvdata)
-      : Device(parent), drvdata_(drvdata){};
-  void DdkInit(::ddk::InitTxn txn) override { txn.Reply(ZX_OK); }
-  void DdkUnbind(::ddk::UnbindTxn txn) override { txn.Reply(); };
-  iwl_trans* drvdata() override { return drvdata_; }
-  const iwl_trans* drvdata() const override { return drvdata_; }
-
- private:
-  iwl_trans* drvdata_ = nullptr;
-};
-
 class WlanDeviceTest : public SingleApTest {
  public:
   WlanDeviceTest()
@@ -64,7 +50,9 @@ class WlanDeviceTest : public SingleApTest {
                 {
                     .beacon_int = kListenInterval,
                 },
-        } {}
+        } {
+    device_ = sim_trans_.sim_device();
+  }
   ~WlanDeviceTest() {}
 
  protected:
@@ -72,6 +60,7 @@ class WlanDeviceTest : public SingleApTest {
   static constexpr uint8_t kInvalidBandIdFillByte = 0xa5;
   static constexpr wlan_info_band_t kInvalidBandId = 0xa5a5a5a5;
   struct iwl_mvm_vif mvmvif_sta_;  // The mvm_vif settings for station role.
+  wlan::iwlwifi::Device* device_;
 };
 
 //////////////////////////////////// Helper Functions  /////////////////////////////////////////////
@@ -249,56 +238,6 @@ TEST_F(WlanDeviceTest, MacStartSmeChannel) {
   ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &sme_channel), ZX_ERR_ALREADY_BOUND);
 }
 
-TEST_F(WlanDeviceTest, MacUnbind) {
-  wlanphy_impl_create_iface_req_t req = {
-      .role = WLAN_INFO_MAC_ROLE_CLIENT,
-      .sme_channel = sme_channel_,
-  };
-  uint16_t iface_id;
-  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
-
-  // Create an interface
-  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
-
-  // To verify the internal state of MVM driver.
-  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
-  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[iface_id];
-
-  // Then unbind it
-  device_mac_ops.unbind(mvmvif);
-  // unbind() doesn't have return value. Expect it is not crashed.
-
-  // Do again and expect not crashed
-  device_mac_ops.unbind(mvmvif);
-
-  device_mac_ops.release(mvmvif);
-}
-
-TEST_F(WlanDeviceTest, MacUnbindInvalidZxdev) {
-  wlanphy_impl_create_iface_req_t req = {
-      .role = WLAN_INFO_MAC_ROLE_CLIENT,
-      .sme_channel = sme_channel_,
-  };
-  uint16_t iface_id;
-  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
-
-  // Create an interface
-  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
-
-  // To verify the internal state of MVM driver.
-  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
-  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[iface_id];
-
-  // Invalidate the zxdev with whatever value
-  mvmvif->zxdev = fake_ddk::kFakeParent;
-
-  // Expect the unbind still cleans up the internal state.
-  device_mac_ops.unbind(mvmvif);
-  ASSERT_EQ(mvmvif->zxdev, nullptr);
-
-  device_mac_ops.release(mvmvif);
-}
-
 TEST_F(WlanDeviceTest, MacRelease) {
   // Allocate an instance so that we can free that in mac_release().
   struct iwl_mvm_vif* mvmvif =
@@ -317,42 +256,17 @@ TEST_F(WlanDeviceTest, MacRelease) {
             ZX_ERR_PEER_CLOSED);
 }
 
-// TODO(fxbug.dev/63618): Modify tests that use wlanphy_ops, to use the below approach.
-// Once that is done, this test can be removed since it will get covered by existing tests.
-TEST_F(WlanDeviceTest, CreateAndDestroyIfaceTest) {
-  wlanphy_impl_create_iface_req_t req = {
-      .role = WLAN_INFO_MAC_ROLE_CLIENT,
-      .sme_channel = sme_channel_,
-  };
-  uint16_t out_id;
-
-  auto device = std::make_unique<StubDevice>(fake_ddk::kFakeParent, sim_trans_.iwl_trans());
-
-  EXPECT_OK(device->WlanphyImplCreateIface(&req, &out_id), "failed to create iface");
-  EXPECT_OK(device->WlanphyImplDestroyIface(out_id), "failed to destroy iface");
-
-  // Delete same interface again to ensure it fails.
-  EXPECT_NOT_OK(device->WlanphyImplDestroyIface(out_id), "second destroy should fail");
-
-  auto mac_device = fake_ddk_.macdevs()[0];
-  mac_device->DdkAsyncRemove();
-  EXPECT_OK(fake_ddk_.ddk().WaitUntilRemove());
-  mac_device->DdkRelease();
-}
-
 /////////////////////////////////////       PHY       //////////////////////////////////////////////
 
 TEST_F(WlanDeviceTest, PhyQuery) {
-  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
   wlanphy_impl_info_t info = {};
 
   // Test input null pointers
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanphy_ops.query(nullptr, nullptr));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanphy_ops.query(iwl_trans, nullptr));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanphy_ops.query(nullptr, &info));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_->WlanphyImplQuery(nullptr));
+  ASSERT_EQ(ZX_OK, device_->WlanphyImplQuery(&info));
 
   // Normal case
-  ASSERT_EQ(ZX_OK, wlanphy_ops.query(iwl_trans, &info));
+  ASSERT_EQ(ZX_OK, device_->WlanphyImplQuery(&info));
   EXPECT_EQ(WLAN_INFO_MAC_ROLE_CLIENT, info.supported_mac_roles);
 }
 
@@ -382,31 +296,32 @@ TEST_F(WlanDeviceTest, PhyCreateDestroySingleInterface) {
       .sme_channel = sme_channel_,
   };
   uint16_t iface_id;
-  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
 
   // Test input null pointers
-  ASSERT_EQ(wlanphy_ops.create_iface(nullptr, &req, &iface_id), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, nullptr, &iface_id), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, nullptr), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlanphy_ops.destroy_iface(nullptr, 0), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, MAX_NUM_MVMVIF), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_ERR_NOT_FOUND);  // hasn't been added yet.
+  ASSERT_EQ(device_->WlanphyImplCreateIface(nullptr, &iface_id), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, nullptr), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(device_->WlanphyImplCreateIface(nullptr, nullptr), ZX_ERR_INVALID_ARGS);
+
+  // Test invalid inputs
+  ASSERT_EQ(device_->WlanphyImplDestroyIface(MAX_NUM_MVMVIF), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_ERR_NOT_FOUND);  // hasn't been added yet.
 
   // To verify the internal state of MVM driver.
-  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
 
   // Add interface
-  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
+  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
   ASSERT_EQ(iface_id, 0);  // the first interface should have id 0.
   struct iwl_mvm_vif* mvmvif = mvm->mvmvif[iface_id];
   ASSERT_NE(mvmvif, nullptr);
   ASSERT_EQ(mvmvif->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
+  // Count includes phy device in addition to the newly created mac device.
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 2);
 
   // Remove interface
-  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_OK);
+  ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_OK);
   ASSERT_EQ(mvm->mvmvif[iface_id], nullptr);
-  fake_ddk_.WaitUntilRemove();
-  device_mac_ops.release(mvmvif);
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 1);
 }
 
 TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
@@ -419,101 +334,71 @@ TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);  // To verify the internal state of MVM driver
 
   // Add 1st interface
-  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
-  ASSERT_EQ(iface_id, 0);  // the first interface should have id 0.
-  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
+  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
+  ASSERT_EQ(iface_id, 0);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  struct iwl_mvm_vif* mvmvif0 = mvm->mvmvif[iface_id];
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 2);
 
   // Add 2nd interface
-  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
-  ASSERT_EQ(iface_id, 1);  // the first interface should have id 0.
+  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
+  ASSERT_EQ(iface_id, 1);
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  struct iwl_mvm_vif* mvmvif1 = mvm->mvmvif[iface_id];
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 3);
 
   // Add 3rd interface
-  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
-  ASSERT_EQ(iface_id, 2);  // the first interface should have id 0.
+  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
+  ASSERT_EQ(iface_id, 2);
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  struct iwl_mvm_vif* mvmvif2 = mvm->mvmvif[iface_id];
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 4);
 
   // Remove the 2nd interface
-  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 1), ZX_OK);
+  ASSERT_EQ(device_->WlanphyImplDestroyIface(1), ZX_OK);
   ASSERT_EQ(mvm->mvmvif[1], nullptr);
-  fake_ddk_.WaitUntilRemove();
-  device_mac_ops.release(mvmvif1);
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 3);
 
   // Add a new interface and it should be the 2nd one.
-  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
-  ASSERT_EQ(iface_id, 1);  // the first interface should have id 0.
+  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
+  ASSERT_EQ(iface_id, 1);
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  mvmvif1 = mvm->mvmvif[iface_id];
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 4);
 
   // Add 4th interface
-  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
-  ASSERT_EQ(iface_id, 3);  // the first interface should have id 0.
+  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_OK);
+  ASSERT_EQ(iface_id, 3);
   ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
   ASSERT_EQ(mvm->mvmvif[iface_id]->mac_role, WLAN_INFO_MAC_ROLE_CLIENT);
-  struct iwl_mvm_vif* mvmvif3 = mvm->mvmvif[iface_id];
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 5);
 
   // Add 5th interface and it should fail
-  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_ERR_NO_RESOURCES);
+  ASSERT_EQ(device_->WlanphyImplCreateIface(&req, &iface_id), ZX_ERR_NO_RESOURCES);
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 5);
 
   // Remove the 2nd interface
-  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 1), ZX_OK);
+  ASSERT_EQ(device_->WlanphyImplDestroyIface(1), ZX_OK);
   ASSERT_EQ(mvm->mvmvif[1], nullptr);
-  fake_ddk_.WaitUntilRemove();
-  device_mac_ops.release(mvmvif1);
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 4);
 
   // Remove the 3rd interface
-  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 2), ZX_OK);
+  ASSERT_EQ(device_->WlanphyImplDestroyIface(2), ZX_OK);
   ASSERT_EQ(mvm->mvmvif[2], nullptr);
-  fake_ddk_.WaitUntilRemove();
-  device_mac_ops.release(mvmvif2);
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 3);
 
   // Remove the 4th interface
-  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 3), ZX_OK);
+  ASSERT_EQ(device_->WlanphyImplDestroyIface(3), ZX_OK);
   ASSERT_EQ(mvm->mvmvif[3], nullptr);
-  fake_ddk_.WaitUntilRemove();
-  device_mac_ops.release(mvmvif3);
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 2);
 
   // Remove the 1st interface
-  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_OK);
+  ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_OK);
   ASSERT_EQ(mvm->mvmvif[0], nullptr);
-  fake_ddk_.WaitUntilRemove();
-  device_mac_ops.release(mvmvif0);
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 1);
 
   // Remove the 1st interface again and it should fail.
-  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_ERR_NOT_FOUND);
-}
-
-TEST_F(WlanDeviceTest, PhyDestroyInvalidZxdev) {
-  wlanphy_impl_create_iface_req_t req = {
-      .role = WLAN_INFO_MAC_ROLE_CLIENT,
-      .sme_channel = sme_channel_,
-  };
-  uint16_t iface_id;
-  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
-
-  // To verify the internal state of MVM driver.
-  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
-
-  // Add interface
-  ASSERT_EQ(wlanphy_ops.create_iface(iwl_trans, &req, &iface_id), ZX_OK);
-  ASSERT_NE(mvm->mvmvif[iface_id], nullptr);
-  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[iface_id];
-
-  // Replace the zxdev with invalid value
-  mvm->mvmvif[iface_id]->zxdev = fake_ddk::kFakeParent;
-
-  // Remove interface
-  ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_OK);
-  ASSERT_EQ(mvm->mvmvif[iface_id], nullptr);
-  fake_ddk_.WaitUntilRemove();
-  device_mac_ops.release(mvmvif);
+  ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_ERR_NOT_FOUND);
+  ASSERT_EQ(fake_ddk_.DeviceCount(), 1);
 }
 
 // The class for WLAN device MAC testing.
