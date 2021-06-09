@@ -48,8 +48,19 @@ static MAGENTA: &str = "\x1B[35;1m";
 #[allow(dead_code)]
 static CYAN: &str = "\x1B[36;1m";
 
+fn colorize_line(color: Color, line: String) -> String {
+    [color, line.as_str(), ANSI_RESET].concat()
+}
+
+enum DecoratorMode {
+    ColorByLogLevel,
+    ColorByKeyword,
+}
+
 struct Decorator {
+    mode: DecoratorMode,
     is_active: bool,
+    log_levels: HashMap<i32, Color>,
     lines: HashMap<String, Color>,
     regex_str_color: String,
     re_color: Option<Regex>,
@@ -62,9 +73,11 @@ struct RegexGroup {
 }
 
 impl Decorator {
-    pub fn new() -> Self {
+    pub fn new(mode: DecoratorMode) -> Self {
         Decorator {
+            mode,
             is_active: false,
+            log_levels: HashMap::new(),
             lines: HashMap::new(),
             regex_str_color: String::default(),
             re_color: None,
@@ -96,6 +109,11 @@ impl Decorator {
         self.regex_grp_color.push(regex_grp_color);
     }
 
+    pub fn add_log_level(&mut self, level: LogLevelFilter, color: Color) {
+        self.fail_if_active();
+        self.log_levels.insert(level as i32, color);
+    }
+
     pub fn init_regex(&mut self) {
         self.re_color = Some(
             Regex::new(self.regex_str_color.as_str())
@@ -109,9 +127,9 @@ impl Decorator {
     }
 
     /// If line contains a keyword, color the entire line
-    fn colorize_line(&self, line: String, keyword: &str, color: &Color) -> (String, bool) {
+    fn try_colorize_line(&self, line: String, keyword: &str, color: &Color) -> (String, bool) {
         if line.contains(keyword) {
-            ([color, line.as_str(), ANSI_RESET].concat(), true)
+            (colorize_line(color, line), true)
         } else {
             (line, false)
         }
@@ -139,22 +157,36 @@ impl Decorator {
         }
     }
 
-    pub fn decorate(&self, mut line: String) -> String {
+    pub fn decorate(&self, level: i32, mut line: String) -> String {
         // TODO(porce): Support styles such as bold, italic, blink
         if !self.is_active {
             return line;
         }
-        let mut encompassing_color = "";
-        for (keyword, color) in &self.lines {
-            let ret = self.colorize_line(line, keyword, &color);
-            line = ret.0;
-            if ret.1 {
-                encompassing_color = color;
-                break;
+
+        match self.mode {
+            DecoratorMode::ColorByLogLevel => {
+                // Use log level to colorize entire line
+                if let Some(color) = self.log_levels.get(&level) {
+                    colorize_line(color, line)
+                } else {
+                    line
+                }
+            }
+            DecoratorMode::ColorByKeyword => {
+                // Find matching keywords and colorize message
+                let mut encompassing_color = "";
+                for (keyword, color) in &self.lines {
+                    let ret = self.try_colorize_line(line, keyword, &color);
+                    line = ret.0;
+                    if ret.1 {
+                        encompassing_color = color;
+                        break;
+                    }
+                }
+
+                self.colorize_words(line, &encompassing_color)
             }
         }
-
-        self.colorize_words(line, &encompassing_color)
     }
 }
 
@@ -198,6 +230,7 @@ struct LocalOptions {
     only: Vec<String>,
     suppress: Vec<String>,
     dump_logs: bool,
+    hide_metadata: bool,
 }
 
 impl Default for LocalOptions {
@@ -216,6 +249,7 @@ impl Default for LocalOptions {
             only: vec![],
             suppress: vec![],
             dump_logs: false,
+            hide_metadata: false,
         }
     }
 }
@@ -224,7 +258,11 @@ impl LocalOptions {
     fn format_time(&self, timestamp: zx::sys::zx_time_t) -> String {
         match self.clock {
             Clock::Monotonic => {
-                format!("{:05}.{:06}", timestamp / 1000000000, (timestamp / 1000) % 1000000)
+                if self.hide_metadata {
+                    format!("{}.{}", timestamp / 1000000000, (timestamp / 1000000) % 1000)
+                } else {
+                    format!("{:05}.{:06}", timestamp / 1000000000, (timestamp / 1000) % 1000000)
+                }
             }
             Clock::UTC => self._monotonic_to_utc(timestamp).format(&self.time_format).to_string(),
             Clock::Local => chrono::Local
@@ -405,6 +443,10 @@ fn help(name: &str) -> String {
 
         --dump_logs yes:
             Dump current logs in buffer and exit.
+
+        --hide_metadata yes:
+            Hides extraneous metadata (such as PID, TID) from log output.
+            When paired with --pretty, lines are colorized by severity.
 
         --help | -h:
             Prints usage."#,
@@ -633,6 +675,12 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                     ));
                 }
             }
+            "--hide_metadata" => {
+                let ans = &args[i + 1];
+                if ans.to_lowercase() == "yes" {
+                    options.local.hide_metadata = true;
+                }
+            }
             a => {
                 return Err(format!("Invalid option {}", a));
             }
@@ -730,15 +778,26 @@ where
             }
         }
         let tags = message.tags.join(", ");
-        let line = format!(
-            "[{}][{}][{}][{}] {}: {}",
-            self.local_options.format_time(message.time),
-            message.pid,
-            message.tid,
-            tags,
-            get_log_level(message.severity),
-            message.msg
-        );
+
+        let line = if self.local_options.hide_metadata {
+            format!(
+                "[{}][{}][{}] {}",
+                self.local_options.format_time(message.time),
+                tags,
+                get_log_level_short(message.severity),
+                message.msg
+            )
+        } else {
+            format!(
+                "[{}][{}][{}][{}] {}: {}",
+                self.local_options.format_time(message.time),
+                message.pid,
+                message.tid,
+                tags,
+                get_log_level(message.severity),
+                message.msg
+            )
+        };
 
         if self.re_only.is_some() && !self.re_only.as_ref().unwrap().is_match(line.as_str()) {
             return;
@@ -768,7 +827,8 @@ where
             }
         }
 
-        if let Err(_) = writeln!(self.writer, "{}", self.decorator.decorate(line)) {
+        if let Err(_) = writeln!(self.writer, "{}", self.decorator.decorate(message.severity, line))
+        {
             process::exit(1);
         }
 
@@ -814,14 +874,38 @@ fn get_log_level(level: i32) -> String {
     }
 }
 
+fn get_log_level_short(level: i32) -> String {
+    // note levels align with syslog logger.h definitions
+    match level {
+        l if (l == LogLevelFilter::Trace as i32) => "T".to_string(),
+        l if (l == LogLevelFilter::Debug as i32) => "D".to_string(),
+        l if (l < LogLevelFilter::Info as i32 && l > LogLevelFilter::Debug as i32) => {
+            format!("VLOG({})", (LogLevelFilter::Info as i32) - l)
+        }
+        l if (l == LogLevelFilter::Info as i32) => "I".to_string(),
+        l if (l == LogLevelFilter::Warn as i32) => "W".to_string(),
+        l if (l == LogLevelFilter::Error as i32) => "E".to_string(),
+        l if (l == LogLevelFilter::Fatal as i32) => "F".to_string(),
+        l => format!("INVALID({})", l),
+    }
+}
+
 fn new_listener(local_options: LocalOptions) -> Result<Listener<Box<dyn Write + Send>>, Error> {
     let writer: Box<dyn Write + Send> = match local_options.file {
         None => Box::new(io::stdout()),
         Some(ref name) => Box::new(MaxCapacityFile::new(name, local_options.file_capacity)?),
     };
 
-    let mut d = Decorator::new();
-    if local_options.is_pretty {
+    let mut d = if local_options.hide_metadata {
+        let mut d = Decorator::new(DecoratorMode::ColorByLogLevel);
+        d.add_log_level(LogLevelFilter::Trace, CYAN);
+        d.add_log_level(LogLevelFilter::Debug, MAGENTA);
+        d.add_log_level(LogLevelFilter::Warn, YELLOW);
+        d.add_log_level(LogLevelFilter::Error, RED);
+        d.add_log_level(LogLevelFilter::Fatal, WHITE_ON_RED);
+        d
+    } else {
+        let mut d = Decorator::new(DecoratorMode::ColorByKeyword);
         d.add_line("welcome to Zircon".to_string(), WHITE_ON_RED);
         d.add_line("dm reboot".to_string(), WHITE_ON_RED);
         d.add_line(" bt#".to_string(), WHITE_ON_RED);
@@ -830,7 +914,10 @@ fn new_listener(local_options: LocalOptions) -> Result<Listener<Box<dyn Write + 
         d.add_word("info".to_string(), YELLOW);
         d.add_word("unknown".to_string(), GREEN);
         d.add_word("warning|warn".to_string(), BLUE);
+        d
+    };
 
+    if local_options.is_pretty {
         d.activate();
     }
 
@@ -889,6 +976,46 @@ mod tests {
     }
 
     #[test]
+    fn test_simple_log() {
+        let mut local_options = LocalOptions::default();
+        local_options.hide_metadata = true;
+        let tmp_dir = TempDir::new().expect("log_listener: should have created tempdir");
+        let file_path = tmp_dir.path().join("tmp_file");
+        let tmp_file = File::create(&file_path).expect("log_listener: should have created file");
+        let mut l =
+            Listener::new(tmp_file, local_options, Decorator::new(DecoratorMode::ColorByLogLevel));
+
+        // test log levels
+        let mut message = LogMessage {
+            pid: 123,
+            tid: 321,
+            severity: LogLevelFilter::Trace as i32,
+            time: 76352234564,
+            msg: "hello".to_string(),
+            dropped_logs: 0,
+            tags: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        };
+        // start with TRACE message
+        l.log(copy_log_message(&message));
+        // add messages with varying severity
+        for level in vec![0x20, 0x30, 0x40, 0x50, 0x60] {
+            message.severity = level;
+            l.log(copy_log_message(&message));
+        }
+        let mut expected = "".to_string();
+        for level in &["T", "D", "I", "W", "E", "F"] {
+            expected.push_str(&format!("[76.352][a, b, c][{}] hello\n", level));
+        }
+
+        // Compare the log output with the expectation.
+        let mut tmp_file = File::open(&file_path).expect("should have opened the file");
+        let mut content = String::new();
+        tmp_file.read_to_string(&mut content).expect("something went wrong reading the file");
+
+        assert_eq!(content, expected);
+    }
+
+    #[test]
     fn test_log_fn() {
         let _executor =
             fasync::TestExecutor::new().expect("log_listener: unable to create executor");
@@ -896,7 +1023,11 @@ mod tests {
         let file_path = tmp_dir.path().join("tmp_file");
         let tmp_file = File::create(&file_path).expect("log_listener: should have created file");
 
-        let mut l = Listener::new(tmp_file, LocalOptions::default(), Decorator::new());
+        let mut l = Listener::new(
+            tmp_file,
+            LocalOptions::default(),
+            Decorator::new(DecoratorMode::ColorByKeyword),
+        );
 
         // test log levels
         let mut message = LogMessage {
@@ -981,7 +1112,8 @@ mod tests {
         filter_options.suppress.push("noisy".to_string());
         filter_options.only.push("interesting".to_string());
 
-        let mut l = Listener::new(tmp_file, filter_options, Decorator::new());
+        let mut l =
+            Listener::new(tmp_file, filter_options, Decorator::new(DecoratorMode::ColorByKeyword));
 
         // Log message filter test
         let mut message2 = LogMessage {
@@ -1028,7 +1160,8 @@ mod tests {
         filter_options.end.push("fourth".to_string());
         filter_options.end.push("sixth".to_string());
 
-        let mut l = Listener::new(tmp_file, filter_options, Decorator::new());
+        let mut l =
+            Listener::new(tmp_file, filter_options, Decorator::new(DecoratorMode::ColorByKeyword));
         let mut message3 = LogMessage {
             pid: 0,
             tid: 0,
@@ -1081,7 +1214,8 @@ mod tests {
         // ignored
         filter_options.since_time = Some(1000000000);
 
-        let mut l = Listener::new(tmp_file, filter_options, Decorator::new());
+        let mut l =
+            Listener::new(tmp_file, filter_options, Decorator::new(DecoratorMode::ColorByKeyword));
         let mut msg = LogMessage {
             pid: 0,
             tid: 0,
@@ -1649,7 +1783,7 @@ mod tests {
     }
 
     #[test]
-    fn test_decorate() {
+    fn test_complex_decorate() {
         let syslog = "
             [00051.028569][1051][1054][klog] INFO: bootsvc: Creating bootfs service...
             [00052.101073][5525][5550][klog] INFO: ath10k: ath10k: Probed chip QCA6174 ver: 2.1
@@ -1658,13 +1792,13 @@ mod tests {
             [00055.306545][526727887][0][netstack] INFO: netstack.go(363): NIC ethp001f6: DHCP acquired IP 192.168.42.193 for 24h0m0s
             [00229.964817][1170][1263][klog] INFO: bt#02: pc 0x644746c42725 sp 0x3279d688da00 (app:/boot/bin/sh,0x1b725)";
 
-        let mut d = Decorator::new();
+        let mut d = Decorator::new(DecoratorMode::ColorByKeyword);
         d.add_word("error".to_string(), RED);
         d.add_word("info".to_string(), YELLOW);
         d.activate();
 
         for line in syslog.split("\n") {
-            println!("{}", d.decorate(line.to_string()));
+            println!("{}", d.decorate(0x30, line.to_string()));
         }
     }
 }

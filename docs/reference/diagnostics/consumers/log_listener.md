@@ -77,6 +77,13 @@ usually invoke it with [`fx log`](https://fuchsia.dev/reference/tools/fx/cmd/log
    </td>
   </tr>
   <tr>
+   <td><code>--hide_metadata yes</code>
+   </td>
+   <td>Hides extraneous metadata (such as PID, TID) from log output. When paired with
+   <code>--pretty</code>, lines are colorized by severity.
+   </td>
+  </tr>
+  <tr>
    <td><code>--severity &lt;level></code>
    </td>
    <td>Minimum severity to include. Defaults to <code>INFO</code>.
