@@ -26,7 +26,7 @@ static const buttons_button_config_t buttons_direct[] = {
 };
 
 static const buttons_gpio_config_t gpios_direct[] = {
-    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}}};
+    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {.interrupt = {GPIO_NO_PULL}}}};
 
 static const buttons_button_config_t buttons_multiple[] = {
     {BUTTONS_TYPE_DIRECT, BUTTONS_ID_VOLUME_UP, 0, 0, 0},
@@ -35,9 +35,15 @@ static const buttons_button_config_t buttons_multiple[] = {
 };
 
 static const buttons_gpio_config_t gpios_multiple[] = {
-    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}},
-    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}},
-    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {.interrupt = {GPIO_NO_PULL}}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {.interrupt = {GPIO_NO_PULL}}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {.interrupt = {GPIO_NO_PULL}}},
+};
+
+static const buttons_gpio_config_t gpios_multiple_one_polled[] = {
+    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {.interrupt = {GPIO_NO_PULL}}},
+    {BUTTONS_GPIO_TYPE_POLL, 0, {.poll = {GPIO_NO_PULL, zx::msec(20).get()}}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {.interrupt = {GPIO_NO_PULL}}},
 };
 
 static const buttons_button_config_t buttons_matrix[] = {
@@ -48,10 +54,10 @@ static const buttons_button_config_t buttons_matrix[] = {
 };
 
 static const buttons_gpio_config_t gpios_matrix[] = {
-    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_PULL_UP}},
-    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_PULL_UP}},
-    {BUTTONS_GPIO_TYPE_MATRIX_OUTPUT, 0, {0}},
-    {BUTTONS_GPIO_TYPE_MATRIX_OUTPUT, 0, {0}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {.interrupt = {GPIO_PULL_UP}}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {.interrupt = {GPIO_PULL_UP}}},
+    {BUTTONS_GPIO_TYPE_MATRIX_OUTPUT, 0, {.matrix = {0}}},
+    {BUTTONS_GPIO_TYPE_MATRIX_OUTPUT, 0, {.matrix = {0}}},
 };
 
 static const buttons_button_config_t buttons_duplicate[] = {
@@ -61,13 +67,49 @@ static const buttons_button_config_t buttons_duplicate[] = {
 };
 
 static const buttons_gpio_config_t gpios_duplicate[] = {
-    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}},
-    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}},
-    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {.interrupt = {GPIO_NO_PULL}}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {.interrupt = {GPIO_NO_PULL}}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {.interrupt = {GPIO_NO_PULL}}},
 };
 }  // namespace
 
 namespace buttons {
+
+class MockGpio : public ddk::MockGpio {
+ public:
+  MockGpio& SetDefaultReadValue(uint8_t value) {
+    default_read_value_ = value;
+    use_default_read_value_ = true;
+    return *this;
+  }
+
+  zx_status_t GpioRead(uint8_t* out_value) override {
+    if (use_default_read_value_) {
+      *out_value = default_read_value_;
+      return ZX_OK;
+    }
+    return ddk::MockGpio::GpioRead(out_value);
+  }
+
+  void VerifyAndClear() {
+    mock_config_in_.VerifyAndClear();
+    mock_config_out_.VerifyAndClear();
+    mock_set_alt_function_.VerifyAndClear();
+    mock_write_.VerifyAndClear();
+    mock_get_interrupt_.VerifyAndClear();
+    mock_release_interrupt_.VerifyAndClear();
+    mock_set_polarity_.VerifyAndClear();
+    mock_set_drive_strength_.VerifyAndClear();
+
+    if (!use_default_read_value_) {
+      mock_read_.VerifyAndClear();
+    }
+  }
+
+ private:
+  bool use_default_read_value_ = false;
+  uint8_t default_read_value_ = 0;
+};
 
 class HidButtonsDeviceTest : public HidButtonsDevice {
  public:
@@ -90,7 +132,7 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
 
   void ShutDownTest() { DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice)); }
 
-  ddk::MockGpio& GetGpio(size_t index) { return gpio_mocks_[index]; }
+  MockGpio& GetGpio(size_t index) { return gpio_mocks_[index]; }
 
   void VerifyAndClearGpios() {
     for (auto& gpio : gpio_mocks_) {
@@ -98,11 +140,11 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
     }
   }
 
-  void SetupGpio(ddk::MockGpio* mock, const buttons_gpio_config_t& gpio_config, zx::interrupt irq) {
+  void SetupGpio(MockGpio* mock, const buttons_gpio_config_t& gpio_config, zx::interrupt irq) {
     mock->ExpectSetAltFunction(ZX_OK, 0);
 
     if (gpio_config.type == BUTTONS_GPIO_TYPE_INTERRUPT) {
-      mock->ExpectConfigIn(ZX_OK, gpio_config.internal_pull)
+      mock->ExpectConfigIn(ZX_OK, gpio_config.interrupt.internal_pull)
           .ExpectRead(ZX_OK, 0)  // Not pushed, low.
           .ExpectReleaseInterrupt(ZX_OK)
           .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_HIGH, std::move(irq));
@@ -112,13 +154,15 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
           .ExpectSetPolarity(ZX_OK, GPIO_POLARITY_HIGH)  // Set correct polarity.
           .ExpectRead(ZX_OK, 0);                         // Still not pushed.
     } else if (gpio_config.type == BUTTONS_GPIO_TYPE_MATRIX_OUTPUT) {
-      mock->ExpectConfigOut(ZX_OK, gpio_config.output_value);
+      mock->ExpectConfigOut(ZX_OK, gpio_config.matrix.output_value);
+    } else if (gpio_config.type == BUTTONS_GPIO_TYPE_POLL) {
+      mock->ExpectConfigIn(ZX_OK, gpio_config.poll.internal_pull);
     }
   }
 
   zx_status_t BindTest(const buttons_gpio_config_t* gpios_config, size_t gpios_config_size,
                        const buttons_button_config_t* buttons_config, size_t buttons_config_size) {
-    gpio_mocks_ = std::vector<ddk::MockGpio>(gpios_config_size);
+    gpio_mocks_ = std::vector<MockGpio>(gpios_config_size);
     for (size_t i = 0; i < gpio_mocks_.size(); i++) {
       zx::interrupt irq;
       zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq);
@@ -145,7 +189,7 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
           gpio_mocks_[buttons[i].gpioB_idx].ExpectConfigIn(ZX_OK, 0x2);
           gpio_mocks_[buttons[i].gpioA_idx].ExpectRead(ZX_OK, 0);
           gpio_mocks_[buttons[i].gpioB_idx].ExpectConfigOut(
-              ZX_OK, gpios[buttons[i].gpioB_idx].config.output_value);
+              ZX_OK, gpios[buttons[i].gpioB_idx].config.matrix.output_value);
           break;
         }
         default:
@@ -197,7 +241,7 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
   sync_completion_t test_channels_cleared_;
   sync_completion_t debounce_threshold_passed_;
 
-  std::vector<ddk::MockGpio> gpio_mocks_;
+  std::vector<MockGpio> gpio_mocks_;
 };
 
 TEST(HidButtonsTest, DirectButtonBind) {
@@ -371,24 +415,24 @@ TEST(HidButtonsTest, MatrixButtonPush) {
       .ExpectRead(ZX_OK, 1);                        // Still pushed, ok to continue.
 
   // Matrix Scan for 0.
-  device.GetGpio(2).ExpectConfigIn(ZX_OK, GPIO_NO_PULL);                   // Float column.
-  device.GetGpio(0).ExpectRead(ZX_OK, 1);                                  // Read row.
-  device.GetGpio(2).ExpectConfigOut(ZX_OK, gpios_matrix[2].output_value);  // Restore column.
+  device.GetGpio(2).ExpectConfigIn(ZX_OK, GPIO_NO_PULL);                          // Float column.
+  device.GetGpio(0).ExpectRead(ZX_OK, 1);                                         // Read row.
+  device.GetGpio(2).ExpectConfigOut(ZX_OK, gpios_matrix[2].matrix.output_value);  // Restore column.
 
   // Matrix Scan for 1.
-  device.GetGpio(2).ExpectConfigIn(ZX_OK, GPIO_NO_PULL);                   // Float column.
-  device.GetGpio(1).ExpectRead(ZX_OK, 0);                                  // Read row.
-  device.GetGpio(2).ExpectConfigOut(ZX_OK, gpios_matrix[2].output_value);  // Restore column.
+  device.GetGpio(2).ExpectConfigIn(ZX_OK, GPIO_NO_PULL);                          // Float column.
+  device.GetGpio(1).ExpectRead(ZX_OK, 0);                                         // Read row.
+  device.GetGpio(2).ExpectConfigOut(ZX_OK, gpios_matrix[2].matrix.output_value);  // Restore column.
 
   // Matrix Scan for 2.
-  device.GetGpio(3).ExpectConfigIn(ZX_OK, GPIO_NO_PULL);                   // Float column.
-  device.GetGpio(0).ExpectRead(ZX_OK, 0);                                  // Read row.
-  device.GetGpio(3).ExpectConfigOut(ZX_OK, gpios_matrix[3].output_value);  // Restore column.
+  device.GetGpio(3).ExpectConfigIn(ZX_OK, GPIO_NO_PULL);                          // Float column.
+  device.GetGpio(0).ExpectRead(ZX_OK, 0);                                         // Read row.
+  device.GetGpio(3).ExpectConfigOut(ZX_OK, gpios_matrix[3].matrix.output_value);  // Restore column.
 
   // Matrix Scan for 3.
-  device.GetGpio(3).ExpectConfigIn(ZX_OK, GPIO_NO_PULL);                   // Float column.
-  device.GetGpio(1).ExpectRead(ZX_OK, 0);                                  // Read row.
-  device.GetGpio(3).ExpectConfigOut(ZX_OK, gpios_matrix[3].output_value);  // Restore colument.
+  device.GetGpio(3).ExpectConfigIn(ZX_OK, GPIO_NO_PULL);                          // Float column.
+  device.GetGpio(1).ExpectRead(ZX_OK, 0);                                         // Read row.
+  device.GetGpio(3).ExpectConfigOut(ZX_OK, gpios_matrix[3].matrix.output_value);  // Restore column.
 
   device.FakeInterrupt();
   device.DebounceWait();
@@ -958,7 +1002,7 @@ TEST(HidButtonsTest, MicAndCamMute) {
       {BUTTONS_TYPE_DIRECT, BUTTONS_ID_MIC_AND_CAM_MUTE, 0, 0, 0},
   };
   static const buttons_gpio_config_t gpios_config[] = {
-      {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}},
+      {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {.interrupt = {GPIO_NO_PULL}}},
   };
   HidButtonsDeviceTest device;
   EXPECT_OK(device.BindTest(gpios_config, countof(gpios_config), buttons_config,
@@ -1032,6 +1076,64 @@ TEST(HidButtonsTest, MicAndCamMute) {
   device.HidbusStop();
   device.ShutDownTest();
   ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+}
+
+TEST(HidButtonsTest, PollOneButton) {
+  HidButtonsDeviceTest device;
+  EXPECT_OK(device.BindTest(gpios_multiple_one_polled, countof(gpios_multiple_one_polled),
+                            buttons_multiple, countof(buttons_multiple)));
+
+  // All GPIOs must have a default read value if polling is being used, as they are all ready
+  // every poll period.
+  device.GetGpio(1).SetDefaultReadValue(0);
+  device.GetGpio(2).SetDefaultReadValue(0);
+
+  std::vector<buttons_input_rpt_t> reports;
+
+  hidbus_ifc_protocol_ops_t ops = {};
+  ops.io_queue = [](void* ctx, const uint8_t* buffer, size_t size, zx_time_t time) {
+    buttons_input_rpt_t report;
+    ASSERT_EQ(size, sizeof(report));
+    memcpy(&report, buffer, size);
+    reinterpret_cast<std::vector<buttons_input_rpt_t>*>(ctx)->push_back(report);
+  };
+  hidbus_ifc_protocol_t protocol = {.ops = &ops, .ctx = &reports};
+  device.HidbusStart(&protocol);
+
+  device.GetGpio(0).SetDefaultReadValue(1).ExpectSetPolarity(ZX_OK, GPIO_POLARITY_LOW);
+  device.FakeInterrupt();
+  device.DebounceWait();
+
+  device.GetGpio(1).SetDefaultReadValue(1);
+  device.DebounceWait();
+
+  device.GetGpio(0).SetDefaultReadValue(0).ExpectSetPolarity(ZX_OK, GPIO_POLARITY_HIGH);
+  device.FakeInterrupt();
+  device.DebounceWait();
+
+  device.GetGpio(1).SetDefaultReadValue(0);
+  device.DebounceWait();
+
+  device.ShutDownTest();
+  ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
+
+  ASSERT_EQ(reports.size(), 4);
+
+  EXPECT_EQ(reports[0].rpt_id, BUTTONS_RPT_ID_INPUT);
+  EXPECT_EQ(reports[0].volume_up, 1);
+  EXPECT_EQ(reports[0].mute, 0);
+
+  EXPECT_EQ(reports[1].rpt_id, BUTTONS_RPT_ID_INPUT);
+  EXPECT_EQ(reports[1].volume_up, 1);
+  EXPECT_EQ(reports[1].mute, 1);
+
+  EXPECT_EQ(reports[2].rpt_id, BUTTONS_RPT_ID_INPUT);
+  EXPECT_EQ(reports[2].volume_up, 0);
+  EXPECT_EQ(reports[2].mute, 1);
+
+  EXPECT_EQ(reports[3].rpt_id, BUTTONS_RPT_ID_INPUT);
+  EXPECT_EQ(reports[3].volume_up, 0);
+  EXPECT_EQ(reports[3].mute, 0);
 }
 
 }  // namespace buttons

@@ -45,6 +45,8 @@ constexpr uint64_t kPortKeyShutDown = 0x01;
 constexpr uint64_t kPortKeyInterruptStart = 0x10;
 // Timer start
 constexpr uint64_t kPortKeyTimerStart = 0x100;
+// Poll timer
+constexpr uint64_t kPortKeyPollTimer = 0x1000;
 // Debounce threshold.
 constexpr uint64_t kDebounceThresholdNs = 50'000'000;
 
@@ -139,6 +141,9 @@ class HidButtonsDevice : public DeviceType {
   fbl::Array<debounce_state> debounce_states_;
   // last_report_ saved to de-duplicate reports
   buttons_input_rpt_t last_report_;
+
+  zx::duration poll_period_{zx::duration::infinite()};
+  zx::timer poll_timer_;
 };
 
 class HidButtonsHidBusFunction

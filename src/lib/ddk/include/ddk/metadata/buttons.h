@@ -26,6 +26,7 @@
 
 #define BUTTONS_GPIO_TYPE_INTERRUPT      0x01
 #define BUTTONS_GPIO_TYPE_MATRIX_OUTPUT  0x02
+#define BUTTONS_GPIO_TYPE_POLL           0x03
 
 #define BUTTONS_GPIO_FLAG_INVERTED       0x80
 // clang-format on
@@ -47,8 +48,16 @@ typedef struct GpioConfig {
   uint8_t type;   // e.g. BUTTONS_GPIO_TYPE_INTERRUPT.
   uint8_t flags;  // e.g. BUTTONS_GPIO_FLAG_INVERTED.
   union {
-    uint32_t internal_pull;  // Only applicable to BUTTONS_GPIO_TYPE_INTERRUPT.
-    uint8_t output_value;    // Only applicable to BUTTONS_GPIO_TYPE_MATRIX_OUTPUT.
+    struct {  // Only applicable to BUTTONS_GPIO_TYPE_INTERRUPT.
+      uint32_t internal_pull;
+    } interrupt;
+    struct {  // Only applicable to BUTTONS_GPIO_TYPE_MATRIX_OUTPUT.
+      uint8_t output_value;
+    } matrix;
+    struct {  // Only applicable to BUTTONS_GPIO_TYPE_POLL.
+      uint32_t internal_pull;
+      zx_duration_t period;
+    } poll;
   };
 } buttons_gpio_config_t;
 

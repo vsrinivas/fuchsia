@@ -24,14 +24,15 @@ static const buttons_button_config_t buttons[] = {
     {BUTTONS_TYPE_DIRECT, BUTTONS_ID_FDR,         2, 0, 0},
     {BUTTONS_TYPE_DIRECT, BUTTONS_ID_MIC_MUTE,    3, 0, 0},
 };
+// clang-format on
+
 // No need for internal pull, external pull-ups used.
 static const buttons_gpio_config_t gpios[] = {
-    {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
-    {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
-    {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
-    {BUTTONS_GPIO_TYPE_INTERRUPT, 0                         , {GPIO_NO_PULL}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {.interrupt = {GPIO_NO_PULL}}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {.interrupt = {GPIO_NO_PULL}}},
+    {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {.interrupt = {GPIO_NO_PULL}}},
+    {BUTTONS_GPIO_TYPE_POLL, 0, {.poll = {GPIO_NO_PULL, zx::msec(20).get()}}},
 };
-// clang-format on
 
 static const device_metadata_t available_buttons_metadata[] = {
     {
