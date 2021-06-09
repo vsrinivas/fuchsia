@@ -607,6 +607,11 @@ sdk_molecule("bind") {
   ]
 }
 
+sdk_molecule("ddk_fidl") {
+  visibility = [ ":*" ]
+  deps = [ "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_sdk($fidl_toolchain)" ]
+}
+
 # An experimental SDK for developing drivers.
 sdk("ddk") {
   id = sdk_id
@@ -618,7 +623,9 @@ sdk("ddk") {
   deps = [
     ":banjo",
     ":bind",
+    ":ddk_fidl",
     ":ddk_host_tools",
+    "//src/devices/usb/lib/usb:usb_sdk",
     "//src/lib/ddk:ddk_sdk",
     "//src/lib/ddktl:ddktl_sdk",
   ]

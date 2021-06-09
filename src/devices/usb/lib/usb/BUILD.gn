@@ -11,11 +11,15 @@ group("tests") {
 
 zx_library("usb") {
   sdk = "source"
+  sdk_publishable = true
+  sdk_name = "usb-experimental-driver-only"
   sdk_headers = [
+    "usb/request-cpp.h",
     "usb/usb-request.h",
     "usb/usb.h",
   ]
   sources = [
+    "align.h",
     "usb-request.c",
     "usb-wrapper.cc",
     "usb.c",
@@ -38,6 +42,5 @@ zx_library("usb") {
     "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/zircon-internal",
   ]
 }

@@ -5,7 +5,6 @@
 #include <fuchsia/hardware/usb/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/phys-iter.h>
-#include <lib/zircon-internal/align.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +13,8 @@
 
 #include <ddk/hw/physiter/c/banjo.h>
 #include <usb/usb-request.h>
+
+#include "align.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -242,10 +243,10 @@ zx_status_t usb_request_physmap(usb_request_t* req, zx_handle_t bti_handle) {
   const size_t kPageSize = zx_system_get_page_size();
   // zx_bti_pin returns whole pages, so take into account unaligned vmo
   // offset and length when calculating the amount of pages returned
-  uint64_t page_offset = ZX_ROUNDDOWN(req->offset, kPageSize);
+  uint64_t page_offset = USB_ROUNDDOWN(req->offset, kPageSize);
   // The buffer size is the vmo size from offset 0.
   uint64_t page_length = req->size - page_offset;
-  uint64_t pages = ZX_ROUNDUP(page_length, kPageSize) / kPageSize;
+  uint64_t pages = USB_ROUNDUP(page_length, kPageSize) / kPageSize;
 
   zx_paddr_t* paddrs = malloc(pages * sizeof(zx_paddr_t));
   if (paddrs == NULL) {
@@ -254,7 +255,7 @@ zx_status_t usb_request_physmap(usb_request_t* req, zx_handle_t bti_handle) {
   }
   const size_t sub_offset = page_offset & (kPageSize - 1);
   const size_t pin_offset = page_offset - sub_offset;
-  const size_t pin_length = ZX_ROUNDUP(page_length + sub_offset, kPageSize);
+  const size_t pin_length = USB_ROUNDUP(page_length + sub_offset, kPageSize);
 
   if (pin_length / kPageSize != pages) {
     return ZX_ERR_INVALID_ARGS;

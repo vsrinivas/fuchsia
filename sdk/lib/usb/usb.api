@@ -1,0 +1,5 @@
+{
+  "pkg/usb-experimental-driver-only/include/usb/request-cpp.h": "430cc3ee3fe49298fa8cb1c5438f4170",
+  "pkg/usb-experimental-driver-only/include/usb/usb-request.h": "308031d833e2d6391a321817dd960177",
+  "pkg/usb-experimental-driver-only/include/usb/usb.h": "3c689f6419cfad6b06161f02f3f200d0"
+}
