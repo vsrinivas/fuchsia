@@ -19,13 +19,13 @@ namespace fidl::fmt {
 class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
  public:
   explicit SpanSequenceTreeVisitor(std::string_view file)
-      : empty_lines_(0), file_(file), uningested_(file) {}
+      : file_(file), preceding_newlines_(0), uningested_(file) {}
 
   // These "On*" methods may be called on files written in the new syntax.
   void OnAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> const& element) override;
-  void OnAttributeListNew(std::unique_ptr<raw::AttributeListNew> const& element) override {
-    NotYetImplemented();
-  };
+  void OnAttributeArg(raw::AttributeArg const& element) override;
+  void OnAttributeNew(raw::AttributeNew const& element) override;
+  void OnAttributeListNew(std::unique_ptr<raw::AttributeListNew> const& element) override;
   void OnBinaryOperatorConstant(
       std::unique_ptr<raw::BinaryOperatorConstant> const& element) override;
   void OnComposeProtocol(std::unique_ptr<raw::ComposeProtocol> const& element) override {
@@ -158,6 +158,9 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
  private:
   enum struct VisitorKind {
     kAliasDeclaration,
+    kAttributeArg,
+    kAttribute,
+    kAttributeList,
     kBinaryOperatorFirstConstant,
     kBinaryOperatorSecondConstant,
     kCompoundIdentifier,
@@ -322,8 +325,9 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // in the raw AST is.  All of the usual caveats when working with raw char arrays apply: make sure
   // that the limit character is actually in the range of the uningested_ string_view before
   // calling this function, make sure the limit pointer is not null, etc.
-  std::optional<std::unique_ptr<SpanSequence>> IngestUntil(const char* limit,
-                                                           bool stop_at_semicolon = false);
+  std::optional<std::unique_ptr<SpanSequence>> IngestUntil(
+      const char* limit, bool stop_at_semicolon = false,
+      SpanSequence::Position position = SpanSequence::Position::kDefault);
   std::optional<std::unique_ptr<SpanSequence>> IngestUntilEndOfFile();
 
   // Ingest until the first semicolon we encounter, taking care to include any inline comments that
@@ -339,6 +343,15 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // `Visiting` class for more on why this is useful.
   std::vector<VisitorKind> ast_path_;
 
+  // We need to invoke the OnAttributesList visitor manually, to ensure that it attributes are
+  // handled independently of the declaration they are attached to.  This means that every
+  // AttributeList will be visited twice: once during this manual invocation, and then again during
+  // the regular course of the TreeVisitor for the raw AST node the AttributeList is attached to.
+  // To ensure that the AttributeList is not processed twice, each new OnAttributeList invocation
+  // checks against this set to ensure that the AttributeList in question has not already been
+  // visited.
+  std::set<raw::AttributeListNew*> attribute_lists_seen_;
+
   // A stack that keeps track of the CompositeSpanSequence we are currently building.  It is a list
   // of that CompositeSpanSequence's children.  When the child list has been filled out, it is
   // popped off the stack and pushed onto the new top element as its child.
@@ -349,14 +362,14 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // exhausting this class.
   std::stack<std::vector<std::unique_ptr<SpanSequence>>> building_;
 
-  // Keeps track of the number of empty lines immediately preceding the uningested_ string_view in
-  // the source file.  This value is used to set the leading_blank_lines value on the next
-  // SpanSequence to be generated.
-  size_t empty_lines_;
-
   // A view into the entire source file being formatted.  Unlike uningested_ below, this serves only
   // as a static reference.
   const std::string_view file_;
+
+  // Keeps track of the number of newlines in the whitespace immediately preceding the current
+  // position of the uningested string_view pointer.  This allows us to calculate the number of
+  // leading_blank_lines needed for the next span.
+  size_t preceding_newlines_;
 
   // A view tracking the remaining portion of the file source string that has yet to be ingested by
   // the formatter.

@@ -158,6 +158,10 @@ SpanSequence* CompositeSpanSequence::GetLastChild() {
 
 bool CompositeSpanSequence::IsEmpty() { return children_.empty(); }
 
+std::vector<std::unique_ptr<SpanSequence>>& CompositeSpanSequence::EditChildren() {
+  return children_;
+}
+
 const std::vector<std::unique_ptr<SpanSequence>>& CompositeSpanSequence::GetChildren() const {
   return children_;
 }
@@ -206,12 +210,6 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
         break;
       }
       case SpanSequence::Kind::kStandaloneComment: {
-        // A standalone comment forces a newline, but its possible that the preceding token already
-        // printed its trailing space.  We don't want to leave that trailing space hanging before a
-        // newline, so delete the space.
-        if (!out->empty() && out->back() == ' ')
-          out->pop_back();
-
         // A standalone comment always forces the rest of the AtomicSpanSequence content to be
         // wrapped, unless that comment precedes the first non-comment token in the span.
         if (!wrapped && first.has_value() && i >= first.value()) {
@@ -339,9 +337,11 @@ std::optional<SpanSequence::Kind> MultilineSpanSequence::Print(
   for (auto& child : GetChildren()) {
     auto child_indentation = indentation;
     if (child->GetPosition() != SpanSequence::Position::kDefault) {
-      if (last_printed_kind.has_value() && last_printed_kind == SpanSequence::Kind::kToken) {
-        *out += "\n";
-        for (size_t i = 0; i < child->GetLeadingBlankLines(); i++) {
+      if (last_printed_kind == SpanSequence::Kind::kToken) {
+        // Omit one of the blank lines in cases where a MultilineSpanSequence is the first child of
+        // another MultilineSpanSequence, meaning that the first newline has already been printed.
+        auto blanks = child->GetLeadingBlankLines();
+        for (size_t i = !out->empty() && out->back() == '\n' ? 1 : 0; i <= blanks; i++) {
           *out += "\n";
         }
       }
@@ -390,9 +390,18 @@ void StandaloneCommentSpanSequence::AddLine(const std::string_view line,
 std::optional<SpanSequence::Kind> StandaloneCommentSpanSequence::Print(
     const size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind,
     size_t indentation, bool wrapped, std::string* out) const {
+  // A standalone comment forces a newline, but its possible that the preceding token already
+  // printed its trailing space(s), or otherwise we've already indented this line.  We don't want to
+  // leave that trailing whitespace hanging before a newline, so let's delete the extra space(s).
+  // Deleting whitespace we've already printed is a bit clumsy, but this is the only place where we
+  // "undo" writes in this manner, and doing it this way allows us to keep the printer stateless.
+  while (!out->empty() && out->back() == ' ')
+    out->pop_back();
+
   const auto wrapped_indentation = indentation + (wrapped ? kWrappedIndentation : 0);
   if (last_printed_kind.has_value()) {
-    if (last_printed_kind == SpanSequence::Kind::kToken) {
+    // Make sure we start the comment on a newline, if one has not already been added to the output.
+    if (last_printed_kind == SpanSequence::Kind::kToken && !out->empty() && out->back() != '\n') {
       *out += "\n";
     }
     for (size_t i = 0; i < GetLeadingBlankLines(); i++) {

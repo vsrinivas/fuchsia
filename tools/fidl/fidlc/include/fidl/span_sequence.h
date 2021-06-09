@@ -173,6 +173,8 @@ class CompositeSpanSequence : public SpanSequence {
   void AddChild(std::unique_ptr<SpanSequence> child);
   void Close() override;
   void CloseChildren();
+  std::vector<std::unique_ptr<SpanSequence>>& EditChildren();
+  const std::vector<std::unique_ptr<SpanSequence>>& GetChildren() const;
   SpanSequence* GetLastChild();
   bool HasComments() const override { return has_comments_; }
   bool HasTokens() const override { return has_tokens_; }
@@ -181,7 +183,6 @@ class CompositeSpanSequence : public SpanSequence {
   bool IsEmpty();
 
   virtual size_t CalculateRequiredSize() const;
-  const std::vector<std::unique_ptr<SpanSequence>>& GetChildren() const;
 
  private:
   std::vector<std::unique_ptr<SpanSequence>> children_;

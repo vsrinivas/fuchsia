@@ -7,7 +7,7 @@
 #include "test_library.h"
 
 namespace {
-std::string Format(const std::string& source) {
+std::string Format(const std::string& source, bool reformat_and_compare = true) {
   fidl::ExperimentalFlags flags;
   flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   auto lib = WithLibraryZx(source, flags);
@@ -18,7 +18,17 @@ std::string Format(const std::string& source) {
   auto result = formatter.Format(lib.source_file(), flags);
   if (!result.has_value()) {
     lib.PrintReports();
-    return "PARSE_FAILED";
+    return reformat_and_compare ? "SECOND_PASS_PARSE_FAILED" : "PARSE_FAILED";
+  }
+
+  // Running the newly formatted output through the formatted another time tests that well-formatted
+  // inputs are always left unchanged by the formatter.
+  if (reformat_and_compare) {
+    return Format(result.value(), false);
+  }
+
+  if (source != result.value()) {
+    return "FORMAT_PASSES_NOT_EQUAL";
   }
   return "\n" + result.value();
 }
@@ -63,6 +73,35 @@ alias MyAlias_Abcdefghijklmnopqrs
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// Test with comments, doc comments, and attributes added and spaced out.
+TEST(NewFormatterTests, AliasWithAllAnnotations) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+ // comment
+
+  /// doc comment
+
+   @attr
+
+    alias MyAlias_Abcdefghijklmnopqr = bool;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+// comment
+
+/// doc comment
+@attr
+alias MyAlias_Abcdefghijklmnopqr = bool;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Test an alias declaration in which every token is placed on a newline.
 TEST(NewFormatterTests, AliasMaximalNewlines) {
   // ---------------40---------------- |
@@ -86,6 +125,136 @@ alias MyAlias_Abcdefghijklmnopqr = bool;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// TODO(fxbug.dev/78236): more tests need to be added here once multiple arguments are supported for
+//  attributes.
+
+// Ensure that already properly formatted attributes declarations are not modified by another run
+// through the formatter.
+TEST(NewFormatterTests, AttributesFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+@attr_without_args
+@attr_with_one_arg("abcdefghijklmnopqr")
+library foo.bar;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+@attr_without_args
+@attr_with_one_arg("abcdefghijklmnopqr")
+library foo.bar;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, AttributesSingle) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+   @attr_with_one_arg("abcd")
+library foo.bar;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+@attr_with_one_arg("abcd")
+library foo.bar;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Attributes with arguments should overflow gracefully, while attributes without them should not.
+TEST(NewFormatterTests, AttributesOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+@attr_without_args_abcdefghijklmnopqrstuv
+@attr_with_one_arg("abcdefghijklmnopqrs")
+library foo.bar;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+@attr_without_args_abcdefghijklmnopqrstuv
+@attr_with_one_arg(
+        "abcdefghijklmnopqrs")
+library foo.bar;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+TEST(NewFormatterTests, AttributesWithComment) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+ @attr_without_args
+
+  // comment
+
+   @attr_with_one_arg("abcdefghijklmnopqr")
+    library foo.bar;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+@attr_without_args
+
+// comment
+
+@attr_with_one_arg("abcdefghijklmnopqr")
+library foo.bar;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, AttributesWithDocComment) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+    /// doc comment 1
+    /// doc comment 2
+
+   @attr_without_args @attr_with_one_arg("abcdefghijklmnopqr")
+
+library foo.bar;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+/// doc comment 1
+/// doc comment 2
+@attr_without_args
+@attr_with_one_arg("abcdefghijklmnopqr")
+library foo.bar;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, AttributesMaximalNewLines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+@attr_without_args
+@attr_with_one_arg
+(
+"abcdefghijklmnopqr"
+)
+library
+foo
+.
+bar
+;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+@attr_without_args
+@attr_with_one_arg("abcdefghijklmnopqr")
+library foo.bar;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Ensure that already properly formatted const declarations are not modified by another run
 // through the formatter.
 TEST(NewFormatterTests, ConstFormatted) {
@@ -103,6 +272,44 @@ const MY_STRING_ABCDEFGH string = "foo";
 const MY_OR_A uint64 = 1 | MY_UINT64_AB;
 const MY_ORS_ABCDEFG uint64 = 1 | 2 | 3;
 const MY_REF_ABCD uint64 = MY_UINT64_AB;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+const MY_TRUE_ABCDEFGHIJKLM bool = true;
+const MY_FALSE_ABCDEFGHIJK bool = false;
+const MY_UINT64_AB uint64 = 12345678900;
+
+
+const MY_FLOAT64_ABCDEF float64 = 12.34;
+const MY_STRING_ABCDEFGH string = "foo";
+const MY_OR_A uint64 = 1 | MY_UINT64_AB;
+const MY_ORS_ABCDEFG uint64 = 1 | 2 | 3;
+const MY_REF_ABCD uint64 = MY_UINT64_AB;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+TEST(NewFormatterTests, ConstUnformatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+const    MY_TRUE_ABCDEFGHIJKLM bool = true;
+const MY_FALSE_ABCDEFGHIJK bool =    false;
+const MY_UINT64_AB uint64 = 12345678900   ;
+
+
+  const MY_FLOAT64_ABCDEF float64 = 12.34;
+   const MY_STRING_ABCDEFGH
+    string = "foo";
+const MY_OR_A uint64 = 1
+|   MY_UINT64_AB;
+const MY_ORS_ABCDEFG uint64=1|2|3;
+ const MY_REF_ABCD uint64 = MY_UINT64_AB
+;
 )FIDL";
 
   // ---------------40---------------- |
@@ -209,6 +416,35 @@ const MY_WAY_TOO_LONG_STRING_ABCDEFGHIJKL
 const MY_WAY_TOO_LONG_REF_ABCDEFGHIJKLMNO
         uint64
         = MY_WAY_TOO_LONG_UINT64_ABCDEFGHIJKL;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test with comments, doc comments, and attributes added and spaced out.
+TEST(NewFormatterTests, ConstWithAllAnnotations) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+ // comment
+
+  /// doc comment
+
+   @attr
+
+    const MY_TRUE_ABCDEFGHIJKLM bool = true;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+// comment
+
+/// doc comment
+@attr
+const MY_TRUE_ABCDEFGHIJKLM bool = true;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
@@ -328,6 +564,48 @@ library my.overlong.severely.overflowing.name;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// No overflow, but incorrect leading spacing and newlines.
+TEST(NewFormatterTests, LibraryUnformatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+  library
+
+  foo.bar;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test with comments, doc comments, and attributes added and spaced out.
+TEST(NewFormatterTests, LibraryWithAllAnnotations) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+ // comment
+
+  /// doc comment
+
+   @attr
+
+    library foo.bar;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+// comment
+
+/// doc comment
+@attr
+library foo.bar;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Test a library declaration in which every token is placed on a newline.
 TEST(NewFormatterTests, LibraryMaximalNewlines) {
   // ---------------40---------------- |
@@ -367,6 +645,25 @@ using imported.abcdefhijklmnopqrstubwxy;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+TEST(NewFormatterTests, UsingUnformatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+  using imported.
+ abcdefhijklmnopqrstubwxy;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+using imported.abcdefhijklmnopqrstubwxy;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Test that a using declaration with no alias does not get wrapped.
 TEST(NewFormatterTests, UsingOverflow) {
   // ---------------40---------------- |
@@ -381,6 +678,35 @@ using imported.abcdefhijklmnopqrstubwxyz;
 library foo.bar;
 
 using imported.abcdefhijklmnopqrstubwxyz;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test with comments, doc comments, and attributes added and spaced out.
+TEST(NewFormatterTests, UsingWithAllAnnotations) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+ // comment
+
+  /// doc comment
+
+   @attr
+
+    using imported.abcdefhijklmnopqrstubwxy;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+// comment
+
+/// doc comment
+@attr
+using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
@@ -417,6 +743,25 @@ TEST(NewFormatterTests, UsingWithAliasFormatted) {
 library foo.bar;
 
 using baz.qux as abcdefghijklmnopqrstuv;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+using baz.qux as abcdefghijklmnopqrstuv;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, UsingWithAliasUnformatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+  using    baz.qux as
+abcdefghijklmnopqrstuv;
 )FIDL";
 
   // ---------------40---------------- |
@@ -479,6 +824,9 @@ TEST(NewFormatterTests, CommentsMaximal) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 // 0
+// 0.1
+/// 0.2
+/// 0.3
 library // A
 // 1
 foo // B
@@ -493,9 +841,12 @@ bar // D
 
 
 // 6
+// 6.1
 
 
 // 7
+/// 7.1
+/// 7.2
 using // F
 // 8
 baz // G
@@ -509,6 +860,9 @@ quz // I
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 // 0
+// 0.1
+/// 0.2
+/// 0.3
 library // A
         // 1
         foo // B
@@ -523,9 +877,12 @@ library // A
 
 
 // 6
+// 6.1
 
 
 // 7
+/// 7.1
+/// 7.2
 using // F
         // 8
         baz // G
@@ -559,21 +916,77 @@ using baz.qux; // C4
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+TEST(NewFormatterTests, CommentsMultiline) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+// C1
+// C2
+library foo.bar; // C3
+
+// C4
+// C5
+using baz.qux; // C6
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+// C1
+// C2
+library foo.bar; // C3
+
+// C4
+// C5
+using baz.qux; // C6
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Ensure that overlong comments are not wrapped.
+TEST(NewFormatterTests, CommentsOverlong) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+// C1: This is my very very long comment.
+library foo.bar; // C2
+// C3: This is my very very long comment.
+using baz.qux; // C4
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+// C1: This is my very very long comment.
+library foo.bar; // C2
+// C3: This is my very very long comment.
+using baz.qux; // C4
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 TEST(NewFormatterTests, CommentsWeird) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
    // C1
+     /// D1
+/// D2
+         /// D3
+ @foo( // C2
+     "abc"
+  // C3
+)
 library foo.
 
-// C2
+// C4
 
-        // C3
+        // C5
 
-bar; using // C4
+bar; @attr using // C6
 
 baz;
+using qux // C7
+;
 
-   // C5
+   // C8
 
 
 
@@ -583,17 +996,27 @@ baz;
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 // C1
+/// D1
+/// D2
+/// D3
+@foo( // C2
+        "abc"
+        // C3
+        )
 library foo.
 
-        // C2
+        // C4
 
-        // C3
+        // C5
 
         bar;
-using // C4
+@attr
+using // C6
         baz;
+using qux // C7
+        ;
 
-// C5
+// C8
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
@@ -603,20 +1026,29 @@ TEST(NewFormatterTests, NewlinesAbsent) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(library foo.bar;
 using imported.abcdefhijklmnopqrstubwxy;
+/// doc comment
 alias MyAlias_Abcdefghijklmnopqr = bool;
+@foo
+@bar
 const MY_TRUE_ABCDEFGHIJKLM bool = true;)FIDL";
 
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
 library foo.bar;
 using imported.abcdefhijklmnopqrstubwxy;
+/// doc comment
 alias MyAlias_Abcdefghijklmnopqr = bool;
+@foo
+@bar
 const MY_TRUE_ABCDEFGHIJKLM bool = true;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// For this test and the one below, new lines are generally expected to be retained.  An exception
+// is made for doc comment and attribute blocks, which must never have newlines between the
+// respective attributes, or between the last attribute and the declaration the block is describing.
 TEST(NewFormatterTests, NewlinesSingle) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
@@ -624,7 +1056,13 @@ library foo.bar;
 
 using imported.abcdefhijklmnopqrstubwxy;
 
+/// doc comment
+
 alias MyAlias_Abcdefghijklmnopqr = bool;
+
+@foo
+
+@bar
 
 const MY_TRUE_ABCDEFGHIJKLM bool = true;
 
@@ -636,8 +1074,11 @@ library foo.bar;
 
 using imported.abcdefhijklmnopqrstubwxy;
 
+/// doc comment
 alias MyAlias_Abcdefghijklmnopqr = bool;
 
+@foo
+@bar
 const MY_TRUE_ABCDEFGHIJKLM bool = true;
 )FIDL";
 
@@ -654,7 +1095,16 @@ library foo.bar;
 using imported.abcdefhijklmnopqrstubwxy;
 
 
+/// doc comment
+
+
 alias MyAlias_Abcdefghijklmnopqr = bool;
+
+
+@foo
+
+
+@bar
 
 
 const MY_TRUE_ABCDEFGHIJKLM bool = true;
@@ -670,9 +1120,12 @@ library foo.bar;
 using imported.abcdefhijklmnopqrstubwxy;
 
 
+/// doc comment
 alias MyAlias_Abcdefghijklmnopqr = bool;
 
 
+@foo
+@bar
 const MY_TRUE_ABCDEFGHIJKLM bool = true;
 )FIDL";
 
