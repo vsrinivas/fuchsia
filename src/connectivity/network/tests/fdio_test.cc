@@ -51,10 +51,8 @@ TEST(NetStreamTest, ReleasePortNoClose) {
 
   // Simulate unexpected process exit by closing the handle without calling close.
   zx::handle handle;
-  zx_status_t status = fdio_fd_transfer(first.release(), handle.reset_and_get_address());
-  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
-  status = zx_handle_close(handle.release());
-  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  ASSERT_OK(fdio_fd_transfer(first.release(), handle.reset_and_get_address()));
+  ASSERT_OK(zx_handle_close(handle.release()));
 
   while (true) {
     int ret = bind(second.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
@@ -73,23 +71,20 @@ TEST(NetStreamTest, RaceClose) {
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
   fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
-  zx_status_t status =
-      fdio_fd_transfer(fd.release(), client.mutable_channel()->reset_and_get_address());
-  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  ASSERT_OK(fdio_fd_transfer(fd.release(), client.mutable_channel()->reset_and_get_address()));
 
   sync_completion_t completion;
 
   std::array<std::thread, 10> workers;
   for (auto& worker : workers) {
     worker = std::thread([&client, &completion]() {
-      zx_status_t status = sync_completion_wait(&completion, ZX_TIME_INFINITE);
-      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+      ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));
 
       auto response = client.Close();
-      if ((status = response.status()) != ZX_OK) {
-        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED) << zx_status_get_string(status);
+      if (zx_status_t status = response.status(); status != ZX_OK) {
+        EXPECT_STATUS(status, ZX_ERR_PEER_CLOSED);
       } else {
-        EXPECT_EQ(status = response.Unwrap()->s, ZX_OK) << zx_status_get_string(status);
+        EXPECT_OK(response.Unwrap()->s);
       }
     });
   }
@@ -104,27 +99,19 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
   fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
-  zx_status_t status;
-  ASSERT_EQ(
-      status = fdio_fd_transfer(fd.release(), client.mutable_channel()->reset_and_get_address()),
-      ZX_OK)
-      << zx_status_get_string(status);
+  ASSERT_OK(fdio_fd_transfer(fd.release(), client.mutable_channel()->reset_and_get_address()));
 
   auto response = client.Describe();
-  ASSERT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
+  ASSERT_OK(response.status());
   const fuchsia_io::wire::NodeInfo& node_info = response.Unwrap()->info;
   ASSERT_EQ(node_info.which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
 
   const zx::socket& socket = node_info.stream_socket().socket;
 
-  EXPECT_EQ(status = socket.signal(ZX_USER_SIGNAL_0, 0), ZX_ERR_ACCESS_DENIED)
-      << zx_status_get_string(status);
-  EXPECT_EQ(status = socket.signal(0, ZX_USER_SIGNAL_0), ZX_ERR_ACCESS_DENIED)
-      << zx_status_get_string(status);
-  EXPECT_EQ(status = socket.signal_peer(ZX_USER_SIGNAL_0, 0), ZX_ERR_ACCESS_DENIED)
-      << zx_status_get_string(status);
-  EXPECT_EQ(status = socket.signal_peer(0, ZX_USER_SIGNAL_0), ZX_ERR_ACCESS_DENIED)
-      << zx_status_get_string(status);
+  EXPECT_STATUS(socket.signal(ZX_USER_SIGNAL_0, 0), ZX_ERR_ACCESS_DENIED);
+  EXPECT_STATUS(socket.signal(0, ZX_USER_SIGNAL_0), ZX_ERR_ACCESS_DENIED);
+  EXPECT_STATUS(socket.signal_peer(ZX_USER_SIGNAL_0, 0), ZX_ERR_ACCESS_DENIED);
+  EXPECT_STATUS(socket.signal_peer(0, ZX_USER_SIGNAL_0), ZX_ERR_ACCESS_DENIED);
 }
 
 static const zx::socket& stream_handle(const fuchsia_io::wire::NodeInfo& node_info) {
@@ -200,40 +187,33 @@ using SocketTypes = testing::Types<StreamSocketImpl, DatagramSocketImpl>;
 TYPED_TEST_SUITE(SocketTest, SocketTypes, SocketTestNames);
 
 TYPED_TEST(SocketTest, CloseResourcesOnClose) {
-  zx_status_t status;
-
   // Increase the reference count.
   zx::channel clone;
-  ASSERT_EQ(status = fdio_fd_clone(this->fd().get(), clone.reset_and_get_address()), ZX_OK)
-      << zx_status_get_string(status);
+  ASSERT_OK(fdio_fd_clone(this->fd().get(), clone.reset_and_get_address()));
 
   typename TypeParam::Client client;
-  ASSERT_EQ(status = fdio_fd_transfer(this->mutable_fd().release(),
-                                      client.mutable_channel()->reset_and_get_address()),
-            ZX_OK)
-      << zx_status_get_string(status);
+  ASSERT_OK(fdio_fd_transfer(this->mutable_fd().release(),
+                             client.mutable_channel()->reset_and_get_address()));
 
   auto describe_response = client.Describe();
-  ASSERT_EQ(status = describe_response.status(), ZX_OK) << zx_status_get_string(status);
+  ASSERT_OK(describe_response.status());
   const fuchsia_io::wire::NodeInfo& node_info = describe_response.Unwrap()->info;
   ASSERT_EQ(node_info.which(), TypeParam::tag());
 
   zx_signals_t observed;
 
-  ASSERT_EQ(status = TypeParam::handle(node_info).wait_one(
-                TypeParam::peer_closed(), zx::deadline_after(zx::msec(100)), &observed),
-            ZX_ERR_TIMED_OUT)
-      << zx_status_get_string(status);
+  ASSERT_STATUS(TypeParam::handle(node_info).wait_one(TypeParam::peer_closed(),
+                                                      zx::deadline_after(zx::msec(100)), &observed),
+                ZX_ERR_TIMED_OUT);
 
   auto close_response = client.Close();
-  EXPECT_EQ(status = close_response.status(), ZX_OK) << zx_status_get_string(status);
-  EXPECT_EQ(status = close_response.Unwrap()->s, ZX_OK) << zx_status_get_string(status);
+  EXPECT_OK(close_response.status());
+  EXPECT_OK(close_response.Unwrap()->s);
 
   // We still have `clone`, nothing should be closed yet.
-  ASSERT_EQ(status = TypeParam::handle(node_info).wait_one(
-                TypeParam::peer_closed(), zx::deadline_after(zx::msec(100)), &observed),
-            ZX_ERR_TIMED_OUT)
-      << zx_status_get_string(status);
+  ASSERT_STATUS(TypeParam::handle(node_info).wait_one(TypeParam::peer_closed(),
+                                                      zx::deadline_after(zx::msec(100)), &observed),
+                ZX_ERR_TIMED_OUT);
 
   clone.reset();
 
@@ -241,12 +221,8 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
   // respect to the `Close` FIDL call above (since its return must come over the channel). The
   // handle closure is not inherently asynchronous, but happens to be as an implementation detail.
   zx::time deadline = zx::deadline_after(zx::sec(5));
-  ASSERT_EQ(
-      status = TypeParam::handle(node_info).wait_one(TypeParam::peer_closed(), deadline, &observed),
-      ZX_OK)
-      << zx_status_get_string(status);
-  ASSERT_EQ(status = client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, &observed), ZX_OK)
-      << zx_status_get_string(status);
+  ASSERT_OK(TypeParam::handle(node_info).wait_one(TypeParam::peer_closed(), deadline, &observed));
+  ASSERT_OK(client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, &observed));
 }
 
 TEST(SocketTest, AcceptedSocketIsConnected) {
@@ -281,26 +257,18 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
   ASSERT_EQ(close(serverfd.release()), 0) << strerror(errno);
 
   fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
-  zx_status_t status;
-  ASSERT_EQ(status = fdio_fd_transfer(connfd.release(),
-                                      client.mutable_channel()->reset_and_get_address()),
-            ZX_OK)
-      << zx_status_get_string(status);
+  ASSERT_OK(fdio_fd_transfer(connfd.release(), client.mutable_channel()->reset_and_get_address()));
 
   auto response = client.Describe();
-  ASSERT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
+  ASSERT_OK(response.status());
   const fuchsia_io::wire::NodeInfo& node_info = response.Unwrap()->info;
   ASSERT_EQ(node_info.which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
 
   const zx::socket& socket = node_info.stream_socket().socket;
 
   zx_signals_t pending;
-  ASSERT_EQ(status = socket.wait_one(ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_3, zx::time::infinite_past(),
-                                     &pending),
-            ZX_OK)
-      << zx_status_get_string(status);
-  EXPECT_TRUE(pending & ZX_USER_SIGNAL_1);
-  EXPECT_TRUE(pending & ZX_USER_SIGNAL_3);
+  ASSERT_STATUS(socket.wait_one(0, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending, ZX_SOCKET_WRITABLE | ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_3);
 }
 
 TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
@@ -338,13 +306,9 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
   std::array<fbl::unique_fd, 10> connfds;
   for (auto& clonefd : connfds) {
     {
-      zx_status_t status;
       zx::channel channel;
-      ASSERT_EQ(status = fdio_fd_clone(connfd.get(), channel.reset_and_get_address()), ZX_OK)
-          << zx_status_get_string(status);
-
-      ASSERT_EQ(status = fdio_fd_create(channel.release(), clonefd.reset_and_get_address()), ZX_OK)
-          << zx_status_get_string(status);
+      ASSERT_OK(fdio_fd_clone(connfd.get(), channel.reset_and_get_address()));
+      ASSERT_OK(fdio_fd_create(channel.release(), clonefd.reset_and_get_address()));
     }
   }
 
@@ -373,18 +337,13 @@ TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
   // endpoint's reference count, then close all copies of the socket.
   std::array<fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket>, 10> clients;
   for (auto& client : clients) {
-    zx_status_t status;
-    ASSERT_EQ(
-        status = fdio_fd_clone(connfd.get(), client.mutable_channel()->reset_and_get_address()),
-        ZX_OK)
-        << zx_status_get_string(status);
+    ASSERT_OK(fdio_fd_clone(connfd.get(), client.mutable_channel()->reset_and_get_address()));
   }
 
   for (auto& client : clients) {
     auto response = client.Close();
-    zx_status_t status;
-    EXPECT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
-    EXPECT_EQ(status = response.Unwrap()->s, ZX_OK) << zx_status_get_string(status);
+    EXPECT_OK(response.status());
+    EXPECT_OK(response.Unwrap()->s);
   }
 
   ASSERT_EQ(close(connfd.release()), 0) << strerror(errno);
