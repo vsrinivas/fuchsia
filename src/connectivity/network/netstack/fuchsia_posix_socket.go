@@ -1204,24 +1204,6 @@ func (eps *endpointWithSocket) close() {
 			}
 		}
 
-		// Signal the client about errors that require special errno
-		// handling by the client for read/write calls.
-		//
-		// TODO(https://fxbug.dev/75717): Remove after ABI transition.
-		eps.terminal.mu.Lock()
-		err := eps.terminal.mu.err
-		eps.terminal.mu.Unlock()
-		switch err.(type) {
-		case *tcpip.ErrConnectionRefused:
-			if err := eps.local.Handle().SignalPeer(0, zxsocket.SignalStreamConnectionRefused); err != nil {
-				panic(fmt.Sprintf("Handle().SignalPeer(0, zxsocket.SignalStreamConnectionRefused) = %s", err))
-			}
-		case *tcpip.ErrConnectionReset:
-			if err := eps.local.Handle().SignalPeer(0, zxsocket.SignalStreamConnectionReset); err != nil {
-				panic(fmt.Sprintf("Handle().SignalPeer(0, zxsocket.SignalStreamConnectionReset) = %s", err))
-			}
-		}
-
 		if err := eps.local.Close(); err != nil {
 			panic(err)
 		}

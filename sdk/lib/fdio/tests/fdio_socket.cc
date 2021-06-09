@@ -135,7 +135,7 @@ class BaseTest : public zxtest::Test {
               if (!connected) {
                 connected = true;
                 // We need the FDIO to act like it's connected.
-                // ZXSIO_SIGNAL_CONNECTED is private, but we know the value.
+                // fdio_internal::stream_socket::kSignalConnected is private, but we know the value.
                 EXPECT_OK(peer.signal(0, ZX_USER_SIGNAL_3));
                 completer.ReplyError(fuchsia_posix::wire::Errno::kEinprogress);
                 break;
@@ -564,8 +564,8 @@ class TcpSocketTimeoutTest : public TcpSocketTest {
     EXPECT_EQ(fut.wait_for(margin), std::future_status::timeout);
     // Resetting the remote end socket should cause the read/write to complete.
     server_socket.reset();
-    // Closing the socket without asserting ZXSIO_SIGNAL_CONNECTION_{REFUSED,RESET} looks like the
-    // connection was gracefully closed. The same behavior is exercised in
+    // Closing the socket without returning an error from `getsockopt(_, SO_ERROR, ...)` looks like
+    // the connection was gracefully closed. The same behavior is exercised in
     // src/connectivity/network/tests/bsdsocket_test.cc:{StopListenWhileConnect,BlockedIOTest/CloseWhileBlocked}.
     auto return_code_and_errno = fut.get();
     switch (optname) {
