@@ -308,11 +308,10 @@ std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestUnti
   }
   uningested_ = uningested_.substr(std::min(chars_seen, uningested_.size()));
 
-  if (!atomic->IsEmpty()) {
-    atomic->Close();
-    return std::move(atomic);
+  if (atomic->IsEmpty()) {
+    return std::nullopt;
   }
-  return std::nullopt;
+  return std::move(atomic);
 }
 
 std::optional<std::unique_ptr<SpanSequence>> SpanSequenceTreeVisitor::IngestUntilEndOfFile() {
@@ -379,8 +378,8 @@ SpanSequenceTreeVisitor::SpanBuilder<T>::~SpanBuilder<T>() {
       end_view.data() + (end_view.size() - 1), false, SpanSequence::Position::kNewlineUnindented);
   if (postscript.has_value()) {
     const auto& top = this->GetFormattingTreeVisitor()->building_.top();
-    if (!top.empty() && !EndsWithComment(top.back())) {
-      postscript.value()->SetLeadingBlankLines(0);
+    if (top.empty() || (!top.empty() && !EndsWithComment(top.back()))) {
+      ClearLeadingBlankLines(postscript.value());
     }
 
     postscript.value()->SetTrailingSpace(false);
@@ -635,6 +634,25 @@ void SpanSequenceTreeVisitor::OnIdentifierConstant(
 void SpanSequenceTreeVisitor::OnLayout(const std::unique_ptr<raw::Layout>& element) {
   const auto visiting = Visiting(this, VisitorKind::kLayout);
 
+  VisitorKind inner_kind;
+  switch (element->kind) {
+    case raw::Layout::kBits:
+    case raw::Layout::kEnum: {
+      inner_kind = VisitorKind::kValueLayout;
+      break;
+    }
+    case raw::Layout::kStruct: {
+      inner_kind = VisitorKind::kStructLayout;
+      break;
+    }
+    case raw::Layout::kTable:
+    case raw::Layout::kUnion: {
+      inner_kind = VisitorKind::kOrdinaledLayout;
+      break;
+    }
+  }
+  const auto inner_visiting = Visiting(this, inner_kind);
+
   // Special case: an empty layout (ex: `struct {}`) should always be atomic.
   if (element->members.empty()) {
     const auto builder = SpanBuilder<AtomicSpanSequence>(this, *element);
@@ -643,6 +661,14 @@ void SpanSequenceTreeVisitor::OnLayout(const std::unique_ptr<raw::Layout>& eleme
 
   const auto builder =
       SpanBuilder<MultilineSpanSequence>(this, element->members[0]->start_, element->end_);
+
+  // By default, `:` tokens do not have a space following the token.  However, in the case of
+  // sub-typed layouts like `enum : uint32 {...`, we need to add this space in.  We can do this by
+  // adding spaces between every child of the first element of the MultilineSpanSequence currently
+  // being built.
+  auto as_composite = static_cast<CompositeSpanSequence*>(building_.top().front().get());
+  AddSpacesBetweenChildren(as_composite->GetChildren());
+
   TreeVisitor::OnLayout(element);
 }
 
@@ -693,6 +719,11 @@ void SpanSequenceTreeVisitor::OnStructLayoutMember(
 
 void SpanSequenceTreeVisitor::OnTypeConstructorNew(
     const std::unique_ptr<raw::TypeConstructorNew>& element) {
+  // Special case: make sure not to visit the subtype on a bits/enum declaration twice, since it is
+  // already being processed as part of the prelude to the layout.
+  if (IsInsideOf(VisitorKind::kValueLayout)) {
+    return;
+  }
   const auto visiting = Visiting(this, VisitorKind::kTypeConstructorNew);
 
   if (element->layout_ref->kind == raw::LayoutReference::Kind::kInline) {
@@ -728,6 +759,20 @@ void SpanSequenceTreeVisitor::OnUsing(const std::unique_ptr<raw::Using>& element
   TreeVisitor::OnUsing(element);
   AddSpacesBetweenChildren(building_.top());
   ClearBlankLinesAfterAttributeList(attrs, building_.top());
+}
+
+void SpanSequenceTreeVisitor::OnValueLayoutMember(
+    const std::unique_ptr<raw::ValueLayoutMember>& element) {
+  const auto visiting = Visiting(this, VisitorKind::kValueLayoutMember);
+  if (element->attributes != nullptr) {
+    OnAttributeListNew(element->attributes);
+  }
+
+  const auto builder = StatementBuilder<DivisibleSpanSequence>(
+      this, *element, SpanSequence::Position::kNewlineIndented);
+  TreeVisitor::OnValueLayoutMember(element);
+  AddSpacesBetweenChildren(building_.top());
+  ClearBlankLinesAfterAttributeList(element->attributes, building_.top());
 }
 
 MultilineSpanSequence SpanSequenceTreeVisitor::Result() {

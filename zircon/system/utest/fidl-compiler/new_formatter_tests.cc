@@ -283,6 +283,182 @@ library foo.bar;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// Ensure that an already properly formatted bits declaration is not modified by another run
+// through the formatter.
+TEST(NewFormatterTests, BitsFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyBits_Abcdefghijklmnopqrs = bits {
+    value1_abcdefghijklmnopqrstuvwx = 0;
+    value2_abcdefghijklmnopqrstu = 0x01;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyBits_Abcdefghijklmnopqrs = bits {
+    value1_abcdefghijklmnopqrstuvwx = 0;
+    value2_abcdefghijklmnopqrstu = 0x01;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, BitsOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyBits_Abcdefghijklmnopqrst = bits {
+    value1_abcdefghijklmnopqrstuvwxy = 0;
+    value2_abcdefghijklmnopqrstuv = 0x01;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyBits_Abcdefghijklmnopqrst
+        = bits {
+    value1_abcdefghijklmnopqrstuvwxy
+            = 0;
+    value2_abcdefghijklmnopqrstuv
+            = 0x01;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, BitsUnformatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyBits_Abcdefghij= flexible bits {
+ value1_abcdefghijklmnopqrstuvwx =0;
+  value2_abcdefghijklmnopqrstu= 0x01;};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyBits_Abcdefghij = flexible bits {
+    value1_abcdefghijklmnopqrstuvwx = 0;
+    value2_abcdefghijklmnopqrstu = 0x01;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, BitsWithAllAnnotations) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+ // comment 1
+  /// doc comment 1
+
+   @foo
+
+    type MyBits_Abcdefghijklmnopqrs = bits {
+    value1_abcdefghijklmnopqrstuvwx = 0;
+  // comment 2
+
+   /// doc comment 2
+
+    @bar
+     value2_abcdefghijklmnopqrstu = 0x01;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+// comment 1
+/// doc comment 1
+@foo
+type MyBits_Abcdefghijklmnopqrs = bits {
+    value1_abcdefghijklmnopqrstuvwx = 0;
+    // comment 2
+
+    /// doc comment 2
+    @bar
+    value2_abcdefghijklmnopqrstu = 0x01;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
+//  `=bits{` does not get split into `= bits {` properly.  This should be fixed when proper token
+//  parsing is used.
+TEST(NewFormatterTests, BitsMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted =
+      R"FIDL(library foo.bar;type MyBits_Abcdefghijklmnopqrstu=bits{value1_abcdefghijklmnopqrstuvwx=0;value2_abcdefghijklmnopqrstu=0x01;};)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+type MyBits_Abcdefghijklmnopqrstu =bits{
+    value1_abcdefghijklmnopqrstuvwx = 0;
+    value2_abcdefghijklmnopqrstu = 0x01;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, BitsMaximalNewlines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library
+foo
+.
+bar
+;
+
+type
+MyBits_Abcdefghijklmnopqrs
+=
+bits
+{
+value1_abcdefghijklmnopqrstuvwx
+=
+0
+;
+value2_abcdefghijklmnopqrstu
+=
+0x01
+;
+}
+;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyBits_Abcdefghijklmnopqrs = bits {
+    value1_abcdefghijklmnopqrstuvwx = 0;
+    value2_abcdefghijklmnopqrstu = 0x01;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Ensure that already properly formatted const declarations are not modified by another run
 // through the formatter.
 TEST(NewFormatterTests, ConstFormatted) {
@@ -577,6 +753,220 @@ const MY_STRING_ABCDEFGH string = "foo";
 const MY_OR_A uint64 = 1 | MY_UINT64_AB;
 const MY_ORS_ABCDEFG uint64 = 1 | 2 | 3;
 const MY_REF_ABCD uint64 = MY_UINT64_AB;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Ensure that an already properly formatted enum declaration is not modified by another run
+// through the formatter.
+TEST(NewFormatterTests, EnumFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyEnum_Abcdefghij = enum : uint32 {
+    value1_abcdefghijklmnopqrstuvwx = 0;
+    value2_abcdefghijklmnopqrstuvw = 01;
+
+    @unknown
+    value3_abcdefghijklmnopqrstuv = 002;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyEnum_Abcdefghij = enum : uint32 {
+    value1_abcdefghijklmnopqrstuvwx = 0;
+    value2_abcdefghijklmnopqrstuvw = 01;
+
+    @unknown
+    value3_abcdefghijklmnopqrstuv = 002;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, EnumOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyEnum_Abcdefghijk = enum : uint32 {
+    value1_abcdefghijklmnopqrstuvwxy = 0;
+    value2_abcdefghijklmnopqrstuvwx = 01;
+
+    @unknown
+    value3_abcdefghijklmnopqrstuvw = 002;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyEnum_Abcdefghijk
+        = enum : uint32 {
+    value1_abcdefghijklmnopqrstuvwxy
+            = 0;
+    value2_abcdefghijklmnopqrstuvwx
+            = 01;
+
+    @unknown
+    value3_abcdefghijklmnopqrstuvw
+            = 002;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, EnumUnformatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyEnum_Abc= strict enum : uint32 {
+ value1_abcdefghijklmnopqrstuvwx =0;
+  value2_abcdefghijklmnopqrstuvw= 01;
+
+     @unknown
+      value3_abcdefghijklmnopqrstuv = 002 ;};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyEnum_Abc = strict enum : uint32 {
+    value1_abcdefghijklmnopqrstuvwx = 0;
+    value2_abcdefghijklmnopqrstuvw = 01;
+
+    @unknown
+    value3_abcdefghijklmnopqrstuv = 002;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, EnumWithAllAnnotations) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+ // comment 1
+  /// doc comment 1
+
+   @foo
+
+    type MyEnum_Abcdefghij = enum : uint32 {
+    value1_abcdefghijklmnopqrstuvwx = 0;
+  // comment 2
+
+   /// doc comment 2
+
+    @bar
+     value2_abcdefghijklmnopqrstuvw = 01;
+
+    @unknown
+    value3_abcdefghijklmnopqrstuv = 002;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+// comment 1
+/// doc comment 1
+@foo
+type MyEnum_Abcdefghij = enum : uint32 {
+    value1_abcdefghijklmnopqrstuvwx = 0;
+    // comment 2
+
+    /// doc comment 2
+    @bar
+    value2_abcdefghijklmnopqrstuvw = 01;
+
+    @unknown
+    value3_abcdefghijklmnopqrstuv = 002;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
+//  `=enum:uint32` does not get split into `= enum : uint32 {` properly.  This should be fixed when
+//  proper token parsing is used.
+TEST(NewFormatterTests, EnumMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted =
+      R"FIDL(library foo.bar;type MyEnum_Abcdefghij=enum:uint32{value1_abcdefghijklmnopqrstuvwx=0;value2_abcdefghijklmnopqrstuvw=01;@unknown value3_abcdefghijklmnopqrstuv=002;};)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+type MyEnum_Abcdefghij =enum:uint32{
+    value1_abcdefghijklmnopqrstuvwx = 0;
+    value2_abcdefghijklmnopqrstuvw = 01;
+    @unknown
+    value3_abcdefghijklmnopqrstuv = 002;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, EnumMaximalNewlines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library
+foo
+.
+bar
+;
+
+type
+MyEnum_Abcdefghij
+=
+enum
+:
+uint32
+{
+value1_abcdefghijklmnopqrstuvwx
+=
+0
+;
+value2_abcdefghijklmnopqrstuvw
+=
+01
+;
+
+@unknown
+value3_abcdefghijklmnopqrstuv
+=
+002
+;
+}
+;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyEnum_Abcdefghij = enum : uint32 {
+    value1_abcdefghijklmnopqrstuvwx = 0;
+    value2_abcdefghijklmnopqrstuvw = 01;
+
+    @unknown
+    value3_abcdefghijklmnopqrstuv = 002;
+};
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));

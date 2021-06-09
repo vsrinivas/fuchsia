@@ -75,9 +75,7 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> const& element) override;
   void OnTypeDecl(std::unique_ptr<raw::TypeDecl> const& element) override;
   void OnUsing(std::unique_ptr<raw::Using> const& element) override;
-  void OnValueLayoutMember(std::unique_ptr<raw::ValueLayoutMember> const& element) override {
-    NotYetImplemented();
-  }
+  void OnValueLayoutMember(std::unique_ptr<raw::ValueLayoutMember> const& element) override;
 
   // The remaining "On*" methods are all untouched by the new syntax, and should never be used by
   // this formatter.
@@ -146,10 +144,15 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
     kLiteral,
     kLiteralConstant,
     kNamedLayoutReference,
+    kOrdinaledLayout,
+    kOrdinaledLayoutMember,
+    kStructLayout,
     kStructLayoutMember,
     kTypeConstructorNew,
     kTypeDecl,
     kUsing,
+    kValueLayout,
+    kValueLayoutMember,
   };
 
   // As we descend down a particular branch of the raw AST, we record the VisitorKind of each node

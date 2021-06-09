@@ -385,7 +385,9 @@ std::optional<SpanSequence::Kind> MultilineSpanSequence::Print(
       if (child->GetPosition() == SpanSequence::Position::kNewlineIndented) {
         child_indentation += kIndentation;
       }
-      MaybeIndentLine(child_indentation, out);
+      if (child->GetKind() != SpanSequence::Kind::kMultiline) {
+        MaybeIndentLine(child_indentation, out);
+      }
     }
 
     const bool keep_wrapped = wrapped && i == first_non_comment_index.value_or(children.size());
