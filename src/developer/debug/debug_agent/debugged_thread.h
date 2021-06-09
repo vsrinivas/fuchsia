@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_DEBUGGED_THREAD_H_
 
 #include "src/developer/debug/debug_agent/arch.h"
+#include "src/developer/debug/debug_agent/automation_instruction_executor.h"
 #include "src/developer/debug/debug_agent/exception_handle.h"
 #include "src/developer/debug/debug_agent/general_registers.h"
 #include "src/developer/debug/debug_agent/thread_handle.h"
