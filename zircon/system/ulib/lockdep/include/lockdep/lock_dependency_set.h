@@ -97,8 +97,7 @@ class LockDependencySet {
     }
 
     Iterator operator++() {
-      while (index != kMaxLockDependencies) {
-        index++;
+      while (++index < kMaxLockDependencies) {
         if (**this != kInvalidLockClassId)
           break;
       }
