@@ -87,7 +87,7 @@ const STATUS_COLOR_DEFAULT: Color = Color { r: 170, g: 170, b: 170, a: 255 };
 const STATUS_COLOR_ACTIVE: Color = Color { r: 255, g: 255, b: 85, a: 255 };
 const STATUS_COLOR_UPDATED: Color = Color { r: 85, g: 255, b: 85, a: 255 };
 
-const CELL_PADDING: f32 = 2.0;
+const CELL_PADDING_FACTOR: f32 = 1.0 / 15.0;
 
 struct Animation {
     // Artboard has weak references to data owned by file.
@@ -171,13 +171,13 @@ impl VirtualConsoleViewAssistant {
     #[cfg(test)]
     fn new_for_test(animation: bool) -> Result<ViewAssistantPtr, Error> {
         let app_context = AppContext::new_for_testing_purposes_only();
-        Self::new(&app_context, 1, ColorScheme::default(), false, 14.0, animation)
+        Self::new(&app_context, 1, ColorScheme::default(), false, 15.0, animation)
     }
 
     // Resize all terminals for 'new_size'.
     fn resize_terminals(&mut self, new_size: &Size) {
         let floored_size = new_size.floor();
-        let cell_size = font_to_cell_size(self.font_size, CELL_PADDING);
+        let cell_size = font_to_cell_size(self.font_size, self.font_size * CELL_PADDING_FACTOR);
         let size = Size::new(floored_size.width, floored_size.height - cell_size.height);
         let size_info = SizeInfo {
             width: size.width,
@@ -308,7 +308,7 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 builder.facet(Box::new(RiveFacet::new(context.size, animation.artboard.clone())));
                 None
             } else {
-                let cell_size = font_to_cell_size(self.font_size, CELL_PADDING);
+                let cell_size = font_to_cell_size(self.font_size, self.font_size * CELL_PADDING_FACTOR);
                 let status_size = Size::new(context.size.width, cell_size.height);
 
                 self.resize_terminals(&context.size);
@@ -334,7 +334,7 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                     active_term,
                     status,
                     tab_width,
-                    CELL_PADDING,
+                    self.font_size * CELL_PADDING_FACTOR,
                 )));
 
                 // Add status bar background to the scene if needed.
@@ -428,12 +428,12 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
 
                     match code_point {
                         PLUS if keyboard_event.modifiers.alt == true => {
-                            let new_font_size = (self.font_size + 2.0).min(MAX_FONT_SIZE);
+                            let new_font_size = (self.font_size + 15.0).min(MAX_FONT_SIZE);
                             self.set_font_size(new_font_size);
                             return Ok(());
                         }
                         MINUS if keyboard_event.modifiers.alt == true => {
-                            let new_font_size = (self.font_size - 2.0).max(MIN_FONT_SIZE);
+                            let new_font_size = (self.font_size - 15.0).max(MIN_FONT_SIZE);
                             self.set_font_size(new_font_size);
                             return Ok(());
                         }

@@ -10,8 +10,8 @@ use {
     std::str::FromStr,
 };
 
-pub const MIN_FONT_SIZE: f32 = 6.0;
-pub const MAX_FONT_SIZE: f32 = 128.0;
+pub const MIN_FONT_SIZE: f32 = 15.0;
+pub const MAX_FONT_SIZE: f32 = 150.0;
 
 #[derive(Debug, Default)]
 pub struct VirtualConsoleArgs {
