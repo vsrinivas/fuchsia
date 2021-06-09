@@ -361,6 +361,46 @@ __NO_INLINE static void bench_rwlock() {
          c, ktl::is_same_v<LockType, BrwLockPi>, count, c / count);
 }
 
+__NO_INLINE static void bench_heap() {
+  constexpr size_t kHeapToUse = 256 * MB;
+  constexpr size_t kAllocSizes[] = {256, KB, 2 * KB};
+
+  for (const auto& alloc_size : kAllocSizes) {
+    const size_t num_allocs = kHeapToUse / alloc_size;
+
+    uint64_t before_alloc = arch::Cycles();
+    uint64_t after_alloc;
+
+    {
+      size_t** alloc_chain = nullptr;
+      auto cleanup = fit::defer([&alloc_chain]() {
+        while (alloc_chain) {
+          size_t** next_alloc = reinterpret_cast<size_t**>(*alloc_chain);
+          free(alloc_chain);
+          alloc_chain = next_alloc;
+        }
+      });
+
+      for (size_t i = 0; i < num_allocs; i++) {
+        size_t** next_alloc = reinterpret_cast<size_t**>(malloc(alloc_size));
+        if (!next_alloc) {
+          printf("Allocation failed during %s\n", __FUNCTION__);
+          return;
+        }
+        *next_alloc = reinterpret_cast<size_t*>(alloc_chain);
+        alloc_chain = next_alloc;
+      }
+      after_alloc = arch::Cycles();
+      // End the block to trigger cleanup and free.
+    }
+    uint64_t after_free = arch::Cycles();
+
+    printf("Heap test using %zu allocations of %zu bytes took %" PRIu64
+           " cycles to allocate and %" PRIu64 " cycles to free\n",
+           num_allocs, alloc_size, after_alloc - before_alloc, after_free - after_alloc);
+  }
+}
+
 int benchmarks(int, const cmd_args*, uint32_t) {
   // Disable the hardware watchdog (if present and enabled) because some of these benchmarks will
   // disable interrupts for extended periods of time.
@@ -380,6 +420,7 @@ int benchmarks(int, const cmd_args*, uint32_t) {
 
   bench_cycles_per_second();
   bench_set_overhead();
+  bench_heap();
   bench_memcpy();
   bench_memset();
 
