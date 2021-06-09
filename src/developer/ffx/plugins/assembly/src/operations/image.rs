@@ -153,6 +153,7 @@ fn construct_base_package(
         .create(true)
         .open(&base_package_path)
         .context("Failed to create the base package file")?;
+    base_package.set_len(0).context("Failed to erase the old base package")?;
     let build_results = base_pkg_builder
         .build(gendir, &mut base_package)
         .context("Failed to build the base package")?;
@@ -395,6 +396,7 @@ fn construct_update(
         .create(true)
         .open(&update_package_path)
         .context("Failed to create the update package file")?;
+    update_package.set_len(0).context("Failed to erase the old update package")?;
     let update_contents = update_pkg_builder
         .build(gendir, &mut update_package)
         .context("Failed to build the update package")?;
