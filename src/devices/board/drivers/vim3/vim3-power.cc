@@ -4,10 +4,13 @@
 
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
 #include <string>
 
+#include <ddk/metadata/power.h>
 #include <ddk/metadata/pwm.h>
 #include <soc/aml-a311d/a311d-power.h>
 #include <soc/aml-a311d/a311d-pwm.h>
@@ -65,6 +68,98 @@ enum VregIdx {
   PWM_A_VREG,
 
   VREG_COUNT,
+};
+
+constexpr zx_bind_inst_t vreg_pwm_ao_d_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_VREG),
+    BI_MATCH_IF(EQ, BIND_PWM_ID, A311D_PWM_AO_D),
+};
+
+constexpr zx_bind_inst_t vreg_pwm_a_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_VREG),
+    BI_MATCH_IF(EQ, BIND_PWM_ID, A311D_PWM_A),
+};
+
+constexpr device_fragment_part_t vreg_pwm_ao_d_fragment[] = {
+    {countof(vreg_pwm_ao_d_match), vreg_pwm_ao_d_match},
+};
+
+constexpr device_fragment_part_t vreg_pwm_a_fragment[] = {
+    {countof(vreg_pwm_a_match), vreg_pwm_a_match},
+};
+
+constexpr device_fragment_t power_impl_fragments[] = {
+    {"vreg-pwm-ao-d", countof(vreg_pwm_ao_d_fragment), vreg_pwm_ao_d_fragment},
+    {"vreg-pwm-a", countof(vreg_pwm_a_fragment), vreg_pwm_a_fragment},
+};
+
+constexpr zx_bind_inst_t power_impl_driver_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
+};
+
+constexpr device_fragment_part_t power_impl_fragment[] = {
+    {countof(power_impl_driver_match), power_impl_driver_match},
+};
+
+static const pbus_dev_t power_dev = []() {
+  pbus_dev_t dev = {};
+  dev.name = "aml-power-impl-composite";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_AMLOGIC_A311D;
+  dev.did = PDEV_DID_AMLOGIC_POWER;
+  return dev;
+}();
+
+zx_device_prop_t power_domain_arm_core_props[] = {
+    {BIND_POWER_DOMAIN_COMPOSITE, 0, PDEV_DID_POWER_DOMAIN_COMPOSITE},
+};
+
+constexpr device_fragment_t power_domain_arm_core_fragments[] = {
+    {"power-impl", countof(power_impl_fragment), power_impl_fragment},
+};
+
+constexpr power_domain_t big_domain[] = {
+    {static_cast<uint32_t>(A311dPowerDomains::kArmCoreBig)},
+};
+
+constexpr device_metadata_t power_domain_big_core_metadata[] = {
+    {
+        .type = DEVICE_METADATA_POWER_DOMAINS,
+        .data = &big_domain,
+        .length = sizeof(big_domain),
+    },
+};
+
+constexpr composite_device_desc_t power_domain_big_core_desc = {
+    .props = power_domain_arm_core_props,
+    .props_count = countof(power_domain_arm_core_props),
+    .fragments = power_domain_arm_core_fragments,
+    .fragments_count = countof(power_domain_arm_core_fragments),
+    .coresident_device_index = 0,
+    .metadata_list = power_domain_big_core_metadata,
+    .metadata_count = countof(power_domain_big_core_metadata),
+};
+
+constexpr power_domain_t little_domain[] = {
+    {static_cast<uint32_t>(A311dPowerDomains::kArmCoreLittle)},
+};
+
+constexpr device_metadata_t power_domain_little_core_metadata[] = {
+    {
+        .type = DEVICE_METADATA_POWER_DOMAINS,
+        .data = &little_domain,
+        .length = sizeof(little_domain),
+    },
+};
+
+constexpr composite_device_desc_t power_domain_little_core_desc = {
+    .props = power_domain_arm_core_props,
+    .props_count = countof(power_domain_arm_core_props),
+    .fragments = power_domain_arm_core_fragments,
+    .fragments_count = countof(power_domain_arm_core_fragments),
+    .coresident_device_index = 0,
+    .metadata_list = power_domain_little_core_metadata,
+    .metadata_count = countof(power_domain_little_core_metadata),
 };
 
 }  // namespace
@@ -140,6 +235,27 @@ zx_status_t Vim3::PowerInit() {
   st = DdkAddComposite("vreg", &vreg_desc);
   if (st != ZX_OK) {
     zxlogf(ERROR, "DdkAddComposite for vreg failed, st = %d", st);
+    return st;
+  }
+
+  st = pbus_.CompositeDeviceAdd(&power_dev, reinterpret_cast<uint64_t>(power_impl_fragments),
+                                countof(power_impl_fragments), UINT32_MAX);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "%s: CompositeDeviceAdd for powerimpl failed, st = %d", __FUNCTION__, st);
+    return st;
+  }
+
+  st = DdkAddComposite("pd-big-core", &power_domain_big_core_desc);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "%s: CompositeDeviceAdd for power domain Big Arm Core failed, st = %d",
+           __FUNCTION__, st);
+    return st;
+  }
+
+  st = DdkAddComposite("pd-little-core", &power_domain_little_core_desc);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "%s: CompositeDeviceAdd for power domain Little Arm Core failed, st = %d",
+           __FUNCTION__, st);
     return st;
   }
 

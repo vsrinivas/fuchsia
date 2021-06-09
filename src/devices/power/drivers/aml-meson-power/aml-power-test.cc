@@ -53,6 +53,9 @@ class AmlPowerTestWrapper : public AmlPower {
                       voltage_pwm_period_ns_t pwm_period)
       : AmlPower(nullptr, mock_big_pwm.GetProto(), voltage_table, pwm_period) {}
 
+  AmlPowerTestWrapper(ddk::MockVreg& mock_big_vreg, ddk::MockVreg& mock_little_vreg)
+      : AmlPower(nullptr, mock_big_vreg.GetProto(), mock_little_vreg.GetProto()) {}
+
   static std::unique_ptr<AmlPowerTestWrapper> Create(ddk::MockPwm& mock_big_pwm,
                                                      std::vector<aml_voltage_table_t> voltage_table,
                                                      voltage_pwm_period_ns_t pwm_period) {
@@ -78,6 +81,12 @@ class AmlPowerTestWrapper : public AmlPower {
     return result;
   }
 
+  static std::unique_ptr<AmlPowerTestWrapper> Create(ddk::MockVreg& mock_big_vreg,
+                                                     ddk::MockVreg& mock_little_vreg) {
+    auto result = std::make_unique<AmlPowerTestWrapper>(mock_big_vreg, mock_little_vreg);
+    return result;
+  }
+
  private:
 };
 
@@ -87,6 +96,7 @@ class AmlPowerTest : public zxtest::Test {
     big_cluster_pwm_.VerifyAndClear();
     little_cluster_pwm_.VerifyAndClear();
     big_cluster_vreg_.VerifyAndClear();
+    little_cluster_vreg_.VerifyAndClear();
   }
 
   zx_status_t Create(uint32_t pid, std::vector<aml_voltage_table_t> voltage_table,
@@ -106,6 +116,10 @@ class AmlPowerTest : public zxtest::Test {
                                                  voltage_table, pwm_period);
         return ZX_OK;
       }
+      case PDEV_PID_AMLOGIC_A311D: {
+        aml_power_ = AmlPowerTestWrapper::Create(big_cluster_vreg_, little_cluster_vreg_);
+        return ZX_OK;
+      }
       default:
         return ZX_ERR_INTERNAL;
     }
@@ -120,6 +134,7 @@ class AmlPowerTest : public zxtest::Test {
   ddk::MockPwm big_cluster_pwm_;
   ddk::MockPwm little_cluster_pwm_;
   ddk::MockVreg big_cluster_vreg_;
+  ddk::MockVreg little_cluster_vreg_;
 };
 
 TEST_F(AmlPowerTest, SetVoltage) {
@@ -343,6 +358,7 @@ TEST_F(AmlPowerTest, LuisSetBigCluster) {
 
   big_cluster_vreg_.ExpectGetRegulatorParams(outparams);
   big_cluster_vreg_.ExpectSetVoltageStep(ZX_OK, 5);
+  big_cluster_vreg_.ExpectGetRegulatorParams(outparams);
   const uint32_t kTestVoltage = 155;
   uint32_t actual;
   EXPECT_OK(aml_power_->PowerImplRequestVoltage(AmlPowerTestWrapper::kBigClusterDomain,
@@ -356,7 +372,9 @@ TEST_F(AmlPowerTest, LuisSetBigCluster) {
 
   // Set voltage to the threshold.
   big_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+  big_cluster_vreg_.ExpectSetVoltageStep(ZX_OK, 8);
   big_cluster_vreg_.ExpectSetVoltageStep(ZX_OK, 10);
+  big_cluster_vreg_.ExpectGetRegulatorParams(outparams);
   EXPECT_OK(
       aml_power_->PowerImplRequestVoltage(AmlPowerTestWrapper::kBigClusterDomain, 200, &actual));
   EXPECT_EQ(actual, 200);
@@ -387,6 +405,106 @@ TEST_F(AmlPowerTest, LuisGetSupportedVoltageRange) {
                                                           &min, &max));
   EXPECT_EQ(max, 1'050'000);
   EXPECT_EQ(min, 690'000);
+}
+
+TEST_F(AmlPowerTest, Vim3SetBigCluster) {
+  EXPECT_OK(Create(PDEV_PID_AMLOGIC_A311D));
+
+  vreg_params_t outparams;
+  outparams.min_uv = 100;
+  outparams.num_steps = 10;
+  outparams.step_size_uv = 10;
+
+  big_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+  big_cluster_vreg_.ExpectSetVoltageStep(ZX_OK, 5);
+  big_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+  const uint32_t kTestVoltage = 155;
+  uint32_t actual;
+  EXPECT_OK(aml_power_->PowerImplRequestVoltage(AmlPowerTestWrapper::kBigClusterDomain,
+                                                kTestVoltage, &actual));
+  EXPECT_EQ(actual, 150);
+
+  // Voltage is too low.
+  big_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+  EXPECT_NOT_OK(
+      aml_power_->PowerImplRequestVoltage(AmlPowerTestWrapper::kBigClusterDomain, 99, &actual));
+
+  // Set voltage to the threshold.
+  big_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+  big_cluster_vreg_.ExpectSetVoltageStep(ZX_OK, 8);
+  big_cluster_vreg_.ExpectSetVoltageStep(ZX_OK, 10);
+  big_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+  EXPECT_OK(
+      aml_power_->PowerImplRequestVoltage(AmlPowerTestWrapper::kBigClusterDomain, 200, &actual));
+  EXPECT_EQ(actual, 200);
+
+  // Set voltage beyond the threshold.
+  big_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+  EXPECT_NOT_OK(
+      aml_power_->PowerImplRequestVoltage(AmlPowerTestWrapper::kBigClusterDomain, 300, &actual));
+}
+
+TEST_F(AmlPowerTest, Vim3SetLittleCluster) {
+  EXPECT_OK(Create(PDEV_PID_AMLOGIC_A311D));
+
+  vreg_params_t outparams;
+  outparams.min_uv = 100;
+  outparams.num_steps = 10;
+  outparams.step_size_uv = 10;
+
+  little_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+  little_cluster_vreg_.ExpectSetVoltageStep(ZX_OK, 5);
+  little_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+  const uint32_t kTestVoltage = 155;
+  uint32_t actual;
+  EXPECT_OK(aml_power_->PowerImplRequestVoltage(AmlPowerTestWrapper::kLittleClusterDomain,
+                                                kTestVoltage, &actual));
+  EXPECT_EQ(actual, 150);
+
+  // Voltage is too low.
+  little_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+  EXPECT_NOT_OK(
+      aml_power_->PowerImplRequestVoltage(AmlPowerTestWrapper::kLittleClusterDomain, 99, &actual));
+
+  // Set voltage to the threshold.
+  little_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+  little_cluster_vreg_.ExpectSetVoltageStep(ZX_OK, 8);
+  little_cluster_vreg_.ExpectSetVoltageStep(ZX_OK, 10);
+  little_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+  EXPECT_OK(
+      aml_power_->PowerImplRequestVoltage(AmlPowerTestWrapper::kLittleClusterDomain, 200, &actual));
+  EXPECT_EQ(actual, 200);
+
+  // Set voltage beyond the threshold.
+  little_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+  EXPECT_NOT_OK(
+      aml_power_->PowerImplRequestVoltage(AmlPowerTestWrapper::kLittleClusterDomain, 300, &actual));
+}
+
+TEST_F(AmlPowerTest, Vim3GetSupportedVoltageRange) {
+  EXPECT_OK(Create(PDEV_PID_AMLOGIC_A311D));
+
+  vreg_params_t outparams;
+  outparams.min_uv = 100;
+  outparams.num_steps = 10;
+  outparams.step_size_uv = 10;
+
+  big_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+
+  uint32_t max, min;
+  EXPECT_OK(aml_power_->PowerImplGetSupportedVoltageRange(AmlPowerTestWrapper::kBigClusterDomain,
+                                                          &min, &max));
+  EXPECT_EQ(max, 200);
+  EXPECT_EQ(min, 100);
+
+  outparams.num_steps = 5;
+  outparams.step_size_uv = 20;
+  little_cluster_vreg_.ExpectGetRegulatorParams(outparams);
+
+  EXPECT_OK(aml_power_->PowerImplGetSupportedVoltageRange(AmlPowerTestWrapper::kLittleClusterDomain,
+                                                          &min, &max));
+  EXPECT_EQ(max, 200);
+  EXPECT_EQ(min, 100);
 }
 
 }  // namespace power

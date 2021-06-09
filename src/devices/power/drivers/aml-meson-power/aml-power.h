@@ -10,6 +10,7 @@
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <fuchsia/hardware/vreg/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/zx/status.h>
 #include <threads.h>
 
 #include <array>
@@ -17,6 +18,7 @@
 #include <vector>
 
 #include <ddktl/device.h>
+#include <soc/aml-a311d/a311d-power.h>
 #include <soc/aml-common/aml-power.h>
 #include <soc/aml-s905d2/s905d2-power.h>
 #include <soc/aml-s905d3/s905d3-power.h>
@@ -37,8 +39,6 @@ class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, dd
            const std::vector<aml_voltage_table_t> voltage_table, voltage_pwm_period_ns_t pwm_period)
       : AmlPowerType(parent),
         big_cluster_pwm_(big_cluster_pwm),
-        big_cluster_vreg_(std::nullopt),
-        little_cluster_pwm_(std::nullopt),
         current_big_cluster_voltage_index_(kInvalidIndex),
         current_little_cluster_voltage_index_(kInvalidIndex),
         voltage_table_(voltage_table),
@@ -51,7 +51,6 @@ class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, dd
            const std::vector<aml_voltage_table_t> voltage_table, voltage_pwm_period_ns_t pwm_period)
       : AmlPowerType(parent),
         big_cluster_pwm_(big_cluster_pwm),
-        big_cluster_vreg_(std::nullopt),
         little_cluster_pwm_(little_cluster_pwm),
         current_big_cluster_voltage_index_(kInvalidIndex),
         current_little_cluster_voltage_index_(kInvalidIndex),
@@ -63,13 +62,24 @@ class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, dd
            ddk::PwmProtocolClient little_cluster_pwm,
            const std::vector<aml_voltage_table_t> voltage_table, voltage_pwm_period_ns_t pwm_period)
       : AmlPowerType(parent),
-        big_cluster_pwm_(std::nullopt),
         big_cluster_vreg_(big_cluster_vreg),
         little_cluster_pwm_(little_cluster_pwm),
         current_big_cluster_voltage_index_(kInvalidIndex),
         current_little_cluster_voltage_index_(kInvalidIndex),
         voltage_table_(voltage_table),
         pwm_period_(pwm_period),
+        num_domains_(2) {}
+
+  // Constructor for Vim3.
+  AmlPower(zx_device_t* parent, ddk::VregProtocolClient big_cluster_vreg,
+           ddk::VregProtocolClient little_cluster_vreg)
+      : AmlPowerType(parent),
+        big_cluster_vreg_(big_cluster_vreg),
+        little_cluster_vreg_(little_cluster_vreg),
+        current_big_cluster_voltage_index_(kInvalidIndex),
+        current_little_cluster_voltage_index_(kInvalidIndex),
+        voltage_table_({}),  // not used
+        pwm_period_(0),      // not used
         num_domains_(2) {}
 
   AmlPower(const AmlPower&) = delete;
@@ -101,15 +111,32 @@ class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, dd
   static_assert(kBigClusterDomain == static_cast<uint32_t>(S905d3PowerDomains::kArmCore));
   static_assert(kBigClusterDomain == static_cast<uint32_t>(T931PowerDomains::kArmCoreBig));
   static_assert(kLittleClusterDomain == static_cast<uint32_t>(T931PowerDomains::kArmCoreLittle));
+  static_assert(kBigClusterDomain == static_cast<uint32_t>(A311dPowerDomains::kArmCoreBig));
+  static_assert(kLittleClusterDomain == static_cast<uint32_t>(A311dPowerDomains::kArmCoreLittle));
 
  private:
-  zx_status_t RequestVoltage(const ddk::PwmProtocolClient& pwm, uint32_t u_volts,
-                             int* current_voltage_idx);
-  zx_status_t SetBigClusterVoltage(uint32_t voltage, uint32_t* actual);
+  struct ClusterArgs {
+    ddk::PwmProtocolClient pwm;
+    ddk::VregProtocolClient vreg;
+    int* current_voltage_index = nullptr;
+  };
+  zx::status<ClusterArgs> GetClusterArgs(uint32_t cluster_index);
 
-  std::optional<ddk::PwmProtocolClient> big_cluster_pwm_;
-  std::optional<ddk::VregProtocolClient> big_cluster_vreg_;
-  std::optional<ddk::PwmProtocolClient> little_cluster_pwm_;
+  zx_status_t GetTargetIndex(const ddk::PwmProtocolClient& pwm, uint32_t u_volts,
+                             uint32_t* target_index);
+  zx_status_t GetTargetIndex(const ddk::VregProtocolClient& vreg, uint32_t u_volts,
+                             uint32_t* target_index);
+  zx_status_t Update(const ddk::PwmProtocolClient& pwm, uint32_t idx);
+  zx_status_t Update(const ddk::VregProtocolClient& vreg, uint32_t idx);
+
+  template <class ProtocolClient>
+  zx_status_t RequestVoltage(const ProtocolClient& pwm, uint32_t u_volts,
+                             int* current_voltage_index);
+
+  ddk::PwmProtocolClient big_cluster_pwm_;
+  ddk::VregProtocolClient big_cluster_vreg_;
+  ddk::PwmProtocolClient little_cluster_pwm_;
+  ddk::VregProtocolClient little_cluster_vreg_;
 
   int current_big_cluster_voltage_index_;
   int current_little_cluster_voltage_index_;

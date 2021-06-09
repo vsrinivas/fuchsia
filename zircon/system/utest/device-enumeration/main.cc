@@ -204,6 +204,10 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "sys/platform/05:06:1d",  // pwm
       "vreg/pwm-0-regulator",
       "vreg/pwm-9-regulator",
+      "aml-power-impl-composite",
+      "pd-big-core",
+      "pd-little-core",
+      "sys/platform/05:06:26",  // power
 
       // Thermal
       "sys/platform/05:06:28",
