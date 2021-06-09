@@ -19,7 +19,6 @@ template("generate_chromium_targets") {
   assert(defined(invoker.archive_path_suffix))
 
   prebuilt_archive_base_path = "//prebuilt/third_party"
-  debug_archive_base_path = "//prebuilt/build_ids/${target_cpu}"
   build_output_gen_base_path = "/gen/fuchsia"
 
   # This target is provided for use by the //src:src target. Dependencies on
@@ -78,8 +77,6 @@ template("generate_chromium_targets") {
     # TODO(crbug.com/1148608): Move these two to `/web_engine`.
     prebuilt_archive_base_path =
         "${prebuilt_archive_base_path}/chromium${invoker.archive_path_suffix}"
-    debug_archive_base_path =
-        "${debug_archive_base_path}/chromium${invoker.archive_path_suffix}"
     custom_package_path =
         "${build_output_gen_base_path}/engine/web_engine/web_engine.far"
     selections = package_flavor_selections
@@ -101,7 +98,6 @@ template("generate_chromium_targets") {
     # TODO(crbug.com/1148608): Make the other two targets follow this pattern and
     # potentially make these the default values in generate_flavors.gni.
     prebuilt_archive_base_path = "${prebuilt_archive_base_path}/${target_name}${invoker.archive_path_suffix}"
-    debug_archive_base_path = "${debug_archive_base_path}/${target_name}${invoker.archive_path_suffix}"
     custom_package_path =
         "${build_output_gen_base_path}/engine/${target_name}/${target_name}.far"
     selections = package_flavor_selections
@@ -120,8 +116,6 @@ template("generate_chromium_targets") {
     # TODO(crbug.com/1148608): Move these two to `/web_runner`.
     prebuilt_archive_base_path =
         "${prebuilt_archive_base_path}/chromium${invoker.archive_path_suffix}"
-    debug_archive_base_path =
-        "${debug_archive_base_path}/chromium${invoker.archive_path_suffix}"
     custom_package_path =
         "${build_output_gen_base_path}/runners/web_runner/web_runner.far"
     selections = package_flavor_selections
