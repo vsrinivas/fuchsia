@@ -16,8 +16,6 @@ group("tests") {
 
     # TODO(fxbug.dev/24643): remove
     "//src/ui/bin/ime:ime_service",
-    "//src/ui/bin/root_presenter",
-    "//src/ui/scenic",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
   ]
@@ -27,7 +25,8 @@ fuchsia_unittest_package("flutter-embedder-test") {
   manifest = "meta/flutter-embedder-test.cmx"
   deps = [
     ":flutter-embedder-test-bin",
-    "//src/ui/scenic",
+    "//src/ui/bin/root_presenter:component_v1_for_test",
+    "//src/ui/scenic:component",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
   ]

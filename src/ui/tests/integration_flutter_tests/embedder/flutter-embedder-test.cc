@@ -82,16 +82,16 @@ const std::vector<std::pair<const char*, const char*>> GetInjectedServices() {
       "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"
     },{
       "fuchsia.ui.scenic.Scenic",
-      "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
+      "fuchsia-pkg://fuchsia.com/flutter-embedder-test#meta/scenic.cmx"
     },{
       "fuchsia.ui.pointerinjector.Registry",
-      "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
+      "fuchsia-pkg://fuchsia.com/flutter-embedder-test#meta/scenic.cmx"
     },{
       "fuchsia.ui.policy.Presenter",
-      "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"
+      "fuchsia-pkg://fuchsia.com/flutter-embedder-test#meta/root_presenter.cmx"
     },{
       "fuchsia.ui.input.InputDeviceRegistry",
-      "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"
+      "fuchsia-pkg://fuchsia.com/flutter-embedder-test#meta/root_presenter.cmx"
     },
       // clang-format on
   }};
