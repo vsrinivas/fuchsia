@@ -8,7 +8,7 @@ import("//build/rust/rustc_binary.gni")
 
 fidl("test.fidl.pkg") {
   public_deps = [ "//sdk/fidl/fuchsia.io" ]
-  sources = [ "test.fidl.pkg" ]
+  sources = [ "test.test.fidl" ]
 }
 
 rustc_binary("bin") {
