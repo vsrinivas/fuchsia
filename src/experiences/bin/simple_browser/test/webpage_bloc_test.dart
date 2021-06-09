@@ -157,8 +157,7 @@ void main() {
 
       webPageBloc.request.add(NavigateToAction(url: testUrl));
 
-      // Needs mocktail package to use 'any' keyword with null-safe enabled.
-      await untilCalled(webPageBloc.webService.loadUrl(any));
+      await untilCalled(mockSimpleBrowserWebService.loadUrl(any));
       verify(webPageBloc.webService.loadUrl(testUrl)).called(1);
       verifyNever(webPageBloc.webService.goBack());
       verifyNever(webPageBloc.webService.goForward());
@@ -173,7 +172,7 @@ void main() {
 
       webPageBloc.request.add(NavigateToAction(url: testUrl));
 
-      await untilCalled(webPageBloc.webService.loadUrl(any));
+      await untilCalled(mockSimpleBrowserWebService.loadUrl(any));
       verify(webPageBloc.webService.loadUrl(testUrl)).called(1);
       verifyNever(webPageBloc.webService.goBack());
       verifyNever(webPageBloc.webService.goForward());
@@ -188,7 +187,7 @@ void main() {
 
       await untilCalled(webPageBloc.webService.goBack());
       verify(webPageBloc.webService.goBack()).called(1);
-      verifyNever(webPageBloc.webService.loadUrl(any));
+      verifyNever(mockSimpleBrowserWebService.loadUrl(any));
       verifyNever(webPageBloc.webService.goForward());
       verifyNever(webPageBloc.webService.refresh());
     });
@@ -201,7 +200,7 @@ void main() {
 
       await untilCalled(webPageBloc.webService.goForward());
       verify(webPageBloc.webService.goForward()).called(1);
-      verifyNever(webPageBloc.webService.loadUrl(any));
+      verifyNever(mockSimpleBrowserWebService.loadUrl(any));
       verifyNever(webPageBloc.webService.goBack());
       verifyNever(webPageBloc.webService.refresh());
     });
@@ -214,7 +213,7 @@ void main() {
 
       await untilCalled(webPageBloc.webService.refresh());
       verify(webPageBloc.webService.refresh()).called(1);
-      verifyNever(webPageBloc.webService.loadUrl(any));
+      verifyNever(mockSimpleBrowserWebService.loadUrl(any));
       verifyNever(webPageBloc.webService.goBack());
       verifyNever(webPageBloc.webService.goForward());
     });
@@ -222,7 +221,11 @@ void main() {
 }
 
 class MockSimpleBrowserWebService extends Mock
-    implements SimpleBrowserWebService {}
+    implements SimpleBrowserWebService {
+  @override
+  Future<void> loadUrl(String? url) =>
+      super.noSuchMethod(Invocation.method(#loadUrl, [url]));
+}
 
 class MockNavigationState extends Mock implements web.NavigationState {
   @override

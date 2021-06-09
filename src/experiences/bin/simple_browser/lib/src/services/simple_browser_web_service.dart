@@ -80,8 +80,8 @@ class SimpleBrowserWebService {
 
   // TODO(fxr/77454): Make [url] required once the 'any' keyword in mockito is
   // available in unit tests for null-safe packages.
-  Future<void> loadUrl(String? url) => _navigationController.loadUrl(
-        url!,
+  Future<void> loadUrl(String url) => _navigationController.loadUrl(
+        url,
         web.LoadUrlParams(type: web.LoadUrlReason.typed),
       );
   Future<void> goBack() => _navigationController.goBack();
