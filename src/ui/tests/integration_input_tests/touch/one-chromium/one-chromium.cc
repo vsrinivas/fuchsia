@@ -140,7 +140,7 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     FX_CHECK(tap_resp["epoch_msec"].IsInt64());
     FX_CHECK(tap_resp["x"].IsInt());
     FX_CHECK(tap_resp["y"].IsInt());
-    FX_CHECK(tap_resp["device_pixel_ratio"].IsDouble());
+    FX_CHECK(tap_resp["device_pixel_ratio"].IsNumber());
 
     // Relay response to parent.
     test::touch::ResponseListenerSyncPtr response_listener_proxy;
