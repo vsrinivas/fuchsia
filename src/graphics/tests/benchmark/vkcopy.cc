@@ -29,6 +29,7 @@ class VkCopyTest {
 
   bool Initialize();
   bool Exec();
+  bool Validate();
 
  private:
   bool InitBuffers(uint32_t buffer_size);
@@ -124,6 +125,11 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
 
     uint8_t index = (buffer.usage == vk::BufferUsageFlagBits::eTransferSrc) ? 0 : 1;
     memset(addr, static_cast<uint8_t>(kSrcValue + index), buffer_size);
+    vk::MappedMemoryRange range;
+    range.memory = *(buffer.memory);
+    range.offset = 0;
+    range.size = VK_WHOLE_SIZE;
+    device->flushMappedMemoryRanges(1, &range);
     device->unmapMemory(*(buffer.memory));
 
     rv = device->bindBufferMemory(*(buffer.buffer), *(buffer.memory), 0 /* offset */);
@@ -171,8 +177,6 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
 }
 
 bool VkCopyTest::Exec() {
-  const auto &device = ctx_->device();
-
   // Submit command buffer and wait for it to complete.
   vk::SubmitInfo submit_info;
   submit_info.commandBufferCount = static_cast<uint32_t>(command_buffers_.size());
@@ -185,10 +189,21 @@ bool VkCopyTest::Exec() {
 
   ctx_->queue().waitIdle();
 
+  return true;
+}
+
+bool VkCopyTest::Validate() {
+  const auto &device = ctx_->device();
+
   // Verify that we've copied from kSrcBuffer to kDstBuffer.
   void *dst_addr;
   auto rv_map = device->mapMemory(*(buffers_[kDstBuffer].memory), 0 /* offset */, buffer_size_,
                                   vk::MemoryMapFlags(), &dst_addr);
+  vk::MappedMemoryRange range;
+  range.memory = *(buffers_[kDstBuffer].memory);
+  range.offset = 0;
+  range.size = VK_WHOLE_SIZE;
+  device->invalidateMappedMemoryRanges(1, &range);
   if (vk::Result::eSuccess != rv_map) {
     RTN_MSG(false, "VK Error: 0x%x - Map buffer memory, value test.\n", rv_map);
   }
@@ -222,6 +237,9 @@ int main() {
   }
 
   std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
+  if (!app.Validate()) {
+    RTN_MSG(-1, "Validate failed.\n");
+  }
 
   const uint32_t kMB = 1024 * 1024;
   printf("Copy rate %g MB/s\n",
