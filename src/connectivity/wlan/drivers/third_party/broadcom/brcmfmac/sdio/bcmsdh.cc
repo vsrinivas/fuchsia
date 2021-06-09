@@ -914,7 +914,11 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
   }
   sdiodev->dma_buffer_size = kDmaInitialBufferSize;
 
-  brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_DOWN);
+  // No need to call brcmf_sdiod_change_state here. Since the bus struct was allocated above it
+  // can't contain any meaningful previous state that we can transition from. So we just need to set
+  // the expected bus state here. This way we avoid any spurious errors messages about setting the
+  // state to the same value if they happen to match.
+  sdiodev->state = BRCMF_SDIOD_DOWN;
 
   BRCMF_DBG(SDIO, "F2 found, calling brcmf_sdiod_probe...");
   err = brcmf_sdiod_probe(sdiodev);
