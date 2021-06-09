@@ -16,11 +16,6 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_url::pkg_url::PkgUrl;
 use fuchsia_zircon as zx;
-use futures::{
-    channel::mpsc,
-    future::{self, Either, FutureExt},
-    stream::StreamExt,
-};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -39,50 +34,52 @@ static CHANNEL_PACKAGE_MAP: &'static str = "channel_package_map.json";
 pub async fn build_current_channel_manager_and_notifier<S: ServiceConnect>(
     service_connector: S,
 ) -> Result<(CurrentChannelManager, CurrentChannelNotifier<S>), anyhow::Error> {
-    let current_channel = if let Some(channel) =
-        lookup_channel_from_vbmeta(&service_connector).await.unwrap_or_else(|e| {
+    let (current_channel, current_realm) = if let (Some(channel), Some(realm)) =
+        lookup_channel_and_realm_from_vbmeta(&service_connector).await.unwrap_or_else(|e| {
             fx_log_warn!("Failed to read current_channel from vbmeta: {:#}", anyhow!(e));
-            None
+            (None, None)
         }) {
-        channel
+        (channel, Some(realm))
     } else {
-        lookup_channel_from_rewrite_engine(&service_connector).await.unwrap_or_else(|e| {
-            fx_log_warn!("Failed to read current_channel from rewrite engine: {:#}", anyhow!(e));
-            String::new()
-        })
+        (
+            lookup_channel_from_rewrite_engine(&service_connector).await.unwrap_or_else(|e| {
+                fx_log_warn!(
+                    "Failed to read current_channel from rewrite engine: {:#}",
+                    anyhow!(e)
+                );
+                String::new()
+            }),
+            None,
+        )
     };
-
-    let (_channel_sender, channel_receiver) = mpsc::channel(100);
 
     Ok((
         CurrentChannelManager::new(current_channel.clone()),
-        CurrentChannelNotifier::new(service_connector, current_channel, channel_receiver),
+        CurrentChannelNotifier::new(service_connector, current_channel, current_realm),
     ))
 }
 
 pub struct CurrentChannelNotifier<S = ServiceConnector> {
     service_connector: S,
     channel: String,
-    channel_receiver: mpsc::Receiver<String>,
+    realm: Option<String>,
 }
 
 impl<S: ServiceConnect> CurrentChannelNotifier<S> {
-    fn new(
-        service_connector: S,
-        channel: String,
-        channel_receiver: mpsc::Receiver<String>,
-    ) -> Self {
-        CurrentChannelNotifier { service_connector, channel, channel_receiver }
+    fn new(service_connector: S, channel: String, realm: Option<String>) -> Self {
+        CurrentChannelNotifier { service_connector, channel, realm }
     }
 
-    async fn notify_cobalt(service_connector: &S, current_channel: String) {
+    async fn notify_cobalt(
+        service_connector: &S,
+        current_channel: String,
+        current_realm: Option<String>,
+    ) {
         loop {
             let cobalt = Self::connect(service_connector).await;
             let distribution_info = SoftwareDistributionInfo {
                 current_channel: Some(current_channel.clone()),
-                // The realm field allows the omaha_client to pass the Omaha app_id to Cobalt.
-                // Here we have no need to populate the realm field.
-                current_realm: None,
+                current_realm: current_realm.clone(),
                 ..SoftwareDistributionInfo::EMPTY
             };
 
@@ -119,39 +116,8 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
     }
 
     pub async fn run(self) {
-        let Self { service_connector, channel, mut channel_receiver } = self;
-        let mut notify_cobalt_task = Self::notify_cobalt(&service_connector, channel).boxed();
-
-        loop {
-            match future::select(channel_receiver.next(), notify_cobalt_task).await {
-                Either::Left((Some(current_channel), _)) => {
-                    fx_log_warn!(
-                        "notify_cobalt() overrun. Starting again with new channel: `{}`",
-                        current_channel
-                    );
-                    notify_cobalt_task =
-                        Self::notify_cobalt(&service_connector, current_channel).boxed();
-                }
-                Either::Left((None, notify_cobalt_future)) => {
-                    fx_log_warn!(
-                        "all channel_senders have been closed. No new messages will arrive."
-                    );
-                    notify_cobalt_future.await;
-                    return;
-                }
-                Either::Right((_, next_channel_fut)) => {
-                    if let Some(current_channel) = next_channel_fut.await {
-                        notify_cobalt_task =
-                            Self::notify_cobalt(&service_connector, current_channel).boxed();
-                    } else {
-                        fx_log_warn!(
-                            "all channel_senders have been closed. No new messages will arrive."
-                        );
-                        return;
-                    }
-                }
-            }
-        }
+        let Self { service_connector, channel, realm } = self;
+        Self::notify_cobalt(&service_connector, channel, realm).await;
     }
 
     async fn connect(service_connector: &S) -> SystemDataUpdaterProxy {
@@ -225,7 +191,8 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
     /// Fetch the target channel from vbmeta, if one is present.
     /// Otherwise, will attempt to guess channel from the current rewrite rules.
     pub async fn update(&self) -> Result<(), anyhow::Error> {
-        let target_channel = lookup_channel_from_vbmeta(&self.service_connector).await?;
+        let (target_channel, _) =
+            lookup_channel_and_realm_from_vbmeta(&self.service_connector).await?;
         if target_channel.is_some()
             && self.target_channel.lock().as_ref() == target_channel.as_ref()
         {
@@ -320,12 +287,20 @@ async fn lookup_channel_from_rewrite_engine(
 }
 
 /// Uses Zircon kernel arguments (typically provided by vbmeta) to determine the current channel.
-async fn lookup_channel_from_vbmeta(
+async fn lookup_channel_and_realm_from_vbmeta(
     service_connector: &impl ServiceConnect,
-) -> Result<Option<String>, anyhow::Error> {
+) -> Result<(Option<String>, Option<String>), anyhow::Error> {
     let proxy = service_connector.connect_to_service::<ArgumentsMarker>()?;
-    let channel = proxy.get_string("ota_channel").await?;
-    Ok(channel)
+    let options = ["ota_channel", "omaha_app_id"];
+    // Rust doesn't like it if we try to .await? on the same line.
+    let future = proxy.get_strings(&mut options.iter().copied());
+    let results = future.await?;
+
+    if results.len() != 2 {
+        return Err(anyhow!("Wrong number of results for get_strings()"));
+    }
+
+    Ok((results[0].clone(), results[1].clone()))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -423,6 +398,7 @@ mod tests {
     use fuchsia_zircon::DurationNum;
     use futures::prelude::*;
     use futures::task::Poll;
+    use futures::{future::FutureExt, stream::StreamExt};
     use matches::assert_matches;
     use parking_lot::Mutex;
     use serde_json::{json, Value};
@@ -472,13 +448,15 @@ mod tests {
     fn serve_ota_channel_arguments(
         mut stream: ArgumentsRequestStream,
         channel: &'static str,
+        realm: Option<&'static str>,
     ) -> fasync::Task<()> {
         fasync::Task::local(async move {
             while let Some(req) = stream.try_next().await.unwrap_or(None) {
                 match req {
-                    ArgumentsRequest::GetString { key, responder } => {
-                        assert_eq!(key, "ota_channel");
-                        responder.send(Some(channel)).expect("send ok");
+                    ArgumentsRequest::GetStrings { keys, responder } => {
+                        assert_eq!(keys, vec!["ota_channel", "omaha_app_id"]);
+                        let response = [Some(channel), realm.clone()];
+                        responder.send(&mut response.iter().map(|v| *v)).expect("send ok");
                     }
                     _ => unreachable!(),
                 }
@@ -493,8 +471,8 @@ mod tests {
                 .expect("ns to bind");
 
         let mut fs = ServiceFs::new_local();
-        let channel = Arc::new(Mutex::new(None));
-        let chan = channel.clone();
+        let channel_and_realm = Arc::new(Mutex::new((None, None)));
+        let chan = channel_and_realm.clone();
 
         fs.add_fidl_service(move |mut stream: SystemDataUpdaterRequestStream| {
             let chan = chan.clone();
@@ -506,7 +484,7 @@ mod tests {
                             info,
                             responder,
                         } => {
-                            *chan.lock() = info.current_channel;
+                            *chan.lock() = (info.current_channel, info.current_realm);
                             responder.send(CobaltStatus::Ok).unwrap();
                         }
                         _ => unreachable!(),
@@ -516,7 +494,7 @@ mod tests {
             .detach()
         })
         .add_fidl_service(move |stream: ArgumentsRequestStream| {
-            serve_ota_channel_arguments(stream, "stable").detach()
+            serve_ota_channel_arguments(stream, "stable", Some("sample-realm")).detach()
         })
         .serve_connection(svc_dir)
         .expect("serve_connection");
@@ -526,7 +504,9 @@ mod tests {
 
         c.run().await;
 
-        assert_eq!(channel.lock().as_ref().map(|s| s.as_str()), Some("stable"));
+        let lock = channel_and_realm.lock();
+        assert_eq!(lock.0.as_deref(), Some("stable"));
+        assert_eq!(lock.1.as_deref(), Some("sample-realm"));
     }
 
     #[test]
@@ -652,8 +632,12 @@ mod tests {
                                 .detach();
                             }
                             ArgumentsMarker::SERVICE_NAME => {
-                                serve_ota_channel_arguments(stream.cast_stream(), "stable")
-                                    .detach();
+                                serve_ota_channel_arguments(
+                                    stream.cast_stream(),
+                                    "stable",
+                                    Some("sample-realm"),
+                                )
+                                .detach();
                             }
                             _ => unimplemented!(),
                         };
@@ -706,7 +690,7 @@ mod tests {
         assert_eq!(connector.connect_count(), 5);
         assert_eq!(connector.call_count(), 2);
         assert_eq!(connector.channel(), Some("stable".to_owned()));
-        assert_eq!(connector.realm(), None);
+        assert_eq!(connector.realm(), Some("sample-realm".to_owned()));
 
         std::mem::drop(executor);
         let mut real_executor = fasync::TestExecutor::new().expect("new executor ok");
@@ -833,9 +817,10 @@ mod tests {
             fasync::Task::local(async move {
                 while let Some(req) = stream.try_next().await.unwrap() {
                     match req {
-                        ArgumentsRequest::GetString { key, responder } => {
-                            assert_eq!(&key, "ota_channel");
-                            responder.send(channel.as_deref()).unwrap();
+                        ArgumentsRequest::GetStrings { keys, responder } => {
+                            assert_eq!(keys, vec!["ota_channel", "omaha_app_id"]);
+                            let response = vec![channel.as_deref(), None];
+                            responder.send(&mut response.into_iter()).unwrap();
                         }
                         _ => unreachable!(),
                     }
