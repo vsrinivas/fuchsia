@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <zircon/boot/image.h>
 
+#include <ktl/byte.h>
 #include <ktl/span.h>
 #include <phys/main.h>
 #include <phys/symbolize.h>

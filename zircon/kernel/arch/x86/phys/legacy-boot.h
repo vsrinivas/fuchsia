@@ -7,18 +7,18 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_PHYS_LEGACY_BOOT_H_
 #define ZIRCON_KERNEL_ARCH_X86_PHYS_LEGACY_BOOT_H_
 
+#include <lib/stdcompat/span.h>
 #include <zircon/boot/image.h>
 
-#include <ktl/byte.h>
-#include <ktl/span.h>
-#include <ktl/string_view.h>
+#include <cstdint>
+#include <string_view>
 
 // This holds information collected from a legacy boot loader protocol.
 struct LegacyBoot {
-  ktl::string_view bootloader;
-  ktl::string_view cmdline;
-  ktl::span<ktl::byte> ramdisk;
-  ktl::span<zbi_mem_range_t> mem_config;
+  std::string_view bootloader;
+  std::string_view cmdline;
+  cpp20::span<std::byte> ramdisk;
+  cpp20::span<zbi_mem_range_t> mem_config;
 };
 
 // InitMemory() initializes this.

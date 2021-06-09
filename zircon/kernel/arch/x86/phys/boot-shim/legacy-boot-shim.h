@@ -1,0 +1,40 @@
+// Copyright 2021 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
+
+#ifndef ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_LEGACY_BOOT_SHIM_H_
+#define ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_LEGACY_BOOT_SHIM_H_
+
+#include <lib/boot-shim/boot-shim.h>
+#include <lib/boot-shim/test-serial-number.h>
+#include <stdio.h>
+
+#include "../legacy-boot.h"
+
+using LegacyBootShimBase = boot_shim::BootShim<  //
+    boot_shim::SingleItem<ZBI_TYPE_MEM_CONFIG>,  //
+    boot_shim::TestSerialNumberItem>;
+
+class LegacyBootShim : public LegacyBootShimBase {
+ public:
+  LegacyBootShim(const char* name, const LegacyBoot& info, FILE* log = stdout)
+      : LegacyBootShimBase(name, log), input_zbi_(cpp20::as_bytes(info.ramdisk)) {
+    set_info(info.bootloader);
+    set_cmdline(info.cmdline);
+    Get<MemConfig>().set_payload(cpp20::as_bytes(info.mem_config));
+    Log(input_zbi_.storage());
+    Check("Error scanning ZBI", Get<SerialNumber>().Init(input_zbi_));
+  }
+
+  InputZbi& input_zbi() { return input_zbi_; }
+
+ private:
+  using MemConfig = boot_shim::SingleItem<ZBI_TYPE_MEM_CONFIG>;
+  using SerialNumber = boot_shim::TestSerialNumberItem;
+
+  InputZbi input_zbi_;
+};
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_LEGACY_BOOT_SHIM_H_

@@ -4,6 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/test.gni")
 import("//build/testing/zbi_test.gni")
 import("//build/unification/global_variables.gni")
 import("//zircon/kernel/phys/phys_executable.gni")
@@ -115,7 +116,10 @@ zbi_test("x86-boot-shim-tests") {
 
 if (toolchain.environment == "kernel.phys32") {
   source_set("legacy-boot-shim") {
-    sources = [ "legacy-boot-shim.cc" ]
+    sources = [
+      "legacy-boot-shim.cc",
+      "legacy-boot-shim.h",
+    ]
     deps = [
       ":stdout",
       ":trampoline-boot",
@@ -126,8 +130,10 @@ if (toolchain.environment == "kernel.phys32") {
       "//zircon/kernel/phys:arch-header",
       "//zircon/kernel/phys:main",
       "//zircon/kernel/phys:symbolize",
+      "//zircon/kernel/phys/lib/boot-shim",
       "//zircon/system/ulib/hwreg",
     ]
+    friend = [ ":legacy-boot-shim-tests" ]
   }
 
   source_set("stdout") {
@@ -169,6 +175,15 @@ if (toolchain.environment == "kernel.phys32") {
   }
 }
 
+test("legacy-boot-shim-tests") {
+  sources = [ "legacy-boot-shim-tests.cc" ]
+  deps = [
+    "//zircon/kernel/phys/lib/boot-shim",
+    "//zircon/kernel/phys/lib/boot-shim:boot-shim-test",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
 qemu_shims = [
   {
     name = "linux-x86-boot-shim"
@@ -206,7 +221,10 @@ template("qemu_shim_test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":x86-boot-shim-tests" ]
+  deps = [
+    ":legacy-boot-shim-tests($host_toolchain)",
+    ":x86-boot-shim-tests",
+  ]
   foreach(shim, qemu_shims) {
     deps += [ ":${shim.name}" ]
     foreach(test, qemu_shim_tests) {
