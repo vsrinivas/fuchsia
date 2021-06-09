@@ -101,29 +101,26 @@ enum StatusEvent {
     VersionAvailableKnown(String),
 }
 
-pub struct UpdateManager<T, Ch, C, A, N, Cq>
+pub struct UpdateManager<T, C, A, N, Cq>
 where
     T: TargetChannelUpdater,
-    Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
     N: StateNotifier,
     Cq: CommitQuerier,
 {
     monitor: UpdateMonitor<N>,
-    updater: SystemInterface<T, Ch, C, A, Cq>,
+    updater: SystemInterface<T, C, A, Cq>,
 }
 
-struct SystemInterface<T, Ch, C, A, Cq>
+struct SystemInterface<T, C, A, Cq>
 where
     T: TargetChannelUpdater,
-    Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
     Cq: CommitQuerier,
 {
     target_channel_updater: Arc<T>,
-    current_channel_updater: Arc<Ch>,
     update_checker: C,
     update_applier: A,
     last_known_update_package: Option<Hash>,
@@ -131,24 +128,17 @@ where
     commit_querier: Cq,
 }
 
-impl<T, Ch>
-    UpdateManager<T, Ch, RealUpdateChecker, RealUpdateApplier, RealStateNotifier, RealCommitQuerier>
+impl<T> UpdateManager<T, RealUpdateChecker, RealUpdateApplier, RealStateNotifier, RealCommitQuerier>
 where
     T: TargetChannelUpdater,
-    Ch: CurrentChannelUpdater,
 {
-    pub async fn new(
-        target_channel_updater: Arc<T>,
-        current_channel_updater: Arc<Ch>,
-        node: finspect::Node,
-    ) -> Self {
+    pub async fn new(target_channel_updater: Arc<T>, node: finspect::Node) -> Self {
         let (fut, update_monitor) = UpdateMonitor::from_inspect_node(node);
         fasync::Task::spawn(fut).detach();
         Self {
             monitor: update_monitor,
             updater: SystemInterface::new(
                 target_channel_updater,
-                current_channel_updater,
                 RealUpdateChecker,
                 RealUpdateApplier,
                 None,
@@ -159,10 +149,9 @@ where
     }
 }
 
-impl<T, Ch, C, A, N, Cq> UpdateManager<T, Ch, C, A, N, Cq>
+impl<T, C, A, N, Cq> UpdateManager<T, C, A, N, Cq>
 where
     T: TargetChannelUpdater,
-    Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
     N: StateNotifier,
@@ -171,7 +160,6 @@ where
     #[cfg(test)]
     pub async fn from_checker_and_applier(
         target_channel_updater: Arc<T>,
-        current_channel_updater: Arc<Ch>,
         update_checker: C,
         update_applier: A,
         commit_querier: Cq,
@@ -182,7 +170,6 @@ where
             monitor: update_monitor,
             updater: SystemInterface::new(
                 target_channel_updater,
-                current_channel_updater,
                 update_checker,
                 update_applier,
                 None,
@@ -195,7 +182,6 @@ where
     #[cfg(test)]
     async fn from_checker_and_applier_with_commit_status(
         target_channel_updater: Arc<T>,
-        current_channel_updater: Arc<Ch>,
         update_checker: C,
         update_applier: A,
         commit_querier: Cq,
@@ -208,7 +194,6 @@ where
             monitor: update_monitor,
             updater: SystemInterface::new(
                 target_channel_updater,
-                current_channel_updater,
                 update_checker,
                 update_applier,
                 last_known_update_package,
@@ -341,17 +326,15 @@ where
     }
 }
 
-impl<T, Ch, C, A, Cq> SystemInterface<T, Ch, C, A, Cq>
+impl<T, C, A, Cq> SystemInterface<T, C, A, Cq>
 where
     T: TargetChannelUpdater,
-    Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
     Cq: CommitQuerier,
 {
     fn new(
         target_channel_updater: Arc<T>,
-        current_channel_updater: Arc<Ch>,
         update_checker: C,
         update_applier: A,
         last_known_update_package: Option<Hash>,
@@ -360,7 +343,6 @@ where
     ) -> Self {
         Self {
             target_channel_updater,
-            current_channel_updater,
             update_checker,
             update_applier,
             last_known_update_package,
@@ -399,7 +381,6 @@ where
 
                 self.last_known_update_package = Some(update_package);
 
-                self.current_channel_updater.update().await;
                 co.yield_(StatusEvent::State(State::NoUpdateAvailable)).await;
 
                 return Ok(());
@@ -582,17 +563,8 @@ impl<S: ServiceConnect + 'static> TargetChannelUpdater for TargetChannelManager<
 }
 
 // For mocking
-pub trait CurrentChannelUpdater: Send + Sync + 'static {
-    fn update(&self) -> BoxFuture<'_, ()>;
-}
-
-impl CurrentChannelUpdater for CurrentChannelManager {
-    fn update(&self) -> BoxFuture<'_, ()> {
-        CurrentChannelManager::update(self)
-            .unwrap_or_else(|e| fx_log_err!("while updating current channel: {:#}", anyhow!(e)))
-            .boxed()
-    }
-}
+pub trait CurrentChannelUpdater: Send + Sync + 'static {}
+impl CurrentChannelUpdater for CurrentChannelManager {}
 
 // For mocking
 pub trait UpdateApplier: Send + Sync + 'static {
@@ -768,28 +740,6 @@ pub(crate) mod tests {
     }
 
     #[derive(Clone)]
-    pub struct FakeCurrentChannelUpdater {
-        call_count: Arc<AtomicU64>,
-    }
-    impl FakeCurrentChannelUpdater {
-        pub fn new() -> Self {
-            Self { call_count: Arc::new(AtomicU64::new(0)) }
-        }
-        pub fn call_count(&self) -> u64 {
-            self.call_count.load(Ordering::SeqCst)
-        }
-    }
-    impl CurrentChannelUpdater for FakeCurrentChannelUpdater {
-        fn update(&self) -> BoxFuture<'_, ()> {
-            let call_count = self.call_count.clone();
-            async move {
-                call_count.fetch_add(1, Ordering::SeqCst);
-            }
-            .boxed()
-        }
-    }
-
-    #[derive(Clone)]
     pub struct UnreachableUpdateApplier;
     impl UpdateApplier for UnreachableUpdateApplier {
         fn apply<'a>(
@@ -937,7 +887,6 @@ pub(crate) mod tests {
 
     type FakeUpdateManager = UpdateManager<
         FakeTargetChannelUpdater,
-        FakeCurrentChannelUpdater,
         FakeUpdateChecker,
         FakeUpdateApplier,
         FakeStateNotifier,
@@ -946,7 +895,6 @@ pub(crate) mod tests {
 
     type BlockingManagerManager = UpdateManager<
         FakeTargetChannelUpdater,
-        FakeCurrentChannelUpdater,
         BlockingUpdateChecker,
         FakeUpdateApplier,
         FakeStateNotifier,
@@ -965,7 +913,6 @@ pub(crate) mod tests {
     async fn test_correct_initial_state() {
         let mut manager = FakeUpdateManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeCommitQuerier::new(),
@@ -982,7 +929,6 @@ pub(crate) mod tests {
 
         let mut manager = FakeUpdateManager::from_checker_and_applier_with_commit_status(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             fake_update_checker,
             FakeUpdateApplier::new_success(),
             FakeCommitQuerier::new(),
@@ -1012,7 +958,6 @@ pub(crate) mod tests {
 
         let mut manager = FakeUpdateManager::from_checker_and_applier_with_commit_status(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             fake_update_checker,
             FakeUpdateApplier::new_success(),
             FakeCommitQuerier::new(),
@@ -1067,7 +1012,6 @@ pub(crate) mod tests {
 
         let mut manager = FakeUpdateManager::from_checker_and_applier_with_commit_status(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_success(),
             fake_commit_querier,
@@ -1089,7 +1033,6 @@ pub(crate) mod tests {
 
         let mut manager = FakeUpdateManager::from_checker_and_applier_with_commit_status(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_success(),
             fake_commit_querier,
@@ -1111,7 +1054,6 @@ pub(crate) mod tests {
 
         let mut manager = FakeUpdateManager::from_checker_and_applier_with_commit_status(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_success(),
             fake_commit_querier,
@@ -1130,7 +1072,6 @@ pub(crate) mod tests {
     async fn test_try_start_update_returns_started() {
         let mut manager = FakeUpdateManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeCommitQuerier::new(),
@@ -1146,7 +1087,6 @@ pub(crate) mod tests {
     async fn test_temporary_callbacks_dropped_after_update_attempt() {
         let mut manager = FakeUpdateManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeCommitQuerier::new(),
@@ -1171,7 +1111,6 @@ pub(crate) mod tests {
     async fn test_try_start_update_callback_when_up_to_date() {
         let mut manager = FakeUpdateManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_up_to_date(),
             FakeUpdateApplier::new_success(),
             FakeCommitQuerier::new(),
@@ -1193,7 +1132,6 @@ pub(crate) mod tests {
     async fn test_try_start_update_callback_when_update_available_and_apply_errors() {
         let mut manager = FakeUpdateManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
             FakeCommitQuerier::new(),
@@ -1229,7 +1167,6 @@ pub(crate) mod tests {
     async fn test_try_start_update_callback_when_update_available_and_apply_succeeds() {
         let mut manager = FakeUpdateManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_success(),
             FakeCommitQuerier::new(),
@@ -1284,7 +1221,6 @@ pub(crate) mod tests {
     async fn test_check_start_update_callback_when_update_available_and_pending() {
         let mut manager = FakeUpdateManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_success(),
             FakeCommitQuerier::new_pending(),
@@ -1316,7 +1252,6 @@ pub(crate) mod tests {
         let update_applier = FakeUpdateApplier::new_error();
         let mut manager = FakeUpdateManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_update_available(),
             update_applier.clone(),
             FakeCommitQuerier::new(),
@@ -1335,10 +1270,8 @@ pub(crate) mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_update_applier_not_called_if_up_to_date() {
         let update_applier = FakeUpdateApplier::new_error();
-        let current_channel_updater = Arc::new(FakeCurrentChannelUpdater::new());
         let mut manager = FakeUpdateManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::clone(&current_channel_updater),
             FakeUpdateChecker::new_up_to_date(),
             update_applier.clone(),
             FakeCommitQuerier::new(),
@@ -1352,14 +1285,12 @@ pub(crate) mod tests {
         let _ = receiver.collect::<Vec<State>>().await;
 
         assert_eq!(update_applier.call_count(), 0);
-        assert_eq!(current_channel_updater.call_count(), 1);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_return_to_initial_state_on_update_check_error() {
         let mut manager = FakeUpdateManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_error(),
             FakeUpdateApplier::new_error(),
             FakeCommitQuerier::new(),
@@ -1379,7 +1310,6 @@ pub(crate) mod tests {
     async fn test_return_to_initial_state_on_update_apply_error() {
         let mut manager = FakeUpdateManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
             FakeCommitQuerier::new(),
@@ -1429,7 +1359,6 @@ pub(crate) mod tests {
         let (blocking_update_checker, sender) = BlockingUpdateChecker::new_checker_and_sender();
         let mut manager = BlockingManagerManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             blocking_update_checker,
             FakeUpdateApplier::new_error(),
             FakeCommitQuerier::new(),
@@ -1460,7 +1389,6 @@ pub(crate) mod tests {
         let update_applier = FakeUpdateApplier::new_error();
         let mut manager = BlockingManagerManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             blocking_update_checker,
             update_applier.clone(),
             FakeCommitQuerier::new(),
@@ -1486,7 +1414,6 @@ pub(crate) mod tests {
         let update_applier = FakeUpdateApplier::new_error();
         let mut manager = BlockingManagerManager::from_checker_and_applier(
             Arc::new(FakeTargetChannelUpdater::new()),
-            Arc::new(FakeCurrentChannelUpdater::new()),
             blocking_update_checker,
             update_applier.clone(),
             FakeCommitQuerier::new(),

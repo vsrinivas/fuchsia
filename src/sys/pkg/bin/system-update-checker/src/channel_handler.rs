@@ -106,18 +106,17 @@ mod tests {
         fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
         fidl_fuchsia_update_channelcontrol::{ChannelControlMarker, ChannelControlProxy},
         fuchsia_async as fasync,
-        futures::channel::mpsc,
         std::{fs, path::Path},
         tempfile::TempDir,
     };
 
     fn new_test_channel_handler(info_dir: &TempDir) -> ChannelHandler {
-        let (sender, _) = mpsc::channel(0);
+        new_test_channel_handler_with_channel(info_dir, "example")
+    }
+
+    fn new_test_channel_handler_with_channel(info_dir: &TempDir, channel: &str) -> ChannelHandler {
         ChannelHandler {
-            current_channel_manager: Arc::new(CurrentChannelManager::new(
-                info_dir.path().into(),
-                sender,
-            )),
+            current_channel_manager: Arc::new(CurrentChannelManager::new(channel.to_owned())),
             target_channel_manager: Arc::new(TargetChannelManager::new(
                 crate::connect::ServiceConnector,
                 info_dir.path(),
@@ -129,6 +128,11 @@ mod tests {
 
     fn spawn_provider_handler(info_dir: &TempDir) -> ProviderProxy {
         let channel_handler = new_test_channel_handler(info_dir);
+        spawn_provider_handler_with_channel_handler(channel_handler)
+    }
+    fn spawn_provider_handler_with_channel_handler(
+        channel_handler: ChannelHandler,
+    ) -> ProviderProxy {
         let (proxy, stream) =
             create_proxy_and_stream::<ProviderMarker>().expect("create_proxy_and_stream");
         fasync::Task::spawn(async move {
@@ -190,7 +194,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_fidl_get_current_return_empty_string_if_both_channel_missing() {
         let tempdir = TempDir::new().expect("create tempdir");
-        let proxy = spawn_provider_handler(&tempdir);
+        let proxy = spawn_provider_handler_with_channel_handler(
+            new_test_channel_handler_with_channel(&tempdir, ""),
+        );
 
         let res = proxy.get_current().await;
 

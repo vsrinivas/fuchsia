@@ -53,9 +53,8 @@ mod tests {
     use crate::config::ConfigBuilder;
     use crate::update_manager::{
         tests::{
-            FakeCommitQuerier, FakeCurrentChannelUpdater, FakeTargetChannelUpdater,
-            FakeUpdateChecker, FakeUpdateManagerControlHandle, StateChangeCollector,
-            UnreachableUpdateApplier,
+            FakeCommitQuerier, FakeTargetChannelUpdater, FakeUpdateChecker,
+            FakeUpdateManagerControlHandle, StateChangeCollector, UnreachableUpdateApplier,
         },
         UpdateManager, UpdateManagerRequest,
     };
@@ -143,15 +142,13 @@ mod tests {
         let checker = FakeUpdateChecker::new_up_to_date();
         let update_blocked = checker.block().unwrap();
         let callback = StateChangeCollector::new();
-        let mut fut =
-            UpdateManager::<_, _, _, _, StateChangeCollector, _>::from_checker_and_applier(
-                Arc::new(FakeTargetChannelUpdater::new()),
-                Arc::new(FakeCurrentChannelUpdater::new()),
-                checker.clone(),
-                UnreachableUpdateApplier,
-                FakeCommitQuerier::new(),
-            )
-            .boxed();
+        let mut fut = UpdateManager::<_, _, _, StateChangeCollector, _>::from_checker_and_applier(
+            Arc::new(FakeTargetChannelUpdater::new()),
+            checker.clone(),
+            UnreachableUpdateApplier,
+            FakeCommitQuerier::new(),
+        )
+        .boxed();
         let mut manager = match executor.run_until_stalled(&mut fut) {
             Poll::Ready(manager) => manager,
             Poll::Pending => panic!("manager not ready"),

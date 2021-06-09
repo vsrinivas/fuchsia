@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::channel::{CurrentChannelManager, TargetChannelManager};
+use crate::channel::TargetChannelManager;
 use crate::connect::ServiceConnector;
 use crate::update_manager::{
     RealCommitQuerier, RealUpdateApplier, RealUpdateChecker, UpdateManager,
@@ -16,10 +16,8 @@ use futures::prelude::*;
 use std::convert::TryInto;
 
 pub type RealTargetChannelUpdater = TargetChannelManager<ServiceConnector>;
-pub type RealCurrentChannelUpdater = CurrentChannelManager;
 pub type RealUpdateManager = UpdateManager<
     RealTargetChannelUpdater,
-    RealCurrentChannelUpdater,
     RealUpdateChecker,
     RealUpdateApplier,
     RealStateNotifier,
@@ -108,11 +106,11 @@ impl Notify for RealStateNotifier {
 mod tests {
     use super::*;
     use crate::update_manager::tests::{
-        BlockingUpdateChecker, FakeCommitQuerier, FakeCurrentChannelUpdater,
-        FakeTargetChannelUpdater, FakeUpdateApplier, FakeUpdateChecker, LATEST_SYSTEM_IMAGE,
+        BlockingUpdateChecker, FakeCommitQuerier, FakeTargetChannelUpdater, FakeUpdateApplier,
+        FakeUpdateChecker, LATEST_SYSTEM_IMAGE,
     };
     use crate::update_manager::{
-        CommitQuerier, CurrentChannelUpdater, TargetChannelUpdater, UpdateApplier, UpdateChecker,
+        CommitQuerier, TargetChannelUpdater, UpdateApplier, UpdateChecker,
     };
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_update::{ManagerMarker, ManagerProxy, MonitorRequest, MonitorRequestStream};
@@ -121,25 +119,22 @@ mod tests {
     use matches::assert_matches;
     use std::sync::Arc;
 
-    async fn spawn_update_service<T, Ch, C, A, Cq>(
+    async fn spawn_update_service<T, C, A, Cq>(
         channel_updater: T,
-        current_channel_updater: Ch,
         update_checker: C,
         update_applier: A,
         commit_status_provider: Cq,
     ) -> (ManagerProxy, UpdateService)
     where
         T: TargetChannelUpdater,
-        Ch: CurrentChannelUpdater,
         C: UpdateChecker,
         A: UpdateApplier,
         Cq: CommitQuerier,
     {
         let mut update_service = UpdateService {
             update_manager:
-                UpdateManager::<T, Ch, C, A, RealStateNotifier, Cq>::from_checker_and_applier(
+                UpdateManager::<T, C, A, RealStateNotifier, Cq>::from_checker_and_applier(
                     Arc::new(channel_updater),
-                    Arc::new(current_channel_updater),
                     update_checker,
                     update_applier,
                     commit_status_provider,
@@ -186,7 +181,6 @@ mod tests {
     async fn test_check_now_monitor_sees_on_state_events() {
         let proxy = spawn_update_service(
             FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
             FakeCommitQuerier::new(),
@@ -224,7 +218,6 @@ mod tests {
         let (blocking_update_checker, unblocker) = BlockingUpdateChecker::new_checker_and_sender();
         let (proxy0, mut service) = spawn_update_service(
             FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
             blocking_update_checker,
             FakeUpdateApplier::new_error(),
             FakeCommitQuerier::new(),
@@ -298,7 +291,6 @@ mod tests {
         let (blocking_update_checker, unblocker) = BlockingUpdateChecker::new_checker_and_sender();
         let proxy = spawn_update_service(
             FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
             blocking_update_checker,
             FakeUpdateApplier::new_error(),
             FakeCommitQuerier::new(),
@@ -354,7 +346,6 @@ mod tests {
     async fn test_check_now_invalid_options() {
         let proxy = spawn_update_service(
             FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
             FakeCommitQuerier::new(),
@@ -383,7 +374,6 @@ mod tests {
         let (blocking_update_checker, unblocker) = BlockingUpdateChecker::new_checker_and_sender();
         let proxy = spawn_update_service(
             FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
             blocking_update_checker,
             FakeUpdateApplier::new_error(),
             FakeCommitQuerier::new(),
@@ -436,7 +426,6 @@ mod tests {
         let fake_update_applier = FakeUpdateApplier::new_error();
         let (proxy0, mut service) = spawn_update_service(
             FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
             blocking_update_checker,
             fake_update_applier.clone(),
             FakeCommitQuerier::new(),
@@ -501,7 +490,6 @@ mod tests {
     async fn test_perform_pending_reboot_returns_false() {
         let proxy = spawn_update_service(
             FakeTargetChannelUpdater::new(),
-            FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
             FakeCommitQuerier::new(),
