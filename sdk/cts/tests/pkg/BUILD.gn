@@ -2,11 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/sdk/sdk_molecule.gni")
+
 group("tests") {
   deps = [
     "fdio:tests",
     "fidl/cpp:tests",
     "memfs:tests",
+  ]
+  testonly = true
+}
+
+sdk_molecule("test_sdks") {
+  deps = [
+    "fdio:test_sdks",
+    "fidl/cpp:test_sdks",
+    "memfs:test_sdks",
   ]
   testonly = true
 }

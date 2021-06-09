@@ -49,7 +49,7 @@ cts_copy_to_sdk("build") {
   sources = [ "BUILD.gn" ]
 }
 
-sdk_molecule("components_sdks") {
+sdk_molecule("test_sdks") {
   testonly = true
   deps = [
     ":cts-package-manager-sample-bin2_sdk",

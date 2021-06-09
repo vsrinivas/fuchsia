@@ -4,11 +4,11 @@
 import("//build/sdk/sdk_molecule.gni")
 
 group("tests") {
-  deps = [ "fuchsia.element:tests" ]
+  deps = [ "hello_world:tests" ]
   testonly = true
 }
 
 sdk_molecule("test_sdks") {
-  deps = [ "fuchsia.element:test_sdks" ]
+  deps = [ "hello_world:test_sdks" ]
   testonly = true
 }

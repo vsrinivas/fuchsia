@@ -114,21 +114,7 @@ sdk_documentation("musl_license") {
 sdk("cts") {
   testonly = true
   category = "cts"
-  deps = [ ":cts_tests" ]
-}
-
-sdk_molecule("cts_tests") {
-  testonly = true
-  category = "cts"
-  visibility = [ ":*" ]
-  deps = [
-    "//sdk/cts/examples/hello_world:test_sdks",
-    "//sdk/cts/tests/fidl/fuchsia.element:test_sdks",
-    "//sdk/cts/tests/pkg/fdio:test_sdks",
-    "//sdk/cts/tests/pkg/fidl/cpp:test_sdks",
-    "//sdk/cts/tests/pkg/memfs:test_sdks",
-    "//sdk/cts/tests/tools/package_manager/components:components_sdks",
-  ]
+  deps = [ "cts:cts_tests" ]
 }
 
 # License/copyright files for the SDK.

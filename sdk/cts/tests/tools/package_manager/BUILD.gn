@@ -93,3 +93,8 @@ group("tests") {
     "//garnet/packages/tools:sl4f",  # Required to run tests locally.
   ]
 }
+
+sdk_molecule("test_sdks") {
+  deps = [ "components:test_sdks" ]
+  testonly = true
+}

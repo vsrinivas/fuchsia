@@ -1,6 +1,7 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import("//build/sdk/sdk_molecule.gni")
 
 group("tests_no_e2e") {
   testonly = true
@@ -24,4 +25,15 @@ group("tests") {
     ":e2e_tests",
     ":tests_no_e2e",
   ]
+}
+
+sdk_molecule("test_sdks") {
+  deps = [
+    "fidl:test_sdks",
+    "pkg:test_sdks",
+
+    # TODO(johnshamoon): Enable this when our Dart toolchain is sorted.
+    # "tools:test_sdks",
+  ]
+  testonly = true
 }

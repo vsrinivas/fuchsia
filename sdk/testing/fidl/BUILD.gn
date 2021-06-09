@@ -89,3 +89,15 @@ cts_fidl("collision_test") {
 
   sources = [ "collision.test.fidl" ]
 }
+
+sdk_molecule("test_sdks") {
+  deps = [
+    ":collision_test_sdk",
+    ":fidl_test_handles_sdk",
+    ":fidl_test_sdk",
+    ":frobinator_sdk",
+    ":test_sdk",
+    ":test_support_sdk",
+  ]
+  testonly = true
+}
