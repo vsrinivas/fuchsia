@@ -9,6 +9,7 @@ use fuchsia_zircon as zx;
 use lazy_static::lazy_static;
 use log::{info, warn};
 
+use crate::devices::*;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
@@ -92,11 +93,7 @@ impl FsNodeOps for RemoteFileNode {
     }
 }
 
-#[cfg(test)]
-use crate::devices::*;
-
-#[cfg(test)] // Will be used outside of tests later
-fn new_remote_filesystem(dir: fio::DirectorySynchronousProxy, rights: u32) -> FsNodeHandle {
+pub fn new_remote_filesystem(dir: fio::DirectorySynchronousProxy, rights: u32) -> FsNodeHandle {
     let remotefs = AnonymousNodeDevice::new(0); // TODO: Get from device registry.
     FsNode::new_root(RemoteDirectoryNode { dir, rights }, remotefs)
 }
@@ -108,7 +105,6 @@ pub struct RemoteFile {
 enum RemoteNode {
     File(fio::FileSynchronousProxy),
     Directory(fio::DirectorySynchronousProxy),
-    Other(fio::NodeSynchronousProxy),
 }
 
 impl RemoteNode {
@@ -116,23 +112,7 @@ impl RemoteNode {
         match self {
             RemoteNode::File(n) => n.get_attr(zx::Time::INFINITE),
             RemoteNode::Directory(n) => n.get_attr(zx::Time::INFINITE),
-            RemoteNode::Other(n) => n.get_attr(zx::Time::INFINITE),
         }
-    }
-}
-
-impl RemoteFile {
-    pub fn from_description(description: syncio::DescribedNode) -> FileHandle {
-        let node = match description.info {
-            fio::NodeInfo::Directory(_) => RemoteNode::Directory(
-                fio::DirectorySynchronousProxy::new(description.node.into_channel()),
-            ),
-            fio::NodeInfo::File(_) => {
-                RemoteNode::File(fio::FileSynchronousProxy::new(description.node.into_channel()))
-            }
-            _ => RemoteNode::Other(description.node),
-        };
-        FileObject::new(RemoteFile { node })
     }
 }
 
@@ -155,7 +135,6 @@ impl FileOps for RemoteFile {
                 n.read_at(total as u64, offset as u64, zx::Time::INFINITE).map_err(fidl_error)
             }
             RemoteNode::Directory(_) => Err(EISDIR),
-            RemoteNode::Other(_) => Err(EINVAL),
         }?;
         zx::Status::ok(status).map_err(fio_error)?;
         task.mm.write_all(data, &bytes)?;
@@ -177,7 +156,6 @@ impl FileOps for RemoteFile {
         _file: &FileObject,
         _task: &Task,
         mut prot: zx::VmarFlags,
-        _flags: u32,
     ) -> Result<zx::Vmo, Errno> {
         let has_execute = prot.contains(zx::VmarFlags::PERM_EXECUTE);
         prot -= zx::VmarFlags::PERM_EXECUTE;
@@ -226,10 +204,10 @@ mod test {
             DirectorySynchronousProxy::new(root.into_channel().unwrap().into_zx_channel()),
             rights,
         );
-        assert_eq!(path_lookup(&root, b"nib").err(), Some(ENOENT));
-        path_lookup(&root, b"lib").unwrap();
+        assert_eq!(root.traverse(b"nib").err(), Some(ENOENT));
+        root.traverse(b"lib").unwrap();
 
-        let _test_file = path_lookup(&root, b"bin/hello_starnix")?.open()?;
+        let _test_file = root.traverse(b"bin/hello_starnix")?.open()?;
         Ok(())
     }
 }

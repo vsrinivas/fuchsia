@@ -6,6 +6,7 @@ use fidl_fuchsia_io as fio;
 use parking_lot::RwLock;
 use std::sync::Arc;
 
+use crate::fs::*;
 use crate::types::*;
 
 #[derive(Debug, Clone)]
@@ -21,8 +22,7 @@ impl Default for FileSystemState {
 }
 
 pub struct FileSystem {
-    // TODO: Replace with a real VFS. This can't last long.
-    pub root: Arc<fio::DirectorySynchronousProxy>,
+    pub root_node: FsNodeHandle,
 
     // TODO: Add cwd and other state here. Some of this state should
     // be copied in FileSystem::fork below.
@@ -30,11 +30,12 @@ pub struct FileSystem {
 }
 
 impl FileSystem {
-    pub fn new(root: fio::DirectorySynchronousProxy) -> Arc<FileSystem> {
-        Arc::new(FileSystem {
-            root: Arc::new(root),
-            state: RwLock::new(FileSystemState::default()),
-        })
+    pub fn new(root_remote: fio::DirectorySynchronousProxy) -> Arc<FileSystem> {
+        let root_node = new_remote_filesystem(
+            syncio::directory_clone(&root_remote, fio::CLONE_FLAG_SAME_RIGHTS).unwrap(),
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        );
+        Arc::new(FileSystem { root_node, state: RwLock::new(FileSystemState::default()) })
     }
 
     pub fn fork(&self) -> Arc<FileSystem> {
@@ -44,9 +45,14 @@ impl FileSystem {
         // See <https://man7.org/linux/man-pages/man2/umask.2.html>
 
         Arc::new(FileSystem {
-            root: self.root.clone(),
+            root_node: Arc::clone(&self.root_node),
             state: RwLock::new(self.state.read().clone()),
         })
+    }
+
+    // This will eventually have the equivalent of a dir_fd parameter.
+    pub fn traverse(&self, path: &FsStr) -> Result<FsNodeHandle, Errno> {
+        self.root_node.traverse(path)
     }
 
     #[cfg(test)]

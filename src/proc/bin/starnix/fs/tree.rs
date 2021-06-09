@@ -71,7 +71,23 @@ impl FsNode {
         Ok(FileObject::new_with_node(self.ops().open()?, Some(Arc::clone(self))))
     }
 
-    fn lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+    pub fn traverse(self: &FsNodeHandle, path: &FsStr) -> Result<FsNodeHandle, Errno> {
+        // I'm a little disappointed in the number of refcount increments and decrements that happen
+        // here.
+        let mut node = Arc::clone(self);
+        for component in path.split(|c| *c == b'/') {
+            if component == b"." || component == b"" {
+                // ignore
+            } else if component == b".." {
+                node = Arc::clone(node.parent());
+            } else {
+                node = node.component_lookup(component)?;
+            }
+        }
+        Ok(node)
+    }
+
+    fn component_lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
         let node = self.get_or_create_empty_child(name.to_vec());
         node.initialize(|name| self.ops().lookup(name))?;
         Ok(node)
@@ -149,22 +165,6 @@ impl Drop for FsNode {
             parent.internal_remove_child(self);
         }
     }
-}
-
-pub fn path_lookup(node: &FsNodeHandle, path: &FsStr) -> Result<FsNodeHandle, Errno> {
-    // I'm a little disappointed in the number of refcount increments and decrements that happen
-    // here.
-    let mut node = Arc::clone(node);
-    for component in path.split(|c| *c == b'/') {
-        if component == b"." || component == b"" {
-            // ignore
-        } else if component == b".." {
-            node = Arc::clone(node.parent());
-        } else {
-            node = node.lookup(component)?;
-        }
-    }
-    Ok(node)
 }
 
 struct TmpfsDirectory;

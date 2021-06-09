@@ -17,7 +17,10 @@
             path: "/data",
         },
         {
-            protocol: [ "fuchsia.process.Launcher" ],
+            protocol: [
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.process.Launcher",
+            ],
         },
     ],
     expose: [

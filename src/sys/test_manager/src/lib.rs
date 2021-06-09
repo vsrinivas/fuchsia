@@ -529,6 +529,11 @@ async fn get_realm(
             capability: Capability::protocol("fuchsia.vulkan.loader.Loader"),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.kernel.VmexResource"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?;
 
     Ok(builder.build())

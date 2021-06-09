@@ -100,7 +100,6 @@ pub trait FileOps: Send + Sync {
         _file: &FileObject,
         _task: &Task,
         _prot: zx::VmarFlags,
-        _flags: u32,
     ) -> Result<zx::Vmo, Errno> {
         Err(ENODEV)
     }

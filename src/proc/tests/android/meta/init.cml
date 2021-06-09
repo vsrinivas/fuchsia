@@ -1,7 +1,7 @@
 {
     program: {
         runner: "starnix",
-        binary: "system/bin/init",
+        binary: "system/bin/hello_world",
         root: "root",
     },
 }

@@ -112,6 +112,7 @@
         {
             protocol: [
                 "fuchsia.hardware.display.Provider",
+                "fuchsia.kernel.VmexResource",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",

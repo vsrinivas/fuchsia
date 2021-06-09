@@ -6,4 +6,9 @@
     program: {
         binary: "bin/starnix_runner_bin_test",
     },
+    use: [
+        {
+            protocol: [ "fuchsia.kernel.VmexResource" ],
+        },
+    ],
 }

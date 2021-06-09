@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_io as fio;
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Task as zxTask};
 use log::warn;
 use parking_lot::{Condvar, Mutex, RwLock};
@@ -564,14 +563,12 @@ impl Task {
         argv: &Vec<CString>,
         environ: &Vec<CString>,
     ) -> Result<ThreadStartInfo, Errno> {
-        // TODO: This operation should be abstracted by the FileSystem.
-        let executable = syncio::directory_open_vmo(
-            &self.fs.root,
-            path.to_str().map_err(|_| ENOENT)?,
-            fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
-            zx::Time::INFINITE,
-        )
-        .map_err(Errno::from_status_like_fdio)?;
+        let executable_fd = self.fs.root_node.traverse(path.to_bytes())?.open()?;
+        let executable = executable_fd.ops().get_vmo(
+            &executable_fd,
+            self,
+            zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE,
+        )?;
 
         // TODO: Implement #!interpreter [optional-arg]
 

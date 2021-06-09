@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_io as fio;
-use fuchsia_zircon as zx;
-use log::warn;
 use std::convert::TryInto;
 use std::ffi::CString;
 
@@ -163,46 +161,25 @@ fn open_internal(
     fio_flags: u32,
     mode: mode_t,
 ) -> Result<FileHandle, Errno> {
+    // TODO(tbodt): handle the flags properly
     let mut buf = [0u8; PATH_MAX as usize];
-    let mut path = task.mm.read_c_string(user_path, &mut buf)?;
+    let path = task.mm.read_c_string(user_path, &mut buf)?;
     if path[0] != b'/' {
+        not_implemented!("non-absolute paths are unimplemented");
         if dir_fd != FdNumber::AT_FDCWD {
             not_implemented!("dirfds are unimplemented");
-            return Err(EINVAL);
         }
-        strace!(
-            "open_internal({}, {}, {:#x}, {:#o})",
-            dir_fd,
-            String::from_utf8_lossy(path),
-            fio_flags,
-            mode
-        );
-        not_implemented!("non-absolute paths are unimplemented");
         return Err(ENOENT);
-    } else {
-        path = &path[1..];
-        strace!(
-            "open_internal(<nofd> {}, {:#x}, {:#o})",
-            String::from_utf8_lossy(path),
-            fio_flags,
-            mode
-        );
     }
-
-    // TODO(tbodt): Need to switch to filesystem APIs that do not require UTF-8
-    let path = std::str::from_utf8(path).expect("bad UTF-8 in filename");
-
-    // TODO: Check fio::OPEN_FLAG_CREATE and use task.fs.apply_umask().
-
-    let description = syncio::directory_open(&task.fs.root, path, fio_flags, 0, zx::Time::INFINITE)
-        .map_err(|e| match e {
-            zx::Status::NOT_FOUND => ENOENT,
-            _ => {
-                warn!("open failed: {:?}", e);
-                EIO
-            }
-        })?;
-    Ok(RemoteFile::from_description(description))
+    strace!(
+        "open_internal({}, {}, {:#x}, {:#o})",
+        dir_fd,
+        String::from_utf8_lossy(path),
+        fio_flags,
+        mode
+    );
+    let path = &path[1..];
+    Ok(task.fs.traverse(path)?.open()?)
 }
 
 pub fn sys_openat(

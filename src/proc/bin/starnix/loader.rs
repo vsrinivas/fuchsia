@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_io as fio;
 use fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, AsHandleRef, HandleBased};
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
@@ -145,13 +144,12 @@ pub fn load_executable(
         if interp.starts_with('/') {
             interp = &interp[1..];
         }
-        let interp_vmo = syncio::directory_open_vmo(
-            &task.fs.root,
-            interp,
-            fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
-            zx::Time::INFINITE,
-        )
-        .map_err(Errno::from_status_like_fdio)?;
+        let interp_file = task.fs.traverse(interp.as_bytes())?.open()?;
+        let interp_vmo = interp_file.ops().get_vmo(
+            &interp_file,
+            task,
+            zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE,
+        )?;
         Some(load_elf(&interp_vmo, &task.mm)?)
     } else {
         None
