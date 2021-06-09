@@ -77,7 +77,7 @@ class FlutterSemanticsTests : public SemanticsIntegrationTest {
 };
 
 // Loads ally-demo flutter app and verifies its semantic tree.
-TEST_F(FlutterSemanticsTests, StaticSemantics) {
+TEST_F(FlutterSemanticsTests, DISABLED_StaticSemantics) {
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
   auto node = FindNodeWithLabel(root, view_ref_koid(), "Blue tapped 0 times");
   ASSERT_TRUE(node);
@@ -93,7 +93,7 @@ TEST_F(FlutterSemanticsTests, StaticSemantics) {
 }
 
 // Loads ally-demo flutter app and validates hit testing
-TEST_F(FlutterSemanticsTests, HitTesting) {
+TEST_F(FlutterSemanticsTests, DISABLED_HitTesting) {
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
   // We'll target all hits just within the bounding box of the nodes.
@@ -115,7 +115,7 @@ TEST_F(FlutterSemanticsTests, HitTesting) {
 }
 
 // Loads ally-demo flutter app and validates triggering actions
-TEST_F(FlutterSemanticsTests, PerformAction) {
+TEST_F(FlutterSemanticsTests, DISABLED_PerformAction) {
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
   // Verify the counter is currently at 0
