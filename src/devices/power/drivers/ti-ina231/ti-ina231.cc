@@ -35,12 +35,16 @@ static_assert((kPowerResolution * kCalibrationValue) == (25ULL * 5'120 * kFixedP
 // Divide the bus voltage limit by this to get the alert limit register value.
 constexpr uint64_t kMicrovoltsPerBit = 1'250;
 
+constexpr float kMicrovoltsToVolts = 1000.0f * 1000.0f;
+constexpr float kVoltsPerBit = kMicrovoltsToVolts / kMicrovoltsPerBit;
+
 }  // namespace
 
 namespace power_sensor {
 
 enum class Ina231Device::Register : uint8_t {
   kConfigurationReg = 0,
+  kBusVoltageReg = 2,
   kPowerReg = 3,
   kCalibrationReg = 5,
   kMaskEnableReg = 6,
@@ -114,7 +118,19 @@ void Ina231Device::GetPowerWatts(GetPowerWattsRequestView request,
 
 void Ina231Device::GetVoltageVolts(GetVoltageVoltsRequestView request,
                                    GetVoltageVoltsCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  zx::status<uint16_t> voltage_reg;
+
+  {
+    fbl::AutoLock lock(&i2c_lock_);
+    voltage_reg = Read16(Register::kBusVoltageReg);
+  }
+
+  if (voltage_reg.is_error()) {
+    completer.ReplyError(voltage_reg.error_value());
+    return;
+  }
+
+  completer.ReplySuccess(static_cast<float>(voltage_reg.value()) / kVoltsPerBit);
 }
 
 zx_status_t Ina231Device::Init(const Ina231Metadata& metadata) {

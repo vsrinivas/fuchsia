@@ -29,6 +29,7 @@ class FakeIna231Device : public fake_i2c::FakeI2c {
   uint16_t mask_enable() const { return registers_[6]; }
   uint16_t alert_limit() const { return registers_[7]; }
 
+  void set_bus_voltage(uint16_t voltage) { registers_[2] = voltage; }
   void set_power(uint16_t power) { registers_[3] = power; }
 
  protected:
@@ -168,6 +169,54 @@ TEST(TiIna231Test, BanjoClients) {
     ASSERT_TRUE(response.ok());
     ASSERT_FALSE(response.value().result.is_err());
     EXPECT_TRUE(FloatNear(response.value().result.response().power, 29.95f));
+  }
+}
+
+TEST(TiIna231Test, GetVoltageVolts) {
+  fake_ddk::Bind ddk;
+  FakeIna231Device fake_i2c;
+  Ina231Device dut(fake_ddk::kFakeParent, 10'000, fake_i2c.GetProto());
+
+  constexpr Ina231Metadata kMetadata = {
+      .mode = Ina231Metadata::kModeShuntAndBusContinuous,
+      .shunt_voltage_conversion_time = Ina231Metadata::kConversionTime332us,
+      .bus_voltage_conversion_time = Ina231Metadata::kConversionTime332us,
+      .averages = Ina231Metadata::kAverages1024,
+      .shunt_resistance_microohm = 10'000,
+      .alert = Ina231Metadata::kAlertNone,
+  };
+
+  EXPECT_OK(dut.Init(kMetadata));
+  EXPECT_EQ(fake_i2c.configuration(), 0x4e97);
+  EXPECT_EQ(fake_i2c.calibration(), 2048);
+  EXPECT_EQ(fake_i2c.mask_enable(), 0);
+
+  EXPECT_OK(dut.DdkAdd("ti-ina231"));
+
+  fidl::WireSyncClient<power_sensor_fidl::Device> client(std::move(ddk.FidlClient()));
+
+  {
+    fake_i2c.set_bus_voltage(9200);
+    auto response = client.GetVoltageVolts();
+    ASSERT_TRUE(response.ok());
+    ASSERT_FALSE(response.value().result.is_err());
+    EXPECT_TRUE(FloatNear(response.value().result.response().voltage, 11.5f));
+  }
+
+  {
+    fake_i2c.set_bus_voltage(0);
+    auto response = client.GetVoltageVolts();
+    ASSERT_TRUE(response.ok());
+    ASSERT_FALSE(response.value().result.is_err());
+    EXPECT_TRUE(FloatNear(response.value().result.response().voltage, 0.0f));
+  }
+
+  {
+    fake_i2c.set_bus_voltage(65535);
+    auto response = client.GetVoltageVolts();
+    ASSERT_TRUE(response.ok());
+    ASSERT_FALSE(response.value().result.is_err());
+    EXPECT_TRUE(FloatNear(response.value().result.response().voltage, 81.91875f));
   }
 }
 
