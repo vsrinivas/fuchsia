@@ -22,7 +22,7 @@ config("compiler") {
   ]
 
   rustflags = [
-    "-Clinker=" + rebase_path("$clang_prefix/clang++", "", root_build_dir),
+    "-Clinker=$clang_prefix/clang++",
     "-Cdefault-linker-libraries",
   ]
   foreach(flag, ldflags) {
