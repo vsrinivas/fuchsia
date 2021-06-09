@@ -19,7 +19,7 @@
 
 constexpr char kRootPresenter[] =
     "fuchsia-pkg://fuchsia.com/pointerinjector-config-test#meta/root_presenter.cmx";
-constexpr char kScenic[] = "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx";
+constexpr char kScenic[] = "fuchsia-pkg://fuchsia.com/pointerinjector-config-test#meta/scenic.cmx";
 constexpr zx::duration kTimeout = zx::min(5);
 
 zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {

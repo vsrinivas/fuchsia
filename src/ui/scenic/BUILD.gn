@@ -246,7 +246,7 @@ fuchsia_unittest_package("scheduling_unittests") {
 }
 
 # For migration purposes only.  To be moved to src/ui/scenic/bin:scenic
-fuchsia_component("scenic_component") {
+fuchsia_component("component") {
   component_name = "scenic"
   manifest = "bin/meta/scenic.cmx"
   deps = [ "bin" ]
@@ -264,5 +264,5 @@ fuchsia_component("scenic_component") {
 
 fuchsia_package("scenic_pkg") {
   package_name = "scenic"
-  deps = [ ":scenic_component" ]
+  deps = [ ":component" ]
 }

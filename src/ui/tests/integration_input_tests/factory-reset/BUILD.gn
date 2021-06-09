@@ -43,6 +43,7 @@ fuchsia_unittest_package("factory-reset-test") {
     ":factory-reset-test-audio",
     ":factory_reset_test",
     "//src/ui/bin/root_presenter:component_v1_for_test",
+    "//src/ui/scenic:component",
   ]
 
   test_specs = {

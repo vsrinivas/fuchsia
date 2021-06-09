@@ -12,7 +12,6 @@ group("tests") {
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/graphics/bin/vulkan_loader",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
-    "//src/ui/scenic",
   ]
 }
 
@@ -43,12 +42,19 @@ fuchsia_unittest_package("pointerinjector-config-test") {
   deps = [
     ":pointerinjector_config_test",
     "//src/ui/bin/root_presenter:component_v1_for_test",
+    "//src/ui/scenic:component",
   ]
 
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
     }
-    environments = [ nuc_env ]
+    environments = [
+      {
+        dimensions = {
+          device_type = "AEMU"
+        }
+      },
+    ]
   }
 }

@@ -41,6 +41,7 @@ fuchsia_test_package("focus-input-test") {
   test_components = [ ":focus-input-test-component" ]
   deps = [
     "//src/ui/bin/root_presenter:component_v1_for_test",
+    "//src/ui/scenic:component",
     "//src/ui/tests/integration_input_tests/focus/focus-gfx-client",
   ]
   test_specs = {
@@ -61,6 +62,5 @@ group("tests") {
 
     # The deps below are necessary on minimal product configs.
     "//src/graphics/bin/vulkan_loader",
-    "//src/ui/scenic",
   ]
 }

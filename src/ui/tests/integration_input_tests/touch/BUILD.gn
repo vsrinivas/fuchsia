@@ -68,6 +68,7 @@ fuchsia_test_package("touch-input-test") {
   deps = [
     ":touch-input-test-display_rotation",
     "//src/ui/bin/root_presenter:component_v1_for_test",
+    "//src/ui/scenic:component",
   ]
   test_specs = {
     environments = [
@@ -138,6 +139,7 @@ fuchsia_test_package("touch-input-test-ip") {
     ":touch-input-test-display_rotation-ip",
     "//src/ui/bin/input-pipeline:component-for-test",
     "//src/ui/bin/root_presenter:component_v1_for_test",
+    "//src/ui/scenic:component",
   ]
   test_specs = {
     environments = [
@@ -164,7 +166,6 @@ group("tests") {
     "//src/graphics/bin/vulkan_loader",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
     "//src/ui/bin/ime:ime_service",
-    "//src/ui/scenic",
     "//src/ui/tests/integration_input_tests/touch/one-chromium",
     "//src/ui/tests/integration_input_tests/touch/one-flutter",
     "//src/ui/tests/integration_input_tests/touch/touch-gfx-client",

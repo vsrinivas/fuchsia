@@ -32,8 +32,9 @@ const std::map<std::string, std::string> LocalServices() {
       {"fuchsia.ui.policy.Presenter",
        "fuchsia-pkg://fuchsia.com/factory-reset-test#meta/root_presenter.cmx"},
       // Scenic protocols.
-      {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-      {"fuchsia.ui.pointerinjector.Registry", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/factory-reset-test#meta/scenic.cmx"},
+      {"fuchsia.ui.pointerinjector.Registry",
+       "fuchsia-pkg://fuchsia.com/factory-reset-test#meta/scenic.cmx"},
       // Misc protocols.
       {"fuchsia.cobalt.LoggerFactory",
        "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"},
