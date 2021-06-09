@@ -185,7 +185,7 @@
             },
         },
         {
-            instance_id: "eac51c2ea624ca423dbdd1110a2aa870e4f977e59be215e7f814bbcfcfd20334",
+            instance_id: "fbd62d3fb735db534eccc2221b3bb981f50a88f60cf326f80925ccd0d0e31443",
             appmgr_moniker: {
                 url: "fuchsia-pkg://fuchsia.com/ot-stack#meta/ot-stack.cmx",
 
