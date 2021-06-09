@@ -1,6 +1,6 @@
 <!-- mdformat off(templates not supported) -->
-{% set rfcid = "RFC-0101" %} {% include
-"docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+{% set rfcid = "RFC-0101" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
 # {{ rfc.name }}: {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 

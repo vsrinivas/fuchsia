@@ -1293,7 +1293,7 @@
   title: 'Dynamic components with numbered handles'
   short_description: 'Provides a way to pass numbered handles to dynamic components.'
   authors: ['lindkvist@google.com, geb@google.com']
-  file: 'NNNN_dynamic_components_numbered_handles.md'
+  file: '0101_dynamic_components_numbered_handles.md'
   area: ['Component Framework']
   issue: ['']
   gerrit_change_id: ['531642']
