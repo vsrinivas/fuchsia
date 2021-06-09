@@ -21,9 +21,6 @@ source_set("utils") {
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("memory_metrics_unittests") {
@@ -51,9 +48,6 @@ executable("memory_metrics_unittests") {
 
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-reorder-init-list" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_component("memory_metrics_unittests_component") {

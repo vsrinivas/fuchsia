@@ -48,9 +48,6 @@ source_set("lib") {
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     "//zircon/system/ulib/trace-vthread",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 metrics_registry("memory_metrics_registry") {
@@ -76,9 +73,6 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_package_with_single_component("monitor") {

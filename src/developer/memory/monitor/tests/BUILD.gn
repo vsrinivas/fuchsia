@@ -37,9 +37,6 @@ executable("memory_monitor_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/memfs",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("memory_monitor_tests") {

@@ -18,9 +18,6 @@ executable("bin") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_package_with_single_component("mem") {
