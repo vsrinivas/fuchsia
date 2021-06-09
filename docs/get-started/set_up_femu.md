@@ -1,123 +1,162 @@
 # Set up and start the Fuchsia emulator (FEMU)
 
-This document describes how to set up and run the Fuchsia emulator (FEMU), including networking
-and GPU support setup.
+This guide provides instructions on how to set up and run the Fuchsia emulator (FEMU),
+including networking and GPU support setup.
+
+The steps are:
+
+1. [Prerequisites](#prerequisites).
+1. [Build Fuchisa for FEMU](#build-fuchsia-for-femu).
+1. [Enable KVM (Optional)](#enable-kvm).
+1. [Start FEMU](#start-femu).
 
 ## Prerequisites
 
-To run FEMU, you must have:
+Running FEMU requires that you've completed the following tasks:
 
- * [Checked out the Fuchsia source and set up some environment variables](/docs/get-started/get_fuchsia_source.md)
- * [Configured and built Fuchsia](/docs/get-started/build_fuchsia.md)
+ * [Checked out the Fuchsia source and set up the environment variables][get-fuchsia-source]
+ * [Configured and built Fuchsia][build-fuchsia]
 
-### Building Fuchsia for FEMU
+## Build Fuchsia for FEMU {#build-fuchsia-for-femu}
 
-Before you can use FEMU, you need to build Fuchsia using `fx set`, 
-specifying a qemu board and supported product. This example uses
-`qemu-x64` for the board and `workstation` for the product:
+To run FEMU, you first need to build a Fuchsia system image that supports
+the emulator environment. The example below uses `qemu-x64` for the board
+and `workstation` for the product.
 
-<pre class="prettyprint">
-<code class="devsite-terminal">fx set workstation.qemu-x64 --release [--with=...]</code>
-<code class="devsite-terminal">fx build</code>
-</pre>
+To build a FEMU Fuchsia image, do the following:
 
-Note: More information on supported boards and products is in the
-[Fuchsia emulator overview](/docs/concepts/emulator/index.md).
+1. Set the Fuchsia build configuration:
 
-## Configure network
+   ```posix-terminal
+   fx set workstation.qemu-x64 --release
+   ```
 
-For Fuchsia's ephemeral software to work with FEMU, you need to configure
-an IPv6 network.
+2. Build Fuchsia:
 
-  * [Linux configuration](#linux-config)
-  * [macOS configuration](#mac-config)
+   ```posix-terminal
+   fx build
+   ```
 
-### Linux {#linux-config}
+For more information on supported boards and products, see the
+[Fuchsia emulator (FEMU)][femu-overview] overview page.
 
-To enable networking in FEMU using [tap networking](https://wiki.qemu.org/Documentation/Networking#Tap), run the following commands:
+## Enable KVM (Optional) {#enable-kvm}
 
-<pre class="prettyprint">
-<code class="devsite-terminal">sudo ip tuntap add dev qemu mode tap user $USER</code>
-<code class="devsite-terminal">sudo ip link set qemu up</code>
-</pre>
+(**Linux only**) If KVM is supported on your machine, update permission
+to enable KVM.
 
+* {Linux}
 
-### macOS {#mac-config}
+  To enable KVM on your machine, do the following:
 
-[User Networking (SLIRP)](https://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29){: .external} is the default networking set up for FEMU on macOS. This networking set up does not support Fuchsia device discovery.
+  Note: You only need to do this once per machine.
 
-## Start FEMU
+  1.  Add yourself to the `kvm` group on your machine:
 
-The most common way to run FEMU is with networking enabled, using the following commands.
+      ```posix-terminal
+      sudo usermod -a -G kvm ${USER}
+      ```
 
-### Linux {#linux-start-femu}
+  1.  Log out of all desktop sessions to your machine and then log in again.
 
-To support device discovery without access to external networks.
+  1.  To verify that KVM is configured correctly, run the following command:
 
-```posix-terminal
-fx vdl start -N
-```
+      ```posix-terminal
+      if [[ -r /dev/kvm ]] && grep '^flags' /proc/cpuinfo | grep -qE 'vmx|svm'; then echo 'KVM is working'; else echo 'KVM not working'; fi
+      ```
 
-To get access to external networks:
+      Verify that this command prints the following line:
 
-{% dynamic if user.is_googler %}
+      ```none {:.devsite-disable-click-to-copy}
+      KVM is working
+      ```
 
-Note: Command will differ depending on the type of machines you use.
+      If you see `KVM not working`, you may need to reboot your machine for
+      the permission change in Step 2 to take effect.
 
-* {Corp}
+* {macOS}
 
-  To use FEMU on a corp machine, see [go/fuchsia-emulator-corp](http://go/fuchsia-emulator-corp).
+  No additional setup is required for macOS.
 
-* {Non-Corp}
+  Instead of KVM, the Fuchsia emulator on macOS uses the
+  [Hypervisor framework][hypervisor-framework]{: .external}.
 
-  Note: `FUCHSIA_ROOT` is the path to the Fuchsia checkout on your local machine (ex: `~/fuchsia`).
+## Start FEMU {#start-femu}
+
+Start the Fuchsia emulator on your machine.
+
+* {Linux}
+
+  The command below allows FEMU to access external networks:
 
   ```posix-terminal
   fx vdl start -N -u {{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/scripts/start-unsecure-internet.sh
   ```
 
-{% dynamic else %}
+  Replace the following:
 
-Note: `FUCHSIA_ROOT` is the path to the Fuchsia checkout on your local machine (ex: `~/fuchsia`).
+  * `FUCHSIA_ROOT`: The path to the Fuchsia checkout on your machine (for example, `~/fuchsia`).
 
-```posix-terminal
-fx vdl start -N -u {{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/scripts/start-unsecure-internet.sh
-```
-{% dynamic endif %}
+  This command opens a new terminal window with the title "Fuchsia Emulator".
+  After the Fuchsia emulator is launched successfully, the terminal starts a
+  SSH console. You can run shell commands on this console, as you would on a
+  Fuchsia device.
 
+  However, if you want to run FEMU without access to external network,
+  run the following command instead:
 
-Once you run the command, a separate window opens with the title "Fuchsia Emulator". After
-the Fuchsia emulator launches successfully, the terminal starts with the SSH console. You
-can run shell commands in this window, just like you would on a Fuchsia device.
+  ```posix-terminal
+  fx vdl start -N
+  ```
 
-### macOS {#mac-start-femu}
+  The `-N` option enables the `fx` tool to discover this FEMU instance as a device
+  on your machine.
 
-On macOS, Fuchsia device discovery does not work. However, you can still use `fx` tools such as `fx ssh`.
+* {macOS}
 
+  To start FEMU on macOS, do the following:
 
-```posix-terminal
-fx vdl start
-```
+  1. Start FEMU:
 
-From the output, take note of the instruction on running `fx set-device`, you will need it for the steps below.
+     ```posix-terminal
+     fx vdl start
+     ```
 
-Note: When you launch FEMU for the first time on your Mac machine after starting up (ex: after a reboot),
-a window pops up asking if you want to allow the process “aemu” to run on your machine.
-Click “allow”.
+     If you launch FEMU for the first time on your macOS (including after a reboot),
+     a window pops up asking if you want to allow the process `aemu` to run on your
+     machine. Click **Allow**.
 
-Run `fx set-device` to specify the launched Fuchsia emulator SSH port. For `SSH_PORT`, use the value that the `fx vdl start --host-gpu` command outputted.
+     This command prints an instruction on running `fx set-device`. Make a note of
+     this command for the next step.
 
+  2. Run the `fx set-device` command to specify the launched Fuchsia emulator SSH port:
 
-```posix-terminal
-fx set-device 127.0.0.1:{{ '<var>' }}SSH_PORT{{ '</var>' }}
-```
+     ```posix-terminal
+     fx set-device 127.0.0.1:{{ '<var>' }}SSH_PORT{{ '</var>' }}
+     ```
 
-## Additional FEMU options
+     Replace the following:
+
+     * `SSH_PORT`: Use the value from the `fx vdl start` command's output in
+     Step 1.
+
+## Next steps
+
+For the next steps, check out the following resources:
+
+ *  To learn more about how FEMU works, see the
+    [Fuchsia emulator (FEMU)][femu-overview] overview page.
+ *  To learn more about Fuchsia device commands and Fuchsia workflows, see
+    [Explore Fuchsia][explore-fuchsia].
+
+## Appendices
+
+This section provides additional FEMU options.
 
 ### Input options
 
-By default FEMU uses multi-touch input. You can add the argument `--pointing-device mouse`
-for mouse cursor input instead.
+By default FEMU uses multi-touch input. You can add the argument
+`--pointing-device mouse` for mouse cursor input instead.
 
 ```posix-terminal
 fx vdl start --pointing-device mouse
@@ -125,7 +164,8 @@ fx vdl start --pointing-device mouse
 
 ### Run FEMU without GUI support
 
-If you don't need graphics or working under the remote workflow, you can run FEMU in headless mode:
+If you don't need graphics or working under the remote workflow,
+you can run FEMU in headless mode:
 
 ```posix-terminal
 fx vdl start --headless
@@ -133,8 +173,10 @@ fx vdl start --headless
 
 ### Specify GPU used by FEMU
 
-By default, FEMU launcher uses software rendering using [SwiftShader](https://swiftshader.googlesource.com/SwiftShader/). 
-To force FEMU to use a specific graphics emulation method, use the parameters `--host-gpu` or `--software-gpu` to the `fx vdl start` command.
+By default, FEMU launcher uses software rendering using
+[SwiftShader][swiftshader]{: .external}. To force FEMU to use a specific
+graphics emulation method, use the parameters `--host-gpu` or
+`--software-gpu` to the `fx vdl start` command.
 
 These are the valid commands and options:
 
@@ -159,7 +201,8 @@ These are the valid commands and options:
 ### Supported hardware for graphics acceleration {#supported-hardware}
 
 FEMU currently supports a limited set of GPUs on macOS and Linux for
-hardware graphics acceleration. FEMU uses a software renderer fallback for unsupported GPUs.
+hardware graphics acceleration. FEMU uses a software renderer fallback
+for unsupported GPUs.
 
 <table>
   <tbody>
@@ -186,14 +229,51 @@ hardware graphics acceleration. FEMU uses a software renderer fallback for unsup
   </tbody>
 </table>
 
-## Exit FEMU
+### Exit FEMU {#exit-femu}
 
 To exit FEMU, run `dm poweroff` in the FEMU terminal.
 
-## Next steps
+### Configure IPv6 network {#configure-ipv6-network}
 
- *  To learn more about how FEMU works, see the
-    [Fuchsia emulator (FEMU) overview](/docs/concepts/emulator/index.md).
- *  To learn more about Fuchsia device commands and Fuchsia workflows, see
-    [Explore Fuchsia](/docs/get-started/explore_fuchsia.md).
+This section provides instructions on how to configure an IPv6 network
+for FEMU on Linux machine using [TUN/TAP][tuntap]{: .external}.
 
+* {Linux}
+
+  Note: The `fx vdl` command automatically performs the instructions below.
+
+  To enable networking in FEMU using
+  [tap networking][tap-networking]{: .external}, do the following:
+
+  1. Set up `tuntap`:
+
+     ```posix-terminal
+     sudo ip tuntap add dev qemu mode tap user $USER
+     ```
+
+  1. Enable the network for `qemu`:
+
+     ```posix-terminal
+     sudo ip link set qemu up
+     ```
+
+* {macOS}
+
+  No additional IPv6 network setup is required for macOS.
+
+  [User Networking (SLIRP)][slirp]{: .external} is the default network setup
+  for FEMU on macOS – while this setup does not support Fuchsia device
+  discovery, you can still use `fx` tools (for example,`fx ssh`) to
+  interact with your FEMU instance.
+
+<!-- Reference links -->
+
+[get-fuchsia-source]: /docs/get-started/get_fuchsia_source.md
+[build-fuchsia]: /docs/get-started/build_fuchsia.md
+[femu-overview]: /docs/concepts/emulator/index.md
+[hypervisor-framework]: https://developer.apple.com/documentation/hypervisor
+[explore-fuchsia]: /docs/get-started/explore_fuchsia.md
+[swiftshader]: https://swiftshader.googlesource.com/SwiftShader/
+[tuntap]: https://en.wikipedia.org/wiki/TUN/TAP
+[tap-networking]: https://wiki.qemu.org/Documentation/Networking#Tap
+[slirp]: https://wiki.qemu.org/Documentation/Networking#User_Networking_.28SLIRP.29

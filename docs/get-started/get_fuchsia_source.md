@@ -1,47 +1,63 @@
 # Get Fuchsia source code
 
-This guide provides instructions for the following tasks:
+This guide provides instructions on how to set up the Fuchsia development
+environment on your machine for building Fuchsia from source.
 
-*   [Download the Fuchsia source code](#download-fuchsia-source).
-*   [Set up environment variables](#set-up-environment-variables).
+The steps are:
 
-## Before you start
-
-We recommend you run `ffx platform preflight` before you continue.
-`preflight` examines your development machine and informs you of issues that
-may affect building Fuchsia from source or running the Fuchsia emulator.
-
-*   For **Linux**, run:
-
-    ```posix-terminal
-    curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-linux-x64 && chmod +x ffx-linux-x64 && ./ffx-linux-x64 platform preflight
-    ```
-
-*   For **MacOS**, run:
-
-    ```posix-terminal
-    curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-macos-x64 && chmod +x ffx-macos-x64 && ./ffx-macos-x64 platform preflight
-    ```
+1. [Prerequisites](#prerequisites).
+2. [Download the Fuchsia source code](#download-fuchsia-source).
+3. [Set up environment variables](#set-up-environment-variables).
 
 ## Prerequisites
 
-The Fuchsia project requires `curl`, `unzip`, and `git` to be up-to-date:
+Before you start, complete the following tasks:
 
-*   For **Linux**, install or update the following packages:
+* [Run preflight](#run-preflight).
+* [Install required packages](#install-required-packages).
 
-    ```posix-terminal
-    sudo apt-get install curl git unzip
-    ```
+### Run preflight {#run-preflight}
 
-    Note: Fuchsia requires the version of Git to be 2.28 or higher.
+We recommend you run `ffx platform preflight`, which examines your machine
+and informs you of issues that may affect building Fuchsia from source or
+running the Fuchsia emulator.
 
-*   For **macOS**, install the Xcode command line tools:
+* {Linux}
 
-    Note: You may skip this step if `ffx platform preflight` discovers Xcode tools installed.
+  ```posix-terminal
+  curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-linux-x64 && chmod +x ffx-linux-x64 && ./ffx-linux-x64 platform preflight
+  ```
 
-    ```posix-terminal
-    xcode-select --install
-    ```
+* {macOS}
+
+  ```posix-terminal
+  curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-macos-x64 && chmod +x ffx-macos-x64 && ./ffx-macos-x64 platform preflight
+  ```
+
+### Install required packages {#install-required-packages}
+
+The Fuchsia project requires `curl`, `unzip`, and `git` to be up to date.
+
+Note: Fuchsia requires the version of Git to be 2.28 or higher.
+
+* {Linux}
+
+  Install (or update) the following packages:
+
+  ```posix-terminal
+  sudo apt-get install curl git unzip
+  ```
+
+* {macOS}
+
+  Install the Xcode command line tools:
+
+  Note: Skip this step if `ffx platform preflight` discovers that Xcode tools
+  are installed on your machine.
+
+  ```posix-terminal
+  xcode-select --install
+  ```
 
 ## Download Fuchsia source {#download-fuchsia-source}
 
@@ -78,8 +94,8 @@ To download the Fuchsia source, do the following:
 
 ## Set up environment variables {#set-up-environment-variables}
 
-Fuchsia recommends updating your shell script to perform the following actions
-(see [Update your shell script](#update-your-shell-script) for the instructions):
+Fuchsia recommends that you update your shell profile to include the following
+actions:
 
 *   Add the `.jiri_root/bin` directory to your `PATH`.
 
@@ -100,16 +116,10 @@ Fuchsia recommends updating your shell script to perform the following actions
     directories with auto-completion (see comments in `fx-env.sh` for more
     information).
 
-### Update your shell script {#update-your-shell-script}
-
-Update your shell script to add Fuchsia's environment variables
-in your terminal.
+To update your shell profile with the changes above, do the following:
 
 Note: If you don't wish to update your environment variables, see
 [Work on Fuchsia without updating your PATH](#work-on-fuchsia-without-updating-your-path).
-
-
-Do the following:
 
 1.  Use a text editor to open your `~/.bash_profile` file, for example:
 
@@ -156,8 +166,7 @@ See
 [Configure and build Fuchsia](/docs/get-started/build_fuchsia.md)
 in the Getting started guide for the next steps.
 
-
-## Troubleshoot
+## Appendices
 
 ### Authentication error {#authentication-error}
 
