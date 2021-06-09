@@ -148,6 +148,7 @@ source_set("crash_server") {
     ":sized_data_reader",
     ":snapshot_manager",
     "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.net.http",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
@@ -156,7 +157,6 @@ source_set("crash_server") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.net.http",
-    "//sdk/fidl/fuchsia.net.http",
     "//src/developer/forensics/utils:sized_data",
     "//src/lib/fsl",
   ]

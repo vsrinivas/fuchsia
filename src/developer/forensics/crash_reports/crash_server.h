@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_CRASH_SERVER_H_
 #define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_CRASH_SERVER_H_
 
+#include <fuchsia/net/http/cpp/fidl.h>
+#include <lib/fit/function.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <map>
@@ -25,23 +27,30 @@ class CrashServer {
  public:
   enum UploadStatus { kSuccess, kFailure, kThrottled };
 
-  CrashServer(std::shared_ptr<sys::ServiceDirectory> services, const std::string& url,
-              LogTags* tags);
+  CrashServer(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+              const std::string& url, LogTags* tags);
 
   virtual ~CrashServer() {}
 
-  // Makes the HTTP request using |report|.
+  virtual bool HasPendingRequest() const { return pending_request_; }
+
+  // Makes the HTTP request using |report| and |snapshot|.
   //
-  // Returns whether the request was successful, defined as returning a HTTP status code in the
-  // range [200-203]. In case of success, |server_report_id| is set to the crash report id on the
-  // server.
-  virtual UploadStatus MakeRequest(const Report& report, Snapshot snapshot,
-                                   std::string* server_report_id);
+  // Executes |callback| on completion with whether the request was successful (HTTP status
+  // code [200-203]) and the crash report id on the server, if the request was successful.
+  //
+  // Note: Only a single call to MakeRequest can be outstanding at a time.
+  virtual void MakeRequest(const Report& report, Snapshot snapshot,
+                           ::fit::function<void(UploadStatus, std::string)> callback);
 
  private:
+  async_dispatcher_t* dispatcher_;
   std::shared_ptr<sys::ServiceDirectory> services_;
   const std::string url_;
   LogTags* tags_;
+
+  bool pending_request_{false};
+  fuchsia::net::http::LoaderPtr loader_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashServer);
 };

@@ -136,8 +136,8 @@ executable("crash_server_unittest_exe") {
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:crash_server",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:loader",
-    "//src/lib/testing/loop_fixture",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gtest",
   ]

@@ -17,7 +17,7 @@
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/testing/stubs/loader.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
@@ -25,85 +25,93 @@ namespace crash_reports {
 namespace {
 
 const std::string kUrl{"http://www.foo.com"};
-const SnapshotUuid kSnapshotUuid{"snapshot-uuid"};
+const std::string kSnapshotUuid{"snapshot-uuid"};
 const Report kReport{
     /*report_id=*/0,          /*program_shortname=*/"program-shortname",
     /*annotations=*/{},
     /*attachments=*/{},       /*snapshot_uuid=*/kSnapshotUuid,
     /*minidump=*/std::nullopt};
 
-class CrashServerTest : public gtest::TestLoopFixture {
+class CrashServerTest : public UnitTestFixture {
  protected:
   CrashServerTest()
-      : loader_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        loader_context_provider_(loader_loop_.dispatcher()),
-        snapshot_manager_(dispatcher(), loader_context_provider_.public_service_directory(),
-                          &clock_, zx::min(0), kGarbageCollectedSnapshotsPath,
-                          StorageSize::Bytes(0u), StorageSize::Bytes(0u)),
-        tags_(),
-        crash_server_(loader_context_provider_.public_service_directory(), kUrl, &tags_) {
-    FX_CHECK(loader_loop_.StartThread() == ZX_OK);
-  }
-
-  ~CrashServerTest() {
-    // Shutdown |laoder_loop_| before running member variable destructors in case tasks on the loop
-    // hold references to member variables.
-    loader_loop_.Shutdown();
+      : snapshot_manager_(dispatcher(), services(), &clock_, zx::min(0),
+                          kGarbageCollectedSnapshotsPath, StorageSize::Bytes(0u),
+                          StorageSize::Bytes(0u)),
+        tags_() {
+    RunLoopUntilIdle();
   }
 
   void SetUpLoader(std::vector<stubs::LoaderResponse> responses) {
-    loader_server_ =
-        std::make_unique<stubs::Loader>(loader_loop_.dispatcher(), std::move(responses));
-    FX_CHECK(loader_context_provider_.context()->outgoing()->AddPublicService(
-                 loader_server_->GetHandler()) == ZX_OK);
+    loader_server_ = std::make_unique<stubs::Loader>(dispatcher(), std::move(responses));
+    InjectServiceProvider(loader_server_.get());
+    crash_server_ = std::make_unique<CrashServer>(dispatcher(), services(), kUrl, &tags_);
+    RunLoopUntilIdle();
   }
 
-  CrashServer& crash_server() { return crash_server_; }
+  CrashServer& crash_server() { return *crash_server_; }
   Snapshot GetSnapshot(const SnapshotUuid& uuid) { return snapshot_manager_.GetSnapshot(uuid); }
 
  private:
-  // |loader_server_| needs to run on a separate thread because |crash_server_| makes synchronous
-  // FIDL calls.
-  async::Loop loader_loop_;
   sys::testing::ComponentContextProvider loader_context_provider_;
   std::unique_ptr<stubs::Loader> loader_server_;
 
   timekeeper::TestClock clock_;
   SnapshotManager snapshot_manager_;
   LogTags tags_;
-  CrashServer crash_server_;
+  std::unique_ptr<CrashServer> crash_server_;
 };
 
 TEST_F(CrashServerTest, Fails_OnError) {
   SetUpLoader({stubs::LoaderResponse::WithError(fuchsia::net::http::Error::DEADLINE_EXCEEDED)});
 
-  std::string server_report_id;
-  EXPECT_EQ(crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid), &server_report_id),
-            CrashServer::UploadStatus::kFailure);
+  std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
+  crash_server().MakeRequest(
+      kReport, GetSnapshot(kSnapshotUuid),
+      [&](CrashServer::UploadStatus status, std::string) { upload_status = status; });
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(upload_status.has_value());
+  EXPECT_EQ(upload_status.value(), CrashServer::UploadStatus::kFailure);
 }
 
 TEST_F(CrashServerTest, Fails_StatusCodeBelow200) {
   SetUpLoader({stubs::LoaderResponse::WithError(199)});
 
-  std::string server_report_id;
-  EXPECT_EQ(crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid), &server_report_id),
-            CrashServer::UploadStatus::kFailure);
+  std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
+  crash_server().MakeRequest(
+      kReport, GetSnapshot(kSnapshotUuid),
+      [&](CrashServer::UploadStatus status, std::string) { upload_status = status; });
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(upload_status.has_value());
+  EXPECT_EQ(upload_status.value(), CrashServer::UploadStatus::kFailure);
 }
 
 TEST_F(CrashServerTest, Fails_StatusCodeAbove203) {
   SetUpLoader({stubs::LoaderResponse::WithError(204)});
 
-  std::string server_report_id;
-  EXPECT_EQ(crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid), &server_report_id),
-            CrashServer::UploadStatus::kFailure);
+  std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
+  crash_server().MakeRequest(
+      kReport, GetSnapshot(kSnapshotUuid),
+      [&](CrashServer::UploadStatus status, std::string) { upload_status = status; });
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(upload_status.has_value());
+  EXPECT_EQ(upload_status.value(), CrashServer::UploadStatus::kFailure);
 }
 
 TEST_F(CrashServerTest, Fails_UploadThrottled) {
   SetUpLoader({stubs::LoaderResponse::WithError(429)});
 
-  std::string server_report_id;
-  EXPECT_EQ(crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid), &server_report_id),
-            CrashServer::UploadStatus::kThrottled);
+  std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
+  crash_server().MakeRequest(
+      kReport, GetSnapshot(kSnapshotUuid),
+      [&](CrashServer::UploadStatus status, std::string) { upload_status = status; });
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(upload_status.has_value());
+  EXPECT_EQ(upload_status.value(), CrashServer::UploadStatus::kThrottled);
 }
 
 TEST_F(CrashServerTest, ReadBodyOnSuccess) {
@@ -114,22 +122,68 @@ TEST_F(CrashServerTest, ReadBodyOnSuccess) {
       stubs::LoaderResponse::WithBody(203, "body-203"),
   });
 
-  std::string server_report_id;
-  EXPECT_EQ(crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid), &server_report_id),
-            CrashServer::UploadStatus::kSuccess);
-  EXPECT_EQ(server_report_id, "body-200");
+  std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
+  std::optional<std::string> server_report_id;
+  crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid),
+                             [&](CrashServer::UploadStatus status, std::string response) {
+                               upload_status = status;
+                               server_report_id = response;
+                             });
+  RunLoopUntilIdle();
 
-  EXPECT_EQ(crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid), &server_report_id),
-            CrashServer::UploadStatus::kSuccess);
-  EXPECT_EQ(server_report_id, "body-201");
+  ASSERT_TRUE(upload_status.has_value());
+  EXPECT_EQ(upload_status.value(), CrashServer::UploadStatus::kSuccess);
 
-  EXPECT_EQ(crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid), &server_report_id),
-            CrashServer::UploadStatus::kSuccess);
-  EXPECT_EQ(server_report_id, "body-202");
+  ASSERT_TRUE(server_report_id.has_value());
+  EXPECT_EQ(server_report_id.value(), "body-200");
 
-  EXPECT_EQ(crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid), &server_report_id),
-            CrashServer::UploadStatus::kSuccess);
-  EXPECT_EQ(server_report_id, "body-203");
+  upload_status = std::nullopt;
+  server_report_id = std::nullopt;
+
+  crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid),
+                             [&](CrashServer::UploadStatus status, std::string response) {
+                               upload_status = status;
+                               server_report_id = response;
+                             });
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(upload_status.has_value());
+  EXPECT_EQ(upload_status.value(), CrashServer::UploadStatus::kSuccess);
+
+  ASSERT_TRUE(server_report_id.has_value());
+  EXPECT_EQ(server_report_id.value(), "body-201");
+
+  upload_status = std::nullopt;
+  server_report_id = std::nullopt;
+
+  crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid),
+                             [&](CrashServer::UploadStatus status, std::string response) {
+                               upload_status = status;
+                               server_report_id = response;
+                             });
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(upload_status.has_value());
+  EXPECT_EQ(upload_status.value(), CrashServer::UploadStatus::kSuccess);
+
+  ASSERT_TRUE(server_report_id.has_value());
+  EXPECT_EQ(server_report_id.value(), "body-202");
+
+  upload_status = std::nullopt;
+  server_report_id = std::nullopt;
+
+  crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid),
+                             [&](CrashServer::UploadStatus status, std::string response) {
+                               upload_status = status;
+                               server_report_id = response;
+                             });
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(upload_status.has_value());
+  EXPECT_EQ(upload_status.value(), CrashServer::UploadStatus::kSuccess);
+
+  ASSERT_TRUE(server_report_id.has_value());
+  EXPECT_EQ(server_report_id.value(), "body-203");
 }
 
 }  // namespace

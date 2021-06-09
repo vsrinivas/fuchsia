@@ -39,78 +39,95 @@ class Queue {
   void WatchReportingPolicy(ReportingPolicyWatcher* watcher);
   void WatchNetwork(NetworkWatcher* network_watcher);
 
-  // Add a report to the queue.
   bool Add(Report report);
 
-  uint64_t Size() const { return pending_reports_.size(); }
-  bool IsEmpty() const { return pending_reports_.empty(); }
-  ReportId LatestReport() { return pending_reports_.back().report_id; }
+  uint64_t Size() const;
+  bool IsEmpty() const;
+  ReportId LatestReport() const;
   bool Contains(ReportId report_id) const;
+  bool IsPeriodicUploadScheduled() const;
+
+  // Returns true if there is an hourly report already an hourly report anywhere in the queue, i.e.
+  // active, ready or blocked.
   bool HasHourlyReport() const;
-  bool IsPeriodicUploadScheduled() const {
-    return upload_all_every_fifteen_minutes_task_.is_pending();
-  }
 
   // Forces the queue to automatically put all reports in the store and stop all uploads.
   void StopUploading();
 
  private:
-  // Information about a report that needs to be uploaded, including its id, its snapshot uuid, and
-  // whether it's the sole hourly report.
+  // Internal representation of a report including metadata about the report and an optional
+  // in-memory version of the report.
+  //
+  // Note: |report| will be set iff it is actively being uploaded or hasn't been added to the store.
   struct PendingReport {
-    explicit PendingReport(const Report& report)
-        : report_id(report.Id()),
-          snapshot_uuid(report.SnapshotUuid()),
-          is_hourly_report(report.IsHourlyReport()) {}
+    explicit PendingReport(Report report);
+    PendingReport(ReportId report_id, SnapshotUuid snapshot_uuid, bool is_hourly_report);
 
-    PendingReport(const ReportId report_id, const SnapshotUuid snapshot_uuid,
-                  const bool is_hourly_report)
-        : report_id(report_id),
-          snapshot_uuid(std::move(snapshot_uuid)),
-          is_hourly_report(is_hourly_report) {}
+    PendingReport(const PendingReport&) = delete;
+    PendingReport& operator=(const PendingReport&) = delete;
+    PendingReport(PendingReport&&) = default;
+    PendingReport& operator=(PendingReport&&) = default;
+
+    // Utility method for interacting with |report|.
+    void SetReport(Report report);
+    Report TakeReport();
+    bool HasReport() const;
 
     ReportId report_id;
     SnapshotUuid snapshot_uuid;
     bool is_hourly_report;
+    std::optional<Report> report;
+
+    // Set to true iff the report is the active report and needs to be deleted once it becomes
+    // blocked.
+    bool delete_post_upload;
   };
 
   // Why a report is being retired.
   enum class RetireReason { kUpload, kDelete, kThrottled, kArchive, kGarbageCollected };
 
+  // Instantiates the queue from state in the store.
+  void InitFromStore();
+
+  // Internal Add() method with information on whether the report can be uploaded immediately and
+  // put in the store. |consider_eager_upload| and |add_to_store| will be false if the report
+  // already has an upload attempt or put in the store, respectively.
+  bool Add(PendingReport pending_report, bool consider_eager_upload, bool add_to_store);
+
+  bool AddToStore(Report report);
+
+  // Stops using |pending_report| for the provided reason and cleans up its resources.
+  void Retire(PendingReport pending_report, RetireReason reason, std::string server_report_id = "");
+
+  // Attempts to upload all reports in |ready_reports_|. Reports are retired if they're uploaded or
+  // throttled and re-added to the queue if the upload fails.
+  void Upload();
+
+  // Make all reports blocked.
+  void BlockAll();
+
+  // Makes all reports ready and call Upload.
+  void UnblockAll();
+
+  void DeleteAll();
+  void UnblockAllEveryFifteenMinutes();
+
+  std::string ReportIdsStr(const std::deque<PendingReport>& reports) const;
+
   // Utility class for recording metrics about reports.
   class UploadMetrics {
    public:
-    explicit UploadMetrics(std::shared_ptr<InfoContext> info_context)
-        : info_(std::move(info_context)) {}
-
+    explicit UploadMetrics(std::shared_ptr<InfoContext> info_context);
     void IncrementUploadAttempts(ReportId report_id);
 
     // Record |report_id| as being retired and erase any state associated with it.
-    void Retire(ReportId report_id, RetireReason retire_reason, std::string server_report_id = "");
+    void Retire(const PendingReport& pending_report, RetireReason retire_reason,
+                std::string server_report_id = "");
 
    private:
     QueueInfo info_;
     std::map<ReportId, size_t> upload_attempts_;
   };
-
-  // Stop using the report associated with |pending_report| for the provided reason. Resources
-  // associated with the report will be cleaned up.
-  void Retire(PendingReport pending_report, RetireReason reason, std::string server_report_id = "");
-
-  // Attempts to upload all pending reports and removes the successfully uploaded reports from the
-  // queue. Returns the number of reports successfully uploaded.
-  size_t UploadAll();
-
-  // Deletes all of the reports in the queue and store.
-  void DeleteAll();
-
-  // Attempts to upload a report
-  //
-  // Returns false if another upload attempt should be made in the future.
-  bool Upload(const Report& report);
-
-  // Schedules UploadAll() to run every 15 minutes.
-  void UploadAllEveryFifteenMinutes();
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
@@ -120,13 +137,20 @@ class Queue {
   SnapshotManager* snapshot_manager_;
   UploadMetrics metrics_;
 
-  std::deque<PendingReport> pending_reports_;
-
-  async::TaskClosureMethod<Queue, &Queue::UploadAllEveryFifteenMinutes>
-      upload_all_every_fifteen_minutes_task_{this};
+  async::TaskClosureMethod<Queue, &Queue::UnblockAllEveryFifteenMinutes>
+      unblock_all_every_fifteen_minutes_task_{this};
 
   ReportingPolicy reporting_policy_{ReportingPolicy::kUndecided};
   bool stop_uploading_{false};
+
+  // A report is either:
+  //  1) Active (actively being uploaded).
+  //  2) Ready (can become the active report).
+  //  3) Blocked (not ready or active and won't become so unless a stimulus triggers it, e.g., the
+  //  network becoming reachable).
+  std::optional<PendingReport> active_report_;
+  std::deque<PendingReport> ready_reports_;
+  std::deque<PendingReport> blocked_reports_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Queue);
 };

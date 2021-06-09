@@ -156,7 +156,8 @@ class CrashReporterTest : public UnitTestFixture {
     snapshot_manager_ = std::make_unique<SnapshotManager>(
         dispatcher(), services(), &clock_, kSnapshotSharedRequestWindow,
         kGarbageCollectedSnapshotsPath, StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u)),
-    crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results);
+    crash_server_ =
+        std::make_unique<StubCrashServer>(dispatcher(), services(), upload_attempt_results);
 
     crash_reporter_ = std::make_unique<CrashReporter>(
         dispatcher(), services(), &clock_, info_context_, config,
@@ -1092,6 +1093,7 @@ TEST_F(CrashReporterTest, Skip_HourlySnapshotIfPending) {
 
   RunLoopFor(zx::min(5));
   RunLoopFor(zx::hour(1));
+
   EXPECT_THAT(crash_server_->latest_annotations().Raw(),
               IsSupersetOf(Linearize(std::map<std::string, testing::Matcher<std::string>>({
                   {"ptime", Not(IsEmpty())},

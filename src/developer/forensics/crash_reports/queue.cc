@@ -32,117 +32,228 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
   FX_CHECK(dispatcher_);
   FX_CHECK(crash_server_);
 
+  InitFromStore();
+}
+
+void Queue::InitFromStore() {
   // Note: The upload attempt data is lost when the component stops and all reports start with
   // upload attempts of 0.
   for (const auto& report_id : store_.GetReports()) {
     // It could technically be an hourly snapshot, but the snapshot has not been persisted so it is
     // okay to have another one here.
-    pending_reports_.emplace_back(report_id, store_.GetSnapshotUuid(report_id),
+    blocked_reports_.emplace_back(report_id, store_.GetSnapshotUuid(report_id),
                                   false /*not a known hourly report*/);
   }
-  std::sort(pending_reports_.begin(), pending_reports_.end(),
+
+  std::sort(blocked_reports_.begin(), blocked_reports_.end(),
             [](const PendingReport& lhs, const PendingReport& rhs) {
               return lhs.report_id <= rhs.report_id;
             });
 
-  if (!pending_reports_.empty()) {
+  if (!blocked_reports_.empty()) {
     std::vector<std::string> report_id_strs;
-    for (const auto& pending_report : pending_reports_) {
+    for (const auto& pending_report : blocked_reports_) {
       report_id_strs.push_back(std::to_string(pending_report.report_id));
     }
-    FX_LOGS(INFO) << "Initializing queue with reports: " << fxl::JoinStrings(report_id_strs, " ");
+    FX_LOGS(INFO) << "Initializing queue with reports: " << ReportIdsStr(blocked_reports_);
   }
 }
 
+uint64_t Queue::Size() const {
+  return ready_reports_.size() + blocked_reports_.size() + (bool)active_report_;
+}
+
+bool Queue::IsEmpty() const { return Size() == 0; }
+
+ReportId Queue::LatestReport() const {
+  const ReportId active_report_id = (active_report_) ? active_report_->report_id : 0u;
+  return std::max({
+      active_report_id,
+      ready_reports_.back().report_id,
+      blocked_reports_.back().report_id,
+  });
+}
+
 bool Queue::Contains(const ReportId report_id) const {
-  return std::find_if(pending_reports_.cbegin(), pending_reports_.cend(),
-                      [=](const PendingReport& r) { return r.report_id == report_id; }) !=
-         pending_reports_.cend();
+  return (std::find_if(ready_reports_.cbegin(), ready_reports_.cend(),
+                       [=](const PendingReport& r) { return r.report_id == report_id; }) !=
+          ready_reports_.cend()) ||
+         (std::find_if(blocked_reports_.cbegin(), blocked_reports_.cend(),
+                       [=](const PendingReport& r) { return r.report_id == report_id; }) !=
+          blocked_reports_.cend()) ||
+         (active_report_ && active_report_->report_id == report_id);
 }
 
 bool Queue::HasHourlyReport() const {
-  return std::find_if(pending_reports_.cbegin(), pending_reports_.cend(),
-                      [=](const PendingReport& r) { return r.is_hourly_report; }) !=
-         pending_reports_.cend();
+  return (std::find_if(ready_reports_.cbegin(), ready_reports_.cend(),
+                       [=](const PendingReport& r) { return r.is_hourly_report; }) !=
+          ready_reports_.cend()) ||
+         (std::find_if(blocked_reports_.cbegin(), blocked_reports_.cend(),
+                       [=](const PendingReport& r) { return r.is_hourly_report; }) !=
+          blocked_reports_.cend()) ||
+         (active_report_ && active_report_->is_hourly_report);
+}
+
+bool Queue::IsPeriodicUploadScheduled() const {
+  return unblock_all_every_fifteen_minutes_task_.is_pending();
 }
 
 void Queue::StopUploading() {
   stop_uploading_ = true;
-  upload_all_every_fifteen_minutes_task_.Cancel();
+
+  // Re-add all active reports so they're put in the store (if need be) and not uploaded
+  // immediately.
+  for (auto& report : ready_reports_) {
+    const bool add_to_store = report.HasReport();
+    Add(std::move(report), /*consider_eager_upload=*/false, add_to_store);
+  }
+  ready_reports_.clear();
+
+  for (auto& report : blocked_reports_) {
+    Retire(std::move(report), RetireReason::kArchive);
+  }
+  blocked_reports_.clear();
+
+  unblock_all_every_fifteen_minutes_task_.Cancel();
 }
 
 bool Queue::Add(Report report) {
-  const PendingReport pending_report(report);
+  // Only allow a single hourly report in the queue at a time.
+  if (report.IsHourlyReport()) {
+    FX_CHECK(!HasHourlyReport());
+  }
+
+  return Add(PendingReport(std::move(report)), /*consider_eager_upload=*/true,
+             /*add_to_store=*/true);
+}
+
+bool Queue::Add(PendingReport pending_report, const bool consider_eager_upload,
+                const bool add_to_store) {
   if (reporting_policy_ == ReportingPolicy::kDoNotFileAndDelete) {
-    Retire(pending_report, RetireReason::kDelete);
+    Retire(std::move(pending_report), RetireReason::kDelete);
     return true;
   }
 
-  // Attempt to upload a report before putting it in the store.
-  if (reporting_policy_ == ReportingPolicy::kUpload && !stop_uploading_) {
-    if (Upload(report)) {
-      // Don't call Retire(), because Upload retires the report.
-      return true;
+  if (consider_eager_upload && reporting_policy_ == ReportingPolicy::kUpload && !stop_uploading_) {
+    ready_reports_.push_back(std::move(pending_report));
+    Upload();
+    return true;
+  }
+
+  if (add_to_store && pending_report.HasReport()) {
+    if (!AddToStore(pending_report.TakeReport())) {
+      Retire(std::move(pending_report), RetireReason::kDelete);
+      return false;
     }
   }
 
-  // If an hourly report is already present, don't delete it and don't store a new one. This is
-  // done to preserve the data from the report_id hourly report that wasn't successfully uploaded
-  // and will have the best chance of containing data on why.
-  if (report.IsHourlyReport() && HasHourlyReport()) {
-    Retire(pending_report, RetireReason::kDelete);
+  if (reporting_policy_ == ReportingPolicy::kArchive) {
+    Retire(std::move(pending_report), RetireReason::kArchive);
     return true;
   }
 
+  if (!stop_uploading_) {
+    blocked_reports_.push_back(std::move(pending_report));
+  }
+  return true;
+}
+
+bool Queue::AddToStore(Report report) {
   std::vector<ReportId> garbage_collected_reports;
   const bool success = store_.Add(std::move(report), &garbage_collected_reports);
-  for (const auto& pending_report : pending_reports_) {
+
+  // Retire each pending report that is garbage collected by the store.
+  for (auto& pending_report : ready_reports_) {
     if (std::find(garbage_collected_reports.cbegin(), garbage_collected_reports.cend(),
                   pending_report.report_id) != garbage_collected_reports.end()) {
-      Retire(pending_report, RetireReason::kGarbageCollected);
+      Retire(std::move(pending_report), RetireReason::kGarbageCollected);
     }
   }
-  pending_reports_.erase(std::remove_if(pending_reports_.begin(), pending_reports_.end(),
+  for (auto& pending_report : blocked_reports_) {
+    if (std::find(garbage_collected_reports.cbegin(), garbage_collected_reports.cend(),
+                  pending_report.report_id) != garbage_collected_reports.end()) {
+      Retire(std::move(pending_report), RetireReason::kGarbageCollected);
+    }
+  }
+
+  // Erase all pending reports that were garbage collected.
+  ready_reports_.erase(std::remove_if(ready_reports_.begin(), ready_reports_.end(),
+                                      [&](const PendingReport& pending_report) {
+                                        return std::find(garbage_collected_reports.cbegin(),
+                                                         garbage_collected_reports.cend(),
+                                                         pending_report.report_id) !=
+                                               garbage_collected_reports.end();
+                                      }),
+                       ready_reports_.end());
+  blocked_reports_.erase(std::remove_if(blocked_reports_.begin(), blocked_reports_.end(),
                                         [&](const PendingReport& pending_report) {
                                           return std::find(garbage_collected_reports.cbegin(),
                                                            garbage_collected_reports.cend(),
                                                            pending_report.report_id) !=
                                                  garbage_collected_reports.end();
                                         }),
-                         pending_reports_.end());
+                         blocked_reports_.end());
 
-  if (!success) {
-    Retire(pending_report, RetireReason::kDelete);
-    return false;
-  }
-
-  if (reporting_policy_ == ReportingPolicy::kArchive) {
-    Retire(pending_report, RetireReason::kArchive);
-    return true;
-  }
-
-  pending_reports_.push_back(pending_report);
-  return true;
+  return success;
 }
 
-bool Queue::Upload(const Report& report) {
-  metrics_.IncrementUploadAttempts(report.Id());
+void Queue::Upload() {
+  // Don't upload if the queue isn't allow to upload.
+  if (stop_uploading_ || reporting_policy_ != ReportingPolicy::kUpload) {
+    return;
+  }
 
-  std::string server_report_id;
-  const auto response = crash_server_->MakeRequest(
-      report, snapshot_manager_->GetSnapshot(report.SnapshotUuid()), &server_report_id);
+  // Don't upload if there aren't any reports to uploade or a report is already being uploaded.
+  if (ready_reports_.empty() || active_report_ || crash_server_->HasPendingRequest()) {
+    return;
+  }
 
-  // Create a PendingReport for |report| if it needs to be retired.
-  const PendingReport pending_report(report);
-  switch (response) {
-    case CrashServer::UploadStatus::kSuccess:
-      Retire(pending_report, RetireReason::kUpload, server_report_id);
-      return true;
-    case CrashServer::UploadStatus::kThrottled:
-      Retire(pending_report, RetireReason::kThrottled);
-      return true;
-    case CrashServer::UploadStatus::kFailure:
-      return false;
+  active_report_ = std::move(ready_reports_.front());
+  ready_reports_.pop_front();
+
+  bool add_to_store = active_report_->HasReport();
+  if (!active_report_->HasReport()) {
+    if (!store_.Contains(active_report_->report_id)) {
+      Retire(std::move(*active_report_), RetireReason::kGarbageCollected);
+      active_report_ = std::nullopt;
+      Upload();
+      return;
+    }
+
+    active_report_->SetReport(store_.Get(active_report_->report_id));
+  }
+
+  metrics_.IncrementUploadAttempts(active_report_->report_id);
+  crash_server_->MakeRequest(
+      *active_report_->report, snapshot_manager_->GetSnapshot(active_report_->snapshot_uuid),
+      [this, add_to_store](CrashServer::UploadStatus status, std::string server_report_id) mutable {
+        switch (status) {
+          case CrashServer::UploadStatus::kSuccess:
+            Retire(std::move(*active_report_), RetireReason::kUpload, server_report_id);
+            break;
+          case CrashServer::UploadStatus::kThrottled:
+            Retire(std::move(*active_report_), RetireReason::kThrottled);
+            break;
+          case CrashServer::UploadStatus::kFailure:
+            if (active_report_->delete_post_upload) {
+              Retire(std::move(*active_report_), RetireReason::kDelete);
+            } else {
+              // If the report isn't deleted and should be added to the store post-upload, its
+              // content should still be present, e.g., DeleteAll didn't delete it.
+              if (add_to_store) {
+                FX_CHECK(active_report_->HasReport());
+              }
+              Add(std::move(*active_report_), /*consider_eager_upload=*/false, add_to_store);
+            }
+            break;
+        }
+        active_report_ = std::nullopt;
+        Upload();
+      });
+
+  // Clear the report from memory if it won't be added to the store.
+  if (!add_to_store) {
+    active_report_->TakeReport();
   }
 }
 
@@ -152,55 +263,71 @@ void Queue::Retire(const PendingReport pending_report, const Queue::RetireReason
   switch (reason) {
     case RetireReason::kArchive:
       FX_LOGST(INFO, tags) << "Archiving local report under /tmp/reports";
-      metrics_.Retire(pending_report.report_id, reason, server_report_id);
+      metrics_.Retire(pending_report, reason, server_report_id);
       // Don't clean up resources if the report is being archived.
       return;
     case RetireReason::kUpload:
       FX_LOGST(INFO, tags) << "Successfully uploaded report at https://crash.corp.google.com/"
                            << server_report_id;
       break;
+    case RetireReason::kThrottled:
+      FX_LOGST(INFO, tags) << "Upload throttled by server";
+      break;
+    case RetireReason::kDelete:
+      FX_LOGST(INFO, tags) << "Deleted local report";
+      break;
     case RetireReason::kGarbageCollected:
       FX_LOGST(INFO, tags) << "Garbage collected local report";
       break;
-    default:
-      break;
   }
 
-  metrics_.Retire(pending_report.report_id, reason, server_report_id);
+  metrics_.Retire(pending_report, reason, server_report_id);
   snapshot_manager_->Release(pending_report.snapshot_uuid);
   tags_->Unregister(pending_report.report_id);
   store_.Remove(pending_report.report_id);
 }
 
-size_t Queue::UploadAll() {
-  std::deque<PendingReport> new_pending_reports;
-  for (const auto& pending_report : pending_reports_) {
-    // |pending_reports_| is kept in sync with |store_| so Get should only ever fail if the
-    // report is deleted from the store by an external influence, e.g., the filesystem flushes
-    // /cache.
-    if (!store_.Contains(pending_report.report_id)) {
-      Retire(pending_report, RetireReason::kGarbageCollected);
-      continue;
-    }
+void Queue::BlockAll() {
+  // Move all ready reports to blocked and add all reports to the store that haven't been
+  // added yet.
+  for (auto& pending_report : ready_reports_) {
+    const bool add_to_store = pending_report.HasReport();
+    Add(std::move(pending_report), /*consider_eager_upload=*/false, add_to_store);
+  }
+  ready_reports_.clear();
+}
 
-    if (!Upload(store_.Get(pending_report.report_id))) {
-      new_pending_reports.push_back(pending_report);
-    }
+void Queue::UnblockAll() {
+  if (stop_uploading_ || reporting_policy_ != ReportingPolicy::kUpload) {
+    return;
   }
 
-  pending_reports_.swap(new_pending_reports);
-
-  // |new_pending_reports| now contains the pending reports before attempting to upload them.
-  return new_pending_reports.size() - pending_reports_.size();
+  ready_reports_.insert(ready_reports_.end(), std::make_move_iterator(blocked_reports_.begin()),
+                        std::make_move_iterator(blocked_reports_.end()));
+  blocked_reports_.clear();
+  Upload();
 }
 
 void Queue::DeleteAll() {
   FX_LOGS(INFO) << fxl::StringPrintf("Deleting all %zu pending reports", Size());
-  for (const auto& pending_report : pending_reports_) {
-    Retire(pending_report, RetireReason::kDelete);
+
+  for (auto& pending_report : ready_reports_) {
+    Retire(std::move(pending_report), RetireReason::kDelete);
+  }
+  ready_reports_.clear();
+
+  for (auto& pending_report : blocked_reports_) {
+    Retire(std::move(pending_report), RetireReason::kDelete);
+  }
+  blocked_reports_.clear();
+
+  // Delete the report being uploaded, but don't retire it; the PendingReport is needed
+  // post-upload and will be retired once it is used.
+  if (active_report_) {
+    active_report_->TakeReport();
+    active_report_->delete_post_upload = true;
   }
 
-  pending_reports_.clear();
   store_.RemoveAll();
 }
 
@@ -215,17 +342,19 @@ void Queue::WatchReportingPolicy(ReportingPolicyWatcher* watcher) {
     reporting_policy_ = policy;
     switch (reporting_policy_) {
       case ReportingPolicy::kDoNotFileAndDelete:
-        upload_all_every_fifteen_minutes_task_.Cancel();
+        unblock_all_every_fifteen_minutes_task_.Cancel();
         DeleteAll();
         break;
       case ReportingPolicy::kUpload:
-        UploadAllEveryFifteenMinutes();
+        UnblockAllEveryFifteenMinutes();
         break;
       case ReportingPolicy::kArchive:
         // The reporting policy shouldn't change to Archive outside of tests.
+        unblock_all_every_fifteen_minutes_task_.Cancel();
         break;
       case ReportingPolicy::kUndecided:
-        upload_all_every_fifteen_minutes_task_.Cancel();
+        BlockAll();
+        unblock_all_every_fifteen_minutes_task_.Cancel();
         break;
     }
   };
@@ -237,76 +366,98 @@ void Queue::WatchReportingPolicy(ReportingPolicyWatcher* watcher) {
 void Queue::WatchNetwork(NetworkWatcher* network_watcher) {
   network_watcher->Register([this](const bool network_is_reachable) {
     if (!stop_uploading_ && network_is_reachable) {
-      // Save the size of |pending_reports_| because UploadAll mutates |pending_reports_|.
-      if (const auto pending = Size();
-          reporting_policy_ == ReportingPolicy::kUpload && pending > 0) {
-        const auto uploaded = UploadAll();
-        if (uploaded > 0) {
-          FX_LOGS(INFO) << fxl::StringPrintf(
-              "Successfully uploaded %zu of %zu pending crash reports on network reachable ",
-              uploaded, pending);
-        } else {
-          FX_LOGS(INFO) << fxl::StringPrintf(
-              "Failed to upload any of the %zu pending crash reports on network reachable ",
-              pending);
-        }
+      if (!blocked_reports_.empty()) {
+        FX_LOGS(INFO) << "Uploading " << blocked_reports_.size()
+                      << " reports on network reachable: " << ReportIdsStr(blocked_reports_);
+        UnblockAll();
       }
     }
   });
 }
 
-void Queue::UploadAllEveryFifteenMinutes() {
+void Queue::UnblockAllEveryFifteenMinutes() {
   if (stop_uploading_) {
     return;
   }
 
-  // Save the size of |pending_reports_| because UploadAll mutates |pending_reports_|.
-  if (const auto pending = Size(); reporting_policy_ == ReportingPolicy::kUpload && pending > 0) {
-    const auto uploaded = UploadAll();
-    if (uploaded > 0) {
-      FX_LOGS(INFO) << fxl::StringPrintf(
-          "Successfully uploaded %zu of %zu pending crash reports as part of the "
-          "15-minute periodic upload",
-          uploaded, pending);
-    } else {
-      FX_LOGS(INFO) << fxl::StringPrintf(
-          "Failed to upload any of the %zu pending crash reports as part of the "
-          "15-minute periodic upload",
-          pending);
-    }
+  if (!blocked_reports_.empty()) {
+    FX_LOGS(INFO) << "Uploading " << blocked_reports_.size()
+                  << " reports on as a part of the 15-minute periodic upload: "
+                  << ReportIdsStr(blocked_reports_);
+    UnblockAll();
   }
+
   if (const auto status =
-          upload_all_every_fifteen_minutes_task_.PostDelayed(dispatcher_, zx::min(15));
+          unblock_all_every_fifteen_minutes_task_.PostDelayed(dispatcher_, zx::min(15));
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Error posting periodic upload task to async loop. Won't retry.";
   }
 }
+
+Queue::PendingReport::PendingReport(Report report)
+    : report_id(report.Id()),
+      snapshot_uuid(report.SnapshotUuid()),
+      is_hourly_report(report.IsHourlyReport()),
+      report(std::move(report)),
+      delete_post_upload(false) {}
+
+Queue::PendingReport::PendingReport(const ReportId report_id, const SnapshotUuid snapshot_uuid,
+                                    const bool is_hourly_report)
+    : report_id(report_id),
+      snapshot_uuid(std::move(snapshot_uuid)),
+      is_hourly_report(is_hourly_report),
+      report(std::nullopt),
+      delete_post_upload(false) {}
+
+void Queue::PendingReport::SetReport(Report r) { report = std::move(r); }
+
+Report Queue::PendingReport::TakeReport() {
+  FX_CHECK(report);
+  auto r = std::move(*report);
+  report = std::nullopt;
+  return r;
+}
+
+bool Queue::PendingReport::HasReport() const { return (bool)report; }
+
+Queue::UploadMetrics::UploadMetrics(std::shared_ptr<InfoContext> info_context)
+    : info_(std::move(info_context)) {}
 
 void Queue::UploadMetrics::IncrementUploadAttempts(const ReportId report_id) {
   upload_attempts_[report_id]++;
   info_.RecordUploadAttemptNumber(upload_attempts_[report_id]);
 }
 
-void Queue::UploadMetrics::Retire(const ReportId report_id, const RetireReason retire_reason,
+void Queue::UploadMetrics::Retire(const PendingReport& pending_report,
+                                  const RetireReason retire_reason,
                                   const std::string server_report_id) {
   switch (retire_reason) {
     case RetireReason::kUpload:
-      info_.MarkReportAsUploaded(server_report_id, upload_attempts_[report_id]);
+      info_.MarkReportAsUploaded(server_report_id, upload_attempts_[pending_report.report_id]);
       break;
     case RetireReason::kDelete:
-      info_.MarkReportAsDeleted(upload_attempts_[report_id]);
+      info_.MarkReportAsDeleted(upload_attempts_[pending_report.report_id]);
       break;
     case RetireReason::kThrottled:
-      info_.MarkReportAsThrottledByServer(upload_attempts_[report_id]);
+      info_.MarkReportAsThrottledByServer(upload_attempts_[pending_report.report_id]);
       break;
     case RetireReason::kArchive:
       info_.MarkReportAsArchived();
       break;
     case RetireReason::kGarbageCollected:
-      info_.MarkReportAsGarbageCollected(upload_attempts_[report_id]);
+      info_.MarkReportAsGarbageCollected(upload_attempts_[pending_report.report_id]);
       break;
   }
-  upload_attempts_.erase(report_id);
+  upload_attempts_.erase(pending_report.report_id);
+}
+
+std::string Queue::ReportIdsStr(const std::deque<PendingReport>& reports) const {
+  std::vector<std::string> report_id_strs;
+  for (const auto& pending_report : reports) {
+    report_id_strs.push_back(std::to_string(pending_report.report_id));
+  }
+
+  return "[" + fxl::JoinStrings(report_id_strs, ", ") + "]";
 }
 
 }  // namespace crash_reports
