@@ -393,6 +393,7 @@ mod tests {
         fidl_fuchsia_pkg_rewrite::{EditTransactionRequest, EngineMarker, EngineRequest},
     };
 
+    const REPO_NAME: &str = "some_repo";
     #[derive(Default)]
     struct FakeRepositoryManager {}
 
@@ -407,9 +408,9 @@ mod tests {
                     assert_eq!(
                         repo,
                         RepositoryConfig {
-                            repo_url: Some("fuchsia-pkg://some_name".to_string()),
+                            repo_url: Some(format!("fuchsia-pkg://{}", REPO_NAME)),
                             mirrors: Some(vec![MirrorConfig {
-                                mirror_url: Some("http://localhost:8084/some_name".to_string()),
+                                mirror_url: Some(format!("http://localhost:8084/{}", REPO_NAME)),
                                 subscribe: Some(false),
                                 ..MirrorConfig::EMPTY
                             }]),
@@ -427,6 +428,43 @@ mod tests {
             Ok(())
         }
     }
+
+    #[derive(Default)]
+    struct ErroringRepositoryManager {}
+
+    #[async_trait(?Send)]
+    impl FidlService for ErroringRepositoryManager {
+        type Service = RepositoryManagerMarker;
+        type StreamHandler = FidlStreamHandler<Self>;
+
+        async fn handle(&self, _cx: &Context, req: RepositoryManagerRequest) -> Result<()> {
+            match req {
+                RepositoryManagerRequest::Add { repo, responder } => {
+                    assert_eq!(
+                        repo,
+                        RepositoryConfig {
+                            repo_url: Some(format!("fuchsia-pkg://{}", REPO_NAME)),
+                            mirrors: Some(vec![MirrorConfig {
+                                mirror_url: Some(format!("http://localhost:8084/{}", REPO_NAME)),
+                                subscribe: Some(false),
+                                ..MirrorConfig::EMPTY
+                            }]),
+                            root_keys: Some(vec![]),
+                            root_version: Some(1),
+                            ..RepositoryConfig::EMPTY
+                        }
+                    );
+
+                    responder.send(&mut Err(1)).unwrap()
+                }
+                _ => {
+                    panic!("unexpected RepositoryManager request {:?}", req);
+                }
+            }
+            Ok(())
+        }
+    }
+
     #[derive(Default)]
     struct FakeEngine {}
     #[async_trait(?Send)]
@@ -446,7 +484,7 @@ mod tests {
                                     rule,
                                     Rule::Literal(LiteralRule {
                                         host_match: "fuchsia.com".to_string(),
-                                        host_replacement: "some_name".to_string(),
+                                        host_replacement: REPO_NAME.to_string(),
                                         path_prefix_match: "/".to_string(),
                                         path_prefix_replacement: "/".to_string(),
                                     })
@@ -471,6 +509,17 @@ mod tests {
         }
     }
 
+    async fn add_repo(daemon: &FakeDaemon) -> bridge::RepositoriesProxy {
+        let proxy = daemon.open_proxy::<bridge::RepositoriesMarker>().await;
+        let spec = bridge::RepositorySpec::Filesystem(bridge::FileSystemRepositorySpec {
+            path: Some("test_path/bar".to_owned()),
+            ..bridge::FileSystemRepositorySpec::EMPTY
+        });
+        proxy.add(REPO_NAME, &mut spec.clone()).unwrap();
+
+        proxy
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_remove() {
         let daemon = FakeDaemonBuilder::new().register_fidl_service::<Repo>().build();
@@ -479,7 +528,7 @@ mod tests {
             path: Some("test_path/bar".to_owned()),
             ..bridge::FileSystemRepositorySpec::EMPTY
         });
-        proxy.add("mine", &mut spec.clone()).unwrap();
+        proxy.add(REPO_NAME, &mut spec.clone()).unwrap();
 
         let (client, server) = fidl::endpoints::create_endpoints().unwrap();
         proxy.list(server).unwrap();
@@ -491,10 +540,10 @@ mod tests {
         assert_eq!(0, client.next().await.unwrap().len());
 
         let got = &next[0];
-        assert_eq!("mine", &got.name);
+        assert_eq!(REPO_NAME, &got.name);
         assert_eq!(spec, got.spec);
 
-        assert!(proxy.remove("mine").await.unwrap());
+        assert!(proxy.remove(REPO_NAME).await.unwrap());
 
         let (client, server) = fidl::endpoints::create_endpoints().unwrap();
         proxy.list(server).unwrap();
@@ -510,16 +559,11 @@ mod tests {
             .register_fidl_service::<FakeEngine>()
             .register_fidl_service::<Repo>()
             .build();
-        let proxy = daemon.open_proxy::<bridge::RepositoriesMarker>().await;
-        let spec = bridge::RepositorySpec::Filesystem(bridge::FileSystemRepositorySpec {
-            path: Some("test_path/bar".to_owned()),
-            ..bridge::FileSystemRepositorySpec::EMPTY
-        });
-        proxy.add("some_name", &mut spec.clone()).unwrap();
 
+        let proxy = add_repo(&daemon).await;
         proxy
             .register_target(bridge::RepositoryTarget {
-                repo_name: Some("some_name".to_string()),
+                repo_name: Some(REPO_NAME.to_string()),
                 target_identifier: None,
                 aliases: Some(vec!["fuchsia.com".to_string()]),
                 ..bridge::RepositoryTarget::EMPTY
@@ -527,5 +571,95 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_register_empty_aliases() {
+        let daemon = FakeDaemonBuilder::new()
+            .register_fidl_service::<FakeRepositoryManager>()
+            .register_fidl_service::<FakeEngine>()
+            .register_fidl_service::<Repo>()
+            .build();
+
+        let proxy = add_repo(&daemon).await;
+        proxy
+            .register_target(bridge::RepositoryTarget {
+                repo_name: Some(REPO_NAME.to_string()),
+                target_identifier: None,
+                aliases: Some(vec![]),
+                ..bridge::RepositoryTarget::EMPTY
+            })
+            .await
+            .unwrap()
+            .unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_register_none_aliases() {
+        let daemon = FakeDaemonBuilder::new()
+            .register_fidl_service::<FakeRepositoryManager>()
+            .register_fidl_service::<FakeEngine>()
+            .register_fidl_service::<Repo>()
+            .build();
+
+        let proxy = add_repo(&daemon).await;
+        proxy
+            .register_target(bridge::RepositoryTarget {
+                repo_name: Some(REPO_NAME.to_string()),
+                target_identifier: None,
+                aliases: None,
+                ..bridge::RepositoryTarget::EMPTY
+            })
+            .await
+            .unwrap()
+            .unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_register_repo_manager_error() {
+        let daemon = FakeDaemonBuilder::new()
+            .register_fidl_service::<ErroringRepositoryManager>()
+            .register_fidl_service::<FakeEngine>()
+            .register_fidl_service::<Repo>()
+            .build();
+
+        let proxy = add_repo(&daemon).await;
+        assert_eq!(
+            proxy
+                .register_target(bridge::RepositoryTarget {
+                    repo_name: Some(REPO_NAME.to_string()),
+                    target_identifier: None,
+                    aliases: None,
+                    ..bridge::RepositoryTarget::EMPTY
+                })
+                .await
+                .unwrap()
+                .unwrap_err(),
+            bridge::RepositoryError::RepositoryManagerError
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_register_non_existent_repo() {
+        let daemon = FakeDaemonBuilder::new()
+            .register_fidl_service::<ErroringRepositoryManager>()
+            .register_fidl_service::<FakeEngine>()
+            .register_fidl_service::<Repo>()
+            .build();
+
+        let proxy = daemon.open_proxy::<bridge::RepositoriesMarker>().await;
+        assert_eq!(
+            proxy
+                .register_target(bridge::RepositoryTarget {
+                    repo_name: Some(REPO_NAME.to_string()),
+                    target_identifier: None,
+                    aliases: None,
+                    ..bridge::RepositoryTarget::EMPTY
+                })
+                .await
+                .unwrap()
+                .unwrap_err(),
+            bridge::RepositoryError::NoMatchingRepository
+        );
     }
 }

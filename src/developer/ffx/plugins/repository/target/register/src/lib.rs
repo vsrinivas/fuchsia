@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Context, Result},
-    errors::ffx_error,
+    errors::{ffx_bail, ffx_error},
     ffx_config::get,
     ffx_core::ffx_plugin,
     ffx_repository_target_register_args::RegisterCommand,
@@ -22,6 +22,10 @@ async fn register(
     cmd: RegisterCommand,
     repos: RepositoriesProxy,
 ) -> Result<()> {
+    if cmd.name.is_empty() {
+        ffx_bail!("error: repository name must not be empty.")
+    }
+
     repos
         .register_target(RepositoryTarget {
             repo_name: Some(cmd.name),
@@ -44,12 +48,12 @@ async fn register(
 mod test {
     use super::*;
     use {
-        fidl_fuchsia_developer_bridge::RepositoriesRequest, fuchsia_async as fasync,
-        futures::channel::oneshot::channel,
+        fidl_fuchsia_developer_bridge::RepositoriesRequest,
+        fuchsia_async as fasync,
+        futures::channel::oneshot::{channel, Receiver},
     };
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_register() {
+    async fn setup_fake_server() -> (RepositoriesProxy, Receiver<RepositoryTarget>) {
         let (sender, receiver) = channel();
         let mut sender = Some(sender);
         let repos = setup_fake_repos(move |req| match req {
@@ -59,6 +63,12 @@ mod test {
             }
             other => panic!("Unexpected request: {:?}", other),
         });
+        (repos, receiver)
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_register() {
+        let (repos, receiver) = setup_fake_server().await;
 
         let aliases = vec![String::from("my_alias")];
         register(
@@ -78,5 +88,46 @@ mod test {
                 ..RepositoryTarget::EMPTY
             }
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_register_empty_aliases() {
+        let (repos, receiver) = setup_fake_server().await;
+
+        register(
+            Some("target_str".to_string()),
+            RegisterCommand { name: "some_name".to_string(), alias: vec![] },
+            repos,
+        )
+        .await
+        .unwrap();
+        let got = receiver.await.unwrap();
+        assert_eq!(
+            got,
+            RepositoryTarget {
+                repo_name: Some("some_name".to_string()),
+                target_identifier: Some("target_str".to_string()),
+                aliases: Some(vec![]),
+                ..RepositoryTarget::EMPTY
+            }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_register_returns_error() {
+        let repos = setup_fake_repos(move |req| match req {
+            RepositoriesRequest::RegisterTarget { target_info: _, responder } => {
+                responder.send(&mut Err(RepositoryError::TargetCommunicationFailure)).unwrap();
+            }
+            other => panic!("Unexpected request: {:?}", other),
+        });
+
+        assert!(register(
+            Some("target_str".to_string()),
+            RegisterCommand { name: "some_name".to_string(), alias: vec![] },
+            repos,
+        )
+        .await
+        .is_err());
     }
 }
