@@ -112,6 +112,11 @@ void Ina231Device::GetPowerWatts(GetPowerWattsRequestView request,
   completer.ReplySuccess(static_cast<float>(power) / kFixedPointFactor);
 }
 
+void Ina231Device::GetVoltageVolts(GetVoltageVoltsRequestView request,
+                                   GetVoltageVoltsCompleter::Sync& completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
 zx_status_t Ina231Device::Init(const Ina231Metadata& metadata) {
   {
     zx_status_t status = loop_.StartThread("TI INA231 loop thread");

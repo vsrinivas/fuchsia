@@ -41,6 +41,8 @@ class Ina231Device : public DeviceType,
 
   void GetPowerWatts(GetPowerWattsRequestView request,
                      GetPowerWattsCompleter::Sync& completer) override;
+  void GetVoltageVolts(GetVoltageVoltsRequestView request,
+                       GetVoltageVoltsCompleter::Sync& completer) override;
 
   // Visible for testing.
   zx_status_t Init(const Ina231Metadata& metadata);

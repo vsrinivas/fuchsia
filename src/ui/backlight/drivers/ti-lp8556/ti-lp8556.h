@@ -147,6 +147,9 @@ class Lp8556Device : public DeviceType,
   void GetPowerWatts(GetPowerWattsRequestView request,
                      GetPowerWattsCompleter::Sync& completer) override;
 
+  void GetVoltageVolts(GetVoltageVoltsRequestView request,
+                       GetVoltageVoltsCompleter::Sync& completer) override;
+
  private:
   zx_status_t SetCurrentScale(uint16_t scale);
   zx_status_t ReadInitialState();

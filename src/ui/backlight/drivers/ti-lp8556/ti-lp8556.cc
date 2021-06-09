@@ -269,6 +269,11 @@ void Lp8556Device::GetPowerWatts(GetPowerWattsRequestView request,
   completer.ReplySuccess(backlight_power_);
 }
 
+void Lp8556Device::GetVoltageVolts(GetVoltageVoltsRequestView request,
+                                   GetVoltageVoltsCompleter::Sync& completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
 void Lp8556Device::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
   if (fidl::WireTryDispatch<FidlBacklight::Device>(this, msg, &txn) ==
       ::fidl::DispatchResult::kFound) {

@@ -7,4 +7,5 @@ using zx;
 
 protocol Device {
     GetPowerWatts() -> (float32 power) error zx.status;
+    GetVoltageVolts() -> (float32 voltage) error zx.status;
 };
