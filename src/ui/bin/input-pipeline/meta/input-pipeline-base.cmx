@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/input_pipeline"
+        "binary": "bin/input-pipeline"
     },
     "sandbox": {
         "services": [

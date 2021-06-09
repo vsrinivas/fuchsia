@@ -7,7 +7,7 @@ group("bin") {
     "brightness_manager",
     "default_hardware_ime",
     "ime:ime_service",
-    "input_pipeline",
+    "input-pipeline",
     "root_presenter",
     "shortcut",
   ]
@@ -21,7 +21,7 @@ group("tests") {
     "default_hardware_ime:tests",
     "hardware_display_controller_provider:tests",
     "ime:tests",
-    "input_pipeline:tests",
+    "input-pipeline:tests",
     "root_presenter:tests",
     "shortcut:tests",
   ]

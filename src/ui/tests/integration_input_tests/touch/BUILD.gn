@@ -136,7 +136,7 @@ fuchsia_test_package("touch-input-test-ip") {
   test_components = [ ":touch-input-test-ip-component" ]
   deps = [
     ":touch-input-test-display_rotation-ip",
-    "//src/ui/bin/input_pipeline:component_for_test",
+    "//src/ui/bin/input-pipeline:component-for-test",
     "//src/ui/bin/root_presenter:component_v1_for_test",
   ]
   test_specs = {

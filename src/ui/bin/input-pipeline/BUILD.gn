@@ -7,11 +7,11 @@ import("//build/rust/rustc_binary.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":input_pipeline_tests" ]
+  deps = [ ":input-pipeline-tests" ]
 }
 
-rustc_binary("input_pipeline_bin") {
-  output_name = "input_pipeline"
+rustc_binary("input-pipeline-bin") {
+  output_name = "input-pipeline"
   with_unit_tests = true
   edition = "2018"
 
@@ -34,22 +34,22 @@ rustc_binary("input_pipeline_bin") {
   ]
 }
 
-fuchsia_component("component_for_test") {
-  component_name = "input_pipeline"
-  manifest = "meta/input_pipeline_base.cmx"
-  deps = [ ":input_pipeline_bin" ]
+fuchsia_component("component-for-test") {
+  component_name = "input-pipeline"
+  manifest = "meta/input-pipeline-base.cmx"
+  deps = [ ":input-pipeline-bin" ]
 }
 
 fuchsia_component("component") {
-  component_name = "input_pipeline"
-  manifest = "meta/input_pipeline.cmx"
-  deps = [ ":input_pipeline_bin" ]
+  component_name = "input-pipeline"
+  manifest = "meta/input-pipeline.cmx"
+  deps = [ ":input-pipeline-bin" ]
 }
 
-fuchsia_package("input_pipeline") {
+fuchsia_package("input-pipeline") {
   deps = [ ":component" ]
 }
 
-fuchsia_unittest_package("input_pipeline_tests") {
-  deps = [ ":input_pipeline_bin_test" ]
+fuchsia_unittest_package("input-pipeline-tests") {
+  deps = [ ":input-pipeline-bin_test" ]
 }

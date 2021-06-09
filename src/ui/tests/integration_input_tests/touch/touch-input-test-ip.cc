@@ -86,7 +86,7 @@ const std::map<std::string, std::string> LocalServices() {
       // allows root presenter to share /config/data with the test. This allows the test to control
       // the display rotation read by root presenter.
       {"fuchsia.input.injection.InputDeviceRegistry",
-       "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/input_pipeline.cmx"},
+       "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/input-pipeline.cmx"},
       {"fuchsia.ui.policy.Presenter",
        "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/root_presenter.cmx"},
       {"fuchsia.ui.pointerinjector.configuration.Setup",
