@@ -21,6 +21,7 @@ if (toolchain.environment == "kernel.phys") {
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/phys:arch-header",
       "//zircon/kernel/phys/lib/memalloc",
+      "//zircon/kernel/phys/lib/page-table",
       "//zircon/system/ulib/zbitl",
     ]
   }
