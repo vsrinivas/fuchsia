@@ -13,8 +13,10 @@ namespace memory {
 const std::vector<const NameMatch> Summary::kNameMatches = {
     {"blob-[0-9a-f]+", "[blobs]"},
     {"mrkl-[0-9a-f]+", "[blob-merkles]"},
+    {"inactive-blob-[0-9a-f]+", "[inactive blobs]"},
     {"thrd_t:0x.*|initial-thread|pthread_t:0x.*", "[stacks]"},
-    {"data:.*", "[data]"},
+    {"data[0-9]*:.*", "[data]"},
+    {"relro:.*", "[relro]"},
     {"", "[unnamed]"},
     {"scudo:.*", "[scudo]"},
     {".*\\.so.*", "[libraries]"}};
