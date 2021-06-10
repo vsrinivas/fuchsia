@@ -254,8 +254,9 @@ class DebuggedProcess : public ProcessHandleObserver {
 
   std::deque<StepOverTicket> step_over_queue_;
 
-  debug_ipc::BufferedZxSocket stdout_;
-  debug_ipc::BufferedZxSocket stderr_;
+  // Non-null only if the corresponding stream is hooked up.
+  std::unique_ptr<BufferedStdioHandle> stdout_;
+  std::unique_ptr<BufferedStdioHandle> stderr_;
 
   // Whether this process was obtained from limbo or not. The agent will check this information
   // when it tries to kill this process in order to determine whether the ZX_ERR_BAD_ACCESS is

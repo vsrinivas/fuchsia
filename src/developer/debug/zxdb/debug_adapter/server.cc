@@ -126,8 +126,8 @@ void DebugAdapterServer::ConnectionResolvedMainThread(fbl::unique_fd client) {
     observer.ClientConnected();
   }
 
-  buffer_ = std::make_unique<debug_ipc::BufferedFD>();
-  if (!buffer_->Init(std::move(client))) {
+  buffer_ = std::make_unique<debug_ipc::BufferedFD>(std::move(client));
+  if (!buffer_->Start()) {
     FX_LOGS(ERROR) << "Failed to initialize debug adapter buffer";
     return;
   }

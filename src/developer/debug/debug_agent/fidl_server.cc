@@ -13,27 +13,23 @@ void DebugAgentImpl::Connect(zx::socket socket, ConnectCallback callback) {
     return;
   }
 
-  zx_status_t status = buffer_.Init(std::move(socket));
-  if (status != ZX_OK) {
-    callback(status);
-    return;
-  }
+  buffer_ = std::make_unique<debug_ipc::BufferedZxSocket>(std::move(socket));
+
   // Route data from the router_buffer -> RemoteAPIAdapter -> DebugAgent.
-  adapter_ = std::make_unique<debug_agent::RemoteAPIAdapter>(debug_agent_, &buffer_.stream());
-  buffer_.set_data_available_callback(
+  adapter_ = std::make_unique<debug_agent::RemoteAPIAdapter>(debug_agent_, &buffer_->stream());
+  buffer_->set_data_available_callback(
       [adapter = adapter_.get()]() { adapter->OnStreamReadable(); });
 
   // Exit the message loop on error.
-  buffer_.set_error_callback([]() {
+  buffer_->set_error_callback([]() {
     DEBUG_LOG(Agent) << "Remote socket connection lost";
     debug_ipc::MessageLoop::Current()->QuitNow();
   });
 
   // Connect the buffer into the agent.
-  debug_agent_->Connect(&buffer_.stream());
-  status = buffer_.Start();
-  if (status != ZX_OK) {
-    callback(status);
+  debug_agent_->Connect(&buffer_->stream());
+  if (!buffer_->Start()) {
+    callback(ZX_ERR_IO);
     return;
   }
 

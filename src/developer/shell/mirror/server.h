@@ -50,7 +50,7 @@ class SocketConnection {
   static uint64_t global_id_;
 
   SocketServer* server_;
-  debug_ipc::BufferedFD buffer_;
+  std::unique_ptr<debug_ipc::BufferedFD> buffer_;
   bool connected_ = false;
   uint64_t id_;
 };

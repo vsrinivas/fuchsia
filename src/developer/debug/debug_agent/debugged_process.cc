@@ -34,13 +34,13 @@ namespace debug_agent {
 
 namespace {
 
-std::vector<char> ReadSocketInput(debug_ipc::BufferedZxSocket* socket) {
-  FX_DCHECK(socket->valid());
+std::vector<char> ReadSocketInput(BufferedStdioHandle* buffer) {
+  FX_DCHECK(buffer->IsValid());
 
   constexpr size_t kReadSize = 1024;  // Read in 1K chunks.
 
   std::vector<char> data;
-  auto& stream = socket->stream();
+  auto& stream = buffer->stream();
   while (true) {
     char buf[kReadSize];
 
@@ -87,11 +87,10 @@ DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateI
     : debug_agent_(debug_agent),
       process_handle_(std::move(create_info.handle)),
       from_limbo_(create_info.from_limbo) {
-  // If create_info out or err are not valid, calling Init on the BufferedZxSocket will fail and
-  // leave it in an invalid state. This is expected if the io sockets could be obtained from the
-  // inferior.
-  stdout_.Init(std::move(create_info.stdio.out));
-  stderr_.Init(std::move(create_info.stdio.err));
+  if (create_info.stdio.out.is_valid())
+    stdout_ = std::make_unique<BufferedStdioHandle>(std::move(create_info.stdio.out));
+  if (create_info.stdio.err.is_valid())
+    stderr_ = std::make_unique<BufferedStdioHandle>(std::move(create_info.stdio.err));
 }
 
 DebuggedProcess::~DebuggedProcess() { DetachFromProcess(); }
@@ -130,23 +129,21 @@ zx_status_t DebuggedProcess::Init() {
   // We bind |this| into the callbacks. This is OK because the DebuggedProcess
   // owns both sockets, meaning that it's assured to outlive the sockets.
 
-  if (stdout_.valid()) {
-    stdout_.set_data_available_callback([this]() { OnStdout(false); });
-    stdout_.set_error_callback([this]() { OnStdout(true); });
-    if (zx_status_t status = stdout_.Start(); status != ZX_OK) {
-      FX_LOGS(WARNING) << "Could not listen on stdout for process " << process_handle_->GetName()
-                       << ": " << debug_ipc::ZxStatusToString(status);
-      stdout_.Reset();
+  if (stdout_) {
+    stdout_->set_data_available_callback([this]() { OnStdout(false); });
+    stdout_->set_error_callback([this]() { OnStdout(true); });
+    if (!stdout_->Start()) {
+      FX_LOGS(WARNING) << "Could not listen on stdout for process " << process_handle_->GetName();
+      stdout_.reset();
     }
   }
 
-  if (stderr_.valid()) {
-    stderr_.set_data_available_callback([this]() { OnStderr(false); });
-    stderr_.set_error_callback([this]() { OnStderr(true); });
-    if (zx_status_t status = stderr_.Start(); status != ZX_OK) {
-      FX_LOGS(WARNING) << "Could not listen on stderr for process " << process_handle_->GetName()
-                       << ": " << debug_ipc::ZxStatusToString(status);
-      stderr_.Reset();
+  if (stderr_) {
+    stderr_->set_data_available_callback([this]() { OnStderr(false); });
+    stderr_->set_error_callback([this]() { OnStderr(true); });
+    if (!stderr_->Start()) {
+      FX_LOGS(WARNING) << "Could not listen on stderr for process " << process_handle_->GetName();
+      stderr_.reset();
     }
   }
 
@@ -665,14 +662,14 @@ std::vector<zx_koid_t> DebuggedProcess::ClientSuspendAllThreads(zx_koid_t except
 }
 
 void DebuggedProcess::OnStdout(bool close) {
-  FX_DCHECK(stdout_.valid());
+  FX_DCHECK(stdout_ && stdout_->IsValid());
   if (close) {
     DEBUG_LOG(Process) << LogPreamble(this) << "stdout closed.";
-    stdout_.Reset();
+    stdout_.reset();
     return;
   }
 
-  auto data = ReadSocketInput(&stdout_);
+  auto data = ReadSocketInput(stdout_.get());
   FX_DCHECK(!data.empty());
   DEBUG_LOG(Process) << LogPreamble(this)
                      << "Got stdout: " << std::string(data.data(), data.size());
@@ -680,14 +677,14 @@ void DebuggedProcess::OnStdout(bool close) {
 }
 
 void DebuggedProcess::OnStderr(bool close) {
-  FX_DCHECK(stderr_.valid());
+  FX_DCHECK(stderr_ && stderr_->IsValid());
   if (close) {
     DEBUG_LOG(Process) << LogPreamble(this) << "stderr closed.";
-    stderr_.Reset();
+    stderr_.reset();
     return;
   }
 
-  auto data = ReadSocketInput(&stderr_);
+  auto data = ReadSocketInput(stderr_.get());
   FX_DCHECK(!data.empty());
   DEBUG_LOG(Process) << LogPreamble(this)
                      << "Got stderr: " << std::string(data.data(), data.size());

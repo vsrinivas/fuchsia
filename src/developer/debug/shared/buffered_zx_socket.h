@@ -9,42 +9,35 @@
 
 #include <functional>
 
+#include "src/developer/debug/shared/buffered_stream.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/socket_watcher.h"
-#include "src/developer/debug/shared/stream_buffer.h"
 
 namespace debug_ipc {
 
 // An adapter that converts a zx::socket to a StreamBuffer.
-class BufferedZxSocket : public SocketWatcher, public StreamBuffer::Writer {
+class BufferedZxSocket final : public BufferedStream, public SocketWatcher {
  public:
-  using DataAvailableCallback = std::function<void()>;
-  using ErrorCallback = std::function<void()>;
-
+  // Constructs a !IsValid() buffered stream not doing anything.
   BufferedZxSocket();
-  ~BufferedZxSocket();
 
-  // This won't start listening on the socket (some users might want to delay doing that).
+  // Constructs for the given zx::socket. The socket must be valid and a MessageLoop must already
+  // have been set up on the current thread.
   //
-  // If successful, it will leave the object in a valid state.
-  zx_status_t Init(zx::socket socket);
+  // Start() must be called before stream events will be delivered.
+  explicit BufferedZxSocket(zx::socket socket);
 
-  // A MessageLoopZircon must be already set up on the current thread. Start can be called as long
-  // as valid() is true. ZX_ERR_BAD_STATE will be returned otherwise.
-  zx_status_t Start();
-  zx_status_t Stop();
-  // Stops and leaves the buffer in an invalid state.
-  void Reset();
+  ~BufferedZxSocket() final;
 
-  bool valid() const { return socket_.is_valid(); }
-
-  void set_data_available_callback(DataAvailableCallback cb) { callback_ = cb; }
-  void set_error_callback(ErrorCallback cb) { error_callback_ = cb; }
-
-  StreamBuffer& stream() { return stream_; }
-  const StreamBuffer& stream() const { return stream_; }
+  // BufferedStream implementation.
+  bool Start() final;
+  bool Stop() final;
+  bool IsValid() final { return socket_.is_valid(); }
 
  private:
+  // BufferedStream protected implementation.
+  void ResetInternal() final;
+
   // SocketWatcher implementation.
   void OnSocketReadable(zx_handle_t) override;
   void OnSocketWritable(zx_handle_t) override;
@@ -54,11 +47,7 @@ class BufferedZxSocket : public SocketWatcher, public StreamBuffer::Writer {
   size_t ConsumeStreamBufferData(const char* data, size_t len) override;
 
   zx::socket socket_;
-  StreamBuffer stream_;
   MessageLoop::WatchHandle watch_handle_;
-
-  DataAvailableCallback callback_;
-  ErrorCallback error_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BufferedZxSocket);
 };

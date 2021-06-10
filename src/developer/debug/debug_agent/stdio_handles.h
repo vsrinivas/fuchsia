@@ -7,9 +7,12 @@
 
 #include <lib/zx/socket.h>
 
+#include "src/developer/debug/shared/buffered_zx_socket.h"
+
 namespace debug_agent {
 
 using OwnedStdioHandle = zx::socket;
+using BufferedStdioHandle = debug_ipc::BufferedZxSocket;
 
 // The handles given to a launched process or component.
 //

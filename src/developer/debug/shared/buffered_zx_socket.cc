@@ -14,43 +14,34 @@
 namespace debug_ipc {
 
 BufferedZxSocket::BufferedZxSocket() = default;
-BufferedZxSocket::~BufferedZxSocket() = default;
 
-zx_status_t BufferedZxSocket::Init(zx::socket socket) {
-  if (!socket.is_valid())
-    return ZX_ERR_INVALID_ARGS;
-
-  FX_DCHECK(!socket_.is_valid());  // Can't be initialized more than once.
-  socket_ = std::move(socket);
-  stream_.set_writer(this);
-
-  return ZX_OK;
+BufferedZxSocket::BufferedZxSocket(zx::socket socket) : socket_(std::move(socket)) {
+  FX_DCHECK(socket_.is_valid());
 }
 
-zx_status_t BufferedZxSocket::Start() {
-  if (!valid())
-    return ZX_ERR_BAD_STATE;
+BufferedZxSocket::~BufferedZxSocket() = default;
+
+bool BufferedZxSocket::Start() {
+  if (!IsValid())
+    return false;
 
   // Register for socket updates from the message loop.
   // We assume the socket is writable and look for that event when we get evidence it's not.
   return MessageLoopTarget::Current()->WatchSocket(MessageLoop::WatchMode::kRead, socket_.get(),
-                                                   this, &watch_handle_);
+                                                   this, &watch_handle_) == ZX_OK;
 }
 
-zx_status_t BufferedZxSocket::Stop() {
-  if (!valid() || watch_handle_.watching())
-    return ZX_ERR_BAD_STATE;
+bool BufferedZxSocket::Stop() {
+  if (!IsValid() || watch_handle_.watching())
+    return false;
   watch_handle_ = MessageLoop::WatchHandle();
-  return ZX_OK;
+  return true;
 }
 
-void BufferedZxSocket::Reset() {
+void BufferedZxSocket::ResetInternal() {
   // The watch must be disabled before the socket is reset.
   watch_handle_.StopWatching();
-
   socket_.reset();
-  callback_ = DataAvailableCallback();
-  error_callback_ = ErrorCallback();
 }
 
 void BufferedZxSocket::OnSocketReadable(zx_handle_t) {
@@ -69,7 +60,7 @@ void BufferedZxSocket::OnSocketReadable(zx_handle_t) {
     if (status == ZX_OK) {
       msg_bytes += num_read;
       buffer.resize(num_read);
-      stream_.AddReadData(std::move(buffer));
+      stream().AddReadData(std::move(buffer));
     } else {
       break;
     }
@@ -82,8 +73,8 @@ void BufferedZxSocket::OnSocketReadable(zx_handle_t) {
   if (msg_bytes == 0)
     return;
 
-  if (callback_)
-    callback_();
+  if (callback())
+    callback()();
 }
 
 void BufferedZxSocket::OnSocketWritable(zx_handle_t) {
@@ -92,12 +83,12 @@ void BufferedZxSocket::OnSocketWritable(zx_handle_t) {
   watch_handle_ = {};
   MessageLoopTarget::Current()->WatchSocket(MessageLoop::WatchMode::kRead, socket_.get(), this,
                                             &watch_handle_);
-  stream_.SetWritable();
+  stream().SetWritable();
 }
 
 void BufferedZxSocket::OnSocketError(zx_handle_t) {
-  if (error_callback_)
-    error_callback_();
+  if (error_callback())
+    error_callback()();
 }
 
 size_t BufferedZxSocket::ConsumeStreamBufferData(const char* data, size_t len) {
@@ -105,8 +96,8 @@ size_t BufferedZxSocket::ConsumeStreamBufferData(const char* data, size_t len) {
   zx_status_t status = socket_.write(0, data, len, &written);
   if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
     DEBUG_LOG(MessageLoop) << "Could not write to socket: " << zx_status_get_string(status);
-    if (error_callback_)
-      error_callback_();
+    if (error_callback())
+      error_callback()();
     return 0;
   }
 

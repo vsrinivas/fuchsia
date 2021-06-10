@@ -192,8 +192,8 @@ void Session::PendingConnection::ConnectCompleteMainThread(fxl::RefPtr<PendingCo
   }
 
   FX_DCHECK(socket_.is_valid());
-  buffer_ = std::make_unique<debug_ipc::BufferedFD>();
-  buffer_->Init(std::move(socket_));
+  buffer_ = std::make_unique<debug_ipc::BufferedFD>(std::move(socket_));
+  buffer_->Start();
 
   // The connection is now established, so we set up the handlers before we send the first request
   // over to the agent. Even though we're in a message loop and these handlers won't be called

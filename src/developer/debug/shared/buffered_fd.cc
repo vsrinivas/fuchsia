@@ -12,20 +12,35 @@
 namespace debug_ipc {
 
 BufferedFD::BufferedFD() = default;
+
+BufferedFD::BufferedFD(fbl::unique_fd fd) : fd_(std::move(fd)) { FX_DCHECK(fd_.is_valid()); }
+
 BufferedFD::~BufferedFD() = default;
 
-bool BufferedFD::Init(fbl::unique_fd fd) {
-  FX_DCHECK(!fd_.is_valid());  // Can't be initialized more than once.
-  fd_ = std::move(fd);
-  stream_.set_writer(this);
+bool BufferedFD::Start() {
+  if (!IsValid())
+    return false;
 
-  // Register for socket updates from the message loop. Here we assume we're in
-  // a writable state already (this will be re-evaluated when we actually try
-  // to write) so only need to watch for readable.
+  // Register for socket updates from the message loop. Here we assume we're in a writable state
+  // already (this will be re-evaluated when we actually try to write) so only need to watch for
+  // readable.
   MessageLoop* loop = MessageLoop::Current();
   FX_DCHECK(loop);
   watch_handle_ = loop->WatchFD(MessageLoop::WatchMode::kRead, fd_.get(), this);
   return watch_handle_.watching();
+}
+
+bool BufferedFD::Stop() {
+  if (!IsValid() || watch_handle_.watching())
+    return false;
+  watch_handle_ = MessageLoop::WatchHandle();
+  return true;
+}
+
+void BufferedFD::ResetInternal() {
+  // The watch must be disabled before the socket is reset.
+  watch_handle_.StopWatching();
+  fd_.reset();
 }
 
 void BufferedFD::OnFDReady(int fd, bool readable, bool writable, bool err) {
@@ -35,7 +50,7 @@ void BufferedFD::OnFDReady(int fd, bool readable, bool writable, bool err) {
     // is full this will be re-evaluated when the write fails.
     watch_handle_ = MessageLoop::WatchHandle();
     watch_handle_ = MessageLoop::Current()->WatchFD(MessageLoop::WatchMode::kRead, fd_.get(), this);
-    stream_.SetWritable();
+    stream().SetWritable();
   }
 
   if (readable) {
@@ -70,7 +85,7 @@ void BufferedFD::OnFDReady(int fd, bool readable, bool writable, bool err) {
         }
       } else if (num_read > 0) {
         buffer.resize(num_read);
-        stream_.AddReadData(std::move(buffer));
+        stream().AddReadData(std::move(buffer));
       } else {
         break;
       }
@@ -78,8 +93,8 @@ void BufferedFD::OnFDReady(int fd, bool readable, bool writable, bool err) {
       // data so this pipe doesn't starve the entire app.
     }
 
-    if (callback_)
-      callback_();
+    if (callback())
+      callback()();
   }
 
   if (err) {
@@ -90,8 +105,8 @@ void BufferedFD::OnFDReady(int fd, bool readable, bool writable, bool err) {
 void BufferedFD::OnFDError() {
   watch_handle_ = MessageLoop::WatchHandle();
   fd_.reset();
-  if (error_callback_)
-    error_callback_();
+  if (error_callback())
+    error_callback()();
 }
 
 size_t BufferedFD::ConsumeStreamBufferData(const char* data, size_t len) {

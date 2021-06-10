@@ -83,7 +83,7 @@ class SocketConnection {
   debug_agent::DebugAgent* debug_agent_ = nullptr;
 
   std::unique_ptr<debug_agent::RemoteAPIAdapter> adapter_;
-  debug_ipc::BufferedFD buffer_;
+  std::unique_ptr<debug_ipc::BufferedFD> buffer_;
   bool connected_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketConnection);

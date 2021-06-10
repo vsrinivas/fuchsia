@@ -12,6 +12,8 @@ namespace debug_ipc {
 
 // This class is a buffer that sits between an asynchronous OS read/write source and producers and
 // consumer of stream data.
+//
+// It is used by the BufferedStream and its implementations to do the actual buffering.
 class StreamBuffer {
  public:
   class Writer {
@@ -26,7 +28,7 @@ class StreamBuffer {
   StreamBuffer();
   ~StreamBuffer();
 
-  // System API ----------------------------------------------------------------
+  // System API ------------------------------------------------------------------------------------
 
   // Sets the writer which flushes write data to the OS.
   void set_writer(Writer* writer) { writer_ = writer; }
@@ -37,7 +39,7 @@ class StreamBuffer {
   // Notification from the OS that data can be written.
   void SetWritable();
 
-  // Public API ----------------------------------------------------------------
+  // Public API ------------------------------------------------------------------------------------
 
   // Returns true if the given number of bytes are available for reading.
   bool IsAvailable(size_t count) const;

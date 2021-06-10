@@ -7,47 +7,45 @@
 
 #include <fbl/unique_fd.h>
 
+#include "src/developer/debug/shared/buffered_stream.h"
 #include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/message_loop.h"
-#include "src/developer/debug/shared/stream_buffer.h"
 
 namespace debug_ipc {
 
-class BufferedFD final : public FDWatcher, public StreamBuffer::Writer {
+class BufferedFD final : public BufferedStream, public FDWatcher {
  public:
-  using DataAvailableCallback = std::function<void()>;
-  using ErrorCallback = std::function<void()>;
-
+  // Constructs a !IsValid() buffered stream not doing anything.
   BufferedFD();
-  ~BufferedFD();
 
-  // A MessageLoop must already be set up on the current thread. Returns true on success.
-  bool Init(fbl::unique_fd fd);
+  // Constructs for the given FD. The FD must be valid and a MessageLoop must already have been set
+  // up on the current thread.
+  //
+  // Start() must be called before stream events will be delivered.
+  explicit BufferedFD(fbl::unique_fd fd);
 
-  void set_data_available_callback(DataAvailableCallback cb) { callback_ = cb; }
-  void set_error_callback(ErrorCallback cb) { error_callback_ = cb; }
+  ~BufferedFD() final;
 
-  StreamBuffer& stream() { return stream_; }
-  const StreamBuffer& stream() const { return stream_; }
+  // BufferedStream implementation.
+  bool Start() final;
+  bool Stop() final;
+  bool IsValid() final { return fd_.is_valid(); }
 
  private:
-  // FDWatcher implementation:
-  void OnFDReady(int fd, bool read, bool write, bool err) override;
+  // BufferedStream protected implementation.
+  void ResetInternal() final;
 
-  // Error handler
+  // FDWatcher implementation:
+  void OnFDReady(int fd, bool read, bool write, bool err) final;
+
+  // Error handler.
   void OnFDError();
 
   // StreamBuffer::Writer implementation.
-  size_t ConsumeStreamBufferData(const char* data, size_t len) override;
+  size_t ConsumeStreamBufferData(const char* data, size_t len) final;
 
   fbl::unique_fd fd_;
-  StreamBuffer stream_;
   MessageLoop::WatchHandle watch_handle_;
-
-  DataAvailableCallback callback_;
-  ErrorCallback error_callback_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(BufferedFD);
 };
 
 }  // namespace debug_ipc

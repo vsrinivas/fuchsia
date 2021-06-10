@@ -35,43 +35,44 @@ Err SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int serve
     return Err(kConnection, "Couldn't accept connection.");
   }
 
-  main_thread_loop->PostTask(
-      FROM_HERE, [this, client = std::move(client),
-                  server_loop = debug_ipc::MessageLoop::Current()]() mutable {
-        if (!buffer_.Init(std::move(client))) {
-          FX_LOGS(ERROR) << "Error waiting for data.";
-          debug_ipc::MessageLoop::Current()->QuitNow();
-          return;
-        }
+  main_thread_loop->PostTask(FROM_HERE, [this, client = std::move(client),
+                                         server_loop =
+                                             debug_ipc::MessageLoop::Current()]() mutable {
+    buffer_ = std::make_unique<debug_ipc::BufferedFD>(std::move(client));
+    if (!buffer_->Start()) {
+      FX_LOGS(ERROR) << "Error waiting for data.";
+      debug_ipc::MessageLoop::Current()->QuitNow();
+      return;
+    }
 
-        buffer_.set_data_available_callback(
-            [buffer = &buffer_, path = this->server_->GetPath(), server_loop, connection = this]() {
-              debug_ipc::StreamBuffer stream = buffer->stream();
-              char buf[32];
-              size_t len = stream.Read(buf, 32);
-              if (len >= strlen(remote_commands::kQuitCommand) &&
-                  strncmp(remote_commands::kQuitCommand, buf, len) == 0) {
-                debug_ipc::MessageLoop::Current()->QuitNow();
-                server_loop->QuitNow();
-                return;
-              }
-              if (len >= strlen(remote_commands::kFilesCommand) &&
-                  strncmp(remote_commands::kFilesCommand, buf, len) == 0) {
-                Update update(&stream, &path);
-                update.SendUpdates();
-              } else {
-                FX_LOGS(ERROR) << "Unrecognized command from socket";
-              }
+    buffer_->set_data_available_callback([buffer = buffer_.get(), path = this->server_->GetPath(),
+                                          server_loop, connection = this]() {
+      debug_ipc::StreamBuffer stream = buffer->stream();
+      char buf[32];
+      size_t len = stream.Read(buf, 32);
+      if (len >= strlen(remote_commands::kQuitCommand) &&
+          strncmp(remote_commands::kQuitCommand, buf, len) == 0) {
+        debug_ipc::MessageLoop::Current()->QuitNow();
+        server_loop->QuitNow();
+        return;
+      }
+      if (len >= strlen(remote_commands::kFilesCommand) &&
+          strncmp(remote_commands::kFilesCommand, buf, len) == 0) {
+        Update update(&stream, &path);
+        update.SendUpdates();
+      } else {
+        FX_LOGS(ERROR) << "Unrecognized command from socket";
+      }
 
-              connection->UnregisterAndDestroy();
-            });
+      connection->UnregisterAndDestroy();
+    });
 #if 0
         // TODO(jeremymanson): Should probably do something sensible here.
-        buffer_.set_error_callback([]() {
+        buffer_->set_error_callback([]() {
           // Do this on Ctrl-C.
         });
 #endif
-      });
+  });
 
   PRINT_FLUSH("Accepted connection.\n");
   connected_ = true;
