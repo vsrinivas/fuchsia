@@ -85,4 +85,10 @@ zx::status<> Extractor::AddBlock(uint64_t block_offset, ExtentProperties propert
 
 zx::status<> Extractor::Write() { return map_error(extractor_write(extractor_)); }
 
+zx::status<> Extractor::Deflate(fbl::unique_fd input_stream, fbl::unique_fd output_stream,
+                                fbl::unique_fd verbose_stream) {
+  return map_error(
+      extractor_deflate(input_stream.get(), output_stream.get(), verbose_stream.get()));
+}
+
 }  // namespace extractor

@@ -58,6 +58,13 @@ pub enum DataKind {
     Modified,
 }
 
+impl DataKind {
+    /// Returns true if the DataKind has data associated with it.
+    pub fn has_data(&self) -> bool {
+        *self == Self::Unmodified || *self == Self::Modified
+    }
+}
+
 /// Properties of an extent
 ///
 /// extent_kind has higher priority than data_kind.

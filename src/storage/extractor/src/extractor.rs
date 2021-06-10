@@ -7,13 +7,20 @@ use {
         error::Error,
         extent::Extent,
         extent_cluster::ExtentCluster,
-        format::Header,
+        format::{ExtentClusterHeader, ExtentInfo, Header},
         options::ExtractorOptions,
         properties::{DataKind, ExtentProperties},
         utils::{RangeOps, ReadAndSeek},
+        ExtentKind,
     },
     flate2::{write::GzEncoder, Compression},
-    std::{fmt, io::Write, ops::Range},
+    std::{
+        convert::TryFrom,
+        fmt,
+        fs::File,
+        io::{Seek, Write},
+        ops::Range,
+    },
 };
 
 enum Streamer {
@@ -108,7 +115,7 @@ impl Extractor {
     pub fn add(
         &mut self,
         range: Range<u64>,
-        properties: ExtentProperties,
+        mut properties: ExtentProperties,
         data: Option<Box<[u8]>>,
     ) -> Result<(), Error> {
         if !range.is_valid() {
@@ -128,6 +135,12 @@ impl Extractor {
         if properties.data_kind == DataKind::Modified {
             todo!("adding modified data is not yet implemented");
         }
+
+        // Skip dumping pii if we are not asked to dump pii.
+        if !self.options.force_dump_pii && properties.extent_kind == ExtentKind::Pii {
+            properties.data_kind = DataKind::Skipped;
+        }
+
         let extent = Extent::new(range, properties, data)?;
         self.extent_cluster.add_extent(&extent)
     }
@@ -159,6 +172,79 @@ impl Extractor {
         }
         Ok(bytes_written)
     }
+
+    /// Deflates an extracted image.
+    ///
+    /// The function reads extracted image from `in_stream`, verifies the image integrity
+    /// and writes the deflated image to `out_stream`. After successful return, `out_stream`
+    /// should look like the original source(from which the `in_stream` was extracted) modulo
+    /// any intentionally skipped ranges.
+    /// See [`add()`] and [`ExtentProperties`]
+    pub fn deflate(
+        mut in_stream: Box<dyn ReadAndSeek>,
+        mut out_stream: Box<File>,
+        mut verbose_stream: Option<Box<dyn Write>>,
+    ) -> Result<(), Error> {
+        let header = Header::deserialize_from(&mut in_stream)?;
+        let mut offset = header.serialized_size();
+        if let Some(stream) = &mut verbose_stream {
+            let _ = writeln!(stream, "Header: {:?}", header).map_err(|_| Error::WriteFailed)?;
+        }
+
+        in_stream.seek(std::io::SeekFrom::Start(offset)).map_err(|_| Error::SeekFailed)?;
+        let cluster_header = ExtentClusterHeader::deserialize_from(&mut in_stream)?;
+        if let Some(stream) = &mut verbose_stream {
+            let _ = writeln!(stream, "Cluster header: {:?}", cluster_header)
+                .map_err(|_| Error::WriteFailed)?;
+        }
+        offset += cluster_header.serialized_size();
+        in_stream.seek(std::io::SeekFrom::Start(offset)).map_err(|_| Error::SeekFailed)?;
+        let mut extents = vec![];
+        let mut max_output_size = 0;
+        for i in 0..cluster_header.get_extent_count() {
+            let extent = Extent::try_from(ExtentInfo::deserialize_from(&mut in_stream)?)?;
+            offset += extent.serialized_size();
+            if let Some(stream) = &mut verbose_stream {
+                let _ = writeln!(stream, "Extent {}: {:?}", i, extent)
+                    .map_err(|_| Error::WriteFailed)?;
+            }
+            if max_output_size < extent.storage_range().end {
+                max_output_size = extent.storage_range().end;
+            }
+            extents.push(extent);
+        }
+
+        // Truncate the output file. This may fail. Ignore the error with a warning.
+        // Truncate may fail if output happens to be a block device file or the
+        // offset being too large for the containing filesystem.
+        match out_stream.set_len(max_output_size) {
+            Err(e) => println!("Truncate failed with {:?}", e),
+            _ => {}
+        };
+
+        offset = ((offset + header.alignment - 1) / header.alignment) * header.alignment;
+        in_stream.seek(std::io::SeekFrom::Start(offset)).map_err(|_| Error::SeekFailed)?;
+        for extent in &extents {
+            if !extent.properties().data_kind.has_data() {
+                continue;
+            }
+
+            let mut buffer = vec![
+                0;
+                extent.storage_range().end as usize
+                    - extent.storage_range().start as usize
+            ];
+
+            in_stream.read_exact(&mut buffer).map_err(|_| Error::ReadFailed)?;
+            out_stream
+                .seek(std::io::SeekFrom::Start(extent.storage_range().start))
+                .map_err(|_| Error::SeekFailed)?;
+            out_stream.write_all(&buffer).map_err(|_| Error::WriteFailed)?;
+        }
+        out_stream.flush().map_err(|_| Error::WriteFailed)?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -173,9 +259,9 @@ mod test {
         std::{
             convert::TryFrom,
             fs::File,
-            io::{Cursor, Read, Seek, SeekFrom},
+            io::{Cursor, Read, Seek, SeekFrom, Write},
         },
-        tempfile::tempfile,
+        tempfile::{tempfile, NamedTempFile},
     };
 
     fn default_properties() -> ExtentProperties {
@@ -281,7 +367,7 @@ mod test {
         // Add pii
         let pii_range = options.alignment..options.alignment * 2;
         let pii_properties =
-            ExtentProperties { extent_kind: ExtentKind::Pii, data_kind: DataKind::Unmodified };
+            ExtentProperties { extent_kind: ExtentKind::Pii, data_kind: DataKind::Skipped };
         let pii_extent = Extent::new(pii_range.clone(), pii_properties, None).unwrap();
         extractor.add(pii_range.clone(), pii_properties, None).unwrap();
 
@@ -335,7 +421,8 @@ mod test {
         }
     }
 
-    // In this test we extract same image twice; once with compression on and once with off and check that the size of compressed image is smaller.
+    // In this test we extract same image twice; once with compression on and once with off and
+    // check that the size of compressed image is smaller.
     #[test]
     fn test_compression() {
         let (mut uncompressed_extractor, options, mut uncompressed_out_file, _) =
@@ -391,5 +478,112 @@ mod test {
             uncompressed_image.iter().zip(&raw_image).filter(|&(a, b)| a == b).count(),
             uncompressed_image.len()
         );
+    }
+
+    fn deflate_test_helper(verbose: bool) {
+        let (mut extractor, options, mut out_file, _) = new_file_based_extractor(false);
+        let mut expected_file = tempfile().unwrap();
+        let mut found_file = NamedTempFile::new().unwrap();
+        let deflated_file =
+            std::fs::OpenOptions::new().read(true).write(true).open(found_file.path()).unwrap();
+
+        // Extract
+        {
+            // Add pii
+            let pii_range = options.alignment..options.alignment * 2;
+            let pii_properties =
+                ExtentProperties { extent_kind: ExtentKind::Pii, data_kind: DataKind::Unmodified };
+            extractor.add(pii_range.clone(), pii_properties, None).unwrap();
+
+            // Add data
+            let data_offset = 4;
+            let data_range = options.alignment * data_offset..options.alignment * 5;
+            let data_properties =
+                ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Unmodified };
+            extractor.add(data_range.clone(), data_properties, None).unwrap();
+            let buffer = vec![data_offset as u8; options.alignment as usize];
+            expected_file.seek(SeekFrom::Start(data_range.start)).unwrap();
+            expected_file.write_all(&buffer).unwrap();
+
+            // Add skipped data block
+            let skipped_range = options.alignment * 8..options.alignment * 10;
+            let skipped_properties =
+                ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Skipped };
+            extractor.add(skipped_range.clone(), skipped_properties, None).unwrap();
+
+            // Add data
+            let data_offset = 14;
+            let data_range = options.alignment * data_offset..options.alignment * 16;
+            let data_properties =
+                ExtentProperties { extent_kind: ExtentKind::Data, data_kind: DataKind::Unmodified };
+            extractor.add(data_range.clone(), data_properties, None).unwrap();
+            let buffer = vec![data_offset as u8; 1 * options.alignment as usize];
+            expected_file.seek(SeekFrom::Start(data_range.start)).unwrap();
+            expected_file.write_all(&buffer).unwrap();
+            let buffer = vec![(data_offset + 1) as u8; options.alignment as usize];
+            expected_file.write_all(&buffer).unwrap();
+
+            assert_eq!(extractor.write().unwrap(), 5 * options.alignment);
+            assert_eq!(out_file.metadata().unwrap().len(), 5 * options.alignment);
+        }
+
+        let mut verbose_file = NamedTempFile::new().unwrap();
+        // deflate and verify the deflated file has expected content.
+        {
+            let verbose_stream: Option<Box<dyn Write + 'static>> = match verbose {
+                true => Some(Box::new(
+                    std::fs::OpenOptions::new()
+                        .read(true)
+                        .write(true)
+                        .open(verbose_file.path())
+                        .unwrap(),
+                )),
+                false => None,
+            };
+            out_file.seek(SeekFrom::Start(0)).unwrap();
+            Extractor::deflate(
+                Box::new(out_file.try_clone().unwrap()),
+                Box::new(deflated_file),
+                verbose_stream,
+            )
+            .unwrap();
+            let mut expected = vec![];
+            let mut found = vec![];
+            expected_file.seek(SeekFrom::Start(0)).unwrap();
+            expected_file.read_to_end(&mut expected).unwrap();
+            found_file.read_to_end(&mut found).unwrap();
+
+            assert_eq!(expected.len(), found.len());
+            for (i, j) in expected.iter().enumerate() {
+                assert_eq!(*j, found[i]);
+            }
+            assert_eq!(expected, found);
+        }
+        let mut found = vec![];
+        verbose_file.read_to_end(&mut found).unwrap();
+        let expected = match verbose {
+            // The following block is formatted for readability of verbose mode over
+            // column width.
+            true => "Header: Header { magic1: 16390322304438255204, magic2: 9989032307365739461, version: 1, extent_cluster_offset: 8192, alignment: 8192, crc32: 214251885, _padding: 0 }\n\
+                     Cluster header: ExtentClusterHeader { magic1: 10289631803642904059, magic2: 4978309320308575589, extent_count: 4, next_cluster_offset: 0, footer_offset: 0, crc32: 1354654985, _padding: 0 }\n\
+                     Extent 0: Extent { storage_range: 8192..16384, properties: ExtentProperties { extent_kind: Pii, data_kind: Skipped }, data: None }\n\
+                     Extent 1: Extent { storage_range: 32768..40960, properties: ExtentProperties { extent_kind: Data, data_kind: Unmodified }, data: None }\n\
+                     Extent 2: Extent { storage_range: 65536..81920, properties: ExtentProperties { extent_kind: Data, data_kind: Skipped }, data: None }\n\
+                     Extent 3: Extent { storage_range: 114688..131072, properties: ExtentProperties { extent_kind: Data, data_kind: Unmodified }, data: None }\n\
+                     ",
+            false => "",
+        };
+        assert_eq!(found.len(), expected.len());
+        assert_eq!(std::str::from_utf8(&found).unwrap(), expected);
+    }
+
+    #[test]
+    fn test_deflate_verbose() {
+        deflate_test_helper(true);
+    }
+
+    #[test]
+    fn test_deflate_verbose_disabled() {
+        deflate_test_helper(false);
     }
 }

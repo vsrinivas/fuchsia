@@ -184,6 +184,16 @@ CResult extractor_add(ExtractorRust *extractor,
 // Writes staged extents to out_fd.
 __attribute__((__warn_unused_result__)) CResult extractor_write(ExtractorRust *extractor);
 
+// Deflate extracted image.
+//
+// # Arguments
+// `out_fd`: File descriptor pointing to rw file. The file will contain
+// deflated image.
+// `in_file`: File descriptor pointing to readable/seekable extracted image file.
+// `verbose_fd`: If valid(>=0), extractor will print information about extracted image to the
+// stream.
+CResult extractor_deflate(int in_fd, int out_fd, int verbose_fd);
+
 } // extern "C"
 
 #endif // SRC_STORAGE_EXTRACTOR_C_EXTRACTOR_H_

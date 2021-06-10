@@ -116,6 +116,25 @@ pub extern "C" fn extractor_write(extractor: &mut Extractor) -> CResult {
     return CResult::from(extractor.write().map(|_| ()));
 }
 
+/// Deflate extracted image.
+///
+/// # Arguments
+/// `out_fd`: File descriptor pointing to rw file. The file will contain
+/// deflated image.
+/// `in_file`: File descriptor pointing to readable/seekable extracted image file.
+/// `verbose_fd`: If valid(>=0), extractor will print information about extracted image to the
+/// stream.
+#[no_mangle]
+pub extern "C" fn extractor_deflate(in_fd: c_int, out_fd: c_int, verbose_fd: c_int) -> CResult {
+    let out_file = unsafe { File::from_raw_fd(out_fd) };
+    let in_file = unsafe { File::from_raw_fd(in_fd) };
+    let verbose_stream: Option<Box<dyn std::io::Write + 'static>> = match verbose_fd < 0 {
+        true => None,
+        false => unsafe { Some(Box::new(File::from_raw_fd(verbose_fd))) },
+    };
+    CResult::from(Extractor::deflate(Box::new(in_file), Box::new(out_file), verbose_stream))
+}
+
 #[cfg(test)]
 mod test {
     use {

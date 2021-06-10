@@ -69,7 +69,7 @@ pub struct Header {
     extent_cluster_offset: u64,
 
     // Image metadata and data is aligned to this number.
-    alignment: u64,
+    pub(crate) alignment: u64,
 
     // crc32 of the structure. This includes crc of padding that gets added when
     // alignment is >1.
@@ -428,6 +428,10 @@ impl ExtentClusterHeader {
         }
         let (e, _) = c_extent_or.unwrap();
         Ok(e.clone())
+    }
+
+    pub fn get_extent_count(&self) -> u64 {
+        self.extent_count
     }
 
     /// Checks/validates extent cluster.

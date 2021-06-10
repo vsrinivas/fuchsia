@@ -44,6 +44,10 @@ class Extractor {
   // Writes the extractor data to the image file.
   zx::status<> Write();
 
+  // Deflates extracted image.
+  static zx::status<> Deflate(fbl::unique_fd input_stream, fbl::unique_fd output_stream,
+                              fbl::unique_fd verbose_stream);
+
  private:
   Extractor() = default;
   Extractor(const Extractor&) = delete;
