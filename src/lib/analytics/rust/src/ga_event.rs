@@ -121,7 +121,7 @@ pub fn make_timing_body_with_hash(
     );
     params.insert(GA_TIMING_TIMING_KEY, &time);
     insert_if_present(GA_TIMING_LABEL_KEY, &mut params, label);
-    insert_if_present(GA_TIMING_VARIABLE_KEY, &mut params, variable);
+    insert_if_present_or(GA_TIMING_VARIABLE_KEY, &mut params, variable, "");
 
     for (&key, value) in custom_dimensions.iter() {
         params.insert(key, value);
@@ -145,6 +145,18 @@ fn insert_if_present<'a>(
             }
         }
         None => (),
+    };
+}
+
+fn insert_if_present_or<'a>(
+    key: &'a str,
+    params: &mut BTreeMap<&'a str, &'a str>,
+    value: Option<&'a str>,
+    default: &'a str,
+) {
+    match value {
+        Some(val) => params.insert(key, val),
+        None => params.insert(key, default),
     };
 }
 
@@ -272,6 +284,25 @@ mod test {
         let key = "key1";
         insert_if_present(key, &mut map2, Some(val));
         assert_eq!(None, map2.get(key));
+    }
+
+    #[test]
+    fn insert_if_present_or_with_value() {
+        let mut map2 = BTreeMap::new();
+        let val_str = "property1";
+        let val = Some(val_str);
+        let key = "key1";
+        insert_if_present_or(key, &mut map2, val, "default");
+        assert_eq!(val_str, *map2.get(key).unwrap());
+    }
+
+    #[test]
+    fn insert_if_present_or_with_default() {
+        let mut map2 = BTreeMap::new();
+        let val = None;
+        let key = "key1";
+        insert_if_present_or(key, &mut map2, val, "default");
+        assert_eq!("default", *map2.get(key).unwrap());
     }
 
     #[test]
