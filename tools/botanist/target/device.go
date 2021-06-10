@@ -12,6 +12,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"os"
+	"os/exec"
 	"sync/atomic"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
@@ -38,6 +40,9 @@ const (
 
 // DeviceConfig contains the static properties of a target device.
 type DeviceConfig struct {
+	// FastbootSernum is the fastboot serial number of the device.
+	FastbootSernum string `json:"fastboot_sernum"`
+
 	// Network is the network properties of the target.
 	Network NetworkProperties `json:"network"`
 
@@ -141,7 +146,7 @@ func (t *DeviceTarget) SSHKey() string {
 }
 
 // Start starts the device target.
-func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, args []string, serialSocketPath string) error {
+func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, args []string, serialSocketPath, flashScript string) error {
 	if t.tftp == nil {
 		// Discover the node on the network and initialize a tftp client to
 		// talk to it.
@@ -206,8 +211,14 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 	}
 
 	// Boot Fuchsia.
-	if err := bootserver.Boot(ctx, t.Tftp(), images, args, authorizedKeys); err != nil {
-		return err
+	if t.config.FastbootSernum != "" {
+		if err := t.flash(ctx, flashScript, images); err != nil {
+			return err
+		}
+	} else {
+		if err := bootserver.Boot(ctx, t.Tftp(), images, args, authorizedKeys); err != nil {
+			return err
+		}
 	}
 
 	if serialSocketPath != "" {
@@ -215,6 +226,43 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 	}
 
 	return nil
+}
+
+func (t *DeviceTarget) flash(ctx context.Context, flashScript string, images []bootserver.Image) error {
+	// Download the images to disk.
+	// TODO(rudymathu): Transport these images via isolate for improved caching performance.
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	var imgs []*bootserver.Image
+	for _, img := range images {
+		imgs = append(imgs, &img)
+	}
+	if err := copyImagesToDir(ctx, wd, imgs...); err != nil {
+		return err
+	}
+
+	// Write the public SSH key to disk if one is needed.
+	flashArgs := []string{"-s", t.config.FastbootSernum}
+	if !t.opts.Netboot && len(t.signers) > 0 {
+		pubkey, err := ioutil.TempFile("", "pubkey*")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(pubkey.Name())
+		defer pubkey.Close()
+
+		if _, err := pubkey.Write(ssh.MarshalAuthorizedKey(t.signers[0].PublicKey())); err != nil {
+			return err
+		}
+		flashArgs = append(flashArgs, fmt.Sprintf("--ssh-key=%s", pubkey.Name()))
+	}
+
+	cmd := exec.CommandContext(ctx, flashScript, flashArgs...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 // Stop stops the device.
