@@ -77,7 +77,12 @@ readonly GOMA_AUTH="$PREBUILT_GOMA_DIR/goma_auth.py"
 readonly GOMA_CTL="$PREBUILT_GOMA_DIR/goma_ctl.py"
 readonly GOMACC="$PREBUILT_GOMA_DIR/gomacc"
 readonly PYTHON_CMD="$PREBUILT_PYTHON3_DIR/bin/python3.8"
-GOMA_CACHE_DIR="${FUCHSIA_DIR}/.jiri_root/goma_cache"
+if [[ -z "$GOMA_LOCAL_OUTPUT_CACHE_DIR" ]]; then
+  GOMA_CACHE_DIR="${FUCHSIA_DIR}/.jiri_root/goma_cache"
+else
+  # inherit the local cache dir from the environment if already set
+  GOMA_CACHE_DIR="$GOMA_LOCAL_OUTPUT_CACHE_DIR"
+fi
 
 if [[ ! -x "$GOMA_AUTH" || ! -x "$GOMA_CTL" ]]; then
   echo "*** $PREBUILT_GOMA_DIR is not current."
