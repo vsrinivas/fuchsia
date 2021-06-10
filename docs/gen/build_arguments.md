@@ -2947,7 +2947,7 @@ From //build/rust/config.gni:45
 
 ### rust_override_lto
 Overrides the LTO setting for all Rust builds, regardless of
-debug/release flags or the `with_lto` arg to the rustc_ templates.
+debug/release flags.
 Valid values are "none", "thin", and "fat".
 
 **Current value (from the default):** `""`
