@@ -21,30 +21,33 @@ template <typename FidlMethod>
 struct WireResponse;
 
 #ifdef __Fuchsia__
-// SyncClient owns a client endpoint and exposes synchronous FIDL calls.
+// WireSyncClient owns a client endpoint and exposes synchronous FIDL calls.
 template <typename FidlProtocol>
 class WireSyncClient;
 
-// This is the wire async client for the given protocol.
+// WireClient implements a client and exposes both synchronous and asynchronous
+// calls.
 template <typename FidlProtocol>
 class WireClient;
 
-// This is the wire sync event handler for the given protocol.
+// WireSyncEventHandler is used by synchronous clients to handle events for the
+// given protocol.
 template <typename FidlProtocol>
 class WireSyncEventHandler;
 
-// AsyncEventHandler is used by asynchronous clients and adds a callback
+// WireAsyncEventHandler is used by asynchronous clients and adds a callback
 // for unbind completion on top of EventHandlerInterface.
 template <typename FidlProtocol>
 class WireAsyncEventHandler;
 
-// Pure-virtual interface to be implemented by a server.
+// WireServer is a pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <typename FidlProtocol>
 class WireServer;
 
-// EventSender owns a server endpoint and exposes methods for sending events.
+// WireEventSender owns a server endpoint and exposes methods for sending
+// events.
 template <typename FidlProtocol>
 class WireEventSender;
 
@@ -59,12 +62,12 @@ class WireUnownedResult;
 
 namespace internal {
 
-// WeakEventSender borrows the server endpoint from a binding object and
+// WireWeakEventSender borrows the server endpoint from a binding object and
 // exposes methods for sending events.
 template <typename FidlProtocol>
 class WireWeakEventSender;
 
-// ClientImpl implements both synchronous and asynchronous FIDL calls,
+// WireClientImpl implements both synchronous and asynchronous FIDL calls,
 // working together with the |::fidl::internal::ClientBase| class to safely
 // borrow channel ownership from the binding object.
 template <typename FidlProtocol>
@@ -104,7 +107,8 @@ using WireCompleter = typename fidl::internal::WireMethodTypes<FidlMethod>::Comp
 
 // |WireCall| is used to make method calls directly on a |fidl::ClientEnd|
 // without having to set up a client. Call it like:
-//   WireCall(client_end).Method(args...);
+//
+//     fidl::WireCall(client_end).Method(args...);
 template <typename FidlProtocol>
 fidl::internal::WireCaller<FidlProtocol> WireCall(const fidl::ClientEnd<FidlProtocol>& client_end) {
   return fidl::internal::WireCaller<FidlProtocol>(client_end.borrow());
@@ -112,7 +116,8 @@ fidl::internal::WireCaller<FidlProtocol> WireCall(const fidl::ClientEnd<FidlProt
 
 // |WireCall| is used to make method calls directly on a |fidl::ClientEnd|
 // without having to set up a client. Call it like:
-//   WireCall(client_end).Method(args...);
+//
+//     fidl::WireCall(client_end).Method(args...);
 template <typename FidlProtocol>
 fidl::internal::WireCaller<FidlProtocol> WireCall(
     const fidl::UnownedClientEnd<FidlProtocol>& client_end) {

@@ -131,5 +131,33 @@ zx::channel ChannelRefTracker::WaitForChannel() {
   return channel;
 }
 
+void ClientController::Bind(ClientBase* client_impl, zx::channel client_end,
+                            async_dispatcher_t* dispatcher,
+                            std::shared_ptr<AsyncEventHandler>&& event_handler) {
+  if (client_impl_) {
+    // This way, the current |Client| will effectively start from a clean slate.
+    // If this |Client| were the only instance for that particular channel,
+    // destroying |control_| would trigger unbinding automatically.
+    control_.reset();
+    client_impl_.reset();
+  }
+
+  client_impl_.reset(client_impl);
+  client_impl_->Bind(client_impl_, std::move(client_end), dispatcher, std::move(event_handler));
+  control_ = std::make_shared<ControlBlock>(client_impl_);
+}
+
+void ClientController::Unbind() {
+  ZX_ASSERT(client_impl_);
+  control_.reset();
+  client_impl_->ClientBase::Unbind();
+}
+
+zx::channel ClientController::WaitForChannel() {
+  ZX_ASSERT(client_impl_);
+  control_.reset();
+  return client_impl_->WaitForChannel();
+}
+
 }  // namespace internal
 }  // namespace fidl

@@ -1525,7 +1525,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>
 
  private:
   friend class ::fidl::Client<::fidl_test_emptystruct::EmptyProtocol>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 

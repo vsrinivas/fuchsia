@@ -1199,7 +1199,6 @@ class ::fidl::internal::WireClientImpl<
  private:
   friend class ::fidl::Client<
       ::fidl_test_placementofattributes::ExampleProtocol>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 

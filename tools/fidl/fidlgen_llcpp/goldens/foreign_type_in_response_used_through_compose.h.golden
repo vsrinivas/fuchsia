@@ -888,7 +888,6 @@ class ::fidl::internal::WireClientImpl<
  private:
   friend class ::fidl::Client<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 

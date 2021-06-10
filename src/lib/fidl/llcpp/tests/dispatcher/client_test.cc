@@ -86,9 +86,8 @@ class ::fidl::internal::WireClientImpl<fidl::TestProtocol> : private fidl::inter
 
  private:
   friend class Client<TestProtocol>;
-  friend class internal::ControlBlock;
 
-  explicit WireClientImpl() = default;
+  WireClientImpl() = default;
 
   // For each event, increment the event count.
   std::optional<UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg,
@@ -326,6 +325,11 @@ TEST(ClientBindingTestCase, Events) {
   // Trigger unbound handler.
   remote.reset();
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
+}
+
+TEST(ClientBindingTestCase, UnbindOnInvalidClientShouldPanic) {
+  Client<TestProtocol> client;
+  ASSERT_DEATH([&] { client.Unbind(); });
 }
 
 TEST(ClientBindingTestCase, Unbind) {

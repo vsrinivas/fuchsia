@@ -1170,7 +1170,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_service::SecondProtocol>
 
  private:
   friend class ::fidl::Client<::fidl_test_service::SecondProtocol>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 
@@ -1245,7 +1244,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_service::FirstProtocol> final
 
  private:
   friend class ::fidl::Client<::fidl_test_service::FirstProtocol>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 

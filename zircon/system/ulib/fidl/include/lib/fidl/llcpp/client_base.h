@@ -279,6 +279,76 @@ class ClientBase {
   zx_txid_t txid_base_ __TA_GUARDED(lock_) = 0;  // Value used to compute the next txid.
 };
 
+// |ClientController| manages the lifetime of a |ClientImpl| instance.
+// The |ClientImpl| class needs to inherit from |fidl::internal::ClientBase|.
+//
+// |ClientImpl|s are created when binding a client endpoint to a message
+// dispatcher, via |Bind|. The destruction of |ClientImpl|s is initiated when
+// this |ClientController| class destructs, or when |Unbind| is explicitly
+// invoked.
+class ClientController {
+ public:
+  ClientController() = default;
+  ~ClientController() = default;
+
+  ClientController(ClientController&& other) noexcept = default;
+  ClientController& operator=(ClientController&& other) noexcept = default;
+  ClientController(const ClientController& other) = default;
+  ClientController& operator=(const ClientController& other) = default;
+
+  // Binds the client implementation to the |dispatcher| and |client_end|.
+  // Takes ownership of |client_impl| and starts managing its lifetime.
+  void Bind(ClientBase* client_impl, zx::channel client_end, async_dispatcher_t* dispatcher,
+            std::shared_ptr<AsyncEventHandler>&& event_handler);
+
+  // Begins to unbind the channel from the dispatcher. In particular, it
+  // triggers the asynchronous destruction of the bound |ClientImpl|. May be
+  // called from any thread. If provided, the |AsyncEventHandler::Unbound| is
+  // invoked asynchronously on a dispatcher thread.
+  //
+  // |Bind| must have been called before this.
+  void Unbind();
+
+  // Blocks the current thread until no nothing is bound to the channel (and no
+  // in-flight uses of the channel exist), then returns the underlying channel.
+  // Unbinds from the dispatcher automatically.
+  //
+  // |Bind| must have been called before this.
+  zx::channel WaitForChannel();
+
+  bool is_valid() const { return static_cast<bool>(client_impl_); }
+  explicit operator bool() const { return is_valid(); }
+
+  ClientBase* get() const { return client_impl_.get(); }
+
+ private:
+  // |ControlBlock| controls the lifecycle of a client binding, such that
+  // unbinding will only happen after all clones of a |Client| managing
+  // the same channel goes out of scope.
+  //
+  // Specifically, all clones of a |Client| will share the same |ControlBlock|
+  // instance, which in turn references the |ClientImpl|, and is responsible
+  // for its unbinding via RAII.
+  class ControlBlock final {
+   public:
+    explicit ControlBlock(std::shared_ptr<ClientBase> client) : client_impl_(std::move(client)) {}
+
+    // Triggers unbinding, which will cause any strong references to the
+    // |ClientBase| to be released.
+    ~ControlBlock() {
+      if (client_impl_) {
+        client_impl_->Unbind();
+      }
+    }
+
+   private:
+    std::shared_ptr<ClientBase> client_impl_;
+  };
+
+  std::shared_ptr<ClientBase> client_impl_;
+  std::shared_ptr<ControlBlock> control_;
+};
+
 }  // namespace internal
 }  // namespace fidl
 

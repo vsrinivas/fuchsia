@@ -1096,7 +1096,6 @@ class ::fidl::internal::WireClientImpl<
  private:
   friend class ::fidl::Client<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 
@@ -1171,7 +1170,6 @@ class ::fidl::internal::WireClientImpl<
  public:
  private:
   friend class ::fidl::Client<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 

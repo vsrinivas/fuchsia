@@ -1624,7 +1624,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface> final
 
  private:
   friend class ::fidl::Client<::fidl_test_doccomments::Interface>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 

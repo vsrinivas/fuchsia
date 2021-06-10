@@ -13638,7 +13638,6 @@ class ::fidl::internal::WireClientImpl<
 
  private:
   friend class ::fidl::Client<::fidl_test_protocols::HandleRightsProtocol>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 
@@ -13784,7 +13783,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>
 
  private:
   friend class ::fidl::Client<::fidl_test_protocols::Transitional>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 
@@ -14032,7 +14030,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
 
  private:
   friend class ::fidl::Client<::fidl_test_protocols::ChannelProtocol>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 
@@ -14346,7 +14343,6 @@ class ::fidl::internal::WireClientImpl<
  private:
   friend class ::fidl::Client<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 
@@ -14645,7 +14641,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
 
  private:
   friend class ::fidl::Client<::fidl_test_protocols::WithErrorSyntax>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 
@@ -14719,7 +14714,6 @@ class ::fidl::internal::WireClientImpl<
 
  private:
   friend class ::fidl::Client<::fidl_test_protocols::DiscoverableProtocol>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 

@@ -1483,7 +1483,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::Super> final
 
  private:
   friend class ::fidl::Client<::fidl_test_inheritance::Super>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 
@@ -1595,7 +1594,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub> final
 
  private:
   friend class ::fidl::Client<::fidl_test_inheritance::Sub>;
-  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 
