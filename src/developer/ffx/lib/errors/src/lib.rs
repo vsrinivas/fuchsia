@@ -20,7 +20,7 @@ pub enum FfxError {
         DaemonError::TargetStateError => format!("Target {} is not in a state capable of the requested operation. Inspect `ffx target list` to determine if it is in the expected state.", target_string(.target)),
         DaemonError::RcsConnectionError => format!("Target {} was not reachable. Run `ffx doctor` for diagnostic information.", target_string(.target)),
         DaemonError::Timeout => format!("Timeout attempting to reach target {}", target_string(.target)),
-        DaemonError::TargetCacheEmpty => format!("Target {} was not found in the target cache", target_string(.target)),
+        DaemonError::TargetCacheEmpty => format!("No devices found."),
         DaemonError::TargetAmbiguous => format!("Target specification {} matched multiple targets. Use `ffx target list` to list known targets, and use a more specific matcher.", target_string(.target)),
         DaemonError::TargetNotFound => format!("Target {} was not found.", target_string(.target)),
         DaemonError::TargetInFastboot => format!("Target {} was found in Fastboot. Reboot or flash the target to continue.", target_string(.target)),
@@ -215,7 +215,6 @@ mod test {
         assert_contains_target_name(DaemonError::TargetStateError);
         assert_contains_target_name(DaemonError::RcsConnectionError);
         assert_contains_target_name(DaemonError::Timeout);
-        assert_contains_target_name(DaemonError::TargetCacheEmpty);
         assert_contains_target_name(DaemonError::TargetAmbiguous);
         assert_contains_target_name(DaemonError::TargetNotFound);
         assert_contains_target_name(DaemonError::TargetInFastboot);

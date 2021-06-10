@@ -1131,6 +1131,10 @@ impl TargetCollection {
         self.targets.borrow().values().cloned().collect()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.targets.borrow().len() == 0
+    }
+
     pub fn remove_target(&self, target_id: String) -> bool {
         if let Some(t) = self.get(target_id) {
             self.targets.borrow_mut().remove(&t.id());

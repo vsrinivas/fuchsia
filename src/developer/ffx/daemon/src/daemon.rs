@@ -395,7 +395,10 @@ impl Daemon {
         // TODO(72818): make target match timeout configurable / paramterable
         self.target_collection
             .wait_for_match(matcher)
-            .on_timeout(GET_TARGET_TIMEOUT, || Err(DaemonError::TargetNotFound))
+            .on_timeout(GET_TARGET_TIMEOUT, || match self.target_collection.is_empty() {
+                true => Err(DaemonError::TargetCacheEmpty),
+                false => Err(DaemonError::TargetNotFound),
+            })
             .await
     }
 
@@ -1185,6 +1188,12 @@ mod test {
             nodename,
             d.get_target(Some(nodename.to_string())).await.unwrap().nodename().unwrap()
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_target_collection_empty_error() {
+        let d = Daemon::new();
+        assert_eq!(Err(DaemonError::TargetCacheEmpty), d.get_target(None).await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

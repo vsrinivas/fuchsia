@@ -16,7 +16,7 @@ enum DaemonError {
     /// A generic timeout error.
     TIMEOUT = 4;
 
-    /// When querying for an unspecified target, the cache was empty.
+    /// When querying for a target, the cache was empty.
     TARGET_CACHE_EMPTY = 5;
     /// When querying for a target (specified or not), there were
     /// too many matches to be clear on which target was the intent
