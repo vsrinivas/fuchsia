@@ -1,0 +1,23 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+# To enable GWP-ASan, add the following target to the base_package_labels.
+# GWP-ASan will be enabled for all the processes launched by appmgr, excluding shells.
+# The default value is SampleRate=16000 and MaxSimultaneousAllocations=32.
+# The memory footprint will grow by 32 x 4KiB = 128KiB for each process.
+config_data("default") {
+  for_pkg = "appmgr"
+  sources = [ "default.txt" ]
+  outputs = [ "gwp_asan_config.txt" ]  # Must match kGwpAsanConfig in realm.cc.
+}
+
+# SampleRate=1 and MaxSimultaneousAllocations=512, only for test purposes to guarantee GWP-ASan
+# triggering.
+config_data("no_sample") {
+  for_pkg = "appmgr"
+  sources = [ "no_sample.txt" ]
+  outputs = [ "gwp_asan_config.txt" ]  # Must match kGwpAsanConfig in realm.cc.
+}

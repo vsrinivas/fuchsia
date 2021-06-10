@@ -247,10 +247,10 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   void CreateElfBinaryComponentFromPackage(
       fuchsia::sys::LaunchInfo launch_info, zx::vmo executable, const std::string& app_argv0,
-      const std::vector<std::string>& env_vars, zx::channel loader_service,
-      fdio_flat_namespace_t* flat, ComponentRequestWrapper component_request,
-      fxl::RefPtr<Namespace> ns, const std::vector<zx_policy_basic_v2_t>& policies,
-      ComponentObjectCreatedCallback callback, zx::channel package_handle);
+      std::vector<std::string> env_vars, zx::channel loader_service, fdio_flat_namespace_t* flat,
+      ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
+      const std::vector<zx_policy_basic_v2_t>& policies, ComponentObjectCreatedCallback callback,
+      zx::channel package_handle);
 
   void CreateRunnerComponentFromPackage(
       fuchsia::sys::PackagePtr package, fuchsia::sys::LaunchInfo launch_info,
@@ -330,6 +330,10 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   // Implement crash introspect service. Only initialized in root realm.
   std::unique_ptr<CrashIntrospector> crash_introspector_;
+
+  // GWP-ASan configuration. If not empty, it is an environment variable (SCUDO_OPTIONS) that will
+  // be injected to all the ELF binary components.
+  std::string gwp_asan_config_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Realm);
 };

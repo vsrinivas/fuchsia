@@ -43,6 +43,7 @@
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/substitute.h"
+#include "src/lib/fxl/strings/trim.h"
 #include "src/lib/json_parser/json_parser.h"
 #include "src/lib/pkg_url/url_resolver.h"
 #include "src/sys/appmgr/constants.h"
@@ -66,6 +67,7 @@ constexpr char kDataKey[] = "data";
 constexpr char kBinaryKey[] = "binary";
 constexpr char kAppArgv0Prefix[] = "/pkg/";
 constexpr zx_status_t kComponentCreationFailed = -1;
+constexpr char kGwpAsanConfig[] = "gwp_asan_config.txt";
 
 using fuchsia::sys::TerminationReason;
 
@@ -422,6 +424,14 @@ Realm::Realm(RealmArgs args, zx::job job)
   }
   if (!scheme_map_.ParseFromDirectoryAt(appmgr_config_dir_, SchemeMap::kConfigDirPath)) {
     FX_LOGS(FATAL) << "Could not parse scheme map config dir: " << scheme_map_.error_str();
+  }
+
+  if (files::IsFileAt(appmgr_config_dir_.get(), kGwpAsanConfig)) {
+    std::string content;
+    if (files::ReadFileToStringAt(appmgr_config_dir_.get(), kGwpAsanConfig, &content)) {
+      gwp_asan_config_ = fxl::TrimString(content, " \n");
+      FX_LOGS(INFO) << "GWP-ASan config: " << gwp_asan_config_;
+    }
   }
 }
 
@@ -1054,10 +1064,10 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
 void Realm::CreateElfBinaryComponentFromPackage(
     fuchsia::sys::LaunchInfo launch_info, zx::vmo executable, const std::string& app_argv0,
-    const std::vector<std::string>& env_vars, zx::channel loader_service,
-    fdio_flat_namespace_t* flat, ComponentRequestWrapper component_request,
-    fxl::RefPtr<Namespace> ns, const std::vector<zx_policy_basic_v2_t>& policies,
-    ComponentObjectCreatedCallback callback, zx::channel package_handle) {
+    std::vector<std::string> env_vars, zx::channel loader_service, fdio_flat_namespace_t* flat,
+    ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
+    const std::vector<zx_policy_basic_v2_t>& policies, ComponentObjectCreatedCallback callback,
+    zx::channel package_handle) {
   TRACE_DURATION("appmgr", "Realm::CreateElfBinaryComponentFromPackage", "launch_info.url",
                  launch_info.url);
 
@@ -1072,6 +1082,10 @@ void Realm::CreateElfBinaryComponentFromPackage(
     if (status != ZX_OK) {
       return;
     }
+  }
+
+  if (!gwp_asan_config_.empty()) {
+    env_vars.push_back(gwp_asan_config_);
   }
 
   const std::string args = Util::GetArgsString(launch_info.arguments);

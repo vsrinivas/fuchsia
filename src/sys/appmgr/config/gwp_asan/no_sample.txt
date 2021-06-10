@@ -1,0 +1,1 @@
+SCUDO_OPTIONS=GWP_ASAN_Enabled=true:GWP_ASAN_SampleRate=1:GWP_ASAN_MaxSimultaneousAllocations=512
