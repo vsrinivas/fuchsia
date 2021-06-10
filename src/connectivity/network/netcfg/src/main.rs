@@ -74,7 +74,7 @@ const DEV_PATH: &str = "/dev";
 /// Path to devfs in netemul environments.
 const NETEMUL_DEV_PATH: &str = "/vdev";
 
-/// File that stores persistant interface configurations.
+/// File that stores persistent interface configurations.
 const PERSISTED_INTERFACE_CONFIG_FILEPATH: &str = "/data/net_interfaces.cfg.json";
 
 /// A node that represents the directory it is in.
@@ -733,7 +733,7 @@ impl<'a> NetCfg<'a> {
                                 .handle_dns_server_watcher_done(source, dns_watchers.get_mut())
                                 .await
                                 .with_context(|| {
-                                    format!("error handling completion of DNS serever watcher for \
+                                    format!("error handling completion of DNS server watcher for \
                                         {:?}", source)
                                 })?;
                             continue;
@@ -1531,7 +1531,7 @@ mod tests {
                 .context("create interface state endpoints")?;
         let (dhcp_server, _dhcp_server_server) =
             fidl::endpoints::create_proxy::<fnet_dhcp::Server_Marker>()
-                .context("error creating dhcp_serveer endpoints")?;
+                .context("error creating dhcp_server endpoints")?;
         let (dhcpv6_client_provider, dhcpv6_client_provider_server) =
             fidl::endpoints::create_proxy::<fnet_dhcpv6::ClientProviderMarker>()
                 .context("error creating dhcpv6_client_provider endpoints")?;
@@ -1549,7 +1549,7 @@ mod tests {
                 dhcp_server: Some(dhcp_server),
                 dhcpv6_client_provider: Some(dhcpv6_client_provider),
                 device_dir_path: "/vdev",
-                persisted_interface_config: persisted_interface_config,
+                persisted_interface_config,
                 allow_virtual_devices: false,
                 filter_enabled_interface_types: Default::default(),
                 default_config_rules: Default::default(),
@@ -1611,7 +1611,7 @@ mod tests {
         .collect()
     }
 
-    /// Handle receving a netstack interface changed event.
+    /// Handle receiving a netstack interface changed event.
     async fn handle_interface_changed_event(
         netcfg: &mut NetCfg<'_>,
         dns_watchers: &mut DnsServerWatchers<'_>,
