@@ -29,7 +29,13 @@ _phys_linker_scripts = [
 #
 #   * output_extension
 #     - Optional: See executable(), but defaults to "bin".
+#     - Type: string
 #     - Default: "bin"
+#
+#   * images_name
+#     - Optional: Name to use in //:images build API entry.
+#     - Type: string
+#     - Default: $target_name
 #
 #   * tags
 #     - Optional: Tags to put in the //:images metadata for the target.
@@ -64,6 +70,7 @@ template("phys_executable") {
       forward_variables_from(invoker,
                              "*",
                              [
+                               "images_name",
                                "metadata",
                                "output_dir",
                                "output_extension",
@@ -116,7 +123,11 @@ template("phys_executable") {
         images += [
           {
             label = get_label_info(":$target_name", "label_with_toolchain")
-            name = target_name
+            if (defined(invoker.images_name)) {
+              name = invoker.images_name
+            } else {
+              name = target_name
+            }
             forward_variables_from(invoker, [ "tags" ])
             path = rebase_path(output_path, root_build_dir)
             cpu = current_cpu

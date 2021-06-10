@@ -69,7 +69,7 @@ if (is_linux) {
       deps = [ "//zircon/kernel/target/arm64/boot-shim:qemu" ]
     } else if (target_cpu == "x64") {
       kernel_binary = "multiboot.bin"
-      deps = [ "//zircon/kernel/target/pc/multiboot" ]
+      deps = [ "//zircon/kernel/arch/x86/phys/boot-shim:multiboot-shim" ]
     } else {
       assert(false, "CPU not supported")
     }
