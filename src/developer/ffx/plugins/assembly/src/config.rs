@@ -70,7 +70,7 @@ pub struct BoardConfig {
     pub blobfs: BlobFSConfig,
 
     /// The information required to construct and flash the FVM.
-    pub fvm: FvmConfig,
+    pub fvm: Option<FvmConfig>,
 
     /// The information required to update and flash recovery.
     /// TODO(fxbug.dev/76371): Re-design so that recovery is a separate product.
@@ -401,9 +401,6 @@ mod tests {
                 "key_metadata": "path/to/metadata"
               },
               "zbi": {
-                "partition": "name"
-              },
-              "fvm": {
                 "partition": "name"
               },
               "recovery": {

@@ -107,6 +107,7 @@ dep_labels = {
   }
   prev_update_pkg = "//build/images:update.meta"
   prev_blobfs = "//build/images:blob.blk"
+  prev_fvm = "//build/images:fvm.blk"
 
   ####
   # Internal labels, in "dep" format:
@@ -197,6 +198,9 @@ files = {
   # The BlobFS output
   blobfs = "${target_out_dir}/blob.blk"
 
+  # The FVM output
+  fvm = "${target_out_dir}/fvm.blk"
+
   #####
   # Files used for validation against external label outputs (temporary)
   #
@@ -267,6 +271,12 @@ files = {
 
   # The blobfs created by //build/images:blob.blk
   prev_blobfs = "${root_build_dir}/obj/build/images/blob.blk"
+
+  # The minfs created by //build/images:data.blk
+  prev_minfs = "${root_build_dir}/obj/build/images/data.blk"
+
+  # The fvm created by //build/images:fvm.blk
+  prev_fvm = "${root_build_dir}/obj/build/images/fvm.blk"
 }
 
 #####
@@ -671,8 +681,68 @@ generated_file(labels.board_config) {
       include_update_package = product_include_updates_in_blobfs
     }
 
-    fvm = {
-      partition = fvm_partition
+    if (uses_base_package) {
+      fvm = {
+        partition = fvm_partition
+        slice_size = fvm_slice_size
+        reserved_slices = fvm_reserved_slices
+
+        filesystems = [
+          {
+            MinFS = {
+              path = rebase_path(files.prev_minfs, root_build_dir)
+              name = "data"
+
+              # Set the minimum inodes.
+              if (minfs_product_minimum_inodes != false) {
+                minimum_inodes = minfs_product_minimum_inodes
+              } else if (minfs_board_minimum_inodes != false) {
+                minimum_inodes = minfs_board_minimum_inodes
+              }
+
+              # Set the minimum data bytes.
+              if (minfs_product_minimum_data_bytes != false) {
+                minimum_data_bytes = minfs_product_minimum_data_bytes
+              } else if (minfs_board_minimum_data_bytes != false) {
+                minimum_data_bytes = minfs_board_minimum_data_bytes
+              }
+
+              # Set the maximum bytes.
+              if (minfs_product_maximum_bytes != false) {
+                maximum_bytes = minfs_product_maximum_bytes
+              } else if (minfs_board_maximum_bytes != false) {
+                maximum_bytes = minfs_board_maximum_bytes
+              }
+            }
+          },
+          {
+            BlobFS = {
+              name = "blob"
+
+              # Set the minimum inodes.
+              if (blobfs_product_minimum_inodes != false) {
+                minimum_inodes = blobfs_product_minimum_inodes
+              } else if (blobfs_board_minimum_inodes != false) {
+                minimum_inodes = blobfs_board_minimum_inodes
+              }
+
+              # Set the minimum data bytes.
+              if (blobfs_product_minimum_data_bytes != false) {
+                minimum_data_bytes = blobfs_product_minimum_data_bytes
+              } else if (blobfs_board_minimum_data_bytes != false) {
+                minimum_data_bytes = blobfs_board_minimum_data_bytes
+              }
+
+              # Set the maximum bytes.
+              if (blobfs_product_maximum_bytes != false) {
+                maximum_bytes = blobfs_product_maximum_bytes
+              } else if (blobfs_board_maximum_bytes != false) {
+                maximum_bytes = blobfs_board_maximum_bytes
+              }
+            }
+          },
+        ]
+      }
     }
 
     # For each firmware item we have as a bootloader, add the correct entry
@@ -822,6 +892,7 @@ ffx_action("images") {
     outputs += [
       files.base_pkg,
       files.blobfs,
+      files.fvm,
 
       # intermediate outputs that are in gendir:
       files.gen_base_static_packages,
@@ -922,6 +993,7 @@ group("output_validation_checks") {
       # only attempt the comparison if there's a base package (which is inverse
       # of bootfs-only).
       ":blobfs_matches",
+      ":fvm_matches",
       ":update_matches",
       ":update_pkg_meta_contents_matches",
       ":update_pkg_meta_package_matches",
@@ -1134,5 +1206,16 @@ if (uses_base_package) {
 
     first = files.prev_blobfs
     second = files.blobfs
+  }
+
+  verify_files_match("fvm_matches") {
+    testonly = true
+    deps = [
+      ":images",
+      dep_labels.prev_fvm,
+    ]
+
+    first = files.prev_fvm
+    second = files.fvm
   }
 }

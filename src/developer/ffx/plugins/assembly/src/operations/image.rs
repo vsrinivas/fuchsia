@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use crate::config::{
-    from_reader, BoardConfig, FvmFilesystemEntry, ProductConfig, VBMetaConfig, ZbiSigningScript,
+    from_reader, BoardConfig, FvmConfig, FvmFilesystemEntry, ProductConfig, VBMetaConfig,
+    ZbiSigningScript,
 };
 use crate::vfs::RealFilesystemProvider;
 use anyhow::{anyhow, Context, Result};
@@ -26,7 +27,7 @@ use vbmeta::Salt;
 use zbi::ZbiBuilder;
 
 pub fn assemble(args: ImageArgs) -> Result<()> {
-    let ImageArgs { product, board, outdir, gendir, full } = args;
+    let ImageArgs { product, board, outdir, gendir, full: _ } = args;
 
     info!("Loading configuration files.");
     info!("  product:  {}", product.display());
@@ -86,13 +87,13 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         None
     };
 
-    // Bail out here for now, unless asked to do otherwise.
-    if !full {
-        return Ok(());
-    }
-
-    info!("Creating the fvm");
-    let _fvm_path: PathBuf = construct_fvm(&outdir, &board, blobfs_path.as_ref())?;
+    let _fvm_path: Option<PathBuf> = if let Some(fvm_config) = &board.fvm {
+        info!("Creating the fvm");
+        Some(construct_fvm(&outdir, &fvm_config, blobfs_path.as_ref())?)
+    } else {
+        info!("Skipping fvm creation");
+        None
+    };
 
     Ok(())
 }
@@ -443,16 +444,16 @@ fn construct_blobfs(
 
 fn construct_fvm(
     outdir: impl AsRef<Path>,
-    board: &BoardConfig,
+    fvm_config: &FvmConfig,
     blobfs_path: Option<impl AsRef<Path>>,
 ) -> Result<PathBuf> {
     // Create the builder.
     let fvm_path = outdir.as_ref().join("fvm.blk");
     let mut fvm_builder =
-        FvmBuilder::new(&fvm_path, board.fvm.slice_size, board.fvm.reserved_slices);
+        FvmBuilder::new(&fvm_path, fvm_config.slice_size, fvm_config.reserved_slices);
 
     // Add all the filesystems.
-    for entry in &board.fvm.filesystems {
+    for entry in &fvm_config.filesystems {
         let (path, attributes) = match entry {
             FvmFilesystemEntry::BlobFS { attributes } => {
                 let path = match &blobfs_path {
