@@ -424,7 +424,7 @@ class DeviceAddArgs {
     args_.flags = flags;
     return *this;
   }
-  DeviceAddArgs& set_props(cpp20::span<zx_device_prop_t> props) {
+  DeviceAddArgs& set_props(cpp20::span<const zx_device_prop_t> props) {
     args_.props = props.data();
     args_.prop_count = static_cast<uint32_t>(props.size());
     return *this;
