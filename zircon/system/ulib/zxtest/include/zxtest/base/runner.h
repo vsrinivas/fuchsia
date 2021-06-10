@@ -209,6 +209,11 @@ class Runner {
   // If this is called without any test running, it will have no effect.
   void NotifyAssertion(const Assertion& assertion);
 
+  // Tells the runner to skip the current test.  The runner will propagate the message to
+  // interested parties.  See NotifyAssertion above for more explanation as to why this is in
+  // global scope.
+  void SkipCurrent(const Message& message);
+
   // Returns true if the current test should be aborted. This happens as a result of a fatal
   // failure.
   bool CurrentTestHasFatalFailures() const { return !test_driver_.Continue(); }

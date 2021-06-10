@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/assert.h>
+
 #include <utility>
 
-#include <zircon/assert.h>
+#include <fbl/string_printf.h>
 #include <zxtest/base/event-broadcaster.h>
 
 namespace zxtest {
@@ -53,6 +55,11 @@ void EventBroadcaster::OnTestStart(const TestCase& test_case, const TestInfo& te
 // Reports when an assertion on the running tests fails.
 void EventBroadcaster::OnAssertion(const Assertion& assertion) {
   Broadcast<&LifecycleObserver::OnAssertion>(&lifecycle_observers_, assertion);
+}
+
+// Reports when there is a message to be processed.
+void EventBroadcaster::OnMessage(const Message& message) {
+  Broadcast<&LifecycleObserver::OnMessage>(&lifecycle_observers_, message);
 }
 
 // Reports before every test is skipped.

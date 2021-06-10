@@ -45,6 +45,9 @@ class EventBroadcaster final : public LifecycleObserver {
   // Reports when an assertion on the running tests fails.
   virtual void OnAssertion(const Assertion& assertion) final;
 
+  // Reports when a message is sent by one of the running tests.
+  void OnMessage(const Message& message) final;
+
   // Reports before every test is skipped.
   void OnTestSkip(const TestCase& test_case, const TestInfo& test) final;
 

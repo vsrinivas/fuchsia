@@ -192,6 +192,13 @@
     }                                                      \
   } while (0)
 
+#define ZXTEST_SKIP(desc, ...)                                                                  \
+  do {                                                                                          \
+    zxtest::Runner::GetInstance()->SkipCurrent(zxtest::Message(                                 \
+        _DESC_PROVIDER(desc, __VA_ARGS__)(), {.filename = __FILE__, .line_number = __LINE__})); \
+    return;                                                                                     \
+  } while (0)
+
 #ifdef __Fuchsia__
 #define _ZXTEST_DEATH_STATUS_COMPLETE zxtest::internal::DeathStatement::State::kSuccess
 #define _ZXTEST_DEATH_STATUS_EXCEPTION zxtest::internal::DeathStatement::State::kException

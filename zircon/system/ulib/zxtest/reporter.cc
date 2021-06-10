@@ -141,6 +141,12 @@ void Reporter::OnAssertion(const Assertion& assertion) {
   log_sink_->Flush();
 }
 
+void Reporter::OnMessage(const Message& message) {
+  log_sink_->Write("%s:%" PRIi64 ": %s\n", message.location().filename,
+                   message.location().line_number, message.text().c_str());
+  log_sink_->Flush();
+}
+
 void Reporter::OnTestSkip(const TestCase& test_case, const TestInfo& test) {
   int64_t elapsed_time = timers_.test.GetElapsedTime();
   iteration_summary_.skipped++;

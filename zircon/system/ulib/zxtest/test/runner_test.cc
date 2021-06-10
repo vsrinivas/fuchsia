@@ -30,6 +30,7 @@ namespace {
 
 constexpr char kTestName[] = "TestName";
 constexpr char kTestName2[] = "TestName2";
+constexpr char kTestName3[] = "TestName3";
 constexpr char kTestCaseName[] = "TestCase";
 constexpr char kTestCaseName2[] = "TestCase2";
 constexpr char kFileName[] = "filename.cc";
@@ -112,6 +113,25 @@ class FailingTest2 : public zxtest::Test {
     Assertion assertion("eq", "a", "1", "b", "2", {.filename = __FILE__, .line_number = __LINE__},
                         /* is_fatal = */ true);
     runner_->NotifyAssertion(assertion);
+  }
+  Runner* runner_;
+};
+
+// A skipped test
+class SkippedTest : public zxtest::Test {
+ public:
+  static fbl::Function<std::unique_ptr<Test>(TestDriver*)> MakeFactory(Runner* runner) {
+    return [runner](TestDriver* driver) {
+      std::unique_ptr<SkippedTest> test = zxtest::Test::Create<SkippedTest>(driver);
+      test->runner_ = runner;
+      return test;
+    };
+  }
+
+ private:
+  void TestBody() {
+    runner_->SkipCurrent(
+        zxtest::Message("Skip message", {.filename = __FILE__, .line_number = __LINE__}));
   }
   Runner* runner_;
 };
@@ -397,6 +417,7 @@ class FakeObserver1 : public LifecycleObserver {
   OBSERVER_EVENT_HANDLER(IterationEnd, const Runner&, int);
   OBSERVER_EVENT_HANDLER(ProgramEnd, const Runner&);
   OBSERVER_EVENT_HANDLER(Assertion, const Assertion&);
+  OBSERVER_EVENT_HANDLER(Message, const Message&);
 };
 
 class FakeObserver2 : public LifecycleObserver {
@@ -405,6 +426,7 @@ class FakeObserver2 : public LifecycleObserver {
   OBSERVER_EVENT_HANDLER(TestStart, const TestCase&, const TestInfo&);
   OBSERVER_EVENT_HANDLER(TestSuccess, const TestCase&, const TestInfo&);
   OBSERVER_EVENT_HANDLER(TestFailure, const TestCase&, const TestInfo&);
+  OBSERVER_EVENT_HANDLER(TestSkip, const TestCase&, const TestInfo&);
   OBSERVER_EVENT_HANDLER(TestCaseEnd, const TestCase&);
 };
 
@@ -420,10 +442,14 @@ void RunnerLifecycleObserversRegisteredAndNotified() {
                                       FakeTest::MakeFactory(&test_counter));
   runner.RegisterTest<Test, FailingTest>(kTestCaseName, kTestName2, kFileName, kLineNumber,
                                          FailingTest::MakeFactory(&runner));
+  runner.RegisterTest<Test, SkippedTest>(kTestCaseName, kTestName3, kFileName, kLineNumber,
+                                         SkippedTest::MakeFactory(&runner));
   runner.RegisterTest<Test, FakeTest>(kTestCaseName2, kTestName, kFileName, kLineNumber,
                                       FakeTest::MakeFactory(&test_counter));
   runner.RegisterTest<Test, FakeTest>(kTestCaseName2, kTestName2, kFileName, kLineNumber,
                                       FakeTest::MakeFactory(&test_counter));
+  runner.RegisterTest<Test, SkippedTest>(kTestCaseName2, kTestName3, kFileName, kLineNumber,
+                                         SkippedTest::MakeFactory(&runner));
 
   Runner::Options options = Runner::kDefaultOptions;
   options.repeat = 2;  // Iterate twice
@@ -439,11 +465,13 @@ void RunnerLifecycleObserversRegisteredAndNotified() {
   ZX_ASSERT_MSG(obs.IterationEndCnt == 2, "IterationEnd notified incorrectly.\n");
   ZX_ASSERT_MSG(obs.ProgramEndCnt == 1, "ProgramEnd notified incorrectly.\n");
   ZX_ASSERT_MSG(obs.AssertionCnt == 2, "Assertion notified incorrectly.\n");
+  ZX_ASSERT_MSG(obs.MessageCnt == 4, "Messages notified incorrectly.\n");
   // |obs2| received all notifications related to tests.
   ZX_ASSERT_MSG(obs2.TestCaseStartCnt == 4, "TestCaseStart notified incorrectly.\n");
-  ZX_ASSERT_MSG(obs2.TestStartCnt == 8, "TestStart notified incorrectly.\n");
+  ZX_ASSERT_MSG(obs2.TestStartCnt == 12, "TestStart notified incorrectly.\n");
   ZX_ASSERT_MSG(obs2.TestSuccessCnt == 6, "TestSuccess notified incorrectly.\n");
   ZX_ASSERT_MSG(obs2.TestFailureCnt == 2, "TestFailure notified incorrectly.\n");
+  ZX_ASSERT_MSG(obs2.TestSkipCnt == 4, "TestSkip notified incorrectly.\n");
   ZX_ASSERT_MSG(obs2.TestCaseEndCnt == 4, "TestCaseEnd notified incorrectly.\n");
 }
 

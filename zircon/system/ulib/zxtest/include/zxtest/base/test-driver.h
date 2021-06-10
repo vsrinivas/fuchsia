@@ -23,7 +23,7 @@ class TestDriver {
  public:
   virtual ~TestDriver() = default;
 
-  // Called when a test is skipped..
+  // Called when a test is skipped.
   virtual void Skip() = 0;
 
   // Return true if the test is allowed to continue execution.

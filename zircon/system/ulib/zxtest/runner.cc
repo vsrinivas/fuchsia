@@ -182,6 +182,11 @@ void Runner::NotifyAssertion(const Assertion& assertion) {
   event_broadcaster_.OnAssertion(assertion);
 }
 
+void Runner::SkipCurrent(const Message& message) {
+  event_broadcaster_.OnMessage(message);
+  test_driver_.Skip();
+}
+
 Runner* Runner::GetInstance() {
   static Runner runner = Runner(Reporter(std::make_unique<FileLogSink>(stdout)));
   return &runner;

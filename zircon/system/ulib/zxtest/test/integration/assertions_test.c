@@ -890,3 +890,10 @@ TEST(ZxTestCAssertionsTest, AssertNotStatusFailureFatal) {
   ASSERT_NOT_STATUS(a, b, "ASSERT_NOT_STATUS equality detection succeeded.");
   TEST_CHECKPOINT();
 }
+
+TEST(ZxTestCAssertionsTest, AssertSkip) {
+  TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, NO_ERRORS, "AssertSkip did not skip");
+  ZXTEST_SKIP("Test skipped");
+  FAIL("Skip test did not skip");
+  TEST_CHECKPOINT();
+}

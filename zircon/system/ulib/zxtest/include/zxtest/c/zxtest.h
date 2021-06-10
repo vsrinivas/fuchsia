@@ -49,6 +49,9 @@ bool zxtest_runner_current_test_has_failures(void);
 void zxtest_runner_fail_current_test(bool fatal, const char* file, int line_number,
                                      const char* message);
 
+// Skips the current running test.
+void zxtest_runner_skip_current_test(const char* file, int line, const char* message);
+
 #ifdef __Fuchsia__
 // Possible expected results for the death statements.
 enum DeathResult {
@@ -273,6 +276,13 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
       _ZXTEST_FAIL_NO_RETURN(fatal, desc, ##__VA_ARGS__);  \
       _RETURN_IF_FATAL(fatal);                             \
     }                                                      \
+  } while (0)
+
+#define ZXTEST_SKIP(desc, ...)                                       \
+  do {                                                               \
+    _GEN_ASSERT_DESC(msg_buffer, desc, ##__VA_ARGS__);               \
+    zxtest_runner_skip_current_test(__FILE__, __LINE__, msg_buffer); \
+    return;                                                          \
   } while (0)
 
 #ifdef __Fuchsia__

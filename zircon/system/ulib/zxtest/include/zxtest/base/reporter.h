@@ -83,6 +83,9 @@ class Reporter final : public LifecycleObserver {
   // Reports when an assertion failed on the current running test.
   void OnAssertion(const Assertion& assertion) final;
 
+  // Reports when a message is sent.
+  void OnMessage(const Message& message) final;
+
   // Reports before every test starts.
   void OnTestSkip(const TestCase& test_case, const TestInfo& test) final;
 

@@ -8,6 +8,7 @@
 namespace zxtest {
 // Forward declaration.
 class Assertion;
+class Message;
 class Runner;
 class TestCase;
 class TestInfo;
@@ -41,6 +42,9 @@ class LifecycleObserver {
 
   // Reports when an assertion on the running tests fails.
   virtual void OnAssertion(const Assertion& assertion) {}
+
+  // Reports when a message is sent.
+  virtual void OnMessage(const Message& message) {}
 
   // Reports after a test execution was skipped.
   virtual void OnTestSkip(const TestCase& test_case, const TestInfo& test) {}

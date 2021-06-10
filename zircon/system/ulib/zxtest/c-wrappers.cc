@@ -133,6 +133,11 @@ void zxtest_runner_fail_current_test(bool is_fatal, const char* file, int line,
       zxtest::Assertion(message, {.filename = file, .line_number = line}, is_fatal));
 }
 
+void zxtest_runner_skip_current_test(const char* file, int line, const char* message) {
+  zxtest::Message mesg(message, {.filename = file, .line_number = line});
+  zxtest::Runner::GetInstance()->SkipCurrent(mesg);
+}
+
 #ifdef __Fuchsia__
 bool zxtest_death_statement_execute(zxtest_test_fn_t statement, enum DeathResult result,
                                     const char* file, int line, const char* message) {

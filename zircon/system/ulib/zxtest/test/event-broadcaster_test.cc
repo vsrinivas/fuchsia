@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test-registry.h"
-
 #include <cstdlib>
 
 #include <fbl/function.h>
@@ -14,6 +12,8 @@
 #include <zxtest/base/test-case.h>
 #include <zxtest/base/test-info.h>
 #include <zxtest/base/types.h>
+
+#include "test-registry.h"
 
 #define ITERATION_EVENT_OBSERVER(Event)                             \
   class FakeObserver : public LifecycleObserver {                   \
@@ -37,6 +37,18 @@
                                                                \
     fbl::Function<void(const Assertion& assertion)> on_notify; \
     bool called = false;                                       \
+  }
+
+#define MESSAGE_OBSERVER                                   \
+  class FakeObserver : public LifecycleObserver {          \
+   public:                                                 \
+    void OnMessage(const Message& message) final {         \
+      on_notify(message);                                  \
+      called = true;                                       \
+    }                                                      \
+                                                           \
+    fbl::Function<void(const Message& message)> on_notify; \
+    bool called = false;                                   \
   }
 
 #define RUNNER_EVENT_OBSERVER(Event)                     \
@@ -224,6 +236,24 @@ void EventBroadcasterOnAssertion() {
   });
 
   event_broadcaster.OnAssertion(assertion);
+
+  ValidateAllObserversNotified(observers);
+}
+
+void EventBroadcasterOnMessage() {
+  MESSAGE_OBSERVER;
+
+  internal::EventBroadcaster event_broadcaster;
+  Message message("Message", {.filename = "test.cpp", .line_number = 99999});
+  fbl::Vector<FakeObserver> observers;
+  observers.reserve(kNumObservers);
+
+  REGISTER_OBSERVERS(observers, event_broadcaster, [&](const Message& actual) {
+    ZX_ASSERT_MSG(&actual == &message,
+                  "EventBroadcaster::OnMessage delivered incorrect message.\n");
+  });
+
+  event_broadcaster.OnMessage(message);
 
   ValidateAllObserversNotified(observers);
 }
