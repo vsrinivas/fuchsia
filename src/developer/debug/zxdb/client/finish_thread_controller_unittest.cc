@@ -31,8 +31,13 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
                            debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
+  // Since this never steps over a non-inline frame, the function return callback should never
+  // be called.
+  bool function_completion_called = false;
+
   // "Finish" from the top stack frame, which is an inline one.
-  auto finish_controller = std::make_unique<FinishThreadController>(thread()->GetStack(), 0);
+  auto finish_controller = std::make_unique<FinishThreadController>(thread()->GetStack(), 0,
+      [&function_completion_called](const FunctionReturnInfo&){ function_completion_called = true; });
   bool continued = false;
   thread()->ContinueWith(std::move(finish_controller), [&continued](const Err& err) {
     if (!err.has_error())
@@ -66,6 +71,9 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
   // Should not have resumed.
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
+
+  // None of the above stepping should have triggered a non-inline function return.
+  EXPECT_FALSE(function_completion_called);
 }
 
 // Finishes multiple frames, consisting of one physical frame finish followed by two inline frame
@@ -79,8 +87,12 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
                            debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
+  // Holds the result of any seen non-inline function returns.
+  std::optional<FunctionReturnInfo> return_info;
+
   // "Finish" frame 3,
-  auto finish_controller = std::make_unique<FinishThreadController>(thread()->GetStack(), 3);
+  auto finish_controller = std::make_unique<FinishThreadController>(thread()->GetStack(), 3,
+      [&return_info](const FunctionReturnInfo& info) { return_info = info; });
   bool continued = false;
   thread()->ContinueWith(std::move(finish_controller), [&continued](const Err& err) {
     if (!err.has_error())
@@ -107,8 +119,12 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 3);
   InjectExceptionWithStack(exception, MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
-  // The breakpoint should have been cleared and the thread should have been
-  // resumed.
+  // That should have triggered the function return call indicating the top function returned.
+  ASSERT_TRUE(return_info);
+  EXPECT_EQ(thread(), return_info->thread);
+  EXPECT_EQ(GetTopFunction()->GetAssignedName(), return_info->symbol.Get()->GetAssignedName());
+
+  // The breakpoint should have been cleared and the thread should have been resumed.
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
   EXPECT_EQ(1, mock_remote_api()->breakpoint_remove_count());
 

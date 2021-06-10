@@ -32,6 +32,7 @@
 #include "src/developer/debug/zxdb/console/format_job.h"
 #include "src/developer/debug/zxdb/console/format_location.h"
 #include "src/developer/debug/zxdb/console/format_name.h"
+#include "src/developer/debug/zxdb/console/format_node_console.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
@@ -42,6 +43,7 @@
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/number_parser.h"
+#include "src/developer/debug/zxdb/expr/return_value.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/elf_symbol.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
@@ -671,6 +673,42 @@ void JobCommandCallback(const char* verb, fxl::WeakPtr<Job> job, bool display_me
   if (callback) {
     callback(err);
   }
+}
+
+void PrintReturnValue(const FunctionReturnInfo& info) {
+  // This only works for symbolized functions.
+  const Function* func = info.symbol.Get()->AsFunction();
+  if (!func)
+    return;
+
+  const Stack& stack = info.thread->GetStack();
+  if (stack.empty())
+    return;  // Something is messed up.
+  auto eval_context = stack[0]->GetEvalContext();
+
+  GetReturnValue(eval_context, func, [eval_context, func = RefPtrTo(func)](ErrOrValue val) {
+    if (val.has_error() || !val.value().type())
+      return;  // Error or void.
+
+    auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
+
+    FormatFunctionNameOptions func_name_options;
+    func_name_options.name.elide_templates = true;
+    func_name_options.name.bold_last = true;
+    func_name_options.params = FormatFunctionNameOptions::kNoParams;
+    out->Append(FormatFunctionName(func.get(), func_name_options));
+    out->Append(Syntax::kOperatorBold, " 🡲 ");
+
+    ConsoleFormatOptions val_options;
+    val_options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+    val_options.wrapping = ConsoleFormatOptions::Wrapping::kSmart;
+    val_options.max_depth = 2;
+
+    out->Append(FormatValueForConsole(val.value(), val_options, eval_context));
+    out->Complete();
+
+    Console::get()->Output(std::move(out));
+  });
 }
 
 }  // namespace zxdb

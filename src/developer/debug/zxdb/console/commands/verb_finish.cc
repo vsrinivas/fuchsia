@@ -56,7 +56,7 @@ Err RunVerbFinish(ConsoleContext* context, const Command& cmd) {
   else
     return Err("Internal error, frame not found in current thread.");
 
-  auto controller = std::make_unique<FinishThreadController>(stack, frame_index);
+  auto controller = std::make_unique<FinishThreadController>(stack, frame_index, &PrintReturnValue);
   cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
     if (err.has_error())
       Console::get()->Output(err);

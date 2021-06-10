@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
+#include "src/developer/debug/zxdb/client/function_return_info.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -31,7 +32,10 @@ class FinishPhysicalFrameThreadController : public ThreadController {
   //
   // The frame_to_finish must have its fingerprint computable. This means that either you're
   // finishing frame 0, or have synced all frames.
-  FinishPhysicalFrameThreadController(Stack& stack, size_t frame_to_finish);
+  //
+  // The optional callback will be issued in the instruction the physical frame has completed.
+  FinishPhysicalFrameThreadController(Stack& stack, size_t frame_to_finish,
+                                      FunctionReturnCallback cb = FunctionReturnCallback());
 
   ~FinishPhysicalFrameThreadController() override;
 
@@ -58,6 +62,9 @@ class FinishPhysicalFrameThreadController : public ThreadController {
   // Will be non-null when stepping out. During initialization or when stepping out of the earliest
   // stack frame, this can be null.
   std::unique_ptr<UntilThreadController> until_controller_;
+
+  LazySymbol function_being_finished_;
+  FunctionReturnCallback function_return_callback_;  // Possibly null.
 
   fxl::WeakPtrFactory<FinishPhysicalFrameThreadController> weak_factory_;
 };

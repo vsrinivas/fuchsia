@@ -15,10 +15,16 @@
 namespace zxdb {
 
 FinishPhysicalFrameThreadController::FinishPhysicalFrameThreadController(Stack& stack,
-                                                                         size_t frame_to_finish)
-    : frame_to_finish_(frame_to_finish), weak_factory_(this) {
+                                                                         size_t frame_to_finish,
+                                                                         FunctionReturnCallback cb)
+    : frame_to_finish_(frame_to_finish),
+      function_return_callback_(std::move(cb)),
+      weak_factory_(this) {
   FX_DCHECK(frame_to_finish < stack.size());
   FX_DCHECK(!stack[frame_to_finish]->IsInline());
+
+  // Save the symbol being finished for later notifications.
+  function_being_finished_ = stack[frame_to_finish]->GetLocation().symbol();
 
 #ifndef NDEBUG
   // Stash for validation later.
@@ -48,6 +54,12 @@ FinishPhysicalFrameThreadController::StopOp FinishPhysicalFrameThreadController:
     // start immediately after the call weren't in the stack of the original call.
     Stack& stack = thread()->GetStack();
     stack.SetHideAmbiguousInlineFrameCount(stack.GetAmbiguousInlineFrameCount());
+
+    if (function_return_callback_) {
+      function_return_callback_(
+          FunctionReturnInfo{.thread = thread(), .symbol = function_being_finished_});
+    }
+
     return kStopDone;
   }
 

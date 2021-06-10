@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
+#include "src/developer/debug/zxdb/client/function_return_info.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -34,7 +35,14 @@ class FinishThreadController : public ThreadController {
   //
   // The frame_to_finish must have its fingerprint computable. This means that either you're
   // finishing frame 0, or have synced all frames.
-  FinishThreadController(Stack& stack, size_t frame_to_finish);
+  //
+  // The optional callback will be issued when a physical frame is stepped out of. It will be on
+  // the instruction immediately following the return. This controller might be used to step out
+  // of inline frames or a physical frame followed by some inline frames. This will be issued on the
+  // outermost physical frame, and never on any inline frames. So it might not get called at all,
+  // and the call might not be the outermost function call from the user's perspective.
+  FinishThreadController(Stack& stack, size_t frame_to_finish,
+                         FunctionReturnCallback cb = FunctionReturnCallback());
 
   ~FinishThreadController() override;
 
@@ -78,6 +86,8 @@ class FinishThreadController : public ThreadController {
 
   // This controller manages the skipping of "line 0" after the finish operations.
   std::unique_ptr<StepThreadController> step_over_line_0_controller_;
+
+  FunctionReturnCallback function_return_callback_;  // Possibly null.
 
   fxl::WeakPtrFactory<FinishThreadController> weak_factory_;
 };

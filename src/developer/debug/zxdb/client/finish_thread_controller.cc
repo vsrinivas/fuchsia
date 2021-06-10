@@ -20,14 +20,23 @@
 
 namespace zxdb {
 
-FinishThreadController::FinishThreadController(Stack& stack, size_t frame_to_finish)
-    : frame_to_finish_(frame_to_finish), weak_factory_(this) {
+FinishThreadController::FinishThreadController(Stack& stack, size_t frame_to_finish,
+                                               FunctionReturnCallback cb)
+    : frame_to_finish_(frame_to_finish),
+      function_return_callback_(std::move(cb)),
+      weak_factory_(this) {
   FX_DCHECK(frame_to_finish < stack.size());
 
   if (!stack[frame_to_finish]->IsInline()) {
     // Finishing a physical frame, don't need to do anything except forward to the physical version.
-    finish_physical_controller_ =
-        std::make_unique<FinishPhysicalFrameThreadController>(stack, frame_to_finish);
+    finish_physical_controller_ = std::make_unique<FinishPhysicalFrameThreadController>(
+        stack, frame_to_finish, [this](const FunctionReturnInfo& info) {
+          // Forward the notification. Theoretically we could move the callback here but it seems
+          // cleaner to consistently forward the notification because some thread controllers will
+          // create more than one sub-controller needing a callback.
+          if (function_return_callback_)
+            function_return_callback_(info);
+        });
     return;
   }
 
@@ -76,8 +85,12 @@ void FinishThreadController::InitWithThread(Thread* thread, fit::callback<void(c
   if (found_physical_index) {
     // There is a physical frame above the one being stepped out of. Set up the physical frame
     // stepper to get out of it.
-    finish_physical_controller_ =
-        std::make_unique<FinishPhysicalFrameThreadController>(stack, *found_physical_index);
+    finish_physical_controller_ = std::make_unique<FinishPhysicalFrameThreadController>(
+        stack, *found_physical_index, [this](const FunctionReturnInfo& info) {
+          // Forward the notification.
+          if (function_return_callback_)
+            function_return_callback_(info);
+        });
     finish_physical_controller_->InitWithThread(thread, std::move(cb));
     return;
   }

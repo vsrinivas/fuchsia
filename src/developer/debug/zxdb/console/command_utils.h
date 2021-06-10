@@ -12,6 +12,7 @@
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
+#include "src/developer/debug/zxdb/client/function_return_info.h"
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/common/err_or.h"
@@ -168,6 +169,11 @@ void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on
                             const Err& err, CommandCallback callback);
 void JobCommandCallback(const char* verb, fxl::WeakPtr<Job> job, bool display_message_on_success,
                         const Err& err, CommandCallback callback);
+
+// Prints the return information from the function to the console, possibly asynchronously. This is
+// used as a callback for ThreadControllers. Does nothing if the return value is void or can't be
+// printed.
+void PrintReturnValue(const FunctionReturnInfo& info);
 
 }  // namespace zxdb
 
