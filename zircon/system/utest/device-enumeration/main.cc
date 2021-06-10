@@ -103,18 +103,12 @@ fbl::String GetTestFilter() {
     return "*Vim3*";
   } else if (!strcmp(board_name, "astro")) {
     return "*Astro*";
-  } else if (!strcmp(board_name, "cleo")) {
-    return "*Cleo*";
   } else if (!strcmp(board_name, "sherlock")) {
     return "*Sherlock*";
-  } else if (!strcmp(board_name, "mt8167s_ref")) {
-    return "*Mt8167sRef*";
   } else if (!strcmp(board_name, "msm8x53-som")) {
     return "*Msm8x53Som*";
   } else if (!strcmp(board_name, "Nocturne")) {
     return "*Nocturne*";
-  } else if (!strcmp(board_name, "c18")) {
-    return "*C18*";
   } else if (!strcmp(board_name, "nelson")) {
     return "*Nelson*";
   } else if (!strcmp(board_name, "luis")) {
@@ -401,57 +395,6 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
-TEST_F(DeviceEnumerationTest, CleoTest) {
-  static const char* kDevicePaths[] = {
-      "sys/platform/mt8167s_ref",
-      "sys/platform/0d:00:1/mt8167-gpio",
-      "sys/platform/0d:00:8/mtk-clk",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/boot1/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/boot2/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-001/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-002/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-003/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-004/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-005/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-006/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-007/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-008/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-009/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-010/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-011/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-012/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-013/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-014/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-015/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-016/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-017/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-018/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-019/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-020/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-021/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-022/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-023/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-024/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-025/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-026/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-027/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-028/block",
-      "sdio/mtk-sdmmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
-      "sdio/mtk-sdmmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2/bt-hci-mediatek",
-      "class/bt-transport/000",
-      "mt8167-buttons/hid-buttons",
-      "sys/platform/0d:00:14/mt-usb/usb-peripheral/function-000/cdc-eth-function/ethernet",
-      "touch/focaltouch HidDevice/hid-device-000",
-      "thermal/mtk-thermal",
-      "mt8167-i2c",
-      "mt8167s_gpu/mt8167s-gpu",
-      "sys/platform/00:00:f/fallback-rtc",
-  };
-
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
-}
-
 TEST_F(DeviceEnumerationTest, SherlockTest) {
   static const char* kDevicePaths[] = {
       "sys/platform/sherlock",
@@ -592,54 +535,6 @@ TEST_F(DeviceEnumerationTest, EveTest) {
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
-TEST_F(DeviceEnumerationTest, Mt8167sRefTest) {
-  static const char* kDevicePaths[] = {
-      "sys/platform/mt8167s_ref",
-      "sys/platform/0d:00:1/mt8167-gpio",
-      "sys/platform/0d:00:6/mt8167-i2c",
-      "sys/platform/0d:00:8/mtk-clk",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/boot1/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/boot2/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-001/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-002/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-003/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-004/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-005/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-006/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-007/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-008/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-009/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-010/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-011/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-012/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-013/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-014/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-015/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-016/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-017/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-018/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-019/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-020/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-021/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-022/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-023/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-024/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-025/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-026/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-027/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-028/block",
-      "sdio/mtk-sdmmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
-      "sdio/mtk-sdmmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
-      "mt8167-buttons/hid-buttons",
-      "sys/platform/0d:00:14/mt-usb/usb-peripheral/function-000/cdc-eth-function/ethernet",
-      "sys/platform/0d:00:9/mtk-thermal",
-      "sys/platform/00:00:f/fallback-rtc",
-  };
-
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
-}
-
 TEST_F(DeviceEnumerationTest, NocturneTest) {
   static const char* kDevicePaths[] = {
       "sys/platform/pci/00:1f.3/intel-hda-000/input-stream-002",
@@ -653,29 +548,6 @@ TEST_F(DeviceEnumerationTest, NocturneTest) {
       "sys/platform/acpi/acpi-lid/hid-device-000",
       "sys/platform/acpi/acpi-pwrbtn/hid-device-000",
       "sys/platform/pci/00:15.0/i2c-bus-9d60/000a/i2c-hid/hid-device-000",
-  };
-
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
-}
-
-TEST_F(DeviceEnumerationTest, C18Test) {
-  static const char* kDevicePaths[] = {
-      "sys/platform/0d:00:1/mt8167-gpio",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/boot1/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/boot2/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-001/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-002/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-003/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-004/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-005/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-006/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-007/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-008/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-009/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-010/block",
-      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-011/block",
-      "sys/platform/0d:00:e/mtk-spi-2/spi/spi-2-0",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

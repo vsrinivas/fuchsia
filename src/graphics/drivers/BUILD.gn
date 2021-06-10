@@ -12,7 +12,6 @@ group("tests") {
     "aml-gpu:tests",
     "misc:tests",
     "msd-arm-mali:tests",
-    "msd-img-rgx/mtk:tests",
     "msd-vsi-vip:tests",
     "virtio:tests",
   ]

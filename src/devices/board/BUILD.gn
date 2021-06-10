@@ -5,10 +5,8 @@
 group("drivers") {
   deps = [
     "drivers/astro",
-    "drivers/c18",
     "drivers/integration-test",
     "drivers/machina",
-    "drivers/mt8167s_ref",
     "drivers/nelson",
     "drivers/qemu-arm64",
     "drivers/sherlock:luis",

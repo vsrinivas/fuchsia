@@ -12,7 +12,6 @@ group("drivers") {
     "drivers/ftl",
     "drivers/gpt",
     "drivers/mbr",
-    "drivers/mtk-sdmmc",
     "drivers/nvme",
     "drivers/pci-sdhci",
     "drivers/ramdisk",

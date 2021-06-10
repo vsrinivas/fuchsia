@@ -115,13 +115,7 @@ template("boot_shim") {
   }
 }
 
-shims = [
-  "c18",
-  "cleo",
-  "msm8x53-som",
-  "msm8998",
-  "mt8167s_ref",
-]
+shims = []
 
 foreach(shim, shims) {
   boot_shim(shim) {

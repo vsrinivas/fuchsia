@@ -7,8 +7,6 @@ group("drivers") {
   deps = [
     "drivers/aml-usb-phy-v2",
     "drivers/dwc2",
-    "drivers/mt-musb-host",
-    "drivers/mt-musb-peripheral",
     "drivers/nelson-usb-phy",
     "drivers/usb-bus",
     "drivers/usb-composite",

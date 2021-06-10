@@ -25,7 +25,6 @@ group("tests") {
     # migrated as packages are given their own local filesystem.
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-bootfs-test",
     "//src/devices/tests/devfs:devfs-bootfs-test",
-    "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-bootfs-test",  # HW-required.
     "//src/devices/usb/tests/usb:usb-bootfs-test",  # HW-required.
     "//src/lib/framebuffer/test:framebuffer-test-bootfs-test",
     "//src/storage/gpt/test:gpt-unit-bootfs-test",

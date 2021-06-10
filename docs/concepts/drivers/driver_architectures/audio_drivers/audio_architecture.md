@@ -39,8 +39,7 @@ one driver for the audio engine and one for the codec. The [Codec
 Interface](audio_codec.md) allows having a driver for the codec implementation
 and another driver configuring the audio engine HW including the DAI and driving
 the codec(s) configuration. In this configuration the codec(s) are secondary to
-the controller. For instance the
-[mt8167-tdm-output](/src/media/audio/drivers/mt8167-tdm-output) is a driver for
+the controller. For instance the mt8167-tdm-output was a driver for
 the MediaTek MT8167S audio subsystem (audio engine) also providing the streaming
 interface for applications and communicating with any codec driver, for example
 a [tas58xx](/src/media/audio/drivers/codecs/tas58xx) exposing the codec

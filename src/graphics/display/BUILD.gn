@@ -11,11 +11,9 @@ group("drivers") {
     "drivers/amlogic-display",
     "drivers/display",
     "drivers/dsi-dw",
-    "drivers/dsi-mt",
     "drivers/fake:fake-display",
     "drivers/goldfish-display",
     "drivers/intel-i915",
-    "drivers/mt8167s-display",
     "drivers/ssd1306:ssd1306_driver",
     "drivers/vim-display",
   ]

@@ -6,14 +6,17 @@
 - Block
 - Board
 - Clock
+- Display
 - Dma
 - Firmware
 - Gpio
 - Graphics
+- I2c
 - Kernel
 - Media
 - Nand
 - Power
+- Spi
 - Testing
 - Thermal
 - Uart

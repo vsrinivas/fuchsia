@@ -9,7 +9,6 @@ group("drivers") {
     "drivers/dw-i2c",
     "drivers/i2c",
     "drivers/intel-i2c",
-    "drivers/mt8167-i2c",
   ]
 }
 

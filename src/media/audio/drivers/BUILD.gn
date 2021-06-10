@@ -14,8 +14,6 @@ group("tests") {
     "codecs:tests",
     "dai-test:tests",
     "intel-hda:tests",
-    "mt8167-tdm-input:tests",
-    "mt8167-tdm-output:tests",
     "test",
     "usb-audio:tests",
   ]

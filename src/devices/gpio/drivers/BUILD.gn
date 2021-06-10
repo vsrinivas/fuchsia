@@ -10,6 +10,5 @@ group("tests") {
     "aml-gxl-gpio:tests",
     "gpio:tests",
     "gpio-test:tests",
-    "mt-8167:tests",
   ]
 }

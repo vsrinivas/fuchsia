@@ -9,7 +9,6 @@ group("drivers") {
     "drivers/aml-gxl-gpio",
     "drivers/gpio",
     "drivers/gpio-test",
-    "drivers/mt-8167",
   ]
 }
 

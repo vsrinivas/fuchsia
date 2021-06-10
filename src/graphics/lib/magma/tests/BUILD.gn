@@ -21,9 +21,6 @@ group("tests") {
   # Add driver dependencies:
   public_deps += [
     "//garnet/packages/prod:vulkan",
-    "//src/graphics/drivers/msd-img-rgx/tests/integration:msd-img-rgx-no-hardware-integration-tests",
-    "//src/graphics/drivers/msd-img-rgx/tests/integration:msd_img_rgx_integration_tests",
-    "//src/graphics/drivers/msd-img-rgx/tests/unit_tests:msd_img_rgx_nonhardware_tests",
     "//src/graphics/drivers/msd-vsi-vip/tests/integration",
     "//src/graphics/drivers/msd-vsi-vip/tests/unit_tests:msd-vsi-vip-nonhardware-tests",
     "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
@@ -39,7 +36,6 @@ group("tests") {
   # Ensure the test MSDs are built even when not deployed
   public_deps += [
     "//src/graphics/drivers/msd-arm-mali:msd_arm_test",
-    "//src/graphics/drivers/msd-img-rgx/no_hardware:msd_img_rgx_no_hardware",
     "//src/graphics/drivers/msd-intel-gen:msd_intel_test",
     "//src/graphics/drivers/msd-vsi-vip:msd_vsi_test",
   ]

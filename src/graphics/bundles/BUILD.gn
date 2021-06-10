@@ -13,8 +13,6 @@ group("drivers") {
     "//src/graphics/drivers/misc/goldfish_control:control_driver",
     "//src/graphics/drivers/msd-arm-mali:msd_arm",
     "//src/graphics/drivers/msd-arm-mali:msd_arm_test",
-    "//src/graphics/drivers/msd-img-rgx/mtk:msd_img_rgx_mt8167",
-    "//src/graphics/drivers/msd-img-rgx/no_hardware:msd_img_rgx_no_hardware",
     "//src/graphics/drivers/msd-intel-gen:msd_intel",
     "//src/graphics/drivers/msd-intel-gen:msd_intel_test",
     "//src/graphics/drivers/msd-vsi-vip:msd_vsi",

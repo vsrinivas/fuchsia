@@ -21,7 +21,6 @@ source_set("generic-arm") {
     "//zircon/kernel/dev/timer/arm_generic",
     "//zircon/kernel/dev/uart/amlogic_s905",
     "//zircon/kernel/dev/uart/dw8250",
-    "//zircon/kernel/dev/uart/mt8167",
     "//zircon/kernel/dev/uart/nxp-imx",
     "//zircon/kernel/dev/uart/pl011",
     "//zircon/kernel/lib/boot-options",

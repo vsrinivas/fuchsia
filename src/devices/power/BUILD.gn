@@ -6,7 +6,6 @@ group("drivers") {
   testonly = true
   deps = [
     "drivers/aml-meson-power",
-    "drivers/mtk-power",
     "drivers/power",
     "drivers/silergy:sy-buck",
   ]

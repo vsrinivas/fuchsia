@@ -19,7 +19,6 @@ group("tests") {
     "dma-buffer:tests",
     "driver:tests",
     "driver2:tests",
-    "mt8167:tests",
     "synchronous-executor:tests",
     "//zircon/system/ulib/devmgr-integration-test:tests",
     "//zircon/system/ulib/driver-integration-test:tests",

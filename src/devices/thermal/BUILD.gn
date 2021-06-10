@@ -9,7 +9,6 @@ group("drivers") {
     "drivers/aml-thermal-s905d2g-legacy",
     "drivers/aml-thermal-s912",
     "drivers/aml-thermistor",
-    "drivers/mtk-thermal",
   ]
 }
 

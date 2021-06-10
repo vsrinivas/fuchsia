@@ -6,9 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "astro:tests",
-    "c18:tests",
     "machina:tests",
-    "mt8167s_ref:tests",
     "nelson:tests",
     "qemu-arm64:tests",
     "sherlock:tests",

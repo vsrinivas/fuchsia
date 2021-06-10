@@ -14,7 +14,6 @@ group("tests") {
     "ftl:tests",
     "gpt:tests",
     "mbr:tests",
-    "mtk-sdmmc:tests",
     "pci-sdhci:tests",
     "ramdisk:tests",
     "sdhci:tests",

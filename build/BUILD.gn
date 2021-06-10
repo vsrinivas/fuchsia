@@ -136,8 +136,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//src/devices/lib/dma-buffer/*",
     "//src/devices/lib/focaltech/*",
     "//src/devices/lib/mmio/*",
-    "//src/devices/lib/mt8167/*",
-    "//src/devices/lib/mt8183/*",
     "//src/devices/lib/synchronous-executor/*",
     "//src/devices/lib/thermal/*",
     "//src/devices/lib/ti/*",
