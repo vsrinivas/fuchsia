@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/abi_null.h"
 #include "src/developer/debug/zxdb/expr/builtin_types.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
@@ -14,7 +15,8 @@
 namespace zxdb {
 
 MockEvalContext::MockEvalContext()
-    : data_provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) {}
+    : abi_(std::make_unique<AbiNull>()),
+      data_provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) {}
 
 MockEvalContext::~MockEvalContext() = default;
 

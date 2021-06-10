@@ -22,6 +22,8 @@ class Triple;
 
 namespace zxdb {
 
+class Abi;
+
 class ArchInfo {
  public:
   ArchInfo();
@@ -30,6 +32,8 @@ class ArchInfo {
   Err Init(debug_ipc::Arch arch);
 
   debug_ipc::Arch arch() const { return arch_; }
+
+  const std::shared_ptr<Abi>& abi() const { return abi_; }
 
   // Returns true of the instruction length is fixed.
   bool is_fixed_instr() const { return is_fixed_instr_; }
@@ -42,13 +46,14 @@ class ArchInfo {
   // isn't correct for x86 (reports 1).
   size_t max_instr_len() const { return max_instr_len_; }
 
-  // In LLVM a configuration name is called a "triple" even though it contains
-  // more than 3 fields.
+  // In LLVM a configuration name is called a "triple" even though it contains more than 3 fields.
+  // The triple() will be null for unknown architectures.
   const std::string& triple_name() const { return triple_name_; }
   const llvm::Triple* triple() const { return triple_.get(); }
 
   const std::string& processor_name() const { return processor_name_; }
 
+  // Thee returned pointers will be null for unknown architectures.
   const llvm::Target* target() const { return target_; }
   const llvm::MCInstrInfo* instr_info() const { return instr_info_.get(); }
   const llvm::MCRegisterInfo* register_info() const { return register_info_.get(); }
@@ -57,6 +62,7 @@ class ArchInfo {
 
  private:
   debug_ipc::Arch arch_ = debug_ipc::Arch::kUnknown;
+  std::shared_ptr<Abi> abi_;
 
   bool is_fixed_instr_ = false;
   size_t instr_align_ = 1;

@@ -29,9 +29,10 @@ class TestEvalContextImpl : public EvalContextImpl {
   FRIEND_MAKE_REF_COUNTED(TestEvalContextImpl);
   FRIEND_REF_COUNTED_THREAD_SAFE(TestEvalContextImpl);
 
-  TestEvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
+  TestEvalContextImpl(std::shared_ptr<Abi> abi, fxl::WeakPtr<const ProcessSymbols> process_symbols,
                       fxl::RefPtr<SymbolDataProvider> data_provider, ExprLanguage language)
-      : EvalContextImpl(std::move(process_symbols), std::move(data_provider), language) {}
+      : EvalContextImpl(std::move(abi), std::move(process_symbols), std::move(data_provider),
+                        language) {}
 
   bool should_promote_ = false;
 };

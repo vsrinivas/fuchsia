@@ -39,6 +39,7 @@ class PrettyEvalContext : public EvalContext {
 
   // EvalContext implementation. Everything except GetNamedValue() passes through to the impl_.
   ExprLanguage GetLanguage() const override { return impl_->GetLanguage(); }
+  const std::shared_ptr<Abi>& GetAbi() const override { return impl_->GetAbi(); }
   FindNameContext GetFindNameContext() const override { return impl_->GetFindNameContext(); }
   void GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override {

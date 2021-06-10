@@ -10,6 +10,7 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/expr/abi_null.h"
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
@@ -64,9 +65,9 @@ class EvalContextImplTest : public TestWithLoop {
   // Returns an evaluation context for a code block. If the code block is null, a default one will
   // be created with MakeCodeBlock().
   fxl::RefPtr<EvalContext> MakeEvalContext(fxl::RefPtr<CodeBlock> code_block = nullptr) {
-    return fxl::MakeRefCounted<EvalContextImpl>(fxl::WeakPtr<const ProcessSymbols>(), provider(),
-                                                ExprLanguage::kC,
-                                                code_block ? code_block : MakeCodeBlock());
+    return fxl::MakeRefCounted<EvalContextImpl>(
+        std::make_shared<AbiNull>(), fxl::WeakPtr<const ProcessSymbols>(), provider(),
+        ExprLanguage::kC, code_block ? code_block : MakeCodeBlock());
   }
 
  private:
@@ -352,7 +353,8 @@ TEST_F(EvalContextImplTest, ExternVariable) {
   constexpr uint64_t kValValue = 0x0102030405060708;
   provider()->AddMemory(kAbsoluteValAddress, {8, 7, 6, 5, 4, 3, 2, 1});
 
-  auto context = fxl::MakeRefCounted<EvalContextImpl>(setup.process().GetWeakPtr(), provider(),
+  auto context = fxl::MakeRefCounted<EvalContextImpl>(std::make_shared<AbiNull>(),
+                                                      setup.process().GetWeakPtr(), provider(),
                                                       ExprLanguage::kC, MakeCodeBlock());
 
   // Resolving the extern variable should give the value that the non-extern one points to.

@@ -126,7 +126,7 @@ TEST(FormatContext, FormatAsmContext) {
   opts.bp_addrs[start_address] = true;
 
   OutputBuffer out;
-  err = FormatAsmContext(&arch, dump, opts, nullptr, SourceFileProvider(), &out);
+  err = FormatAsmContext(arch, dump, opts, nullptr, SourceFileProvider(), &out);
   ASSERT_FALSE(err.has_error());
 
   EXPECT_EQ(
@@ -142,7 +142,7 @@ TEST(FormatContext, FormatAsmContext) {
   opts.emit_bytes = true;
   opts.bp_addrs.clear();
   opts.bp_addrs[opts.active_address] = false;
-  err = FormatAsmContext(&arch, dump, opts, nullptr, SourceFileProvider(), &out);
+  err = FormatAsmContext(arch, dump, opts, nullptr, SourceFileProvider(), &out);
   ASSERT_FALSE(err.has_error());
 
   EXPECT_EQ(
@@ -188,7 +188,7 @@ TEST(FormatContext, FormatAsmContext) {
   module_symbols->AddSymbolLocations(
       0x123456788, {Location(0x123456788, FileLine(kFileName, 5), 0, symbol_context)});
 
-  err = FormatAsmContext(&arch, dump, opts, &process, file_provider, &out);
+  err = FormatAsmContext(arch, dump, opts, &process, file_provider, &out);
   ASSERT_FALSE(err.has_error());
 
   EXPECT_EQ(

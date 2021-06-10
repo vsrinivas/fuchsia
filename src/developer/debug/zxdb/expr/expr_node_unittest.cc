@@ -12,6 +12,7 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/expr/abi_null.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/expr/eval_test_support.h"
@@ -145,7 +146,8 @@ TEST_F(ExprNodeTest, LiteralChar) {
 // EvalContextImpl.
 TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   auto data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
-  auto context = fxl::MakeRefCounted<EvalContextImpl>(fxl::WeakPtr<const ProcessSymbols>(),
+  auto context = fxl::MakeRefCounted<EvalContextImpl>(std::make_shared<AbiNull>(),
+                                                      fxl::WeakPtr<const ProcessSymbols>(),
                                                       data_provider, ExprLanguage::kC);
 
   // Dereferencing should remove the const on the pointer but not the pointee.
@@ -212,7 +214,8 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
 
 TEST_F(ExprNodeTest, DereferenceErrors) {
   auto data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
-  auto context = fxl::MakeRefCounted<EvalContextImpl>(fxl::WeakPtr<const ProcessSymbols>(),
+  auto context = fxl::MakeRefCounted<EvalContextImpl>(std::make_shared<AbiNull>(),
+                                                      fxl::WeakPtr<const ProcessSymbols>(),
                                                       data_provider, ExprLanguage::kC);
 
   auto base_type = MakeInt32Type();

@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/client/client_eval_context_impl.h"
 
+#include "src/developer/debug/zxdb/client/arch_info.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -17,7 +18,8 @@ namespace zxdb {
 // Do not store the Frame pointer because it may got out of scope before this class does.
 ClientEvalContextImpl::ClientEvalContextImpl(const Frame* frame,
                                              std::optional<ExprLanguage> language)
-    : EvalContextImpl(frame->GetThread()->GetProcess()->GetSymbols()->GetWeakPtr(),
+    : EvalContextImpl(frame->session()->arch_info().abi(),
+                      frame->GetThread()->GetProcess()->GetSymbols()->GetWeakPtr(),
                       frame->GetSymbolDataProvider(), frame->GetLocation(), language),
       weak_target_(frame->GetThread()->GetProcess()->GetTarget()->GetWeakPtr()),
       weak_system_(frame->session()->system().GetWeakPtr()) {
@@ -27,7 +29,8 @@ ClientEvalContextImpl::ClientEvalContextImpl(const Frame* frame,
 }
 
 ClientEvalContextImpl::ClientEvalContextImpl(Target* target, std::optional<ExprLanguage> language)
-    : EvalContextImpl(target->GetProcess() ? target->GetProcess()->GetSymbols()->GetWeakPtr()
+    : EvalContextImpl(target->session()->arch_info().abi(),
+                      target->GetProcess() ? target->GetProcess()->GetSymbols()->GetWeakPtr()
                                            : fxl::WeakPtr<const ProcessSymbols>(),
                       target->GetProcess() ? target->GetProcess()->GetSymbolDataProvider()
                                            : fxl::MakeRefCounted<SymbolDataProvider>(),

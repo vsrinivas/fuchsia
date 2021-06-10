@@ -137,7 +137,7 @@ struct FormatAsmOpts {
 // When options.include_source is not set, this can be null.
 //
 // On error, returns the error and does nothing.
-Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const FormatAsmOpts& opts,
+Err FormatAsmContext(const ArchInfo& arch_info, const MemoryDump& dump, const FormatAsmOpts& opts,
                      Process* process, const SourceFileProvider& file_provider, OutputBuffer* out);
 
 // Creates a source code context of the given location and puts it in the output buffer. This does

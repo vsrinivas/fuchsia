@@ -132,11 +132,11 @@ Err RunDisassembleVerb(ConsoleContext* context, const Command& cmd) {
     if (Err err = StringToUint64(cmd.GetSwitchValue(kNumSwitch), &num_instr); err.has_error())
       return err;
     options.max_instructions = num_instr;
-    size = options.max_instructions * context->session()->arch_info()->max_instr_len();
+    size = options.max_instructions * context->session()->arch_info().max_instr_len();
   } else {
     // Default instruction count when no symbol and no explicit size is given.
     options.max_instructions = 16;
-    size = options.max_instructions * context->session()->arch_info()->max_instr_len();
+    size = options.max_instructions * context->session()->arch_info().max_instr_len();
     size_is_default = true;
   }
 

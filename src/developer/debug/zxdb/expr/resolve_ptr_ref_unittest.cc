@@ -8,6 +8,7 @@
 
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/expr/abi_null.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/expr/test_eval_context_impl.h"
@@ -211,7 +212,8 @@ TEST_F(ResolvePtrRefTest, Derived) {
   VirtualBaseTestSetup setup(symbol_data_provider.get(), mock_module_symbols);
 
   auto eval_context = fxl::MakeRefCounted<TestEvalContextImpl>(
-      symbol_setup.process().GetWeakPtr(), symbol_data_provider, ExprLanguage::kC);
+      std::make_shared<AbiNull>(), symbol_setup.process().GetWeakPtr(), symbol_data_provider,
+      ExprLanguage::kC);
 
   ExprValue ref_value(setup.kBaseAddress, setup.base_class_ref);
   ExprValue ptr_value(setup.kBaseAddress, setup.base_class_ptr);

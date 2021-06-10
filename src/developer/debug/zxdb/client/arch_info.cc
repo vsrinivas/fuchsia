@@ -14,6 +14,8 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "src/developer/debug/zxdb/expr/abi_arm64.h"
+#include "src/developer/debug/zxdb/expr/abi_x64.h"
 
 namespace zxdb {
 
@@ -42,7 +44,12 @@ Err ArchInfo::Init(debug_ipc::Arch arch) {
   arch_ = arch;
 
   switch (arch) {
+    case debug_ipc::Arch::kUnknown:
+      // This is used for some tests and default values. LLVM will not be initialized.
+      return Err();
+
     case debug_ipc::Arch::kX64:
+      abi_ = std::make_shared<AbiX64>();
       is_fixed_instr_ = false;
       max_instr_len_ = 15;
       instr_align_ = 1;
@@ -50,6 +57,7 @@ Err ArchInfo::Init(debug_ipc::Arch arch) {
       processor_name_ = "x86-64";
       break;
     case debug_ipc::Arch::kArm64:
+      abi_ = std::make_shared<AbiArm64>();
       is_fixed_instr_ = true;
       max_instr_len_ = 4;
       instr_align_ = 4;

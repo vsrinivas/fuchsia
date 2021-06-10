@@ -277,20 +277,19 @@ Err Session::PendingConnection::DoConnectBackgroundThread() {
   return Err("Unsupported Connection type");
 }
 
-// Session ---------------------------------------------------------------------
+// Session -----------------------------------------------------------------------------------------
 
 Session::Session()
     : remote_api_(std::make_unique<RemoteAPIImpl>(this)), system_(this), weak_factory_(this) {
+  SetArch(debug_ipc::Arch::kUnknown);
+
   ListenForSystemSettings();
 }
 
 Session::Session(std::unique_ptr<RemoteAPI> remote_api, debug_ipc::Arch arch)
     : remote_api_(std::move(remote_api)), system_(this), arch_(arch), weak_factory_(this) {
-  arch_info_ = std::make_unique<ArchInfo>();
-  Err err = arch_info_->Init(arch);
-
-  // Should not fail for synthetically set-up architectures.
-  FX_DCHECK(!err.has_error());
+  Err err = SetArch(arch);
+  FX_DCHECK(!err.has_error());  // Should not fail for synthetically set-up architectures.
 
   ListenForSystemSettings();
 }
@@ -431,6 +430,9 @@ Err Session::SetArch(debug_ipc::Arch arch) {
   Err arch_err = arch_info_->Init(arch);
   if (!arch_err.has_error()) {
     arch_ = arch;
+  } else {
+    // Rollback to default-initialized ArchInfo;
+    arch_info_ = std::make_unique<ArchInfo>();
   }
 
   return arch_err;
@@ -515,7 +517,7 @@ bool Session::ClearConnectionData() {
   stream_ = nullptr;
   connected_info_.host.clear();
   connected_info_.port = 0;
-  arch_info_.reset();
+  arch_info_ = std::make_unique<ArchInfo>();  // Reset to default one (always keep non-null).
   connection_storage_.reset();
   arch_ = debug_ipc::Arch::kUnknown;
   system_.DidDisconnect();
@@ -789,8 +791,8 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
     if (callback) {
       callback(
           Err("The IPC version of the debug_agent on the system (v%u) doesn't match\n"
-              "the zxdb frontend's IPC version (v%u).", reply.version,
-              debug_ipc::kProtocolVersion));
+              "the zxdb frontend's IPC version (v%u).",
+              reply.version, debug_ipc::kProtocolVersion));
     }
     return;
   }

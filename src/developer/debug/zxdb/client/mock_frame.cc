@@ -5,6 +5,8 @@
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/client/arch_info.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
@@ -121,7 +123,8 @@ fxl::RefPtr<SymbolDataProvider> MockFrame::GetSymbolDataProvider() const {
 
 fxl::RefPtr<EvalContext> MockFrame::GetEvalContext() const {
   if (!eval_context_) {
-    eval_context_ = fxl::MakeRefCounted<EvalContextImpl>(fxl::WeakPtr<const ProcessSymbols>(),
+    eval_context_ = fxl::MakeRefCounted<EvalContextImpl>(session()->arch_info().abi(),
+                                                         fxl::WeakPtr<const ProcessSymbols>(),
                                                          GetSymbolDataProvider(), location_);
   }
   return eval_context_;

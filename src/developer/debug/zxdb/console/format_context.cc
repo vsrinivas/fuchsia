@@ -286,10 +286,10 @@ Err OutputSourceContext(Process* process, std::unique_ptr<SourceFileProvider> fi
     options.active_address = location.address();
 
     uint64_t start_address;
-    const ArchInfo* arch_info = process->session()->arch_info();
-    if (arch_info->is_fixed_instr()) {
+    const ArchInfo& arch_info = process->session()->arch_info();
+    if (arch_info.is_fixed_instr()) {
       // Fixed instruction length, back up 2 instructions to provide context.
-      start_address = location.address() - 2 * arch_info->max_instr_len();
+      start_address = location.address() - 2 * arch_info.max_instr_len();
       options.max_instructions = 5;
     } else {
       // Variable length instructions. Since this code path is triggered when
@@ -303,7 +303,7 @@ Err OutputSourceContext(Process* process, std::unique_ptr<SourceFileProvider> fi
       options.max_instructions = 4;
     }
 
-    size_t size = options.max_instructions * arch_info->max_instr_len();
+    size_t size = options.max_instructions * arch_info.max_instr_len();
 
     process->ReadMemory(
         start_address, size,
@@ -443,11 +443,11 @@ Err FormatSourceContext(const std::string& file_name_for_display, const std::str
   return Err();
 }
 
-Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const FormatAsmOpts& opts,
+Err FormatAsmContext(const ArchInfo& arch_info, const MemoryDump& dump, const FormatAsmOpts& opts,
                      Process* process, const SourceFileProvider& file_provider, OutputBuffer* out) {
   // Make the disassembler.
   Disassembler disassembler;
-  Err my_err = disassembler.Init(arch_info);
+  Err my_err = disassembler.Init(&arch_info);
   if (my_err.has_error())
     return my_err;
 

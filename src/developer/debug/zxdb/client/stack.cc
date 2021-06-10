@@ -10,11 +10,14 @@
 
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/client/arch_info.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/abi.h"
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
@@ -73,8 +76,8 @@ class InlineFrame final : public Frame {
       fxl::WeakPtr<const ProcessSymbols> process_syms;
       if (Thread* thread = GetThread())
         process_syms = thread->GetProcess()->GetSymbols()->GetWeakPtr();
-      symbol_eval_context_ =
-          fxl::MakeRefCounted<EvalContextImpl>(process_syms, GetSymbolDataProvider(), location_);
+      symbol_eval_context_ = fxl::MakeRefCounted<EvalContextImpl>(
+          session()->arch_info().abi(), process_syms, GetSymbolDataProvider(), location_);
     }
     return symbol_eval_context_;
   }

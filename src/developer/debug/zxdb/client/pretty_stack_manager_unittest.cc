@@ -10,6 +10,7 @@
 
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/mock_stack_delegate.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 
 namespace zxdb {
@@ -32,7 +33,8 @@ std::vector<std::unique_ptr<Frame>> GetTestFrames() {
 }  // namespace
 
 TEST(PrettyStackManager, StackGlobMatchesAt) {
-  MockStackDelegate delegate;
+  Session session;
+  MockStackDelegate delegate(&session);
   Stack stack(&delegate);
   delegate.set_stack(&stack);
 
@@ -98,7 +100,8 @@ TEST(PrettyStackManager, StackGlobMatchesAt) {
 }
 
 TEST(PrettyStackManager, GetMatchAt) {
-  MockStackDelegate delegate;
+  Session session;
+  MockStackDelegate delegate(&session);
   Stack stack(&delegate);
   delegate.set_stack(&stack);
 

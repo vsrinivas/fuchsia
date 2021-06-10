@@ -45,6 +45,7 @@ class EvalContextImpl : public EvalContext {
   // doesn't have enough context to know what they should be. The ClientEvalContextImpl hooks
   // some things up to the debugger settings system.
   ExprLanguage GetLanguage() const override;
+  const std::shared_ptr<Abi>& GetAbi() const override { return abi_; }
   FindNameContext GetFindNameContext() const override;
   void GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override;
@@ -74,10 +75,10 @@ class EvalContextImpl : public EvalContext {
   //    includes local variables, variables on "this", and things relative to the current namespace.
   //
   // The variant that takes a location will extract the code block from the location if possible.
-  EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
+  EvalContextImpl(std::shared_ptr<Abi> abi, fxl::WeakPtr<const ProcessSymbols> process_symbols,
                   fxl::RefPtr<SymbolDataProvider> data_provider, ExprLanguage language,
                   fxl::RefPtr<CodeBlock> code_block = fxl::RefPtr<CodeBlock>());
-  EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
+  EvalContextImpl(std::shared_ptr<Abi> abi, fxl::WeakPtr<const ProcessSymbols> process_symbols,
                   fxl::RefPtr<SymbolDataProvider> data_provider, const Location& location,
                   std::optional<ExprLanguage> force_language = std::nullopt);
   ~EvalContextImpl() override;
@@ -93,6 +94,8 @@ class EvalContextImpl : public EvalContext {
 
   // Implements type name lookup on the target's symbol index.
   FoundName DoTargetSymbolsNameLookup(const ParsedIdentifier& ident);
+
+  std::shared_ptr<Abi> abi_;
 
   fxl::WeakPtr<const ProcessSymbols> process_symbols_;  // Possibly null.
   fxl::RefPtr<SymbolDataProvider> data_provider_;       // Possibly null.

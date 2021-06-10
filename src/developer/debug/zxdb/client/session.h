@@ -11,9 +11,11 @@
 #include <vector>
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/zxdb/client/arch_info.h"
 #include "src/developer/debug/zxdb/client/session_observer.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/abi.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -129,8 +131,8 @@ class Session : public SettingStoreObserver {
   // Architecture of the attached system. Will be "kUnknown" when not connected.
   debug_ipc::Arch arch() const { return arch_; }
 
-  // Architecture information of the attached system. Will be null when not connected.
-  const ArchInfo* arch_info() const { return arch_info_.get(); }
+  // Architecture information of the attached system.
+  const ArchInfo& arch_info() const { return *arch_info_; }
 
   // Observer list getters.
   fxl::ObserverList<TargetObserver>& target_observers() { return target_observers_; }
@@ -263,7 +265,7 @@ class Session : public SettingStoreObserver {
   System system_;
 
   debug_ipc::Arch arch_ = debug_ipc::Arch::kUnknown;
-  std::unique_ptr<ArchInfo> arch_info_;
+  std::unique_ptr<ArchInfo> arch_info_;  // Guaranteed non-null.
 
   // The last connection that was made by the session. Will have an empty host and a 0 port
   // if there has never been a connection.

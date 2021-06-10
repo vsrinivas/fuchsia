@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/mock_stack_delegate.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
@@ -83,7 +84,8 @@ std::vector<std::unique_ptr<Frame>> MakeInlineStackFrames() {
 // IndexForFrame is trivial when there's no inline frame, but when there is, the returned index
 // must take this into account.
 TEST_F(StackTest, IndexForFrame) {
-  MockStackDelegate delegate;
+  Session session;
+  MockStackDelegate delegate(&session);
   Stack stack(&delegate);
   delegate.set_stack(&stack);
 
@@ -124,7 +126,8 @@ TEST_F(StackTest, IndexForFrame) {
 
 // Tests fingerprint computations involving inline frames.
 TEST_F(StackTest, InlineFingerprint) {
-  MockStackDelegate delegate;
+  Session session;
+  MockStackDelegate delegate(&session);
   Stack stack(&delegate);
   delegate.set_stack(&stack);
   stack.SetFramesForTest(MakeInlineStackFrames(), true);
@@ -187,7 +190,8 @@ TEST_F(StackTest, InlineExpansion) {
   FileLine inline_exec_line(kFileName, 20);
   FileLine top_line(kFileName, 30);
 
-  MockStackDelegate delegate;
+  Session session;
+  MockStackDelegate delegate(&session);
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
   // Non-inline location for the top stack frame.
@@ -303,7 +307,8 @@ TEST_F(StackTest, InlineHiding) {
   // Bottom frame has no inline frame.
   frames.push_back(std::move(phys_bottom));
 
-  MockStackDelegate delegate;
+  Session session;
+  MockStackDelegate delegate(&session);
   Stack stack(&delegate);
   delegate.set_stack(&stack);
 
@@ -324,7 +329,8 @@ TEST_F(StackTest, InlineHiding) {
 // Appends stack items to an already existing stack via SetFrames(). The existing frames and the
 // inline hide count should be unchanged.
 TEST_F(StackTest, UpdateExisting) {
-  MockStackDelegate delegate;
+  Session session;
+  MockStackDelegate delegate(&session);
   Stack stack(&delegate);
   delegate.set_stack(&stack);
 
@@ -395,7 +401,8 @@ TEST_F(StackTest, InlineVars) {
   constexpr uint64_t kInlineAddr = 0x1002;
   constexpr uint64_t kPhysAddr = 0x1000;
 
-  MockStackDelegate delegate;
+  Session session;
+  MockStackDelegate delegate(&session);
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
   // Make inline function.

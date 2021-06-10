@@ -19,6 +19,7 @@
 
 namespace zxdb {
 
+class Abi;
 class Err;
 class PrettyTypeManager;
 class Symbol;
@@ -39,6 +40,9 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
  public:
   // Returns the language associated with the expression.
   virtual ExprLanguage GetLanguage() const = 0;
+
+  // The ABI defines the calling conventions on the current platform.
+  virtual const std::shared_ptr<Abi>& GetAbi() const = 0;
 
   // Returns a context for looking up names.
   virtual FindNameContext GetFindNameContext() const = 0;

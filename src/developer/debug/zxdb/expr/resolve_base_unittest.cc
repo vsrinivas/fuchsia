@@ -8,6 +8,7 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/expr/abi_null.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/expr/test_eval_context_impl.h"
 #include "src/developer/debug/zxdb/expr/virtual_base_test_setup.h"
@@ -61,7 +62,8 @@ TEST_F(ResolveBase, PromotePtrRefToDerived) {
 
   auto symbol_data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
   auto eval_context = fxl::MakeRefCounted<TestEvalContextImpl>(
-      symbol_setup.process().GetWeakPtr(), symbol_data_provider, ExprLanguage::kC);
+      std::make_shared<AbiNull>(), symbol_setup.process().GetWeakPtr(), symbol_data_provider,
+      ExprLanguage::kC);
 
   VirtualBaseTestSetup setup(symbol_data_provider.get(), mock_module_symbols);
 

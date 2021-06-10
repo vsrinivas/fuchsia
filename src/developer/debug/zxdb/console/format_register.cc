@@ -20,6 +20,7 @@
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_formatters.h"
+#include "src/developer/debug/zxdb/expr/abi_null.h"
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/format_options.h"
@@ -107,7 +108,8 @@ void FormatGeneralVectorRegisters(const FormatRegisterOptions& options,
 
   // The formatter needs an eval context but we don't need it to have any capabilities.
   auto eval_context = fxl::MakeRefCounted<EvalContextImpl>(
-      fxl::WeakPtr<const ProcessSymbols>(), fxl::RefPtr<SymbolDataProvider>(), Location());
+      std::make_shared<AbiNull>(), fxl::WeakPtr<const ProcessSymbols>(),
+      fxl::RefPtr<SymbolDataProvider>(), Location());
 
   // Largest number of vector elements of all registers.
   size_t max_children = 0;

@@ -22,6 +22,7 @@ class MockEvalContext : public EvalContext {
   PrettyTypeManager& pretty_type_manager() { return pretty_type_manager_; }
 
   void set_language(ExprLanguage lang) { language_ = lang; }
+  void set_abi(std::shared_ptr<Abi> abi) { abi_ = std::move(abi); }
   void set_vector_register_format(VectorRegisterFormat fmt) { vector_register_format_ = fmt; }
   void set_should_promote_to_derived(bool p) { should_promote_to_derived_ = p; }
 
@@ -35,6 +36,7 @@ class MockEvalContext : public EvalContext {
 
   // EvalContext implementation.
   ExprLanguage GetLanguage() const override { return language_; }
+  const std::shared_ptr<Abi>& GetAbi() const override { return abi_; }
   FindNameContext GetFindNameContext() const override;
   void GetNamedValue(const ParsedIdentifier& ident, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override;
@@ -54,6 +56,7 @@ class MockEvalContext : public EvalContext {
   ~MockEvalContext();
 
  private:
+  std::shared_ptr<Abi> abi_;
   fxl::RefPtr<MockSymbolDataProvider> data_provider_;
   std::map<std::string, ExprValue> values_by_name_;
   std::map<const Value*, ExprValue> values_by_symbol_;

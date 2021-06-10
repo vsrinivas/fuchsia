@@ -95,20 +95,24 @@ ErrOrValue RegisterDataToValue(RegisterID id, VectorRegisterFormat vector_fmt,
 
 }  // namespace
 
-EvalContextImpl::EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
+EvalContextImpl::EvalContextImpl(std::shared_ptr<Abi> abi,
+                                 fxl::WeakPtr<const ProcessSymbols> process_symbols,
                                  fxl::RefPtr<SymbolDataProvider> data_provider,
                                  ExprLanguage language, fxl::RefPtr<CodeBlock> code_block)
-    : process_symbols_(std::move(process_symbols)),
+    : abi_(std::move(abi)),
+      process_symbols_(std::move(process_symbols)),
       data_provider_(data_provider),
       block_(std::move(code_block)),
       language_(language),
       weak_factory_(this) {}
 
-EvalContextImpl::EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
+EvalContextImpl::EvalContextImpl(std::shared_ptr<Abi> abi,
+                                 fxl::WeakPtr<const ProcessSymbols> process_symbols,
                                  fxl::RefPtr<SymbolDataProvider> data_provider,
                                  const Location& location,
                                  std::optional<ExprLanguage> force_language)
-    : process_symbols_(std::move(process_symbols)),
+    : abi_(std::move(abi)),
+      process_symbols_(std::move(process_symbols)),
       data_provider_(data_provider),
       weak_factory_(this) {
   const CodeBlock* function = nullptr;

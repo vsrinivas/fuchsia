@@ -196,7 +196,7 @@ void GetSubstatementCallsForLine(
   AddressRange extent = line_code.GetExtent();
   process->ReadMemory(
       extent.begin(), extent.size(),
-      [arch_info = process->session()->arch_info(),
+      [arch_info = &process->session()->arch_info(),
        weak_symbols = process->GetSymbols()->GetWeakPtr(), loc, line_code = std::move(line_code),
        inlines = std::move(inlines), cb = std::move(cb)](const Err& in_err, MemoryDump dump) {
         if (in_err.has_error())

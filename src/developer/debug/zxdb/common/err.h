@@ -19,7 +19,8 @@ enum class ErrType {
   kCorruptMessage,  // Data was corrupted between us and the debug agent.
   kClientApi,       // An invalid client API call.
   kInput,           // Some problem getting input from the user (parse error, etc.).
-  kOptimizedOut     // Not available because of optimization in the debugged program.
+  kOptimizedOut,    // Not available because of optimization in the debugged program.
+  kUnsupported      // The answer is probably knowable but the debugger doesn't support it yet.
 };
 
 class Err {

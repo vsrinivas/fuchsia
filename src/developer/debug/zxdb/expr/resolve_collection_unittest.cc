@@ -10,6 +10,7 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/expr/abi_null.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
@@ -44,7 +45,8 @@ class ResolveCollectionTest : public TestWithLoop {
     data_provider_ = fxl::MakeRefCounted<MockSymbolDataProvider>();
 
     // With the mock symbol system above, we make a real EvalContext that uses it.
-    eval_context_ = fxl::MakeRefCounted<TestEvalContextImpl>(process_setup_.process().GetWeakPtr(),
+    eval_context_ = fxl::MakeRefCounted<TestEvalContextImpl>(std::make_shared<AbiNull>(),
+                                                             process_setup_.process().GetWeakPtr(),
                                                              data_provider_, ExprLanguage::kC);
   }
   void TearDown() override {
