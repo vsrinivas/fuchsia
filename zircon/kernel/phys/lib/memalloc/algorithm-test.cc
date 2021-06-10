@@ -24,6 +24,7 @@ namespace {
 
 constexpr uint64_t kMax = std::numeric_limits<uint64_t>::max();
 
+using memalloc::MemRangeStream;
 using memalloc::Type;
 
 std::string ToString(const memalloc::MemRange& range) {
@@ -63,10 +64,11 @@ void CompareRanges(cpp20::span<const memalloc::MemRange> expected,
 void TestFindNormalizedRamRanges(cpp20::span<memalloc::MemRange> input,
                                  cpp20::span<const memalloc::MemRange> expected) {
   std::vector<memalloc::MemRange> actual;
-  memalloc::FindNormalizedRamRanges(input, [&actual](const memalloc::MemRange& range) {
-    actual.push_back(range);
-    return true;
-  });
+  memalloc::FindNormalizedRamRanges(MemRangeStream{input},
+                                    [&actual](const memalloc::MemRange& range) {
+                                      actual.push_back(range);
+                                      return true;
+                                    });
   ASSERT_NO_FATAL_FAILURE(CompareRanges(expected, {actual}));
 }
 
@@ -75,12 +77,32 @@ void TestFindNormalizedRanges(cpp20::span<memalloc::MemRange> input,
   const size_t scratch_size = 4 * input.size() * sizeof(void*);
   auto scratch = std::make_unique<void*[]>(scratch_size);
   std::vector<memalloc::MemRange> actual;
-  memalloc::FindNormalizedRanges(input, {scratch.get(), scratch_size},
+  memalloc::FindNormalizedRanges(MemRangeStream{input}, {scratch.get(), scratch_size},
                                  [&actual](const memalloc::MemRange& range) {
                                    actual.push_back(range);
                                    return true;
                                  });
   ASSERT_NO_FATAL_FAILURE(CompareRanges(expected, {actual}));
+}
+
+void TestMemRangeStream(cpp20::span<memalloc::MemRange> input,
+                        cpp20::span<memalloc::MemRange> aux_input,
+                        cpp20::span<const memalloc::MemRange> expected) {
+  memalloc::MemRangeStream stream(input, aux_input);
+  EXPECT_EQ(input.size() + aux_input.size(), stream.size());
+
+  std::vector<memalloc::MemRange> actual;
+  for (const memalloc::MemRange* range = stream(); range; range = stream()) {
+    actual.push_back(*range);
+  }
+  EXPECT_EQ(actual.size(), stream.size());
+  EXPECT_EQ(actual.empty(), stream.empty());
+  ASSERT_NO_FATAL_FAILURE(CompareRanges(expected, {actual}));
+
+  // Repeated calls should yield nullptr.
+  EXPECT_EQ(nullptr, stream());
+  EXPECT_EQ(nullptr, stream());
+  EXPECT_EQ(nullptr, stream());
 }
 
 TEST(MemallocFindTests, NoRanges) {
@@ -409,21 +431,21 @@ TEST(MemallocFindTests, CanShortCircuit) {
 
   // Only record the first RAM range.
   Shuffle(ranges);
-  memalloc::FindNormalizedRamRanges({ranges}, record_first_n(1));
+  memalloc::FindNormalizedRamRanges(MemRangeStream{ranges}, record_first_n(1));
   ASSERT_EQ(1u, outputs.size());
   EXPECT_EQ(normalized[0], outputs[0]);
 
   // Only record the first range.
   Shuffle(ranges);
   outputs.clear();
-  memalloc::FindNormalizedRanges({ranges}, scratch, record_first_n(1));
+  memalloc::FindNormalizedRanges(MemRangeStream{ranges}, scratch, record_first_n(1));
   ASSERT_EQ(1u, outputs.size());
   EXPECT_EQ(normalized[0], outputs[0]);
 
   // Only record the first two RAM ranges.
   outputs.clear();
   Shuffle(ranges);
-  memalloc::FindNormalizedRamRanges({ranges}, record_first_n(2));
+  memalloc::FindNormalizedRamRanges(MemRangeStream{ranges}, record_first_n(2));
   ASSERT_EQ(2u, outputs.size());
   EXPECT_EQ(normalized[0], outputs[0]);
   EXPECT_EQ(normalized[3], outputs[1]);
@@ -431,7 +453,7 @@ TEST(MemallocFindTests, CanShortCircuit) {
   // Only record the first two ranges.
   outputs.clear();
   Shuffle(ranges);
-  memalloc::FindNormalizedRanges({ranges}, scratch, record_first_n(2));
+  memalloc::FindNormalizedRanges(MemRangeStream{ranges}, scratch, record_first_n(2));
   ASSERT_EQ(2u, outputs.size());
   EXPECT_EQ(normalized[0], outputs[0]);
   EXPECT_EQ(normalized[1], outputs[1]);
@@ -439,7 +461,7 @@ TEST(MemallocFindTests, CanShortCircuit) {
   // Only record the first three RAM ranges.
   outputs.clear();
   Shuffle(ranges);
-  memalloc::FindNormalizedRamRanges({ranges}, record_first_n(3));
+  memalloc::FindNormalizedRamRanges(MemRangeStream{ranges}, record_first_n(3));
   ASSERT_EQ(3u, outputs.size());
   EXPECT_EQ(normalized[0], outputs[0]);
   EXPECT_EQ(normalized[3], outputs[1]);
@@ -448,11 +470,59 @@ TEST(MemallocFindTests, CanShortCircuit) {
   // Only record the first three ranges.
   outputs.clear();
   Shuffle(ranges);
-  memalloc::FindNormalizedRanges({ranges}, scratch, record_first_n(3));
+  memalloc::FindNormalizedRanges(MemRangeStream{ranges}, scratch, record_first_n(3));
   ASSERT_EQ(3u, outputs.size());
   EXPECT_EQ(normalized[0], outputs[0]);
   EXPECT_EQ(normalized[1], outputs[1]);
   EXPECT_EQ(normalized[2], outputs[2]);
+}
+
+TEST(MemallocRangeStreamTests, Empty) {
+  memalloc::MemRangeStream stream({}, {});
+  EXPECT_TRUE(stream.empty());
+  EXPECT_EQ(0u, stream.size());
+
+  ASSERT_NO_FATAL_FAILURE(TestMemRangeStream({}, {}, {}));
+}
+
+TEST(MemallocRangeStreamTests, OutputIsSorted) {
+  memalloc::MemRange ranges[] = {
+      // reserved: [0, 10)
+      {.addr = 0, .size = 10, .type = Type::kReserved},
+      // RAM: [5, 15)
+      {.addr = 5, .size = 10, .type = memalloc::Type::kFreeRam},
+      // RAM: [20, 60)
+      {.addr = 20, .size = 40, .type = memalloc::Type::kFreeRam},
+      // reserved: [30, 35)
+      {.addr = 30, .size = 5, .type = Type::kReserved},
+      // reserved: [35, 40)
+      {.addr = 35, .size = 5, .type = Type::kReserved},
+      // peripheral: [60, 80)
+      {.addr = 60, .size = 20, .type = Type::kPeripheral},
+  };
+
+  const memalloc::MemRange expected[] = {
+      // reserved: [0, 10)
+      {.addr = 0, .size = 10, .type = Type::kReserved},
+      // RAM: [5, 15), though we only expect [10, 15) to be free.
+      {.addr = 5, .size = 10, .type = memalloc::Type::kFreeRam},
+      // RAM: [20, 60), though we only expect to [20, 30) and [40, 60) to be free.
+      {.addr = 20, .size = 40, .type = memalloc::Type::kFreeRam},
+      // reserved: [30, 35)
+      {.addr = 30, .size = 5, .type = Type::kReserved},
+      // reserved: [35, 40)
+      {.addr = 35, .size = 5, .type = Type::kReserved},
+      // peripheral: [60, 80)
+      {.addr = 60, .size = 20, .type = Type::kPeripheral},
+  };
+
+  cpp20::span<memalloc::MemRange> all_ranges{ranges};
+  for (size_t i = 0; i <= all_ranges.size(); ++i) {
+    Shuffle(ranges);
+    auto main = all_ranges.first(i);
+    auto aux = all_ranges.last(all_ranges.size() - i);
+    ASSERT_NO_FATAL_FAILURE(TestMemRangeStream(main, aux, expected));
+  }
 }
 
 }  // namespace

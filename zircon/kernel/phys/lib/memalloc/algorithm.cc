@@ -165,13 +165,28 @@ class ActiveRanges {
 
 }  // namespace
 
-void FindNormalizedRamRanges(cpp20::span<MemRange> ranges, MemRangeCallback cb) {
-  // Sorting lexicographically on range/interval endpoints is crucial to the
-  // following logic. With this ordering, given a range of interest, the moment
-  // we come across a range disjoint from it, we know that all subsequent
-  // ranges will similarly be disjoint. This allows us to straightforwardly
-  // disambiguate the contiguous regions among arbitrarily-overlapping ranges.
-  std::sort(ranges.begin(), ranges.end());
+// Returns the next range in the stream, returning nullptr when all ranges
+// have been streamed (until the stream itself has been reset).
+const MemRange* MemRangeStream::operator()() {
+  // Dereferencing a cpp20::span iterator returns a reference.
+  constexpr auto to_ptr = [](auto it) -> const MemRange* { return &(*it); };
+
+  if (it_ == ranges_.end() && aux_it_ == aux_ranges_.end()) {
+    return nullptr;
+  }
+  if (aux_it_ == aux_ranges_.end() || (it_ != ranges_.end() && *it_ < *aux_it_)) {
+    return to_ptr(it_++);
+  }
+  return to_ptr(aux_it_++);
+}
+
+void FindNormalizedRamRanges(MemRangeStream ranges, MemRangeCallback cb) {
+  // Having sorted lexicographically on range endpoints (as MemRangeStream
+  // does) is crucial to the following logic. With this ordering, given a range
+  // of interest, the moment we come across a range disjoint from it, we know
+  // that all subsequent ranges will similarly be disjoint. This allows us to
+  // straightforwardly disambiguate the contiguous regions among
+  // arbitrarily-overlapping ranges.
 
   // The current RAM range of interest. With each new RAM range we come across,
   // we see if it can be merged into the candidate and update accordingly; with
@@ -183,13 +198,13 @@ void FindNormalizedRamRanges(cpp20::span<MemRange> ranges, MemRangeCallback cb) 
   // Tracks the last contiguous range of memory that is the union of all
   // non-RAM types.
   Interval current_non_ram;
-  for (const MemRange& range : ranges) {
-    Interval interval(range);
+  for (const MemRange* range = ranges(); range != nullptr; range = ranges()) {
+    Interval interval(*range);
     if (interval.empty()) {
       continue;
     }
 
-    if (range.type == Type::kFreeRam) {
+    if (range->type == Type::kFreeRam) {
       // Check to see if this new RAM interval intersects with the current
       // non-RAM interval we're tracking. If they intersect, it would be at
       // the head of the new interval; if so, update the new interval to just
@@ -241,8 +256,7 @@ void FindNormalizedRamRanges(cpp20::span<MemRange> ranges, MemRangeCallback cb) 
   }
 }
 
-void FindNormalizedRanges(cpp20::span<const MemRange> ranges, cpp20::span<void*> scratch,
-                          MemRangeCallback cb) {
+void FindNormalizedRanges(MemRangeStream ranges, cpp20::span<void*> scratch, MemRangeCallback cb) {
   if (ranges.empty()) {
     return;
   }
@@ -261,9 +275,10 @@ void FindNormalizedRanges(cpp20::span<const MemRange> ranges, cpp20::span<void*>
 
   cpp20::span<Endpoint> endpoints{reinterpret_cast<Endpoint*>(scratch.data()), 2 * ranges.size()};
   for (size_t i = 0; i < ranges.size(); ++i) {
-    const MemRange& range = ranges[i];
-    endpoints[2 * i] = {&range, EndpointType::kLeft};
-    endpoints[2 * i + 1] = {&range, EndpointType::kRight};
+    const MemRange* range = ranges();
+    ZX_DEBUG_ASSERT(range);
+    endpoints[2 * i] = {range, EndpointType::kLeft};
+    endpoints[2 * i + 1] = {range, EndpointType::kRight};
   }
   std::sort(endpoints.begin(), endpoints.end());
 

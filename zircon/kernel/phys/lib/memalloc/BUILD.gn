@@ -43,6 +43,9 @@ zx_library("memalloc") {
   public_deps = [
     "//sdk/lib/stdcompat:headers",
 
+    # <lib/memalloc/range.h> has #include <lib/fit/function.h>.
+    "//sdk/lib/fit:headers",
+
     # <lib/memalloc/allocator.h> has #include <fbl/intrusive_double_list.h>.
     "//zircon/system/ulib/fbl:headers",
 
