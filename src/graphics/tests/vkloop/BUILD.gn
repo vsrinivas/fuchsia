@@ -29,9 +29,6 @@ executable("vkloop_bin") {
 
   public_deps += [ "//src/lib/vulkan" ]
 
-  # TODO(fxbug.dev/58615): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
