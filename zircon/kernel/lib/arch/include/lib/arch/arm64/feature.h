@@ -292,6 +292,47 @@ struct ArmIdAa64Pfr0El1 : public SysRegBase<ArmIdAa64Pfr0El1> {
 };
 ARCH_ARM64_SYSREG(ArmIdAa64Pfr0El1, "ID_AA64PFR0_EL1");
 
+// Physical address size.
+//
+// The same encoding is used by several registers, including system registers TCR_EL1.IPS,
+// TCR_EL2.PS, and the feature register ID_AA64MMFR0_EL1.PARange.
+//
+// [arm/v8]: D13.2.64 ID_AA64MMFR0_EL1, AArch64 Memory Model Feature Register 0
+// [arm/v8]: D13.2.120 Translation Control Register (EL1)
+// [arm/v8]: D13.2.121 Translation Control Register (EL2)
+enum class ArmPhysicalAddressSize {
+  k32Bits = 0b000,
+  k36Bits = 0b001,
+  k40Bits = 0b010,
+  k42Bits = 0b011,
+  k44Bits = 0b100,
+  k48Bits = 0b101,
+  k52Bits = 0b110,
+};
+
+// ID_AA64MMFR0_EL1, AArch64 Memory Model Feature Register 0
+//
+// [arm/v8]: D13.2.64 ID_AA64MMFR0_EL1, AArch64 Memory Model Feature Register 0
+struct ArmIdAa64Mmfr0El1 : public SysRegBase<ArmIdAa64Mmfr0El1> {
+  DEF_FIELD(63, 60, ecv);  // Enhanced Counter Virtualization (FEAT_ECV)
+  DEF_FIELD(59, 56, fgt);  // Fine-Grained Trap controls (FEAT_FGT)
+  // Bits [55:48] reserved.
+  DEF_FIELD(47, 44, exs);          // Disable context synchronizing exceptions (FEAT_ExS)
+  DEF_FIELD(43, 40, tgran4_2);     // 4 kiB granules at stage 2
+  DEF_FIELD(39, 36, tgran64_2);    // 64 kiB granules at stage 2
+  DEF_FIELD(35, 32, tgran16_2);    // 16 kiB granules at stage 2
+  DEF_FIELD(31, 28, tgran4);       // 4 kiB granules at stage 1
+  DEF_FIELD(27, 24, tgran64);      // 64 kiB granules at stage 1
+  DEF_FIELD(23, 20, tgran16);      // 16 kiB granules at stage 1
+  DEF_FIELD(19, 16, big_end_el0);  // Mixed-endian support for EL0 only
+  DEF_FIELD(15, 12, sns_mem);      // Secure and Non-secure Memory distinguished
+  DEF_FIELD(11, 8, big_end);       // Mixed-endian support
+  DEF_FIELD(7, 4, asid_bits);      // Number of ASID bits
+  DEF_ENUM_FIELD(ArmPhysicalAddressSize, 3, 0, pa_range);  // Supported Physical Address range
+};
+
+ARCH_ARM64_SYSREG(ArmIdAa64Mmfr0El1, "id_aa64mmfr0_el1");
+
 }  // namespace arch
 
 #endif  // ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_ARM64_FEATURE_H_
