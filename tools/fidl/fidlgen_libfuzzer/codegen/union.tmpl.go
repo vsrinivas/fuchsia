@@ -7,28 +7,28 @@ package codegen
 const tmplUnion = `
 {{- define "UnionSizeAndAlloc" }}
 template<>
-struct MinSize<{{ .Natural.Name }}> {
+struct MinSize<{{ .Name }}> {
   operator size_t() {
-    size_t sizes[] = {0{{ range  .Members }}, MinSize<{{ .Type.Natural }}>(){{ end }}};
+    size_t sizes[] = {0{{ range  .Members }}, MinSize<{{ .Type }}>(){{ end }}};
     return 1 + *std::max_element(sizes, sizes + {{ len .Members }} + 1);
   }
 };
 template<>
-struct Allocate<{{ .Natural.Name }}> {
+struct Allocate<{{ .Name }}> {
   static_assert({{ len .Members }} > 0, "xunion must have at least one member");
 
-  {{ .Natural.Name }} operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<{{ .Natural.Name }}>());
+  {{ .Name }} operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<{{ .Name }}>());
 
     uint8_t selector;
     ZX_ASSERT(src->CopyBytes(&selector, 1));
     (*size)++;
 
-    {{ .Natural.Name }} out;
+    {{ .Name }} out;
     switch (selector % {{ len .Members }}) {
       {{- range $memberIdx, $member := .Members }}
       case {{ $memberIdx }}: {
-        out.set_{{ $member.Natural.Name }}(Allocate<{{ $member.Type.Natural }}>{}(src, size));
+        out.set_{{ $member.Name }}(Allocate<{{ $member.Type }}>{}(src, size));
         break;
       }
       {{- end }}

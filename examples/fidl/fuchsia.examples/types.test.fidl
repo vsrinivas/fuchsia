@@ -24,8 +24,6 @@ bits FileMode : uint16 {
 };
 // [END bits]
 
-// TODO(fxbug.dev/65466): Make flexible bits work with libfuzzer.
-[BindingsDenylist = "libfuzzer"]
 // [START flexible_bits]
 flexible bits FlexibleFileMode : uint16 {
     READ = 0b001;
@@ -42,8 +40,6 @@ enum LocationType {
 };
 // [END enums]
 
-// TODO(fxbug.dev/65466): Make flexible enums work with libfuzzer.
-[BindingsDenylist = "libfuzzer"]
 // [START flexible_enums]
 flexible enum FlexibleLocationType {
     MUSEUM = 1;

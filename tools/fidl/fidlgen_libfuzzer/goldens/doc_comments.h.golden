@@ -150,16 +150,14 @@ struct Allocate<MyFlexibleEnum> {
 };
 template <>
 struct MinSize<MyFlexibleBits> {
-  operator size_t() { return sizeof(MyFlexibleBits); }
+  operator size_t() { return sizeof(uint32_t); }
 };
 template <>
 struct Allocate<MyFlexibleBits> {
   MyFlexibleBits operator()(FuzzInput* src, size_t* size) {
-    MyFlexibleBits out;
-    ZX_ASSERT(*size >= sizeof(MyFlexibleBits));
-    ZX_ASSERT(src->CopyObject(&out));
-    *size = sizeof(MyFlexibleBits);
-    return out;
+    ZX_ASSERT(*size >= sizeof(uint32_t));
+    return MyFlexibleBits(
+        *reinterpret_cast<const uint32_t*>(src->TakeBytes(sizeof(uint32_t))));
   }
 };
 template <>
