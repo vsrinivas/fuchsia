@@ -266,3 +266,14 @@ fuchsia_package("scenic_pkg") {
   package_name = "scenic"
   deps = [ ":component" ]
 }
+
+group("frame-scheduler-min-predicted-frame-duration-in-us--15000") {
+  public_deps = [ ":frame_scheduler_min_predicted_frame_duration_in_us__15000" ]
+}
+
+config_data("frame_scheduler_min_predicted_frame_duration_in_us__15000") {
+  for_pkg = "scenic"
+  sources = [ rebase_path(
+          "data/frame_scheduler_min_predicted_frame_duration_in_us__15000") ]
+  outputs = [ "scenic_config" ]
+}

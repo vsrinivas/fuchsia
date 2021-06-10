@@ -1,0 +1,3 @@
+{
+  "frame_scheduler_min_predicted_frame_duration_in_us" : 15000
+}

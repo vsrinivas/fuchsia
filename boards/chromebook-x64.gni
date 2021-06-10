@@ -21,3 +21,7 @@ avb_atx_metadata =
 # device at all times. To avoid unintentionally breaking remote workflows,
 # we permit multiple GPT devices.
 board_bootfs_labels += [ "//src/storage/fshost:gpt_all" ]
+
+board_package_labels += [
+  "//src/ui/scenic:frame-scheduler-min-predicted-frame-duration-in-us--15000",
+]
