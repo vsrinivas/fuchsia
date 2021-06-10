@@ -188,38 +188,39 @@ bool SockAddrIn::Set(const std::string& ip_port_str) {
     return true;
   }
 
-  std::string ip_str;
-  size_t col_pos = 0;
+  std::string ip_str = ip_port_str;
+  std::string port_str = ip_port_str;
   if (ip_port_str[0] == '[') {
-    auto addr_end_pos = ip_port_str.find_first_of(']');
+    size_t addr_end_pos = ip_port_str.find_first_of(']');
     if (addr_end_pos == std::string::npos) {
       LOG(ERROR) << "Error-Cannot parse ip_port_str='" << ip_port_str
                  << "' for <ip>:<port> - missing address closing brack ']'!";
       return false;
     }
     ip_str = ip_port_str.substr(1, addr_end_pos - 1);
-    col_pos = addr_end_pos + 1;
-  } else {
-    col_pos = ip_port_str.find_first_of(':');
-    if (col_pos == std::string::npos) {
-      LOG(ERROR) << "Error-Cannot parse ip_port_str='" << ip_port_str
-                 << "' for <ip>:<port> - missing port!";
-      return false;
-    }
-    if (ip_port_str.find_first_of(':', col_pos + 1) != std::string::npos) {
-      LOG(ERROR) << "Error-Cannot parse ip_port_str='" << ip_port_str
-                 << "' for <ip>:<port> - too many colons ':',"
-                 << " use '[]' brackets around IPv6 addresses!";
-      return false;
-    }
+    port_str = ip_port_str.substr(addr_end_pos);
+  }
+  const size_t col_pos = port_str.find_first_of(':');
+  if (col_pos == std::string::npos) {
+    LOG(ERROR) << "Error-Cannot parse ip_port_str='" << ip_port_str
+               << "' for <ip>:<port> - missing port!";
+    return false;
+  }
+  if (port_str.find_first_of(':', col_pos + 1) != std::string::npos) {
+    LOG(ERROR) << "Error-Cannot parse ip_port_str='" << ip_port_str
+               << "' for <ip>:<port> - too many colons ':',"
+               << " use '[]' brackets around IPv6 addresses!";
+    return false;
+  }
+  if (ip_str == ip_port_str) {
     ip_str = ip_port_str.substr(0, col_pos);
   }
+  port_str = port_str.substr(col_pos + 1);
 
   if (!addr_.Set(ip_str)) {
     return false;
   }
 
-  std::string port_str = ip_port_str.substr(col_pos + 1);
   if (port_str.empty()) {
     LOG(ERROR) << "Error-Cannot parse ip_port_str='" << ip_port_str
                << "' for <ip>:<port> - port_str is empty!";

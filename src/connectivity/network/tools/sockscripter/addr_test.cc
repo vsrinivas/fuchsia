@@ -88,4 +88,12 @@ TEST(AddrTest, SockAddrIn) {
                          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
   EXPECT_EQ(memcmp(addr_in6->sin6_addr.s6_addr, cmp, 16), 0);
   EXPECT_EQ(addr_in6->sin6_port, htons(4040));
+
+  EXPECT_FALSE(addr.Set(""));
+  EXPECT_FALSE(addr.Set(":0"));
+  EXPECT_FALSE(addr.Set("any::0"));
+  EXPECT_FALSE(addr.Set("[]"));
+  EXPECT_FALSE(addr.Set("[]:0"));
+  EXPECT_FALSE(addr.Set("[::]"));
+  EXPECT_FALSE(addr.Set("[::]::0"));
 }
