@@ -47,7 +47,7 @@ def expand_manifest_items(
     Returns:
         An Entry list.
     """
-    entries = []
+    entries : List[Entry] = []
     for item in manifest_items:
         if 'label' not in item:
             item['label'] = default_label
@@ -65,7 +65,17 @@ def expand_manifest_items(
 
 def _entries_have_same_source(
         entry1: Entry, entry2: Entry, opened_files: Set[str]) -> bool:
-    """Return True iff two entries have the same source."""
+    """Return True iff two entries have the same source.
+
+    Args:
+        entry1, entry2: input entries to compare.
+        opened_files: a set of file paths, updated with the input entries'
+            source paths if they need to be opened for comparing their
+            content.
+    Returns:
+        True iff the entries have the same source path, or if the
+        path point to files with the same content.
+    """
     if entry1.source == entry2.source:
         return True
 
@@ -95,13 +105,6 @@ def expand_manifest(manifest_items: Iterable[dict],
         an empty string in case of success.
     """
     input_entries = expand_manifest_items(manifest_items, opened_files)
-
-    # Map a destination path to a set of corresponding entries. This is
-    # used later to determine conflicts and merge duplicates.
-    entries_dict: DefaultDict[str, Set[Entry]] = collections.defaultdict(set)
-    for entry in input_entries:
-        dest = entry.destination
-        entries_dict[dest].add(entry)
 
     # Used to record that a given destination path has two or more conflicting
     # entries, with different sources.
@@ -157,7 +160,7 @@ def convert_fini_manifest_to_distribution_entries(
     Returns:
         An Entry list.
     """
-    result = []
+    result : List[Entry] = []
     for line in fini_manifest_lines:
         dst, _, src = line.strip().partition('=')
         entry = Entry(destination=dst, source=src, label=label)
@@ -169,12 +172,12 @@ def convert_fini_manifest_to_distribution_entries(
 def _rewrite_elf_needed(dep: str) -> Optional[str]:
     """Rewrite an ELF DT_NEEDED dependency name.
 
-  Args:
-    dep: dependency name as it appears in ELF DT_NEEDED entry (e.g. 'libc.so')
-  Returns:
-    None if the dependency should be ignored, or the input dependency name,
-    possibly rewritten for specific cases (e.g. 'libc.so' -> 'ld.so.1')
-  """
+    Args:
+        dep: dependency name as it appears in ELF DT_NEEDED entry (e.g. 'libc.so')
+    Returns:
+        None if the dependency should be ignored, or the input dependency name,
+        possibly rewritten for specific cases (e.g. 'libc.so' -> 'ld.so.1')
+    """
     if dep == 'libzircon.so':
         # libzircon.so being injected by the kernel into user processes, it should
         # not appear in Fuchsia packages, and thus should be ignored.
@@ -197,21 +200,21 @@ def verify_elf_dependencies(
 ) -> List[str]:
     """Verify the ELF dependencies of a given ELF binary.
 
-  Args:
-    binary_name: Name of the binary being verified, only used for error messages.
-    lib_dir: The directory where the dependency libraries are supposed to be
-      at runtime.
-    deps: The list of DT_NEEDED dependency names for the current binary.
-    get_lib_dependencies: A function that takes a runtime library path
-      (e.g. "lib/libfoo.so") and returns the corresponding list of DT_NEEDED
-      dependencies for its input, as a list of strings.
-    visited_libraries: An optional set of file paths, which is updated
-      by this function with the paths of the dependency libraries
-      visited by this function.
+    Args:
+      binary_name: Name of the binary being verified, only used for error messages.
+      lib_dir: The directory where the dependency libraries are supposed to be
+          at runtime.
+      deps: The list of DT_NEEDED dependency names for the current binary.
+      get_lib_dependencies: A function that takes a runtime library path
+          (e.g. "lib/libfoo.so") and returns the corresponding list of DT_NEEDED
+          dependencies for its input, as a list of strings.
+      visited_libraries: An optional set of file paths, which is updated
+          by this function with the paths of the dependency libraries
+          visited by this function.
 
-  Returns:
-    A list of error strings, which will be empty in case of success.
-  """
+    Returns:
+        A list of error strings, which will be empty in case of success.
+    """
     # Note that we do allow circular dependencies because they do happen
     # in practice. In particular when generating instrumented binaries,
     # e.g. for the 'asan' case (omitting libzircon.so):
@@ -228,7 +231,7 @@ def verify_elf_dependencies(
     #     libunwind.so-----------'
     #
     errors: List[str] = []
-    queue = set(deps)
+    queue : Set[str] = set(deps)
     while queue:
         dep = queue.pop()
         dep2 = _rewrite_elf_needed(dep)
