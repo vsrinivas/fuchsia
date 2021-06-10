@@ -27,7 +27,7 @@ class ZirconPlatformBusMapper : public PlatformBusMapper {
 
   class BusMapping : public PlatformBusMapper::BusMapping {
    public:
-    BusMapping(uint64_t page_offset, std::vector<uint64_t> page_addr, zx::pmt pmt)
+    BusMapping(uint64_t page_offset, std::vector<uint64_t> page_addr, std::vector<zx::pmt> pmt)
         : page_offset_(page_offset), page_addr_(std::move(page_addr)), pmt_(std::move(pmt)) {}
     ~BusMapping();
 
@@ -39,7 +39,7 @@ class ZirconPlatformBusMapper : public PlatformBusMapper {
    private:
     uint64_t page_offset_;
     std::vector<uint64_t> page_addr_;
-    zx::pmt pmt_;
+    std::vector<zx::pmt> pmt_;
   };
 
  private:
