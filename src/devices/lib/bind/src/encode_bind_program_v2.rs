@@ -2,338 +2,42 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::bind_library::ValueType;
 use crate::bind_program_v2_constants::*;
-use crate::compiler::{
-    BindProgram, BindProgramEncodeError, Symbol, SymbolTable, SymbolicInstructionInfo,
-};
-use crate::instruction::{Condition, Instruction};
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use crate::compiler::{BindProgram, BindProgramEncodeError};
+use crate::instruction_encoder::encode_instructions;
+use crate::symbol_table_encoder::SymbolTableEncoder;
 
 /// Functions for encoding the new bytecode format. When the
 /// old bytecode format is deleted, the "v2" should be removed from the names.
 
-// Info on a jump instruction's offset. |index| represents the jump offset's
-// location in the bytecode vector. |inst_offset| represents number of bytes
-// |index| is from the end of the jump instruction. The jump offset is
-// calculated by subtracting |index| and |inst_offset| from label location.
-struct JumpInstructionOffsetInfo {
-    index: usize,
-    inst_offset: usize,
-}
-
-struct LabelInfo {
-    pub index: Option<usize>,
-    pub jump_instructions: Vec<JumpInstructionOffsetInfo>,
-}
-
-struct SymbolTableEncoder {
-    pub encoded_symbols: HashMap<String, u32>,
-    unique_key: u32,
-    pub bytecode: Vec<u8>,
-}
-
-impl SymbolTableEncoder {
-    pub fn new() -> Self {
-        SymbolTableEncoder {
-            encoded_symbols: HashMap::<String, u32>::new(),
-            unique_key: SYMB_TBL_START_KEY,
-            bytecode: vec![],
-        }
-    }
-
-    // Assign a unique key to |value| and add it to the list of encoded symbols and
-    // the bytecode.
-    // TODO(fxb/67919): Add support for enum values.
-    fn add_symbol(&mut self, value: String) -> Result<u32, BindProgramEncodeError> {
-        if value.len() > MAX_STRING_LENGTH {
-            return Err(BindProgramEncodeError::InvalidStringLength(value));
-        }
-
-        let symbol_key = self.unique_key;
-
-        self.encoded_symbols.insert(value.to_string(), self.unique_key);
-
-        // Add the symbol to the bytecode. The string value is followed by a zero
-        // terminator.
-        self.bytecode.extend_from_slice(&self.unique_key.to_le_bytes());
-        self.bytecode.append(&mut value.into_bytes());
-        self.bytecode.push(0);
-
-        self.unique_key += 1;
-
-        Ok(symbol_key)
-    }
-
-    // Retrieve the key for |value|. Add |value| if it's missing.
-    pub fn get_key(&mut self, value: String) -> Result<u32, BindProgramEncodeError> {
-        match self.encoded_symbols.get(&value) {
-            Some(key) => Ok(*key),
-            None => self.add_symbol(value),
-        }
-    }
-}
-
-#[allow(dead_code)]
-struct Encoder<'a> {
-    inst_iter: std::vec::IntoIter<SymbolicInstructionInfo<'a>>,
-    symbol_table: SymbolTable,
-    symbol_table_encoder: SymbolTableEncoder,
-    label_map: HashMap<u32, LabelInfo>,
-}
-
-impl<'a> Encoder<'a> {
-    pub fn new(bind_program: BindProgram<'a>) -> Self {
-        Encoder {
-            inst_iter: bind_program.instructions.into_iter(),
-            symbol_table: bind_program.symbol_table,
-
-            symbol_table_encoder: SymbolTableEncoder::new(),
-
-            // Map of the label ID and the information. Used to
-            // store the label location in the bytecode and to
-            // calculate the jump offsets.
-            label_map: HashMap::<u32, LabelInfo>::new(),
-        }
-    }
-
-    pub fn encode_to_bytecode(mut self) -> Result<Vec<u8>, BindProgramEncodeError> {
-        // The instruction bytecode must be encoded before the symbol table since
-        // encoding the instructions might add new values to the symbol table.
-        let mut instruction_bytecode = self.encode_inst_block()?;
-
-        let mut bytecode: Vec<u8> = vec![];
-
-        // Encode the header.
-        bytecode.extend_from_slice(&BIND_MAGIC_NUM.to_be_bytes());
-        bytecode.extend_from_slice(&BYTECODE_VERSION.to_le_bytes());
-
-        // Encode the symbol table.
-        bytecode.extend_from_slice(&SYMB_MAGIC_NUM.to_be_bytes());
-        bytecode
-            .extend_from_slice(&(self.symbol_table_encoder.bytecode.len() as u32).to_le_bytes());
-        bytecode.append(&mut self.symbol_table_encoder.bytecode);
-
-        // Encode the instruction section.
-        bytecode.extend_from_slice(&INSTRUCTION_MAGIC_NUM.to_be_bytes());
-        bytecode.extend_from_slice(&(instruction_bytecode.len() as u32).to_le_bytes());
-        bytecode.append(&mut instruction_bytecode);
-
-        Ok(bytecode)
-    }
-
-    fn encode_inst_block(&mut self) -> Result<Vec<u8>, BindProgramEncodeError> {
-        let mut bytecode: Vec<u8> = vec![];
-
-        while let Some(symbolic_inst) = self.inst_iter.next() {
-            let instruction = symbolic_inst.to_instruction().instruction;
-            match instruction {
-                Instruction::Abort(condition) => {
-                    self.append_abort_instruction(&mut bytecode, condition)?;
-                }
-                Instruction::Goto(condition, label) => {
-                    self.append_jmp_statement(&mut bytecode, condition, label)?;
-                }
-                Instruction::Label(label_id) => {
-                    self.append_and_update_label(&mut bytecode, label_id)?;
-                }
-                Instruction::Match(_) => {
-                    // Match statements are not supported in the new bytecode. Once
-                    // the old bytecode is removed, they can be deleted.
-                    return Err(BindProgramEncodeError::MatchNotSupported);
-                }
-            };
-        }
-
-        // Update the jump instruction offsets.
-        for (label_id, data) in self.label_map.iter() {
-            // If the label index is not available, then the label is missing in the bind program.
-            if data.index.is_none() {
-                return Err(BindProgramEncodeError::MissingLabel(*label_id));
-            }
-
-            let label_index = data.index.unwrap();
-            for usage in data.jump_instructions.iter() {
-                let offset = u32::try_from(label_index - usage.index - usage.inst_offset)
-                    .map_err(|_| BindProgramEncodeError::JumpOffsetOutOfRange(*label_id))?;
-
-                let offset_bytes = offset.to_le_bytes();
-                for i in 0..4 {
-                    bytecode[usage.index + i] = offset_bytes[i];
-                }
-            }
-        }
-
-        Ok(bytecode)
-    }
-
-    fn append_abort_instruction(
-        &mut self,
-        bytecode: &mut Vec<u8>,
-        condition: Condition,
-    ) -> Result<(), BindProgramEncodeError> {
-        // Since the bind program aborts when a condition statement fails, we encode the opposite
-        // condition in the Abort instruction. For example, if the given condition is Equal, we
-        // would encode AbortIfNotEqual.
-        match condition {
-            Condition::Always => {
-                bytecode.push(RawOp::Abort as u8);
-                Ok(())
-            }
-            Condition::Equal(lhs, rhs) => {
-                bytecode.push(RawOp::InequalCondition as u8);
-                self.append_value_comparison(bytecode, lhs, rhs)
-            }
-            Condition::NotEqual(lhs, rhs) => {
-                bytecode.push(RawOp::EqualCondition as u8);
-                self.append_value_comparison(bytecode, lhs, rhs)
-            }
-        }
-    }
-
-    fn append_jmp_statement(
-        &mut self,
-        bytecode: &mut Vec<u8>,
-        condition: Condition,
-        label_id: u32,
-    ) -> Result<(), BindProgramEncodeError> {
-        let offset_index = bytecode.len() + 1;
-        let placeholder_offset = (0 as u32).to_le_bytes();
-        match condition {
-            Condition::Always => {
-                bytecode.push(RawOp::UnconditionalJump as u8);
-                bytecode.extend_from_slice(&placeholder_offset);
-            }
-            Condition::Equal(lhs, rhs) => {
-                bytecode.push(RawOp::JumpIfEqual as u8);
-                bytecode.extend_from_slice(&placeholder_offset);
-                self.append_value_comparison(bytecode, lhs, rhs)?;
-            }
-            Condition::NotEqual(lhs, rhs) => {
-                bytecode.push(RawOp::JumpIfNotEqual as u8);
-                bytecode.extend_from_slice(&placeholder_offset);
-                self.append_value_comparison(bytecode, lhs, rhs)?;
-            }
-        };
-
-        // If the label's index is already set, then the label appears before
-        // the jump statement. We can make this assumption because we're
-        // encoding the bind program in one direction.
-        if let Some(data) = self.label_map.get(&label_id) {
-            if data.index.is_some() {
-                return Err(BindProgramEncodeError::InvalidGotoLocation(label_id));
-            }
-        }
-
-        // Add the label to the map if it doesn't already exists. Push the jump instruction
-        // offset to the map.
-        self.label_map
-            .entry(label_id)
-            .or_insert(LabelInfo { index: None, jump_instructions: vec![] })
-            .jump_instructions
-            .push(JumpInstructionOffsetInfo {
-                index: offset_index,
-                inst_offset: bytecode.len() - offset_index,
-            });
-
-        Ok(())
-    }
-
-    fn append_and_update_label(
-        &mut self,
-        bytecode: &mut Vec<u8>,
-        label_id: u32,
-    ) -> Result<(), BindProgramEncodeError> {
-        if let Some(data) = self.label_map.get(&label_id) {
-            if data.index.is_some() {
-                return Err(BindProgramEncodeError::DuplicateLabel(label_id));
-            }
-        }
-
-        self.label_map
-            .entry(label_id)
-            .and_modify(|data| data.index = Some(bytecode.len()))
-            .or_insert(LabelInfo { index: Some(bytecode.len()), jump_instructions: vec![] });
-
-        bytecode.push(RawOp::JumpLandPad as u8);
-        Ok(())
-    }
-
-    fn append_value_comparison(
-        &mut self,
-        bytecode: &mut Vec<u8>,
-        lhs: Symbol,
-        rhs: Symbol,
-    ) -> Result<(), BindProgramEncodeError> {
-        // LHS value should represent a key.
-        if !is_symbol_key(&lhs) {
-            return Err(BindProgramEncodeError::IncorrectTypesInValueComparison);
-        }
-
-        let rhs_val_type = match rhs {
-            Symbol::NumberValue(_) => ValueType::Number,
-            Symbol::StringValue(_) => ValueType::Str,
-            Symbol::BoolValue(_) => ValueType::Bool,
-            Symbol::EnumValue(_) => ValueType::Enum,
-            _ => {
-                // The RHS value should not represent a key.
-                return Err(BindProgramEncodeError::IncorrectTypesInValueComparison);
-            }
-        };
-
-        // If the LHS key contains a value type, compare it to the RHS value to ensure that the
-        // types match.
-        if let Symbol::Key(_, lhs_val_type) = lhs {
-            if lhs_val_type != rhs_val_type {
-                return Err(BindProgramEncodeError::MismatchValueTypes(lhs_val_type, rhs_val_type));
-            }
-        }
-
-        self.append_value(bytecode, lhs)?;
-        self.append_value(bytecode, rhs)?;
-        Ok(())
-    }
-
-    fn append_value(
-        &mut self,
-        bytecode: &mut Vec<u8>,
-        symbol: Symbol,
-    ) -> Result<(), BindProgramEncodeError> {
-        let (value_type, value) = match symbol {
-            Symbol::NumberValue(value) => Ok((RawValueType::NumberValue as u8, value as u32)),
-            Symbol::BoolValue(value) => Ok((RawValueType::BoolValue as u8, value as u32)),
-            Symbol::StringValue(value) => {
-                Ok((RawValueType::StringValue as u8, self.symbol_table_encoder.get_key(value)?))
-            }
-            Symbol::Key(key, _) => {
-                Ok((RawValueType::Key as u8, self.symbol_table_encoder.get_key(key)?))
-            }
-            Symbol::DeprecatedKey(key) => Ok((RawValueType::NumberValue as u8, key)),
-            _ => unimplemented!("Unsupported symbol"),
-        }?;
-
-        bytecode.push(value_type);
-        bytecode.extend_from_slice(&value.to_le_bytes());
-        Ok(())
-    }
-}
-
-fn is_symbol_key(key: &Symbol) -> bool {
-    match key {
-        Symbol::DeprecatedKey(_) | Symbol::Key(_, _) => true,
-        _ => false,
-    }
-}
-
 pub fn encode_to_bytecode_v2(bind_program: BindProgram) -> Result<Vec<u8>, BindProgramEncodeError> {
-    Encoder::new(bind_program).encode_to_bytecode()
+    let mut symbol_table_encoder = SymbolTableEncoder::new();
+    let mut instruction_bytecode =
+        encode_instructions(bind_program.instructions, &mut symbol_table_encoder)?;
+
+    let mut bytecode: Vec<u8> = vec![];
+
+    // Encode the header.
+    bytecode.extend_from_slice(&BIND_MAGIC_NUM.to_be_bytes());
+    bytecode.extend_from_slice(&BYTECODE_VERSION.to_le_bytes());
+
+    // Encode the symbol table.
+    bytecode.extend_from_slice(&SYMB_MAGIC_NUM.to_be_bytes());
+    bytecode.extend_from_slice(&(symbol_table_encoder.bytecode.len() as u32).to_le_bytes());
+    bytecode.append(&mut symbol_table_encoder.bytecode);
+
+    // Encode the instruction section.
+    bytecode.extend_from_slice(&INSTRUCTION_MAGIC_NUM.to_be_bytes());
+    bytecode.extend_from_slice(&(instruction_bytecode.len() as u32).to_le_bytes());
+    bytecode.append(&mut instruction_bytecode);
+
+    Ok(bytecode)
 }
 
 pub fn encode_to_string_v2(
     bind_program: BindProgram,
 ) -> Result<(String, usize), BindProgramEncodeError> {
-    let result = Encoder::new(bind_program).encode_to_bytecode()?;
+    let result = encode_to_bytecode_v2(bind_program)?;
     let byte_count = result.len();
     Ok((
         result.into_iter().map(|byte| format!("{:#x}", byte)).collect::<Vec<String>>().join(","),
@@ -344,7 +48,8 @@ pub fn encode_to_string_v2(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::compiler::{SymbolicInstruction, SymbolicInstructionInfo};
+    use crate::bind_library::ValueType;
+    use crate::compiler::{Symbol, SymbolicInstruction, SymbolicInstructionInfo};
     use std::collections::HashMap;
 
     // Constants representing the number of bytes in an operand and value.

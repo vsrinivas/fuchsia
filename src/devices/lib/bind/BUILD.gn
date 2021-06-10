@@ -87,11 +87,13 @@ rustc_library("lib") {
     "src/encode_bind_program_v2.rs",
     "src/errors.rs",
     "src/instruction.rs",
+    "src/instruction_encoder.rs",
     "src/lib.rs",
     "src/linter.rs",
     "src/match_bind.rs",
     "src/offline_debugger.rs",
     "src/parser_common.rs",
+    "src/symbol_table_encoder.rs",
     "src/test.rs",
   ]
   inputs = [ "tests_schema.json" ]
