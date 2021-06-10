@@ -27,7 +27,6 @@ _common_bootfs_deps = [
   "//src/devices/registers/drivers/registers",
   "//src/devices/rtc/drivers/nxp",
   "//src/devices/thermal/drivers/aml-thermal-s905d2g",
-  "//src/devices/thermal/drivers/aml-thermal-s905d2g-legacy",
   "//src/devices/usb/drivers/aml-usb-phy-v2",
   "//src/devices/usb/drivers/dwc2",
   "//src/graphics/display/drivers/aml-canvas",

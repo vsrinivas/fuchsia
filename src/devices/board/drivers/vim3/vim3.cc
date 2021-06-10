@@ -144,6 +144,11 @@ int Vim3::Thread() {
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
+  if ((status = CpuInit()) != ZX_OK) {
+    zxlogf(ERROR, "CpuInit() failed: %d", status);
+    init_txn_->Reply(ZX_ERR_INTERNAL);
+    return status;
+  }
   if ((status = ThermalInit()) != ZX_OK) {
     zxlogf(ERROR, "ThermalInit() failed: %d", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);

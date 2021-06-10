@@ -208,12 +208,13 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "pd-big-core",
       "pd-little-core",
       "sys/platform/05:06:26",  // power
+      "aml-cpu",
+      "sys/platform/05:06:1e",  // cpu
 
       // Thermal
       "sys/platform/05:06:28",
       "sys/platform/05:06:a",
       "class/thermal/000",
-      "class/thermal/001",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
