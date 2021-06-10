@@ -16,6 +16,7 @@
 #include <acpica/acpi.h>
 
 #include "acpi-private.h"
+#include "acpi/acpi.h"
 #include "dev.h"
 #include "util.h"
 
@@ -36,20 +37,20 @@ bool AddDeviveProperty(acpi_i2c_device_t& dev, uint16_t vid, uint16_t did,
   return true;
 }
 
-zx_status_t I2cBusPublishMetadata(zx_device_t* dev, uint8_t pci_bus_num, uint64_t adr,
-                                  const ACPI_DEVICE_INFO& i2c_bus_info,
+zx_status_t I2cBusPublishMetadata(acpi::Acpi* acpi, zx_device_t* dev, uint8_t pci_bus_num,
+                                  uint64_t adr, const ACPI_DEVICE_INFO& i2c_bus_info,
                                   ACPI_HANDLE i2c_bus_object) {
   std::vector<acpi_i2c_device_t> found_devices;
 
   // Enumerate the device children who are direct descendants of the bus object.
-  acpi::WalkNamespace(
+  (void)acpi->WalkNamespace(
       ACPI_TYPE_DEVICE, i2c_bus_object, 1,
-      [&found_devices, &i2c_bus_info](ACPI_HANDLE object, uint32_t level,
-                                      acpi::WalkDirection dir) -> ACPI_STATUS {
+      [&found_devices, &i2c_bus_info, acpi](ACPI_HANDLE object, uint32_t level,
+                                            acpi::WalkDirection dir) -> acpi::status<> {
         // We only have work to do when descending into a node.  Skip the node when
         // we are ascending back through it.
         if (dir == acpi::WalkDirection::Ascending) {
-          return AE_OK;
+          return acpi::ok();
         }
 
         // Attempt to fetch the info for this device.  Don't stop enumerating if
@@ -58,7 +59,7 @@ zx_status_t I2cBusPublishMetadata(zx_device_t* dev, uint8_t pci_bus_num, uint64_
         if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
           zxlogf(WARNING, "Failed to fetch object info for device on I2C bus \"%s\"",
                  fourcc_to_string(i2c_bus_info.Name).str);
-          return AE_OK;
+          return acpi::ok();
         } else {
           info = std::move(res.value());
         }
@@ -72,7 +73,7 @@ zx_status_t I2cBusPublishMetadata(zx_device_t* dev, uint8_t pci_bus_num, uint64_
           zxlogf(WARNING,
                  "Failed to extract HID info ACPI I2C device \"%s\" on bus \"%s\" (status %d)\n",
                  fourcc_to_string(info->Name).str, fourcc_to_string(i2c_bus_info.Name).str, status);
-          return AE_OK;
+          return acpi::ok();
         }
 
         // If we have a CID, and it matches the I2C HID CID, then add the
@@ -91,7 +92,7 @@ zx_status_t I2cBusPublishMetadata(zx_device_t* dev, uint8_t pci_bus_num, uint64_
                   "Insufficient space to store I2C class in devprops for ACPI I2C device \"%s\" on "
                   "bus \"%s\"\n",
                   fourcc_to_string(info->Name).str, fourcc_to_string(i2c_bus_info.Name).str);
-              return AE_OK;
+              return acpi::ok();
             }
 
             new_dev.props[new_dev.propcount].id = BIND_I2C_CLASS;
@@ -105,22 +106,21 @@ zx_status_t I2cBusPublishMetadata(zx_device_t* dev, uint8_t pci_bus_num, uint64_
                    "Failed to extract CID info ACPI I2C device \"%s\" on bus \"%s\" (status %d)\n",
                    fourcc_to_string(info->Name).str, fourcc_to_string(i2c_bus_info.Name).str,
                    status);
-            return AE_OK;
+            return acpi::ok();
           }
         }
 
         // Invoke the "Current Resource Settings" method (_CRS) on our device object
         // and go looking for the resource which describes the I2C specific details
         // of this device (its address, expected speed, and so on).
-        ACPI_STATUS acpi_status;
-        acpi_status = acpi::WalkResources(
+        acpi::status<> acpi_status = acpi->WalkResources(
             object, "_CRS",
-            [&new_dev, &info, &i2c_bus_info](ACPI_RESOURCE* resource) -> ACPI_STATUS {
+            [&new_dev, &info, &i2c_bus_info](ACPI_RESOURCE* resource) -> acpi::status<> {
               if (resource->Type != ACPI_RESOURCE_TYPE_SERIAL_BUS) {
-                return AE_NOT_FOUND;
+                return acpi::error(AE_NOT_FOUND);
               }
               if (resource->Data.I2cSerialBus.Type != ACPI_RESOURCE_SERIAL_TYPE_I2C) {
-                return AE_NOT_FOUND;
+                return acpi::error(AE_NOT_FOUND);
               }
 
               ACPI_RESOURCE_I2C_SERIALBUS* i2c = &resource->Data.I2cSerialBus;
@@ -135,36 +135,36 @@ zx_status_t I2cBusPublishMetadata(zx_device_t* dev, uint8_t pci_bus_num, uint64_
               if (!strcmp(info->HardwareId.String, ALC5663_HID_STRING)) {
                 if (!AddDeviveProperty(new_dev, PDEV_VID_REALTEK, PDEV_DID_ALC5663, *info,
                                        i2c_bus_info)) {
-                  return AE_OK;
+                  return acpi::ok();
                 }
               } else if (!strcmp(info->HardwareId.String, ALC5514_HID_STRING)) {
                 if (!AddDeviveProperty(new_dev, PDEV_VID_REALTEK, PDEV_DID_ALC5514, *info,
                                        i2c_bus_info)) {
-                  return AE_OK;
+                  return acpi::ok();
                 }
               } else if (!strcmp(info->HardwareId.String, MAX98927_HID_STRING)) {
                 if (!AddDeviveProperty(new_dev, PDEV_VID_MAXIM, PDEV_DID_MAXIM_MAX98927, *info,
                                        i2c_bus_info)) {
-                  return AE_OK;
+                  return acpi::ok();
                 }
               }
-              return AE_CTRL_TERMINATE;
+              return acpi::error(AE_CTRL_TERMINATE);
             });
 
-        if (acpi_status != AE_OK) {
+        if (acpi_status.is_error()) {
           zxlogf(
               WARNING,
               "Failed to find ACPI CRS for I2C device \"%s\" on bus \"%s\" (status %d).  Skipping "
               "device.\n",
               fourcc_to_string(info->Name).str, fourcc_to_string(i2c_bus_info.Name).str,
-              acpi_status);
-          return AE_OK;
+              acpi_status.status_value());
+          return acpi::ok();
         }
 
         // Looks like we got all of the info we were looking for.  Go ahead and add
         // this device to our list.
         found_devices.emplace_back(new_dev);
-        return AE_OK;
+        return acpi::ok();
       });
 
   // If we didn't find any devices, then we are done.

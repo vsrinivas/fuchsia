@@ -8,6 +8,7 @@
 #include <acpica/acpi.h>
 
 #include "acpi-private.h"
+#include "acpi/acpi.h"
 #include "dev.h"
 #include "errors.h"
 #include "x86.h"
@@ -53,7 +54,11 @@ int is_gpe_device(ACPI_HANDLE object) {
   return 0;
 }
 
-ACPI_STATUS acpi_prw_walk(ACPI_HANDLE obj, UINT32 level, void* context, void** out_value) {
+acpi::status<> acpi_prw_walk(ACPI_HANDLE obj, uint32_t level, acpi::WalkDirection dir) {
+  if (dir == acpi::WalkDirection::Ascending) {
+    return acpi::ok();
+  }
+
   ACPI_BUFFER buffer = {
       // Request that the ACPI subsystem allocate the buffer
       .Length = ACPI_ALLOCATE_BUFFER,
@@ -61,7 +66,7 @@ ACPI_STATUS acpi_prw_walk(ACPI_HANDLE obj, UINT32 level, void* context, void** o
   };
   ACPI_STATUS status = AcpiEvaluateObject(obj, (char*)"_PRW", NULL, &buffer);
   if (status != AE_OK) {
-    return AE_OK;  // Keep walking the tree
+    return acpi::ok();  // Keep walking the tree
   }
   ACPI_OBJECT* prw_res = static_cast<ACPI_OBJECT*>(buffer.Pointer);
 
@@ -72,7 +77,7 @@ ACPI_STATUS acpi_prw_walk(ACPI_HANDLE obj, UINT32 level, void* context, void** o
   // types with (handle, int) packages, so check that the handle is a GPE device by
   // checking against the CID/HID required by the ACPI spec.
   if (prw_res->Type != ACPI_TYPE_PACKAGE || prw_res->Package.Count < 2) {
-    return AE_OK;  // Keep walking the tree
+    return acpi::ok();  // Keep walking the tree
   }
 
   ACPI_HANDLE gpe_block;
@@ -106,10 +111,10 @@ ACPI_STATUS acpi_prw_walk(ACPI_HANDLE obj, UINT32 level, void* context, void** o
 bailout:
   ACPI_FREE(buffer.Pointer);
 
-  return AE_OK;  // We want to keep going even if we bailed out
+  return acpi::ok();  // We want to keep going even if we bailed out
 }
 
-ACPI_STATUS acpi_sub_init(void) {
+ACPI_STATUS acpi_sub_init(acpi::Acpi* acpi) {
   // This sequence is described in section 10.1.2.1 (Full ACPICA Initialization)
   // of the ACPICA developer's reference.
   ACPI_STATUS status = AcpiInitializeSubsystem();
@@ -156,7 +161,7 @@ ACPI_STATUS acpi_sub_init(void) {
     return status;
   }
 
-  AcpiWalkNamespace(ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, INT_MAX, acpi_prw_walk, NULL, NULL, NULL);
+  (void)acpi->WalkNamespace(ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, INT_MAX, acpi_prw_walk);
 
   status = AcpiUpdateAllGpes();
   if (status != AE_OK) {
@@ -177,7 +182,7 @@ namespace x86 {
 zx_status_t X86::EarlyAcpiInit() {
   ZX_DEBUG_ASSERT(!acpica_initialized_);
   // First initialize the ACPI subsystem.
-  zx_status_t status = acpi_to_zx_status(acpi_sub_init());
+  zx_status_t status = acpi_to_zx_status(acpi_sub_init(acpi_.get()));
   if (status != ZX_OK) {
     return status;
   }

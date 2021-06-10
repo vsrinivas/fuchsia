@@ -53,39 +53,6 @@ static inline size_t UnusedPropsCount(const T& props, uint32_t propcount) {
 // to the info object, or an ACPI error code in the case of failure.
 acpi::status<UniquePtr<ACPI_DEVICE_INFO>> GetObjectInfo(ACPI_HANDLE obj);
 
-// A utility function which can be used to invoke the ACPICA library's
-// AcpiWalkNamespace function, but with an arbitrary Callable instead of needing
-// to use C-style callbacks with context pointers.
-enum class WalkDirection {
-  Descending,
-  Ascending,
-};
-
-template <typename Callable>
-ACPI_STATUS WalkNamespace(ACPI_OBJECT_TYPE type, ACPI_HANDLE start_object, uint32_t max_depth,
-                          Callable cbk) {
-  auto Descent = [](ACPI_HANDLE object, uint32_t level, void* ctx, void**) -> ACPI_STATUS {
-    return (*static_cast<Callable*>(ctx))(object, level, WalkDirection::Descending);
-  };
-
-  auto Ascent = [](ACPI_HANDLE object, uint32_t level, void* ctx, void**) -> ACPI_STATUS {
-    return (*static_cast<Callable*>(ctx))(object, level, WalkDirection::Ascending);
-  };
-
-  return ::AcpiWalkNamespace(type, start_object, max_depth, Descent, Ascent, &cbk, nullptr);
-}
-
-// A utility function which can be used to invoke the ACPICA library's
-// AcpiWalkResources function, but with an arbitrary Callable instead of needing
-// to use C-style callbacks with context pointers.
-template <typename Callable>
-ACPI_STATUS WalkResources(ACPI_HANDLE object, const char* resource_name, Callable cbk) {
-  auto Thunk = [](ACPI_RESOURCE* res, void* ctx) -> ACPI_STATUS {
-    return (*static_cast<Callable*>(ctx))(res);
-  };
-  return ::AcpiWalkResources(object, const_cast<char*>(resource_name), Thunk, &cbk);
-}
-
 // ExtractHidToDevProps and ExtractCidToDevProps
 //
 // These functions will take an ACPI_DEVICE_INFO structure, and attempt to

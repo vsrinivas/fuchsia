@@ -9,7 +9,9 @@
 #include <lib/ddk/device.h>
 #include <zircon/compiler.h>
 
-zx_status_t publish_acpi_devices(zx_device_t* parent, zx_device_t* acpi_root);
+#include "acpi/acpi.h"
+
+zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* parent, zx_device_t* acpi_root);
 zx_status_t acpi_suspend(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,
                          uint8_t* out_state);
 

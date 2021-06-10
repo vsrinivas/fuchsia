@@ -17,6 +17,7 @@
 #include <fbl/macros.h>
 #include <fbl/vector.h>
 
+#include "acpi/acpi.h"
 #include "src/devices/lib/iommu/iommu.h"
 
 namespace x86 {
@@ -27,7 +28,8 @@ using DeviceType = ddk::Device<X86, ddk::Messageable<fuchsia_hardware_acpi::Acpi
 // This is the main class for the X86 platform bus driver.
 class X86 : public DeviceType {
  public:
-  explicit X86(zx_device_t* parent, pbus_protocol_t* pbus) : DeviceType(parent), pbus_(pbus) {}
+  explicit X86(zx_device_t* parent, pbus_protocol_t* pbus, std::unique_ptr<acpi::Acpi> acpi)
+      : DeviceType(parent), pbus_(pbus), acpi_(std::move(acpi)) {}
   ~X86();
 
   static zx_status_t Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* out);
@@ -76,6 +78,7 @@ class X86 : public DeviceType {
 
   thrd_t thread_;
 
+  std::unique_ptr<acpi::Acpi> acpi_;
   // Whether the global ACPICA initialization has been performed or not
   bool acpica_initialized_ = false;
 };

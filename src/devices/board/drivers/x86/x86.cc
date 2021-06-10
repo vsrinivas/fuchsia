@@ -49,7 +49,7 @@ int X86::Thread() {
     return status;
   }
 
-  status = publish_acpi_devices(parent(), zxdev());
+  status = publish_acpi_devices(acpi_.get(), parent(), zxdev());
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: publish_acpi_devices() failed: %d", __func__, status);
     return status;
@@ -91,7 +91,7 @@ zx_status_t X86::Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* ou
   }
 
   fbl::AllocChecker ac;
-  *out = fbl::make_unique_checked<X86>(&ac, parent, &pbus);
+  *out = fbl::make_unique_checked<X86>(&ac, parent, &pbus, std::make_unique<acpi::RealAcpi>());
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

@@ -274,7 +274,8 @@ zx_status_t acpi_suspend(uint8_t requested_state, bool enable_wake, uint8_t susp
   };
 }
 
-zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* acpi_root) {
+zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
+                                 zx_device_t* acpi_root) {
   zx_status_t status = pwrbtn_init(acpi_root);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: failed to initialize pwrbtn device: %d", status);
@@ -290,22 +291,21 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* acpi_ro
   // with publishing static metadata before we publish devices.
   LastPciBbnTracker last_pci_bbn;
 
-  ACPI_STATUS acpi_status;
-  acpi_status = acpi::WalkNamespace(
+  acpi::status<> acpi_status = acpi->WalkNamespace(
       ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
-      [acpi_root, &last_pci_bbn](ACPI_HANDLE object, uint32_t level,
-                                 acpi::WalkDirection dir) -> ACPI_STATUS {
+      [acpi_root, acpi, &last_pci_bbn](ACPI_HANDLE object, uint32_t level,
+                                       acpi::WalkDirection dir) -> acpi::status<> {
         // If we are ascending, tell our PciBbn tracker so that it can properly
         // invalidate our last BBN when needed.
         if (dir == acpi::WalkDirection::Ascending) {
           last_pci_bbn.Ascend(level);
-          return AE_OK;
+          return acpi::ok();
         }
 
         // We are descending.  Grab our object info.
         acpi::UniquePtr<ACPI_DEVICE_INFO> info;
         if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
-          return res.error_value();
+          return res.take_error();
         } else {
           info = std::move(res.value());
         }
@@ -317,7 +317,7 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* acpi_ro
         // will need it in order to publish metadata for the devices we
         // encounter.  If we encounter a fatal condition, terminate the walk.
         if (last_pci_bbn.Descend(level, object, *info) != ZX_OK) {
-          return AE_ERROR;
+          return acpi::error(AE_ERROR);
         }
 
         // Is this an HDAS (Intel HDA audio controller) or I2Cx (I2C bus) device node
@@ -357,7 +357,7 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* acpi_ro
             } else {
               // Attaching metadata to the I2Cx device /dev/sys/platform/pci/...
               zx_status_t status =
-                  I2cBusPublishMetadata(acpi_root, last_pci_bbn.bbn(),
+                  I2cBusPublishMetadata(acpi, acpi_root, last_pci_bbn.bbn(),
                                         static_cast<uint64_t>(info->Address), *info, object);
               if ((status != ZX_OK) && (status != ZX_ERR_NOT_FOUND)) {
                 zxlogf(ERROR, "acpi: failed to publish I2C metadata");
@@ -366,30 +366,30 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* acpi_ro
           }
         }
 
-        return AE_OK;
+        return acpi::ok();
       });
 
-  if (!ACPI_SUCCESS(acpi_status)) {
-    zxlogf(WARNING, "acpi: Error (%d) during fixup and metadata pass", acpi_status);
+  if (acpi_status.is_error()) {
+    zxlogf(WARNING, "acpi: Error (%d) during fixup and metadata pass", acpi_status.error_value());
   }
 
   // Now walk the ACPI namespace looking for devices we understand, and publish
   // them.  For now, publish only the first PCI bus we encounter.
   bool published_pci_bus = false;
-  acpi_status = acpi::WalkNamespace(
+  acpi_status = acpi->WalkNamespace(
       ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
       [acpi_root, platform_bus, &published_pci_bus](ACPI_HANDLE object, uint32_t level,
-                                                    acpi::WalkDirection dir) -> ACPI_STATUS {
+                                                    acpi::WalkDirection dir) -> acpi::status<> {
         // We don't have anything useful to do during the ascent phase.  Just
         // skip it.
         if (dir == acpi::WalkDirection::Ascending) {
-          return AE_OK;
+          return acpi::ok();
         }
 
         // We are descending.  Grab our object info.
         acpi::UniquePtr<ACPI_DEVICE_INFO> info;
         if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
-          return res.error_value();
+          return res.take_error();
         } else {
           info = std::move(res.value());
         }
@@ -399,7 +399,7 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* acpi_ro
         const std::string_view hid = hid_from_acpi_devinfo(*info);
         const std::string_view cid = cid_from_acpi_devinfo(*info);
         if (hid.empty()) {
-          return AE_OK;
+          return acpi::ok();
         }
 
         // Now, if we recognize the HID, go ahead and deal with publishing the
@@ -438,10 +438,10 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* acpi_ro
         } else if (hid == SERIAL_HID_STRING) {
           PublishAcpiDevice(acpi_root, platform_bus, "serial", object, info.get());
         }
-        return AE_OK;
+        return acpi::ok();
       });
 
-  if (acpi_status != AE_OK) {
+  if (acpi_status.is_error()) {
     return ZX_ERR_BAD_STATE;
   } else {
     return ZX_OK;

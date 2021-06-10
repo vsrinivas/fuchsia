@@ -19,7 +19,10 @@ shared_deps = [
 
 source_set("acpi") {
   configs += [ "..:config" ]
-  sources = [ "device.cc" ]
+  sources = [
+    "acpi.cc",
+    "device.cc",
+  ]
   deps = shared_deps + [
            "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
            "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
