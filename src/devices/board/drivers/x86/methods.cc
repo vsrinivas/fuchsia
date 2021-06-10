@@ -17,6 +17,7 @@
 #include "errors.h"
 #include "util.h"
 
+// TODO(fxbug.dev/78349): delete these methods once users are in separate drivers.
 static zx_status_t uuid_str_to_uint8_buf(const char* uuid_str, uint8_t* uuid) {
   if (strlen(uuid_str) != 36) {
     return ZX_ERR_WRONG_TYPE;
@@ -37,16 +38,6 @@ static zx_status_t uuid_str_to_uint8_buf(const char* uuid_str, uint8_t* uuid) {
   }
 
   return ZX_OK;
-}
-
-// Call the ACPI _BNN method to query a PCI Host Bridge's base bus number.
-zx_status_t acpi_bbn_call(ACPI_HANDLE dev_obj, uint8_t* out_bbn) {
-  uint64_t tmp = 0;
-  ACPI_STATUS status = acpi_evaluate_integer(dev_obj, "_BBN", &tmp);
-
-  // BBN is returned in the lower 8 bits
-  *out_bbn = tmp & 0xFF;
-  return acpi_to_zx_status(status);
 }
 
 // Call the ACPI _CRT method to query critical shutdown temperature.
@@ -138,15 +129,6 @@ zx_status_t acpi_osc_call(ACPI_HANDLE dev_obj, const char* uuid_str, uint64_t re
 // a cooling policy.
 zx_status_t acpi_psv_call(ACPI_HANDLE dev_obj, uint64_t* out) {
   ACPI_STATUS status = acpi_evaluate_integer(dev_obj, "_PSV", out);
-  return acpi_to_zx_status(status);
-}
-
-// Call the ACPI _SEG method to query a PCI Host Bridge's segment group
-zx_status_t acpi_seg_call(ACPI_HANDLE dev_obj, uint16_t* out_seg) {
-  uint64_t out;
-  ACPI_STATUS status = acpi_evaluate_integer(dev_obj, "_SEG", &out);
-  // Lower 8 bits of _SEG returned integer is the PCI segment group.
-  *out_seg = static_cast<uint8_t>(out & 0xFF);
   return acpi_to_zx_status(status);
 }
 

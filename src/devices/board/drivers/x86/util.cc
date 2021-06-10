@@ -6,6 +6,7 @@
 
 #include <acpica/acpi.h>
 
+// TODO(fxbug.dev/78349): delete these methods once users are in separate drivers.
 ACPI_STATUS acpi_evaluate_integer(ACPI_HANDLE handle, const char* name, uint64_t* out) {
   ACPI_OBJECT obj = {
       .Type = ACPI_TYPE_INTEGER,

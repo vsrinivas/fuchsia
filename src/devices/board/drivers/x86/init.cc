@@ -9,6 +9,7 @@
 
 #include "acpi-private.h"
 #include "acpi/acpi.h"
+#include "acpi/util.h"
 #include "dev.h"
 #include "errors.h"
 #include "x86.h"
@@ -18,16 +19,9 @@
 namespace {
 
 /* @brief Switch interrupts to APIC model (controls IRQ routing) */
-ACPI_STATUS set_apic_irq_mode(void) {
-  ACPI_OBJECT selector = {};
-  selector.Integer.Type = ACPI_TYPE_INTEGER;
-  selector.Integer.Value = 1;  // 1 means APIC mode according to ACPI v5 5.8.1
-
-  ACPI_OBJECT_LIST params = {
-      .Count = 1,
-      .Pointer = &selector,
-  };
-  return AcpiEvaluateObject(NULL, (char*)"\\_PIC", &params, NULL);
+ACPI_STATUS set_apic_irq_mode(acpi::Acpi* acpi) {
+  ACPI_OBJECT selector = acpi::MakeAcpiObject(1);  // 1 means APIC mode according to ACPI v5 5.8.1
+  return acpi->EvaluateObject(nullptr, "\\_PIC", std::vector({selector})).status_value();
 }
 
 int is_gpe_device(ACPI_HANDLE object) {
@@ -54,21 +48,17 @@ int is_gpe_device(ACPI_HANDLE object) {
   return 0;
 }
 
-acpi::status<> acpi_prw_walk(ACPI_HANDLE obj, uint32_t level, acpi::WalkDirection dir) {
+acpi::status<> acpi_prw_walk(ACPI_HANDLE obj, uint32_t level, acpi::WalkDirection dir,
+                             acpi::Acpi* acpi) {
   if (dir == acpi::WalkDirection::Ascending) {
     return acpi::ok();
   }
 
-  ACPI_BUFFER buffer = {
-      // Request that the ACPI subsystem allocate the buffer
-      .Length = ACPI_ALLOCATE_BUFFER,
-      .Pointer = NULL,
-  };
-  ACPI_STATUS status = AcpiEvaluateObject(obj, (char*)"_PRW", NULL, &buffer);
-  if (status != AE_OK) {
+  auto status = acpi->EvaluateObject(obj, (char*)"_PRW", std::nullopt);
+  if (status.is_error()) {
     return acpi::ok();  // Keep walking the tree
   }
-  ACPI_OBJECT* prw_res = static_cast<ACPI_OBJECT*>(buffer.Pointer);
+  acpi::UniquePtr<ACPI_OBJECT> prw_res = std::move(status.value());
 
   // _PRW returns a package with >= 2 entries. The first entry indicates what type of
   // event it is. If it's a GPE event, the first entry is either an integer indicating
@@ -88,30 +78,31 @@ acpi::status<> acpi_prw_walk(ACPI_HANDLE obj, uint32_t level, acpi::WalkDirectio
     gpe_bit = static_cast<UINT32>(prw_res->Package.Elements[0].Integer.Value);
   } else if (event_info->Type == ACPI_TYPE_PACKAGE) {
     if (event_info->Package.Count != 2) {
-      goto bailout;
+      return acpi::ok();
+      ;
     }
     ACPI_OBJECT* handle_obj = &event_info->Package.Elements[0];
     ACPI_OBJECT* gpe_num_obj = &event_info->Package.Elements[1];
     if (handle_obj->Type != ACPI_TYPE_LOCAL_REFERENCE ||
         !is_gpe_device(handle_obj->Reference.Handle)) {
-      goto bailout;
+      return acpi::ok();
+      ;
     }
     if (gpe_num_obj->Type != ACPI_TYPE_INTEGER) {
-      goto bailout;
+      return acpi::ok();
+      ;
     }
     gpe_block = handle_obj->Reference.Handle;
     gpe_bit = static_cast<UINT32>(gpe_num_obj->Integer.Value);
   } else {
-    goto bailout;
+    return acpi::ok();
+    ;
   }
   if (AcpiSetupGpeForWake(obj, gpe_block, gpe_bit) != AE_OK) {
     zxlogf(INFO, "Acpi failed to setup wake GPE");
   }
 
-bailout:
-  ACPI_FREE(buffer.Pointer);
-
-  return acpi::ok();  // We want to keep going even if we bailed out
+  return acpi::ok();
 }
 
 ACPI_STATUS acpi_sub_init(acpi::Acpi* acpi) {
@@ -153,7 +144,7 @@ ACPI_STATUS acpi_sub_init(acpi::Acpi* acpi) {
     return status;
   }
 
-  status = set_apic_irq_mode();
+  status = set_apic_irq_mode(acpi);
   if (status == AE_NOT_FOUND) {
     zxlogf(WARNING, "Could not find ACPI IRQ mode switch");
   } else if (status != AE_OK) {
@@ -161,7 +152,10 @@ ACPI_STATUS acpi_sub_init(acpi::Acpi* acpi) {
     return status;
   }
 
-  (void)acpi->WalkNamespace(ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, INT_MAX, acpi_prw_walk);
+  (void)acpi->WalkNamespace(ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, INT_MAX,
+                            [acpi](ACPI_HANDLE obj, uint32_t depth, acpi::WalkDirection dir) {
+                              return acpi_prw_walk(obj, depth, dir, acpi);
+                            });
 
   status = AcpiUpdateAllGpes();
   if (status != AE_OK) {

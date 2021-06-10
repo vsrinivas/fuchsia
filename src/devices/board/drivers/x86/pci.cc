@@ -32,6 +32,7 @@
 
 #include "acpi-private.h"
 #include "acpi/acpi.h"
+#include "errors.h"
 #include "methods.h"
 #include "resources.h"
 
@@ -315,23 +316,30 @@ zx_status_t pci_init_interrupts(ACPI_HANDLE object, x64Pciroot::Context* dev_ctx
   return ZX_OK;
 }
 
-zx_status_t pci_init_segment_and_ecam(ACPI_HANDLE object, x64Pciroot::Context* dev_ctx) {
-  zx_status_t status = acpi_bbn_call(object, &dev_ctx->info.start_bus_num);
-  if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
+zx_status_t pci_init_segment_and_ecam(acpi::Acpi* acpi, ACPI_HANDLE object,
+                                      x64Pciroot::Context* dev_ctx) {
+  auto bbn = acpi->CallBbn(object);
+  if (bbn.is_error() && acpi_to_zx_status(bbn.error_value()) != ZX_ERR_NOT_FOUND) {
     zxlogf(DEBUG, "Unable to read _BBN for '%s' (%d), assuming base bus of 0", dev_ctx->name,
-           status);
+           bbn.error_value());
 
     // Until we find an ecam we assume this potential legacy pci bus spans
     // bus 0 to bus 255 in its segment group.
     dev_ctx->info.end_bus_num = PCI_BUS_MAX;
   }
-  bool found_bbn = (status == ZX_OK);
+  bool found_bbn = false;
+  if (bbn.is_ok()) {
+    dev_ctx->info.start_bus_num = bbn.value();
+    found_bbn = true;
+  }
 
-  status = acpi_seg_call(object, &dev_ctx->info.segment_group);
-  if (status != ZX_OK) {
+  auto seg = acpi->CallSeg(object);
+  if (seg.is_error()) {
     dev_ctx->info.segment_group = 0;
     zxlogf(DEBUG, "Unable to read _SEG for '%s' (%d), assuming segment group 0.", dev_ctx->name,
-           status);
+           seg.error_value());
+  } else {
+    dev_ctx->info.segment_group = seg.value();
   }
 
   // If an MCFG is found for the given segment group this root has then we'll
@@ -340,7 +348,7 @@ zx_status_t pci_init_segment_and_ecam(ACPI_HANDLE object, x64Pciroot::Context* d
   auto& pinfo = dev_ctx->info;
   memcpy(pinfo.name, dev_ctx->name, sizeof(pinfo.name));
   McfgAllocation mcfg_alloc;
-  status = RootHost->GetSegmentMcfgAllocation(dev_ctx->info.segment_group, &mcfg_alloc);
+  zx_status_t status = RootHost->GetSegmentMcfgAllocation(dev_ctx->info.segment_group, &mcfg_alloc);
   if (status == ZX_OK) {
     // Print a warning if _BBN and MCFG bus numbers don't match. We'll use the
     // MCFG first if we have one, but a mismatch likely represents an error in
@@ -434,7 +442,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   // ACPI names are stored as 4 bytes in a u32
   memcpy(dev_ctx.name, &info->Name, 4);
 
-  status = pci_init_segment_and_ecam(object, &dev_ctx);
+  status = pci_init_segment_and_ecam(acpi, object, &dev_ctx);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Initializing %.*s ecam and bus information failed: %s",
            static_cast<int>(sizeof(dev_ctx.name)), dev_ctx.name, zx_status_get_string(status));

@@ -62,38 +62,32 @@ const std::string_view cid_from_acpi_devinfo(const ACPI_DEVICE_INFO& info) {
   return std::string_view{};
 }
 
-void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
-  ACPI_STATUS acpi_status;
+void acpi_apply_workarounds(acpi::Acpi* acpi, ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
   // Slate workaround: Turn on the HID controller.
   if (!memcmp(&info->Name, "I2C0", 4)) {
-    ACPI_BUFFER buffer = {
-        .Length = ACPI_ALLOCATE_BUFFER,
-        .Pointer = nullptr,
-    };
-    acpi_status = AcpiEvaluateObject(object, (char*)"H00A._PR0", nullptr, &buffer);
-    if (acpi_status == AE_OK) {
-      ACPI_OBJECT* pkg = static_cast<ACPI_OBJECT*>(buffer.Pointer);
+    auto acpi_status = acpi->EvaluateObject(object, "H00A._PR0", std::nullopt);
+    if (acpi_status.is_ok()) {
+      acpi::UniquePtr<ACPI_OBJECT> pkg = std::move(acpi_status.value());
       for (unsigned i = 0; i < pkg->Package.Count; i++) {
         ACPI_OBJECT* ref = &pkg->Package.Elements[i];
         if (ref->Type != ACPI_TYPE_LOCAL_REFERENCE) {
           zxlogf(DEBUG, "acpi: Ignoring wrong type 0x%x", ref->Type);
         } else {
           zxlogf(DEBUG, "acpi: Enabling HID controller at I2C0.H00A._PR0[%u]", i);
-          acpi_status = AcpiEvaluateObject(ref->Reference.Handle, (char*)"_ON", nullptr, nullptr);
-          if (acpi_status != AE_OK) {
-            zxlogf(ERROR, "acpi: acpi error 0x%x in I2C0._PR0._ON", acpi_status);
+          acpi_status = acpi->EvaluateObject(ref->Reference.Handle, "_ON", std::nullopt);
+          if (acpi_status.is_error()) {
+            zxlogf(ERROR, "acpi: acpi error 0x%x in I2C0._PR0._ON", acpi_status.error_value());
           }
         }
       }
-      AcpiOsFree(buffer.Pointer);
     }
   }
   // Acer workaround: Turn on the HID controller.
   else if (!memcmp(&info->Name, "I2C1", 4)) {
     zxlogf(DEBUG, "acpi: Enabling HID controller at I2C1");
-    acpi_status = AcpiEvaluateObject(object, (char*)"_PS0", nullptr, nullptr);
-    if (acpi_status != AE_OK) {
-      zxlogf(ERROR, "acpi: acpi error in I2C1._PS0: 0x%x", acpi_status);
+    auto acpi_status = acpi->EvaluateObject(object, "_PS0", std::nullopt);
+    if (acpi_status.is_error()) {
+      zxlogf(ERROR, "acpi: acpi error in I2C1._PS0: 0x%x", acpi_status.error_value());
     }
   }
 }
@@ -121,7 +115,7 @@ zx_device_t* PublishAcpiDevice(zx_device_t* acpi_root, zx_device_t* platform_bus
 // walking the ACPI namespace.
 class LastPciBbnTracker {
  public:
-  LastPciBbnTracker() = default;
+  explicit LastPciBbnTracker(acpi::Acpi* acpi) : acpi_(acpi) {}
 
   // If we are ascending through the level where we noticed a valid PCI BBN,
   // then we are no longer valid.
@@ -137,17 +131,19 @@ class LastPciBbnTracker {
     // bus number and stash it as our last seen PCI bus number.
     const std::string_view hid = hid_from_acpi_devinfo(obj_info);
     if ((hid == PCI_EXPRESS_ROOT_HID_STRING) || (hid == PCI_ROOT_HID_STRING)) {
+      auto bbn_ret = acpi_->CallBbn(object);
       uint8_t bbn;
-      zx_status_t status = acpi_bbn_call(object, &bbn);
 
-      if (status == ZX_ERR_NOT_FOUND) {
+      if (acpi_to_zx_status(bbn_ret.status_value()) == ZX_ERR_NOT_FOUND) {
         zxlogf(WARNING, "acpi: PCI/PCIe device \"%s\" missing _BBN entry, defaulting to 0",
                fourcc_to_string(obj_info.Name).str);
         bbn = 0;
-      } else if (status != ZX_OK) {
+      } else if (bbn_ret.is_error()) {
         zxlogf(ERROR, "acpi: failed to fetch BBN for PCI/PCIe device \"%s\"",
                fourcc_to_string(obj_info.Name).str);
         return ZX_ERR_BAD_STATE;
+      } else {
+        bbn = bbn_ret.value();
       }
 
       if (valid_) {
@@ -177,6 +173,7 @@ class LastPciBbnTracker {
   bool valid_ = false;
   uint32_t level_ = 0;
   uint8_t bbn_ = 0;
+  acpi::Acpi* acpi_;
 };
 
 }  // namespace
@@ -289,7 +286,7 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
   // driver dependencies on ACPI.  Once drivers can access their metadata
   // directly via a connection to the ACPI driver, we will not need to bother
   // with publishing static metadata before we publish devices.
-  LastPciBbnTracker last_pci_bbn;
+  LastPciBbnTracker last_pci_bbn(acpi);
 
   acpi::status<> acpi_status = acpi->WalkNamespace(
       ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
@@ -311,7 +308,7 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
         }
 
         // Apply any workarounds for quirks.
-        acpi_apply_workarounds(object, info.get());
+        acpi_apply_workarounds(acpi, object, info.get());
 
         // If this is a PCI node we are passing through, track it's BBN.  We
         // will need it in order to publish metadata for the devices we
@@ -349,8 +346,9 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
           } else {
             if (info->Name == kHDAS_Id) {
               // Attaching metadata to the HDAS device /dev/sys/platform/pci/...
-              zx_status_t status = nhlt_publish_metadata(
-                  acpi_root, last_pci_bbn.bbn(), static_cast<uint64_t>(info->Address), object);
+              zx_status_t status =
+                  nhlt_publish_metadata(acpi, acpi_root, last_pci_bbn.bbn(),
+                                        static_cast<uint64_t>(info->Address), object);
               if ((status != ZX_OK) && (status != ZX_ERR_NOT_FOUND)) {
                 zxlogf(ERROR, "acpi: failed to publish NHLT metadata");
               }

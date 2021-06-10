@@ -14,6 +14,8 @@
 #include <zircon/process.h>
 
 #include "acpi-private.h"
+#include "acpi/acpi.h"
+#include "acpi/object.h"
 #include "errors.h"
 
 /**
@@ -31,57 +33,21 @@ static const uint8_t NHLT_UUID[] = {
     /* 0000 */ 0x6E, 0x88, 0x9F, 0xA6, 0xEB, 0x6C, 0x94, 0x45,
     /* 0008 */ 0xA4, 0x1F, 0x7B, 0x5D, 0xCE, 0x24, 0xC5, 0x53};
 
-zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, ACPI_HANDLE object) {
+zx_status_t nhlt_publish_metadata(acpi::Acpi* acpi, zx_device_t* dev, uint8_t bbn, uint64_t adr,
+                                  ACPI_HANDLE object) {
   zx_status_t status = ZX_OK;
 
-  // parameters
-  ACPI_OBJECT objs[] = {
-      {
-          // uuid
-          .Buffer =
-              {
-                  .Type = ACPI_TYPE_BUFFER,
-                  .Length = sizeof(NHLT_UUID),
-                  .Pointer = (uint8_t*)NHLT_UUID,
-              },
-      },
-      {
-          // revision id
-          .Integer =
-              {
-                  .Type = ACPI_TYPE_INTEGER,
-                  .Value = 1,
-              },
-      },
-      {
-          // function id
-          .Integer =
-              {
-                  .Type = ACPI_TYPE_INTEGER,
-                  .Value = 1,
-              },
-      },
-  };
-  ACPI_OBJECT_LIST params = {
-      .Count = countof(objs),
-      .Pointer = objs,
-  };
+  std::vector<ACPI_OBJECT> params({
+      acpi::MakeAcpiObject(const_cast<uint8_t*>(NHLT_UUID), sizeof(NHLT_UUID)),  // uuid
+      acpi::MakeAcpiObject(1),                                                   // revision id
+      acpi::MakeAcpiObject(1),                                                   // function id
+  });
 
-  acpi::UniquePtr<ACPI_OBJECT> out_obj;
-  {
-    // output buffer
-    ACPI_BUFFER out = {
-        .Length = ACPI_ALLOCATE_BUFFER,
-        .Pointer = nullptr,
-    };
-
-    // Fetch the NHLT resource
-    ACPI_STATUS acpi_status = AcpiEvaluateObject(object, (char*)"_DSM", &params, &out);
-    out_obj.reset(static_cast<ACPI_OBJECT*>(out.Pointer));
-    if (acpi_status != AE_OK) {
-      zxlogf(ERROR, "acpi: failed to fetch NHLT blob (acpi_status 0x%x)", acpi_status);
-      return acpi_to_zx_status(acpi_status);
-    }
+  // Fetch the NHLT resource
+  auto out_obj = acpi->EvaluateObject(object, "_DSM", params);
+  if (out_obj.is_error()) {
+    zxlogf(ERROR, "acpi: failed to fetch NHLT blob (acpi_status 0x%x)", out_obj.status_value());
+    return acpi_to_zx_status(out_obj.status_value());
   }
 
   if (out_obj->Type != ACPI_TYPE_BUFFER) {

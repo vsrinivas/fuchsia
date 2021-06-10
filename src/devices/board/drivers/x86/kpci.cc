@@ -235,7 +235,8 @@ static zx_status_t find_pcie_config(zx_pci_init_arg_t* arg) {
 }
 
 /* @brief Device enumerator for platform_configure_pcie_legacy_irqs */
-static acpi::status<> get_pcie_devices_irq(ACPI_HANDLE object, zx_pci_init_arg_t* arg) {
+static acpi::status<> get_pcie_devices_irq(acpi::Acpi* acpi, ACPI_HANDLE object,
+                                           zx_pci_init_arg_t* arg) {
   ACPI_STATUS status = handle_prt(object, arg, UINT8_MAX, UINT8_MAX);
   if (status != AE_OK) {
     return acpi::make_status(status);
@@ -251,16 +252,11 @@ static acpi::status<> get_pcie_devices_irq(ACPI_HANDLE object, zx_pci_init_arg_t
       return acpi::make_status(status);
     }
 
-    ACPI_OBJECT object = {0};
-    ACPI_BUFFER buffer = {
-        .Length = sizeof(object),
-        .Pointer = &object,
-    };
-    status = AcpiEvaluateObject(child, (char*)"_ADR", NULL, &buffer);
-    if (status != AE_OK || buffer.Length < sizeof(object) || object.Type != ACPI_TYPE_INTEGER) {
+    auto status = acpi->EvaluateObject(child, "_ADR", std::nullopt);
+    if (status.is_error() || status->Type != ACPI_TYPE_INTEGER) {
       continue;
     }
-    UINT64 data = object.Integer.Value;
+    UINT64 data = status->Integer.Value;
     uint8_t port_dev_id = (data >> 16) & (PCI_MAX_DEVICES_PER_BUS - 1);
     uint8_t port_func_id = data & (PCI_MAX_FUNCTIONS_PER_DEVICE - 1);
     // Ignore the return value of this, since if child is not a
@@ -285,9 +281,9 @@ static zx_status_t find_pci_legacy_irq_mapping(acpi::Acpi* acpi, zx_pci_init_arg
   }
   arg->num_irqs = 0;
 
-  acpi::status<> status =
-      acpi->GetDevices((arg->addr_windows[0].has_ecam) ? PCIE_HID : PCI_HID,
-                       [arg](ACPI_HANDLE hnd, uint32_t) { return get_pcie_devices_irq(hnd, arg); });
+  acpi::status<> status = acpi->GetDevices(
+      (arg->addr_windows[0].has_ecam) ? PCIE_HID : PCI_HID,
+      [acpi, arg](ACPI_HANDLE hnd, uint32_t) { return get_pcie_devices_irq(acpi, hnd, arg); });
   if (status.is_error()) {
     return ZX_ERR_INTERNAL;
   }

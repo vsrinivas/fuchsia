@@ -4,7 +4,36 @@
 
 #include "acpi.h"
 
+#include <vector>
+
 namespace acpi {
+
+acpi::status<uint8_t> Acpi::CallBbn(ACPI_HANDLE obj) {
+  auto ret = EvaluateObject(obj, "_BBN", std::nullopt);
+  if (ret.is_error()) {
+    return ret.take_error();
+  }
+
+  if (ret->Type != ACPI_TYPE_INTEGER) {
+    return acpi::error(AE_TYPE);
+  }
+
+  return acpi::ok(ret->Integer.Value);
+}
+
+acpi::status<uint16_t> Acpi::CallSeg(ACPI_HANDLE obj) {
+  auto ret = EvaluateObject(obj, "SEG", std::nullopt);
+
+  if (ret.is_error()) {
+    return ret.take_error();
+  }
+
+  if (ret->Type != ACPI_TYPE_INTEGER) {
+    return acpi::error(AE_TYPE);
+  }
+  // Lower 8 bits of _SEG returned integer is the PCI segment group.
+  return acpi::ok(ret->Integer.Value & 0xff);
+}
 
 acpi::status<> RealAcpi::WalkNamespace(ACPI_OBJECT_TYPE type, ACPI_HANDLE start_object,
                                        uint32_t max_depth, NamespaceCallable cbk) {
@@ -37,5 +66,27 @@ acpi::status<> RealAcpi::GetDevices(const char* hid, DeviceCallable cbk) {
   };
 
   return acpi::make_status(::AcpiGetDevices(const_cast<char*>(hid), Thunk, &cbk, nullptr));
+}
+
+acpi::status<acpi::UniquePtr<ACPI_OBJECT>> RealAcpi::EvaluateObject(
+    ACPI_HANDLE object, const char* pathname, std::optional<std::vector<ACPI_OBJECT>> args) {
+  ACPI_OBJECT_LIST params;
+  ACPI_OBJECT_LIST* params_ptr = nullptr;
+  if (args.has_value()) {
+    params.Count = static_cast<UINT32>(args->size());
+    params.Pointer = args->data();
+    params_ptr = &params;
+  }
+
+  ACPI_BUFFER out = {
+      .Length = ACPI_ALLOCATE_BUFFER,
+      .Pointer = nullptr,
+  };
+
+  ACPI_STATUS result = ::AcpiEvaluateObject(object, const_cast<char*>(pathname), params_ptr, &out);
+  if (result != AE_OK) {
+    return acpi::error(result);
+  }
+  return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(static_cast<ACPI_OBJECT*>(out.Pointer)));
 }
 }  // namespace acpi

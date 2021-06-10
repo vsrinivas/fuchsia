@@ -6,10 +6,14 @@
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_ACPI_H_
 
 #include <functional>
+#include <optional>
+#include <vector>
 
 #include <acpica/acpi.h>
 
+#include "object.h"
 #include "status.h"
+#include "util.h"
 
 namespace acpi {
 
@@ -39,6 +43,12 @@ class Acpi {
 
   using DeviceCallable = std::function<acpi::status<>(ACPI_HANDLE device, uint32_t depth)>;
   virtual acpi::status<> GetDevices(const char* hid, DeviceCallable cbk) = 0;
+
+  virtual acpi::status<acpi::UniquePtr<ACPI_OBJECT>> EvaluateObject(
+      ACPI_HANDLE object, const char* pathname, std::optional<std::vector<ACPI_OBJECT>> args) = 0;
+
+  acpi::status<uint8_t> CallBbn(ACPI_HANDLE obj);
+  acpi::status<uint16_t> CallSeg(ACPI_HANDLE obj);
 };
 
 // Implementation of `Acpi` using ACPICA to operate on real ACPI tables.
@@ -51,6 +61,10 @@ class RealAcpi : public Acpi {
                                ResourcesCallable cbk) override;
 
   acpi::status<> GetDevices(const char* hid, DeviceCallable cbk) override;
+
+  acpi::status<acpi::UniquePtr<ACPI_OBJECT>> EvaluateObject(
+      ACPI_HANDLE object, const char* pathname,
+      std::optional<std::vector<ACPI_OBJECT>> args) override;
 };
 }  // namespace acpi
 

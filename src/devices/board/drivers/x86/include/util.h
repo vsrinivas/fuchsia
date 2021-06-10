@@ -10,6 +10,7 @@
 
 #include <acpica/acpi.h>
 
+// TODO(fxbug.dev/78349): delete these methods once users are in their own drivers.
 ACPI_STATUS acpi_evaluate_integer(ACPI_HANDLE handle, const char* name, uint64_t* out);
 ACPI_STATUS acpi_evaluate_method_intarg(ACPI_HANDLE handle, const char* name, uint64_t arg);
 
