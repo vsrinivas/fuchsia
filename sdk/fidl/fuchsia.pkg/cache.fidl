@@ -98,6 +98,9 @@ protocol NeededBlobs {
     /// should not be called until writing the meta blob or this request
     /// responds with `false`.
     ///
+    /// If the package was already cached, server will close the channel
+    /// with a `ZX_OK` epitaph.
+    ///
     /// + request `file` resolves to an opened writable file which must be
     ///   truncated to the correct size by the caller and then written from
     ///   start to finish (seeks are not supported). A corrupt blob is indicated
@@ -115,6 +118,9 @@ protocol NeededBlobs {
     /// Returns an iterator of blobs that are not present on the system that
     /// must be written using the `OpenBlob` request before the package will be
     /// fully cached.
+    ///
+    /// Client should call `OpenMetaBlob`, and write it if needed, before
+    /// calling `GetMissingBlobs`.
     ///
     /// A client should make this request no more than once per `NeededBlobs`
     /// connection. Once all blobs yielded by this iterator are written, the

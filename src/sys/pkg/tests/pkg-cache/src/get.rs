@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{do_fetch, get_missing_blobs, verify_fetches_succeed, write_blob, TestEnv};
-use fidl_fuchsia_io::{DirectoryMarker, FileMarker};
-use fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker};
-use fidl_fuchsia_pkg_ext::BlobId;
-use fuchsia_pkg_testing::PackageBuilder;
-use fuchsia_zircon::Status;
-use futures::prelude::*;
-use matches::assert_matches;
+use {
+    crate::{do_fetch, get_missing_blobs, verify_fetches_succeed, write_blob, TestEnv},
+    blobfs_ramdisk::BlobfsRamdisk,
+    fidl_fuchsia_io::{DirectoryMarker, FileMarker},
+    fidl_fuchsia_pkg::{BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker},
+    fidl_fuchsia_pkg_ext::BlobId,
+    fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
+    fuchsia_zircon::Status,
+    futures::prelude::*,
+    matches::assert_matches,
+    pkgfs_ramdisk::PkgfsRamdisk,
+};
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn get_multiple_packages_with_no_content_blobs() {
@@ -179,4 +183,70 @@ async fn unavailable_when_client_drops_needed_blobs_channel() {
     drop(needed_blobs);
 
     assert_eq!(get_fut.await.unwrap(), Err(Status::UNAVAILABLE));
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_package_already_present_on_fs() {
+    let pkg = PackageBuilder::new("some-package")
+        .add_resource_at("some-blob", &b"some contents"[..])
+        .build()
+        .await
+        .unwrap();
+    let blobfs = BlobfsRamdisk::start().unwrap();
+
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]);
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    let system_image_package = system_image_package.build().await;
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+
+    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+
+    let mut meta_blob_info =
+        BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
+
+    let (needed_blobs, needed_blobs_server_end) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+
+    // Call `PackageCache.Get()` for already cached package.
+    let get_fut = env
+        .proxies
+        .package_cache
+        .get(
+            &mut meta_blob_info,
+            &mut std::iter::empty(),
+            needed_blobs_server_end,
+            Some(dir_server_end),
+        )
+        .map_ok(|res| res.map_err(Status::from_raw));
+
+    // `OpenMetaBlob()` for already cached package closes the channel with with a `ZX_OK` epitaph.
+    let (_meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    assert_matches!(
+        needed_blobs.open_meta_blob(meta_blob_server_end).await,
+        Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
+    );
+
+    // `GetMissingBlobs()` will fail with cached epitaph, since channel was closed by server.
+    let (_blob_iterator, blob_iterator_server_end) =
+        fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
+    assert_matches!(
+        needed_blobs.get_missing_blobs(blob_iterator_server_end),
+        Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
+    );
+
+    let () = get_fut.await.unwrap().unwrap();
+
+    // `dir` is resolved to package directory.
+    let () = pkg.verify_contents(&dir).await.unwrap();
+
+    let () = env.stop().await;
 }
