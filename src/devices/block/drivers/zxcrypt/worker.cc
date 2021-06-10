@@ -170,11 +170,13 @@ zx_status_t Worker::DecryptRead(block_op_t* block) {
 
   TRACE_DURATION("zxcrypt", "zxcrypt::Worker::DecryptRead", "len", length);
 
-  if (ZX_ROUNDDOWN(offset_vmo, ZX_PAGE_SIZE) != offset_vmo) {
+  const size_t kPageSize = zx_system_get_page_size();
+
+  if (ZX_ROUNDDOWN(offset_vmo, kPageSize) != offset_vmo) {
     // Ensure the range inside the VMO we map is page aligned so that requests smaller than a page
     // still work.
-    mapping_offset = offset_vmo - ZX_ROUNDDOWN(offset_vmo, ZX_PAGE_SIZE);
-    offset_vmo = ZX_ROUNDDOWN(offset_vmo, ZX_PAGE_SIZE);
+    mapping_offset = offset_vmo - ZX_ROUNDDOWN(offset_vmo, kPageSize);
+    offset_vmo = ZX_ROUNDDOWN(offset_vmo, kPageSize);
     aligned_length += mapping_offset;
   }
 
