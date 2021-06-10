@@ -1148,7 +1148,7 @@ func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how socket.ShutdownMode) 
 		flags |= tcpip.ShutdownWrite
 	}
 	if flags == 0 {
-		return socket.DatagramSocketShutdownResultWithErr(C.EINVAL), nil
+		return socket.DatagramSocketShutdownResultWithErr(posix.ErrnoEinval), nil
 	}
 	if err := epe.ep.Shutdown(flags); err != nil {
 		return socket.DatagramSocketShutdownResultWithErr(tcpipErrorToCode(err)), nil
