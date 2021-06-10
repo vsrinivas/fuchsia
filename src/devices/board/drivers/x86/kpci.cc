@@ -7,13 +7,16 @@
 #include <lib/pci/pciroot.h>
 #include <stdio.h>
 #include <zircon/hw/pci.h>
+#include <zircon/syscalls/pci.h>
 
 #include <array>
 
 #include <acpica/acpi.h>
 
 #include "acpi-private.h"
+#include "acpi/acpi.h"
 #include "acpi/device.h"
+#include "acpi/status.h"
 #include "methods.h"
 #include "pci.h"
 #include "resources.h"
@@ -232,12 +235,10 @@ static zx_status_t find_pcie_config(zx_pci_init_arg_t* arg) {
 }
 
 /* @brief Device enumerator for platform_configure_pcie_legacy_irqs */
-static ACPI_STATUS get_pcie_devices_irq(ACPI_HANDLE object, UINT32 nesting_level, void* context,
-                                        void** ret) {
-  zx_pci_init_arg_t* arg = static_cast<zx_pci_init_arg_t*>(context);
+static acpi::status<> get_pcie_devices_irq(ACPI_HANDLE object, zx_pci_init_arg_t* arg) {
   ACPI_STATUS status = handle_prt(object, arg, UINT8_MAX, UINT8_MAX);
   if (status != AE_OK) {
-    return status;
+    return acpi::make_status(status);
   }
 
   // Enumerate root ports
@@ -247,7 +248,7 @@ static ACPI_STATUS get_pcie_devices_irq(ACPI_HANDLE object, UINT32 nesting_level
     if (status == AE_NOT_FOUND) {
       break;
     } else if (status != AE_OK) {
-      return status;
+      return acpi::make_status(status);
     }
 
     ACPI_OBJECT object = {0};
@@ -266,7 +267,7 @@ static ACPI_STATUS get_pcie_devices_irq(ACPI_HANDLE object, UINT32 nesting_level
     // root port, it will fail and we don't care.
     handle_prt(child, arg, port_dev_id, port_func_id);
   }
-  return AE_OK;
+  return acpi::ok();
 }
 
 /* @brief Find the legacy IRQ swizzling for the PCIe root bus
@@ -275,7 +276,7 @@ static ACPI_STATUS get_pcie_devices_irq(ACPI_HANDLE object, UINT32 nesting_level
  *
  * @return ZX_OK on success
  */
-static zx_status_t find_pci_legacy_irq_mapping(zx_pci_init_arg_t* arg) {
+static zx_status_t find_pci_legacy_irq_mapping(acpi::Acpi* acpi, zx_pci_init_arg_t* arg) {
   unsigned int map_len =
       sizeof(arg->dev_pin_to_global_irq) / (sizeof(**(arg->dev_pin_to_global_irq)));
   for (unsigned int i = 0; i < map_len; ++i) {
@@ -284,19 +285,18 @@ static zx_status_t find_pci_legacy_irq_mapping(zx_pci_init_arg_t* arg) {
   }
   arg->num_irqs = 0;
 
-  ACPI_STATUS status = AcpiGetDevices((arg->addr_windows[0].has_ecam) ? PCIE_HID : PCI_HID,
-                                      get_pcie_devices_irq, arg, NULL);
-  if (status != AE_OK) {
+  acpi::status<> status =
+      acpi->GetDevices((arg->addr_windows[0].has_ecam) ? PCIE_HID : PCI_HID,
+                       [arg](ACPI_HANDLE hnd, uint32_t) { return get_pcie_devices_irq(hnd, arg); });
+  if (status.is_error()) {
     return ZX_ERR_INTERNAL;
   }
   return ZX_OK;
 }
 
-static ACPI_STATUS find_pci_configs_cb(ACPI_HANDLE object, uint32_t nesting_level, void* _ctx,
-                                       void** ret) {
+static acpi::status<> find_pci_configs_cb(ACPI_HANDLE object, zx_pci_init_arg_t* arg) {
   size_t size_per_bus =
       PCI_BASE_CONFIG_SIZE * PCI_MAX_DEVICES_PER_BUS * PCI_MAX_FUNCTIONS_PER_DEVICE;
-  zx_pci_init_arg_t* arg = (zx_pci_init_arg_t*)_ctx;
 
   // TODO(cja): This is essentially a hacky solution to deal with
   // legacy PCI on Virtualbox and GCE. When the ACPI bus driver
@@ -311,10 +311,10 @@ static ACPI_STATUS find_pci_configs_cb(ACPI_HANDLE object, uint32_t nesting_leve
     arg->addr_windows[0].size = size_per_bus;
     arg->addr_window_count = 1;
 
-    return AE_OK;
+    return acpi::ok();
   }
 
-  return AE_ERROR;
+  return acpi::error(AE_ERROR);
 }
 
 /* @brief Find the PCI config (returns the first one found)
@@ -323,10 +323,14 @@ static ACPI_STATUS find_pci_configs_cb(ACPI_HANDLE object, uint32_t nesting_leve
  *
  * @return ZX_OK on success.
  */
-static zx_status_t find_pci_config(zx_pci_init_arg_t* arg) {
+static zx_status_t find_pci_config(acpi::Acpi* acpi, zx_pci_init_arg_t* arg) {
   // TODO: Although this will find every PCI legacy root, we're presently
   // hardcoding to just use the first at bus 0 dev 0 func 0 segment 0.
-  return AcpiGetDevices(PCI_HID, find_pci_configs_cb, arg, NULL);
+  return acpi->GetDevices(PCI_HID, [arg](ACPI_HANDLE device,
+                                         uint32_t) { return find_pci_configs_cb(device, arg); })
+                 .is_ok()
+             ? ZX_OK
+             : ZX_ERR_INTERNAL;
 }
 
 /* @brief Compute PCIe initialization information
@@ -337,7 +341,7 @@ static zx_status_t find_pci_config(zx_pci_init_arg_t* arg) {
  *
  * @return ZX_OK on success
  */
-zx_status_t get_pci_init_arg(zx_pci_init_arg_t** arg, uint32_t* size) {
+zx_status_t get_pci_init_arg(acpi::Acpi* acpi, zx_pci_init_arg_t** arg, uint32_t* size) {
   zx_pci_init_arg_t* res = NULL;
 
   // TODO(teisenbe): We assume only one ECAM window right now...
@@ -352,13 +356,13 @@ zx_status_t get_pci_init_arg(zx_pci_init_arg_t** arg, uint32_t* size) {
   // will be handled when the PCI bus driver binds to roots via ACPI.
   zx_status_t status = find_pcie_config(res);
   if (status != ZX_OK) {
-    status = find_pci_config(res);
+    status = find_pci_config(acpi, res);
     if (status != ZX_OK) {
       goto fail;
     }
   }
 
-  status = find_pci_legacy_irq_mapping(res);
+  status = find_pci_legacy_irq_mapping(acpi, res);
   if (status != ZX_OK) {
     goto fail;
   }
@@ -474,25 +478,23 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
   return AE_OK;
 }
 
-static ACPI_STATUS pci_report_current_resources_device_cb(ACPI_HANDLE object,
-                                                          uint32_t nesting_level, void* _ctx,
-                                                          void** ret) {
+static acpi::status<> pci_report_current_resources_device_cb(ACPI_HANDLE object, acpi::Acpi* acpi,
+                                                             report_current_resources_ctx* ctx) {
   acpi::UniquePtr<ACPI_DEVICE_INFO> info;
   if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
-    return res.error_value();
+    return res.take_error();
   } else {
     info = std::move(res.value());
   }
 
-  auto* ctx = static_cast<report_current_resources_ctx*>(_ctx);
   ctx->device_is_root_bridge = (info->Flags & ACPI_PCI_ROOT_BRIDGE) != 0;
 
   ACPI_STATUS status =
       AcpiWalkResources(object, (char*)"_CRS", report_current_resources_resource_cb, ctx);
   if (status == AE_NOT_FOUND || status == AE_OK) {
-    return AE_OK;
+    return acpi::ok();
   }
-  return status;
+  return acpi::make_status(status);
 }
 
 /* @brief Report current resources to the kernel PCI driver
@@ -505,7 +507,7 @@ static ACPI_STATUS pci_report_current_resources_device_cb(ACPI_HANDLE object,
  *
  * @return ZX_OK on success
  */
-zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle) {
+zx_status_t pci_report_current_resources(acpi::Acpi* acpi, zx_handle_t root_resource_handle) {
   // First we search for resources to add, then we subtract out things that
   // are being consumed elsewhere.  This forces an ordering on the
   // operations so that it should be consistent, and should protect against
@@ -518,8 +520,11 @@ zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle) {
       .device_is_root_bridge = false,
       .add_pass = true,
   };
-  ACPI_STATUS status = AcpiGetDevices(NULL, pci_report_current_resources_device_cb, &ctx, NULL);
-  if (status != AE_OK) {
+  acpi::status<> status =
+      acpi->GetDevices(nullptr, [ctx = &ctx, acpi](ACPI_HANDLE hnd, uint32_t) -> acpi::status<> {
+        return pci_report_current_resources_device_cb(hnd, acpi, ctx);
+      });
+  if (status.is_error()) {
     return ZX_ERR_INTERNAL;
   }
 
@@ -529,8 +534,11 @@ zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle) {
       .device_is_root_bridge = false,
       .add_pass = false,
   };
-  status = AcpiGetDevices(NULL, pci_report_current_resources_device_cb, &ctx, NULL);
-  if (status != AE_OK) {
+  status =
+      acpi->GetDevices(nullptr, [ctx = &ctx, acpi](ACPI_HANDLE hnd, uint32_t) -> acpi::status<> {
+        return pci_report_current_resources_device_cb(hnd, acpi, ctx);
+      });
+  if (status.is_error()) {
     return ZX_ERR_INTERNAL;
   }
 
@@ -546,10 +554,11 @@ zx_protocol_device_t acpi_device_proto = [] {
 
 // This pci_init initializes the kernel pci driver and is not compiled in at the same time as the
 // userspace pci driver under development.
-zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
+zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
+                     acpi::Acpi* acpi) {
   // Report current resources to kernel PCI driver
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  zx_status_t status = pci_report_current_resources(get_root_resource());
+  zx_status_t status = pci_report_current_resources(acpi, get_root_resource());
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: WARNING: ACPI failed to report all current resources!");
   }
@@ -557,7 +566,7 @@ zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object, ACPI_DEVICE_
   // Initialize kernel PCI driver
   zx_pci_init_arg_t* arg;
   uint32_t arg_size;
-  status = get_pci_init_arg(&arg, &arg_size);
+  status = get_pci_init_arg(acpi, &arg, &arg_size);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: erorr %d in get_pci_init_arg", status);
     return AE_ERROR;

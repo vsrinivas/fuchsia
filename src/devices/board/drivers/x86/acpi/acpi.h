@@ -36,6 +36,9 @@ class Acpi {
   using ResourcesCallable = std::function<acpi::status<>(ACPI_RESOURCE* res)>;
   virtual acpi::status<> WalkResources(ACPI_HANDLE object, const char* resource_name,
                                        ResourcesCallable cbk) = 0;
+
+  using DeviceCallable = std::function<acpi::status<>(ACPI_HANDLE device, uint32_t depth)>;
+  virtual acpi::status<> GetDevices(const char* hid, DeviceCallable cbk) = 0;
 };
 
 // Implementation of `Acpi` using ACPICA to operate on real ACPI tables.
@@ -46,6 +49,8 @@ class RealAcpi : public Acpi {
                                NamespaceCallable cbk) override;
   acpi::status<> WalkResources(ACPI_HANDLE object, const char* resource_name,
                                ResourcesCallable cbk) override;
+
+  acpi::status<> GetDevices(const char* hid, DeviceCallable cbk) override;
 };
 }  // namespace acpi
 

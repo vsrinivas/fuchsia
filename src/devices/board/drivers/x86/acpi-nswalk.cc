@@ -378,8 +378,8 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
   bool published_pci_bus = false;
   acpi_status = acpi->WalkNamespace(
       ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
-      [acpi_root, platform_bus, &published_pci_bus](ACPI_HANDLE object, uint32_t level,
-                                                    acpi::WalkDirection dir) -> acpi::status<> {
+      [acpi_root, acpi, platform_bus, &published_pci_bus](
+          ACPI_HANDLE object, uint32_t level, acpi::WalkDirection dir) -> acpi::status<> {
         // We don't have anything useful to do during the ascent phase.  Just
         // skip it.
         if (dir == acpi::WalkDirection::Ascending) {
@@ -406,7 +406,7 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
         // device.
         if ((hid == PCI_EXPRESS_ROOT_HID_STRING) || (hid == PCI_ROOT_HID_STRING)) {
           if (!published_pci_bus) {
-            if (pci_init(platform_bus, object, info.get()) == ZX_OK) {
+            if (pci_init(platform_bus, object, info.get(), acpi) == ZX_OK) {
               published_pci_bus = true;
             } else {
               zxlogf(WARNING, "Skipping extra PCI/PCIe bus \"%s\"",

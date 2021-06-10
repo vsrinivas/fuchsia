@@ -31,6 +31,7 @@
 #include <region-alloc/region-alloc.h>
 
 #include "acpi-private.h"
+#include "acpi/acpi.h"
 #include "methods.h"
 #include "resources.h"
 
@@ -46,8 +47,7 @@ struct ResourceContext {
 
 // ACPICA will call this function for each resource found while walking a device object's resource
 // list.
-static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
-  auto* ctx = static_cast<ResourceContext*>(_ctx);
+static acpi::status<> resource_report_callback(ACPI_RESOURCE* res, ResourceContext* ctx) {
   zx_status_t status;
 
   bool is_mmio = false;
@@ -59,7 +59,7 @@ static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
     resource_memory_t mem;
     status = resource_parse_memory(res, &mem);
     if (status != ZX_OK || mem.minimum != mem.maximum) {
-      return AE_ERROR;
+      return acpi::error(AE_ERROR);
     }
 
     is_mmio = true;
@@ -69,7 +69,7 @@ static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
     resource_address_t addr;
     status = resource_parse_address(res, &addr);
     if (status != ZX_OK) {
-      return AE_ERROR;
+      return acpi::error(AE_ERROR);
     }
 
     if (addr.resource_type == RESOURCE_ADDRESS_MEMORY) {
@@ -77,12 +77,12 @@ static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
     } else if (addr.resource_type == RESOURCE_ADDRESS_IO) {
       is_mmio = false;
     } else {
-      return AE_OK;
+      return acpi::ok();
     }
 
     if (!addr.min_address_fixed || !addr.max_address_fixed || addr.maximum < addr.minimum) {
       printf("WARNING: ACPI found bad _CRS address entry\n");
-      return AE_OK;
+      return acpi::ok();
     }
 
     // We compute len from maximum rather than address_length, since some
@@ -100,32 +100,32 @@ static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
     resource_io_t io;
     status = resource_parse_io(res, &io);
     if (status != ZX_OK) {
-      return AE_ERROR;
+      return acpi::error(AE_ERROR);
     }
 
     if (io.minimum != io.maximum) {
       printf("WARNING: ACPI found bad _CRS IO entry\n");
-      return AE_OK;
+      return acpi::ok();
     }
 
     is_mmio = false;
     base = io.minimum;
     len = io.address_length;
   } else {
-    return AE_OK;
+    return acpi::ok();
   }
 
   // Ignore empty regions that are reported, and skip any resources that
   // aren't for the pass we're doing.
   if (len == 0 || add_range != ctx->add_pass) {
-    return AE_OK;
+    return acpi::ok();
   }
 
   if (add_range && is_mmio && base < MB(1)) {
     // The PC platform defines many legacy regions below 1MB that we do not
     // want PCIe to try to map onto.
     zxlogf(INFO, "Skipping adding MMIO range due to being below 1MB");
-    return AE_OK;
+    return acpi::ok();
   }
 
   // Add/Subtract the [base, len] region we found through ACPI to the allocators
@@ -160,31 +160,31 @@ static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
       // If we are subtracting a range and fail, abort.  This is bad.
       zxlogf(INFO, "Failed to subtract range [%#lx - %#lx] (%#lx): %d", base, base + len, len,
              status);
-      return AE_ERROR;
+      return acpi::error(AE_ERROR);
     }
   }
-  return AE_OK;
+  return acpi::ok();
 }
 
 // ACPICA will call this function once per device object found while walking the device
 // tree off of the PCI root.
-static ACPI_STATUS walk_devices_callback(ACPI_HANDLE object, uint32_t /*nesting_level*/, void* _ctx,
-                                         void** /*ret*/) {
+static acpi::status<> walk_devices_callback(ACPI_HANDLE object, ResourceContext* ctx,
+                                            acpi::Acpi* acpi) {
   acpi::UniquePtr<ACPI_DEVICE_INFO> info;
   auto res = acpi::GetObjectInfo(object);
   if (res.is_error()) {
     zxlogf(DEBUG, "acpi::GetObjectInfo failed %d", res.error_value());
-    return res.error_value();
+    return res.take_error();
   }
   info = std::move(res.value());
 
-  auto* ctx = static_cast<ResourceContext*>(_ctx);
   ctx->device_is_root_bridge = (info->Flags & ACPI_PCI_ROOT_BRIDGE) != 0;
 
-  ACPI_STATUS status =
-      AcpiWalkResources(object, const_cast<char*>("_CRS"), resource_report_callback, ctx);
-  if (status == AE_NOT_FOUND || status == AE_OK) {
-    return AE_OK;
+  acpi::status<> status = acpi->WalkResources(
+      object, const_cast<char*>("_CRS"),
+      [ctx](ACPI_RESOURCE* rsrc) { return resource_report_callback(rsrc, ctx); });
+  if (status.is_ok() || status.error_value() == AE_NOT_FOUND) {
+    return acpi::ok();
   }
   return status;
 }
@@ -199,7 +199,7 @@ static ACPI_STATUS walk_devices_callback(ACPI_HANDLE object, uint32_t /*nesting_
  *
  * @return ZX_OK on success
  */
-zx_status_t scan_acpi_tree_for_resources(zx_handle_t root_resource_handle) {
+zx_status_t scan_acpi_tree_for_resources(acpi::Acpi* acpi, zx_handle_t root_resource_handle) {
   // First we search for resources to add, then we subtract out things that
   // are being consumed elsewhere.  This forces an ordering on the
   // operations so that it should be consistent, and should protect against
@@ -212,15 +212,20 @@ zx_status_t scan_acpi_tree_for_resources(zx_handle_t root_resource_handle) {
       .device_is_root_bridge = false,
       .add_pass = true,
   };
-  ACPI_STATUS status = AcpiGetDevices(nullptr, walk_devices_callback, &ctx, nullptr);
-  if (status != AE_OK) {
+  acpi::status<> status =
+      acpi->GetDevices(nullptr, [acpi, ctx = &ctx](ACPI_HANDLE device, uint32_t) {
+        return walk_devices_callback(device, ctx, acpi);
+      });
+  if (status.is_error()) {
     return ZX_ERR_INTERNAL;
   }
 
   // Removes resources we believe are in use by other parts of the platform
   ctx.add_pass = false;
-  status = AcpiGetDevices(nullptr, walk_devices_callback, &ctx, nullptr);
-  if (status != AE_OK) {
+  status = acpi->GetDevices(nullptr, [acpi, ctx = &ctx](ACPI_HANDLE device, uint32_t) {
+    return walk_devices_callback(device, ctx, acpi);
+  });
+  if (status.is_error()) {
     return ZX_ERR_INTERNAL;
   }
 
@@ -386,7 +391,7 @@ zx_status_t pci_init_segment_and_ecam(ACPI_HANDLE object, x64Pciroot::Context* d
 
 // Parse the MCFG table and initialize the window allocators for the RootHost if this is the first
 // root found.
-zx_status_t pci_root_host_init() {
+zx_status_t pci_root_host_init(acpi::Acpi* acpi) {
   static bool initialized = false;
   if (initialized) {
     return ZX_OK;
@@ -402,7 +407,7 @@ zx_status_t pci_root_host_init() {
     return st;
   }
 
-  st = scan_acpi_tree_for_resources(get_root_resource());
+  st = scan_acpi_tree_for_resources(acpi, get_root_resource());
   if (st != ZX_OK) {
     zxlogf(ERROR, "Scanning acpi resources failed: %s", zx_status_get_string(st));
     return st;
@@ -412,8 +417,9 @@ zx_status_t pci_root_host_init() {
   return ZX_OK;
 }
 
-zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
-  zx_status_t status = pci_root_host_init();
+zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
+                     acpi::Acpi* acpi) {
+  zx_status_t status = pci_root_host_init(acpi);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Error initializing PCI root host, attempting to boot regardless: %d", status);
   }

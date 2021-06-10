@@ -18,6 +18,7 @@
 #include <acpica/actypes.h>
 
 #include "acpi-private.h"
+#include "acpi/acpi.h"
 
 __BEGIN_CDECLS
 // It would be nice to use the hwreg library here, but these structs should be kept
@@ -41,10 +42,11 @@ struct acpi_legacy_irq {
   uint32_t options;  // Configuration for zx_interrupt_create
 };
 
-zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info);
+zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
+                     acpi::Acpi* acpi);
 
-zx_status_t get_pci_init_arg(zx_pci_init_arg_t** arg, uint32_t* size);
-zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle);
+zx_status_t get_pci_init_arg(acpi::Acpi* acpi, zx_pci_init_arg_t** arg, uint32_t* size);
+zx_status_t pci_report_current_resources(acpi::Acpi* acpi, zx_handle_t root_resource_handle);
 
 class x64Pciroot : public PcirootBase {
  public:

@@ -30,4 +30,12 @@ acpi::status<> RealAcpi::WalkResources(ACPI_HANDLE object, const char* resource_
   return acpi::make_status(
       ::AcpiWalkResources(object, const_cast<char*>(resource_name), Thunk, &cbk));
 }
+
+acpi::status<> RealAcpi::GetDevices(const char* hid, DeviceCallable cbk) {
+  auto Thunk = [](ACPI_HANDLE object, uint32_t level, void* ctx, void**) -> ACPI_STATUS {
+    return (*static_cast<DeviceCallable*>(ctx))(object, level).status_value();
+  };
+
+  return acpi::make_status(::AcpiGetDevices(const_cast<char*>(hid), Thunk, &cbk, nullptr));
+}
 }  // namespace acpi
