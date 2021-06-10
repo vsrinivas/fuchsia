@@ -10,7 +10,7 @@ namespace {
 std::string Format(const std::string& source, bool reformat_and_compare = true) {
   fidl::ExperimentalFlags flags;
   flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  auto lib = WithLibraryZx(source, flags);
+  auto lib = TestLibrary(source, flags);
 
   // We use a column width of 40, rather than the "real world" 100, to make tests easier to read
   // and write.
@@ -102,6 +102,8 @@ alias MyAlias_Abcdefghijklmnopqr = bool;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// This test's input is semantically identical to AliasFormatted.  The only difference is that the
+// newlines and unnecessary spaces have been removed.
 TEST(NewFormatterTests, AliasMinimalWhitespace) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(library foo.bar;alias MyAlias_Abcdefghijklmnopqr=bool;)FIDL";
@@ -115,7 +117,7 @@ alias MyAlias_Abcdefghijklmnopqr = bool;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
-// Test an alias declaration in which every token is placed on a newline.
+// Input is identical to AliasFormatted, except that every token is on a newline.
 TEST(NewFormatterTests, AliasMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
@@ -243,6 +245,8 @@ library foo.bar;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// This test's input is semantically identical to AttributesFormatted.  The only difference is that
+// the newlines and unnecessary spaces have been removed.
 TEST(NewFormatterTests, AttributesMinimalWhitespace) {
   // ---------------40---------------- |
   std::string unformatted =
@@ -403,6 +407,8 @@ type MyBits_Abcdefghijklmnopqrs = bits {
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
 //  `=bits{` does not get split into `= bits {` properly.  This should be fixed when proper token
 //  parsing is used.
+// This test's input is semantically identical to BitsFormatted.  The only difference is that the
+// newlines and unnecessary spaces have been removed.
 TEST(NewFormatterTests, BitsMinimalWhitespace) {
   // ---------------40---------------- |
   std::string unformatted =
@@ -420,6 +426,7 @@ type MyBits_Abcdefghijklmnopqrstu =bits{
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// Input is identical to BitsFormatted, except that every token is on a newline.
 TEST(NewFormatterTests, BitsMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
@@ -654,6 +661,8 @@ const MY_TRUE_ABCDEFGHIJKLM bool = true;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// This test's input is semantically identical to ConstFormatted.  The only difference is that the
+// newlines and unnecessary spaces have been removed.
 TEST(NewFormatterTests, ConstMinimalWhitespace) {
   // ---------------40---------------- |
   std::string unformatted =
@@ -675,7 +684,7 @@ const MY_REF_ABCD uint64 = MY_UINT64_AB;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
-// Test const declarations where every token is placed on a newline.
+// Input is identical to ConstFormatted, except that every token is on a newline.
 TEST(NewFormatterTests, ConstMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
@@ -903,6 +912,8 @@ type MyEnum_Abcdefghij = enum : uint32 {
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
 //  `=enum:uint32` does not get split into `= enum : uint32 {` properly.  This should be fixed when
 //  proper token parsing is used.
+// This test's input is semantically identical to EnumFormatted.  The only difference is that the
+// newlines and unnecessary spaces have been removed.
 TEST(NewFormatterTests, EnumMinimalWhitespace) {
   // ---------------40---------------- |
   std::string unformatted =
@@ -922,6 +933,7 @@ type MyEnum_Abcdefghij =enum:uint32{
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// Input is identical to EnumFormatted, except that every token is on a newline.
 TEST(NewFormatterTests, EnumMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
@@ -1045,6 +1057,8 @@ library foo.bar;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// This test's input is semantically identical to LibraryFormatted.  The only difference is that the
+// newlines and unnecessary spaces have been removed.
 TEST(NewFormatterTests, LibraryMinimalWhitespace) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(library foo.bar;)FIDL";
@@ -1057,7 +1071,7 @@ library foo.bar;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
-// Test a library declaration in which every token is placed on a newline.
+// Input is identical to LibraryFormatted, except that every token is on a newline.
 TEST(NewFormatterTests, LibraryMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
@@ -1110,6 +1124,1090 @@ type MyPopulatedStruct_Abcdef = struct {
         nested1_abcdef vector<uint8>:16;
         nested2_abcdef string = "abcde";
     };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, ProtocolNoArgumentsFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstu {};
+
+protocol Composed_Abcdefghijklmnopqr {
+    compose Empty_Abcdefghijklmnopqrstu;
+};
+
+protocol Populated_Abcdefghijklmnopqrs {
+    compose Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrstuvwxyz();
+    OneWayNull_Abcdefghijklm(struct {});
+
+    TwoWay_Abcdefghijklmnopqrst() -> ();
+    TwoWayNull(struct {}) -> (struct{});
+    TwoWayError_Ab() -> () error uint32;
+
+    compose Empty_Abcdefghijklmnopqrstu;
+
+    -> Event_Abcdefghijklmnopqrstuvwx();
+    -> EventNull_Abcdefghijk(struct {});
+    -> EventError() error abcdefghijklm;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstu {};
+
+protocol Composed_Abcdefghijklmnopqr {
+    compose Empty_Abcdefghijklmnopqrstu;
+};
+
+protocol Populated_Abcdefghijklmnopqrs {
+    compose Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrstuvwxyz();
+    OneWayNull_Abcdefghijklm(struct {});
+
+    TwoWay_Abcdefghijklmnopqrst() -> ();
+    TwoWayNull(struct {}) -> (struct{});
+    TwoWayError_Ab() -> () error uint32;
+
+    compose Empty_Abcdefghijklmnopqrstu;
+
+    -> Event_Abcdefghijklmnopqrstuvwx();
+    -> EventNull_Abcdefghijk(struct {});
+    -> EventError() error abcdefghijklm;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Aside from the contents of the request/response layouts themselves, nothing in a protocol
+// definition should cause wrapping on overflow.
+TEST(NewFormatterTests, ProtocolNoArgumentsOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstuv {};
+
+protocol Composed_Abcdefghijklmnopqrs {
+    compose Empty_Abcdefghijklmnopqrstuv;
+};
+
+protocol Populated_Abcdefghijklmnopqrst {
+    compose Composed_Abcdefghijklmnopqrs;
+    OneWay_Abcdefghijklmnopqrstuvwxyzz();
+    OneWayNull_Abcdefghijklmn(struct {});
+
+    TwoWay_Abcdefghijklmnopqrstu() -> ();
+    TwoWayNulls(struct {}) -> (struct{});
+    TwoWayError_Abc() -> () error uint32;
+
+    compose Empty_Abcdefghijklmnopqrstuv;
+
+    -> Event_Abcdefghijklmnopqrstuvwxy();
+    -> EventNull_Abcdefghijkl(struct {});
+    -> EventError() error abcdefghijklmn;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstuv {};
+
+protocol Composed_Abcdefghijklmnopqrs {
+    compose Empty_Abcdefghijklmnopqrstuv;
+};
+
+protocol Populated_Abcdefghijklmnopqrst {
+    compose Composed_Abcdefghijklmnopqrs;
+    OneWay_Abcdefghijklmnopqrstuvwxyzz();
+    OneWayNull_Abcdefghijklmn(struct {});
+
+    TwoWay_Abcdefghijklmnopqrstu() -> ();
+    TwoWayNulls(struct {}) -> (struct{});
+    TwoWayError_Abc() -> () error uint32;
+
+    compose Empty_Abcdefghijklmnopqrstuv;
+
+    -> Event_Abcdefghijklmnopqrstuvwxy();
+    -> EventNull_Abcdefghijkl(struct {});
+    -> EventError() error abcdefghijklmn;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, ProtocolNoArgumentsUnformatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstu {   }
+;
+
+protocol
+Composed_Abcdefghijklmnopqr   {
+    compose Empty_Abcdefghijklmnopqrstu ;
+};
+
+protocol Populated_Abcdefghijklmnopqrs   {
+ compose Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrstuvwxyz( );
+    OneWayNull_Abcdefghijklm (struct {});
+
+    TwoWay_Abcdefghijklmnopqrst()   -> ();
+    TwoWayNull(struct {}) ->   (struct{});
+    TwoWayError_Ab() -> ()error
+uint32;
+
+    compose Empty_Abcdefghijklmnopqrstu   ;
+
+    ->Event_Abcdefghijklmnopqrstuvwx() ;
+    -> EventNull_Abcdefghijk(  struct {  });
+    ->  EventError()
+error   abcdefghijklm;};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstu {};
+
+protocol Composed_Abcdefghijklmnopqr {
+    compose Empty_Abcdefghijklmnopqrstu;
+};
+
+protocol Populated_Abcdefghijklmnopqrs {
+    compose Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrstuvwxyz();
+    OneWayNull_Abcdefghijklm(struct {});
+
+    TwoWay_Abcdefghijklmnopqrst() -> ();
+    TwoWayNull(struct {}) -> (struct{});
+    TwoWayError_Ab() -> () error uint32;
+
+    compose Empty_Abcdefghijklmnopqrstu;
+
+    -> Event_Abcdefghijklmnopqrstuvwx();
+    -> EventNull_Abcdefghijk(struct {});
+    -> EventError() error abcdefghijklm;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, ProtocolNoArgumentsWithAllAnnotations) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+ // comment 1
+  /// doc comment 1
+
+   @foo
+
+    protocol Empty_Abcdefghijklmnopqrstu {};
+
+protocol Composed_Abcdefghijklmnopqr {
+    // comment 2
+
+   /// doc comment 2
+
+     @bar
+
+      compose Empty_Abcdefghijklmnopqrstu;
+};
+
+protocol Populated_Abcdefghijklmnopqrs {
+    compose Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrstuvwxyz();
+
+// comment 3
+/// doc comment 3
+
+     @baz
+    OneWayNull_Abcdefghijklm(struct {});
+
+    TwoWay_Abcdefghijklmnopqrst() -> ();
+    TwoWayNull(struct {}) -> (struct{});
+    TwoWayError_Ab() -> () error uint32;
+
+    // comment 4
+    /// doc comment 4
+    @qux
+    compose Empty_Abcdefghijklmnopqrstu;
+
+   // comment 5
+
+  /// doc comment 5
+@abc
+    -> Event_Abcdefghijklmnopqrstuvwx();
+    -> EventNull_Abcdefghijk(struct {});
+    -> EventError() error abcdefghijklm;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+// comment 1
+/// doc comment 1
+@foo
+protocol Empty_Abcdefghijklmnopqrstu {};
+
+protocol Composed_Abcdefghijklmnopqr {
+    // comment 2
+
+    /// doc comment 2
+    @bar
+    compose Empty_Abcdefghijklmnopqrstu;
+};
+
+protocol Populated_Abcdefghijklmnopqrs {
+    compose Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrstuvwxyz();
+
+    // comment 3
+    /// doc comment 3
+    @baz
+    OneWayNull_Abcdefghijklm(struct {});
+
+    TwoWay_Abcdefghijklmnopqrst() -> ();
+    TwoWayNull(struct {}) -> (struct{});
+    TwoWayError_Ab() -> () error uint32;
+
+    // comment 4
+    /// doc comment 4
+    @qux
+    compose Empty_Abcdefghijklmnopqrstu;
+
+    // comment 5
+
+    /// doc comment 5
+    @abc
+    -> Event_Abcdefghijklmnopqrstuvwx();
+    -> EventNull_Abcdefghijk(struct {});
+    -> EventError() error abcdefghijklm;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly.  This should
+//  be fixed when proper token parsing is used.
+// This test's input is semantically identical to ProtocolNoArgumentsFormatted.  The only difference
+// is that the newlines and unnecessary spaces have been removed.
+TEST(NewFormatterTests, ProtocolNoArgumentsMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted =
+      R"FIDL(library foo.bar;protocol Empty_Abcdefghijklmnopqrstu{};protocol Composed_Abcdefghijklmnopqr{compose Empty_Abcdefghijklmnopqrstu;};protocol Populated_Abcdefghijklmnopqrs{compose Composed_Abcdefghijklmnopqr;OneWay_Abcdefghijklmnopqrstuvwxyz();OneWayNull_Abcdefghijklm(struct{});TwoWay_Abcdefghijklmnopqrst()->();TwoWayNull(struct{})->(struct{});TwoWayError_Ab()->()error uint32;compose Empty_Abcdefghijklmnopqrstu;->Event_Abcdefghijklmnopqrstuvwx();->EventNull_Abcdefghijk(struct{});->EventError()error abcdefghijklm;};)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+protocol Empty_Abcdefghijklmnopqrstu{};
+protocol Composed_Abcdefghijklmnopqr{
+    compose Empty_Abcdefghijklmnopqrstu;
+};
+protocol Populated_Abcdefghijklmnopqrs{
+    compose Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrstuvwxyz();
+    OneWayNull_Abcdefghijklm(struct{});
+    TwoWay_Abcdefghijklmnopqrst() -> ();
+    TwoWayNull(struct{}) -> (struct{});
+    TwoWayError_Ab() -> () error uint32;
+    compose Empty_Abcdefghijklmnopqrstu;
+    -> Event_Abcdefghijklmnopqrstuvwx();
+    -> EventNull_Abcdefghijk(struct{});
+    -> EventError() error abcdefghijklm;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Input is identical to ProtocolNoArgumentsFormatted, except that every token is on a newline.
+TEST(NewFormatterTests, ProtocolNoArgumentsMaximalNewlines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library
+foo
+.
+bar
+;
+
+protocol
+Empty_Abcdefghijklmnopqrstu
+{
+}
+;
+
+protocol
+Composed_Abcdefghijklmnopqr
+{
+compose Empty_Abcdefghijklmnopqrstu
+;
+}
+;
+
+protocol
+Populated_Abcdefghijklmnopqrs
+{
+compose
+Composed_Abcdefghijklmnopqr
+;
+OneWay_Abcdefghijklmnopqrstuvwxyz(
+)
+;
+OneWayNull_Abcdefghijklm(
+struct
+{
+}
+)
+;
+
+TwoWay_Abcdefghijklmnopqrst
+(
+)
+->
+(
+)
+;
+TwoWayNull
+(
+struct
+{
+}
+)
+->
+(
+struct
+{
+}
+)
+;
+TwoWayError_Ab
+(
+)
+->
+(
+)
+error
+uint32
+;
+
+compose
+Empty_Abcdefghijklmnopqrstu
+;
+
+->
+Event_Abcdefghijklmnopqrstuvwx
+(
+)
+;
+->
+EventNull_Abcdefghijk
+(
+struct
+{
+}
+)
+;
+->
+EventError
+(
+)
+error
+abcdefghijklm
+;
+}
+;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstu {};
+
+protocol Composed_Abcdefghijklmnopqr {
+    compose Empty_Abcdefghijklmnopqrstu;
+};
+
+protocol Populated_Abcdefghijklmnopqrs {
+    compose Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrstuvwxyz();
+    OneWayNull_Abcdefghijklm(struct {});
+
+    TwoWay_Abcdefghijklmnopqrst() -> ();
+    TwoWayNull(struct {}) -> (struct {});
+    TwoWayError_Ab() -> () error uint32;
+
+    compose Empty_Abcdefghijklmnopqrstu;
+
+    -> Event_Abcdefghijklmnopqrstuvwx();
+    -> EventNull_Abcdefghijk(struct {});
+    -> EventError() error abcdefghijklm;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, ProtocolWithArgumentsFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstu {};
+
+protocol Composed_Abcdefghijklmnopqr {
+    compose Empty_Abcdefghijklmnopqrstu;
+};
+
+protocol Populated_Abcdefghijklmnopqrs {
+    compose Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrst(struct {
+        req1_abcdefghijklmnopqrstu bool;
+    });
+
+    TwoWay_Abcdefghijklmnopqrst(struct {
+        req2_abcdefghijklmnopqrstu bool;
+    }) -> (struct {
+        res3_abcdefghijklmnopqrstu bool;
+    });
+    TwoWayError_Abcdefghijklmno(struct {
+        req4_abcdefghijklm bool = false;
+        req5_abcdefghijklmnopqr struct {
+            inner1_abcdefghijklmno int8;
+        };
+    }) -> (struct {
+        res6_abcdefghijklmnopqrstu bool;
+    }) error uint32;
+
+    compose Empty_Abcdefghijklmnopqrstu;
+
+    -> Event_Abcdefghijklmnopqr(struct {
+        res7_abcdefghijklmnopqrstu bool;
+    });
+    -> EventError_Abcdefghijklm(struct {
+        res8_abcdefghijklmnopqrs union {
+            1: inner2_abcdefghijkl bool;
+        };
+        res9_abcdefghijklmnopqrstu bool;
+    }) error noop_abcdefghijklmnopqrstu;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstu {};
+
+protocol Composed_Abcdefghijklmnopqr {
+    compose Empty_Abcdefghijklmnopqrstu;
+};
+
+protocol Populated_Abcdefghijklmnopqrs {
+    compose Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrst(struct {
+        req1_abcdefghijklmnopqrstu bool;
+    });
+
+    TwoWay_Abcdefghijklmnopqrst(struct {
+        req2_abcdefghijklmnopqrstu bool;
+    }) -> (struct {
+        res3_abcdefghijklmnopqrstu bool;
+    });
+    TwoWayError_Abcdefghijklmno(struct {
+        req4_abcdefghijklm bool = false;
+        req5_abcdefghijklmnopqr struct {
+            inner1_abcdefghijklmno int8;
+        };
+    }) -> (struct {
+        res6_abcdefghijklmnopqrstu bool;
+    }) error uint32;
+
+    compose Empty_Abcdefghijklmnopqrstu;
+
+    -> Event_Abcdefghijklmnopqr(struct {
+        res7_abcdefghijklmnopqrstu bool;
+    });
+    -> EventError_Abcdefghijklm(struct {
+        res8_abcdefghijklmnopqrs union {
+            1: inner2_abcdefghijkl bool;
+        };
+        res9_abcdefghijklmnopqrstu bool;
+    }) error noop_abcdefghijklmnopqrstu;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, ProtocolWithArgumentsOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstuv {};
+
+protocol Composed_Abcdefghijklmnopqrs {
+    compose Empty_Abcdefghijklmnopqrstuv;
+};
+
+protocol Populated_Abcdefghijklmnopqrst {
+    compose Composed_Abcdefghijklmnopqrs;
+    OneWay_Abcdefghijklmnopqrstu(struct {
+        req1_abcdefghijklmnopqrstuv bool;
+    });
+
+    TwoWay_Abcdefghijklmnopqrstu(struct {
+        req2_abcdefghijklmnopqrstuv bool;
+    }) -> (struct {
+        res3_abcdefghijklmnopqrstuv bool;
+    });
+    TwoWayError_Abcdefghijklmnop(struct {
+        req4_abcdefghijklmo bool = false;
+        req5_abcdefghijklmnopqrs struct {
+            inner1_abcdefghijklmnop int8;
+        };
+    }) -> (struct {
+        res6_abcdefghijklmnopqrstuv bool;
+    }) error uint32;
+
+    compose Empty_Abcdefghijklmnopqrstuv;
+
+    -> Event_Abcdefghijklmnopqrs(struct {
+        res7_abcdefghijklmnopqrstuv bool;
+    });
+    -> EventError_Abcdefghijklmo(struct {
+        res8_abcdefghijklmnopqrst union {
+            1: inner2_abcdefghijklm bool;
+        };
+        res9_abcdefghijklmnopqrstuv bool;
+    }) error noop_abcdefghijklmnopqrstuv;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstuv {};
+
+protocol Composed_Abcdefghijklmnopqrs {
+    compose Empty_Abcdefghijklmnopqrstuv;
+};
+
+protocol Populated_Abcdefghijklmnopqrst {
+    compose Composed_Abcdefghijklmnopqrs;
+    OneWay_Abcdefghijklmnopqrstu(struct {
+        req1_abcdefghijklmnopqrstuv
+                bool;
+    });
+
+    TwoWay_Abcdefghijklmnopqrstu(struct {
+        req2_abcdefghijklmnopqrstuv
+                bool;
+    }) -> (struct {
+        res3_abcdefghijklmnopqrstuv
+                bool;
+    });
+    TwoWayError_Abcdefghijklmnop(struct {
+        req4_abcdefghijklmo
+                bool
+                = false;
+        req5_abcdefghijklmnopqrs
+                struct {
+            inner1_abcdefghijklmnop
+                    int8;
+        };
+    }) -> (struct {
+        res6_abcdefghijklmnopqrstuv
+                bool;
+    }) error uint32;
+
+    compose Empty_Abcdefghijklmnopqrstuv;
+
+    -> Event_Abcdefghijklmnopqrs(struct {
+        res7_abcdefghijklmnopqrstuv
+                bool;
+    });
+    -> EventError_Abcdefghijklmo(struct {
+        res8_abcdefghijklmnopqrst
+                union {
+            1: inner2_abcdefghijklm
+                    bool;
+        };
+        res9_abcdefghijklmnopqrstuv
+                bool;
+    }) error noop_abcdefghijklmnopqrstuv;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, ProtocolWithArgumentsUnformatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstu  {};
+
+protocol Composed_Abcdefghijklmnopqr
+{ compose Empty_Abcdefghijklmnopqrstu; };
+
+protocol Populated_Abcdefghijklmnopqrs
+ {
+    compose
+Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrst(struct {
+        req1_abcdefghijklmnopqrstu bool ;
+    }  );
+
+    TwoWay_Abcdefghijklmnopqrst(struct   {
+        req2_abcdefghijklmnopqrstu bool;
+    }) ->(struct {
+  res3_abcdefghijklmnopqrstu  bool;
+    });
+    TwoWayError_Abcdefghijklmno  (struct {
+        req4_abcdefghijklm bool= false;
+        req5_abcdefghijklmnopqr struct {
+            inner1_abcdefghijklmno   int8;};
+} )->(   struct
+{
+res6_abcdefghijklmnopqrstu
+bool;}
+)
+error uint32;
+
+ compose Empty_Abcdefghijklmnopqrstu;
+
+    ->Event_Abcdefghijklmnopqr(  struct { res7_abcdefghijklmnopqrstu bool;});
+    -> EventError_Abcdefghijklm(struct {
+        res8_abcdefghijklmnopqrs union {
+1: inner2_abcdefghijkl bool;
+        };
+        res9_abcdefghijklmnopqrstu bool
+;
+    }  ) error noop_abcdefghijklmnopqrstu;};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstu {};
+
+protocol Composed_Abcdefghijklmnopqr {
+    compose Empty_Abcdefghijklmnopqrstu;
+};
+
+protocol Populated_Abcdefghijklmnopqrs {
+    compose Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrst(struct {
+        req1_abcdefghijklmnopqrstu bool;
+    });
+
+    TwoWay_Abcdefghijklmnopqrst(struct {
+        req2_abcdefghijklmnopqrstu bool;
+    }) -> (struct {
+        res3_abcdefghijklmnopqrstu bool;
+    });
+    TwoWayError_Abcdefghijklmno(struct {
+        req4_abcdefghijklm bool = false;
+        req5_abcdefghijklmnopqr struct {
+            inner1_abcdefghijklmno int8;
+        };
+    }) -> (struct {
+        res6_abcdefghijklmnopqrstu bool;
+    }) error uint32;
+
+    compose Empty_Abcdefghijklmnopqrstu;
+
+    -> Event_Abcdefghijklmnopqr(struct {
+        res7_abcdefghijklmnopqrstu bool;
+    });
+    -> EventError_Abcdefghijklm(struct {
+        res8_abcdefghijklmnopqrs union {
+            1: inner2_abcdefghijkl bool;
+        };
+        res9_abcdefghijklmnopqrstu bool;
+    }) error noop_abcdefghijklmnopqrstu;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, ProtocolWithArgumentsWithAllAnnotations) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+ // comment 1
+  /// doc comment 1
+
+   @foo
+
+    protocol Empty_Abcdefghijklmnopqrstu {};
+
+protocol Composed_Abcdefghijklmnopqr {
+    // comment 2
+
+   /// doc comment 2
+
+     @bar
+
+      compose Empty_Abcdefghijklmnopqrstu;
+};
+
+protocol Populated_Abcdefghijklmnopqrs {
+    compose Composed_Abcdefghijklmnopqr;
+
+// comment 3
+/// doc comment 3
+
+     @baz
+    OneWay_Abcdefghijklmnopqrst(struct {
+        req1_abcdefghijklmnopqrstu bool;
+    });
+
+    TwoWay_Abcdefghijklmnopqrst(struct {
+        req2_abcdefghijklmnopqrstu bool;
+    }) -> (struct {
+        res3_abcdefghijklmnopqrstu bool;
+    });
+    TwoWayError_Abcdefghijklmno(struct {
+        req4_abcdefghijklm bool = false;
+        req5_abcdefghijklmnopqr struct {
+            inner1_abcdefghijklmno int8;
+        };
+    }) -> (struct {
+        res6_abcdefghijklmnopqrstu bool;
+    }) error uint32;
+
+    // comment 4
+    /// doc comment 4
+    @qux
+    compose Empty_Abcdefghijklmnopqrstu;
+
+   // comment 5
+
+  /// doc comment 5
+@abc
+    -> Event_Abcdefghijklmnopqr(struct {
+        res7_abcdefghijklmnopqrstu bool;
+    });
+    -> EventError_Abcdefghijklm(struct {
+        res8_abcdefghijklmnopqrs union {
+            1: inner2_abcdefghijkl bool;
+        };
+        res9_abcdefghijklmnopqrstu bool;
+    }) error noop_abcdefghijklmnopqrstu;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+// comment 1
+/// doc comment 1
+@foo
+protocol Empty_Abcdefghijklmnopqrstu {};
+
+protocol Composed_Abcdefghijklmnopqr {
+    // comment 2
+
+    /// doc comment 2
+    @bar
+    compose Empty_Abcdefghijklmnopqrstu;
+};
+
+protocol Populated_Abcdefghijklmnopqrs {
+    compose Composed_Abcdefghijklmnopqr;
+
+    // comment 3
+    /// doc comment 3
+    @baz
+    OneWay_Abcdefghijklmnopqrst(struct {
+        req1_abcdefghijklmnopqrstu bool;
+    });
+
+    TwoWay_Abcdefghijklmnopqrst(struct {
+        req2_abcdefghijklmnopqrstu bool;
+    }) -> (struct {
+        res3_abcdefghijklmnopqrstu bool;
+    });
+    TwoWayError_Abcdefghijklmno(struct {
+        req4_abcdefghijklm bool = false;
+        req5_abcdefghijklmnopqr struct {
+            inner1_abcdefghijklmno int8;
+        };
+    }) -> (struct {
+        res6_abcdefghijklmnopqrstu bool;
+    }) error uint32;
+
+    // comment 4
+    /// doc comment 4
+    @qux
+    compose Empty_Abcdefghijklmnopqrstu;
+
+    // comment 5
+
+    /// doc comment 5
+    @abc
+    -> Event_Abcdefghijklmnopqr(struct {
+        res7_abcdefghijklmnopqrstu bool;
+    });
+    -> EventError_Abcdefghijklm(struct {
+        res8_abcdefghijklmnopqrs union {
+            1: inner2_abcdefghijkl bool;
+        };
+        res9_abcdefghijklmnopqrstu bool;
+    }) error noop_abcdefghijklmnopqrstu;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly.  This should
+//  be fixed when proper token parsing is used.
+// This test's input is semantically identical to ProtocolWithArgumentsFormatted.  The only
+// difference is that the newlines and unnecessary spaces have been removed.
+TEST(NewFormatterTests, ProtocolWithArgumentsMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted =
+      R"FIDL(library foo.bar;protocol Empty_Abcdefghijklmnopqrstu{};protocol Composed_Abcdefghijklmnopqr{compose Empty_Abcdefghijklmnopqrstu;};protocol Populated_Abcdefghijklmnopqrs{compose Composed_Abcdefghijklmnopqr;OneWay_Abcdefghijklmnopqrst(struct{req1_abcdefghijklmnopqrstu bool;});TwoWay_Abcdefghijklmnopqrst(struct{req2_abcdefghijklmnopqrstu bool;})->(struct{res3_abcdefghijklmnopqrstu bool;});TwoWayError_Abcdefghijklmno(struct{req4_abcdefghijklm bool=false;req5_abcdefghijklmnopqr struct{inner1_abcdefghijklmno int8;};})->(struct{res6_abcdefghijklmnopqrstu bool;})error uint32;compose Empty_Abcdefghijklmnopqrstu;->Event_Abcdefghijklmnopqr(struct{res7_abcdefghijklmnopqrstu bool;});->EventError_Abcdefghijklm(struct{res8_abcdefghijklmnopqrs union{1:inner2_abcdefghijkl bool;};res9_abcdefghijklmnopqrstu bool;})error noop_abcdefghijklmnopqrstu;};)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+protocol Empty_Abcdefghijklmnopqrstu{};
+protocol Composed_Abcdefghijklmnopqr{
+    compose Empty_Abcdefghijklmnopqrstu;
+};
+protocol Populated_Abcdefghijklmnopqrs{
+    compose Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrst(struct{
+        req1_abcdefghijklmnopqrstu bool;
+    });
+    TwoWay_Abcdefghijklmnopqrst(struct{
+        req2_abcdefghijklmnopqrstu bool;
+    }) -> (struct{
+        res3_abcdefghijklmnopqrstu bool;
+    });
+    TwoWayError_Abcdefghijklmno(struct{
+        req4_abcdefghijklm bool = false;
+        req5_abcdefghijklmnopqr struct{
+            inner1_abcdefghijklmno int8;
+        };
+    }) -> (struct{
+        res6_abcdefghijklmnopqrstu bool;
+    }) error uint32;
+    compose Empty_Abcdefghijklmnopqrstu;
+    -> Event_Abcdefghijklmnopqr(struct{
+        res7_abcdefghijklmnopqrstu bool;
+    });
+    -> EventError_Abcdefghijklm(struct{
+        res8_abcdefghijklmnopqrs union{
+            1: inner2_abcdefghijkl bool;
+        };
+        res9_abcdefghijklmnopqrstu bool;
+    }) error noop_abcdefghijklmnopqrstu;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Input is identical to ProtocolWithArgumentsFormatted, except that every token is on a newline.
+TEST(NewFormatterTests, ProtocolWithArgumentsMaximalNewlines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library
+foo
+.
+bar
+;
+
+protocol
+Empty_Abcdefghijklmnopqrstu
+{
+}
+;
+
+protocol
+Composed_Abcdefghijklmnopqr
+{
+compose Empty_Abcdefghijklmnopqrstu;
+}
+;
+
+protocol
+Populated_Abcdefghijklmnopqrs
+{
+compose
+Composed_Abcdefghijklmnopqr
+;
+OneWay_Abcdefghijklmnopqrst
+(
+struct
+{
+req1_abcdefghijklmnopqrstu
+bool
+;
+}
+)
+;
+
+TwoWay_Abcdefghijklmnopqrst
+(
+struct
+{
+req2_abcdefghijklmnopqrstu
+bool
+;
+}
+)
+->
+(
+struct
+{
+res3_abcdefghijklmnopqrstu
+bool
+;
+}
+)
+;
+TwoWayError_Abcdefghijklmno
+(
+struct
+{
+req4_abcdefghijklm
+bool
+=
+false
+;
+req5_abcdefghijklmnopqr
+struct
+{
+inner1_abcdefghijklmno
+int8
+;
+}
+;
+}
+)
+->
+(struct
+{
+res6_abcdefghijklmnopqrstu
+bool
+;
+}
+)
+error
+uint32
+;
+
+compose
+Empty_Abcdefghijklmnopqrstu
+;
+
+->
+Event_Abcdefghijklmnopqr(struct
+{
+res7_abcdefghijklmnopqrstu
+bool
+;
+}
+)
+;
+->
+EventError_Abcdefghijklm(struct
+{
+res8_abcdefghijklmnopqrs
+union
+{
+1:
+inner2_abcdefghijkl
+bool
+;
+}
+;
+res9_abcdefghijklmnopqrstu
+bool
+;
+}
+)
+error
+noop_abcdefghijklmnopqrstu
+;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+protocol Empty_Abcdefghijklmnopqrstu {};
+
+protocol Composed_Abcdefghijklmnopqr {
+    compose Empty_Abcdefghijklmnopqrstu;
+};
+
+protocol Populated_Abcdefghijklmnopqrs {
+    compose Composed_Abcdefghijklmnopqr;
+    OneWay_Abcdefghijklmnopqrst(struct {
+        req1_abcdefghijklmnopqrstu bool;
+    });
+
+    TwoWay_Abcdefghijklmnopqrst(struct {
+        req2_abcdefghijklmnopqrstu bool;
+    }) -> (struct {
+        res3_abcdefghijklmnopqrstu bool;
+    });
+    TwoWayError_Abcdefghijklmno(struct {
+        req4_abcdefghijklm bool = false;
+        req5_abcdefghijklmnopqr struct {
+            inner1_abcdefghijklmno int8;
+        };
+    }) -> (struct {
+        res6_abcdefghijklmnopqrstu bool;
+    }) error uint32;
+
+    compose Empty_Abcdefghijklmnopqrstu;
+
+    -> Event_Abcdefghijklmnopqr(struct {
+        res7_abcdefghijklmnopqrstu bool;
+    });
+    -> EventError_Abcdefghijklm(struct {
+        res8_abcdefghijklmnopqrs union {
+            1: inner2_abcdefghijkl bool;
+        };
+        res9_abcdefghijklmnopqrstu bool;
+    }) error noop_abcdefghijklmnopqrstu;
 };
 )FIDL";
 
@@ -1225,6 +2323,7 @@ type MyPopulatedStruct_Abcdef = struct {
 
       field2_abcdefghijklmno bool = false;
     field3_abcdefghijklmnopqrst struct {
+     // comment 3
       /// doc comment 3
        @baz("qux")
         nested1_abcdef vector<uint8>:16;
@@ -1251,6 +2350,7 @@ type MyPopulatedStruct_Abcdef = struct {
     @bar
     field2_abcdefghijklmno bool = false;
     field3_abcdefghijklmnopqrst struct {
+        // comment 3
         /// doc comment 3
         @baz("qux")
         nested1_abcdef vector<uint8>:16;
@@ -1265,6 +2365,8 @@ type MyPopulatedStruct_Abcdef = struct {
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
 //  `=struct{` does not get split into `= struct {` properly.  This should be fixed when proper
 //  token parsing is used.
+// This test's input is semantically identical to StructFormatted.  The only difference is that the
+// newlines and unnecessary spaces have been removed.
 TEST(NewFormatterTests, StructMinimalWhitespace) {
   // ---------------40---------------- |
   std::string unformatted =
@@ -1287,6 +2389,7 @@ type MyPopulatedStruct_Abcdef =struct{
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// Input is identical to StructFormatted, except that every token is on a newline.
 TEST(NewFormatterTests, StructMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
@@ -1567,6 +2670,7 @@ type MyPopulatedTable_Abcdefgh = table {
      @bar
 
       3: field3_abcdefghijklmnopqr table {
+        // comment 3
          /// doc comment 3
           @baz("qux")
         1: nested1_abc vector<uint8>:16;
@@ -1592,6 +2696,7 @@ type MyPopulatedTable_Abcdefgh = table {
     /// doc comment 2
     @bar
     3: field3_abcdefghijklmnopqr table {
+        // comment 3
         /// doc comment 3
         @baz("qux")
         1: nested1_abc vector<uint8>:16;
@@ -1605,6 +2710,8 @@ type MyPopulatedTable_Abcdefgh = table {
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
 //  `=table{` does not get split into `= table {` properly.  This should be fixed when proper
 //  token parsing is used.
+// This test's input is semantically identical to TableFormatted.  The only difference is that the
+// newlines and unnecessary spaces have been removed.
 TEST(NewFormatterTests, TableMinimalWhitespace) {
   // ---------------40---------------- |
   std::string unformatted =
@@ -1626,6 +2733,7 @@ type MyPopulatedTable_Abcdefgh =table{
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// Input is identical to TableFormatted, except that every token is on a newline.
 TEST(NewFormatterTests, TableMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
@@ -1896,6 +3004,7 @@ type MyUnion_Abcdefgh = resource union {
      @bar
 
       3: field3_abcdefghijklmnopqr union {
+     // comment 3
          /// doc comment 3
           @baz("qux")
         1: nested1_abc vector<uint8>:16;
@@ -1919,6 +3028,7 @@ type MyUnion_Abcdefgh = resource union {
     /// doc comment 2
     @bar
     3: field3_abcdefghijklmnopqr union {
+        // comment 3
         /// doc comment 3
         @baz("qux")
         1: nested1_abc vector<uint8>:16;
@@ -1932,6 +3042,8 @@ type MyUnion_Abcdefgh = resource union {
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
 //  `=union{` does not get split into `= union {` properly.  This should be fixed when proper
 //  token parsing is used.
+// This test's input is semantically identical to UnionFormatted.  The only difference is that the
+// newlines and unnecessary spaces have been removed.
 TEST(NewFormatterTests, UnionMinimalWhitespace) {
   // ---------------40---------------- |
   std::string unformatted =
@@ -1952,6 +3064,7 @@ type MyUnion_Abcdefghijklmnopq =union{
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// Input is identical to UnionFormatted, except that every token is on a newline.
 TEST(NewFormatterTests, UnionMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
@@ -2099,6 +3212,8 @@ using imported.abcdefhijklmnopqrstubwxy;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// This test's input is semantically identical to UsingFormatted.  The only difference is that the
+// newlines and unnecessary spaces have been removed.
 TEST(NewFormatterTests, UsingMinimalWhitespace) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(library foo.bar;using imported.abcdefhijklmnopqrstubwxy;)FIDL";
@@ -2112,7 +3227,7 @@ using imported.abcdefhijklmnopqrstubwxy;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
-// Test a using declaration in which every token is placed on a newline.
+// Input is identical to UsingFormatted, except that every token is on a newline.
 TEST(NewFormatterTests, UsingMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
@@ -2194,6 +3309,8 @@ using baz.qux
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// This test's input is semantically identical to UsingWithAliasFormatted.  The only difference is
+// that the newlines and unnecessary spaces have been removed.
 TEST(NewFormatterTests, UsingWithAliasMinimalWhitespace) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(library foo.bar;using baz.qux as abcdefghijklmnopqrstuv;)FIDL";
@@ -2207,7 +3324,7 @@ using baz.qux as abcdefghijklmnopqrstuv;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
-// Test an aliased using declaration in which every token is placed on a newline.
+// Input is identical to UsingWithAliasFormatted, except that every token is on a newline.
 TEST(NewFormatterTests, UsingWithAliasMaximalNewlines) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
@@ -2356,7 +3473,7 @@ using baz.qux; // C6
 }
 
 // Ensure that overlong comments are not wrapped.
-TEST(NewFormatterTests, CommentsOverlong) {
+TEST(NewFormatterTests, CommentsOverflow) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(
 // C1: This is my very very long comment.

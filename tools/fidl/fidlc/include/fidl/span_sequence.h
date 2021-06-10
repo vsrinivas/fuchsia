@@ -66,9 +66,32 @@ class SpanSequence {
   // merely containers for the "printable" token kinds (kToken, kInlineComment, kStandaloneComment),
   // this return kind may not be for any class inhering from CompositeSpanSequence (ie, kAtomic,
   // kDivisible, and kMultiline are not allowed).
+  //
+  // The function takes the following arguments:
+  //   * max_col_width: The maximum width of a column in our file.  This is passed in via the top
+  //       level Print call, and should not be changed as it is recursed through the SpanSequence
+  //       tree.
+  //   * last_printed_kind: The kind (kToken, kStandaloneComment, or kInlineComment) of the last
+  //       text added to the output.
+  //   * indentation: the number of spaces text appearing on newlines should be indented.
+  //   * wrapped: whether or not the last output line is already wrapped.  It is expected that this
+  //       value has NOT been added to the `indentation` value.  That is, if an unwrapped line has
+  //       `indentation=4,wrapped=false`, the wrapped line should be `indentation=4,wrapped=true`.
+  //   * is_next_sibling_indented: this is a form of lookahead that notes whether the next bit of
+  //       text to be added to the output AFTER this SpanSequence has finished printing will be on
+  //       an indented newline.  This is important to note because we want StandaloneComments to
+  //       be aligned to the indentation of either their preceding or following line, whichever is
+  //       greater.  Without this argument, we would get output like:
+  //
+  //         type MyStruct = struct {
+  //         // Uh-oh, I wasn't indented properly!
+  //             foo bool;
+  //         };
+  //
+  //   * out: a pointer to the output string being built by this printer.
   virtual std::optional<SpanSequence::Kind> Print(
       size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind, size_t indentation,
-      bool wrapped, std::string* out) const = 0;
+      bool wrapped, bool is_next_sibling_indented, std::string* out) const = 0;
 
   size_t GetLeadingBlankLines() const { return leading_blank_lines_; }
   size_t GetOutdentation() const { return outdentation_; }
@@ -155,6 +178,7 @@ class TokenSpanSequence final : public SpanSequence {
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
                                           std::optional<SpanSequence::Kind> last_printed_kind,
                                           size_t indentation, bool wrapped,
+                                          bool is_next_sibling_indented,
                                           std::string* out) const override;
 
  private:
@@ -245,6 +269,7 @@ class AtomicSpanSequence final : public CompositeSpanSequence {
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
                                           std::optional<SpanSequence::Kind> last_printed_kind,
                                           size_t indentation, bool wrapped,
+                                          bool is_next_sibling_indented,
                                           std::string* out) const override;
 };
 
@@ -275,6 +300,7 @@ class DivisibleSpanSequence final : public CompositeSpanSequence {
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
                                           std::optional<SpanSequence::Kind> last_printed_kind,
                                           size_t indentation, bool wrapped,
+                                          bool is_next_sibling_indented,
                                           std::string* out) const override;
 };
 
@@ -293,6 +319,7 @@ class MultilineSpanSequence final : public CompositeSpanSequence {
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
                                           std::optional<SpanSequence::Kind> last_printed_kind,
                                           size_t indentation, bool wrapped,
+                                          bool is_next_sibling_indented,
                                           std::string* out) const override;
 };
 
@@ -342,6 +369,7 @@ class InlineCommentSpanSequence final : public CommentSpanSequence {
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
                                           std::optional<SpanSequence::Kind> last_printed_kind,
                                           size_t indentation, bool wrapped,
+                                          bool is_next_sibling_indented,
                                           std::string* out) const override;
 
  private:
@@ -380,6 +408,7 @@ class StandaloneCommentSpanSequence final : public CommentSpanSequence {
   std::optional<SpanSequence::Kind> Print(size_t max_col_width,
                                           std::optional<SpanSequence::Kind> last_printed_kind,
                                           size_t indentation, bool wrapped,
+                                          bool is_next_sibling_indented,
                                           std::string* out) const override;
 
  private:

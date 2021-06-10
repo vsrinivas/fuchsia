@@ -71,8 +71,8 @@ size_t IngestCommentLine(std::string_view text, size_t leading_blank_lines,
 // into tokens.
 void AppendToken(std::string_view word, size_t leading_blank_lines, AtomicSpanSequence* out) {
   if (!word.empty() && word[0] != '\0') {
-    // TODO(fxbug.dev/77861): remove this once proper parser support is added
-    static std::regex needs_trailing_space_regex("[a-z_]+|=|\\|");
+    // TODO(fxbug.dev/77861): remove this once proper parser support is added.
+    static std::regex needs_trailing_space_regex("[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9])?|=|\\||->");
     auto token_span_sequence = std::make_unique<TokenSpanSequence>(word, leading_blank_lines);
     if (std::regex_match(std::string(word), needs_trailing_space_regex) && word != "reserved") {
       token_span_sequence->SetTrailingSpace(true);
@@ -524,9 +524,11 @@ void SpanSequenceTreeVisitor::OnAttributeNew(const raw::AttributeNew& element) {
 
 void SpanSequenceTreeVisitor::OnAttributeListNew(
     const std::unique_ptr<raw::AttributeListNew>& element) {
-  if (attribute_lists_seen_.insert(element.get()).second) {
+  if (already_seen_.insert(element.get()).second) {
     const auto visiting = Visiting(this, VisitorKind::kAttributeList);
-    const auto indent = IsInsideOf(VisitorKind::kLayoutMember)
+    const auto indent = IsInsideOf(VisitorKind::kLayoutMember) ||
+                                IsInsideOf(VisitorKind::kProtocolMethod) ||
+                                IsInsideOf(VisitorKind::kProtocolCompose)
                             ? SpanSequence::Position::kNewlineIndented
                             : SpanSequence::Position::kNewlineUnindented;
     const auto builder = SpanBuilder<MultilineSpanSequence>(this, *element, indent);
@@ -622,15 +624,18 @@ void SpanSequenceTreeVisitor::OnFile(const std::unique_ptr<raw::File>& element) 
   }
 }
 
-void SpanSequenceTreeVisitor::OnIdentifier(const std::unique_ptr<raw::Identifier>& element) {
-  const auto visiting = Visiting(this, VisitorKind::kIdentifier);
-  if (IsInsideOf(VisitorKind::kCompoundIdentifier)) {
-    const auto builder = TokenBuilder(this, element->start_, false);
-    TreeVisitor::OnIdentifier(element);
-  } else {
-    const auto span_builder = SpanBuilder<AtomicSpanSequence>(this, *element);
-    const auto token_builder = TokenBuilder(this, element->start_, false);
-    TreeVisitor::OnIdentifier(element);
+void SpanSequenceTreeVisitor::OnIdentifier(const std::unique_ptr<raw::Identifier>& element,
+                                           bool ignore) {
+  if (already_seen_.insert(element.get()).second && !ignore) {
+    const auto visiting = Visiting(this, VisitorKind::kIdentifier);
+    if (IsInsideOf(VisitorKind::kCompoundIdentifier)) {
+      const auto builder = TokenBuilder(this, element->start_, false);
+      TreeVisitor::OnIdentifier(element);
+    } else {
+      const auto span_builder = SpanBuilder<AtomicSpanSequence>(this, *element);
+      const auto token_builder = TokenBuilder(this, element->start_, false);
+      TreeVisitor::OnIdentifier(element);
+    }
   }
 }
 
@@ -760,6 +765,123 @@ void SpanSequenceTreeVisitor::OnOrdinaledLayoutMember(
   // it here.
   if (ordinal_digits > 1 && !building_.top().empty())
     OutdentFirstChildToken(building_.top().back(), ordinal_digits - 1);
+}
+
+void SpanSequenceTreeVisitor::OnParameterListNew(
+    const std::unique_ptr<raw::ParameterListNew>& element) {
+  const auto visiting = Visiting(this, VisitorKind::kParameterList);
+  if (element->attributes != nullptr) {
+    OnAttributeListNew(element->attributes);
+  }
+
+  const auto builder = SpanBuilder<AtomicSpanSequence>(this, *element);
+  if (element->type_ctor) {
+    auto opening_paren = IngestUntil(element->type_ctor->start_.data().data() - 1);
+    if (opening_paren.has_value())
+      building_.top().push_back(std::move(opening_paren.value()));
+  }
+
+  TreeVisitor::OnParameterListNew(element);
+  ClearBlankLinesAfterAttributeList(element->attributes, building_.top());
+}
+
+void SpanSequenceTreeVisitor::OnProtocolCompose(
+    const std::unique_ptr<raw::ProtocolCompose>& element) {
+  const auto visiting = Visiting(this, VisitorKind::kProtocolCompose);
+  const auto& attrs = std::get<std::unique_ptr<raw::AttributeListNew>>(element->attributes);
+  if (attrs != nullptr) {
+    OnAttributeListNew(attrs);
+  }
+
+  const auto builder = StatementBuilder<AtomicSpanSequence>(
+      this, *element, SpanSequence::Position::kNewlineIndented);
+  TreeVisitor::OnProtocolCompose(element);
+  ClearBlankLinesAfterAttributeList(attrs, building_.top());
+}
+
+void SpanSequenceTreeVisitor::OnProtocolDeclaration(
+    const std::unique_ptr<raw::ProtocolDeclaration>& element) {
+  const auto visiting = Visiting(this, VisitorKind::kProtocolDeclaration);
+  const auto& attrs = std::get<std::unique_ptr<raw::AttributeListNew>>(element->attributes);
+  if (attrs != nullptr) {
+    OnAttributeListNew(attrs);
+  }
+
+  // Special case: an empty protocol definition should always be atomic.
+  if (element->methods.empty() && element->composed_protocols.empty()) {
+    const auto builder =
+        StatementBuilder<AtomicSpanSequence>(this, element->identifier->start_, element->end_,
+                                             SpanSequence::Position::kNewlineUnindented);
+    ClearBlankLinesAfterAttributeList(attrs, building_.top());
+    return;
+  }
+
+  const auto first_child_start_token = !element->composed_protocols.empty()
+                                           ? element->composed_protocols[0]->start_
+                                           : element->methods[0]->start_;
+  const auto builder = StatementBuilder<MultilineSpanSequence>(
+      this, first_child_start_token, SpanSequence::Position::kNewlineUnindented);
+
+  // We want to purposefully ignore this identifier, as it has already been captured by the prelude
+  // to the StatementBuilder we created above.  By running this method now, we mark the Identifier
+  // as seen, so that the call to DeclarationOrderTreeVisitor::OnProtocolDeclaration won't print the
+  // identifier a second time when it visits it.
+  OnIdentifier(element->identifier, true);
+  DeclarationOrderTreeVisitor::OnProtocolDeclaration(element);
+
+  const auto closing_bracket_builder = SpanBuilder<AtomicSpanSequence>(
+      this, element->end_, SpanSequence::Position::kNewlineUnindented);
+  ClearBlankLinesAfterAttributeList(attrs, building_.top());
+}
+
+void SpanSequenceTreeVisitor::OnProtocolMethod(
+    const std::unique_ptr<raw::ProtocolMethod>& element) {
+  const auto visiting = Visiting(this, VisitorKind::kProtocolMethod);
+  const auto& attrs = std::get<std::unique_ptr<raw::AttributeListNew>>(element->attributes);
+  if (attrs != nullptr) {
+    OnAttributeListNew(attrs);
+  }
+
+  const auto builder = StatementBuilder<AtomicSpanSequence>(
+      this, element->start_, SpanSequence::Position::kNewlineIndented);
+  if (raw::IsParameterListDefined(element->maybe_request)) {
+    const auto visiting_request = Visiting(this, VisitorKind::kProtocolRequest);
+    // This is not an event - make sure to process the identifier into an AtomicSpanSequence with
+    // the first parameter list, with no space between them.
+    const auto& request = std::get<std::unique_ptr<raw::ParameterListNew>>(element->maybe_request);
+    const auto name_builder =
+        SpanBuilder<AtomicSpanSequence>(this, element->identifier->start_, request->end_);
+    OnIdentifier(element->identifier);
+    OnParameterListNew(request);
+  }
+
+  if (raw::IsParameterListDefined(element->maybe_response)) {
+    const auto visiting_response = Visiting(this, VisitorKind::kProtocolResponse);
+    const auto& response =
+        std::get<std::unique_ptr<raw::ParameterListNew>>(element->maybe_response);
+    if (!raw::IsParameterListDefined(element->maybe_request)) {
+      // This is an event - make sure to process the identifier into an AtomicSpanSequence with the
+      // the second parameter list, with no space between them.
+      const auto name_builder =
+          SpanBuilder<AtomicSpanSequence>(this, element->identifier->start_, response->end_);
+      OnIdentifier(element->identifier);
+      OnParameterListNew(response);
+    } else {
+      // This is a method with both a request and a response.  Reaching this point means that the
+      // last character we've seen is the closing `)` of the request parameter list, so make sure to
+      // add a space after that character before processing the `->` and the response parameter
+      // list.
+      building_.top().back()->SetTrailingSpace(true);
+      OnParameterListNew(response);
+    }
+  }
+
+  if (raw::IsTypeConstructorDefined(element->maybe_error_ctor)) {
+    building_.top().back()->SetTrailingSpace(true);
+    OnTypeConstructor(element->maybe_error_ctor);
+  }
+  AddSpacesBetweenChildren(building_.top());
+  ClearBlankLinesAfterAttributeList(attrs, building_.top());
 }
 
 void SpanSequenceTreeVisitor::OnStructLayoutMember(

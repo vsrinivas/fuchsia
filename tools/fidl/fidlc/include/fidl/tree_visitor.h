@@ -182,7 +182,7 @@ class TreeVisitor {
   virtual void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) {
     element->Accept(this);
   }
-  virtual void OnComposeProtocol(std::unique_ptr<ComposeProtocol> const& element) {
+  virtual void OnProtocolCompose(std::unique_ptr<ProtocolCompose> const& element) {
     element->Accept(this);
   }
   virtual void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) {

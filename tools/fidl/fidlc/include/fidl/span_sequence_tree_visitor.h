@@ -28,14 +28,14 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnAttributeListNew(std::unique_ptr<raw::AttributeListNew> const& element) override;
   void OnBinaryOperatorConstant(
       std::unique_ptr<raw::BinaryOperatorConstant> const& element) override;
-  void OnComposeProtocol(std::unique_ptr<raw::ComposeProtocol> const& element) override {
-    NotYetImplemented();
-  };
   void OnCompoundIdentifier(std::unique_ptr<raw::CompoundIdentifier> const& element) override;
   void OnConstant(std::unique_ptr<raw::Constant> const& element) override;
   void OnConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const& element) override;
   void OnFile(std::unique_ptr<raw::File> const& element) override;
-  void OnIdentifier(std::unique_ptr<raw::Identifier> const& element) override;
+  void OnIdentifier(std::unique_ptr<raw::Identifier> const& element, bool ignore);
+  void OnIdentifier(std::unique_ptr<raw::Identifier> const& element) override {
+    OnIdentifier(element, false);
+  };
   void OnIdentifierConstant(std::unique_ptr<raw::IdentifierConstant> const& element) override;
   void OnLayout(std::unique_ptr<raw::Layout> const& element) override;
   void OnLayoutMember(std::unique_ptr<raw::LayoutMember> const& element) override;
@@ -45,16 +45,10 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnNamedLayoutReference(std::unique_ptr<raw::NamedLayoutReference> const& element) override;
   void OnOrdinal64(raw::Ordinal64& element) override;
   void OnOrdinaledLayoutMember(std::unique_ptr<raw::OrdinaledLayoutMember> const& element) override;
-  void OnParameter(std::unique_ptr<raw::Parameter> const& element) override { NotYetImplemented(); }
-  void OnParameterListNew(std::unique_ptr<raw::ParameterListNew> const& element) override {
-    NotYetImplemented();
-  }
-  void OnProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> const& element) override {
-    NotYetImplemented();
-  }
-  void OnProtocolMethod(std::unique_ptr<raw::ProtocolMethod> const& element) override {
-    NotYetImplemented();
-  }
+  void OnParameterListNew(std::unique_ptr<raw::ParameterListNew> const& element) override;
+  void OnProtocolCompose(std::unique_ptr<raw::ProtocolCompose> const& element) override;
+  void OnProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> const& element) override;
+  void OnProtocolMethod(std::unique_ptr<raw::ProtocolMethod> const& element) override;
   void OnResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> const& element) override {
     NotYetImplemented();
   }
@@ -89,6 +83,9 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
     AbortUnimplemented();
   }
   void OnEnumMember(std::unique_ptr<raw::EnumMember> const& element) override {
+    AbortUnimplemented();
+  }
+  void OnParameter(std::unique_ptr<raw::Parameter> const& element) override {
     AbortUnimplemented();
   }
   void OnParameterListOld(std::unique_ptr<raw::ParameterListOld> const& element) override {
@@ -143,6 +140,12 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
     kOrdinal64,
     kOrdinaledLayout,
     kOrdinaledLayoutMember,
+    kParameterList,
+    kProtocolCompose,
+    kProtocolDeclaration,
+    kProtocolMethod,
+    kProtocolRequest,
+    kProtocolResponse,
     kStructLayout,
     kStructLayoutMember,
     kTypeConstructorNew,
@@ -280,6 +283,9 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
     StatementBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element,
                      SpanSequence::Position position = SpanSequence::Position::kDefault)
         : Builder<T>(ftv, element.start_, element.end_, true), position_(position) {}
+    StatementBuilder(SpanSequenceTreeVisitor* ftv, const Token& start, const Token& end,
+                     SpanSequence::Position position = SpanSequence::Position::kDefault)
+        : Builder<T>(ftv, start, end, true), position_(position) {}
 
     // Use this constructor when the SourceElement will only be partially ingested by the
     // StatementBuilder.  For example, a ConstDeclaration's identifier and type_ctor members are
@@ -329,7 +335,20 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // To ensure that the AttributeList is not processed twice, each new OnAttributeList invocation
   // checks against this set to ensure that the AttributeList in question has not already been
   // visited.
-  std::set<raw::AttributeListNew*> attribute_lists_seen_;
+
+  // We need to invoke certain On* visitors, like OnAttributeList or OnIdentifier, manually prior to
+  // delegating to the original TreeVisitor logic for their parent node, which will visit them
+  // again.  This is necessary when we want to handle child AST nodes in a different order than that
+  // which they are visited in by the default TreeVisitor of that kind.  For example, when in
+  // OnProtocolDeclaration, we need to visit the attached attributes before visiting the first token
+  // of the declaration (in this case, "protocol") itself.  If we did not do this, and instead
+  // delegated the task to the TreeVisitor, the resulting output wold be:
+  //
+  //   protocol @foo {...
+  //
+  // To avoid this "double visit" problem, we maintain a set of pointers to SourceElements we've
+  // already visited.
+  std::set<raw::SourceElement*> already_seen_;
 
   // A stack that keeps track of the CompositeSpanSequence we are currently building.  It is a list
   // of that CompositeSpanSequence's children.  When the child list has been filled out, it is

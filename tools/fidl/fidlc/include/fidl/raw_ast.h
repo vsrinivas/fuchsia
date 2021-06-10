@@ -617,9 +617,9 @@ class ProtocolMethod : public SourceElement {
   raw::TypeConstructor maybe_error_ctor;
 };
 
-class ComposeProtocol final : public SourceElement {
+class ProtocolCompose final : public SourceElement {
  public:
-  ComposeProtocol(SourceElement const& element, AttributeList attributes,
+  ProtocolCompose(SourceElement const& element, AttributeList attributes,
                   std::unique_ptr<CompoundIdentifier> protocol_name)
       : SourceElement(element),
         attributes(std::move(attributes)),
@@ -635,7 +635,7 @@ class ProtocolDeclaration final : public SourceElement {
  public:
   ProtocolDeclaration(SourceElement const& element, AttributeList attributes,
                       std::unique_ptr<Identifier> identifier,
-                      std::vector<std::unique_ptr<ComposeProtocol>> composed_protocols,
+                      std::vector<std::unique_ptr<ProtocolCompose>> composed_protocols,
                       std::vector<std::unique_ptr<ProtocolMethod>> methods)
       : SourceElement(element),
         attributes(std::move(attributes)),
@@ -647,7 +647,7 @@ class ProtocolDeclaration final : public SourceElement {
 
   AttributeList attributes;
   std::unique_ptr<Identifier> identifier;
-  std::vector<std::unique_ptr<ComposeProtocol>> composed_protocols;
+  std::vector<std::unique_ptr<ProtocolCompose>> composed_protocols;
   std::vector<std::unique_ptr<ProtocolMethod>> methods;
 };
 

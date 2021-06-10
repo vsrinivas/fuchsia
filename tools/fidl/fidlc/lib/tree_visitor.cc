@@ -184,7 +184,7 @@ void DeclarationOrderTreeVisitor::OnProtocolDeclaration(
     // And the earliest declaration is...
     switch (m.begin()->second) {
       case compose_t:
-        OnComposeProtocol(*compose_it);
+        OnProtocolCompose(*compose_it);
         ++compose_it;
         break;
       case method_t:

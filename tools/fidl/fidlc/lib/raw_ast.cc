@@ -273,7 +273,7 @@ void ProtocolMethod::Accept(TreeVisitor* visitor) const {
   }
 }
 
-void ComposeProtocol::Accept(TreeVisitor* visitor) const {
+void ProtocolCompose::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   visitor->OnCompoundIdentifier(protocol_name);
 }
@@ -286,7 +286,7 @@ void ProtocolDeclaration::Accept(TreeVisitor* visitor) const {
   visitor->OnIdentifier(identifier);
   for (auto composed_protocol = composed_protocols.begin();
        composed_protocol != composed_protocols.end(); ++composed_protocol) {
-    visitor->OnComposeProtocol(*composed_protocol);
+    visitor->OnProtocolCompose(*composed_protocol);
   }
   for (auto method = methods.begin(); method != methods.end(); ++method) {
     visitor->OnProtocolMethod(*method);

@@ -57,8 +57,8 @@ namespace {
   DO(EnumDeclaration)           \
   DO(Parameter)                 \
   DO(ParameterList)             \
+  DO(ProtocolCompose)           \
   DO(ProtocolMethod)            \
-  DO(ComposeProtocol)           \
   DO(ProtocolDeclaration)       \
   DO(ResourceDeclaration)       \
   DO(ResourceProperty)          \
@@ -211,18 +211,18 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     CheckSpanOfType(ElementType::ParameterListNew, *element);
     TreeVisitor::OnParameterListNew(element);
   }
-  void OnProtocolMethod(std::unique_ptr<fidl::raw::ProtocolMethod> const& element) override {
-    CheckSpanOfType(ElementType::ProtocolMethod, *element);
-    TreeVisitor::OnProtocolMethod(element);
-  }
-  void OnComposeProtocol(std::unique_ptr<fidl::raw::ComposeProtocol> const& element) override {
-    CheckSpanOfType(ElementType::ComposeProtocol, *element);
-    TreeVisitor::OnComposeProtocol(element);
+  void OnProtocolCompose(std::unique_ptr<fidl::raw::ProtocolCompose> const& element) override {
+    CheckSpanOfType(ElementType::ProtocolCompose, *element);
+    TreeVisitor::OnProtocolCompose(element);
   }
   void OnProtocolDeclaration(
       std::unique_ptr<fidl::raw::ProtocolDeclaration> const& element) override {
     CheckSpanOfType(ElementType::ProtocolDeclaration, *element);
     TreeVisitor::OnProtocolDeclaration(element);
+  }
+  void OnProtocolMethod(std::unique_ptr<fidl::raw::ProtocolMethod> const& element) override {
+    CheckSpanOfType(ElementType::ProtocolMethod, *element);
+    TreeVisitor::OnProtocolMethod(element);
   }
   void OnResourceProperty(std::unique_ptr<fidl::raw::ResourceProperty> const& element) override {
     CheckSpanOfType(ElementType::ResourceProperty, *element);
@@ -574,7 +574,7 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
          R"FIDL(library x; protocol X { «-> Event()»; };)FIDL",
          R"FIDL(library x; protocol X { «[attr] -> Event(bool res, int32 res2)»; };)FIDL",
      }},
-    {ElementType::ComposeProtocol,
+    {ElementType::ProtocolCompose,
      {
          R"FIDL(library x; protocol X { «compose OtherProtocol»; };)FIDL",
          R"FIDL(library x; protocol X { «[attr] compose OtherProtocol»; };)FIDL",

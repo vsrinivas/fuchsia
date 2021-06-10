@@ -37,7 +37,7 @@ std::string NewFormatter::Print(std::unique_ptr<raw::File> const& ast,
   // unformatted file.  Reserve that space now to minimize allocations as the printed string grows
   // down the road.
   out.reserve(original_file_size);
-  result.Print(cols_, std::nullopt, 0, false, &out);
+  result.Print(cols_, std::nullopt, 0, false, false, &out);
 
   // Formatted files always have a trailing newline.
   if (!out.empty() && out.at(out.size() - 1) != '\n')

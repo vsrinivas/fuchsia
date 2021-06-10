@@ -1025,9 +1025,9 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(raw::AttributeLi
   if (!parse_params(&response))
     return Fail();
 
-  std::unique_ptr<raw::TypeConstructorOld> maybe_error;
+  raw::TypeConstructor maybe_error;
   if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kError))) {
-    maybe_error = ParseTypeConstructorOld();
+    maybe_error = ParseTypeConstructor();
     if (!Ok())
       return Fail();
   }
@@ -1075,18 +1075,18 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
                                                std::move(maybe_response), std::move(maybe_error));
 }
 
-std::unique_ptr<raw::ComposeProtocol> Parser::ParseComposeProtocol(raw::AttributeList attributes,
+std::unique_ptr<raw::ProtocolCompose> Parser::ParseProtocolCompose(raw::AttributeList attributes,
                                                                    ASTScope& scope) {
   auto identifier = ParseCompoundIdentifier();
   if (!Ok())
     return Fail();
 
-  return std::make_unique<raw::ComposeProtocol>(scope.GetSourceElement(), std::move(attributes),
+  return std::make_unique<raw::ProtocolCompose>(scope.GetSourceElement(), std::move(attributes),
                                                 std::move(identifier));
 }
 
 void Parser::ParseProtocolMember(
-    std::vector<std::unique_ptr<raw::ComposeProtocol>>* composed_protocols,
+    std::vector<std::unique_ptr<raw::ProtocolCompose>>* composed_protocols,
     std::vector<std::unique_ptr<raw::ProtocolMethod>>* methods) {
   ASTScope scope(this);
   raw::AttributeList attributes = MaybeParseAttributeList();
@@ -1111,7 +1111,7 @@ void Parser::ParseProtocolMember(
           return ParseProtocolMethod(std::move(attributes), scope, std::move(identifier));
         });
       } else if (is_composed) {
-        add(composed_protocols, [&] { return ParseComposeProtocol(std::move(attributes), scope); });
+        add(composed_protocols, [&] { return ParseProtocolCompose(std::move(attributes), scope); });
       } else {
         Fail(ErrUnrecognizedProtocolMember);
         return;
@@ -1126,7 +1126,7 @@ void Parser::ParseProtocolMember(
 
 std::unique_ptr<raw::ProtocolDeclaration> Parser::ParseProtocolDeclaration(
     raw::AttributeList attributes, ASTScope& scope, const Modifiers& modifiers) {
-  std::vector<std::unique_ptr<raw::ComposeProtocol>> composed_protocols;
+  std::vector<std::unique_ptr<raw::ProtocolCompose>> composed_protocols;
   std::vector<std::unique_ptr<raw::ProtocolMethod>> methods;
 
   const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kProtocol));
