@@ -37,6 +37,7 @@ impl FidlService for Echo {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use services::testing::FakeDaemonBuilder;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_echo() {

@@ -391,6 +391,7 @@ mod tests {
         fidl,
         fidl_fuchsia_pkg::{MirrorConfig, RepositoryConfig, RepositoryManagerRequest},
         fidl_fuchsia_pkg_rewrite::{EditTransactionRequest, EngineMarker, EngineRequest},
+        services::testing::{FakeDaemon, FakeDaemonBuilder},
     };
 
     const REPO_NAME: &str = "some_repo";

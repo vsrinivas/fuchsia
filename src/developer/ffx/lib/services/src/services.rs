@@ -195,7 +195,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::FakeDaemonBuilder;
+    use crate::testing::FakeDaemonBuilder;
     use anyhow::anyhow;
     use fidl_fuchsia_ffx_test as ffx_test;
     use std::sync::atomic::{AtomicU64, Ordering};

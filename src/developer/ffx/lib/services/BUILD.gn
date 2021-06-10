@@ -31,11 +31,12 @@ rustc_library("lib") {
 
   sources = [
     "src/context.rs",
-    "src/fake_daemon.rs",
     "src/lib.rs",
     "src/prelude.rs",
     "src/register.rs",
     "src/services.rs",
+    "src/testing/fake_daemon.rs",
+    "src/testing/mod.rs",
   ]
 }
 
