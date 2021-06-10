@@ -1301,3 +1301,16 @@
   reviewers: [ 'bryanhenry@google.com', 'geb@google.com', 'dgonyeo@google.com', 'shayba@google.com', 'thatguy@google.com']
   submitted: '2021-05-18'
   reviewed: '2021-06-02'
+
+- name: 'RFC-0102'
+  title: 'Forbid CHILD_NO_WRITE with CHILD_RESIZABLE'
+  short_description: 'Make it an error to pass ZX_VMO_CHILD_NO_WRITE with ZX_VMO_CHILD_RESIZABLE to zx_vmo_create_child'
+  authors: ['adanis@google.com']
+  file: '0102_forbid_no_write_with_resizable.md'
+  area: ['Zircon']
+  issue: ['77315']
+  gerrit_change_id: ['533409']
+  submitted: '2021-05-25'
+  status: 'Accepted'
+  reviewers: ['bryanhenry@google.com','bprosnitz@google.com','rashaeqbal@google.com','cpu@google.com']
+  reviewed: '2021-06-10'
