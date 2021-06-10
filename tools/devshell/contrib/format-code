@@ -48,7 +48,7 @@ function zap-commas() {
 function get-diff-base() {
   local upstream=$(git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null)
   if [[ -z "${upstream}" ]]; then
-    upstream="origin/master"
+    upstream="origin/main"
   fi
   local local_commit=$(git rev-list HEAD ^${upstream} --  2>/dev/null | tail -1)
   if [[ -z "${local_commit}" ]]; then
