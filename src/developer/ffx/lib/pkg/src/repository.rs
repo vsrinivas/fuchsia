@@ -6,14 +6,17 @@ use {
     anyhow::Context,
     bytes::Bytes,
     fidl_fuchsia_pkg as pkg,
-    futures::{future::ready, stream::once, AsyncReadExt, Stream},
+    futures::{
+        future::ready,
+        stream::{once, BoxStream},
+        AsyncReadExt, StreamExt as _,
+    },
     parking_lot::Mutex,
     serde::{Deserialize, Serialize},
     std::{
         convert::TryFrom,
         io,
         path::PathBuf,
-        pin::Pin,
         sync::atomic::{AtomicUsize, Ordering},
     },
     tuf::{
@@ -129,7 +132,7 @@ pub struct Resource {
     pub len: u64,
 
     /// A stream of bytes representing the resource.
-    pub stream: Pin<Box<dyn Stream<Item = io::Result<Bytes>> + Send + Unpin + 'static>>,
+    pub stream: BoxStream<'static, io::Result<Bytes>>,
 }
 
 impl std::fmt::Debug for Resource {
@@ -142,7 +145,7 @@ impl TryFrom<RepositoryConfig> for Resource {
     type Error = Error;
     fn try_from(config: RepositoryConfig) -> Result<Resource, Error> {
         let json = Bytes::from(serde_json::to_vec(&config).map_err(|e| anyhow::anyhow!(e))?);
-        Ok(Resource { len: json.len() as u64, stream: Box::pin(once(ready(Ok(json)))) })
+        Ok(Resource { len: json.len() as u64, stream: once(ready(Ok(json))).boxed() })
     }
 }
 
@@ -222,8 +225,31 @@ impl Repository {
         self.backend.spec()
     }
 
+    /// Returns if the repository supports watching for timestamp changes.
+    pub fn supports_watch(&self) -> bool {
+        return self.backend.supports_watch();
+    }
+
+    /// Return a stream that yields whenever the repository's timestamp changes.
+    pub fn watch(&self) -> anyhow::Result<BoxStream<'static, ()>> {
+        self.backend.watch()
+    }
+
+    /// Return a stream of bytes for the resource.
     pub async fn fetch(&self, path: &str) -> Result<Resource, Error> {
         self.backend.fetch(path).await
+    }
+
+    /// Return a `vec<u8>` of the resource.
+    pub async fn fetch_bytes(&self, path: &str) -> Result<Vec<u8>, Error> {
+        let mut resource = self.fetch(path).await?;
+
+        let mut bytes = Vec::with_capacity(resource.len as usize);
+        while let Some(chunk) = resource.stream.next().await.transpose()? {
+            bytes.extend_from_slice(&chunk);
+        }
+
+        Ok(bytes)
     }
 
     pub async fn get_config(&self, mirror_url: &str) -> Result<RepositoryConfig, Error> {
@@ -233,7 +259,7 @@ impl Repository {
             root_version: Some(self.metadata.root_version),
             mirrors: Some(vec![MirrorConfig {
                 mirror_url: Some(format!("http://{}", mirror_url)),
-                subscribe: Some(false),
+                subscribe: Some(self.backend.supports_watch()),
             }]),
         })
     }
@@ -290,6 +316,16 @@ pub trait RepositoryBackend: std::fmt::Debug {
     /// Fetch a [Resource] from this repository.
     async fn fetch(&self, path: &str) -> Result<Resource, Error>;
 
+    /// Whether or not the backend supports watching for file changes.
+    fn supports_watch(&self) -> bool {
+        false
+    }
+
+    /// Returns a stream which sends a unit value every time the given path is modified.
+    fn watch(&self) -> anyhow::Result<BoxStream<'static, ()>> {
+        Err(anyhow::anyhow!("Watching not supported for this repo type"))
+    }
+
     /// Produces the backing TUF [RepositoryProvider] for this repository.
     fn get_tuf_repo(&self) -> Result<Box<dyn RepositoryProvider<Json>>, Error>;
 }
@@ -319,7 +355,7 @@ mod test {
             root_version: Some(ROOT_VERSION),
             mirrors: Some(vec![MirrorConfig {
                 mirror_url: Some(format!("http://{}", server_url)),
-                subscribe: Some(false),
+                subscribe: Some(true),
             }]),
         };
 

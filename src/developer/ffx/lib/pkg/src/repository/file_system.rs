@@ -6,14 +6,22 @@ use {
     super::{manager::RepositorySpec, Error, RepositoryBackend, Resource},
     anyhow::Result,
     bytes::{Bytes, BytesMut},
-    futures::{ready, stream, AsyncRead, Stream},
+    futures::{
+        ready,
+        stream::{self, BoxStream},
+        AsyncRead, Stream, StreamExt,
+    },
     log::{error, warn},
+    notify::{immediate_watcher, RecursiveMode, Watcher as _},
+    parking_lot::Mutex,
     std::{
         cmp::min,
+        ffi::OsStr,
         io,
         path::{Component, Path, PathBuf},
         pin::Pin,
-        task::Poll,
+        sync::Arc,
+        task::{Context, Poll},
     },
     tuf::{
         interchange::Json,
@@ -53,11 +61,75 @@ impl RepositoryBackend for FileSystemRepository {
         Ok(Resource { len, stream: Box::pin(file_stream(file_path, len as usize, file)) })
     }
 
+    fn supports_watch(&self) -> bool {
+        true
+    }
+
+    fn watch(&self) -> Result<BoxStream<'static, ()>> {
+        // Since all we are doing is signaling that the timestamp file is changed, it's it's fine
+        // if the channel is full, since that just means we haven't consumed our notice yet.
+        let (sender, receiver) = futures::channel::mpsc::channel(1);
+
+        // FIXME(https://github.com/notify-rs/notify/pull/333): `immediate_watcher` takes an `Fn`
+        // closure, which means it could theoretically call it concurrently (although the current
+        // implementation does not do this). `sender` requires mutability, so we need to use
+        // interior mutability. Notify may change to use `FnMut` in #333, which would remove our
+        // need for interior mutability.
+        //
+        // We use a Mutex over a RefCell in case notify starts using the closure concurrently down
+        // the road without us noticing.
+        let sender = Arc::new(Mutex::new(sender));
+
+        let mut watcher = immediate_watcher(move |event: notify::Result<notify::Event>| {
+            let event = match event {
+                Ok(event) => event,
+                Err(err) => {
+                    warn!("error receving notify event: {}", err);
+                    return;
+                }
+            };
+
+            // Send an event if any applied to timestamp.json.
+            let timestamp_name = OsStr::new("timestamp.json");
+            if event.paths.iter().any(|p| p.file_name() == Some(timestamp_name)) {
+                if let Err(e) = sender.lock().try_send(()) {
+                    if e.is_full() {
+                        // It's okay to ignore a full channel, since that just means that the other
+                        // side of the channel still has an outstanding notice, which should be the
+                        // same effect if we re-sent the event.
+                    } else if !e.is_disconnected() {
+                        warn!("Error sending event: {:?}", e);
+                    }
+                }
+            }
+        })?;
+
+        // Watch the repo path instead of directly watching timestamp.json to avoid
+        // https://github.com/notify-rs/notify/issues/165.
+        watcher.watch(&self.repo_path, RecursiveMode::NonRecursive)?;
+
+        Ok(WatchStream { _watcher: watcher, receiver }.boxed())
+    }
+
     fn get_tuf_repo(&self) -> Result<Box<(dyn RepositoryProvider<Json> + 'static)>, Error> {
         TufFileSystemRepositoryBuilder::<Json>::new(self.repo_path.clone())
             .build()
             .map(|r| Box::new(r) as Box<dyn RepositoryProvider<Json>>)
             .map_err(|e| anyhow::anyhow!(e).into())
+    }
+}
+
+#[pin_project::pin_project]
+struct WatchStream {
+    _watcher: notify::RecommendedWatcher,
+    #[pin]
+    receiver: futures::channel::mpsc::Receiver<()>,
+}
+
+impl Stream for WatchStream {
+    type Item = ();
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.project().receiver.poll_next(cx)
     }
 }
 
@@ -126,11 +198,13 @@ fn file_stream(
 mod tests {
     use {
         super::*,
-        futures::StreamExt,
+        fuchsia_async as fasync,
+        futures::{FutureExt, StreamExt},
         matches::assert_matches,
         std::{
-            fs::File,
+            fs::{self, File},
             io::{self, Write as _},
+            time::Duration,
         },
     };
 
@@ -211,5 +285,54 @@ mod tests {
         assert_matches!(
             read(&repo, "subdir/../empty").await,
             Err(Error::InvalidPath(path)) if path == Path::new("subdir/../empty"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_watch() {
+        let d = tempfile::tempdir().unwrap();
+        let repo = FileSystemRepository::new(d.path().to_path_buf());
+
+        assert!(repo.supports_watch());
+        let mut watch_stream = repo.watch().unwrap();
+
+        // Try to read from the stream. This should not return anything since we haven't created a
+        // file yet.
+        futures::select! {
+            _ = watch_stream.next().fuse() => panic!("should not have received an event"),
+            _ = fasync::Timer::new(Duration::from_millis(10)).fuse() => (),
+        };
+
+        // Next, write to the file and make sure we observe an event.
+        let timestamp_file = d.path().join("timestamp.json");
+        fs::write(&timestamp_file, br#"{"version":1}"#).unwrap();
+
+        futures::select! {
+            result = watch_stream.next().fuse() => {
+                assert_eq!(result, Some(()));
+            },
+            _ = fasync::Timer::new(Duration::from_secs(10)).fuse() => {
+                panic!("wrote to timestamp.json, but did not get an event");
+            },
+        };
+
+        // Write to the file again and make sure we receive another event.
+        fs::write(&timestamp_file, br#"{"version":2}"#).unwrap();
+
+        futures::select! {
+            result = watch_stream.next().fuse() => {
+                assert_eq!(result, Some(()));
+            },
+            _ = fasync::Timer::new(Duration::from_secs(10)).fuse() => {
+                panic!("wrote to timestamp.json, but did not get an event");
+            },
+        };
+
+        // FIXME(https://github.com/notify-rs/notify/pull/337): On OSX, notify uses a
+        // crossbeam-channel in `Drop` to shut down the interior thread. Unfortunately this can
+        // trip over an issue where OSX will tear down the thread local storage before shutting
+        // down the thread, which can trigger a panic. To avoid this issue, sleep a little bit
+        // after shutting down our stream.
+        drop(watch_stream);
+        fasync::Timer::new(Duration::from_millis(100)).await;
     }
 }

@@ -411,7 +411,7 @@ mod tests {
                             repo_url: Some(format!("fuchsia-pkg://{}", REPO_NAME)),
                             mirrors: Some(vec![MirrorConfig {
                                 mirror_url: Some(format!("http://localhost:8084/{}", REPO_NAME)),
-                                subscribe: Some(false),
+                                subscribe: Some(true),
                                 ..MirrorConfig::EMPTY
                             }]),
                             root_keys: Some(vec![]),
@@ -446,7 +446,7 @@ mod tests {
                             repo_url: Some(format!("fuchsia-pkg://{}", REPO_NAME)),
                             mirrors: Some(vec![MirrorConfig {
                                 mirror_url: Some(format!("http://localhost:8084/{}", REPO_NAME)),
-                                subscribe: Some(false),
+                                subscribe: Some(true),
                                 ..MirrorConfig::EMPTY
                             }]),
                             root_keys: Some(vec![]),
