@@ -22,4 +22,4 @@ case $1 in
   ;;
 esac
 
-fx-command-run run --no-build --no-restart-session mem "$@"
+fx-command-run run --no-build --no-kill --no-restart-session mem "$@"
