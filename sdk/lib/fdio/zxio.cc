@@ -296,20 +296,6 @@ zx::status<fdio_ptr> remote::create(fidl::ClientEnd<fuchsia_io::Node> node, zx::
   return zx::ok(io);
 }
 
-zx::status<fdio_ptr> remote::create(fidl::ClientEnd<fio::File> file, zx::event event,
-                                    zx::stream stream) {
-  fdio_ptr io = fbl::MakeRefCounted<remote>();
-  if (io == nullptr) {
-    return zx::error(ZX_ERR_NO_MEMORY);
-  }
-  zx_status_t status = zxio_file_init(&io->zxio_storage(), file.channel().release(),
-                                      event.release(), stream.release());
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(io);
-}
-
 zx::status<fdio_ptr> remote::create(zx::vmo vmo, zx::stream stream) {
   fdio_ptr io = fbl::MakeRefCounted<remote>();
   if (io == nullptr) {
@@ -331,18 +317,6 @@ zx::status<fdio_ptr> remote::create(fidl::ClientEnd<fio::File> file, zx::vmo vmo
   }
   zx_status_t status = zxio_vmofile_init(&io->zxio_storage(), fidl::BindSyncClient(std::move(file)),
                                          std::move(vmo), offset, length, seek);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(io);
-}
-
-zx::status<fdio_ptr> dir::create(fidl::ClientEnd<fio::Directory> directory) {
-  fdio_ptr io = fbl::MakeRefCounted<dir>();
-  if (io == nullptr) {
-    return zx::error(ZX_ERR_NO_MEMORY);
-  }
-  zx_status_t status = zxio_dir_init(&io->zxio_storage(), directory.channel().release());
   if (status != ZX_OK) {
     return zx::error(status);
   }

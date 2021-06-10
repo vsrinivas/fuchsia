@@ -18,6 +18,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "sdk/lib/zxio/private.h"
 #include "sdk/lib/zxio/tests/file_test_suite.h"
 #include "sdk/lib/zxio/tests/test_file_server_base.h"
 
@@ -31,7 +32,7 @@ class CloseCountingFileServer : public zxio_tests::TestFileServerBase {
   virtual ~CloseCountingFileServer() = default;
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
     num_close_.fetch_add(1);
     zxio_tests::TestFileServerBase::Close(request, completer);
   }

@@ -120,6 +120,16 @@ namespace fio = fuchsia_io;
 zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo& info,
                                       zxio_storage_t* storage) {
   switch (info.which()) {
+    case fio::wire::NodeInfo::Tag::kDirectory: {
+      return zxio_dir_init(storage, node.TakeChannel().release());
+    }
+    case fio::wire::NodeInfo::Tag::kFile: {
+      auto& file = info.mutable_file();
+      zx::event event = std::move(file.event);
+      zx::stream stream = std::move(file.stream);
+      return zxio_file_init(storage, node.TakeChannel().release(), event.release(),
+                            stream.release());
+    }
     case fio::wire::NodeInfo::Tag::kPipe: {
       auto& pipe = info.mutable_pipe();
       zx::socket socket = std::move(pipe.socket);

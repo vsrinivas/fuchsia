@@ -77,8 +77,6 @@ struct pipe : public zxio {
 
 struct remote : public zxio {
   static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node, zx::eventpair event);
-  static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::File> file, zx::event event,
-                                     zx::stream stream);
   static zx::status<fdio_ptr> create(zx::vmo vmo, zx::stream stream);
 
   // Creates an |fdio_t| for a VMO file.
@@ -109,8 +107,6 @@ struct remote : public zxio {
 };
 
 struct dir : public remote {
-  static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Directory> dir);
-
   // Override |convert_to_posix_mode| for directories, since directories
   // have different semantics for the "rwx" bits.
   uint32_t convert_to_posix_mode(zxio_node_protocols_t protocols,

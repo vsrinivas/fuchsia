@@ -101,6 +101,9 @@ bool zxio_is_valid(const zxio_t* io);
 
 void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension_ops_t* ops);
 
+zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t event,
+                           zx_handle_t stream);
+
 zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fuchsia_io::Node> node,
                                       fuchsia_io::wire::NodeInfo& node_info,
                                       zxio_storage_t* storage);

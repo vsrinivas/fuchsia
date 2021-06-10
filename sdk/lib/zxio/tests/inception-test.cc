@@ -2,11 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
 #include <lib/zx/vmo.h>
 #include <lib/zxio/inception.h>
 #include <string.h>
 
 #include <zxtest/zxtest.h>
+
+#include "sdk/lib/zxio/tests/test_directory_server_base.h"
+#include "sdk/lib/zxio/tests/test_file_server_base.h"
 
 TEST(CreateWithAllocator, ErrorAllocator) {
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
@@ -117,6 +123,113 @@ TEST(CreateWithInfo, Unsupported) {
   ASSERT_OK(zxio_release(zxio, recaptured_handle.reset_and_get_address()));
   EXPECT_TRUE(recaptured_handle.is_valid());
   ASSERT_OK(zxio_close(zxio));
+}
+
+class TestDirectoryServer final : public zxio_tests::TestDirectoryServerBase {
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final {
+    completer.Reply(ZX_OK);
+  }
+};
+
+TEST(CreateWithInfo, Directory) {
+  auto dir_ends = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_OK(dir_ends.status_value());
+  auto [dir_client, dir_server] = std::move(dir_ends.value());
+
+  fidl::FidlAllocator fidl_allocator;
+  auto node_info = fuchsia_io::wire::NodeInfo::WithDirectory(fidl_allocator);
+
+  auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
+    if (type != ZXIO_OBJECT_TYPE_DIR) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    *out_storage = new zxio_storage_t;
+    *out_context = *out_storage;
+    return ZX_OK;
+  };
+
+  async::Loop dir_control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  TestDirectoryServer server;
+  fidl::BindServer(dir_control_loop.dispatcher(), std::move(dir_server), &server);
+  dir_control_loop.StartThread("dir_control_thread");
+
+  void* context = nullptr;
+  fidl::ClientEnd<fuchsia_io::Node> node_client(dir_client.TakeChannel());
+  ASSERT_OK(zxio_create_with_allocator(std::move(node_client), node_info, allocator, &context));
+  ASSERT_NE(context, nullptr);
+
+  std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
+  zxio_t* zxio = &(storage->io);
+
+  // Sanity check the zxio by sending a sync operation to the server.
+  EXPECT_OK(zxio_sync(zxio));
+
+  ASSERT_OK(zxio_close(zxio));
+
+  dir_control_loop.Shutdown();
+}
+
+class TestFileServer final : public zxio_tests::TestFileServerBase {
+ public:
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) final {
+    fidl::FidlAllocator fidl_allocator;
+    fidl::VectorView<uint8_t> read_data(fidl_allocator, sizeof(kTestData));
+    memcpy(read_data.mutable_data(), kTestData, sizeof(kTestData));
+    completer.Reply(ZX_OK, read_data);
+  }
+
+  static constexpr char kTestData[] = "abcdef";
+};
+
+TEST(CreateWithInfo, File) {
+  auto file_ends = fidl::CreateEndpoints<fuchsia_io::File>();
+  ASSERT_OK(file_ends.status_value());
+  auto [file_client, file_server] = std::move(file_ends.value());
+
+  zx::event file_event;
+  ASSERT_OK(zx::event::create(0u, &file_event));
+  fuchsia_io::wire::FileObject file = {.event = std::move(file_event)};
+
+  fidl::FidlAllocator fidl_allocator;
+  auto node_info = fuchsia_io::wire::NodeInfo::WithFile(fidl_allocator, std::move(file));
+
+  auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
+    if (type != ZXIO_OBJECT_TYPE_FILE) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    *out_storage = new zxio_storage_t;
+    *out_context = *out_storage;
+    return ZX_OK;
+  };
+
+  async::Loop file_control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  TestFileServer server;
+  fidl::BindServer(file_control_loop.dispatcher(), std::move(file_server), &server);
+  file_control_loop.StartThread("file_control_thread");
+
+  void* context = nullptr;
+  fidl::ClientEnd<fuchsia_io::Node> node_client(file_client.TakeChannel());
+  ASSERT_OK(zxio_create_with_allocator(std::move(node_client), node_info, allocator, &context));
+  ASSERT_NE(context, nullptr);
+
+  // The event in node_info should be consumed by zxio.
+  EXPECT_FALSE(node_info.file().event.is_valid());
+
+  std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
+  zxio_t* zxio = &(storage->io);
+
+  // Sanity check the zxio by reading some test data from the server.
+  char buffer[sizeof(TestFileServer::kTestData)];
+  size_t actual = 0u;
+
+  ASSERT_OK(zxio_read(zxio, buffer, sizeof(buffer), 0u, &actual));
+
+  EXPECT_EQ(sizeof(buffer), actual);
+  EXPECT_BYTES_EQ(buffer, TestFileServer::kTestData, sizeof(buffer));
+
+  ASSERT_OK(zxio_close(zxio));
+
+  file_control_loop.Shutdown();
 }
 
 TEST(CreateWithInfo, Pipe) {

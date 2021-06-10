@@ -56,6 +56,12 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
     case ZXIO_OBJECT_TYPE_DEBUGLOG:
       io = fbl::MakeRefCounted<fdio_internal::zxio>();
       break;
+    case ZXIO_OBJECT_TYPE_DIR:
+      io = fbl::MakeRefCounted<fdio_internal::dir>();
+      break;
+    case ZXIO_OBJECT_TYPE_FILE:
+      io = fbl::MakeRefCounted<fdio_internal::remote>();
+      break;
     case ZXIO_OBJECT_TYPE_PIPE:
       io = fbl::MakeRefCounted<fdio_internal::pipe>();
       break;
@@ -78,8 +84,7 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
 
 zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo info) {
   void* context = nullptr;
-  zx_status_t status =
-      zxio_create_with_allocator(std::move(node), info, ZxioAllocator, &context);
+  zx_status_t status = zxio_create_with_allocator(std::move(node), info, ZxioAllocator, &context);
   switch (status) {
     case ZX_OK: {
       return zx::ok(fbl::ImportFromRawPtr(static_cast<fdio*>(context)));
@@ -104,15 +109,8 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
   }
 
   switch (info.which()) {
-    case fio::wire::NodeInfo::Tag::kDirectory:
-      return fdio_internal::dir::create(fidl::ClientEnd<fio::Directory>(node.TakeChannel()));
     case fio::wire::NodeInfo::Tag::kService:
       return fdio_internal::remote::create(std::move(node), zx::eventpair{});
-    case fio::wire::NodeInfo::Tag::kFile: {
-      auto& file = info.mutable_file();
-      return fdio_internal::remote::create(fidl::ClientEnd<fio::File>(node.TakeChannel()),
-                                           std::move(file.event), std::move(file.stream));
-    }
     case fio::wire::NodeInfo::Tag::kDevice: {
       auto& device = info.mutable_device();
       return fdio_internal::remote::create(std::move(node), std::move(device.event));

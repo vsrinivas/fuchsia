@@ -36,9 +36,10 @@ static_assert(sizeof(zxio_remote_t) <= sizeof(zxio_storage_t),
               "zxio_remote_t must fit inside zxio_storage_t.");
 
 zx_status_t zxio_remote_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t event);
+
+// TODO(https://fxbug.dev/43267): Move to private.h once caller here is updated:
+// https://fuchsia.googlesource.com/third_party/mesa/+/refs/heads/main/src/util/os_dirent_fuchsia.cpp#60
 zx_status_t zxio_dir_init(zxio_storage_t* remote, zx_handle_t control);
-zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t event,
-                           zx_handle_t stream);
 
 // remote v2 -------------------------------------------------------------------
 
