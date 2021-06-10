@@ -33,9 +33,17 @@ cpp20::span<MemRange> RangesFromBytes(std::vector<std::byte> bytes) {
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   FuzzedDataProvider provider(data, size);
 
+  const bool just_ram = provider.ConsumeBool();
   std::vector<std::byte> bytes = provider.ConsumeRemainingBytes<std::byte>();
   cpp20::span<MemRange> ranges = RangesFromBytes(bytes);
 
-  memalloc::FindNormalizedRamRanges(ranges, [](const MemRange& range) { return true; });
+  constexpr auto find_all = [](const MemRange& range) { return true; };
+  if (just_ram) {
+    memalloc::FindNormalizedRamRanges(ranges, find_all);
+  } else {
+    const size_t scratch_size = 4 * ranges.size() * sizeof(void*);
+    auto scratch = std::make_unique<void*[]>(scratch_size);
+    memalloc::FindNormalizedRanges(ranges, {scratch.get(), scratch_size}, find_all);
+  }
   return 0;
 }

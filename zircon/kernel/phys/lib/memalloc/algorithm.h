@@ -11,6 +11,7 @@
 #include <lib/memalloc/range.h>
 #include <lib/stdcompat/span.h>
 
+#include <cstddef>
 #include <string_view>
 
 namespace memalloc {
@@ -30,6 +31,13 @@ using MemRangeCallback = fit::inline_function<bool(const MemRange&)>;
 // ranges.
 //
 void FindNormalizedRamRanges(cpp20::span<MemRange> ranges, MemRangeCallback cb);
+
+// A variant of the above that finds all of the normalized ranges in order.
+// It also runs in O(n*log(n)) time but with O(n) space. In particular, a
+// buffer of scratch must be provided that is at least
+// least 4*n*sizeof(void*) in size.
+void FindNormalizedRanges(cpp20::span<const MemRange> ranges, cpp20::span<void*> scratch,
+                          MemRangeCallback cb);
 
 }  // namespace memalloc
 

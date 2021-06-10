@@ -11,6 +11,7 @@
 #include <zircon/assert.h>
 
 #include <algorithm>
+#include <array>
 #include <limits>
 
 namespace memalloc {
@@ -18,6 +19,25 @@ namespace memalloc {
 constexpr uint64_t kMax = std::numeric_limits<uint64_t>::max();
 
 namespace {
+
+constexpr uint64_t GetLeft(const MemRange& range) { return range.addr; }
+
+constexpr uint64_t GetRight(const MemRange& range) {
+  return GetLeft(range) + std::min(kMax - GetLeft(range), range.size);
+}
+
+constexpr size_t kNumTypes = 3;
+
+// Normalizes unknown types to ZBI_MEM_RANGE_RESERVED.
+constexpr Type GetType(const MemRange& range) {
+  switch (range.type) {
+    case Type::kFreeRam:
+    case Type::kPeripheral:
+    case Type::kReserved:
+      return range.type;
+  }
+  return Type::kReserved;
+}
 
 // Represents a 64-bit, unsigned integral interval, [Left(), Right()), whose
 // inclusive endpoints may may range from 0 to UINT64_MAX -1.
@@ -40,8 +60,7 @@ class Interval {
   constexpr Interval(uint64_t left, uint64_t right)
       : left_(left >= right ? 0 : left), right_(left >= right ? 0 : right) {}
 
-  constexpr Interval(const MemRange& range)
-      : Interval(range.addr, range.addr + std::min(kMax - range.addr, range.size)) {}
+  constexpr Interval(const MemRange& range) : Interval(GetLeft(range), GetRight(range)) {}
 
   constexpr bool empty() const { return Left() == Right(); }
 
@@ -85,6 +104,63 @@ class Interval {
  private:
   uint64_t left_ = 0;
   uint64_t right_ = 0;
+};
+
+enum class EndpointType { kLeft, kRight };
+
+struct Endpoint {
+  const MemRange* range;
+  EndpointType type;
+
+  constexpr bool IsLeft() const { return type == EndpointType::kLeft; }
+
+  constexpr uint64_t value() const {
+    ZX_DEBUG_ASSERT(range);
+    return IsLeft() ? GetLeft(*range) : GetRight(*range);
+  }
+
+  // Compares by value, giving left endpoints precedence.
+  constexpr bool operator<(Endpoint other) const {
+    return value() < other.value() || (value() == other.value() && IsLeft() && !other.IsLeft());
+  }
+};
+
+// An array of counters indexed by Type.
+class ActiveRanges {
+ public:
+  size_t& operator[](Type type) {
+    switch (type) {
+      case Type::kFreeRam:
+        return values_[0];
+      case Type::kPeripheral:
+        return values_[1];
+      case Type::kReserved:
+        static_assert(kNumTypes - 1 == 2);
+        return values_[2];
+    }
+    ZX_PANIC("should not be reached");
+  }
+
+  // Gives the active range type with the highest relative precedence - or
+  // std::nullopt if there are no active ranges.
+  std::optional<Type> DominantType() {
+    if ((*this)[Type::kReserved]) {
+      return Type::kReserved;
+    }
+    if ((*this)[Type::kPeripheral]) {
+      return Type::kPeripheral;
+    }
+    if ((*this)[Type::kFreeRam]) {
+      return Type::kFreeRam;
+    }
+    return {};
+  }
+
+  auto begin() const { return values_.begin(); }
+  auto end() const { return values_.end(); }
+
+ private:
+  std::array<size_t, kNumTypes> values_ = {};
 };
 
 }  // namespace
@@ -163,6 +239,100 @@ void FindNormalizedRamRanges(cpp20::span<MemRange> ranges, MemRangeCallback cb) 
   if (!candidate.empty()) {
     cb(candidate.AsRamRange());
   }
+}
+
+void FindNormalizedRanges(cpp20::span<const MemRange> ranges, cpp20::span<void*> scratch,
+                          MemRangeCallback cb) {
+  if (ranges.empty()) {
+    return;
+  }
+
+  // This algorithm relies on creating a sorted array of endpoints. For every
+  // range, we need two endpoints, each of which we represent with two words.
+  {
+    static_assert(std::alignment_of_v<Endpoint> % std::alignment_of_v<void*> == 0);
+    static_assert(sizeof(Endpoint) == 2 * sizeof(void*));
+    const size_t min_size = 4 * ranges.size() * sizeof(void*);
+    ZX_ASSERT_MSG(scratch.size() >= min_size,
+                  "scratch space must be at least 4*sizeof(void*) times the number of ranges "
+                  "(%zu): expected >= %zu bytes; got %zu bytes",
+                  ranges.size(), min_size, scratch.size());
+  }
+
+  cpp20::span<Endpoint> endpoints{reinterpret_cast<Endpoint*>(scratch.data()), 2 * ranges.size()};
+  for (size_t i = 0; i < ranges.size(); ++i) {
+    const MemRange& range = ranges[i];
+    endpoints[2 * i] = {&range, EndpointType::kLeft};
+    endpoints[2 * i + 1] = {&range, EndpointType::kRight};
+  }
+  std::sort(endpoints.begin(), endpoints.end());
+
+  // The following algorithm is simple, but rather subtle. It works as follows.
+  //
+  // We iterate through endpoints sorted by value and maintain counters that
+  // gives the number of the original ranges that are 'active' at this point in
+  // time: if we see a left endpoint, the associated counter is incremented; if
+  // we see a right endpoint, it is decremented. We also maintain the the type
+  // and start value of the normalized range we are currently building up.
+  //
+  // After processing each endpoint of a specific value, we take stock of the
+  // counters: every positive counter corresponds to a collection of active
+  // ranges of that associated type. If there are active ranges, let TYPE be
+  // the most dominant among them (i.e., with the highest relative precedence):
+  // then we are either in the process of building up a normalized TYPE range
+  // or have just started to; if the former, then carry on; if the latter, it
+  // is time to emit the previous normalized range we had been building up, as
+  // we have just found its end. If all counters are zero, we are no longer
+  // building up a normalized range and should clear the tracked start and type.
+  ActiveRanges counters;
+  std::optional<Type> curr_type;
+  uint64_t curr_start = endpoints.front().value();
+  uint64_t curr_value = curr_start;
+
+  // Processes an "event", given by seeing a new active, normalized range type.
+  // If std::nullopt, there are no active ranges at this time.
+  auto process_event = [&](std::optional<Type> active_type) -> bool {
+    // Still building up the same range.
+    if (active_type == curr_type) {
+      return true;
+    }
+
+    // If we have been building up a (non-empty) normalized range of a
+    // different type, emit it.
+    ZX_DEBUG_ASSERT(curr_start <= curr_value);
+    if (curr_type && curr_start < curr_value) {
+      if (!cb({.addr = curr_start, .size = curr_value - curr_start, .type = *curr_type})) {
+        return false;
+      }
+    }
+    curr_start = curr_value;
+    curr_type = active_type;
+    return true;
+  };
+
+  for (size_t i = 0; i < endpoints.size();) {
+    curr_value = endpoints[i].value();
+    do {
+      const Endpoint& endpoint = endpoints[i];
+      ZX_DEBUG_ASSERT(endpoint.range);
+      const Type type = GetType(*endpoint.range);
+      if (endpoint.IsLeft()) {
+        counters[type]++;
+      } else {
+        ZX_DEBUG_ASSERT(counters[type] > 0);
+        counters[type]--;
+      }
+      ++i;
+    } while (i < endpoints.size() && endpoints[i].value() == curr_value);
+
+    if (!process_event(counters.DominantType())) {
+      return;
+    }
+  }
+  // There should be no active ranges tracked now, normalized or otherwise.
+  ZX_DEBUG_ASSERT(!curr_type);
+  ZX_DEBUG_ASSERT(
+      std::all_of(counters.begin(), counters.end(), [](size_t count) { return count == 0; }));
 }
 
 }  // namespace memalloc
