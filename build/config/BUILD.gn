@@ -597,7 +597,6 @@ config("Wno-conversion") {
     "//sdk/lib/ui/scenic/cpp/*",
     "//sdk/lib/vfs/cpp/*",
     "//sdk/lib/virtualization/*",
-    "//src/bringup/bin/bootsvc/*",
     "//src/bringup/bin/netsvc/*",
     "//src/bringup/bin/ptysvc/*",
     "//src/connectivity/network/tools/nc/third_party/openbsd-netcat:nc",
