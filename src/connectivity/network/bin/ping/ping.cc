@@ -14,12 +14,14 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
+#include <cctype>
 #include <cerrno>
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <string>
 
 #include <fbl/unique_fd.h>
 
@@ -34,21 +36,19 @@ struct Options {
   long count = 3;
   long interval_msec = 1000;
   long timeout_msec = 1000;
-  long payload_size_bytes = 0;
-  long min_payload_size_bytes = 0;
+  std::string message = "This is an echo message!";
   const char* interface_name = nullptr;
   const char* host = nullptr;
-
-  explicit Options(long min) {
-    payload_size_bytes = min;
-    min_payload_size_bytes = min;
-  }
 
   void Print() const {
     printf("Count: %ld, ", count);
     printf("Interval: %ld ms, ", interval_msec);
     printf("Timeout: %ld ms, ", timeout_msec);
-    printf("Payload size: %ld bytes, ", payload_size_bytes);
+    printf("Message: ");
+    for (char c : message) {
+      putc((std::isgraph(c) || c == ' ') ? c : ' ', stdout);
+    }
+    printf(", Message size: %zu bytes, ", message.size());
     printf("Source interface: %s, ", interface_name);
     if (host != nullptr) {
       printf("Destination: %s\n", host);
@@ -58,11 +58,6 @@ struct Options {
   bool Validate() const {
     if (interval_msec <= 0) {
       fprintf(stderr, "interval must be positive: %ld\n", interval_msec);
-      return false;
-    }
-
-    if (payload_size_bytes < min_payload_size_bytes) {
-      fprintf(stderr, "payload size must be more than: %ld\n", min_payload_size_bytes);
       return false;
     }
 
@@ -90,8 +85,8 @@ struct Options {
     fprintf(stderr, "\t-c count: Only send count packets (default = 3)\n");
     fprintf(stderr, "\t-i interval(ms): Time interval between pings (default = 1000)\n");
     fprintf(stderr, "\t-t timeout(ms): Timeout waiting for ping response (default = 1000)\n");
-    fprintf(stderr, "\t-s size(bytes): Number of payload bytes (default = %ld)\n",
-            payload_size_bytes);
+    fprintf(stderr, "\t-s size(bytes): Number of message bytes (default = %zu)\n", message.size());
+    fprintf(stderr, "\t-m message: Message to fill in packets (default = %s)\n", message.c_str());
     fprintf(stderr, "\t-I interface_name: Name of the interface the requests will be sent from\n");
     fprintf(stderr, "\t-h: View this help message\n\n");
     return -1;
@@ -99,7 +94,9 @@ struct Options {
 
   int ParseCommandLine(int argc, char** argv) {
     int opt;
-    while ((opt = getopt(argc, argv, "c:i:t:s:I:h")) != -1) {
+    size_t message_bytes = 0;
+    bool message_bytes_set = false;
+    while ((opt = getopt(argc, argv, "c:i:t:s:m:I:h")) != -1) {
       char* endptr = nullptr;
       switch (opt) {
         case 'c':
@@ -124,11 +121,15 @@ struct Options {
           }
           break;
         case 's':
-          payload_size_bytes = strtol(optarg, &endptr, 10);
+          message_bytes = strtol(optarg, &endptr, 10);
           if (*endptr != '\0') {
             fprintf(stderr, "-s must be followed by a non-negative integer\n");
             return Usage();
           }
+          message_bytes_set = true;
+          break;
+        case 'm':
+          message = std::string(optarg);
           break;
         case 'I':
           interface_name = optarg;
@@ -142,6 +143,17 @@ struct Options {
     if (optind >= argc) {
       fprintf(stderr, "missing destination\n");
       return Usage();
+    }
+    if (message_bytes_set) {
+      if (message.size() > message_bytes) {
+        // Truncate over-sized messages.
+        message.resize(message_bytes);
+      } else {
+        // Pad out under-sized messages with '\0'.
+        while (message.size() < message_bytes) {
+          message.push_back('\0');
+        }
+      }
     }
     host = argv[optind];
     return 0;
@@ -218,7 +230,7 @@ bool ValidateReceivedPacket(const packet_t& sent_packet, size_t sent_packet_size
             received_packet.hdr.un.echo.sequence, sent_packet.hdr.un.echo.sequence);
     return false;
   }
-  if (memcmp(received_packet.payload, sent_packet.payload, options.payload_size_bytes) != 0) {
+  if (memcmp(received_packet.payload, sent_packet.payload, options.message.size()) != 0) {
     fprintf(stderr, "Incorrect Payload content in received packet\n");
     return false;
   }
@@ -226,9 +238,7 @@ bool ValidateReceivedPacket(const packet_t& sent_packet, size_t sent_packet_size
 }
 
 int main(int argc, char** argv) {
-  constexpr char ping_message[] = "This is an echo message!";
-  long message_size = static_cast<long>(strlen(ping_message) + 1);
-  Options options(message_size);
+  Options options;
   PingStatistics stats;
 
   if (options.ParseCommandLine(argc, argv) != 0) {
@@ -295,7 +305,7 @@ int main(int argc, char** argv) {
 
   uint16_t sequence = 1;
 
-  size_t sent_packet_size = offsetof(packet_t, payload) + options.payload_size_bytes;
+  size_t sent_packet_size = offsetof(packet_t, payload) + options.message.size();
   std::unique_ptr<uint8_t[]> sent(new uint8_t[sent_packet_size]),
       rcvd(new uint8_t[sent_packet_size]);
   auto packet = reinterpret_cast<packet_t*>(sent.get());
@@ -316,7 +326,7 @@ int main(int argc, char** argv) {
                     },
             },
     };
-    strcpy(packet->payload, ping_message);
+    memcpy(packet->payload, options.message.data(), options.message.size());
     // Netstack will overwrite the checksum
     zx_ticks_t before = zx_ticks_get();
     ssize_t r = sendto(s.get(), packet, sent_packet_size, 0, info->ai_addr, info->ai_addrlen);
