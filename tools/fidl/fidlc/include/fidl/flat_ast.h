@@ -1220,6 +1220,8 @@ using MethodHasher = fit::function<raw::Ordinal64(
     const std::vector<std::string_view>& library_name, const std::string_view& protocol_name,
     const std::string_view& selector_name, const raw::SourceElement& source_element)>;
 
+struct LibraryComparator;
+
 class Library {
   friend StepBase;
   friend ConsumeStep;
@@ -1238,6 +1240,7 @@ class Library {
 
   bool ConsumeFile(std::unique_ptr<raw::File> file);
   bool Compile();
+  std::set<const Library*, LibraryComparator> DirectDependencies() const;
 
   const std::vector<std::string_view>& name() const { return library_name_; }
   const AttributeList* attributes() const { return attributes_.get(); }
@@ -1489,6 +1492,14 @@ class Library {
 
   VirtualSourceFile generated_source_file_{"generated"};
   friend class LibraryMediator;
+};
+
+struct LibraryComparator {
+  bool operator()(const flat::Library* lhs, const flat::Library* rhs) const {
+    assert(!lhs->name().empty());
+    assert(!rhs->name().empty());
+    return lhs->name() < rhs->name();
+  }
 };
 
 class StepBase {

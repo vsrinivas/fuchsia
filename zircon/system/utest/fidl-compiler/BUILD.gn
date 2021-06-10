@@ -45,6 +45,7 @@ if (current_toolchain == default_toolchain) {
       "coded_types_generator_tests.cc",
       "consts_tests.cc",
       "declaration_order_tests.cc",
+      "direct_dependencies_tests.cc",
       "enums_tests.cc",
       "errors_tests.cc",
       "flat_ast_tests.cc",

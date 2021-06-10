@@ -5588,7 +5588,6 @@ bool Library::CompileTypeConstructorNew(TypeConstructorNew* type_ctor) {
   // // postcondition: compilation sets the Type of the TypeConstructor
   assert(type_ctor->type && "type constructors' type not resolved after compilation");
   return VerifyTypeCategory(type_ctor->type, type_ctor->name.span(), AllowedCategories::kTypeOnly);
-  return false;
 }
 
 bool Library::VerifyTypeCategory(const Type* type, std::optional<SourceSpan> span,
@@ -5870,6 +5869,65 @@ bool Library::HasAttribute(std::string_view name) const {
 }
 
 const std::set<Library*>& Library::dependencies() const { return dependencies_.dependencies(); }
+
+std::set<const Library*, LibraryComparator> Library::DirectDependencies() const {
+  std::set<const Library*, LibraryComparator> direct_dependencies;
+  auto add_dependency = [&](const Library* dep_library) {
+    if (!dep_library->HasAttribute("Internal")) {
+      direct_dependencies.insert(dep_library);
+    }
+  };
+  auto add_constant_deps = [&](const Constant* constant) {
+    if (constant->kind != Constant::Kind::kIdentifier)
+      return;
+    auto* dep_library = static_cast<const IdentifierConstant*>(constant)->name.library();
+    assert(dep_library != nullptr && "all identifier constants have a library");
+    add_dependency(dep_library);
+  };
+  auto add_type_ctor_deps = [&](const TypeConstructor& type_ctor) {
+    if (auto dep_library = GetName(type_ctor).library())
+      add_dependency(dep_library);
+
+    // TODO(fxbug.dev/64629): Add dependencies introduced through handle constraints.
+    // This code currently assumes the handle constraints are always defined in the same
+    // library as the resource_definition and so does not check for them separately.
+    const auto& invocation = GetLayoutInvocation(type_ctor);
+    if (invocation.size_raw)
+      add_constant_deps(invocation.size_raw);
+    if (invocation.protocol_decl_raw)
+      add_constant_deps(invocation.protocol_decl_raw);
+    if (IsTypeConstructorDefined(invocation.element_type_raw)) {
+      if (auto dep_library = GetName(invocation.element_type_raw).library())
+        add_dependency(dep_library);
+    }
+    if (IsTypeConstructorDefined(invocation.boxed_type_raw)) {
+      if (auto dep_library = GetName(invocation.boxed_type_raw).library())
+        add_dependency(dep_library);
+    }
+  };
+  for (const auto& dep_library : dependencies()) {
+    add_dependency(dep_library);
+  }
+  // Discover additional dependencies that are required to support
+  // cross-library protocol composition.
+  for (const auto& protocol : protocol_declarations_) {
+    for (const auto method_with_info : protocol->all_methods) {
+      if (auto request = method_with_info.method->maybe_request_payload) {
+        for (const auto& member : request->members) {
+          add_type_ctor_deps(member.type_ctor);
+        }
+      }
+      if (auto response = method_with_info.method->maybe_response_payload) {
+        for (const auto& member : response->members) {
+          add_type_ctor_deps(member.type_ctor);
+        }
+      }
+      add_dependency(method_with_info.method->owning_protocol->name.library());
+    }
+  }
+  direct_dependencies.erase(this);
+  return direct_dependencies;
+}
 
 std::unique_ptr<TypeConstructorOld> TypeConstructorOld::CreateSizeType() {
   return std::make_unique<TypeConstructorOld>(
