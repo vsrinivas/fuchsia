@@ -309,7 +309,7 @@ async fn handle_connecting_error_and_retry(
                 status: Some(types::DisconnectStatus::ConnectionFailed),
             },
         );
-        return Err(ExitReason(Err(format_err!("exceeded connection attempt limit"))));
+        return Err(ExitReason(Ok(())));
     } else {
         // Limit not exceeded, retry after backing off.
         let backoff_time = 400_i64 * i64::from(new_attempt_count);
