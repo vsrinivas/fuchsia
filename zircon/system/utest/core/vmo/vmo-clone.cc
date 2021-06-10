@@ -304,12 +304,5 @@ TEST(VmoCloneTestCase, NotImmutableMissingNoWrite) {
       .expect_immutable_child = false,
   });
 }
-TEST(VmoCloneTestCase, NotImmutableHasResizable) {
-  TestImmutableClone({
-      .parent_create_flags = ZX_VMO_RESIZABLE,
-      .child_clone_flags = ZX_VMO_CHILD_NO_WRITE | ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_RESIZABLE,
-      .expect_immutable_child = false,
-  });
-}
 
 }  // namespace

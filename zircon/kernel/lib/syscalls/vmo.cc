@@ -192,6 +192,12 @@ zx_status_t sys_vmo_create_child(zx_handle_t handle, uint32_t options, uint64_t 
   fbl::RefPtr<VmObject> child_vmo;
   bool no_write = false;
 
+  // Resizing a VMO requires the WRITE permissions, but NO_WRITE forbids the WRITE permissions, as
+  // such it does not make sense to create a VMO with both of these.
+  if ((options & ZX_VMO_CHILD_NO_WRITE) && (options & ZX_VMO_CHILD_RESIZABLE)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // Writable is a property of the handle, not the object, so we consume this option here before
   // calling CreateChild.
   if (options & ZX_VMO_CHILD_NO_WRITE) {
@@ -226,7 +232,7 @@ zx_status_t sys_vmo_create_child(zx_handle_t handle, uint32_t options, uint64_t 
   // A choice was made to conservatively only mark VMOs as immutable when the user explicitly
   // creates a VMO in a way that is guaranteed at the API level to always output an immutable VMO.
   auto initial_mutability = VmObjectDispatcher::InitialMutability::kMutable;
-  if (no_write && (options & ZX_VMO_CHILD_SNAPSHOT) && (~options & ZX_VMO_CHILD_RESIZABLE)) {
+  if (no_write && (options & ZX_VMO_CHILD_SNAPSHOT)) {
     initial_mutability = VmObjectDispatcher::InitialMutability::kImmutable;
   }
 

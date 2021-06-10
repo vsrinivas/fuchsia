@@ -70,7 +70,8 @@ further specify the child's behavior:
 
 - **ZX_VMO_CHILD_RESIZABLE** - Create a resizable child VMO.
 
-- **ZX_VMO_CHILD_NO_WRITE** - Create a child that cannot be written to.
+- **ZX_VMO_CHILD_NO_WRITE** - Create a child that cannot be written to. This is incompatible with
+                              **ZX_VMO_CHILD_RESIZABLE**.
 
 *offset* must be page aligned.
 
@@ -130,7 +131,7 @@ of failure, a negative error value is returned.
 **ZX_ERR_ACCESS_DENIED**  Input handle does not have sufficient rights.
 
 **ZX_ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL
-or the offset is not page aligned.
+or the offset is not page aligned, or an incompatible combination of *options* was given.
 
 **ZX_ERR_OUT_OF_RANGE**  *offset* + *size* is too large.
 

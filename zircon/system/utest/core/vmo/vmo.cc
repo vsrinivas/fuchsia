@@ -1847,4 +1847,42 @@ TEST(VmoTestCase, LockUnlock) {
   EXPECT_EQ(ZX_ERR_BAD_STATE, vmo.op_range(ZX_VMO_OP_UNLOCK, 0, kSize, nullptr, 0));
 }
 
+TEST(VmoTestCase, NoWriteResizable) {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+
+  // Show that any way of creating a child that is no write and resizable fails.
+  zx::vmo child;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            vmo.create_child(ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_NO_WRITE | ZX_VMO_CHILD_RESIZABLE,
+                             0, zx_system_get_page_size(), &child));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            vmo.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE | ZX_VMO_CHILD_NO_WRITE |
+                                 ZX_VMO_CHILD_RESIZABLE,
+                             0, zx_system_get_page_size(), &child));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            vmo.create_child(ZX_VMO_CHILD_SLICE | ZX_VMO_CHILD_NO_WRITE | ZX_VMO_CHILD_RESIZABLE, 0,
+                             zx_system_get_page_size(), &child));
+  // Prove that creating a non-resizable one works.
+  EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_NO_WRITE, 0,
+                             zx_system_get_page_size(), &child));
+
+  // Do it again with a resziable parent to show the resizability of the parent is irrelevant.
+  child.reset();
+  vmo.reset();
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), ZX_VMO_RESIZABLE, &vmo));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            vmo.create_child(ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_NO_WRITE | ZX_VMO_CHILD_RESIZABLE,
+                             0, zx_system_get_page_size(), &child));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            vmo.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE | ZX_VMO_CHILD_NO_WRITE |
+                                 ZX_VMO_CHILD_RESIZABLE,
+                             0, zx_system_get_page_size(), &child));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            vmo.create_child(ZX_VMO_CHILD_SLICE | ZX_VMO_CHILD_NO_WRITE | ZX_VMO_CHILD_RESIZABLE, 0,
+                             zx_system_get_page_size(), &child));
+  EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_NO_WRITE, 0,
+                             zx_system_get_page_size(), &child));
+}
+
 }  // namespace
