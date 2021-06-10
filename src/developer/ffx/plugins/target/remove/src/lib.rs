@@ -10,10 +10,28 @@ use {
 #[ffx_plugin()]
 pub async fn remove(daemon_proxy: bridge::DaemonProxy, cmd: RemoveCommand) -> Result<()> {
     let RemoveCommand { mut id, .. } = cmd;
-    if let Err(e) = daemon_proxy.remove_target(&mut id).await? {
-        Err(ffx_error!("Error removing target: {:?}", e).into())
-    } else {
-        Ok(())
+    match daemon_proxy.remove_target(&mut id).await? {
+        Ok(found) => {
+            if found {
+                // The RemoveTarget call suffers from a race condition where:
+                // 1. The Onet discovery fires a DaemonEvent as soon as the FIDL request comes into
+                //    the Daemon.
+                // 2. The RemoveTarget request is handled and the target is removed from the Target
+                //    Collection.
+                // 3. The DaemonEvent from step 1 is handled and the Daemon thinks it just
+                //    discovered a new target - to the target is IMMEDIATELY added back to the
+                //    Target Collection.
+                // To break this race condition, the daemon can be killed because the configuration
+                // IS cleared during step 2.
+                //TODO(fxb/78432): Fix the race condition and remove the call to quit.
+                daemon_proxy.quit().await?;
+                println!("Removed.");
+            } else {
+                println!("No matching target found.");
+            }
+            Ok(())
+        }
+        Err(e) => Err(ffx_error!("Error removing target: {:?}", e).into()),
     }
 }
 
@@ -30,6 +48,9 @@ mod test {
             DaemonRequest::RemoveTarget { target_id, responder } => {
                 test(target_id);
                 responder.send(&mut Ok(true)).unwrap();
+            }
+            DaemonRequest::Quit { responder } => {
+                responder.send(true).unwrap();
             }
             _ => assert!(false),
         })
