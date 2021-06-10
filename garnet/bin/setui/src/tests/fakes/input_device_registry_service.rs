@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::tests::fakes::base::Service;
+use std::sync::Arc;
+
 use anyhow::{format_err, Error};
 use fidl::endpoints::{ServerEnd, ServiceMarker};
-use fidl_fuchsia_ui_input::MediaButtonsEvent;
-use fidl_fuchsia_ui_policy::MediaButtonsListenerProxy;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::TryStreamExt;
 use parking_lot::RwLock;
-use std::sync::Arc;
+
+use fidl_fuchsia_ui_input::MediaButtonsEvent;
+use fidl_fuchsia_ui_policy::MediaButtonsListenerProxy;
+
+use crate::tests::fakes::base::Service;
 
 pub(crate) struct InputDeviceRegistryService {
     listeners: Arc<RwLock<Vec<MediaButtonsListenerProxy>>>,
@@ -32,10 +35,10 @@ impl InputDeviceRegistryService {
         self.fail = fail;
     }
 
-    pub(crate) fn send_media_button_event(&self, event: MediaButtonsEvent) {
+    pub(crate) async fn send_media_button_event(&self, event: MediaButtonsEvent) {
         *self.last_sent_event.write() = Some(event.clone());
         for listener in self.listeners.read().iter() {
-            listener.on_media_buttons_event(event.clone()).ok();
+            listener.on_event(event.clone()).await.ok();
         }
     }
 }
@@ -63,19 +66,26 @@ impl Service for InputDeviceRegistryService {
 
         fasync::Task::spawn(async move {
             while let Some(req) = manager_stream.try_next().await.unwrap() {
-                if let fidl_fuchsia_ui_policy::DeviceListenerRegistryRequest::RegisterMediaButtonsListener {
-                        listener,
-                        control_handle: _,
-                    } = req {
-                        if let Ok(proxy) = listener.into_proxy() {
-                            if let Some(event) = &*last_event.read() {
-                                proxy.on_media_buttons_event(event.clone()).ok();
-                            }
-                            listeners_handle.write().push(proxy);
+                if let fidl_fuchsia_ui_policy::DeviceListenerRegistryRequest::RegisterListener {
+                    listener,
+                    responder,
+                } = req
+                {
+                    if let Ok(proxy) = listener.into_proxy() {
+                        // Save the listener.
+                        listeners_handle.write().push(proxy.clone());
+                        // Acknowledge the registration.
+                        responder.send().expect("failed to ack RegisterListener call");
+                        // Send the last event if there was one.
+                        let last_event = last_event.read().clone();
+                        if let Some(event) = last_event {
+                            proxy.on_event(event).await.ok();
                         }
                     }
+                }
             }
-        }).detach();
+        })
+        .detach();
 
         Ok(())
     }

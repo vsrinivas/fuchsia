@@ -231,14 +231,14 @@ async fn set_device_muted(
 // Switch the hardware mic state to muted = [muted] for input2.
 async fn switch_hardware_mic_mute(env: &TestInputEnvironment, muted: bool) {
     let buttons_event = MediaButtonsEventBuilder::new().set_volume(1).set_mic_mute(muted).build();
-    env.input_button_service.lock().await.send_media_button_event(buttons_event.clone());
+    env.input_button_service.lock().await.send_media_button_event(buttons_event.clone()).await;
 }
 
 // Switch the hardware camera disable to disabled = [disabled].
 async fn switch_hardware_camera_disable(env: &TestInputEnvironment, disabled: bool) {
     let buttons_event =
         MediaButtonsEventBuilder::new().set_volume(1).set_camera_disable(disabled).build();
-    env.input_button_service.lock().await.send_media_button_event(buttons_event.clone());
+    env.input_button_service.lock().await.send_media_button_event(buttons_event.clone()).await;
 }
 
 // Perform a watch and watch2 and check that the mic mute state matches [expected_muted_state].
@@ -833,7 +833,7 @@ async fn test_media_buttons() {
     let input_device_registry_service = Arc::new(Mutex::new(InputDeviceRegistryService::new()));
 
     let initial_event = MediaButtonsEventBuilder::new().set_volume(1).set_mic_mute(true).build();
-    input_device_registry_service.lock().await.send_media_button_event(initial_event.clone());
+    input_device_registry_service.lock().await.send_media_button_event(initial_event.clone()).await;
 
     service_registry.lock().await.register_service(input_device_registry_service.clone());
 
@@ -843,14 +843,17 @@ async fn test_media_buttons() {
     let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
     assert!(monitor_media_buttons(service_context, input_tx).await.is_ok());
 
+    // Listener receives an event immediately upon listening.
     if let Some(event) = input_rx.next().await {
         assert_eq!(initial_event, event);
     }
 
+    // Disable the camera.
     let second_event =
         MediaButtonsEventBuilder::new().set_volume(1).set_camera_disable(true).build();
-    input_device_registry_service.lock().await.send_media_button_event(second_event.clone());
+    input_device_registry_service.lock().await.send_media_button_event(second_event.clone()).await;
 
+    // Listener receives the camera disable event.
     if let Some(event) = input_rx.next().await {
         assert_eq!(second_event, event);
     }
@@ -864,7 +867,7 @@ async fn test_device_listener_failure() {
 
     let initial_event = MediaButtonsEventBuilder::new().set_volume(1).set_mic_mute(true).build();
 
-    input_device_registry_service.lock().await.send_media_button_event(initial_event.clone());
+    input_device_registry_service.lock().await.send_media_button_event(initial_event.clone()).await;
 
     service_registry.lock().await.register_service(input_device_registry_service.clone());
 

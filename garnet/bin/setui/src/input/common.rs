@@ -116,8 +116,8 @@ pub async fn monitor_media_buttons(
     let (client_end, mut stream) = create_request_stream::<MediaButtonsListenerMarker>()
         .expect("failed to create request stream for media buttons listener");
 
-    if call!(presenter_service => register_media_buttons_listener(client_end)).is_err() {
-        fx_log_err!("Registering media button listener with presenter service failed.");
+    if let Err(error) = call_async!(presenter_service => register_listener(client_end)).await {
+        fx_log_err!("Registering media button listener with presenter service failed {:?}", error);
         return Err(format_err!("presenter service not ready"));
     }
 
@@ -127,10 +127,14 @@ pub async fn monitor_media_buttons(
             #[allow(clippy::single_match)]
             #[allow(unreachable_patterns)]
             match media_request {
-                MediaButtonsListenerRequest::OnMediaButtonsEvent { event, control_handle: _ } => {
+                MediaButtonsListenerRequest::OnEvent { event, responder } => {
                     sender
                         .unbounded_send(event)
                         .expect("Media buttons sender failed to send event");
+                    // Acknowledge the event.
+                    responder
+                        .send()
+                        .unwrap_or_else(|_| fx_log_err!("Failed to ack media buttons event"));
                 }
                 _ => {}
             }

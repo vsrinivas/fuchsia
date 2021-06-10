@@ -463,7 +463,7 @@ async fn test_light_disabled_by_mic_mute_off() {
 
     // Send mic unmuted, which should disable the light.
     let buttons_event = MediaButtonsEventBuilder::new().set_mic_mute(false).build();
-    env.input_service.lock().await.send_media_button_event(buttons_event);
+    env.input_service.lock().await.send_media_button_event(buttons_event).await;
 
     // Verify that the expected value is returned on a watch call.
     let settings: fidl_fuchsia_settings::LightGroup =

@@ -351,7 +351,12 @@ async fn test_audio_input() {
 
     let buttons_event = MediaButtonsEventBuilder::new().set_volume(1).set_mic_mute(true).build();
 
-    fake_services.input_device_registry.lock().await.send_media_button_event(buttons_event.clone());
+    fake_services
+        .input_device_registry
+        .lock()
+        .await
+        .send_media_button_event(buttons_event.clone())
+        .await;
 
     let updated_settings = audio_proxy.watch().await.expect("watch completed");
 

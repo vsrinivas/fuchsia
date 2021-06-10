@@ -322,7 +322,12 @@ async fn test_max_volume_sound_on_press() {
     // to 1 (volume up).
     let buttons_event = MediaButtonsEventBuilder::new().set_volume(1).build();
 
-    fake_services.input_device_registry.lock().await.send_media_button_event(buttons_event.clone());
+    fake_services
+        .input_device_registry
+        .lock()
+        .await
+        .send_media_button_event(buttons_event.clone())
+        .await;
 
     // Sets volume max again.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;

@@ -78,13 +78,18 @@ async fn test_media_buttons_proxied() {
     );
 
     // The agent should now be initialized. Send a media button event.
-    fake_services.input_device_registry.lock().await.send_media_button_event(MediaButtonsEvent {
-        volume: Some(1),
-        mic_mute: Some(true),
-        pause: None,
-        camera_disable: None,
-        ..MediaButtonsEvent::EMPTY
-    });
+    fake_services
+        .input_device_registry
+        .lock()
+        .await
+        .send_media_button_event(MediaButtonsEvent {
+            volume: Some(1),
+            mic_mute: Some(true),
+            pause: None,
+            camera_disable: None,
+            ..MediaButtonsEvent::EMPTY
+        })
+        .await;
 
     // Track the events to make sure they came in.
     let mut mic_mute_received = false;
