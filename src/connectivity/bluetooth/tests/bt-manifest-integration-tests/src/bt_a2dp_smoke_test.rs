@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_bluetooth_a2dp as fidl_a2dp, fidl_fuchsia_bluetooth_avdtp as fidl_avdtp,
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
+    fidl_fuchsia_bluetooth_internal_a2dp::{ControllerMarker, ControllerProxy},
     fidl_fuchsia_cobalt::{LoggerFactoryMarker, LoggerFactoryRequestStream},
     fidl_fuchsia_media::{
         AudioDeviceEnumeratorMarker, AudioDeviceEnumeratorRequestStream,
@@ -42,6 +43,7 @@ enum Event {
     Profile(Option<ProfileRequestStream>),
     Avdtp(Option<fidl_avdtp::PeerManagerProxy>),
     AudioMode(Option<fidl_a2dp::AudioModeProxy>),
+    A2dpMediaStream(Option<ControllerProxy>),
     Avrcp(Option<fidl_avrcp::PeerManagerRequestStream>),
     Codec(Option<CodecFactoryRequestStream>),
     Registry(Option<RegistryRequestStream>),
@@ -130,6 +132,12 @@ async fn mock_a2dp_client(
 
     let audio_mode_svc = handles.connect_to_service::<fidl_a2dp::AudioModeMarker>()?;
     sender.send(Event::AudioMode(Some(audio_mode_svc))).await.expect("failed sending ack to test");
+
+    let a2dp_media_stream_svc = handles.connect_to_service::<ControllerMarker>()?;
+    sender
+        .send(Event::A2dpMediaStream(Some(a2dp_media_stream_svc)))
+        .await
+        .expect("failed sending ack to test");
     Ok(())
 }
 
@@ -230,7 +238,12 @@ async fn a2dp_v2_component_topology() {
             RouteEndpoint::component(A2DP_MONIKER),
             vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)],
         )
-        .expect("Failed adding route for a2dp.AudioMode service");
+        .expect("Failed adding route for a2dp.AudioMode service")
+        .add_protocol_route::<ControllerMarker>(
+            RouteEndpoint::component(A2DP_MONIKER),
+            vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)],
+        )
+        .expect("Failed adding route for internal.a2dp.Controller service");
 
     // Capabilities provided by the generic service provider component, which are consumed
     // by the A2DP component.
@@ -261,14 +274,14 @@ async fn a2dp_v2_component_topology() {
         .expect("Failed adding LogSink route to test components");
     let _test_topology = builder.build().create().await.unwrap();
 
-    // If the routing is correctly configured, we expect 14 events:
+    // If the routing is correctly configured, we expect 15 events:
     //   - `bt-a2dp` connecting to the 10 services specified in its manifest.
     //   - `bt-avrcp-target` (a child of bt-a2dp) connecting to the `avrcp.PeerManager` and
     //     `Discovery` services.
-    //   - `fake-a2dp-client` connecting to the `avdtp.PeerManager` and `AudioMode` services which
-    //      are provided by `bt-a2dp`.
+    //   - `fake-a2dp-client` connecting to the `avdtp.PeerManager`, `AudioMode`, & `Controller`
+    //     services which are provided by `bt-a2dp`.
     let mut events = Vec::new();
-    let expected_number_of_events = 14;
+    let expected_number_of_events = 15;
     for i in 0..expected_number_of_events {
         let msg = format!("Unexpected error waiting for {:?} event", i);
         events.push(receiver.next().await.expect(&msg));
@@ -283,9 +296,9 @@ async fn a2dp_v2_component_topology() {
         2
     );
     // There should be only one duplicate service request (avrcp.PeerManager), the rest
-    // should be unique requests (13 in total).
+    // should be unique requests (14 in total).
     let discriminant_set: HashSet<_> = HashSet::from_iter(discriminants.iter());
-    assert_eq!(discriminant_set.len(), 13);
+    assert_eq!(discriminant_set.len(), 14);
 
     info!("Finished A2DP smoke test");
 }

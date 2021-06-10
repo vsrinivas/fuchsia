@@ -49,11 +49,13 @@ mod player;
 mod sink_task;
 mod source_task;
 mod sources;
+mod stream_controller;
 mod volume_relay;
 
 use crate::config::A2dpConfiguration;
 use crate::encoding::EncodedStream;
 use crate::pcm_audio::PcmAudio;
+use crate::stream_controller::{add_stream_controller_capability, PermitsManager};
 use sources::AudioSourceType;
 
 /// Make the SDP definition for the A2DP service.
@@ -581,11 +583,15 @@ async fn main() -> Result<(), Error> {
 
     let peers = Arc::new(Mutex::new(peers));
 
+    // `bt-a2dp` provides the `avdtp.PeerManager`, `a2dp.AudioMode`, and `internal.a2dp.Controller`
+    // capabilities.
     fs.dir("svc").add_fidl_service(move |s| controller_pool.connected(s));
     fs.dir("svc").add_fidl_service({
         let peers = peers.clone();
         move |s| handle_audio_mode_connection(peers.clone(), s)
     });
+    add_stream_controller_capability(&mut fs, PermitsManager);
+
     if let Err(e) = fs.take_and_serve_directory_handle() {
         warn!("Unable to serve service directory: {}", e);
     }

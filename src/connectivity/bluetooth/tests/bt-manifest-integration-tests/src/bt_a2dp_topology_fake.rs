@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_bluetooth_avdtp as fidl_avdtp, fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_component::LifecycleMarker,
+    fidl_fuchsia_bluetooth_internal_a2dp::{ControllerMarker, ControllerRequestStream},
     fidl_fuchsia_cobalt::LoggerFactoryMarker,
     fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, SessionAudioConsumerFactoryMarker},
     fidl_fuchsia_media_sessions2::PublisherMarker,
@@ -51,6 +52,10 @@ async fn main() -> Result<(), Error> {
                 fidl_avdtp::PeerManagerMarker::SERVICE_NAME,
             ))
             .detach();
+        })
+        .add_fidl_service(|stream: ControllerRequestStream| {
+            fasync::Task::local(process_request_stream(stream, ControllerMarker::SERVICE_NAME))
+                .detach();
         });
     fs.take_and_serve_directory_handle().expect("Unable to serve ServiceFs requests");
     let service_fs_task = fasync::Task::spawn(fs.collect::<()>());

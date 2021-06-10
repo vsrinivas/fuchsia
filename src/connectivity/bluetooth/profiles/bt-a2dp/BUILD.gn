@@ -16,6 +16,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.avdtp:fuchsia.bluetooth.avdtp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.internal.a2dp:fuchsia.bluetooth.internal.a2dp-rustc",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback-rustc",
@@ -86,6 +87,7 @@ rustc_binary("bin") {
     "src/sink_task.rs",
     "src/source_task.rs",
     "src/sources.rs",
+    "src/stream_controller.rs",
     "src/volume_relay.rs",
   ]
 }
@@ -145,6 +147,7 @@ rustc_test("encoding_integration_bin") {
     "//sdk/fidl/fuchsia.bluetooth.avdtp:fuchsia.bluetooth.avdtp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.internal.a2dp:fuchsia.bluetooth.internal.a2dp-rustc",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback-rustc",
@@ -209,6 +212,7 @@ rustc_test("encoding_integration_bin") {
     "src/sink_task.rs",
     "src/source_task.rs",
     "src/sources.rs",
+    "src/stream_controller.rs",
     "src/volume_relay.rs",
   ]
 }

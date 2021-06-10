@@ -31,6 +31,7 @@
             protocol: [
                 "fuchsia.bluetooth.a2dp.AudioMode",
                 "fuchsia.bluetooth.avdtp.PeerManager",
+                "fuchsia.bluetooth.internal.a2dp.Controller",
             ],
         },
     ],
@@ -71,6 +72,7 @@
             protocol: [
                 "fuchsia.bluetooth.a2dp.AudioMode",
                 "fuchsia.bluetooth.avdtp.PeerManager",
+                "fuchsia.bluetooth.internal.a2dp.Controller",
             ],
             from: "self",
         },
