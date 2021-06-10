@@ -12,26 +12,30 @@ group("tests") {
   }
 }
 
+shared_deps = [
+  "//third_party/acpica",
+  "//zircon/system/ulib/zxc",
+]
+
 source_set("acpi") {
   configs += [ "..:config" ]
   sources = [ "device.cc" ]
-  deps = [
-    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
-    "//src/devices/lib/iommu",
-    "//src/lib/ddk",
-    "//third_party/acpica",
-    "//zircon/public/lib/fbl",
-  ]
+  deps = shared_deps + [
+           "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
+           "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
+           "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
+           "//src/devices/lib/iommu",
+           "//src/lib/ddk",
+           "//zircon/public/lib/fbl",
+         ]
 }
 
 test("acpi-test") {
-  sources = [ "util-test.cc" ]
-  deps = [
-    "//third_party/acpica",
-    "//zircon/public/lib/zxtest",
+  sources = [
+    "status-test.cc",
+    "util-test.cc",
   ]
+  deps = shared_deps + [ "//zircon/public/lib/zxtest" ]
 }
 
 fuchsia_unittest_package("x86-acpi-tests") {

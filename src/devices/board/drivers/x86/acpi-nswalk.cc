@@ -26,6 +26,7 @@
 #include "acpi-private.h"
 #include "acpi.h"
 #include "acpi/device.h"
+#include "acpi/status.h"
 #include "dev.h"
 #include "errors.h"
 #include "i2c.h"
@@ -182,16 +183,16 @@ class LastPciBbnTracker {
 
 namespace acpi {
 
-fitx::result<ACPI_STATUS, UniquePtr<ACPI_DEVICE_INFO>> GetObjectInfo(ACPI_HANDLE obj) {
+acpi::status<UniquePtr<ACPI_DEVICE_INFO>> GetObjectInfo(ACPI_HANDLE obj) {
   ACPI_DEVICE_INFO* raw = nullptr;
   ACPI_STATUS acpi_status = AcpiGetObjectInfo(obj, &raw);
   UniquePtr<ACPI_DEVICE_INFO> ret{raw};
 
   if (ACPI_SUCCESS(acpi_status)) {
-    return fitx::ok(std::move(ret));
+    return acpi::ok(std::move(ret));
   }
 
-  return fitx::error(acpi_status);
+  return acpi::error(acpi_status);
 }
 
 }  // namespace acpi

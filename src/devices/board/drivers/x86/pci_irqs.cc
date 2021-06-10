@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 #include <assert.h>
 #include <fuchsia/hardware/pciroot/c/banjo.h>
-#include <lib/fitx/result.h>
 #include <lib/pci/pciroot.h>
 #include <stdio.h>
 #include <zircon/hw/pci.h>
@@ -15,6 +14,7 @@
 #include <acpica/acpi.h>
 
 #include "acpi-private.h"
+#include "acpi/status.h"
 #include "acpi/util.h"
 #include "pci.h"
 
@@ -55,28 +55,28 @@ constexpr const char* im_to_str(uint32_t irq_mode) {
 }
 
 // Find Extended IRQ information for a PRT's Interrupt Link Device.
-fitx::result<ACPI_STATUS, ACPI_RESOURCE_EXTENDED_IRQ> FindExtendedIrqResource(ACPI_HANDLE parent,
-                                                                              char source[4]) {
+acpi::status<ACPI_RESOURCE_EXTENDED_IRQ> FindExtendedIrqResource(ACPI_HANDLE parent,
+                                                                 char source[4]) {
   // If this method is called then we're attempting to find the Interrupt Link Device referenced by
   // a given PRT entry.
   ACPI_HANDLE ild;
   ACPI_STATUS status = AcpiGetHandle(parent, source, &ild);
   if (status != AE_OK) {
-    return fitx::error(status);
+    return acpi::error(status);
   }
 
   acpi::AcpiBuffer<ACPI_RESOURCE> crs_buffer;
   status = AcpiGetCurrentResources(ild, &crs_buffer);
   if (status != AE_OK) {
-    return fitx::error(status);
+    return acpi::error(status);
   }
 
   for (auto& res : crs_buffer) {
     if (res.Type == ACPI_RESOURCE_TYPE_EXTENDED_IRQ) {
-      return fitx::ok(res.Data.ExtendedIrq);
+      return acpi::ok(res.Data.ExtendedIrq);
     }
   }
-  return fitx::error(AE_NOT_FOUND);
+  return acpi::error(AE_NOT_FOUND);
 }
 
 // Take a PRT entry and return a usable acpi_legacy_irq based on the type of IRQ

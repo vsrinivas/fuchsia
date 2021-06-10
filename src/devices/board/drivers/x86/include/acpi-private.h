@@ -4,13 +4,13 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_PRIVATE_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_PRIVATE_H_
 #include <lib/ddk/binding.h>
-#include <lib/fitx/result.h>
 
 #include <vector>
 
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
+#include "acpi/status.h"
 #include "acpi/util.h"
 #include "resources.h"
 
@@ -49,9 +49,9 @@ static inline size_t UnusedPropsCount(const T& props, uint32_t propcount) {
 }  // namespace internal
 
 // A free standing function which can be used to fetch the Info structure of an
-// ACPI device.  It returns a fitx::result which either holds a managed pointer
+// ACPI device.  It returns a acpi::status which either holds a managed pointer
 // to the info object, or an ACPI error code in the case of failure.
-fitx::result<ACPI_STATUS, UniquePtr<ACPI_DEVICE_INFO>> GetObjectInfo(ACPI_HANDLE obj);
+acpi::status<UniquePtr<ACPI_DEVICE_INFO>> GetObjectInfo(ACPI_HANDLE obj);
 
 // A utility function which can be used to invoke the ACPICA library's
 // AcpiWalkNamespace function, but with an arbitrary Callable instead of needing
