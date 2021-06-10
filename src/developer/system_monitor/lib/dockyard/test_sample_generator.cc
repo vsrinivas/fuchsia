@@ -69,8 +69,10 @@ void GenerateRandomSamples(const RandomSampleGenerator& gen,
         }
         break;
       case RandomSampleGenerator::VALUE_STYLE_SINE_WAVE:
-        value =
-            gen.value_min + value_range * (1 + sin(PI_DIV_16 * sample_n)) / 2;
+        value = gen.value_min +
+                static_cast<SampleValue>(
+                    static_cast<double>(value_range) *
+                    (1 + sin(PI_DIV_16 * static_cast<double>(sample_n))) / 2);
         break;
     }
     dockyard->AddSample(gen.dockyard_id, Sample(time, value));
@@ -81,14 +83,14 @@ void GenerateRandomSamples(const RandomSampleGenerator& gen,
         time = gen.start + time_range * (sample_n + 1) / gen.sample_count;
         break;
       case RandomSampleGenerator::TIME_STYLE_SHORT_STAGGER:
-        time += GenValue(time_stride * 0.5, time_stride * 1.5);
+        time += GenValue(time_stride / 2, time_stride + time_stride / 2);
         break;
       case RandomSampleGenerator::TIME_STYLE_LONG_STAGGER:
         time += GenValue(0, time_stride * 2);
         break;
       case RandomSampleGenerator::TIME_STYLE_CLUMPED:
         time += ((sample_n % 4) ? GenValue(0, time_stride / 4)
-                                : time_stride * 2.25);
+                                : time_stride * 2 + time_stride / 4);
         break;
       case RandomSampleGenerator::TIME_STYLE_OPEN:
         time += GenValue(0, time_stride * 2);

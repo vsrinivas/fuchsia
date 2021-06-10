@@ -125,7 +125,8 @@ std::optional<std::string> DockyardHost::GetSampleString(
   if (!future) {
     return {};
   }
-  dockyard::DockyardId dockyard_id = future->get()->response.highest_value;
+  dockyard::DockyardId dockyard_id =
+      static_cast<dockyard::DockyardId>(future->get()->response.highest_value);
   std::string string_as_path;
   if (dockyard_.GetDockyardPath(dockyard_id, &string_as_path)) {
     return string_as_path;
@@ -148,7 +149,9 @@ DockyardHost::GetSampleStringsForIds(
   std::vector<const std::string> result;
   for (const auto& sample_values : query->response.data_sets) {
     std::string string_as_path;
-    if (dockyard_.GetDockyardPath(sample_values[0], &string_as_path)) {
+    if (dockyard_.GetDockyardPath(
+            static_cast<dockyard::DockyardId>(sample_values[0]),
+            &string_as_path)) {
       result.emplace_back(string_as_path);
     } else {
       result.emplace_back("<not found>");

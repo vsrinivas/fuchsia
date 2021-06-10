@@ -48,8 +48,9 @@ grpc::Status DockyardServiceImpl::SendSample(
     GT_LOG(INFO) << "Received sample at " << sample.time() << ", key "
                  << sample.sample().key() << ": " << sample.sample().value();
 
-    dockyard_->AddSample(sample.sample().key(),
-                         Sample(sample.time(), sample.sample().value()));
+    dockyard_->AddSample(
+        static_cast<dockyard::DockyardId>(sample.sample().key()),
+        Sample(sample.time(), sample.sample().value()));
   }
   return grpc::Status::OK;
 }
@@ -63,7 +64,7 @@ grpc::Status DockyardServiceImpl::SendSamples(
     int limit = samples.sample_size();
     for (int i = 0; i < limit; ++i) {
       auto sample = samples.sample(i);
-      dockyard_->AddSample(sample.key(),
+      dockyard_->AddSample(static_cast<dockyard::DockyardId>(sample.key()),
                            Sample(samples.time(), sample.value()));
     }
   }

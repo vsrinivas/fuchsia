@@ -607,8 +607,6 @@ config("Wno-conversion") {
     "//src/developer/shell/josh/lib",
     "//src/developer/shell/josh/lib:tests",
     "//src/developer/shell/mirror:shell_mirror_tests_bin",
-    "//src/developer/system_monitor/*",
-    "//src/developer/system_monitor/bin/harvester/*",
     "//src/devices/usb/bin/lsusb/*",
     "//src/diagnostics/validator/inspect/lib/cpp/*",
     "//src/graphics/display/drivers/*",

@@ -953,7 +953,7 @@ DockyardId Dockyard::GetDockyardIdLocked(const std::string& dockyard_path) {
   if (search != dockyard_path_to_id_.end()) {
     return search->second;
   }
-  DockyardId id = dockyard_path_to_id_.size();
+  DockyardId id = static_cast<DockyardId>(dockyard_path_to_id_.size());
   dockyard_path_to_id_.emplace(dockyard_path, id);
   dockyard_id_to_path_.emplace(id, dockyard_path);
 
@@ -1083,7 +1083,8 @@ std::ostringstream Dockyard::DebugDump() const {
       --sample;
       out << " " << sample->first << ": " << sample->second;
       if (StringEndsWith(stream_name, ":name")) {
-        out << "=" << get_dockyard_path(sample->second);
+        out << "="
+            << get_dockyard_path(static_cast<DockyardId>(sample->second));
       }
       // Print how many times this entry repeats (in recent past).
       int count = 1;
