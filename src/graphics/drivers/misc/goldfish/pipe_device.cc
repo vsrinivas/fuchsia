@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -70,8 +71,12 @@ uint32_t lower_32_bits(uint64_t n) { return static_cast<uint32_t>(n); }
 // static
 zx_status_t PipeDevice::Create(void* ctx, zx_device_t* device) {
   auto pipe_device = std::make_unique<goldfish::PipeDevice>(device);
-
-  zx_status_t status = pipe_device->Bind();
+  zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOOGLE},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GOLDFISH},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GOLDFISH_PIPE_CONTROL},
+  };
+  zx_status_t status = pipe_device->Bind(props, "goldfish-pipe");
   if (status == ZX_OK) {
     // devmgr now owns device.
     __UNUSED auto* dev = pipe_device.release();
@@ -88,7 +93,7 @@ PipeDevice::~PipeDevice() {
   }
 }
 
-zx_status_t PipeDevice::Bind() {
+zx_status_t PipeDevice::Bind(const cpp20::span<zx_device_prop_t>& props, const char* dev_name) {
   if (!acpi_.is_valid()) {
     zxlogf(ERROR, "%s: no acpi protocol", kTag);
     return ZX_ERR_NOT_SUPPORTED;
@@ -153,7 +158,13 @@ zx_status_t PipeDevice::Bind() {
   mmio_->Write32(upper_32_bits(pa_open_command_buffer), PIPE_V2_REG_OPEN_BUFFER_HIGH);
   mmio_->Write32(lower_32_bits(pa_open_command_buffer), PIPE_V2_REG_OPEN_BUFFER);
 
-  return DdkAdd(ddk::DeviceAddArgs("goldfish-pipe").set_proto_id(ZX_PROTOCOL_GOLDFISH_PIPE));
+  status =
+      DdkAdd(ddk::DeviceAddArgs(dev_name).set_props(props).set_proto_id(ZX_PROTOCOL_GOLDFISH_PIPE));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: create %s device failed: %d", kTag, dev_name, status);
+    return status;
+  }
+  return ZX_OK;
 }
 
 zx_status_t PipeDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {

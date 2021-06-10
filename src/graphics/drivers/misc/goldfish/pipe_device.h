@@ -37,7 +37,7 @@ class PipeDevice : public DeviceType,
   explicit PipeDevice(zx_device_t* parent);
   ~PipeDevice();
 
-  zx_status_t Bind();
+  zx_status_t Bind(const cpp20::span<zx_device_prop_t>& props, const char* dev_name);
 
   // Device protocol implementation.
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);

@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <fuchsia/hardware/goldfish/pipe/c/banjo.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fake_ddk/fidl-helper.h>
@@ -24,6 +25,8 @@
 #include <vector>
 
 #include <zxtest/zxtest.h>
+
+#include "src/graphics/drivers/misc/goldfish/goldfish-bind.h"
 namespace goldfish {
 
 namespace {
@@ -32,6 +35,13 @@ constexpr uint32_t kGoldfishBtiId = 0x80888088;
 
 constexpr uint32_t kPipeMinDeviceVersion = 2;
 constexpr uint32_t kMaxSignalledPipes = 64;
+
+zx_device_prop_t kDefaultPipeDeviceProps[] = {
+    {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOOGLE},
+    {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GOLDFISH},
+    {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GOLDFISH_PIPE_CONTROL},
+};
+constexpr const char* kDefaultPipeDeviceName = "goldfish-pipe";
 
 using fuchsia_sysmem::wire::HeapType;
 constexpr HeapType kSysmemHeaps[] = {
@@ -248,7 +258,7 @@ TEST_F(PipeDeviceTest, Bind) {
     ctrl_regs->version = kPipeMinDeviceVersion;
   }
 
-  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   {
     auto mapped = MapControlRegisters();
@@ -272,7 +282,7 @@ TEST_F(PipeDeviceTest, Bind) {
 }
 
 TEST_F(PipeDeviceTest, Open) {
-  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   zx_device_t* instance_dev;
   ASSERT_OK(dut_->DdkOpen(&instance_dev, 0u));
@@ -285,7 +295,7 @@ TEST_F(PipeDeviceTest, Open) {
 }
 
 TEST_F(PipeDeviceTest, CreatePipe) {
-  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   int32_t id;
   zx::vmo vmo;
@@ -300,7 +310,7 @@ TEST_F(PipeDeviceTest, CreatePipe) {
 }
 
 TEST_F(PipeDeviceTest, CreatePipeMultiThreading) {
-  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   auto create_pipe = [this](size_t num_pipes, std::vector<int32_t>* ids) {
     for (size_t i = 0; i < num_pipes; i++) {
@@ -332,7 +342,7 @@ TEST_F(PipeDeviceTest, CreatePipeMultiThreading) {
 }
 
 TEST_F(PipeDeviceTest, Exec) {
-  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   int32_t id;
   zx::vmo vmo;
@@ -355,7 +365,7 @@ TEST_F(PipeDeviceTest, Exec) {
 }
 
 TEST_F(PipeDeviceTest, TransferObservedSignals) {
-  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   int32_t id;
   zx::vmo vmo;
@@ -386,7 +396,7 @@ TEST_F(PipeDeviceTest, TransferObservedSignals) {
 }
 
 TEST_F(PipeDeviceTest, GetBti) {
-  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   zx::bti bti;
   ASSERT_OK(dut_->GoldfishPipeGetBti(&bti));
@@ -404,7 +414,7 @@ TEST_F(PipeDeviceTest, GetBti) {
 }
 
 TEST_F(PipeDeviceTest, ConnectToSysmem) {
-  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   zx::channel sysmem_server, sysmem_client;
   zx_koid_t server_koid = ZX_KOID_INVALID, client_koid = ZX_KOID_INVALID;

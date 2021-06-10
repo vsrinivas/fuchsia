@@ -17,7 +17,10 @@
 namespace x86 {
 
 static const zx_bind_inst_t goldfish_pipe_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_PIPE),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_PIPE),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GOLDFISH),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GOLDFISH_PIPE_CONTROL),
 };
 
 static const zx_bind_inst_t goldfish_address_space_match[] = {

@@ -87,6 +87,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_GOOGLE_AMLOGIC_CPU 0x06
 #define PDEV_DID_GOLDFISH_CONTROL   0x07
 #define PDEV_DID_GOOGLE_BROWNOUT    0x08  // Product-specific brownout protection device
+#define PDEV_DID_GOLDFISH_PIPE_CONTROL 0x09
 
 // Khadas
 #define PDEV_VID_KHADAS             0x04
