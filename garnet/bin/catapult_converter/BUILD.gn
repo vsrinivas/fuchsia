@@ -12,10 +12,6 @@ source_set("converter") {
     "//src/lib/fxl",
     "//third_party/rapidjson",
   ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 executable("converter_bin") {
@@ -47,9 +43,6 @@ test("catapult_converter_unittest") {
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("catapult_converter_tests") {

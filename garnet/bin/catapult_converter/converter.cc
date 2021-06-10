@@ -99,7 +99,7 @@ void ComputeStatistics(const std::vector<double>& vals, rapidjson::Value* output
 
   double min = *std::min_element(vals.begin(), vals.end());
   double max = *std::max_element(vals.begin(), vals.end());
-  double mean = sum / vals.size();
+  double mean = sum / static_cast<double>(vals.size());
   double variance = Variance(vals, mean);
 
   // meanlogs is the mean of the logs of the values, which is useful for
@@ -108,7 +108,7 @@ void ComputeStatistics(const std::vector<double>& vals, rapidjson::Value* output
   // If any of the values are zero or negative, meanlogs will be -Infinity
   // or a NaN, which can't be serialized in JSON format.  In those cases,
   // we write 'null' in the JSON instead.
-  double meanlogs = sum_of_logs / vals.size();
+  double meanlogs = sum_of_logs / static_cast<double>(vals.size());
   rapidjson::Value meanlogs_json;
   if (isfinite(meanlogs))
     meanlogs_json.SetDouble(meanlogs);
