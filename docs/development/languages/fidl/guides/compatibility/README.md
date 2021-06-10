@@ -313,9 +313,19 @@ It is not source-compatible to rename a bits member.
 
 ### Updating value of constants {#const-value-default-value}
 
-It is safe to update the value of a `const` declaration. In rare circumstances,
-such a change could cause source-compatibility issues if the constant is used in
-static asserts that would fail with the updated value.
+**ABI**
+
+It is sometimes binary-compatible to update the value of a `const` declaration.
+If a constant value affects the public interface semantics (for example, by
+representing a runtime invariant in the interface), changing the constant value
+is binary-incompatible due to mismatched expectations between peers on different
+versions.
+
+**API**
+
+It is usually source-compatible to update the value of a `const` declaration. In
+rare circumstances, such a change could cause source-compatibility issues if the
+constant is used in static asserts that would fail with the updated value.
 
 ## Modifiers {#modifiers}
 
