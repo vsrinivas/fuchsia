@@ -13,7 +13,11 @@ buildconfig = "//build/config/BUILDCONFIG.gn"
 secondary_source = "//build/secondary/"
 
 # The executable used to execute scripts in action and exec_script.
-script_executable = "/usr/bin/env"
+# This is often an interpreter for projects that use a primary scripting
+# language. In this project, we use several different kinds of programs
+# including scripts in different languages and native binaries. An empty
+# script_executable string tells GN to directly run the "script".
+script_executable = ""
 
 # Require Ninja 1.10.0 to support multiple outputs from a rule with a depfile.
 ninja_required_version = "1.10.0"
