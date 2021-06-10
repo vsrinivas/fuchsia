@@ -222,9 +222,9 @@ struct DwarfFde {
 // and a reference implementation in LLVM
 // https://github.com/llvm/llvm-project/blob/main/libunwind/src/DwarfParser.hpp
 // https://github.com/llvm/llvm-project/blob/main/libunwind/src/EHHeaderParser.hpp
-Error DwarfCfi::Load(uint64_t elf_ptr) {
+Error DwarfCfi::Load(Memory* elf, uint64_t elf_ptr) {
   Elf64_Ehdr ehdr;
-  if (auto err = memory_->Read(+elf_ptr, ehdr); err.has_err()) {
+  if (auto err = elf->Read(+elf_ptr, ehdr); err.has_err()) {
     return err;
   }
 
@@ -239,8 +239,7 @@ Error DwarfCfi::Load(uint64_t elf_ptr) {
   pc_end_ = 0;
   for (uint64_t i = 0; i < ehdr.e_phnum; i++) {
     Elf64_Phdr phdr;
-    if (auto err = memory_->Read(elf_ptr + ehdr.e_phoff + ehdr.e_phentsize * i, phdr);
-        err.has_err()) {
+    if (auto err = elf->Read(elf_ptr + ehdr.e_phoff + ehdr.e_phentsize * i, phdr); err.has_err()) {
       return err;
     }
     if (phdr.p_type == PT_GNU_EH_FRAME) {
@@ -256,7 +255,7 @@ Error DwarfCfi::Load(uint64_t elf_ptr) {
 
   auto p = eh_frame_hdr_ptr_;
   uint8_t version;
-  if (auto err = memory_->Read(p, version); err.has_err()) {
+  if (auto err = elf->Read(p, version); err.has_err()) {
     return err;
   }
   if (version != 1) {
@@ -266,24 +265,23 @@ Error DwarfCfi::Load(uint64_t elf_ptr) {
   uint8_t eh_frame_ptr_enc;
   uint8_t fde_count_enc;
   uint64_t eh_frame_ptr;  // not used
-  if (auto err = memory_->Read<uint8_t>(p, eh_frame_ptr_enc); err.has_err()) {
+  if (auto err = elf->Read<uint8_t>(p, eh_frame_ptr_enc); err.has_err()) {
     return err;
   }
-  if (auto err = memory_->Read<uint8_t>(p, fde_count_enc); err.has_err()) {
+  if (auto err = elf->Read<uint8_t>(p, fde_count_enc); err.has_err()) {
     return err;
   }
-  if (auto err = memory_->Read<uint8_t>(p, table_enc_); err.has_err()) {
+  if (auto err = elf->Read<uint8_t>(p, table_enc_); err.has_err()) {
     return err;
   }
   if (auto err = DecodeTableEntrySize(table_enc_, table_entry_size_); err.has_err()) {
     return err;
   }
-  if (auto err = memory_->ReadEncoded(p, eh_frame_ptr, eh_frame_ptr_enc, eh_frame_hdr_ptr_);
+  if (auto err = elf->ReadEncoded(p, eh_frame_ptr, eh_frame_ptr_enc, eh_frame_hdr_ptr_);
       err.has_err()) {
     return err;
   }
-  if (auto err = memory_->ReadEncoded(p, fde_count_, fde_count_enc, eh_frame_hdr_ptr_);
-      err.has_err()) {
+  if (auto err = elf->ReadEncoded(p, fde_count_, fde_count_enc, eh_frame_hdr_ptr_); err.has_err()) {
     return err;
   }
   table_ptr_ = p;
@@ -292,10 +290,11 @@ Error DwarfCfi::Load(uint64_t elf_ptr) {
     return Error("empty binary search table");
   }
 
+  elf_ = elf;
   return Success();
 }
 
-Error DwarfCfi::Step(const Registers& current, Registers& next) {
+Error DwarfCfi::Step(Memory* stack, const Registers& current, Registers& next) {
   uint64_t pc;
   if (auto err = current.GetPC(pc); err.has_err()) {
     return err;
@@ -311,8 +310,7 @@ Error DwarfCfi::Step(const Registers& current, Registers& next) {
     uint64_t mid = (low + high) / 2;
     uint64_t addr = table_ptr_ + mid * table_entry_size_;
     uint64_t mid_pc;
-    if (auto err = memory_->ReadEncoded(addr, mid_pc, table_enc_, eh_frame_hdr_ptr_);
-        err.has_err()) {
+    if (auto err = elf_->ReadEncoded(addr, mid_pc, table_enc_, eh_frame_hdr_ptr_); err.has_err()) {
       return err;
     }
     if (pc < mid_pc) {
@@ -323,25 +321,25 @@ Error DwarfCfi::Step(const Registers& current, Registers& next) {
   }
   uint64_t addr = table_ptr_ + low * table_entry_size_ + table_entry_size_ / 2;
   uint64_t fde_ptr;
-  if (auto err = memory_->ReadEncoded(addr, fde_ptr, table_enc_, eh_frame_hdr_ptr_);
-      err.has_err()) {
+  if (auto err = elf_->ReadEncoded(addr, fde_ptr, table_enc_, eh_frame_hdr_ptr_); err.has_err()) {
     return err;
   }
 
   DwarfCie cie;
   DwarfFde fde;
-  if (auto err = DecodeFDE(memory_, fde_ptr, fde, cie); err.has_err()) {
+  if (auto err = DecodeFDE(elf_, fde_ptr, fde, cie); err.has_err()) {
     return err;
   }
   if (pc < fde.pc_begin || pc >= fde.pc_end) {
     return Error("cannot find FDE for pc %#" PRIx64, pc);
   }
 
-  DwarfCfiParser cfi_parser(memory_, current.arch());
+  DwarfCfiParser cfi_parser(current.arch());
 
   // Parse instructions in CIE first.
-  if (auto err = cfi_parser.ParseInstructions(cie.code_alignment_factor, cie.data_alignment_factor,
-                                              cie.instructions_begin, cie.instructions_end, -1);
+  if (auto err =
+          cfi_parser.ParseInstructions(elf_, cie.code_alignment_factor, cie.data_alignment_factor,
+                                       cie.instructions_begin, cie.instructions_end, -1);
       err.has_err()) {
     return err;
   }
@@ -349,14 +347,15 @@ Error DwarfCfi::Step(const Registers& current, Registers& next) {
   cfi_parser.Snapshot();
 
   // Parse instructions in FDE until pc.
-  if (auto err = cfi_parser.ParseInstructions(cie.code_alignment_factor, cie.data_alignment_factor,
-                                              fde.instructions_begin, fde.instructions_end,
-                                              pc - fde.pc_begin);
+  if (auto err = cfi_parser.ParseInstructions(elf_, cie.code_alignment_factor,
+                                              cie.data_alignment_factor, fde.instructions_begin,
+                                              fde.instructions_end, pc - fde.pc_begin);
       err.has_err()) {
     return err;
   }
 
-  if (auto err = cfi_parser.Step(cie.return_address_register, current, next); err.has_err()) {
+  if (auto err = cfi_parser.Step(stack, cie.return_address_register, current, next);
+      err.has_err()) {
     return err;
   }
 

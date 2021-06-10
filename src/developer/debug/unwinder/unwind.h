@@ -35,10 +35,19 @@ struct Frame {
   // Disallow default constructors.
   Frame(Registers regs, Trust trust, Error error)
       : regs(std::move(regs)), trust(trust), error(std::move(error)) {}
+
+  // Useful for debugging.
+  std::string Describe() const;
 };
 
-// Unwind with given memory, modules and registers.
+// Unwind with given memory, modules and registers. The modules are provided as the base addresses
+// and are accessed through the memory.
 std::vector<Frame> Unwind(Memory* memory, const std::vector<uint64_t>& modules,
+                          const Registers& registers, size_t max_depth = 50);
+
+// Unwind with given memory, modules and registers. Unlike the function above, the stack and the
+// modules could be from separate memory spaces.
+std::vector<Frame> Unwind(Memory* stack, const std::map<uint64_t, Memory*>& module_map,
                           const Registers& registers, size_t max_depth = 50);
 
 }  // namespace unwinder

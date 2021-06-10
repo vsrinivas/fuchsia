@@ -97,6 +97,7 @@ class Registers {
 
   Error Get(RegisterID reg_id, uint64_t& val) const;
   Error Set(RegisterID reg_id, uint64_t val);
+  Error Unset(RegisterID reg_id);
 
   Error GetSP(uint64_t& sp) const;
   Error SetSP(uint64_t sp);

@@ -32,6 +32,14 @@ Error Registers::Set(RegisterID reg_id, uint64_t val) {
   return Success();
 }
 
+Error Registers::Unset(RegisterID reg_id) {
+  if (reg_id >= (arch_ == Arch::kX64 ? RegisterID::kX64_last : RegisterID::kArm64_last)) {
+    return Error("invalid reg_id %hhu", reg_id);
+  }
+  regs_.erase(reg_id);
+  return Success();
+}
+
 Error Registers::GetSP(uint64_t& sp) const {
   return Get(arch_ == Arch::kX64 ? RegisterID::kX64_sp : RegisterID::kArm64_sp, sp);
 }

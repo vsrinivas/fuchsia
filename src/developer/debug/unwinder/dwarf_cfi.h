@@ -22,19 +22,17 @@ namespace unwinder {
 // a cached Memory implementation.
 class DwarfCfi {
  public:
-  explicit DwarfCfi(Memory* memory) : memory_(memory) {}
-
   // Load the eh_frame from the ELF file.
   //
   // This function only reads the eh_frame_hdr and loads the address of the binary search table
   // to avoid using any significant memory for large binaries.
-  [[nodiscard]] Error Load(uint64_t elf_ptr);
+  [[nodiscard]] Error Load(Memory* elf, uint64_t elf_ptr);
 
   // Unwind one frame.
-  [[nodiscard]] Error Step(const Registers& current, Registers& next);
+  [[nodiscard]] Error Step(Memory* stack, const Registers& current, Registers& next);
 
  private:
-  Memory* memory_ = nullptr;
+  Memory* elf_ = nullptr;
   uint64_t eh_frame_hdr_ptr_ = 0;
 
   // Marks the executable section so that we don't need to find the FDE to know a PC is wrong.

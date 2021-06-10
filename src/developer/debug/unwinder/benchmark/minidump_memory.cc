@@ -15,8 +15,7 @@
 
 namespace benchmark {
 
-std::string MinidumpGetBuildID(const crashpad::ModuleSnapshot& mod) {
-  auto build_id = mod.BuildID();
+std::string BuildIdToHex(const std::vector<uint8_t>& build_id) {
   FX_CHECK(!build_id.empty());
 
   // 2 hex characters per 1 byte, so the string size is twice the data size. Hopefully we'll be
@@ -83,12 +82,12 @@ class SnapshotMemoryRegion : public MinidumpMemory::MemoryRegion {
   const crashpad::MemorySnapshot* snapshot_;
 };
 
-class ElfMemoryRegion : public MinidumpMemory::MemoryRegion {
+class ElfMemoryRegion : public MinidumpMemory::MemoryRegion, public unwinder::Memory {
  public:
-  // Construct a memory region from a crashpad MemorySnapshot. The pointer should always be derived
-  // from the minidump_ object, and will thus always share its lifetime.
-  explicit ElfMemoryRegion(const std::string& path, uint64_t start_in, size_t size_in)
-      : MemoryRegion(start_in, size_in), file_(fopen(path.c_str(), "rb")) {}
+  // Construct a memory region from a file. This class is also used directly by unwinder as Memory*.
+  explicit ElfMemoryRegion(const std::string& path, uint64_t start_in, size_t size_in,
+                           MinidumpMemory::Statistics* stat)
+      : MemoryRegion(start_in, size_in), file_(fopen(path.c_str(), "rb")), stat_(stat) {}
   ~ElfMemoryRegion() override { fclose(file_); }
 
   size_t Read(uint64_t offset, size_t size, void* dst) const override {
@@ -103,8 +102,17 @@ class ElfMemoryRegion : public MinidumpMemory::MemoryRegion {
     return fread(dst, 1, read_end - offset, file_);
   }
 
+  unwinder::Error ReadBytes(uint64_t addr, uint64_t size, void* dst) override {
+    // If this class is used directly from the unwinder, stat_ must be updated by ourselves.
+    stat_->read_count++;
+    stat_->total_read_size += size;
+    return Read(addr - start, size, dst) == size ? unwinder::Success()
+                                                 : unwinder::Error("short read");
+  }
+
  private:
   FILE* file_;
+  MinidumpMemory::Statistics* stat_;
 };
 
 }  // namespace
@@ -122,9 +130,13 @@ MinidumpMemory::MinidumpMemory(const crashpad::ProcessSnapshotMinidump& minidump
   build_id_index.AddBuildIdDir(home + "/.fuchsia/debug/symbol-cache");
 
   for (const auto& module : minidump.Modules()) {
-    auto path = build_id_index.EntryForBuildID(MinidumpGetBuildID(*module)).binary;
-    FX_CHECK(!path.empty());
-    regions_.push_back(std::make_unique<ElfMemoryRegion>(path, module->Address(), module->Size()));
+    auto build_id = BuildIdToHex(module->BuildID());
+    auto path = build_id_index.EntryForBuildID(build_id).binary;
+    FX_CHECK(!path.empty()) << "Cannot find symbol file for " << build_id;
+    auto elf_region =
+        std::make_unique<ElfMemoryRegion>(path, module->Address(), module->Size(), &statistics_);
+    module_map_.emplace(module->Address(), elf_region.get());
+    regions_.push_back(std::move(elf_region));
   }
 
   std::sort(regions_.begin(), regions_.end(),
@@ -154,7 +166,7 @@ size_t MinidumpMemory::Read(uint64_t addr, void* dst, size_t size) {
 }
 
 unwinder::Error MinidumpMemory::ReadBytes(uint64_t addr, uint64_t size, void* dst) {
-  return Read(addr, dst, size) == size ? unwinder::Success() : unwinder::Error("insufficient read");
+  return Read(addr, dst, size) == size ? unwinder::Success() : unwinder::Error("short read");
 }
 
 }  // namespace benchmark

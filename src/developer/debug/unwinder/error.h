@@ -12,7 +12,6 @@
 
 namespace unwinder {
 
-// Use fbl::String to avoid copying the immutable error message.
 class Error {
  public:
   [[gnu::format(printf, 2, 3)]] explicit Error(const char* fmt, ...) {

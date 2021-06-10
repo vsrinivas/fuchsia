@@ -14,10 +14,28 @@
 
 namespace benchmark {
 
-std::string MinidumpGetBuildID(const crashpad::ModuleSnapshot& mod);
+std::string BuildIdToHex(const std::vector<uint8_t>& build_id);
 
 class MinidumpMemory : public unwindstack::Memory, public unwinder::Memory {
  public:
+  explicit MinidumpMemory(const crashpad::ProcessSnapshotMinidump& minidump);
+
+  // Used by UnwindFromUnwinder.
+  std::map<uint64_t, unwinder::Memory*> module_map() { return module_map_; }
+
+  // Implementation of unwindstack::Memory and unwinder::Memory.
+  size_t Read(uint64_t addr, void* dst, size_t size) override;
+  unwinder::Error ReadBytes(uint64_t addr, uint64_t size, void* dst) override;
+
+  // Staticstics related.
+  struct Statistics {
+    uint64_t read_count = 0;
+    uint64_t total_read_size = 0;
+  };
+
+  const Statistics& GetStatistics() const { return statistics_; }
+  void ResetStatistics() { statistics_ = Statistics(); }
+
   class MemoryRegion {
    public:
     MemoryRegion(uint64_t start_in, size_t size_in) : start(start_in), size(size_in) {}
@@ -29,21 +47,9 @@ class MinidumpMemory : public unwindstack::Memory, public unwinder::Memory {
     const size_t size;
   };
 
-  explicit MinidumpMemory(const crashpad::ProcessSnapshotMinidump& minidump);
-
-  size_t Read(uint64_t addr, void* dst, size_t size) override;
-  unwinder::Error ReadBytes(uint64_t addr, uint64_t size, void* dst) override;
-
-  struct Statistics {
-    uint64_t read_count = 0;
-    uint64_t total_read_size = 0;
-  };
-
-  const Statistics& GetStatistics() const { return statistics_; }
-  void ResetStatistics() { statistics_ = Statistics(); }
-
  private:
   std::vector<std::unique_ptr<MemoryRegion>> regions_;
+  std::map<uint64_t, unwinder::Memory*> module_map_;
   Statistics statistics_;
 };
 

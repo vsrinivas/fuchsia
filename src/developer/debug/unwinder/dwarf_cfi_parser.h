@@ -18,10 +18,10 @@ namespace unwinder {
 class DwarfCfiParser {
  public:
   // arch is needed to default initialize register_locations_.
-  DwarfCfiParser(Memory* memory, Registers::Arch arch);
+  explicit DwarfCfiParser(Registers::Arch arch);
 
   // Parse the CFA instructions until the (relative) pc reaches pc_limit.
-  [[nodiscard]] Error ParseInstructions(uint64_t code_alignment_factor,
+  [[nodiscard]] Error ParseInstructions(Memory* elf, uint64_t code_alignment_factor,
                                         int64_t data_alignment_factor, uint64_t instructions_begin,
                                         uint64_t instructions_end, uint64_t pc_limit);
 
@@ -29,8 +29,8 @@ class DwarfCfiParser {
   void Snapshot() { initial_register_locations_ = register_locations_; }
 
   // Apply the frame info to unwind one frame.
-  [[nodiscard]] Error Step(RegisterID return_address_register, const Registers& current,
-                           Registers& next);
+  [[nodiscard]] Error Step(Memory* stack, RegisterID return_address_register,
+                           const Registers& current, Registers& next);
 
  private:
   struct RegisterLocation {
@@ -47,8 +47,6 @@ class DwarfCfiParser {
       int64_t offset;     // only valid when type == kOffset.
     };
   };
-
-  Memory* memory_;
 
   RegisterID cfa_register_ = RegisterID::kInvalid;
   uint64_t cfa_register_offset_ = -1;

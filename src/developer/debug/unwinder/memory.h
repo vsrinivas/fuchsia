@@ -12,6 +12,7 @@
 
 namespace unwinder {
 
+// Abstract representation of a readable memory space.
 class Memory {
  public:
   virtual Error ReadBytes(uint64_t addr, uint64_t size, void* dst) = 0;

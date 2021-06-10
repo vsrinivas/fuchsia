@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <set>
 #include <unordered_map>
+#include <utility>
 
 #include "src/developer/debug/unwinder/dwarf_cfi.h"
 #include "src/developer/debug/unwinder/error.h"
@@ -20,8 +21,8 @@ namespace {
 
 class CFIUnwinder {
  public:
-  CFIUnwinder(Memory* memory, const std::vector<uint64_t>& modules)
-      : memory_(memory), module_addresses_(modules.begin(), modules.end()) {}
+  CFIUnwinder(Memory* stack, std::map<uint64_t, Memory*> module_map)
+      : stack_(stack), module_map_(std::move(module_map)) {}
 
   Error Step(Registers current, Registers& next, bool is_return_address) {
     uint64_t pc;
@@ -37,37 +38,72 @@ class CFIUnwinder {
       current.SetPC(pc);
     }
 
-    auto module_address_it = module_addresses_.upper_bound(pc);
-    if (module_address_it == module_addresses_.begin()) {
+    auto module_it = module_map_.upper_bound(pc);
+    if (module_it == module_map_.begin()) {
       return Error("%#" PRIx64 " is not covered by any module", pc);
     }
-    uint64_t module_address = *(--module_address_it);
+    module_it--;
+    uint64_t module_address = module_it->first;
 
-    auto module_map_it = module_map_.find(module_address);
-    if (module_map_it == module_map_.end()) {
-      module_map_it = module_map_.emplace(module_address, memory_).first;
-      if (auto err = module_map_it->second.Load(module_address); err.has_err()) {
+    auto cfi_it = cfi_map_.find(module_address);
+    if (cfi_it == cfi_map_.end()) {
+      cfi_it = cfi_map_.emplace(module_address, DwarfCfi()).first;
+      if (auto err = cfi_it->second.Load(module_it->second, module_address); err.has_err()) {
         return err;
       }
     }
-    if (auto err = module_map_it->second.Step(current, next); err.has_err()) {
+    if (auto err = cfi_it->second.Step(stack_, current, next); err.has_err()) {
       return err;
     }
     return Success();
   }
 
  private:
-  Memory* memory_;
-  std::set<uint64_t> module_addresses_;
-  std::unordered_map<uint64_t, DwarfCfi> module_map_;
+  Memory* stack_;
+  std::map<uint64_t, Memory*> module_map_;
+  std::map<uint64_t, DwarfCfi> cfi_map_;
 };
 
 }  // namespace
 
+std::string Frame::Describe() const {
+  std::string res = "registers={" + regs.Describe() + "}  trust=";
+  switch (trust) {
+    case Trust::kScan:
+      res += "Scan";
+      break;
+    case Trust::kFP:
+      res += "FP";
+      break;
+    case Trust::kSSC:
+      res += "SSC";
+      break;
+    case Trust::kCFI:
+      res += "CFI";
+      break;
+    case Trust::kContext:
+      res += "Context";
+      break;
+  }
+  if (error.has_err()) {
+    res += "  error=\"" + error.msg() + "\"";
+  }
+  return res;
+}
+
 std::vector<Frame> Unwind(Memory* memory, const std::vector<uint64_t>& modules,
                           const Registers& registers, size_t max_depth) {
-  std::vector<Frame> res = {{registers, Frame::Trust::kContext, Success()}};
-  CFIUnwinder cfi_unwinder(memory, modules);
+  std::map<uint64_t, Memory*> module_maps;
+  for (auto address : modules) {
+    module_maps.emplace(address, memory);
+  }
+  return Unwind(memory, module_maps, registers, max_depth);
+}
+
+std::vector<Frame> Unwind(Memory* stack, const std::map<uint64_t, Memory*>& module_map,
+                          const Registers& registers, size_t max_depth) {
+  std::vector<Frame> res = {{registers, Frame::Trust::kContext, /* placeholder */ Success()}};
+  CFIUnwinder cfi_unwinder(stack, module_map);
 
   while (max_depth--) {
     Registers next(registers.arch());

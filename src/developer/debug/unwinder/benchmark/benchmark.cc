@@ -11,6 +11,7 @@
 #include "snapshot/minidump/process_snapshot_minidump.h"
 #include "src/developer/debug/unwinder/benchmark/libunwindstack.h"
 #include "src/developer/debug/unwinder/benchmark/minidump_memory.h"
+#include "src/developer/debug/unwinder/memory.h"
 #include "src/developer/debug/unwinder/registers.h"
 #include "src/developer/debug/unwinder/unwind.h"
 
@@ -21,7 +22,7 @@ void PrintContext(const crashpad::ProcessSnapshotMinidump& minidump) {
   int module_idx = 0;
   for (auto module : minidump.Modules()) {
     printf("{{{module:%#x:%s:elf:%s}}}\n", module_idx, module->Name().c_str(),
-           MinidumpGetBuildID(*module).c_str());
+           BuildIdToHex(module->BuildID()).c_str());
     printf("{{{mmap:%#" PRIx64 ":%#" PRIx64 ":load:%#x:rwx:0x0}}}\n", module->Address(),
            module->Size(), module_idx);
     module_idx++;
@@ -36,7 +37,7 @@ void PrintBacktrace(const std::vector<unwinder::Frame>& frames) {
     frame.regs.GetPC(pc);
     frame.regs.GetSP(sp);
     printf("{{{bt:%d:%#" PRIx64 ":sp %#" PRIx64 "}}}\n", i++, pc, sp);
-    printf("  %s\n", frame.regs.Describe().c_str());
+    printf("  %s\n", frame.Describe().c_str());
   }
 }
 
@@ -73,13 +74,8 @@ std::vector<unwinder::Frame> UnwindFromUnwinder(
     const std::shared_ptr<MinidumpMemory>& memory,
     const std::vector<const crashpad::ModuleSnapshot*>& modules,
     const crashpad::ThreadSnapshot* thread) {
-  std::vector<uint64_t> module_bases;
-  module_bases.reserve(modules.size());
-  for (auto module : modules) {
-    module_bases.push_back(module->Address());
-  }
-  auto context = thread->Context();
-  return unwinder::Unwind(memory.get(), module_bases, ParseMinidumpContext(*context));
+  auto registers = ParseMinidumpContext(*thread->Context());
+  return unwinder::Unwind(memory.get(), memory->module_map(), registers);
 }
 
 int Main(int argc, const char** argv) {

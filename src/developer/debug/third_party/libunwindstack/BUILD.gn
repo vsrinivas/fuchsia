@@ -4,10 +4,10 @@
 
 config("config") {
   defines = [ "NO_LIBDEXFILE_SUPPORT" ]
-  include_dirs = [
-    "fuchsia",
-    "include",
-  ]
+
+  # Use -isystem instead of -I to suppress -Wconversion warnings.
+  cflags = [ "-isystem" + rebase_path("include", root_build_dir) ]
+  include_dirs = [ "fuchsia" ]
 
   if (is_mac) {
     # This has to be public so that includes from unwindstack/ElfInterface.h can

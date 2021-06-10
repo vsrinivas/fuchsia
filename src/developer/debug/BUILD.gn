@@ -9,6 +9,7 @@ group("debug") {
     "debug_agent",
     "ipc",
     "shared",
+    "unwinder/benchmark($host_toolchain)",
   ]
 }
 
