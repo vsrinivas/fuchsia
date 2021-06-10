@@ -5,17 +5,17 @@
 #
 # This script runs an action with rewrapper and reproxy. Use as follows:
 #
-# ./scripts/rbe_action.sh -- echo Hello
+# $0 -- echo Hello
 #
 # To override the default config:
 #
-# ./scripts/rbe_action.sh --cfg reclient.cfg -- echo Hello
+# $0 --cfg reclient.cfg -- echo Hello
 #
-# Note that overriding RBE_cfg will set the same config file for both
+# Note that --cfg will set the same config file for both
 # rewrapper and reproxy, so you need to make sure it contains all needed
 # arguments for both.
 #
-# To override the location of reclient binaries, set the RBE_dir env var
+# To override the location of reclient binaries, set --bindir
 # before using the script.
 
 set -e
@@ -26,6 +26,7 @@ script_dir="$(dirname "$script")"
 # defaults
 config="$script_dir"/fuchsia-re-client.cfg
 # location of reclient binaries relative to output directory where build is run
+# TODO(fangism): this could also be set relative to --exec_root.
 reclient_bindir=../../prebuilt/proprietary/third_party/reclient/linux-x64
 
 usage() {
@@ -33,7 +34,8 @@ usage() {
 $script [rewrapper options] -- command [args...]
 
 options:
-  --cfg reclient config for reproxy and rewrapper tools
+  --cfg FILE: reclient config for reproxy and rewrapper tools
+  --bindir DIR: location of reproxy and rewrapper tools
   All other options forwarded to rewrapper until -- is encountered.
 EOF
 }
@@ -58,6 +60,8 @@ do
   case "$opt" in
     --cfg=*) config="$optarg" ;;
     --cfg) prev_opt=config ;;
+    --bindir=*) reclient_bindir="$optarg" ;;
+    --bindir) prev_opt=reclient_bindir ;;
     # stop option processing
     --) shift; break ;;
     # Forward all other options to rewrapper
