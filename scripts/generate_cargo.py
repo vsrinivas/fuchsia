@@ -41,6 +41,11 @@ name = "%(crate_name)s"
 path = "%(source_root)s"
 """
 
+CARGO_PACKAGE_NO_WORKSPACE = """\
+[workspace]
+# empty workspace table excludes this crate from thinking it should be in a workspace
+"""
+
 CARGO_PACKAGE_DEP = """\
 [%(dep_type)s.%(crate_name)s]
 version = "0.0.1"
@@ -53,7 +58,9 @@ def strip_toolchain(target):
     return re.search("[^(]*", target)[0]
 
 
-def lookup_gn_pkg_name(project, target):
+def lookup_gn_pkg_name(project, target, *, for_workspace):
+    if for_workspace:
+        return mangle_label(target)
     metadata = project.targets[target]
     return metadata["output_name"]
 
@@ -64,6 +71,30 @@ def rebase_gn_path(root_path, location, directory=False):
     path = location[2:]
     target = os.path.dirname(path) if directory else path
     return os.path.join(root_path, target)
+
+
+def mangle_label(label):
+    assert label[0:2] == "//"
+    # remove the prefix //
+    label = label[2:]
+    result = []
+    for c in label:
+        if c == "-":
+            result.append("--")
+        elif c == "_":
+            result.append("__")
+        elif c == "/":
+            result.append("_-_")
+        elif c == ":":
+            result.append("-_-")
+        elif c == ".":
+            result.append("_--")
+        elif c == "(":
+            # Toolchain is not part of mangled label
+            break
+        else:
+            result.append(c)
+    return "".join(result)
 
 
 class FeatureSpec(object):
@@ -121,7 +152,6 @@ class Project(object):
         if meta["type"] in ("source_set", "group"):
             return meta["deps"]
 
-
     def find_test_targets(self, source_root):
         overlapping_targets = self.rust_targets_by_source_root.get(
             source_root, [])
@@ -133,7 +163,7 @@ class Project(object):
 
 def write_toml_file(
         fout, metadata, project, target, lookup, root_path, root_build_dir,
-        gn_cargo_dir):
+        gn_cargo_dir, for_workspace):
     rust_crates_path = os.path.join(root_path, "third_party/rust_crates")
 
     edition = "2018" if "--edition=2018" in metadata["rustflags"] else "2015"
@@ -160,7 +190,7 @@ def write_toml_file(
             features.append(match.group(1))
 
     crate_type = "rlib"
-    package_name = lookup_gn_pkg_name(project, target)
+    package_name = lookup_gn_pkg_name(project, target, for_workspace=for_workspace)
 
     fout.write(
         CARGO_PACKAGE_CONTENTS % {
@@ -208,6 +238,9 @@ def write_toml_file(
                 % test_targets)
             extra_test_deps = sorted(test_deps - set(metadata["deps"]))
 
+    if not for_workspace:
+        fout.write(CARGO_PACKAGE_NO_WORKSPACE)
+
     if features:
         fout.write("\n[features]\n")
         # Filter 'default' feature out to avoid generating a duplicated entry.
@@ -216,12 +249,14 @@ def write_toml_file(
         for feature in features:
             fout.write("%s = []\n" % feature)
 
-    fout.write("\n[patch.crates-io]\n")
-    for patch in project.patches:
-        path = project.patches[patch]["path"]
-        fout.write(
-            "%s = { path = \"%s/%s\" }\n" % (patch, rust_crates_path, path))
-    fout.write("\n")
+    if not for_workspace:
+        # In a workspace, patches are ignored, so we skip emitting all the patch lines to cut down on warning spam
+        fout.write("\n[patch.crates-io]\n")
+        for patch in project.patches:
+            path = project.patches[patch]["path"]
+            fout.write(
+                "%s = { path = \"%s/%s\" }\n" % (patch, rust_crates_path, path))
+        fout.write("\n")
 
     # collect all dependencies
     deps = metadata["deps"][:]
@@ -256,7 +291,7 @@ def write_toml_file(
                         fout.write("default-features = false\n")
             # this is a in-tree rust target
             elif "crate_name" in project.targets[dep]:
-                crate_name = lookup_gn_pkg_name(project, dep)
+                crate_name = lookup_gn_pkg_name(project, dep, for_workspace=for_workspace)
                 output_name = project.targets[dep]["crate_name"]
                 dep_dir = os.path.join(gn_cargo_dir, str(lookup[dep]))
                 fout.write(
@@ -331,6 +366,8 @@ def main():
     with open(os.path.join(gn_cargo_dir, "generate_cargo.stamp"), "w") as f:
         f.truncate()
 
+    workspace_dirs = []
+
     for target in project.rust_targets:
         cargo_toml_dir = os.path.join(gn_cargo_dir, str(lookup[target]))
         try:
@@ -338,12 +375,68 @@ def main():
         except OSError:
             print("Failed to create directory for Cargo: %s" % cargo_toml_dir)
 
+        for_workspace_cargo_toml_dir = os.path.join(
+            gn_cargo_dir, "for_workspace", str(lookup[target]))
+        try:
+            os.makedirs(for_workspace_cargo_toml_dir)
+        except OSError:
+            print(
+                "Failed to create directory for Cargo: %s" %
+                for_workspace_cargo_toml_dir)
+
         metadata = project.targets[target]
         with open(os.path.join(cargo_toml_dir, "Cargo.toml"), "w") as fout:
             write_toml_file(
-                fout, metadata, project, target, lookup, root_path,
-                root_build_dir, gn_cargo_dir)
+                fout,
+                metadata,
+                project,
+                target,
+                lookup,
+                root_path,
+                root_build_dir,
+                gn_cargo_dir,
+                for_workspace=False)
 
+        if (not target.startswith("//third_party/rust_crates:")
+           ) and target in project.reachable_targets:
+            if "(" not in target:
+                # for now, only put fuchsia crates in workspace
+                workspace_dirs.append(
+                    (
+                        target,
+                        os.path.relpath(
+                            for_workspace_cargo_toml_dir, root_path)))
+            with open(os.path.join(for_workspace_cargo_toml_dir, "Cargo.toml"),
+                      "w") as fout:
+                write_toml_file(
+                    fout,
+                    metadata,
+                    project,
+                    target,
+                    lookup,
+                    root_path,
+                    root_build_dir,
+                    os.path.join(gn_cargo_dir, "for_workspace"),
+                    for_workspace=True)
+
+    # TODO: refactor into separate function
+    with open(os.path.join(gn_cargo_dir, "for_workspace",
+                           "Cargo_for_fuchsia_dir.toml"), "w") as fout:
+        fout.write("[workspace]\nmembers = [\n")
+        for target, dir in workspace_dirs:
+            fout.write("  # %s\n" % target)
+            fout.write("  %s,\n" % json.dumps(dir))
+        fout.write("]\n")
+
+        fout.write('exclude = ["third_party/rust_crates",]\n')
+        fout.write("\n[patch.crates-io]\n")
+        for patch in project.patches:
+            path = project.patches[patch]["path"]
+            fout.write(
+                "%s = { path = %s }\n" % (
+                    patch,
+                    json.dumps(os.path.join("third_party/rust_crates", path))))
+        fout.write("\n")
     return 0
 
 
