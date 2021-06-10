@@ -21,7 +21,7 @@ use {
             CobaltDiagnostics, CompositeDiagnostics, Diagnostics, Event, InspectDiagnostics,
         },
         enums::{InitialClockState, InitializeRtcOutcome, Role, StartClockSource, Track},
-        rtc::{Rtc, RtcImpl},
+        rtc::{Rtc, RtcCreationError, RtcImpl},
         time_source::{PushTimeSource, TimeSource},
         time_source_manager::TimeSourceManager,
     },
@@ -133,7 +133,10 @@ async fn main() -> Result<(), Error> {
     let optional_rtc = match RtcImpl::only_device() {
         Ok(rtc) => Some(rtc),
         Err(err) => {
-            warn!("failed to connect to RTC, ZX_CLOCK_UTC won't be updated: {}", err);
+            match err {
+                RtcCreationError::NoDevices => info!("no RTC devices found."),
+                _ => warn!("failed to connect to RTC: {}", err),
+            };
             diagnostics.record(Event::InitializeRtc { outcome: err.into(), time: None });
             None
         }
