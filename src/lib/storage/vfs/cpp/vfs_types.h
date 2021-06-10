@@ -66,24 +66,47 @@ union Rights {
   bool StricterOrSameAs(Rights other) const { return (raw_value & ~(other.raw_value)) == 0; }
 
   // Convenience factory functions for commonly used option combinations.
-  // TODO(fxbug.dev/38296) : Remove the magic numbers and go back to a style of
-  //
-  // '''
-  // constexpr static Rights FooAndBar() {
-  //   Rights rights;
-  //   rights.foo = true;
-  //   rights.bar = true;
-  //   return rights;
-  // }
-  // '''
-  // Once we have resolved the GCC issues with fbl::BitFieldMember
-  //
-  constexpr static Rights ReadOnly() { return Rights{0x1}; }
-  constexpr static Rights WriteOnly() { return Rights{0x2}; }
-  constexpr static Rights ReadWrite() { return Rights{0x3}; }
-  constexpr static Rights ReadExec() { return Rights{0x9}; }
-  constexpr static Rights WriteExec() { return Rights{0xa}; }
-  constexpr static Rights All() { return Rights{0xf}; }
+  constexpr static Rights ReadOnly() {
+    Rights rights{};
+    rights.read = true;
+    return rights;
+  }
+
+  constexpr static Rights WriteOnly() {
+    Rights rights{};
+    rights.write = true;
+    return rights;
+  }
+
+  constexpr static Rights ReadWrite() {
+    Rights rights{};
+    rights.read = true;
+    rights.write = true;
+    return rights;
+  }
+
+  constexpr static Rights ReadExec() {
+    Rights rights{};
+    rights.read = true;
+    rights.execute = true;
+    return rights;
+  }
+
+  constexpr static Rights WriteExec() {
+    Rights rights{};
+    rights.write = true;
+    rights.execute = true;
+    return rights;
+  }
+
+  constexpr static Rights All() {
+    Rights rights{};
+    rights.read = true;
+    rights.write = true;
+    rights.admin = true;
+    rights.execute = true;
+    return rights;
+  }
 };
 
 constexpr Rights operator&(Rights lhs, Rights rhs) { return Rights(lhs.raw_value & rhs.raw_value); }
@@ -206,7 +229,7 @@ struct VnodeConnectionOptions {
     fbl::BitFieldMember<uint32_t, 9, 1> posix;
     fbl::BitFieldMember<uint32_t, 10, 1> clone_same_rights;
 
-    constexpr Flags() : raw_value(0) {}
+    constexpr Flags() = default;
 
     constexpr Flags& operator=(const Flags& other) {
       raw_value = other.raw_value;
