@@ -34,8 +34,8 @@ namespace sys {
 
 OutgoingDirectory::OutgoingDirectory()
     : root_(std::make_unique<vfs::PseudoDir>()),
-      svc_(GetOrCreateDirectory("svc")),
-      debug_(GetOrCreateDirectory("debug")) {}
+      svc_(AddNewEmptyDirectory(root_.get(), "svc")),
+      debug_(AddNewEmptyDirectory(root_.get(), "debug")) {}
 
 OutgoingDirectory::~OutgoingDirectory() = default;
 
