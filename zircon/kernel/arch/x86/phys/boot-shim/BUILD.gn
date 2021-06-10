@@ -162,14 +162,6 @@ if (toolchain.environment == "kernel.phys32") {
       "..:multiboot",
       "//zircon/kernel/phys:symbolize",
     ]
-
-    # This marks it as the official default boot shim for using QEMU.
-    images_name = "qemu-kernel"
-
-    # Everything should find this via the //:images build API.
-    # But some things might still look for "out/.../multiboot.bin" directly.
-    output_dir = root_build_dir
-    output_name = "multiboot"
   }
 } else {
   group("linux-x86-boot-shim") {
