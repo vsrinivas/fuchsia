@@ -8,6 +8,7 @@
 #include <lib/fake-bti/bti.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
+#include <zircon/errors.h>
 
 #include <fbl/algorithm.h>
 #include <zxtest/zxtest.h>
@@ -603,12 +604,29 @@ TEST(UsbRequestTest, Alloc) {
   EXPECT_OK(Request::Alloc(&request, 0, 0, kParentReqSize));
 }
 
-TEST(UsbRequestTest, Init) {
+TEST(UsbRequestTest, VmoOffsetBoundsTest) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   std::optional<Request> request;
   ASSERT_OK(Request::Alloc(&request, 0, 0, kParentReqSize));
-  EXPECT_OK(request->Init(vmo, 0, 0, 0));
+
+  uint64_t offset = 0;
+  uint64_t length = ZX_PAGE_SIZE;
+  EXPECT_OK(request->Init(vmo, offset, 0, 0));
+  EXPECT_OK(request->Init(vmo, offset, length, 0));
+  EXPECT_OK(request->Init(vmo, offset, length-1, 0));
+  EXPECT_EQ(request->Init(vmo, offset, length+1, 0), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(request->Init(vmo, offset+1, length, 0), ZX_ERR_INVALID_ARGS);
+  EXPECT_OK(request->Init(vmo, offset+1, length-1, 0));
+
+  offset = ZX_PAGE_SIZE;
+  length = 1;
+  EXPECT_EQ(request->Init(vmo, offset, length-1, 0), ZX_OK);
+  EXPECT_EQ(request->Init(vmo, offset-1, length, 0), ZX_OK);
+  EXPECT_EQ(request->Init(vmo, offset+1, length, 0), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(request->Init(vmo, offset, length, 0), ZX_ERR_INVALID_ARGS);
+
+  EXPECT_EQ(request->Init(vmo, ZX_PAGE_SIZE, ZX_PAGE_SIZE, 0), ZX_ERR_INVALID_ARGS);
   free(request->take());
 }
 

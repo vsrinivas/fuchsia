@@ -140,6 +140,11 @@ __EXPORT zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle
     return status;
   }
 
+  if (length > size || vmo_offset > size - length) {
+    zx_handle_close(dup_handle);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // TODO(ravoorir): Do not map the entire vmo. Map only what is needed.
   zx_vaddr_t mapped_addr;
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, dup_handle, 0,
