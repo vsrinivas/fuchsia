@@ -98,11 +98,11 @@ class TestLibrary final {
   }
 
   bool AddDependentLibrary(TestLibrary dependent_library) {
-    return all_libraries_->Insert(std::move(dependent_library.library_));
+    return all_libraries_->Insert(std::move(dependent_library.library_)).second;
   }
 
   bool AddDependentLibrary(TestLibrary* dependent_library) {
-    return all_libraries_->Insert(std::move(dependent_library->library_));
+    return all_libraries_->Insert(std::move(dependent_library->library_)).second;
   }
 
   void AddAttributeSchema(const std::string& name, fidl::flat::AttributeSchema schema) {

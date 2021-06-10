@@ -11,6 +11,7 @@
 #include <cstring>
 #include <regex>
 #include <set>
+#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -208,6 +209,10 @@ std::vector<std::string> FormatFindings(const Findings& findings, bool enable_co
 // Used by the formatter to make sure that formatting was not destructive.
 bool OnlyWhitespaceChanged(const std::string& unformatted_input,
                            const std::string& formatted_output);
+
+// Compares two streams representing JSON IRs for equality, ignoring location
+// fields.
+bool IsIrEquals(const std::string& from_old, const std::string& from_new);
 
 }  // namespace utils
 }  // namespace fidl
