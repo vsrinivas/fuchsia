@@ -31,6 +31,9 @@ pub enum FfxError {
         DaemonError::TargetInZedboot => format!("Target {} was found in Zedboot. Reboot the target to continue.", target_string(.target)),
     })]
     DaemonError { err: DaemonError, target: Option<String> },
+
+    #[error("{}", format!("No target with matcher {} was found.\n\n* Use `ffx target list` to verify the state of connected devices.\n* Use the SERIAL matcher with the --target (-t) parameter to explicity match a device.", target_string(.target)))]
+    FastbootError { target: Option<String> },
 }
 
 fn target_string(matcher: &Option<String>) -> String {

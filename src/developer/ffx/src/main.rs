@@ -83,7 +83,10 @@ impl Injector for Injection {
             .await?;
 
         result
-            .map_err(|err| FfxError::DaemonError { err, target })
+            .map_err(|err| match err {
+                DaemonError::TargetNotFound => FfxError::FastbootError { target },
+                _ => FfxError::DaemonError { err, target },
+            })
             .map(|_| fastboot_proxy)
             .context("fastboot_factory")
     }
