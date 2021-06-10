@@ -43,16 +43,12 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnLiteral(std::unique_ptr<raw::Literal> const& element) override;
   void OnLiteralConstant(std::unique_ptr<raw::LiteralConstant> const& element) override;
   void OnNamedLayoutReference(std::unique_ptr<raw::NamedLayoutReference> const& element) override;
-  void OnNullability(types::Nullability nullability) override { NotYetImplemented(); };
-  void OnOrdinaledLayoutMember(
-      std::unique_ptr<raw::OrdinaledLayoutMember> const& element) override {
-    NotYetImplemented();
-  }
+  void OnOrdinal64(raw::Ordinal64& element) override;
+  void OnOrdinaledLayoutMember(std::unique_ptr<raw::OrdinaledLayoutMember> const& element) override;
   void OnParameter(std::unique_ptr<raw::Parameter> const& element) override { NotYetImplemented(); }
   void OnParameterListNew(std::unique_ptr<raw::ParameterListNew> const& element) override {
     NotYetImplemented();
   }
-  void OnPrimitiveSubtype(types::PrimitiveSubtype subtype) override { NotYetImplemented(); };
   void OnProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> const& element) override {
     NotYetImplemented();
   }
@@ -144,6 +140,7 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
     kLiteral,
     kLiteralConstant,
     kNamedLayoutReference,
+    kOrdinal64,
     kOrdinaledLayout,
     kOrdinaledLayoutMember,
     kStructLayout,
@@ -212,8 +209,7 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // consists of a single token.
   class TokenBuilder : public Builder<TokenSpanSequence> {
    public:
-    TokenBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element,
-                 bool trailing_space);
+    TokenBuilder(SpanSequenceTreeVisitor* ftv, const Token& token, bool trailing_space);
   };
 
   // Builds a CompositeSpanSequence that is smaller than a standalone statement (see the comment on

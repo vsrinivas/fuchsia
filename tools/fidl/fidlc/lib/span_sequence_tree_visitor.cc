@@ -71,11 +71,10 @@ size_t IngestCommentLine(std::string_view text, size_t leading_blank_lines,
 // into tokens.
 void AppendToken(std::string_view word, size_t leading_blank_lines, AtomicSpanSequence* out) {
   if (!word.empty() && word[0] != '\0') {
-    // TODO(fxbug.dev/73507): add more variants to the regex as we run across them when adding
-    //  support for more raw AST node types.
+    // TODO(fxbug.dev/77861): remove this once proper parser support is added
     static std::regex needs_trailing_space_regex("[a-z_]+|=|\\|");
     auto token_span_sequence = std::make_unique<TokenSpanSequence>(word, leading_blank_lines);
-    if (std::regex_match(std::string(word), needs_trailing_space_regex)) {
+    if (std::regex_match(std::string(word), needs_trailing_space_regex) && word != "reserved") {
       token_span_sequence->SetTrailingSpace(true);
     }
 
@@ -202,6 +201,24 @@ IngestLineResult IngestLine(std::string_view text, size_t leading_newlines,
     source_seen = true;
   }
   return IngestLineResult{chars_seen, semi_colon_seen, !source_seen};
+}
+
+// Take the leftmost non-comment leaf (ie, the first printable TokenSpanSequence) of the
+// SpanSequence tree with its root at the provided SpanSequence and outdent it the specified amount.
+bool OutdentFirstChildToken(std::unique_ptr<SpanSequence>& span_sequence, size_t size) {
+  if (span_sequence->GetKind() == SpanSequence::Kind::kToken) {
+    span_sequence->SetOutdentation(size);
+    return true;
+  }
+  if (span_sequence->IsComposite()) {
+    auto& children = static_cast<CompositeSpanSequence*>(span_sequence.get())->EditChildren();
+    for (auto& child : children) {
+      if (OutdentFirstChildToken(child, size))
+        return true;
+    }
+  }
+
+  return false;
 }
 
 // Is the last leaf of the SpanSequence tree with its root at the provided SpanSequence a
@@ -354,14 +371,13 @@ SpanSequenceTreeVisitor::Builder<T>::~Builder<T>() {
 }
 
 SpanSequenceTreeVisitor::TokenBuilder::TokenBuilder(SpanSequenceTreeVisitor* ftv,
-                                                    const raw::SourceElement& element,
-                                                    bool has_trailing_space)
-    : Builder<TokenSpanSequence>(ftv, element.start_, element.end_, false) {
+                                                    const Token& token, bool has_trailing_space)
+    : Builder<TokenSpanSequence>(ftv, token, token, false) {
   const auto leading_newlines = this->GetFormattingTreeVisitor()->preceding_newlines_;
   const size_t leading_blank_lines = leading_newlines == 0 ? 0 : leading_newlines - 1;
 
   auto token_span_sequence =
-      std::make_unique<TokenSpanSequence>(element.span().data(), leading_blank_lines);
+      std::make_unique<TokenSpanSequence>(token.span().data(), leading_blank_lines);
   token_span_sequence->SetTrailingSpace(has_trailing_space);
   token_span_sequence->Close();
   this->GetFormattingTreeVisitor()->building_.top().push_back(std::move(token_span_sequence));
@@ -456,7 +472,7 @@ void SpanSequenceTreeVisitor::OnAttributeNew(const raw::AttributeNew& element) {
   if (element.args.empty()) {
     const auto builder =
         SpanBuilder<AtomicSpanSequence>(this, element, SpanSequence::Position::kNewlineUnindented);
-    const auto token_builder = TokenBuilder(this, element, false);
+    const auto token_builder = TokenBuilder(this, element.start_, false);
     return;
   }
 
@@ -609,11 +625,11 @@ void SpanSequenceTreeVisitor::OnFile(const std::unique_ptr<raw::File>& element) 
 void SpanSequenceTreeVisitor::OnIdentifier(const std::unique_ptr<raw::Identifier>& element) {
   const auto visiting = Visiting(this, VisitorKind::kIdentifier);
   if (IsInsideOf(VisitorKind::kCompoundIdentifier)) {
-    const auto builder = TokenBuilder(this, *element, false);
+    const auto builder = TokenBuilder(this, element->start_, false);
     TreeVisitor::OnIdentifier(element);
   } else {
     const auto span_builder = SpanBuilder<AtomicSpanSequence>(this, *element);
-    const auto token_builder = TokenBuilder(this, *element, false);
+    const auto token_builder = TokenBuilder(this, element->start_, false);
     TreeVisitor::OnIdentifier(element);
   }
 }
@@ -621,7 +637,7 @@ void SpanSequenceTreeVisitor::OnIdentifier(const std::unique_ptr<raw::Identifier
 void SpanSequenceTreeVisitor::OnLiteral(const std::unique_ptr<raw::Literal>& element) {
   const auto visiting = Visiting(this, VisitorKind::kLiteral);
   const auto trailing_space = IsInsideOf(VisitorKind::kBinaryOperatorFirstConstant);
-  const auto builder = TokenBuilder(this, *element, trailing_space);
+  const auto builder = TokenBuilder(this, element->start_, trailing_space);
   TreeVisitor::OnLiteral(element);
 }
 
@@ -701,6 +717,49 @@ void SpanSequenceTreeVisitor::OnNamedLayoutReference(
   const auto visiting = Visiting(this, VisitorKind::kNamedLayoutReference);
   const auto builder = SpanBuilder<AtomicSpanSequence>(this, *element);
   TreeVisitor::OnNamedLayoutReference(element);
+}
+
+void SpanSequenceTreeVisitor::OnOrdinal64(raw::Ordinal64& element) {
+  const auto visiting = Visiting(this, VisitorKind::kOrdinal64);
+  const auto span_builder = SpanBuilder<AtomicSpanSequence>(this, element);
+  const auto token_builder = TokenBuilder(this, element.start_, false);
+}
+
+void SpanSequenceTreeVisitor::OnOrdinaledLayoutMember(
+    const std::unique_ptr<raw::OrdinaledLayoutMember>& element) {
+  const auto visiting = Visiting(this, VisitorKind::kOrdinaledLayoutMember);
+  if (element->attributes != nullptr) {
+    OnAttributeListNew(element->attributes);
+  }
+
+  const auto ordinal_digits = element->ordinal->start_.data().size();
+  {
+    const auto builder = StatementBuilder<DivisibleSpanSequence>(
+        this, *element, SpanSequence::Position::kNewlineIndented);
+
+    // We want to keep the ordinal atomic with the member name, so we need a separate scope for
+    // these two nodes, as they are meant to be their own AtomicSpanSequence, but no raw AST node or
+    // visitor exists for grouping them.
+    {
+      const auto ordinal_name_builder = SpanBuilder<AtomicSpanSequence>(this, element->start_);
+      OnOrdinal64(*element->ordinal);
+      building_.top().back()->SetTrailingSpace(true);
+      if (!element->reserved)
+        OnIdentifier(element->identifier);
+    }
+
+    if (!element->reserved)
+      OnTypeConstructorNew(element->type_ctor);
+    AddSpacesBetweenChildren(building_.top());
+    ClearBlankLinesAfterAttributeList(element->attributes, building_.top());
+  }
+
+  // The closing of the previous scope means that the SpanSequence representing this ordinaled
+  // layout member has been added to the end of the currently building list.  If there is a non-zero
+  // indentation offset (as determined by the number of digits in the ordinal), make sure to apply
+  // it here.
+  if (ordinal_digits > 1 && !building_.top().empty())
+    OutdentFirstChildToken(building_.top().back(), ordinal_digits - 1);
 }
 
 void SpanSequenceTreeVisitor::OnStructLayoutMember(

@@ -50,12 +50,7 @@ class SpanSequence {
   };
 
   explicit SpanSequence(Kind kind, Position position, size_t leading_blank_lines = 0)
-      : kind_(kind),
-        position_(position),
-        leading_blank_lines_(leading_blank_lines),
-        closed_(false),
-        has_trailing_space_(false),
-        required_size_(0) {}
+      : kind_(kind), position_(position), leading_blank_lines_(leading_blank_lines) {}
 
   virtual ~SpanSequence() = default;
 
@@ -76,27 +71,54 @@ class SpanSequence {
       bool wrapped, std::string* out) const = 0;
 
   size_t GetLeadingBlankLines() const { return leading_blank_lines_; }
+  size_t GetOutdentation() const { return outdentation_; }
   size_t GetRequiredSize() const { return required_size_; }
   Kind GetKind() const { return kind_; }
   Position GetPosition() const { return position_; }
-  bool HasTrailingSpace() const { return has_trailing_space_; }
+  bool HasTrailingSpace() const { return trailing_space_; }
   bool IsClosed() const { return closed_; }
   void SetLeadingBlankLines(size_t leading_blanks) { leading_blank_lines_ = leading_blanks; }
+  void SetOutdentation(size_t outdentation) { outdentation_ = outdentation; }
   void SetRequiredSize(size_t required_size) { required_size_ = required_size; }
-  void SetTrailingSpace(bool has_trailing_space) { has_trailing_space_ = has_trailing_space; }
+  void SetTrailingSpace(bool trailing_space) { trailing_space_ = trailing_space; }
 
  private:
   const enum Kind kind_;
   const enum Position position_;
 
+  // A "closed" SpanSequence can no longer be modified.  When the Close() method is called, the
+  // required_size_ and trailing_space_ members are calculated, and may then be accessed by
+  // downstream functions like the printer.
+  bool closed_ = false;
+
   // Tracks the number of leading new lines to print before this SpanSequence is added to the
   // printer's output string,
   size_t leading_blank_lines_;
 
-  // A "closed" SpanSequence can no longer be modified.  When the Close() method is called, the
-  // required_size_ and has_trailing_space_ members are calculated, and may then be accessed by
-  // downstream functions like the printer.
-  bool closed_;
+  // The number of spaces to remove from the indentation when printing this SpanSequence.  As of
+  // now, it is only used for the purpose of vertically aligning ordinaled layout members, like so:
+  //
+  //   type MyTable = table {
+  //     1: reserved;
+  //     // ...
+  //    10: reserved;
+  //     // ...
+  //   100: reserved;
+  //     // etc...
+  //   };
+  size_t outdentation_ = 0;
+
+  // Tracks how many characters of line space are needed to render this SpanSequence without
+  // dividing it.  For example, if we have the DivisibleSpanSequence:
+  //
+  //   |------------------40------------------|
+  //   Method(MyLongRequestName) -> (MyLongResponseName);
+  //   |-----------------------| |----------------------|
+  //   |-----------------------50-----------------------|
+  //
+  // we can see that it's required_size_ of 50 is greater than the available line width of 40, so it
+  // must be split.
+  size_t required_size_ = 0;
 
   // Tracks whether or not we would like to add a trailing space after this SpanSequence, though it
   // does not strictly guarantee that such a space will appear in the final output.  For example, if
@@ -112,19 +134,7 @@ class SpanSequence {
   //   type MyStruct =
   //       // My oddly placed comment.
   //       struct {};
-  bool has_trailing_space_;
-
-  // Tracks how many characters of line space are needed to render this SpanSequence without
-  // dividing it.  For example, if we have the DivisibleSpanSequence:
-  //
-  //   |------------------40------------------|
-  //   Method(MyLongRequestName) -> (MyLongResponseName);
-  //   |-----------------------| |----------------------|
-  //   |-----------------------50-----------------------|
-  //
-  // we can see that it's required_size_ of 50 is greater than the available line width of 40, so it
-  // must be split.
-  size_t required_size_;
+  bool trailing_space_ = false;
 };
 
 // Each TokenSpanSequence points to an underlying string_view representing exactly one token from

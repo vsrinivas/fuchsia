@@ -20,17 +20,35 @@ void MaybeAddBlankLinesAfterStandaloneComment(const SpanSequence* printing,
                                               std::string* out) {
   if (printing->GetLeadingBlankLines() > 0 &&
       last_printed_kind == SpanSequence::Kind::kStandaloneComment) {
-    for (size_t i = 0; i < printing->GetLeadingBlankLines(); i++) {
+    while (!out->empty() && out->back() == ' ')
+      out->pop_back();
+    for (size_t i = 0; i < printing->GetLeadingBlankLines(); i++)
       *out += "\n";
-    }
   }
 }
 
 // Before printing some text after a newline, we want to make sure to indent to the proper position.
 // No indentation is performed if we are not on a newline, or are on the first line of the output.
-void MaybeIndentLine(size_t indentation, std::string* out) {
-  if (out->empty() || out->back() == '\n')
+void MaybeIndentLine(size_t indentation, size_t outdentation, std::string* out) {
+  if (out->empty() || out->back() == '\n') {
+    // It may be tempting to write this as:
+    //
+    //   *out += std::string(indentation > outdentation ? indentation - outdentation : 0, ' ');
+    //
+    // and omit the deleting while-clause below, but this will introduce a subtle bug.  It is
+    // usually the case that the SpanSequence being outdented is actually the first child of the
+    // SpanSequence being indented, resulting in two calls like:
+    //
+    //   MaybeIndentLine(N, 0, out); // For the parent.
+    //   MaybeIndentLine(0, N, out); // For the first child.
+    //
+    // Using the formulation above, this would result in no outdentation being applied.
     *out += std::string(indentation, ' ');
+  }
+  while (outdentation > 0 && !out->empty() && out->back() == ' ') {
+    out->pop_back();
+    outdentation -= 1;
+  }
 }
 
 // Walks a list of SpanSequences, returning the index of the first one that is not a comment.
@@ -72,7 +90,7 @@ std::optional<SpanSequence::Kind> TokenSpanSequence::Print(
     const size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind,
     size_t indentation, bool wrapped, std::string* out) const {
   MaybeAddBlankLinesAfterStandaloneComment(this, last_printed_kind, out);
-  MaybeIndentLine(indentation, out);
+  MaybeIndentLine(indentation, GetOutdentation(), out);
   *out += std::string(span_);
   return SpanSequence::Kind::kToken;
 }
@@ -188,7 +206,7 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
     const auto& child = children[i];
     switch (child->GetKind()) {
       case SpanSequence::Kind::kAtomic: {
-        MaybeIndentLine(wrapped_indentation, out);
+        MaybeIndentLine(wrapped_indentation, child->GetOutdentation(), out);
         last_printed_kind =
             child->Print(max_col_width, last_printed_kind, indentation, wrapped, out);
 
@@ -276,7 +294,7 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
     // which forces line breaks.
     for (size_t i = 0; i < children.size(); ++i) {
       const auto& child = children[i];
-      MaybeIndentLine(wrapped_indentation, out);
+      MaybeIndentLine(wrapped_indentation, child->GetOutdentation(), out);
       last_printed_kind = child->Print(max_col_width, last_printed_kind, indentation, wrapped, out);
       if (i < last.value_or(0)) {
         *out += "\n";
@@ -303,7 +321,7 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
       }
       case SpanSequence::Kind::kAtomic:
       case SpanSequence::Kind::kDivisible: {
-        MaybeIndentLine(wrapped_indentation, out);
+        MaybeIndentLine(wrapped_indentation, child->GetOutdentation(), out);
         last_printed_kind =
             child->Print(max_col_width, last_printed_kind, indentation, wrapped, out);
 
@@ -331,7 +349,7 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
         break;
       }
       case SpanSequence::Kind::kMultiline: {
-        MaybeIndentLine(wrapped_indentation, out);
+        MaybeIndentLine(wrapped_indentation, child->GetOutdentation(), out);
         last_printed_kind =
             child->Print(max_col_width, last_printed_kind, indentation, wrapped, out);
         if (!wrapped) {
@@ -386,7 +404,7 @@ std::optional<SpanSequence::Kind> MultilineSpanSequence::Print(
         child_indentation += kIndentation;
       }
       if (child->GetKind() != SpanSequence::Kind::kMultiline) {
-        MaybeIndentLine(child_indentation, out);
+        MaybeIndentLine(child_indentation, child->GetOutdentation(), out);
       }
     }
 

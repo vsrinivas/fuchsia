@@ -1354,6 +1354,664 @@ type MyPopulatedStruct_Abcdef = struct {
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// Ensure that an already properly formatted table declaration is not modified by another run
+// through the formatter.
+TEST(NewFormatterTests, TableFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyEmptyTable_Abcdefghij = table {};
+
+type MyPopulatedTable_Abcdefgh = table {
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+
+    3: field3_abcdefghijklmnopqr table {
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyEmptyTable_Abcdefghij = table {};
+
+type MyPopulatedTable_Abcdefgh = table {
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+
+    3: field3_abcdefghijklmnopqr table {
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, TableOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyEmptyTable_Abcdefghijk = table {};
+type MyPopulatedTable_Abcdefghi = table {
+    1: field1_abcdefghijklmnopqrstu bool;
+    2: reserved;
+
+    3: field3_abcdefghijklmnopqrs table {
+        1: nested1_abcd vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyEmptyTable_Abcdefghijk
+        = table {};
+type MyPopulatedTable_Abcdefghi
+        = table {
+    1: field1_abcdefghijklmnopqrstu
+            bool;
+    2: reserved;
+
+    3: field3_abcdefghijklmnopqrs
+            table {
+        1: nested1_abcd
+                vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, TableUnformatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyEmptyTable_Abcdefghij =   table  { } ;
+
+type MyPopulatedTable_Abcdefgh= table {
+    1:   field1_abcdefghijklmnopqrst bool;
+    2  : reserved;
+
+    3:field3_abcdefghijklmnopqr    table
+{
+        1
+:nested1_abc  vector<uint8>:16  ;};
+
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyEmptyTable_Abcdefghij = table {};
+
+type MyPopulatedTable_Abcdefgh = table {
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+
+    3: field3_abcdefghijklmnopqr table {
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// This test is not technically valid FIDL (ordinals must be dense), but it does parse successfully,
+// which is sufficient for testing outdentation formatting.
+TEST(NewFormatterTests, TableOutdentation) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyTable = table {
+1: reserved;
+12: field12 bool;
+// comment 1
+123: reserved;
+1234: field1234 bool;
+12345: reserved;
+123456: field123456 table {
+    1: reserved;
+    12: field12 bool;
+    123: reserved;
+
+    // comment 2
+    1234: field1234 bool;
+    12345: reserved;
+    123456: field123456 table {
+        1: reserved;
+        12: field12 bool;
+        123: reserved;
+        1234: field1234 bool;
+        // comment 3
+
+        12345: reserved;
+        123456: field123456 table {};
+    };
+};
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyTable = table {
+    1: reserved;
+   12: field12 bool;
+    // comment 1
+  123: reserved;
+ 1234: field1234 bool;
+12345: reserved;
+123456: field123456 table {
+        1: reserved;
+       12: field12 bool;
+      123: reserved;
+
+        // comment 2
+     1234: field1234 bool;
+    12345: reserved;
+   123456: field123456 table {
+            1: reserved;
+           12: field12 bool;
+          123: reserved;
+         1234: field1234 bool;
+            // comment 3
+
+        12345: reserved;
+       123456: field123456
+                    table {};
+        };
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test with comments, doc comments, and attributes added.
+TEST(NewFormatterTests, TableWithAllAnnotations) {
+  // ---------------40---------------- |
+  std::string unformatted =
+      R"FIDL(
+library foo.bar;
+
+ // comment 1
+  /// doc comment 1
+
+   @foo
+
+    type MyEmptyTable_Abcdefghij = table {};
+
+type MyPopulatedTable_Abcdefgh = table {
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+
+  // comment 2
+
+   /// doc comment 2
+
+     @bar
+
+      3: field3_abcdefghijklmnopqr table {
+         /// doc comment 3
+          @baz("qux")
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+// comment 1
+/// doc comment 1
+@foo
+type MyEmptyTable_Abcdefghij = table {};
+
+type MyPopulatedTable_Abcdefgh = table {
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+
+    // comment 2
+
+    /// doc comment 2
+    @bar
+    3: field3_abcdefghijklmnopqr table {
+        /// doc comment 3
+        @baz("qux")
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
+//  `=table{` does not get split into `= table {` properly.  This should be fixed when proper
+//  token parsing is used.
+TEST(NewFormatterTests, TableMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted =
+      R"FIDL(library foo.bar;type MyEmptyTable_Abcdefghij=table{};type MyPopulatedTable_Abcdefgh=table{1:field1_abcdefghijklmnopqrst bool;2:reserved;3:field3_abcdefghijklmnopqr table{1:nested1_abc vector<uint8>:16;};};)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+type MyEmptyTable_Abcdefghij = table{};
+type MyPopulatedTable_Abcdefgh =table{
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+    3: field3_abcdefghijklmnopqr table{
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, TableMaximalNewlines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library
+foo
+.
+bar
+;
+
+type
+MyEmptyTable_Abcdefghij
+=
+table
+{
+}
+;
+
+type
+MyPopulatedTable_Abcdefgh
+=
+table
+{
+1
+:
+field1_abcdefghijklmnopqrst
+bool
+;
+2
+:
+reserved
+;
+3
+:
+field3_abcdefghijklmnopqr
+table
+{
+1
+:
+nested1_abc
+vector
+<
+uint8
+>
+:
+16
+;
+}
+;
+}
+;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyEmptyTable_Abcdefghij = table {};
+
+type MyPopulatedTable_Abcdefgh = table {
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+    3: field3_abcdefghijklmnopqr table {
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Ensure that an already properly formatted union declaration is not modified by another run
+// through the formatter.
+TEST(NewFormatterTests, UnionFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyUnion_Abcdefghijklmnopq = union {
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+
+    3: field3_abcdefghijklmnopqr union {
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyUnion_Abcdefghijklmnopq = union {
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+
+    3: field3_abcdefghijklmnopqr union {
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, UnionOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyUnion_Abcdefghijklmnopqr = union {
+    1: field1_abcdefghijklmnopqrstu bool;
+    2: reserved;
+
+    3: field3_abcdefghijklmnopqrs union {
+        1: nested1_abcd vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyUnion_Abcdefghijklmnopqr
+        = union {
+    1: field1_abcdefghijklmnopqrstu
+            bool;
+    2: reserved;
+
+    3: field3_abcdefghijklmnopqrs
+            union {
+        1: nested1_abcd
+                vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, UnionUnformatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyUnion_A= strict resource union {
+    1:   field1_abcdefghijklmnopqrst bool;
+    2  : reserved;
+
+    3:field3_abcdefghijklmnopqr    union
+{
+        1
+:nested1_abc  vector<uint8>:16  ;};
+
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyUnion_A = strict resource union {
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+
+    3: field3_abcdefghijklmnopqr union {
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// This test is not technically valid FIDL (ordinals must be dense), but it does parse successfully,
+// which is sufficient for testing outdentation formatting.
+TEST(NewFormatterTests, UnionOutdentation) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyUnion = flexible resource union {
+1: reserved;
+12: field12 bool;
+// comment 1
+123: reserved;
+1234: field1234 bool;
+12345: reserved;
+123456: field123456 flexible union {
+    1: reserved;
+    12: field12 bool;
+    123: reserved;
+
+    // comment 2
+    1234: field1234 bool;
+    12345: reserved;
+    123456: field123456 strict union {
+        1: reserved;
+        12: field12 bool;
+        123: reserved;
+        1234: field1234 bool;
+        // comment 3
+
+        12345: reserved;
+        123456: field123456 struct {};
+    };
+};
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyUnion = flexible resource union {
+    1: reserved;
+   12: field12 bool;
+    // comment 1
+  123: reserved;
+ 1234: field1234 bool;
+12345: reserved;
+123456: field123456 flexible union {
+        1: reserved;
+       12: field12 bool;
+      123: reserved;
+
+        // comment 2
+     1234: field1234 bool;
+    12345: reserved;
+   123456: field123456
+                strict union {
+            1: reserved;
+           12: field12 bool;
+          123: reserved;
+         1234: field1234 bool;
+            // comment 3
+
+        12345: reserved;
+       123456: field123456
+                    struct {};
+        };
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test with comments, doc comments, and attributes added.
+TEST(NewFormatterTests, UnionWithAllAnnotations) {
+  // ---------------40---------------- |
+  std::string unformatted =
+      R"FIDL(
+library foo.bar;
+
+ // comment 1
+  /// doc comment 1
+
+   @foo
+type MyUnion_Abcdefgh = resource union {
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+
+  // comment 2
+
+   /// doc comment 2
+
+     @bar
+
+      3: field3_abcdefghijklmnopqr union {
+         /// doc comment 3
+          @baz("qux")
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+// comment 1
+/// doc comment 1
+@foo
+type MyUnion_Abcdefgh = resource union {
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+
+    // comment 2
+
+    /// doc comment 2
+    @bar
+    3: field3_abcdefghijklmnopqr union {
+        /// doc comment 3
+        @baz("qux")
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
+//  `=union{` does not get split into `= union {` properly.  This should be fixed when proper
+//  token parsing is used.
+TEST(NewFormatterTests, UnionMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted =
+      R"FIDL(library foo.bar;type MyUnion_Abcdefghijklmnopq=union{1:field1_abcdefghijklmnopqrst bool;2:reserved;3:field3_abcdefghijklmnopqr union{1:nested1_abc vector<uint8>:16;};};)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+type MyUnion_Abcdefghijklmnopq =union{
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+    3: field3_abcdefghijklmnopqr union{
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, UnionMaximalNewlines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library
+foo
+.
+bar
+;
+
+type
+MyUnion_Abcdefghijklmnopq
+=
+union
+{
+1
+:
+field1_abcdefghijklmnopqrst
+bool
+;
+2
+:
+reserved
+;
+3
+:
+field3_abcdefghijklmnopqr
+union
+{
+1
+:
+nested1_abc
+vector
+<
+uint8
+>
+:
+16
+;
+}
+;
+}
+;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+type MyUnion_Abcdefghijklmnopq = union {
+    1: field1_abcdefghijklmnopqrst bool;
+    2: reserved;
+    3: field3_abcdefghijklmnopqr union {
+        1: nested1_abc vector<uint8>:16;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Ensure that an already properly formatted using declaration is not modified by another run
 // through the formatter.
 TEST(NewFormatterTests, UsingFormatted) {
