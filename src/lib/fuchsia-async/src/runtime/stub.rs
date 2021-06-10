@@ -37,6 +37,14 @@ pub mod task {
             unimplemented!();
         }
     }
+
+    /// Stub unblock, panics if used.
+    pub fn unblock<T: 'static + Send>(
+        _: impl 'static + Send + FnOnce() -> T,
+    ) -> impl 'static + Send + Future<Output = T> {
+        // TODO(https://github.com/rust-lang/rust/issues/69882): Implement solution.
+        async { unimplemented!() }
+    }
 }
 
 pub mod executor {

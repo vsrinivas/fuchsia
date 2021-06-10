@@ -62,6 +62,34 @@ pub mod task {
             self.0.poll(cx)
         }
     }
+
+    /// Offload a blocking function call onto a different thread.
+    ///
+    /// This function can be called from an asynchronous function without blocking
+    /// it, returning a future that can be `.await`ed normally. The provided
+    /// function should contain at least one blocking operation, such as:
+    ///
+    /// - A synchronous syscall that does not yet have an async counterpart.
+    /// - A compute operation which risks blocking the executor for an unacceptable
+    ///   amount of time.
+    ///
+    /// If neither of these conditions are satisfied, just call the function normally,
+    /// as synchronous functions themselves are allowed within an async context,
+    /// as long as they are not blocking.
+    ///
+    /// If you have an async function that may block, refactor the function such that
+    /// the blocking operations are offloaded onto the function passed to [`unblock`].
+    ///
+    /// NOTE: Synchronous functions cannot be cancelled and may keep running after
+    /// the returned future is dropped. As a result, resources held by the function
+    /// should be assumed to be held until the returned future completes.
+    ///
+    /// For details on performance characteristics and edge cases, see [`blocking::unblock`].
+    pub fn unblock<T: 'static + Send>(
+        f: impl 'static + Send + FnOnce() -> T,
+    ) -> impl 'static + Send + Future<Output = T> {
+        blocking::unblock(f)
+    }
 }
 
 pub mod executor {

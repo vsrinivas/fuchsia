@@ -19,7 +19,7 @@ use self::stub as implementation;
 
 pub use implementation::{
     executor::{Duration, LocalExecutor, SendExecutor, TestExecutor, Time},
-    task::Task,
+    task::{unblock, Task},
     timer::Timer,
 };
 
@@ -236,6 +236,30 @@ mod task_tests {
         // can we spawn, then join a task
         run(async move {
             assert_eq!(42, Task::blocking(async move { 42u8 }).await);
+        })
+    }
+
+    #[test]
+    fn can_join_unblock() {
+        // can we poll a blocked task
+        run(async move {
+            assert_eq!(42, unblock(|| 42u8).await);
+        })
+    }
+
+    #[test]
+    fn can_join_unblock_local() {
+        // can we poll a blocked task in a local executor
+        LocalExecutor::new().unwrap().run_singlethreaded(async move {
+            assert_eq!(42, unblock(|| 42u8).await);
+        });
+    }
+
+    #[test]
+    #[should_panic]
+    fn unblock_fn_panics() {
+        run(async move {
+            unblock(|| panic!("bad")).await;
         })
     }
 
