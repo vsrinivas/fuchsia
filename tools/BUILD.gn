@@ -24,7 +24,6 @@ group("tools") {
     "//tools/fidl",
     "//tools/fidlcat:fidlcat_host",
     "//tools/fvdl:host($host_toolchain)",
-    "//tools/integration/fint($host_toolchain)",
     "//tools/jq5:install($host_toolchain)",
     "//tools/loglistener:host($host_toolchain)",
     "//tools/make-efi:host",
@@ -48,6 +47,14 @@ group("build_infra") {
     "//tools/blobstats($host_toolchain)",
     "//tools/build/ninjago/buildstats($host_toolchain)",
     "//tools/build/ninjago/ninjatrace($host_toolchain)",
+
+    # The infrastructure uses a version of fint built using the Go toolchain,
+    # rather than Ninja, so we technically don't need to include fint here. But
+    # we still want the build graph to be considered to be affected by fint
+    # changes, because fint is always used by the infrastructure to build
+    # fuchsia and it may affect later infrastructure steps that might be skipped
+    # if the build graph was considered unaffected.
+    "//tools/integration/fint($host_toolchain)",
     "//tools/size_checker/cmd:host($host_toolchain)",
   ]
 }
