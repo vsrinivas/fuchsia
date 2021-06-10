@@ -1374,7 +1374,7 @@ static_assert(
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Parent>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1388,10 +1388,10 @@ class ::fidl::internal::WireClientImpl<
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
           request);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_inheritancewithrecursivedecl::Parent>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
@@ -1462,7 +1462,7 @@ class ::fidl::internal::WireWeakEventSender<
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Child>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1488,10 +1488,10 @@ class ::fidl::internal::WireClientImpl<
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
           request);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_inheritancewithrecursivedecl::Child>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

@@ -138,9 +138,8 @@ class Client final {
   // re-binding behavior.
   void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
             std::shared_ptr<fidl::WireAsyncEventHandler<Protocol>> event_handler = nullptr) {
-    // Cannot use |std::make_shared| because the |ClientImpl| constructor is private.
-    controller_.Bind(static_cast<internal::ClientBase*>(new ClientImpl()), client_end.TakeChannel(),
-                     dispatcher, std::move(event_handler));
+    controller_.Bind(std::make_shared<ClientImpl>(), client_end.TakeChannel(), dispatcher,
+                     std::move(event_handler));
   }
 
   // Begins to unbind the channel from the dispatcher. May be called from any

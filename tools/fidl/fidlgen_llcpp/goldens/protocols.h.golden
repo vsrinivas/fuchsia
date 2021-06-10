@@ -13591,7 +13591,7 @@ class ::fidl::WireResponseContext<
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_protocols::HandleRightsProtocol>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |HandleRightsProtocol.ResponseMethod()|.
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
@@ -13636,10 +13636,10 @@ class ::fidl::internal::WireClientImpl<
   ::fidl::Result NoResponseMethod(::fidl::BufferSpan _request_buffer,
                                   ::zx::socket&& h);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_protocols::HandleRightsProtocol>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
@@ -13740,7 +13740,7 @@ class ::fidl::WireResponseContext<::fidl_test_protocols::Transitional::Request>
 
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Transitional.Request()|.
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
@@ -13781,10 +13781,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>
   // Caller provides the backing storage for FIDL message via request buffer.
   ::fidl::Result OneWay(::fidl::BufferSpan _request_buffer, int64_t x);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_protocols::Transitional>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
@@ -13921,7 +13921,7 @@ class ::fidl::WireResponseContext<
 
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |ChannelProtocol.MethodB()|.
   // Allocates 32 bytes of request buffer on the stack. The callback is stored
@@ -14028,10 +14028,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
   ::fidl::Result MethodA(::fidl::BufferSpan _request_buffer, int64_t a,
                          int64_t b);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_protocols::ChannelProtocol>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
@@ -14187,7 +14187,7 @@ class ::fidl::WireResponseContext<
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestEmptyResponse()|. Allocates 16
@@ -14340,11 +14340,11 @@ class ::fidl::internal::WireClientImpl<
   ::fidl::Result WithRequestNoResponse(::fidl::BufferSpan _request_buffer,
                                        ::fidl::StringView arg);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<
       ::fidl_test_protocols::WithAndWithoutRequestResponse>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
@@ -14518,7 +14518,7 @@ class ::fidl::WireResponseContext<
 
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |WithErrorSyntax.ResponseAsStruct()|.
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
@@ -14639,10 +14639,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
       ::fidl_test_protocols::WithErrorSyntax::HandleInResult>
   HandleInResult_Sync(::fidl::BufferSpan _response_buffer);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_protocols::WithErrorSyntax>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
@@ -14706,16 +14706,16 @@ class ::fidl::internal::WireWeakEventSender<
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_protocols::DiscoverableProtocol>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result Method();
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_protocols::DiscoverableProtocol>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

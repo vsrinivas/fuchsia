@@ -131,7 +131,7 @@ zx::channel ChannelRefTracker::WaitForChannel() {
   return channel;
 }
 
-void ClientController::Bind(ClientBase* client_impl, zx::channel client_end,
+void ClientController::Bind(std::shared_ptr<ClientBase>&& client_impl, zx::channel client_end,
                             async_dispatcher_t* dispatcher,
                             std::shared_ptr<AsyncEventHandler>&& event_handler) {
   if (client_impl_) {
@@ -142,7 +142,7 @@ void ClientController::Bind(ClientBase* client_impl, zx::channel client_end,
     client_impl_.reset();
   }
 
-  client_impl_.reset(client_impl);
+  client_impl_ = std::move(client_impl);
   client_impl_->Bind(client_impl_, std::move(client_end), dispatcher, std::move(event_handler));
   control_ = std::make_shared<ControlBlock>(client_impl_);
 }

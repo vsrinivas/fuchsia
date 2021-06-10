@@ -815,7 +815,7 @@ class ::fidl::WireResponseContext<
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_transitivedependenciescompose::Top>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Top.GetFoo()|.
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
@@ -847,10 +847,10 @@ class ::fidl::internal::WireClientImpl<
       ::fidl_test_transitivedependenciescompose::Top::GetFoo>
   GetFoo_Sync(::fidl::BufferSpan _response_buffer);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_transitivedependenciescompose::Top>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

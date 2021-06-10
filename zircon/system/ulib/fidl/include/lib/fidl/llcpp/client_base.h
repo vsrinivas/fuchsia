@@ -298,8 +298,8 @@ class ClientController {
 
   // Binds the client implementation to the |dispatcher| and |client_end|.
   // Takes ownership of |client_impl| and starts managing its lifetime.
-  void Bind(ClientBase* client_impl, zx::channel client_end, async_dispatcher_t* dispatcher,
-            std::shared_ptr<AsyncEventHandler>&& event_handler);
+  void Bind(std::shared_ptr<ClientBase>&& client_impl, zx::channel client_end,
+            async_dispatcher_t* dispatcher, std::shared_ptr<AsyncEventHandler>&& event_handler);
 
   // Begins to unbind the channel from the dispatcher. In particular, it
   // triggers the asynchronous destruction of the bound |ClientImpl|. May be

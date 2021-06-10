@@ -1907,7 +1907,7 @@ class ::fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_requestflexibleenvelope::Protocol>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|.
   // The request and callback are allocated on the heap.
@@ -1983,10 +1983,10 @@ class ::fidl::internal::WireClientImpl<
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
       ::fidl::BufferSpan _response_buffer);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_requestflexibleenvelope::Protocol>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

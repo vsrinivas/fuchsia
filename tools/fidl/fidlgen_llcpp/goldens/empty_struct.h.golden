@@ -1478,7 +1478,7 @@ class ::fidl::WireResponseContext<
 
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |EmptyProtocol.SendAndReceive()|.
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
@@ -1523,10 +1523,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>
   ::fidl::Result Send(::fidl::BufferSpan _request_buffer,
                       const ::fidl_test_emptystruct::wire::Empty& e);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_emptystruct::EmptyProtocol>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

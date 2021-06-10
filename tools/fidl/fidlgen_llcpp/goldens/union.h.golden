@@ -5199,7 +5199,7 @@ class ::fidl::WireResponseContext<
 
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
-    : private ::fidl::internal::ClientBase {
+    : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of
   // |TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated()|. Allocates 16
@@ -5274,10 +5274,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
   FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync(
       ::fidl::BufferSpan _response_buffer);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_union::TestProtocol>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

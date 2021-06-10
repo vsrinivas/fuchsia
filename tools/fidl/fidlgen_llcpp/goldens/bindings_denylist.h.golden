@@ -1065,7 +1065,7 @@ class ::fidl::WireResponseContext<
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of
   // |OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol()|. Allocates 16 bytes
@@ -1093,11 +1093,11 @@ class ::fidl::internal::WireClientImpl<
                          LibfuzzerNeedsNonemptyProtocol>
   LibfuzzerNeedsNonemptyProtocol_Sync();
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<
       ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
@@ -1166,12 +1166,12 @@ class ::fidl::internal::WireWeakEventSender<
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_bindingsdenylist::OnlyCppAndDeps>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_bindingsdenylist::OnlyCppAndDeps>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

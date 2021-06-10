@@ -524,12 +524,12 @@ static_assert(sizeof(::fidl_test_handles::wire::Handles) ==
 }  // namespace fidl
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_handles::SomeProtocol> final
-    : private ::fidl::internal::ClientBase {
+    : public ::fidl::internal::ClientBase {
  public:
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_handles::SomeProtocol>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

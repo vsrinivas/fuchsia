@@ -1046,7 +1046,7 @@ class ::fidl::WireResponseContext<::fidl_test_error::Example::Foo>
 
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_error::Example> final
-    : private ::fidl::internal::ClientBase {
+    : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Example.Foo()|.
   // The request and callback are allocated on the heap.
@@ -1077,10 +1077,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_error::Example> final
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_error::Example>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

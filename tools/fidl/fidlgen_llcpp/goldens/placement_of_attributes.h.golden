@@ -1186,7 +1186,7 @@ static_assert(
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_placementofattributes::ExampleProtocol>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1196,11 +1196,11 @@ class ::fidl::internal::WireClientImpl<
   ::fidl::Result Method(::fidl::BufferSpan _request_buffer,
                         const ::exampleusing::wire::Empty& arg);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<
       ::fidl_test_placementofattributes::ExampleProtocol>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

@@ -2066,7 +2066,7 @@ class ::fidl::WireResponseContext<::fidl_test_nullable::SimpleProtocol::Add>
 
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |SimpleProtocol.Add()|.
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
@@ -2100,10 +2100,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>
       ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
       ::fidl::BufferSpan _response_buffer);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_nullable::SimpleProtocol>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

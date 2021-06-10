@@ -2247,7 +2247,7 @@ class ::fidl::WireResponseContext<
 
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Parent.GetChild()|.
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
@@ -2328,10 +2328,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
       ::fidl::BufferSpan _request_buffer,
       ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r);
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_protocolrequest::Parent>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
@@ -2394,12 +2394,12 @@ class ::fidl::internal::WireWeakEventSender<
 
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Child> final
-    : private ::fidl::internal::ClientBase {
+    : public ::fidl::internal::ClientBase {
  public:
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_protocolrequest::Child>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

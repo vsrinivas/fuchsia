@@ -9,7 +9,7 @@ const fragmentProtocolClientImplTmpl = `
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 template<>
-class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
+class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
  public:
   {{- /* Generate both sync and async flavors for two-way methods. */}}
   {{- range .TwoWayMethods }}
@@ -94,10 +94,10 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
 {{ "" }}
   {{- end }}
 
+  {{ .WireClientImpl.Self }}() = default;
+
  private:
   friend class ::fidl::Client<{{ . }}>;
-
-  {{ .WireClientImpl.Self }}() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

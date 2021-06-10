@@ -42,7 +42,7 @@ class ::fidl::WireAsyncEventHandler<fidl::TestProtocol> : public fidl::internal:
 };
 
 template <>
-class ::fidl::internal::WireClientImpl<fidl::TestProtocol> : private fidl::internal::ClientBase {
+class ::fidl::internal::WireClientImpl<fidl::TestProtocol> : public fidl::internal::ClientBase {
  public:
   void PrepareAsyncTxn(internal::ResponseContext* context) {
     internal::ClientBase::PrepareAsyncTxn(context);
@@ -84,10 +84,10 @@ class ::fidl::internal::WireClientImpl<fidl::TestProtocol> : private fidl::inter
     return txids_.size();
   }
 
+  WireClientImpl() = default;
+
  private:
   friend class Client<TestProtocol>;
-
-  WireClientImpl() = default;
 
   // For each event, increment the event count.
   std::optional<UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg,

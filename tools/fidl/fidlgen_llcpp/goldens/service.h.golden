@@ -1162,16 +1162,16 @@ static_assert(
 }  // namespace fidl
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_service::SecondProtocol>
-    final : private ::fidl::internal::ClientBase {
+    final : public ::fidl::internal::ClientBase {
  public:
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result MethodOnSecond();
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_service::SecondProtocol>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
@@ -1236,16 +1236,16 @@ class ::fidl::internal::WireWeakEventSender<
 
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_service::FirstProtocol> final
-    : private ::fidl::internal::ClientBase {
+    : public ::fidl::internal::ClientBase {
  public:
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result MethodOnFirst();
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_service::FirstProtocol>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,

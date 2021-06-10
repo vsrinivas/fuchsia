@@ -1612,7 +1612,7 @@ static_assert(
 }  // namespace fidl
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface> final
-    : private ::fidl::internal::ClientBase {
+    : public ::fidl::internal::ClientBase {
  public:
   /// method comment #1
   ///
@@ -1622,10 +1622,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface> final
   // necessary.
   ::fidl::Result Method();
 
+  WireClientImpl() = default;
+
  private:
   friend class ::fidl::Client<::fidl_test_doccomments::Interface>;
-
-  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
