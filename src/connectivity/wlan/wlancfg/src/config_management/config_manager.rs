@@ -407,66 +407,54 @@ impl SavedNetworksManager {
         discovered_in_scan: Option<ScanType>,
     ) {
         let mut saved_networks = self.saved_networks.lock().await;
-        let mut ids = vec![id.clone()];
-        // This alternate possible network identifier will be checked only if the specified id is
-        // not found, as it is pushed to the end of the list.
-        if let Some(security_type) = lower_valid_security(&id.security_type) {
-            ids.push(NetworkIdentifier::new(id.ssid.clone(), security_type));
-        }
-        for id in ids.into_iter() {
-            let networks = match saved_networks.get_mut(&id) {
-                Some(networks) => networks,
-                None => {
-                    continue;
-                }
-            };
-            for network in networks.iter_mut() {
-                if &network.credential == credential {
-                    match connect_result {
-                        fidl_sme::ConnectResultCode::Success => {
-                            let mut has_change = false;
-                            if !network.has_ever_connected {
-                                network.has_ever_connected = true;
-                                has_change = true;
-                            }
-                            if let Some(scan_type) = discovered_in_scan {
-                                let connect_event = match scan_type {
-                                    ScanType::Passive => HiddenProbEvent::ConnectPassive,
-                                    ScanType::Active => HiddenProbEvent::ConnectActive,
-                                };
-                                network.update_hidden_prob(connect_event);
-                                // TODO(60619): Update the stash with new probability if it has changed
-                            }
-                            if has_change {
-                                // Update persistent storage since a config has changed.
-                                let data = network_config_vec_to_persistent_data(&networks);
-                                if let Err(e) =
-                                    self.stash.lock().await.write(&id.into(), &data).await
-                                {
-                                    info!("Failed to record successful connect in stash: {}", e);
-                                }
+        let networks = match saved_networks.get_mut(&id) {
+            Some(networks) => networks,
+            None => {
+                error!("Failed to find network to record result of connect attempt.");
+                return;
+            }
+        };
+        for network in networks.iter_mut() {
+            if &network.credential == credential {
+                match connect_result {
+                    fidl_sme::ConnectResultCode::Success => {
+                        let mut has_change = false;
+                        if !network.has_ever_connected {
+                            network.has_ever_connected = true;
+                            has_change = true;
+                        }
+                        if let Some(scan_type) = discovered_in_scan {
+                            let connect_event = match scan_type {
+                                ScanType::Passive => HiddenProbEvent::ConnectPassive,
+                                ScanType::Active => HiddenProbEvent::ConnectActive,
+                            };
+                            network.update_hidden_prob(connect_event);
+                            // TODO(60619): Update the stash with new probability if it has changed
+                        }
+                        if has_change {
+                            // Update persistent storage since a config has changed.
+                            let data = network_config_vec_to_persistent_data(&networks);
+                            if let Err(e) = self.stash.lock().await.write(&id.into(), &data).await {
+                                info!("Failed to record successful connect in stash: {}", e);
                             }
                         }
-                        fidl_sme::ConnectResultCode::CredentialRejected => {
-                            network
-                                .perf_stats
-                                .failure_list
-                                .add(bssid, FailureReason::CredentialRejected);
-                        }
-                        fidl_sme::ConnectResultCode::Failed => {
-                            network
-                                .perf_stats
-                                .failure_list
-                                .add(bssid, FailureReason::GeneralFailure);
-                        }
-                        fidl_sme::ConnectResultCode::Canceled => {}
                     }
-                    return;
+                    fidl_sme::ConnectResultCode::CredentialRejected => {
+                        network
+                            .perf_stats
+                            .failure_list
+                            .add(bssid, FailureReason::CredentialRejected);
+                    }
+                    fidl_sme::ConnectResultCode::Failed => {
+                        network.perf_stats.failure_list.add(bssid, FailureReason::GeneralFailure);
+                    }
+                    fidl_sme::ConnectResultCode::Canceled => {}
                 }
+                return;
             }
         }
         // Will not reach here if we find the saved network with matching SSID and credential.
-        info!("Failed to find network to record result of connect attempt.");
+        error!("Failed to find matching network to record result of connect attempt.");
     }
 
     /// Record the disconnect from a network, to be used for things such as avoiding connections
@@ -594,16 +582,6 @@ pub fn select_subset_potentially_hidden_networks(
             type_: network.security_type.into(),
         })
         .collect()
-}
-
-/// Returns a security type that could have been upgraded to the provided security type
-/// in an auto connect.
-fn lower_valid_security(security_type: &SecurityType) -> Option<SecurityType> {
-    match security_type {
-        SecurityType::Wpa3 => Some(SecurityType::Wpa2),
-        SecurityType::Wpa2 => Some(SecurityType::Wpa),
-        _ => None,
-    }
 }
 
 /// Returns a list of security types that could be optionally upgraded to match with this detailed
@@ -1128,61 +1106,6 @@ mod tests {
         .expect("Failed to create SavedNetworksManager");
         assert_variant!(saved_networks.lookup(network_id).await.as_slice(), [config] => {
             assert_eq!(config.has_ever_connected, true);
-        });
-    }
-
-    #[test_case(SecurityType::Wpa3, Some(SecurityType::Wpa2))]
-    #[test_case(SecurityType::Wpa2, Some(SecurityType::Wpa))]
-    #[test_case(SecurityType::Wpa, None)]
-    #[test_case(SecurityType::Wep, None)]
-    #[test_case(SecurityType::None, None)]
-    fn test_lower_security(
-        security_type: SecurityType,
-        expected_security_type: Option<SecurityType>,
-    ) {
-        assert_eq!(expected_security_type, lower_valid_security(&security_type))
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_record_connect_valid_security() {
-        let stash_id = rand_string();
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-        let saved_network_id = NetworkIdentifier::new("foo", SecurityType::Wpa);
-        let credential = Credential::Password(b"some_password".to_vec());
-        let connected_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
-        // If we record a successful connection to a WPA2 network, we shouldn't mark a WPA3 network
-        let saved_unrecorded_id = NetworkIdentifier::new("foo", SecurityType::Wpa3);
-        let bssid = [3; 6];
-
-        assert!(saved_networks
-            .store(saved_network_id.clone(), credential.clone())
-            .await
-            .expect("Failed save network")
-            .is_none());
-        assert!(saved_networks
-            .store(saved_unrecorded_id.clone(), credential.clone())
-            .await
-            .expect("Failed save network")
-            .is_none());
-
-        saved_networks
-            .record_connect_result(
-                connected_id,
-                &credential,
-                bssid,
-                fidl_sme::ConnectResultCode::Success,
-                Some(ScanType::Active),
-            )
-            .await;
-
-        assert_variant!(saved_networks.lookup(saved_network_id).await.as_slice(), [config] => {
-            assert!(config.has_ever_connected);
-        });
-        assert_variant!(saved_networks.lookup(saved_unrecorded_id).await.as_slice(), [config] => {
-            assert!(!config.has_ever_connected);
         });
     }
 
