@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceMonitorRequest},
     fuchsia_zircon as zx,
     futures::TryStreamExt,
-    log::error,
+    log::{error, info},
     std::sync::Arc,
 };
 
@@ -24,9 +24,17 @@ pub(crate) async fn serve_monitor_requests(
     while let Some(req) = req_stream.try_next().await.context("error running DeviceService")? {
         match req {
             DeviceMonitorRequest::ListPhys { responder } => responder.send(&mut list_phys(&phys)),
-            DeviceMonitorRequest::GetDevPath { phy_id: _, responder } => responder.send(None),
-            DeviceMonitorRequest::GetSupportedMacRoles { phy_id: _, responder } => {
-                responder.send(None)
+            DeviceMonitorRequest::GetDevPath { phy_id, responder } => {
+                match query_phy(&phys, phy_id).await {
+                    Some(info) => responder.send(info.dev_path.as_deref()),
+                    None => responder.send(None),
+                }
+            }
+            DeviceMonitorRequest::GetSupportedMacRoles { phy_id, responder } => {
+                match query_phy(&phys, phy_id).await {
+                    Some(mut info) => responder.send(Some(&mut info.supported_mac_roles.drain(..))),
+                    None => responder.send(None),
+                }
             }
             DeviceMonitorRequest::WatchDevices { watcher, control_handle: _ } => {
                 watcher_service
@@ -110,6 +118,26 @@ async fn clear_country(phys: &PhyMap, req: fidl_svc::ClearCountryRequest) -> zx:
             zx::Status::INTERNAL
         }
     }
+}
+
+async fn query_phy(phys: &PhyMap, id: u16) -> Option<fidl_dev::PhyInfo> {
+    info!("query_phy(id = {})", id);
+    let phy = phys.get(&id)?;
+    let query_result = phy
+        .proxy
+        .query()
+        .await
+        .map_err(move |e| {
+            error!("query_phy(id = {}): error sending 'Query' request to phy: {}", id, e);
+        })
+        .ok()?;
+    info!("query_phy(id = {}): received a 'QueryResult' from device", id);
+    zx::Status::ok(query_result.status)
+        .map_err(move |e| {
+            error!("query_phy(id = {}): returned an error: {}", id, e);
+        })
+        .ok()?;
+    Some(query_result.info)
 }
 
 #[cfg(test)]
@@ -234,7 +262,50 @@ mod tests {
     }
 
     #[test]
-    fn test_get_dev_path() {
+    fn test_get_dev_path_success() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        test_values.phys.insert(10u16, phy);
+
+        let service_fut = serve_monitor_requests(
+            test_values.req_stream,
+            test_values.phys,
+            test_values.watcher_service,
+        );
+        pin_mut!(service_fut);
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+
+        // Initiate a GetDevPath request. The returned future should not be able
+        // to produce a result immediately
+        let query_fut = test_values.proxy.get_dev_path(10u16);
+        pin_mut!(query_fut);
+        assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
+
+        // The call above should trigger a Query message to the phy.
+        // Pretend that we are the phy and read the message from the other side.
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+        let responder = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::Query { responder }))) => responder
+        );
+
+        // Reply with a fake phy info
+        responder
+            .send(&mut fidl_dev::QueryResponse { status: zx::sys::ZX_OK, info: fake_phy_info() })
+            .expect("failed to send QueryResponse");
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+
+        // Our original future should complete now, and return the dev path.
+        assert_variant!(
+            exec.run_until_stalled(&mut query_fut),
+            Poll::Ready(Ok(Some(path))) => {
+                assert_eq!(path, "/dev/null");
+            }
+        );
+    }
+
+    #[test]
+    fn test_get_dev_path_phy_not_found() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(
@@ -259,7 +330,53 @@ mod tests {
     }
 
     #[test]
-    fn test_query_phy() {
+    fn test_get_mac_roles_success() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        test_values.phys.insert(10u16, phy);
+
+        let service_fut = serve_monitor_requests(
+            test_values.req_stream,
+            test_values.phys,
+            test_values.watcher_service,
+        );
+        pin_mut!(service_fut);
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+
+        // Initiate a GetMacRoles request. The returned future should not be able
+        // to produce a result immediately
+        let query_fut = test_values.proxy.get_supported_mac_roles(10u16);
+        pin_mut!(query_fut);
+        assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
+
+        // The call above should trigger a Query message to the phy.
+        // Pretend that we are the phy and read the message from the other side.
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+        let responder = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::Query { responder }))) => responder
+        );
+
+        // Reply with a fake phy info
+        let mut phy_info = fake_phy_info();
+        phy_info.supported_mac_roles.push(fidl_dev::MacRole::Client);
+        responder
+            .send(&mut fidl_dev::QueryResponse { status: zx::sys::ZX_OK, info: phy_info })
+            .expect("failed to send QueryResponse");
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+
+        // Our original future should complete now and the client role should be reported.
+        assert_variant!(
+            exec.run_until_stalled(&mut query_fut),
+            Poll::Ready(Ok(Some(roles))) => {
+                assert_eq!(roles.len(), 1);
+                assert_eq!(roles[0], fidl_dev::MacRole::Client);
+            }
+        );
+    }
+
+    #[test]
+    fn test_get_mac_roles_phy_not_found() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(
@@ -271,7 +388,7 @@ mod tests {
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
-        // Query a PHY's MAC roles.
+        // Query a PHY's dev path.
         let query_fut = test_values.proxy.get_supported_mac_roles(0);
         pin_mut!(query_fut);
         assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
@@ -732,5 +849,13 @@ mod tests {
                 assert_eq!(status, zx::Status::NOT_SUPPORTED.into_raw());
             }
         );
+    }
+
+    fn fake_phy_info() -> fidl_dev::PhyInfo {
+        fidl_dev::PhyInfo {
+            id: 10,
+            dev_path: Some("/dev/null".to_string()),
+            supported_mac_roles: Vec::new(),
+        }
     }
 }
