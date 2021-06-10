@@ -36,6 +36,7 @@ AccessibilityView::AccessibilityView(
   fuchsia::ui::views::ViewRef a11y_view_ref_copy;
   fidl::Clone(a11y_view_ref, &a11y_view_ref_copy);
 
+  view_ref_.emplace();
   fidl::Clone(a11y_view_ref, &(*view_ref_));
 
   // Create a11y view. We need to do this step before we ask root presenter to
