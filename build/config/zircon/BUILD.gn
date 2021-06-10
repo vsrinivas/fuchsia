@@ -858,47 +858,6 @@ variant("tiny") {
 # undefined behavior in fuchsia. THIS CONFIG SHOULD NOT BE USED.
 config("temporarily_disable_ubsan_do_not_use") {
   visibility = [
-    # TODO(fxbug.dev/41888): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "//zircon/system/ulib/affine:*",
-    "//zircon/system/ulib/affine/test:*",
-
-    # TODO(fxbug.dev/41892): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "//zircon/system/ulib/trace-reader:*",
-
-    # TODO(fxbug.dev/42488): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "//zircon/system/dev/display/display:*",
-
-    # TODO(fxbug.dev/41887): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "//zircon/system/uapp/nand-util:*",
-
-    # TODO(fxbug.dev/42493): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "//zircon/system/ulib/cobalt-client/test:*",
-
-    # TODO(fxbug.dev/41890): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "//src/storage/gpt:*",
-
-    # TODO(fxbug.dev/41893): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "//sdk/lib/zxio/test:*",
-
-    # TODO(fxbug.dev/41894): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "//zircon/system/ulib/zxtest:*",
-
-    # TODO(fxbug.dev/41900): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "//zircon/system/utest/trace:*",
-
-    # TODO(fxbug.dev/41901): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "//zircon/third_party/uapp/dash:*",
-
     # TODO(fxbug.dev/41766): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "//zircon/third_party/ulib/lz4:*",
