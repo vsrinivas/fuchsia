@@ -144,12 +144,7 @@ import("//build/rust/rustc_test.gni")
 #    ]
 #
 template("rustc_binary") {
-  # TODO(bwb) remove all versions from the callers
-  # this is a hold-over. It's just noise right now.
   not_needed(invoker, [ "version" ])
-
-  # TODO soft-migration
-  not_needed(invoker, [ "with_lto" ])
 
   # use the target name unless another name is specified
   assert(!(defined(invoker.output_name) && defined(invoker.name)),
@@ -162,7 +157,7 @@ template("rustc_binary") {
   }
 
   # if "with_unit_tests" is set to true, generate an additional rust test target
-  # TODO(bwb) deprecate this. All tests should be declared independently
+  # TODO(https://fxbug.dev/72931): accept a string.
   if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
     rustc_test_internal("${target_name}_test") {
       output_name = "${package_name}_bin_test"
@@ -251,7 +246,7 @@ template("rustc_binary") {
       deps += invoker.deps
     }
 
-    # TODO(bwb) remove "non_rust_deps" as a concept
+    # TODO(https://fxbug.dev/43781) remove "non_rust_deps" as a concept
     if (defined(invoker.non_rust_deps)) {
       deps += invoker.non_rust_deps
     }

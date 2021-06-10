@@ -57,7 +57,6 @@ action("cargo_toml_gen_desc") {
 #
 action("cargo_toml_gen") {
   # Nothing in-tree should depend on Cargo files.
-  # TODO(bwb) remove base_packages visibility when auto-generation is disabled
   visibility = [
     "//:additional_base_packages",
     "//:additional_cache_packages",

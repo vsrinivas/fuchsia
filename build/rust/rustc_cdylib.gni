@@ -71,7 +71,7 @@ template("rustc_cdylib") {
   not_needed(invoker, [ "version" ])
 
   # if "with_unit_tests" is set to true, generate an additional rust test target
-  # TODO(bwb) deprecate this. All tests should be declared independently
+  # TODO(https://fxbug.dev/72931): accept a string.
   if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
     rustc_test("${target_name}_test") {
       not_needed(invoker, [ "public" ])
