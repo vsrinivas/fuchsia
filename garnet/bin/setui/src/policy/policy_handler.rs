@@ -96,7 +96,7 @@ pub trait Create: Sized {
 ///
 /// [`PolicyHandler`]: trait.PolicyHandler.html
 /// [`Context`]: ../base/struct.Context.html
-pub fn create_handler<C, T: StorageFactory + 'static>(
+pub(crate) fn create_handler<C, T: StorageFactory + 'static>(
     context: Context<T>,
 ) -> BoxFuture<'static, GenerateHandlerResult>
 where
@@ -141,7 +141,7 @@ impl ClientProxy {
 }
 
 impl ClientProxy {
-    pub fn new(service_messenger: service::message::Messenger) -> Self {
+    pub(crate) fn new(service_messenger: service::message::Messenger) -> Self {
         Self { service_messenger }
     }
 

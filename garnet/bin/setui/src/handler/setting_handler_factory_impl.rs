@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 /// SettingHandlerFactoryImpl houses registered closures for generating setting
 /// handlers.
-pub struct SettingHandlerFactoryImpl {
+pub(crate) struct SettingHandlerFactoryImpl {
     environment: Environment,
     generators: HashMap<SettingType, GenerateHandler>,
 
@@ -104,7 +104,7 @@ impl SettingHandlerFactory for SettingHandlerFactoryImpl {
 }
 
 impl SettingHandlerFactoryImpl {
-    pub fn new(
+    pub(crate) fn new(
         settings: HashSet<SettingType>,
         service_context: Arc<ServiceContext>,
         context_id_counter: Arc<AtomicU64>,
@@ -116,7 +116,11 @@ impl SettingHandlerFactoryImpl {
         }
     }
 
-    pub fn register(&mut self, setting_type: SettingType, generate_function: GenerateHandler) {
+    pub(crate) fn register(
+        &mut self,
+        setting_type: SettingType,
+        generate_function: GenerateHandler,
+    ) {
         self.generators.insert(setting_type, generate_function);
     }
 }

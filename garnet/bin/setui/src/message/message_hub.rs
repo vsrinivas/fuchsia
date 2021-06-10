@@ -90,7 +90,7 @@ pub struct MessageHub<P: Payload + 'static, A: Address + 'static, R: Role + 'sta
 
 impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P, A, R> {
     /// Returns a new MessageHub for the given types.
-    pub fn create(fuse: Option<ActionFuseHandle>) -> Delegate<P, A, R> {
+    pub(crate) fn create(fuse: Option<ActionFuseHandle>) -> Delegate<P, A, R> {
         let (action_tx, mut action_rx) = futures::channel::mpsc::unbounded::<(
             Fingerprint<A>,
             MessageAction<P, A, R>,

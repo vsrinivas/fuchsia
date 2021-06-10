@@ -58,7 +58,7 @@ impl PartialEq for RequestInfo {
 
 impl RequestInfo {
     /// Sends the supplied result as a reply with the associated [`Client`].
-    pub fn reply(&self, result: SettingHandlerResult) {
+    pub(crate) fn reply(&self, result: SettingHandlerResult) {
         match &self.client {
             Client::Service(client) => {
                 // TODO(fxbug.dev/70985): return HandlerErrors directly
@@ -109,11 +109,11 @@ struct ActiveRequest {
 }
 
 impl ActiveRequest {
-    pub fn get_request(&self) -> Request {
+    pub(crate) fn get_request(&self) -> Request {
         self.request.setting_request.clone()
     }
 
-    pub fn get_info(&mut self) -> &mut RequestInfo {
+    pub(crate) fn get_info(&mut self) -> &mut RequestInfo {
         &mut self.request
     }
 }
@@ -147,7 +147,7 @@ enum ListenEvent {
     Restart,
 }
 
-pub struct SettingProxy {
+pub(crate) struct SettingProxy {
     setting_type: SettingType,
 
     client_signature: Option<service::message::Signature>,
@@ -186,7 +186,7 @@ macro_rules! publish {
 impl SettingProxy {
     /// Creates a SettingProxy that is listening to requests from the
     /// provided receiver and will send responses/updates on the given sender.
-    pub async fn create(
+    pub(crate) async fn create(
         setting_type: SettingType,
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
         delegate: service::message::Delegate,

@@ -10,6 +10,7 @@ use crate::message::beacon::BeaconBuilder;
 use crate::message::message_builder::MessageBuilder;
 use crate::message::messenger::Messenger;
 use crate::message::receptor::Receptor;
+#[cfg(test)]
 use crate::message::Timestamp;
 
 /// MessageClient provides a subset of Messenger functionality around a specific
@@ -59,38 +60,35 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageClien
         }
     }
 
-    pub fn get_timestamp(&self) -> Timestamp {
+    #[cfg(test)]
+    pub(crate) fn get_timestamp(&self) -> Timestamp {
         self.message.get_timestamp()
     }
 
-    pub fn get_modifiers(&self) -> Vec<Signature<A>> {
+    #[cfg(test)]
+    pub(crate) fn get_modifiers(&self) -> Vec<Signature<A>> {
         self.message.get_modifiers()
     }
 
     /// Returns the Signature of the original author of the associated Message.
     /// This value can be used to communicate with the author at top-level
     /// communication.
-    pub fn get_author(&self) -> Signature<A> {
+    pub(crate) fn get_author(&self) -> Signature<A> {
         self.message.get_author()
     }
 
     /// Returns the audience associated with the underlying [`Message`]. If it
     /// is a new [`Message`] (origin), it will be the target audience.
     /// Otherwise it is the author of the reply.
-    pub fn get_audience(&self) -> Audience<A, R> {
+    pub(crate) fn get_audience(&self) -> Audience<A, R> {
         match self.message.get_type() {
             MessageType::Origin(audience) => audience.clone(),
             MessageType::Reply(message) => Audience::Messenger(message.get_author()),
         }
     }
 
-    /// Returns the payload associated with the associated Message.
-    pub fn get_payload(&self) -> &P {
-        self.message.payload()
-    }
-
     /// Creates a dedicated receptor for receiving future communication on this message thread.
-    pub fn spawn_observer(&mut self) -> Receptor<P, A, R> {
+    pub(crate) fn spawn_observer(&mut self) -> Receptor<P, A, R> {
         let (beacon, receptor) = BeaconBuilder::new(self.messenger.clone()).build();
         self.messenger.forward(self.message.clone(), Some(beacon));
         ActionFuse::defuse(self.forwarder.clone());
@@ -99,7 +97,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageClien
     }
 
     /// Creates a MessageBuilder for the reply to this message.
-    pub fn reply(&self, payload: P) -> MessageBuilder<P, A, R> {
+    pub(crate) fn reply(&self, payload: P) -> MessageBuilder<P, A, R> {
         // Return a MessageBuilder for a reply. Note that the auto-forwarder is
         // handed off so the automatic forwarding behavior follows the
         // MessageBuilder rather than this MessageClient.
@@ -112,18 +110,18 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageClien
     }
 
     /// Propagates a derived message on the path of the original message.
-    pub fn propagate(&self, payload: P) -> MessageBuilder<P, A, R> {
+    pub(crate) fn propagate(&self, payload: P) -> MessageBuilder<P, A, R> {
         MessageBuilder::derive(payload, self.message.clone(), self.messenger.clone())
             .auto_forwarder(self.forwarder.clone())
     }
 
-    pub async fn acknowledge(&mut self) {
+    pub(crate) async fn acknowledge(&mut self) {
         self.message.report_status(Status::Acknowledged).await;
     }
 
     /// Tracks the lifetime of the reply listener, firing the fuse when it
     /// goes out of scope.
-    pub async fn bind_to_recipient(&mut self, fuse: ActionFuseHandle) {
+    pub(crate) async fn bind_to_recipient(&mut self, fuse: ActionFuseHandle) {
         self.message.bind_to_author(fuse).await;
     }
 }

@@ -33,7 +33,7 @@ type JobStreamItem = (source::Id, Option<Result<Job, Error>>);
 /// [Manager] based on the [Job] definitions.
 // TODO(fxbug.dev/70534): Use Manager to handle FIDL requests.
 #[allow(dead_code)]
-pub struct Manager {
+pub(crate) struct Manager {
     /// A mapping from [source id](source::Id) to [handler](source::Handler). This mapping is used
     /// to retrieve the [handler](source::Handler) for job updates (inserting, retrieving,
     /// completing) and source maintenance (cleaning up on exit).
@@ -60,7 +60,7 @@ impl Manager {
     /// service.
     // TODO(fxbug.dev/70534): Use Manager to handle FIDL requests.
     #[allow(dead_code)]
-    pub async fn spawn(message_hub_delegate: &message::Delegate) -> message::Signature {
+    pub(crate) async fn spawn(message_hub_delegate: &message::Delegate) -> message::Signature {
         // Create a top-level receptor in the MessageHub to accept new sources from.
         let receptor = message_hub_delegate
             .create(MessengerType::Unbound)

@@ -70,19 +70,19 @@ pub struct Builder {
 
 impl Builder {
     /// Returns a builder with no values set.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { monitors: vec![] }
     }
 
     /// Appends [`monitor::Generate`] to the set of monitors to participate in
     /// this environment.
-    pub fn add_monitors(mut self, mut monitors: Vec<base_monitor::Generate>) -> Self {
+    pub(crate) fn add_monitors(mut self, mut monitors: Vec<base_monitor::Generate>) -> Self {
         self.monitors.append(&mut monitors);
         self
     }
 
     /// Constructs the configuration.
-    pub fn build(self) -> Actor {
+    pub(crate) fn build(self) -> Actor {
         let monitor_delegate = service::message::create_hub();
         Actor { delegate: monitor_delegate, monitors: self.monitors }
     }

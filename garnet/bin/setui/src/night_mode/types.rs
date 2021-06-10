@@ -10,10 +10,7 @@ pub struct NightModeInfo {
 }
 
 impl NightModeInfo {
-    pub const fn empty() -> NightModeInfo {
+    pub(super) const fn empty() -> NightModeInfo {
         NightModeInfo { night_mode_enabled: None }
-    }
-    pub const fn new(user_night_mode_enabled: bool) -> NightModeInfo {
-        NightModeInfo { night_mode_enabled: Some(user_night_mode_enabled) }
     }
 }

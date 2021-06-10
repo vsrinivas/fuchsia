@@ -20,7 +20,7 @@ use std::sync::Arc;
 use std::task::Poll;
 
 #[derive(Clone, PartialEq, Debug, Copy)]
-pub enum TestMessage {
+pub(crate) enum TestMessage {
     Foo,
     Bar,
     Baz,
@@ -29,12 +29,12 @@ pub enum TestMessage {
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Copy, Hash)]
-pub enum TestAddress {
+pub(crate) enum TestAddress {
     Foo(u64),
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Copy, Hash)]
-pub enum TestRole {
+pub(crate) enum TestRole {
     Foo,
     Bar,
 }

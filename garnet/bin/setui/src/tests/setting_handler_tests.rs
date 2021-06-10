@@ -252,7 +252,7 @@ struct StateController {
 }
 
 impl StateController {
-    pub fn create_generator(
+    fn create_generator(
         reporter: UnboundedSender<State>,
         invocation_counts_reporter: UnboundedSender<HashMap<State, u8>>,
     ) -> GenerateController {
@@ -493,20 +493,20 @@ struct StubControllerBuilder {
 }
 
 impl StubControllerBuilder {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self { request_mapping: Vec::new() }
     }
 
     /// Maps a preset [`SettingHandlerResult`] to return when the specified [`Request`] is
     /// encountered.
-    pub fn add_request_mapping(mut self, request: Request, result: SettingHandlerResult) -> Self {
+    fn add_request_mapping(mut self, request: Request, result: SettingHandlerResult) -> Self {
         self.request_mapping.retain(|(target_request, _)| *target_request != request);
         self.request_mapping.push((request, result));
 
         self
     }
 
-    pub fn build(self) -> GenerateController {
+    fn build(self) -> GenerateController {
         let request_mapping = self.request_mapping;
         Box::new(move |_| {
             let request_mapping = request_mapping.clone();

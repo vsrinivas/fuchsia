@@ -40,13 +40,13 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Builder<P, A
 
     /// Includes the specified role in the list of roles to be associated with
     /// the new messenger.
-    pub fn add_role(mut self, role: role::Signature<R>) -> Self {
+    pub(crate) fn add_role(mut self, role: role::Signature<R>) -> Self {
         self.roles.insert(role);
         self
     }
 
     /// Constructs a messenger based on specifications supplied.
-    pub async fn build(self) -> CreateMessengerResult<P, A, R> {
+    pub(crate) async fn build(self) -> CreateMessengerResult<P, A, R> {
         let (tx, rx) = futures::channel::oneshot::channel::<CreateMessengerResult<P, A, R>>();
 
         // Panic if send failed since a messenger cannot be created.
@@ -104,7 +104,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessengerCli
 
     /// Creates a MessageBuilder for a new message with the specified payload
     /// and audience.
-    pub fn message(&self, payload: P, audience: Audience<A, R>) -> MessageBuilder<P, A, R> {
+    pub(crate) fn message(&self, payload: P, audience: Audience<A, R>) -> MessageBuilder<P, A, R> {
         MessageBuilder::new(payload, MessageType::Origin(audience), self.messenger.clone())
     }
 

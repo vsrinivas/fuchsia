@@ -90,7 +90,7 @@ pub enum Event {
     Exited(ExitResult),
 }
 
-pub trait StorageFactory: DeviceStorageFactory + Send + Sync {}
+pub(crate) trait StorageFactory: DeviceStorageFactory + Send + Sync {}
 impl<T: DeviceStorageFactory + Send + Sync> StorageFactory for T {}
 
 #[derive(Error, Debug, Clone, PartialEq)]
@@ -136,22 +136,22 @@ pub enum ControllerError {
     ExitError,
 }
 
-pub type BoxedController = Box<dyn controller::Handle + Send + Sync>;
-pub type BoxedControllerResult = Result<BoxedController, ControllerError>;
+pub(crate) type BoxedController = Box<dyn controller::Handle + Send + Sync>;
+pub(crate) type BoxedControllerResult = Result<BoxedController, ControllerError>;
 
-pub type GenerateController =
+pub(crate) type GenerateController =
     Box<dyn Fn(Arc<ClientImpl>) -> BoxFuture<'static, BoxedControllerResult> + Send + Sync>;
 
-pub mod controller {
+pub(crate) mod controller {
     use super::*;
 
     #[async_trait]
-    pub trait Create: Sized {
+    pub(crate) trait Create: Sized {
         async fn create(client: Arc<ClientImpl>) -> Result<Self, ControllerError>;
     }
 
     #[async_trait]
-    pub trait Handle: Send {
+    pub(crate) trait Handle: Send {
         async fn handle(&self, request: Request) -> Option<SettingHandlerResult>;
         async fn change_state(&mut self, _state: State) -> Option<ControllerStateResult> {
             None
@@ -279,12 +279,12 @@ impl ClientImpl {
     }
 }
 
-pub struct Handler<C: controller::Create + controller::Handle + Send + Sync + 'static> {
+pub(crate) struct Handler<C: controller::Create + controller::Handle + Send + Sync + 'static> {
     _data: PhantomData<C>,
 }
 
 impl<C: controller::Create + controller::Handle + Send + Sync + 'static> Handler<C> {
-    pub fn spawn(context: Context) -> BoxFuture<'static, ControllerGenerateResult> {
+    pub(crate) fn spawn(context: Context) -> BoxFuture<'static, ControllerGenerateResult> {
         Box::pin(async move {
             ClientImpl::create(
                 context,
@@ -336,12 +336,12 @@ pub mod persist {
         Updated,
     }
 
-    pub mod controller {
+    pub(crate) mod controller {
         use super::ClientProxy;
         use super::*;
 
         #[async_trait]
-        pub trait Create: Sized {
+        pub(crate) trait Create: Sized {
             async fn create(handler: ClientProxy) -> Result<Self, ControllerError>;
         }
     }
@@ -358,19 +358,19 @@ pub mod persist {
     }
 
     impl ClientProxy {
-        pub async fn new(base_proxy: Arc<BaseProxy>, setting_type: SettingType) -> Self {
+        pub(crate) async fn new(base_proxy: Arc<BaseProxy>, setting_type: SettingType) -> Self {
             Self { base: base_proxy, setting_type }
         }
 
-        pub fn get_service_context(&self) -> Arc<ServiceContext> {
+        pub(crate) fn get_service_context(&self) -> Arc<ServiceContext> {
             self.base.get_service_context()
         }
 
-        pub async fn get_messenger(&self) -> Messenger {
+        pub(crate) async fn get_messenger(&self) -> Messenger {
             self.base.messenger.clone()
         }
 
-        pub async fn notify(&self, event: Event) {
+        pub(crate) async fn notify(&self, event: Event) {
             self.base.notify(event).await;
         }
 
@@ -416,7 +416,7 @@ pub mod persist {
 
         /// The argument `write_through` will block returning until the value has been completely
         /// written to persistent store, rather than any temporary in-memory caching.
-        pub async fn write_setting(
+        pub(crate) async fn write_setting(
             &self,
             setting_info: SettingInfo,
             write_through: bool,
@@ -460,7 +460,7 @@ pub mod persist {
 
     /// A trait for interpreting a `Result` into whether a notification occurred
     /// and converting the `Result` into a `SettingHandlerResult`.
-    pub trait WriteResult: IntoHandlerResult {
+    pub(crate) trait WriteResult: IntoHandlerResult {
         /// Indicates whether a notification occurred as a result of the write.
         fn notified(&self) -> bool;
     }
@@ -477,12 +477,14 @@ pub mod persist {
         }
     }
 
-    pub struct Handler<C: controller::Create + super::controller::Handle + Send + Sync + 'static> {
+    pub(crate) struct Handler<
+        C: controller::Create + super::controller::Handle + Send + Sync + 'static,
+    > {
         _data: PhantomData<C>,
     }
 
     impl<C: controller::Create + super::controller::Handle + Send + Sync + 'static> Handler<C> {
-        pub fn spawn(context: Context) -> BoxFuture<'static, ControllerGenerateResult> {
+        pub(crate) fn spawn(context: Context) -> BoxFuture<'static, ControllerGenerateResult> {
             Box::pin(async move {
                 let setting_type = context.setting_type;
 
@@ -506,6 +508,6 @@ pub mod persist {
     }
 }
 
-pub fn reply(client: MessageClient, result: SettingHandlerResult) {
+pub(crate) fn reply(client: MessageClient, result: SettingHandlerResult) {
     client.reply(Payload::Result(result).into()).send().ack();
 }

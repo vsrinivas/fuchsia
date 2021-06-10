@@ -11,7 +11,7 @@ use crate::tests::fakes::base::create_setting_handler;
 use crate::EnvironmentBuilder;
 use std::sync::Arc;
 
-pub async fn create_test_env_with_failures(
+pub(crate) async fn create_test_env_with_failures(
     storage_factory: Arc<InMemoryStorageFactory>,
     env_name: &'static str,
     interface: Interface,

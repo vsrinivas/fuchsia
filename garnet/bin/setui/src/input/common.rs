@@ -27,7 +27,7 @@ use {
 /// ```
 /// MediaButtonsEventBuilder::new().set_volume(1).set_mic_mute(true).build();
 /// ```
-pub struct MediaButtonsEventBuilder {
+pub(crate) struct MediaButtonsEventBuilder {
     volume: i8,
     mic_mute: bool,
     pause: bool,
@@ -36,12 +36,12 @@ pub struct MediaButtonsEventBuilder {
 
 #[allow(dead_code)]
 impl MediaButtonsEventBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         // Create with defaults.
         Self { volume: 0, mic_mute: false, pause: false, camera_disable: false }
     }
 
-    pub fn build(self) -> MediaButtonsEvent {
+    pub(crate) fn build(self) -> MediaButtonsEvent {
         MediaButtonsEvent {
             volume: Some(self.volume),
             mic_mute: Some(self.mic_mute),
@@ -51,22 +51,22 @@ impl MediaButtonsEventBuilder {
         }
     }
 
-    pub fn set_volume(mut self, volume: i8) -> Self {
+    pub(crate) fn set_volume(mut self, volume: i8) -> Self {
         self.volume = volume;
         self
     }
 
-    pub fn set_mic_mute(mut self, mic_mute: bool) -> Self {
+    pub(crate) fn set_mic_mute(mut self, mic_mute: bool) -> Self {
         self.mic_mute = mic_mute;
         self
     }
 
-    pub fn set_pause(mut self, pause: bool) -> Self {
+    pub(crate) fn set_pause(mut self, pause: bool) -> Self {
         self.pause = pause;
         self
     }
 
-    pub fn set_camera_disable(mut self, camera_disable: bool) -> Self {
+    pub(crate) fn set_camera_disable(mut self, camera_disable: bool) -> Self {
         self.camera_disable = camera_disable;
         self
     }
@@ -171,7 +171,7 @@ async fn get_camera_id(
 
 /// Establishes a connection to the fuchsia.camera3.Device api by watching
 /// the camera id and using it to connect to the device.
-pub async fn connect_to_camera(
+pub(crate) async fn connect_to_camera(
     service_context_handle: Arc<ServiceContext>,
 ) -> Result<Camera3DeviceProxy, Error> {
     // Connect to the camera device watcher to get camera ids. This will

@@ -27,7 +27,7 @@ use thiserror;
 
 pub type ControllerGenerateResult = Result<(), anyhow::Error>;
 
-pub type GenerateHandler =
+pub(crate) type GenerateHandler =
     Box<dyn Fn(Context) -> BoxFuture<'static, ControllerGenerateResult> + Send + Sync>;
 
 pub type Response = Result<Option<SettingInfo>, Error>;
@@ -55,7 +55,7 @@ macro_rules! generate_inspect {
         }
 
         impl $name {
-            pub fn for_inspect(&self) -> &'static str {
+            pub(crate) fn for_inspect(&self) -> &'static str {
                 match self {
                     $(
                         $name::$variant $(
@@ -281,7 +281,7 @@ pub enum SettingHandlerFactoryError {
 /// A factory capable of creating a handler for a given setting on-demand. If no
 /// viable handler can be created, None will be returned.
 #[async_trait]
-pub trait SettingHandlerFactory {
+pub(crate) trait SettingHandlerFactory {
     async fn generate(
         &mut self,
         setting_type: SettingType,
@@ -302,7 +302,7 @@ impl Clone for Environment {
 }
 
 impl Environment {
-    pub fn new(
+    pub(crate) fn new(
         settings: HashSet<SettingType>,
         service_context: Arc<ServiceContext>,
     ) -> Environment {
@@ -322,7 +322,7 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(
+    pub(crate) fn new(
         setting_type: SettingType,
         messenger: Messenger,
         receptor: Receptor,
@@ -337,7 +337,7 @@ impl Context {
 /// ContextBuilder is a convenience builder to facilitate creating a Context
 /// (and associated environment).
 #[cfg(test)]
-pub struct ContextBuilder {
+pub(crate) struct ContextBuilder {
     setting_type: SettingType,
     settings: HashSet<SettingType>,
     service_context: Option<Arc<ServiceContext>>,
@@ -349,7 +349,7 @@ pub struct ContextBuilder {
 
 #[cfg(test)]
 impl ContextBuilder {
-    pub fn new(
+    pub(crate) fn new(
         setting_type: SettingType,
         messenger: Messenger,
         receptor: Receptor,
@@ -367,21 +367,8 @@ impl ContextBuilder {
         }
     }
 
-    // Sets the service context to be used.
-    pub fn service_context(mut self, service_context: Arc<ServiceContext>) -> Self {
-        self.service_context = Some(service_context);
-
-        self
-    }
-
-    /// Adds the settings to given environment.
-    pub fn add_settings(mut self, settings: &[SettingType]) -> Self {
-        self.settings.extend(settings.iter().copied());
-        self
-    }
-
     /// Generates the Context.
-    pub fn build(self) -> Context {
+    pub(crate) fn build(self) -> Context {
         let service_context =
             self.service_context.unwrap_or_else(|| Arc::new(ServiceContext::new(None, None)));
         let environment = Environment::new(self.settings, service_context);

@@ -16,8 +16,7 @@ use futures::task::Poll;
 use futures::{pin_mut, FutureExt};
 use matches::assert_matches;
 
-pub type RequestCallback<S> =
-    Box<dyn Fn(Request<S>, ExitSender) -> RequestResultCreator<'static, S>>;
+type RequestCallback<S> = Box<dyn Fn(Request<S>, ExitSender) -> RequestResultCreator<'static, S>>;
 
 /// A super simple processing unit that just calls its `RequestCallback` immediately when `process`
 /// is called.
@@ -32,7 +31,7 @@ impl<S> TestProcessingUnit<S>
 where
     S: ServiceMarker,
 {
-    pub fn new(callback: RequestCallback<S>) -> Self {
+    fn new(callback: RequestCallback<S>) -> Self {
         Self { callback }
     }
 }

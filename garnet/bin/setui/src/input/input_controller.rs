@@ -25,8 +25,8 @@ use futures::lock::Mutex;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-pub const DEFAULT_CAMERA_NAME: &str = "camera";
-pub const DEFAULT_MIC_NAME: &str = "microphone";
+pub(crate) const DEFAULT_CAMERA_NAME: &str = "camera";
+pub(crate) const DEFAULT_MIC_NAME: &str = "microphone";
 
 impl DeviceStorageCompatible for InputInfoSources {
     const KEY: &'static str = "input_info";
@@ -367,7 +367,7 @@ impl DeviceStorageAccess for InputController {
 
 impl InputController {
     /// Alternate constructor that allows specifying a configuration.
-    pub async fn create_with_config(
+    pub(crate) async fn create_with_config(
         client: ClientProxy,
         input_device_config: InputConfiguration,
     ) -> Result<Self, ControllerError> {

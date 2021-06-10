@@ -188,7 +188,7 @@ mod tests {
     }
 
     impl TestResponder {
-        pub fn new(sender: Sender<Result<SettingInfo, Error>>) -> Self {
+        pub(crate) fn new(sender: Sender<Result<SettingInfo, Error>>) -> Self {
             Self { sender }
         }
     }

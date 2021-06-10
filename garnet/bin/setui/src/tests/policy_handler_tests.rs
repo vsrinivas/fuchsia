@@ -19,10 +19,10 @@ use std::sync::Arc;
 
 const ENV_NAME: &str = "policy_handler_tests_env";
 
-pub type HandlePolicyRequestCallback =
+type HandlePolicyRequestCallback =
     Box<dyn Fn(PolicyRequest, ClientProxy) -> BoxFuture<'static, Response> + Send + Sync>;
 
-pub struct FakePolicyHandler {
+struct FakePolicyHandler {
     client_proxy: ClientProxy,
     handle_policy_request_callback: Option<HandlePolicyRequestCallback>,
 }

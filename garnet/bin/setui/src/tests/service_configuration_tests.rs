@@ -23,11 +23,11 @@ use {
 
 const ENV_NAME: &str = "settings_service_configuration_test_environment";
 
-pub fn get_test_settings_types() -> HashSet<SettingType> {
+fn get_test_settings_types() -> HashSet<SettingType> {
     return [SettingType::Accessibility, SettingType::Privacy].iter().copied().collect();
 }
 
-pub fn get_test_policy_types() -> HashSet<PolicyType> {
+fn get_test_policy_types() -> HashSet<PolicyType> {
     return [PolicyType::Unknown].iter().copied().collect();
 }
 

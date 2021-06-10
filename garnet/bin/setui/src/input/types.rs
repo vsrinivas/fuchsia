@@ -75,13 +75,13 @@ pub struct InputState {
 }
 
 impl InputState {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { input_categories: HashMap::<InputDeviceType, InputCategory>::new() }
     }
 
     /// Insert an InputDevice's state into the internal InputState hierarchy, updating the
     /// state if it already exists or adding the state if it does not.
-    pub fn insert_device(&mut self, input_device: InputDevice, source: DeviceStateSource) {
+    pub(crate) fn insert_device(&mut self, input_device: InputDevice, source: DeviceStateSource) {
         self.set_source_state(
             input_device.device_type,
             input_device.name,
@@ -93,7 +93,7 @@ impl InputState {
     /// Set the `state` for a given device and `source`.
     /// The combination of `device_type` and `device_name`
     /// uniquely identifies the device.
-    pub fn set_source_state(
+    pub(crate) fn set_source_state(
         &mut self,
         device_type: InputDeviceType,
         device_name: String,
@@ -118,7 +118,7 @@ impl InputState {
     /// The combination of `device_type` and `device_name`
     /// uniquely identifies the device. Returns None if it fails to find
     /// the corresponding state for the given arguments.
-    pub fn get_source_state(
+    pub(crate) fn get_source_state(
         &self,
         device_type: InputDeviceType,
         device_name: String,
@@ -148,7 +148,7 @@ impl InputState {
     /// The combination of `device_type` and `device_name`
     /// uniquely identifies the device. Returns None if it fails to find
     /// the corresponding state for the given arguments.
-    pub fn get_state(
+    pub(crate) fn get_state(
         &self,
         device_type: InputDeviceType,
         device_name: String,
@@ -170,13 +170,13 @@ impl InputState {
     }
 
     /// Returns true if the state map is empty.
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.input_categories.is_empty()
     }
 
     /// Returns a set of the `InputDeviceType`s contained in the
     /// state map.
-    pub fn device_types(&self) -> HashSet<InputDeviceType> {
+    pub(crate) fn device_types(&self) -> HashSet<InputDeviceType> {
         self.input_categories.keys().cloned().collect()
     }
 }
@@ -222,7 +222,7 @@ pub struct InputCategory {
 }
 
 impl InputCategory {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self { devices: HashMap::<String, InputDevice>::new() }
     }
 }
@@ -243,7 +243,7 @@ pub struct InputDevice {
 }
 
 impl InputDevice {
-    pub fn new(name: String, device_type: InputDeviceType) -> Self {
+    fn new(name: String, device_type: InputDeviceType) -> Self {
         Self {
             name,
             device_type,
@@ -252,7 +252,7 @@ impl InputDevice {
         }
     }
 
-    pub fn compute_input_state(&mut self) {
+    fn compute_input_state(&mut self) {
         let mut computed_state = DeviceState::from_bits(0).unwrap();
 
         for state in self.source_states.values() {
@@ -405,25 +405,25 @@ impl Default for DeviceState {
 }
 
 impl DeviceState {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         // Represents AVAILABLE as the default.
         Self { bits: 1 }
     }
 
     /// The flags that clients can manipulate by default.
-    pub fn default_mutable_toggle_state() -> Self {
+    fn default_mutable_toggle_state() -> Self {
         DeviceState::MUTED | DeviceState::DISABLED
     }
 
     /// Returns true if the current state contains the given state.
     /// e.g. All the 1 bits in the given `state` are also 1s in the
     /// current state.
-    pub fn has_state(&self, state: DeviceState) -> bool {
+    pub(crate) fn has_state(&self, state: DeviceState) -> bool {
         *self & state == state
     }
 
     /// Returns true if the device's state has an error.
-    pub fn has_error(&self) -> bool {
+    fn has_error(&self) -> bool {
         let is_err = *self & DeviceState::ERROR == DeviceState::ERROR;
         let incompatible_state = self.has_state(DeviceState::ACTIVE | DeviceState::DISABLED)
             || self.has_state(DeviceState::ACTIVE | DeviceState::MUTED)

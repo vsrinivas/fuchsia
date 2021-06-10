@@ -48,13 +48,13 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Receptor<P, 
 
     /// Returns the signature associated the top level messenger associated with
     /// this receptor.
-    pub fn get_signature(&self) -> Signature<A> {
+    pub(crate) fn get_signature(&self) -> Signature<A> {
         self.signature
     }
 
     /// Returns the next pending payload, returning an Error if the origin
     /// message (if any) was not deliverable or another error was encountered.
-    pub async fn next_payload(&mut self) -> Result<(P, MessageClient<P, A, R>), Error> {
+    pub(crate) async fn next_payload(&mut self) -> Result<(P, MessageClient<P, A, R>), Error> {
         while let Some(event) = self.next().await {
             match event {
                 MessageEvent::Message(payload, client) => {
@@ -70,7 +70,9 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Receptor<P, 
         Err(format_err!("could not retrieve payload"))
     }
 
-    pub async fn next_of<T: TryFrom<P>>(&mut self) -> Result<(T, MessageClient<P, A, R>), Error>
+    pub(crate) async fn next_of<T: TryFrom<P>>(
+        &mut self,
+    ) -> Result<(T, MessageClient<P, A, R>), Error>
     where
         <T as std::convert::TryFrom<P>>::Error: std::fmt::Debug,
     {
@@ -105,12 +107,12 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Receptor<P, 
     }
 
     // Used to consume receptor.
-    pub fn ack(self) {}
+    pub(crate) fn ack(self) {}
 }
 
 /// Extracts the payload from a given `MessageEvent`. Such event is provided
 /// in an optional argument to match the return value from `Receptor` stream.
-pub fn extract_payload<P: Payload + 'static, A: Address + 'static, R: Role + 'static>(
+pub(crate) fn extract_payload<P: Payload + 'static, A: Address + 'static, R: Role + 'static>(
     event: Option<MessageEvent<P, A, R>>,
 ) -> Option<P> {
     if let Some(MessageEvent::Message(payload, _)) = event {

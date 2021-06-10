@@ -26,7 +26,7 @@ type CallbackSender = UnboundedSender<Actor>;
 struct TestMonitorAgent;
 
 impl TestMonitorAgent {
-    pub fn create(callback: CallbackSender) -> BlueprintHandle {
+    fn create(callback: CallbackSender) -> BlueprintHandle {
         Arc::new(scaffold::agent::Blueprint::new(scaffold::agent::Generate::Async(Arc::new(
             move |mut context: AgentContext| -> BoxFuture<'static, ()> {
                 callback

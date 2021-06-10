@@ -28,7 +28,8 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Delegate<P, 
 
     /// This method is soft-deprecated for now.
     // #[deprecated(note = "Please use messenger_builder instead")]
-    pub async fn create_role(&self) -> Result<role::Signature<R>, role::Error> {
+    #[cfg(test)]
+    pub(crate) async fn create_role(&self) -> Result<role::Signature<R>, role::Error> {
         let (tx, rx) =
             futures::channel::oneshot::channel::<Result<role::Response<R>, role::Error>>();
 
@@ -42,11 +43,14 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Delegate<P, 
     }
 
     /// Returns a builder for constructing a new messenger.
-    pub fn messenger_builder(&self, messenger_type: MessengerType<P, A, R>) -> Builder<P, A, R> {
+    pub(crate) fn messenger_builder(
+        &self,
+        messenger_type: MessengerType<P, A, R>,
+    ) -> Builder<P, A, R> {
         Builder::new(self.messenger_action_tx.clone(), messenger_type)
     }
 
-    pub async fn create(
+    pub(crate) async fn create(
         &self,
         messenger_type: MessengerType<P, A, R>,
     ) -> CreateMessengerResult<P, A, R> {
@@ -57,7 +61,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Delegate<P, 
     /// that there is no guarantee that the messenger at the given [`Signature`]
     /// will not be deleted or created after this function returns.
     #[cfg(test)]
-    pub async fn contains(&self, signature: Signature<A>) -> MessengerPresenceResult<A> {
+    pub(crate) async fn contains(&self, signature: Signature<A>) -> MessengerPresenceResult<A> {
         let (tx, rx) = futures::channel::oneshot::channel::<MessengerPresenceResult<A>>();
         self.messenger_action_tx
             .unbounded_send(MessengerAction::CheckPresence(signature, tx))
@@ -65,7 +69,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Delegate<P, 
         rx.await.unwrap_or(Err(MessageError::Unexpected))
     }
 
-    pub fn delete(&self, signature: Signature<A>) {
+    pub(crate) fn delete(&self, signature: Signature<A>) {
         self.messenger_action_tx
             .unbounded_send(MessengerAction::DeleteBySignature(signature))
             .expect(

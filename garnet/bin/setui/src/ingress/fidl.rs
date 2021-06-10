@@ -74,7 +74,7 @@ pub mod display {
 /// [Register] defines the closure implemented for interfaces to bring up support. Each interface
 /// handler is given access to the MessageHub [Delegate] for communication within the service and
 /// [ServiceFsDir] to register as the designated handler for the interface.
-pub type Register = Box<
+pub(crate) type Register = Box<
     dyn for<'a> FnOnce(&Delegate, &Seeder, &mut ServiceFsDir<'_, ServiceObj<'a, ()>>) + Send + Sync,
 >;
 

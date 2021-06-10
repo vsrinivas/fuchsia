@@ -42,7 +42,7 @@ pub struct Seeder {
 impl Seeder {
     // TODO(fxbug.dev/70534): Use Manager to handle FIDL requests.
     #[allow(dead_code)]
-    pub async fn new(delegate: &Delegate, manager_signature: Signature) -> Self {
+    pub(crate) async fn new(delegate: &Delegate, manager_signature: Signature) -> Self {
         Self {
             messenger: delegate
                 .create(MessengerType::Unbound)
@@ -55,7 +55,11 @@ impl Seeder {
 
     // TODO(fxbug.dev/70534): Use Manager to handle FIDL requests.
     #[allow(dead_code)]
-    pub fn seed<J: Into<Job>, E: Into<Error>, T: 'static + Stream<Item = Result<J, E>> + Send>(
+    pub(crate) fn seed<
+        J: Into<Job>,
+        E: Into<Error>,
+        T: 'static + Stream<Item = Result<J, E>> + Send,
+    >(
         &self,
         source: T,
     ) {
@@ -115,11 +119,11 @@ pub(super) struct IdGenerator {
 }
 
 impl IdGenerator {
-    pub fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self { next_identifier: 0 }
     }
 
-    pub fn generate(&mut self) -> Id {
+    pub(super) fn generate(&mut self) -> Id {
         let return_id = Id::new(self.next_identifier);
         self.next_identifier += 1;
 
@@ -147,7 +151,7 @@ pub(super) struct Handler {
 }
 
 impl Handler {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let mut handler = Self {
             job_id_generator: job::IdGenerator::new(),
             jobs: HashMap::new(),
@@ -161,12 +165,12 @@ impl Handler {
     }
 
     /// Marks the source as completed.
-    pub fn complete(&mut self) {
+    pub(crate) fn complete(&mut self) {
         self.set_state(if self.is_active() { State::PendingCompletion } else { State::Completed });
     }
 
     /// Returns whether the source has completed.
-    pub fn is_completed(&mut self) -> bool {
+    pub(crate) fn is_completed(&mut self) -> bool {
         matches!(self.states.back(), Some(&(State::Completed, _)))
     }
 
@@ -182,7 +186,7 @@ impl Handler {
         self.states.push_back((state, now()));
     }
 
-    pub async fn execute_next<F: Fn(job::Info, job::execution::Details) + Send + 'static>(
+    pub(crate) async fn execute_next<F: Fn(job::Info, job::execution::Details) + Send + 'static>(
         &mut self,
         delegate: &mut Delegate,
         callback: F,
@@ -207,12 +211,12 @@ impl Handler {
 
     /// Returns whether the source is active, defined as having at least one [Job] which is
     /// currently active (running, not pending).
-    pub fn is_active(&self) -> bool {
+    pub(crate) fn is_active(&self) -> bool {
         self.jobs.iter().any(|(_, group)| group.is_active())
     }
 
     /// Adds a [Job] to be handled by this [Handler].
-    pub fn add_pending_job(&mut self, incoming_job: Job) {
+    pub(crate) fn add_pending_job(&mut self, incoming_job: Job) {
         let job_info = job::Info::new(self.job_id_generator.generate(), incoming_job);
         let execution_type = job_info.get_execution_type().clone();
 
@@ -225,7 +229,7 @@ impl Handler {
     }
 
     /// Informs the [Handler] that a [Job] by the given [Id](job::Id) has completed.
-    pub fn handle_job_completion(&mut self, job: job::Info) {
+    pub(crate) fn handle_job_completion(&mut self, job: job::Info) {
         self.jobs.get_mut(job.get_execution_type()).expect("group should be present").complete(job);
 
         // When a source end is detected, the managing entity will try to complete the source. If

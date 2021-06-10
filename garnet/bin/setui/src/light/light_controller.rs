@@ -24,10 +24,10 @@ use std::convert::TryInto;
 
 /// Used as the argument field in a ControllerError::InvalidArgument to signal the FIDL handler to
 /// signal that a LightError::INVALID_NAME should be returned to the client.
-pub const ARG_NAME: &str = "name";
+pub(crate) const ARG_NAME: &str = "name";
 
 /// Hardware path used to connect to light devices.
-pub const DEVICE_PATH: &str = "/dev/class/light/*";
+pub(crate) const DEVICE_PATH: &str = "/dev/class/light/*";
 
 impl DeviceStorageCompatible for LightInfo {
     fn default_value() -> Self {

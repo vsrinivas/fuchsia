@@ -26,21 +26,21 @@ pub struct BeaconBuilder<P: Payload + 'static, A: Address + 'static, R: Role + '
 }
 
 impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> BeaconBuilder<P, A, R> {
-    pub fn new(messenger: Messenger<P, A, R>) -> Self {
+    pub(super) fn new(messenger: Messenger<P, A, R>) -> Self {
         Self { messenger, chained_fuses: vec![], timeout: None }
     }
 
-    pub fn add_fuse(mut self, fuse: ActionFuseHandle) -> Self {
+    pub(super) fn add_fuse(mut self, fuse: ActionFuseHandle) -> Self {
         self.chained_fuses.push(fuse);
         self
     }
 
-    pub fn set_timeout(mut self, duration: Option<Duration>) -> Self {
+    pub(super) fn set_timeout(mut self, duration: Option<Duration>) -> Self {
         self.timeout = duration;
         self
     }
 
-    pub fn build(self) -> (Beacon<P, A, R>, Receptor<P, A, R>) {
+    pub(super) fn build(self) -> (Beacon<P, A, R>, Receptor<P, A, R>) {
         Beacon::create(self.messenger, self.chained_fuses, self.timeout)
     }
 }
@@ -123,7 +123,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Beacon<P, A,
 
     /// Sends the Status associated with the original message that spawned
     /// this beacon.
-    pub async fn status(&self, status: Status) -> Result<(), Error> {
+    pub(super) async fn status(&self, status: Status) -> Result<(), Error> {
         if self.event_sender.unbounded_send(MessageEvent::Status(status)).is_err() {
             return Err(format_err!("failed to deliver status"));
         }
@@ -132,7 +132,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Beacon<P, A,
     }
 
     /// Delivers a response to the original message that spawned this Beacon.
-    pub async fn deliver(
+    pub(super) async fn deliver(
         &self,
         message: Message<P, A, R>,
         client_id: MessageClientId,

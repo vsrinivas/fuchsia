@@ -66,13 +66,13 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageBuild
         self
     }
 
-    pub fn set_timeout(mut self, duration: Option<Duration>) -> MessageBuilder<P, A, R> {
+    pub(crate) fn set_timeout(mut self, duration: Option<Duration>) -> MessageBuilder<P, A, R> {
         self.timeout = duration;
         self
     }
 
     /// Consumes the MessageBuilder and sends the message to the MessageHub.
-    pub fn send(self) -> Receptor<P, A, R> {
+    pub(crate) fn send(self) -> Receptor<P, A, R> {
         let (beacon, receptor) =
             BeaconBuilder::new(self.messenger.clone()).set_timeout(self.timeout).build();
         self.messenger

@@ -28,7 +28,7 @@ pub struct PolicyProxy {
 impl PolicyProxy {
     /// Creates a policy proxy and returns the signatures it uses to communicate in the core message
     /// hub.
-    pub async fn create(
+    pub(crate) async fn create(
         policy_type: PolicyType,
         handler_factory: Arc<Mutex<dyn PolicyHandlerFactory + Send + Sync>>,
         delegate: service::message::Delegate,

@@ -13,7 +13,7 @@ pub struct LightInfo {
 }
 
 impl LightInfo {
-    pub fn contains_light_group_name(self, name: String) -> bool {
+    pub(crate) fn contains_light_group_name(self, name: String) -> bool {
         self.light_groups.contains_key(name.as_str())
     }
 }

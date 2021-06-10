@@ -56,11 +56,11 @@ impl SettingHandler {
         Ok(None)
     }
 
-    pub fn queue_action(&mut self, request: Request, action: HandlerAction) {
+    fn queue_action(&mut self, request: Request, action: HandlerAction) {
         self.responses.push((request, action))
     }
 
-    pub fn notify(&self) {
+    fn notify(&self) {
         self.messenger
             .message(
                 setting_handler::Payload::Event(Event::Changed(UnknownInfo(true).into())).into(),
@@ -161,11 +161,11 @@ struct FakeFactory {
 }
 
 impl FakeFactory {
-    pub fn new(delegate: service::message::Delegate) -> Self {
+    fn new(delegate: service::message::Delegate) -> Self {
         FakeFactory { handlers: HashMap::new(), request_counts: HashMap::new(), delegate }
     }
 
-    pub async fn create(
+    async fn create(
         &mut self,
         setting_type: SettingType,
     ) -> (service::message::Messenger, service::message::Receptor) {
@@ -175,7 +175,7 @@ impl FakeFactory {
         (client, receptor)
     }
 
-    pub fn get_request_count(&mut self, setting_type: SettingType) -> u64 {
+    fn get_request_count(&mut self, setting_type: SettingType) -> u64 {
         if let Some(count) = self.request_counts.get(&setting_type) {
             *count
         } else {
@@ -213,21 +213,21 @@ struct TestEnvironmentBuilder {
 }
 
 impl TestEnvironmentBuilder {
-    pub fn new(setting_type: SettingType) -> Self {
+    fn new(setting_type: SettingType) -> Self {
         Self { setting_type, done_tx: None, timeout: None }
     }
 
-    pub fn set_done_tx(mut self, tx: Option<oneshot::Sender<()>>) -> Self {
+    fn set_done_tx(mut self, tx: Option<oneshot::Sender<()>>) -> Self {
         self.done_tx = tx;
         self
     }
 
-    pub fn set_timeout(mut self, duration: Duration, retry_on_timeout: bool) -> Self {
+    fn set_timeout(mut self, duration: Duration, retry_on_timeout: bool) -> Self {
         self.timeout = Some((duration, retry_on_timeout));
         self
     }
 
-    pub async fn build(self) -> TestEnvironment {
+    async fn build(self) -> TestEnvironment {
         let delegate = service::message::create_hub();
 
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new(delegate.clone())));
@@ -270,14 +270,14 @@ impl TestEnvironmentBuilder {
     }
 }
 
-pub struct TestEnvironment {
+struct TestEnvironment {
     proxy_handler_signature: service::message::Signature,
     service_client: service::message::Messenger,
     handler_factory: Arc<Mutex<FakeFactory>>,
     setting_handler_rx: UnboundedReceiver<State>,
     setting_handler: Arc<Mutex<SettingHandler>>,
     setting_type: SettingType,
-    pub delegate: service::message::Delegate,
+    delegate: service::message::Delegate,
 }
 
 impl TestEnvironment {

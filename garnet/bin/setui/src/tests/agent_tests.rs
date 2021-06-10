@@ -59,7 +59,7 @@ impl TestAgent {
     // registered with the given authority for the lifespan specified. The
     // callback will be invoked whenever an invocation is encountered, passing a
     // reference to this agent.
-    pub async fn create_and_register(
+    async fn create_and_register(
         id: u32,
         lifespan_target: LifespanTarget,
         authority: &mut Authority,
@@ -72,7 +72,7 @@ impl TestAgent {
         agent
     }
 
-    pub fn create(
+    fn create(
         id: u32,
         lifespan_target: LifespanTarget,
         callback: CallbackSender,
@@ -129,13 +129,13 @@ impl TestAgent {
     }
 
     /// Returns the id specified at construction time.
-    pub fn id(&self) -> u32 {
+    fn id(&self) -> u32 {
         self.id
     }
 
     /// Returns the last encountered, unprocessed invocation. None will be
     /// returned if such invocation does not exist.
-    pub fn last_invocation(&self) -> &Option<Invocation> {
+    fn last_invocation(&self) -> &Option<Invocation> {
         &self.last_invocation
     }
 }

@@ -213,7 +213,7 @@ pub trait DeviceStorageAccess {
 impl DeviceStorage {
     /// Construct a device storage from the iteratable item, which will produce the keys for
     /// storage, and from a generator that will produce a stash proxy given a particular key.
-    pub fn with_stash_proxy<I, G>(iter: I, stash_generator: G) -> Self
+    pub(crate) fn with_stash_proxy<I, G>(iter: I, stash_generator: G) -> Self
     where
         I: IntoIterator<Item = &'static str>,
         G: Fn() -> StoreAccessorProxy,
@@ -310,7 +310,7 @@ impl DeviceStorage {
 
     /// Write `new_value` to storage. If `flush` is true then then changes will immediately be
     /// persisted to disk, otherwise the write will be persisted to disk at a set interval.
-    pub async fn write<T>(&self, new_value: &T, flush: bool) -> Result<UpdateState, Error>
+    pub(crate) async fn write<T>(&self, new_value: &T, flush: bool) -> Result<UpdateState, Error>
     where
         T: DeviceStorageCompatible,
     {
@@ -393,7 +393,7 @@ impl DeviceStorage {
 
     /// Gets the latest value cached locally, or loads the value from storage.
     /// Doesn't support multiple concurrent callers of the same struct.
-    pub async fn get<T>(&self) -> T
+    pub(crate) async fn get<T>(&self) -> T
     where
         T: DeviceStorageCompatible,
     {
@@ -537,7 +537,7 @@ fn prefixed(input_string: &str) -> String {
 }
 
 #[cfg(test)]
-pub mod testing {
+pub(crate) mod testing {
     use super::*;
     use fidl_fuchsia_stash::{StoreAccessorMarker, StoreAccessorRequest};
     use fuchsia_async as fasync;
@@ -546,34 +546,29 @@ pub mod testing {
     use std::sync::Arc;
 
     #[derive(PartialEq)]
-    pub enum StashAction {
+    pub(crate) enum StashAction {
         Get,
         Flush,
         Set,
         Commit,
     }
 
-    #[derive(Default)]
-    pub struct StashStats {
+    pub(crate) struct StashStats {
         actions: Vec<StashAction>,
     }
 
     impl StashStats {
-        pub fn new() -> Self {
+        pub(crate) fn new() -> Self {
             StashStats { actions: Vec::new() }
         }
 
-        pub fn record(&mut self, action: StashAction) {
+        pub(crate) fn record(&mut self, action: StashAction) {
             self.actions.push(action);
-        }
-
-        pub fn get_record_count(&self, action: StashAction) -> usize {
-            return self.actions.iter().filter(|&target| *target == action).count();
         }
     }
 
     /// Storage that does not write to disk, for testing.
-    pub struct InMemoryStorageFactory {
+    pub(crate) struct InMemoryStorageFactory {
         initial_data: HashMap<&'static str, String>,
         device_storage_cache: Mutex<InitializationState>,
     }
@@ -593,7 +588,7 @@ pub mod testing {
     impl InMemoryStorageFactory {
         /// Constructs a new `InMemoryStorageFactory` with the ability to create a [`DeviceStorage`]
         /// that can only read and write to the storage keys passed in.
-        pub fn new() -> Self {
+        pub(crate) fn new() -> Self {
             InMemoryStorageFactory {
                 initial_data: HashMap::new(),
                 device_storage_cache: Mutex::new(InitializationState::new()),
@@ -602,7 +597,7 @@ pub mod testing {
 
         /// Constructs a new `InMemoryStorageFactory` with the data written to stash. This simulates
         /// the data existing in storage before the RestoreAgent reads it.
-        pub fn with_initial_data<T>(data: &T) -> Self
+        pub(crate) fn with_initial_data<T>(data: &T) -> Self
         where
             T: DeviceStorageCompatible,
         {
@@ -615,7 +610,7 @@ pub mod testing {
         }
 
         /// Helper method to simplify setup for `InMemoryStorageFactory` in tests.
-        pub async fn initialize_storage<T>(&self)
+        pub(crate) async fn initialize_storage<T>(&self)
         where
             T: DeviceStorageCompatible,
         {
@@ -643,7 +638,7 @@ pub mod testing {
         }
 
         /// Retrieve the [`DeviceStorage`] singleton.
-        pub async fn get_device_storage(&self) -> Arc<DeviceStorage> {
+        pub(crate) async fn get_device_storage(&self) -> Arc<DeviceStorage> {
             let initialization = &mut *self.device_storage_cache.lock().await;
             match initialization {
                 InitializationState::Initializing(initial_keys) => {
@@ -1205,12 +1200,12 @@ mod tests {
         use crate::handler::device_storage::DeviceStorageCompatible;
         use serde::{Deserialize, Serialize};
 
-        pub const DEFAULT_V1_VALUE: i32 = 1;
-        pub const DEFAULT_CURRENT_VALUE: i32 = 2;
-        pub const DEFAULT_CURRENT_VALUE_2: i32 = 3;
+        pub(crate) const DEFAULT_V1_VALUE: i32 = 1;
+        pub(crate) const DEFAULT_CURRENT_VALUE: i32 = 2;
+        pub(crate) const DEFAULT_CURRENT_VALUE_2: i32 = 3;
 
         #[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
-        pub struct V1 {
+        pub(crate) struct V1 {
             pub value: i32,
         }
 
@@ -1223,7 +1218,7 @@ mod tests {
         }
 
         #[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
-        pub struct Current {
+        pub(crate) struct Current {
             pub value: i32,
             pub value_2: i32,
         }

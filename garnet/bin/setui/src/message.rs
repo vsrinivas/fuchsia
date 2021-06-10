@@ -47,40 +47,41 @@ macro_rules! message_hub_definition {
             };
             use crate::message::receptor::Receptor as BaseReceptor;
 
-            pub type Delegate = BaseDelegate<$payload, $address, $role>;
+            pub(crate) type Delegate = BaseDelegate<$payload, $address, $role>;
 
             #[allow(dead_code)]
-            pub type Audience = BaseAudience<$address, $role>;
+            pub(crate) type Audience = BaseAudience<$address, $role>;
 
             #[allow(dead_code)]
-            pub type Messenger = BaseMessengerClient<$payload, $address, $role>;
+            pub(crate) type Messenger = BaseMessengerClient<$payload, $address, $role>;
 
             #[allow(dead_code)]
-            pub type TargetedMessenger = BaseTargetedMessengerClient<$payload, $address, $role>;
+            pub(crate) type TargetedMessenger =
+                BaseTargetedMessengerClient<$payload, $address, $role>;
 
             #[allow(dead_code)]
-            pub type MessageError = BaseMessageError<$address>;
+            pub(crate) type MessageError = BaseMessageError<$address>;
 
             #[allow(dead_code)]
-            pub type MessageEvent = BaseMessageEvent<$payload, $address, $role>;
+            pub(crate) type MessageEvent = BaseMessageEvent<$payload, $address, $role>;
 
             #[allow(dead_code)]
-            pub type MessageClient = BaseMessageClient<$payload, $address, $role>;
+            pub(crate) type MessageClient = BaseMessageClient<$payload, $address, $role>;
 
             #[allow(dead_code)]
-            pub type MessengerType = BaseMessengerType<$payload, $address, $role>;
+            pub(crate) type MessengerType = BaseMessengerType<$payload, $address, $role>;
 
             #[allow(dead_code)]
-            pub type MessageType = BaseMessageType<$payload, $address, $role>;
+            pub(crate) type MessageType = BaseMessageType<$payload, $address, $role>;
 
             #[allow(dead_code)]
-            pub type Receptor = BaseReceptor<$payload, $address, $role>;
+            pub(crate) type Receptor = BaseReceptor<$payload, $address, $role>;
 
             #[allow(dead_code)]
-            pub type Signature = BaseSignature<$address>;
+            pub(crate) type Signature = BaseSignature<$address>;
 
             #[allow(dead_code)]
-            pub fn create_hub() -> Delegate {
+            pub(crate) fn create_hub() -> Delegate {
                 MessageHub::<$payload, $address, $role>::create(None)
             }
         }

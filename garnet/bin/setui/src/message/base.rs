@@ -393,23 +393,23 @@ pub mod filter {
     }
 
     impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Builder<P, A, R> {
-        pub fn new(condition: Condition<P, A, R>, conjugation: Conjugation) -> Self {
+        pub(crate) fn new(condition: Condition<P, A, R>, conjugation: Conjugation) -> Self {
             Self { conjugation, conditions: vec![condition] }
         }
 
         /// Shorthand method to create a filter based on a single condition.
-        pub fn single(condition: Condition<P, A, R>) -> Filter<P, A, R> {
+        pub(crate) fn single(condition: Condition<P, A, R>) -> Filter<P, A, R> {
             Builder::new(condition, Conjugation::All).build()
         }
 
         /// Adds an additional condition to the filter under construction.
-        pub fn append(mut self, condition: Condition<P, A, R>) -> Self {
+        pub(crate) fn append(mut self, condition: Condition<P, A, R>) -> Self {
             self.conditions.push(condition);
 
             self
         }
 
-        pub fn build(self) -> Filter<P, A, R> {
+        pub(crate) fn build(self) -> Filter<P, A, R> {
             Filter { conjugation: self.conjugation, conditions: self.conditions }
         }
     }
@@ -423,7 +423,7 @@ pub mod filter {
     }
 
     impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Filter<P, A, R> {
-        pub fn matches(&self, message: &Message<P, A, R>) -> bool {
+        pub(crate) fn matches(&self, message: &Message<P, A, R>) -> bool {
             for condition in &self.conditions {
                 let match_found = match condition {
                     Condition::Audience(audience) => matches!(
@@ -514,13 +514,15 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
         self.return_path.insert(0, participant);
     }
 
-    pub fn get_timestamp(&self) -> Timestamp {
+    #[cfg(test)]
+    pub(super) fn get_timestamp(&self) -> Timestamp {
         self.timestamp
     }
 
     /// Returns the Signatures of messengers who have modified this message
     /// through propagation.
-    pub fn get_modifiers(&self) -> Vec<Signature<A>> {
+    #[cfg(test)]
+    pub(super) fn get_modifiers(&self) -> Vec<Signature<A>> {
         let mut modifiers = vec![];
 
         if let Attribution::Derived(origin, signature) = &self.attribution {
@@ -531,7 +533,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
         modifiers
     }
 
-    pub fn get_author(&self) -> Signature<A> {
+    pub(crate) fn get_author(&self) -> Signature<A> {
         match &self.attribution {
             Attribution::Source(_) => self.author.signature,
             Attribution::Derived(message, _) => message.get_author(),
@@ -553,12 +555,12 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
 
     /// Returns the message's attribution, which identifies whether it has been modified by a source
     /// other than the original author.
-    pub fn get_attribution(&self) -> &Attribution<P, A, R> {
+    pub(crate) fn get_attribution(&self) -> &Attribution<P, A, R> {
         &self.attribution
     }
 
     /// Returns the message's type.
-    pub fn get_type(&self) -> &MessageType<P, A, R> {
+    pub(crate) fn get_type(&self) -> &MessageType<P, A, R> {
         match &self.attribution {
             Attribution::Source(message_type) => message_type,
             Attribution::Derived(message, _) => message.get_type(),
@@ -566,7 +568,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
     }
 
     /// Returns a reference to the message's payload.
-    pub fn payload(&self) -> &P {
+    pub(crate) fn payload(&self) -> &P {
         &self.payload
     }
 

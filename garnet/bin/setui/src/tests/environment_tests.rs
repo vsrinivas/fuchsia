@@ -40,7 +40,7 @@ blueprint_definition!("test_agent", TestAgent::create);
 // A test agent to send an event to the message hub. Required so that we can test that
 // a message sent on the message hub returned from environment creation is received by
 // other components attached to the message hub.
-pub struct TestAgent {
+struct TestAgent {
     delegate: service::message::Delegate,
 }
 

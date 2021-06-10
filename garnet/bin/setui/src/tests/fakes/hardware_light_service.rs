@@ -18,10 +18,10 @@ use std::sync::Arc;
 
 /// An implementation of fuchsia.hardware.light for testing use.
 pub(crate) struct HardwareLightService {
-    pub light_info: Arc<Mutex<HashMap<u32, Info>>>,
-    pub simple_values: Arc<Mutex<HashMap<u32, bool>>>,
-    pub brightness_values: Arc<Mutex<HashMap<u32, f64>>>,
-    pub rgb_values: Arc<Mutex<HashMap<u32, Rgb>>>,
+    pub(crate) light_info: Arc<Mutex<HashMap<u32, Info>>>,
+    pub(crate) simple_values: Arc<Mutex<HashMap<u32, bool>>>,
+    pub(crate) brightness_values: Arc<Mutex<HashMap<u32, f64>>>,
+    pub(crate) rgb_values: Arc<Mutex<HashMap<u32, Rgb>>>,
 }
 
 /// Allow dead code since this is just a fake for testing.

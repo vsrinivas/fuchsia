@@ -69,7 +69,7 @@ pub struct ActionFuse {
 
 impl ActionFuse {
     /// Returns an ActionFuse reference with the given TriggerAction.
-    pub fn create(
+    pub(super) fn create(
         actions: Vec<TriggeredAction>,
         chained_fuses: Vec<ActionFuseHandle>,
     ) -> ActionFuseHandle {
@@ -77,7 +77,7 @@ impl ActionFuse {
     }
 
     /// Suppresses the action from automatically executing.
-    pub fn defuse(handle: ActionFuseHandle) {
+    pub(crate) fn defuse(handle: ActionFuseHandle) {
         fasync::Task::spawn(async move {
             let mut fuse = handle.lock().await;
             fuse.actions.clear();
