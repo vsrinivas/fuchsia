@@ -21,7 +21,7 @@ const char Symbolize::kProgramName_[] = "phys-memory-test";
 
 namespace {
 
-constexpr uint64_t kMiB [[maybe_unused]] = 1024 * 1024;
+constexpr uint64_t kMiB = 1024 * 1024;
 
 // Allocate and overwrite all RAM from the given memalloc::Allocator.
 //
@@ -44,14 +44,7 @@ size_t AllocateAndOverwriteFreeMemory() {
     bytes_allocated += allocation_size;
 
     // Overwrite the memory.
-    //
-    // TODO(dgreenaway): We are currently running uncached on ARM64, which has
-    // a memcpy throughput of ~5MiB/s (!). We only overwrite a small amount of
-    // RAM to avoid the copy taking to long on systems with large amounts of RAM.
-    constexpr size_t kMaxOverwrite = 64 * kMiB;
-    if (bytes_allocated < kMaxOverwrite) {
-      memset(result.get(), 0x33, allocation_size);
-    }
+    memset(result.get(), 0x33, allocation_size);
 
     // Leak this allocation.
     (void)result.release();
@@ -75,5 +68,6 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
     return 1;
   }
 
+  printf("Successfully allocated %zu bytes of memory.\n", bytes_allocated);
   return 0;
 }
