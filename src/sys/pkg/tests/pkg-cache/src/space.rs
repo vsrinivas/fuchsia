@@ -3,109 +3,22 @@
 // found in the LICENSE file.
 
 use {
-    crate::{get_missing_blobs, write_blob, PkgFs, TestEnv},
-    anyhow::Error,
+    crate::{get_missing_blobs, write_blob, TempDirPkgFs, TestEnv},
     blobfs_ramdisk::BlobfsRamdisk,
-    fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, FileMarker},
+    fidl_fuchsia_io::{DirectoryMarker, FileMarker},
     fidl_fuchsia_paver as paver,
     fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker, PackageCacheProxy},
     fidl_fuchsia_pkg_ext::BlobId,
     fidl_fuchsia_space::ErrorCode,
     fuchsia_async::{self as fasync, OnSignals},
-    fuchsia_merkle::Hash,
-    fuchsia_pkg::{MetaContents, PackagePath},
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
     fuchsia_zircon::{self as zx, Status},
     futures::TryFutureExt,
-    maplit::{btreemap, hashmap},
     matches::assert_matches,
     mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
     pkgfs_ramdisk::PkgfsRamdisk,
-    std::{
-        collections::{BTreeSet, HashMap},
-        fs::{create_dir, create_dir_all, File},
-        io::Write as _,
-        path::PathBuf,
-    },
-    system_image::StaticPackages,
-    tempfile::TempDir,
+    std::collections::{BTreeSet, HashMap},
 };
-
-struct TempDirPkgFs {
-    root: TempDir,
-}
-
-impl TempDirPkgFs {
-    fn new() -> Self {
-        let system_image_hash: Hash =
-            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let fake_package_hash: Hash =
-            "1111111111111111111111111111111111111111111111111111111111111111".parse().unwrap();
-        let static_packages = StaticPackages::from_entries(vec![(
-            PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
-            fake_package_hash,
-        )]);
-        let versions_contents = hashmap! {
-            system_image_hash.clone() => MetaContents::from_map(
-                btreemap! {
-                    "some-blob".to_string() =>
-                        "2222222222222222222222222222222222222222222222222222222222222222".parse().unwrap()
-                }
-            ).unwrap(),
-            fake_package_hash.clone() => MetaContents::from_map(
-                btreemap! {
-                    "other-blob".to_string() =>
-                        "3333333333333333333333333333333333333333333333333333333333333333".parse().unwrap()
-                }
-            ).unwrap()
-        };
-        let root = tempfile::tempdir().unwrap();
-
-        create_dir(root.path().join("ctl")).unwrap();
-
-        create_dir(root.path().join("system")).unwrap();
-        File::create(root.path().join("system/meta"))
-            .unwrap()
-            .write_all(system_image_hash.to_string().as_bytes())
-            .unwrap();
-        create_dir(root.path().join("system/data")).unwrap();
-        static_packages
-            .serialize(File::create(root.path().join("system/data/static_packages")).unwrap())
-            .unwrap();
-
-        create_dir(root.path().join("versions")).unwrap();
-        for (hash, contents) in versions_contents.iter() {
-            let meta_path = root.path().join(format!("versions/{}/meta", hash));
-            create_dir_all(&meta_path).unwrap();
-            contents.serialize(&mut File::create(meta_path.join("contents")).unwrap()).unwrap();
-        }
-
-        create_dir(root.path().join("blobfs")).unwrap();
-
-        Self { root }
-    }
-
-    fn garbage_path(&self) -> PathBuf {
-        self.root.path().join("ctl/do-not-use-this-garbage")
-    }
-
-    fn create_garbage(&self) {
-        File::create(self.garbage_path()).unwrap();
-    }
-}
-
-impl PkgFs for TempDirPkgFs {
-    fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
-        Ok(fdio::transfer_fd(File::open(self.root.path()).unwrap()).unwrap().into())
-    }
-
-    fn blobfs_root_proxy(&self) -> Result<DirectoryProxy, Error> {
-        let dir_handle: ClientEnd<DirectoryMarker> =
-            fdio::transfer_fd(File::open(self.root.path().join("blobfs")).unwrap()).unwrap().into();
-        Ok(dir_handle.into_proxy().unwrap())
-    }
-}
 
 // TODO(fxbug.dev/76724): Deduplicate this function.
 async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {

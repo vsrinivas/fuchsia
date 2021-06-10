@@ -152,3 +152,31 @@ async fn get_and_hold_directory() {
     let () = package.verify_contents(&dir).await.unwrap();
     let () = package.verify_contents(&dir_2).await.unwrap();
 }
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn unavailable_when_client_drops_needed_blobs_channel() {
+    let env = TestEnv::builder().build().await;
+
+    let pkg = PackageBuilder::new("pkg-a").build().await.unwrap();
+
+    let mut meta_blob_info =
+        BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
+
+    let (needed_blobs, needed_blobs_server_end) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let get_fut = env
+        .proxies
+        .package_cache
+        .get(
+            &mut meta_blob_info,
+            &mut std::iter::empty(),
+            needed_blobs_server_end,
+            Some(dir_server_end),
+        )
+        .map_ok(|res| res.map_err(Status::from_raw));
+
+    drop(needed_blobs);
+
+    assert_eq!(get_fut.await.unwrap(), Err(Status::UNAVAILABLE));
+}

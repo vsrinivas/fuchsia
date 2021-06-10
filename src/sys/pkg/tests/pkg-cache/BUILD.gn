@@ -58,6 +58,7 @@ rustc_test("driver") {
     "src/get.rs",
     "src/inspect.rs",
     "src/lib.rs",
+    "src/open.rs",
     "src/space.rs",
     "src/sync.rs",
   ]

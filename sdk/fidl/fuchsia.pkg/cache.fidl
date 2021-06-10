@@ -30,7 +30,7 @@ protocol PackageCache {
     /// + request `dir` an optional request for a directory that will be resolved when the package
     ///   has been successfully cached.
     /// * error a zx_status value indicating failure. One of the following:
-    ///     * `ZX_ERR_UNAVAILABLE` if the client closed `needed_blobs` or `dir` handles before
+    ///     * `ZX_ERR_UNAVAILABLE` if the client closed `needed_blobs` handles before
     ///       all the missing blobs were downloaded to the system.
     Get(
         BlobInfo meta_far_blob,
