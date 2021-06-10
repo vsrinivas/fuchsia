@@ -33,7 +33,6 @@ tests = [
   "management",
   "neighbor",
   "reachability",
-  "routes",
   "socket",
   "sys",
 ]
@@ -91,7 +90,10 @@ fuchsia_test_package("netstack-integration-tests") {
   ]
 }
 
-tests_v2 = [ "inspect" ]
+tests_v2 = [
+  "inspect",
+  "routes",
+]
 
 foreach(test, tests_v2) {
   name = "netstack-${test}-integration-test"

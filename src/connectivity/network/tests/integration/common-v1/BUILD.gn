@@ -71,7 +71,6 @@ rustc_library("netstack_testing_common") {
     "//src/connectivity/network/tests/integration/management",
     "//src/connectivity/network/tests/integration/neighbor",
     "//src/connectivity/network/tests/integration/reachability",
-    "//src/connectivity/network/tests/integration/routes",
     "//src/connectivity/network/tests/integration/socket",
   ]
 }
