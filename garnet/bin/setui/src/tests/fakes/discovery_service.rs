@@ -14,7 +14,7 @@ use futures::lock::Mutex;
 use futures::TryStreamExt;
 use std::sync::Arc;
 
-pub type SessionId = u64;
+pub(crate) type SessionId = u64;
 
 /// An implementation of the Discovery connection state manager for tests.
 pub(crate) struct DiscoveryService {

@@ -14,11 +14,9 @@
 //! directed. The separation of this responsibility from the main
 //! resource-watching component promotes code reshare and modularity.
 
-use crate::message::base::MessengerType;
-use crate::monitor::base::{
-    monitor::{self as base_monitor},
-    Error,
-};
+use crate::monitor::base::monitor as base_monitor;
+#[cfg(test)]
+use crate::monitor::base::Error;
 use crate::service;
 
 /// `Actor` handles bringing up and controlling environment-specific components
@@ -32,7 +30,11 @@ pub struct Actor {
 impl Actor {
     /// Starts up environment monitors and returns a TargetedMessenger that
     /// broadcasts to all monitors.
-    pub async fn start_monitoring(&self) -> Result<service::message::TargetedMessenger, Error> {
+    #[cfg(test)]
+    pub(crate) async fn start_monitoring(
+        &self,
+    ) -> Result<service::message::TargetedMessenger, Error> {
+        use crate::message::base::MessengerType;
         // Create unbound, broadcasting messenger to send messages to the monitors.
         let monitor_messenger = service::message::TargetedMessenger::new(
             self.delegate

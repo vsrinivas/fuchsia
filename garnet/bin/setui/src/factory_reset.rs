@@ -7,4 +7,4 @@ pub mod types;
 
 mod factory_reset_fidl_handler;
 
-pub use self::factory_reset_fidl_handler::fidl_io;
+pub(crate) use self::factory_reset_fidl_handler::fidl_io;

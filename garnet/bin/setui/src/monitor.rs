@@ -115,18 +115,18 @@ impl DataBuilder {
     /// By default, the builder creates Data with the current time and no
     /// details
     #[allow(dead_code)]
-    pub fn new(state: State) -> Self {
+    pub(crate) fn new(state: State) -> Self {
         Self { update_time: now(), state, details: None }
     }
 
     #[allow(dead_code)]
-    pub fn set_details(mut self, details: Details) -> Self {
+    pub(crate) fn set_details(mut self, details: Details) -> Self {
         self.details = Some(details);
         self
     }
 
     #[allow(dead_code)]
-    pub fn build(self) -> Data {
+    pub(crate) fn build(self) -> Data {
         Data { update_time: self.update_time, state: self.state, details: self.details }
     }
 }

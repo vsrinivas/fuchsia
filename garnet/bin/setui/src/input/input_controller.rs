@@ -122,7 +122,7 @@ pub struct InputInfoSourcesV1 {
 }
 
 impl InputInfoSourcesV1 {
-    pub const fn new(hw_microphone: Microphone, sw_microphone: Microphone) -> InputInfoSourcesV1 {
+    const fn new(hw_microphone: Microphone, sw_microphone: Microphone) -> InputInfoSourcesV1 {
         Self { hw_microphone, sw_microphone }
     }
 }

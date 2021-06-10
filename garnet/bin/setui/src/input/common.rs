@@ -107,7 +107,7 @@ impl From<VolumeGain> for Request {
 
 /// Method for listening to media button changes. Changes will be reported back
 /// on the supplied sender.
-pub async fn monitor_media_buttons(
+pub(crate) async fn monitor_media_buttons(
     service_context_handle: Arc<ServiceContext>,
     sender: futures::channel::mpsc::UnboundedSender<MediaButtonsEvent>,
 ) -> Result<(), Error> {

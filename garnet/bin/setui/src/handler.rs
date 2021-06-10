@@ -10,11 +10,11 @@ pub mod base;
 /// with the proxy.
 pub mod setting_handler;
 
-pub mod setting_proxy;
+pub(crate) mod setting_proxy;
 
 /// This mod allows controllers to store state in persistent device level storage.
 pub mod device_storage;
 
 /// This mod implements a factory that can be populated to provide handlers on
 /// demand.
-pub mod setting_handler_factory_impl;
+pub(crate) mod setting_handler_factory_impl;

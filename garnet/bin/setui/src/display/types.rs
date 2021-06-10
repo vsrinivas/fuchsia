@@ -20,7 +20,7 @@ pub struct DisplayInfo {
 }
 
 impl DisplayInfo {
-    pub const fn new(
+    pub(crate) const fn new(
         auto_brightness: bool,
         manual_brightness_value: f32,
         auto_brightness_value: f32,
@@ -122,7 +122,7 @@ pub struct Theme {
 }
 
 impl Theme {
-    pub fn new(theme_type: Option<ThemeType>, theme_mode: ThemeMode) -> Self {
+    pub(super) fn new(theme_type: Option<ThemeType>, theme_mode: ThemeMode) -> Self {
         Self { theme_type, theme_mode }
     }
 }
@@ -136,21 +136,21 @@ pub struct ThemeBuilder {
 }
 
 impl ThemeBuilder {
-    pub fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self { theme_type: None, theme_mode: ThemeMode::empty() }
     }
 
-    pub fn set_theme_type(&mut self, theme_type: Option<ThemeType>) -> &mut Self {
+    pub(super) fn set_theme_type(&mut self, theme_type: Option<ThemeType>) -> &mut Self {
         self.theme_type = theme_type;
         self
     }
 
-    pub fn set_theme_mode(&mut self, theme_mode: ThemeMode) -> &mut Self {
+    pub(super) fn set_theme_mode(&mut self, theme_mode: ThemeMode) -> &mut Self {
         self.theme_mode = theme_mode;
         self
     }
 
-    pub fn build(&self) -> Option<Theme> {
+    pub(super) fn build(&self) -> Option<Theme> {
         if self.theme_type.is_none() && self.theme_mode.is_empty() {
             None
         } else {

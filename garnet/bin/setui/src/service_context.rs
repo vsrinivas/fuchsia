@@ -28,7 +28,7 @@ pub struct ServiceContext {
 }
 
 impl ServiceContext {
-    pub fn new(
+    pub(crate) fn new(
         generate_service: Option<GenerateService>,
         delegate: Option<service::message::Delegate>,
     ) -> Self {
@@ -48,7 +48,7 @@ impl ServiceContext {
     ///
     /// If a GenerateService was specified at creation, the name of the service marker will be used
     /// to generate a service.
-    pub async fn connect<S: DiscoverableService>(
+    pub(crate) async fn connect<S: DiscoverableService>(
         &self,
     ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
         let proxy = if let Some(generate_service) = &self.generate_service {
@@ -59,10 +59,10 @@ impl ServiceContext {
             connect_to_protocol::<S>()?
         };
 
-        Ok(ExternalServiceProxy { proxy, publisher: self.make_publisher().await })
+        Ok(ExternalServiceProxy::new(proxy, self.make_publisher().await))
     }
 
-    pub async fn connect_with_publisher<S: DiscoverableService>(
+    pub(crate) async fn connect_with_publisher<S: DiscoverableService>(
         &self,
         publisher: Publisher,
     ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
@@ -74,14 +74,14 @@ impl ServiceContext {
             connect_to_protocol::<S>()?
         };
 
-        Ok(ExternalServiceProxy { proxy, publisher: Some(publisher) })
+        Ok(ExternalServiceProxy::new(proxy, Some(publisher)))
     }
 
     /// Connect to a service with the given name and ServiceMarker.
     ///
     /// If a GenerateService was specified at creation, the given name will be used to generate a
     /// service.
-    pub async fn connect_named<S: ServiceMarker>(
+    pub(crate) async fn connect_named<S: ServiceMarker>(
         &self,
         service_name: &str,
     ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
@@ -91,46 +91,27 @@ impl ServiceContext {
                 return Err(format_err!("Could not handl service {:?}", service_name));
             }
 
-            Ok(ExternalServiceProxy {
-                proxy: S::Proxy::from_channel(fasync::Channel::from_channel(client)?),
-                publisher: self.make_publisher().await,
-            })
+            Ok(ExternalServiceProxy::new(
+                S::Proxy::from_channel(fasync::Channel::from_channel(client)?),
+                self.make_publisher().await,
+            ))
         } else {
             Err(format_err!("No service generator"))
         }
-    }
-
-    /// Connect to a service at the given path and DiscoverableService.
-    ///
-    /// If a GenerateService was specified at creation, the name of the service marker will be used
-    /// to generate a service and the path will be ignored.
-    pub async fn connect_discoverable_path<S: DiscoverableService>(
-        &self,
-        path: &str,
-    ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
-        let proxy = if let Some(generate_service) = &self.generate_service {
-            let (client, server) = zx::Channel::create()?;
-            ((generate_service)(S::SERVICE_NAME, server)).await?;
-            S::Proxy::from_channel(fasync::Channel::from_channel(client)?)
-        } else {
-            connect_to_protocol_at_path::<S>(path)?
-        };
-
-        Ok(ExternalServiceProxy { proxy, publisher: self.make_publisher().await })
     }
 
     /// Connect to a service at the given path and ServiceMarker.
     ///
     /// If a GenerateService was specified at creation, the name of the service marker will be used
     /// to generate a service and the path will be ignored.
-    pub async fn connect_path<S: ServiceMarker>(
+    pub(crate) async fn connect_path<S: ServiceMarker>(
         &self,
         path: &str,
     ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
         let (proxy, server) = fidl::endpoints::create_proxy::<S>()?;
         fdio::service_connect(path, server.into_channel())?;
 
-        Ok(ExternalServiceProxy { proxy, publisher: self.make_publisher().await })
+        Ok(ExternalServiceProxy::new(proxy, self.make_publisher().await))
     }
 
     /// Connect to a service by discovering a hardware device at the given glob-style pattern.
@@ -139,7 +120,7 @@ impl ServiceContext {
     ///
     /// If a GenerateService was specified at creation, the name of the service marker will be used
     /// to generate a service and the path will be ignored.
-    pub async fn connect_device_path<S: DiscoverableService>(
+    pub(crate) async fn connect_device_path<S: DiscoverableService>(
         &self,
         glob_pattern: &str,
     ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
@@ -156,14 +137,14 @@ impl ServiceContext {
         let path_str =
             found_path.to_str().ok_or_else(|| format_err!("failed to convert path to str"))?;
 
-        Ok(ExternalServiceProxy {
-            proxy: connect_to_protocol_at_path::<S>(path_str)?,
-            publisher: self.make_publisher().await,
-        })
+        Ok(ExternalServiceProxy::new(
+            connect_to_protocol_at_path::<S>(path_str)?,
+            self.make_publisher().await,
+        ))
     }
 
-    pub async fn wrap_proxy<P: Proxy>(&self, proxy: P) -> ExternalServiceProxy<P> {
-        ExternalServiceProxy { proxy, publisher: self.make_publisher().await }
+    pub(crate) async fn wrap_proxy<P: Proxy>(&self, proxy: P) -> ExternalServiceProxy<P> {
+        ExternalServiceProxy::new(proxy, self.make_publisher().await)
     }
 }
 
@@ -185,8 +166,7 @@ impl<P> ExternalServiceProxy<P>
 where
     P: Proxy,
 {
-    #[cfg(test)]
-    pub fn new(proxy: P, publisher: Option<Publisher>) -> Self {
+    pub(crate) fn new(proxy: P, publisher: Option<Publisher>) -> Self {
         Self { proxy, publisher }
     }
 
@@ -199,7 +179,7 @@ where
     }
 
     /// Make a call to a synchronous API of the wrapped proxy.
-    pub fn call<T, F>(&self, func: F) -> Result<T, fidl::Error>
+    pub(crate) fn call<T, F>(&self, func: F) -> Result<T, fidl::Error>
     where
         F: FnOnce(&P) -> Result<T, fidl::Error>,
     {
@@ -209,7 +189,7 @@ where
     }
 
     /// Nake a call to an asynchronous API of the wrapped proxy.
-    pub async fn call_async<T, F, Fut>(&self, func: F) -> Result<T, fidl::Error>
+    pub(crate) async fn call_async<T, F, Fut>(&self, func: F) -> Result<T, fidl::Error>
     where
         F: FnOnce(&P) -> Fut,
         Fut: Future<Output = Result<T, fidl::Error>>,

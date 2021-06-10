@@ -119,7 +119,7 @@ pub mod role {
 
     impl<R: Role + 'static> Signature<R> {
         /// Returns a `Signature` based on the a predefined role.
-        pub fn role(role: R) -> Self {
+        pub(crate) fn role(role: R) -> Self {
             Self { signature_type: SignatureType::Role(role) }
         }
 

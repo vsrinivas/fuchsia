@@ -63,7 +63,8 @@ impl<
         T: Responder<R, E> + Send + Sync + 'static,
     > Work<R, E, T>
 {
-    pub fn new(setting_type: SettingType, signature: Signature, responder: T) -> Self {
+    #[cfg(test)]
+    pub(super) fn new(setting_type: SettingType, signature: Signature, responder: T) -> Self {
         Self {
             setting_type,
             signature,

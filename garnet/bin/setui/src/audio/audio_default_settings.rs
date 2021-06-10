@@ -41,7 +41,7 @@ const DEFAULT_AUDIO_INFO: AudioInfo = AudioInfo {
 };
 
 lazy_static! {
-    pub static ref AUDIO_DEFAULT_SETTINGS: Mutex<DefaultSetting<AudioInfo, &'static str>> =
+    pub(crate) static ref AUDIO_DEFAULT_SETTINGS: Mutex<DefaultSetting<AudioInfo, &'static str>> =
         Mutex::new(DefaultSetting::new(
             Some(DEFAULT_AUDIO_INFO),
             "/config/data/audio_config_data.json",
@@ -50,7 +50,7 @@ lazy_static! {
         ));
 }
 
-pub fn create_default_modified_counters() -> ModifiedCounters {
+pub(crate) fn create_default_modified_counters() -> ModifiedCounters {
     let mut counters = HashMap::new();
     let stream_types = [
         AudioStreamType::Background,
@@ -68,7 +68,7 @@ pub fn create_default_modified_counters() -> ModifiedCounters {
     counters
 }
 
-pub const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioStream {
+pub(crate) const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioStream {
     AudioStream {
         stream_type,
         source: AudioSettingSource::User,
@@ -77,7 +77,7 @@ pub const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioS
     }
 }
 
-pub fn default_audio_info() -> AudioInfo {
+pub(crate) fn default_audio_info() -> AudioInfo {
     AUDIO_DEFAULT_SETTINGS
         .lock()
         .unwrap()

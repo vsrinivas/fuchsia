@@ -29,7 +29,7 @@ macro_rules! fidl_process_full {
             Result<Option<paste::paste!{[<$interface Request>]}>, anyhow::Error>,
         >;
 
-        pub mod fidl_io {
+        pub(crate) mod fidl_io {
             paste::paste!{
                 use fidl_fuchsia_settings::{[<$interface Marker>], [<$interface RequestStream>]};
             }
@@ -40,7 +40,7 @@ macro_rules! fidl_process_full {
             use ::fuchsia_async as fasync;
             use ::futures::FutureExt;
 
-            pub fn spawn (
+            pub(crate) fn spawn (
                 delegate: service::message::Delegate,
                 stream: paste::paste!{[<$interface RequestStream>]}
             ) {
@@ -85,7 +85,7 @@ macro_rules! fidl_process_policy {
             Result<Option<paste::paste! {[<$interface Request>]}>, anyhow::Error>,
         >;
 
-        pub mod fidl_io {
+        pub(crate) mod fidl_io {
             paste::paste! {
                 use fidl_fuchsia_settings_policy::{
                     [<$interface Marker>],
@@ -98,7 +98,7 @@ macro_rules! fidl_process_policy {
             use crate::service;
             use fuchsia_async as fasync;
 
-            pub fn spawn(
+            pub(crate) fn spawn(
                 delegate: service::message::Delegate,
                 stream: paste::paste! {[<$interface RequestStream>]},
             ) {
@@ -215,7 +215,7 @@ macro_rules! fidl_process_custom {
     };
 }
 
-pub fn convert_to_epitaph(error: &anyhow::Error) -> fuchsia_zircon::Status {
+pub(crate) fn convert_to_epitaph(error: &anyhow::Error) -> fuchsia_zircon::Status {
     match error.root_cause().downcast_ref::<Error>() {
         Some(Error::UnhandledType(_)) => fuchsia_zircon::Status::UNAVAILABLE,
         _ => fuchsia_zircon::Status::INTERNAL,

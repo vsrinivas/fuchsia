@@ -11,7 +11,8 @@ pub struct DeviceInfo {
 }
 
 impl DeviceInfo {
-    pub const fn new(build_tag: String) -> DeviceInfo {
+    #[cfg(test)]
+    pub(crate) const fn new(build_tag: String) -> DeviceInfo {
         DeviceInfo { build_tag }
     }
 }

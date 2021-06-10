@@ -18,13 +18,7 @@ pub mod watch;
 /// contained data.
 pub struct Scoped<T>(pub T);
 
-impl<T> Scoped<T> {
-    pub fn extract(self) -> T {
-        self.0
-    }
-}
-
-pub mod registration {
+pub(crate) mod registration {
     use super::fidl;
     use crate::base::Dependency;
     use crate::job::source::Seeder;
@@ -89,7 +83,7 @@ pub mod registration {
             &self.dependencies
         }
 
-        pub fn register<'a>(
+        pub(crate) fn register<'a>(
             self,
             delegate: &Delegate,
             job_seeder: &Seeder,

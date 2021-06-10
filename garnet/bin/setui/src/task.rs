@@ -85,12 +85,12 @@ struct IdGenerator {
 
 impl IdGenerator {
     /// Returns a handle to a new `IdGenerator`.
-    pub fn create() -> Arc<Self> {
+    pub(super) fn create() -> Arc<Self> {
         Arc::new(Self { next_id: AtomicUsize::new(0) })
     }
 
     /// generates a unique identifier.
-    pub fn generate(&self) -> Id {
+    pub(super) fn generate(&self) -> Id {
         Id { key: self.next_id.fetch_add(1, Ordering::SeqCst) }
     }
 }
@@ -141,7 +141,11 @@ impl<C: Category + 'static> Client<C> {
     /// Spawns a new task, tracking its lifetime with the provided [`Category`].
     ///
     /// [`Category`]: enum.Category.html
-    pub fn spawn<T: Send>(&self, category: &C, future: impl Future<Output = T> + Send + 'static) {
+    pub(crate) fn spawn<T: Send>(
+        &self,
+        category: &C,
+        future: impl Future<Output = T> + Send + 'static,
+    ) {
         let task_id = self.id_generator.generate();
 
         // We report the creation before spawning in case spawning fails.
@@ -219,7 +223,7 @@ impl<C: Category + 'static> Summary<C> {
     }
 
     /// Returns the longest running active task and its start time.
-    pub fn get_longest_active_task(&self) -> Option<(C, zx::Time)> {
+    pub(super) fn get_longest_active_task(&self) -> Option<(C, zx::Time)> {
         let mut return_val = None;
         for statistics in self.statistics.values() {
             for timestamp in statistics.active_tasks.values() {
@@ -240,22 +244,22 @@ impl<C: Category + 'static> Summary<C> {
     }
 
     /// Returns the completed task count.
-    pub fn get_completed_task_count(&self) -> i64 {
+    pub(super) fn get_completed_task_count(&self) -> i64 {
         self.statistics.values().into_iter().map(|stat| stat.lifetime_count).sum()
     }
 
     /// Returns the active task count.
-    pub fn get_active_task_count(&self) -> usize {
+    pub(super) fn get_active_task_count(&self) -> usize {
         self.active_tasks.len()
     }
 
     /// Returns the categories with currently running tasks.
-    pub fn get_active_categories(&self) -> Vec<C> {
+    pub(super) fn get_active_categories(&self) -> Vec<C> {
         self.active_tasks.values().into_iter().unique().cloned().collect()
     }
 
     /// Returns the seen categories.
-    pub fn get_seen_categories(&self) -> Vec<C> {
+    pub(super) fn get_seen_categories(&self) -> Vec<C> {
         self.statistics.keys().cloned().collect()
     }
 
@@ -263,14 +267,14 @@ impl<C: Category + 'static> Summary<C> {
     ///
     /// [`Category`]: enum.Category.html
     /// [`Statistics`]: struct.Statistics.html
-    pub fn get_statistics(&self, category: &C) -> Option<Statistics<C>> {
+    pub(super) fn get_statistics(&self, category: &C) -> Option<Statistics<C>> {
         self.statistics.get(&category).cloned()
     }
 
     /// Returns the [`Category`] and duration of the longest completed task.
     ///
     /// [`Category`]: enum.Category.html
-    pub fn longest_completed_task(&self) -> Option<(C, zx::Duration)> {
+    pub(super) fn longest_completed_task(&self) -> Option<(C, zx::Duration)> {
         let mut return_val = None;
         while let Some(statistics) = self.statistics.values().next() {
             if let Some(duration) = statistics.longest_duration {
@@ -308,7 +312,7 @@ pub struct Statistics<C: Category + 'static> {
 #[allow(dead_code)]
 impl<C: Category + 'static> Statistics<C> {
     /// Creates a `Statistics` instance with default values.
-    pub fn new(category: C) -> Self {
+    pub(super) fn new(category: C) -> Self {
         Self {
             category,
             lifetime_count: 0,
@@ -319,22 +323,22 @@ impl<C: Category + 'static> Statistics<C> {
     }
 
     /// Returns the start time of the oldest actively running task.
-    pub fn get_oldest_active_start_time(&self) -> Option<zx::Time> {
+    pub(super) fn get_oldest_active_start_time(&self) -> Option<zx::Time> {
         self.active_tasks.values().sorted().next().cloned()
     }
 
     /// Returns the number of tasks actively running.
-    pub fn get_active_task_count(&self) -> usize {
+    pub(super) fn get_active_task_count(&self) -> usize {
         self.active_tasks.len()
     }
 
     /// Ingests data around the start of a task.
-    pub fn start(&mut self, id: Id, start_time: zx::Time) {
+    pub(super) fn start(&mut self, id: Id, start_time: zx::Time) {
         self.active_tasks.insert(id, start_time);
     }
 
     /// Ingests data surrounding the end of a task.
-    pub fn complete(&mut self, id: Id, end_time: zx::Time) {
+    pub(super) fn complete(&mut self, id: Id, end_time: zx::Time) {
         let start_time = self
             .active_tasks
             .remove(&id)
@@ -383,23 +387,23 @@ impl<C: Category + 'static> Debug for Statistics<C> {
 /// [`Manager`]: struct.Manager.html
 /// [`SinkHandle`]: type.SinkHandle.html
 #[derive(Default)]
-pub struct Builder<C: Category + 'static> {
+pub(crate) struct Builder<C: Category + 'static> {
     sinks: Vec<SinkHandle<C>>,
 }
 
 #[allow(dead_code)]
 impl<C: Category + 'static> Builder<C> {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { sinks: Vec::new() }
     }
 
-    pub fn add_sink(mut self, handle: SinkHandle<C>) -> Self {
+    pub(crate) fn add_sink(mut self, handle: SinkHandle<C>) -> Self {
         self.sinks.push(handle);
 
         self
     }
 
-    pub fn build(self) -> (fasync::Task<()>, Client<C>) {
+    pub(crate) fn build(self) -> (fasync::Task<()>, Client<C>) {
         Manager::create(self.sinks)
     }
 }
@@ -419,7 +423,7 @@ impl<C: Category + 'static> Manager<C> {
     /// the processing Task and [`Client`] to interact.
     ///
     /// [`Client`]: struct.Client.html
-    pub fn create(sinks: Vec<SinkHandle<C>>) -> (fasync::Task<()>, Client<C>) {
+    pub(crate) fn create(sinks: Vec<SinkHandle<C>>) -> (fasync::Task<()>, Client<C>) {
         // Create an unbounded channel for clients to communicate with the task
         // manager.
         let (action_tx, mut action_rx) =

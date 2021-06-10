@@ -139,7 +139,7 @@ where
 /// to the constructed type.
 ///
 /// [`RequestCallback`]: type.RequestCallback.html
-pub struct SettingProcessingUnit<S, T, ST, K>
+pub(crate) struct SettingProcessingUnit<S, T, ST, K>
 where
     S: ServiceMarker,
     T: From<SettingInfo> + Send + Sync + 'static,

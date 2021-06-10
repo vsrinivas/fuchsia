@@ -204,7 +204,7 @@ where
         hanging_get_handler
     }
 
-    pub fn close(&mut self) {
+    pub(crate) fn close(&mut self) {
         // This method has been called in drop methods. Only log warn in case the receiving end has
         // been dropped already.
         if let Some(exit_tx) = self.listen_exit_tx.take() {

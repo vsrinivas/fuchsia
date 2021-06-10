@@ -11,11 +11,11 @@ pub struct DoNotDisturbInfo {
 }
 
 impl DoNotDisturbInfo {
-    /// TODO(67780): Explore using std::defaut::Default instead.
-    pub const fn empty() -> DoNotDisturbInfo {
+    /// TODO(67780): Explore using std::default::Default instead.
+    pub(super) const fn empty() -> DoNotDisturbInfo {
         DoNotDisturbInfo { user_dnd: None, night_mode_dnd: None }
     }
-    pub const fn new(user_dnd: bool, night_mode_dnd: bool) -> DoNotDisturbInfo {
+    pub(crate) const fn new(user_dnd: bool, night_mode_dnd: bool) -> DoNotDisturbInfo {
         DoNotDisturbInfo { user_dnd: Some(user_dnd), night_mode_dnd: Some(night_mode_dnd) }
     }
 }

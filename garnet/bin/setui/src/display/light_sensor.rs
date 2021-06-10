@@ -41,7 +41,7 @@ pub struct Sensor {
 }
 
 impl Sensor {
-    pub async fn new(
+    pub(super) async fn new(
         proxy: &ExternalServiceProxy<InputDeviceProxy>,
         service_context: &ServiceContext,
     ) -> Result<Self, Error> {
@@ -63,7 +63,7 @@ impl Sensor {
 
 /// Opens the sensor's device file.
 /// Tries all the input devices until the one with the correct signature is found.
-pub async fn open_sensor(
+pub(super) async fn open_sensor(
     service_context: Arc<ServiceContext>,
     config: LightSensorConfig,
 ) -> Result<Sensor, Error> {
@@ -98,7 +98,7 @@ async fn get_reports(sensor: &Sensor) -> Result<InputReport, Error> {
 }
 
 /// Reads the sensor's HID record and decodes it.
-pub async fn read_sensor(sensor: &Sensor) -> Result<AmbientLightInputRpt, Error> {
+pub(super) async fn read_sensor(sensor: &Sensor) -> Result<AmbientLightInputRpt, Error> {
     let report = get_reports(sensor).await?;
 
     let rpt_id = report.trace_id.ok_or_else(|| format_err!("Report missing trace_id"))?;

@@ -139,7 +139,7 @@ struct ClientNotifier {
 }
 
 impl ClientNotifier {
-    pub fn create(client: Arc<ClientImpl>) -> Arc<Mutex<Self>> {
+    fn create(client: Arc<ClientImpl>) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(Self { client }))
     }
 }
@@ -248,7 +248,7 @@ mod tests {
     }
 
     impl TestNotifier {
-        pub fn create(notifier: Notifier) -> Arc<Mutex<Self>> {
+        fn create(notifier: Notifier) -> Arc<Mutex<Self>> {
             Arc::new(Mutex::new(Self { notifier }))
         }
     }

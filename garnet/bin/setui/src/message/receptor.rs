@@ -90,7 +90,8 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Receptor<P, 
         converted_payload
     }
 
-    pub async fn wait_for_acknowledge(&mut self) -> Result<(), Error> {
+    #[cfg(test)]
+    pub(crate) async fn wait_for_acknowledge(&mut self) -> Result<(), Error> {
         while let Some(event) = self.next().await {
             match event {
                 MessageEvent::Status(Status::Acknowledged) => {

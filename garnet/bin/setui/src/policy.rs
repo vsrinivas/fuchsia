@@ -54,7 +54,7 @@ impl PolicyType {
     }
 
     /// Initialize the storage needed for this particular policy handler.
-    pub async fn initialize_storage<T>(&self, storage_factory: &Arc<T>) -> Result<(), Error>
+    pub(crate) async fn initialize_storage<T>(&self, storage_factory: &Arc<T>) -> Result<(), Error>
     where
         T: DeviceStorageFactory,
     {

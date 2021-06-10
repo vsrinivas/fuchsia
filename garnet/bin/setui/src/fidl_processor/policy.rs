@@ -37,7 +37,7 @@ pub struct RequestContext {
 }
 
 impl RequestContext {
-    pub async fn request(
+    pub(crate) async fn request(
         &self,
         policy_type: PolicyType,
         request: crate::policy::Request,

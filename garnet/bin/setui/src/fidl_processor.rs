@@ -6,7 +6,7 @@
 pub mod processor;
 
 // Fidl processing unit for normal requests and definitions.
-pub mod settings;
+pub(crate) mod settings;
 
 // Fidl processing unit for policy requests and definitions.
 pub mod policy;

@@ -51,7 +51,8 @@ impl AudioInfo {
     /// Selectively replaces an existing stream of the same type with the one
     /// provided. The `AudioInfo` is left intact if that stream type does not
     /// exist.
-    pub fn replace_stream(&mut self, stream: AudioStream) {
+    #[cfg(test)]
+    pub(crate) fn replace_stream(&mut self, stream: AudioStream) {
         if let Some(s) = self.streams.iter_mut().find(|s| s.stream_type == stream.stream_type) {
             *s = stream;
         }

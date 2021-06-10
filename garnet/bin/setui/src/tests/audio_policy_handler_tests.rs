@@ -37,7 +37,7 @@ use std::sync::Arc;
 // The types of data that can be sent.
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Clone, Debug)]
-pub enum TestEnvironmentPayload {
+pub(crate) enum TestEnvironmentPayload {
     Request(SettingRequest),
     Serve(AudioInfo),
 }

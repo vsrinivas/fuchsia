@@ -10,23 +10,23 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-pub mod channel {
+pub(crate) mod channel {
     use crate::job;
     use crate::service::message::Messenger;
     use async_trait::async_trait;
     use futures::channel::mpsc::UnboundedSender;
 
     #[derive(Debug)]
-    pub enum State {
+    pub(crate) enum State {
         Execute,
     }
 
-    pub struct Workload {
+    pub(crate) struct Workload {
         state_sender: UnboundedSender<State>,
     }
 
     impl Workload {
-        pub fn new(state_sender: UnboundedSender<State>) -> Self {
+        pub(crate) fn new(state_sender: UnboundedSender<State>) -> Self {
             Self { state_sender }
         }
     }
@@ -60,7 +60,7 @@ impl job::work::Sequential for StubWorkload {
 
 /// [Workload] provides a simple implementation of [Workload](job::Workload) for sending a test
 /// Payload to a given target.
-pub struct Workload {
+pub(crate) struct Workload {
     /// The payload to be delivered.
     payload: Payload,
     /// The [Signature] of the recipient to receive the payload.

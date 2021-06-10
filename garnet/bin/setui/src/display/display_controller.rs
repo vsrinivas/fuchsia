@@ -303,7 +303,7 @@ pub struct DisplayInfoV1 {
 }
 
 impl DisplayInfoV1 {
-    pub const fn new(
+    const fn new(
         auto_brightness: bool,
         manual_brightness_value: f32,
         low_light_mode: LowLightMode,
@@ -335,7 +335,7 @@ pub struct DisplayInfoV2 {
 }
 
 impl DisplayInfoV2 {
-    pub const fn new(
+    const fn new(
         auto_brightness: bool,
         manual_brightness_value: f32,
         low_light_mode: LowLightMode,
@@ -407,7 +407,7 @@ pub struct DisplayInfoV3 {
 }
 
 impl DisplayInfoV3 {
-    pub const fn new(
+    const fn new(
         auto_brightness: bool,
         manual_brightness_value: f32,
         screen_enabled: bool,
@@ -466,7 +466,7 @@ pub struct DisplayInfoV4 {
 }
 
 impl DisplayInfoV4 {
-    pub const fn new(
+    const fn new(
         auto_brightness: bool,
         manual_brightness_value: f32,
         screen_enabled: bool,
@@ -528,7 +528,7 @@ pub struct DisplayInfoV5 {
 }
 
 impl DisplayInfoV5 {
-    pub const fn new(
+    const fn new(
         auto_brightness: bool,
         manual_brightness_value: f32,
         screen_enabled: bool,

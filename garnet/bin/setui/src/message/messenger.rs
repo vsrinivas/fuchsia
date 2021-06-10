@@ -73,12 +73,14 @@ pub struct TargetedMessengerClient<P: Payload + 'static, A: Address + 'static, R
 impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static>
     TargetedMessengerClient<P, A, R>
 {
-    pub fn new(client: MessengerClient<P, A, R>, audience: Audience<A, R>) -> Self {
+    #[cfg(test)]
+    pub(crate) fn new(client: MessengerClient<P, A, R>, audience: Audience<A, R>) -> Self {
         Self { client, audience }
     }
 
     /// Creates a MessageBuilder for a new message with the specified payload.
-    pub fn message(&self, payload: P) -> MessageBuilder<P, A, R> {
+    #[cfg(test)]
+    pub(crate) fn message(&self, payload: P) -> MessageBuilder<P, A, R> {
         self.client.message(payload, self.audience.clone())
     }
 }

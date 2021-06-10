@@ -75,7 +75,7 @@ pub(crate) enum Dependency {
 impl Dependency {
     /// Returns whether the [Dependency] can be handled by the provided environment. Currently, this
     /// only involves [SettingType] handlers.
-    pub fn is_fulfilled(&self, entities: &HashSet<Entity>) -> bool {
+    pub(crate) fn is_fulfilled(&self, entities: &HashSet<Entity>) -> bool {
         match self {
             Dependency::Entity(entity) => entities.contains(entity),
         }
@@ -236,7 +236,8 @@ pub fn get_default_setting_types() -> HashSet<SettingType> {
 
 /// Returns all known setting types. New additions to SettingType should also
 /// be inserted here.
-pub fn get_all_setting_types() -> HashSet<SettingType> {
+#[cfg(test)]
+pub(crate) fn get_all_setting_types() -> HashSet<SettingType> {
     array::IntoIter::new([
         SettingType::Accessibility,
         SettingType::Audio,

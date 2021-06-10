@@ -24,7 +24,7 @@ pub type RequestStream<S> = <S as ServiceMarker>::RequestStream;
 
 /// `ProcessingUnit` is an entity that is able to process a stream request and indicate whether the
 /// request was consumed.
-pub trait ProcessingUnit<S>
+pub(crate) trait ProcessingUnit<S>
 where
     S: ServiceMarker,
 {
@@ -62,7 +62,7 @@ impl<S> BaseFidlProcessor<S>
 where
     S: ServiceMarker,
 {
-    pub fn new(
+    pub(crate) fn new(
         request_stream: RequestStream<S>,
         service_messenger: service::message::Messenger,
     ) -> Self {
@@ -80,7 +80,7 @@ where
 
     // Process the stream. Note that we pass in the processor here as it cannot
     // be used again afterwards.
-    pub async fn process(mut self) {
+    pub(crate) async fn process(mut self) {
         let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
         loop {
             // Note that we create a fuse outside the select! to prevent it from
@@ -182,7 +182,7 @@ impl<S> PolicyFidlProcessor<S>
 where
     S: ServiceMarker,
 {
-    pub async fn new(
+    pub(crate) async fn new(
         stream: RequestStream<S>,
         service_messenger: service::message::Messenger,
     ) -> Self {
@@ -190,12 +190,12 @@ where
     }
 
     /// Registers a fidl processing unit for policy requests.
-    pub async fn register(&mut self, callback: PolicyRequestCallback<S>) {
+    pub(crate) async fn register(&mut self, callback: PolicyRequestCallback<S>) {
         let processing_unit = Box::new(PolicyProcessingUnit::<S>::new(callback));
         self.base_processor.processing_units.push(processing_unit);
     }
 
-    pub async fn process(self) {
+    pub(crate) async fn process(self) {
         self.base_processor.process().await
     }
 }

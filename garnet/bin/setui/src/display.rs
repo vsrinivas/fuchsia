@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use self::display_fidl_handler::fidl_io;
+pub(crate) use self::display_fidl_handler::fidl_io;
 pub use self::light_sensor_controller::LIGHT_SENSOR_SERVICE_NAME;
 
 pub mod display_configuration;
