@@ -699,9 +699,10 @@ int main(int argc, const char** argv) {
 
   async::Loop async_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async_loop.StartThread("audio CLI wait for key");
+  std::atomic<bool> pressed(false);
   fsl::FDWaiter fd_waiter(async_loop.dispatcher());
 
-  std::atomic<bool> pressed(false);
+  auto cleanup = fit::defer([&async_loop] { async_loop.Shutdown(); });
   fd_waiter.Wait([&pressed](zx_status_t, uint32_t) { pressed.store(true); }, 0, POLLIN);
   auto loop_done = [&pressed]() -> bool { return !pressed.load(); };
 
