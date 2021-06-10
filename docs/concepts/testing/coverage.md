@@ -143,6 +143,20 @@ group("tests") {
 
 Look for context as to why your test is disabled on coverage and investigate.
 
+### Test only flakes in coverage
+
+Related to the above, tests are more likely to be flaky under coverage
+[example][fxr541525]. The extra overhead from collecting coverage at runtime
+slows down performance, which in turn affects timing, which is often the cause
+for additional flakiness.
+
+An immediate fix would be to disable your test under coverage (see the GN
+snippet above), at the immediate cost of not collecting coverage information
+from your test. As a best practice you should treat flakes on coverage the same
+as you would treat flakes elsewhere, mainly fix the flakiness.
+
+See also: [flaky test policy][flaky-policy].
+
 ## How test coverage works
 
 Fuchsia's code coverage build, test runtime support, and processing tools use
@@ -190,10 +204,12 @@ dashboards.
 [cfv2]: /docs/concepts/components/v2/
 [covargs]: /tools/debug/covargs/
 [debugdata]: https://fuchsia.dev/reference/fidl/fuchsia.debugdata
+[flaky-policy]: /docs/concepts/testing/test_flake_policy.md
 [fuchsia-coverage-ci]: https://ci.chromium.org/p/fuchsia/builders/ci/fuchsia-coverage
 [fuzz-testing]: /docs/concepts/testing/fuzz_testing.md
 [fx-smoke-test]: https://fuchsia.dev/reference/tools/fx/cmd/smoke-test
 [fxr499602]: https://fuchsia-review.googlesource.com/c/fuchsia/+/499602/12
+[fxr541525]: https://fuchsia-review.googlesource.com/c/fuchsia/+/541525
 [gerrit]: https://fuchsia-review.googlesource.com/
 [llvm-cov]: https://llvm.org/docs/CommandGuide/llvm-cov.html
 [llvm-coverage]: https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
