@@ -397,7 +397,7 @@ fn help(name: &str) -> String {
         --pid <integer>:
             pid for the program to filter on.
 
-        --pretty yes:
+        --pretty:
             Activate colorization. Note, suppression features does not need this option.
             TODO(porce): Use structopt and convert this to boolean.
 
@@ -438,13 +438,13 @@ fn help(name: &str) -> String {
             See chrono::format::strftime for format specifiers.
             Defaults to "%Y-%m-%d %H:%M:%S".
 
-        --since_now yes:
+        --since_now:
             Ignore all logs from before this command is invoked.
 
-        --dump_logs yes:
+        --dump_logs:
             Dump current logs in buffer and exit.
 
-        --hide_metadata yes:
+        --hide_metadata:
             Hides extraneous metadata (such as PID, TID) from log output.
             When paired with --pretty, lines are colorized by severity.
 
@@ -455,19 +455,58 @@ fn help(name: &str) -> String {
     )
 }
 
-fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
-    if args.len() % 2 != 0 {
-        return Err(String::from("Invalid args."));
+// These flags don't require an additional parameter
+const PARAMETERLESS_FLAGS: [&'static str; 4] =
+    ["--pretty", "--since_now", "--dump_logs", "--hide_metadata"];
+
+fn check_for_param(i: usize, args: &[String]) -> Result<bool, String> {
+    let flag = &args[i];
+
+    if PARAMETERLESS_FLAGS.contains(&flag.as_str()) {
+        // This flag does not require a parameter
+        if let Some(arg) = args.get(i + 1) {
+            // There is another argument after this flag
+            if arg == "yes" {
+                // A parameterless flag may still have a `yes` param.
+                // This is for compatibility reasons.
+                return Ok(true);
+            } else if arg.starts_with("-") {
+                // The next argument is another flag.
+                return Ok(false);
+            } else {
+                // The next argument appears to be a param
+                return Err(format!("'{}' does not require a parameter", flag));
+            }
+        }
+        // There is no next argument
+        return Ok(false);
     }
+
+    // This flag requires a parameter
+    if let Some(arg) = args.get(i + 1) {
+        // There is another argument after this flag
+        if arg.starts_with("-") {
+            // The next argument is another flag
+            return Err(format!("'{}' is missing a parameter", flag));
+        } else {
+            // The next argument appears to be a param
+            return Ok(true);
+        }
+    }
+
+    // There is no next argument
+    return Err(format!("'{}' is missing a parameter", flag));
+}
+
+fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
     let mut options = LogListenerOptions::default();
 
     let mut i = 0;
     let mut severity_passed = false;
     while i < args.len() {
         let argument = &args[i];
-        if args[i + 1].starts_with("-") {
-            return Err(format!("Invalid args. Pass argument after flag '{}'", argument));
-        }
+        let has_param = check_for_param(i, args)?;
+
         match argument.as_ref() {
             "--begin" => {
                 options.local.begin.extend(args[i + 1].split(",").map(String::from));
@@ -502,18 +541,10 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                 options.local.only.extend(args[i + 1].split(",").map(String::from));
             }
             "--pretty" => {
-                let ans = &args[i + 1];
-                if ans.to_lowercase() == "yes" {
-                    options.local.is_pretty = true;
-                }
+                options.local.is_pretty = true;
             }
             "--since_now" => {
-                let ans = &args[i + 1];
-                if ans.to_lowercase() == "yes" {
-                    options.local.since_time = Some(zx::Time::get_monotonic().into_nanos());
-                } else {
-                    return Err(format!("The argument to --since_now must be 'yes'"));
-                }
+                options.local.since_time = Some(zx::Time::get_monotonic().into_nanos());
             }
             "--suppress" => {
                 options.local.suppress.extend(args[i + 1].split(",").map(String::from));
@@ -616,10 +647,7 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                 options.local.time_format = args[i + 1].clone();
             }
             "--dump_logs" => {
-                let ans = &args[i + 1];
-                if ans.to_lowercase() == "yes" {
-                    options.local.dump_logs = true;
-                }
+                options.local.dump_logs = true;
             }
             "--select" => {
                 // Starting out, we require that the 'component' be specified
@@ -676,16 +704,18 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                 }
             }
             "--hide_metadata" => {
-                let ans = &args[i + 1];
-                if ans.to_lowercase() == "yes" {
-                    options.local.hide_metadata = true;
-                }
+                options.local.hide_metadata = true;
             }
             a => {
                 return Err(format!("Invalid option {}", a));
             }
         }
-        i = i + 2;
+
+        if has_param {
+            i = i + 2;
+        } else {
+            i = i + 1;
+        }
     }
     return Ok(options);
 }
@@ -1502,7 +1532,15 @@ mod tests {
 
         #[test]
         fn pretty() {
-            let args = vec!["--pretty".to_string(), "YeS".to_string()];
+            let args = vec!["--pretty".to_string()];
+            let mut expected = LogListenerOptions::default();
+            expected.local.is_pretty = true;
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn pretty_yes() {
+            let args = vec!["--pretty".to_string(), "yes".to_string()];
             let mut expected = LogListenerOptions::default();
             expected.local.is_pretty = true;
             parse_flag_test_helper(&args, Some(&expected));
@@ -1510,15 +1548,13 @@ mod tests {
 
         #[test]
         fn pretty_error() {
-            let args = vec!["--pretty".to_string(), "123".to_string()];
-            let mut expected = LogListenerOptions::default();
-            expected.local.is_pretty = false;
-            parse_flag_test_helper(&args, Some(&expected));
+            let args = vec!["--pretty".to_string(), "123a".to_string()];
+            parse_flag_test_helper(&args, None);
         }
 
         #[test]
         fn dump_logs() {
-            let args = vec!["--dump_logs".to_string(), "YeS".to_string()];
+            let args = vec!["--dump_logs".to_string()];
             let mut expected = LogListenerOptions::default();
             expected.local.dump_logs = true;
             parse_flag_test_helper(&args, Some(&expected));
@@ -1526,10 +1562,42 @@ mod tests {
 
         #[test]
         fn dump_logs_error() {
-            let args = vec!["--dump_logs".to_string(), "123".to_string()];
+            let args = vec!["--dump_logs".to_string(), "123a".to_string()];
+            parse_flag_test_helper(&args, None);
+        }
+
+        #[test]
+        fn pretty_and_hide_metadata() {
+            let args = vec!["--hide_metadata".to_string(), "--pretty".to_string()];
             let mut expected = LogListenerOptions::default();
-            expected.local.dump_logs = false;
+            expected.local.hide_metadata = true;
+            expected.local.is_pretty = true;
             parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn verbosity_and_hide_metadata() {
+            let args =
+                vec!["--verbosity".to_string(), "1".to_string(), "--hide_metadata".to_string()];
+            let mut expected = LogListenerOptions::default();
+            expected.filter.verbosity = 1;
+            expected.filter.min_severity = LogLevelFilter::None;
+            expected.local.hide_metadata = true;
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn hide_metadata() {
+            let args = vec!["--hide_metadata".to_string()];
+            let mut expected = LogListenerOptions::default();
+            expected.local.hide_metadata = true;
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn hide_metadata_error() {
+            let args = vec!["--hide_metadata".to_string(), "123a".to_string()];
+            parse_flag_test_helper(&args, None);
         }
 
         #[test]
