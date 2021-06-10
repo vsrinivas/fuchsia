@@ -19,6 +19,7 @@ const zx::duration log_durations[kNumLevels] = {zx::sec(30), zx::min(1), zx::min
 
 void Logger::SetPressureLevel(Level l) {
   duration_ = log_durations[l];
+  task_.Cancel();
   task_.PostDelayed(dispatcher_, zx::usec(1));
 }
 
@@ -39,7 +40,6 @@ void Logger::Log() {
   std::replace(str.begin(), str.end(), '\n', ' ');
   FX_LOGS(INFO) << str;
 
-  task_.Cancel();
   task_.PostDelayed(dispatcher_, duration_);
 }
 
