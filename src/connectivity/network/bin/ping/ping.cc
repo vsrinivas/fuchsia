@@ -31,13 +31,13 @@ typedef struct {
 } __PACKED packet_t;
 
 struct Options {
-  long interval_msec = 1000;
-  long payload_size_bytes = 0;
   long count = 3;
+  long interval_msec = 1000;
   long timeout_msec = 1000;
+  long payload_size_bytes = 0;
+  long min_payload_size_bytes = 0;
   const char* interface_name = nullptr;
   const char* host = nullptr;
-  long min_payload_size_bytes = 0;
 
   explicit Options(long min) {
     payload_size_bytes = min;
@@ -46,9 +46,9 @@ struct Options {
 
   void Print() const {
     printf("Count: %ld, ", count);
-    printf("Payload size: %ld bytes, ", payload_size_bytes);
     printf("Interval: %ld ms, ", interval_msec);
     printf("Timeout: %ld ms, ", timeout_msec);
+    printf("Payload size: %ld bytes, ", payload_size_bytes);
     printf("Source interface: %s, ", interface_name);
     if (host != nullptr) {
       printf("Destination: %s\n", host);
@@ -90,38 +90,29 @@ struct Options {
     fprintf(stderr, "\t-c count: Only send count packets (default = 3)\n");
     fprintf(stderr, "\t-i interval(ms): Time interval between pings (default = 1000)\n");
     fprintf(stderr, "\t-t timeout(ms): Timeout waiting for ping response (default = 1000)\n");
-    fprintf(stderr, "\t-I interface_name: Name of the interface the requests will be sent from\n");
     fprintf(stderr, "\t-s size(bytes): Number of payload bytes (default = %ld)\n",
             payload_size_bytes);
+    fprintf(stderr, "\t-I interface_name: Name of the interface the requests will be sent from\n");
     fprintf(stderr, "\t-h: View this help message\n\n");
     return -1;
   }
 
   int ParseCommandLine(int argc, char** argv) {
     int opt;
-    while ((opt = getopt(argc, argv, "s:c:i:t:I:h")) != -1) {
+    while ((opt = getopt(argc, argv, "c:i:t:s:I:h")) != -1) {
       char* endptr = nullptr;
       switch (opt) {
-        case 'h':
-          return Usage();
-        case 'i':
-          interval_msec = strtol(optarg, &endptr, 10);
-          if (*endptr != '\0') {
-            fprintf(stderr, "-i must be followed by a non-negative integer\n");
-            return Usage();
-          }
-          break;
-        case 's':
-          payload_size_bytes = strtol(optarg, &endptr, 10);
-          if (*endptr != '\0') {
-            fprintf(stderr, "-s must be followed by a non-negative integer\n");
-            return Usage();
-          }
-          break;
         case 'c':
           count = strtol(optarg, &endptr, 10);
           if (*endptr != '\0') {
             fprintf(stderr, "-c must be followed by a non-negative integer\n");
+            return Usage();
+          }
+          break;
+        case 'i':
+          interval_msec = strtol(optarg, &endptr, 10);
+          if (*endptr != '\0') {
+            fprintf(stderr, "-i must be followed by a non-negative integer\n");
             return Usage();
           }
           break;
@@ -132,9 +123,18 @@ struct Options {
             return Usage();
           }
           break;
+        case 's':
+          payload_size_bytes = strtol(optarg, &endptr, 10);
+          if (*endptr != '\0') {
+            fprintf(stderr, "-s must be followed by a non-negative integer\n");
+            return Usage();
+          }
+          break;
         case 'I':
           interface_name = optarg;
           break;
+        case 'h':
+          return Usage();
         default:
           return Usage();
       }
