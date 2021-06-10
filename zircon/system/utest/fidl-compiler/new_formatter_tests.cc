@@ -1090,6 +1090,283 @@ library foo.bar;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// Ensure that an already properly formatted resource declaration is not modified by another run
+// through the formatter.
+TEST(NewFormatterTests, ResourceFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+resource_definition default_abcdefghij {
+    properties {
+        obj_type subtype_abcdefghijklmn;
+    };
+};
+
+resource_definition subtype_a : uint32 {
+    properties {
+        obj_type subtype_abcdefghijklmn;
+        rights rights_abcdefghijklmnopq;
+    };
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+resource_definition default_abcdefghij {
+    properties {
+        obj_type subtype_abcdefghijklmn;
+    };
+};
+
+resource_definition subtype_a : uint32 {
+    properties {
+        obj_type subtype_abcdefghijklmn;
+        rights rights_abcdefghijklmnopq;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// No part of a resource_definition should wrap on overflow.
+TEST(NewFormatterTests, ResourceOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+resource_definition default_abcdefghijk {
+    properties {
+        obj_type subtype_abcdefghijklmno;
+    };
+};
+
+resource_definition subtype_ab : uint32 {
+    properties {
+        obj_type subtype_abcdefghijklmno;
+        rights rights_abcdefghijklmnopqr;
+    };
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+resource_definition default_abcdefghijk {
+    properties {
+        obj_type subtype_abcdefghijklmno;
+    };
+};
+
+resource_definition subtype_ab : uint32 {
+    properties {
+        obj_type subtype_abcdefghijklmno;
+        rights rights_abcdefghijklmnopqr;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, ResourceUnormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+resource_definition default_abcdefghij
+
+{
+    properties  { obj_type subtype_abcdefghijklmn;
+};};
+
+resource_definition subtype_a: uint32 {properties {
+obj_type subtype_abcdefghijklmn ;
+  rights rights_abcdefghijklmnopq;
+};
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+resource_definition default_abcdefghij {
+    properties {
+        obj_type subtype_abcdefghijklmn;
+    };
+};
+
+resource_definition subtype_a : uint32 {
+    properties {
+        obj_type subtype_abcdefghijklmn;
+        rights rights_abcdefghijklmnopq;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, ResourceWithAllAnnotations) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+ // comment 1
+  /// doc comment 1
+
+   @foo
+    resource_definition default_abcdefghij {
+    properties {
+  // comment 2
+
+   /// doc comment 2
+
+     @bar
+
+        obj_type subtype_abcdefghijklmn;
+    };
+};
+
+resource_definition subtype_a : uint32 {
+    properties {
+        obj_type subtype_abcdefghijklmn;
+// comment 3
+/// doc comment 3
+
+     @baz
+        rights rights_abcdefghijklmnopq;
+    };
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+// comment 1
+/// doc comment 1
+@foo
+resource_definition default_abcdefghij {
+    properties {
+        // comment 2
+
+        /// doc comment 2
+        @bar
+        obj_type subtype_abcdefghijklmn;
+    };
+};
+
+resource_definition subtype_a : uint32 {
+    properties {
+        obj_type subtype_abcdefghijklmn;
+        // comment 3
+        /// doc comment 3
+        @baz
+        rights rights_abcdefghijklmnopq;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly.  This should
+//  be fixed when proper token parsing is used.
+// This test's input is semantically identical to ResourceFormatted.  The only difference is that
+// the newlines and unnecessary spaces have been removed.
+TEST(NewFormatterTests, ResourceFormattedMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted =
+      R"FIDL(library foo.bar;resource_definition default_abcdefghij {properties{obj_type subtype_abcdefghijklmn;};};resource_definition subtype_a:uint32{properties{obj_type subtype_abcdefghijklmn;rights rights_abcdefghijklmnopq;};};)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+resource_definition default_abcdefghij {
+    properties{
+        obj_type subtype_abcdefghijklmn;
+    };
+};
+resource_definition subtype_a :uint32{
+    properties{
+        obj_type subtype_abcdefghijklmn;
+        rights rights_abcdefghijklmnopq;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Input is identical to ResourceFormatted, except that every token is on a newline.
+TEST(NewFormatterTests, ResourceMaximalNewlines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library
+foo
+.
+bar
+;
+
+resource_definition
+default_abcdefghij
+{
+properties
+{
+obj_type
+subtype_abcdefghijklmn
+;
+}
+;
+}
+;
+
+resource_definition
+subtype_a
+:
+uint32
+{
+properties
+{
+obj_type
+subtype_abcdefghijklmn
+;
+rights
+rights_abcdefghijklmnopq
+;
+}
+;
+}
+;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+resource_definition default_abcdefghij {
+    properties {
+        obj_type subtype_abcdefghijklmn;
+    };
+};
+
+resource_definition subtype_a : uint32 {
+    properties {
+        obj_type subtype_abcdefghijklmn;
+        rights rights_abcdefghijklmnopq;
+    };
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Ensure that an already properly formatted service declaration is not modified by another run
 // through the formatter.
 TEST(NewFormatterTests, ServiceFormatted) {
@@ -3656,32 +3933,6 @@ using baz.qux; // C4
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
-TEST(NewFormatterTests, CommentsMultiline) {
-  // ---------------40---------------- |
-  std::string unformatted = R"FIDL(
-// C1
-// C2
-library foo.bar; // C3
-
-// C4
-// C5
-using baz.qux; // C6
-)FIDL";
-
-  // ---------------40---------------- |
-  std::string formatted = R"FIDL(
-// C1
-// C2
-library foo.bar; // C3
-
-// C4
-// C5
-using baz.qux; // C6
-)FIDL";
-
-  ASSERT_STR_EQ(formatted, Format(unformatted));
-}
-
 // Ensure that overlong comments are not wrapped.
 TEST(NewFormatterTests, CommentsOverflow) {
   // ---------------40---------------- |
@@ -3698,6 +3949,144 @@ using baz.qux; // C4
 library foo.bar; // C2
 // C3: This is my very very long comment.
 using baz.qux; // C4
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, CommentsMultiline) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+// C1a
+// C1b
+library foo.bar;  // C2
+
+// C3a
+// C3b
+using baz.qux;  // C4
+
+// C5a
+// C5b
+resource_definition thing : uint8 {  // C6
+// C7a
+// C7b
+    properties {  // C8
+// C9a
+// C9b
+        stuff rights;  // C10
+    };
+};
+
+// C11a
+// C11b
+const MY_CONST string = "abc";  // C12
+
+// C13a
+// C13b
+type MyEnum = enum {  // C14
+// C15a
+// C17b
+    MY_VALUE = 1;  // C16
+};
+
+// C17a
+// C17b
+type MyTable = resource table {  // C18
+// C19a
+// C19b
+    1: field thing;  // C20
+};
+
+// C21a
+// C21b
+alias MyAlias = MyStruct;  // C22
+
+// C23a
+// C23b
+protocol MyProtocol {  // C24
+// C25a
+// C25b
+    MyMethod(resource struct {  // C26
+// C27a
+// C27b
+        data MyTable;  // C28
+    }) -> () error MyEnum;  // C29
+};  // 30
+
+// C29a
+// C29b
+service MyService {  // C32
+// C31a
+// C31b
+    my_protocol client_end:MyProtocol;  // C34
+};  // C35
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+// C1a
+// C1b
+library foo.bar; // C2
+
+// C3a
+// C3b
+using baz.qux; // C4
+
+// C5a
+// C5b
+resource_definition thing : uint8 { // C6
+    // C7a
+    // C7b
+    properties { // C8
+        // C9a
+        // C9b
+        stuff rights; // C10
+    };
+};
+
+// C11a
+// C11b
+const MY_CONST string = "abc"; // C12
+
+// C13a
+// C13b
+type MyEnum = enum { // C14
+    // C15a
+    // C17b
+    MY_VALUE = 1; // C16
+};
+
+// C17a
+// C17b
+type MyTable = resource table { // C18
+    // C19a
+    // C19b
+    1: field thing; // C20
+};
+
+// C21a
+// C21b
+alias MyAlias = MyStruct; // C22
+
+// C23a
+// C23b
+protocol MyProtocol { // C24
+    // C25a
+    // C25b
+    MyMethod(resource struct { // C26
+        // C27a
+        // C27b
+        data MyTable; // C28
+    }) -> () error MyEnum; // C29
+}; // 30
+
+// C29a
+// C29b
+service MyService { // C32
+    // C31a
+    // C31b
+    my_protocol client_end:MyProtocol; // C34
+}; // C35
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));

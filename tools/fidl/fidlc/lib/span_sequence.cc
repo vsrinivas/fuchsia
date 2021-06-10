@@ -243,7 +243,7 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
                                          next_token_is_indented, out);
 
         // A comment always forces the rest of the AtomicSpanSequence content to be wrapped.
-        if (!wrapped) {
+        if (!wrapped && i < last.value_or(0)) {
           wrapped = true;
           wrapped_indentation += kWrappedIndentation;
         }

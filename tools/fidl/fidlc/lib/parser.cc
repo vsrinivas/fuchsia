@@ -1174,7 +1174,7 @@ std::unique_ptr<raw::ProtocolDeclaration> Parser::ParseProtocolDeclaration(
 
 std::unique_ptr<raw::ResourceProperty> Parser::ParseResourcePropertyDeclaration() {
   ASTScope scope(this);
-  auto attributes = MaybeParseAttributeListOld();
+  auto attributes = MaybeParseAttributeList();
   if (!Ok())
     return Fail();
 

@@ -49,12 +49,8 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnProtocolCompose(std::unique_ptr<raw::ProtocolCompose> const& element) override;
   void OnProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> const& element) override;
   void OnProtocolMethod(std::unique_ptr<raw::ProtocolMethod> const& element) override;
-  void OnResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> const& element) override {
-    NotYetImplemented();
-  }
-  void OnResourceProperty(std::unique_ptr<raw::ResourceProperty> const& element) override {
-    NotYetImplemented();
-  }
+  void OnResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> const& element) override;
+  void OnResourceProperty(std::unique_ptr<raw::ResourceProperty> const& element) override;
   void OnServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> const& element) override;
   void OnServiceMember(std::unique_ptr<raw::ServiceMember> const& element) override;
   void OnStructLayoutMember(std::unique_ptr<raw::StructLayoutMember> const& element) override;
@@ -142,6 +138,8 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
     kProtocolMethod,
     kProtocolRequest,
     kProtocolResponse,
+    kResourceDeclaration,
+    kResourceProperty,
     kServiceDeclaration,
     kServiceMember,
     kStructLayout,
@@ -309,8 +307,11 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // that the limit character is actually in the range of the uningested_ string_view before
   // calling this function, make sure the limit pointer is not null, etc.
   std::optional<std::unique_ptr<SpanSequence>> IngestUntil(
-      const char* limit, bool stop_at_semicolon = false,
+      const char* limit, std::optional<char> stop_at = std::nullopt,
       SpanSequence::Position position = SpanSequence::Position::kDefault);
+
+  // This call is just sugar around IngestUntil(LAST_CHAR_OF_FILE, stop_char);
+  std::optional<std::unique_ptr<SpanSequence>> IngestUntilChar(char stop_char);
   std::optional<std::unique_ptr<SpanSequence>> IngestUntilEndOfFile();
 
   // Ingest until the first semicolon we encounter, taking care to include any inline comments that
@@ -319,7 +320,7 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // we call it on `foo; // bar\n`, we should expect to ingest the entire thing, trailing comment
   // included.
   //
-  // This call is just sugar around IngestUntil(LAST_CHAR_OF_FILE, true);
+  // This call is just sugar around IngestUntilChar(, ';');
   std::optional<std::unique_ptr<SpanSequence>> IngestUntilSemicolon();
 
   // Stores that path in the raw AST of the node currently being visited.  See the comment on the
