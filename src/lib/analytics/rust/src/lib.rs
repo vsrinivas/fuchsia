@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 mod env_info;
 mod ga_event;
+pub mod metrics_event_batch;
 mod metrics_service;
 mod metrics_state;
 mod notice;
@@ -14,6 +15,7 @@ use {
 };
 
 use crate::env_info::{analytics_folder, is_analytics_disabled_by_env};
+use crate::metrics_event_batch::MetricsEventBatch;
 use crate::metrics_service::*;
 use crate::metrics_state::{MetricsState, UNKNOWN_VERSION};
 
@@ -89,7 +91,7 @@ pub async fn opt_out_for_this_invocation() -> Result<()> {
 pub async fn add_launch_event(args: Option<&str>) -> Result<()> {
     let svc = METRICS_SERVICE.lock().await;
     match &svc.init_state {
-        MetricsServiceInitStatus::INITIALIZED => svc.inner_add_launch_event(args).await,
+        MetricsServiceInitStatus::INITIALIZED => svc.inner_add_launch_event(args, None).await,
         MetricsServiceInitStatus::UNINITIALIZED => {
             log::error!("add_launch_event called on uninitialized METRICS_SERVICE");
             bail!(INIT_ERROR)
@@ -102,7 +104,7 @@ pub async fn add_launch_event(args: Option<&str>) -> Result<()> {
 pub async fn add_crash_event(err: &str) -> Result<()> {
     let svc = METRICS_SERVICE.lock().await;
     match &svc.init_state {
-        MetricsServiceInitStatus::INITIALIZED => svc.inner_add_crash_event(err).await,
+        MetricsServiceInitStatus::INITIALIZED => svc.inner_add_crash_event(err, None).await,
         MetricsServiceInitStatus::UNINITIALIZED => {
             log::error!("add_crash_event called on uninitialized METRICS_SERVICE");
             bail!(INIT_ERROR)
@@ -112,10 +114,19 @@ pub async fn add_crash_event(err: &str) -> Result<()> {
 
 /// Records a timing event from the app.
 /// Returns an error if init has not been called.
-pub async fn add_timing_event() -> Result<()> {
+pub async fn add_timing_event(
+    category: Option<&str>,
+    time: String,
+    variable: Option<&str>,
+    label: Option<&str>,
+    custom_dimensions: BTreeMap<&str, String>,
+) -> Result<()> {
     let svc = METRICS_SERVICE.lock().await;
     match &svc.init_state {
-        MetricsServiceInitStatus::INITIALIZED => svc.inner_add_timing_event().await,
+        MetricsServiceInitStatus::INITIALIZED => {
+            svc.inner_add_timing_event(category, time, variable, label, custom_dimensions, None)
+                .await
+        }
         MetricsServiceInitStatus::UNINITIALIZED => {
             log::error!("add_timing_event called on uninitialized METRICS_SERVICE");
             bail!(INIT_ERROR)
@@ -134,10 +145,21 @@ pub async fn add_custom_event(
     let svc = METRICS_SERVICE.lock().await;
     match &svc.init_state {
         MetricsServiceInitStatus::INITIALIZED => {
-            svc.inner_add_custom_event(category, action, label, custom_dimensions).await
+            svc.inner_add_custom_event(category, action, label, custom_dimensions, None).await
         }
         MetricsServiceInitStatus::UNINITIALIZED => {
             log::error!("add_custom_event called on uninitialized METRICS_SERVICE");
+            bail!(INIT_ERROR)
+        }
+    }
+}
+
+pub async fn make_batch() -> Result<MetricsEventBatch> {
+    let svc = METRICS_SERVICE.lock().await;
+    match &svc.init_state {
+        MetricsServiceInitStatus::INITIALIZED => Ok(MetricsEventBatch::new()),
+        MetricsServiceInitStatus::UNINITIALIZED => {
+            log::error!("make_batch called on uninitialized METRICS_SERVICE");
             bail!(INIT_ERROR)
         }
     }

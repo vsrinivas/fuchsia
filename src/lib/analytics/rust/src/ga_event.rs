@@ -10,19 +10,25 @@ const GA_PROPERTY_KEY: &str = "tid";
 
 const GA_CLIENT_KEY: &str = "cid";
 
-const GA_EVENT_CATEGORY_KEY: &str = "ec";
-const GA_EVENT_CATEGORY_DEFAULT: &str = "general";
-
 // TODO(fxb/71579): match zxdb by changing category and action for analytics commands
 // const GA_EVENT_CATEGORY_ANALYTICS: &str = "analytics";
 // const GA_EVENT_CATEGORY_ANALYTICS_ACTION_ENABLE: &str = "manual-enable";
 // const GA_EVENT_CATEGORY_ANALYTICS_ACTION_DISABLE: &str = "disable";
 
+const GA_EVENT_CATEGORY_KEY: &str = "ec";
+const GA_EVENT_CATEGORY_DEFAULT: &str = "general";
 const GA_EVENT_ACTION_KEY: &str = "ea";
+const GA_EVENT_LABEL_KEY: &str = "el";
 
-const GA_EVENT_LABELS_KEY: &str = "el";
+const GA_TIMING_CATEGORY_KEY: &str = "utc";
+const GA_TIMING_CATEGORY_DEFAULT: &str = "general";
+const GA_TIMING_TIMING_KEY: &str = "utt";
+const GA_TIMING_VARIABLE_KEY: &str = "utv";
+const GA_TIMING_LABEL_KEY: &str = "utl";
+
 const GA_DATA_TYPE_KEY: &str = "t";
 const GA_DATA_TYPE_EVENT_KEY: &str = "event";
+const GA_DATA_TYPE_TIMING_KEY: &str = "timing";
 
 const GA_PROTOCOL_KEY: &str = "v";
 const GA_PROTOCOL_VAL: &str = "1";
@@ -41,7 +47,7 @@ pub fn make_body_with_hash(
     ga_property_id: &str,
     category: Option<&str>,
     action: Option<&str>,
-    labels: Option<&str>,
+    label: Option<&str>,
     custom_dimensions: BTreeMap<&str, String>,
     uuid: String,
 ) -> String {
@@ -68,7 +74,54 @@ pub fn make_body_with_hash(
         },
     );
     insert_if_present(GA_EVENT_ACTION_KEY, &mut params, action);
-    insert_if_present(GA_EVENT_LABELS_KEY, &mut params, labels);
+    insert_if_present(GA_EVENT_LABEL_KEY, &mut params, label);
+
+    for (&key, value) in custom_dimensions.iter() {
+        params.insert(key, value);
+    }
+    params.insert(GA_CUSTOM_DIMENSION_1_KEY, &uname);
+
+    let body = to_kv_post_body(&params);
+    //println!("body = {}", &body);
+    body
+}
+
+pub fn make_timing_body_with_hash(
+    app_name: &str,
+    app_version: Option<&str>,
+    ga_property_id: &str,
+    category: Option<&str>,
+    time: String,
+    variable: Option<&str>,
+    label: Option<&str>,
+    custom_dimensions: BTreeMap<&str, String>,
+    uuid: String,
+) -> String {
+    let uname = os_and_release_desc();
+
+    let mut params = BTreeMap::new();
+    params.insert(GA_PROTOCOL_KEY, GA_PROTOCOL_VAL);
+    params.insert(GA_PROPERTY_KEY, ga_property_id);
+    params.insert(GA_CLIENT_KEY, &uuid);
+    params.insert(GA_DATA_TYPE_KEY, GA_DATA_TYPE_TIMING_KEY);
+    params.insert(GA_APP_NAME_KEY, app_name);
+    params.insert(
+        GA_APP_VERSION_KEY,
+        match app_version {
+            Some(ver) => ver,
+            None => GA_APP_VERSION_DEFAULT,
+        },
+    );
+    params.insert(
+        GA_TIMING_CATEGORY_KEY,
+        match category {
+            Some(value) => value,
+            None => GA_TIMING_CATEGORY_DEFAULT,
+        },
+    );
+    params.insert(GA_TIMING_TIMING_KEY, &time);
+    insert_if_present(GA_TIMING_LABEL_KEY, &mut params, label);
+    insert_if_present(GA_TIMING_VARIABLE_KEY, &mut params, variable);
 
     for (&key, value) in custom_dimensions.iter() {
         params.insert(key, value);
@@ -220,4 +273,7 @@ mod test {
         insert_if_present(key, &mut map2, Some(val));
         assert_eq!(None, map2.get(key));
     }
+
+    #[test]
+    fn make_post_body_for_timing_event() {}
 }

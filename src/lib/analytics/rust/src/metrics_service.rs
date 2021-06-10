@@ -6,6 +6,7 @@ use {
     anyhow::Result,
     fuchsia_hyper::new_https_client,
     futures::lock::Mutex,
+    hyper::body::HttpBody,
     hyper::{Body, Method, Request},
     lazy_static::lazy_static,
     std::collections::BTreeMap,
@@ -15,11 +16,13 @@ use {
 use crate::ga_event::*;
 use crate::metrics_state::*;
 use crate::notice::{BRIEF_NOTICE, FULL_NOTICE};
+use crate::MetricsEventBatch;
 
 #[cfg(test)]
 const GA_URL: &str = "https://www.google-analytics.com/debug/collect";
 #[cfg(not(test))]
 const GA_URL: &str = "https://www.google-analytics.com/collect";
+const GA_BATCH_URL: &str = "https://www.google-analytics.com/batch";
 
 lazy_static! {
     pub(crate) static ref METRICS_SERVICE: Arc<Mutex<MetricsService>> = Arc::new(Mutex::new(MetricsService::default()));
@@ -80,10 +83,14 @@ impl MetricsService {
         self.state.uuid.map_or("No uuid".to_string(), |u| u.to_string())
     }
 
-    pub(crate) async fn inner_add_launch_event(&self, args: Option<&str>) -> Result<()> {
+    pub(crate) async fn inner_add_launch_event(
+        &self,
+        args: Option<&str>,
+        batch_collector: Option<&mut MetricsEventBatch>,
+    ) -> Result<()> {
         // TODO(fxb/71580): extract param for category when requirements are clear.
         // For tools with subcommands, e.g. ffx, could be subcommands for better analysis
-        self.inner_add_custom_event(None, args, args, BTreeMap::new()).await
+        self.inner_add_custom_event(None, args, args, BTreeMap::new(), batch_collector).await
     }
 
     pub(crate) async fn inner_add_custom_event(
@@ -92,6 +99,7 @@ impl MetricsService {
         action: Option<&str>,
         label: Option<&str>,
         custom_dimensions: BTreeMap<&str, String>,
+        batch_collector: Option<&mut MetricsEventBatch>,
     ) -> Result<()> {
         match self.state.status {
             MetricsStatus::NewToTool | MetricsStatus::OptedIn => {
@@ -105,21 +113,31 @@ impl MetricsService {
                     custom_dimensions,
                     self.uuid_as_str(),
                 );
-                let client = new_https_client();
-                let req =
-                    Request::builder().method(Method::POST).uri(GA_URL).body(Body::from(body))?;
-                let res = client.request(req).await;
-                match res {
-                    Ok(res) => log::info!("Analytics response: {}", res.status()),
-                    Err(e) => log::debug!("Error posting analytics: {}", e),
+                match batch_collector {
+                    None => {
+                        let client = new_https_client();
+                        let req = Request::builder()
+                            .method(Method::POST)
+                            .uri(GA_URL)
+                            .body(Body::from(body))?;
+                        let res = client.request(req).await;
+                        match res {
+                            Ok(res) => log::info!("Analytics response: {}", res.status()),
+                            Err(e) => log::debug!("Error posting analytics: {}", e),
+                        }
+                        Ok(())
+                    }
+                    Some(bc) => {
+                        bc.add_event_string(body);
+                        Ok(())
+                    }
                 }
-                Ok(())
             }
             _ => Ok(()),
         }
     }
 
-    // TODO(fxb/70502): Add command timing
+    // TODO(fxb/70502): Add command crash
     // fx exception in subcommand
     // "t=event" \
     // "ec=fx_exception" \
@@ -127,20 +145,86 @@ impl MetricsService {
     // "el=${args}" \
     // "cd1=${exit_status}" \
     // )
-    pub(crate) async fn inner_add_crash_event(&self, _err: &str) -> Result<()> {
+    pub(crate) async fn inner_add_crash_event(
+        &self,
+        _err: &str,
+        batch_collector: Option<&mut MetricsEventBatch>,
+    ) -> Result<()> {
+        if let Some(bc) = batch_collector {
+            &mut bc.add_event_string("".to_string()); // TODO add crash_post_body
+        }
         Ok(())
     }
 
-    // TODO(fxb/70503): Add command timing
-    // fx subcommand timing event
-    // hit_type="timing"
-    //  "t=timing" \
-    //     "utc=fx" \
-    //     "utv=${subcommand}" \
-    //     "utt=${timing}" \
-    //     "utl=${args}" \
-    //     )
-    pub(crate) async fn inner_add_timing_event(&self) -> Result<()> {
+    /// Records a timing event from the app.
+    /// Returns an error if init has not been called.
+    pub(crate) async fn inner_add_timing_event(
+        &self,
+        category: Option<&str>,
+        time: String,
+        variable: Option<&str>,
+        label: Option<&str>,
+        custom_dimensions: BTreeMap<&str, String>,
+        batch_collector: Option<&mut MetricsEventBatch>,
+    ) -> Result<()> {
+        match self.state.status {
+            MetricsStatus::NewToTool | MetricsStatus::OptedIn => {
+                let body = make_timing_body_with_hash(
+                    &self.state.app_name,
+                    Some(&self.state.build_version),
+                    &self.state.ga_product_code,
+                    category,
+                    time,
+                    variable,
+                    label,
+                    custom_dimensions,
+                    self.uuid_as_str(),
+                );
+                match batch_collector {
+                    None => {
+                        let client = new_https_client();
+                        let req = Request::builder()
+                            .method(Method::POST)
+                            .uri(GA_URL)
+                            .body(Body::from(body))?;
+                        let res = client.request(req).await;
+                        match res {
+                            Ok(res) => log::info!("Analytics response: {}", res.status()),
+                            Err(e) => log::debug!("Error posting analytics: {}", e),
+                        }
+                        Ok(())
+                    }
+                    Some(bc) => {
+                        &mut bc.add_event_string(body);
+                        Ok(())
+                    }
+                }
+            }
+            _ => Ok(()),
+        }
+    }
+
+    pub(crate) async fn inner_send_events(&self, body: String, batch: bool) -> Result<()> {
+        let client = new_https_client();
+        let url = match batch {
+            true => GA_BATCH_URL,
+            false => GA_URL,
+        };
+
+        log::debug!("POSTING ANALYTICS: url: {}, \nBODY: {}", &url, &body);
+
+        let req = Request::builder().method(Method::POST).uri(url).body(Body::from(body))?;
+        let res = client.request(req).await;
+        match res {
+            Ok(mut res) => {
+                log::info!("Analytics response: {}", res.status());
+                while let Some(chunk) = res.body_mut().data().await {
+                    log::debug!("{:?}", &chunk?);
+                }
+                //let result = String::from_utf8(bytes.into_iter().collect()).expect("");
+            }
+            Err(e) => log::debug!("Error posting analytics: {}", e),
+        }
         Ok(())
     }
 }

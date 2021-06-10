@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::build_info;
-use analytics::{add_custom_event, init};
+use analytics::{init, make_batch, metrics_event_batch::MetricsEventBatch};
 use anyhow::Result;
 use std::collections::BTreeMap;
 
@@ -36,14 +36,28 @@ fn legacy_discovery_env() -> String {
     .to_string()
 }
 
-pub async fn add_fx_launch_event() -> Result<()> {
+pub async fn add_ffx_launch_and_timing_events(time: String) -> Result<()> {
+    let mut batcher = make_batch().await?;
+    add_ffx_launch_event(&mut batcher).await?;
+    add_ffx_timing_event(time, &mut batcher).await?;
+    batcher.send_events().await
+}
+
+async fn add_ffx_launch_event(batcher: &mut MetricsEventBatch) -> Result<()> {
     let launch_args = get_launch_args();
     let mut custom_dimensions = BTreeMap::new();
     add_legacy_discovery_metrics(&mut custom_dimensions);
-    add_custom_event(None, Some(&launch_args), None, custom_dimensions).await
+    batcher.add_custom_event(None, Some(&launch_args), None, custom_dimensions).await
 }
 
-pub fn add_legacy_discovery_metrics(custom_dimensions: &mut BTreeMap<&str, String>) {
+fn add_legacy_discovery_metrics(custom_dimensions: &mut BTreeMap<&str, String>) {
     custom_dimensions
         .insert(ANALYTICS_LEGACY_DISCOVERY_CUSTOM_DIMENSION_KEY, legacy_discovery_env());
+}
+
+async fn add_ffx_timing_event(time: String, batcher: &mut MetricsEventBatch) -> Result<()> {
+    let launch_args = get_launch_args();
+    let mut custom_dimensions = BTreeMap::new();
+    add_legacy_discovery_metrics(&mut custom_dimensions);
+    batcher.add_timing_event(Some(&launch_args), time, None, None, custom_dimensions).await
 }

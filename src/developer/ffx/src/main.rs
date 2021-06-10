@@ -8,7 +8,7 @@ use {
     async_once::Once,
     async_trait::async_trait,
     errors::{ffx_bail, ffx_error, FfxError, ResultExt as _},
-    ffx_core::metrics::{add_fx_launch_event, init_metrics_svc},
+    ffx_core::metrics::{add_ffx_launch_and_timing_events, init_metrics_svc},
     ffx_core::Injector,
     ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running},
     ffx_lib_args::{from_env, Ffx},
@@ -279,17 +279,19 @@ async fn run() -> Result<i32> {
 
     let analytics_start = Instant::now();
 
-    let analytics_task = fuchsia_async::Task::local(async {
-        if let Err(e) = add_fx_launch_event().await {
-            log::error!("metrics submission failed: {}", e);
-        }
-        Instant::now()
-    });
-
     let command_start = Instant::now();
     let res = ffx_lib_suite::ffx_plugin_impl(Injection::default(), app).await;
     let command_done = Instant::now();
     log::info!("Command completed. Success: {}", res.is_ok());
+    let command_duration = (command_done - command_start).as_secs_f32();
+    let timing_in_millis = (command_done - command_start).as_millis().to_string();
+
+    let analytics_task = fuchsia_async::Task::local(async move {
+        if let Err(e) = add_ffx_launch_and_timing_events(timing_in_millis).await {
+            log::error!("metrics submission failed: {}", e);
+        }
+        Instant::now()
+    });
 
     let analytics_done = analytics_task
         // TODO(66918): make configurable, and evaluate chosen time value.
@@ -303,7 +305,7 @@ async fn run() -> Result<i32> {
     log::info!(
         "Run finished. success: {}, command time: {}, analytics time: {}",
         res.is_ok(),
-        (command_done - command_start).as_secs_f32(),
+        &command_duration,
         (analytics_done - analytics_start).as_secs_f32()
     );
     res
