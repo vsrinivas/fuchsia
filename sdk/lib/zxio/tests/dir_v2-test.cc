@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io2/llcpp/fidl.h>
+#include <fuchsia/io2/llcpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
@@ -20,70 +21,20 @@ namespace {
 
 namespace fio2 = fuchsia_io2;
 
-class TestServerBase : public fidl::WireServer<fio2::Directory> {
+class TestServerBase : public fio2::testing::Directory_TestBase {
  public:
   TestServerBase() = default;
   virtual ~TestServerBase() = default;
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
+    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
 
   // Exercised by |zxio_close|.
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Close(ZX_OK);
-  }
-
-  void Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetAttributes(GetAttributesRequestView request,
-                     GetAttributesCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void UpdateAttributes(UpdateAttributesRequestView request,
-                        UpdateAttributesCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Open(OpenRequestView request, OpenCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void AddInotifyFilter(AddInotifyFilterRequestView request,
-                        AddInotifyFilterCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Enumerate(EnumerateRequestView request, EnumerateCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Rename(RenameRequestView request, RenameCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Link(LinkRequestView request, LinkCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   uint32_t num_close() const { return num_close_.load(); }

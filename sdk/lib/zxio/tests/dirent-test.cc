@@ -17,12 +17,13 @@
 
 #include <zxtest/zxtest.h>
 
+#include "sdk/lib/zxio/tests/test_directory_server_base.h"
+
 namespace {
 
 namespace fio = fuchsia_io;
-namespace fio2 = fuchsia_io2;
 
-class TestServer final : public fidl::WireServer<fio::Directory> {
+class TestServer final : public zxio_tests::TestDirectoryServerBase {
  public:
   TestServer() = default;
 
@@ -32,43 +33,6 @@ class TestServer final : public fidl::WireServer<fio::Directory> {
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Reply(ZX_OK);
-  }
-
-  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Open(OpenRequestView request, OpenCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void AddInotifyFilter(AddInotifyFilterRequestView request,
-                        AddInotifyFilterCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Unlink2(Unlink2RequestView request, Unlink2Completer::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override {
@@ -115,22 +79,6 @@ class TestServer final : public fidl::WireServer<fio::Directory> {
     memset(buffer_, 0, sizeof(buffer_));
     index_ = 0;
     completer.Reply(ZX_OK);
-  }
-
-  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Rename2(Rename2RequestView request, Rename2Completer::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Link(LinkRequestView request, LinkCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   uint32_t num_close() const { return num_close_.load(); }

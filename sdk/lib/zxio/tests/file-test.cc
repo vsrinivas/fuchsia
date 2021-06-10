@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/io/llcpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/server.h>
@@ -17,81 +18,28 @@
 
 #include <zxtest/zxtest.h>
 
-#include "file_test_suite.h"
+#include "sdk/lib/zxio/tests/file_test_suite.h"
+#include "sdk/lib/zxio/tests/test_file_server_base.h"
 
 namespace {
 
 namespace fio = fuchsia_io;
 
-class TestServerBase : public fidl::WireServer<fio::File> {
+class CloseCountingFileServer : public zxio_tests::TestFileServerBase {
  public:
-  TestServerBase() = default;
-  virtual ~TestServerBase() = default;
+  CloseCountingFileServer() = default;
+  virtual ~CloseCountingFileServer() = default;
 
   // Exercised by |zxio_close|.
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
-    completer.Reply(ZX_OK);
-    // After the reply, we should close the connection.
-    completer.Close(ZX_OK);
-  }
-
-  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
+    zxio_tests::TestFileServerBase::Close(request, completer);
   }
 
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     fio::wire::FileObject file_object;
     completer.Reply(fio::wire::NodeInfo::WithFile(
         fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
-  }
-
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Seek(SeekRequestView request, SeekCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   uint32_t num_close() const { return num_close_.load(); }
@@ -151,12 +99,12 @@ class File : public zxtest::Test {
 
  protected:
   zxio_storage_t file_;
-  std::unique_ptr<TestServerBase> server_;
+  std::unique_ptr<CloseCountingFileServer> server_;
   std::unique_ptr<fidl::ServerBindingRef<fio::File>> binding_;
   std::unique_ptr<async::Loop> loop_;
 };
 
-class TestServerEvent final : public TestServerBase {
+class TestServerEvent final : public CloseCountingFileServer {
  public:
   TestServerEvent() { ASSERT_OK(zx::event::create(0, &event_)); }
 
@@ -216,7 +164,7 @@ TEST_F(File, GetVmoPropagatesError) {
   constexpr zx_status_t kGetAttrError = 1;
   constexpr zx_status_t kGetBufferError = 2;
 
-  class TestServer : public TestServerBase {
+  class TestServer : public CloseCountingFileServer {
    public:
     void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
       completer.Reply(kGetAttrError, fuchsia_io::wire::NodeAttributes{});
@@ -237,7 +185,7 @@ TEST_F(File, GetVmoPropagatesError) {
   ASSERT_STATUS(kGetAttrError, zxio_vmo_get_copy(&file_.io, vmo.reset_and_get_address(), nullptr));
 }
 
-class TestServerChannel final : public TestServerBase {
+class TestServerChannel final : public CloseCountingFileServer {
  public:
   TestServerChannel() {
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &store_));
@@ -331,7 +279,7 @@ TEST_F(File, ReadWriteChannel) {
   ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
 }
 
-class TestServerStream final : public TestServerBase {
+class TestServerStream final : public CloseCountingFileServer {
  public:
   TestServerStream() {
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &store_));

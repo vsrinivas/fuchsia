@@ -30,6 +30,8 @@ test("zxio") {
     "remote-test.cc",
     "remote_v2-test.cc",
     "rights-const-test.cc",
+    "test_directory_server_base.h",
+    "test_file_server_base.h",
     "vmo-test.cc",
     "vmofile-test.cc",
     "zxio-test.cc",
