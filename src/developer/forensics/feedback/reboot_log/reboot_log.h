@@ -19,8 +19,7 @@ namespace feedback {
 class RebootLog {
  public:
   static RebootLog ParseRebootLog(const std::string& zircon_reboot_log_path,
-                                  const std::string& graceful_reboot_log_path,
-                                  const std::string& not_a_fdr_path);
+                                  const std::string& graceful_reboot_log_path, bool not_a_fdr);
 
   bool HasUptime() const { return last_boot_uptime_.has_value(); }
 

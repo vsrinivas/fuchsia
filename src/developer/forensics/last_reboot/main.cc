@@ -18,16 +18,45 @@ namespace forensics {
 namespace last_reboot {
 namespace {
 
-constexpr char kGracefulRebootReasonFile[] = "graceful_reboot_reason.txt";
+constexpr char kPreviousGracefulRebootReasonFile[] = "/tmp/graceful_reboot_reason.txt";
+constexpr char kCurrentGracefulRebootReasonFile[] = "/cache/graceful_reboot_reason.txt";
 constexpr char kNotAFdr[] = "/data/not_a_fdr.txt";
 
-void SetNotAFdr() {
+// Return whether |kNotAFdr| existed in the file system and create it otherwise.
+bool TestAndSetNotAFdr() {
   if (files::IsFile(kNotAFdr)) {
-    return;
+    return true;
   }
 
   if (!files::WriteFile(kNotAFdr, "", 0u)) {
     FX_LOGS(ERROR) << "Failed to create " << kNotAFdr;
+  }
+
+  return false;
+}
+
+void MovePreviousRebootReason() {
+  // Bail if the file doesn't exist.
+  if (!files::IsFile(kCurrentGracefulRebootReasonFile)) {
+    return;
+  }
+
+  // Bail if the file can't be read.
+  std::string content;
+  if (!files::ReadFileToString(kCurrentGracefulRebootReasonFile, &content)) {
+    FX_LOGS(ERROR) << "Failed to read file " << kCurrentGracefulRebootReasonFile;
+    return;
+  }
+
+  // Copy the file content – we cannot move as the two files are under different namespaces.
+  if (!files::WriteFile(kPreviousGracefulRebootReasonFile, content)) {
+    FX_LOGS(ERROR) << "Failed to write file " << kPreviousGracefulRebootReasonFile;
+    return;
+  }
+
+  // Delete the original file.
+  if (!files::DeletePath(kCurrentGracefulRebootReasonFile, /*recursive=*/true)) {
+    FX_LOGS(ERROR) << "Failed to delete " << kCurrentGracefulRebootReasonFile;
   }
 }
 
@@ -37,21 +66,19 @@ int main() {
   syslog::SetTags({"forensics", "reboot"});
 
   component::Component component;
-  PreviousBootFile reboot_reason_file =
-      PreviousBootFile::FromCache(component.IsFirstInstance(), kGracefulRebootReasonFile);
+
+  if (component.IsFirstInstance()) {
+    MovePreviousRebootReason();
+  }
 
   MainService main_service(MainService::Config{
       .dispatcher = component.Dispatcher(),
       .services = component.Services(),
       .root_node = component.InspectRoot(),
       .reboot_log = feedback::RebootLog::ParseRebootLog(
-          "/boot/log/last-panic.txt", reboot_reason_file.PreviousBootPath(), kNotAFdr),
-      .graceful_reboot_reason_write_path = reboot_reason_file.CurrentBootPath(),
+          "/boot/log/last-panic.txt", kPreviousGracefulRebootReasonFile, TestAndSetNotAFdr()),
+      .graceful_reboot_reason_write_path = kCurrentGracefulRebootReasonFile,
   });
-
-  // The "no-FDR" marker needs to be written after parsing the reboot log as its absence may
-  // indicate a reboot due to FDR.
-  SetNotAFdr();
 
   // fuchsia.feedback.LastRebootInfoProvider
   component.AddPublicService(

@@ -128,7 +128,7 @@ GracefulRebootReason ExtractGracefulRebootInfo(const std::string& graceful_reboo
 
 RebootReason DetermineRebootReason(const ZirconRebootReason zircon_reason,
                                    const GracefulRebootReason graceful_reason,
-                                   const std::string& not_a_fdr_path) {
+                                   const bool not_a_fdr) {
   switch (zircon_reason) {
     case ZirconRebootReason::kCold:
       return RebootReason::kCold;
@@ -149,7 +149,7 @@ RebootReason DetermineRebootReason(const ZirconRebootReason zircon_reason,
     case ZirconRebootReason::kNotParseable:
       return RebootReason::kNotParseable;
     case ZirconRebootReason::kNoCrash:
-      if (!files::IsFile(not_a_fdr_path)) {
+      if (!not_a_fdr) {
         return RebootReason::kFdr;
       }
       switch (graceful_reason) {
@@ -207,7 +207,7 @@ std::string MakeRebootLog(const std::optional<std::string>& zircon_reboot_log,
 // static
 RebootLog RebootLog::ParseRebootLog(const std::string& zircon_reboot_log_path,
                                     const std::string& graceful_reboot_log_path,
-                                    const std::string& not_a_fdr_path) {
+                                    const bool not_a_fdr) {
   std::optional<std::string> zircon_reboot_log;
   std::optional<zx::duration> last_boot_uptime;
   const auto zircon_reason =
@@ -215,7 +215,7 @@ RebootLog RebootLog::ParseRebootLog(const std::string& zircon_reboot_log_path,
 
   const auto graceful_reason = ExtractGracefulRebootInfo(graceful_reboot_log_path);
 
-  const auto reboot_reason = DetermineRebootReason(zircon_reason, graceful_reason, not_a_fdr_path);
+  const auto reboot_reason = DetermineRebootReason(zircon_reason, graceful_reason, not_a_fdr);
   const auto reboot_log = MakeRebootLog(zircon_reboot_log, graceful_reason, reboot_reason);
 
   FX_LOGS(INFO) << "Reboot info:\n" << reboot_log;

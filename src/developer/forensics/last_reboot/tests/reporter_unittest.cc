@@ -73,7 +73,6 @@ class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<
  public:
   ReporterTest() : cobalt_(dispatcher(), services()) {}
 
-  void SetUp() override { FX_CHECK(tmp_dir_.NewTempFileWithData("", &not_a_fdr_path_)); }
   void TearDown() override { files::DeletePath(kHasReportedOnPath, /*recursive=*/false); }
 
  protected:
@@ -92,11 +91,11 @@ class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<
     FX_CHECK(tmp_dir_.NewTempFileWithData(contents, &graceful_reboot_log_path_));
   }
 
-  void SetAsFdr() { FX_CHECK(files::DeletePath(not_a_fdr_path_, /*recursive=*/true)); }
+  void SetAsFdr() { not_a_fdr_ = false; }
 
   void ReportOnRebootLog() {
     const auto reboot_log = feedback::RebootLog::ParseRebootLog(
-        zircon_reboot_log_path_, graceful_reboot_log_path_, not_a_fdr_path_);
+        zircon_reboot_log_path_, graceful_reboot_log_path_, not_a_fdr_);
     ReportOn(reboot_log);
   }
 
@@ -108,12 +107,12 @@ class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<
 
   std::string zircon_reboot_log_path_;
   std::string graceful_reboot_log_path_;
-  std::string not_a_fdr_path_;
   std::unique_ptr<stubs::CrashReporterBase> crash_reporter_server_;
 
  private:
   cobalt::Logger cobalt_;
   files::ScopedTempDir tmp_dir_;
+  bool not_a_fdr_{true};
 };
 
 using GenericReporterTest = ReporterTest<UngracefulRebootTestParam /*does not matter*/>;
