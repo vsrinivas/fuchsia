@@ -95,10 +95,13 @@ config_data("test-config") {
 }
 
 fuchsia_test_package("sampler-integration-tests") {
-  test_components = [
-    ":sampler-integration-test",
-    ":config-validation-test",
-  ]
+  test_components = [ ":config-validation-test" ]
+
+  # TODO(fxbug.dev/77585): Flaky test disabled on coverage.
+  # Please fix the flake and remove the condition below.
+  if (!is_coverage) {
+    test_components += [ ":sampler-integration-test" ]
+  }
   deps = [
     ":reboot-required-config",
     ":sampler-for-test",
