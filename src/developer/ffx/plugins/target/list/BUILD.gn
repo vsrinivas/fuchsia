@@ -36,6 +36,7 @@ ffx_plugin("ffx_list") {
     "test_data/target_formatter_empty_nodename_with_default_golden",
     "test_data/target_formatter_one_target_no_default_golden",
     "test_data/target_formatter_one_target_with_default_golden",
+    "test_data/target_formatter_name_only_formatter_with_default_golden",
     "test_data/target_formatter_simple_formatter_with_default_golden",
   ]
 }

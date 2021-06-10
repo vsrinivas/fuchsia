@@ -70,6 +70,7 @@ impl TryFrom<(Format, Vec<bridge::Target>)> for Box<dyn TargetFormatter> {
             Format::Tabular => Box::new(TabularTargetFormatter::try_from(targets)?),
             Format::Simple => Box::new(SimpleTargetFormatter::try_from(targets)?),
             Format::Addresses => Box::new(AddressesTargetFormatter::try_from(targets)?),
+            Format::NameOnly => Box::new(NameOnlyTargetFormatter::try_from(targets)?),
             Format::Json => Box::new(JsonTargetFormatter::try_from(targets)?),
         })
     }
@@ -107,6 +108,41 @@ impl TryFrom<Vec<bridge::Target>> for AddressesTargetFormatter {
 }
 
 impl TargetFormatter for AddressesTargetFormatter {
+    fn lines(&self, _default_nodename: Option<&str>) -> Vec<String> {
+        self.targets.iter().map(|t| format!("{}", t.0)).collect()
+    }
+}
+
+pub struct NameOnlyTarget(String);
+
+impl TryFrom<bridge::Target> for NameOnlyTarget {
+    type Error = Error;
+
+    fn try_from(t: bridge::Target) -> Result<Self> {
+        let names = t.nodename.unwrap_or("<unknown>".to_string());
+        Ok(Self(names))
+    }
+}
+
+pub struct NameOnlyTargetFormatter {
+    targets: Vec<NameOnlyTarget>,
+}
+
+impl TryFrom<Vec<bridge::Target>> for NameOnlyTargetFormatter {
+    type Error = Error;
+
+    fn try_from(mut targets: Vec<bridge::Target>) -> Result<Self> {
+        let mut t = Vec::with_capacity(targets.len());
+        for target in targets.drain(..) {
+            if let Ok(name_target) = NameOnlyTarget::try_from(target) {
+                t.push(name_target)
+            }
+        }
+        Ok(Self { targets: t })
+    }
+}
+
+impl TargetFormatter for NameOnlyTargetFormatter {
     fn lines(&self, _default_nodename: Option<&str>) -> Vec<String> {
         self.targets.iter().map(|t| format!("{}", t.0)).collect()
     }
@@ -490,6 +526,8 @@ mod test {
             include_str!("../test_data/target_formatter_empty_nodename_no_default_golden");
         static ref SIMPLE_FORMATTER_WITH_DEFAULT_GOLDEN: &'static str =
             include_str!("../test_data/target_formatter_simple_formatter_with_default_golden");
+        static ref NAME_ONLY_FORMATTER_WITH_DEFAULT_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_name_only_formatter_with_default_golden");
         static ref DEVICE_FINDER_FORMAT_GOLDEN: &'static str =
             include_str!("../test_data/target_formatter_device_finder_format_golden");
         static ref ADDRESSES_FORMAT_GOLDEN: &'static str =
@@ -616,6 +654,34 @@ mod test {
         let lines = formatter.lines(None);
         assert_eq!(lines.len(), 2);
         assert_eq!(lines.join("\n"), SIMPLE_FORMATTER_WITH_DEFAULT_GOLDEN.to_string());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_name_only_formatter() {
+        let formatter = NameOnlyTargetFormatter::try_from(vec![
+            make_valid_target(),
+            bridge::Target {
+                nodename: None,
+                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                    ip: IpAddress::Ipv6(Ipv6Address {
+                        addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+                    }),
+                    scope_id: 137,
+                })]),
+                rcs_state: Some(bridge::RemoteControlState::Unknown),
+                target_type: Some(bridge::TargetType::Unknown),
+                target_state: Some(bridge::TargetState::Unknown),
+                ..bridge::Target::EMPTY
+            },
+        ])
+        .unwrap();
+        let lines = formatter.lines(Some("fooberdoober"));
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines.join("\n"), NAME_ONLY_FORMATTER_WITH_DEFAULT_GOLDEN.to_string());
+
+        let lines = formatter.lines(None);
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines.join("\n"), NAME_ONLY_FORMATTER_WITH_DEFAULT_GOLDEN.to_string());
     }
 
     #[test]
