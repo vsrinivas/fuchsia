@@ -40,6 +40,7 @@ use {
                 Options, StoreInfoMutation, Transaction,
             },
         },
+        trace_duration,
     },
     allocator::Allocator,
     anyhow::{anyhow, bail, Context, Error},
@@ -667,6 +668,7 @@ impl Mutations for ObjectStore {
     /// space pressure (flushing the store will persist in-memory data and allow the journal file to
     /// be trimmed).
     async fn flush(&self) -> Result<(), Error> {
+        trace_duration!("ObjectStore::flush", "store_object_id" => self.store_object_id);
         if self.parent_store.is_none() {
             return Ok(());
         }

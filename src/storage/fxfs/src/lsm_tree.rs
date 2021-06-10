@@ -11,6 +11,7 @@ use {
     crate::{
         object_handle::{ObjectHandle, WriteBytes, Writer},
         object_store::transaction,
+        trace_duration,
     },
     anyhow::Error,
     async_utils::event::Event,
@@ -147,6 +148,7 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
         mut iterator: impl LayerIterator<K, V>,
         writer: impl WriteBytes + Send,
     ) -> Result<(), Error> {
+        trace_duration!("LSMTree::compact_with_iterator");
         let mut writer =
             SimplePersistentLayerWriter::new(writer, SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE);
         while let Some(item_ref) = iterator.get() {

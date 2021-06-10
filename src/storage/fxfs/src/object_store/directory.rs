@@ -19,6 +19,7 @@ use {
             transaction::{Mutation, Transaction},
             HandleOptions, ObjectStore, ObjectStoreMutation, StoreObjectHandle,
         },
+        trace_duration,
     },
     anyhow::{anyhow, bail, Error},
     std::{fmt, ops::Bound, sync::Arc},
@@ -75,6 +76,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
     }
 
     pub async fn open(owner: &Arc<S>, object_id: u64) -> Result<Directory<S>, Error> {
+        trace_duration!("Directory::open");
         let store = owner.as_ref().as_ref();
         store.ensure_open().await?;
         if let ObjectItem {
@@ -96,6 +98,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
 
     /// Returns the object ID and descriptor for the given child, or None if not found.
     pub async fn lookup(&self, name: &str) -> Result<Option<(u64, ObjectDescriptor)>, Error> {
+        trace_duration!("Directory::lookup");
         match self.store().tree().find(&ObjectKey::child(self.object_id, name)).await? {
             None | Some(ObjectItem { value: ObjectValue::None, .. }) => Ok(None),
             Some(ObjectItem {

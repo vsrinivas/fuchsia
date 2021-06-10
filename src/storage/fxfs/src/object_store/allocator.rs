@@ -24,6 +24,7 @@ use {
             transaction::{AllocatorMutation, AssocObj, Mutation, Options, Transaction},
             HandleOptions, ObjectStore,
         },
+        trace_duration,
     },
     anyhow::{anyhow, bail, ensure, Error},
     async_trait::async_trait,
@@ -466,6 +467,7 @@ impl Allocator for SimpleAllocator {
         mut dealloc_range: Range<u64>,
     ) -> Result<u64, Error> {
         log::debug!("deallocate {:?}", dealloc_range);
+        trace_duration!("SimpleAllocator::deallocate");
 
         // We need to determine whether this deallocation actually frees the range or is just a
         // reference count adjustment.  We separate the two kinds into two different mutation types

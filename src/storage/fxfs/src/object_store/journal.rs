@@ -48,6 +48,7 @@ use {
             },
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
+        trace_duration,
     },
     anyhow::{anyhow, bail, Context, Error},
     async_utils::event::Event,
@@ -250,6 +251,7 @@ impl Journal {
 
     /// Reads the latest super-block, and then replays journaled records.
     pub async fn replay(&self, filesystem: Arc<dyn Filesystem>) -> Result<(), Error> {
+        trace_duration!("Journal::replay");
         let (super_block, current_super_block, root_parent) = match futures::join!(
             self.load_superblock(filesystem.clone(), SuperBlockCopy::A),
             self.load_superblock(filesystem.clone(), SuperBlockCopy::B)

@@ -17,6 +17,7 @@ use {
             transaction::{Mutation, Transaction},
             ObjectStore,
         },
+        trace_duration,
     },
     anyhow::{bail, Context, Error},
     fuchsia_async::{self as fasync},
@@ -100,6 +101,7 @@ impl Graveyard {
 
     async fn reap_task(self: Arc<Self>, journal_offset: u64) {
         log::info!("Reaping graveyard starting, gen: {}", journal_offset);
+        trace_duration!("Graveyard::reap");
         match self.reap_task_inner(journal_offset).await {
             Ok(deleted) => log::info!("Reaping graveyard done, removed {} elements", deleted),
             Err(e) => log::error!("Reaping graveyard encountered error: {:?}", e),

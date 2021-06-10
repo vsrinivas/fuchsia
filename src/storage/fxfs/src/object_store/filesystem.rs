@@ -9,6 +9,7 @@ use {
             allocator::{Allocator, Reservation},
             journal::{super_block::SuperBlock, Journal},
             object_manager::ObjectManager,
+            trace_duration,
             transaction::{
                 AssocObj, LockKey, LockManager, Mutation, Options, ReadGuard, Transaction,
                 TransactionHandler, WriteGuard,
@@ -183,6 +184,7 @@ impl FxFilesystem {
     async fn compact(self: Arc<Self>) {
         loop {
             log::debug!("Compaction starting");
+            trace_duration!("FxFilesystem::compact");
             if let Err(e) = self.objects.flush().await {
                 log::error!("Compaction encountered error: {:?}", e);
                 return;
@@ -287,6 +289,7 @@ impl TransactionHandler for FxFilesystem {
     }
 
     async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>) {
+        trace_duration!("FxFilesystem::commit_transaction");
         self.lock_manager.commit_prepare(transaction).await;
         self.journal.commit(transaction).await;
         let mut compaction = self.compaction.lock().unwrap();
