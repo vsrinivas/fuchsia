@@ -17,10 +17,12 @@ group("dispatcher") {
 
 test("fidl_llcpp_dispatcher_tests_bin") {
   output_name = "fidl_llcpp_dispatcher_tests"
+  public = [ "mock_client_impl.h" ]
   sources = [
     "bind_server_overloads_test.cc",
     "client_test.cc",
     "server_test.cc",
+    "shared_client_test.cc",
     "transaction_tests.cc",
   ]
   deps = [

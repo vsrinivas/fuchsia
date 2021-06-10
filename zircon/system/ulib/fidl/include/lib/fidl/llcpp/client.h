@@ -83,6 +83,8 @@ class Client final {
   //
   // If any other error occurs during initialization, the |event_handler->Unbound|
   // handler will be invoked asynchronously with the reason, if specified.
+  //
+  // TODO(fxbug.dev/75485): Take a raw pointer to the event handler.
   template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
   Client(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
          std::shared_ptr<AsyncEventHandler> event_handler = nullptr) {
@@ -133,9 +135,11 @@ class Client final {
   // When other errors occur during binding, the |event_handler->Unbound|
   // handler will be asynchronously invoked with the reason, if specified.
   //
-  // Re-binding a |Client| to a different channel is equivalent to replacing the
-  // |Client| with a new instance. TODO(fxbug.dev/78361): Disallow this
+  // Re-binding a |Client| to a different channel is equivalent to replacing
+  // the |Client| with a new instance. TODO(fxbug.dev/78361): Disallow this
   // re-binding behavior.
+  //
+  // TODO(fxbug.dev/75485): Take a raw pointer to the event handler.
   void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
             std::shared_ptr<fidl::WireAsyncEventHandler<Protocol>> event_handler = nullptr) {
     controller_.Bind(std::make_shared<ClientImpl>(), client_end.TakeChannel(), dispatcher,
@@ -201,6 +205,141 @@ Client(fidl::ClientEnd<Protocol>, async_dispatcher_t*, AsyncEventHandlerReferenc
 
 template <typename Protocol>
 Client(fidl::ClientEnd<Protocol>, async_dispatcher_t*) -> Client<Protocol>;
+
+// TODO(fxbug.dev/75485): This class is not yet ready for general use.
+template <typename Protocol>
+class WireSharedClient final {
+  using ClientImpl = fidl::internal::WireClientImpl<Protocol>;
+
+ public:
+  // Create an initialized |WireSharedClient| which manages the binding of the client end of
+  // a channel to a dispatcher.
+  //
+  // It is a logic error to use a dispatcher that is shutting down or already
+  // shut down. Doing so will result in a panic.
+  //
+  // If any other error occurs during initialization, the |event_handler->Unbound|
+  // handler will be invoked asynchronously with the reason, if specified.
+  //
+  // TODO(fxbug.dev/75485): Take a unique pointer to the event handler.
+  template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
+  WireSharedClient(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
+                   std::shared_ptr<AsyncEventHandler> event_handler = nullptr) {
+    Bind(std::move(client_end), dispatcher, std::move(event_handler));
+  }
+
+  // Create an uninitialized |WireSharedClient|.
+  //
+  // Prefer using the constructor overload that binds the client to a channel
+  // atomically during construction. Use this default constructor only when the
+  // client must be constructed first before a channel could be obtained (for
+  // example, if the client is an instance variable).
+  WireSharedClient() = default;
+
+  // Returns if the |WireSharedClient| is initialized.
+  bool is_valid() const { return controller_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
+  // If the current |WireSharedClient| is the last instance controlling the current
+  // connection, the destructor of this |WireSharedClient| will trigger unbinding, which
+  // will cause any strong references to the |ClientBase| to be released.
+  //
+  // When the last |WireSharedClient| destructs:
+  // - The channel will be closed.
+  // - Pointers obtained via |get| will be invalidated.
+  // - Unbinding will happen, implying:
+  //   * In-progress calls will be forgotten. Async callbacks will be dropped.
+  //   * The |Unbound| callback in the |event_handler| will be invoked, if one
+  //     was specified when creating the client, on a dispatcher thread.
+  //
+  // See also: |Unbind|.
+  ~WireSharedClient() = default;
+
+  // |fidl::WireSharedClient|s can be safely moved without affecting any in-progress
+  // operations. Note that calling methods on a client should be serialized with
+  // respect to operations that consume the client, such as moving it or
+  // destroying it.
+  WireSharedClient(WireSharedClient&& other) noexcept = default;
+  WireSharedClient& operator=(WireSharedClient&& other) noexcept = default;
+
+  // Bind the |client_end| endpoint to the dispatcher. If |WireSharedClient| is already
+  // initialized, destroys the previous binding, releasing its channel.
+  //
+  // It is a logic error to invoke |Bind| on a dispatcher that is shutting down
+  // or already shut down. Doing so will result in a panic.
+  //
+  // When other error occurs during binding, the |event_handler->Unbound|
+  // handler will be asynchronously invoked with the reason, if specified.
+  //
+  // Re-binding a |WireSharedClient| to a different channel is equivalent to replacing
+  // the |WireSharedClient| with a new instance.
+  //
+  // TODO(fxbug.dev/75485): Take a unique pointer to the event handler.
+  void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
+            std::shared_ptr<fidl::WireAsyncEventHandler<Protocol>> event_handler = nullptr) {
+    controller_.Bind(std::make_shared<ClientImpl>(), client_end.TakeChannel(), dispatcher,
+                     std::move(event_handler));
+  }
+
+  // Begins to unbind the channel from the dispatcher. May be called from any
+  // thread. If provided, the |fidl::WireAsyncEventHandler<Protocol>::Unbound|
+  // is invoked asynchronously on a dispatcher thread.
+  //
+  // NOTE: |Bind| must have been called before this.
+  //
+  // WARNING: While it is safe to invoke |Unbind| from any thread, it is unsafe
+  // to wait on the |fidl::WireAsyncEventHandler<Protocol>::Unbound| from a
+  // dispatcher thread, as that will likely deadlock.
+  //
+  // Unbinding can happen automatically via RAII. |WireSharedClient|s will release
+  // resources automatically when they are destructed. See also: |~WireSharedClient|.
+  void Unbind() { controller_.Unbind(); }
+
+  // Returns another |WireSharedClient| instance sharing the same channel.
+  //
+  // Prefer to |Clone| only when necessary e.g. extending the lifetime of a
+  // |WireSharedClient| to a different scope. Any living clone will prevent the cleanup of
+  // the channel, unless one explicitly call |WaitForChannel|.
+  WireSharedClient Clone() { return WireSharedClient(*this); }
+
+  // Returns the underlying channel. Unbinds from the dispatcher if required.
+  //
+  // NOTE: |Bind| must have been called before this.
+  //
+  // WARNING: This is a blocking call. It waits for completion of dispatcher
+  // unbind and of any channel operations, including synchronous calls which may
+  // block indefinitely. It should not be invoked on the dispatcher thread if
+  // the dispatcher is single threaded.
+  fidl::ClientEnd<Protocol> WaitForChannel() {
+    return fidl::ClientEnd<Protocol>(controller_.WaitForChannel());
+  }
+
+  // Returns the interface for making outgoing FIDL calls. If the client has
+  // been unbound, calls on the interface return error with status
+  // |ZX_ERR_CANCELED| and reason |fidl::Reason::kUnbind|.
+  //
+  // Persisting this pointer to a local variable is discouraged, since that
+  // results in unsafe borrows. Always prefer making calls directly via the
+  // |fidl::WireSharedClient| reference-counting type. A client may be cloned and handed
+  // off through the |Clone| method.
+  ClientImpl* operator->() const { return get(); }
+  ClientImpl& operator*() const { return *get(); }
+
+ private:
+  ClientImpl* get() const { return static_cast<ClientImpl*>(controller_.get()); }
+
+  WireSharedClient(const WireSharedClient& other) noexcept = default;
+  WireSharedClient& operator=(const WireSharedClient& other) noexcept = default;
+
+  internal::ClientController controller_;
+};
+
+template <typename Protocol, typename AsyncEventHandlerReference>
+WireSharedClient(fidl::ClientEnd<Protocol>, async_dispatcher_t*, AsyncEventHandlerReference&&)
+    -> WireSharedClient<Protocol>;
+
+template <typename Protocol>
+WireSharedClient(fidl::ClientEnd<Protocol>, async_dispatcher_t*) -> WireSharedClient<Protocol>;
 
 }  // namespace fidl
 
