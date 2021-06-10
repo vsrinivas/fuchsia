@@ -43,16 +43,18 @@ people have run into frequently.
 
 **Specific terms**
 
-| Term      | Suggested alternatives                                        |
-| --------- | ------------------------------------------------------------- |
-| master    | primary, controller, leader, host                             |
-| slave     | replica, subordinate, secondary, follower, device, peripheral |
-| whitelist | allowlist, exception list, inclusion list                     |
-| blacklist | denylist, blocklist, exclusion list                           |
-| insane    | unexpected, catastrophic, incoherent                          |
-| sane      | expected, appropriate, sensible, valid                        |
-| crazy     | unexpected, catastrophic, incoherent                          |
-| redline   | priority line, limit, soft limit                              |
+| Term        | Suggested alternatives                                        |
+| ----------  | ------------------------------------------------------------- |
+| master      | primary, controller, leader, host                             |
+| slave       | replica, subordinate, secondary, follower, device, peripheral |
+| whitelist   | allowlist, exception list, inclusion list                     |
+| blacklist   | denylist, blocklist, exclusion list                           |
+| insane      | unexpected, catastrophic, incoherent                          |
+| sane        | expected, appropriate, sensible, valid                        |
+| crazy       | unexpected, catastrophic, incoherent                          |
+| redline     | priority line, limit, soft limit                              |
+| white glove | top tier service; meticulous, thorough support                |
+| blackout    | blocked out                                                   |
 
 **Idioms**
 
