@@ -1090,6 +1090,216 @@ library foo.bar;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// Ensure that an already properly formatted service declaration is not modified by another run
+// through the formatter.
+TEST(NewFormatterTests, ServiceFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+service MyEmptyService_Abcdefghijklm {};
+
+service MyPopulatedService_Abcdefghik {
+    import_ab client_end:foo.baz.Import;
+    local_abcdefghijkl client_end:Local;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+service MyEmptyService_Abcdefghijklm {};
+
+service MyPopulatedService_Abcdefghik {
+    import_ab client_end:foo.baz.Import;
+    local_abcdefghijkl client_end:Local;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// No part of the service should wrap if it overflows.
+TEST(NewFormatterTests, ServiceOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+service MyEmptyService_Abcdefghijklmn {};
+
+service MyPopulatedService_Abcdefghikl {
+    import_abc client_end:foo.baz.Import;
+    local_abcdefghijklm client_end:Local;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+service MyEmptyService_Abcdefghijklmn {};
+
+service MyPopulatedService_Abcdefghikl {
+    import_abc client_end:foo.baz.Import;
+    local_abcdefghijklm client_end:Local;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, ServiceUnformatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+service
+MyEmptyService_Abcdefghijklmn {  };
+
+service MyPopulatedService_Abcdefghikl
+{
+  import_abc client_end:foo.baz.Import ;
+    local_abcdefghijklm client_end: Local;};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+service MyEmptyService_Abcdefghijklmn {};
+
+service MyPopulatedService_Abcdefghikl {
+    import_abc client_end:foo.baz.Import;
+    local_abcdefghijklm client_end:Local;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test with comments, doc comments, and attributes added and spaced out.
+TEST(NewFormatterTests, ServiceWithAllAnnotations) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+
+ // comment 1
+  /// doc comment 1
+
+   @foo
+service MyEmptyService_Abcdefghijklmn {};
+
+service MyPopulatedService_Abcdefghikl {
+    import_abc client_end:foo.baz.Import;
+  // comment 2
+
+   /// doc comment 2
+
+     @bar
+
+      local_abcdefghijklm client_end:Local;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+
+// comment 1
+/// doc comment 1
+@foo
+service MyEmptyService_Abcdefghijklmn {};
+
+service MyPopulatedService_Abcdefghikl {
+    import_abc client_end:foo.baz.Import;
+    // comment 2
+
+    /// doc comment 2
+    @bar
+    local_abcdefghijklm client_end:Local;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly.  This should
+//  be fixed when proper token parsing is used.
+// This test's input is semantically identical to ServiceFormatted.  The only difference is that the
+// newlines and unnecessary spaces have been removed.
+TEST(NewFormatterTests, ServiceMinimalWhitespace) {
+  // ---------------40---------------- |
+  std::string unformatted =
+      R"FIDL(library foo.bar;service MyEmptyService_Abcdefghijklmn{};service MyPopulatedService_Abcdefghikl{import_abc client_end:foo.baz.Import;local_abcdefghijklm client_end:Local;};)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+service MyEmptyService_Abcdefghijklmn{};
+service MyPopulatedService_Abcdefghikl{
+    import_abc client_end:foo.baz.Import;
+    local_abcdefghijklm client_end:Local;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Input is identical to ServiceFormatted, except that every token is on a newline.
+TEST(NewFormatterTests, ServiceMaximalNewlines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library
+foo
+.
+bar
+;
+
+service
+MyEmptyService_Abcdefghijklmn
+{
+}
+;
+
+service
+MyPopulatedService_Abcdefghikl
+{
+import_abc
+client_end
+:
+foo
+.
+baz
+.
+Import
+;
+local_abcdefghijklm
+client_end
+:
+Local
+;
+}
+;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+service MyEmptyService_Abcdefghijklmn {};
+
+service MyPopulatedService_Abcdefghikl {
+    import_abc client_end:foo.baz.Import;
+    local_abcdefghijklm client_end:Local;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Ensure that an already properly formatted struct declaration is not modified by another run
 // through the formatter.
 TEST(NewFormatterTests, StructFormatted) {

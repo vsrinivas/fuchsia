@@ -55,12 +55,8 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   void OnResourceProperty(std::unique_ptr<raw::ResourceProperty> const& element) override {
     NotYetImplemented();
   }
-  void OnServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> const& element) override {
-    NotYetImplemented();
-  }
-  void OnServiceMember(std::unique_ptr<raw::ServiceMember> const& element) override {
-    NotYetImplemented();
-  }
+  void OnServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> const& element) override;
+  void OnServiceMember(std::unique_ptr<raw::ServiceMember> const& element) override;
   void OnStructLayoutMember(std::unique_ptr<raw::StructLayoutMember> const& element) override;
   void OnTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> const& element) override;
   void OnTypeDecl(std::unique_ptr<raw::TypeDecl> const& element) override;
@@ -146,6 +142,8 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
     kProtocolMethod,
     kProtocolRequest,
     kProtocolResponse,
+    kServiceDeclaration,
+    kServiceMember,
     kStructLayout,
     kStructLayoutMember,
     kTypeConstructorNew,

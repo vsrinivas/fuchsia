@@ -526,11 +526,11 @@ void SpanSequenceTreeVisitor::OnAttributeListNew(
     const std::unique_ptr<raw::AttributeListNew>& element) {
   if (already_seen_.insert(element.get()).second) {
     const auto visiting = Visiting(this, VisitorKind::kAttributeList);
-    const auto indent = IsInsideOf(VisitorKind::kLayoutMember) ||
-                                IsInsideOf(VisitorKind::kProtocolMethod) ||
-                                IsInsideOf(VisitorKind::kProtocolCompose)
-                            ? SpanSequence::Position::kNewlineIndented
-                            : SpanSequence::Position::kNewlineUnindented;
+    const auto indent =
+        IsInsideOf(VisitorKind::kLayoutMember) || IsInsideOf(VisitorKind::kProtocolMethod) ||
+                IsInsideOf(VisitorKind::kProtocolCompose) || IsInsideOf(VisitorKind::kServiceMember)
+            ? SpanSequence::Position::kNewlineIndented
+            : SpanSequence::Position::kNewlineUnindented;
     const auto builder = SpanBuilder<MultilineSpanSequence>(this, *element, indent);
     TreeVisitor::OnAttributeListNew(element);
 
@@ -880,6 +880,57 @@ void SpanSequenceTreeVisitor::OnProtocolMethod(
     building_.top().back()->SetTrailingSpace(true);
     OnTypeConstructor(element->maybe_error_ctor);
   }
+  AddSpacesBetweenChildren(building_.top());
+  ClearBlankLinesAfterAttributeList(attrs, building_.top());
+}
+
+void SpanSequenceTreeVisitor::OnServiceDeclaration(
+    const std::unique_ptr<raw::ServiceDeclaration>& element) {
+  const auto visiting = Visiting(this, VisitorKind::kServiceDeclaration);
+  const auto& attrs = std::get<std::unique_ptr<raw::AttributeListNew>>(element->attributes);
+  if (attrs != nullptr) {
+    OnAttributeListNew(attrs);
+  }
+
+  // Special case: an empty service definition should always be atomic.
+  if (element->members.empty()) {
+    const auto builder =
+        StatementBuilder<AtomicSpanSequence>(this, element->identifier->start_, element->end_,
+                                             SpanSequence::Position::kNewlineUnindented);
+    ClearBlankLinesAfterAttributeList(attrs, building_.top());
+    return;
+  }
+
+  const auto builder = StatementBuilder<MultilineSpanSequence>(
+      this, element->members.front()->start_, SpanSequence::Position::kNewlineUnindented);
+
+  // We want to purposefully ignore this identifier, as it has already been captured by the prelude
+  // to the StatementBuilder we created above.  By running this method now, we mark the Identifier
+  // as seen, so that the call to TreeVisitor::OnServiceDeclaration won't print the identifier a
+  // second time when it visits it.
+  OnIdentifier(element->identifier, true);
+  TreeVisitor::OnServiceDeclaration(element);
+
+  const auto closing_bracket_builder = SpanBuilder<AtomicSpanSequence>(
+      this, element->end_, SpanSequence::Position::kNewlineUnindented);
+  ClearBlankLinesAfterAttributeList(attrs, building_.top());
+}
+
+void SpanSequenceTreeVisitor::OnServiceMember(const std::unique_ptr<raw::ServiceMember>& element) {
+  const auto visiting = Visiting(this, VisitorKind::kServiceMember);
+  const auto& attrs = std::get<std::unique_ptr<raw::AttributeListNew>>(element->attributes);
+  if (attrs != nullptr) {
+    OnAttributeListNew(attrs);
+  }
+
+  const auto builder = StatementBuilder<AtomicSpanSequence>(
+      this, *element, SpanSequence::Position::kNewlineIndented);
+
+  // TODO(fxbug.dev/70247): once the old syntax is removed, TreeVisitor::OnServiceMember will visit
+  //  its children in the proper order ("types come second...").  For now, we do this visitation
+  //  manually instead.
+  OnIdentifier(element->identifier);
+  OnTypeConstructor(element->type_ctor);
   AddSpacesBetweenChildren(building_.top());
   ClearBlankLinesAfterAttributeList(attrs, building_.top());
 }
