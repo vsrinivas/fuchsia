@@ -8,11 +8,52 @@ compliance with the style guide. Tricium checks in Gerrit also use clang-format 
 non-gating linter. However, you may still manually format code as long as it complies
 with these guidelines.
 
-### Tip: TODO comments
+## Fuchsia-specific style
 
-When following the Google C++ style guide by entering a bug number in a TODO
-comment, using the form `TODO(fxbug.dev/11111)` will provide an address that
-can be used as a URL.
+### TODO comments
+
+The Google C++ style guide requires referencing a bug number in TODO comments.
+On Fuchsia this is done in the format: `TODO(fxbug.dev/12345)`.
+
+### Compilation flags
+
+Please do not add `-Wall` or `-Wextra`.
+
+```gn
+source_set("my_sources") {
+  ...
+  cflags = [
+    # Don't do this!
+    "-Wall",
+  ]
+}
+```
+
+This flag is already added in a centralized place in the build, followed by
+additional flags that suppress certain warnings globally.
+
+Occasionally new compiler warnings are added upstream. In order to roll the
+latest compiler, global maintainers may opt to temporarily suppress a
+newly-introduced warning in a centralized place while we work through a backlog
+of fixing instances of this warning throughout the codebase. If your project
+uses `-Wall` then it may break with a Clang roll.
+
+Do feel free to enable/disable specific warnings that are not set globally.
+If these warnings are set globally later in a manner that's congruent with your
+own preferences then it's a good idea to remove any local overrides.
+
+```gn
+source_set("my_sources") {
+  ...
+  cflags = [
+    # We don't want any write-only params/vars in our code.
+    # TODO(fxbug.dev/56202): delete the below when these warnings are
+    # enabled globally.
+    "-Wunused-but-set-parameter",
+    "-Wunused-but-set-variable",
+  ]
+}
+```
 
 ## Exceptions
 
