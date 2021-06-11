@@ -6,7 +6,7 @@ use {
     crate::constants::*,
     crate::daemon_manager::{DaemonManager, DefaultDaemonManager},
     crate::recorder::{DoctorRecorder, Recorder},
-    anyhow::{Error, Result},
+    anyhow::{Context, Error, Result},
     async_lock::Mutex,
     async_trait::async_trait,
     errors::ffx_bail,
@@ -288,8 +288,8 @@ fn format_err(e: &Error) -> String {
 
 struct DoctorRecorderParameters {
     record: bool,
-    log_root: PathBuf,
-    output_dir: PathBuf,
+    log_root: Option<PathBuf>,
+    output_dir: Option<PathBuf>,
     recorder: Arc<Mutex<dyn Recorder>>,
 }
 
@@ -309,36 +309,61 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
     let ffx: ffx_lib_args::Ffx = argh::from_env();
     let target_str = ffx.target.unwrap_or(String::default());
 
-    let logs_enabled: bool = get("log.enabled").await?;
-    if !logs_enabled && cmd.record {
-        println!(
-            "{}WARNING:{} --record was provided but ffx logs are not enabled. This means your record will only include doctor output.",
-            color::Fg(color::Red), style::Reset
-        );
-        println!(
-            "ffx doctor will proceed, but if you want to enable logs, you can do so by running:"
-        );
-        println!("  ffx config set log.enabled true");
-        println!("You will then need to restart the ffx daemon:");
-        println!("  ffx doctor --force-restart\n\n");
-        fuchsia_async::Timer::new(Duration::from_millis(10000)).await;
-    }
+    let mut log_root = None;
+    let mut output_dir = None;
+    let mut record = cmd.record;
+    match get("log.enabled").await {
+        Ok(enabled) => {
+            let enabled: bool = enabled;
+            if !enabled && cmd.record {
+                println!(
+                    "{}WARNING:{} --record was provided but ffx logs are not enabled. This means your record will only include doctor output.",
+                    color::Fg(color::Red), style::Reset
+                );
+                println!(
+                    "ffx doctor will proceed, but if you want to enable logs, you can do so by running:"
+                );
+                println!("  ffx config set log.enabled true");
+                println!("You will then need to restart the ffx daemon:");
+                println!("  ffx doctor --force-restart\n\n");
+                fuchsia_async::Timer::new(Duration::from_millis(10000)).await;
+            }
 
-    let log_root: PathBuf = get("log.dir").await?;
-    let output_dir = cmd.output_dir.map(|s| PathBuf::from(s)).unwrap_or(std::env::current_dir()?);
+            log_root = Some(get("log.dir").await?);
+            let final_output_dir =
+                cmd.output_dir.map(|s| PathBuf::from(s)).unwrap_or(std::env::current_dir()?);
 
-    if !output_dir.is_dir() {
-        ffx_bail!(
-            "cannot record: output directory does not exist or is unreadable: {:?}",
-            output_dir
-        );
-    }
+            if !final_output_dir.is_dir() {
+                ffx_bail!(
+                    "cannot record: output directory does not exist or is unreadable: {:?}",
+                    output_dir
+                );
+            }
+
+            output_dir = Some(final_output_dir);
+        }
+        Err(e) => {
+            println!(
+                "{}WARNING:{} getting log status from ffx config failed. The error was: {:?}",
+                color::Fg(color::Red),
+                style::Reset,
+                e
+            );
+            if cmd.record {
+                println!("Record mode requires configuration and will be turned off for this run.");
+            }
+            println!("If this issue persists, please file a bug here: {}", BUG_URL);
+            fuchsia_async::Timer::new(Duration::from_millis(10000)).await;
+
+            record = false;
+        }
+    };
 
     let recorder = Arc::new(Mutex::new(DoctorRecorder::new()));
     let mut handler = DefaultDoctorStepHandler::new(recorder.clone());
     let default_target = get(DEFAULT_TARGET_CONFIG)
         .await
-        .map_err(|e: ffx_config::api::ConfigError| format!("{:?}", e));
+        .map_err(|e: ffx_config::api::ConfigError| format!("{:?}", e).replace("\n", ""));
 
     doctor(
         &mut handler,
@@ -350,7 +375,7 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
         build_info().build_version,
         default_target,
         DoctorRecorderParameters {
-            record: cmd.record,
+            record: record,
             log_root,
             output_dir,
             recorder: recorder.clone(),
@@ -385,9 +410,15 @@ async fn doctor(
     .await?;
 
     if record_params.record {
-        let mut daemon_log = record_params.log_root.clone();
+        let log_root =
+            record_params.log_root.context("log_root not present despite record set to true")?;
+        let output_dir = record_params
+            .output_dir
+            .context("output_dir not present despite record set to true")?;
+
+        let mut daemon_log = log_root.clone();
         daemon_log.push("ffx.daemon.log");
-        let mut fe_log = record_params.log_root.clone();
+        let mut fe_log = log_root.clone();
         fe_log.push("ffx.log");
 
         step_handler.step(StepType::GeneratingRecord).await?;
@@ -395,7 +426,7 @@ async fn doctor(
         let final_path = {
             let mut r = record_params.recorder.lock().await;
             r.add_sources(vec![daemon_log, fe_log]);
-            r.generate(record_params.output_dir)?
+            r.generate(output_dir)?
         };
 
         step_handler.result(StepResult::Success).await?;
@@ -1121,8 +1152,8 @@ mod test {
     fn record_params_no_record() -> DoctorRecorderParameters {
         DoctorRecorderParameters {
             record: false,
-            log_root: PathBuf::from("/tmp"),
-            output_dir: PathBuf::from("/tmp"),
+            log_root: None,
+            output_dir: None,
             recorder: Arc::new(Mutex::new(DisabledRecorder::new())),
         }
     }
@@ -1140,8 +1171,8 @@ mod test {
             recorder.clone(),
             DoctorRecorderParameters {
                 record: true,
-                log_root: root.clone(),
-                output_dir: root.clone(),
+                log_root: Some(root.clone()),
+                output_dir: Some(root.clone()),
                 recorder: recorder.clone(),
             },
         )
@@ -1612,6 +1643,72 @@ mod test {
         fake.assert_no_leftover_calls().await;
         r.assert_generate_called();
     }
+
+    async fn missing_field_test(
+        fake_recorder: Arc<Mutex<FakeRecorder>>,
+        params: DoctorRecorderParameters,
+    ) {
+        let fake = FakeDaemonManager::new(
+            vec![true],
+            vec![],
+            vec![],
+            vec![Ok(setup_responsive_daemon_server())],
+        );
+        let mut handler = FakeStepHandler::new();
+
+        assert!(doctor(
+            &mut handler,
+            &fake,
+            "",
+            1,
+            DEFAULT_RETRY_DELAY,
+            false,
+            version_str(),
+            Ok(None),
+            params,
+        )
+        .await
+        .is_err());
+
+        let _ = fake_recorder.lock().await;
+        handler
+            .assert_matches_steps(vec![
+                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::step(StepType::ListingTargets(String::default())),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::NoTargetsFound),
+                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
+                // Error will occur here.
+            ])
+            .await;
+        fake.assert_no_leftover_calls().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_mode_missing_log_root_fails() {
+        let temp = tempdir().unwrap();
+        let root = temp.path().to_path_buf();
+        let (fake_recorder, mut params) = record_params_with_temp(root);
+        params.log_root = None;
+        missing_field_test(fake_recorder, params).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_record_mode_missing_output_dir_fails() {
+        let temp = tempdir().unwrap();
+        let root = temp.path().to_path_buf();
+        let (fake_recorder, mut params) = record_params_with_temp(root);
+        params.output_dir = None;
+        missing_field_test(fake_recorder, params).await;
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_finds_target_with_missing_nodename() {
         let (tx, rx) = oneshot::channel::<()>();
