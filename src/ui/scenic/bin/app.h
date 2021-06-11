@@ -64,6 +64,8 @@ class App {
                fit::promise<ui_display::DisplayControllerHandles> dc_handles_promise,
                fit::closure quit_callback);
 
+  ~App();
+
  private:
   void InitializeServices(escher::EscherUniquePtr escher,
                           std::shared_ptr<display::Display> display);

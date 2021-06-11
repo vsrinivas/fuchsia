@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/bin/app.h"
 
+#include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "rapidjson/document.h"
@@ -19,15 +20,9 @@
 
 namespace {
 
-// Wait for /dev/class/display-controller on x86 as that's sufficient for Intel GPU driver and
-// supports AEMU and swiftshader, which don't depend on devices in /dev/class/gpu.
-//
-// TODO(fxbug.dev/23795): Scenic should not be aware of these type of dependencies.
-#if defined(__x86_64__)
-static const std::string kDependencyDir = "/dev/class/display-controller";
-#else
-static const std::string kDependencyDir = "/dev/class/gpu";
-#endif
+// App installs the loader manifest FS at this path so it can use fsl::DeviceWatcher on
+// it.
+static const char* kDependencyPath = "/gpu-manifest-fs";
 
 // Reads the config file and returns a struct with all found values.
 scenic_impl::ConfigValues ReadConfig() {
@@ -138,14 +133,37 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
   fit::bridge<escher::EscherUniquePtr> escher_bridge;
   fit::bridge<std::shared_ptr<display::Display>> display_bridge;
 
+  auto vulkan_loader = app_context_->svc()->Connect<fuchsia::vulkan::loader::Loader>();
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir;
+  vulkan_loader->ConnectToManifestFs(fuchsia::vulkan::loader::ConnectToManifestOptions{},
+                                     dir.NewRequest().TakeChannel());
+
+  fdio_ns_t* ns;
+  zx_status_t status = fdio_ns_get_installed(&ns);
+  FX_DCHECK(status == ZX_OK);
+  status = fdio_ns_bind(ns, kDependencyPath, dir.TakeChannel().release());
+  FX_DCHECK(status == ZX_OK);
+
   view_ref_installed_impl_.Publish(app_context_.get());
 
+  // Wait for a Vulkan ICD to become advertised before trying to launch escher.
   device_watcher_ = fsl::DeviceWatcher::Create(
-      kDependencyDir, [this, completer = std::move(escher_bridge.completer)](
-                          int dir_fd, std::string filename) mutable {
-        completer.complete_ok(gfx::GfxSystem::CreateEscher(app_context_.get()));
+      kDependencyPath,
+      [this, vulkan_loader = std::move(vulkan_loader),
+       completer = std::move(escher_bridge.completer)](int dir_fd, std::string filename) mutable {
+        auto escher = gfx::GfxSystem::CreateEscher(app_context_.get());
+        if (!escher) {
+          FX_LOGS(WARNING) << "Escher creation failed.";
+          // This should almost never happen, but might if the device was removed quickly after it
+          // was added or if the Vulkan driver doesn't actually work on this hardware. Retry when a
+          // new device is added.
+          return;
+        }
+        completer.complete_ok(std::move(escher));
         device_watcher_.reset();
       });
+
+  FX_DCHECK(device_watcher_);
 
   // Instantiate DisplayManager and schedule a task to inject the display controller into it, once
   // it becomes available.
@@ -223,6 +241,14 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   InitializeGraphics(display);
   InitializeInput();
   InitializeHeartbeat();
+}
+
+App::~App() {
+  fdio_ns_t* ns;
+  zx_status_t status = fdio_ns_get_installed(&ns);
+  FX_DCHECK(status == ZX_OK);
+  status = fdio_ns_unbind(ns, kDependencyPath);
+  FX_DCHECK(status == ZX_OK);
 }
 
 void App::CreateFrameScheduler(std::shared_ptr<const scheduling::VsyncTiming> vsync_timing) {
