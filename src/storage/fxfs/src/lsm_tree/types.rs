@@ -6,6 +6,7 @@ use {
     crate::{lsm_tree::merge, object_handle::ObjectHandle},
     anyhow::Error,
     async_trait::async_trait,
+    async_utils::event::Event,
     serde::{Deserialize, Serialize},
     std::{fmt::Debug, sync::Arc},
 };
@@ -207,6 +208,16 @@ pub trait Layer<K, V>: Send + Sync {
     /// iterator on the first item in the layer.
     async fn seek(&self, bound: std::ops::Bound<&K>)
         -> Result<BoxedLayerIterator<'_, K, V>, Error>;
+
+    /// Locks the layer preventing it from being closed. This will never block i.e. there can be
+    /// many locks concurrently.  The lock is purely advisory: seek will still work even if lock has
+    /// not been called; it merely causes close to wait until all locks are released.  Returns None
+    /// if close has been called for the layer.
+    fn lock(&self) -> Option<Event>;
+
+    /// Waits for existing locks readers to finish and then returns.  Subsequent calls to lock will
+    /// return None.
+    async fn close(&self);
 }
 
 /// MutableLayer is a trait that only mutable layers need to implement.
@@ -225,7 +236,7 @@ pub trait MutableLayer<K, V>: Layer<K, V> {
     async fn replace_or_insert(&self, item: Item<K, V>);
 
     /// Locks the layer, blocking writes but not reads.
-    async fn lock(&self) -> futures::lock::MutexGuard<'_, ()>;
+    async fn lock_writes(&self) -> futures::lock::MutexGuard<'_, ()>;
 }
 
 /// Something that implements LayerIterator is returned by the seek function.

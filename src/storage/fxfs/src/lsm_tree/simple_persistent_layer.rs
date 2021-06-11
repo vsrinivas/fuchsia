@@ -11,12 +11,13 @@ use {
     },
     anyhow::{bail, Context, Error},
     async_trait::async_trait,
+    async_utils::event::Event,
     byteorder::{ByteOrder, LittleEndian, ReadBytesExt},
     serde::Serialize,
     std::{
         cmp::Ordering,
         ops::{Bound, Drop},
-        sync::Arc,
+        sync::{Arc, Mutex},
         vec::Vec,
     },
 };
@@ -28,6 +29,7 @@ pub struct SimplePersistentLayer {
     object_handle: Arc<dyn ObjectHandle>,
     block_size: u32,
     size: u64,
+    close_event: Mutex<Option<Event>>,
 }
 
 pub struct Iterator<'iter, K, V> {
@@ -119,6 +121,7 @@ impl SimplePersistentLayer {
             object_handle: Arc::new(object_handle),
             block_size,
             size,
+            close_event: Mutex::new(Some(Event::new())),
         }))
     }
 }
@@ -195,6 +198,18 @@ impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
                 },
             }
         }
+    }
+
+    fn lock(&self) -> Option<Event> {
+        self.close_event.lock().unwrap().clone()
+    }
+
+    async fn close(&self) {
+        let _ = {
+            let event = self.close_event.lock().unwrap().take().expect("close already called");
+            event.wait_or_dropped()
+        }
+        .await;
     }
 }
 

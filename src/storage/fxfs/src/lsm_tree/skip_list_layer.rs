@@ -15,6 +15,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
+    async_utils::event::Event,
     futures::future::poll_fn,
     std::{
         cell::UnsafeCell,
@@ -22,7 +23,7 @@ use {
         ops::{Bound, Range},
         sync::{
             atomic::{self, AtomicPtr, AtomicU32},
-            Arc,
+            Arc, Mutex,
         },
         task::{Poll, Waker},
     },
@@ -101,6 +102,8 @@ pub struct SkipListLayer<K, V> {
 
     // The number of nodes that have been allocated.  This is only used for debugging purposes.
     allocated: AtomicU32,
+
+    close_event: Mutex<Option<Event>>,
 }
 
 struct ReadCounts<K, V> {
@@ -153,6 +156,7 @@ impl<K, V> SkipListLayer<K, V> {
             read_counts: std::sync::Mutex::new(ReadCounts::new()),
             writer_lock: futures::lock::Mutex::new(()),
             allocated: AtomicU32::new(0),
+            close_event: Mutex::new(Some(Event::new())),
         })
     }
 
@@ -206,6 +210,18 @@ impl<K: Key, V: Value> Layer<K, V> for SkipListLayer<K, V> {
     ) -> Result<BoxedLayerIterator<'a, K, V>, Error> {
         Ok(Box::new(SkipListLayerIter::new(self, bound)))
     }
+
+    fn lock(&self) -> Option<Event> {
+        self.close_event.lock().unwrap().clone()
+    }
+
+    async fn close(&self) {
+        let _ = {
+            let event = self.close_event.lock().unwrap().take().expect("close already called");
+            event.wait_or_dropped()
+        }
+        .await;
+    }
 }
 
 // The methods here all use commit_and_wait (rather than just using commit via drop) for now because
@@ -251,7 +267,7 @@ impl<K: Eq + Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer
         .unwrap();
     }
 
-    async fn lock(&self) -> futures::lock::MutexGuard<'_, ()> {
+    async fn lock_writes(&self) -> futures::lock::MutexGuard<'_, ()> {
         self.writer_lock.lock().await
     }
 }

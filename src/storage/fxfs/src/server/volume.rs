@@ -107,7 +107,9 @@ impl FxVolume {
                 }
             }
         }
-        self.store.tombstone(object_id).await?;
+        self.store
+            .tombstone(object_id, Options { skip_space_checks: true, ..Default::default() })
+            .await?;
         Ok(())
     }
 }

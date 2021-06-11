@@ -11,7 +11,7 @@ use {
             layers_from_handles,
             skip_list_layer::SkipListLayer,
             types::{
-                BoxedLayerIterator, Item, ItemRef, LayerIterator, MutableLayer, NextKey,
+                BoxedLayerIterator, Item, ItemRef, Layer, LayerIterator, MutableLayer, NextKey,
                 OrdLowerBound, OrdUpperBound,
             },
             LSMTree,
@@ -403,7 +403,9 @@ impl Allocator for SimpleAllocator {
         let result = {
             let tree = &self.tree;
             let mut layer_set = tree.empty_layer_set();
-            layer_set.layers.push(self.reserved_allocations.clone());
+            layer_set
+                .layers
+                .push((self.reserved_allocations.clone() as Arc<dyn Layer<_, _>>).into());
             tree.add_all_layers_to_layer_set(&mut layer_set);
             let mut merger = layer_set.merger();
             let mut iter = merger.seek(Bound::Unbounded).await?;
@@ -757,17 +759,12 @@ impl Mutations for SimpleAllocator {
         // transactions for each stage, but we need make sure objects are cleaned up if there's a
         // failure.
         let reservation = filesystem.flush_reservation();
-        let mut transaction = filesystem
-            .clone()
-            .new_transaction(
-                &[],
-                Options {
-                    skip_journal_checks: true,
-                    allocator_reservation: Some(reservation),
-                    ..Default::default()
-                },
-            )
-            .await?;
+        let txn_options = Options {
+            skip_journal_checks: true,
+            allocator_reservation: Some(reservation),
+            ..Default::default()
+        };
+        let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
 
         let root_store = self.filesystem.upgrade().unwrap().root_store();
         let layer_object_handle = ObjectStore::create_object(
@@ -792,20 +789,15 @@ impl Mutations for SimpleAllocator {
         transaction.commit().await;
 
         let layer_set = self.tree.immutable_layer_set();
-        let mut merger = layer_set.merger();
-        self.tree
-            .compact_with_iterator(
-                CoalescingIterator::new(Box::new(merger.seek(Bound::Unbounded).await?)).await?,
-                Writer::new(
-                    &layer_object_handle,
-                    Options {
-                        skip_journal_checks: true,
-                        allocator_reservation: Some(reservation),
-                        ..Default::default()
-                    },
-                ),
-            )
-            .await?;
+        {
+            let mut merger = layer_set.merger();
+            self.tree
+                .compact_with_iterator(
+                    CoalescingIterator::new(Box::new(merger.seek(Bound::Unbounded).await?)).await?,
+                    Writer::new(&layer_object_handle, txn_options),
+                )
+                .await?;
+        }
 
         log::debug!("using {} for allocator layer file", object_id);
         let object_handle =
@@ -814,17 +806,7 @@ impl Mutations for SimpleAllocator {
 
         // TODO(jfsulliv): Can we preallocate the buffer instead of doing a bounce? Do we know the
         // size up front?
-        let mut transaction = filesystem
-            .clone()
-            .new_transaction(
-                &[],
-                Options {
-                    skip_journal_checks: true,
-                    allocator_reservation: Some(reservation),
-                    ..Default::default()
-                },
-            )
-            .await?;
+        let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
         let mut serialized_info = Vec::new();
         {
             let mut inner = self.inner.lock().unwrap();
@@ -851,6 +833,16 @@ impl Mutations for SimpleAllocator {
         self.tree.set_layers(layers_from_handles(Box::new([layer_object_handle])).await?);
 
         object_sync.commit();
+
+        // Now close the layers and purge them.
+        for layer in layer_set.layers {
+            let object_id = layer.handle().map(|h| h.object_id());
+            layer.close_layer().await;
+            if let Some(object_id) = object_id {
+                root_store.tombstone(object_id, txn_options).await?;
+            }
+        }
+
         Ok(())
     }
 }

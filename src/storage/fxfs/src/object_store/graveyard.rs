@@ -14,7 +14,7 @@ use {
             record::{
                 ObjectAttributes, ObjectItem, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue,
             },
-            transaction::{Mutation, Transaction},
+            transaction::{Mutation, Options, Transaction},
             ObjectStore,
         },
         trace_duration,
@@ -125,15 +125,29 @@ impl Graveyard {
         };
         let num_purged = purge_items.len();
         let fs = self.store().filesystem();
+        let object_manager = fs.object_manager();
         for (store_id, id) in purge_items {
             // Since the reaping might be happening early in the mount, some stores might not be
             // open yet.
-            let store = fs
-                .object_manager()
+            let store = object_manager
                 .open_store(store_id)
                 .await
                 .context(format!("Failed to open store {}", store_id))?;
-            store.tombstone(id).await.context("Failed to tombstone object")?;
+            // TODO(csuter): we shouldn't assume that all objects in the root stores use the
+            // metadata reservation.
+            let options = if store_id == object_manager.root_parent_store_object_id()
+                || store_id == object_manager.root_store_object_id()
+            {
+                Options {
+                    skip_journal_checks: true,
+                    skip_space_checks: true,
+                    allocator_reservation: Some(fs.flush_reservation()),
+                    ..Default::default()
+                }
+            } else {
+                Options { skip_journal_checks: true, skip_space_checks: true, ..Default::default() }
+            };
+            store.tombstone(id, options).await.context("Failed to tombstone object")?;
         }
         Ok(num_purged)
     }

@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        debug_assert_not_too_long,
         lsm_tree::types::Item,
         object_handle::INVALID_OBJECT_ID,
         object_store::{
@@ -30,7 +31,7 @@ use {
     },
 };
 
-#[derive(Clone, Default)]
+#[derive(Clone, Copy, Default)]
 pub struct Options<'a> {
     /// If true, don't check for low journal space.  This should be true for any transactions that
     /// might alleviate journal space (i.e. compaction).
@@ -383,8 +384,8 @@ impl<'a> Transaction<'a> {
     ) -> Transaction<'a> {
         let (read_locks, txn_locks) = {
             let lock_manager: &LockManager = handler.as_ref().as_ref();
-            let mut read_guard = lock_manager.read_lock(read_locks).await;
-            let mut write_guard = lock_manager.txn_lock(txn_locks).await;
+            let mut read_guard = debug_assert_not_too_long!(lock_manager.read_lock(read_locks));
+            let mut write_guard = debug_assert_not_too_long!(lock_manager.txn_lock(txn_locks));
             (std::mem::take(&mut read_guard.lock_keys), std::mem::take(&mut write_guard.lock_keys))
         };
         Transaction {

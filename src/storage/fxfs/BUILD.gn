@@ -28,6 +28,7 @@ fxfs_deps = [
 fxfs_test_deps = [ "//third_party/rust_crates:matches" ]
 
 fxfs_sources = [
+  "src/debug_assert_not_too_long.rs",
   "src/errors.rs",
   "src/lib.rs",
   "src/lsm_tree.rs",

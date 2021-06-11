@@ -15,10 +15,11 @@ pub mod server;
 #[cfg(test)]
 pub mod testing;
 pub mod volume;
-
 #[cfg(target_os = "fuchsia")]
 #[macro_use]
 mod trace;
 #[cfg(not(target_os = "fuchsia"))]
 #[macro_use]
 mod trace_stub;
+#[macro_use]
+mod debug_assert_not_too_long;

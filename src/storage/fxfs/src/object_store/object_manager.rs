@@ -64,6 +64,10 @@ impl ObjectManager {
         self.objects.read().unwrap().stores.keys().cloned().collect()
     }
 
+    pub fn root_parent_store_object_id(&self) -> u64 {
+        self.objects.read().unwrap().root_parent_store_object_id
+    }
+
     pub fn root_parent_store(&self) -> Arc<ObjectStore> {
         let objects = self.objects.read().unwrap();
         objects.stores.get(&objects.root_parent_store_object_id).unwrap().clone()
@@ -74,6 +78,10 @@ impl ObjectManager {
         let store_id = store.store_object_id();
         objects.stores.insert(store_id, store);
         objects.root_parent_store_object_id = store_id;
+    }
+
+    pub fn root_store_object_id(&self) -> u64 {
+        self.objects.read().unwrap().root_store_object_id
     }
 
     pub fn root_store(&self) -> Arc<ObjectStore> {

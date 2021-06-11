@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        debug_assert_not_too_long,
         errors::FxfsError,
         object_store::{
             allocator::{Allocator, Reservation},
@@ -214,7 +215,7 @@ impl FxFilesystem {
             .set(sender)
             .unwrap_or_else(|_| panic!("take_device should only be called once"));
         std::mem::drop(self);
-        receiver.await.unwrap()
+        debug_assert_not_too_long!(receiver).unwrap()
     }
 
     pub fn super_block(&self) -> SuperBlock {
@@ -290,7 +291,7 @@ impl TransactionHandler for FxFilesystem {
 
     async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>) {
         trace_duration!("FxFilesystem::commit_transaction");
-        self.lock_manager.commit_prepare(transaction).await;
+        debug_assert_not_too_long!(self.lock_manager.commit_prepare(transaction));
         self.journal.commit(transaction).await;
         let mut compaction = self.compaction.lock().unwrap();
         if let Compaction::Idle = *compaction {
@@ -306,11 +307,11 @@ impl TransactionHandler for FxFilesystem {
     }
 
     async fn read_lock<'a>(&'a self, lock_keys: &[LockKey]) -> ReadGuard<'a> {
-        self.lock_manager.read_lock(lock_keys).await
+        debug_assert_not_too_long!(self.lock_manager.read_lock(lock_keys))
     }
 
     async fn write_lock<'a>(&'a self, lock_keys: &[LockKey]) -> WriteGuard<'a> {
-        self.lock_manager.write_lock(lock_keys).await
+        debug_assert_not_too_long!(self.lock_manager.write_lock(lock_keys))
     }
 }
 

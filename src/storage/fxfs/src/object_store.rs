@@ -371,15 +371,12 @@ impl ObjectStore {
 
     // Purges an object that is in the graveyard.  This has no locking, so it's not safe to call
     // this more than once simultaneously for a given object.
-    pub async fn tombstone(&self, object_id: u64) -> Result<(), Error> {
+    pub async fn tombstone(&self, object_id: u64, txn_options: Options<'_>) -> Result<(), Error> {
         let fs = self.filesystem();
         let mut search_key = ObjectKey::attribute(object_id, 0);
         // TODO(csuter): There should be a test that runs fsck after each transaction.
         loop {
-            let mut transaction = fs
-                .clone()
-                .new_transaction(&[], Options { skip_space_checks: true, ..Default::default() })
-                .await?;
+            let mut transaction = fs.clone().new_transaction(&[], txn_options).await?;
             let next_key = self.delete_some(&mut transaction, &search_key).await?;
             transaction.commit().await;
             search_key = if let Some(next_key) = next_key {
@@ -686,17 +683,12 @@ impl Mutations for ObjectStore {
 
         let object_sync = ObjectFlush::new(object_manager, self.store_object_id);
         let reservation = filesystem.flush_reservation();
-        let mut transaction = filesystem
-            .clone()
-            .new_transaction(
-                &[],
-                Options {
-                    skip_journal_checks: true,
-                    allocator_reservation: Some(reservation),
-                    ..Default::default()
-                },
-            )
-            .await?;
+        let txn_options = Options {
+            skip_journal_checks: true,
+            allocator_reservation: Some(reservation),
+            ..Default::default()
+        };
+        let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
         let object_handle = ObjectStore::create_object(
             parent_store,
             &mut transaction,
@@ -719,7 +711,7 @@ impl Mutations for ObjectStore {
         const SIZE_THRESHOLD: u64 = 32768;
         let mut layer_set = self.tree.immutable_layer_set();
         let mut total_size = 0;
-        let mut layers_to_keep = match layer_set.layers.iter().enumerate().find(|(_, layer)| {
+        let layers_to_keep = match layer_set.layers.iter().enumerate().find(|(_, layer)| {
             match layer.handle() {
                 None => {}
                 Some(handle) => {
@@ -736,40 +728,21 @@ impl Mutations for ObjectStore {
             None => Vec::new(),
         };
 
-        let mut merger = layer_set.merger();
-        let iter = merger.seek(Bound::Unbounded).await?;
-        self.tree
-            .compact_with_iterator(
-                iter,
-                Writer::new(
-                    &object_handle,
-                    transaction::Options {
-                        skip_journal_checks: true,
-                        allocator_reservation: Some(reservation),
-                        ..Default::default()
-                    },
-                ),
-            )
-            .await
-            .context("ObjectStore::flush")?;
+        {
+            let mut merger = layer_set.merger();
+            let iter = merger.seek(Bound::Unbounded).await?;
+            self.tree
+                .compact_with_iterator(iter, Writer::new(&object_handle, txn_options))
+                .await
+                .context("ObjectStore::flush")?;
+        }
 
         let mut serialized_info = Vec::new();
         let mut new_store_info = self.store_info();
 
-        let mut transaction = filesystem
-            .clone()
-            .new_transaction(
-                &[],
-                Options {
-                    skip_journal_checks: true,
-                    allocator_reservation: Some(reservation),
-                    ..Default::default()
-                },
-            )
-            .await?;
+        let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
 
         // Move the existing layers we're compacting to the graveyard.
-        // TODO(jfsulliv): these layer files need to be purged when no longer used.
         for layer in &layer_set.layers {
             if let Some(handle) = layer.handle() {
                 graveyard.add(&mut transaction, parent_store.store_object_id(), handle.object_id());
@@ -779,7 +752,7 @@ impl Mutations for ObjectStore {
         new_store_info.last_object_id = self.last_object_id.load(atomic::Ordering::Relaxed);
 
         let mut layers = layers_from_handles(Box::new([object_handle])).await?;
-        layers.append(&mut layers_to_keep);
+        layers.extend(layers_to_keep.iter().map(|l| (*l).clone()));
 
         new_store_info.layers = Vec::new();
         for layer in &layers {
@@ -805,6 +778,16 @@ impl Mutations for ObjectStore {
         self.tree.set_layers(layers);
 
         object_sync.commit();
+
+        // Now close the layers and purge them.
+        for layer in layer_set.layers {
+            let object_id = layer.handle().map(|h| h.object_id());
+            layer.close_layer().await;
+            if let Some(object_id) = object_id {
+                parent_store.tombstone(object_id, txn_options).await?;
+            }
+        }
+
         Ok(())
     }
 }
@@ -1535,7 +1518,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
                 .allocator()
                 .allocate(transaction, allocate_end - file_range.start)
                 .await
-                .context("allocation failed")?;
+                .context("Allocation failed")?;
             allocated += device_range.end - device_range.start;
             let this_file_range =
                 file_range.start..file_range.start + device_range.end - device_range.start;
@@ -1661,6 +1644,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
 mod tests {
     use {
         crate::{
+            errors::FxfsError,
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ObjectHandleExt, ObjectProperties},
             object_store::{
@@ -2065,7 +2049,10 @@ mod tests {
 
         assert_eq!(allocator.get_allocated_bytes(), allocated_before);
 
-        store.tombstone(object.object_id).await.expect("purge failed");
+        store
+            .tombstone(object.object_id, Options { skip_space_checks: true, ..Default::default() })
+            .await
+            .expect("purge failed");
 
         assert_eq!(
             allocated_before - allocator.get_allocated_bytes(),
@@ -2457,6 +2444,51 @@ mod tests {
             .await;
         }
         fs.unwrap().close().await.expect("Close failed");
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_old_layers_are_purged() {
+        let (_fs, object) = test_filesystem_and_object().await;
+
+        let store = object.store();
+
+        store.flush().await.expect("flush failed");
+
+        let mut buf = object.allocate_buffer(5);
+        buf.as_mut_slice().copy_from_slice(b"hello");
+        object.write(0, buf.as_ref()).await.expect("write failed");
+
+        // Getting the layer-set should cause the flush to stall.
+        let layer_set = store.tree().layer_set();
+
+        let done = Mutex::new(false);
+        let mut object_id = 0;
+
+        join!(
+            async {
+                store.flush().await.expect("flush failed");
+                assert!(*done.lock().unwrap());
+            },
+            async {
+                // This is a halting problem so all we can do is sleep.
+                fasync::Timer::new(Duration::from_secs(1)).await;
+                *done.lock().unwrap() = true;
+                object_id = layer_set.layers.last().unwrap().handle().unwrap().object_id();
+                std::mem::drop(layer_set);
+            }
+        );
+
+        if let Err(e) = ObjectStore::open_object(
+            &store.parent_store.as_ref().unwrap(),
+            object_id,
+            HandleOptions::default(),
+        )
+        .await
+        {
+            assert!(FxfsError::NotFound.matches(&e));
+        } else {
+            panic!("open_object succeeded");
+        }
     }
 }
 

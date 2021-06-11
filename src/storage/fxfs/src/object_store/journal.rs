@@ -23,6 +23,7 @@ mod writer;
 
 use {
     crate::{
+        debug_assert_not_too_long,
         errors::FxfsError,
         lsm_tree::LSMTree,
         object_handle::ObjectHandle,
@@ -178,6 +179,9 @@ struct Inner {
 
     // This event is used when we are waiting for a compaction to free up journal space.
     reclaim_event: Option<Event>,
+
+    // The offset that we can zero the journal up to now that it is no longer needed.
+    zero_offset: Option<u64>,
 }
 
 impl Journal {
@@ -196,6 +200,7 @@ impl Journal {
                 super_block_to_write: SuperBlockCopy::A,
                 journal_file_offset: 0,
                 reclaim_event: None,
+                zero_offset: None,
             }),
             trace: AtomicBool::new(false),
         }
@@ -645,7 +650,11 @@ impl Journal {
             Some(x) => x,
         };
         let size = handle.get_size();
-        if file_offset + self.chunk_size() <= size {
+
+        let needs_extending = file_offset + self.chunk_size() > size;
+        let zero_offset = self.inner.lock().unwrap().zero_offset.clone();
+
+        if !needs_extending && zero_offset.is_none() {
             return Ok(());
         }
         let mut transaction = handle
@@ -655,7 +664,13 @@ impl Journal {
                 ..Default::default()
             })
             .await?;
-        handle.preallocate_range(&mut transaction, size..size + self.chunk_size()).await?;
+        if needs_extending {
+            handle.preallocate_range(&mut transaction, size..size + self.chunk_size()).await?;
+        }
+        if let Some(zero_offset) = zero_offset {
+            handle.zero(&mut transaction, 0..zero_offset).await?;
+        }
+
         let journal_file_checkpoint = writer.journal_file_checkpoint();
 
         // We have to apply the mutations before writing them because we borrowed the writer for the
@@ -672,10 +687,18 @@ impl Journal {
         // within the old preallocated range.  If this situation arose (it shouldn't, so it would be
         // a bug if it did), then it could be fixed (e.g. by fsck) by forcing a sync of the root
         // store.
-        assert!(writer.journal_file_checkpoint().file_offset <= size);
-        let file_offset = writer.journal_file_checkpoint().file_offset;
-        let (handle, _) = self.handle_and_reservation.get().unwrap();
-        assert!(file_offset + self.chunk_size() <= handle.get_size());
+        if needs_extending {
+            assert!(writer.journal_file_checkpoint().file_offset <= size);
+            let file_offset = writer.journal_file_checkpoint().file_offset;
+            let (handle, _) = self.handle_and_reservation.get().unwrap();
+            assert!(file_offset + self.chunk_size() <= handle.get_size());
+        }
+
+        let mut inner = self.inner.lock().unwrap();
+        if inner.zero_offset == zero_offset {
+            inner.zero_offset = None;
+        }
+
         Ok(())
     }
 
@@ -745,7 +768,7 @@ impl Journal {
         // First we must lock the root parent store so that no new entries are written to it.
         let sync = ObjectFlush::new(self.objects.clone(), root_parent_store.store_object_id());
         let mutable_layer = root_parent_store.tree().mutable_layer();
-        let guard = mutable_layer.lock();
+        let _guard = mutable_layer.lock_writes();
 
         // After locking, we need to flush the journal because it might have records that a new
         // super-block would refer to.
@@ -775,7 +798,7 @@ impl Journal {
             let inner = self.inner.lock().unwrap();
             (inner.super_block.clone(), inner.super_block_to_write)
         };
-        let old_checkpoint_offset = new_super_block.journal_checkpoint.file_offset;
+        let old_super_block_offset = new_super_block.journal_checkpoint.file_offset;
 
         let (journal_file_offsets, min_checkpoint) = self.objects.journal_file_offsets();
 
@@ -803,38 +826,13 @@ impl Journal {
             inner.super_block = new_super_block;
             inner.super_block_to_write = super_block_to_write.next();
             inner.needs_super_block = false;
-        }
-
-        sync.commit();
-        std::mem::drop(guard);
-
-        // The previous super-block is now guaranteed to be persisted (because we flushed the device
-        // above), so we can free all journal space that it doesn't need.
-        {
-            let mut writer = self.writer.lock().await;
-
-            if old_checkpoint_offset >= BLOCK_SIZE {
-                let (handle, reservation) = self.handle_and_reservation.get().unwrap();
-                let mut transaction = handle
-                    .new_transaction_with_options(Options {
-                        skip_journal_checks: true,
-                        allocator_reservation: Some(reservation),
-                        ..Default::default()
-                    })
-                    .await?;
-                let mut offset = old_checkpoint_offset;
-                offset -= offset % BLOCK_SIZE;
-                handle.zero(&mut transaction, 0..offset).await?;
-                let cloned_mutations = clone_mutations(&transaction);
-                self.apply_mutations(&mut transaction, writer.journal_file_checkpoint()).await;
-                std::mem::drop(transaction);
-                writer.write_mutations(cloned_mutations);
+            inner.zero_offset = Some(round_down(old_super_block_offset, BLOCK_SIZE));
+            if let Some(event) = inner.reclaim_event.take() {
+                event.signal();
             }
         }
 
-        if let Some(event) = self.inner.lock().unwrap().reclaim_event.take() {
-            event.signal();
-        }
+        sync.commit();
 
         Ok(())
     }
@@ -873,18 +871,16 @@ impl Journal {
     /// Waits for there to be sufficient space in the journal.
     pub async fn check_journal_space(&self) {
         loop {
-            {
+            debug_assert_not_too_long!({
                 let mut inner = self.inner.lock().unwrap();
                 if inner.journal_file_offset - inner.super_block.journal_checkpoint.file_offset
                     < RECLAIM_SIZE
-                    && self.handle_and_reservation.get().unwrap().1.amount() >= RECLAIM_SIZE
                 {
                     break;
                 }
                 let event = inner.reclaim_event.get_or_insert_with(|| Event::new());
                 event.wait()
-            }
-            .await;
+            });
         }
     }
 

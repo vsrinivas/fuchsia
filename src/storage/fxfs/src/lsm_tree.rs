@@ -246,10 +246,43 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
     }
 }
 
+/// This is an RAII wrapper for a layer which holds a lock on the layer (via the Layer::lock
+/// method).
+pub struct LockedLayer<K, V>(Event, Arc<dyn Layer<K, V>>);
+
+impl<K, V> LockedLayer<K, V> {
+    pub async fn close_layer(self) {
+        let layer = self.1;
+        std::mem::drop(self.0);
+        layer.close().await;
+    }
+}
+
+impl<K, V> From<Arc<dyn Layer<K, V>>> for LockedLayer<K, V> {
+    fn from(layer: Arc<dyn Layer<K, V>>) -> Self {
+        let event = layer.lock().unwrap();
+        Self(event, layer)
+    }
+}
+
+impl<K, V> std::ops::Deref for LockedLayer<K, V> {
+    type Target = Arc<dyn Layer<K, V>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.1
+    }
+}
+
+impl<K, V> AsRef<dyn Layer<K, V>> for LockedLayer<K, V> {
+    fn as_ref(&self) -> &(dyn Layer<K, V> + 'static) {
+        self.1.as_ref()
+    }
+}
+
 /// A LayerSet provides a snapshot of the layers at a particular point in time, and allows you to
 /// get an iterator.  Iterators borrow the layers so something needs to hold reference count.
 pub struct LayerSet<K, V> {
-    pub layers: Vec<Arc<dyn Layer<K, V>>>,
+    pub layers: Vec<LockedLayer<K, V>>,
     merge_fn: merge::MergeFn<K, V>,
 }
 
