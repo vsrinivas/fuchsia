@@ -29,13 +29,13 @@ import 'package:mime/mime.dart';
 /// ```
 /// See go/workstation_localhost for more details about using this library.
 class Localhost {
-  HttpServer _server;
-  bool _isReady;
+  HttpServer? _server;
+  late bool _isReady;
   final _pages = <String, File>{};
 
   // A keyword that will call stopServer() when it's requested in the form of
   // 'http://127.0.0.1:8080/$_stopKeyword'
-  String _stopKeyword;
+  late String _stopKeyword;
 
   Map<String, File> get pages => _pages;
 
@@ -52,7 +52,7 @@ class Localhost {
     var url = 'http://';
     try {
       _server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
-      url += '${_server.address.address}:${_server.port}';
+      url += '${_server!.address.address}:${_server!.port}';
       log.info('Start serving on $url/');
       _isReady = true;
       //ignore: avoid_catches_without_on_clauses
@@ -73,42 +73,45 @@ class Localhost {
       _isReady,
       'The server is not ready for serving files. Call bindServer() first.',
     );
-    await for (var req in _server) {
-      final fileName = req.uri.path.substring(1); // eleminates '/'
 
-      if (fileName == _stopKeyword) {
-        req.response
-          ..headers.contentType = ContentType.text
-          ..write('Stopped the server.');
-        await req.response.close();
-        stopServer();
-      }
+    if (_server != null) {
+      await for (var req in _server!) {
+        final fileName = req.uri.path.substring(1); // eleminates '/'
 
-      final targetFile = _pages[fileName];
-      final mimeType = lookupMimeType(fileName);
-      if (mimeType == null) {
-        log.warning('Unsupported type of file: $fileName. ');
-        req.response
-          ..headers.contentType = ContentType.text
-          ..write('$fileName is not a supported type of file.');
-      } else if (targetFile != null && targetFile.existsSync()) {
-        log.info('Serving $fileName');
-        req.response.headers.contentType = ContentType.parse(mimeType);
-        try {
-          await req.response.addStream(targetFile.openRead());
-          //ignore: avoid_catches_without_on_clauses
-        } catch (e) {
-          log.shout('Something went wrong while loading the file: $e');
+        if (fileName == _stopKeyword) {
+          req.response
+            ..headers.contentType = ContentType.text
+            ..write('Stopped the server.');
+          await req.response.close();
+          stopServer();
         }
-      } else {
-        log.warning('No such file $fileName. '
-            'Check if you passed necessary files to your Localhost using '
-            'passWebFiles().');
-        req.response
-          ..headers.contentType = ContentType.text
-          ..write('Missing file: $fileName');
+
+        final targetFile = _pages[fileName];
+        final mimeType = lookupMimeType(fileName);
+        if (mimeType == null) {
+          log.warning('Unsupported type of file: $fileName. ');
+          req.response
+            ..headers.contentType = ContentType.text
+            ..write('$fileName is not a supported type of file.');
+        } else if (targetFile != null && targetFile.existsSync()) {
+          log.info('Serving $fileName');
+          req.response.headers.contentType = ContentType.parse(mimeType);
+          try {
+            await req.response.addStream(targetFile.openRead());
+            //ignore: avoid_catches_without_on_clauses
+          } catch (e) {
+            log.shout('Something went wrong while loading the file: $e');
+          }
+        } else {
+          log.warning('No such file $fileName. '
+              'Check if you passed necessary files to your Localhost using '
+              'passWebFiles().');
+          req.response
+            ..headers.contentType = ContentType.text
+            ..write('Missing file: $fileName');
+        }
+        await req.response.close();
       }
-      await req.response.close();
     }
   }
 

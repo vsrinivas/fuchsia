@@ -9,6 +9,7 @@ import("//build/dart/test.gni")
 
 dart_library("ermine_localhost") {
   package_name = "ermine_localhost"
+  null_safe = true
   sources = [
     "localhost.dart",
     "src/localhost.dart",
@@ -35,6 +36,7 @@ resource("testdata_another") {
 }
 
 dart_test("ermine_localhost_unittests") {
+  null_safe = true
   sources = [ "localhost_test.dart" ]
 
   deps = [
