@@ -149,7 +149,7 @@ Base) for a product. These packages are never evicted by the system.
 
 **Current value for `target_cpu = "arm64"`:** `["//bundles:kitchen_sink"]`
 
-From //out/not-default/args.gn:3
+From //out/not-default/args.gn:8
 
 **Overridden from the default:** `[]`
 
@@ -157,7 +157,7 @@ From //BUILD.gn:31
 
 **Current value for `target_cpu = "x64"`:** `["//bundles:kitchen_sink"]`
 
-From //out/not-default/args.gn:3
+From //out/not-default/args.gn:8
 
 **Overridden from the default:** `[]`
 
@@ -479,7 +479,7 @@ Board configuration of the current build
 
 **Current value for `target_cpu = "arm64"`:** `"arm64"`
 
-From //out/not-default/args.gn:4
+From //out/not-default/args.gn:3
 
 **Overridden from the default:** `"qemu-arm64"`
 
@@ -487,7 +487,7 @@ From //build/info/info.gni:12
 
 **Current value for `target_cpu = "x64"`:** `"x64"`
 
-From //out/not-default/args.gn:4
+From //out/not-default/args.gn:3
 
 **Overridden from the default:** `"x64"`
 
@@ -498,7 +498,7 @@ Product configuration of the current build
 
 **Current value for `target_cpu = "arm64"`:** `"bringup"`
 
-From //out/not-default/args.gn:5
+From //out/not-default/args.gn:4
 
 **Overridden from the default:** `""`
 
@@ -506,7 +506,7 @@ From //build/info/info.gni:9
 
 **Current value for `target_cpu = "x64"`:** `"bringup"`
 
-From //out/not-default/args.gn:5
+From //out/not-default/args.gn:4
 
 **Overridden from the default:** `""`
 
@@ -573,7 +573,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:55
+From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
@@ -581,7 +581,7 @@ From //BUILD.gn:39
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:55
+From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
@@ -1480,7 +1480,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
-From //products/bringup.gni:64
+From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
@@ -1488,7 +1488,7 @@ From //BUILD.gn:58
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
-From //products/bringup.gni:64
+From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
@@ -1621,7 +1621,7 @@ Debug build.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //out/not-default/args.gn:6
+From //out/not-default/args.gn:5
 
 **Overridden from the default:** `true`
 
@@ -1629,7 +1629,7 @@ From //build/config/BUILDCONFIG.gn:27
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //out/not-default/args.gn:6
+From //out/not-default/args.gn:5
 
 **Overridden from the default:** `true`
 
@@ -3320,13 +3320,13 @@ From //build/config.gni:13
 
 **Current value for `target_cpu = "arm64"`:** `"arm64"`
 
-From //out/not-default/args.gn:7
+From //out/not-default/args.gn:6
 
 **Overridden from the default:** `""`
 
 **Current value for `target_cpu = "x64"`:** `"x64"`
 
-From //out/not-default/args.gn:7
+From //out/not-default/args.gn:6
 
 **Overridden from the default:** `""`
 
@@ -3525,7 +3525,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot"]`
 
-From //products/bringup.gni:57
+From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
@@ -3533,7 +3533,7 @@ From //BUILD.gn:53
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot"]`
 
-From //products/bringup.gni:57
+From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
@@ -3595,7 +3595,7 @@ Set to true to enable distributed compilation using Goma.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //out/not-default/args.gn:8
+From //out/not-default/args.gn:7
 
 **Overridden from the default:** `false`
 
@@ -3603,7 +3603,7 @@ From //build/toolchain/goma.gni:11
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //out/not-default/args.gn:8
+From //out/not-default/args.gn:7
 
 **Overridden from the default:** `false`
 
