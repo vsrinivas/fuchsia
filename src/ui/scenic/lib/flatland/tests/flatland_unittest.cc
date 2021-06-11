@@ -22,6 +22,7 @@
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 #include "src/ui/scenic/lib/flatland/tests/mock_flatland_presenter.h"
+#include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 #include "src/ui/scenic/lib/utils/dispatcher_holder.h"
@@ -802,6 +803,44 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
 
   EXPECT_TRUE(utils::IsEventSignalled(release1_copy, ZX_EVENT_SIGNALED));
   EXPECT_TRUE(utils::IsEventSignalled(release2_copy, ZX_EVENT_SIGNALED));
+}
+
+TEST_F(FlatlandTest, SetDebugNameAddsPrefixToLogs) {
+  class TestErrorReporter : public scenic_impl::ErrorReporter {
+   public:
+    std::string reported_error;
+
+    std::string GetPrefix();
+
+   private:
+    // |scenic_impl::ErrorReporter|
+    void ReportError(syslog::LogSeverity severity, std::string error_string) override {
+      reported_error = error_string;
+    }
+  };
+
+  std::shared_ptr<TestErrorReporter> test_error_reporter = std::make_shared<TestErrorReporter>();
+  const TransformId kInvalidId = {0};
+
+  // No prefix in errors by default.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetErrorReporter(test_error_reporter);
+    flatland->CreateTransform(kInvalidId);
+    PRESENT(flatland, false);
+    EXPECT_EQ("CreateTransform called with transform_id 0", test_error_reporter->reported_error);
+  }
+
+  // SetDebugName() adds a prefix.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetErrorReporter(test_error_reporter);
+    flatland->SetDebugName("test_client");
+    flatland->CreateTransform(kInvalidId);
+    PRESENT(flatland, false);
+    EXPECT_EQ("Flatland client(test_client): CreateTransform called with transform_id 0",
+              test_error_reporter->reported_error);
+  }
 }
 
 TEST_F(FlatlandTest, CreateAndReleaseTransformValidCases) {

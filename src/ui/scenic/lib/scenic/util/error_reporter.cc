@@ -35,8 +35,11 @@ class DefaultErrorReporter : public ErrorReporter {
 
 }  // anonymous namespace
 
-ErrorReporter::Report::Report(ErrorReporter* owner, syslog::LogSeverity severity)
-    : owner_(owner), severity_(severity) {}
+ErrorReporter::Report::Report(ErrorReporter* owner, syslog::LogSeverity severity,
+                              const std::string& prefix)
+    : owner_(owner), severity_(severity) {
+  stream_ << prefix;
+}
 
 ErrorReporter::Report::Report(Report&& other)
     : owner_(other.owner_), severity_(other.severity_), stream_(std::move(other.stream_)) {}

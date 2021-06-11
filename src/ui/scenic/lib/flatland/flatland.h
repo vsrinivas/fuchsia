@@ -14,6 +14,7 @@
 
 #include <map>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -32,6 +33,7 @@
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
+#include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 #include "src/ui/scenic/lib/scheduling/present2_helper.h"
 #include "src/ui/scenic/lib/utils/dispatcher_holder.h"
@@ -131,6 +133,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
                    fuchsia::ui::scenic::internal::Flatland::ReleaseLinkCallback callback) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void ReleaseImage(ContentId image_id) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
+  void SetDebugName(std::string name) override;
 
   // Called just before the FIDL client receives the event of the same name, indicating that this
   // Flatland instance should allow an additional |num_present_tokens| calls to Present().
@@ -150,6 +154,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   // exist for this Flatland instance, returns std::nullopt.
   std::optional<TransformHandle> GetContentHandle(ContentId content_id) const;
 
+  // For validating logs in tests only.
+  void SetErrorReporter(std::shared_ptr<scenic_impl::ErrorReporter> error_reporter);
+
  private:
   Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
            fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
@@ -160,8 +167,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
            const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
                buffer_collection_importers);
 
-  void ReportError();
-  void ReportLinkProtocolError();
+  void ReportBadOperationError();
+  void ReportLinkProtocolError(const std::string& error_log);
   void CloseConnection();
 
   // The dispatcher this Flatland instance is running on.
@@ -206,9 +213,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   // Used to import Flatland images to external services that Flatland does not have knowledge of.
   // Each importer is used for a different service.
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers_;
-
-  // A Sysmem allocator to facilitate buffer allocation with the Renderer.
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 
   // True if any function has failed since the previous call to Present(), false otherwise.
   bool failure_since_previous_present_ = false;
@@ -307,6 +311,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
 
   // A mapping from Flatland-generated TransformHandle to the ImageMetadata it represents.
   std::unordered_map<TransformHandle, allocation::ImageMetadata> image_metadatas_;
+
+  // Error reporter used for printing debug logs.
+  std::shared_ptr<scenic_impl::ErrorReporter> error_reporter_;
 };
 
 }  // namespace flatland

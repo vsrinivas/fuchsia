@@ -35,7 +35,7 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder, ContentLinkToken token,
     fuchsia::ui::scenic::internal::LinkProperties initial_properties,
     fidl::InterfaceRequest<ContentLink> content_link, TransformHandle graph_handle,
-    std::function<void()> error_callback) {
+    LinkProtocolErrorCallback error_callback) {
   FX_DCHECK(token.value.is_valid());
 
   auto impl = std::make_shared<GraphLinkImpl>(std::move(dispatcher_holder));
@@ -103,7 +103,7 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
 LinkSystem::ParentLink LinkSystem::CreateParentLink(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder, GraphLinkToken token,
     fidl::InterfaceRequest<GraphLink> graph_link, TransformHandle link_origin,
-    std::function<void()> error_callback) {
+    LinkProtocolErrorCallback error_callback) {
   FX_DCHECK(token.value.is_valid());
 
   auto impl = std::make_shared<ContentLinkImpl>(std::move(dispatcher_holder));

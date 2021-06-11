@@ -95,12 +95,14 @@ void FlatlandDisplay::SetContent(ContentLinkToken token,
   // typically during rendering.
   child_link_ = link_system_->CreateChildLink(
       dispatcher_holder_, std::move(token), fidl::Clone(properties), std::move(content_link),
-      child_transform, [ref = weak_from_this(), dispatcher_holder = dispatcher_holder_]() {
+      child_transform,
+      [ref = weak_from_this(),
+       dispatcher_holder = dispatcher_holder_](const std::string& error_log) {
         FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
             << "Link protocol error reported on the wrong dispatcher.";
 
         // TODO(fxbug.dev/77035): FlatlandDisplay currently has no way to notify clients of errors.
-        FX_LOGS(ERROR) << "FlatlandDisplay illegal client usage: link protocol";
+        FX_LOGS(ERROR) << "FlatlandDisplay illegal client usage: " << error_log;
       });
   FX_CHECK(child_transform == child_link_.graph_handle);
 

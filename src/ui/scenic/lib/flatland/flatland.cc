@@ -11,6 +11,7 @@
 
 #include <functional>
 #include <memory>
+#include <sstream>
 #include <utility>
 
 #include "src/lib/fsl/handles/object_info.h"
@@ -70,7 +71,8 @@ Flatland::Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
       uber_struct_queue_(std::move(uber_struct_queue)),
       buffer_collection_importers_(buffer_collection_importers),
       transform_graph_(session_id_),
-      local_root_(transform_graph_.CreateTransform()) {
+      local_root_(transform_graph_.CreateTransform()),
+      error_reporter_(scenic_impl::ErrorReporter::Default()) {
   zx_status_t status = peer_closed_waiter_.Begin(
       dispatcher(),
       [this](async_dispatcher_t* dispatcher, async::WaitOnce* wait, zx_status_t status,
@@ -241,8 +243,8 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
   // Attempting to link with an invalid token will never succeed, so its better to fail early and
   // immediately close the link connection.
   if (!token.value.is_valid()) {
-    FX_LOGS(ERROR) << "LinkToParent failed, GraphLinkToken was invalid";
-    ReportError();
+    error_reporter_->ERROR() << "LinkToParent failed, GraphLinkToken was invalid";
+    ReportBadOperationError();
     return;
   }
 
@@ -255,11 +257,12 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
   auto link_origin = transform_graph_.CreateTransform();
   LinkSystem::ParentLink link = link_system_->CreateParentLink(
       dispatcher_holder_, std::move(token), std::move(graph_link), link_origin,
-      [ref = weak_from_this(), dispatcher_holder = dispatcher_holder_]() {
+      [ref = weak_from_this(),
+       dispatcher_holder = dispatcher_holder_](const std::string& error_log) {
         FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
             << "Link protocol error reported on the wrong dispatcher.";
         if (auto impl = ref.lock())
-          impl->ReportLinkProtocolError();
+          impl->ReportLinkProtocolError(error_log);
       });
 
   // This portion of the method is feed-forward. The parent-child relationship between
@@ -285,8 +288,8 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
 void Flatland::UnlinkFromParent(
     fuchsia::ui::scenic::internal::Flatland::UnlinkFromParentCallback callback) {
   if (!parent_link_) {
-    FX_LOGS(ERROR) << "UnlinkFromParent failed, no existing parent Link";
-    ReportError();
+    error_reporter_->ERROR() << "UnlinkFromParent failed, no existing parent Link";
+    ReportBadOperationError();
     return;
   }
 
@@ -354,15 +357,15 @@ void Flatland::ClearGraph() {
 
 void Flatland::CreateTransform(TransformId transform_id) {
   if (transform_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "CreateTransform called with transform_id 0";
-    ReportError();
+    error_reporter_->ERROR() << "CreateTransform called with transform_id 0";
+    ReportBadOperationError();
     return;
   }
 
   if (transforms_.count(transform_id.value)) {
-    FX_LOGS(ERROR) << "CreateTransform called with pre-existing transform_id "
-                   << transform_id.value;
-    ReportError();
+    error_reporter_->ERROR() << "CreateTransform called with pre-existing transform_id "
+                             << transform_id.value;
+    ReportBadOperationError();
     return;
   }
 
@@ -372,16 +375,17 @@ void Flatland::CreateTransform(TransformId transform_id) {
 
 void Flatland::SetTranslation(TransformId transform_id, Vec2 translation) {
   if (transform_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "SetTranslation called with transform_id 0";
-    ReportError();
+    error_reporter_->ERROR() << "SetTranslation called with transform_id 0";
+    ReportBadOperationError();
     return;
   }
 
   auto transform_kv = transforms_.find(transform_id.value);
 
   if (transform_kv == transforms_.end()) {
-    FX_LOGS(ERROR) << "SetTranslation failed, transform_id " << transform_id.value << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "SetTranslation failed, transform_id " << transform_id.value
+                             << " not found";
+    ReportBadOperationError();
     return;
   }
 
@@ -390,16 +394,17 @@ void Flatland::SetTranslation(TransformId transform_id, Vec2 translation) {
 
 void Flatland::SetOrientation(TransformId transform_id, Orientation orientation) {
   if (transform_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "SetOrientation called with transform_id 0";
-    ReportError();
+    error_reporter_->ERROR() << "SetOrientation called with transform_id 0";
+    ReportBadOperationError();
     return;
   }
 
   auto transform_kv = transforms_.find(transform_id.value);
 
   if (transform_kv == transforms_.end()) {
-    FX_LOGS(ERROR) << "SetOrientation failed, transform_id " << transform_id.value << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "SetOrientation failed, transform_id " << transform_id.value
+                             << " not found";
+    ReportBadOperationError();
     return;
   }
 
@@ -408,8 +413,8 @@ void Flatland::SetOrientation(TransformId transform_id, Orientation orientation)
 
 void Flatland::AddChild(TransformId parent_transform_id, TransformId child_transform_id) {
   if (parent_transform_id.value == kInvalidId || child_transform_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "AddChild called with transform_id zero";
-    ReportError();
+    error_reporter_->ERROR() << "AddChild called with transform_id zero";
+    ReportBadOperationError();
     return;
   }
 
@@ -417,40 +422,41 @@ void Flatland::AddChild(TransformId parent_transform_id, TransformId child_trans
   auto child_global_kv = transforms_.find(child_transform_id.value);
 
   if (parent_global_kv == transforms_.end()) {
-    FX_LOGS(ERROR) << "AddChild failed, parent_transform_id " << parent_transform_id.value
-                   << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "AddChild failed, parent_transform_id " << parent_transform_id.value
+                             << " not found";
+    ReportBadOperationError();
     return;
   }
 
   if (child_global_kv == transforms_.end()) {
-    FX_LOGS(ERROR) << "AddChild failed, child_transform_id " << child_transform_id.value
-                   << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "AddChild failed, child_transform_id " << child_transform_id.value
+                             << " not found";
+    ReportBadOperationError();
     return;
   }
 
   if (opacity_values_.find(parent_global_kv->second) != opacity_values_.end() &&
       opacity_values_[parent_global_kv->second] != 1.f) {
-    FX_LOGS(ERROR) << "Cannot add a child to a node with an opacity value < 1.0.";
-    ReportError();
+    error_reporter_->ERROR() << "Cannot add a child to a node with an opacity value < 1.0.";
+    ReportBadOperationError();
     return;
   }
 
   bool added = transform_graph_.AddChild(parent_global_kv->second, child_global_kv->second);
 
   if (!added) {
-    FX_LOGS(ERROR) << "AddChild failed, connection already exists between parent "
-                   << parent_transform_id.value << " and child " << child_transform_id.value;
-    ReportError();
+    error_reporter_->ERROR() << "AddChild failed, connection already exists between parent "
+                             << parent_transform_id.value << " and child "
+                             << child_transform_id.value;
+    ReportBadOperationError();
   }
 }
 
 void Flatland::RemoveChild(TransformId parent_transform_id, TransformId child_transform_id) {
   if (parent_transform_id.value == kInvalidId || child_transform_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "RemoveChild failed, transform_id " << parent_transform_id.value
-                   << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "RemoveChild failed, transform_id " << parent_transform_id.value
+                             << " not found";
+    ReportBadOperationError();
     return;
   }
 
@@ -458,25 +464,26 @@ void Flatland::RemoveChild(TransformId parent_transform_id, TransformId child_tr
   auto child_global_kv = transforms_.find(child_transform_id.value);
 
   if (parent_global_kv == transforms_.end()) {
-    FX_LOGS(ERROR) << "RemoveChild failed, parent_transform_id " << parent_transform_id.value
-                   << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "RemoveChild failed, parent_transform_id "
+                             << parent_transform_id.value << " not found";
+    ReportBadOperationError();
     return;
   }
 
   if (child_global_kv == transforms_.end()) {
-    FX_LOGS(ERROR) << "RemoveChild failed, child_transform_id " << child_transform_id.value
-                   << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "RemoveChild failed, child_transform_id "
+                             << child_transform_id.value << " not found";
+    ReportBadOperationError();
     return;
   }
 
   bool removed = transform_graph_.RemoveChild(parent_global_kv->second, child_global_kv->second);
 
   if (!removed) {
-    FX_LOGS(ERROR) << "RemoveChild failed, connection between parent " << parent_transform_id.value
-                   << " and child " << child_transform_id.value << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "RemoveChild failed, connection between parent "
+                             << parent_transform_id.value << " and child "
+                             << child_transform_id.value << " not found";
+    ReportBadOperationError();
   }
 }
 
@@ -489,9 +496,9 @@ void Flatland::SetRootTransform(TransformId transform_id) {
 
   auto global_kv = transforms_.find(transform_id.value);
   if (global_kv == transforms_.end()) {
-    FX_LOGS(ERROR) << "SetRootTransform failed, transform_id " << transform_id.value
-                   << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "SetRootTransform failed, transform_id " << transform_id.value
+                             << " not found";
+    ReportBadOperationError();
     return;
   }
 
@@ -506,21 +513,22 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
   // Attempting to link with an invalid token will never succeed, so its better to fail early and
   // immediately close the link connection.
   if (!token.value.is_valid()) {
-    FX_LOGS(ERROR) << "CreateLink failed, ContentLinkToken was invalid";
-    ReportError();
+    error_reporter_->ERROR() << "CreateLink failed, ContentLinkToken was invalid";
+    ReportBadOperationError();
     return;
   }
 
   if (!properties.has_logical_size()) {
-    FX_LOGS(ERROR) << "CreateLink must be provided a LinkProperties with a logical size";
-    ReportError();
+    error_reporter_->ERROR() << "CreateLink must be provided a LinkProperties with a logical size";
+    ReportBadOperationError();
     return;
   }
 
   auto logical_size = properties.logical_size();
   if (logical_size.x <= 0.f || logical_size.y <= 0.f) {
-    FX_LOGS(ERROR) << "CreateLink must be provided a logical size with positive X and Y values";
-    ReportError();
+    error_reporter_->ERROR()
+        << "CreateLink must be provided a logical size with positive X and Y values";
+    ReportBadOperationError();
     return;
   }
 
@@ -536,24 +544,26 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
   fidl::Clone(properties, &initial_properties);
   LinkSystem::ChildLink link = link_system_->CreateChildLink(
       dispatcher_holder_, std::move(token), std::move(initial_properties), std::move(content_link),
-      graph_handle, [ref = weak_from_this(), dispatcher_holder = dispatcher_holder_]() {
+      graph_handle,
+      [ref = weak_from_this(),
+       dispatcher_holder = dispatcher_holder_](const std::string& error_log) {
         FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
             << "Link protocol error reported on the wrong dispatcher.";
         if (auto impl = ref.lock())
-          impl->ReportLinkProtocolError();
+          impl->ReportLinkProtocolError(error_log);
       });
 
   // TODO(fxbug.dev/76640): probably move this up before creating the child-link.
   if (link_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "CreateLink called with ContentId zero";
-    ReportError();
+    error_reporter_->ERROR() << "CreateLink called with ContentId zero";
+    ReportBadOperationError();
     return;
   }
 
   // TODO(fxbug.dev/76640): probably move this up before creating the child-link.
   if (content_handles_.count(link_id.value)) {
-    FX_LOGS(ERROR) << "CreateLink called with existing ContentId " << link_id.value;
-    ReportError();
+    error_reporter_->ERROR() << "CreateLink called with existing ContentId " << link_id.value;
+    ReportBadOperationError();
     return;
   }
 
@@ -576,14 +586,14 @@ void Flatland::CreateImage(ContentId image_id,
                            fuchsia::scenic::allocation::BufferCollectionImportToken import_token,
                            uint32_t vmo_index, ImageProperties properties) {
   if (image_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "CreateImage called with image_id 0";
-    ReportError();
+    error_reporter_->ERROR() << "CreateImage called with image_id 0";
+    ReportBadOperationError();
     return;
   }
 
   if (content_handles_.count(image_id.value)) {
-    FX_LOGS(ERROR) << "CreateImage called with pre-existing image_id " << image_id.value;
-    ReportError();
+    error_reporter_->ERROR() << "CreateImage called with pre-existing image_id " << image_id.value;
+    ReportBadOperationError();
     return;
   }
 
@@ -591,20 +601,20 @@ void Flatland::CreateImage(ContentId image_id,
 
   // Check if there is a valid peer.
   if (global_collection_id == ZX_KOID_INVALID) {
-    FX_LOGS(ERROR) << "CreateImage called with no valid export token";
-    ReportError();
+    error_reporter_->ERROR() << "CreateImage called with no valid export token";
+    ReportBadOperationError();
     return;
   }
 
   if (!properties.has_width()) {
-    FX_LOGS(ERROR) << "CreateImage failed, ImageProperties did not specify a width";
-    ReportError();
+    error_reporter_->ERROR() << "CreateImage failed, ImageProperties did not specify a width";
+    ReportBadOperationError();
     return;
   }
 
   if (!properties.has_height()) {
-    FX_LOGS(ERROR) << "CreateImage failed, ImageProperties did not specify a height";
-    ReportError();
+    error_reporter_->ERROR() << "CreateImage failed, ImageProperties did not specify a height";
+    ReportBadOperationError();
     return;
   }
 
@@ -630,8 +640,8 @@ void Flatland::CreateImage(ContentId image_id,
         buffer_collection_importers_[j]->ReleaseBufferImage(metadata.identifier);
       }
 
-      FX_LOGS(ERROR) << "Importer could not import image.";
-      ReportError();
+      error_reporter_->ERROR() << "Importer could not import image.";
+      ReportBadOperationError();
       return;
     }
   }
@@ -646,22 +656,22 @@ void Flatland::CreateImage(ContentId image_id,
 
 void Flatland::SetImageDestinationSize(ContentId image_id, fuchsia::math::SizeU size) {
   if (image_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "SetImageSize called with image_id 0";
-    ReportError();
+    error_reporter_->ERROR() << "SetImageSize called with image_id 0";
+    ReportBadOperationError();
     return;
   }
 
   auto content_kv = content_handles_.find(image_id.value);
 
   if (content_kv == content_handles_.end()) {
-    FX_LOGS(ERROR) << "SetImageSize called with non-existent image_id " << image_id.value;
-    ReportError();
+    error_reporter_->ERROR() << "SetImageSize called with non-existent image_id " << image_id.value;
+    ReportBadOperationError();
     return;
   }
 
   auto image_kv = image_metadatas_.find(content_kv->second);
   if (image_kv == image_metadatas_.end()) {
-    FX_LOGS(ERROR) << "SetImageSize called on non-image content.";
+    error_reporter_->ERROR() << "SetImageSize called on non-image content.";
     return;
   }
 
@@ -672,28 +682,29 @@ void Flatland::SetImageDestinationSize(ContentId image_id, fuchsia::math::SizeU 
 
 void Flatland::SetOpacity(TransformId transform_id, float val) {
   if (transform_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "SetOpacity called with transform_id 0";
-    ReportError();
+    error_reporter_->ERROR() << "SetOpacity called with transform_id 0";
+    ReportBadOperationError();
     return;
   }
 
   if (val < 0.f || val > 1.f) {
-    FX_LOGS(ERROR) << "Opacity value is not within valid range [0,1].";
-    ReportError();
+    error_reporter_->ERROR() << "Opacity value is not within valid range [0,1].";
+    ReportBadOperationError();
     return;
   }
 
   auto transform_kv = transforms_.find(transform_id.value);
 
   if (transform_kv == transforms_.end()) {
-    FX_LOGS(ERROR) << "SetOpacity failed, transform_id " << transform_id.value << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "SetOpacity failed, transform_id " << transform_id.value
+                             << " not found";
+    ReportBadOperationError();
     return;
   }
 
   if (transform_graph_.HasChildren(transform_kv->second)) {
-    FX_LOGS(ERROR) << "Cannot set the opacity value of a non-leaf node below 1.0";
-    ReportError();
+    error_reporter_->ERROR() << "Cannot set the opacity value of a non-leaf node below 1.0";
+    ReportBadOperationError();
     return;
   }
 
@@ -707,16 +718,17 @@ void Flatland::SetOpacity(TransformId transform_id, float val) {
 
 void Flatland::SetContent(TransformId transform_id, ContentId content_id) {
   if (transform_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "SetContent called with transform_id zero";
-    ReportError();
+    error_reporter_->ERROR() << "SetContent called with transform_id zero";
+    ReportBadOperationError();
     return;
   }
 
   auto transform_kv = transforms_.find(transform_id.value);
 
   if (transform_kv == transforms_.end()) {
-    FX_LOGS(ERROR) << "SetContent failed, transform_id " << transform_id.value << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "SetContent failed, transform_id " << transform_id.value
+                             << " not found";
+    ReportBadOperationError();
     return;
   }
 
@@ -728,8 +740,9 @@ void Flatland::SetContent(TransformId transform_id, ContentId content_id) {
   auto handle_kv = content_handles_.find(content_id.value);
 
   if (handle_kv == content_handles_.end()) {
-    FX_LOGS(ERROR) << "SetContent failed, content_id " << content_id.value << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "SetContent failed, content_id " << content_id.value
+                             << " not found";
+    ReportBadOperationError();
     return;
   }
 
@@ -738,24 +751,26 @@ void Flatland::SetContent(TransformId transform_id, ContentId content_id) {
 
 void Flatland::SetLinkProperties(ContentId link_id, LinkProperties properties) {
   if (link_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "SetLinkProperties called with link_id zero.";
-    ReportError();
+    error_reporter_->ERROR() << "SetLinkProperties called with link_id zero.";
+    ReportBadOperationError();
     return;
   }
 
   auto content_kv = content_handles_.find(link_id.value);
 
   if (content_kv == content_handles_.end()) {
-    FX_LOGS(ERROR) << "SetLinkProperties failed, link_id " << link_id.value << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "SetLinkProperties failed, link_id " << link_id.value
+                             << " not found";
+    ReportBadOperationError();
     return;
   }
 
   auto link_kv = child_links_.find(content_kv->second);
 
   if (link_kv == child_links_.end()) {
-    FX_LOGS(ERROR) << "SetLinkProperties failed, content_id " << link_id.value << " is not a Link";
-    ReportError();
+    error_reporter_->ERROR() << "SetLinkProperties failed, content_id " << link_id.value
+                             << " is not a Link";
+    ReportBadOperationError();
     return;
   }
 
@@ -764,9 +779,10 @@ void Flatland::SetLinkProperties(ContentId link_id, LinkProperties properties) {
   if (properties.has_logical_size()) {
     auto logical_size = properties.logical_size();
     if (logical_size.x <= 0.f || logical_size.y <= 0.f) {
-      FX_LOGS(ERROR) << "SetLinkProperties failed, logical_size components must be positive, "
-                     << "given (" << logical_size.x << ", " << logical_size.y << ")";
-      ReportError();
+      error_reporter_->ERROR()
+          << "SetLinkProperties failed, logical_size components must be positive, "
+          << "given (" << logical_size.x << ", " << logical_size.y << ")";
+      ReportBadOperationError();
       return;
     }
   } else {
@@ -784,31 +800,32 @@ void Flatland::SetLinkProperties(ContentId link_id, LinkProperties properties) {
 
 void Flatland::SetLinkSize(ContentId link_id, Vec2 size) {
   if (link_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "SetLinkSize called with link_id zero";
-    ReportError();
+    error_reporter_->ERROR() << "SetLinkSize called with link_id zero";
+    ReportBadOperationError();
     return;
   }
 
   if (size.x <= 0.f || size.y <= 0.f) {
-    FX_LOGS(ERROR) << "SetLinkSize failed, size components must be positive, given (" << size.x
-                   << ", " << size.y << ")";
-    ReportError();
+    error_reporter_->ERROR() << "SetLinkSize failed, size components must be positive, given ("
+                             << size.x << ", " << size.y << ")";
+    ReportBadOperationError();
     return;
   }
 
   auto content_kv = content_handles_.find(link_id.value);
 
   if (content_kv == content_handles_.end()) {
-    FX_LOGS(ERROR) << "SetLinkSize failed, link_id " << link_id.value << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "SetLinkSize failed, link_id " << link_id.value << " not found";
+    ReportBadOperationError();
     return;
   }
 
   auto link_kv = child_links_.find(content_kv->second);
 
   if (link_kv == child_links_.end()) {
-    FX_LOGS(ERROR) << "SetLinkSize failed, content_id " << link_id.value << " is not a Link";
-    ReportError();
+    error_reporter_->ERROR() << "SetLinkSize failed, content_id " << link_id.value
+                             << " is not a Link";
+    ReportBadOperationError();
     return;
   }
 
@@ -820,17 +837,17 @@ void Flatland::SetLinkSize(ContentId link_id, Vec2 size) {
 
 void Flatland::ReleaseTransform(TransformId transform_id) {
   if (transform_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "ReleaseTransform called with transform_id zero";
-    ReportError();
+    error_reporter_->ERROR() << "ReleaseTransform called with transform_id zero";
+    ReportBadOperationError();
     return;
   }
 
   auto transform_kv = transforms_.find(transform_id.value);
 
   if (transform_kv == transforms_.end()) {
-    FX_LOGS(ERROR) << "ReleaseTransform failed, transform_id " << transform_id.value
-                   << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "ReleaseTransform failed, transform_id " << transform_id.value
+                             << " not found";
+    ReportBadOperationError();
     return;
   }
 
@@ -842,24 +859,25 @@ void Flatland::ReleaseTransform(TransformId transform_id) {
 void Flatland::ReleaseLink(ContentId link_id,
                            fuchsia::ui::scenic::internal::Flatland::ReleaseLinkCallback callback) {
   if (link_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "ReleaseLink called with link_id zero";
-    ReportError();
+    error_reporter_->ERROR() << "ReleaseLink called with link_id zero";
+    ReportBadOperationError();
     return;
   }
 
   auto content_kv = content_handles_.find(link_id.value);
 
   if (content_kv == content_handles_.end()) {
-    FX_LOGS(ERROR) << "ReleaseLink failed, link_id " << link_id.value << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "ReleaseLink failed, link_id " << link_id.value << " not found";
+    ReportBadOperationError();
     return;
   }
 
   auto link_kv = child_links_.find(content_kv->second);
 
   if (link_kv == child_links_.end()) {
-    FX_LOGS(ERROR) << "ReleaseLink failed, content_id " << link_id.value << " is not a Link";
-    ReportError();
+    error_reporter_->ERROR() << "ReleaseLink failed, content_id " << link_id.value
+                             << " is not a Link";
+    ReportBadOperationError();
     return;
   }
 
@@ -900,24 +918,25 @@ void Flatland::ReleaseLink(ContentId link_id,
 
 void Flatland::ReleaseImage(ContentId image_id) {
   if (image_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "ReleaseImage called with image_id zero";
-    ReportError();
+    error_reporter_->ERROR() << "ReleaseImage called with image_id zero";
+    ReportBadOperationError();
     return;
   }
 
   auto content_kv = content_handles_.find(image_id.value);
 
   if (content_kv == content_handles_.end()) {
-    FX_LOGS(ERROR) << "ReleaseImage failed, image_id " << image_id.value << " not found";
-    ReportError();
+    error_reporter_->ERROR() << "ReleaseImage failed, image_id " << image_id.value << " not found";
+    ReportBadOperationError();
     return;
   }
 
   auto image_kv = image_metadatas_.find(content_kv->second);
 
   if (image_kv == image_metadatas_.end()) {
-    FX_LOGS(ERROR) << "ReleaseImage failed, content_id " << image_id.value << " is not an Image";
-    ReportError();
+    error_reporter_->ERROR() << "ReleaseImage failed, content_id " << image_id.value
+                             << " is not an Image";
+    ReportBadOperationError();
     return;
   }
 
@@ -927,6 +946,13 @@ void Flatland::ReleaseImage(ContentId image_id) {
   // Even though the handle is released, it may still be referenced by client Transforms. The
   // image_metadatas_ map preserves the entry until it shows up in the dead_transforms list.
   content_handles_.erase(image_id.value);
+}
+
+void Flatland::SetDebugName(std::string name) {
+  std::stringstream stream;
+  if (!name.empty())
+    stream << "Flatland client(" << name << "): ";
+  error_reporter_->SetPrefix(stream.str());
 }
 
 void Flatland::OnPresentProcessed(uint32_t num_present_tokens,
@@ -954,9 +980,16 @@ std::optional<TransformHandle> Flatland::GetContentHandle(ContentId content_id) 
   return handle_kv->second;
 }
 
-void Flatland::ReportError() { failure_since_previous_present_ = true; }
+void Flatland::SetErrorReporter(std::shared_ptr<scenic_impl::ErrorReporter> error_reporter) {
+  error_reporter_ = error_reporter;
+}
 
-void Flatland::ReportLinkProtocolError() { link_protocol_error_ = true; }
+void Flatland::ReportBadOperationError() { failure_since_previous_present_ = true; }
+
+void Flatland::ReportLinkProtocolError(const std::string& error_log) {
+  error_reporter_->ERROR() << error_log;
+  link_protocol_error_ = true;
+}
 
 void Flatland::CloseConnection() {
   // Cancel the async::Wait before closing the connection, or it will assert on destruction.

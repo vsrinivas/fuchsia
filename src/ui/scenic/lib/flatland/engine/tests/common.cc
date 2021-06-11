@@ -35,14 +35,14 @@ DisplayCompositorTestBase::FakeFlatlandSession::LinkToParent(FakeFlatlandSession
   fidl::InterfacePtr<GraphLink> graph_link;
   LinkSystem::ParentLink parent_link = link_system_->CreateParentLink(
       dispatcher_holder_, std::move(child_token), graph_link.NewRequest(), graph_.CreateTransform(),
-      []() { GTEST_FAIL(); });
+      [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
   // Create the child link.
   fidl::InterfacePtr<ContentLink> content_link;
   LinkSystem::ChildLink child_link = link_system_->CreateChildLink(
       dispatcher_holder_, std::move(parent_token), LinkProperties(), content_link.NewRequest(),
       parent_session.graph_.CreateTransform(),
-      []() { GTEST_FAIL() << "Hanging get flow control is broken."; });
+      [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
   // Run the loop to establish the link.
   harness_->RunLoopUntilIdle();

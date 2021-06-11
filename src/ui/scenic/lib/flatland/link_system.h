@@ -25,9 +25,12 @@
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
+#include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 #include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 
 namespace flatland {
+
+using LinkProtocolErrorCallback = std::function<void(const std::string&)>;
 
 // An implementation of the GraphLink protocol, consisting of hanging gets for various updateable
 // pieces of information.
@@ -36,7 +39,7 @@ class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
   explicit GraphLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder)
       : layout_helper_(dispatcher_holder), status_helper_(std::move(dispatcher_holder)) {}
 
-  void SetErrorCallback(std::function<void()> error_callback) {
+  void SetErrorCallback(LinkProtocolErrorCallback error_callback) {
     FX_DCHECK(error_callback);
     error_callback_ = std::move(error_callback);
   }
@@ -52,11 +55,10 @@ class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
   // |fuchsia::ui::scenic::internal::GraphLink|
   void GetLayout(GetLayoutCallback callback) override {
     if (layout_helper_.HasPendingCallback()) {
-      FX_LOGS(ERROR)
-          << "GetLayout() called when there is a pending GetLayout() call. Flatland connection "
-             "will be closed because of broken flow control.";
       FX_DCHECK(error_callback_);
-      error_callback_();
+      error_callback_(
+          "GetLayout() called when there is a pending GetLayout() call. Flatland connection "
+          "will be closed because of broken flow control.");
       return;
     }
 
@@ -69,11 +71,10 @@ class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
   // |fuchsia::ui::scenic::internal::GraphLink|
   void GetStatus(GetStatusCallback callback) override {
     if (status_helper_.HasPendingCallback()) {
-      FX_LOGS(ERROR)
-          << "GetStatus() called when there is a pending GetStatus() call. Flatland connection "
-             "will be closed because of broken flow control.";
       FX_DCHECK(error_callback_);
-      error_callback_();
+      error_callback_(
+          "GetStatus() called when there is a pending GetStatus() call. Flatland connection "
+          "will be closed because of broken flow control.");
       return;
     }
 
@@ -81,7 +82,7 @@ class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
   }
 
  private:
-  std::function<void()> error_callback_;
+  LinkProtocolErrorCallback error_callback_;
 
   HangingGetHelper<fuchsia::ui::scenic::internal::LayoutInfo> layout_helper_;
   HangingGetHelper<fuchsia::ui::scenic::internal::GraphLinkStatus> status_helper_;
@@ -94,7 +95,7 @@ class ContentLinkImpl : public fuchsia::ui::scenic::internal::ContentLink {
   explicit ContentLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder)
       : status_helper_(std::move(dispatcher_holder)) {}
 
-  void SetErrorCallback(std::function<void()> error_callback) {
+  void SetErrorCallback(LinkProtocolErrorCallback error_callback) {
     FX_DCHECK(error_callback);
     error_callback_ = std::move(error_callback);
   }
@@ -106,11 +107,10 @@ class ContentLinkImpl : public fuchsia::ui::scenic::internal::ContentLink {
   // |fuchsia::ui::scenic::internal::ContentLink|
   void GetStatus(GetStatusCallback callback) override {
     if (status_helper_.HasPendingCallback()) {
-      FX_LOGS(ERROR)
-          << "GetStatus() called when there is a pending GetStatus() call. Flatland connection "
-             "will be closed because of broken flow control.";
       FX_DCHECK(error_callback_);
-      error_callback_();
+      error_callback_(
+          "GetStatus() called when there is a pending GetStatus() call. Flatland connection "
+          "will be closed because of broken flow control.");
       return;
     }
 
@@ -118,7 +118,7 @@ class ContentLinkImpl : public fuchsia::ui::scenic::internal::ContentLink {
   }
 
  private:
-  std::function<void()> error_callback_;
+  LinkProtocolErrorCallback error_callback_;
 
   HangingGetHelper<fuchsia::ui::scenic::internal::ContentLinkStatus> status_helper_;
 };
@@ -151,12 +151,12 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   struct GraphLinkRequest {
     fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink> interface;
     TransformHandle child_handle;
-    std::function<void()> error_callback;
+    LinkProtocolErrorCallback error_callback;
   };
 
   struct ContentLinkRequest {
     fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> interface;
-    std::function<void()> error_callback;
+    LinkProtocolErrorCallback error_callback;
   };
 
   // Linked Flatland instances only implement a small piece of link functionality. For now, directly
@@ -202,7 +202,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
       fuchsia::ui::scenic::internal::ContentLinkToken token,
       fuchsia::ui::scenic::internal::LinkProperties initial_properties,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link,
-      TransformHandle graph_handle, std::function<void()> error_callback);
+      TransformHandle graph_handle, LinkProtocolErrorCallback error_callback);
 
   // Creates the parent end of a link. Once both ends of a Link have been created, the LinkSystem
   // will create a local topology that connects the internal Link to the ParentLink's |link_origin|.
@@ -213,7 +213,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
       fuchsia::ui::scenic::internal::GraphLinkToken token,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink> graph_link,
-      TransformHandle link_origin, std::function<void()> error_callback);
+      TransformHandle link_origin, LinkProtocolErrorCallback error_callback);
 
   // Returns a snapshot of the current set of links, represented as a map from LinkSystem-owned
   // TransformHandles to TransformHandles in ParentLinks. The LinkSystem generates Keys for this

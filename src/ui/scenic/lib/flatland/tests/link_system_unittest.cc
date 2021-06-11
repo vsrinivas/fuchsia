@@ -77,9 +77,9 @@ TEST_F(LinkSystemTest, UnresolvedGraphLinkDiesOnContentTokenDeath) {
   TransformHandle handle;
 
   fidl::InterfacePtr<ContentLink> content_link;
-  ChildLink parent_link =
-      link_system->CreateChildLink(dispatcher_holder_, std::move(parent_token), LinkProperties(),
-                                   content_link.NewRequest(), handle, []() { GTEST_FAIL(); });
+  ChildLink parent_link = link_system->CreateChildLink(
+      dispatcher_holder_, std::move(parent_token), LinkProperties(), content_link.NewRequest(),
+      handle, [](const std::string& error_log) { GTEST_FAIL() << error_log; });
   EXPECT_TRUE(parent_link.importer.valid());
   EXPECT_TRUE(content_link.is_bound());
 
@@ -100,9 +100,9 @@ TEST_F(LinkSystemTest, UnresolvedContentLinkDiesOnGraphTokenDeath) {
   TransformHandle handle;
 
   fidl::InterfacePtr<GraphLink> graph_link;
-  ParentLink child_link =
-      link_system->CreateParentLink(dispatcher_holder_, std::move(child_token),
-                                    graph_link.NewRequest(), handle, []() { GTEST_FAIL(); });
+  ParentLink child_link = link_system->CreateParentLink(
+      dispatcher_holder_, std::move(child_token), graph_link.NewRequest(), handle,
+      [](const std::string& error_log) { GTEST_FAIL() << error_log; });
   EXPECT_TRUE(child_link.exporter.valid());
   EXPECT_TRUE(graph_link.is_bound());
 
@@ -125,7 +125,8 @@ TEST_F(LinkSystemTest, ResolvedLinkCreatesLinkTopology) {
   fidl::InterfacePtr<GraphLink> graph_link;
   ParentLink parent_link = link_system->CreateParentLink(
       dispatcher_holder_, std::move(child_token), graph_link.NewRequest(),
-      child_graph.CreateTransform(), []() { GTEST_FAIL(); });
+      child_graph.CreateTransform(),
+      [](const std::string& error_log) { GTEST_FAIL() << error_log; });
   EXPECT_TRUE(parent_link.exporter.valid());
   EXPECT_TRUE(graph_link.is_bound());
 
@@ -134,7 +135,8 @@ TEST_F(LinkSystemTest, ResolvedLinkCreatesLinkTopology) {
   properties.set_logical_size(Vec2{1.0f, 2.0f});
   ChildLink child_link = link_system->CreateChildLink(
       dispatcher_holder_, std::move(parent_token), std::move(properties), content_link.NewRequest(),
-      parent_graph.CreateTransform(), []() { GTEST_FAIL(); });
+      parent_graph.CreateTransform(),
+      [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
   EXPECT_TRUE(child_link.importer.valid());
   EXPECT_TRUE(content_link.is_bound());
@@ -167,13 +169,15 @@ TEST_F(LinkSystemTest, ChildLinkDeathDestroysTopology) {
   fidl::InterfacePtr<GraphLink> graph_link;
   ParentLink parent_link = link_system->CreateParentLink(
       dispatcher_holder_, std::move(child_token), graph_link.NewRequest(),
-      child_graph.CreateTransform(), []() { GTEST_FAIL(); });
+      child_graph.CreateTransform(),
+      [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
   {
     fidl::InterfacePtr<ContentLink> content_link;
     ChildLink child_link = link_system->CreateChildLink(
         dispatcher_holder_, std::move(parent_token), LinkProperties(), content_link.NewRequest(),
-        parent_graph.CreateTransform(), []() { GTEST_FAIL(); });
+        parent_graph.CreateTransform(),
+        [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
     auto links = link_system->GetResolvedTopologyLinks();
     EXPECT_FALSE(links.empty());
@@ -197,15 +201,17 @@ TEST_F(LinkSystemTest, ParentLinkDeathDestroysTopology) {
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<ContentLink> content_link;
-  ChildLink child_link = link_system->CreateChildLink(
-      dispatcher_holder_, std::move(parent_token), LinkProperties(), content_link.NewRequest(),
-      parent_graph.CreateTransform(), []() { GTEST_FAIL(); });
+  ChildLink child_link =
+      link_system->CreateChildLink(dispatcher_holder_, std::move(parent_token), LinkProperties(),
+                                   content_link.NewRequest(), parent_graph.CreateTransform(),
+                                   [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
   {
     fidl::InterfacePtr<GraphLink> graph_link;
     ParentLink parent_link = link_system->CreateParentLink(
         dispatcher_holder_, std::move(child_token), graph_link.NewRequest(),
-        child_graph.CreateTransform(), []() { GTEST_FAIL(); });
+        child_graph.CreateTransform(),
+        [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
     auto links = link_system->GetResolvedTopologyLinks();
     EXPECT_FALSE(links.empty());
@@ -232,13 +238,15 @@ TEST_F(LinkSystemTest, OverwrittenHangingGetsReturnError) {
   bool parent_link_returned_error = false;
   ParentLink parent_link = link_system->CreateParentLink(
       dispatcher_holder_, std::move(child_token), graph_link.NewRequest(),
-      child_graph.CreateTransform(), [&]() { parent_link_returned_error = true; });
+      child_graph.CreateTransform(),
+      [&](const std::string& error_log) { parent_link_returned_error = true; });
 
   fidl::InterfacePtr<ContentLink> content_link;
   bool child_link_returned_error = false;
   ChildLink child_link = link_system->CreateChildLink(
       dispatcher_holder_, std::move(parent_token), LinkProperties(), content_link.NewRequest(),
-      parent_graph.CreateTransform(), [&]() { child_link_returned_error = true; });
+      parent_graph.CreateTransform(),
+      [&](const std::string& error_log) { child_link_returned_error = true; });
 
   {
     bool status_updated = false;

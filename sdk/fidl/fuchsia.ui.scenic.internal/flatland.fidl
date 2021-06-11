@@ -513,6 +513,11 @@ protocol Flatland {
     /// It is an error to call functions with a released id (unless that id has been reused to
     /// construct a new Image).
     ReleaseImage(ContentId image_id);
+
+    /// Set debug name of the current client that can be used by Flatland to print as a prefix
+    /// to logs to help client distinguish what is theirs. |name| can be an arbitrary string, but
+    /// the current process name (see fsl::GetCurrentProcessName()) is a good default.
+    SetDebugName(string:64 name);
 };
 
 /// This API connects to the singleton "primary display", and allows a tree of Flatland content to

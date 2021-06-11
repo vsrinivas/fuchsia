@@ -9,6 +9,7 @@
 #include <lib/zx/time.h>
 
 #include <sstream>
+#include <string>
 
 #include "src/lib/fxl/macros.h"
 
@@ -47,7 +48,7 @@ class ErrorReporter {
    private:
     // Only ErrorReporter can create reports.
     friend class ErrorReporter;
-    Report(ErrorReporter* owner, syslog::LogSeverity severity);
+    Report(ErrorReporter* owner, syslog::LogSeverity severity, const std::string& prefix);
 
     ErrorReporter* owner_;
     syslog::LogSeverity severity_;
@@ -58,17 +59,21 @@ class ErrorReporter {
 
   // Create a new Report which will, upon destruction, invoke ReportError()
   // upon this ErrorReporter.
-  Report INFO() { return Report(this, syslog::LOG_INFO); }
-  Report WARN() { return Report(this, syslog::LOG_WARNING); }
-  Report ERROR() { return Report(this, syslog::LOG_ERROR); }
-  Report FATAL() { return Report(this, syslog::LOG_FATAL); }
+  Report INFO() { return Report(this, syslog::LOG_INFO, prefix_); }
+  Report WARN() { return Report(this, syslog::LOG_WARNING, prefix_); }
+  Report ERROR() { return Report(this, syslog::LOG_ERROR, prefix_); }
+  Report FATAL() { return Report(this, syslog::LOG_FATAL, prefix_); }
 
   // Return a default ErrorReporter that is always available, which simply logs
   // the error using FX_LOGS(severity).
   static const std::shared_ptr<ErrorReporter>& Default();
 
+  // Set a string that is printed before everything else.
+  void SetPrefix(const std::string& prefix) { prefix_ = prefix; }
+
  private:
   virtual void ReportError(syslog::LogSeverity severity, std::string error_string) = 0;
+  std::string prefix_;
 };
 }  // namespace scenic_impl
 
