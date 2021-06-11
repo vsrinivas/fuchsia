@@ -340,6 +340,54 @@ TEST(CreateWithInfo, Pipe) {
   ASSERT_OK(zxio_close(zxio));
 }
 
+class TestServiceNodeServer : public fuchsia_io::testing::Node_TestBase {
+ public:
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
+    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+    completer.Reply(ZX_OK);
+    // After the reply, we should close the connection.
+    completer.Close(ZX_OK);
+  }
+};
+
+TEST(CreateWithInfo, Service) {
+  auto node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
+  ASSERT_OK(node_ends.status_value());
+  auto [node_client, node_server] = std::move(node_ends.value());
+
+  fidl::FidlAllocator fidl_allocator;
+  auto node_info = fuchsia_io::wire::NodeInfo::WithService(fidl_allocator);
+
+  auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
+    if (type != ZXIO_OBJECT_TYPE_SERVICE) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    *out_storage = new zxio_storage_t;
+    *out_context = *out_storage;
+    return ZX_OK;
+  };
+
+  async::Loop service_control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  TestServiceNodeServer server;
+  fidl::BindServer(service_control_loop.dispatcher(), std::move(node_server), &server);
+  service_control_loop.StartThread("service_control_thread");
+
+  void* context = nullptr;
+  ASSERT_OK(zxio_create_with_allocator(std::move(node_client), node_info, allocator, &context));
+  ASSERT_NE(context, nullptr);
+
+  std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
+  zxio_t* zxio = &(storage->io);
+
+  ASSERT_OK(zxio_close(zxio));
+
+  service_control_loop.Shutdown();
+}
+
 class TestVmofileServer : public zxio_tests::TestFileServerBase {
  public:
   explicit TestVmofileServer(uint64_t seek_start_offset) : seek_start_offset_(seek_start_offset) {}

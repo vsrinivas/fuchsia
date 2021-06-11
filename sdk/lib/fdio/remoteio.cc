@@ -68,6 +68,9 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
     case ZXIO_OBJECT_TYPE_PIPE:
       io = fbl::MakeRefCounted<fdio_internal::pipe>();
       break;
+    case ZXIO_OBJECT_TYPE_SERVICE:
+      io = fbl::MakeRefCounted<fdio_internal::remote>();
+      break;
     case ZXIO_OBJECT_TYPE_VMO:
       io = fbl::MakeRefCounted<fdio_internal::remote>();
       break;
@@ -118,8 +121,6 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
   }
 
   switch (info.which()) {
-    case fio::wire::NodeInfo::Tag::kService:
-      return fdio_internal::remote::create(std::move(node), zx::eventpair{});
     case fio::wire::NodeInfo::Tag::kTty: {
       auto& tty = info.mutable_tty();
       return fdio_internal::pty::create(fidl::ClientEnd<fpty::Device>(node.TakeChannel()),

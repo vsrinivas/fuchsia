@@ -146,6 +146,9 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
       }
       return zxio_pipe_init(storage, std::move(socket), socket_info);
     }
+    case fio::wire::NodeInfo::Tag::kService: {
+      return zxio_remote_init(storage, node.TakeChannel().release(), ZX_HANDLE_INVALID);
+    }
     case fio::wire::NodeInfo::Tag::kVmofile: {
       auto& file = info.mutable_vmofile();
       auto control = fidl::ClientEnd<fio::File>(node.TakeChannel());
