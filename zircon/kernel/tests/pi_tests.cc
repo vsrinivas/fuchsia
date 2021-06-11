@@ -136,7 +136,7 @@ void CreateDistribution(uint32_t* data, uint32_t N, const DistroSpec& spec) {
 
 template <typename DATA_TYPE, size_t N>
 void CreateDistribution(DATA_TYPE (&data)[N], const DistroSpec& spec) {
-  static_assert(ktl::is_one_of<DATA_TYPE, int32_t, uint32_t>::value,
+  static_assert(ktl::is_same<DATA_TYPE, int32_t>::value || ktl::is_same<DATA_TYPE, uint32_t>::value,
                 "CreateDistribution only operates on 32 bit integer types!");
   static_assert(N <= ktl::numeric_limits<uint32_t>::max(),
                 "CreateDistribution array size must be expressible using a 32 bit unsigned int");

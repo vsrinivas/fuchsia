@@ -98,19 +98,6 @@ using std::remove_pointer_t;
 using std::remove_reference;
 using std::remove_reference_t;
 
-// Generates a type whose ::value is true if |T| is the same type as one of the types in the |Ts|
-// parameter pack.
-//
-// For example:
-//
-// ktl::is_one_of<T, bool, char, int>::value will be true if and only if T is a bool, char, or int.
-//
-template <typename T, typename... Ts>
-struct is_one_of : ktl::disjunction<ktl::is_same<T, Ts>...> {};
-
-template <class T, typename... Ts>
-inline constexpr bool is_one_of_v = ktl::is_one_of<T, Ts...>::value;
-
 }  // namespace ktl
 
 #endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_TYPE_TRAITS_H_

@@ -24,7 +24,6 @@ source_set("phys") {
   testonly = toolchain.environment != "kernel"
   cflags = [ "-fno-builtin" ]
   sources = [
-    "ktl_type_traits_tests.cc",
     "popcount.cc",
     "printf_tests.cc",
     "relocation_tests.cc",

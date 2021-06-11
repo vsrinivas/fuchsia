@@ -8,9 +8,9 @@
 #define ZIRCON_KERNEL_LIB_USER_COPY_INCLUDE_LIB_USER_COPY_INTERNAL_H_
 
 #include <stddef.h>
+#include <sys/types.h>
 
 #include <ktl/type_traits.h>
-#include <sys/types.h>
 
 namespace internal {
 
