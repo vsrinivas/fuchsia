@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{object_store::FxFilesystem, server::volume::FxVolumeAndRoot, volume::root_volume},
+    crate::{
+        object_store::filesystem::OpenFxFilesystem, server::volume::FxVolumeAndRoot,
+        volume::root_volume,
+    },
     anyhow::{Context, Error},
     fidl_fuchsia_fs::{AdminRequest, AdminRequestStream, QueryRequest, QueryRequestStream},
     fidl_fuchsia_io::{self as fio, DirectoryMarker},
@@ -11,10 +14,7 @@ use {
     fuchsia_zircon::{self as zx},
     futures::stream::{StreamExt, TryStreamExt},
     futures::TryFutureExt,
-    std::sync::{
-        atomic::{self, AtomicBool},
-        Arc,
-    },
+    std::sync::atomic::{self, AtomicBool},
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
         registry::token_registry,
@@ -36,7 +36,7 @@ enum Services {
 }
 
 pub struct FxfsServer {
-    fs: Arc<FxFilesystem>,
+    fs: OpenFxFilesystem,
     // TODO(jfsulliv): we'd like to support multiple volumes, but not clear how to multiplex
     // requests.
     volume: FxVolumeAndRoot,
@@ -45,7 +45,7 @@ pub struct FxfsServer {
 
 impl FxfsServer {
     /// Creates a new FxfsServer by opening or creating |volume_name| in |fs|.
-    pub async fn new(fs: Arc<FxFilesystem>, volume_name: &str) -> Result<Self, Error> {
+    pub async fn new(fs: OpenFxFilesystem, volume_name: &str) -> Result<Self, Error> {
         let volume_dir = root_volume(&fs).await?;
         let volume = FxVolumeAndRoot::new(
             volume_dir

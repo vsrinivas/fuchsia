@@ -23,7 +23,10 @@ use {
     fuchsia_async as fasync,
     futures::channel::oneshot::{channel, Sender},
     once_cell::sync::OnceCell,
-    std::sync::{Arc, Mutex},
+    std::sync::{
+        atomic::{self, AtomicBool},
+        Arc, Mutex,
+    },
     storage_device::{Device, DeviceHolder},
 };
 
@@ -74,20 +77,57 @@ pub trait Mutations: Send + Sync {
 #[derive(Default)]
 pub struct SyncOptions {}
 
+pub struct OpenFxFilesystem(Arc<FxFilesystem>);
+
+impl OpenFxFilesystem {
+    /// Waits for filesystem to be dropped (so callers should ensure all direct and indirect
+    /// references are dropped) and returns the device.  No attempt is made at a graceful shutdown.
+    pub async fn take_device(self) -> DeviceHolder {
+        let (sender, receiver) = channel::<DeviceHolder>();
+        self.device_sender
+            .set(sender)
+            .unwrap_or_else(|_| panic!("take_device should only be called once"));
+        std::mem::drop(self);
+        debug_assert_not_too_long!(receiver).unwrap()
+    }
+}
+
+impl From<Arc<FxFilesystem>> for OpenFxFilesystem {
+    fn from(fs: Arc<FxFilesystem>) -> Self {
+        Self(fs)
+    }
+}
+
+impl Drop for OpenFxFilesystem {
+    fn drop(&mut self) {
+        if !self.read_only && !self.closed.load(atomic::Ordering::SeqCst) {
+            let this = self.0.clone();
+            fasync::Task::spawn(async move {
+                let _ = this.close().await;
+            })
+            .detach();
+        }
+    }
+}
+
+impl std::ops::Deref for OpenFxFilesystem {
+    type Target = Arc<FxFilesystem>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 pub struct FxFilesystem {
     device: OnceCell<DeviceHolder>,
     objects: Arc<ObjectManager>,
     journal: Journal,
     lock_manager: LockManager,
-    compaction: Mutex<Compaction>,
+    compaction_task: Mutex<Option<fasync::Task<()>>>,
     device_sender: OnceCell<Sender<DeviceHolder>>,
     flush_reservation: OnceCell<Reservation>,
-}
-
-enum Compaction {
-    Idle,
-    Paused,
-    Task(fasync::Task<()>),
+    closed: AtomicBool,
+    read_only: bool,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -97,7 +137,7 @@ pub struct OpenOptions {
 }
 
 impl FxFilesystem {
-    pub async fn new_empty(device: DeviceHolder) -> Result<Arc<FxFilesystem>, Error> {
+    pub async fn new_empty(device: DeviceHolder) -> Result<OpenFxFilesystem, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
         let filesystem = Arc::new(FxFilesystem {
@@ -105,20 +145,22 @@ impl FxFilesystem {
             objects,
             journal,
             lock_manager: LockManager::new(),
-            compaction: Mutex::new(Compaction::Idle),
+            compaction_task: Mutex::new(None),
             device_sender: OnceCell::new(),
             flush_reservation: OnceCell::new(),
+            closed: AtomicBool::new(false),
+            read_only: false,
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.init_empty(filesystem.clone()).await?;
         let _ = filesystem.flush_reservation.set(filesystem.allocator().reserve(0).unwrap());
-        Ok(filesystem)
+        Ok(filesystem.into())
     }
 
     async fn open_with_options(
         device: DeviceHolder,
         options: OpenOptions,
-    ) -> Result<Arc<FxFilesystem>, Error> {
+    ) -> Result<OpenFxFilesystem, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
         journal.set_trace(options.trace);
@@ -127,9 +169,11 @@ impl FxFilesystem {
             objects,
             journal,
             lock_manager: LockManager::new(),
-            compaction: Mutex::new(Compaction::Idle),
+            compaction_task: Mutex::new(None),
             device_sender: OnceCell::new(),
             flush_reservation: OnceCell::new(),
+            closed: AtomicBool::new(false),
+            read_only: options.read_only,
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await?;
@@ -140,18 +184,18 @@ impl FxFilesystem {
                 graveyard.reap_async(filesystem.journal.journal_file_offset());
             }
         }
-        Ok(filesystem)
+        Ok(filesystem.into())
     }
 
     pub fn set_trace(&self, v: bool) {
         self.journal.set_trace(v);
     }
 
-    pub async fn open(device: DeviceHolder) -> Result<Arc<FxFilesystem>, Error> {
+    pub async fn open(device: DeviceHolder) -> Result<OpenFxFilesystem, Error> {
         Self::open_with_options(device, OpenOptions { trace: false, read_only: false }).await
     }
 
-    pub async fn open_read_only(device: DeviceHolder) -> Result<Arc<FxFilesystem>, Error> {
+    pub async fn open_read_only(device: DeviceHolder) -> Result<OpenFxFilesystem, Error> {
         Self::open_with_options(device, OpenOptions { trace: false, read_only: true }).await
     }
 
@@ -164,9 +208,9 @@ impl FxFilesystem {
     }
 
     pub async fn close(&self) -> Result<(), Error> {
-        let compaction =
-            std::mem::replace(&mut *self.compaction.lock().unwrap(), Compaction::Paused);
-        if let Compaction::Task(task) = compaction {
+        assert_eq!(self.closed.swap(true, atomic::Ordering::SeqCst), false);
+        let compaction_task = std::mem::take(&mut *self.compaction_task.lock().unwrap());
+        if let Some(task) = compaction_task {
             task.await;
         }
         if let Some(graveyard) = self.objects.graveyard() {
@@ -194,28 +238,13 @@ impl FxFilesystem {
                 log::error!("Error writing journal super-block: {:?}", e);
                 return;
             }
-            let mut compaction = self.compaction.lock().unwrap();
             log::debug!("Compaction finished");
-            if let Compaction::Paused = *compaction {
-                break;
-            }
-            // Check to see if we need to do another compaction immediately.
-            if !self.journal.should_flush() {
-                *compaction = Compaction::Idle;
+            let mut compaction_task = self.compaction_task.lock().unwrap();
+            if !self.journal.should_flush() || self.closed.load(atomic::Ordering::SeqCst) {
+                *compaction_task = None;
                 break;
             }
         }
-    }
-
-    /// Waits for filesystem to be dropped (so callers should ensure all direct and indirect
-    /// references are dropped) and returns the device.  No attempt is made at a graceful shutdown.
-    pub async fn take_device(self: Arc<FxFilesystem>) -> DeviceHolder {
-        let (sender, receiver) = channel::<DeviceHolder>();
-        self.device_sender
-            .set(sender)
-            .unwrap_or_else(|_| panic!("take_device should only be called once"));
-        std::mem::drop(self);
-        debug_assert_not_too_long!(receiver).unwrap()
     }
 
     pub fn super_block(&self) -> SuperBlock {
@@ -293,11 +322,12 @@ impl TransactionHandler for FxFilesystem {
         trace_duration!("FxFilesystem::commit_transaction");
         debug_assert_not_too_long!(self.lock_manager.commit_prepare(transaction));
         self.journal.commit(transaction).await;
-        let mut compaction = self.compaction.lock().unwrap();
-        if let Compaction::Idle = *compaction {
-            if self.journal.should_flush() {
-                *compaction = Compaction::Task(fasync::Task::spawn(self.clone().compact()));
-            }
+        let mut compaction_task = self.compaction_task.lock().unwrap();
+        if compaction_task.is_none()
+            && !self.closed.load(atomic::Ordering::SeqCst)
+            && self.journal.should_flush()
+        {
+            *compaction_task = Some(fasync::Task::spawn(self.clone().compact()));
         }
     }
 

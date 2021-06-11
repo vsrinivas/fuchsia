@@ -1649,7 +1649,7 @@ mod tests {
             object_handle::{ObjectHandle, ObjectHandleExt, ObjectProperties},
             object_store::{
                 allocator::Allocator,
-                filesystem::{Filesystem, FxFilesystem, Mutations, SyncOptions},
+                filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},
                 record::{ObjectKey, ObjectKeyData, Timestamp},
                 round_up,
                 transaction::{Options, TransactionHandler},
@@ -1677,12 +1677,12 @@ mod tests {
     const TEST_OBJECT_SIZE: u64 = 913;
     const TEST_OBJECT_ALLOCATED_SIZE: u64 = 512;
 
-    async fn test_filesystem() -> Arc<FxFilesystem> {
+    async fn test_filesystem() -> OpenFxFilesystem {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         FxFilesystem::new_empty(device).await.expect("new_empty failed")
     }
 
-    async fn test_filesystem_and_object() -> (Arc<FxFilesystem>, StoreObjectHandle<ObjectStore>) {
+    async fn test_filesystem_and_object() -> (OpenFxFilesystem, StoreObjectHandle<ObjectStore>) {
         let fs = test_filesystem().await;
         let store = fs.root_store();
         let object;

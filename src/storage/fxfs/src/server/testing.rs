@@ -4,7 +4,10 @@
 
 use {
     crate::{
-        object_store::{fsck::fsck, FxFilesystem},
+        object_store::{
+            filesystem::{FxFilesystem, OpenFxFilesystem},
+            fsck::fsck,
+        },
         server::volume::FxVolumeAndRoot,
         volume::root_volume,
     },
@@ -24,13 +27,13 @@ use {
 };
 
 struct State {
-    filesystem: Arc<FxFilesystem>,
+    filesystem: OpenFxFilesystem,
     volume: FxVolumeAndRoot,
     root: DirectoryProxy,
 }
 
-impl From<State> for (Arc<FxFilesystem>, FxVolumeAndRoot) {
-    fn from(state: State) -> (Arc<FxFilesystem>, FxVolumeAndRoot) {
+impl From<State> for (OpenFxFilesystem, FxVolumeAndRoot) {
+    fn from(state: State) -> (OpenFxFilesystem, FxVolumeAndRoot) {
         (state.filesystem, state.volume)
     }
 }
