@@ -959,7 +959,7 @@ DwarfExprEval::Completion DwarfExprEval::OpDeref(uint32_t byte_size, const char*
     // have already been validated to be the correct size so we know it will fit in a StackEntry.
     FX_DCHECK(data.size() <= sizeof(StackEntry));
     StackEntry to_push = 0;
-    memcpy(&to_push, &data[0], data.size());
+    memcpy(&to_push, data.data(), data.size());
     eval->Push(to_push);
   });
   return Completion::kAsync;

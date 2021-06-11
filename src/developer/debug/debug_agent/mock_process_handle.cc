@@ -58,7 +58,7 @@ zx_status_t MockProcessHandle::ReadMemory(uintptr_t address, void* buffer, size_
                                           size_t* actual) const {
   auto vect = mock_memory_.ReadMemory(address, len);
   if (!vect.empty())
-    memcpy(buffer, &vect[0], vect.size());
+    memcpy(buffer, vect.data(), vect.size());
   *actual = vect.size();
   return ZX_OK;
 }

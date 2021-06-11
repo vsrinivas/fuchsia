@@ -155,7 +155,7 @@ void FormatStdStringMemory(const std::vector<uint8_t>& mem, FormatNode* node,
     return node->SetDescribedError(err);
 
   if (IsInlineString(mem)) {
-    FormatCharArrayNode(node, char_type, &mem[0], string_size, true, false);
+    FormatCharArrayNode(node, char_type, mem.data(), string_size, true, false);
   } else {
     // Long representation (with pointer).
     uint64_t data_ptr;

@@ -194,7 +194,7 @@ ErrOrValue StringToNumber(ExprLanguage lang, std::string_view str) {
 
   // Construct the data. This assumes little-endian since it truncates or zero-fills off the right.
   std::vector<uint8_t> data(matched_type->byte_size);
-  memcpy(&data[0], &value, matched_type->byte_size);
+  memcpy(data.data(), &value, matched_type->byte_size);
 
   return ExprValue(std::move(type), std::move(data));
 }
@@ -356,7 +356,7 @@ size_t GetFloatTokenLength(ExprLanguage lang, std::string_view input) {
   while (!cur.empty() && isalnum(cur[0]))
     cur = cur.substr(1);
 
-  return &cur[0] - &input[0];
+  return cur.begin() - input.begin();
 }
 
 FloatSuffix StripFloatSuffix(std::string_view* view) {
@@ -405,14 +405,14 @@ ErrOrValue ValueForFloatToken(ExprLanguage lang, const ExprToken& token) {
       double d =
           converter.StringToDouble(digits.data(), static_cast<int>(digits.size()), &consumed);
       data.resize(sizeof(double));
-      memcpy(&data[0], &d, sizeof(double));
+      memcpy(data.data(), &d, sizeof(double));
       type = GetBuiltinDoubleType(lang);
       break;
     }
     case FloatSuffix::kFloat: {
       float f = converter.StringToFloat(digits.data(), static_cast<int>(digits.size()), &consumed);
       data.resize(sizeof(float));
-      memcpy(&data[0], &f, sizeof(float));
+      memcpy(data.data(), &f, sizeof(float));
       type = GetBuiltinFloatType(lang);
       break;
     }
@@ -423,7 +423,7 @@ ErrOrValue ValueForFloatToken(ExprLanguage lang, const ExprToken& token) {
           converter.StringToDouble(digits.data(), static_cast<int>(digits.size()), &consumed);
       long double ld = d;
       data.resize(sizeof(long double));
-      memcpy(&data[0], &ld, sizeof(long double));
+      memcpy(data.data(), &ld, sizeof(long double));
       type = GetBuiltinLongDoubleType(lang);
       break;
     }

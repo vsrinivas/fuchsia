@@ -75,7 +75,7 @@ void DoFoo(Foo* f) {
 void DoRefs(int& a, const Foo& f) {
   int array[5] = {100, 101, 102, 103, 104};
 
-  int* array2 = &array[0];
+  int* array2 = array;
 
   a = 56;
   if (f.bar > 1)

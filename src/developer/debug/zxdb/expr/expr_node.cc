@@ -81,7 +81,7 @@ void AddressOfExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallba
       std::vector<uint8_t> contents;
       contents.resize(kTargetPointerSize);
       TargetPointer address = value.value().source().address();
-      memcpy(&contents[0], &address, sizeof(kTargetPointerSize));
+      memcpy(contents.data(), &address, sizeof(kTargetPointerSize));
 
       cb(ExprValue(std::move(ptr_type), std::move(contents)));
     }

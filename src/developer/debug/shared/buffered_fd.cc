@@ -63,7 +63,7 @@ void BufferedFD::OnFDReady(int fd, bool readable, bool writable, bool err) {
       std::vector<char> buffer;
       buffer.resize(kBufSize);
 
-      ssize_t num_read = read(fd_.get(), &buffer[0], kBufSize);
+      ssize_t num_read = read(fd_.get(), buffer.data(), kBufSize);
       if (num_read == 0) {
         // We asked for data and it had none. Since this assumes async input,
         // that means EOF (otherwise it will return -1 and errno will be

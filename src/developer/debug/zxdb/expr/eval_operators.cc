@@ -92,7 +92,7 @@ void AssignRegisterWithExistingValue(const fxl::RefPtr<EvalContext>& context,
   } else if (existing_data.size() < sizeof(uint128_t) && source.data().size() < sizeof(uint128_t)) {
     // Have non-byte-sized shifts, the source is probably a bitfield. This assumes little-endian.
     uint128_t existing_value = 0;
-    memcpy(&existing_value, &existing_data[0], existing_data.size());
+    memcpy(&existing_value, existing_data.data(), existing_data.size());
 
     uint128_t write_value = 0;
     memcpy(&write_value, &source.data()[0], source.data().size());
@@ -104,7 +104,7 @@ void AssignRegisterWithExistingValue(const fxl::RefPtr<EvalContext>& context,
                              dest.bit_shift() + info.shift);
 
     uint128_t new_value = new_dest.SetBits(existing_value, write_value);
-    memcpy(&existing_data[0], &new_value, existing_data.size());
+    memcpy(existing_data.data(), &new_value, existing_data.size());
 
     context->GetDataProvider()->WriteRegister(info.canonical_id, std::move(existing_data),
                                               std::move(cb));
@@ -371,7 +371,7 @@ ErrOrValue DoIntBinaryOp(const OpValue& left, const OpValue& right, bool check_f
   // Convert to a base type of the correct size.
   std::vector<uint8_t> result_data;
   result_data.resize(result_type->byte_size());
-  memcpy(&result_data[0], &result_val, result_type->byte_size());
+  memcpy(result_data.data(), &result_val, result_type->byte_size());
 
   return ExprValue(std::move(result_type), std::move(result_data));
 }

@@ -21,7 +21,7 @@ void MockSymbolDataProvider::AddRegisterValue(debug_ipc::RegisterID id, bool syn
                                               uint64_t value) {
   std::vector<uint8_t> data;
   data.resize(sizeof(value));
-  memcpy(&data[0], &value, sizeof(value));
+  memcpy(data.data(), &value, sizeof(value));
   regs_[id] = RegData(synchronous, std::move(data));
 }
 

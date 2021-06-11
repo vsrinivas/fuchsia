@@ -56,7 +56,7 @@ IndexWalker::IndexWalker(const Index* index) {
   path_.reserve(8);
 
   path_.push_back({&index->root()});
-  AddAnonymousChildrenToStage(&path_[0]);
+  AddAnonymousChildrenToStage(path_.data());
 }
 
 IndexWalker::~IndexWalker() = default;

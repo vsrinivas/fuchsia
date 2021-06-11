@@ -56,7 +56,7 @@ void AsyncDwarfExprEval::OnEvalComplete(const Err& err, const fxl::RefPtr<EvalCo
 
     std::vector<uint8_t> data;
     data.resize(type_size);
-    memcpy(&data[0], &result_int, type_size);
+    memcpy(data.data(), &result_int, type_size);
     callback_(ExprValue(type_, std::move(data), source));
   } else if (dwarf_eval_.GetResultType() == DwarfExprEval::ResultType::kData) {
     // The DWARF result is a block of data.

@@ -58,7 +58,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
 
     // The message size includes the header.
     std::vector<char> buffer(header.size);
-    stream_->Read(&buffer[0], header.size);
+    stream_->Read(buffer.data(), header.size);
 
     // Range check the message type.
     if (header.type == debug_ipc::MsgHeader::Type::kNone ||

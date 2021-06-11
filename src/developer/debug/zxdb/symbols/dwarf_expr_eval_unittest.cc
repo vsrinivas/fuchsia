@@ -798,7 +798,7 @@ TEST_F(DwarfExprEvalTest, Deref) {
   constexpr uint64_t kMemoryContents = 0x5000000000;
   std::vector<uint8_t> mem;
   mem.resize(sizeof(kMemoryContents));
-  memcpy(&mem[0], &kMemoryContents, sizeof(kMemoryContents));
+  memcpy(mem.data(), &kMemoryContents, sizeof(kMemoryContents));
   provider()->AddMemory(kReg6 + kOffsetFromReg6, mem);
 
   DoEvalTest(program, true, DwarfExprEval::Completion::kAsync, kMemoryContents - 0x30,

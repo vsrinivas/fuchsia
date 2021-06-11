@@ -34,7 +34,7 @@ bool ExtractCountedLocationDescription(TargetPointer begin, TargetPointer end, D
   // Expression data.
   std::vector<uint8_t> expression;
   expression.resize(*length_or);
-  if (!ext.ReadBytes(*length_or, &expression[0]))
+  if (!ext.ReadBytes(*length_or, expression.data()))
     return false;
 
   // Don't bother adding empty ranges or empty expressions. Check this after reading the expression
@@ -215,7 +215,7 @@ VariableLocation DecodeDwarf4LocationList(TargetPointer unit_base_addr,
     // Expression data.
     std::vector<uint8_t> expression;
     expression.resize(*expression_len);
-    if (!ext.ReadBytes(*expression_len, &expression[0]))
+    if (!ext.ReadBytes(*expression_len, expression.data()))
       return VariableLocation();
 
     if (*begin == *end)

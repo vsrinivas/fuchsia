@@ -108,7 +108,7 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   constexpr uint64_t kMemoryValue = 0x78362419047;
   std::vector<uint8_t> mem_value;
   mem_value.resize(sizeof(kMemoryValue));
-  memcpy(&mem_value[0], &kMemoryValue, sizeof(kMemoryValue));
+  memcpy(mem_value.data(), &kMemoryValue, sizeof(kMemoryValue));
   mock_remote_api()->AddMemory(kAddress, mem_value);
 
   // This describes the frame base location for the function. This encodes the memory pointed to by

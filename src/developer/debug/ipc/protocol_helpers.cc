@@ -34,7 +34,7 @@ bool Deserialize(MessageReader* reader, ProcessThreadId* ids) {
 void Serialize(const Register& reg, MessageWriter* writer) {
   writer->WriteUint32(*reinterpret_cast<const uint32_t*>(&reg.id));
   writer->WriteUint32(static_cast<uint32_t>(reg.data.size()));
-  writer->WriteBytes(&reg.data[0], static_cast<uint32_t>(reg.data.size()));
+  writer->WriteBytes(reg.data.data(), static_cast<uint32_t>(reg.data.size()));
 }
 
 bool Deserialize(MessageReader* reader, Register* reg) {

@@ -151,7 +151,7 @@ void MessageLoopPoll::RunImpl() {
       poll_timeout = static_cast<int>(delay);
     }
 
-    int res = poll(&poll_vect[0], static_cast<nfds_t>(poll_vect.size()), poll_timeout);
+    int res = poll(poll_vect.data(), static_cast<nfds_t>(poll_vect.size()), poll_timeout);
     FX_DCHECK(res >= 0 || errno == EINTR) << "poll() failed: " << strerror(errno);
 
     for (size_t i = 0; i < poll_vect.size(); i++) {

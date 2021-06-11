@@ -11,7 +11,7 @@ namespace zxdb {
 
 ConstValue::ConstValue(int64_t v) {
   data_.resize(sizeof(int64_t));
-  memcpy(&data_[0], &v, sizeof(int64_t));
+  memcpy(data_.data(), &v, sizeof(int64_t));
 }
 
 ConstValue::ConstValue(std::vector<uint8_t> buffer) : data_(std::move(buffer)) {}
@@ -22,7 +22,7 @@ std::vector<uint8_t> ConstValue::GetConstValue(size_t byte_count) const {
   std::vector<uint8_t> result;
   if (byte_count && data_.size()) {
     result.resize(byte_count);
-    memcpy(&result[0], &data_[0], std::min(byte_count, data_.size()));
+    memcpy(result.data(), data_.data(), std::min(byte_count, data_.size()));
   }
   return result;
 }

@@ -72,7 +72,7 @@ TEST_F(ReturnValue, BaseTypeX64) {
   // Provide a floating-point return register value.
   constexpr double kDoubleValue = 3.14;
   std::vector<uint8_t> float_data(sizeof(kDoubleValue));
-  memcpy(&float_data[0], &kDoubleValue, sizeof(kDoubleValue));
+  memcpy(float_data.data(), &kDoubleValue, sizeof(kDoubleValue));
   context->data_provider()->AddRegisterValue(RegisterID::kX64_xmm0, false, float_data);
 
   // Returning an 8-byte double.

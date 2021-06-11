@@ -255,7 +255,7 @@ debug_ipc::MemoryBlock ZirconProcessHandle::ReadOneMemoryBlock(uint64_t address,
   block.data.resize(size);
 
   size_t bytes_read = 0;
-  if (process_.read_memory(address, &block.data[0], block.size, &bytes_read) == ZX_OK &&
+  if (process_.read_memory(address, block.data.data(), block.size, &bytes_read) == ZX_OK &&
       bytes_read == size) {
     block.valid = true;
   } else {
@@ -278,7 +278,7 @@ std::vector<zx_info_maps_t> ZirconProcessHandle::GetMaps() const {
   while (true) {
     map.resize(count_guess);
 
-    zx_status_t status = process_.get_info(ZX_INFO_PROCESS_MAPS, &map[0],
+    zx_status_t status = process_.get_info(ZX_INFO_PROCESS_MAPS, map.data(),
                                            sizeof(zx_info_maps) * map.size(), &actual, &avail);
 
     if (status != ZX_OK) {

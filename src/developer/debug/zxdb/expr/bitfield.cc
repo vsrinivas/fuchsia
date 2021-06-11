@@ -108,7 +108,7 @@ ErrOrValue ResolveBitfieldMember(const fxl::RefPtr<EvalContext>& context, const 
   // Save the data back to the desired size (assume little-endian so truncation from the right is
   // correct).
   std::vector<uint8_t> new_data(data_member->byte_size());
-  memcpy(&new_data[0], &bits, new_data.size());
+  memcpy(new_data.data(), &bits, new_data.size());
   return ExprValue(RefPtrTo(dest_type), std::move(new_data), source);
 }
 
@@ -121,7 +121,7 @@ void WriteBitfieldToMemory(const fxl::RefPtr<EvalContext>& context, const ExprVa
     return cb(Err("Writing bitfields for data > 128-bits is not supported."));
 
   uint128_t value = 0;
-  memcpy(&value, &data[0], data.size());
+  memcpy(&value, data.data(), data.size());
 
   // Number of bytes affected by this bitfield.
   size_t byte_size = (dest.bit_size() + dest.bit_shift() + 7) / 8;
@@ -142,13 +142,13 @@ void WriteBitfieldToMemory(const fxl::RefPtr<EvalContext>& context, const ExprVa
           return cb(Err("Memory at address 0x%" PRIx64 " is invalid.", dest.address()));
 
         uint128_t original = 0;
-        memcpy(&original, &original_data[0], original_data.size());
+        memcpy(&original, original_data.data(), original_data.size());
 
         uint128_t result = dest.SetBits(original, value);
 
         // Write out the new data.
         std::vector<uint8_t> new_data(byte_size);
-        memcpy(&new_data[0], &result, byte_size);
+        memcpy(new_data.data(), &result, byte_size);
         context->GetDataProvider()->WriteMemory(dest.address(), std::move(new_data), std::move(cb));
       });
 }

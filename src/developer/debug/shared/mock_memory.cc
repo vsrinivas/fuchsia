@@ -23,7 +23,7 @@ std::vector<uint8_t> MockMemory::ReadMemory(uint64_t address, uint32_t size) con
 
   std::vector<uint8_t> subset;
   subset.resize(size_to_return);
-  memcpy(&subset[0], &found->second[offset], size_to_return);
+  memcpy(subset.data(), &found->second[offset], size_to_return);
   return subset;
 }
 

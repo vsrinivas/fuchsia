@@ -104,7 +104,7 @@ ExprValue CastFloatToIntT(double double_value, const fxl::RefPtr<Type>& dest_typ
 
   std::vector<uint8_t> int64_data;
   int64_data.resize(sizeof(Int64));
-  memcpy(&int64_data[0], &int64_value, sizeof(Int64));
+  memcpy(int64_data.data(), &int64_value, sizeof(Int64));
 
   // CastToIntegerOfSize will downcast the int64 to the desired result size.
   return ExprValue(dest_type, CastToIntegerOfSize(int64_data, true, dest_type->byte_size()),

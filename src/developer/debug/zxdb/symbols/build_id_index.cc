@@ -199,7 +199,7 @@ void BuildIDIndex::LoadIdsTxt(const std::string& file_name, const std::string& b
   contents.resize(length);
 
   fseek(id_file, 0, SEEK_SET);
-  if (fread(&contents[0], 1, contents.size(), id_file) != static_cast<size_t>(length)) {
+  if (fread(contents.data(), 1, contents.size(), id_file) != static_cast<size_t>(length)) {
     status_.emplace_back(file_name, 0);
     LogMessage("Can't read build ID file: " + file_name);
     return;

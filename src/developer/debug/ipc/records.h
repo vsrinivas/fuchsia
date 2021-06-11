@@ -152,25 +152,25 @@ struct Register {
   // Constructs from a size and a pointed-to data buffer in machine-endianness.
   Register(RegisterID rid, size_t byte_size, const void* bytes) : id(rid) {
     data.resize(byte_size);
-    memcpy(&data[0], bytes, byte_size);
+    memcpy(data.data(), bytes, byte_size);
   }
 
   // Constructs a sized value for the current platform.
   Register(RegisterID rid, uint64_t val) : id(rid) {
     data.resize(sizeof(val));
-    memcpy(&data[0], &val, sizeof(val));
+    memcpy(data.data(), &val, sizeof(val));
   }
   Register(RegisterID rid, uint32_t val) : id(rid) {
     data.resize(sizeof(val));
-    memcpy(&data[0], &val, sizeof(val));
+    memcpy(data.data(), &val, sizeof(val));
   }
   Register(RegisterID rid, uint16_t val) : id(rid) {
     data.resize(sizeof(val));
-    memcpy(&data[0], &val, sizeof(val));
+    memcpy(data.data(), &val, sizeof(val));
   }
   Register(RegisterID rid, uint8_t val) : id(rid) {
     data.resize(sizeof(val));
-    memcpy(&data[0], &val, sizeof(val));
+    memcpy(data.data(), &val, sizeof(val));
   }
 
   // Retrieves the low up-to-128 bits of the register value as a number.

@@ -823,7 +823,7 @@ void FormatCharPointerNode(FormatNode* node, uint64_t ptr, const Type* char_type
                                   }
 
                                   bool new_truncated = truncated && data.size() == bytes_to_fetch;
-                                  FormatCharArrayNode(weak_node.get(), char_type, &data[0],
+                                  FormatCharArrayNode(weak_node.get(), char_type, data.data(),
                                                       data.size(), false, new_truncated);
                                 });
 }

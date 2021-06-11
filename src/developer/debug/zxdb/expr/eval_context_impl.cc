@@ -65,7 +65,7 @@ ErrOrValue RegisterDataToValue(RegisterID id, VectorRegisterFormat vector_fmt,
 
   if (data.size() <= sizeof(uint64_t)) {
     uint64_t int_value = 0;
-    memcpy(&int_value, &data[0], data.size());
+    memcpy(&int_value, data.data(), data.size());
 
     // Use the types defined by ExprValue for the unsigned number of the corresponding size.
     // Passing a null type will cause ExprValue to create one matching the input type.

@@ -77,7 +77,7 @@ std::vector<uint8_t> GetOriginalData() {
 // Returns the memory data buffer with the beginning overwritten by a software breakpoint.
 std::vector<uint8_t> GetOriginalDataWithBreakpoint() {
   auto result = GetOriginalData();
-  memcpy(&result[0], &arch::kBreakInstruction, sizeof(arch::kBreakInstruction));
+  memcpy(result.data(), &arch::kBreakInstruction, sizeof(arch::kBreakInstruction));
   return result;
 }
 
@@ -97,7 +97,7 @@ bool MemoryContains(MockProcessHandle& handle, uint64_t address, const void* dat
   if (handle.ReadMemory(address, read.get(), data_len, &actual) != ZX_OK || actual != data_len)
     return false;
 
-  return memcmp(data, &read[0], data_len) == 0;
+  return memcmp(data, read.get(), data_len) == 0;
 }
 
 bool MemoryContainsBreak(MockProcessHandle& handle, uint64_t address) {
@@ -166,7 +166,7 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
 
   // Fill with memory contents reflecting the breakpoint instruction.
   auto with_bp = GetOriginalDataWithBreakpoint();
-  memcpy(&block.data[kBlockOffset], &with_bp[0], with_bp.size());
+  memcpy(&block.data[kBlockOffset], with_bp.data(), with_bp.size());
 
   // FixupMemoryBlock should give back the original data.
   bp.FixupMemoryBlock(&block);

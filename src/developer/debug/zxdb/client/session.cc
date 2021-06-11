@@ -222,7 +222,7 @@ void Session::PendingConnection::DataAvailableMainThread(fxl::RefPtr<PendingConn
 
   std::vector<char> serialized;
   serialized.resize(kHelloMessageSize);
-  buffer_->stream().Read(&serialized[0], kHelloMessageSize);
+  buffer_->stream().Read(serialized.data(), kHelloMessageSize);
 
   debug_ipc::HelloReply reply;
   uint32_t transaction_id = 0;
@@ -311,7 +311,7 @@ void Session::OnStreamReadable() {
 
     std::vector<char> serialized_header;
     serialized_header.resize(debug_ipc::MsgHeader::kSerializedHeaderSize);
-    stream_->Peek(&serialized_header[0], debug_ipc::MsgHeader::kSerializedHeaderSize);
+    stream_->Peek(serialized_header.data(), debug_ipc::MsgHeader::kSerializedHeaderSize);
 
     debug_ipc::MessageReader reader(std::move(serialized_header));
     debug_ipc::MsgHeader header;
@@ -341,7 +341,7 @@ void Session::OnStreamReadable() {
     // is consumed if the size is right, even if the transaction ID is wrong.
     std::vector<char> serialized;
     serialized.resize(header.size);
-    stream_->Read(&serialized[0], header.size);
+    stream_->Read(serialized.data(), header.size);
 
     // Transaction ID 0 is reserved for notifications.
     if (header.transaction_id == 0) {

@@ -36,7 +36,7 @@ void MessageWriter::WriteString(const std::string& str) {
   uint32_t size = static_cast<uint32_t>(str.size());
   WriteUint32(size);
   if (!str.empty())
-    WriteBytes(&str[0], size);
+    WriteBytes(str.data(), size);
 }
 
 void MessageWriter::WriteBool(bool b) { WriteUint32(b ? 1u : 0u); }
@@ -49,7 +49,7 @@ void MessageWriter::WriteHeader(MsgHeader::Type type, uint32_t transaction_id) {
 
 std::vector<char> MessageWriter::MessageComplete() {
   uint32_t size = static_cast<uint32_t>(buffer_.size());
-  memcpy(&buffer_[0], &size, sizeof(uint32_t));
+  memcpy(buffer_.data(), &size, sizeof(uint32_t));
   return std::move(buffer_);
 }
 

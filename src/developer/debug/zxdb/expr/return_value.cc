@@ -39,7 +39,7 @@ void GetCollectionReturnValue(const fxl::RefPtr<EvalContext>& context, const Col
         // Convert the register data to a pointer.
         TargetPointer address = 0;
         if (value.size() > 0)
-          memcpy(&address, &value[0], sizeof(TargetPointer));
+          memcpy(&address, value.data(), sizeof(TargetPointer));
 
         // Convert the pointer to the actual collection.
         ResolvePointer(context, address, return_type, std::move(cb));

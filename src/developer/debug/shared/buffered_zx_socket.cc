@@ -56,7 +56,7 @@ void BufferedZxSocket::OnSocketReadable(zx_handle_t) {
     buffer.resize(kBufSize);
 
     size_t num_read = 0;
-    zx_status_t status = socket_.read(0, &buffer[0], kBufSize, &num_read);
+    zx_status_t status = socket_.read(0, buffer.data(), kBufSize, &num_read);
     if (status == ZX_OK) {
       msg_bytes += num_read;
       buffer.resize(num_read);

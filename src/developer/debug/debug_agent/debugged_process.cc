@@ -612,8 +612,8 @@ void DebuggedProcess::OnModules(debug_ipc::ModulesReply* reply) {
 void DebuggedProcess::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
                                     debug_ipc::WriteMemoryReply* reply) {
   size_t actual = 0;
-  reply->status =
-      process_handle_->WriteMemory(request.address, &request.data[0], request.data.size(), &actual);
+  reply->status = process_handle_->WriteMemory(request.address, request.data.data(),
+                                               request.data.size(), &actual);
   if (reply->status == ZX_OK && actual != request.data.size())
     reply->status = ZX_ERR_IO;  // Convert partial writes to errors.
 }

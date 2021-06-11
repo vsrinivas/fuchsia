@@ -148,7 +148,7 @@ void Serialize(const MemoryBlock& block, MessageWriter* writer) {
   writer->WriteBool(block.valid);
   writer->WriteUint32(block.size);
   if (block.valid && block.size > 0)
-    writer->WriteBytes(&block.data[0], block.size);
+    writer->WriteBytes(block.data.data(), block.size);
 }
 
 void Serialize(const Module& module, MessageWriter* writer) {

@@ -58,7 +58,7 @@ ExprValue::ExprValue(fxl::RefPtr<Type> optional_type, int base_type, const char*
   FX_DCHECK(type_->byte_size() == data_size || type_->byte_size() == 0);
 
   data_.resize(data_size);
-  memcpy(&data_[0], data, data_size);
+  memcpy(data_.data(), data, data_size);
 }
 
 ExprValue::ExprValue(fxl::RefPtr<Type> type, std::vector<uint8_t> data,
@@ -102,7 +102,7 @@ template <>
 int8_t ExprValue::GetAs<int8_t>() const {
   FX_DCHECK(data_.size() == sizeof(int8_t)) << "Got size of " << data_.size();
   int8_t result;
-  memcpy(&result, &data_[0], sizeof(int8_t));
+  memcpy(&result, data_.data(), sizeof(int8_t));
   return result;
 }
 
@@ -110,7 +110,7 @@ template <>
 uint8_t ExprValue::GetAs<uint8_t>() const {
   FX_DCHECK(data_.size() == sizeof(uint8_t)) << "Got size of " << data_.size();
   uint8_t result;
-  memcpy(&result, &data_[0], sizeof(uint8_t));
+  memcpy(&result, data_.data(), sizeof(uint8_t));
   return result;
 }
 
@@ -118,7 +118,7 @@ template <>
 int16_t ExprValue::GetAs<int16_t>() const {
   FX_DCHECK(data_.size() == sizeof(int16_t)) << "Got size of " << data_.size();
   int16_t result;
-  memcpy(&result, &data_[0], sizeof(int16_t));
+  memcpy(&result, data_.data(), sizeof(int16_t));
   return result;
 }
 
@@ -126,7 +126,7 @@ template <>
 uint16_t ExprValue::GetAs<uint16_t>() const {
   FX_DCHECK(data_.size() == sizeof(uint16_t)) << "Got size of " << data_.size();
   uint16_t result;
-  memcpy(&result, &data_[0], sizeof(uint16_t));
+  memcpy(&result, data_.data(), sizeof(uint16_t));
   return result;
 }
 
@@ -134,7 +134,7 @@ template <>
 int32_t ExprValue::GetAs<int32_t>() const {
   FX_DCHECK(data_.size() == sizeof(int32_t)) << "Got size of " << data_.size();
   int32_t result;
-  memcpy(&result, &data_[0], sizeof(int32_t));
+  memcpy(&result, data_.data(), sizeof(int32_t));
   return result;
 }
 
@@ -142,7 +142,7 @@ template <>
 uint32_t ExprValue::GetAs<uint32_t>() const {
   FX_DCHECK(data_.size() == sizeof(uint32_t)) << "Got size of " << data_.size();
   uint32_t result;
-  memcpy(&result, &data_[0], sizeof(uint32_t));
+  memcpy(&result, data_.data(), sizeof(uint32_t));
   return result;
 }
 
@@ -150,7 +150,7 @@ template <>
 int64_t ExprValue::GetAs<int64_t>() const {
   FX_DCHECK(data_.size() == sizeof(int64_t)) << "Got size of " << data_.size();
   int64_t result;
-  memcpy(&result, &data_[0], sizeof(int64_t));
+  memcpy(&result, data_.data(), sizeof(int64_t));
   return result;
 }
 
@@ -158,7 +158,7 @@ template <>
 uint64_t ExprValue::GetAs<uint64_t>() const {
   FX_DCHECK(data_.size() == sizeof(uint64_t)) << "Got size of " << data_.size();
   uint64_t result;
-  memcpy(&result, &data_[0], sizeof(uint64_t));
+  memcpy(&result, data_.data(), sizeof(uint64_t));
   return result;
 }
 
@@ -166,7 +166,7 @@ template <>
 int128_t ExprValue::GetAs<int128_t>() const {
   FX_DCHECK(data_.size() == sizeof(int128_t)) << "Got size of " << data_.size();
   int128_t result;
-  memcpy(&result, &data_[0], sizeof(int128_t));
+  memcpy(&result, data_.data(), sizeof(int128_t));
   return result;
 }
 
@@ -174,7 +174,7 @@ template <>
 uint128_t ExprValue::GetAs<uint128_t>() const {
   FX_DCHECK(data_.size() == sizeof(uint128_t)) << "Got size of " << data_.size();
   uint128_t result;
-  memcpy(&result, &data_[0], sizeof(uint128_t));
+  memcpy(&result, data_.data(), sizeof(uint128_t));
   return result;
 }
 
@@ -182,7 +182,7 @@ template <>
 float ExprValue::GetAs<float>() const {
   FX_DCHECK(data_.size() == sizeof(float)) << "Got size of " << data_.size();
   float result;
-  memcpy(&result, &data_[0], sizeof(float));
+  memcpy(&result, data_.data(), sizeof(float));
   return result;
 }
 
@@ -190,7 +190,7 @@ template <>
 double ExprValue::GetAs<double>() const {
   FX_DCHECK(data_.size() == sizeof(double)) << "Got size of " << data_.size();
   double result;
-  memcpy(&result, &data_[0], sizeof(double));
+  memcpy(&result, data_.data(), sizeof(double));
   return result;
 }
 

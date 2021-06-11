@@ -377,7 +377,7 @@ std::string MinidumpGetUUID(const crashpad::ModuleSnapshot& mod) {
   // 2 hex characters per 1 byte, so the string size is twice the data size. Hopefully we'll be
   // overwriting the zeros we're filling with.
   std::string ret(build_id.size() * 2, '\0');
-  char* pos = &ret[0];
+  char* pos = ret.data();
 
   for (const auto& byte : build_id) {
     sprintf(pos, "%02hhx", byte);
