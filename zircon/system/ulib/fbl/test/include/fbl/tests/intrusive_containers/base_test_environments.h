@@ -5,6 +5,8 @@
 #ifndef FBL_TESTS_INTRUSIVE_CONTAINERS_BASE_TEST_ENVIRONMENTS_H_
 #define FBL_TESTS_INTRUSIVE_CONTAINERS_BASE_TEST_ENVIRONMENTS_H_
 
+#include <cstddef>
+#include <iterator>
 #include <utility>
 
 #include <fbl/ref_counted.h>
@@ -543,12 +545,24 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       (*iter).Visit();
       EXPECT_EQ(2u, (*iter).visited_count());
 
-      // Exercise both pre and postfix increment
-      if ((i++) & 1)
-        iter++;
-      else
-        ++iter;
+      // Exercise pre- and post-fix incrementing, as well as incrementing via
+      // std::advance() and std::next().
+      switch (i++ % 4) {
+        case 0:
+          iter++;
+          break;
+        case 1:
+          ++iter;
+          break;
+        case 2:
+          std::advance(iter, std::ptrdiff_t{1});
+          break;
+        case 3:
+          iter = std::next(iter);
+          break;
+      }
     }
+    ASSERT_GE(i, 4);
     EXPECT_FALSE(iter.IsValid());
 
     for (i = 0; i < OBJ_COUNT; ++i) {
@@ -556,24 +570,58 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       objects()[i]->ResetVisitedCount();
     }
 
-    // Advancing iter past the end of the container should be a no-op.  Check
-    // both pre and post-fix.
-    iter = end;
-    ++iter;
-    EXPECT_FALSE(iter.IsValid());
-    EXPECT_TRUE(iter == end);
-
+    // Advancing iter past the end of the container should be a no-op.
+    //
     // We know that the iterator  is already at the end of the container, but
     // perform the explicit assignment in order to check that the assignment
     // operator is working (the previous version actually exercises the copy
     // constructor or the explicit rvalue constructor, if supplied)
-    iter = end;
-    iter++;
-    EXPECT_FALSE(iter.IsValid());
-    EXPECT_TRUE(iter == end);
+
+    {  // prefix
+      iter = end;
+      ++iter;
+      EXPECT_FALSE(iter.IsValid());
+      EXPECT_TRUE(iter == end);
+    }
+
+    {  // postfix
+      iter = end;
+      iter++;
+      EXPECT_FALSE(iter.IsValid());
+      EXPECT_TRUE(iter == end);
+    }
+
+    {  // std::advance()
+      iter = end;
+      std::advance(iter, std::ptrdiff_t{1});
+      EXPECT_FALSE(iter.IsValid());
+      EXPECT_TRUE(iter == end);
+    }
+
+    {  // std::next()
+      iter = std::next(end);
+      EXPECT_FALSE(iter.IsValid());
+      EXPECT_TRUE(iter == end);
+    }
   }
 
   void Iterate() {
+    using IterType = typename ContainerType::iterator;
+    static_assert(std::is_same_v<typename IterType::value_type, ObjType>);
+    static_assert(std::is_same_v<typename IterType::reference, ObjType&>);
+    static_assert(std::is_same_v<typename IterType::pointer, ObjType*>);
+    static_assert(std::is_same_v<typename IterType::difference_type, std::ptrdiff_t>);
+    static_assert(
+        std::is_base_of_v<std::forward_iterator_tag, typename IterType::iterator_category>);
+
+    using ConstIterType = typename ContainerType::const_iterator;
+    static_assert(std::is_same_v<typename ConstIterType::value_type, ObjType>);
+    static_assert(std::is_same_v<typename ConstIterType::reference, const ObjType&>);
+    static_assert(std::is_same_v<typename ConstIterType::pointer, const ObjType*>);
+    static_assert(std::is_same_v<typename ConstIterType::difference_type, std::ptrdiff_t>);
+    static_assert(
+        std::is_base_of_v<std::forward_iterator_tag, typename ConstIterType::iterator_category>);
+
     // Both begin and cbegin should both be invalid, and to end/cend
     ASSERT_EQ(0u, Size(container()));
     EXPECT_FALSE(container().begin().IsValid());
@@ -652,17 +700,34 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
   void DoReverseIterate(const IterType& begin, const IterType& end) {
     IterType iter;
 
-    // Backing up one from end() should give a valid iterator (either prefix
-    // or postfix).
-    iter = end;
-    EXPECT_FALSE(iter.IsValid());
-    iter--;
-    EXPECT_TRUE(iter.IsValid());
+    // Backing up one from end() should give a valid iterator.
+    {  // prefix
+      iter = end;
+      EXPECT_FALSE(iter.IsValid());
+      --iter;
+      EXPECT_TRUE(iter.IsValid());
+    }
 
-    iter = end;
-    EXPECT_FALSE(iter.IsValid());
-    --iter;
-    EXPECT_TRUE(iter.IsValid());
+    {  // postfix
+      iter = end;
+      EXPECT_FALSE(iter.IsValid());
+      iter--;
+      EXPECT_TRUE(iter.IsValid());
+    }
+
+    {  // std::advance()
+      iter = end;
+      EXPECT_FALSE(iter.IsValid());
+      std::advance(iter, std::ptrdiff_t{-1});
+      EXPECT_TRUE(iter.IsValid());
+    }
+
+    {  // std::prev()
+      iter = end;
+      EXPECT_FALSE(iter.IsValid());
+      iter = std::prev(iter);
+      EXPECT_TRUE(iter.IsValid());
+    }
 
     // Make sure that backing up an iterator by one points always points
     // to the previous object in the container.
@@ -673,13 +738,20 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       ASSERT_NOT_NULL(objects()[prev_ndx]);
 
       auto prev_iter = iter;
-      --prev_iter;
-      ASSERT_TRUE(prev_iter.IsValid());
-      EXPECT_FALSE(prev_iter == iter);
-      EXPECT_TRUE(*prev_iter == *objects()[prev_ndx]);
-
-      prev_iter = iter;
-      prev_iter--;
+      switch (prev_ndx % 4) {
+        case 0:
+          prev_iter--;
+          break;
+        case 1:
+          --prev_iter;
+          break;
+        case 2:
+          std::advance(prev_iter, std::ptrdiff_t{-1});
+          break;
+        case 3:
+          prev_iter = std::prev(iter);
+          break;
+      }
       ASSERT_TRUE(prev_iter.IsValid());
       EXPECT_FALSE(prev_iter == iter);
       EXPECT_TRUE(*prev_iter == *objects()[prev_ndx]);
@@ -701,6 +773,14 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
   }
 
   void ReverseIterate() {
+    using IterType = typename ContainerType::iterator;
+    static_assert(
+        std::is_base_of_v<std::bidirectional_iterator_tag, typename IterType::iterator_category>);
+
+    using ConstIterType = typename ContainerType::const_iterator;
+    static_assert(std::is_base_of_v<std::bidirectional_iterator_tag,
+                                    typename ConstIterType::iterator_category>);
+
     // Make sure that backing up from end() for an empty container stays at
     // end.  Check both prefix and postfix decrement operators.
     ASSERT_EQ(0u, Size(container()));

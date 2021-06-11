@@ -7,6 +7,8 @@
 
 #include <zircon/assert.h>
 
+#include <cstddef>
+#include <iterator>
 #include <utility>
 
 #include <fbl/intrusive_container_utils.h>
@@ -373,7 +375,20 @@ class __POINTER(_KeyType) HashTable {
   // The shared implementation of the iterator
   template <class IterTraits>
   class iterator_impl {
+   private:
+    using IterType = typename IterTraits::IterType;
+
+    template <typename IterCategory>
+    static constexpr bool kIsBidirectional =
+        std::is_base_of_v<std::bidirectional_iterator_tag, IterCategory>;
+
    public:
+    using value_type = ValueType;
+    using reference = typename IterTraits::RefType;
+    using pointer = typename IterTraits::RawPtrType;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = typename std::iterator_traits<IterType>::iterator_category;
+
     iterator_impl() {}
     iterator_impl(const iterator_impl& other) {
       hash_table_ = other.hash_table_;
@@ -406,6 +421,8 @@ class __POINTER(_KeyType) HashTable {
       return *this;
     }
 
+    template <typename _IterCategory = iterator_category,
+              typename = std::enable_if_t<kIsBidirectional<_IterCategory>>>
     iterator_impl& operator--() {
       // If we have never been bound to a HashTable instance, the we had
       // better be invalid.
@@ -446,6 +463,8 @@ class __POINTER(_KeyType) HashTable {
       return ret;
     }
 
+    template <typename _IterCategory = iterator_category,
+              typename = std::enable_if_t<kIsBidirectional<_IterCategory>>>
     iterator_impl operator--(int) {
       iterator_impl ret(*this);
       --(*this);
@@ -458,7 +477,6 @@ class __POINTER(_KeyType) HashTable {
 
    private:
     friend ContainerType;
-    using IterType = typename IterTraits::IterType;
 
     enum BeginTag { BEGIN };
     enum EndTag { END };

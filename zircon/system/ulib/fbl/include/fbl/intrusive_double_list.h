@@ -7,6 +7,8 @@
 
 #include <zircon/assert.h>
 
+#include <cstddef>
+#include <iterator>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -721,6 +723,12 @@ class __POINTER(PtrType_) DoublyLinkedList : public internal::DoublyLinkedListBa
   template <class IterTraits>
   class iterator_impl {
    public:
+    using value_type = ValueType;
+    using reference = typename IterTraits::RefType;
+    using pointer = typename IterTraits::RawPtrType;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = std::bidirectional_iterator_tag;
+
     iterator_impl() = default;
     iterator_impl(const iterator_impl& other) = default;
     iterator_impl& operator=(const iterator_impl& other) = default;

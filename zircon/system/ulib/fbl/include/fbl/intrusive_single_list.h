@@ -7,6 +7,8 @@
 
 #include <zircon/assert.h>
 
+#include <cstddef>
+#include <iterator>
 #include <utility>
 
 #include <fbl/intrusive_container_node_utils.h>
@@ -752,6 +754,12 @@ class __POINTER(PtrType_) SinglyLinkedList : private internal::SizeTracker<ListS
   template <class IterTraits>
   class iterator_impl {
    public:
+    using value_type = ValueType;
+    using reference = typename IterTraits::RefType;
+    using pointer = typename IterTraits::RawPtrType;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = std::forward_iterator_tag;
+
     iterator_impl() = default;
     iterator_impl(const iterator_impl& other) = default;
     iterator_impl& operator=(const iterator_impl& other) = default;

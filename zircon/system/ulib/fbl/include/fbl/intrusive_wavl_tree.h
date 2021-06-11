@@ -7,6 +7,8 @@
 
 #include <zircon/assert.h>
 
+#include <cstddef>
+#include <iterator>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -670,6 +672,12 @@ class __POINTER(KeyType_) WAVLTree {
   template <class IterTraits>
   class iterator_impl {
    public:
+    using value_type = ValueType;
+    using reference = typename IterTraits::RefType;
+    using pointer = typename IterTraits::RawPtrType;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = std::bidirectional_iterator_tag;
+
     iterator_impl() {}
     iterator_impl(const iterator_impl& other) { node_ = other.node_; }
 
