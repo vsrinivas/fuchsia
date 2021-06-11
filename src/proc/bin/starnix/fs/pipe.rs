@@ -7,7 +7,6 @@ use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::sync::Arc;
 
-use crate::devices::*;
 use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::mm::PAGE_SIZE;
@@ -135,8 +134,6 @@ impl Pipe {
     }
 }
 
-pub struct PipeNode {}
-
 pub struct PipeReadEndpoint {
     pipe: Arc<Mutex<Pipe>>,
 }
@@ -145,28 +142,12 @@ pub struct PipeWriteEndpoint {
     pipe: Arc<Mutex<Pipe>>,
 }
 
-impl PipeNode {
-    pub fn new(task: &Task) -> Result<(FileHandle, FileHandle), Errno> {
-        let pipe_device = task
-            .thread_group
-            .kernel
-            .devices
-            .get_anonymous_node_device(AnonymousNodeDeviceName::Pipe);
-        let pipe = Pipe::new();
-        let node = FsNode::new_root(PipeNode {}, pipe_device);
-        let read = FileObject::new_with_node(
-            Box::new(PipeReadEndpoint { pipe: pipe.clone() }),
-            Some(node.clone()),
-        );
-        let write = FileObject::new_with_node(Box::new(PipeWriteEndpoint { pipe }), Some(node));
-        Ok((read, write))
-    }
-}
-
-impl FsNodeOps for PipeNode {
-    fn open(&self) -> Result<Box<dyn FileOps>, Errno> {
-        Err(ENOSYS)
-    }
+pub fn new_pipe(kern: &Kernel) -> (FileHandle, FileHandle) {
+    let pipe = Pipe::new();
+    let node = Anon::new_node(kern, AnonNodeType::Pipe);
+    let read = FileObject::new(PipeReadEndpoint { pipe: pipe.clone() }, node.clone());
+    let write = FileObject::new(PipeWriteEndpoint { pipe }, node);
+    (read, write)
 }
 
 impl Drop for PipeReadEndpoint {
@@ -242,7 +223,7 @@ impl FileOps for PipeReadEndpoint {
     }
 
     fn fstat(&self, file: &FileObject, _task: &Task) -> Result<stat_t, Errno> {
-        Ok(stat_t { st_blksize: ATOMIC_IO_BYTES as i64, ..file.node.as_ref().unwrap().fstat() })
+        Ok(stat_t { st_blksize: ATOMIC_IO_BYTES as i64, ..file.node.as_ref().fstat() })
     }
 
     fn fcntl(
@@ -302,7 +283,7 @@ impl FileOps for PipeWriteEndpoint {
     }
 
     fn fstat(&self, file: &FileObject, _task: &Task) -> Result<stat_t, Errno> {
-        Ok(stat_t { st_blksize: ATOMIC_IO_BYTES as i64, ..file.node.as_ref().unwrap().fstat() })
+        Ok(stat_t { st_blksize: ATOMIC_IO_BYTES as i64, ..file.node.as_ref().fstat() })
     }
 
     fn fcntl(

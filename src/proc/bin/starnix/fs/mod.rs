@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod anon_node;
 mod fd;
 mod file_system;
 mod fuchsia;
@@ -11,6 +12,7 @@ pub mod syscalls;
 mod tree;
 
 pub use self::fuchsia::*;
+pub use anon_node::*;
 pub use fd::*;
 pub use file_system::*;
 pub use tree::*;

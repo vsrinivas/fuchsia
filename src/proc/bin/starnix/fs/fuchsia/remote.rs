@@ -94,7 +94,7 @@ impl FsNodeOps for RemoteFileNode {
 }
 
 pub fn new_remote_filesystem(dir: fio::DirectorySynchronousProxy, rights: u32) -> FsNodeHandle {
-    let remotefs = AnonymousNodeDevice::new(0); // TODO: Get from device registry.
+    let remotefs = AnonNodeDevice::new(0); // TODO: Get from device registry.
     FsNode::new_root(RemoteDirectoryNode { dir, rights }, remotefs)
 }
 

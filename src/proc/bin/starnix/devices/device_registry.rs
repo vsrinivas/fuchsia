@@ -8,12 +8,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
 use crate::devices::*;
+use crate::fs::AnonNodeType;
 use crate::types::uapi::*;
-
-#[derive(Hash, PartialEq, Eq, Debug, Copy, Clone)]
-pub enum AnonymousNodeDeviceName {
-    Pipe,
-}
 
 fn make_device_id(major: u16, minor: u32) -> dev_t {
     let major = major as dev_t;
@@ -23,7 +19,7 @@ fn make_device_id(major: u16, minor: u32) -> dev_t {
 
 pub struct DeviceRegistry {
     next_anonymous_device_minor_number: AtomicU32,
-    anonymous_node_devices: Mutex<HashMap<AnonymousNodeDeviceName, DeviceHandle>>,
+    anonymous_node_devices: Mutex<HashMap<AnonNodeType, DeviceHandle>>,
 }
 
 impl DeviceRegistry {
@@ -34,11 +30,13 @@ impl DeviceRegistry {
         }
     }
 
-    pub fn get_anonymous_node_device(&self, name: AnonymousNodeDeviceName) -> DeviceHandle {
+    pub fn get_anon_node_device(&self, name: AnonNodeType) -> DeviceHandle {
         let mut devices = self.anonymous_node_devices.lock();
-        Arc::clone(devices.entry(name).or_insert_with(|| {
-            AnonymousNodeDevice::new(self.allocate_anonymous_device_minor_number())
-        }))
+        Arc::clone(
+            devices.entry(name).or_insert_with(|| {
+                AnonNodeDevice::new(self.allocate_anonymous_device_minor_number())
+            }),
+        )
     }
 
     fn allocate_anonymous_device_minor_number(&self) -> dev_t {

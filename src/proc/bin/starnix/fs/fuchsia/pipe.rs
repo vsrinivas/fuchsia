@@ -14,9 +14,9 @@ pub struct FuchsiaPipe {
 }
 
 impl FuchsiaPipe {
-    pub fn from_socket(socket: zx::Socket) -> Result<FileHandle, zx::Status> {
+    pub fn from_socket(kern: &Kernel, socket: zx::Socket) -> Result<FileHandle, zx::Status> {
         // TODO: Distinguish between stream and datagram sockets.
-        Ok(FileObject::new(FuchsiaPipe { socket }))
+        Ok(Anon::new_file(kern, FuchsiaPipe { socket }, AnonNodeType::Misc))
     }
 }
 

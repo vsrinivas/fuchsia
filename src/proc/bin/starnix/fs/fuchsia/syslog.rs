@@ -13,8 +13,8 @@ use crate::types::*;
 pub struct SyslogFile;
 
 impl SyslogFile {
-    pub fn new() -> FileHandle {
-        FileObject::new(SyslogFile)
+    pub fn new(kernel: &Kernel) -> FileHandle {
+        Anon::new_file(kernel, SyslogFile, AnonNodeType::Misc)
     }
 }
 

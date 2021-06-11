@@ -219,7 +219,7 @@ async fn start_component(
     .map_err(|e| anyhow!("Failed to open root: {}", e))?;
 
     let files = FdTable::new();
-    let stdio = SyslogFile::new();
+    let stdio = SyslogFile::new(&kernel);
     files.insert(FdNumber::from_raw(0), stdio.clone());
     files.insert(FdNumber::from_raw(1), stdio.clone());
     files.insert(FdNumber::from_raw(2), stdio);

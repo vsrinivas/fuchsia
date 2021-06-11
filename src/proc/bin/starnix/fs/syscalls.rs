@@ -328,7 +328,7 @@ pub fn sys_pipe2(
     if flags & !(O_CLOEXEC | O_NONBLOCK | O_DIRECT) != 0 {
         return Err(EINVAL);
     }
-    let (read, write) = PipeNode::new(&ctx.task)?;
+    let (read, write) = new_pipe(ctx.kernel());
 
     let file_flags = flags & (O_NONBLOCK | O_DIRECT);
     read.set_file_flags(O_RDONLY | file_flags);

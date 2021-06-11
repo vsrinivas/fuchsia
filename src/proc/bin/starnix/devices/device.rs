@@ -24,7 +24,7 @@ pub type DeviceHandle = Arc<dyn Device + Sync + Send>;
 /// A device used to back anonymous FsNodes
 ///
 /// Used for pipe nodes, for example.
-pub struct AnonymousNodeDevice {
+pub struct AnonNodeDevice {
     device_id: dev_t,
 
     // TODO: The inode number is more a file system concept than a device
@@ -33,14 +33,14 @@ pub struct AnonymousNodeDevice {
     next_inode_number: AtomicU64,
 }
 
-impl AnonymousNodeDevice {
+impl AnonNodeDevice {
     /// Create an AnonymousNodeDevice with the given identifier.
     pub fn new(device_id: dev_t) -> DeviceHandle {
-        Arc::new(AnonymousNodeDevice { device_id, next_inode_number: AtomicU64::new(1) })
+        Arc::new(AnonNodeDevice { device_id, next_inode_number: AtomicU64::new(1) })
     }
 }
 
-impl Device for AnonymousNodeDevice {
+impl Device for AnonNodeDevice {
     fn get_device_id(&self) -> dev_t {
         self.device_id
     }

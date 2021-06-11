@@ -5,7 +5,7 @@
 use fuchsia_zircon::sys::zx_thread_state_general_regs_t;
 use std::sync::Arc;
 
-use crate::task::Task;
+use crate::task::{Kernel, Task};
 
 pub struct SyscallContext<'a> {
     pub task: &'a Arc<Task>,
@@ -20,5 +20,9 @@ impl SyscallContext<'_> {
     #[cfg(test)]
     pub fn new<'a>(task: &'a Arc<Task>) -> SyscallContext<'a> {
         SyscallContext { task, registers: zx_thread_state_general_regs_t::default() }
+    }
+
+    pub fn kernel(&self) -> &Kernel {
+        &self.task.thread_group.kernel
     }
 }

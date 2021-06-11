@@ -52,6 +52,16 @@ impl Kernel {
         };
         Ok(Arc::new(kernel))
     }
+
+    #[cfg(test)]
+    pub fn new_for_testing() -> Arc<Kernel> {
+        Arc::new(Kernel {
+            job: zx::Job::from_handle(zx::Handle::invalid()),
+            pids: RwLock::new(PidTable::new()),
+            scheduler: RwLock::new(Scheduler::new()),
+            devices: DeviceRegistry::new(),
+        })
+    }
 }
 
 pub struct Scheduler {

@@ -68,7 +68,7 @@ impl FsNode {
     }
 
     pub fn open(self: &FsNodeHandle) -> Result<FileHandle, Errno> {
-        Ok(FileObject::new_with_node(self.ops().open()?, Some(Arc::clone(self))))
+        Ok(FileObject::new_from_box(self.ops().open()?, Arc::clone(self)))
     }
 
     pub fn traverse(self: &FsNodeHandle, path: &FsStr) -> Result<FsNodeHandle, Errno> {
@@ -186,7 +186,7 @@ mod test {
 
     #[test]
     fn test_tmpfs() {
-        let tmpfs = AnonymousNodeDevice::new(0);
+        let tmpfs = AnonNodeDevice::new(0);
         let root = FsNode::new_root(TmpfsDirectory {}, tmpfs);
         let usr = root.mkdir(b"usr".to_vec()).unwrap();
         let _etc = root.mkdir(b"etc".to_vec()).unwrap();

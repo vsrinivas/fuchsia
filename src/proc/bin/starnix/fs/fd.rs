@@ -214,17 +214,17 @@ pub fn default_ioctl(request: u32) -> Result<SyscallResult, Errno> {
 /// Corresponds to struct file in Linux.
 pub struct FileObject {
     ops: Box<dyn FileOps>,
-    pub node: Option<FsNodeHandle>,
+    pub node: FsNodeHandle,
     pub offset: Mutex<usize>,
     pub flags: Mutex<u32>,
     pub async_owner: Mutex<pid_t>,
 }
 
 impl FileObject {
-    pub fn new<T: FileOps + 'static>(ops: T) -> FileHandle {
-        Self::new_with_node(Box::new(ops), None)
+    pub fn new<T: FileOps + 'static>(ops: T, node: FsNodeHandle) -> FileHandle {
+        Self::new_from_box(Box::new(ops), node)
     }
-    pub fn new_with_node(ops: Box<dyn FileOps>, node: Option<FsNodeHandle>) -> FileHandle {
+    pub fn new_from_box(ops: Box<dyn FileOps>, node: FsNodeHandle) -> FileHandle {
         Arc::new(Self {
             node,
             ops,
@@ -352,8 +352,9 @@ mod test {
 
     #[test]
     fn test_fd_table_install() {
+        let kern = Kernel::new_for_testing();
         let files = FdTable::new();
-        let file = SyslogFile::new();
+        let file = SyslogFile::new(&kern);
 
         let fd0 = files.add(file.clone()).unwrap();
         assert_eq!(fd0.raw(), 0);
@@ -367,8 +368,9 @@ mod test {
 
     #[test]
     fn test_fd_table_fork() {
+        let kern = Kernel::new_for_testing();
         let files = FdTable::new();
-        let file = SyslogFile::new();
+        let file = SyslogFile::new(&kern);
 
         let fd0 = files.add(file.clone()).unwrap();
         let fd1 = files.add(file.clone()).unwrap();
@@ -388,8 +390,9 @@ mod test {
 
     #[test]
     fn test_fd_table_exec() {
+        let kern = Kernel::new_for_testing();
         let files = FdTable::new();
-        let file = SyslogFile::new();
+        let file = SyslogFile::new(&kern);
 
         let fd0 = files.add(file.clone()).unwrap();
         let fd1 = files.add(file.clone()).unwrap();
@@ -407,8 +410,9 @@ mod test {
 
     #[test]
     fn test_fd_table_pack_values() {
+        let kern = Kernel::new_for_testing();
         let files = FdTable::new();
-        let file = SyslogFile::new();
+        let file = SyslogFile::new(&kern);
 
         // Add two FDs.
         let fd0 = files.add(file.clone()).unwrap();
