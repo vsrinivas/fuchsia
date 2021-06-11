@@ -4,10 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_INCLUDE_KTL_ALGORITHM_H_
-#define ZIRCON_KERNEL_INCLUDE_KTL_ALGORITHM_H_
+#ifndef ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_ALGORITHM_H_
+#define ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_ALGORITHM_H_
 
-#include <algorithm>
+#include <lib/stdcompat/algorithm.h>
 
 namespace ktl {
 
@@ -37,9 +37,9 @@ using std::swap;
 using std::transform;
 
 // "Sorting operations" (subset)
-using std::is_sorted;
+using cpp20::is_sorted;
+using cpp20::sort;
 using std::is_sorted_until;
-using std::sort;
 using std::stable_sort;
 
 // "Binary search operations (on sorted ranges)"
@@ -59,4 +59,4 @@ using std::minmax_element;
 
 }  // namespace ktl
 
-#endif  // ZIRCON_KERNEL_INCLUDE_KTL_ALGORITHM_H_
+#endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_ALGORITHM_H_

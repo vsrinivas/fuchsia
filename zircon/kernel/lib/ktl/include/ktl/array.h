@@ -4,15 +4,17 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_INCLUDE_KTL_ARRAY_H_
-#define ZIRCON_KERNEL_INCLUDE_KTL_ARRAY_H_
+#ifndef ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_ARRAY_H_
+#define ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_ARRAY_H_
 
-#include <array>
+#include <lib/stdcompat/array.h>
 
 namespace ktl {
 
 using std::array;
 
+using cpp20::to_array;
+
 }  // namespace ktl
 
-#endif  // ZIRCON_KERNEL_INCLUDE_KTL_ARRAY_H_
+#endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_ARRAY_H_

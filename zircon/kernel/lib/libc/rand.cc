@@ -38,7 +38,7 @@ ktl::atomic<uintptr_t> gPrng;
 
 }  // namespace
 
-void srand(unsigned int seed) { gPrng.store(seed - 1, ktl::memory_order::relaxed); }
+void srand(unsigned int seed) { gPrng.store(seed - 1, ktl::memory_order_relaxed); }
 
 // rand_r doesn't need to access the state atomically.
 int rand_r(uintptr_t* seed) {
@@ -47,9 +47,9 @@ int rand_r(uintptr_t* seed) {
 }
 
 int rand() {
-  uintptr_t new_seed, old_seed = gPrng.load(ktl::memory_order::relaxed);
+  uintptr_t new_seed, old_seed = gPrng.load(ktl::memory_order_relaxed);
   do {
     new_seed = TrivialPrng(old_seed);
-  } while (!gPrng.compare_exchange_weak(old_seed, new_seed, ktl::memory_order::relaxed));
+  } while (!gPrng.compare_exchange_weak(old_seed, new_seed, ktl::memory_order_relaxed));
   return TrivialRand(new_seed);
 }

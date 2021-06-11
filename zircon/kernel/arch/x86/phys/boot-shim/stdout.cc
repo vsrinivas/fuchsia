@@ -48,7 +48,7 @@ void StdoutFromCmdline(ktl::string_view cmdline) {
     // BootOptions already parsed and redacted, so put it back.
     for (auto word : WordView(cmdline)) {
       constexpr ktl::string_view kPrefix = "kernel.entropy-mixin=";
-      if (word.starts_with(kPrefix)) {
+      if (ktl::starts_with(word, kPrefix)) {
         word.remove_prefix(kPrefix.length());
         memcpy(const_cast<char*>(word.data()), boot_opts.entropy_mixin.hex.data(),
                std::min(boot_opts.entropy_mixin.len, word.size()));

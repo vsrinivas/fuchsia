@@ -334,7 +334,7 @@ template("code_patching_hermetic_stub") {
 # source_set() that defines the following function, which may be used to
 # access the instructions comprising a given alternativate:
 # ```
-# std::span<const std::byte> GetPatchAlternative(std::string_view name);
+# ktl::span<const ktl::byte> GetPatchAlternative(ktl::string_view name);
 # ```
 # It returns an empty span if the name is not recognized.
 #

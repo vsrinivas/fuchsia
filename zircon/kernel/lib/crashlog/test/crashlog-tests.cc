@@ -28,7 +28,7 @@ bool BasicTest() {
   EXPECT_GT(len, 0u);
 
   ktl::string_view text{buffer.get(), len};
-  EXPECT_TRUE(text.ends_with('\n'));
+  EXPECT_TRUE(ktl::ends_with(text, '\n'));
   EXPECT_TRUE(text.find("BACKTRACE"sv) != ktl::string_view::npos);
 
   END_TEST;
@@ -47,7 +47,7 @@ bool OomTest() {
 
   // OOM case should not include the full dump.
   ktl::string_view text{buffer.get(), len};
-  EXPECT_TRUE(text.ends_with('\n'));
+  EXPECT_TRUE(ktl::ends_with(text, '\n'));
   EXPECT_TRUE(text.find("BACKTRACE"sv) == ktl::string_view::npos);
 
   END_TEST;

@@ -7,19 +7,20 @@
 #ifndef ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_SPAN_H_
 #define ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_SPAN_H_
 
-#include <span>
+#include <lib/stdcompat/span.h>
+
+#include "type_traits.h"
 
 namespace ktl {
 
-using std::span;
+using cpp20::span;
 
-using std::as_bytes;
-using std::as_writable_bytes;
+using cpp20::as_bytes;
+using cpp20::as_writable_bytes;
 
-using std::dynamic_extent;
+using cpp20::dynamic_extent;
 
 using std::size;
-using std::ssize;
 
 }  // namespace ktl
 

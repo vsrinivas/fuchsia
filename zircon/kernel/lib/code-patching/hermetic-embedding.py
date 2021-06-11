@@ -34,17 +34,15 @@ $body
 
 CPP_FILE = string.Template(
     HEADER + """
-#include <cstddef>
-#include <span>
-#include <string_view>
-
-using namespace std::literals;
+#include <ktl/byte.h>
+#include <ktl/span.h>
+#include <ktl/string_view.h>
 
 $externs
 
 // Looks a code patching alternative up by name, returning its raw, binary
 // contents if known or else returning an empty span.
-std::span<const std::byte> GetPatchAlternative(std::string_view name) {
+ktl::span<const ktl::byte> GetPatchAlternative(ktl::string_view name) {
 $function_body
 }
 
@@ -111,8 +109,8 @@ def main():
         # further define a function for looking up an alternative by name.
         cpp_externs.extend(
             [
-                "extern \"C\" const std::byte %s[];" % alternative_start,
-                "extern \"C\" const std::byte %s[];" % alternative_stop,
+                "extern \"C\" const ktl::byte %s[];" % alternative_start,
+                "extern \"C\" const ktl::byte %s[];" % alternative_stop,
             ])
         cpp_function_body.extend(
             [

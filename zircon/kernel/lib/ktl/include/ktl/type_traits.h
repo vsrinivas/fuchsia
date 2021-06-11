@@ -7,16 +7,16 @@
 #ifndef ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_TYPE_TRAITS_H_
 #define ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_TYPE_TRAITS_H_
 
-#include <type_traits>
+#include <lib/stdcompat/type_traits.h>
 
 namespace ktl {
 
+using cpp20::is_bounded_array;
+using cpp20::is_bounded_array_v;
+using cpp20::is_unbounded_array;
+using cpp20::is_unbounded_array_v;
 using std::is_array;
 using std::is_array_v;
-using std::is_bounded_array;
-using std::is_bounded_array_v;
-using std::is_unbounded_array;
-using std::is_unbounded_array_v;
 
 using std::conjunction;
 using std::conjunction_v;
