@@ -253,9 +253,6 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 		"universe_package_labels": staticSpec.UniversePackages,
 		"host_labels":             staticSpec.HostLabels,
 	} {
-		if len(values) == 0 {
-			continue
-		}
 		// If product is set, append to the corresponding list variable instead
 		// of overwriting it to avoid overwriting any packages set in the
 		// imported product file.
@@ -288,36 +285,39 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 		vars["rust_incremental"] = filepath.Join(contextSpec.CacheDir, "rust_cache")
 	}
 
-	var normalArgs []string
-	var importArgs []string
+	var importArgs, varArgs, appendArgs []string
 	for _, arg := range staticSpec.GnArgs {
 		if strings.HasPrefix(arg, "import(") {
 			importArgs = append(importArgs, arg)
+		} else if strings.Contains(arg, "+=") {
+			appendArgs = append(appendArgs, arg)
 		} else {
-			normalArgs = append(normalArgs, arg)
+			varArgs = append(varArgs, arg)
 		}
 	}
 
 	for k, v := range vars {
-		normalArgs = append(normalArgs, fmt.Sprintf("%s=%s", k, toGNValue(v)))
+		varArgs = append(varArgs, fmt.Sprintf("%s=%s", k, toGNValue(v)))
 	}
+	sort.Strings(varArgs)
+
 	for k, v := range appends {
-		normalArgs = append(normalArgs, fmt.Sprintf("%s+=%s", k, toGNValue(v)))
+		appendArgs = append(appendArgs, fmt.Sprintf("%s+=%s", k, toGNValue(v)))
 	}
-	sort.Strings(normalArgs)
+	sort.Strings(appendArgs)
 
 	for _, p := range imports {
 		importArgs = append(importArgs, fmt.Sprintf(`import("//%s")`, p))
 	}
 	sort.Strings(importArgs)
 
-	var finalArgs []string
-
 	// Ensure that imports come before args that set or modify variables, as
 	// otherwise the imported files might blindly redefine variables set or
 	// modified by other arguments.
+	var finalArgs []string
 	finalArgs = append(finalArgs, importArgs...)
-	finalArgs = append(finalArgs, normalArgs...)
+	finalArgs = append(finalArgs, varArgs...)
+	finalArgs = append(finalArgs, appendArgs...)
 	return finalArgs, nil
 }
 
