@@ -55,7 +55,6 @@ if (is_host) {
 
   test_image_outputs = get_target_outputs(":test_image")
   test_image = test_image_outputs[0]
-  test_image_path = rebase_path(test_image)
 
   action("expected_descriptor") {
     hermetic_deps = false
@@ -125,17 +124,23 @@ if (is_host) {
     ]
   }
 
-  avb_key_path = rebase_path(test_avb_key)
-  avb_metadata_path = rebase_path(test_avb_atx_metadata)
+  # Rust tooling needs the files passed through ENV to be relative to the
+  # directory of the test source file.
+  source_dir = "//" + rebase_path("tests", "//")
+  avb_key_path = rebase_path(test_avb_key, source_dir)
+  avb_metadata_path = rebase_path(test_avb_atx_metadata, source_dir)
+  test_image_path = rebase_path(test_image, source_dir)
 
   avb_outputs = get_target_outputs(":expected_vbmeta")
-  expected_vbmeta_path = rebase_path(avb_outputs[0])
+  expected_vbmeta_path = avb_outputs[0]
+  expected_vbmeta_path_source_relative =
+      rebase_path(expected_vbmeta_path, source_dir)
 
   config("integration_test_assets") {
     rustenv = [
       "AVB_KEY=$avb_key_path",
       "AVB_METADATA=$avb_metadata_path",
-      "EXPECTED_VBMETA=$expected_vbmeta_path",
+      "EXPECTED_VBMETA=$expected_vbmeta_path_source_relative",
       "SALT=" + salt,
       "IMAGE=$test_image_path",
     ]
@@ -154,9 +159,9 @@ if (is_host) {
     ]
     configs += [ ":integration_test_assets" ]
     inputs = [
-      avb_key_path,
-      avb_metadata_path,
-      test_image_path,
+      test_avb_key,
+      test_avb_atx_metadata,
+      test_image,
       expected_vbmeta_path,
     ]
   }
