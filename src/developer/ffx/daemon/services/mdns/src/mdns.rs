@@ -39,6 +39,21 @@ pub(crate) struct DiscoveryConfig {
     pub ttl: u32,
 }
 
+async fn propagate_bind_event(sock: &UdpSocket, svc: &Weak<MdnsServiceInner>) -> u16 {
+    let port = match sock.local_addr().unwrap() {
+        SocketAddr::V4(s) => s.port(),
+        SocketAddr::V6(s) => s.port(),
+    };
+    if let Some(svc) = svc.upgrade() {
+        svc.publish_event(bridge::MdnsEventType::SocketBound(bridge::MdnsBindEvent {
+            port: Some(port),
+            ..bridge::MdnsBindEvent::EMPTY
+        }))
+        .await;
+    }
+    port
+}
+
 // discovery_loop iterates over all multicast interfaces and adds them to
 // the socket_tasks if there is not already a task for that interface.
 pub(crate) async fn discovery_loop(config: DiscoveryConfig) {
@@ -68,6 +83,10 @@ pub(crate) async fn discovery_loop(config: DiscoveryConfig) {
                 .context("make_listen_socket for IPv4")
             {
                 Ok(sock) => {
+                    // TODO(awdavies): Networking tests appear to fail when
+                    // using IPv6. Only propagates the port binding event for
+                    // IPv4.
+                    let _ = propagate_bind_event(&sock, &mdns_service).await;
                     let sock = Rc::new(sock);
                     v4_listen_socket = Rc::downgrade(&sock);
                     Task::local(recv_loop(sock, mdns_service.clone())).detach();
