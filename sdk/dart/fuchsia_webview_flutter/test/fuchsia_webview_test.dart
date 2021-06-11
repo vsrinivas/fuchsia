@@ -4,6 +4,7 @@
 
 // ignore_for_file: avoid_as, import_of_legacy_library_into_null_safe
 
+import 'dart:async';
 import 'dart:convert' show utf8;
 import 'dart:typed_data';
 
@@ -11,6 +12,7 @@ import 'package:fidl_fuchsia_net_http/fidl_async.dart' as fidl_net;
 import 'package:fidl_fuchsia_web/fidl_async.dart' as fidl_web;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_webview_flutter/src/fuchsia_web_services.dart';
 import 'package:fuchsia_webview_flutter/src/fuchsia_webview_platform_controller.dart';
 import 'package:fuchsia_webview_flutter/webview.dart';
@@ -31,15 +33,28 @@ class MockFuchsiaWebViewPlatformController extends Mock
 class MockNavigationControllerProxy extends Mock
     implements fidl_web.NavigationControllerProxy {}
 
+class MockFuchsiaViewConnection extends Mock implements FuchsiaViewConnection {}
+
 void main() {
   FuchsiaWebServices? mockWebServices;
   fidl_web.NavigationControllerProxy? mockNavigationController;
+  MockFuchsiaViewConnection mockFuchsiaViewConnection;
 
   setUp(() {
     mockWebServices = MockFuchsiaWebServices();
     mockNavigationController = MockNavigationControllerProxy();
+    mockFuchsiaViewConnection = MockFuchsiaViewConnection();
     when(mockWebServices!.navigationController)
         .thenReturn(mockNavigationController!);
+    when(mockWebServices!.viewConnection).thenReturn(mockFuchsiaViewConnection);
+
+    final completer = Completer();
+    when(mockFuchsiaViewConnection.viewId).thenReturn(42);
+    when(mockFuchsiaViewConnection.whenConnected)
+        .thenAnswer((_) => Future<bool>.value(false));
+    when(mockFuchsiaViewConnection.connect())
+        .thenAnswer((_) => completer.future);
+
     WebView.platform = FuchsiaWebView(fuchsiaWebServices: mockWebServices);
   });
 

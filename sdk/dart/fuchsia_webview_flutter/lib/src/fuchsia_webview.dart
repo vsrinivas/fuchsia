@@ -7,7 +7,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
-import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:webview_flutter/platform_interface.dart';
 
 import 'fuchsia_web_services.dart';
@@ -26,11 +26,9 @@ class FuchsiaWebView implements WebViewPlatform {
   FuchsiaWebView({this.fuchsiaWebServices});
 
   /// This constructor creates a FuchsiaWebView, parameterizing it with the desired features.
-  FuchsiaWebView.create(
-      {bool usePlatformView = false, bool useSoftwareRendering = false})
-      : fuchsiaWebServices = FuchsiaWebServices(
-            usePlatformView: usePlatformView,
-            useSoftwareRendering: useSoftwareRendering);
+  FuchsiaWebView.create({bool useSoftwareRendering = false})
+      : fuchsiaWebServices =
+            FuchsiaWebServices(useSoftwareRendering: useSoftwareRendering);
 
   @override
   Widget build({
@@ -74,7 +72,7 @@ class _EmbeddedWebviewState extends State<_EmbeddedWebview> {
 
   @override
   Widget build(BuildContext context) =>
-      ChildView(connection: _controller.fuchsiaWebServices.childViewConnection);
+      FuchsiaView(controller: _controller.fuchsiaWebServices.viewConnection!);
 
   @override
   void initState() {

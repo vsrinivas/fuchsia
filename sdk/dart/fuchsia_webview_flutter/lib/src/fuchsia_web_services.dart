@@ -9,7 +9,7 @@ import 'package:fidl_fuchsia_io/fidl_async.dart' as fidl_io;
 import 'package:fidl_fuchsia_web/fidl_async.dart' as fidl_web;
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic/views.dart';
-import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:fuchsia_vfs/vfs.dart';
 import 'package:zircon/zircon.dart';
@@ -54,12 +54,11 @@ class FuchsiaWebServices {
       _navigationEventObserverBinding =
       fidl_web.NavigationEventListenerBinding();
 
-  ChildViewConnection? _childViewConnection;
+  FuchsiaViewConnection? _viewConnection;
 
   /// Constructs [FuchsiaWebServices] and connects to various 'fuchsia.web.*`
   /// services.
-  FuchsiaWebServices(
-      {bool usePlatformView = false, bool useSoftwareRendering = false}) {
+  FuchsiaWebServices({bool useSoftwareRendering = false}) {
     Incoming.fromSvcPath()
       ..connectToService(_contextProviderProxy)
       ..close();
@@ -117,8 +116,7 @@ class FuchsiaWebServices {
     // that the webview will live in.
     final tokenPair = ViewTokenPair();
     frame.createView(tokenPair.viewToken);
-    _childViewConnection = ChildViewConnection(tokenPair.viewHolderToken,
-        usePlatformView: usePlatformView);
+    _viewConnection = FuchsiaViewConnection(tokenPair.viewHolderToken);
     frame.getNavigationController(_navigationControllerProxy.ctrl.request());
   }
 
@@ -129,9 +127,9 @@ class FuchsiaWebServices {
 
   /// Returns a connection to a child view.
   ///
-  /// It can be used to construct a [ChildView] widget that will display the
+  /// It can be used to construct a [FuchsiaView] widget that will display the
   /// view's contents.
-  ChildViewConnection? get childViewConnection => _childViewConnection;
+  FuchsiaViewConnection? get viewConnection => _viewConnection;
 
   /// Returns [fidl_web.NavigationControllerProxy]
   fidl_web.NavigationControllerProxy get navigationController =>
