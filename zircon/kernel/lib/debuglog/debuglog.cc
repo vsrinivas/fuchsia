@@ -228,14 +228,12 @@ zx_status_t DlogReader::Read(uint32_t flags, dlog_record_t* record, size_t* _act
     Guard<SpinLock, IrqSave> guard{&log->lock};
 
     size_t rtail = tail_;
-    uint32_t rolled_out = 0;
 
     // If the read-tail is not within the range of log-tail..log-head
     // this reader has been lapped by a writer and we reset our read-tail
     // to the current log-tail.
     //
     if ((log->head - log->tail) < (log->head - rtail)) {
-      rolled_out = static_cast<uint32_t>(log->tail - rtail);
       rtail = log->tail;
     }
 
@@ -255,7 +253,7 @@ zx_status_t DlogReader::Read(uint32_t flags, dlog_record_t* record, size_t* _act
         memcpy(record, record_start, fifospace);
         memcpy(reinterpret_cast<char*>(record) + fifospace, log->data, actual - fifospace);
       }
-      record->hdr.preamble = rolled_out;
+      record->hdr.preamble = 0;
 
       *_actual = actual;
       status = ZX_OK;

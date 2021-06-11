@@ -11,7 +11,7 @@ __BEGIN_CDECLS
 
 // Defines and structures for zx_log_*()
 typedef struct zx_log_record {
-  uint32_t rollout;
+  uint32_t unused;
   uint16_t datalen;
   uint8_t severity;
   uint8_t flags;

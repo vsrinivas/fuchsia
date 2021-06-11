@@ -34,7 +34,7 @@ The returned record will have the following format:
 
 ```c
 typedef struct zx_log_record {
-  uint32_t rollout;
+  uint32_t unused;
   uint16_t datalen;
   uint8_t severity;
   uint8_t flags;
@@ -49,10 +49,6 @@ The fields are defined as follows:
 
 | Field       | Description                                                    |
 | ----------- | -------------------------------------------------------------- |
-| *rollout*   | Number of bytes of log messages (including headers) dropped    |
-:             : since the last call to `zx_debuglog_read` on this object. The  :
-:             : kernel will drop the oldest log messages when its internal     :
-:             : buffer becomes full.                                           :
 | *datalen*   | Number of bytes of data in the *data* field.                   |
 | *severity*  | Severity of this log message. Standard severity levels are     |
 :             : defined in the header `zircon/syscalls/log.h`.                 :

@@ -73,11 +73,7 @@ struct dlog_header {
   // (|DLOG_HDR_READLEN|) and the record's size when padded out to live in the
   // FIFO (|DLOG_HDR_FIFOLEN|).
   //
-  // After being read out of a debuglog, the |preamble| field contains the
-  // number of bytes (across both headers and messages) that were dropped from
-  // the log since the last message was read. Note, this is a 32-bit value so if
-  // approximately 4GB of data is written in between two read operations, data
-  // loss may go undetected.
+  // After being read out of a debuglog, the |preamble| field is 0.
   uint32_t preamble;
   uint16_t datalen;
   uint8_t severity;

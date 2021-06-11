@@ -119,7 +119,8 @@ bool log_reader_read() {
   END_TEST;
 }
 
-bool log_reader_rollout() {
+// Write to the log, exceeding its capacity and see that data is lost.
+bool log_reader_dataloss() {
   BEGIN_TEST;
 
   fbl::AllocChecker ac;
@@ -165,11 +166,7 @@ bool log_reader_rollout() {
     num_read++;
     ASSERT_EQ(sizeof(dlog_header) + sizeof(msg), got);
     EXPECT_EQ(DEBUGLOG_WARNING, rec.hdr.severity);
-    if (num_read == 1) {
-      EXPECT_EQ(sizeof(dlog_header_t) + sizeof(msg), rec.hdr.preamble);
-    } else {
-      EXPECT_EQ(0u, rec.hdr.preamble);
-    }
+    EXPECT_EQ(0u, rec.hdr.preamble);
     EXPECT_EQ(0, rec.hdr.flags);
     EXPECT_EQ(ZX_KOID_INVALID, rec.hdr.pid);
     EXPECT_NE(ZX_KOID_INVALID, rec.hdr.tid);
@@ -236,6 +233,6 @@ UNITTEST_START_TESTCASE(debuglog_tests)
 DEBUGLOG_UNITTEST(log_format)
 DEBUGLOG_UNITTEST(log_wrap)
 DEBUGLOG_UNITTEST(log_reader_read)
-DEBUGLOG_UNITTEST(log_reader_rollout)
+DEBUGLOG_UNITTEST(log_reader_dataloss)
 DEBUGLOG_UNITTEST(shutdown)
 UNITTEST_END_TESTCASE(debuglog_tests, "debuglog_tests", "Debuglog test")
