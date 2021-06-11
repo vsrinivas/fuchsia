@@ -167,7 +167,9 @@ def main():
     # Prevents QEMU from boot-looping, as most ZBI tests do not have a means of
     # gracefully shutting down.
     if not args.boot:
-        cmd += ['--', '-no-reboot']
+        if not args.emu:
+            cmd += ['--']
+        cmd += ['-no-reboot']
 
     print('+ %s' % ' '.join(map(shlex.quote, cmd)))
     return subprocess.run(cmd).returncode
