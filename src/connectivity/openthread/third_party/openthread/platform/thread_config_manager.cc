@@ -20,8 +20,16 @@ ThreadConfigManager::ThreadConfigManager(const std::string& path) : config_store
   } else {
     config_.SetObject();
   }
-  FX_CHECK(!json_parser_.HasError())
-      << "Failed to load configuration: " << json_parser_.error_str();
+
+  if (json_parser_.HasError()) {
+    // Report error but don't crash if the file is not a valid json format.
+    // Start from a blank object in that case.
+    FX_LOGS(ERROR) << "Failed to load configuration from file: " << config_store_path_
+                   << " with error: " << json_parser_.error_str();
+    FX_LOGS(ERROR) << "Will assume no existing configuration.";
+
+    config_.SetObject();
+  }
 }
 
 ThreadConfigMgrError ThreadConfigManager::AppendConfigValueBinArray(const std::string& key,

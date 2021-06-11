@@ -106,8 +106,9 @@ otError otPlatSettingsAdd(otInstance *instance, uint16_t key, const uint8_t *val
                           uint16_t value_length) {
   OT_UNUSED_VARIABLE(instance);
   std::string key_str(std::to_string(key));
-  config_manager.AppendConfigValueBinArray(key_str.c_str(), value, value_length);
-  return OT_ERROR_NONE;
+  ThreadConfigMgrError err;
+  err = config_manager.AppendConfigValueBinArray(key_str.c_str(), value, value_length);
+  return get_ot_error(err);
 }
 
 otError otPlatSettingsDelete(otInstance *instance, uint16_t key, int index) {
