@@ -2,12 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "sdk/lib/diagnostics/syslog/elf_stdio.shard.cml" ],
     program: {
-        runner: "elf",
         binary: "bin/network_context",
-        forward_stdout_to: "log",
-        forward_stderr_to: "log",
     },
     capabilities: [
         { protocol: "fuchsia.netemul.network.NetworkContext" },
