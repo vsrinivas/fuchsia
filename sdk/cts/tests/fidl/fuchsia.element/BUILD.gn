@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
 import("//sdk/cts/build/cts.gni")
-import("//src/session/build/session_config.gni")
 
 cts_executable("element-manager-test-bin") {
   output_name = "element-manager-test"
@@ -83,7 +81,7 @@ cts_fuchsia_package("fuchsia-element-reference") {
   ]
 }
 
-session_config("reference-session-config") {
+cts_session_config("reference-session-config") {
   config = "reference_session_config.json"
 }
 
@@ -116,6 +114,7 @@ sdk_molecule("test_sdks") {
     ":reference-element-bin_sdk",
     ":reference-element_sdk",
     ":reference-session-bin_sdk",
+    ":reference-session-config_sdk",
     ":reference-session_sdk",
   ]
 }
