@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gpt-tests.h"
-
 #include <ctype.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/cksum.h>
@@ -95,55 +93,171 @@ void destroy_gpt(int fd, uint64_t block_size, uint64_t offset, uint64_t block_co
 // GptDevice. Before making the change to GptDevice, we make tracking
 // changes to this class so that we can verify a set of changes.
 class Partitions {
+ private:
+  void IncrementGuid(uint8_t* guid) { guid[6]++; }
+
  public:
-  Partitions(uint32_t count, uint64_t first, uint64_t last);
+  Partitions(uint32_t count, uint64_t first, uint64_t last) {
+    ZX_ASSERT(count > 0);
+    ZX_ASSERT(count <= gpt::kPartitionCount);
+    partition_count_ = count;
+
+    uint64_t part_first = first, part_last;
+    uint64_t part_max_len = (last - first) / partition_count_;
+    ZX_ASSERT(part_max_len > 0);
+
+    memset(partitions_, 0, sizeof(partitions_));
+    for (uint32_t i = 0; i < partition_count_; i++) {
+      part_last = part_first + random_length(part_max_len);
+      uuid::Uuid guid = TestGuid(i);
+      memcpy(partitions_[i].type, guid.bytes(), sizeof(partitions_[i].type));
+      memcpy(partitions_[i].guid, guid.bytes(), sizeof(partitions_[i].type));
+      partitions_[i].first = part_first;
+      partitions_[i].last = part_last;
+      partitions_[i].flags = 0;
+      memset(partitions_[i].name, 0, sizeof(partitions_[i].name));
+      snprintf(reinterpret_cast<char*>(partitions_[i].name), sizeof(partitions_[i].name), "%u_part",
+               i);
+
+      // Set next first block
+      part_first += part_max_len;
+
+      // Previous last block should be less than next first block
+      ZX_ASSERT(part_last < part_first);
+    }
+  }
 
   // Returns partition at index index. Returns null if index is out of range.
-  const gpt_partition_t* GetPartition(uint32_t index) const;
+  const gpt_partition_t* GetPartition(uint32_t index) const {
+    if (index >= partition_count_) {
+      return nullptr;
+    }
 
-  // Returns number of parition created/removed.
+    return &partitions_[index];
+  }
+
+  // Returns number of partition created/removed.
   uint32_t GetCount() const { return partition_count_; }
 
   // Marks a partition as created in GPT.
-  void MarkCreated(uint32_t index);
+  void MarkCreated(uint32_t index) {
+    ASSERT_LT(index, partition_count_);
+    created_[index] = true;
+  }
 
   // Mark a partition as removed in GPT.
-  void ClearCreated(uint32_t index);
+  void ClearCreated(uint32_t index) {
+    ASSERT_LT(index, partition_count_);
+    created_[index] = false;
+  }
 
   // Returns true if the GPT should have the partition.
-  bool IsCreated(uint32_t index) const;
+  bool IsCreated(uint32_t index) const { return created_[index]; }
 
   // Returns number of partition that should exist on GPT.
-  uint32_t CreatedCount() const;
+  uint32_t CreatedCount() const {
+    uint32_t created_count = 0;
+
+    for (uint32_t i = 0; i < GetCount(); i++) {
+      if (IsCreated(i)) {
+        created_count++;
+      }
+    }
+    return (created_count);
+  }
 
   // Returns true if the partition p exists in partitions_.
-  bool Find(const gpt_partition_t* p, uint32_t* out_index) const;
+  bool Find(const gpt_partition_t* p, uint32_t* out_index) const {
+    for (uint32_t i = 0; i < partition_count_; i++) {
+      if (Compare(GetPartition(i), p)) {
+        *out_index = i;
+        return true;
+      }
+    }
+
+    return false;
+  }
 
   // Changes gpt_partition_t.type. One of the fields in the GUID
   // is incremented.
-  void ChangePartitionType(uint32_t partition_index);
+  void ChangePartitionType(uint32_t partition_index) {
+    ASSERT_LT(partition_index, partition_count_);
+    IncrementGuid(partitions_[partition_index].type);
+  }
 
   // Changes gpt_partition_t.guid. One of the fields in the GUID
   // is incremented.
-  void ChangePartitionGuid(uint32_t partition_index);
+  void ChangePartitionGuid(uint32_t partition_index) {
+    ASSERT_LT(partition_index, partition_count_);
+    IncrementGuid(partitions_[partition_index].guid);
+  }
 
   // Sets the visibility attribute of the partition
-  void SetPartitionVisibility(uint32_t partition_index, bool visible);
+  void SetPartitionVisibility(uint32_t partition_index, bool visible) {
+    ASSERT_LT(partition_index, partition_count_);
+    gpt::SetPartitionVisibility(&partitions_[partition_index], visible);
+  }
 
   // Changes the range a partition covers. The function doesn't check if these
   // changes are valid or not (whether they over lap with other partitions,
   // cross device limits)
-  void ChangePartitionRange(uint32_t partition_index, uint64_t start, uint64_t end);
+  void ChangePartitionRange(uint32_t partition_index, uint64_t start, uint64_t end) {
+    ASSERT_LT(partition_index, partition_count_);
+    partitions_[partition_index].first = start;
+    partitions_[partition_index].last = end;
+  }
 
   // Gets the current value of gpt_partition_t.flags
-  void GetPartitionFlags(uint32_t partition_index, uint64_t* flags) const;
+  void GetPartitionFlags(uint32_t partition_index, uint64_t* flags) const {
+    ASSERT_LT(partition_index, partition_count_);
+    *flags = partitions_[partition_index].flags;
+  }
 
   // Sets the current value of gpt_partition_t.flags
-  void SetPartitionFlags(uint32_t partition_index, uint64_t flags);
+  void SetPartitionFlags(uint32_t partition_index, uint64_t flags) {
+    ASSERT_LT(partition_index, partition_count_);
+    partitions_[partition_index].flags = flags;
+  }
 
   // Returns true if two partitions are the same.
   static bool Compare(const gpt_partition_t* in_mem_partition,
-                      const gpt_partition_t* on_disk_partition);
+                      const gpt_partition_t* on_disk_partition) {
+    if (memcmp(in_mem_partition->type, on_disk_partition->type, sizeof(in_mem_partition->type)) !=
+        0) {
+      return false;
+    }
+
+    if (memcmp(in_mem_partition->guid, on_disk_partition->guid, sizeof(in_mem_partition->guid)) !=
+        0) {
+      return false;
+    }
+
+    if (in_mem_partition->first != on_disk_partition->first) {
+      return false;
+    }
+
+    if (in_mem_partition->last != on_disk_partition->last) {
+      return false;
+    }
+
+    if (in_mem_partition->flags != on_disk_partition->flags) {
+      return false;
+    }
+
+    // In mem partition name is a c-string whereas on-disk partition name
+    // is stored as UTF-16. We need to convert UTF-16 to c-string before we
+    // compare.
+    char name[GPT_NAME_LEN];
+    memset(name, 0, GPT_NAME_LEN);
+    utf16_to_cstring(name, (const uint16_t*)on_disk_partition->name, GPT_NAME_LEN / 2);
+
+    if (strncmp(name, reinterpret_cast<const char*>(in_mem_partition->name), GPT_NAME_LEN / 2) !=
+        0) {
+      return false;
+    }
+
+    return true;
+  }
 
  private:
   // List of partitions
@@ -156,148 +270,272 @@ class Partitions {
   uint32_t partition_count_;
 };
 
-Partitions::Partitions(uint32_t count, uint64_t first, uint64_t last) {
-  ZX_ASSERT(count > 0);
-  ZX_ASSERT(count <= gpt::kPartitionCount);
-  partition_count_ = count;
+constexpr uint32_t kBlockSize = 512;
+constexpr uint64_t kBlockCount = 1 << 20;
+constexpr uint64_t kAcceptableMinimumSize = kBlockSize * kBlockCount;
+constexpr uint64_t kGptMetadataSize = 1 << 18;  // 256KiB for now. See comment in LibGptTest::Init
 
-  uint64_t part_first = first, part_last;
-  uint64_t part_max_len = (last - first) / partition_count_;
-  ZX_ASSERT(part_max_len > 0);
+static_assert(kGptMetadataSize <= kAcceptableMinimumSize,
+              "GPT size greater than kAcceptableMinimumSize");
 
-  memset(partitions_, 0, sizeof(partitions_));
-  for (uint32_t i = 0; i < partition_count_; i++) {
-    part_last = part_first + random_length(part_max_len);
-    uuid::Uuid guid = TestGuid(i);
-    memcpy(partitions_[i].type, guid.bytes(), sizeof(partitions_[i].type));
-    memcpy(partitions_[i].guid, guid.bytes(), sizeof(partitions_[i].type));
-    partitions_[i].first = part_first;
-    partitions_[i].last = part_last;
-    partitions_[i].flags = 0;
-    memset(partitions_[i].name, 0, sizeof(partitions_[i].name));
-    snprintf(reinterpret_cast<char*>(partitions_[i].name), sizeof(partitions_[i].name), "%u_part",
-             i);
-
-    // Set next first block
-    part_first += part_max_len;
-
-    // Previous last block should be less than next first block
-    ZX_ASSERT(part_last < part_first);
-  }
-}
-
-const gpt_partition_t* Partitions::GetPartition(uint32_t index) const {
-  if (index >= partition_count_) {
-    return nullptr;
-  }
-
-  return &partitions_[index];
-}
-
-void Partitions::MarkCreated(uint32_t index) {
-  ASSERT_LT(index, partition_count_);
-  created_[index] = true;
-}
-
-void Partitions::ClearCreated(uint32_t index) {
-  ASSERT_LT(index, partition_count_);
-  created_[index] = false;
-}
-
-bool Partitions::IsCreated(uint32_t index) const { return created_[index]; }
-
-uint32_t Partitions::CreatedCount() const {
-  uint32_t created_count = 0;
-
-  for (uint32_t i = 0; i < GetCount(); i++) {
-    if (IsCreated(i)) {
-      created_count++;
-    }
-  }
-  return (created_count);
-}
-
-bool Partitions::Compare(const gpt_partition_t* in_mem_partition,
-                         const gpt_partition_t* on_disk_partition) {
-  if (memcmp(in_mem_partition->type, on_disk_partition->type, sizeof(in_mem_partition->type)) !=
-      0) {
-    return false;
-  }
-
-  if (memcmp(in_mem_partition->guid, on_disk_partition->guid, sizeof(in_mem_partition->guid)) !=
-      0) {
-    return false;
-  }
-
-  if (in_mem_partition->first != on_disk_partition->first) {
-    return false;
-  }
-
-  if (in_mem_partition->last != on_disk_partition->last) {
-    return false;
-  }
-
-  if (in_mem_partition->flags != on_disk_partition->flags) {
-    return false;
-  }
-
-  // In mem partition name is a c-string whereas on-disk partition name
-  // is stored as UTF-16. We need to convert UTF-16 to c-string before we
-  // compare.
-  char name[GPT_NAME_LEN];
-  memset(name, 0, GPT_NAME_LEN);
-  utf16_to_cstring(name, (const uint16_t*)on_disk_partition->name, GPT_NAME_LEN / 2);
-
-  if (strncmp(name, reinterpret_cast<const char*>(in_mem_partition->name), GPT_NAME_LEN / 2) != 0) {
-    return false;
-  }
-
-  return true;
-}
-
-bool Partitions::Find(const gpt_partition_t* p, uint32_t* out_index) const {
-  for (uint32_t i = 0; i < partition_count_; i++) {
-    if (Compare(GetPartition(i), p)) {
-      *out_index = i;
-      return true;
+class LibGptTest {
+ public:
+  ~LibGptTest() {
+    if (ramdisk_ != nullptr) {
+      ramdisk_destroy(ramdisk_);
     }
   }
 
-  return false;
-}
+  // Test environment options.
+  struct Options {
+    // Path to the block device to use for the test. If empty, an internal ramdisk will
+    // be used for tests.
+    std::string disk_path;
 
-void IncrementGuid(uint8_t* guid) { guid[6]++; }
+    // Block size and count for the test. Ignored if a block device is provided.
+    uint32_t block_size = kBlockSize;
+    uint64_t block_count = kBlockCount;
+  };
 
-void Partitions::ChangePartitionGuid(uint32_t partition_index) {
-  ASSERT_LT(partition_index, partition_count_);
-  IncrementGuid(partitions_[partition_index].guid);
-}
+  // Create a new test environment using the given options.
+  static std::unique_ptr<LibGptTest> Create(const Options& options) {
+    // Use "new" to access private constructor.
+    auto result = std::unique_ptr<LibGptTest>(new LibGptTest());
 
-void Partitions::ChangePartitionType(uint32_t partition_index) {
-  ASSERT_LT(partition_index, partition_count_);
-  IncrementGuid(partitions_[partition_index].type);
-}
+    // Set up disk.
+    if (options.disk_path.empty()) {
+      result->InitRamDisk(options);
+    } else {
+      result->InitDisk(options.disk_path.c_str());
+    }
 
-void Partitions::SetPartitionVisibility(uint32_t partition_index, bool visible) {
-  ASSERT_LT(partition_index, partition_count_);
-  gpt::SetPartitionVisibility(&partitions_[partition_index], visible);
-}
+    // TODO(auradkar): All tests assume that the disks don't have an initialized
+    // disk. If tests find an GPT initialized disk at the beginning of test,
+    // they fail. The tests leave disks in initialized state.
+    //
+    // To either uninitialized an initialized disk as a part of setup
+    // test needs to know where gpt lies on the disk. As of now libgpt doesn't
+    // export an api to get the location(s) of the gpt on disk. So, we assume
+    // here that gpt lies in first few (GptMetadataBlocksCount()) blocks on the
+    // device. We also ignore any backup copies on the device.
+    // Once there exists an api in libgpt to get size and location(s) of gpt,
+    // we can setup/cleanup before/after running tests in a better way.
+    destroy_gpt(result->fd_.get(), result->GetBlockSize(), 0, result->GptMetadataBlocksCount());
 
-void Partitions::ChangePartitionRange(uint32_t partition_index, uint64_t start, uint64_t end) {
-  ASSERT_LT(partition_index, partition_count_);
-  partitions_[partition_index].first = start;
-  partitions_[partition_index].last = end;
-}
+    result->Reset();
 
-void Partitions::GetPartitionFlags(uint32_t partition_index, uint64_t* flags) const {
-  ASSERT_LT(partition_index, partition_count_);
-  *flags = partitions_[partition_index].flags;
-}
+    return result;
+  }
 
-void Partitions::SetPartitionFlags(uint32_t partition_index, uint64_t flags) {
-  ASSERT_LT(partition_index, partition_count_);
-  partitions_[partition_index].flags = flags;
-}
+  // Returns total size of the disk under test.
+  uint64_t GetDiskSize() const { return blk_size_ * blk_count_; }
+
+  // Return block size of the disk under test.
+  uint32_t GetBlockSize() const { return blk_size_; }
+
+  // Returns total number of block in the disk.
+  uint64_t GetBlockCount() const { return blk_count_; }
+
+  // Return total number of block free in disk after GPT is created.
+  uint64_t GetUsableBlockCount() const { return usable_last_block_ - usable_start_block_; }
+
+  // First block that is free to use after GPT is created.
+  uint64_t GetUsableStartBlock() const { return usable_start_block_; }
+
+  // Last block that is free to use after GPT is created.
+  uint64_t GetUsableLastBlock() const { return usable_last_block_; }
+
+  // Returns number of block GPT uses.
+  uint64_t GptMetadataBlocksCount() const {
+    // See comment in Init
+    return kGptMetadataSize / blk_size_;
+  }
+
+  // Returns the full device path.
+  const char* GetDevicePath() const { return disk_path_; }
+
+  // Remove all partition from GPT and keep device in GPT initialized state.
+  void Reset() {
+    std::unique_ptr<GptDevice> gpt;
+
+    // explicitly close the fd, if open, before we attempt to reopen it.
+    fd_.reset();
+
+    fd_.reset(open(disk_path_, O_RDWR));
+
+    ASSERT_TRUE(fd_.is_valid(), "Could not open block device");
+    ASSERT_OK(GptDevice::Create(fd_.get(), GetBlockSize(), GetBlockCount(), &gpt));
+    gpt_ = std::move(gpt);
+  }
+
+  // Finalize uninitialized disk and verify.
+  void Finalize() {
+    ASSERT_FALSE(gpt_->Valid(), "Valid GPT on uninitialized disk");
+
+    ASSERT_OK(gpt_->Finalize(), "Failed to finalize");
+    ASSERT_TRUE(gpt_->Valid(), "Invalid GPT after finalize");
+  }
+
+  // Sync and verify.
+  void Sync() {
+    ASSERT_OK(gpt_->Sync(), "Failed to sync");
+    ASSERT_TRUE(gpt_->Valid(), "Invalid GPT after sync");
+  }
+
+  // Get the Range from GPT.
+  void ReadRange() {
+    ASSERT_EQ(gpt_->Range(&usable_start_block_, &usable_last_block_), ZX_OK,
+              "Retrieval of device range failed.");
+
+    // TODO(auradkar): GptDevice doesn't export api to get GPT-metadata size.
+    // If it does, we can keep better track of metadata size it says it needs
+    // and metadata it actually uses.
+    ASSERT_LT(GetUsableStartBlock(), GetBlockCount(), "Range starts after EOD");
+    ASSERT_LT(GetUsableStartBlock(), GetUsableLastBlock(), "Invalid range");
+    ASSERT_LT(GetUsableLastBlock(), GetBlockCount(), "Range end greater than block count");
+    ASSERT_GT(GetUsableBlockCount(), 0, "GPT occupied all available blocks");
+  }
+
+  // Read the MBR from the disk.
+  zx_status_t ReadMbr(mbr::Mbr* mbr) const {
+    ZX_ASSERT(sizeof(*mbr) <= blk_size_);
+
+    // Read the block containing the MBR.
+    char buff[blk_size_];
+    ssize_t ret = pread(fd_.get(), buff, blk_size_, 0);
+    if (ret < 0) {
+      return ZX_ERR_IO;
+    }
+
+    // Copy the result to "mbr".
+    memcpy(mbr, buff, sizeof(*mbr));
+    return ZX_OK;
+  }
+
+  // Prepare disk to run Add Partition tests.
+  // 1. initialize GPT
+  // 2. optionally sync
+  // 3. get the usable range
+  void PrepDisk(bool sync) {
+    if (sync) {
+      Sync();
+    } else {
+      Finalize();
+    }
+
+    ReadRange();
+  }
+
+  // gpt_ changes across Reset(). So we do not expose pointer to GptDevice to
+  // any of the test. Instead we expose following wrapper functions for
+  // a few GptDevice methods.
+  bool IsGptValid() const { return gpt_->Valid(); }
+
+  zx_status_t GetDiffs(uint32_t partition_index, uint32_t* diffs) const {
+    return gpt_->GetDiffs(partition_index, diffs);
+  }
+
+  // Gets a partition at index.
+  const gpt_partition_t* GetPartition(uint32_t index) const {
+    return gpt_->GetPartition(index).value_or(nullptr);
+  }
+
+  // Adds a partition
+  zx_status_t AddPartition(const char* name, const uint8_t* type, const uint8_t* guid,
+                           uint64_t offset, uint64_t blocks, uint64_t flags) {
+    return gpt_->AddPartition(name, type, guid, offset, blocks, flags);
+  }
+
+  // removes a partition.
+  zx_status_t RemovePartition(const uint8_t* guid) { return gpt_->RemovePartition(guid); }
+
+  // removes all partitions.
+  zx_status_t RemoveAllPartitions() { return gpt_->RemoveAllPartitions(); }
+
+  // wrapper around GptDevice's SetPartitionType
+  zx_status_t SetPartitionType(uint32_t partition_index, const uint8_t* type) {
+    return gpt_->SetPartitionType(partition_index, type);
+  }
+
+  // wrapper around GptDevice's SetPartitionGuid
+  zx_status_t SetPartitionGuid(uint32_t partition_index, const uint8_t* guid) {
+    return gpt_->SetPartitionGuid(partition_index, guid);
+  }
+
+  // wrapper around GptDevice's SetPartitionRange
+  zx_status_t SetPartitionRange(uint32_t partition_index, uint64_t start, uint64_t end) {
+    return gpt_->SetPartitionRange(partition_index, start, end);
+  }
+
+  // wrapper around GptDevice's SetPartitionVisibility
+  zx_status_t SetPartitionVisibility(uint32_t index, bool visible) {
+    return gpt_->SetPartitionVisibility(index, visible);
+  }
+
+  // wrapper around GptDevice's GetPartitionFlags
+  zx_status_t GetPartitionFlags(uint32_t index, uint64_t* flags) {
+    return gpt_->GetPartitionFlags(index, flags);
+  }
+
+  // wrapper around GptDevice's SetPartitionFlags
+  zx_status_t SetPartitionFlags(uint32_t index, uint64_t flags) {
+    return gpt_->SetPartitionFlags(index, flags);
+  }
+
+ private:
+  LibGptTest() {}
+
+  // Initialize a physical media.
+  void InitDisk(const char* disk_path) {
+    strlcpy(disk_path_, disk_path, sizeof(disk_path_));
+    fbl::unique_fd fd(open(disk_path_, O_RDWR));
+    ASSERT_TRUE(fd.is_valid(), "Could not open block device to fetch info");
+    fdio_cpp::UnownedFdioCaller disk_caller(fd.get());
+    fuchsia_hardware_block_BlockInfo block_info;
+    zx_status_t status;
+    ASSERT_EQ(
+        fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status, &block_info),
+        ZX_OK);
+    ASSERT_OK(status);
+
+    blk_size_ = block_info.block_size;
+    blk_count_ = block_info.block_count;
+
+    ASSERT_GE(GetDiskSize(), kAcceptableMinimumSize, "Insufficient disk space for tests");
+    fd_ = std::move(fd);
+  }
+
+  // Create and initialize and ramdisk.
+  void InitRamDisk(const Options& options) {
+    ASSERT_EQ(ramdisk_create(options.block_size, options.block_count, &ramdisk_), ZX_OK,
+              "Could not create ramdisk");
+    InitDisk(ramdisk_get_path(ramdisk_));
+  }
+
+  // Block size of the device.
+  uint32_t blk_size_ = kBlockSize;
+
+  // Number of block in the disk.
+  uint64_t blk_count_ = kBlockCount;
+
+  // disk path
+  char disk_path_[PATH_MAX] = {};
+
+  // pointer to read GptDevice.
+  std::unique_ptr<gpt::GptDevice> gpt_;
+
+  // Open file descriptor to block device.
+  fbl::unique_fd fd_;
+
+  // An optional ramdisk structure.
+  ramdisk_client_t* ramdisk_ = nullptr;
+
+  // usable start block offset.
+  uint64_t usable_start_block_ = UINT64_MAX;
+
+  // usable last block offset.
+  uint64_t usable_last_block_ = UINT64_MAX;
+};
 
 class LibGptTestFixture : public zxtest::Test {
  public:
@@ -305,13 +543,9 @@ class LibGptTestFixture : public zxtest::Test {
 
  protected:
   void SetUp() override {
-    LibGptTest::Options options{};
-    if (gUseRamDisk) {
-      lib_gpt_test_ = LibGptTest::Create(options);
-    } else {
-      options.disk_path = std::string(gDevPath);
-      lib_gpt_test_ = LibGptTest::Create(options);
-    }
+    lib_gpt_test_ = LibGptTest::Create({
+        .disk_path = gUseRamDisk ? std::string() : gDevPath,
+    });
   }
 
  private:
@@ -319,128 +553,6 @@ class LibGptTestFixture : public zxtest::Test {
 };
 
 using GptDeviceTest = LibGptTestFixture;
-
-void LibGptTest::Reset() {
-  std::unique_ptr<GptDevice> gpt;
-
-  // explicitly close the fd, if open, before we attempt to reopen it.
-  fd_.reset();
-
-  fd_.reset(open(disk_path_, O_RDWR));
-
-  ASSERT_TRUE(fd_.is_valid(), "Could not open block device\n");
-  ASSERT_OK(GptDevice::Create(fd_.get(), GetBlockSize(), GetBlockCount(), &gpt));
-  gpt_ = std::move(gpt);
-}
-
-void LibGptTest::Finalize() {
-  ASSERT_FALSE(gpt_->Valid(), "Valid GPT on uninitialized disk");
-
-  ASSERT_OK(gpt_->Finalize(), "Failed to finalize");
-  ASSERT_TRUE(gpt_->Valid(), "Invalid GPT after finalize");
-}
-
-void LibGptTest::Sync() {
-  ASSERT_OK(gpt_->Sync(), "Failed to sync");
-  ASSERT_TRUE(gpt_->Valid(), "Invalid GPT after sync");
-}
-
-void LibGptTest::ReadRange() {
-  ASSERT_EQ(gpt_->Range(&usable_start_block_, &usable_last_block_), ZX_OK,
-            "Retrieval of device range failed.");
-
-  // TODO(auradkar): GptDevice doesn't export api to get GPT-metadata size.
-  // If it does, we can keep better track of metadata size it says it needs
-  // and metadata it actually uses.
-  ASSERT_LT(GetUsableStartBlock(), GetBlockCount(), "Range starts after EOD");
-  ASSERT_LT(GetUsableStartBlock(), GetUsableLastBlock(), "Invalid range");
-  ASSERT_LT(GetUsableLastBlock(), GetBlockCount(), "Range end greater than block count");
-  ASSERT_GT(GetUsableBlockCount(), 0, "GPT occupied all available blocks");
-}
-
-zx_status_t LibGptTest::ReadMbr(mbr::Mbr* mbr) const {
-  ZX_ASSERT(sizeof(*mbr) <= blk_size_);
-
-  // Read the block containing the MBR.
-  char buff[blk_size_];
-  ssize_t ret = pread(fd_.get(), buff, blk_size_, 0);
-  if (ret < 0) {
-    return ZX_ERR_IO;
-  }
-
-  // Copy the result to "mbr".
-  memcpy(mbr, buff, sizeof(*mbr));
-  return ZX_OK;
-}
-
-void LibGptTest::PrepDisk(bool sync) {
-  if (sync) {
-    Sync();
-  } else {
-    Finalize();
-  }
-
-  ReadRange();
-}
-
-void LibGptTest::InitDisk(const char* disk_path) {
-  snprintf(disk_path_, PATH_MAX, "%s", disk_path);
-  fbl::unique_fd fd(open(disk_path_, O_RDWR));
-  ASSERT_TRUE(fd.is_valid(), "Could not open block device to fetch info");
-  fdio_cpp::UnownedFdioCaller disk_caller(fd.get());
-  fuchsia_hardware_block_BlockInfo block_info;
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(disk_caller.borrow_channel(), &status, &block_info),
-            ZX_OK);
-  ASSERT_OK(status);
-
-  blk_size_ = block_info.block_size;
-  blk_count_ = block_info.block_count;
-
-  ASSERT_GE(GetDiskSize(), kAccptableMinimumSize, "Insufficient disk space for tests");
-  fd_ = std::move(fd);
-}
-
-void LibGptTest::InitRamDisk(const LibGptTest::Options& options) {
-  ASSERT_EQ(ramdisk_create(options.block_size, options.block_count, &ramdisk_), ZX_OK,
-            "Could not create ramdisk");
-  InitDisk(ramdisk_get_path(ramdisk_));
-}
-
-std::unique_ptr<LibGptTest> LibGptTest::Create(const LibGptTest::Options& options) {
-  // Use "new" to access private constructor.
-  auto result = std::unique_ptr<LibGptTest>(new LibGptTest());
-
-  // Set up disk.
-  if (options.disk_path.empty()) {
-    result->InitRamDisk(options);
-  } else {
-    result->InitDisk(options.disk_path.c_str());
-  }
-
-  // TODO(auradkar): All tests assume that the disks don't have an initialized
-  // disk. If tests find an GPT initialized disk at the beginning of test,
-  // they fail. The tests leave disks in initalized state.
-  //
-  // To either uninitialize an initialized disk as a part of setup
-  // test needs to know where gpt lies on the disk. As of now libgpt doesn't
-  // export an api to get the location(s) of the gpt on disk. So, we assume
-  // here that gpt lies in first few (GptMetadataBlocksCount()) blocks on the
-  // device. We also ignore any backup copies on the device.
-  // Once there exists an api in libgpt to get size and location(s) of gpt,
-  // we can setup/cleanup before/after running tests in a better way.
-  destroy_gpt(result->fd_.get(), result->GetBlockSize(), 0, result->GptMetadataBlocksCount());
-
-  result->Reset();
-
-  return result;
-}
-
-LibGptTest::~LibGptTest() {
-  if (ramdisk_ != nullptr) {
-    ramdisk_destroy(ramdisk_);
-  }
-}
 
 uint64_t EntryArrayBlockCount(uint64_t block_size) {
   return ((kMaxPartitionTableSize + block_size - 1) / block_size);
@@ -514,7 +626,7 @@ void PartitionVerify(LibGptTest* libGptTest, const Partitions* partitions) {
   uint32_t found_index = 0;
 
   // Check what's found on disk is created by us
-  // iteratre over all partition that are present on disk and make sure
+  // iterate over all partition that are present on disk and make sure
   // that we intended to create them.
   // Note: The index of an entry/partition need not match with the index of
   // the partition in "Partition* partition".
@@ -598,7 +710,7 @@ void RemovePartition(LibGptTest* libGptTest, uint32_t total_partitions, uint32_t
   RemovePartitions(libGptTest, &partitions, remove_count, sync);
 }
 
-// Test removing all total_partititions from GPT w/o syncing.
+// Test removing all total_partitions from GPT w/o syncing.
 void RemoveAllPartitions(LibGptTest* libGptTest, uint32_t total_partitions, bool sync) {
   libGptTest->PrepDisk(sync);
 
@@ -1283,9 +1395,9 @@ TEST(GptDeviceEntryCountTest, FewerEntries) {
 }
 
 TEST(GptDeviceMbr, LargerSectorSizes) {
-  LibGptTest::Options options{};
-  options.block_size = 4096;
-  auto libGptTest = LibGptTest::Create(options);
+  auto libGptTest = LibGptTest::Create({
+      .block_size = 4096,
+  });
 
   // Disk starts off uninitialized.
   EXPECT_FALSE(libGptTest->IsGptValid());
@@ -1303,9 +1415,9 @@ TEST(GptDeviceMbr, LargerSectorSizes) {
 }
 
 TEST(GptDeviceMbr, DiskSize) {
-  LibGptTest::Options options{};
-  options.block_count = 0x10'0000;
-  auto libGptTest = LibGptTest::Create(options);
+  auto libGptTest = LibGptTest::Create({
+      .block_count = 0x10'0000,
+  });
 
   // Write changes to disk.
   libGptTest->Sync();
@@ -1375,7 +1487,7 @@ TEST(KnownGuidTest, FindByTypeGuid) {
   EXPECT_EQ(matches.size(), 1);
   EXPECT_EQ(matches.front()->name(), "zircon-b");
 
-  // New patition scheme.
+  // New partition scheme.
   matches = KnownGuid::Find(std::nullopt, uuid::Uuid(GPT_DURABLE_BOOT_TYPE_GUID), std::nullopt);
   EXPECT_EQ(matches.size(), 1);
   EXPECT_EQ(matches.front()->name(), "durable_boot");
