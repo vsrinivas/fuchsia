@@ -518,7 +518,26 @@ the information about their interleaving is lost.  Zircon currently
 preserves message ordering only within a channel, not between
 channels.
 
-## A note on terminology: "caller" and "callee"
+## Notes on terminology
+
+### Role of the "key" values
+
+In this document, the term "key" has essentially the same meaning as
+in Zircon's current [`zx_object_wait_async()`][zx_object_wait_async]
+and [`zx_port_wait()`][zx_port_wait] syscalls.
+
+[zx_object_wait_async]: <https://fuchsia.googlesource.com/fuchsia/+/dc596b81547a0930c88945bff32c8094a361ba3c/docs/reference/syscalls/object_wait_async.md>
+[zx_port_wait]: <https://fuchsia.googlesource.com/fuchsia/+/dc596b81547a0930c88945bff32c8094a361ba3c/docs/reference/syscalls/port_wait.md>
+
+In the MBMQ model, a key value is used by a process to identify which
+of its incoming channels a message came from, or which of its earlier
+requests an incoming reply correponds to.  A process can use whatever
+key values it wants when passing them to `zx_object_wait_async()` or
+`zx_channel_redirect()`.  We expect that the typical usage will be for
+a process to treat a key as being a pointer to some data structure in
+its address space.
+
+### "Caller" and "callee"
 
 We are using the terms "caller" and "callee" to emphasise that these
 roles are relative to a particular interaction.  The "caller" is the
