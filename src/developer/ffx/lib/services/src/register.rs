@@ -100,17 +100,31 @@ impl ServiceRegister {
         Self { inner: Rc::new(ServiceRegisterInner { service_map: map, ..Default::default() }) }
     }
 
+    /// Returns an error if `self.stopping` has been set to true, otherwise
+    /// returns `Ok(())`.
+    fn invariant_check(&self) -> Result<(), ServiceError> {
+        if self.inner.stopping.load(Ordering::SeqCst) {
+            return Err(ServiceError::BadRegisterState(
+                "Cannot start any services. Shutting down".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    pub async fn start(&self, name: String, cx: Context) -> Result<(), ServiceError> {
+        self.invariant_check()?;
+        let svc =
+            self.inner.service_map.get(&name).ok_or(ServiceError::NoServiceFound(name.clone()))?;
+        svc.start(cx).await.map_err(Into::into)
+    }
+
     pub async fn open(
         &self,
         name: String,
         cx: Context,
         server_channel: fidl::AsyncChannel,
     ) -> Result<(), ServiceError> {
-        if self.inner.stopping.load(Ordering::SeqCst) {
-            return Err(ServiceError::BadRegisterState(
-                "cannot open any new connections. Already shutting down".to_string(),
-            ));
-        }
+        self.invariant_check()?;
         let task_id = self.inner.next_task_id.fetch_add(1, Ordering::SeqCst);
         let svc =
             self.inner.service_map.get(&name).ok_or(ServiceError::NoServiceFound(name.clone()))?;

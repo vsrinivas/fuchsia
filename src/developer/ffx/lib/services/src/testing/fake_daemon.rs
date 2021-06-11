@@ -27,6 +27,10 @@ impl<S> StreamHandler for ClosureStreamHandler<S>
 where
     S: DiscoverableService,
 {
+    async fn start(&self, _cx: Context) -> Result<()> {
+        Ok(())
+    }
+
     async fn open(
         &self,
         cx: Context,

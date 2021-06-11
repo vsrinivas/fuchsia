@@ -25,10 +25,12 @@ use {
     ffx_daemon_core::events::{self, EventHandler},
     ffx_daemon_services::create_service_register_map,
     fidl::endpoints::ClientEnd,
+    fidl::endpoints::DiscoverableService,
     fidl::endpoints::RequestStream,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{
         DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream, DiagnosticsStreamError,
+        RepositoriesMarker,
     },
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, RemoteControlMarker,
@@ -289,10 +291,17 @@ impl Daemon {
 
     pub async fn start(&mut self) -> Result<()> {
         self.load_manual_targets().await;
+        self.start_services().await?;
         self.start_discovery().await?;
         self.start_ascendd().await?;
         self.start_target_expiry(Duration::from_secs(1));
         self.serve().await
+    }
+
+    async fn start_services(&mut self) -> Result<()> {
+        let cx = services::Context::new(self.clone());
+        self.service_register.start(RepositoriesMarker::SERVICE_NAME.to_string(), cx).await?;
+        Ok(())
     }
 
     /// Start all discovery tasks

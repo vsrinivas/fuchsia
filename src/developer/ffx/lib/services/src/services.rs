@@ -58,6 +58,10 @@ where
 
 #[async_trait(?Send)]
 pub trait StreamHandler {
+    /// Starts the service, if possible. For instanced services this would be
+    /// a no-op as the service would no longer later be usable by any caller.
+    async fn start(&self, cx: Context) -> Result<()>;
+
     /// Called when opening a new stream. This stream may be shutdown outside
     /// of the control of this object by the service register.
     async fn open(
@@ -76,6 +80,12 @@ impl<F> StreamHandler for FidlInstancedStreamHandler<F>
 where
     F: FidlService + 'static,
 {
+    /// This is a no-op, as the service cannot be interacted with by the caller
+    /// afterwards.
+    async fn start(&self, _cx: Context) -> Result<()> {
+        Ok(())
+    }
+
     /// Default implementation for the stream handler. The future returned by this
     /// lives for the lifetime of the stream represented by `server`
     async fn open(
@@ -162,6 +172,12 @@ impl<F> StreamHandler for FidlStreamHandler<F>
 where
     F: FidlService + 'static,
 {
+    /// Starts the service at most once. Invoking this more than once will
+    /// return the same result each time (including errors).
+    async fn start(&self, cx: Context) -> Result<()> {
+        self.start_service(&cx).await
+    }
+
     async fn open(
         &self,
         cx: Context,
