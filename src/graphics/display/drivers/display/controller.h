@@ -58,6 +58,8 @@ class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
   edid::Edid edid;
   fbl::Vector<edid::timing_params_t> edid_timings;
   fbl::Vector<audio_types_audio_stream_format_range_t> edid_audio_;
+
+  // This field has no meaning if EDID information is available.
   display_params_t params;
 
   fbl::Array<zx_pixel_format_t> pixel_formats_;

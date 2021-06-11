@@ -73,8 +73,28 @@ namespace display {
 void DisplayInfo::InitializeInspect(inspect::Node* parent_node) {
   ZX_DEBUG_ASSERT(init_done);
   node = parent_node->CreateChild(fbl::StringPrintf("display-%lu", id).c_str());
-  node.CreateUint("width", params.width, &properties);
-  node.CreateUint("height", params.height, &properties);
+
+  if (has_edid) {
+    size_t i = 0;
+    for (const auto& t : edid_timings) {
+      auto child = node.CreateChild(fbl::StringPrintf("timing-parameters-%lu", ++i).c_str());
+      child.CreateDouble("vsync-hz", static_cast<double>(t.vertical_refresh_e2) / 100.0,
+                         &properties);
+      child.CreateUint("pixel-clock-khz", t.pixel_freq_10khz * 10, &properties);
+      child.CreateUint("horizontal-pixels", t.horizontal_addressable, &properties);
+      child.CreateUint("horizontal-blanking", t.horizontal_blanking, &properties);
+      child.CreateUint("horizontal-sync-offset", t.horizontal_front_porch, &properties);
+      child.CreateUint("horizontal-sync-pulse", t.horizontal_sync_pulse, &properties);
+      child.CreateUint("vertical-pixels", t.vertical_addressable, &properties);
+      child.CreateUint("vertical-blanking", t.vertical_blanking, &properties);
+      child.CreateUint("vertical-sync-offset", t.vertical_front_porch, &properties);
+      child.CreateUint("vertical-sync-pulse", t.vertical_sync_pulse, &properties);
+      properties.emplace(std::move(child));
+    }
+  } else {
+    node.CreateUint("width", params.width, &properties);
+    node.CreateUint("height", params.height, &properties);
+  }
 }
 
 void Controller::PopulateDisplayMode(const edid::timing_params_t& params, display_mode_t* mode) {
