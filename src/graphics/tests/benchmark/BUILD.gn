@@ -9,22 +9,20 @@ if (magma_openvx_package != "") {
   import("$magma_openvx_package/fuchsia/openvx-data.gni")
 }
 
-executable("test_memcpy_bin") {
-  output_name = "test_memcpy"
-
-  sources = [ "test_memcpy.cc" ]
+executable("test_membw_bin") {
+  output_name = "test_membw"
+  sources = [ "test_membw.cc" ]
 }
 
-fuchsia_component("test_memcpy_cmp") {
+fuchsia_component("test_membw_component") {
   testonly = true
-  component_name = "test_memcpy"
-  deps = [ ":test_memcpy_bin" ]
-  manifest = "meta/test_memcpy.cmx"
+  component_name = "test_membw"
+  deps = [ ":test_membw_bin" ]
+  manifest = "meta/test_membw.cmx"
 }
 
-fuchsia_test_package("test-memcpy-pkg") {
-  package_name = "test-memcpy"
-  test_components = [ ":test_memcpy_cmp" ]
+fuchsia_test_package("test-membw") {
+  test_components = [ ":test_membw_component" ]
 }
 
 executable("vkcopy_bin") {
@@ -109,7 +107,7 @@ fuchsia_test_package("vkcopy-pkg") {
 group("vulkan-benchmark") {
   testonly = true
   deps = [
-    ":test-memcpy-pkg",
+    ":test-membw",
     ":vkcopy-pkg",
   ]
 }
@@ -121,4 +119,12 @@ group("benchmark") {
   if (magma_openvx_package != "") {
     deps += [ ":vxcopy-pkg" ]
   }
+}
+
+group("linux_x64") {
+  testonly = true
+  deps = [
+    ":test_membw_bin(//build/toolchain:linux_x64)",
+    ":vkcopy_bin(//build/toolchain:linux_x64)",
+  ]
 }
