@@ -15,13 +15,7 @@ dart_library("fuchsia_scenic_flutter") {
   source_dir = "lib"
 
   sources = [
-    "child_view.dart",
-    "child_view_connection.dart",
     "fuchsia_view.dart",
-    "src/child_view.dart",
-    "src/child_view_connection.dart",
-    "src/child_view_render_box.dart",
-    "src/child_view_render_box_2.dart",
     "src/fuchsia_view.dart",
     "src/fuchsia_view_connection.dart",
     "src/fuchsia_view_controller.dart",
@@ -45,7 +39,6 @@ dart_library("fuchsia_scenic_flutter") {
 #   fx test fuchsia_scenic_flutter_unittests
 flutter_test("fuchsia_scenic_flutter_unittests") {
   sources = [
-    "child_view_test.dart",
     "fuchsia_view_connection_test.dart",
     "fuchsia_view_controller_test.dart",
     "fuchsia_view_test.dart",
