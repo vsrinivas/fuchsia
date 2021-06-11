@@ -59,11 +59,6 @@
             path: "/dev/class/gpu",
         },
         {
-            directory: "config-vulkan-icd",
-            rights: [ "r*" ],
-            path: "/config/vulkan/icd.d",
-        },
-        {
             directory: "tmp",
             rights: [ "rw*" ],
             path: "/tmp",

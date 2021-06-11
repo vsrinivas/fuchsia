@@ -62,13 +62,6 @@
             to: "#scenic",
         },
         {
-            directory: "config-data",
-            from: "parent",
-            as: "config-vulkan-icd",
-            to: [ "#scenic" ],
-            subdir: "vulkan-icd/icd.d",
-        },
-        {
             directory: "tmp",
             from: "parent",
             to: [ "#scenic" ],
