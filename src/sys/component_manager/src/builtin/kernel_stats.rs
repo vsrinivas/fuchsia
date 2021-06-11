@@ -115,11 +115,15 @@ impl BuiltinCapability for KernelStats {
                         return Err(anyhow::anyhow!("Duration must be greater than 0"));
                     }
 
+                    // Record `start_time` before the first stats query, and `end_time` *after* the
+                    // second stats query completes. This ensures the "total time" (`end_time` -
+                    // `start_time`) will never be less than the duration spanned by `start_stats`
+                    // to `end_stats`, which would be invalid.
                     let start_time = fuchsia_async::Time::now();
                     let start_stats = self.resource.cpu_stats()?;
                     fuchsia_async::Timer::new(zx::Duration::from_nanos(duration).after_now()).await;
-                    let end_time = fuchsia_async::Time::now();
                     let end_stats = self.resource.cpu_stats()?;
+                    let end_time = fuchsia_async::Time::now();
 
                     let loads = calculate_cpu_loads(start_time, start_stats, end_time, end_stats);
                     responder.send(&loads)?;
@@ -158,7 +162,7 @@ fn calculate_cpu_loads(
 mod tests {
     use {
         super::*, fidl_fuchsia_boot as fboot, fuchsia_async as fasync,
-        fuchsia_component::client::connect_to_protocol,
+        fuchsia_component::client::connect_to_protocol, zx::DurationNum as _,
     };
 
     fn root_resource_available() -> bool {
@@ -273,9 +277,13 @@ mod tests {
         }
 
         let kernel_stats_provider = serve_kernel_stats(OnError::Panic).await?;
-        let cpu_loads = kernel_stats_provider.get_cpu_load(1000).await?;
+        let cpu_loads = kernel_stats_provider.get_cpu_load(1.seconds().into_nanos()).await?;
 
-        assert!(cpu_loads.iter().sum::<f32>() > 0.0);
+        assert!(
+            cpu_loads.iter().all(|l| l > &0.0 && l <= &100.0),
+            "Invalid CPU load value (expected range 0.0 - 100.0, received {:?}",
+            cpu_loads
+        );
 
         Ok(())
     }
