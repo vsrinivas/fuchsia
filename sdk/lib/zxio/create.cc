@@ -149,6 +149,11 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
     case fio::wire::NodeInfo::Tag::kService: {
       return zxio_remote_init(storage, node.TakeChannel().release(), ZX_HANDLE_INVALID);
     }
+    case fio::wire::NodeInfo::Tag::kTty: {
+      auto& tty = info.mutable_tty();
+      zx::eventpair event = std::move(tty.event);
+      return zxio_remote_init(storage, node.TakeChannel().release(), event.release());
+    }
     case fio::wire::NodeInfo::Tag::kVmofile: {
       auto& file = info.mutable_vmofile();
       auto control = fidl::ClientEnd<fio::File>(node.TakeChannel());
@@ -164,8 +169,9 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
       return zxio_vmofile_init(storage, fidl::BindSyncClient(std::move(control)),
                                std::move(file.vmo), file.offset, file.length, result->offset);
     }
-    default:
+    default: {
       zxio_handle_holder_init(storage, node.TakeChannel());
       return ZX_ERR_NOT_SUPPORTED;
+    }
   }
 }

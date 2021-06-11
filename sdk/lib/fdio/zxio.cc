@@ -313,19 +313,6 @@ uint32_t dir::convert_to_posix_mode(zxio_node_protocols_t protocols, zxio_abilit
          zxio_abilities_to_posix_permissions_for_directory(abilities);
 }
 
-zx::status<fdio_ptr> pty::create(fidl::ClientEnd<fpty::Device> device, zx::eventpair event) {
-  fdio_ptr io = fbl::MakeRefCounted<pty>();
-  if (io == nullptr) {
-    return zx::error(ZX_ERR_NO_MEMORY);
-  }
-  zx_status_t status =
-      zxio_remote_init(&io->zxio_storage(), device.channel().release(), event.release());
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(io);
-}
-
 Errno pty::posix_ioctl(int request, va_list va) {
   switch (request) {
     case TIOCGWINSZ: {

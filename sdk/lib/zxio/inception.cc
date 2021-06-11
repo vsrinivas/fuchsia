@@ -70,6 +70,9 @@ zx_status_t zxio_create_with_allocator(fidl::ClientEnd<fuchsia_io::Node> node,
     case fio::wire::NodeInfo::Tag::kService:
       type = ZXIO_OBJECT_TYPE_SERVICE;
       break;
+    case fio::wire::NodeInfo::Tag::kTty:
+      type = ZXIO_OBJECT_TYPE_TTY;
+      break;
     case fio::wire::NodeInfo::Tag::kVmofile:
       type = ZXIO_OBJECT_TYPE_VMOFILE;
       break;

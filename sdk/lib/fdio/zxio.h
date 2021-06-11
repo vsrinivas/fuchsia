@@ -111,8 +111,6 @@ struct dir : public remote {
 };
 
 struct pty : public remote {
-  static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_hardware_pty::Device> device,
-                                     zx::eventpair event);
   Errno posix_ioctl(int request, va_list va) override;
 
  protected:

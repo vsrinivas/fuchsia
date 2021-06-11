@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pty/llcpp/fidl_test_base.h>
 #include <fuchsia/io/llcpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -386,6 +387,70 @@ TEST(CreateWithInfo, Service) {
   ASSERT_OK(zxio_close(zxio));
 
   service_control_loop.Shutdown();
+}
+
+class TestTtyServer : public fuchsia_hardware_pty::testing::Device_TestBase {
+ public:
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
+    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+    completer.Reply(ZX_OK);
+    // After the reply, we should close the connection.
+    completer.Close(ZX_OK);
+  }
+};
+
+TEST(CreateWithInfo, Tty) {
+  auto node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
+  ASSERT_OK(node_ends.status_value());
+  auto [node_client, node_server] = std::move(node_ends.value());
+
+  zx::eventpair event0, event1;
+  ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
+
+  fuchsia_io::wire::Tty tty = {.event = std::move(event1)};
+  fidl::FidlAllocator fidl_allocator;
+  auto node_info = fuchsia_io::wire::NodeInfo::WithTty(fidl_allocator, std::move(tty));
+
+  auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
+    if (type != ZXIO_OBJECT_TYPE_TTY) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    *out_storage = new zxio_storage_t;
+    *out_context = *out_storage;
+    return ZX_OK;
+  };
+
+  async::Loop tty_control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  TestTtyServer server;
+  fidl::ServerEnd<fuchsia_hardware_pty::Device> tty_server(node_server.TakeChannel());
+  fidl::BindServer(tty_control_loop.dispatcher(), std::move(tty_server), &server);
+  tty_control_loop.StartThread("tty_control_thread");
+
+  void* context = nullptr;
+  ASSERT_OK(zxio_create_with_allocator(std::move(node_client), node_info, allocator, &context));
+  ASSERT_NE(context, nullptr);
+
+  // The event in node_info should be consumed by zxio.
+  EXPECT_FALSE(node_info.tty().event.is_valid());
+
+  std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
+  zxio_t* zxio = &(storage->io);
+
+  // Closing the zxio object should close our eventpair's peer event.
+  zx_signals_t pending = 0;
+  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
+
+  ASSERT_OK(zxio_close(zxio));
+
+  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
+
+  tty_control_loop.Shutdown();
 }
 
 class TestVmofileServer : public zxio_tests::TestFileServerBase {
