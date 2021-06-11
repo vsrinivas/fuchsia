@@ -463,29 +463,25 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                     }
                 }
             }
-            OfferDecl::Service(svc_offers) => {
-                let mut pairs = vec![];
-                for svc_offer in &svc_offers.sources {
-                    match &svc_offer.source {
-                        OfferSource::Child(source) => match &svc_offers.target {
-                            OfferTarget::Child(target) => pairs.push((
-                                DependencyNode::Child(source.clone()),
-                                DependencyNode::Child(target.clone()),
-                            )),
-                            OfferTarget::Collection(target) => pairs.push((
-                                DependencyNode::Child(source.clone()),
-                                DependencyNode::Collection(target.clone()),
-                            )),
-                        },
-                        _ => {
-                            // Capabilities offered by the parent, routed in from the component, or
-                            // provided by the framework (based on some other capability) are not
-                            // relevant.
-                            continue;
-                        }
+            OfferDecl::Service(svc_offer) => {
+                match &svc_offer.source {
+                    OfferSource::Child(source) => match &svc_offer.target {
+                        OfferTarget::Child(target) => vec![(
+                            DependencyNode::Child(source.clone()),
+                            DependencyNode::Child(target.clone()),
+                        )],
+                        OfferTarget::Collection(target) => vec![(
+                            DependencyNode::Child(source.clone()),
+                            DependencyNode::Collection(target.clone()),
+                        )],
+                    },
+                    _ => {
+                        // Capabilities offered by the parent, routed in from the component, or
+                        // provided by the framework (based on some other capability) are not
+                        // relevant.
+                        continue;
                     }
                 }
-                pairs
             }
             OfferDecl::Directory(dir_offer) => {
                 match dir_offer.dependency_type {

@@ -51,7 +51,8 @@ macro_rules! fidl_translations_identical {
     };
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(FidlDecl, Debug, Clone, PartialEq, Default)]
+#[fidl_decl(fidl_table = "fsys::ComponentDecl")]
 pub struct ComponentDecl {
     pub program: Option<ProgramDecl>,
     pub uses: Vec<UseDecl>,
@@ -62,217 +63,6 @@ pub struct ComponentDecl {
     pub collections: Vec<CollectionDecl>,
     pub facets: Option<fsys::Object>,
     pub environments: Vec<EnvironmentDecl>,
-}
-
-impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
-    fn fidl_into_native(self) -> ComponentDecl {
-        // When transforming ExposeDecl::Service and OfferDecl::Service from
-        // FIDL to native, we aggregate the declarations by target.
-        let mut exposes = vec![];
-        if let Some(e) = self.exposes {
-            let mut services: HashMap<(ExposeTarget, CapabilityName), Vec<_>> = HashMap::new();
-            for expose in e.into_iter() {
-                match expose {
-                    fsys::ExposeDecl::Service(s) => services
-                        .entry((
-                            s.target.unwrap().fidl_into_native(),
-                            s.target_name.unwrap().fidl_into_native(),
-                        ))
-                        .or_default()
-                        .push(ServiceSource::<ExposeSource> {
-                            source: s.source.unwrap().fidl_into_native(),
-                            source_name: s.source_name.unwrap().fidl_into_native(),
-                        }),
-                    fsys::ExposeDecl::Protocol(ls) => {
-                        exposes.push(ExposeDecl::Protocol(ls.fidl_into_native()))
-                    }
-                    fsys::ExposeDecl::Directory(d) => {
-                        exposes.push(ExposeDecl::Directory(d.fidl_into_native()))
-                    }
-                    fsys::ExposeDecl::Runner(r) => {
-                        exposes.push(ExposeDecl::Runner(r.fidl_into_native()))
-                    }
-                    fsys::ExposeDecl::Resolver(r) => {
-                        exposes.push(ExposeDecl::Resolver(r.fidl_into_native()))
-                    }
-                    fsys::ExposeDeclUnknown!() => panic!("invalid variant"),
-                }
-            }
-            for ((target, target_name), sources) in services.into_iter() {
-                exposes.push(ExposeDecl::Service(ExposeServiceDecl {
-                    sources,
-                    target,
-                    target_name,
-                }))
-            }
-        }
-        let mut offers = vec![];
-        if let Some(o) = self.offers {
-            let mut services: HashMap<(OfferTarget, CapabilityName), Vec<_>> = HashMap::new();
-            for offer in o.into_iter() {
-                match offer {
-                    fsys::OfferDecl::Service(s) => services
-                        .entry((
-                            s.target.unwrap().fidl_into_native(),
-                            s.target_name.unwrap().fidl_into_native(),
-                        ))
-                        .or_default()
-                        .push(ServiceSource::<OfferSource> {
-                            source: s.source.unwrap().fidl_into_native(),
-                            source_name: s.source_name.unwrap().fidl_into_native(),
-                        }),
-                    fsys::OfferDecl::Protocol(ls) => {
-                        offers.push(OfferDecl::Protocol(ls.fidl_into_native()))
-                    }
-                    fsys::OfferDecl::Directory(d) => {
-                        offers.push(OfferDecl::Directory(d.fidl_into_native()))
-                    }
-                    fsys::OfferDecl::Storage(s) => {
-                        offers.push(OfferDecl::Storage(s.fidl_into_native()))
-                    }
-                    fsys::OfferDecl::Runner(s) => {
-                        offers.push(OfferDecl::Runner(s.fidl_into_native()))
-                    }
-                    fsys::OfferDecl::Resolver(r) => {
-                        offers.push(OfferDecl::Resolver(r.fidl_into_native()))
-                    }
-                    fsys::OfferDecl::Event(e) => {
-                        offers.push(OfferDecl::Event(e.fidl_into_native()))
-                    }
-                    fsys::OfferDeclUnknown!() => panic!("invalid variant"),
-                }
-            }
-            for ((target, target_name), sources) in services.into_iter() {
-                offers.push(OfferDecl::Service(OfferServiceDecl { sources, target, target_name }))
-            }
-        }
-        ComponentDecl {
-            program: self.program.map(FidlIntoNative::fidl_into_native),
-            uses: self
-                .uses
-                .into_iter()
-                .map(IntoIterator::into_iter)
-                .flatten()
-                .map(FidlIntoNative::fidl_into_native)
-                .collect(),
-            exposes,
-            offers,
-            capabilities: self
-                .capabilities
-                .into_iter()
-                .map(IntoIterator::into_iter)
-                .flatten()
-                .map(FidlIntoNative::fidl_into_native)
-                .collect(),
-            children: self
-                .children
-                .into_iter()
-                .map(IntoIterator::into_iter)
-                .flatten()
-                .map(FidlIntoNative::fidl_into_native)
-                .collect(),
-            collections: self
-                .collections
-                .into_iter()
-                .map(IntoIterator::into_iter)
-                .flatten()
-                .map(FidlIntoNative::fidl_into_native)
-                .collect(),
-            facets: self.facets.map(FidlIntoNative::fidl_into_native),
-            environments: self
-                .environments
-                .into_iter()
-                .map(IntoIterator::into_iter)
-                .flatten()
-                .map(FidlIntoNative::fidl_into_native)
-                .collect(),
-        }
-    }
-}
-
-impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
-    fn native_into_fidl(self) -> fsys::ComponentDecl {
-        // When transforming ExposeDecl::Service and OfferDecl::Service from
-        // native to FIDL, we disaggregate the declarations.
-        let mut exposes = vec![];
-        for expose in self.exposes.into_iter() {
-            match expose {
-                ExposeDecl::Service(s) => {
-                    for es in s.sources.into_iter() {
-                        exposes.push(fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
-                            source: Some(es.source.native_into_fidl()),
-                            source_name: Some(es.source_name.native_into_fidl()),
-                            target: Some(s.target.clone().native_into_fidl()),
-                            target_name: Some(s.target_name.clone().native_into_fidl()),
-                            ..fsys::ExposeServiceDecl::EMPTY
-                        }))
-                    }
-                }
-                ExposeDecl::Protocol(ls) => {
-                    exposes.push(fsys::ExposeDecl::Protocol(ls.native_into_fidl()))
-                }
-                ExposeDecl::Directory(d) => {
-                    exposes.push(fsys::ExposeDecl::Directory(d.native_into_fidl()))
-                }
-                ExposeDecl::Runner(r) => {
-                    exposes.push(fsys::ExposeDecl::Runner(r.native_into_fidl()))
-                }
-                ExposeDecl::Resolver(r) => {
-                    exposes.push(fsys::ExposeDecl::Resolver(r.native_into_fidl()))
-                }
-            }
-        }
-        let mut offers = vec![];
-        for offer in self.offers.into_iter() {
-            match offer {
-                OfferDecl::Service(s) => {
-                    for os in s.sources.into_iter() {
-                        offers.push(fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                            source: Some(os.source.native_into_fidl()),
-                            source_name: Some(os.source_name.native_into_fidl()),
-                            target: Some(s.target.clone().native_into_fidl()),
-                            target_name: Some(s.target_name.clone().native_into_fidl()),
-                            ..fsys::OfferServiceDecl::EMPTY
-                        }))
-                    }
-                }
-                OfferDecl::Protocol(ls) => {
-                    offers.push(fsys::OfferDecl::Protocol(ls.native_into_fidl()))
-                }
-                OfferDecl::Directory(d) => {
-                    offers.push(fsys::OfferDecl::Directory(d.native_into_fidl()))
-                }
-                OfferDecl::Storage(s) => {
-                    offers.push(fsys::OfferDecl::Storage(s.native_into_fidl()))
-                }
-                OfferDecl::Runner(s) => offers.push(fsys::OfferDecl::Runner(s.native_into_fidl())),
-                OfferDecl::Resolver(r) => {
-                    offers.push(fsys::OfferDecl::Resolver(r.native_into_fidl()))
-                }
-                OfferDecl::Event(e) => offers.push(fsys::OfferDecl::Event(e.native_into_fidl())),
-            }
-        }
-        fsys::ComponentDecl {
-            program: self.program.map(NativeIntoFidl::native_into_fidl),
-            uses: native_into_fidl_vec(self.uses),
-            exposes: if exposes.is_empty() { None } else { Some(exposes) },
-            offers: if offers.is_empty() { None } else { Some(offers) },
-            capabilities: native_into_fidl_vec(self.capabilities),
-            children: native_into_fidl_vec(self.children),
-            collections: native_into_fidl_vec(self.collections),
-            facets: self.facets.map(NativeIntoFidl::native_into_fidl),
-            environments: native_into_fidl_vec(self.environments),
-            ..fsys::ComponentDecl::EMPTY
-        }
-    }
-}
-
-fn native_into_fidl_vec<N: NativeIntoFidl<F>, F>(vec: Vec<N>) -> Option<Vec<F>> {
-    if vec.is_empty() {
-        None
-    } else {
-        Some(vec.into_iter().map(NativeIntoFidl::native_into_fidl).collect())
-    }
 }
 
 impl ComponentDecl {
@@ -466,7 +256,8 @@ pub struct UseEventStreamDecl {
     pub subscriptions: Vec<EventSubscription>,
 }
 
-#[derive(FromEnum, Debug, Clone, PartialEq, Eq)]
+#[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_union = "fsys::OfferDecl")]
 pub enum OfferDecl {
     Service(OfferServiceDecl),
     Protocol(OfferProtocolDecl),
@@ -477,35 +268,13 @@ pub enum OfferDecl {
     Event(OfferEventDecl),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::OfferServiceDecl")]
 pub struct OfferServiceDecl {
-    pub sources: Vec<ServiceSource<OfferSource>>,
+    pub source: OfferSource,
+    pub source_name: CapabilityName,
     pub target: OfferTarget,
     pub target_name: CapabilityName,
-}
-
-impl SourceName for OfferServiceDecl {
-    fn source_name(&self) -> &CapabilityName {
-        // NOTE: The FidlIntoNative transformation guarantees there is at least one source.
-        // TODO(fxbug.dev/71881): Generalize to all sources.
-        &self.sources[0].source_name
-    }
-}
-
-impl OfferDeclCommon for OfferServiceDecl {
-    fn source(&self) -> &OfferSource {
-        // NOTE: The FidlIntoNative transformation guarantees there is at least one source.
-        // TODO(fxbug.dev/71881): Generalize to all sources.
-        &self.sources[0].source
-    }
-
-    fn target(&self) -> &OfferTarget {
-        &self.target
-    }
-
-    fn target_name(&self) -> &CapabilityName {
-        &self.target_name
-    }
 }
 
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
@@ -568,7 +337,8 @@ pub struct OfferEventDecl {
     pub mode: EventMode,
 }
 
-#[derive(FromEnum, Debug, Clone, PartialEq, Eq)]
+#[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_union = "fsys::ExposeDecl")]
 pub enum ExposeDecl {
     Service(ExposeServiceDecl),
     Protocol(ExposeProtocolDecl),
@@ -621,35 +391,13 @@ impl ExposeDeclCommon for ExposeDecl {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ExposeServiceDecl")]
 pub struct ExposeServiceDecl {
-    pub sources: Vec<ServiceSource<ExposeSource>>,
+    pub source: ExposeSource,
+    pub source_name: CapabilityName,
     pub target: ExposeTarget,
     pub target_name: CapabilityName,
-}
-
-impl SourceName for ExposeServiceDecl {
-    fn source_name(&self) -> &CapabilityName {
-        // NOTE: The FidlIntoNative transformation guarantees there is at least one source.
-        // TODO(fxbug.dev/71881): Generalize to all sources.
-        &self.sources[0].source_name
-    }
-}
-
-impl ExposeDeclCommon for ExposeServiceDecl {
-    fn source(&self) -> &ExposeSource {
-        // NOTE: The FidlIntoNative transformation guarantees there is at least one source.
-        // TODO(fxbug.dev/71881): Generalize to all sources.
-        &self.sources[0].source
-    }
-
-    fn target(&self) -> &ExposeTarget {
-        &self.target
-    }
-
-    fn target_name(&self) -> &CapabilityName {
-        &self.target_name
-    }
 }
 
 #[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
@@ -2063,16 +1811,14 @@ mod tests {
                             target_name: "pkg".try_into().unwrap(),
                         }),
                         ExposeDecl::Service(ExposeServiceDecl {
-                            sources: vec![
-                                ServiceSource::<ExposeSource> {
-                                    source: ExposeSource::Child("netstack".to_string()),
-                                    source_name: "netstack1".try_into().unwrap(),
-                                },
-                                ServiceSource::<ExposeSource> {
-                                    source: ExposeSource::Child("netstack".to_string()),
-                                    source_name: "netstack2".try_into().unwrap(),
-                                },
-                            ],
+                            source: ExposeSource::Child("netstack".to_string()),
+                            source_name: "netstack1".try_into().unwrap(),
+                            target_name: "mynetstack".try_into().unwrap(),
+                            target: ExposeTarget::Parent,
+                        }),
+                        ExposeDecl::Service(ExposeServiceDecl {
+                            source: ExposeSource::Child("netstack".to_string()),
+                            source_name: "netstack2".try_into().unwrap(),
                             target_name: "mynetstack".try_into().unwrap(),
                             target: ExposeTarget::Parent,
                         }),
@@ -2121,16 +1867,14 @@ mod tests {
                             mode: EventMode::Sync,
                         }),
                         OfferDecl::Service(OfferServiceDecl {
-                            sources: vec![
-                                ServiceSource::<OfferSource> {
                                     source: OfferSource::Parent,
                                     source_name: "netstack1".try_into().unwrap(),
-                                },
-                                ServiceSource::<OfferSource> {
+                            target: OfferTarget::Child("echo".to_string()),
+                            target_name: "mynetstack".try_into().unwrap(),
+                        }),
+                        OfferDecl::Service(OfferServiceDecl {
                                     source: OfferSource::Parent,
                                     source_name: "netstack2".try_into().unwrap(),
-                                },
-                            ],
                             target: OfferTarget::Child("echo".to_string()),
                             target_name: "mynetstack".try_into().unwrap(),
                         }),

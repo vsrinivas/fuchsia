@@ -348,12 +348,10 @@ impl ComponentCapability {
             ComponentCapability::Use(use_) => {
                 matches!(use_, UseDecl::Protocol(_) | UseDecl::Directory(_) | UseDecl::Service(_))
             }
-            ComponentCapability::Expose(expose) => {
-                matches!(
-                    expose,
-                    ExposeDecl::Protocol(_) | ExposeDecl::Directory(_) | ExposeDecl::Service(_)
-                )
-            }
+            ComponentCapability::Expose(expose) => matches!(
+                expose,
+                ExposeDecl::Protocol(_) | ExposeDecl::Directory(_) | ExposeDecl::Service(_)
+            ),
             ComponentCapability::Offer(offer) => matches!(
                 offer,
                 OfferDecl::Protocol(_) | OfferDecl::Directory(_) | OfferDecl::Service(_)
@@ -446,11 +444,7 @@ impl ComponentCapability {
                 ExposeDecl::Directory(ExposeDirectoryDecl { source_name, .. }) => Some(source_name),
                 ExposeDecl::Runner(ExposeRunnerDecl { source_name, .. }) => Some(source_name),
                 ExposeDecl::Resolver(ExposeResolverDecl { source_name, .. }) => Some(source_name),
-                ExposeDecl::Service(ExposeServiceDecl { sources, .. }) => {
-                    // NOTE: The cm_rust transformation guarantees there is at least one source.
-                    // TODO(fxbug.dev/71881): Generalize to many sources.
-                    Some(&sources[0].source_name)
-                }
+                ExposeDecl::Service(ExposeServiceDecl { source_name, .. }) => Some(source_name),
             },
             ComponentCapability::Offer(offer) => match offer {
                 OfferDecl::Protocol(OfferProtocolDecl { source_name, .. }) => Some(source_name),
@@ -459,11 +453,7 @@ impl ComponentCapability {
                 OfferDecl::Event(OfferEventDecl { source_name, .. }) => Some(source_name),
                 OfferDecl::Storage(OfferStorageDecl { source_name, .. }) => Some(source_name),
                 OfferDecl::Resolver(OfferResolverDecl { source_name, .. }) => Some(source_name),
-                OfferDecl::Service(OfferServiceDecl { sources, .. }) => {
-                    // NOTE: The cm_rust transformation guarantees there is at least one source.
-                    // TODO(fxbug.dev/71881): Generalize to many sources.
-                    Some(&sources[0].source_name)
-                }
+                OfferDecl::Service(OfferServiceDecl { source_name, .. }) => Some(source_name),
             },
         }
     }

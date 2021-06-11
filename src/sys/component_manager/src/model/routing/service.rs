@@ -268,10 +268,9 @@ mod tests {
                         target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
                     }))
                     .expose(ExposeDecl::Service(ExposeServiceDecl {
-                        sources: vec![ServiceSource {
-                            source: ExposeSource::Collection("coll".to_string()),
-                            source_name: "my.service.Service".into(),
-                        }],
+                        source: ExposeSource::Collection("coll".to_string()),
+                        source_name: "my.service.Service".into(),
+
                         target_name: "my.service.Service".into(),
                         target: ExposeTarget::Parent,
                     }))
@@ -282,10 +281,9 @@ mod tests {
                 "foo",
                 ComponentDeclBuilder::new()
                     .expose(ExposeDecl::Service(ExposeServiceDecl {
-                        sources: vec![ServiceSource {
-                            source: ExposeSource::Self_,
-                            source_name: "my.service.Service".into(),
-                        }],
+                        source: ExposeSource::Self_,
+                        source_name: "my.service.Service".into(),
+
                         target_name: "my.service.Service".into(),
                         target: ExposeTarget::Parent,
                     }))
@@ -299,10 +297,9 @@ mod tests {
                 "bar",
                 ComponentDeclBuilder::new()
                     .expose(ExposeDecl::Service(ExposeServiceDecl {
-                        sources: vec![ServiceSource {
-                            source: ExposeSource::Self_,
-                            source_name: "my.service.Service".into(),
-                        }],
+                        source: ExposeSource::Self_,
+                        source_name: "my.service.Service".into(),
+
                         target_name: "my.service.Service".into(),
                         target: ExposeTarget::Parent,
                     }))

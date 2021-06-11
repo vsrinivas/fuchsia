@@ -1671,10 +1671,9 @@ async fn use_service_from_parent() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Service(OfferServiceDecl {
-                    sources: vec![ServiceSource {
-                        source: OfferSource::Self_,
-                        source_name: "foo".into(),
-                    }],
+                    source: OfferSource::Self_,
+                    source_name: "foo".into(),
+
                     target_name: "foo".into(),
                     target: OfferTarget::Child("b".to_string()),
                 }))
@@ -1732,10 +1731,8 @@ async fn use_service_from_child() {
                     source_path: "/svc/foo".try_into().unwrap(),
                 })
                 .expose(ExposeDecl::Service(ExposeServiceDecl {
-                    sources: vec![ServiceSource {
-                        source: ExposeSource::Self_,
-                        source_name: "foo".into(),
-                    }],
+                    source: ExposeSource::Self_,
+                    source_name: "foo".into(),
                     target_name: "foo".into(),
                     target: ExposeTarget::Parent,
                 }))
@@ -1780,10 +1777,8 @@ async fn route_service_from_sibling() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Service(OfferServiceDecl {
-                    sources: vec![ServiceSource {
-                        source: OfferSource::Child("c".into()),
-                        source_name: "foo".into(),
-                    }],
+                    source: OfferSource::Child("c".into()),
+                    source_name: "foo".into(),
                     target_name: "foo".into(),
                     target: OfferTarget::Child("b".to_string()),
                 }))
@@ -1796,10 +1791,8 @@ async fn route_service_from_sibling() {
             "c",
             ComponentDeclBuilder::new()
                 .expose(ExposeDecl::Service(ExposeServiceDecl {
-                    sources: vec![ServiceSource {
-                        source: ExposeSource::Self_,
-                        source_name: "foo".into(),
-                    }],
+                    source: ExposeSource::Self_,
+                    source_name: "foo".into(),
                     target_name: "foo".into(),
                     target: ExposeTarget::Parent,
                 }))
@@ -1843,10 +1836,9 @@ async fn route_service_from_parent_collection() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Service(OfferServiceDecl {
-                    sources: vec![ServiceSource {
-                        source: OfferSource::Collection("coll".to_string()),
-                        source_name: "foo".into(),
-                    }],
+                    source: OfferSource::Collection("coll".to_string()),
+                    source_name: "foo".into(),
+
                     target_name: "foo".into(),
                     target: OfferTarget::Child("b".to_string()),
                 }))
@@ -1894,10 +1886,8 @@ async fn list_service_instances_from_collection() {
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 }))
                 .offer(OfferDecl::Service(OfferServiceDecl {
-                    sources: vec![ServiceSource {
-                        source: OfferSource::Collection("coll".to_string()),
-                        source_name: "foo".into(),
-                    }],
+                    source: OfferSource::Collection("coll".to_string()),
+                    source_name: "foo".into(),
                     target_name: "foo".into(),
                     target: OfferTarget::Child("client".to_string()),
                 }))
@@ -1910,10 +1900,8 @@ async fn list_service_instances_from_collection() {
             "service_child_a",
             ComponentDeclBuilder::new()
                 .expose(ExposeDecl::Service(ExposeServiceDecl {
-                    sources: vec![ServiceSource {
-                        source: ExposeSource::Self_,
-                        source_name: "foo".into(),
-                    }],
+                    source: ExposeSource::Self_,
+                    source_name: "foo".into(),
                     target: ExposeTarget::Parent,
                     target_name: "foo".into(),
                 }))
@@ -1927,10 +1915,8 @@ async fn list_service_instances_from_collection() {
             "service_child_b",
             ComponentDeclBuilder::new()
                 .expose(ExposeDecl::Service(ExposeServiceDecl {
-                    sources: vec![ServiceSource {
-                        source: ExposeSource::Self_,
-                        source_name: "foo".into(),
-                    }],
+                    source: ExposeSource::Self_,
+                    source_name: "foo".into(),
                     target: ExposeTarget::Parent,
                     target_name: "foo".into(),
                 }))
@@ -2015,10 +2001,8 @@ async fn use_service_from_sibling_collection() {
             "a",
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Service(OfferServiceDecl {
-                    sources: vec![ServiceSource {
-                        source: OfferSource::Child("c".to_string()),
-                        source_name: "my.service.Service".into(),
-                    }],
+                    source: OfferSource::Child("c".to_string()),
+                    source_name: "my.service.Service".into(),
                     target: OfferTarget::Child("b".to_string()),
                     target_name: "my.service.Service".into(),
                 }))
@@ -2045,10 +2029,8 @@ async fn use_service_from_sibling_collection() {
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
                 }))
                 .expose(ExposeDecl::Service(ExposeServiceDecl {
-                    sources: vec![ServiceSource {
-                        source: ExposeSource::Collection("coll".to_string()),
-                        source_name: "my.service.Service".into(),
-                    }],
+                    source: ExposeSource::Collection("coll".to_string()),
+                    source_name: "my.service.Service".into(),
                     target_name: "my.service.Service".into(),
                     target: ExposeTarget::Parent,
                 }))
@@ -2059,10 +2041,9 @@ async fn use_service_from_sibling_collection() {
             "foo",
             ComponentDeclBuilder::new()
                 .expose(ExposeDecl::Service(ExposeServiceDecl {
-                    sources: vec![ServiceSource {
-                        source: ExposeSource::Self_,
-                        source_name: "my.service.Service".into(),
-                    }],
+                    source: ExposeSource::Self_,
+                    source_name: "my.service.Service".into(),
+
                     target_name: "my.service.Service".into(),
                     target: ExposeTarget::Parent,
                 }))
@@ -2076,10 +2057,9 @@ async fn use_service_from_sibling_collection() {
             "bar",
             ComponentDeclBuilder::new()
                 .expose(ExposeDecl::Service(ExposeServiceDecl {
-                    sources: vec![ServiceSource {
-                        source: ExposeSource::Self_,
-                        source_name: "my.service.Service".into(),
-                    }],
+                    source: ExposeSource::Self_,
+                    source_name: "my.service.Service".into(),
+
                     target_name: "my.service.Service".into(),
                     target: ExposeTarget::Parent,
                 }))
