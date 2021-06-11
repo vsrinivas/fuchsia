@@ -108,6 +108,11 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fuchsia_io::Node> node,
                                       fuchsia_io::wire::NodeInfo& node_info,
                                       zxio_storage_t* storage);
 
+// vmofile ---------------------------------------------------------------------
+
+zx_status_t zxio_vmofile_init(zxio_storage_t* file, fidl::WireSyncClient<fuchsia_io::File> control,
+                              zx::vmo vmo, zx_off_t offset, zx_off_t length, zx_off_t seek);
+
 zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, uint32_t flags,
                                 zx_handle_t* out_vmo, size_t* out_size);
 

@@ -308,21 +308,6 @@ zx::status<fdio_ptr> remote::create(zx::vmo vmo, zx::stream stream) {
   return zx::ok(io);
 }
 
-zx::status<fdio_ptr> remote::create(fidl::ClientEnd<fio::File> file, zx::vmo vmo, zx_off_t offset,
-                                    zx_off_t length, zx_off_t seek) {
-  // NB: vmofile doesn't support some of the operations, but it can fail in zxio.
-  fdio_ptr io = fbl::MakeRefCounted<remote>();
-  if (io == nullptr) {
-    return zx::error(ZX_ERR_NO_MEMORY);
-  }
-  zx_status_t status = zxio_vmofile_init(&io->zxio_storage(), fidl::BindSyncClient(std::move(file)),
-                                         std::move(vmo), offset, length, seek);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(io);
-}
-
 uint32_t dir::convert_to_posix_mode(zxio_node_protocols_t protocols, zxio_abilities_t abilities) {
   return zxio_node_protocols_to_posix_type(protocols) |
          zxio_abilities_to_posix_permissions_for_directory(abilities);

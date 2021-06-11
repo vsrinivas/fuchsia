@@ -4,7 +4,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async/cpp/task.h>
 #include <lib/zx/vmo.h>
 #include <lib/zxio/inception.h>
 #include <string.h>
@@ -275,4 +274,95 @@ TEST(CreateWithInfo, Pipe) {
   EXPECT_EQ(buffer, data);
 
   ASSERT_OK(zxio_close(zxio));
+}
+
+class TestVmofileServer : public zxio_tests::TestFileServerBase {
+ public:
+  explicit TestVmofileServer(uint64_t seek_start_offset) : seek_start_offset_(seek_start_offset) {}
+
+ private:
+  // Constructing a Vmofile instance requires a server responding to a seek call
+  // over the fuchsia.io.File protocol. This is a test implementation smart enough
+  // to respond to this call.
+  void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final {
+    if (request->start != fuchsia_io::wire::SeekOrigin::kStart || request->offset != 0) {
+      ADD_FAILURE("unsupported Seek received start %d offset %ld", request->start, request->offset);
+      completer.Close(ZX_ERR_NOT_SUPPORTED);
+      return;
+    }
+    completer.Reply(ZX_OK, seek_start_offset_);
+  }
+
+  const uint64_t seek_start_offset_;
+};
+
+TEST(CreateWithInfo, Vmofile) {
+  auto file_ends = fidl::CreateEndpoints<fuchsia_io::File>();
+  ASSERT_OK(file_ends.status_value());
+  auto [file_client, file_server] = std::move(file_ends.value());
+
+  const uint64_t vmo_size = 5678;
+  const uint64_t file_start_offset = 1234;
+  const uint64_t file_length = 345;
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(vmo_size, 0u, &vmo));
+
+  fuchsia_io::wire::Vmofile vmofile = {
+      .vmo = std::move(vmo),
+      .offset = file_start_offset,
+      .length = file_length,
+  };
+  fidl::FidlAllocator fidl_allocator;
+  auto node_info = fuchsia_io::wire::NodeInfo::WithVmofile(fidl_allocator, std::move(vmofile));
+
+  auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
+    if (type != ZXIO_OBJECT_TYPE_VMOFILE) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    *out_storage = new zxio_storage_t;
+    *out_context = *out_storage;
+    return ZX_OK;
+  };
+
+  const uint64_t offset_within_file = 234;
+
+  async::Loop vmofile_control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  TestVmofileServer server(offset_within_file);
+  fidl::BindServer(vmofile_control_loop.dispatcher(), std::move(file_server), &server);
+  vmofile_control_loop.StartThread("vmofile_control_thread");
+
+  void* context = nullptr;
+  fidl::ClientEnd<fuchsia_io::Node> node_client(file_client.TakeChannel());
+  ASSERT_OK(zxio_create_with_allocator(std::move(node_client), node_info, allocator, &context));
+  ASSERT_NE(context, nullptr);
+
+  // The vmo in node_info should be consumed by zxio.
+  EXPECT_FALSE(node_info.vmofile().vmo.is_valid());
+
+  std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
+  zxio_t* zxio = &(storage->io);
+
+  // Sanity check the zxio object.
+  zxio_node_attributes_t attr;
+  EXPECT_OK(zxio_attr_get(zxio, &attr));
+
+  EXPECT_TRUE(attr.has.content_size);
+  EXPECT_EQ(attr.content_size, file_length);
+
+  size_t seek_current_offset = 0u;
+  EXPECT_OK(zxio_seek(zxio, ZXIO_SEEK_ORIGIN_CURRENT, 0, &seek_current_offset));
+  EXPECT_EQ(static_cast<size_t>(offset_within_file), seek_current_offset);
+
+  size_t seek_start_offset = 0u;
+  EXPECT_OK(zxio_seek(zxio, ZXIO_SEEK_ORIGIN_START, 0, &seek_start_offset));
+  EXPECT_EQ(0, seek_start_offset);
+
+  size_t seek_end_offset = 0u;
+  EXPECT_OK(zxio_seek(zxio, ZXIO_SEEK_ORIGIN_END, 0, &seek_end_offset));
+  EXPECT_EQ(static_cast<size_t>(file_length), seek_end_offset);
+
+  ASSERT_OK(zxio_close(zxio));
+
+  vmofile_control_loop.Shutdown();
 }

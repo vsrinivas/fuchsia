@@ -88,11 +88,6 @@ uint32_t zxio_abilities_to_posix_permissions_for_directory(zxio_abilities_t abil
 // The |offset| is the initial seek offset within the file.
 zx_status_t zxio_vmo_init(zxio_storage_t* file, zx::vmo vmo, zx::stream stream);
 
-// vmofile ---------------------------------------------------------------------
-
-zx_status_t zxio_vmofile_init(zxio_storage_t* file, fidl::WireSyncClient<fuchsia_io::File> control,
-                              zx::vmo vmo, zx_off_t offset, zx_off_t length, zx_off_t seek);
-
 // pipe ------------------------------------------------------------------------
 
 // A |zxio_t| backend that uses a Zircon socket object.

@@ -68,6 +68,9 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
     case ZXIO_OBJECT_TYPE_VMO:
       io = fbl::MakeRefCounted<fdio_internal::remote>();
       break;
+    case ZXIO_OBJECT_TYPE_VMOFILE:
+      io = fbl::MakeRefCounted<fdio_internal::remote>();
+      break;
     default:
       // Unknown type - allocate a generic fdio object so that zxio_create can
       // initialize a zxio object holding the object for us.
@@ -85,16 +88,19 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
 zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo info) {
   void* context = nullptr;
   zx_status_t status = zxio_create_with_allocator(std::move(node), info, ZxioAllocator, &context);
+  // If the status is ZX_ERR_NO_MEMORY, then zxio_create_with_allocator has not allocated
+  // anything and we can return immediately with no cleanup.
+  if (status == ZX_ERR_NO_MEMORY) {
+    ZX_ASSERT(context == nullptr);
+    return zx::error(status);
+  }
+  // Otherwise, ZxioAllocator has allocated an fdio instance that we now own.
+  fdio_ptr io = fbl::ImportFromRawPtr(static_cast<fdio*>(context));
   switch (status) {
     case ZX_OK: {
-      return zx::ok(fbl::ImportFromRawPtr(static_cast<fdio*>(context)));
-    }
-    case ZX_ERR_NO_MEMORY: {
-      ZX_ASSERT(context == nullptr);
-      return zx::error(status);
+      return zx::ok(std::move(io));
     }
     case ZX_ERR_NOT_SUPPORTED: {
-      fdio_ptr io = fbl::ImportFromRawPtr(static_cast<fdio*>(context));
       zx::handle retrieved_handle;
       status = io->unwrap(retrieved_handle.reset_and_get_address());
       if (status != ZX_OK) {
@@ -119,21 +125,6 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
       auto& tty = info.mutable_tty();
       return fdio_internal::pty::create(fidl::ClientEnd<fpty::Device>(node.TakeChannel()),
                                         std::move(tty.event));
-    }
-    case fio::wire::NodeInfo::Tag::kVmofile: {
-      auto& file = info.mutable_vmofile();
-      auto control = fidl::ClientEnd<fio::File>(node.TakeChannel());
-      auto result = fidl::WireCall(control.borrow()).Seek(0, fio::wire::SeekOrigin::kStart);
-      zx_status_t status = result.status();
-      if (status != ZX_OK) {
-        return zx::error(status);
-      }
-      status = result->s;
-      if (status != ZX_OK) {
-        return zx::error(status);
-      }
-      return fdio_internal::remote::create(std::move(control), std::move(file.vmo), file.offset,
-                                           file.length, result->offset);
     }
     case fio::wire::NodeInfo::Tag::kDatagramSocket: {
       auto& socket = info.mutable_datagram_socket();

@@ -9,6 +9,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "sdk/lib/zxio/private.h"
+
 constexpr const char* ALPHABET = "abcdefghijklmnopqrstuvwxyz";
 
 class VmoFileNonZeroOffsetTest : public zxtest::Test {

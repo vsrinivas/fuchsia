@@ -79,16 +79,6 @@ struct remote : public zxio {
   static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node, zx::eventpair event);
   static zx::status<fdio_ptr> create(zx::vmo vmo, zx::stream stream);
 
-  // Creates an |fdio_t| for a VMO file.
-  //
-  // * |vmo| is the VMO that contains the contents of the file.
-  // * |offset| is the index of the first byte of the file in the VMO.
-  // * |length| is the number of bytes in the file.
-  // * |seek| is the initial seek offset within the file (i.e., relative to
-  //   |offset| within the underlying VMO).
-  static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::File> file, zx::vmo vmo,
-                                     zx_off_t offset, zx_off_t length, zx_off_t seek);
-
   zx::status<fdio_ptr> open(const char* path, uint32_t flags, uint32_t mode) override;
   zx_status_t borrow_channel(zx_handle_t* out_borrowed) override;
   void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* signals) override;

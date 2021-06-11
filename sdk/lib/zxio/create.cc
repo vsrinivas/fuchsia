@@ -141,6 +141,21 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
       }
       return zxio_pipe_init(storage, std::move(socket), socket_info);
     }
+    case fio::wire::NodeInfo::Tag::kVmofile: {
+      auto& file = info.mutable_vmofile();
+      auto control = fidl::ClientEnd<fio::File>(node.TakeChannel());
+      auto result = fidl::WireCall(control.borrow()).Seek(0, fio::wire::SeekOrigin::kStart);
+      zx_status_t status = result.status();
+      if (status != ZX_OK) {
+        return status;
+      }
+      status = result->s;
+      if (status != ZX_OK) {
+        return status;
+      }
+      return zxio_vmofile_init(storage, fidl::BindSyncClient(std::move(control)),
+                               std::move(file.vmo), file.offset, file.length, result->offset);
+    }
     default:
       zxio_handle_holder_init(storage, node.TakeChannel());
       return ZX_ERR_NOT_SUPPORTED;
