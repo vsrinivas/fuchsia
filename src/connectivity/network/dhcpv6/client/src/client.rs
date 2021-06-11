@@ -100,7 +100,7 @@ pub(crate) trait AsyncSocket<'a> {
 }
 
 impl<'a> AsyncSocket<'a> for fasync::net::UdpSocket {
-    type RecvFromFut = fasync::net::RecvFrom<'a>;
+    type RecvFromFut = fasync::net::UdpRecvFrom<'a>;
     type SendToFut = fasync::net::SendTo<'a>;
 
     fn recv_from(&'a self, buf: &'a mut [u8]) -> Self::RecvFromFut {
