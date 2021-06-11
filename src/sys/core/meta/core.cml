@@ -257,9 +257,7 @@
         {
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
             from: "#appmgr",
-            to: [
-                "#sampler",
-            ],
+            to: [ "#sampler" ],
             dependency: "weak_for_migration",
         },
         {
@@ -268,12 +266,10 @@
             to: "#universe-resolver",
         },
         {
-            directory: "pkgfs",
-            from: "parent",
-            to: "#pkg-cache",
-        },
-        {
-            directory: "blob",
+            directory: [
+                "blob",
+                "pkgfs",
+            ],
             from: "parent",
             to: "#pkg-cache",
         },
@@ -777,37 +773,24 @@
         {
             directory: "boot",
             from: "parent",
-            to: [
-                "#appmgr",
-                "#last_reboot",
+            to: "#last_reboot",
+        },
+        {
+            directory: [
+                "blob",
+                "boot",
+                "dev",
+                "durable",
+                "factory",
+                "hub",
+                "install",
+                "minfs",
+                "system",
+                "tmp",
+                "volume",
             ],
-        },
-        {
-            directory: "dev",
             from: "parent",
             to: "#appmgr",
-        },
-        {
-            directory: "durable",
-            from: "parent",
-            to: "#appmgr",
-        },
-        {
-            directory: "factory",
-            from: "parent",
-            to: "#appmgr",
-        },
-        {
-            directory: "minfs",
-            from: "parent",
-            to: "#appmgr",
-        },
-        {
-            directory: "minfs",
-            from: "parent",
-            as: "ssh",
-            to: [ "#ssh-key-manager" ],
-            subdir: "ssh",
         },
         {
             directory: "pkgfs",
@@ -816,29 +799,11 @@
             rights: [ "rx*" ],
         },
         {
-            directory: "system",
+            directory: "minfs",
             from: "parent",
-            to: "#appmgr",
-        },
-        {
-            directory: "blob",
-            from: "parent",
-            to: "#appmgr",
-        },
-        {
-            directory: "volume",
-            from: "parent",
-            to: "#appmgr",
-        },
-        {
-            directory: "install",
-            from: "parent",
-            to: "#appmgr",
-        },
-        {
-            directory: "tmp",
-            from: "parent",
-            to: "#appmgr",
+            as: "ssh",
+            to: [ "#ssh-key-manager" ],
+            subdir: "ssh",
         },
 
         // Note: this is the v2 root hub. The hub in the `expose` section below
@@ -846,23 +811,14 @@
         {
             directory: "hub",
             from: "parent",
-            to: [
-                "#appmgr",
-                "#remote-control",
+            to: "#remote-control",
+        },
+        {
+            storage: [
+                "cache",
+                "data",
+                "tmp",
             ],
-        },
-        {
-            storage: "cache",
-            from: "self",
-            to: "#session-manager",
-        },
-        {
-            storage: "data",
-            from: "self",
-            to: "#session-manager",
-        },
-        {
-            storage: "tmp",
             from: "self",
             to: "#session-manager",
         },
@@ -882,7 +838,7 @@
             subdir: "class/input-report",
         },
         {
-            protocol: [ "fuchsia.hardware.power.statecontrol.Admin" ],
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
             from: "parent",
             to: "#session-manager",
         },
@@ -960,12 +916,10 @@
             to: "#appmgr",
         },
         {
-            storage: "tmp",
-            from: "self",
-            to: "#last_reboot",
-        },
-        {
-            storage: "cache",
+            storage: [
+                "cache",
+                "tmp",
+            ],
             from: "self",
             to: "#last_reboot",
         },

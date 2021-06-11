@@ -78,64 +78,22 @@
             to: "#bootstrap",
         },
 
-        // ...and the rest of these are services provided by components for each other
+        // ...and the rest of these are capabilities provided by components for each other
         {
-            directory: "dev",
-            from: "#bootstrap",
-            to: "#core",
-        },
-        {
-            directory: "durable",
-            from: "#bootstrap",
-            to: "#core",
-        },
-        {
-            directory: "factory",
-            from: "#bootstrap",
-            to: "#core",
-        },
-        {
-            directory: "minfs",
-            from: "#bootstrap",
-            to: "#core",
-        },
-        {
-            directory: "pkgfs",
-            from: "#bootstrap",
-            to: "#core",
-        },
-        {
-            directory: "build-info",
-            from: "#bootstrap",
-            to: "#core",
-        },
-        {
-            directory: "config-data",
-            from: "#bootstrap",
-            to: "#core",
-        },
-        {
-            directory: "deprecated-misc-storage",
-            from: "#bootstrap",
-            to: "#core",
-        },
-        {
-            directory: "root-ssl-certificates",
-            from: "#bootstrap",
-            to: "#core",
-        },
-        {
-            directory: "system",
-            from: "#bootstrap",
-            to: "#core",
-        },
-        {
-            directory: "blob",
-            from: "#bootstrap",
-            to: "#core",
-        },
-        {
-            directory: "tmp",
+            directory: [
+                "blob",
+                "build-info",
+                "config-data",
+                "deprecated-misc-storage",
+                "dev",
+                "durable",
+                "factory",
+                "minfs",
+                "pkgfs",
+                "root-ssl-certificates",
+                "system",
+                "tmp",
+            ],
             from: "#bootstrap",
             to: "#core",
         },

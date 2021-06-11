@@ -465,16 +465,16 @@
             subdir: "class/display-controller",
         },
         {
-            directory: "minfs",
-            from: "#fshost",
-            to: [
-                "#console-launcher",
-                "#netsvc",
+            directory: [
+                "bin",
+                "blob",
+                "install",
+                "minfs",
+                "pkgfs",
+                "system",
+                "system-delayed",
+                "tmp",
             ],
-            dependency: "weak_for_migration",
-        },
-        {
-            directory: "pkgfs",
             from: "#fshost",
             to: [
                 "#console-launcher",
@@ -485,56 +485,8 @@
         {
             directory: "system-delayed",
             from: "#fshost",
-            to: [
-                "#console-launcher",
-                "#driver_manager",
-                "#netsvc",
-            ],
+            to: "#driver_manager",
             dependency: "weak_for_migration",
-        },
-        {
-            directory: "system",
-            from: "#fshost",
-            to: [
-                "#console-launcher",
-                "#netsvc",
-            ],
-            dependency: "weak_for_migration",
-        },
-        {
-            directory: "blob",
-            from: "#fshost",
-            to: [
-                "#console-launcher",
-                "#netsvc",
-            ],
-            dependency: "weak_for_migration",
-        },
-        {
-            directory: "install",
-            from: "#fshost",
-            to: [
-                "#console-launcher",
-                "#netsvc",
-            ],
-            dependency: "weak_for_migration",
-        },
-        {
-            directory: "tmp",
-            from: "#fshost",
-            to: [
-                "#console-launcher",
-                "#netsvc",
-            ],
-            dependency: "weak_for_migration",
-        },
-        {
-            directory: "bin",
-            from: "#fshost",
-            to: [
-                "#console-launcher",
-                "#netsvc",
-            ],
         },
         {
             directory: "volume",
@@ -831,51 +783,20 @@
             from: "#driver_manager",
         },
         {
-            directory: "build-info",
-            from: "#fshost",
-        },
-        {
-            directory: "config-data",
-            from: "#fshost",
-        },
-        {
-            directory: "deprecated-misc-storage",
-            from: "#fshost",
-        },
-        {
-            directory: "root-ssl-certificates",
-            from: "#fshost",
-        },
-        {
-            directory: "factory",
-            from: "#fshost",
-        },
-        {
-            directory: "durable",
-            from: "#fshost",
-        },
-        {
-            directory: "minfs",
-            from: "#fshost",
-        },
-        {
-            directory: "pkgfs",
-            from: "#fshost",
-        },
-        {
-            directory: "system",
-            from: "#fshost",
-        },
-        {
-            directory: "blob",
-            from: "#fshost",
-        },
-        {
-            directory: "tmp",
-            from: "#fshost",
-        },
-        {
-            directory: "bin",
+            directory: [
+                "bin",
+                "blob",
+                "build-info",
+                "config-data",
+                "deprecated-misc-storage",
+                "durable",
+                "factory",
+                "minfs",
+                "pkgfs",
+                "root-ssl-certificates",
+                "system",
+                "tmp",
+            ],
             from: "#fshost",
         },
         {
