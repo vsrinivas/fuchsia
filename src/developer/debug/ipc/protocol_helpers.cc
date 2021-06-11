@@ -44,7 +44,7 @@ bool Deserialize(MessageReader* reader, Register* reg) {
   if (!reader->ReadUint32(&length))
     return false;
   reg->data.resize(length);
-  return reader->ReadBytes(length, &reg->data[0]);
+  return reader->ReadBytes(length, reg->data.data());
 }
 
 void Serialize(RegisterCategory type, MessageWriter* writer) {

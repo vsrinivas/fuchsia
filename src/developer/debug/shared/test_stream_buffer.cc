@@ -11,7 +11,7 @@ TestStreamBuffer::TestStreamBuffer() { stream_.set_writer(this); }
 TestStreamBuffer::~TestStreamBuffer() = default;
 
 size_t TestStreamBuffer::ConsumeStreamBufferData(const char* data, size_t len) {
-  write_sink_.insert(write_sink_.end(), &data[0], &data[len]);
+  write_sink_.insert(write_sink_.end(), data, &data[len]);
   return len;
 }
 

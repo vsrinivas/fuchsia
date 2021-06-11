@@ -26,7 +26,7 @@ VariableLocation::VariableLocation(const uint8_t* data, size_t size,
 
   entry.begin = 0;
   entry.end = 0;
-  entry.expression = DwarfExpr(std::vector<uint8_t>(&data[0], &data[size]), source);
+  entry.expression = DwarfExpr(std::vector<uint8_t>(data, &data[size]), source);
 }
 
 VariableLocation::VariableLocation(std::vector<Entry> locations)

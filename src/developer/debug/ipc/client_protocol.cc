@@ -76,7 +76,7 @@ bool Deserialize(MessageReader* reader, MemoryBlock* block) {
       return false;
 
     block->data.resize(block->size);
-    if (!reader->ReadBytes(block->size, &block->data[0]))
+    if (!reader->ReadBytes(block->size, block->data.data()))
       return false;
   }
   return true;

@@ -356,7 +356,7 @@ size_t GetFloatTokenLength(ExprLanguage lang, std::string_view input) {
   while (!cur.empty() && isalnum(cur[0]))
     cur = cur.substr(1);
 
-  return cur.begin() - input.begin();
+  return std::distance(input.begin(), cur.begin());
 }
 
 FloatSuffix StripFloatSuffix(std::string_view* view) {

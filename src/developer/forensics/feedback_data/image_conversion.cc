@@ -47,7 +47,7 @@ bool RawToPng(const png_structp png_ptr, const png_infop info_ptr,
   for (size_t y = 0; y < height; ++y) {
     rows[y] = imgdata.data() + y * stride;
   }
-  png_set_rows(png_ptr, info_ptr, &rows[0]);
+  png_set_rows(png_ptr, info_ptr, rows.data());
 
   // Tell libpng how to process each row? libpng is so obscure.
   std::vector<uint8_t> pixels;

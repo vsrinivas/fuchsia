@@ -195,14 +195,14 @@ TEST_F(FormatTest, Float) {
   float in_float = 3.14159;
   memcpy(buffer, &in_float, 4);
   ExprValue val_float(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
-                      std::vector<uint8_t>(&buffer[0], &buffer[4]));
+                      std::vector<uint8_t>(buffer, &buffer[4]));
   EXPECT_EQ(" = float, 3.14159\n", GetDebugTreeForValue(eval_context(), val_float, opts));
 
   // 64-bit float.
   double in_double = 9.875e+12;
   memcpy(buffer, &in_double, 8);
   ExprValue val_double(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double"),
-                       std::vector<uint8_t>(&buffer[0], &buffer[8]));
+                       std::vector<uint8_t>(buffer, &buffer[8]));
   EXPECT_EQ(" = double, 9.875e+12\n", GetDebugTreeForValue(eval_context(), val_double, opts));
 }
 

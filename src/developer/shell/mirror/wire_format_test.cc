@@ -64,7 +64,7 @@ TEST_F(FilesTest, BasicSerialization) {
     ASSERT_EQ(0, golden_files.DumpFiles(&dumped_files));
     const std::string kSimpleFile = kDataDir + "/simple" + std::to_string(num_files);
     std::ofstream fout(kSimpleFile, std::ios::out | std::ios::binary);
-    fout.write(&dumped_files[0], dumped_files.size());
+    fout.write(dumped_files.data(), dumped_files.size());
     fout.close();
 
     // Read the files from temp storage
