@@ -5,8 +5,14 @@
 
 #### CATEGORY=Software delivery
 ### start the update server and attach to a running fuchsia device
-## usage: fx serve-updates [-v] [-l host[:port]] [--no-auto-config]
+## usage: fx serve-updates [-v] [-l host[:port]] [-c version] [--no-auto-config]
 ##   -l host:port       host and port that "pm serve" will listen on
+##   -c version         configuration format version for the served config.json
+##                      that "pm" will serve. Valid choices: 1 or 2.
+##                      Choosing `1` will serve a file which can be processed by
+##                      `amberctl` and `pkgctl repo add ... -f 1`.
+##                      Choosing `2` will serve a file which cannot be processed by
+##                      `amberctl` but by `pkgctl repo ...` without the `-f 1` switch.
 ##   --no-auto-config   do not configure this host as a package server on the device
 ##   --[no-]persist     enable or disable persistence of repository metadata. Disabled
 ##                      by default.
@@ -42,6 +48,10 @@ while (($#)); do
       shift
       port="${1##*:}"
       serve_flags+=(-l "$1")
+      ;;
+    -c)
+      shift
+      serve_flags+=(-c "$1")
       ;;
     --no-persist)
       ;;
