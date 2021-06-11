@@ -14,11 +14,21 @@
 
 namespace extractor {
 
+enum class SubCommand {
+  // Extract a disk to a file.
+  kExtract,
+
+  // Deflate an extracted image.
+  kDeflate,
+};
+
 enum class DiskType {
   kMinfs,
 };
 
 struct ExtractOptions {
+  SubCommand sub_command;
+
   // Disk/input path from where disk will be extracted.
   std::string input_path;
   fbl::unique_fd input_fd;
@@ -31,6 +41,8 @@ struct ExtractOptions {
 
   // If true, dumps pii along with metadata.
   bool dump_pii = false;
+
+  bool verbose = false;
 };
 
 zx::status<ExtractOptions> ParseCommandLineArguments(int argc, char* const argv[]);

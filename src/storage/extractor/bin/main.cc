@@ -10,14 +10,7 @@
 #include "src/storage/extractor/cpp/extractor.h"
 #include "src/storage/minfs/format.h"
 
-int main(int argc, char** argv) {
-  auto args_or = extractor::ParseCommandLineArguments(argc, argv);
-
-  if (args_or.is_error()) {
-    return -1;
-  }
-  auto args = std::move(args_or.value());
-
+int Extract(extractor::ExtractOptions& args) {
   ExtractorOptions options = ExtractorOptions{
       .force_dump_pii = args.dump_pii, .add_checksum = false, .alignment = minfs::kMinfsBlockSize};
   auto extractor_or =
@@ -40,4 +33,36 @@ int main(int argc, char** argv) {
   }
 
   return 0;
+}
+
+int Deflate(extractor::ExtractOptions& args) {
+  fbl::unique_fd verbose_stream;
+  if (args.verbose) {
+    verbose_stream.reset(dup(fileno(stdout)));
+    if (!verbose_stream.is_valid()) {
+      std::cerr << "Failed to open stdout for verbose stream" << std::endl;
+      return EXIT_FAILURE;
+    }
+  }
+  auto status = extractor::Extractor::Deflate(args.input_fd.duplicate(), args.output_fd.duplicate(),
+                                              std::move(verbose_stream));
+  if (status.is_error()) {
+    std::cerr << "Deflate failed with " << status.status_value() << std::endl;
+    return EXIT_FAILURE;
+  }
+  return 0;
+}
+
+int main(int argc, char** argv) {
+  auto args_or = extractor::ParseCommandLineArguments(argc, argv);
+
+  if (args_or.is_error()) {
+    return -1;
+  }
+  auto args = std::move(args_or.value());
+
+  if (args.sub_command == extractor::SubCommand::kExtract) {
+    return Extract(args);
+  }
+  return Deflate(args);
 }

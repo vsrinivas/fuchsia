@@ -101,7 +101,29 @@ Things to keep in mind if you are manually scraping logs:
 ## Tool
 
 If you have control over the device environment, you can extract the disk image
-by runnig [disk-extract](/src/storage/extractor/bin/BUILD.gn).
+by runnig [disk-extract](/src/storage/extractor/bin/BUILD.gn). The workflow
+might look something like
+
+```
+# Assuming minfs block device is at /dev/class/block/001, on fuchsia
+fuchsia$ disk-extract extract --type minfs --disk /dev/class/block/001 --image /tmp/img.ext
+
+# Copy the extracted image on to the host (say linux or mac)
+host$ fx scp "[$(fx get-device-addr)]:/tmp/img.ext" /tmp/img.ext
+
+# Deflate the extracted image
+host$ out/core.x64/host_x64/disk-extract deflate --verbose --input_file /tmp/img.ext --output_file /tmp/img.deflate
+
+# Optionally attach the deflated image to fuchsia qemu to debug the image
+host$ fx qemu -s 8 -Nk -- -drive file=/tmp/img.deflate
+
+# In fuchsia you can try to debug it with disk-inspect or try to mount it (if it is a non-fvm
+# image). Assuming the attached file showed up as 008 block device
+
+fuchsia$ mkdir /tmp/x
+fuchsia$ mount /dev/class/block/008 /tmp/x
+
+```
 
 ## Library
 
@@ -112,6 +134,4 @@ extractor at [/src/storage/extractor/cpp/minfs_extractor.cc](/src/storage/extrac
 
 ## Future work
 
-You can convert the extracted image back into a blown-up file, which can be
-attached to a vm as a disk or attached as a loopback device. This might help
-improve debuggability.
+Only minfs supports extraction. Extraction can be added to blobfs, fvm, ftl and fxfs.
