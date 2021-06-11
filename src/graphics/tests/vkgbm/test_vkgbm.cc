@@ -26,10 +26,13 @@ class VkGbm : public testing::Test {
     vk::InstanceCreateInfo instance_info;
     instance_info.pApplicationInfo = &app_info;
 
-    context_ = VulkanContext::Builder{}
-                   .set_instance_info(instance_info)
-                   .set_validation_layers_enabled(false)
-                   .Unique();
+    std::array<const char *, 1> device_extensions{VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME};
+
+    auto builder = VulkanContext::Builder();
+    builder.set_instance_info(instance_info).set_validation_layers_enabled(false);
+    builder.set_device_info(builder.DeviceInfo().setPEnabledExtensionNames(device_extensions));
+
+    context_ = builder.Unique();
     ASSERT_TRUE(context_);
   }
 
@@ -48,9 +51,9 @@ class VkGbm : public testing::Test {
   }
 
   void IsMemoryTypeCoherent(uint32_t memoryTypeIndex, bool *is_coherent_out);
-  void WriteLinearImage(vk::DeviceMemory memory, bool is_coherent, uint32_t row_bytes,
+  void WriteLinearImage(vk::DeviceMemory memory, bool is_coherent, uint64_t row_bytes,
                         uint32_t height, uint32_t fill);
-  void CheckLinearImage(vk::DeviceMemory memory, bool is_coherent, uint32_t row_bytes,
+  void CheckLinearImage(vk::DeviceMemory memory, bool is_coherent, uint64_t row_bytes,
                         uint32_t height, uint32_t fill);
 
  private:
@@ -66,7 +69,7 @@ void VkGbm::IsMemoryTypeCoherent(uint32_t memoryTypeIndex, bool *is_coherent_out
                                        vk::MemoryPropertyFlagBits::eHostCoherent);
 }
 
-void VkGbm::WriteLinearImage(vk::DeviceMemory memory, bool is_coherent, uint32_t row_bytes,
+void VkGbm::WriteLinearImage(vk::DeviceMemory memory, bool is_coherent, uint64_t row_bytes,
                              uint32_t height, uint32_t fill) {
   void *addr;
   vk::Result result = context_->device()->mapMemory(memory, 0 /* offset */, VK_WHOLE_SIZE,
@@ -88,7 +91,7 @@ void VkGbm::WriteLinearImage(vk::DeviceMemory memory, bool is_coherent, uint32_t
   context_->device()->unmapMemory(memory);
 }
 
-void VkGbm::CheckLinearImage(vk::DeviceMemory memory, bool is_coherent, uint32_t row_bytes,
+void VkGbm::CheckLinearImage(vk::DeviceMemory memory, bool is_coherent, uint64_t row_bytes,
                              uint32_t height, uint32_t fill) {
   void *addr;
   vk::Result result = context_->device()->mapMemory(memory, 0 /* offset */, VK_WHOLE_SIZE,
@@ -133,7 +136,7 @@ TEST_F(VkGbm, ImageCopy) {
 
   vk::UniqueImage src_image;
   vk::UniqueDeviceMemory src_memory;
-  uint32_t src_row_bytes;
+  uint64_t src_row_bytes;
 
   {
     auto create_info = vk::ImageCreateInfo()
@@ -191,7 +194,7 @@ TEST_F(VkGbm, ImageCopy) {
   vk::UniqueImage dst_image;
   vk::UniqueDeviceMemory dst_memory;
   bool dst_is_coherent;
-  uint32_t dst_row_bytes;
+  uint64_t dst_row_bytes;
 
   {
     auto create_info = vk::ImageCreateInfo()
