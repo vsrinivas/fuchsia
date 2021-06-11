@@ -512,10 +512,11 @@ void _encodeHandle(
   }
 }
 
-void _checkHandleRights(HandleInfo handleInfo, int objectType, int rights) {
+Handle _checkHandleRights(HandleInfo handleInfo, int objectType, int rights) {
   if (objectType != ZX.OBJ_TYPE_NONE &&
       handleInfo.type != ZX.OBJ_TYPE_NONE &&
       handleInfo.type != objectType) {
+    handleInfo.handle.close();
     throw FidlError(
         'Handle has object type ${handleInfo.type} but required $objectType.',
         FidlErrorCode.fidlIncorrectHandleType);
@@ -523,16 +524,16 @@ void _checkHandleRights(HandleInfo handleInfo, int objectType, int rights) {
   if (rights != ZX.RIGHT_SAME_RIGHTS &&
       handleInfo.rights != ZX.RIGHT_SAME_RIGHTS) {
     if ((rights & ~handleInfo.rights) != 0) {
+      handleInfo.handle.close();
       throw FidlError(
           'Required handle rights were missing. Got ${handleInfo.rights}, want $rights.',
           FidlErrorCode.fidlMissingRequiredHandleRights);
     }
     if ((handleInfo.rights & ~rights) != 0) {
-      // TODO(fxbug.dev/41920) Replace the rights.
-      throw FidlError(
-          'Extra rights were provided. Got ${handleInfo.rights}, want $rights.');
+      return handleInfo.handle.replace(rights);
     }
   }
+  return handleInfo.handle;
 }
 
 Handle? _decodeNullableHandle(
@@ -543,8 +544,7 @@ Handle? _decodeNullableHandle(
   }
   if (encoded == kHandlePresent) {
     final HandleInfo handleInfo = decoder.claimHandle();
-    _checkHandleRights(handleInfo, objectType, rights);
-    return handleInfo.handle;
+    return _checkHandleRights(handleInfo, objectType, rights);
   }
   return null;
 }

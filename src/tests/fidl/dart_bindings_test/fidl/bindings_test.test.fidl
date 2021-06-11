@@ -164,3 +164,11 @@ union UnionTwo {
 protocol SimpleServer {
     Ping() -> ();
 };
+
+resource struct ChannelWithDefaultRights {
+    zx.handle:<CHANNEL, zx.DEFAULT_CHANNEL_RIGHTS> c;
+};
+
+resource struct ChannelWithReducedRights {
+    zx.handle:<CHANNEL, zx.rights.TRANSFER> c;
+};

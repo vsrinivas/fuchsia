@@ -24,6 +24,48 @@ void main() async {
           NumberHandleNumber(n1: 1, h: pair.first.handle, n2: 2));
     });
 
+    // Test decoding a handle that has more rights than are specified in FIDL.
+    // The handle rights should be reduced to the set of rights specified in
+    // FIDL.
+    //
+    // Normally this would be implemented in GIDL, but because
+    // zx_object_get_info doesn't exist in dart, a custom test is needed.
+    test('handle with extra rights', () async {
+      void reduceRightsViaFidl(Function check) {
+        ChannelPair channelPair = ChannelPair();
+        final defaultRights = ChannelWithDefaultRights(c: channelPair.first);
+
+        var encoder = Encoder()..alloc(8, 0);
+        kChannelWithDefaultRights_Type.encode(encoder, defaultRights, 0, 1);
+
+        final decoder =
+            Decoder(IncomingMessage.fromOutgoingMessage(encoder.message))
+              ..claimMemory(8, 0);
+        final reducedRights =
+            kChannelWithReducedRights_Type.decode(decoder, 0, 1);
+
+        // The dart zircon library replaces handles with invalid handles on
+        // failure.
+        expect(reducedRights.c.handle, isNot(equals(Handle.invalid())));
+        check(reducedRights.c.handle);
+
+        channelPair.first.close();
+        channelPair.second.close();
+      }
+
+      // The reduceRightsViaFidl function is necessary because each expect case
+      // is destructive - either the handle becomes invalid or the rights are
+      // changed.
+      reduceRightsViaFidl((handle) {
+        expect(handle.replace(ZX.DEFAULT_CHANNEL_RIGHTS),
+            equals(Handle.invalid()));
+      });
+      reduceRightsViaFidl((handle) {
+        expect(
+            handle.replace(ZX.RIGHT_TRANSFER), isNot(equals(Handle.invalid())));
+      });
+    });
+
     // TODO(fxbug.dev/56687): test in GIDL
     test('unknown ordinal flexible with handles', () async {
       var encoder = Encoder()..alloc(24, 0);
