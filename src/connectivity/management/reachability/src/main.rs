@@ -13,11 +13,10 @@
 extern crate fuchsia_syslog as syslog;
 #[macro_use]
 extern crate log;
-use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::component;
 use futures::{FutureExt as _, StreamExt as _};
-use reachability_core::{ping_fut, IcmpPinger, Monitor};
+use reachability_core::Monitor;
 
 mod eventloop;
 
@@ -32,17 +31,13 @@ fn main() -> Result<(), anyhow::Error> {
     info!("Starting reachability monitor!");
     let mut executor = fuchsia_async::LocalExecutor::new()?;
 
-    let (request_tx, request_rx) = futures::channel::mpsc::unbounded();
-    let (response_tx, response_rx) = futures::channel::mpsc::unbounded();
-    let mut ping_task = fasync::Task::blocking(ping_fut(request_rx, response_tx)).fuse();
-
     let mut fs = ServiceFs::new_local();
     let mut fs = fs.take_and_serve_directory_handle()?;
 
     let inspector = component::inspector();
     let () = inspect_runtime::serve(&inspector, &mut fs)?;
 
-    let mut monitor = Monitor::new(Box::new(IcmpPinger::new(request_tx, response_rx)))?;
+    let mut monitor = Monitor::new()?;
     let () = monitor.set_inspector(inspector);
 
     info!("monitoring");
@@ -54,7 +49,6 @@ fn main() -> Result<(), anyhow::Error> {
         loop {
             futures::select! {
                 r = eventloop_fut => break r,
-                r = ping_task => break r,
                 r = serve_fut => break r,
             }
         }

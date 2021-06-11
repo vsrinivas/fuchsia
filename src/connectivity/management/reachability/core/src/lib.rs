@@ -7,20 +7,22 @@ mod ping;
 
 #[macro_use]
 extern crate log;
-pub use ping::{ping_fut, IcmpPinger, Pinger};
 use {
+    crate::ping::Ping,
     fidl_fuchsia_hardware_network, fidl_fuchsia_net_interfaces as fnet_interfaces,
     fidl_fuchsia_net_interfaces_ext::{self as fnet_interfaces_ext},
     fuchsia_async as fasync,
     fuchsia_inspect::Inspector,
+    futures::{pin_mut, FutureExt as _, StreamExt as _},
     inspect::InspectInfo,
+    net_declare::std_ip,
     net_types::ScopeableAddress as _,
     network_manager_core::{address::LifIpAddr, error, hal},
     std::collections::HashMap,
 };
 
-const IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS: &str = "8.8.8.8";
-const IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS: &str = "2001:4860:4860::8888";
+const IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS: std::net::IpAddr = std_ip!("8.8.8.8");
+const IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS: std::net::IpAddr = std_ip!("2001:4860:4860::8888");
 
 /// `Stats` keeps the monitoring service statistic counters.
 #[derive(Debug, Default, Clone)]
@@ -325,7 +327,6 @@ pub struct Monitor {
     hal: hal::NetCfg,
     state: StateInfo,
     stats: Stats,
-    pinger: Box<dyn Pinger>,
     inspector: Option<&'static Inspector>,
     system_node: Option<InspectInfo>,
     nodes: HashMap<Id, InspectInfo>,
@@ -333,13 +334,12 @@ pub struct Monitor {
 
 impl Monitor {
     /// Create the monitoring service.
-    pub fn new(pinger: Box<dyn Pinger>) -> anyhow::Result<Self> {
+    pub fn new() -> anyhow::Result<Self> {
         let hal = hal::NetCfg::new()?;
         Ok(Monitor {
             hal,
             state: Default::default(),
             stats: Default::default(),
-            pinger,
             inspector: None,
             system_node: None,
             nodes: HashMap::new(),
@@ -424,7 +424,7 @@ impl Monitor {
             error!("failed to get route table");
             Vec::new()
         });
-        if let Some(info) = compute_state(properties, &routes, &mut *self.pinger).await {
+        if let Some(info) = compute_state(properties, &routes, &ping::Pinger).await {
             let id = Id::from(properties.id);
             let () = self.update_state(id, &properties.name, info);
         }
@@ -463,7 +463,7 @@ async fn compute_state(
         has_default_ipv6_route: _,
     }: &fnet_interfaces_ext::Properties,
     routes: &[hal::Route],
-    pinger: &mut dyn Pinger,
+    pinger: &dyn Ping,
 ) -> Option<IpVersions<StateEvent>> {
     if PortType::from(device_class) == PortType::Loopback {
         return None;
@@ -481,29 +481,15 @@ async fn compute_state(
         });
     }
 
-    // TODO(https://fxbug.dev/74517) Check if packet count has increased, and if so upgrade the state to
-    // LinkLayerUp.
+    // TODO(https://fxbug.dev/74517) Check if packet count has increased, and if so upgrade the
+    // state to LinkLayerUp.
 
-    // TODO(https://fxbug.dev/65581) Parallelize the following two calls for IPv4 and IPv6 respectively
-    // when the ping logic is implemented in Rust and async.
-    let ipv4 = StateEvent {
-        state: if v4_addrs.is_empty() {
-            State::Up
-        } else {
-            network_layer_state(v4_addrs, routes, pinger, IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS)
-                .await
-        },
-        time: fasync::Time::now(),
-    };
-    let ipv6 = StateEvent {
-        state: if v6_addrs.is_empty() {
-            State::Up
-        } else {
-            network_layer_state(v6_addrs, routes, pinger, IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS)
-                .await
-        },
-        time: fasync::Time::now(),
-    };
+    let (ipv4, ipv6) = futures::join!(
+        network_layer_state(&v4_addrs, routes, pinger, IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS)
+            .map(|state| StateEvent { state, time: fasync::Time::now() }),
+        network_layer_state(&v6_addrs, routes, pinger, IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS)
+            .map(|state| StateEvent { state, time: fasync::Time::now() })
+    );
     Some(IpVersions { ipv4, ipv6 })
 }
 
@@ -522,44 +508,62 @@ fn local_routes<'a>(address: &LifIpAddr, route_table: &'a [hal::Route]) -> Vec<&
 
 // `network_layer_state` determines the L3 reachability state.
 async fn network_layer_state(
-    addresses: impl IntoIterator<Item = LifIpAddr>,
+    addresses: &[LifIpAddr],
     routes: &[hal::Route],
-    p: &mut dyn Pinger,
-    ping_address: &str,
+    p: &dyn Ping,
+    internet_ping_address: std::net::IpAddr,
 ) -> State {
+    if addresses.is_empty() {
+        return State::Up;
+    }
+
     // TODO(https://fxbug.dev/36242) Check neighbor reachability and upgrade state to Local.
-    let mut gateway_reachable = false;
-    'outer: for a in addresses {
-        for r in local_routes(&a, routes) {
-            if let Some(gw_ip) = r.gateway {
-                let gw_url = match gw_ip {
-                    std::net::IpAddr::V4(_) => gw_ip.to_string(),
-                    std::net::IpAddr::V6(v6) => {
-                        if let Some(id) = r.port_id {
+
+    let gateway_reachable =
+        futures::stream::iter(addresses.into_iter()).filter_map(|a| async move {
+            let gateway_addr_iter = local_routes(&a, routes).into_iter().filter_map(|r| {
+                // TODO(https://github.com/rust-lang/rust/issues/65490): Move this line into the
+                // closure parameter when possible.
+                let &hal::Route { target: _, gateway, port_id, metric: _ } = r;
+                gateway.and_then(|gw_ip| match gw_ip {
+                    std::net::IpAddr::V4(_) => Some(std::net::SocketAddr::new(gw_ip, 0)),
+                    std::net::IpAddr::V6(v6) => port_id
+                        .map(|id| {
+                            std::net::SocketAddr::V6(std::net::SocketAddrV6::new(
+                                v6,
+                                0,
+                                0,
+                                id.to_u32(),
+                            ))
+                        })
+                        .or_else(|| {
                             if net_types::ip::Ipv6Addr::new(v6.octets()).scope()
                                 != net_types::ip::Ipv6Scope::Global
                             {
-                                format!("{}%{}", gw_ip, id.to_u64())
+                                warn!(
+                                    "cannot ping IPv6 non-global gateway address as the route \
+                                    does not have an interface ID: {:?}",
+                                    r
+                                );
+                                None
                             } else {
-                                gw_ip.to_string()
+                                Some(std::net::SocketAddr::new(gw_ip, 0))
                             }
-                        } else {
-                            gw_ip.to_string()
-                        }
-                    }
-                };
-                if p.ping(&gw_url).await {
-                    gateway_reachable = true;
-                    break 'outer;
-                }
-            }
-        }
-    }
-    if !gateway_reachable {
-        return State::Local;
-    }
+                        }),
+                })
+            });
+            let reachable = futures::stream::iter(gateway_addr_iter)
+                .filter_map(|gw_addr| async move { p.ping(gw_addr).await.then(|| ()) });
+            pin_mut!(reachable);
+            reachable.next().await
+        });
+    pin_mut!(gateway_reachable);
+    match gateway_reachable.next().await {
+        Some(()) => {}
+        None => return State::Local,
+    };
 
-    if !p.ping(ping_address).await {
+    if !p.ping(std::net::SocketAddr::new(internet_ping_address, 0)).await {
         return State::Gateway;
     }
     return State::Internet;
@@ -685,24 +689,24 @@ mod tests {
     }
 
     #[derive(Default)]
-    struct FakePing<'a> {
-        gateway_urls: Vec<&'a str>,
+    struct FakePing {
+        gateway_addrs: std::collections::HashSet<std::net::IpAddr>,
         gateway_response: bool,
         internet_response: bool,
     }
 
     #[async_trait]
-    impl Pinger for FakePing<'_> {
-        async fn ping(&mut self, url: &str) -> bool {
-            if self.gateway_urls.contains(&url) {
+    impl Ping for FakePing {
+        async fn ping(&self, addr: std::net::SocketAddr) -> bool {
+            if self.gateway_addrs.contains(&addr.ip()) {
                 return self.gateway_response;
             }
-            if IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS == url
-                || IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS == url
+            if IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS == addr.ip()
+                || IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS == addr.ip()
             {
                 return self.internet_response;
             }
-            panic!("ping destination URL {} is not in the set of gateway URLs ({:?}) or equal to the IPv4/IPv6 internet connectivity check address", url, self.gateway_urls);
+            panic!("ping destination address {} is not in the set of gateway URLs ({:?}) or equal to the IPv4/IPv6 internet connectivity check address", addr, self.gateway_addrs);
         }
     }
 
@@ -743,7 +747,7 @@ mod tests {
         net2: &str,
         net2_gateway: &str,
         unspecified_addr: LifIpAddr,
-        ping_url: &str,
+        ping_internet_addr: std::net::IpAddr,
         prefix: u8,
     ) {
         let address = LifIpAddr { address: net1_addr.parse().unwrap(), prefix };
@@ -784,14 +788,14 @@ mod tests {
 
         assert_eq!(
             network_layer_state(
-                std::iter::once(address),
+                &[address],
                 &route_table,
-                &mut FakePing {
-                    gateway_urls: vec![net1_gateway],
+                &FakePing {
+                    gateway_addrs: std::iter::once(net1_gateway.parse().unwrap()).collect(),
                     gateway_response: true,
                     internet_response: true,
                 },
-                ping_url,
+                ping_internet_addr,
             )
             .await,
             State::Internet,
@@ -800,14 +804,14 @@ mod tests {
 
         assert_eq!(
             network_layer_state(
-                std::iter::once(address),
+                &[address],
                 &route_table,
-                &mut FakePing {
-                    gateway_urls: vec![net1_gateway],
+                &FakePing {
+                    gateway_addrs: std::iter::once(net1_gateway.parse().unwrap()).collect(),
                     gateway_response: true,
                     internet_response: false,
                 },
-                ping_url,
+                ping_internet_addr,
             )
             .await,
             State::Gateway,
@@ -816,14 +820,14 @@ mod tests {
 
         assert_eq!(
             network_layer_state(
-                std::iter::once(address),
+                &[address],
                 &route_table,
-                &mut FakePing {
-                    gateway_urls: vec![net1_gateway],
+                &FakePing {
+                    gateway_addrs: std::iter::once(net1_gateway.parse().unwrap()).collect(),
                     gateway_response: false,
                     internet_response: false,
                 },
-                ping_url,
+                ping_internet_addr,
             )
             .await,
             State::Local,
@@ -832,14 +836,20 @@ mod tests {
 
         assert_eq!(
             network_layer_state(
-                std::iter::empty(),
+                &[address],
                 &route_table_2,
-                &mut FakePing::default(),
-                ping_url,
+                &FakePing::default(),
+                ping_internet_addr,
             )
             .await,
             State::Local,
             "No default route"
+        );
+
+        assert_eq!(
+            network_layer_state(&[], &route_table, &FakePing::default(), ping_internet_addr).await,
+            State::Up,
+            "No address"
         );
     }
 
@@ -905,7 +915,7 @@ mod tests {
             exec: &mut fasync::TestExecutor,
             properties: &fnet_interfaces_ext::Properties,
             routes: &[hal::Route],
-            pinger: &mut dyn Pinger,
+            pinger: &dyn Ping,
         ) -> Result<Option<IpVersions<StateEvent>>, anyhow::Error> {
             let fut = compute_state(&properties, routes, pinger);
             futures::pin_mut!(fut);
@@ -929,7 +939,7 @@ mod tests {
                 addresses: vec![],
             },
             &[],
-            &mut FakePing::default(),
+            &FakePing::default(),
         )
         .expect(
             "error calling compute_state with non-ethernet interface, no addresses, interface down",
@@ -940,7 +950,7 @@ mod tests {
             &mut exec,
             &fnet_interfaces_ext::Properties { online: false, ..properties.clone() },
             &[],
-            &mut FakePing::default(),
+            &FakePing::default(),
         )
         .expect("error calling compute_state, want Down state");
         let want =
@@ -955,14 +965,14 @@ mod tests {
                 ..properties.clone()
             },
             &[],
-            &mut FakePing::default(),
+            &FakePing::default(),
         )
         .expect("error calling compute_state, want Local state due to no default routes");
         let want =
             Some(IpVersions::<StateEvent>::construct(StateEvent { state: State::Local, time }));
         assert_eq!(got, want);
 
-        let got = run_compute_state(&mut exec, &properties, route_table2, &mut FakePing::default())
+        let got = run_compute_state(&mut exec, &properties, route_table2, &FakePing::default())
             .expect(
                 "error calling compute_state, want Local state due to no matching default route",
             );
@@ -975,7 +985,7 @@ mod tests {
             &properties,
             route_table,
             &mut FakePing {
-                gateway_urls: vec!["1.2.3.1", "123::1"],
+                gateway_addrs: [std_ip!("1.2.3.1"), std_ip!("123::1")].iter().cloned().collect(),
                 gateway_response: true,
                 internet_response: false,
             },
@@ -990,7 +1000,7 @@ mod tests {
             &properties,
             route_table,
             &mut FakePing {
-                gateway_urls: vec!["1.2.3.1", "123::1"],
+                gateway_addrs: [std_ip!("1.2.3.1"), std_ip!("123::1")].iter().cloned().collect(),
                 gateway_response: true,
                 internet_response: true,
             },

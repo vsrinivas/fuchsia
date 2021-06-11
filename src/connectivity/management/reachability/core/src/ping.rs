@@ -1,75 +1,78 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use anyhow::Context as _;
+
+use anyhow::{anyhow, Context as _};
 use async_trait::async_trait;
-use futures::{Future, StreamExt as _, TryStreamExt as _};
-use std::ffi::CString;
+use fuchsia_async::{self as fasync, TimeoutExt as _};
+use futures::{FutureExt as _, SinkExt as _, TryFutureExt as _, TryStreamExt as _};
+use std::net::SocketAddr;
 
-/// trait that can ping.
-#[async_trait]
-pub trait Pinger {
-    /// returns true if url is reachable, false otherwise.
-    async fn ping(&mut self, url: &str) -> bool;
-}
+const PING_MESSAGE: &str = "Hello from reachability monitor!";
+const SEQ_MIN: u16 = 1;
+const SEQ_MAX: u16 = 3;
+const TIMEOUT: fasync::Duration = fasync::Duration::from_seconds(1);
 
-#[link(name = "ext_ping", kind = "static")]
-extern "C" {
-    fn c_ping(url: *const libc::c_char) -> libc::ssize_t;
-}
+async fn ping<I>(addr: I::Addr) -> anyhow::Result<()>
+where
+    I: ping::Ip,
+    I::Addr: std::fmt::Display + Copy,
+{
+    let socket = ping::new_icmp_socket::<I>().context("failed to create socket")?;
+    let (mut sink, mut stream) = ping::new_unicast_sink_and_stream::<
+        I,
+        _,
+        { PING_MESSAGE.len() + ping::ICMP_HEADER_LEN },
+    >(&socket, &addr, PING_MESSAGE.as_bytes());
 
-/// A ping implementation which requests a backend to send the echo requests via channels.
-// TODO(fxbug.dev/65581) Replace this with an implementation in Rust.
-pub struct IcmpPinger {
-    request_tx: futures::channel::mpsc::UnboundedSender<String>,
-    response_rx: futures::channel::mpsc::UnboundedReceiver<bool>,
-}
-
-impl IcmpPinger {
-    pub fn new(
-        request_tx: futures::channel::mpsc::UnboundedSender<String>,
-        response_rx: futures::channel::mpsc::UnboundedReceiver<bool>,
-    ) -> Self {
-        Self { request_tx, response_rx }
-    }
-}
-
-#[async_trait]
-impl Pinger for IcmpPinger {
-    // returns true if there has been a response, false otherwise.
-    async fn ping(&mut self, url: &str) -> bool {
-        match self.request_tx.unbounded_send(url.to_string()) {
-            Ok(()) => {}
-            Err(e) => panic!("failed to send request to ping URL={}: {}", url, e),
+    for seq in SEQ_MIN..=SEQ_MAX {
+        let deadline = fasync::Time::after(TIMEOUT);
+        let () = sink
+            .send(seq)
+            .map_err(anyhow::Error::new)
+            .on_timeout(deadline, || Err(anyhow!("timed out")))
+            .await
+            .with_context(|| format!("failed to send ping (seq={})", seq))?;
+        if match stream.try_next().map(Some).on_timeout(deadline, || None).await {
+            None => Ok(false),
+            Some(Err(e)) => Err(anyhow!("failed to receive ping: {}", e)),
+            Some(Ok(None)) => Err(anyhow!("ping reply stream ended unexpectedly")),
+            Some(Ok(Some(got))) if got >= SEQ_MIN && got <= seq => Ok(true),
+            Some(Ok(Some(got))) => Err(anyhow!(
+                "received unexpected ping sequence number; got: {}, want: {}..={}",
+                got,
+                SEQ_MIN,
+                seq,
+            )),
+        }? {
+            return Ok(());
         }
-        if let Some(rtn) = self.response_rx.next().await {
-            rtn
-        } else {
-            panic!("ping response channel closed unexpectedly");
-        }
     }
+    Err(anyhow!("no ping reply received"))
 }
 
-/// Creates a future which reads URLs from `request_rx`, and sends whether the URL is reachable via
-/// ICMP echo requests to `response_tx`.
-///
-/// TODO(fxbug.dev/65581) The current implementation in C++ is blocking, and is required to be on a
-/// separate thread as to not block other logic from running. This should be changed to an
-/// implementation in Rust.
-pub fn ping_fut(
-    request_rx: futures::channel::mpsc::UnboundedReceiver<String>,
-    response_tx: futures::channel::mpsc::UnboundedSender<bool>,
-) -> impl Future<Output = Result<(), anyhow::Error>> {
-    request_rx
-        .map(move |url| {
-            let ret;
-            // unsafe needed as we are calling C code.
-            let c_str = CString::new(url).unwrap();
-            unsafe {
-                ret = c_ping(c_str.as_ptr());
+/// Trait that can send ICMP echo requests, and receive and validate replies.
+#[async_trait]
+pub trait Ping {
+    /// Returns true if the address is reachable, false otherwise.
+    async fn ping(&self, addr: SocketAddr) -> bool;
+}
+
+pub struct Pinger;
+
+#[async_trait]
+impl Ping for Pinger {
+    async fn ping(&self, addr: SocketAddr) -> bool {
+        let r = match addr {
+            SocketAddr::V4(addr_v4) => ping::<ping::Ipv4>(addr_v4).await,
+            SocketAddr::V6(addr_v6) => ping::<ping::Ipv6>(addr_v6).await,
+        };
+        match r {
+            Ok(()) => true,
+            Err(e) => {
+                warn!("error while pinging {}: {}", addr, e);
+                false
             }
-
-            response_tx.unbounded_send(ret == 0).context("failed to send ping response")
-        })
-        .try_collect()
+        }
+    }
 }
