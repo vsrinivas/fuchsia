@@ -210,7 +210,7 @@ class ErmineStory {
 
   /// Requests focus to be transfered to this view given it's [viewRef].
   Future<void> requestFocus() async {
-    // [requestFocus] is called for 'every' post render of ChildView widget,
+    // [requestFocus] is called for 'every' post render of FuchsiaView widget,
     // even when that child view is not focused. Skip focusing those views here.
     if (fuchsiaViewConnection == null || !focused || !hittestable) {
       return;

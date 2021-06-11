@@ -244,13 +244,13 @@ class ClustersModel extends ChangeNotifier implements ErmineShell, Inspectable {
       return null;
     }
 
-    // Check if the topmost hit is a ChildView.
-    final childViewRenderBox = hitTests.path.first.target;
+    // Check if the topmost hit is a FuchsiaView.
+    final fuchsiaViewRenderBox = hitTests.path.first.target;
     return currentCluster.value?.stories?.firstWhere(
       (story) {
         final key = GlobalObjectKey(story.fuchsiaViewConnection);
         final renderObject = key.currentContext?.findRenderObject();
-        return renderObject == childViewRenderBox;
+        return renderObject == fuchsiaViewRenderBox;
       },
       orElse: () => null,
     );
