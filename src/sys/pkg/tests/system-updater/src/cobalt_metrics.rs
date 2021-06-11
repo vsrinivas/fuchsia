@@ -104,7 +104,6 @@ async fn succeeds_even_if_metrics_fail_to_send() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,

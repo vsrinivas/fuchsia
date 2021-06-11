@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {super::*, pretty_assertions::assert_eq};
+use {
+    super::*,
+    fidl_fuchsia_pkg::ResolveError,
+    fidl_fuchsia_update_installer_ext::{PrepareFailureReason, State},
+    pretty_assertions::assert_eq,
+};
 
 #[fasync::run_singlethreaded(test)]
 async fn rejects_invalid_package_name() {
@@ -43,7 +48,6 @@ async fn rejects_invalid_package_name() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(not_update_package_url.to_string())
         ]
     );
@@ -64,8 +68,7 @@ async fn rejects_invalid_package_name() {
 async fn fails_if_package_unavailable() {
     let env = TestEnv::builder().build().await;
 
-    env.resolver
-        .mock_resolve_failure(UPDATE_PKG_URL, fidl_fuchsia_pkg::ResolveError::PackageNotFound);
+    env.resolver.mock_resolve_failure(UPDATE_PKG_URL, ResolveError::PackageNotFound);
 
     let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -88,7 +91,6 @@ async fn fails_if_package_unavailable() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
         ]
     );
@@ -126,7 +128,6 @@ async fn uses_custom_update_package() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve("fuchsia-pkg://fuchsia.com/another-update/4".to_string()),
             Gc,
             BlobfsSync,
@@ -139,6 +140,171 @@ async fn uses_custom_update_package() {
             Paver(PaverEvent::DataSinkFlush),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
+        ]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn retry_update_package_resolve_once() {
+    let env = TestEnv::builder().build().await;
+
+    env.resolver.url(UPDATE_PKG_URL).respond_serially(vec![
+        // First resolve should fail with NoSpace.
+        Err(ResolveError::NoSpace),
+        // Second resolve should succeed.
+        Ok(env
+            .resolver
+            .package("update", "upd4t3")
+            .add_file("packages.json", make_packages_json([]))
+            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("zbi", "fake zbi")),
+    ]);
+
+    env.run_update().await.expect("run system updater");
+
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
+            // First resolve should fail with NoSpace, so we GC and try the resolve again.
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
+            // Second resolve should succeed!
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
+            BlobfsSync,
+            Paver(PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
+        ]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn retry_update_package_resolve_twice() {
+    let env = TestEnv::builder().build().await;
+
+    env.resolver.url(UPDATE_PKG_URL).respond_serially(vec![
+        // First two resolves should fail with NoSpace.
+        Err(ResolveError::NoSpace),
+        Err(ResolveError::NoSpace),
+        // Third resolve should succeed.
+        Ok(env
+            .resolver
+            .package("update", "upd4t3")
+            .add_file("packages.json", make_packages_json([]))
+            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("zbi", "fake zbi")),
+    ]);
+
+    env.run_update().await.expect("run system updater");
+
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
+            // First resolve should fail with NoSpace, so we GC and try the resolve again.
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
+            // Second resolve should fail with NoSpace, so we GC and try the resolve again.
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
+            // Third resolve should succeed!
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
+            BlobfsSync,
+            Paver(PaverEvent::WriteAsset {
+                configuration: paver::Configuration::B,
+                asset: paver::Asset::Kernel,
+                payload: b"fake zbi".to_vec(),
+            }),
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
+            Paver(PaverEvent::DataSinkFlush),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
+        ]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn retry_update_package_resolve_thrice_fails_update_attempt() {
+    let env = TestEnv::builder().build().await;
+
+    env.resolver.url(UPDATE_PKG_URL).respond_serially(vec![
+        // Each resolve should fail with NoSpace.
+        Err(ResolveError::NoSpace),
+        Err(ResolveError::NoSpace),
+        Err(ResolveError::NoSpace),
+    ]);
+
+    let mut attempt = env.start_update().await.unwrap();
+
+    assert_eq!(attempt.next().await.unwrap().unwrap(), State::Prepare);
+    assert_eq!(
+        attempt.next().await.unwrap().unwrap(),
+        State::FailPrepare(PrepareFailureReason::OutOfSpace)
+    );
+
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
+            // First resolve should fail with out of space, so we GC and try the resolve again.
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
+            // Second resolve should fail with out of space, so we GC and try the resolve again.
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc,
+            // Third resolve should fail with out of space, so the update fails.
+            PackageResolve(UPDATE_PKG_URL.to_string()),
         ]
     );
 }

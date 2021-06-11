@@ -61,7 +61,6 @@ async fn writes_recovery_and_force_reboots_into_it() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             Paver(PaverEvent::WriteAsset {
@@ -165,7 +164,6 @@ async fn rejects_zbi() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc
         ]

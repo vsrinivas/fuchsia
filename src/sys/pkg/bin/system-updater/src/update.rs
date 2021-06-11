@@ -8,7 +8,7 @@ use {
     epoch::EpochFile,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_paver::DataSinkProxy,
-    fidl_fuchsia_pkg::PackageCacheProxy,
+    fidl_fuchsia_pkg::{PackageCacheProxy, PackageResolverProxy},
     fidl_fuchsia_space::ManagerProxy as SpaceManagerProxy,
     fidl_fuchsia_update_installer_ext::{
         FetchFailureReason, Options, PrepareFailureReason, State, UpdateInfo,
@@ -412,19 +412,19 @@ impl<'a> Attempt<'a> {
             .await
             .map_err(PrepareError::PreparePartitionMetdata)?;
 
-        if let Err(e) = gc(&self.env.space_manager).await {
-            fx_log_err!("unable to gc packages (1/2): {:#}", anyhow!(e));
-        }
+        let update_pkg = resolve_update_package(
+            &self.env.pkg_resolver,
+            &self.config.update_url,
+            &self.env.space_manager,
+        )
+        .await
+        .map_err(PrepareError::ResolveUpdate)?;
 
-        let update_pkg =
-            resolver::resolve_update_package(&self.env.pkg_resolver, &self.config.update_url)
-                .await
-                .map_err(PrepareError::ResolveUpdate)?;
         *target_version = history::Version::for_update_package(&update_pkg).await;
         let () = update_pkg.verify_name().await.map_err(PrepareError::VerifyName)?;
 
         if let Err(e) = gc(&self.env.space_manager).await {
-            fx_log_err!("unable to gc packages (2/2): {:#}", anyhow!(e));
+            fx_log_err!("unable to gc packages: {:#}", anyhow!(e));
         }
 
         let mode = update_mode(&update_pkg).await.map_err(PrepareError::ParseUpdateMode)?;
@@ -586,6 +586,38 @@ async fn gc(space_manager: &SpaceManagerProxy) -> Result<(), Error> {
         .context("while performing gc call")?
         .map_err(|e| anyhow!("garbage collection responded with {:?}", e))?;
     Ok(())
+}
+
+/// Resolve the update package, incorporating an increasingly aggressive GC and retry strategy.
+async fn resolve_update_package(
+    pkg_resolver: &PackageResolverProxy,
+    update_url: &PkgUrl,
+    space_manager: &SpaceManagerProxy,
+) -> Result<UpdatePackage, ResolveError> {
+    // First, attempt to resolve the update package.
+    match resolver::resolve_update_package(pkg_resolver, update_url).await {
+        Ok(update_pkg) => return Ok(update_pkg),
+        Err(ResolveError::Error(fidl_fuchsia_pkg_ext::ResolveError::NoSpace, _)) => (),
+        Err(e) => return Err(e),
+    }
+
+    // If the first attempt fails with NoSpace, perform a GC and retry.
+    if let Err(e) = gc(space_manager).await {
+        fx_log_err!("unable to gc packages before first resolve retry: {:#}", anyhow!(e));
+    }
+    match resolver::resolve_update_package(pkg_resolver, update_url).await {
+        Ok(update_pkg) => return Ok(update_pkg),
+        Err(ResolveError::Error(fidl_fuchsia_pkg_ext::ResolveError::NoSpace, _)) => (),
+        Err(e) => return Err(e),
+    }
+
+    // If the second attempt fails with NoSpace, perform a GC and retry. If the third attempt fails,
+    // return the error regardless of type.
+    // TODO(fxbug.dev/77367) try harder by releasing retained packages.
+    if let Err(e) = gc(space_manager).await {
+        fx_log_err!("unable to gc packages before second resolve retry: {:#}", anyhow!(e));
+    }
+    resolver::resolve_update_package(pkg_resolver, update_url).await
 }
 
 async fn verify_board<B>(build_info: &B, pkg: &UpdatePackage) -> Result<(), Error>

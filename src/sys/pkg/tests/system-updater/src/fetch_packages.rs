@@ -39,7 +39,6 @@ async fn fails_on_package_resolver_connect_error() {
             Paver(PaverEvent::BootManagerFlush),
             // The connect succeeds, so the system updater only notices the resolver is not there when
             // it tries to resolve a package
-            Gc
         ]
     );
 }
@@ -89,7 +88,6 @@ async fn fails_on_update_package_fetch_error() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             PackageResolve(system_image_url.to_string()),
@@ -194,7 +192,6 @@ async fn fails_on_content_package_fetch_error() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
@@ -242,7 +239,6 @@ async fn fails_when_package_cache_sync_fails() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),

@@ -35,7 +35,6 @@ async fn writes_bootloader() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
@@ -88,7 +87,6 @@ async fn writes_firmware() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
@@ -144,7 +142,6 @@ async fn writes_multiple_firmware_types() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
@@ -210,7 +207,6 @@ async fn skips_unsupported_firmware_type() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,

@@ -54,7 +54,6 @@ async fn updates_the_system() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
@@ -106,7 +105,6 @@ async fn requires_zbi() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),
@@ -176,7 +174,6 @@ async fn updates_the_system_with_progress() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             PackageResolve(SYSTEM_IMAGE_URL.to_string()),

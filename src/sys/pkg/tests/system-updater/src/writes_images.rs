@@ -80,7 +80,6 @@ async fn fails_on_image_write_error() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
@@ -130,7 +129,6 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
@@ -176,7 +174,6 @@ async fn writes_to_both_configs_if_abr_not_supported() {
     assert_eq!(
         env.take_interactions(),
         vec![
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
@@ -353,7 +350,6 @@ async fn writes_recovery_called_legacy_zedboot() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
@@ -407,7 +403,6 @@ async fn writes_recovery() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
@@ -461,7 +456,6 @@ async fn writes_recovery_vbmeta() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
@@ -519,7 +513,6 @@ async fn writes_fuchsia_vbmeta() {
                 configuration: paver::Configuration::B
             }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
@@ -594,7 +587,6 @@ async fn assert_writes_for_current_and_target(
             Paver(PaverEvent::QueryConfigurationStatus { configuration: current_config }),
             Paver(PaverEvent::SetConfigurationUnbootable { configuration: target_config }),
             Paver(PaverEvent::BootManagerFlush),
-            Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
             BlobfsSync,
