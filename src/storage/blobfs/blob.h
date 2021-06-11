@@ -126,7 +126,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   void CompleteSync() __TA_EXCLUDES(mutex_);
 
-#if !defined(ENABLE_BLOBFS_NEW_PAGER)
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+  // Notification that the associated Blobfs is tearing down. This will clean up any extra
+  // references such that the Blob can be deleted.
+  void WillTeardownFilesystem();
+#else
   // When blob VMOs are cloned and returned to clients, blobfs watches the original VMO handle for
   // the signal |ZX_VMO_ZERO_CHILDREN|. While this signal is not set, the blob's Vnode keeps an
   // extra reference to itself to prevent teardown while clients are using this Vmo. This reference
@@ -350,7 +354,10 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // In the new pager, these members are in the PagedVmo base class.
   zx::vmo paged_vmo_ __TA_GUARDED(mutex_);
   const zx::vmo& paged_vmo() const __TA_REQUIRES_SHARED(mutex_) { return paged_vmo_; }
-  void FreePagedVmo() __TA_REQUIRES(mutex_) { paged_vmo_.reset(); }
+  fbl::RefPtr<fs::Vnode> FreePagedVmo() __TA_REQUIRES(mutex_) {
+    paged_vmo_.reset();
+    return nullptr;
+  }
 #endif
 
   // VMO mappings for the blob's merkle tree and data.

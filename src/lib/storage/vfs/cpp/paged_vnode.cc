@@ -42,9 +42,12 @@ void PagedVnode::DidClonePagedVmo() {
   }
 }
 
-void PagedVnode::FreePagedVmo() {
+fbl::RefPtr<Vnode> PagedVnode::FreePagedVmo() {
   if (!paged_vmo_info_.vmo.is_valid())
-    return;
+    return nullptr;
+
+  // Need to stop watching before deleting the VMO or there will be no handle to stop watching.
+  StopWatchingForZeroVmoClones();
 
   if (paged_vfs() && paged_vmo())
     paged_vfs()->FreePagedVmo(std::move(paged_vmo_info_));
@@ -54,31 +57,22 @@ void PagedVnode::FreePagedVmo() {
   paged_vmo_info_.vmo = zx::vmo();
   paged_vmo_info_.id = 0;
 
-  StopWatchingForZeroVmoClones();
-
-  if (has_clones()) {
-    // In the common case, OnNoPagedVmoClonesMessage() will call OnNoPagedVmoClones() which will
-    // optionally call this function to release the vmo. The has_clones_reference_ will be released
-    // at the end of OnNoPagedVmoClones(), allowing this class to go out of scope if there is no
-    // other use for it. In this case, has_clones() will be false before this call and this block
-    // will be skipped.
-    //
-    // But it is possible for a node to want to free its VMO at other times, even when there are
-    // clones. This might happen during filesystem tear-down, for example. In this case we need to
-    // force ourselves into the "no clones" state but we can't release the has_clones_reference_ from
-    // this stack since it will free our object (and the lock the caller must currently be holding
-    // for us) out from under us. Instead, send the reference to the message loop to release it
-    // non-reentrantly.
-    async::PostTask(paged_vfs()->dispatcher(), [this_ref = std::move(has_clones_reference_)]() {});
-  }
+  // This function must not free itself since the lock must be held to call it and the caller can't
+  // release a deleted lock. The has_clones_reference_ may be the last thing keeping this class
+  // alive so return it to allow the caller to release it properly.
+  return std::move(has_clones_reference_);
 }
 
 void PagedVnode::OnNoPagedVmoClones() {
   ZX_DEBUG_ASSERT(!has_clones());
 
   // It is now save to release the VMO. Since we know there are no clones, we don't have to
-  // call zx_pager_detach_vmo() to stop delivery of requests.
-  FreePagedVmo();
+  // call zx_pager_detach_vmo() to stop delivery of requests. And since there are no clones, the
+  // has_clones_reference_ should also be null and there shouldn't be a reference to release
+  // returned by FreePagedVmo(). If there is, deleting it here would cause "this" to be deleted
+  // inside its own lock which will crash.
+  fbl::RefPtr<fs::Vnode> pager_reference = FreePagedVmo();
+  ZX_DEBUG_ASSERT(!pager_reference);
 }
 
 void PagedVnode::OnNoPagedVmoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBase* wait,
@@ -130,6 +124,11 @@ void PagedVnode::WatchForZeroVmoClones() {
   clone_watcher_.Begin(paged_vfs()->dispatcher());
 }
 
-void PagedVnode::StopWatchingForZeroVmoClones() { clone_watcher_.set_object(ZX_HANDLE_INVALID); }
+void PagedVnode::StopWatchingForZeroVmoClones() {
+  // This needs to tolerate calls where the cancel is unnecessary.
+  if (clone_watcher_.is_pending())
+    clone_watcher_.Cancel();
+  clone_watcher_.set_object(ZX_HANDLE_INVALID);
+}
 
 }  // namespace fs

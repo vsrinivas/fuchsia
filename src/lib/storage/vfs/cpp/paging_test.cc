@@ -137,13 +137,17 @@ class PagingTestFile : public PagedVnode {
 
   // Allows tests to force-free the underlying VMO, even if it has mappings.
   void ForceFreePagedVmo() {
-    std::lock_guard lock(mutex_);
+    // Free pager_ref outside the lock.
+    fbl::RefPtr<fs::Vnode> pager_ref;
+    {
+      std::lock_guard lock(mutex_);
 
-    if (!shared_->GetVmoPresent())
-      return;  // Already gone, nothing to do.
+      if (!shared_->GetVmoPresent())
+        return;  // Already gone, nothing to do.
 
-    FreePagedVmo();
-    shared_->SignalVmoPresenceChanged(false);
+      pager_ref = FreePagedVmo();
+      shared_->SignalVmoPresenceChanged(false);
+    }
   }
 
  protected:

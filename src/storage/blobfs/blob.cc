@@ -530,7 +530,18 @@ zx_status_t Blob::Commit() {
   // all data has been copied from these buffers.
   data_mapping.Unmap();
   unpaged_backing_data_.reset();
-  FreePagedVmo();
+
+  // FreePagedVmo() will return the reference that keeps this object alive on behalf of the paging
+  // system so we can free it outside the lock. However, when a Blob is being written it can't be
+  // mapped so we know there should be no pager reference. Otherwise, calling FreePagedVmo() will
+  // make future uses of the mapped data go invalid.
+  //
+  // If in the future we need to support memory mapping a paged VMO (like we allow mapping and using
+  // the portions of a blob that are already known), then this code will have to be changed to not
+  // free the VMO here (which will in turn require other changes).
+  fbl::RefPtr<fs::Vnode> pager_reference = FreePagedVmo();
+  ZX_DEBUG_ASSERT(!pager_reference);
+
   write_info_->compressor.reset();
 
   // Wrap all pending writes with a strong reference to this Blob, so that it stays
@@ -1003,30 +1014,36 @@ bool Blob::ShouldCache() const {
 }
 
 void Blob::ActivateLowMemory() {
-  std::lock_guard lock(mutex_);
+  // The reference returned by FreePagedVmo() needs to be released outside of the lock since it
+  // could be keeping this class in scope.
+  fbl::RefPtr<fs::Vnode> pager_reference;
+  {
+    std::lock_guard lock(mutex_);
 
-  // We shouldn't be putting the blob into a low-memory state while it is still mapped.
-  //
-  // It is common for tests to trigger this assert during Blobfs tear-down. This will happen when
-  // the "no clones" message was not delivered before destruction. This can happen if the test code
-  // kept a vmo reference, but can also happen when there are no clones because the delivery of this
-  // message depends on running the message loop which is easy to skip in a test.
-  //
-  // Often, the solution is to call RunUntilIdle() on the loop after the test code has cleaned up
-  // its mappings but before deleting Blobfs. This will allow the pending notifications to be
-  // delivered.
-  ZX_ASSERT_MSG(!has_clones(), "Cannot put blob in low memory state as its mapped via clones.");
+    // We shouldn't be putting the blob into a low-memory state while it is still mapped.
+    //
+    // It is common for tests to trigger this assert during Blobfs tear-down. This will happen when
+    // the "no clones" message was not delivered before destruction. This can happen if the test
+    // code kept a vmo reference, but can also happen when there are no clones because the delivery
+    // of this message depends on running the message loop which is easy to skip in a test.
+    //
+    // Often, the solution is to call RunUntilIdle() on the loop after the test code has cleaned up
+    // its mappings but before deleting Blobfs. This will allow the pending notifications to be
+    // delivered.
+    ZX_ASSERT_MSG(!has_clones(), "Cannot put blob in low memory state as its mapped via clones.");
 
 #if !defined(ENABLE_BLOBFS_NEW_PAGER)
-  // This must happen before freeing the vmo for the PageWatcher's pager synchronization code in
-  // its destructor to work.
-  page_watcher_.reset();
+    // This must happen before freeing the vmo for the PageWatcher's pager synchronization code in
+    // its destructor to work.
+    page_watcher_.reset();
 #endif
 
-  FreePagedVmo();
+    pager_reference = FreePagedVmo();
 
-  unpaged_backing_data_.reset();
-  merkle_mapping_.Reset();
+    unpaged_backing_data_.reset();
+    merkle_mapping_.Reset();
+  }
+  // When the pager_reference goes out of scope here, it could delete |this|.
 }
 
 Blob::~Blob() { ActivateLowMemory(); }
@@ -1264,7 +1281,20 @@ void Blob::CompleteSync() {
   }
 }
 
-#if !defined(ENABLE_BLOBFS_NEW_PAGER)
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+
+void Blob::WillTeardownFilesystem() {
+  // Be careful to release the pager reference outside the lock.
+  fbl::RefPtr<fs::Vnode> pager_reference;
+  {
+    std::lock_guard lock(mutex_);
+    pager_reference = FreePagedVmo();
+  }
+  // When pager_reference goes out of scope here, it could cause |this| to be deleted.
+}
+
+#else
+
 // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
 // is complete.
 fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
@@ -1277,6 +1307,7 @@ fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
   }
   return nullptr;
 }
+
 #endif
 
 zx_status_t Blob::OpenNode([[maybe_unused]] ValidatedOptions options,

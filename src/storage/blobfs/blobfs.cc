@@ -846,9 +846,11 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
 
   // Shutdown all internal connections to blobfs.
   GetCache().ForAllOpenNodes([](fbl::RefPtr<CacheNode> cache_node) {
-    auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
-#if !defined(ENABLE_BLOBFS_NEW_PAGER)
-    vnode->CloneWatcherTeardown();
+    auto blob = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+    blob->WillTeardownFilesystem();
+#else
+    blob->CloneWatcherTeardown();
 #endif
     return ZX_OK;
   });

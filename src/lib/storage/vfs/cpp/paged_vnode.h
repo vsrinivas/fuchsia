@@ -121,7 +121,14 @@ class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
   //
   // If there are any clones of the vmo alive, all future paging requests on those vmo clones will
   // fail.
-  void FreePagedVmo() __TA_REQUIRES(mutex_);
+  //
+  // This function returns any reference held on behalf of the pager that is keeping this class
+  // alive. The caller should ensure that this reference (if non-null) is safely released outside of
+  // the Vnode's mutex_.
+  //
+  // TODO(fxbug.dev/51111) make the return value a PagedVnode. Using the base class here allows
+  // the blobfs conversion to the new pager easier.
+  [[nodiscard]] fbl::RefPtr<Vnode> FreePagedVmo() __TA_REQUIRES(mutex_);
 
   // Implementors of this class can override this function to response to the event that there
   // are no more clones of the vmo_. The default implementation calls FreePagedVmo().
