@@ -1,0 +1,20 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("gbm.gni")
+
+config("gbm_config") {
+  libs = [ "$gbm_lib_path" ]
+}
+
+group("gbm") {
+  if (use_custom_gbm) {
+    public_deps = [
+      "//third_party/minigbm(//build/toolchain:linux_${current_cpu}-shared)",
+    ]
+  } else {
+    public_configs = [ ":gbm_config" ]
+    public_deps = [ "//third_party/mesa/include:gbm-header" ]
+  }
+}

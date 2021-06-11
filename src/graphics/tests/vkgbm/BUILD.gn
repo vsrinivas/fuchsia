@@ -8,9 +8,9 @@ executable("vkgbm") {
   sources = [ "test_vkgbm.cc" ]
 
   deps = [
+    "//src/graphics/lib/gbm",
     "//src/graphics/tests/common",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/minigbm",
   ]
 }

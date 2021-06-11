@@ -1,0 +1,15 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  use_custom_gbm = false
+}
+
+if (use_custom_gbm) {
+  gbm_lib_path = "${root_build_dir}/linux_${current_cpu}-shared/libgbm.so"
+} else if (target_cpu == "x64") {
+  gbm_lib_path = "//prebuilt/third_party/minigbm/linux-x64/libgbm.so"
+} else {
+  gbm_lib_path = "no-gbm-available"
+}
