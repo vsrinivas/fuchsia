@@ -39,9 +39,6 @@ source_set("device") {
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/virtio",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("virtio") {
@@ -92,9 +89,6 @@ source_set("block") {
     "//zircon/public/lib/bitmap",
     "//zircon/system/ulib/trace",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("virtio_block_bin") {
@@ -106,9 +100,6 @@ executable("virtio_block_bin") {
     ":block",
     ":virtio",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_package_with_single_component("virtio_block") {
@@ -164,9 +155,6 @@ executable("virtio_gpu_bin") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/ui/base_view",
   ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_package_with_single_component("virtio_gpu") {
@@ -279,9 +267,6 @@ executable("virtio_net_bin") {
     "//sdk/lib/fit-promise",
     "//zircon/public/lib/async-cpp",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_package_with_single_component("virtio_net") {
@@ -319,9 +304,6 @@ executable("virtio_wl_bin") {
     "//src/lib/fsl",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_package_with_single_component("virtio_wl") {
@@ -369,9 +351,6 @@ executable("device_tests") {
   ]
 
   configs += [ "//build/config:all_source" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("qcow_test_data") {
@@ -395,9 +374,6 @@ executable("device_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 action("virtio_magma_generic") {

@@ -31,12 +31,12 @@ class FdBlockDispatcher : public BlockDispatcher {
   }
 
   void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
-    int ret = pread(fd_, data, size, off);
+    ssize_t ret = pread(fd_, data, size, off);
     callback(ret < 0 ? ZX_ERR_IO : ZX_OK);
   }
 
   void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
-    int ret = pwrite(fd_, data, size, off);
+    ssize_t ret = pwrite(fd_, data, size, off);
     callback(ret < 0 ? ZX_ERR_IO : ZX_OK);
   }
 };
