@@ -35,7 +35,7 @@
         {
             name: "custom-timeout",
             extends: "realm",
-            __stop_timeout_ms: 1000,
+            __stop_timeout_ms: 4000,
         },
     ],
 }

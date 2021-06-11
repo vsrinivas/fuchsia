@@ -215,15 +215,11 @@ fuchsia_component("rendezvous_exit_component") {
 fuchsia_test_package("elf_runner_lifecycle_test") {
   test_components = [
     ":lifecycle_integration_test",
+    ":lifecycle_timeout_integration_test",
     ":lifecycle_timeout_unresponsive_integration_test",
     ":component_exit_integration_test",
   ]
 
-  # TODO(fxbug.dev/78492): Flaky test disabled on coverage.
-  # Please fix the flake and remove the condition below.
-  if (!is_coverage) {
-    test_components += [ ":lifecycle_timeout_integration_test" ]
-  }
   deps = [
     ":immediate_exit_component",
     ":lifecycle_timeout_node",
