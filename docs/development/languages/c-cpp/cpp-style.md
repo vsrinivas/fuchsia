@@ -8,19 +8,19 @@ compliance with the style guide. Tricium checks in Gerrit also use clang-format 
 non-gating linter. However, you may still manually format code as long as it complies
 with these guidelines.
 
-#### Tip: TODO comments
+### Tip: TODO comments
 
 When following the Google C++ style guide by entering a bug number in a TODO
 comment, using the form `TODO(fxbug.dev/11111)` will provide an address that
 can be used as a URL.
 
-### Exceptions
+## Exceptions
 
-#### Line length
+### Line length
 
 Fuchsia uses 100 columns instead of 80.
 
-#### Braces
+### Braces
 
 Always use braces `{ }` when the contents of a block are more than one line.
 This is something you need to watch since Clang-format doesn't know to add
@@ -40,7 +40,7 @@ while (!done) {
 ```
 
 
-#### Conditionals and loops
+### Conditionals and loops
 
 Do not use spaces inside parentheses (the Google style guide discourages but
 permits this).
@@ -57,7 +57,7 @@ if (x == kFoo)
   return new Foo;
 ```
 
-#### Namespace names
+### Namespace names
 
 * Nested namespaces are forbidden, with the following exceptions:
   - `internal` (when required to hide implementation details of templated code)
@@ -77,7 +77,7 @@ Rationale: [Tip of the Week #130: Namespace Naming][totw-130]
 [google-guide]: https://google.github.io/styleguide/cppguide.html
 [totw-130]: https://abseil.io/tips/130
 
-#### Includes
+### Includes
 
 * If the header being included is a system, global, or library header (see
   [Naming C/C++ objects](naming.md) for precise definitions), use
