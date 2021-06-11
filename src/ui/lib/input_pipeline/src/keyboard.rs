@@ -13,7 +13,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::{channel::mpsc::Sender, SinkExt},
-    input_synthesis::usages::is_modifier3,
+    keymaps::usages::is_modifier3,
 };
 
 /// A [`KeyboardEvent`] represents an input event from a keyboard device.

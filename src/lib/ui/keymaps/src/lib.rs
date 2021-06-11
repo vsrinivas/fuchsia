@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::usages;
 use anyhow::{format_err, Result};
 use fidl_fuchsia_input;
 use fuchsia_syslog::fx_log_err;
@@ -12,6 +11,8 @@ use std::collections;
 mod defs;
 
 pub mod config;
+pub mod inverse_keymap;
+pub mod usages;
 
 lazy_static! {
     /// A US QWERTY keymap.

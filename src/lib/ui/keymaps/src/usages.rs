@@ -150,7 +150,7 @@ pub fn input3_key_to_hid_usage(key: fidl_fuchsia_input::Key) -> u32 {
 /// # Future directions
 /// Per fxbug.dev/63974, this method will be replaced with a method that deals in
 /// `fuchsia.input.Key`s, instead of HID Usage IDs.
-pub(crate) fn hid_usage_to_input3_key(usage_id: u16) -> Option<fidl_fuchsia_input::Key> {
+pub fn hid_usage_to_input3_key(usage_id: u16) -> Option<fidl_fuchsia_input::Key> {
     if usage_id == Usages::HidUsageKeyVolUp as u16 {
         Some(fidl_fuchsia_input::Key::MediaVolumeIncrement)
     } else if usage_id == Usages::HidUsageKeyVolDown as u16 {

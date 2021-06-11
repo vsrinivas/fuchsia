@@ -27,11 +27,11 @@ rustc_library("input-synthesis") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
+    "//src/lib/ui/keymaps",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:serde",
@@ -40,12 +40,6 @@ rustc_library("input-synthesis") {
   ]
 
   sources = [
-    # TODO(fxbug.dev/78366): factor inverse_keymap and src/keymaps/* into own
-    # library.
-    "src/inverse_keymap.rs",
-    "src/keymaps/config.rs",
-    "src/keymaps/defs.rs",
-    "src/keymaps/mod.rs",
     "src/legacy_backend.rs",
     "src/lib.rs",
     "src/modern_backend/input_device.rs",
@@ -53,7 +47,6 @@ rustc_library("input-synthesis") {
     "src/modern_backend/input_reports_reader.rs",
     "src/modern_backend/mod.rs",
     "src/synthesizer.rs",
-    "src/usages.rs",
   ]
 
   configs += [ ":use_modern_input_injection" ]

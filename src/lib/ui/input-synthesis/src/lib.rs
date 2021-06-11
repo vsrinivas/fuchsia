@@ -7,14 +7,12 @@ use {
     anyhow::{format_err, Error},
     fidl_fuchsia_ui_input::{self, Touch},
     fuchsia_component::client::new_protocol_connector,
+    keymaps::usages,
     std::time::Duration,
 };
 
-pub mod inverse_keymap;
-pub mod keymaps;
 pub mod legacy_backend;
 pub mod synthesizer;
-pub mod usages;
 
 mod modern_backend;
 

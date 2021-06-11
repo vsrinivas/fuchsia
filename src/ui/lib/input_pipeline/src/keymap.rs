@@ -11,7 +11,7 @@ use crate::input_handler::InputHandler;
 use crate::keyboard;
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_debug;
-use input_synthesis::keymaps;
+use keymaps;
 
 /// `Handler` applies a keymap to a keyboard event, resolving each key press
 /// to a sequence of Unicode code points.  This allows basic keymap application,

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::{inverse_keymap::InverseKeymap, keymaps},
     anyhow::{ensure, Error},
     async_trait::async_trait,
     fidl_fuchsia_input as input,
@@ -11,6 +10,7 @@ use {
     fidl_fuchsia_ui_input3 as input3, fuchsia_async as fasync,
     fuchsia_syslog::fx_log_debug,
     fuchsia_zircon as zx,
+    keymaps::{self, inverse_keymap::InverseKeymap},
     serde::{Deserialize, Deserializer},
     std::{convert::TryFrom, thread, time::Duration},
 };

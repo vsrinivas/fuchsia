@@ -6,7 +6,7 @@ use {
     core::convert::TryFrom,
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input as ui_input,
     fidl_fuchsia_ui_input3 as ui_input3,
-    input_synthesis::{keymaps, usages::input3_key_to_hid_usage},
+    keymaps::{self, usages::input3_key_to_hid_usage},
     std::collections::HashSet,
 };
 
@@ -218,7 +218,7 @@ impl TryFrom<KeyEvent> for ui_input3::KeyEvent {
 #[cfg(test)]
 mod test {
     use {
-        super::*, core::convert::TryInto, input_synthesis::usages::Usages, maplit::hashset,
+        super::*, core::convert::TryInto, keymaps::usages::Usages, maplit::hashset,
         std::iter::FromIterator,
     };
 

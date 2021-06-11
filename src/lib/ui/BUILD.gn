@@ -8,6 +8,7 @@ group("ui") {
   deps = [
     "carnelian",
     "input-synthesis",
+    "keymaps",
     "scenic/cpp",
   ]
 }
@@ -19,6 +20,7 @@ group("tests") {
     "carnelian:carnelian-tests",
     "fuchsia-framebuffer:fuchsia-framebuffer-tests",
     "input-synthesis:tests",
+    "keymaps:tests",
   ]
 }
 

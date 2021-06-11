@@ -12,7 +12,7 @@ use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::{StreamExt, TryStreamExt};
-use input_synthesis::usages::Usages;
+use keymaps::usages::Usages;
 use test_helpers::{bind_editor, get_state_update, simulate_keypress};
 
 #[fasync::run_singlethreaded(test)]

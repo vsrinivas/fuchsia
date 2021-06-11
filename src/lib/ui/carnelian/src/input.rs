@@ -16,8 +16,8 @@ use fuchsia_async::{self as fasync, Time, TimeoutExt};
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon::{self as zx, Duration};
 use futures::{TryFutureExt, TryStreamExt};
-use input_synthesis::usages::input3_key_to_hid_usage;
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
+use keymaps::usages::input3_key_to_hid_usage;
 use std::{
     collections::{HashMap, HashSet},
     fs,
@@ -653,7 +653,7 @@ impl InputReportHandler {
             modifiers: &Modifiers,
         ) -> Event {
             let hid_usage = input3_key_to_hid_usage(key);
-            let code_point = input_synthesis::keymaps::US_QWERTY.hid_usage_to_code_point_for_mods(
+            let code_point = keymaps::US_QWERTY.hid_usage_to_code_point_for_mods(
                 hid_usage,
                 modifiers.shift,
                 modifiers.caps_lock,
@@ -1196,7 +1196,7 @@ impl ScenicInputHandler {
         let device_id = self.keyboard_device_id.clone();
         let hid_usage = input3_key_to_hid_usage(key);
         let modifiers = Modifiers::from_pressed_keys_3(&self.pressed_keys);
-        let code_point = input_synthesis::keymaps::US_QWERTY.hid_usage_to_code_point_for_mods(
+        let code_point = keymaps::US_QWERTY.hid_usage_to_code_point_for_mods(
             hid_usage,
             modifiers.shift,
             modifiers.caps_lock,
@@ -1254,8 +1254,7 @@ mod scenic_input_tests {
             .filter_map(|event| match event.event_type {
                 EventType::Keyboard(keyboard_event) => match keyboard_event.phase {
                     keyboard::Phase::Pressed => {
-                        if keyboard_event.hid_usage
-                            == input_synthesis::usages::Usages::HidUsageKeyR as u32
+                        if keyboard_event.hid_usage == keymaps::usages::Usages::HidUsageKeyR as u32
                             && keyboard_event.modifiers.control
                         {
                             Some(())

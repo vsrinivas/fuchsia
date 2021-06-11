@@ -8,7 +8,7 @@
 //! This is useful during the transition towards a more configurable keymap
 //! support.
 
-use crate::keymaps::ModifierState;
+use crate::ModifierState;
 use lazy_static::lazy_static;
 use std::convert::Into;
 

@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_ui_input3 as fidl_ui_input3,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_debug, fx_log_err},
-    input_synthesis::keymaps,
+    keymaps,
     std::convert::TryInto,
 };
 

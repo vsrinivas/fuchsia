@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use fidl_fuchsia_ui_input::KeyboardReport;
 
-use crate::keymaps;
+use crate as keymaps;
 use crate::usages::Usages;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -51,7 +51,7 @@ impl InverseKeymap {
     ///
     /// ```
     /// # use crate::inverse_keymap::InverseKeymap;
-    /// # use crate::keymaps::US_QWERTY;
+    /// # use crate::US_QWERTY;
     ///
     /// let _keymap = InverseKeymap::new(&US_QWERTY);
     /// ```
