@@ -188,8 +188,9 @@ pub(crate) async fn discovery_loop(config: DiscoveryConfig) {
 fn make_target<B: ByteSlice + Clone>(
     src: SocketAddr,
     msg: dns::Message<B>,
-) -> Option<bridge::Target> {
+) -> Option<(bridge::Target, u32)> {
     let mut nodename = String::new();
+    let mut ttl = 0u32;
     let src = bridge::TargetAddrInfo::Ip(bridge::TargetIp {
         ip: match &src {
             SocketAddr::V6(s) => IpAddress::Ipv6(Ipv6Address { addr: s.ip().octets().into() }),
@@ -205,19 +206,25 @@ fn make_target<B: ByteSlice + Clone>(
             write!(nodename, "{}", record.domain).unwrap();
             nodename = nodename.trim_end_matches(".local").into();
         }
+        if ttl == 0 {
+            ttl = record.ttl;
+        }
         // The records here also have the IP addresses of
         // the machine, however these could be different if behind a NAT
         // (as with QEMU). Later it might be useful to store them in the
         // Target struct.
     }
-    if nodename.len() == 0 {
+    if nodename.len() == 0 || ttl == 0 {
         return None;
     }
-    Some(bridge::Target {
-        nodename: Some(nodename),
-        addresses: Some(vec![src]),
-        ..bridge::Target::EMPTY
-    })
+    Some((
+        bridge::Target {
+            nodename: Some(nodename),
+            addresses: Some(vec![src]),
+            ..bridge::Target::EMPTY
+        },
+        ttl,
+    ))
 }
 
 // recv_loop reads packets from sock. If the packet is a Fuchsia mdns packet, a
@@ -261,14 +268,14 @@ async fn recv_loop(sock: Rc<UdpSocket>, mdns_service: Weak<MdnsServiceInner>) {
         }
 
         if let Some(mdns_service) = mdns_service.upgrade() {
-            if let Some(t) = make_target(addr, msg) {
+            if let Some((t, ttl)) = make_target(addr, msg) {
                 log::trace!(
                     "packet from {} ({}) on {}",
                     addr,
                     t.nodename.as_ref().unwrap_or(&"<unknown>".to_string()),
                     sock.local_addr().unwrap()
                 );
-                mdns_service.handle_target(t).await;
+                mdns_service.handle_target(t, ttl).await;
             }
         } else {
             return;
@@ -455,7 +462,8 @@ mod tests {
             .unwrap_or_else(|_| panic!("failed to serialize"));
         let parsed = msg_bytes.parse::<Message<_>>().expect("failed to parse");
         let addr: SocketAddr = (MDNS_MCAST_V4, 12).into();
-        let t = make_target(addr.clone(), parsed).unwrap();
+        let (t, ttl) = make_target(addr.clone(), parsed).unwrap();
+        assert_eq!(ttl, 4500);
         assert_eq!(
             t.addresses.as_ref().unwrap()[0],
             bridge::TargetAddrInfo::Ip(bridge::TargetIp {

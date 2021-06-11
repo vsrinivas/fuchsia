@@ -21,17 +21,30 @@ pub(crate) const MDNS_INTERFACE_DISCOVERY_INTERVAL_SECS: u64 = 1;
 pub(crate) const MDNS_TTL: u32 = 255;
 
 #[derive(Debug)]
-struct CachedTarget(bridge::Target);
+struct CachedTarget {
+    target: bridge::Target,
+    eviction_task: Option<Task<()>>,
+}
+
+impl CachedTarget {
+    fn new(target: bridge::Target) -> Self {
+        Self { target, eviction_task: None }
+    }
+
+    fn new_with_task(target: bridge::Target, eviction_task: Task<()>) -> Self {
+        Self { target, eviction_task: Some(eviction_task) }
+    }
+}
 
 impl Hash for CachedTarget {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.nodename.as_ref().unwrap_or(&"<unknown>".to_string()).hash(state);
+        self.target.nodename.as_ref().unwrap_or(&"<unknown>".to_string()).hash(state);
     }
 }
 
 impl PartialEq for CachedTarget {
     fn eq(&self, other: &CachedTarget) -> bool {
-        self.0.nodename.eq(&other.0.nodename)
+        self.target.nodename.eq(&other.target.nodename)
     }
 }
 
@@ -44,11 +57,31 @@ pub(crate) struct MdnsServiceInner {
 }
 
 impl MdnsServiceInner {
-    async fn handle_target(&self, t: bridge::Target) {
-        if self.target_cache.borrow_mut().insert(CachedTarget(t.clone())) {
-            self.publish_event(bridge::MdnsEventType::TargetFound(t)).await
+    async fn handle_target(self: &Rc<Self>, t: bridge::Target, ttl: u32) {
+        let weak = Rc::downgrade(self);
+        let t_clone = t.clone();
+        let eviction_task = Task::local(async move {
+            fuchsia_async::Timer::new(Duration::from_secs(ttl.into())).await;
+            if let Some(this) = weak.upgrade() {
+                this.evict_target(t_clone).await;
+            }
+        });
+
+        if self
+            .target_cache
+            .borrow_mut()
+            .replace(CachedTarget::new_with_task(t.clone(), eviction_task))
+            .is_none()
+        {
+            self.publish_event(bridge::MdnsEventType::TargetFound(t)).await;
         } else {
             self.publish_event(bridge::MdnsEventType::TargetRediscovered(t)).await
+        }
+    }
+
+    async fn evict_target(&self, t: bridge::Target) {
+        if self.target_cache.borrow_mut().remove(&CachedTarget::new(t.clone())) {
+            self.publish_event(bridge::MdnsEventType::TargetExpired(t)).await
         }
     }
 
@@ -57,7 +90,7 @@ impl MdnsServiceInner {
     }
 
     fn target_cache(&self) -> Vec<bridge::Target> {
-        self.target_cache.borrow().iter().map(|c| c.0.clone()).collect()
+        self.target_cache.borrow().iter().map(|c| c.target.clone()).collect()
     }
 }
 
@@ -158,10 +191,10 @@ mod tests {
         let svc_inner = service.borrow().inner.as_ref().unwrap().clone();
         let nodename = "plop".to_owned();
         svc_inner
-            .handle_target(bridge::Target {
-                nodename: Some(nodename.clone()),
-                ..bridge::Target::EMPTY
-            })
+            .handle_target(
+                bridge::Target { nodename: Some(nodename.clone()), ..bridge::Target::EMPTY },
+                5000,
+            )
             .await;
         while let Some(e) = proxy.get_next_event().await.unwrap() {
             assert!(matches!(*e, bridge::MdnsEventType::TargetFound(_),));
@@ -172,10 +205,10 @@ mod tests {
             nodename
         );
         svc_inner
-            .handle_target(bridge::Target {
-                nodename: Some(nodename.clone()),
-                ..bridge::Target::EMPTY
-            })
+            .handle_target(
+                bridge::Target { nodename: Some(nodename.clone()), ..bridge::Target::EMPTY },
+                5000,
+            )
             .await;
         while let Some(e) = proxy.get_next_event().await.unwrap() {
             assert!(matches!(*e, bridge::MdnsEventType::TargetRediscovered(_),));
@@ -185,5 +218,72 @@ mod tests {
             proxy.get_targets().await.unwrap().into_iter().next().unwrap().nodename.unwrap(),
             nodename
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_eviction() {
+        let daemon = FakeDaemonBuilder::new().build();
+        let service = Rc::new(RefCell::new(Mdns::default()));
+        let (proxy, _task) = services::testing::create_proxy(service.clone(), &daemon).await;
+        let svc_inner = service.borrow().inner.as_ref().unwrap().clone();
+        let nodename = "plop".to_owned();
+        svc_inner
+            .handle_target(
+                bridge::Target { nodename: Some(nodename.clone()), ..bridge::Target::EMPTY },
+                1,
+            )
+            .await;
+        // Hangs until the target expires.
+        let mut new_target_found = false;
+        while let Some(e) = proxy.get_next_event().await.unwrap() {
+            match *e {
+                bridge::MdnsEventType::TargetExpired(_) => {
+                    break;
+                }
+                bridge::MdnsEventType::TargetFound(t) => {
+                    assert_eq!(t.nodename.unwrap(), nodename);
+                    new_target_found = true;
+                }
+                e => panic!("unsupported event: {:?}", e),
+            }
+        }
+        assert_eq!(proxy.get_targets().await.unwrap().len(), 0);
+        assert!(new_target_found);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_eviction_timer_override() {
+        let daemon = FakeDaemonBuilder::new().build();
+        let service = Rc::new(RefCell::new(Mdns::default()));
+        let (proxy, _task) = services::testing::create_proxy(service.clone(), &daemon).await;
+        let svc_inner = service.borrow().inner.as_ref().unwrap().clone();
+        let nodename = "plop".to_owned();
+        svc_inner
+            .handle_target(
+                bridge::Target { nodename: Some(nodename.clone()), ..bridge::Target::EMPTY },
+                50000,
+            )
+            .await;
+        while let Some(e) = proxy.get_next_event().await.unwrap() {
+            match *e {
+                bridge::MdnsEventType::TargetFound(t) => {
+                    assert_eq!(t.nodename.unwrap(), nodename);
+                    break;
+                }
+                e => panic!("unexpected event: {:?}", e),
+            }
+        }
+        svc_inner
+            .handle_target(
+                bridge::Target { nodename: Some(nodename.clone()), ..bridge::Target::EMPTY },
+                1,
+            )
+            .await;
+        while let Some(e) = proxy.get_next_event().await.unwrap() {
+            if matches!(*e, bridge::MdnsEventType::TargetExpired(_)) {
+                break;
+            }
+        }
+        assert_eq!(proxy.get_targets().await.unwrap().len(), 0);
     }
 }
