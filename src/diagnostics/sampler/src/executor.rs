@@ -354,6 +354,7 @@ impl ProjectSampler {
         minimum_sample_rate_sec: i64,
         project_sampler_stats: Arc<ProjectSamplerStats>,
     ) -> Result<ProjectSampler, Error> {
+        let customer_id = config.customer_id;
         let project_id = config.project_id;
         let poll_rate_sec = config.poll_rate_sec;
         if poll_rate_sec < minimum_sample_rate_sec {
@@ -390,7 +391,7 @@ impl ProjectSampler {
             let (cobalt_logger_proxy, cobalt_server_end) =
                 fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
             cobalt_logger_factory
-                .create_logger_from_project_id(project_id, cobalt_server_end)
+                .create_logger_from_project_spec(customer_id, project_id, cobalt_server_end)
                 .await?;
             Some(cobalt_logger_proxy)
         } else {
@@ -401,6 +402,7 @@ impl ProjectSampler {
             let (metrics_logger_proxy, metrics_server_end) =
                 fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
             let mut project_spec = ProjectSpec::EMPTY;
+            project_spec.customer_id = Some(customer_id);
             project_spec.project_id = Some(project_id);
             metric_logger_factory
                 .create_metric_event_logger(project_spec, metrics_server_end)

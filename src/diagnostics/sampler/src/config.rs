@@ -15,6 +15,11 @@ pub struct ProjectConfig {
     /// Project ID that metrics are being sampled and forwarded on behalf of.
     pub project_id: u32,
 
+    /// Customer ID that metrics are being sampled and forwarded on behalf of.
+    /// This will default to 1 if not specified.
+    #[serde(default)]
+    pub customer_id: u32,
+
     /// The frequency with which metrics are sampled, in seconds.
     pub poll_rate_sec: i64,
 
@@ -71,7 +76,11 @@ pub fn parse_config(path: impl AsRef<Path>) -> Result<ProjectConfig, Error> {
     let path = path.as_ref();
     let json_string: String =
         fs::read_to_string(path).with_context(|| format!("parsing config: {}", path.display()))?;
-    let config: ProjectConfig = serde_json5::from_str(&json_string)?;
+    let mut config: ProjectConfig = serde_json5::from_str(&json_string)?;
+    // If not specified, use the default Fuchsia customer.
+    if config.customer_id == 0 {
+        config.customer_id = 1;
+    }
     Ok(config)
 }
 
@@ -250,4 +259,48 @@ mod tests {
         assert!(config.is_ok());
         assert_eq!(config.unwrap().project_configs.len(), 2);
     }
+}
+
+#[test]
+fn default_customer_id() {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("config");
+    fs::create_dir(&config_path).unwrap();
+    fs::write(config_path.join("1default.json"), r#"{
+  "project_id": 5,
+  "poll_rate_sec": 60,
+  "metrics": [
+    {
+      "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_batch_iterator_get_next_requests",
+      "metric_id": 1,
+      "metric_type": "Occurrence",
+      "event_codes": [0, 0]
+    }
+  ]
+}
+"#).unwrap();
+    fs::write(
+        config_path.join("2with_customer_id.json"),
+        r#"{
+  "customer_id": 6,
+  "project_id": 5,
+  "poll_rate_sec": 3,
+  "metrics": [
+    {
+      "selector": "single_counter_test_component.cmx:root:counter",
+      "metric_id": 1,
+      "metric_type": "Occurrence",
+      "event_codes": [0, 0]
+    }
+  ]
+}
+"#,
+    )
+    .unwrap();
+
+    let config = SamplerConfig::from_directory(10, &config_path);
+    assert!(config.is_ok());
+    assert_eq!(config.as_ref().unwrap().project_configs.len(), 2);
+    assert_eq!(config.as_ref().unwrap().project_configs[0].customer_id, 1);
+    assert_eq!(config.as_ref().unwrap().project_configs[1].customer_id, 6);
 }
