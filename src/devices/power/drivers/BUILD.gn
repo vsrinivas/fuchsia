@@ -8,6 +8,7 @@ group("tests") {
   deps = [
     "aml-meson-power:tests",
     "aml-pwm-regulator:tests",
+    "nelson-brownout-protection:tests",
     "power:tests",
     "silergy:tests",
     "ti-ina231:tests",

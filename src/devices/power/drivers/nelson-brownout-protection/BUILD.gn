@@ -1,0 +1,69 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+
+bind_rules("nelson-brownout-protection-bind") {
+  rules = "nelson-brownout-protection.bind"
+  output = "nelson-brownout-protection-bind.h"
+  tests = "nelson-brownout-protection-bind-test.json"
+  deps = [ "//src/devices/bind/fuchsia.google.platform" ]
+}
+
+group("common") {
+  public_deps = [
+    ":nelson-brownout-protection-bind",
+    "//sdk/banjo/fuchsia.hardware.audio:fuchsia.hardware.audio_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
+    "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_llcpp",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//src/media/audio/lib/simple-codec",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/trace:trace-driver",
+  ]
+}
+
+driver_module("nelson-brownout-protection") {
+  configs += [ "//build/config:all_source" ]
+  sources = [ "nelson-brownout-protection.cc" ]
+  deps = [ ":common" ]
+}
+
+test("nelson-brownout-protection-test-bin") {
+  output_name = "nelson-brownout-protection-test"
+  configs += [ "//build/config:all_source" ]
+  sources = [
+    "nelson-brownout-protection-test.cc",
+    "nelson-brownout-protection.cc",
+  ]
+  deps = [
+    ":common",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
+}
+
+fuchsia_unittest_package("nelson-brownout-protection-test") {
+  deps = [ ":nelson-brownout-protection-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":nelson-brownout-protection-bind_test",
+    ":nelson-brownout-protection-test",
+  ]
+}
