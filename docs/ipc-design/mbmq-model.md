@@ -77,7 +77,7 @@ The callee process can read the MBO from its MsgQueue using
 from the message queue, sets the CMH to point to the MBO, and sets the
 MBO's state to `owned_by_callee`.  This state gives the callee the
 ability to read and write the MBO's contents using the CMH handle.
-The caller can read the request message out of the MBO by pasing the
+The caller can read the request message out of the MBO by passing the
 CMH handle to `zx_mbo_read()`.  The caller can write a reply message
 into the MBO (overwriting its contents) by passing the CMH handle to
 `zx_mbo_write()`.
@@ -479,8 +479,8 @@ The non-shareability of channels has some disadvantages:
     from the source that we get the object from, e.g. by doing
     multiple `Open` calls on a `fuchsia.io.Directory`.
 
-    A further option is create proxy channels that forward requests to
-    one FIDL object.  This is clearly undesirable for performance
+    A further option is to create proxy channels that forward requests
+    to one FIDL object.  This is clearly undesirable for performance
     reasons.
 
 *   Non-shareability also complicates matters when we want to share a
