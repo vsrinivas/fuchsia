@@ -76,7 +76,10 @@ class TestMultithread {
       if (!InitBatchBuffer(batch_buffer.get()))
         break;  // Abort the test
 
-      EXPECT_TRUE(connection->MapBufferGpu(id, gpu_addr, 0, batch_buffer->size() / page_size(), 0));
+      constexpr uint64_t kMapFlags =
+          MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
+      EXPECT_TRUE(
+          connection->MapBufferGpu(id, gpu_addr, 0, batch_buffer->size() / page_size(), kMapFlags));
       gpu_addr += batch_buffer->size() + extra_page_count * page_size();
 
       auto command_buffer = std::make_unique<magma_system_command_buffer>();
