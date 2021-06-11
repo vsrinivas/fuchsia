@@ -96,8 +96,10 @@ impl<'a> PciDb<'a> {
                     // subvendor subdevice  subsystem_name
                     // ex: \t\t001c 0004  2 Channel CAN Bus SJC1000
                     let subvendor = u16::from_str_radix(&trimmed[0..4], 16);
-                    let subdevice = u16::from_str_radix(&trimmed[6..10], 16);
-                    let name = &trimmed[10..len];
+                    let subdevice = u16::from_str_radix(&trimmed[5..9], 16);
+                    // Devices with subvendor/subdevice information have an
+                    // extra space, but those without do not.
+                    let name = &trimmed[10..len].trim();
 
                     let v = cached_vendor.unwrap();
                     v.devices.push(Device {
@@ -183,13 +185,26 @@ impl<'a> PciDb<'a> {
     ) -> Option<String> {
         if let Some(v_entry) = self.device_db.get(&vendor) {
             let mut name = v_entry.name.to_string();
-            for dev in &v_entry.devices {
+            // The ID database sorts devices in a manner like:
+            // 1000  Broadcom / LSI
+            //        0001  53c810
+            //        000c  53c895
+            //               1000 1010  LSI8951U PCI to Ultra2 SCSI host adapter
+            //               1000 1020  LSI8952U PCI to Ultra2 SCSI host adapter
+            //               1de1 3906  DC-390U2B SCSI adapter
+            //               1de1 3907  DC-390U2W
+            // By reversing the list under this vendor/device we grab the most
+            // specific name if possible, but fall back on the general device
+            // name if none is find for that specific subvendor / subdevice
+            // combination.
+            for dev in v_entry.devices.iter().rev() {
                 if device == dev.device
                     && ((dev.subvendor == None && dev.subdevice == None)
                         || (subvendor == dev.subvendor && subdevice == dev.subdevice))
                 {
                     name.push(' ');
                     name.push_str(&dev.name);
+                    break;
                 }
             }
             return Some(name);
@@ -201,11 +216,21 @@ impl<'a> PciDb<'a> {
         if let Some(c_entry) = self.class_db.get(&class) {
             let mut name = c_entry.name.to_string();
             for sub in &c_entry.subclasses {
-                if subclass == sub.subclass && ((prog_if == None) || (prog_if == sub.prog_if)) {
-                    name.push(' ');
-                    name.push_str(&sub.name);
+                if subclass == sub.subclass {
+                    if sub.prog_if == None {
+                        // We've found the basic subclass name, so replace the
+                        // base class name we found. A subclass without a program
+                        // interface is always the more general class name.
+                        name = sub.name.to_string();
+                    } else if prog_if.is_some() && prog_if == sub.prog_if {
+                        // If we find a matching program interface then append
+                        // it to the subclass name found above to get the more
+                        // specific name.
+                        name.push_str(&format!(" ({})", sub.name));
+                    }
                 }
             }
+            // At the very least we have a base class name. We may also have a subclass name.
             return Some(name);
         }
         None
@@ -216,46 +241,91 @@ impl<'a> PciDb<'a> {
 mod test {
     use super::*;
     use lazy_static::lazy_static;
+    use std::fs;
 
     lazy_static! {
-        static ref DB: PciDb = PciDb::new("/boot/data/lspci/pci.ids.gz")
+        static ref DB_BUF: String = fs::read_to_string("/pkg/data/lspci/pci.ids")
             .context("Couldn't open PCI IDs file")
             .unwrap();
+        static ref DB: PciDb<'static> =
+            PciDb::new(&DB_BUF).context("Couldnt parse database buffer").unwrap();
     }
 
     #[test]
     fn vendor_without_devices() -> Result<(), Error> {
-        assert_eq!("SafeNet (wrong ID)", DB.find(0x0001, 0, None, None).unwrap());
+        assert_eq!("SafeNet (wrong ID)", DB.find_device(0x0001, 0, None, None).unwrap());
         // This vendor has no devices, does it still work if we specify one?
-        assert_eq!("SafeNet (wrong ID)", DB.find(0x0001, 0xFFFF, None, None).unwrap());
+        assert_eq!("SafeNet (wrong ID)", DB.find_device(0x0001, 0xFFFF, None, None).unwrap());
         Ok(())
     }
 
     #[test]
     fn general_device_and_subdevices() -> Result<(), Error> {
-        assert_eq!("PEAK-System Technik GmbH", DB.find(0x001c, 0, None, None).unwrap());
+        assert_eq!("PEAK-System Technik GmbH", DB.find_device(0x001c, 0, None, None).unwrap());
         assert_eq!(
             "PEAK-System Technik GmbH PCAN-PCI CAN-Bus controller",
-            DB.find(0x001c, 0x001, None, None).unwrap()
+            DB.find_device(0x001c, 0x001, None, None).unwrap()
         );
         assert_eq!(
             "PEAK-System Technik GmbH 2 Channel CAN Bus SJC1000",
-            DB.find(0x001c, 0x001, Some(0x001c), Some(0x0004)).unwrap()
+            DB.find_device(0x001c, 0x001, Some(0x001c), Some(0x0004)).unwrap()
         );
         assert_eq!(
             "PEAK-System Technik GmbH 2 Channel CAN Bus SJC1000 (Optically Isolated)",
-            DB.find(0x001c, 0x001, Some(0x001c), Some(0x0005)).unwrap()
+            DB.find_device(0x001c, 0x001, Some(0x001c), Some(0x0005)).unwrap()
         );
         Ok(())
     }
 
     #[test]
     fn numeric_fields_in_entries() -> Result<(), Error> {
-        assert_eq!("Broadcom / LSI 53c810", DB.find(0x1000, 0x0001, None, None).unwrap());
+        assert_eq!("Broadcom / LSI 53c810", DB.find_device(0x1000, 0x0001, None, None).unwrap());
         assert_eq!(
             "Broadcom / LSI LSI53C810AE PCI to SCSI I/O Processor",
-            DB.find(0x1000, 0x0001, Some(0x1000), Some(0x1000)).unwrap()
+            DB.find_device(0x1000, 0x0001, Some(0x1000), Some(0x1000)).unwrap()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn device_not_found() -> Result<(), Error> {
+        // The device ID matches an Allied Telesis, Inc device, but the vendor is invalid.
+        assert_eq!(None, DB.find_device(0x0000, 0x8139, None, None));
+        // Vendor is LevelOne, but invalid device ID
+        assert_eq!("LevelOne", DB.find_device(0x018a, 0x1000, None, None).unwrap());
+        // Valid LevelOne FPC-0106TX
+        assert_eq!(
+            "LevelOne FPC-0106TX misprogrammed [RTL81xx]",
+            DB.find_device(0x018a, 0x0106, None, None).unwrap(),
+        );
+        Ok(())
+    }
+
+    struct ClassTest<'a> {
+        e: &'a str,
+        c: u8,
+        s: u8,
+        p: Option<u8>,
+    }
+
+    #[test]
+    fn class_lookup() -> Result<(), Error> {
+        let tests = vec![
+            ClassTest { e: "Bridge", c: 0x06, s: 0xFF, p: None },
+            ClassTest { e: "Bridge", c: 0x06, s: 0xFF, p: Some(0xFF) },
+            ClassTest { e: "Bridge", c: 0x06, s: 0x80, p: None },
+            ClassTest { e: "Host bridge", c: 0x06, s: 0x00, p: None },
+            ClassTest { e: "ISA bridge", c: 0x06, s: 0x01, p: None },
+            ClassTest { e: "EISA bridge", c: 0x06, s: 0x02, p: None },
+            ClassTest { e: "PCI bridge", c: 0x06, s: 0x04, p: None },
+            ClassTest { e: "PCI bridge (Normal decode)", c: 0x06, s: 0x04, p: Some(0x00) },
+            ClassTest { e: "PCI bridge (Subtractive decode)", c: 0x06, s: 0x04, p: Some(0x01) },
+        ];
+
+        assert_eq!(None, DB.find_class(0xEF, 0x00, None));
+        for test in &tests {
+            assert_eq!(test.e, DB.find_class(test.c, test.s, test.p).unwrap());
+        }
         Ok(())
     }
 }

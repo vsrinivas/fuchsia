@@ -18,6 +18,10 @@ rustc_binary("lspci") {
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:bitfield",
   ]
+  test_deps = [
+    ":database",
+    "//third_party/rust_crates:lazy_static",
+  ]
   sources = [
     "src/bridge.rs",
     "src/capability.rs",
@@ -33,6 +37,15 @@ rustc_binary("lspci") {
 resource("database") {
   sources = [ "//third_party/pciids/pci.ids" ]
   outputs = [ "data/lspci/{{source_file_part}}" ]
+}
+
+fuchsia_unittest_package("lspci-tests") {
+  deps = [ ":lspci_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":lspci-tests" ]
 }
 
 group("bootfs") {

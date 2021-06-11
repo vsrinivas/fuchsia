@@ -5,6 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
+    "bin/lspci:tests",
     "lib:tests",
     "testing:tests",
   ]
