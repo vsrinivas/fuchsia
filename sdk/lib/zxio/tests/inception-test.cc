@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/io/llcpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/vmo.h>
@@ -122,6 +123,69 @@ TEST(CreateWithInfo, Unsupported) {
   ASSERT_OK(zxio_release(zxio, recaptured_handle.reset_and_get_address()));
   EXPECT_TRUE(recaptured_handle.is_valid());
   ASSERT_OK(zxio_close(zxio));
+}
+
+class TestDeviceNodeServer : public fuchsia_io::testing::Node_TestBase {
+ public:
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
+    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+    completer.Reply(ZX_OK);
+    // After the reply, we should close the connection.
+    completer.Close(ZX_OK);
+  }
+};
+
+TEST(CreateWithInfo, Device) {
+  auto node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
+  ASSERT_OK(node_ends.status_value());
+  auto [node_client, node_server] = std::move(node_ends.value());
+
+  zx::eventpair event0, event1;
+  ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
+
+  fuchsia_io::wire::Device device = {.event = std::move(event1)};
+  fidl::FidlAllocator fidl_allocator;
+  auto node_info = fuchsia_io::wire::NodeInfo::WithDevice(fidl_allocator, std::move(device));
+
+  auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
+    if (type != ZXIO_OBJECT_TYPE_DEVICE) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    *out_storage = new zxio_storage_t;
+    *out_context = *out_storage;
+    return ZX_OK;
+  };
+
+  async::Loop device_control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  TestDeviceNodeServer server;
+  fidl::BindServer(device_control_loop.dispatcher(), std::move(node_server), &server);
+  device_control_loop.StartThread("device_control_thread");
+
+  void* context = nullptr;
+  ASSERT_OK(zxio_create_with_allocator(std::move(node_client), node_info, allocator, &context));
+  ASSERT_NE(context, nullptr);
+
+  // The event in node_info should be consumed by zxio.
+  EXPECT_FALSE(node_info.device().event.is_valid());
+
+  std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
+  zxio_t* zxio = &(storage->io);
+
+  // Closing the zxio object should close our eventpair's peer event.
+  zx_signals_t pending = 0;
+  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
+
+  ASSERT_OK(zxio_close(zxio));
+
+  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
+
+  device_control_loop.Shutdown();
 }
 
 class TestDirectoryServer final : public zxio_tests::TestDirectoryServerBase {

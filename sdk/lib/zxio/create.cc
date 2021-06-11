@@ -120,6 +120,11 @@ namespace fio = fuchsia_io;
 zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo& info,
                                       zxio_storage_t* storage) {
   switch (info.which()) {
+    case fio::wire::NodeInfo::Tag::kDevice: {
+      auto& device = info.mutable_device();
+      zx::eventpair event = std::move(device.event);
+      return zxio_remote_init(storage, node.TakeChannel().release(), event.release());
+    }
     case fio::wire::NodeInfo::Tag::kDirectory: {
       return zxio_dir_init(storage, node.TakeChannel().release());
     }
