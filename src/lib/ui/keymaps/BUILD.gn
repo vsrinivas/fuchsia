@@ -12,11 +12,11 @@ rustc_library("keymaps") {
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:test-case",
   ]
 

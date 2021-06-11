@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use {
+    crate::derive_key_sequence,
     anyhow::{ensure, Error},
     async_trait::async_trait,
     fidl_fuchsia_input as input,
     fidl_fuchsia_ui_input::{self, KeyboardReport, Touch},
     fidl_fuchsia_ui_input3 as input3, fuchsia_async as fasync,
     fuchsia_syslog::fx_log_debug,
-    fuchsia_zircon as zx,
-    keymaps::{self, inverse_keymap::InverseKeymap},
+    fuchsia_zircon as zx, keymaps,
     serde::{Deserialize, Deserializer},
     std::{convert::TryFrom, thread, time::Duration},
 };
@@ -350,8 +350,7 @@ pub(crate) async fn text(
     registry: &mut dyn InputDeviceRegistry,
 ) -> Result<(), Error> {
     let mut input_device = registry.add_keyboard_device()?;
-    let key_sequence = InverseKeymap::new(&keymaps::US_QWERTY)
-        .derive_key_sequence(&input)
+    let key_sequence = derive_key_sequence(&keymaps::US_QWERTY, &input)
         .ok_or_else(|| anyhow::format_err!("Cannot translate text to key sequence"))?;
 
     fx_log_debug!(

@@ -4,22 +4,19 @@
 
 use std::collections::HashMap;
 
-use fidl_fuchsia_ui_input::KeyboardReport;
-
 use crate as keymaps;
-use crate::usages::Usages;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum Shift {
+pub enum Shift {
     No,
     Yes,
     DontCare,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct KeyStroke {
-    usage: u32,
-    shift: Shift,
+pub struct KeyStroke {
+    pub usage: u32,
+    pub shift: Shift,
 }
 
 /// Lightweight utility for basic keymap conversion of chars to keystrokes.
@@ -83,247 +80,28 @@ impl InverseKeymap {
         Self { map }
     }
 
-    /// Converts the `input` string into a key sequence under the provided `InverseKeymap`.
-    ///
-    /// This is intended for end-to-end and input testing only; for production use cases and general
-    /// testing, IME injection should be used instead.
-    ///
-    /// A translation from `input` to a sequence of keystrokes is not guaranteed to exist. If a
-    /// translation does not exist, `None` is returned.
-    ///
-    /// The sequence does not contain pauses except between repeated keys or to clear a shift state,
-    /// though the sequence does terminate with an empty report (no keys pressed). A shift key
-    /// transition is sent in advance of each series of keys that needs it.
-    ///
-    /// Note that there is currently no way to distinguish between particular key releases. As such,
-    /// only one key release report is generated even in combinations, e.g. Shift + A.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use crate::{keymaps::QWERTY_MAP, inverse_keymap::InverseKeymap};
-    /// let keymap = InverseKeymap::new(&QWERTY_MAP);
-    /// let key_sequence = keymap.derive_key_sequence("A").unwrap();
-    ///
-    /// // [shift, A, clear]
-    /// assert_eq!(key_sequence.len(), 3);
-    /// ```
-    pub fn derive_key_sequence(&self, input: &str) -> Option<Vec<KeyboardReport>> {
-        let mut reports = vec![];
-        let mut shift_pressed = false;
-        let mut last_usage = None;
-
-        for ch in input.chars() {
-            let key_stroke = self.map.get(&ch)?;
-
-            match key_stroke.shift {
-                Shift::Yes if !shift_pressed => {
-                    shift_pressed = true;
-                    last_usage = Some(0);
-                }
-                Shift::No if shift_pressed => {
-                    shift_pressed = false;
-                    last_usage = Some(0);
-                }
-                _ => {
-                    if last_usage == Some(key_stroke.usage) {
-                        last_usage = Some(0);
-                    }
-                }
-            }
-
-            if let Some(0) = last_usage {
-                reports.push(KeyboardReport {
-                    pressed_keys: if shift_pressed {
-                        vec![Usages::HidUsageKeyLeftShift as u32]
-                    } else {
-                        vec![]
-                    },
-                });
-            }
-
-            last_usage = Some(key_stroke.usage);
-
-            reports.push(KeyboardReport {
-                pressed_keys: if shift_pressed {
-                    vec![key_stroke.usage, Usages::HidUsageKeyLeftShift as u32]
-                } else {
-                    vec![key_stroke.usage]
-                },
-            });
-        }
-
-        // TODO: In the future, we might want to distinguish between different key releases, instead
-        //       of sending one single release report even in the case of key combinations.
-        reports.push(KeyboardReport { pressed_keys: vec![] });
-
-        Some(reports)
+    pub fn get(&self, c: &char) -> Option<&KeyStroke> {
+        self.map.get(c)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use matches::assert_matches;
 
-    macro_rules! reports {
-        ( $( [ $( $usages:expr ),* ] ),* $( , )? ) => {
-            Some(vec![
-                $(
-                    KeyboardReport {
-                        pressed_keys: vec![$($usages as u32),*]
-                    }
-                ),*
-            ])
-        }
+    #[test]
+    fn returns_correct_shift_level() {
+        let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
+        assert_matches!(keymap.get(&'a'), Some(KeyStroke { shift: Shift::No, .. }));
+        assert_matches!(keymap.get(&'A'), Some(KeyStroke { shift: Shift::Yes, .. }));
     }
 
     #[test]
-    fn shift_map() {
+    fn returns_expected_usage() {
         let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
-
-        assert_eq!(keymap.map[&'a'].shift, Shift::No);
-        assert_eq!(keymap.map[&'A'].shift, Shift::Yes);
-    }
-
-    #[test]
-    fn lowercase() {
-        let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
-
-        assert_eq!(
-            keymap.derive_key_sequence("lowercase"),
-            reports![
-                [Usages::HidUsageKeyL],
-                [Usages::HidUsageKeyO],
-                [Usages::HidUsageKeyW],
-                [Usages::HidUsageKeyE],
-                [Usages::HidUsageKeyR],
-                [Usages::HidUsageKeyC],
-                [Usages::HidUsageKeyA],
-                [Usages::HidUsageKeyS],
-                [Usages::HidUsageKeyE],
-                [],
-            ]
-        );
-    }
-
-    #[test]
-    fn numerics() {
-        let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
-
-        assert_eq!(
-            keymap.derive_key_sequence("0123456789"),
-            reports![
-                [Usages::HidUsageKey0],
-                [Usages::HidUsageKey1],
-                [Usages::HidUsageKey2],
-                [Usages::HidUsageKey3],
-                [Usages::HidUsageKey4],
-                [Usages::HidUsageKey5],
-                [Usages::HidUsageKey6],
-                [Usages::HidUsageKey7],
-                [Usages::HidUsageKey8],
-                [Usages::HidUsageKey9],
-                [],
-            ]
-        );
-    }
-
-    #[test]
-    fn internet_text_entry() {
-        let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
-
-        assert_eq!(
-            keymap.derive_key_sequence("http://127.0.0.1:8080"),
-            reports![
-                [Usages::HidUsageKeyH],
-                [Usages::HidUsageKeyT],
-                [],
-                [Usages::HidUsageKeyT],
-                [Usages::HidUsageKeyP],
-                // ':'
-                // Shift is actuated first on its own, then together with
-                // the key.
-                [Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeySemicolon, Usages::HidUsageKeyLeftShift],
-                [],
-                [Usages::HidUsageKeySlash],
-                [],
-                [Usages::HidUsageKeySlash],
-                [Usages::HidUsageKey1],
-                [Usages::HidUsageKey2],
-                [Usages::HidUsageKey7],
-                [Usages::HidUsageKeyDot],
-                [Usages::HidUsageKey0],
-                [Usages::HidUsageKeyDot],
-                [Usages::HidUsageKey0],
-                [Usages::HidUsageKeyDot],
-                [Usages::HidUsageKey1],
-                [Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeySemicolon, Usages::HidUsageKeyLeftShift],
-                [],
-                [Usages::HidUsageKey8],
-                [Usages::HidUsageKey0],
-                [Usages::HidUsageKey8],
-                [Usages::HidUsageKey0],
-                [],
-            ]
-        );
-    }
-
-    #[test]
-    fn sentence() {
-        let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
-
-        assert_eq!(
-            keymap.derive_key_sequence("Hello, world!"),
-            reports![
-                [Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeyH, Usages::HidUsageKeyLeftShift],
-                [],
-                [Usages::HidUsageKeyE],
-                [Usages::HidUsageKeyL],
-                [],
-                [Usages::HidUsageKeyL],
-                [Usages::HidUsageKeyO],
-                [Usages::HidUsageKeyComma],
-                [Usages::HidUsageKeySpace],
-                [Usages::HidUsageKeyW],
-                [Usages::HidUsageKeyO],
-                [Usages::HidUsageKeyR],
-                [Usages::HidUsageKeyL],
-                [Usages::HidUsageKeyD],
-                [Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKey1, Usages::HidUsageKeyLeftShift],
-                [],
-            ]
-        );
-    }
-
-    #[test]
-    fn hold_shift() {
-        let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
-
-        assert_eq!(
-            keymap.derive_key_sequence("ALL'S WELL!"),
-            reports![
-                [Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeyA, Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeyL, Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeyL, Usages::HidUsageKeyLeftShift],
-                [],
-                [Usages::HidUsageKeyApostrophe],
-                [Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeyS, Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeySpace, Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeyW, Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeyE, Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeyL, Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKeyL, Usages::HidUsageKeyLeftShift],
-                [Usages::HidUsageKey1, Usages::HidUsageKeyLeftShift],
-                [],
-            ]
-        );
+        assert_matches!(keymap.get(&'a'), Some(KeyStroke { usage: 0x04, .. }));
+        // Numeric character: maps to main keyboard, not keypad.
+        assert_matches!(keymap.get(&'1'), Some(KeyStroke { usage: 0x1e, .. }));
     }
 }

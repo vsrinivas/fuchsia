@@ -5,9 +5,12 @@
 use {
     crate::synthesizer::*,
     anyhow::{format_err, Error},
-    fidl_fuchsia_ui_input::{self, Touch},
+    fidl_fuchsia_ui_input::{self, KeyboardReport, Touch},
     fuchsia_component::client::new_protocol_connector,
-    keymaps::usages,
+    keymaps::{
+        inverse_keymap::{InverseKeymap, Shift},
+        usages::{self, Usages},
+    },
     std::time::Duration,
 };
 
@@ -255,9 +258,233 @@ async fn get_backend() -> Result<Box<dyn InputDeviceRegistry>, Error> {
     Err(format_err!("no available InputDeviceRegistry"))
 }
 
+/// Converts the `input` string into a key sequence under the `InverseKeymap` derived from `keymap`.
+///
+/// This is intended for end-to-end and input testing only; for production use cases and general
+/// testing, IME injection should be used instead.
+///
+/// A translation from `input` to a sequence of keystrokes is not guaranteed to exist. If a
+/// translation does not exist, `None` is returned.
+///
+/// The sequence does not contain pauses except between repeated keys or to clear a shift state,
+/// though the sequence does terminate with an empty report (no keys pressed). A shift key
+/// transition is sent in advance of each series of keys that needs it.
+///
+/// Note that there is currently no way to distinguish between particular key releases. As such,
+/// only one key release report is generated even in combinations, e.g. Shift + A.
+///
+/// # Example
+///
+/// ```
+/// let key_sequence = derive_key_sequence(&keymaps::US_QWERTY, "A").unwrap();
+///
+/// // [shift, A, clear]
+/// assert_eq!(key_sequence.len(), 3);
+/// ```
+fn derive_key_sequence(keymap: &keymaps::Keymap<'_>, input: &str) -> Option<Vec<KeyboardReport>> {
+    let inverse_keymap = InverseKeymap::new(keymap);
+    let mut reports = vec![];
+    let mut shift_pressed = false;
+    let mut last_usage = None;
+
+    for ch in input.chars() {
+        let key_stroke = inverse_keymap.get(&ch)?;
+
+        match key_stroke.shift {
+            Shift::Yes if !shift_pressed => {
+                shift_pressed = true;
+                last_usage = Some(0);
+            }
+            Shift::No if shift_pressed => {
+                shift_pressed = false;
+                last_usage = Some(0);
+            }
+            _ => {
+                if last_usage == Some(key_stroke.usage) {
+                    last_usage = Some(0);
+                }
+            }
+        }
+
+        if let Some(0) = last_usage {
+            reports.push(KeyboardReport {
+                pressed_keys: if shift_pressed {
+                    vec![Usages::HidUsageKeyLeftShift as u32]
+                } else {
+                    vec![]
+                },
+            });
+        }
+
+        last_usage = Some(key_stroke.usage);
+
+        reports.push(KeyboardReport {
+            pressed_keys: if shift_pressed {
+                vec![key_stroke.usage, Usages::HidUsageKeyLeftShift as u32]
+            } else {
+                vec![key_stroke.usage]
+            },
+        });
+    }
+
+    // TODO: In the future, we might want to distinguish between different key releases, instead
+    //       of sending one single release report even in the case of key combinations.
+    reports.push(KeyboardReport { pressed_keys: vec![] });
+
+    Some(reports)
+}
+
 #[cfg(test)]
 mod tests {
-    // The functions in this file need to bind to FIDL services in this component's environment to
-    // do their work, but a component can't modify its own environment. Hence, we can't validate
-    // this module with unit tests.
+    // Most of the functions in this file need to bind to FIDL services in
+    // this component's environment to do their work, but a component can't
+    // modify its own environment. Hence, we can't validate those functions.
+    //
+    // However, we can (and do) validate derive_key_sequence().
+
+    use super::{derive_key_sequence, KeyboardReport, Usages};
+
+    macro_rules! reports {
+        ( $( [ $( $usages:expr ),* ] ),* $( , )? ) => {
+            Some(vec![
+                $(
+                    KeyboardReport {
+                        pressed_keys: vec![$($usages as u32),*]
+                    }
+                ),*
+            ])
+        }
+    }
+
+    #[test]
+    fn lowercase() {
+        assert_eq!(
+            derive_key_sequence(&keymaps::US_QWERTY, "lowercase"),
+            reports![
+                [Usages::HidUsageKeyL],
+                [Usages::HidUsageKeyO],
+                [Usages::HidUsageKeyW],
+                [Usages::HidUsageKeyE],
+                [Usages::HidUsageKeyR],
+                [Usages::HidUsageKeyC],
+                [Usages::HidUsageKeyA],
+                [Usages::HidUsageKeyS],
+                [Usages::HidUsageKeyE],
+                [],
+            ]
+        );
+    }
+
+    #[test]
+    fn numerics() {
+        assert_eq!(
+            derive_key_sequence(&keymaps::US_QWERTY, "0123456789"),
+            reports![
+                [Usages::HidUsageKey0],
+                [Usages::HidUsageKey1],
+                [Usages::HidUsageKey2],
+                [Usages::HidUsageKey3],
+                [Usages::HidUsageKey4],
+                [Usages::HidUsageKey5],
+                [Usages::HidUsageKey6],
+                [Usages::HidUsageKey7],
+                [Usages::HidUsageKey8],
+                [Usages::HidUsageKey9],
+                [],
+            ]
+        );
+    }
+
+    #[test]
+    fn internet_text_entry() {
+        assert_eq!(
+            derive_key_sequence(&keymaps::US_QWERTY, "http://127.0.0.1:8080"),
+            reports![
+                [Usages::HidUsageKeyH],
+                [Usages::HidUsageKeyT],
+                [],
+                [Usages::HidUsageKeyT],
+                [Usages::HidUsageKeyP],
+                // ':'
+                // Shift is actuated first on its own, then together with
+                // the key.
+                [Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeySemicolon, Usages::HidUsageKeyLeftShift],
+                [],
+                [Usages::HidUsageKeySlash],
+                [],
+                [Usages::HidUsageKeySlash],
+                [Usages::HidUsageKey1],
+                [Usages::HidUsageKey2],
+                [Usages::HidUsageKey7],
+                [Usages::HidUsageKeyDot],
+                [Usages::HidUsageKey0],
+                [Usages::HidUsageKeyDot],
+                [Usages::HidUsageKey0],
+                [Usages::HidUsageKeyDot],
+                [Usages::HidUsageKey1],
+                [Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeySemicolon, Usages::HidUsageKeyLeftShift],
+                [],
+                [Usages::HidUsageKey8],
+                [Usages::HidUsageKey0],
+                [Usages::HidUsageKey8],
+                [Usages::HidUsageKey0],
+                [],
+            ]
+        );
+    }
+
+    #[test]
+    fn sentence() {
+        assert_eq!(
+            derive_key_sequence(&keymaps::US_QWERTY, "Hello, world!"),
+            reports![
+                [Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeyH, Usages::HidUsageKeyLeftShift],
+                [],
+                [Usages::HidUsageKeyE],
+                [Usages::HidUsageKeyL],
+                [],
+                [Usages::HidUsageKeyL],
+                [Usages::HidUsageKeyO],
+                [Usages::HidUsageKeyComma],
+                [Usages::HidUsageKeySpace],
+                [Usages::HidUsageKeyW],
+                [Usages::HidUsageKeyO],
+                [Usages::HidUsageKeyR],
+                [Usages::HidUsageKeyL],
+                [Usages::HidUsageKeyD],
+                [Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKey1, Usages::HidUsageKeyLeftShift],
+                [],
+            ]
+        );
+    }
+
+    #[test]
+    fn hold_shift() {
+        assert_eq!(
+            derive_key_sequence(&keymaps::US_QWERTY, "ALL'S WELL!"),
+            reports![
+                [Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeyA, Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeyL, Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeyL, Usages::HidUsageKeyLeftShift],
+                [],
+                [Usages::HidUsageKeyApostrophe],
+                [Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeyS, Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeySpace, Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeyW, Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeyE, Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeyL, Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKeyL, Usages::HidUsageKeyLeftShift],
+                [Usages::HidUsageKey1, Usages::HidUsageKeyLeftShift],
+                [],
+            ]
+        );
+    }
 }
