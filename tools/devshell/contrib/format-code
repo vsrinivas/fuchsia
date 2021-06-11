@@ -32,6 +32,8 @@
 ##    -- PATTERN
 ##             For --all or --git, passes along -- PATTERN to `git ls-files`
 ##             to filter what files are affected.
+##
+## Supported Languages: C, C++, cml, Dart, FIDL, GN, Go, Python, Rust, JSON
 
 set -e
 
