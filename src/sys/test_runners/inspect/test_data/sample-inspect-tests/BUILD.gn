@@ -20,7 +20,6 @@ group("sample-inspect-tests") {
   deps = []
 
   # TODO(fxbug.dev/77403) - reenable tests on coverage builders.
-  if (!is_coverage) {
-    deps += [ ":sample-inspect-tests-pkg" ]
-  }
+  # TODO(fxbug.dev/77856) - disabled due to flakiness. Re-enable.
+  # deps += [ ":sample-inspect-tests-pkg" ]
 }

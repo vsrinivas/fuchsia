@@ -139,8 +139,6 @@ fn filter_out_println(event: TestEvent) -> Option<TestEvent> {
     }
 }
 
-// TODO(fxbug.dev/77856): disabled due to flakiness. Re-enable
-#[ignore]
 #[fuchsia::test]
 async fn launch_and_test_sample_test() {
     let test_url =
