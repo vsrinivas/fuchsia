@@ -538,7 +538,8 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
   EXPECT_CALL(*mock, ApplyConfig()).WillOnce(Return());
 
   DisplayInfo display_info = {resolution, {kPixelFormat}};
-  display_compositor_->AddDisplay(display_id, display_info, /*num_vmos*/ 0);
+  display_compositor_->AddDisplay(display_id, display_info, /*num_vmos*/ 0,
+                                  /*out_buffer_collection*/ nullptr);
 
   display_compositor_->RenderFrame(
       1, zx::time(1),

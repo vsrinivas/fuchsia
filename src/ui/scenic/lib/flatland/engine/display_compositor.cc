@@ -511,7 +511,7 @@ DisplayCompositor::FrameEventData DisplayCompositor::NewFrameEventData() {
 
 allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
     uint64_t display_id, DisplayInfo info, uint32_t num_vmos,
-    fuchsia::sysmem::BufferCollectionInfo_2* collection_info) {
+    fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info) {
   FX_DCHECK(display_engine_data_map_.find(display_id) == display_engine_data_map_.end())
       << "DisplayCompositor::AddDisplay(): display already exists: " << display_id;
 
@@ -539,7 +539,9 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
     return 0;
   }
 
-  FX_DCHECK(collection_info);
+  // If we are creating vmos, we need a non-null buffer collection pointer to return back
+  // to the caller.
+  FX_DCHECK(out_collection_info);
 
   // Create the buffer collection token to be used for frame buffers.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr compositor_token;
@@ -570,18 +572,28 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
                                                std::move(display_token), image_config);
   FX_DCHECK(result);
 
-  // Finally set the DisplayCompositor constraints.
+// Finally set the DisplayCompositor constraints.
+#ifdef CPU_ACCESSIBLE_VMO
   auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
   fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr =
       CreateBufferCollectionSyncPtrAndSetConstraints(
           sysmem_allocator_.get(), std::move(compositor_token), num_vmos, kWidth, kHeight,
           buffer_usage, ConvertZirconFormatToSysmemFormat(pixel_format), memory_constraints);
+#else
+  const fuchsia::sysmem::BufferUsage buffer_usage = {
+      .vulkan = fuchsia::sysmem::vulkanUsageColorAttachment};
+  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr =
+      CreateBufferCollectionSyncPtrAndSetConstraints(
+          sysmem_allocator_.get(), std::move(compositor_token), num_vmos, kWidth, kHeight,
+          buffer_usage, ConvertZirconFormatToSysmemFormat(pixel_format));
+
+#endif  // CPU_ACCESSIBLE_VMO
 
   // Have the client wait for buffers allocated so it can populate its information
   // struct with the vmo data.
   {
     zx_status_t allocation_status = ZX_OK;
-    auto status = collection_ptr->WaitForBuffersAllocated(&allocation_status, collection_info);
+    auto status = collection_ptr->WaitForBuffersAllocated(&allocation_status, out_collection_info);
     FX_DCHECK(status == ZX_OK) << "status: " << status;
     FX_DCHECK(allocation_status == ZX_OK) << "status: " << allocation_status;
 

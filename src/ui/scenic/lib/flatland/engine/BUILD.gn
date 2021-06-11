@@ -11,25 +11,47 @@ config("engine_config") {
   }
 }
 
-source_set("engine") {
-  sources = [
-    "display_compositor.cc",
-    "display_compositor.h",
-    "engine.cc",
-    "engine.h",
-    "engine_types.cc",
-    "engine_types.h",
-    "release_fence_manager.cc",
-    "release_fence_manager.h",
-  ]
+config("cpu_accessible_config") {
+  defines = [ "CPU_ACCESSIBLE_VMO=1" ]
+}
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.hardware.display",
-    "//src/ui/scenic/lib/display:display",
-    "//src/ui/scenic/lib/flatland",
-    "//src/ui/scenic/lib/flatland/renderer",
-    "//src/ui/scenic/lib/scheduling:frame_scheduler_interface",
-  ]
+template("engine_library") {
+  source_set(target_name) {
+    forward_variables_from(invoker, "*")
+    sources = [
+      "display_compositor.cc",
+      "display_compositor.h",
+      "engine.cc",
+      "engine.h",
+      "engine_types.cc",
+      "engine_types.h",
+      "release_fence_manager.cc",
+      "release_fence_manager.h",
+    ]
 
-  public_configs = [ ":engine_config" ]
+    public_deps = [
+      "//sdk/fidl/fuchsia.hardware.display",
+      "//src/ui/scenic/lib/display:display",
+      "//src/ui/scenic/lib/flatland",
+      "//src/ui/scenic/lib/flatland/renderer",
+      "//src/ui/scenic/lib/scheduling:frame_scheduler_interface",
+    ]
+
+    public_configs = [ ":engine_config" ]
+    if (make_cpu_accessible) {
+      public_configs += [ ":cpu_accessible_config" ]
+    }
+  }
+}
+
+# The default engine will not have render buffers be host-readable
+# for performance.
+engine_library("engine") {
+  make_cpu_accessible = false
+}
+
+# For tests where we need the framebuffers to be host-readable so
+# that we can inspect the pixels, use this build configuration.
+engine_library("engine_host_accessible_framebuffers") {
+  make_cpu_accessible = true
 }

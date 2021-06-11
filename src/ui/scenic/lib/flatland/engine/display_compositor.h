@@ -71,14 +71,16 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
 
   // Register a new display to the DisplayCompositor, which also generates the render targets to be
   // presented on the display when compositing on the GPU. If num_vmos is 0, this function will not
-  // create any render targets for GPU composition for that display. Returns the ID for the buffer
-  // collection of the render targets. The buffer collection info is also returned back to the
-  // caller via an output parameter.
+  // create any render targets for GPU composition for that display. The buffer collection info is
+  // also returned back to the caller via an output parameter |out_collection_info|. This out
+  // parameter is only allowed to be nullptr when num_vmos is 0. Otherwise, a valid handle to return
+  // the buffer collection data is required. This function also returns the ID for the buffer
+  // collection of the render targets.
   // TODO(fxbug.dev/59646): We need to figure out exactly how we want the display to anchor
   // to the Flatland hierarchy.
   allocation::GlobalBufferCollectionId AddDisplay(
       uint64_t display_id, DisplayInfo info, uint32_t num_vmos,
-      fuchsia::sysmem::BufferCollectionInfo_2* collection_info = nullptr);
+      fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info);
 
  private:
   friend class test::DisplayCompositorPixelTest;
