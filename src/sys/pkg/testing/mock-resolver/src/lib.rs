@@ -142,7 +142,8 @@ pub fn handle_package_directory_stream(
 
 #[derive(Debug)]
 enum Expectation {
-    Immediate(Result<TestPackage, fidl_fuchsia_pkg::ResolveError>),
+    ImmediateConstant(Result<TestPackage, fidl_fuchsia_pkg::ResolveError>),
+    ImmediateVec(Vec<Result<TestPackage, fidl_fuchsia_pkg::ResolveError>>),
     BlockOnce(Option<oneshot::Sender<PendingResolve>>),
 }
 
@@ -275,19 +276,35 @@ impl MockResolverService {
 
         (*self.resolve_hook)(&package_url);
 
-        match self.expectations.lock().get_mut(&package_url).unwrap_or(&mut Expectation::Immediate(
-            Err(fidl_fuchsia_pkg::ResolveError::PackageNotFound),
-        )) {
-            Expectation::Immediate(Ok(package)) => {
+        match self.expectations.lock().get_mut(&package_url).unwrap_or(
+            &mut Expectation::ImmediateConstant(Err(
+                fidl_fuchsia_pkg::ResolveError::PackageNotFound,
+            )),
+        ) {
+            Expectation::ImmediateConstant(Ok(package)) => {
                 package.serve_on(dir);
                 responder.send(&mut Ok(()))?;
             }
-            Expectation::Immediate(Err(error)) => {
+            Expectation::ImmediateConstant(Err(error)) => {
                 responder.send(&mut Err(*error))?;
             }
             Expectation::BlockOnce(handler) => {
                 let handler = handler.take().unwrap();
                 handler.send(PendingResolve { responder, dir_request: dir }).unwrap();
+            }
+            Expectation::ImmediateVec(expected_results) => {
+                if expected_results.is_empty() {
+                    panic!("expected_results should be >= number of resolve requests");
+                }
+                match expected_results.remove(0) {
+                    Ok(package) => {
+                        package.serve_on(dir);
+                        responder.send(&mut Ok(()))?;
+                    }
+                    Err(e) => {
+                        responder.send(&mut Err(e))?;
+                    }
+                };
             }
         }
         Ok(())
@@ -303,7 +320,7 @@ pub struct ForUrl<'a> {
 impl<'a> ForUrl<'a> {
     /// Fail resolve requests for the given URL with the given error status.
     pub fn fail(self, error: fidl_fuchsia_pkg::ResolveError) {
-        self.svc.expectations.lock().insert(self.url, Expectation::Immediate(Err(error)));
+        self.svc.expectations.lock().insert(self.url, Expectation::ImmediateConstant(Err(error)));
     }
 
     /// Succeed resolve requests for the given URL by serving the given package.
@@ -312,7 +329,7 @@ impl<'a> ForUrl<'a> {
         // be invalid for TestPackage to impl Clone, as add_file would affect all Clones of a
         // package.
         let pkg = TestPackage::new(pkg.root.clone());
-        self.svc.expectations.lock().insert(self.url, Expectation::Immediate(Ok(pkg)));
+        self.svc.expectations.lock().insert(self.url, Expectation::ImmediateConstant(Ok(pkg)));
     }
 
     /// Blocks requests for the given URL once, allowing the returned handler control the response.
@@ -322,6 +339,20 @@ impl<'a> ForUrl<'a> {
 
         self.svc.expectations.lock().insert(self.url, Expectation::BlockOnce(Some(send)));
         ResolveHandler::Waiting(recv)
+    }
+
+    /// Respond to resolve requests serially with a list of pre-defined immediate responses. This is
+    /// useful if the caller wants to make several resolve calls for the same url and have each
+    /// resolve call return something different.
+    ///
+    /// This API is different from the other ForUrl APIs because the mock resolver will use each
+    /// response exactly once. In the other APIs, the resolver will always return the given response
+    /// for a url regardless of how many times resolve() is called.
+    pub fn respond_serially(
+        self,
+        reponses: Vec<Result<TestPackage, fidl_fuchsia_pkg::ResolveError>>,
+    ) {
+        self.svc.expectations.lock().insert(self.url, Expectation::ImmediateVec(reponses));
     }
 }
 
@@ -371,7 +402,7 @@ impl ResolveHandler {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches};
+    use {super::*, fidl_fuchsia_pkg::ResolveError, matches::assert_matches};
 
     async fn read_file(dir_proxy: &DirectoryProxy, path: &str) -> String {
         let file_proxy =
@@ -385,7 +416,7 @@ mod tests {
     fn do_resolve(
         proxy: &PackageResolverProxy,
         url: &str,
-    ) -> impl Future<Output = Result<DirectoryProxy, fidl_fuchsia_pkg::ResolveError>> {
+    ) -> impl Future<Output = Result<DirectoryProxy, ResolveError>> {
         let (package_dir, package_dir_server_end) = fidl::endpoints::create_proxy().unwrap();
         let fut = proxy.resolve(url, &mut std::iter::empty(), package_dir_server_end);
 
@@ -457,5 +488,40 @@ mod tests {
 
         let first_pkg = first_fut.await.unwrap();
         assert_eq!(read_file(&first_pkg, "meta").await, "fake merkle");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn multiple_predefined_responses() {
+        let resolver = Arc::new(MockResolverService::new(None));
+        let resolver_proxy = Arc::clone(&resolver).spawn_resolver_service();
+
+        resolver.url("fuchsia-pkg://fuchsia.com/update").respond_serially(vec![
+            Err(ResolveError::NoSpace),
+            Ok(resolver.package("update", "upd4t3")),
+        ]);
+
+        // First resolve should fail with the error.
+        assert_matches!(
+            do_resolve(&resolver_proxy, "fuchsia-pkg://fuchsia.com/update").await,
+            Err(ResolveError::NoSpace)
+        );
+
+        // Second resolve should succeed and give us the expected package dir.
+        let package_dir =
+            do_resolve(&resolver_proxy, "fuchsia-pkg://fuchsia.com/update").await.unwrap();
+        let meta_contents = read_file(&package_dir, "meta").await;
+        assert_eq!(meta_contents, "upd4t3");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    #[should_panic(expected = "expected_results should be >= number of resolve requests")]
+    async fn panics_when_not_enough_predefined_responses() {
+        let resolver = Arc::new(MockResolverService::new(None));
+        let resolver_proxy = Arc::clone(&resolver).spawn_resolver_service();
+
+        resolver.url("fuchsia-pkg://fuchsia.com/update").respond_serially(vec![]);
+
+        // Since there are no expected responses, the mock resolver should panic.
+        let _ = do_resolve(&resolver_proxy, "fuchsia-pkg://fuchsia.com/update").await;
     }
 }
