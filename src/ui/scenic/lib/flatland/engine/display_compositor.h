@@ -16,6 +16,7 @@
 namespace flatland {
 
 namespace test {
+class DisplayCompositorSmokeTest;
 class DisplayCompositorPixelTest;
 class DisplayCompositorTest;
 }  // namespace test
@@ -83,6 +84,7 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
       fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info);
 
  private:
+  friend class test::DisplayCompositorSmokeTest;
   friend class test::DisplayCompositorPixelTest;
   friend class test::DisplayCompositorTest;
 

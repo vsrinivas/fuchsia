@@ -37,6 +37,7 @@ group("tests") {
     ":flatland_buffers_unittests",
     ":flatland_display_compositor_pixeltests",
     ":flatland_display_compositor_pixeltests_with_fake_display",
+    ":flatland_display_compositor_smoketests",
     ":flatland_engine_unittests",
     ":flatland_renderer_unittests",
     ":flatland_unittests",
@@ -146,6 +147,23 @@ fuchsia_unittest_package(
     log_settings = {
       max_severity = "ERROR"
     }
+  }
+}
+
+fuchsia_unittest_package("flatland_display_compositor_smoketests") {
+  manifest = "meta/flatland_display_compositor_smoketests.cmx"
+  deps =
+      [ "lib/flatland/engine/tests/smoketests:smoketests_with_fake_display" ] +
+      scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+
+    # Ensures that only devices that have access
+    # to display controller image capture features
+    # can run this test suite.
+    environments = [ aemu_env ] + basic_envs
   }
 }
 
