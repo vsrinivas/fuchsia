@@ -172,6 +172,7 @@ test("driver_manager_test") {
     "binding_v2_test.cc",
     "composite_device_tests.cc",
     "coordinator_test_utils.cc",
+    "device_tests.cc",
     "init_tests.cc",
     "inspect_test.cc",
     "load_driver_package_test.cc",

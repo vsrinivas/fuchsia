@@ -1166,3 +1166,46 @@ TEST_F(CompositeTestCase, FragmentDeviceInit) {
     ASSERT_EQ(Device::State::kActive, comp_device->state());
   }
 }
+
+TEST_F(CompositeTestCase, DeviceIteratorCompositeChild) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "parent-device", 1 /* protocol id */, "", &parent_index));
+
+  uint32_t protocol_id = 1;
+  ASSERT_NO_FATAL_FAILURES(
+      BindCompositeDefineComposite(platform_bus(), &protocol_id, 1, nullptr, 0, "composite"));
+
+  zx::channel composite_remote_coordinator;
+  zx::channel composite_remote_controller;
+  size_t fragment_device_indexes;
+  ASSERT_NO_FATAL_FAILURES(
+      CheckCompositeCreation("composite", &parent_index, 1, &fragment_device_indexes,
+                             &composite_remote_coordinator, &composite_remote_controller));
+
+  for (auto& d : device(parent_index)->device->children()) {
+    ASSERT_EQ(d.name(), "composite-comp-device-0");
+  }
+}
+
+TEST_F(CompositeTestCase, DeviceIteratorCompositeSibling) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "parent-device", 1 /* protocol id */, "", &parent_index));
+
+  uint32_t protocol_id = 1;
+  ASSERT_NO_FATAL_FAILURES(
+      BindCompositeDefineComposite(platform_bus(), &protocol_id, 1, nullptr, 0, "composite"));
+  zx::channel composite_remote_coordinator;
+  zx::channel composite_remote_controller;
+  size_t fragment_device_indexes;
+  ASSERT_NO_FATAL_FAILURES(
+      CheckCompositeCreation("composite", &parent_index, 1, &fragment_device_indexes,
+                             &composite_remote_coordinator, &composite_remote_controller));
+
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(device(parent_index)->device, "sibling-device", 0, "", &child_index));
+
+  ASSERT_TRUE(device(child_index)->device->children().is_empty());
+}

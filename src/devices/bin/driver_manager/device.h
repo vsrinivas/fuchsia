@@ -204,26 +204,38 @@ class Device
                 if (arg != device_->children_.end()) {
                   return false;
                 }
-                // If there are no more children, run through the Composite
-                // state next.
-                if (device_->parent_) {
+                // If there are no more children and this is a fragment device,
+                // run through the Composite state next.
+                if (device_->parent_ &&
+                    device_->libname() == device_->coordinator->GetFragmentDriverPath()) {
                   state_ = Composite{device_->parent_->fragments().begin()};
+                  return true;
                 } else {
-                  state_ = Composite{};
+                  state_ = Done{};
+                  return false;
                 }
-                return true;
               } else if constexpr (std::is_same_v<T, Composite>) {
                 // Check if this device is an internal fragment device
                 // that bound to a composite fragment.  If it is, and
                 // the composite has been constructed, the iterator
                 // should yield the composite.
-                if (device_->parent_) {
-                  if (arg != device_->parent_->fragments().end() &&
-                      arg->composite()->device() != nullptr) {
-                    return false;
-                  }
+                if (arg == device_->parent_->fragments().end()) {
+                  state_ = Done{};
+                  return false;
                 }
-                state_ = Done{};
+
+                // Skip composite devices that aren't yet bound.
+                if (arg->composite()->device() == nullptr) {
+                  state_ = Composite{++arg};
+                  return true;
+                }
+
+                // Skip any fragments that aren't bound to our device.
+                if (arg->fragment_device().get() != device_) {
+                  state_ = Composite{++arg};
+                  return true;
+                }
+
                 return false;
               } else if constexpr (std::is_same_v<T, Done>) {
                 return false;
