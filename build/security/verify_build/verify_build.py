@@ -16,14 +16,62 @@ import tempfile
 
 SUPPORTED_TYPES = ['kernel_cmdline', 'bootfs_filelist', 'static_pkgs']
 
-SOFT_TRANSITION_MESSAGE_TEMPLATE = """
-If you are making a change in fuchsia repo that causes this you need a soft transition by:
-1: copy the old golden file to *.orig.
-2: update the original golden file to a new golden file as suggested above.
-3: modify the product configuration GNI file where `{0}` or `{1}` is defined to contain both the old golden file and the new golden file.
-4: check in your fuchsia change.
-5: remove the original golden file and remove the entry from `{0}` or `{1}`.
+SOFT_TRANSITION_MESSAGE = """
+If you are making a change in fuchsia.git that causes this, you need to perform a soft transition:
+1: Instead of adding lines as written above, add each line prefixed with a question mark to mark it as transitional.
+2: Instead of removing lines as written above, prefix the line with a question mark to mark it as transitional.
+3: Check in your fuchsia.git change.
+4: For each new line you added in 1, remove the question mark.
+5: For each existing line you modified in 2, remove the line.
 """
+
+class GoldenFileChecker(object):
+    def __init__(self, path):
+        self._path = path
+        self._checked = False
+        try:
+            with open(path, "r") as f:
+                self.orig_lines = f.read().strip().splitlines()
+        except IOError as e:
+            raise VerificationError(f'Failed to open golden file: {e}')
+
+        # Parse file contents.
+        self.required_contents = set()
+        self.optional_contents = set()
+        for line in self.orig_lines:
+            if line.startswith("#"):
+                # A leading # indicates a comment, and we ignore the rest of the line.
+                continue
+            elif line.startswith("?"):
+                # A leading ? indicates an optional line, and we allow the presence or
+                # absence of the noun indicated by the rest of the line
+                self.optional_contents.add(line[1:])
+            else:
+                self.required_contents.add(line)
+
+        # Prepare records.
+        self.observed_and_not_permitted = []
+        self.observed = set()
+
+    def check_match(self, observed_contents):
+        assert not self._checked
+        self._checked = True
+        # Verify that:
+        # 1) every line in observed_contents is allowed in either
+        #    required_contents or optional_contents
+        # 2) every line in required_contents is observed
+        for line in observed_contents:
+            if line not in self.required_contents and line not in self.optional_contents:
+                self.observed_and_not_permitted.append(line)
+            else:
+                self.observed.add(line)
+
+        errors = []
+        for extra in sorted(list(self.observed_and_not_permitted)):
+          errors.append(f"'{extra}' is not listed in {self._path} but was found in the build.  If the addition to the build was intended, add a line '{extra}' to {self._path}.")
+        for missing in sorted(list(self.required_contents - self.observed)):
+          errors.append(f"'{missing}' was declared as required in {self._path} but was not found in the build.  If the removal from the build was intended, update {self._path} to remove the line '{missing}'.")
+        return errors
 
 
 def print_error(msg):
@@ -134,37 +182,31 @@ def verify_kernel_cmdline(kernel_cmdline_golden_file, scrutiny_out):
     Raises:
         VerificationError: If verification fails.
     """
-    try:
-        with open(kernel_cmdline_golden_file, 'r') as f:
-            golden_file_content = f.read().strip()
-    except IOError as e:
-        raise VerificationError(f'Failed to open golden file: {e}')
-    if not os.path.exists(os.path.join(scrutiny_out, 'sections',
-                                       'cmdline.blk')):
-        # We find no kernel cmdline. Check whether the golden file is empty.
-        if not golden_file_content:
-            # Golden file is empty. Pass the check.
-            return
-        else:
-            error_msg = (
-                'Found no kernel cmdline in ZBI\n' +
-                'Please update kernel cmdline golden file at ' +
-                kernel_cmdline_golden_file + ' to be an empty file')
-            raise VerificationError(error_msg)
-    try:
-        with open(os.path.join(scrutiny_out, 'sections', 'cmdline.blk'),
-                  'r') as f:
-            # The cmdline.blk contains a trailing \x00.
-            cmdline = f.read().strip().rstrip('\x00')
-    except IOError as e:
-        raise VerificationError(f'Failed to read cmdline.blk: {e}')
+    gf_checker = GoldenFileChecker(kernel_cmdline_golden_file)
+    actual_cmd = []
+    if os.path.exists(os.path.join(scrutiny_out, 'sections', 'cmdline.blk')):
+        try:
+            with open(os.path.join(scrutiny_out, 'sections', 'cmdline.blk'),
+                      'r') as f:
+                # The cmdline.blk contains a trailing \x00.
+                cmdline = f.read().strip().rstrip('\x00')
+        except IOError as e:
+            raise VerificationError(f'Failed to read cmdline.blk: {e}')
+        cmdline_args = cmdline.split(' ')
+        try:
+            actual_cmd = generate_sorted_cmdline(cmdline_args)
+        except CmdlineFormatError as e:
+          raise VerificationError(f'Invalid golden cmdline format: {e}')
 
-    try:
-        compare_cmdline(
-            cmdline, golden_file_content, kernel_cmdline_golden_file)
-    except CmdlineFormatError as e:
-        raise VerificationError(f'Invalid cmdline format: {e}')
-    return
+    errors = gf_checker.check_match(actual_cmd)
+    if len(errors) > 0:
+        error_msgs = ['Kernel cmdline mismatch!']
+        error_msgs.append('')
+        error_msgs.extend(errors)
+        error_msgs.append('')
+        error_msgs.append(f'If you intended to change the kernel command line, please acknowledge it by updating {kernel_cmdline_golden_file} with the added or removed lines.')
+        error_msgs.append(SOFT_TRANSITION_MESSAGE)
+        raise VerificationError('\n'.join(error_msgs))
 
 
 def verify_bootfs_filelist(bootfs_filelist_golden_file, scrutiny_out):
@@ -173,11 +215,7 @@ def verify_bootfs_filelist(bootfs_filelist_golden_file, scrutiny_out):
     Raises:
       VerificationError: If verification fails.
     """
-    try:
-        with open(bootfs_filelist_golden_file, 'r') as f:
-            golden_file_content = f.read().strip()
-    except IOError as e:
-        raise VerificationError(f'Failed to read golden file: {e}')
+    gf_checker = GoldenFileChecker(bootfs_filelist_golden_file)
     bootfs_folder = os.path.join(scrutiny_out, 'bootfs')
     bootfs_files = []
     try:
@@ -187,30 +225,17 @@ def verify_bootfs_filelist(bootfs_filelist_golden_file, scrutiny_out):
                     os.path.relpath(os.path.join(root, file), bootfs_folder))
     except IOError as e:
         raise VerificationError(f'Failed to walk bootfs folder: {e}')
-    got_content = '\n'.join(sorted(bootfs_files))
+    got_content = sorted(bootfs_files)
 
-    if golden_file_content == got_content:
-        return
-    error_msgs = ['BootFS file list mismatch!']
-    error_msgs.append(
-        'Please update bootFS file list golden file at ' +
-        bootfs_filelist_golden_file + ' to:')
-    error_msgs.append('```')
-    error_msgs.append(got_content)
-    error_msgs.append('```')
-    error_msgs.append('')
-    error_msgs.append('Diff:')
-    error_msgs.extend(
-        difflib.context_diff(
-            golden_file_content.splitlines(keepends=True),
-            got_content.splitlines(keepends=True),
-            fromfile='want',
-            tofile='got'))
-    error_msgs.append(
-        SOFT_TRANSITION_MESSAGE_TEMPLATE.format(
-            'fuchsia_zbi_bootfs_filelist_goldens',
-            'recovery_zbi_bootfs_filelist_goldens'))
-    raise VerificationError('\n'.join(error_msgs))
+    errors = gf_checker.check_match(bootfs_files)
+    if len(errors) > 0:
+        error_msgs = ['BootFS file list mismatch!']
+        error_msgs.append('')
+        error_msgs.extend(errors)
+        error_msgs.append('')
+        error_msgs.append(f'If you intended to change the bootfs contents, please acknowledge it by updating {bootfs_filelist_golden_file} with the added or removed lines.')
+        error_msgs.append(SOFT_TRANSITION_MESSAGE)
+        raise VerificationError('\n'.join(error_msgs))
 
 
 def verify_static_pkgs(
@@ -295,35 +320,17 @@ def verify_static_pkgs(
     pkgs = []
     for pkg in static_packages_content.splitlines():
         pkgs.append(re.split(r'/[0-9]=', pkg)[0])
-    got_content = '\n'.join(sorted(pkgs))
 
-    try:
-        with open(golden_file, 'r') as f:
-            golden_file_content = f.read().strip()
-    except IOError as e:
-        raise VerificationError(f'Failed to read golden file: {e}')
-
-    if golden_file_content == got_content:
-        return
-    error_msgs = ['Static packages list mismatch!']
-    error_msgs.append(
-        'Please update static packages list golden file at ' + golden_file +
-        ' to:')
-    error_msgs.append('```')
-    error_msgs.append(got_content)
-    error_msgs.append('```')
-    error_msgs.append('')
-    error_msgs.append('Diff:')
-    error_msgs.extend(
-        difflib.context_diff(
-            golden_file_content.splitlines(keepends=True),
-            got_content.splitlines(keepends=True),
-            fromfile='want',
-            tofile='got'))
-    error_msgs.append(
-        SOFT_TRANSITION_MESSAGE_TEMPLATE.format(
-            'fuchsia_static_pkgs_goldens', 'recovery_static_pkgs_goldens'))
-    raise VerificationError('\n'.join(error_msgs))
+    gf_checker = GoldenFileChecker(golden_file)
+    errors = gf_checker.check_match(sorted(pkgs))
+    if len(errors) > 0:
+        error_msgs = ['Static packages list mismatch!']
+        error_msgs.append('')
+        error_msgs.extend(errors)
+        error_msgs.append('')
+        error_msgs.append(f'If you intended to change the list of static packages, please acknowledge it by updating {golden_file} with the added or removed lines.')
+        error_msgs.append(SOFT_TRANSITION_MESSAGE)
+        raise VerificationError('\n'.join(error_msgs))
 
 
 def get_system_image_hash(scrutiny_out):
@@ -409,46 +416,14 @@ class VerificationError(Exception):
         return self.msg
 
 
-def compare_cmdline(actual_cmdline, golden_cmdline, golden_file):
-    """compare_cmdline compares the actual cmdline with the golden cmdline.
-
-    Raises:
-      CmdlineFormatError: If the kernel cmdline is not formatted correctly.
-    """
-    golden_cmd = generate_sorted_cmdline(golden_cmdline, '\n')
-    actual_cmd = generate_sorted_cmdline(actual_cmdline, ' ')
-    if golden_cmd == actual_cmd:
-        return
-    error_msgs = ['Kernel cmdline mismatch!']
-    error_msgs.append(
-        'Please update kernel cmdline golden file at ' + golden_file + ' to:')
-    error_msgs.append('```')
-    error_msgs.append(actual_cmd)
-    error_msgs.append('```')
-    error_msgs.append('')
-    error_msgs.append('Diff:')
-    error_msgs.extend(
-        difflib.context_diff(
-            golden_cmd.splitlines(keepends=True),
-            actual_cmd.splitlines(keepends=True),
-            fromfile='want',
-            tofile='got'))
-    error_msgs.append(
-        SOFT_TRANSITION_MESSAGE_TEMPLATE.format(
-            'fuchsia_zbi_kernel_cmdline_goldens',
-            'recovery_zbi_kernel_cmdline_goldens'))
-    raise VerificationError('\n'.join(error_msgs))
-
-
-def generate_sorted_cmdline(cmdline, splitter):
+def generate_sorted_cmdline(cmdline_args):
     """generate_sorted_cmdline generates a kernel cmdline sorted by entry keys.
 
     Raises:
       CmdlineFormatError: If the kernel cmdline is not formatted correctly.
     """
     cmdline_entries = {}
-    entries = cmdline.split(splitter)
-    for entry in entries:
+    for entry in cmdline_args:
         if len(entry.split('=')) > 2:
             raise CmdlineFormatError(
                 'invalid kernel cmdline, key value pair: ' + entry)
@@ -457,9 +432,9 @@ def generate_sorted_cmdline(cmdline, splitter):
             raise CmdlineFormatError('duplicate kernel cmdline key: ' + key)
         cmdline_entries[key] = value
 
-    return '\n'.join(
+    return [
         ('%s=%s' % (key, value)) if value else key
-        for key, value in sorted(cmdline_entries.items()))
+        for key, value in sorted(cmdline_entries.items())]
 
 
 def parse_key_value_file(file_path):

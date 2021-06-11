@@ -164,11 +164,12 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
                 self.assertTrue(os.path.isfile(depfile))
         return result
 
-    def test_verify_kernel_cmdline_sucess_normal_case(self):
+    def test_verify_kernel_cmdline_success_normal_case(self):
         self.assertEqual(
             0,
             self.verify_kernel_cmdline(
-                'key1=v1\nkey2=v2\nkey3=v3', b'key1=v1 key2=v2 key3=v3'))
+                'key1=v1\n# comments are ignored\nkey2=v2\nkey3=v3',
+                b'key1=v1 key2=v2 key3=v3'))
 
     def test_verify_kernel_cmdline_success_order_diff(self):
         self.assertEqual(
@@ -180,6 +181,18 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
         self.assertEqual(
             0,
             self.verify_kernel_cmdline('option1\noption2', b'option1 option2'))
+
+    def test_verify_kernel_cmdline_success_transitional(self):
+        # ? at start of line marks it optional
+        cmdline_golden = 'key1=v1\nkey2=v2\n?key3=v3'
+        self.assertEqual(
+            0,
+            self.verify_kernel_cmdline(
+                cmdline_golden, b'key1=v1 key2=v2 key3=v3'))
+        self.assertEqual(
+            0,
+            self.verify_kernel_cmdline(
+                cmdline_golden, b'key1=v1 key2=v2'))
 
     def test_verify_kernel_cmdline_fail_golden_empty(self):
         self.assertEqual(
@@ -372,7 +385,8 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
         self.assertEqual(
             0,
             self.verify_bootfs_filelist(
-                'fileA\nfileB\nfileC', ['fileA', 'fileC', 'fileB']))
+                'fileA\nfileB\n# comments are ignored\nfileC',
+                ['fileA', 'fileC', 'fileB']))
 
     def test_verify_bootfs_filelist_sub_dir(self):
         self.assertEqual(
@@ -394,6 +408,19 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
                 'dir/fileA\ndir/fileC\nfileB',
                 ['dir1/fileA', 'dir/fileC', 'fileB']))
 
+    def test_verify_bootfs_filelist_transitional(self):
+        # ? at start of line permits presence or absence of file for soft
+        # transitions
+        golden_contents = 'fileA\n?fileB\nfileC'
+        self.assertEqual(
+            0,
+            self.verify_bootfs_filelist(
+                golden_contents,
+                ['fileA', 'fileB', 'fileC']))
+        self.assertEqual(
+            0,
+            self.verify_bootfs_filelist(golden_contents, ['fileA', 'fileC']))
+
     def test_verify_static_pkgs_normal_case(self):
         static_packages = 'pkg0/0=1\npkg1/0=1\npkg2/0=2'
         zbi_files = {
@@ -404,7 +431,7 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
         self.assertEqual(
             0,
             self.verify_static_pkgs(
-                'pkg0\npkg1\npkg2', zbi_files, blobfs_files,
+                '# allow comments\npkg0\npkg1\npkg2', zbi_files, blobfs_files,
                 system_image_files))
 
     def test_verify_static_pkgs_order(self):
@@ -418,6 +445,29 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
             0,
             self.verify_static_pkgs(
                 'pkg0\npkg1\npkg2', zbi_files, blobfs_files,
+                system_image_files))
+
+    def test_verify_static_pkgs_transitional(self):
+        static_packages_with_pkg2 = 'pkg0/0=1\npkg1/0=1\npkg2/0=2'
+        static_packages_without_pkg2 = 'pkg0/0=1\npkg1/0=1\npkg2/0=2'
+        zbi_files = {
+            'bootfs/config/devmgr': 'zircon.system.pkgfs.cmd=bin/pkgsvr+1234'
+        }
+        blobfs_files_with_pkg2 = {'1234': 'system_image',
+                                  '2345': static_packages_with_pkg2}
+        blobfs_files_without_pkg2 = {'1234': 'system_image',
+                                     '2345': static_packages_without_pkg2}
+        system_image_files = {'meta/contents': 'data/static_packages=2345'}
+        self.assertEqual(
+            0,
+            self.verify_static_pkgs(
+                'pkg0\npkg1\n?pkg2', zbi_files, blobfs_files_with_pkg2,
+                system_image_files))
+
+        self.assertEqual(
+            0,
+            self.verify_static_pkgs(
+                'pkg0\npkg1\n?pkg2', zbi_files, blobfs_files_without_pkg2,
                 system_image_files))
 
     def test_verify_static_pkgs_mismatch(self):
