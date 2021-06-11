@@ -33,10 +33,4 @@
             to: "#netemul",
         },
     ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
-        },
-    ],
 }
