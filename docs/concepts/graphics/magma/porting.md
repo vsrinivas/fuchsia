@@ -76,8 +76,7 @@ approach.
 Having a separate MSD per SoC gives more flexibility and might be necessary
 if the GPU IP vendor allows many customizations to the IP block in an SoC.
 MSD implementations for different SoCs may share a library of SoC-independent
-code, but will be compiled as independent drivers. See
-[msd-img-rgx-mtk][msd-img-rgx-mtk] for an example of this approach.
+code, but will be compiled as independent drivers.
 
 ### Splitting responsibilities? (PCI version)
 
@@ -312,7 +311,6 @@ the system driver using the Zircon DDK.
 [msd-intel-gen]: /src/graphics/drivers/msd-intel-gen
 [intel-i915]: /src/graphics/display/drivers/intel-i915
 [driverdir]: /src/graphics/drivers
-[msd-img-rgx-mtk]: /src/graphics/drivers/msd-img-rgx/mtk
 [vkcube]: /src/graphics/examples/vkcube
 [icd_load]: /src/graphics/tests/icd_load
 [libmagma]: /src/graphics/lib/magma/src/libmagma
