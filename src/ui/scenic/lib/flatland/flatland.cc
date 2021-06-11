@@ -84,18 +84,16 @@ Flatland::~Flatland() {
   // TODO(fxbug.dev/55374): consider if Link tokens should be returned or not.
 }
 
-void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args, PresentCallback callback) {
+void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args) {
   // Close any clients that had invalid operations on link protocols.
   if (link_protocol_error_) {
-    callback(fit::error(Error::BAD_HANGING_GET));
-    CloseConnection();
+    CloseConnection(Error::BAD_HANGING_GET);
     return;
   }
 
   // Close any clients that call Present() without any present tokens.
   if (present_tokens_remaining_ == 0) {
-    callback(fit::error(Error::NO_PRESENTS_REMAINING));
-    CloseConnection();
+    CloseConnection(Error::NO_PRESENTS_REMAINING);
     return;
   }
   present_tokens_remaining_--;
@@ -123,120 +121,114 @@ void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args, PresentC
   // TODO(fxbug.dev/36166): Once the 2D scene graph is externalized, don't commit changes if a cycle
   // is detected. Instead, kill the channel and remove the sub-graph from the global graph.
   failure_since_previous_present_ |= !data.cyclical_edges.empty();
+
   if (failure_since_previous_present_) {
-    // TODO(fxbug.dev/56869): determine if pending link operations should still be run here.
-    callback(fit::error(Error::BAD_OPERATION));
-    failure_since_previous_present_ = false;
+    CloseConnection(Error::BAD_OPERATION);
     return;
   }
-  // TODO(fxbug.dev/76640): this doesn't need to be a else block, since there is a return in the if
-  // block.  Leaving it this way for now to avoid messing with indentation.
-  else {
-    FX_DCHECK(data.sorted_transforms[0].handle == root_handle);
 
-    // Cleanup released resources. Here we also collect the list of unused images so they can be
-    // released by the buffer collection importers.
-    std::vector<allocation::ImageMetadata> images_to_release;
-    for (const auto& dead_handle : data.dead_transforms) {
-      matrices_.erase(dead_handle);
+  FX_DCHECK(data.sorted_transforms[0].handle == root_handle);
 
-      auto image_kv = image_metadatas_.find(dead_handle);
-      if (image_kv != image_metadatas_.end()) {
-        images_to_release.push_back(image_kv->second);
-        image_metadatas_.erase(image_kv);
-      }
+  // Cleanup released resources. Here we also collect the list of unused images so they can be
+  // released by the buffer collection importers.
+  std::vector<allocation::ImageMetadata> images_to_release;
+  for (const auto& dead_handle : data.dead_transforms) {
+    matrices_.erase(dead_handle);
+
+    auto image_kv = image_metadatas_.find(dead_handle);
+    if (image_kv != image_metadatas_.end()) {
+      images_to_release.push_back(image_kv->second);
+      image_metadatas_.erase(image_kv);
     }
+  }
 
-    // If there are images ready for release, create a release fence for the current Present() and
-    // delay release until that fence is reached to ensure that the images are no longer referenced
-    // in any render data.
-    if (!images_to_release.empty()) {
-      // Create a release fence specifically for the images.
-      zx::event image_release_fence;
-      zx_status_t status = zx::event::create(0, &image_release_fence);
-      FX_DCHECK(status == ZX_OK);
+  // If there are images ready for release, create a release fence for the current Present() and
+  // delay release until that fence is reached to ensure that the images are no longer referenced
+  // in any render data.
+  if (!images_to_release.empty()) {
+    // Create a release fence specifically for the images.
+    zx::event image_release_fence;
+    zx_status_t status = zx::event::create(0, &image_release_fence);
+    FX_DCHECK(status == ZX_OK);
 
-      // Use a self-referencing async::WaitOnce to perform ImageImporter deregistration.
-      // This is primarily so the handler does not have to live in the Flatland instance, which may
-      // be destroyed before the release fence is signaled. WaitOnce moves the handler to the stack
-      // prior to invoking it, so it is safe for the handler to delete the WaitOnce on exit.
-      // Specifically, we move the wait object into the lambda function via |copy_ref = wait| to
-      // ensure that the wait object lives. The callback will not trigger without this.
-      auto wait = std::make_shared<async::WaitOnce>(image_release_fence.get(), ZX_EVENT_SIGNALED);
-      status =
-          wait->Begin(dispatcher(),
-                      [copy_ref = wait, importer_ref = buffer_collection_importers_,
+    // Use a self-referencing async::WaitOnce to perform ImageImporter deregistration.
+    // This is primarily so the handler does not have to live in the Flatland instance, which may
+    // be destroyed before the release fence is signaled. WaitOnce moves the handler to the stack
+    // prior to invoking it, so it is safe for the handler to delete the WaitOnce on exit.
+    // Specifically, we move the wait object into the lambda function via |copy_ref = wait| to
+    // ensure that the wait object lives. The callback will not trigger without this.
+    auto wait = std::make_shared<async::WaitOnce>(image_release_fence.get(), ZX_EVENT_SIGNALED);
+    status = wait->Begin(
+        dispatcher(), [copy_ref = wait, importer_ref = buffer_collection_importers_,
                        images_to_release](async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
                                           const zx_packet_signal_t* /*signal*/) mutable {
-                        FX_DCHECK(status == ZX_OK);
+          FX_DCHECK(status == ZX_OK);
 
-                        for (auto& image_id : images_to_release) {
-                          for (auto& importer : importer_ref) {
-                            importer->ReleaseBufferImage(image_id.identifier);
-                          }
-                        }
-                      });
-      FX_DCHECK(status == ZX_OK);
-
-      // Push the new release fence into the user-provided list.
-      args.mutable_release_fences()->push_back(std::move(image_release_fence));
-    }
-
-    auto uber_struct = std::make_unique<UberStruct>();
-    uber_struct->local_topology = std::move(data.sorted_transforms);
-
-    for (const auto& [link_id, child_link] : child_links_) {
-      LinkProperties initial_properties;
-      fidl::Clone(child_link.properties, &initial_properties);
-      uber_struct->link_properties[child_link.link.graph_handle] = std::move(initial_properties);
-    }
-
-    for (const auto& [handle, matrix_data] : matrices_) {
-      uber_struct->local_matrices[handle] = matrix_data.GetMatrix();
-    }
-
-    for (const auto& [handle, opacity_value] : opacity_values_) {
-      uber_struct->local_opacity_values[handle] = opacity_value;
-    }
-
-    uber_struct->images = image_metadatas_;
-
-    // Register a Present to get the PresentId needed to queue the UberStruct. This happens before
-    // waiting on the acquire fences to indicate that a Present is pending.
-    auto present_id = flatland_presenter_->RegisterPresent(
-        session_id_, std::move(*args.mutable_release_fences()));
-    present2_helper_.RegisterPresent(present_id,
-                                     /*present_received_time=*/zx::time(async_now(dispatcher())));
-
-    // Safe to capture |this| because the Flatland is guaranteed to outlive |fence_queue_|,
-    // Flatland is non-movable and FenceQueue does not fire closures after destruction.
-    // TODO(fxbug.dev/76640): make the fences be the first arg, and the closure be the second.
-    fence_queue_->QueueTask(
-        [this, present_id, requested_presentation_time = args.requested_presentation_time(),
-         squashable = args.squashable(), uber_struct = std::move(uber_struct),
-         link_operations = std::move(pending_link_operations_),
-         release_fences = std::move(*args.mutable_release_fences())]() mutable {
-          // Push the UberStruct, then schedule the associated Present that will eventually publish
-          // it to the InstanceMap used for rendering.
-          uber_struct_queue_->Push(present_id, std::move(uber_struct));
-          flatland_presenter_->ScheduleUpdateForSession(zx::time(requested_presentation_time),
-                                                        {session_id_, present_id}, squashable);
-
-          // Finalize Link destruction operations after publishing the new UberStruct. This
-          // ensures that any local Transforms referenced by the to-be-deleted Links are already
-          // removed from the now-published UberStruct.
-          for (auto& operation : link_operations) {
-            operation();
+          for (auto& image_id : images_to_release) {
+            for (auto& importer : importer_ref) {
+              importer->ReleaseBufferImage(image_id.identifier);
+            }
           }
-        },
-        std::move(*args.mutable_acquire_fences()));
+        });
+    FX_DCHECK(status == ZX_OK);
 
-    // We exited early in this method if there was a failure, and none of the subsequent operations
-    // are allowed to trigger a failure (all failure possibilities should be checked before the
-    // early exit).
-    FX_DCHECK(!failure_since_previous_present_);
-    callback(fit::ok());
+    // Push the new release fence into the user-provided list.
+    args.mutable_release_fences()->push_back(std::move(image_release_fence));
   }
+
+  auto uber_struct = std::make_unique<UberStruct>();
+  uber_struct->local_topology = std::move(data.sorted_transforms);
+
+  for (const auto& [link_id, child_link] : child_links_) {
+    LinkProperties initial_properties;
+    fidl::Clone(child_link.properties, &initial_properties);
+    uber_struct->link_properties[child_link.link.graph_handle] = std::move(initial_properties);
+  }
+
+  for (const auto& [handle, matrix_data] : matrices_) {
+    uber_struct->local_matrices[handle] = matrix_data.GetMatrix();
+  }
+
+  for (const auto& [handle, opacity_value] : opacity_values_) {
+    uber_struct->local_opacity_values[handle] = opacity_value;
+  }
+
+  uber_struct->images = image_metadatas_;
+
+  // Register a Present to get the PresentId needed to queue the UberStruct. This happens before
+  // waiting on the acquire fences to indicate that a Present is pending.
+  auto present_id =
+      flatland_presenter_->RegisterPresent(session_id_, std::move(*args.mutable_release_fences()));
+  present2_helper_.RegisterPresent(present_id,
+                                   /*present_received_time=*/zx::time(async_now(dispatcher())));
+
+  // Safe to capture |this| because the Flatland is guaranteed to outlive |fence_queue_|,
+  // Flatland is non-movable and FenceQueue does not fire closures after destruction.
+  // TODO(fxbug.dev/76640): make the fences be the first arg, and the closure be the second.
+  fence_queue_->QueueTask(
+      [this, present_id, requested_presentation_time = args.requested_presentation_time(),
+       squashable = args.squashable(), uber_struct = std::move(uber_struct),
+       link_operations = std::move(pending_link_operations_),
+       release_fences = std::move(*args.mutable_release_fences())]() mutable {
+        // Push the UberStruct, then schedule the associated Present that will eventually publish
+        // it to the InstanceMap used for rendering.
+        uber_struct_queue_->Push(present_id, std::move(uber_struct));
+        flatland_presenter_->ScheduleUpdateForSession(zx::time(requested_presentation_time),
+                                                      {session_id_, present_id}, squashable);
+
+        // Finalize Link destruction operations after publishing the new UberStruct. This
+        // ensures that any local Transforms referenced by the to-be-deleted Links are already
+        // removed from the now-published UberStruct.
+        for (auto& operation : link_operations) {
+          operation();
+        }
+      },
+      std::move(*args.mutable_acquire_fences()));
+
+  // We exited early in this method if there was a failure, and none of the subsequent operations
+  // are allowed to trigger a failure (all failure possibilities should be checked before the
+  // early exit).
+  FX_DCHECK(!failure_since_previous_present_);
 }
 
 void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLink> graph_link) {
@@ -959,7 +951,8 @@ void Flatland::OnPresentProcessed(uint32_t num_present_tokens,
                                   FuturePresentationInfos presentation_infos) {
   present_tokens_remaining_ += num_present_tokens;
   if (binding_.is_bound()) {
-    binding_.events().OnPresentProcessed(num_present_tokens, std::move(presentation_infos));
+    binding_.events().OnPresentProcessed(Error::NO_ERROR, num_present_tokens,
+                                         std::move(presentation_infos));
   }
 }
 
@@ -984,6 +977,8 @@ void Flatland::SetErrorReporter(std::shared_ptr<scenic_impl::ErrorReporter> erro
   error_reporter_ = error_reporter;
 }
 
+scheduling::SessionId Flatland::GetSessionId() const { return session_id_; }
+
 void Flatland::ReportBadOperationError() { failure_since_previous_present_ = true; }
 
 void Flatland::ReportLinkProtocolError(const std::string& error_log) {
@@ -991,7 +986,10 @@ void Flatland::ReportLinkProtocolError(const std::string& error_log) {
   link_protocol_error_ = true;
 }
 
-void Flatland::CloseConnection() {
+void Flatland::CloseConnection(Error error) {
+  // Send the error to the client before closing the connection.
+  binding_.events().OnPresentProcessed(error, /*num_present_tokens=*/0, FuturePresentationInfos());
+
   // Cancel the async::Wait before closing the connection, or it will assert on destruction.
   zx_status_t status = peer_closed_waiter_.Cancel();
 

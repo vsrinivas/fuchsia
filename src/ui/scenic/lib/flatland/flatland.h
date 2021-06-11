@@ -81,7 +81,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   Flatland& operator=(Flatland&&) = delete;
 
   // |fuchsia::ui::scenic::internal::Flatland|
-  void Present(fuchsia::ui::scenic::internal::PresentArgs args, PresentCallback callback) override;
+  void Present(fuchsia::ui::scenic::internal::PresentArgs args) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void LinkToParent(
       fuchsia::ui::scenic::internal::GraphLinkToken token,
@@ -157,6 +157,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   // For validating logs in tests only.
   void SetErrorReporter(std::shared_ptr<scenic_impl::ErrorReporter> error_reporter);
 
+  // For using as a unique identifier in tests only.
+  scheduling::SessionId GetSessionId() const;
+
  private:
   Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
            fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
@@ -169,7 +172,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
 
   void ReportBadOperationError();
   void ReportLinkProtocolError(const std::string& error_log);
-  void CloseConnection();
+  void CloseConnection(fuchsia::ui::scenic::internal::Error error);
 
   // The dispatcher this Flatland instance is running on.
   async_dispatcher_t* dispatcher() const { return dispatcher_holder_->dispatcher(); }

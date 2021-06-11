@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_scenic_allocation as scenic_alloc, fidl_fuchsia_ui_scenic_internal as fland,
-    fidl_fuchsia_math as fmath, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol, fuchsia_syslog as syslog,
-    fuchsia_zircon as zx, log::*,
+    fidl_fuchsia_math as fmath, fidl_fuchsia_scenic_allocation as scenic_alloc,
+    fidl_fuchsia_ui_scenic_internal as fland, fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_protocol, fuchsia_syslog as syslog, fuchsia_zircon as zx,
+    log::*,
 };
 
 use fidl::endpoints::create_proxy;
@@ -222,7 +222,7 @@ async fn main() {
         squashable: Some(false),
         ..fland::PresentArgs::EMPTY
     };
-    flatland.present(args).await.expect("fidl error").expect("present failed");
+    flatland.present(args).expect("fidl error");
 
     // TODO(fxbug.dev/76640): give Scenic enough time to render a frame before killing the session;
     // if we don't, then the content will never appear on the screen.  Worse, though, is that if we

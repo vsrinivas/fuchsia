@@ -23,8 +23,8 @@ using flatland::FlatlandPresenter;
 using flatland::LinkSystem;
 using flatland::MockFlatlandPresenter;
 using flatland::UberStructSystem;
+using fuchsia::ui::scenic::internal::Error;
 using fuchsia::ui::scenic::internal::Flatland;
-using fuchsia::ui::scenic::internal::Flatland_Present_Result;
 
 // These macros works like functions that check a variety of conditions, but if those conditions
 // fail, the line number for the failure will appear in-line rather than in a function.
@@ -38,34 +38,25 @@ using fuchsia::ui::scenic::internal::Flatland_Present_Result;
 // |flatland| is a Flatland object constructed with the MockFlatlandPresenter owned by the
 // FlatlandManagerTest harness. |session_id| is the SessionId for |flatland|. |expect_success|
 // should be false if the call to Present() is expected to trigger an error.
-#define PRESENT(flatland, session_id, expect_success)                                             \
-  {                                                                                               \
-    const auto num_pending_sessions = GetNumPendingSessionUpdates(session_id);                    \
-    if (expect_success) {                                                                         \
-      EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(session_id, _));                     \
-      EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));                  \
-    }                                                                                             \
-    bool processed_callback = false;                                                              \
-    fuchsia::ui::scenic::internal::PresentArgs present_args;                                      \
-    present_args.set_requested_presentation_time(0);                                              \
-    present_args.set_acquire_fences({});                                                          \
-    present_args.set_release_fences({});                                                          \
-    present_args.set_squashable(true);                                                            \
-    flatland->Present(std::move(present_args), [&](Flatland_Present_Result result) {              \
-      EXPECT_EQ(!expect_success, result.is_err());                                                \
-      if (!expect_success) {                                                                      \
-        EXPECT_EQ(fuchsia::ui::scenic::internal::Error::NO_PRESENTS_REMAINING, result.err());     \
-      }                                                                                           \
-      processed_callback = true;                                                                  \
-    });                                                                                           \
-    /* If expecting success, wait for the worker thread to process the request. */                \
-    if (expect_success) {                                                                         \
-      EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this, session_id, num_pending_sessions] {            \
-        return GetNumPendingSessionUpdates(session_id) > num_pending_sessions;                    \
-      }));                                                                                        \
-    }                                                                                             \
-    /* Then wait for the callback to run as well. */                                              \
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&processed_callback] { return processed_callback; })); \
+#define PRESENT(flatland, session_id, expect_success)                                  \
+  {                                                                                    \
+    const auto num_pending_sessions = GetNumPendingSessionUpdates(session_id);         \
+    if (expect_success) {                                                              \
+      EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(session_id, _));          \
+      EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));       \
+    }                                                                                  \
+    fuchsia::ui::scenic::internal::PresentArgs present_args;                           \
+    present_args.set_requested_presentation_time(0);                                   \
+    present_args.set_acquire_fences({});                                               \
+    present_args.set_release_fences({});                                               \
+    present_args.set_squashable(true);                                                 \
+    flatland->Present(std::move(present_args));                                        \
+    /* If expecting success, wait for the worker thread to process the request. */     \
+    if (expect_success) {                                                              \
+      EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this, session_id, num_pending_sessions] { \
+        return GetNumPendingSessionUpdates(session_id) > num_pending_sessions;         \
+      }));                                                                             \
+    }                                                                                  \
   }
 
 namespace {
@@ -284,7 +275,7 @@ TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
 
   uint32_t returned_tokens = 0;
   flatland.events().OnPresentProcessed =
-      [&returned_tokens](uint32_t present_tokens,
+      [&returned_tokens](Error error, uint32_t present_tokens,
                          Flatland::FuturePresentationInfos future_presentation_infos) {
         returned_tokens = present_tokens;
       };
@@ -302,7 +293,7 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
 
   uint32_t returned_tokens1 = 0;
   flatland1.events().OnPresentProcessed =
-      [&returned_tokens1](uint32_t present_tokens,
+      [&returned_tokens1](Error error, uint32_t present_tokens,
                           Flatland::FuturePresentationInfos future_presentation_infos) {
         returned_tokens1 = present_tokens;
         EXPECT_FALSE(future_presentation_infos.empty());
@@ -313,7 +304,7 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
 
   uint32_t returned_tokens2 = 0;
   flatland2.events().OnPresentProcessed =
-      [&returned_tokens2](uint32_t present_tokens,
+      [&returned_tokens2](Error error, uint32_t present_tokens,
                           Flatland::FuturePresentationInfos future_presentation_infos) {
         returned_tokens2 = present_tokens;
         EXPECT_FALSE(future_presentation_infos.empty());
@@ -395,7 +386,7 @@ TEST_F(FlatlandManagerTest, ConsecutiveUpdateSessions_ReturnsCorrectPresentToken
 
   uint32_t returned_tokens = 0;
   flatland.events().OnPresentProcessed =
-      [&returned_tokens](uint32_t present_tokens,
+      [&returned_tokens](Error error, uint32_t present_tokens,
                          Flatland::FuturePresentationInfos future_presentation_infos) {
         returned_tokens = present_tokens;
         EXPECT_FALSE(future_presentation_infos.empty());
@@ -443,10 +434,13 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
+  Error error_returned = Error::NO_ERROR;
   uint32_t tokens_remaining = 1;
   flatland.events().OnPresentProcessed =
-      [&tokens_remaining](uint32_t present_tokens,
-                          Flatland::FuturePresentationInfos future_presentation_infos) {
+      [&error_returned, &tokens_remaining](
+          Error error, uint32_t present_tokens,
+          Flatland::FuturePresentationInfos future_presentation_infos) {
+        error_returned = error;
         tokens_remaining += present_tokens;
       };
 
@@ -469,6 +463,38 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   // the destroy_instance_function() posts a task from the worker to the main and that task
   // ultimately posts the destruction back onto the worker.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&flatland]() { return !flatland.is_bound(); }));
+  EXPECT_EQ(error_returned, Error::NO_PRESENTS_REMAINING);
+}
+
+TEST_F(FlatlandManagerTest, ErrorClosesSession) {
+  // Setup a Flatland instance with an OnPresentProcessed() callback.
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
+  const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
+
+  Error error_returned = Error::NO_ERROR;
+  uint32_t tokens_remaining = 1;
+  flatland.events().OnPresentProcessed =
+      [&error_returned, &tokens_remaining](
+          Error error, uint32_t present_tokens,
+          Flatland::FuturePresentationInfos future_presentation_infos) {
+        error_returned = error;
+        tokens_remaining += present_tokens;
+      };
+
+  // Run until the instance receives the initial allotment of tokens.
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&tokens_remaining]() { return tokens_remaining > 1; }));
+  EXPECT_TRUE(flatland.is_bound());
+
+  // Queue a bad SetRootTransform call ensure the session is closed.
+  EXPECT_CALL(*mock_flatland_presenter_, RemoveSession(id));
+  flatland->SetRootTransform({2});
+  PRESENT(flatland, id, false);
+
+  // The instance will eventually be unbound, but it takes a pair of thread hops to complete since
+  // the destroy_instance_function() posts a task from the worker to the main and that task
+  // ultimately posts the destruction back onto the worker.
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&flatland]() { return !flatland.is_bound(); }));
+  EXPECT_EQ(error_returned, Error::BAD_OPERATION);
 }
 
 TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
@@ -478,7 +504,7 @@ TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
 
   uint32_t tokens_remaining = 1;
   flatland.events().OnPresentProcessed =
-      [&tokens_remaining](uint32_t present_tokens,
+      [&tokens_remaining](Error error, uint32_t present_tokens,
                           Flatland::FuturePresentationInfos future_presentation_infos) {
         tokens_remaining += present_tokens;
       };

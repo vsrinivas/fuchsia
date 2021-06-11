@@ -9,10 +9,17 @@ using fuchsia.scenic.allocation;
 using fuchsia.scenic.scheduling;
 using zx;
 
-// The set of error codes returned by Flatland::Present().
+/// The set of error codes returned in [`OnPresentProcessed`]. Everything except NO_ERROR, causes
+/// Flatland channel to be closed.
 enum Error {
+    /// Indicates that the operation was successful.
+    NO_ERROR = 0;
+    /// Indicates that the parameters used the function calls are invalid.
     BAD_OPERATION = 1;
+    /// Indicates that `present_tokens` field was not properly processed and the client queued more
+    /// [`Present`]s than allowed.
     NO_PRESENTS_REMAINING = 2;
+    /// Indicates that the client has overwritten hanging gets in the protocols returned.
     BAD_HANGING_GET = 3;
 };
 
@@ -220,8 +227,9 @@ protocol Flatland {
     /// Complete execution of all feed-forward operations.
     ///
     /// If executing an operation produces an error (e.g., CreateTransform(0)),
-    /// [`Present`]() will; return an error. Operations that produce errors are
-    /// ignored. Future operations are still executed.
+    /// [`OnPresentProcessed`] emits a non-success Error type. Operations that produce errors
+    /// are ignored and the channel is closed. If the execution is completed successfully,
+    /// [`OnPresentProcessed`] emits NO_ERROR along with other parameters.
     ///
     /// The client may only call [`Present`] when they have a non-zero number
     /// of "present tokens", which are tracked by the server. The server may
@@ -245,10 +253,7 @@ protocol Flatland {
     /// See [`fuchsia.ui.scenic.internal/PresentArgs`] documentation above for
     /// more detailed information on what arguments are passed in and their
     /// role.
-    ///
-    /// TODO(fxbug.dev/36166): [`Present`] should stop execution, and kill the
-    /// channel, when irrecoverable errors are detected.
-    Present(PresentArgs args) -> () error Error;
+    Present(PresentArgs args);
 
     /// This event is fired when clients should expect minimal resource
     /// contention. Clients may use the timing of this event to begin their
@@ -259,7 +264,8 @@ protocol Flatland {
     /// client so that the client can call [`Present`] further times.
     /// - response `future_presentation_infos` information about future
     /// presentation and latch times.
-    -> OnPresentProcessed(uint32 present_tokens, FuturePresentationInfos future_presentation_infos);
+    -> OnPresentProcessed(Error error, uint32 present_tokens,
+                          FuturePresentationInfos future_presentation_infos);
 
     /// This event is fired whenever a set of one or more [`Present`]s are
     /// presented simultaneously, and are therefore no longer in flight.
