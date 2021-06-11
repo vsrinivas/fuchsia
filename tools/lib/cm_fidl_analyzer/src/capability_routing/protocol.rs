@@ -219,6 +219,7 @@ mod tests {
             source,
             source_name,
             target_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+            dependency_type: DependencyType::Strong,
         }
     }
 

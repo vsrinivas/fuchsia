@@ -520,11 +520,60 @@ impl<'a> ValidationContext<'a> {
             };
         }
 
-        if let Some(cml::UseFromRef::Named(name)) = &use_.from {
-            self.validate_component_child_or_capability_ref(
-                "\"use\" source",
-                cml::AnyRef::Named(name),
-            )?;
+        // disallow (use from #child dependency=strong) && (offer to #child from self)
+        // - err: `use` must have dependency=weak to prevent cycle
+        // disallow (use from <not-#child> dependency=weak)
+        // - err: a `use` dependency=`weak` is only valid if from children
+        match &use_.from {
+            Some(cml::UseFromRef::Named(name)) => {
+                self.validate_component_child_or_capability_ref(
+                    "\"use\" source",
+                    cml::AnyRef::Named(name),
+                )?;
+                let offer_to_ref = cml::OfferToRef::Named(name.clone());
+                let has_offers_from_self_to_child = if let Some(offers) = &self.document.offer {
+                    offers
+                        .iter()
+                        .filter(|offer| {
+                            offer.to.iter().filter(|to| to == &&offer_to_ref).next().is_some()
+                        })
+                        .filter(|offer| {
+                            offer
+                                .from
+                                .iter()
+                                .filter(|from| from == &&cml::OfferFromRef::Self_)
+                                .next()
+                                .is_some()
+                        })
+                        .next()
+                        .is_some()
+                } else {
+                    false
+                };
+                match (
+                    self.all_children.get(name),
+                    use_.dependency.as_ref(),
+                    has_offers_from_self_to_child,
+                ) {
+                    (Some(_), None | Some(&cml::DependencyType::Strong), true) => {
+                        return Err(Error::validate(format!(
+                            "use from #{} and offer to #{} from self introduce a dependency cycle. Consider marking use from #{} with dependency: \"weak\"",
+                            name,
+                            name,
+                            name
+                        )));
+                    }
+                    _ => {}
+                }
+            }
+            _ => match &use_.dependency {
+                Some(cml::DependencyType::Weak) | Some(cml::DependencyType::WeakForMigration) => {
+                    return Err(Error::validate(format!(
+                        "Only `use` from children can have dependency: \"weak\""
+                    )));
+                }
+                _ => {}
+            },
         }
 
         Ok(())
@@ -1582,7 +1631,7 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream`, `filter`, `modes`, `subscriptions`"
+            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream`, `filter`, `modes`, `subscriptions`, `dependency`"
         ),
 
         test_cml_use_disallows_nested_dirs_directory(
@@ -1768,6 +1817,73 @@ mod tests {
                 ]
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\",\"filter\" can only be specified when one `event` is supplied"
+        ),
+        test_cml_use_from_child_offer_cycle_strong(
+            json!({
+                "capabilities": [
+                    { "protocol": ["fuchsia.example.Protocol"] },
+                ],
+                "children": [
+                    {
+                        "name": "child",
+                        "url": "fuchsia-pkg://fuchsia.com/child#meta/child.cm",
+                    },
+                ],
+                "use": [
+                    {
+                        "protocol": "fuchsia.child.Protocol",
+                        "from": "#child",
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.example.Protocol",
+                        "from": "self",
+                        "to": [ "#child" ],
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "use from #child and offer to #child from self introduce a dependency cycle. Consider marking use from #child with dependency: \"weak\""
+        ),
+        test_cml_use_from_parent_weak(
+            json!({
+                "use": [
+                    {
+                        "protocol": "fuchsia.parent.Protocol",
+                        "from": "parent",
+                        "dependency": "weak",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Only `use` from children can have dependency: \"weak\""
+        ),
+        test_cml_use_from_child_offer_cycle_weak(
+            json!({
+                "capabilities": [
+                    { "protocol": ["fuchsia.example.Protocol"] },
+                ],
+                "children": [
+                    {
+                        "name": "child",
+                        "url": "fuchsia-pkg://fuchsia.com/child#meta/child.cm",
+                    },
+                ],
+                "use": [
+                    {
+                        "protocol": "fuchsia.example.Protocol",
+                        "from": "#child",
+                        "dependency": "weak",
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.example.Protocol",
+                        "from": "self",
+                        "to": [ "#child" ],
+                    },
+                ],
+            }),
+            Ok(())
         ),
 
         // expose

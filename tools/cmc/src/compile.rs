@@ -243,6 +243,9 @@ fn translate_use(
                     source: Some(clone_fsys_ref(&source)?),
                     source_name: Some(source_name.clone().into()),
                     target_path: Some(target_path.into()),
+                    dependency_type: Some(
+                        use_.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
+                    ),
                     ..fsys::UseServiceDecl::EMPTY
                 }));
             }
@@ -257,6 +260,9 @@ fn translate_use(
                     source: Some(clone_fsys_ref(&source)?),
                     source_name: Some(source_name.clone().into()),
                     target_path: Some(target_path.into()),
+                    dependency_type: Some(
+                        use_.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
+                    ),
                     ..fsys::UseProtocolDecl::EMPTY
                 }));
             }
@@ -271,6 +277,9 @@ fn translate_use(
                 target_path: Some(target_path.into()),
                 rights: Some(rights),
                 subdir: subdir.map(|s| s.into()),
+                dependency_type: Some(
+                    use_.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
+                ),
                 ..fsys::UseDirectoryDecl::EMPTY
             }));
         } else if let Some(n) = &use_.storage {
@@ -315,6 +324,9 @@ fn translate_use(
                         Some(dict) => Some(dictionary_from_map(dict)?),
                         None => None,
                     },
+                    dependency_type: Some(
+                        use_.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
+                    ),
                     ..fsys::UseEventDecl::EMPTY
                 }));
             }
@@ -1286,6 +1298,7 @@ mod tests {
                 uses: Some(vec![
                     fsys::UseDecl::Service (
                         fsys::UseServiceDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("CoolFonts".to_string()),
                             target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
@@ -1294,6 +1307,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Service (
                         fsys::UseServiceDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                             source_name: Some("fuchsia.sys2.Realm".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
@@ -1302,6 +1316,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Service (
                         fsys::UseServiceDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("myservice".to_string()),
                             target_path: Some("/svc/myservice".to_string()),
@@ -1310,6 +1325,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Service (
                         fsys::UseServiceDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("myservice2".to_string()),
                             target_path: Some("/svc/myservice2".to_string()),
@@ -1778,6 +1794,7 @@ mod tests {
                 uses: Some(vec![
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("LegacyCoolFonts".to_string()),
                             target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
@@ -1786,6 +1803,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                             source_name: Some("fuchsia.sys2.LegacyRealm".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.LegacyRealm".to_string()),
@@ -1794,6 +1812,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Capability(fsys::CapabilityRef { name: "data-storage".to_string() })),
                             source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.StorageAdmin".to_string()),
@@ -1802,6 +1821,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Debug(fsys::DebugRef {})),
                             source_name: Some("fuchsia.sys2.DebugProto".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.DebugProto".to_string()),
@@ -1810,6 +1830,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                             source_name: Some("fuchsia.sys2.Echo".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.Echo".to_string()),
@@ -1818,6 +1839,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Directory (
                         fsys::UseDirectoryDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("assets".to_string()),
                             target_path: Some("/data/assets".to_string()),
@@ -1828,6 +1850,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Directory (
                         fsys::UseDirectoryDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("config".to_string()),
                             target_path: Some("/data/config".to_string()),
@@ -1852,6 +1875,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Event (
                         fsys::UseEventDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("destroyed".to_string()),
                             target_name: Some("destroyed".to_string()),
@@ -1862,6 +1886,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Event (
                         fsys::UseEventDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                             source_name: Some("started".to_string()),
                             target_name: Some("started".to_string()),
@@ -1872,6 +1897,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Event (
                         fsys::UseEventDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                             source_name: Some("stopped".to_string()),
                             target_name: Some("stopped".to_string()),
@@ -1882,6 +1908,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Event (
                         fsys::UseEventDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("directory_ready".to_string()),
                             target_name: Some("diagnostics".to_string()),
@@ -3328,6 +3355,7 @@ mod tests {
                 uses: Some(vec![
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("LegacyCoolFonts".to_string()),
                             target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
@@ -3336,6 +3364,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("ReallyGoodFonts".to_string()),
                             target_path: Some("/svc/ReallyGoodFonts".to_string()),
@@ -3344,6 +3373,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("IWouldNeverUseTheseFonts".to_string()),
                             target_path: Some("/svc/IWouldNeverUseTheseFonts".to_string()),
@@ -3352,6 +3382,7 @@ mod tests {
                     ),
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             source: Some(fsys::Ref::Debug(fsys::DebugRef {})),
                             source_name: Some("DebugProtocol".to_string()),
                             target_path: Some("/svc/DebugProtocol".to_string()),
@@ -3806,6 +3837,7 @@ mod tests {
                     ..fsys::ProgramDecl::EMPTY
                 }),
                 uses: Some(vec![fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                    dependency_type: Some(fsys::DependencyType::Strong),
                     source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     source_name: Some("foo".to_string()),
                     target_path: Some("/svc/foo".to_string()),

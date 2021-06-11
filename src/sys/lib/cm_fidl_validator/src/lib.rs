@@ -299,6 +299,9 @@ struct ValidationContext<'a> {
     strong_dependencies: DirectedGraph<DependencyNode<'a>>,
     target_ids: IdMap<'a>,
     errors: Vec<Error>,
+    // Set of all children which use from child with dependency_type=strong.
+    // Used for preventing use/offer cycles.
+    use_from_child_strong: HashSet<&'a str>,
 }
 
 /// A node in the DependencyGraph. The first string describes the type of node and the second
@@ -455,7 +458,12 @@ impl<'a> ValidationContext<'a> {
     fn validate_use_decl(&mut self, use_: &'a fsys::UseDecl) {
         match use_ {
             fsys::UseDecl::Service(u) => {
-                self.validate_use_source(u.source.as_ref(), "UseServiceDecl", "source");
+                self.validate_use_source(
+                    u.source.as_ref(),
+                    u.dependency_type.as_ref(),
+                    "UseServiceDecl",
+                    "source",
+                );
                 check_name(
                     u.source_name.as_ref(),
                     "UseServiceDecl",
@@ -470,7 +478,12 @@ impl<'a> ValidationContext<'a> {
                 );
             }
             fsys::UseDecl::Protocol(u) => {
-                self.validate_use_source(u.source.as_ref(), "UseProtocolDecl", "source");
+                self.validate_use_source(
+                    u.source.as_ref(),
+                    u.dependency_type.as_ref(),
+                    "UseProtocolDecl",
+                    "source",
+                );
                 check_name(
                     u.source_name.as_ref(),
                     "UseProtocolDecl",
@@ -485,7 +498,12 @@ impl<'a> ValidationContext<'a> {
                 );
             }
             fsys::UseDecl::Directory(u) => {
-                self.validate_use_source(u.source.as_ref(), "UseDirectoryDecl", "source");
+                self.validate_use_source(
+                    u.source.as_ref(),
+                    u.dependency_type.as_ref(),
+                    "UseDirectoryDecl",
+                    "source",
+                );
                 check_name(
                     u.source_name.as_ref(),
                     "UseDirectoryDecl",
@@ -632,7 +650,12 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_event(&mut self, event: &'a fsys::UseEventDecl) {
-        self.validate_use_source(event.source.as_ref(), "UseEventDecl", "source");
+        self.validate_use_source(
+            event.source.as_ref(),
+            event.dependency_type.as_ref(),
+            "UseEventDecl",
+            "source",
+        );
         if let Some(fsys::Ref::Self_(_)) = event.source {
             self.errors.push(Error::invalid_field("UseEventDecl", "source"));
         }
@@ -703,7 +726,17 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_use_source(&mut self, source: Option<&fsys::Ref>, decl: &str, field: &str) {
+    // disallow (use from #child dependency=strong) && (offer to #child from self)
+    // - err: `use` must have dependency=weak to prevent cycle
+    // disallow (use from <not-#child> dependency=weak)
+    // - err: a `use` dependency=`weak` is only valid if from children
+    fn validate_use_source(
+        &mut self,
+        source: Option<&'a fsys::Ref>,
+        dependency_type: Option<&fsys::DependencyType>,
+        decl: &str,
+        field: &str,
+    ) {
         match source {
             Some(fsys::Ref::Parent(_)) => {}
             Some(fsys::Ref::Framework(_)) => {}
@@ -717,6 +750,8 @@ impl<'a> ValidationContext<'a> {
             Some(fsys::Ref::Child(child)) => {
                 if !self.all_children.contains_key(&child.name as &str) {
                     self.errors.push(Error::invalid_child(decl, field, &child.name));
+                } else if dependency_type == Some(&fsys::DependencyType::Strong) {
+                    self.use_from_child_strong.insert(&child.name);
                 }
             }
             Some(_) => {
@@ -726,6 +761,20 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::missing_field(decl, field));
             }
         };
+
+        let is_use_from_child = match source {
+            Some(fsys::Ref::Child(_)) => true,
+            _ => false,
+        };
+        match (is_use_from_child, dependency_type) {
+            (
+                false,
+                Some(fsys::DependencyType::Weak) | Some(fsys::DependencyType::WeakForMigration),
+            ) => {
+                self.errors.push(Error::invalid_field(decl, "dependency_type"));
+            }
+            _ => {}
+        }
     }
 
     fn validate_child_decl(&mut self, child: &'a fsys::ChildDecl) {
@@ -1469,6 +1518,19 @@ impl<'a> ValidationContext<'a> {
             }
         }
         check_name(target_name, decl, "target_name", &mut self.errors);
+        if let (Some(fsys::Ref::Self_(_)), Some(fsys::Ref::Child(c))) = (source, target) {
+            match (c.collection.as_ref(), &c.name) {
+                (None, child_name) => {
+                    if self.use_from_child_strong.get(child_name as &str).is_some() {
+                        self.errors.push(Error::dependency_cycle(format!(
+                            "use from #{} (dependency_type: strong) and offer to #{} from self",
+                            child_name, child_name
+                        )))
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 
     fn validate_storage_offer_fields(
@@ -2338,6 +2400,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("abc".to_string()),
                         target_path: Some("/foo/bar".to_string()),
@@ -2346,6 +2409,7 @@ mod tests {
                         ..UseDirectoryDecl::EMPTY
                     }),
                     UseDecl::Directory(UseDirectoryDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("abc".to_string()),
                         target_path: Some("/foo/bar/baz".to_string()),
@@ -2372,6 +2436,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("abc".to_string()),
                         target_path: Some("/foo/bar".to_string()),
@@ -2380,6 +2445,7 @@ mod tests {
                         ..UseDirectoryDecl::EMPTY
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("crow".to_string()),
                         target_path: Some("/foo/bar/fuchsia.2".to_string()),
@@ -2404,6 +2470,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("abc".to_string()),
                         target_path: Some("/foo/bar".to_string()),
@@ -2415,6 +2482,7 @@ mod tests {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("space".to_string()),
                         target_path: Some("/foo/bar/baz/fuchsia.logger.Log".to_string()),
+                        dependency_type: Some(fsys::DependencyType::Strong),
                         ..UseServiceDecl::EMPTY
                     }),
                 ]);
@@ -2451,15 +2519,18 @@ mod tests {
                         source: None,
                         source_name: None,
                         target_path: None,
+                        dependency_type: Some(fsys::DependencyType::Strong),
                         ..UseServiceDecl::EMPTY
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: None,
                         source_name: None,
                         target_path: None,
                         ..UseProtocolDecl::EMPTY
                     }),
                     UseDecl::Directory(UseDirectoryDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: None,
                         source_name: None,
                         target_path: None,
@@ -2478,6 +2549,7 @@ mod tests {
                         ..UseStorageDecl::EMPTY
                     }),
                     UseDecl::Event(UseEventDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: None,
                         source_name: None,
                         target_name: None,
@@ -2523,6 +2595,7 @@ mod tests {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_name: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
+                        dependency_type: Some(fsys::DependencyType::Strong),
                         ..UseServiceDecl::EMPTY
                     }),
                 ]);
@@ -2538,6 +2611,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
                     UseDecl::Protocol(UseProtocolDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_name: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
@@ -2556,6 +2630,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
                     UseDecl::Directory(UseDirectoryDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_name: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
@@ -2574,6 +2649,7 @@ mod tests {
                         ..UseStorageDecl::EMPTY
                     }),
                     UseDecl::Event(UseEventDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_name: Some("/foo".to_string()),
                         target_name: Some("/foo".to_string()),
@@ -2582,6 +2658,7 @@ mod tests {
                         ..UseEventDecl::EMPTY
                     }),
                     UseDecl::Event(UseEventDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         source_name: Some("started".to_string()),
                         target_name: Some("started".to_string()),
@@ -2630,6 +2707,7 @@ mod tests {
                 ComponentDecl {
                     uses: Some(vec![
                         UseDecl::Protocol(UseProtocolDecl {
+                            dependency_type: Some(DependencyType::Strong),
                             source: Some(fsys::Ref::Capability(fsys::CapabilityRef {
                                 name: "this-storage-doesnt-exist".to_string(),
                             })),
@@ -2650,6 +2728,7 @@ mod tests {
                 ComponentDecl {
                     uses: Some(vec![
                         UseDecl::Protocol(UseProtocolDecl {
+                            dependency_type: Some(DependencyType::Strong),
                             source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "no-such-child".to_string(), collection: None})),
                             source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.StorageAdmin".to_string()),
@@ -2659,9 +2738,11 @@ mod tests {
                             source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "no-such-child".to_string(), collection: None})),
                             source_name: Some("service_name".to_string()),
                             target_path: Some("/svc/service_name".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
                             ..UseServiceDecl::EMPTY
                         }),
                         UseDecl::Directory(UseDirectoryDecl {
+                            dependency_type: Some(DependencyType::Strong),
                             source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "no-such-child".to_string(), collection: None})),
                             source_name: Some("DirectoryName".to_string()),
                             target_path: Some("/data/DirectoryName".to_string()),
@@ -2670,6 +2751,7 @@ mod tests {
                             ..UseDirectoryDecl::EMPTY
                         }),
                         UseDecl::Event(UseEventDecl {
+                            dependency_type: Some(DependencyType::Strong),
                             source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "no-such-child".to_string(), collection: None})),
                             source_name: Some("abc".to_string()),
                             target_name: Some("abc".to_string()),
@@ -2686,6 +2768,157 @@ mod tests {
                 Error::invalid_child("UseProtocolDecl", "source", "no-such-child"),
                 Error::invalid_child("UseServiceDecl", "source", "no-such-child"),
                 Error::invalid_child("UseDirectoryDecl", "source", "no-such-child"),
+            ])),
+        },
+        test_validate_use_from_child_offer_to_child_strong_cycle => {
+            input = {
+                ComponentDecl {
+                    capabilities: Some(vec![
+                        CapabilityDecl::Service(ServiceDecl {
+                            name: Some("a".to_string()),
+                            source_path: Some("/a".to_string()),
+                            ..ServiceDecl::EMPTY
+                        })]),
+                    uses: Some(vec![
+                        UseDecl::Protocol(UseProtocolDecl {
+                            dependency_type: Some(DependencyType::Strong),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "child".to_string(), collection: None})),
+                            source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                            target_path: Some("/svc/fuchsia.sys2.StorageAdmin".to_string()),
+                            ..UseProtocolDecl::EMPTY
+                        }),
+                        UseDecl::Service(UseServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "child".to_string(), collection: None})),
+                            source_name: Some("service_name".to_string()),
+                            target_path: Some("/svc/service_name".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                            ..UseServiceDecl::EMPTY
+                        }),
+                        UseDecl::Directory(UseDirectoryDecl {
+                            dependency_type: Some(DependencyType::Strong),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "child".to_string(), collection: None})),
+                            source_name: Some("DirectoryName".to_string()),
+                            target_path: Some("/data/DirectoryName".to_string()),
+                            rights: Some(fio2::Operations::Connect),
+                            subdir: None,
+                            ..UseDirectoryDecl::EMPTY
+                        }),
+                        UseDecl::Event(UseEventDecl {
+                            dependency_type: Some(DependencyType::Strong),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "child".to_string(), collection: None})),
+                            source_name: Some("abc".to_string()),
+                            target_name: Some("abc".to_string()),
+                            filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                            mode: Some(EventMode::Async),
+                            ..UseEventDecl::EMPTY
+                        })
+                    ]),
+                    offers: Some(vec![
+                        OfferDecl::Service(OfferServiceDecl {
+                            source: Some(Ref::Self_(SelfRef{})),
+                            source_name: Some("a".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
+                            target_name: Some("a".to_string()),
+                            ..OfferServiceDecl::EMPTY
+                        })
+                    ]),
+                    children: Some(vec![
+                        ChildDecl {
+                            name: Some("child".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            ..ChildDecl::EMPTY
+                        }
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Err(ErrorList::new(vec![
+                Error::dependency_cycle("use from #child (dependency_type: strong) and offer to #child from self".to_string()),
+            ])),
+        },
+        test_validate_use_from_child_offer_to_child_weak_cycle => {
+            input = {
+                ComponentDecl {
+                    capabilities: Some(vec![
+                        CapabilityDecl::Service(ServiceDecl {
+                            name: Some("a".to_string()),
+                            source_path: Some("/a".to_string()),
+                            ..ServiceDecl::EMPTY
+                        })]),
+                    uses: Some(vec![
+                        UseDecl::Protocol(UseProtocolDecl {
+                            dependency_type: Some(DependencyType::Weak),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "child".to_string(), collection: None})),
+                            source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                            target_path: Some("/svc/fuchsia.sys2.StorageAdmin".to_string()),
+                            ..UseProtocolDecl::EMPTY
+                        }),
+                        UseDecl::Service(UseServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "child".to_string(), collection: None})),
+                            source_name: Some("service_name".to_string()),
+                            target_path: Some("/svc/service_name".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Weak),
+                            ..UseServiceDecl::EMPTY
+                        }),
+                        UseDecl::Directory(UseDirectoryDecl {
+                            dependency_type: Some(DependencyType::WeakForMigration),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "child".to_string(), collection: None})),
+                            source_name: Some("DirectoryName".to_string()),
+                            target_path: Some("/data/DirectoryName".to_string()),
+                            rights: Some(fio2::Operations::Connect),
+                            subdir: None,
+                            ..UseDirectoryDecl::EMPTY
+                        }),
+                        UseDecl::Event(UseEventDecl {
+                            dependency_type: Some(DependencyType::WeakForMigration),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "child".to_string(), collection: None})),
+                            source_name: Some("abc".to_string()),
+                            target_name: Some("abc".to_string()),
+                            filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                            mode: Some(EventMode::Async),
+                            ..UseEventDecl::EMPTY
+                        })
+                    ]),
+                    offers: Some(vec![
+                        OfferDecl::Service(OfferServiceDecl {
+                            source: Some(Ref::Self_(SelfRef{})),
+                            source_name: Some("a".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
+                            target_name: Some("a".to_string()),
+                            ..OfferServiceDecl::EMPTY
+                        })
+                    ]),
+                    children: Some(vec![
+                        ChildDecl {
+                            name: Some("child".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            ..ChildDecl::EMPTY
+                        }
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Ok(()),
+        },
+        test_validate_use_from_not_child_weak => {
+            input = {
+                ComponentDecl {
+                    uses: Some(vec![
+                        UseDecl::Protocol(UseProtocolDecl {
+                            dependency_type: Some(DependencyType::Weak),
+                            source: Some(fsys::Ref::Parent(ParentRef{})),
+                            source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                            target_path: Some("/svc/fuchsia.sys2.StorageAdmin".to_string()),
+                            ..UseProtocolDecl::EMPTY
+                        }),
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("UseProtocolDecl", "dependency_type"),
             ])),
         },
         test_validate_has_events_in_event_stream => {
@@ -2743,15 +2976,18 @@ mod tests {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_path: Some(format!("/s/{}", "b".repeat(1024))),
+                        dependency_type: Some(fsys::DependencyType::Strong),
                         ..UseServiceDecl::EMPTY
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_path: Some(format!("/p/{}", "c".repeat(1024))),
                         ..UseProtocolDecl::EMPTY
                     }),
                     UseDecl::Directory(UseDirectoryDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_path: Some(format!("/d/{}", "d".repeat(1024))),
@@ -2765,6 +3001,7 @@ mod tests {
                         ..UseStorageDecl::EMPTY
                     }),
                     UseDecl::Event(UseEventDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_name: Some(format!("{}", "a".repeat(101))),
@@ -2795,15 +3032,18 @@ mod tests {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("foo".to_string()),
                         target_path: Some("/bar".to_string()),
+                        dependency_type: Some(fsys::DependencyType::Strong),
                         ..UseServiceDecl::EMPTY
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("space".to_string()),
                         target_path: Some("/bar".to_string()),
                         ..UseProtocolDecl::EMPTY
                     }),
                     UseDecl::Directory(UseDirectoryDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("crow".to_string()),
                         target_path: Some("/bar".to_string()),
@@ -2824,6 +3064,7 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.uses = Some(vec![
                     UseDecl::Event(UseEventDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         source_name: Some("started".to_string()),
                         target_name: Some("started".to_string()),
@@ -2846,6 +3087,7 @@ mod tests {
                         ..UseEventStreamDecl::EMPTY
                     }),
                     UseDecl::Event(UseEventDecl {
+                        dependency_type: Some(DependencyType::Strong),
                         source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         source_name: Some("stopped".to_string()),
                         target_name: Some("stopped".to_string()),

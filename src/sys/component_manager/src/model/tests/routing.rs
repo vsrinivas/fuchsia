@@ -189,6 +189,7 @@ async fn use_framework_service() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
                     source_name: "fuchsia.sys2.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
@@ -236,11 +237,13 @@ async fn capability_requested_event_at_parent() {
                     dependency_type: DependencyType::Strong,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
                     source_name: "capability_requested".into(),
                     target_name: "capability_requested".into(),
@@ -248,6 +251,7 @@ async fn capability_requested_event_at_parent() {
                     mode: cm_rust::EventMode::Async,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
                     source_name: "resolved".into(),
                     target_name: "resolved".into(),
@@ -268,6 +272,7 @@ async fn capability_requested_event_at_parent() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: "bar_svc".into(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -366,6 +371,7 @@ async fn use_in_collection() {
                     source: UseSource::Framework,
                     source_name: "fuchsia.sys2.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source_name: "hippo_data".into(),
@@ -390,6 +396,7 @@ async fn use_in_collection() {
             "c",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: "hippo_data".into(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
@@ -402,6 +409,7 @@ async fn use_in_collection() {
             "d",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: "hippo_svc".into(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -483,6 +491,7 @@ async fn use_in_collection_not_offered() {
                     source: UseSource::Framework,
                     source_name: "fuchsia.sys2.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_transient_collection("coll")
                 .build(),
@@ -496,8 +505,10 @@ async fn use_in_collection_not_offered() {
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: "hippo_svc".into(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -543,6 +554,7 @@ async fn destroying_instance_kills_framework_service_task() {
                     source: UseSource::Framework,
                     source_name: "fuchsia.sys2.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .build(),
         ),
@@ -660,6 +672,7 @@ async fn use_runner_from_environment_in_collection() {
                     source: UseSource::Framework,
                     source_name: "fuchsia.sys2.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .runner(RunnerDecl {
                     name: "elf".into(),
@@ -1000,6 +1013,7 @@ async fn use_with_destroyed_parent() {
         source: UseSource::Parent,
         source_name: "foo_svc".into(),
         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+        dependency_type: DependencyType::Strong,
     };
     let use_decl = UseDecl::Protocol(use_protocol_decl.clone());
     let components = vec![
@@ -1011,6 +1025,7 @@ async fn use_with_destroyed_parent() {
                     source: UseSource::Framework,
                     source_name: "fuchsia.sys2.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Self_,
@@ -1120,6 +1135,7 @@ async fn use_from_destroyed_but_not_removed() {
                     source: UseSource::Parent,
                     source_name: "baz_svc".into(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .build(),
         ),
@@ -1517,11 +1533,13 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
                     source_name: "capability_requested".into(),
                     target_name: "capability_requested".into(),
@@ -1529,6 +1547,7 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
                     mode: cm_rust::EventMode::Async,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
                     source_name: "started".into(),
                     target_name: "started".into(),
@@ -1536,6 +1555,7 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
                     mode: cm_rust::EventMode::Async,
                 }))
                 .use_(UseDecl::Event(UseEventDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
                     source_name: "resolved".into(),
                     target_name: "resolved".into(),
@@ -1662,6 +1682,7 @@ async fn route_protocol_from_expose() {
 #[fuchsia::test]
 async fn use_service_from_parent() {
     let use_decl = UseServiceDecl {
+        dependency_type: DependencyType::Strong,
         source: UseSource::Parent,
         source_name: "foo".into(),
         target_path: CapabilityPath::try_from("/foo").unwrap(),
@@ -1714,6 +1735,7 @@ async fn use_service_from_parent() {
 #[fuchsia::test]
 async fn use_service_from_child() {
     let use_decl = UseServiceDecl {
+        dependency_type: DependencyType::Strong,
         source: UseSource::Child("b".to_string()),
         source_name: "foo".into(),
         target_path: CapabilityPath::try_from("/foo").unwrap(),
@@ -1768,6 +1790,7 @@ async fn use_service_from_child() {
 #[fuchsia::test]
 async fn route_service_from_sibling() {
     let use_decl = UseServiceDecl {
+        dependency_type: DependencyType::Strong,
         source: UseSource::Parent,
         source_name: "foo".into(),
         target_path: CapabilityPath::try_from("/foo").unwrap(),
@@ -1827,6 +1850,7 @@ async fn route_service_from_sibling() {
 #[fuchsia::test]
 async fn route_service_from_parent_collection() {
     let use_decl = UseServiceDecl {
+        dependency_type: DependencyType::Strong,
         source: UseSource::Parent,
         source_name: "foo".into(),
         target_path: CapabilityPath::try_from("/foo").unwrap(),
@@ -1872,6 +1896,7 @@ async fn route_service_from_parent_collection() {
 #[fuchsia::test]
 async fn list_service_instances_from_collection() {
     let use_decl = UseServiceDecl {
+        dependency_type: DependencyType::Strong,
         source: UseSource::Parent,
         source_name: "foo".into(),
         target_path: CapabilityPath::try_from("/foo").unwrap(),
@@ -1881,6 +1906,7 @@ async fn list_service_instances_from_collection() {
             "root",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
                     source_name: "fuchsia.sys2.Realm".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
@@ -2014,6 +2040,7 @@ async fn use_service_from_sibling_collection() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Service(UseServiceDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: "my.service.Service".into(),
                     target_path: "/svc/my.service.Service".try_into().unwrap(),
@@ -2024,6 +2051,7 @@ async fn use_service_from_sibling_collection() {
             "c",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
                     source_name: "fuchsia.sys2.Realm".into(),
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),

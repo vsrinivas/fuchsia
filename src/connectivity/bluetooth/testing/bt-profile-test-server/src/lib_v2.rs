@@ -736,6 +736,7 @@ mod tests {
                 dirname: "/svc".to_string(),
                 basename: bredr::ProfileTestMarker::SERVICE_NAME.to_string(),
             },
+            dependency_type: DependencyType::Strong,
         });
         assert!(pico_member_decl.uses.contains(&use_decl));
 
@@ -816,6 +817,7 @@ mod tests {
                 dirname: "/svc".to_string(),
                 basename: bredr::ProfileTestMarker::SERVICE_NAME.to_string(),
             },
+            dependency_type: DependencyType::Strong,
         });
         assert!(interposer.uses.contains(&profile_test_use));
 

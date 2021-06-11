@@ -167,6 +167,7 @@ async fn use_work_scheduler_with_expose_to_framework() {
                     target: ExposeTarget::Framework,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
                     source_name: "fuchsia.sys2.WorkScheduler".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.WorkScheduler")
@@ -195,6 +196,7 @@ async fn use_work_scheduler_without_expose() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
                     source_name: "fuchsia.sys2.WorkScheduler".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.WorkScheduler")
@@ -234,6 +236,7 @@ async fn use_work_scheduler_with_expose_to_realm() {
                     target: ExposeTarget::Parent,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
                     source_name: "fuchsia.sys2.WorkScheduler".into(),
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.WorkScheduler")
@@ -275,6 +278,7 @@ async fn use_work_scheduler_control_routed() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: offer_use_name.clone().into(),
                     target_path: use_path.clone(),
@@ -317,6 +321,7 @@ async fn use_work_scheduler_control_error() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Framework,
                     source_name: offer_use_name.clone().into(),
                     target_path: use_path.clone(),

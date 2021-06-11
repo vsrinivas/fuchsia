@@ -137,6 +137,7 @@ async fn framework_directory_rights() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: "foo_data".into(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
@@ -185,6 +186,7 @@ async fn framework_directory_incompatible_rights() {
             "b",
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
+                    dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
                     source_name: "foo_data".into(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),

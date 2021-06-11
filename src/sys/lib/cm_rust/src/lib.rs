@@ -169,6 +169,7 @@ pub struct UseServiceDecl {
     pub source: UseSource,
     pub source_name: CapabilityName,
     pub target_path: CapabilityPath,
+    pub dependency_type: DependencyType,
 }
 
 #[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
@@ -177,6 +178,7 @@ pub struct UseProtocolDecl {
     pub source: UseSource,
     pub source_name: CapabilityName,
     pub target_path: CapabilityPath,
+    pub dependency_type: DependencyType,
 }
 
 #[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
@@ -187,6 +189,7 @@ pub struct UseDirectoryDecl {
     pub target_path: CapabilityPath,
     pub rights: fio2::Operations,
     pub subdir: Option<PathBuf>,
+    pub dependency_type: DependencyType,
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
@@ -216,6 +219,7 @@ pub struct UseEventDecl {
     pub target_name: CapabilityName,
     pub filter: Option<HashMap<String, DictionaryValue>>,
     pub mode: EventMode,
+    pub dependency_type: DependencyType,
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
@@ -1383,24 +1387,28 @@ mod tests {
                 }),
                 uses: Some(vec![
                     fsys::UseDecl::Service(fsys::UseServiceDecl {
+                        dependency_type: Some(fsys::DependencyType::Strong),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("netstack".to_string()),
                         target_path: Some("/svc/mynetstack".to_string()),
                         ..fsys::UseServiceDecl::EMPTY
                     }),
                     fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                        dependency_type: Some(fsys::DependencyType::Strong),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("legacy_netstack".to_string()),
                         target_path: Some("/svc/legacy_mynetstack".to_string()),
                         ..fsys::UseProtocolDecl::EMPTY
                     }),
                     fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                        dependency_type: Some(fsys::DependencyType::Strong),
                         source: Some(fsys::Ref::Child(fsys::ChildRef { name: "echo".to_string(), collection: None})),
                         source_name: Some("echo_service".to_string()),
                         target_path: Some("/svc/echo_service".to_string()),
                         ..fsys::UseProtocolDecl::EMPTY
                     }),
                     fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
+                        dependency_type: Some(fsys::DependencyType::Strong),
                         source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         source_name: Some("dir".to_string()),
                         target_path: Some("/data".to_string()),
@@ -1419,6 +1427,7 @@ mod tests {
                         ..fsys::UseStorageDecl::EMPTY
                     }),
                     fsys::UseDecl::Event(fsys::UseEventDecl {
+                        dependency_type: Some(fsys::DependencyType::Strong),
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("directory_ready".to_string()),
                         target_name: Some("diagnostics_ready".to_string()),
@@ -1746,21 +1755,25 @@ mod tests {
                     }),
                     uses: vec![
                         UseDecl::Service(UseServiceDecl {
+                            dependency_type: DependencyType::Strong,
                             source: UseSource::Parent,
                             source_name: "netstack".try_into().unwrap(),
                             target_path: "/svc/mynetstack".try_into().unwrap(),
                         }),
                         UseDecl::Protocol(UseProtocolDecl {
+                            dependency_type: DependencyType::Strong,
                             source: UseSource::Parent,
                             source_name: "legacy_netstack".try_into().unwrap(),
                             target_path: "/svc/legacy_mynetstack".try_into().unwrap(),
                         }),
                         UseDecl::Protocol(UseProtocolDecl {
+                            dependency_type: DependencyType::Strong,
                             source: UseSource::Child("echo".to_string()),
                             source_name: "echo_service".try_into().unwrap(),
                             target_path: "/svc/echo_service".try_into().unwrap(),
                         }),
                         UseDecl::Directory(UseDirectoryDecl {
+                            dependency_type: DependencyType::Strong,
                             source: UseSource::Framework,
                             source_name: "dir".try_into().unwrap(),
                             target_path: "/data".try_into().unwrap(),
@@ -1776,6 +1789,7 @@ mod tests {
                             target_path: "/temp".try_into().unwrap(),
                         }),
                         UseDecl::Event(UseEventDecl {
+                            dependency_type: DependencyType::Strong,
                             source: UseSource::Parent,
                             source_name: "directory_ready".into(),
                             target_name: "diagnostics_ready".into(),

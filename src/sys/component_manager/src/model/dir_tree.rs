@@ -170,9 +170,9 @@ mod tests {
         },
         ::routing::component_instance::ComponentInstanceInterface,
         cm_rust::{
-            CapabilityName, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
-            ExposeRunnerDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
-            UseProtocolDecl, UseSource, UseStorageDecl,
+            CapabilityName, CapabilityPath, DependencyType, ExposeDecl, ExposeDirectoryDecl,
+            ExposeProtocolDecl, ExposeRunnerDecl, ExposeSource, ExposeTarget, UseDecl,
+            UseDirectoryDecl, UseProtocolDecl, UseSource, UseStorageDecl,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
@@ -198,11 +198,13 @@ mod tests {
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
                     rights: fio2::Operations::Connect,
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }),
                 UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
                     source_name: "baz-svc".into(),
                     target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
+                    dependency_type: DependencyType::Strong,
                 }),
                 UseDecl::Storage(UseStorageDecl {
                     source_name: "data".into(),

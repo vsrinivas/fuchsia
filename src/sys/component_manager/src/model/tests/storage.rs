@@ -126,6 +126,7 @@ async fn use_in_collection_from_parent() {
                     source: UseSource::Framework,
                     source_name: "fuchsia.sys2.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
@@ -311,6 +312,7 @@ async fn use_in_collection_from_grandparent() {
                     source: UseSource::Framework,
                     source_name: "fuchsia.sys2.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Parent,

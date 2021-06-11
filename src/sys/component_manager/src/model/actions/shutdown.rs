@@ -385,12 +385,16 @@ pub fn process_component_dependencies(decl: &ComponentDecl) -> DependencyMap {
 fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut DependencyMap) {
     // - By default, all children are dependents of the parent (`decl`)
     // - If parent (`decl`) uses from child, then child's dependent is parent instead.
-    let add_to_dependency_map = |dependency_map: &mut DependencyMap, source: &UseSource| {
+    let add_to_dependency_map = |dependency_map: &mut DependencyMap,
+                                 source: &UseSource,
+                                 dependency_type: &DependencyType| {
         match source {
             UseSource::Child(name) => {
                 match dependency_map.get_mut(&DependencyNode::Child(name.to_string())) {
                     Some(targets) => {
-                        targets.insert(DependencyNode::Parent);
+                        if dependency_type == &DependencyType::Strong {
+                            targets.insert(DependencyNode::Parent);
+                        }
                     }
                     _ => {
                         panic!("A dependency went off the map!");
@@ -403,12 +407,20 @@ fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut Depende
     };
     for use_ in &decl.uses {
         match use_ {
-            UseDecl::Protocol(decl) => add_to_dependency_map(dependency_map, &decl.source),
-            UseDecl::Service(decl) => add_to_dependency_map(dependency_map, &decl.source),
-            UseDecl::Directory(decl) => add_to_dependency_map(dependency_map, &decl.source),
+            UseDecl::Protocol(decl) => {
+                add_to_dependency_map(dependency_map, &decl.source, &decl.dependency_type)
+            }
+            UseDecl::Service(decl) => {
+                add_to_dependency_map(dependency_map, &decl.source, &decl.dependency_type)
+            }
+            UseDecl::Directory(decl) => {
+                add_to_dependency_map(dependency_map, &decl.source, &decl.dependency_type)
+            }
             // storage doesn't have a `use` source; storage is always assumed to be from the parent.
             UseDecl::Storage(_decl) => {}
-            UseDecl::Event(decl) => add_to_dependency_map(dependency_map, &decl.source),
+            UseDecl::Event(decl) => {
+                add_to_dependency_map(dependency_map, &decl.source, &decl.dependency_type)
+            }
             // event streams specify a `use` source.
             UseDecl::EventStream(_decl) => {}
         }
@@ -1520,6 +1532,7 @@ mod tests {
                 source: UseSource::Child("childA".to_string()),
                 source_name: "test.protocol".into(),
                 target_path: CapabilityPath::try_from("/svc/test.protocol").unwrap(),
+                dependency_type: DependencyType::Strong,
             })],
             ..default_component_decl()
         };
@@ -1558,6 +1571,7 @@ mod tests {
                 source: UseSource::Child("childA".to_string()),
                 source_name: "test.protocol".into(),
                 target_path: CapabilityPath::try_from("/svc/test.protocol").unwrap(),
+                dependency_type: DependencyType::Strong,
             })],
             ..default_component_decl()
         };
@@ -1565,6 +1579,86 @@ mod tests {
         let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
         // childB is a dependent because we consider all children dependent, unless the parent
         // uses something from the child.
+        expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childB".to_string())]));
+        expected.push((DependencyNode::Child("childA".to_string()), vec![DependencyNode::Parent]));
+        expected.push((DependencyNode::Child("childB".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+    }
+
+    #[test]
+    fn test_use_from_child_weak() {
+        let decl = ComponentDecl {
+            offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                source: OfferSource::Self_,
+                source_name: "serviceParent".into(),
+                target_name: "serviceParent".into(),
+                target: OfferTarget::Child("childA".to_string()),
+                dependency_type: DependencyType::Strong,
+            })],
+            children: vec![ChildDecl {
+                name: "childA".to_string(),
+                url: "ignored:///child".to_string(),
+                startup: fsys::StartupMode::Lazy,
+                environment: None,
+            }],
+            uses: vec![UseDecl::Protocol(UseProtocolDecl {
+                source: UseSource::Child("childA".to_string()),
+                source_name: "test.protocol".into(),
+                target_path: CapabilityPath::try_from("/svc/test.protocol").unwrap(),
+                dependency_type: DependencyType::Weak,
+            })],
+            ..default_component_decl()
+        };
+
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childA".to_string())]));
+        expected.push((DependencyNode::Child("childA".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+    }
+
+    #[test]
+    fn test_use_from_some_children_weak() {
+        let decl = ComponentDecl {
+            offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                source: OfferSource::Self_,
+                source_name: "serviceParent".into(),
+                target_name: "serviceParent".into(),
+                target: OfferTarget::Child("childA".to_string()),
+                dependency_type: DependencyType::Strong,
+            })],
+            children: vec![
+                ChildDecl {
+                    name: "childA".to_string(),
+                    url: "ignored:///child".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                    environment: None,
+                },
+                ChildDecl {
+                    name: "childB".to_string(),
+                    url: "ignored:///child".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                    environment: None,
+                },
+            ],
+            uses: vec![
+                UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Child("childA".to_string()),
+                    source_name: "test.protocol".into(),
+                    target_path: CapabilityPath::try_from("/svc/test.protocol").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }),
+                UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Child("childB".to_string()),
+                    source_name: "test.protocol2".into(),
+                    target_path: CapabilityPath::try_from("/svc/test.protocol2").unwrap(),
+                    dependency_type: DependencyType::Weak,
+                }),
+            ],
+            ..default_component_decl()
+        };
+
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        // childB is a dependent because its use-from-child has a 'weak' dependency.
         expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childB".to_string())]));
         expected.push((DependencyNode::Child("childA".to_string()), vec![DependencyNode::Parent]));
         expected.push((DependencyNode::Child("childB".to_string()), vec![]));
@@ -2007,6 +2101,7 @@ mod tests {
                         source: UseSource::Parent,
                         source_name: "serviceD".into(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -2032,6 +2127,7 @@ mod tests {
                         source: UseSource::Parent,
                         source_name: "serviceD".into(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -2156,6 +2252,7 @@ mod tests {
                         source: UseSource::Parent,
                         source_name: "serviceD".into(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -2185,6 +2282,7 @@ mod tests {
                         source: UseSource::Parent,
                         source_name: "serviceD".into(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
@@ -2201,6 +2299,7 @@ mod tests {
                         source: UseSource::Parent,
                         source_name: "serviceE".into(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -2361,6 +2460,7 @@ mod tests {
                         source: UseSource::Parent,
                         source_name: "serviceD".into(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -2390,6 +2490,7 @@ mod tests {
                         source: UseSource::Parent,
                         source_name: "serviceE".into(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: ExposeSource::Self_,
@@ -2406,11 +2507,13 @@ mod tests {
                         source: UseSource::Parent,
                         source_name: "serviceE".into(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "serviceD".into(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -2556,6 +2659,7 @@ mod tests {
                         source: UseSource::Parent,
                         source_name: "serviceC".into(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -2625,6 +2729,7 @@ mod tests {
                         source: UseSource::Child("b".to_string()),
                         source_name: "serviceC".into(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -2685,6 +2790,93 @@ mod tests {
                 Lifecycle::Stop(vec!["a:0", "b:0"].into()),
             ];
             assert_eq!(events, expected);
+        }
+    }
+
+    /// Shut down `a`:
+    ///   a     (a use b weak)
+    ///  / \
+    /// b    c
+    /// In this case, b or c shutdown first (arbitrary order), then a.
+    #[fuchsia::test]
+    async fn shutdown_use_from_child_weak() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .add_eager_child("b")
+                    .add_eager_child("c")
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Child("b".to_string()),
+                        source_name: "serviceC".into(),
+                        target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
+                        dependency_type: DependencyType::Weak,
+                    }))
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .protocol(ProtocolDecl {
+                        name: "serviceC".into(),
+                        source_path: "/svc/serviceC".parse().unwrap(),
+                    })
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "serviceC".into(),
+                        target_name: "serviceC".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .build(),
+            ),
+            ("c", ComponentDeclBuilder::new().build()),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let component_a = test.look_up(vec!["a:0"].into()).await;
+        let component_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let component_c = test.look_up(vec!["a:0", "c:0"].into()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model
+            .bind(&component_a.abs_moniker, &BindReason::Eager)
+            .await
+            .expect("could not bind to a");
+
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_c_info = ComponentInfo::new(component_c).await;
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // to shut down.
+        ActionSet::register(component_a_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+        component_c_info.check_is_shut_down(&test.runner).await;
+
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+            let expected1: Vec<_> = vec![
+                Lifecycle::Stop(vec!["a:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                Lifecycle::Stop(vec!["a:0"].into()),
+            ];
+            let expected2: Vec<_> = vec![
+                Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a:0"].into()),
+            ];
+            assert!(events == expected1 || events == expected2);
         }
     }
 

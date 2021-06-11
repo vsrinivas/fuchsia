@@ -504,6 +504,7 @@ impl RealmBuilder {
                 target_name: event.name().into(),
                 filter: event.filter(),
                 mode: mode.clone(),
+                dependency_type: cm_rust::DependencyType::Strong,
             }),
             _ => panic!(
                 "attempting to do local routing for a non-event capability: {:?}",
@@ -1095,6 +1096,7 @@ mod tests {
                             target_name: "started".into(),
                             filter: None,
                             mode: EventMode::Sync,
+                            dependency_type: DependencyType::Strong,
                         })],
                         offers: vec![
                             OfferDecl::Event(OfferEventDecl {
@@ -1150,6 +1152,7 @@ mod tests {
                                 filter: Some(hashmap!(
                                     "name".to_string() => DictionaryValue::Str(
                                         "diagnostics".to_string()))),
+                                dependency_type: DependencyType::Strong,
                             }),
                             UseDecl::Event(UseEventDecl {
                                 source: UseSource::Parent,
@@ -1159,6 +1162,7 @@ mod tests {
                                 filter: Some(hashmap!(
                                     "name".to_string() => DictionaryValue::Str(
                                         "fuchsia.logger.LogSink".to_string()))),
+                                dependency_type: DependencyType::Strong,
                             }),
                         ],
                         ..ComponentDecl::default()
@@ -1382,6 +1386,7 @@ mod tests {
                             source: UseSource::Parent,
                             source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             target_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            dependency_type: DependencyType::Strong,
                         })],
                         ..ComponentDecl::default()
                     },
@@ -1561,6 +1566,7 @@ mod tests {
                             source: UseSource::Parent,
                             source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             target_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            dependency_type: DependencyType::Strong,
                         })],
                         capabilities: vec![CapabilityDecl::Directory(DirectoryDecl {
                             name: "example-dir".try_into().unwrap(),
@@ -1811,6 +1817,7 @@ mod tests {
                                 target_path: "/example".try_into().unwrap(),
                                 rights: fio2::RW_STAR_DIR,
                                 subdir: None,
+                                dependency_type: DependencyType::Strong,
                             }),
                             UseDecl::Protocol(UseProtocolDecl {
                                 source: UseSource::Parent,
@@ -1818,6 +1825,7 @@ mod tests {
                                 target_path: "/svc/fidl.examples.routing.echo.Echo"
                                     .try_into()
                                     .unwrap(),
+                                dependency_type: DependencyType::Strong,
                             }),
                         ],
                         ..ComponentDecl::default()

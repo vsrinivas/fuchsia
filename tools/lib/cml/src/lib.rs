@@ -1181,6 +1181,7 @@ pub struct Use {
     pub filter: Option<Map<String, Value>>,
     pub modes: Option<EventModes>,
     pub subscriptions: Option<EventSubscriptions>,
+    pub dependency: Option<DependencyType>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -1946,6 +1947,7 @@ mod tests {
             filter: None,
             modes: None,
             subscriptions: None,
+            dependency: None,
         }
     }
 

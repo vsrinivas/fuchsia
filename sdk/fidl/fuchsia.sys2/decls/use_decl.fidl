@@ -36,6 +36,16 @@ table UseServiceDecl {
     ///
     /// Must be an absolute path starting with /.
     3: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+
+    /// The dependency type this use represents.
+    ///
+    /// A component which offers a capability to a child from itself and uses a
+    /// capability from the same child, must mark the dependency as `weak`.  A
+    /// `weak` dependency implies that the capability may become unavailable at
+    /// any point. Taking a strong dependency on a child's capability will
+    /// cause this the child to shut down before its parent. When using a weak
+    /// dependency, the parent shuts down before the child.
+    4: DependencyType dependency_type;
 };
 
 /// Declares a protocol used by a component, which was offered to it.
@@ -56,6 +66,16 @@ table UseProtocolDecl {
     ///
     /// Must be an absolute path starting with /.
     3: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+
+    /// The dependency type this use represents.
+    ///
+    /// A component which offers a capability to a child from itself and uses a
+    /// capability from the same child, must mark the dependency as `weak`.  A
+    /// `weak` dependency implies that the capability may become unavailable at
+    /// any point. Taking a strong dependency on a child's capability will
+    /// cause this the child to shut down before its parent. When using a weak
+    /// dependency, the parent shuts down before the child.
+    4: DependencyType dependency_type;
 };
 
 /// Declares a directory used by a component, which was offered to it.
@@ -79,6 +99,16 @@ table UseDirectoryDecl {
 
     /// The subdirectory of this directory to use instead of the root. Optional.
     5: string:fuchsia.component.MAX_PATH_LENGTH subdir;
+
+    /// The dependency type this use represents.
+    ///
+    /// A component which offers a capability to a child from itself and uses a
+    /// capability from the same child, must mark the dependency as `weak`.  A
+    /// `weak` dependency implies that the capability may become unavailable at
+    /// any point. Taking a strong dependency on a child's capability will
+    /// cause this the child to shut down before its parent. When using a weak
+    /// dependency, the parent shuts down before the child.
+    6: DependencyType dependency_type;
 };
 
 /// Declares storage used by a component, which was offered to it.
@@ -111,6 +141,16 @@ table UseEventDecl {
 
     /// The mode that the event can use.
     5: EventMode mode;
+
+    /// The dependency type this use represents.
+    ///
+    /// A component which offers a capability to a child from itself and uses a
+    /// capability from the same child, must mark the dependency as `weak`.  A
+    /// `weak` dependency implies that the capability may become unavailable at
+    /// any point. Taking a strong dependency on a child's capability will
+    /// cause this the child to shut down before its parent. When using a weak
+    /// dependency, the parent shuts down before the child.
+    6: DependencyType dependency_type;
 };
 
 /// Declares a static EventStream used by a component.

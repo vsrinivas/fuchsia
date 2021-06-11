@@ -733,6 +733,7 @@ impl RealmNode {
                         .as_str()
                         .try_into()
                         .unwrap(),
+                    dependency_type: cm_rust::DependencyType::Strong,
                 }))
             }
             ffrb::Capability::Directory(ffrb::DirectoryCapability {
@@ -743,6 +744,7 @@ impl RealmNode {
                 target_path: path.as_ref().unwrap().as_str().try_into().unwrap(),
                 rights: rights.as_ref().unwrap().clone(),
                 subdir: None,
+                dependency_type: cm_rust::DependencyType::Strong,
             })),
             ffrb::Capability::Storage(ffrb::StorageCapability { name, path, .. }) => {
                 Ok(cm_rust::UseDecl::Storage(cm_rust::UseStorageDecl {
@@ -1612,6 +1614,7 @@ mod tests {
                             source: cm_rust::UseSource::Parent,
                             source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             target_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            dependency_type: cm_rust::DependencyType::Strong,
                         })],
                         ..cm_rust::ComponentDecl::default()
                     },
@@ -1781,6 +1784,7 @@ mod tests {
                             source: cm_rust::UseSource::Parent,
                             source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
                             target_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            dependency_type: cm_rust::DependencyType::Strong,
                         })],
                         capabilities: vec![cm_rust::CapabilityDecl::Directory(
                             cm_rust::DirectoryDecl {
@@ -2047,6 +2051,7 @@ mod tests {
                                 target_path: "/svc/fidl.examples.routing.echo.Echo"
                                     .try_into()
                                     .unwrap(),
+                                dependency_type: cm_rust::DependencyType::Strong,
                             }),
                             cm_rust::UseDecl::Directory(cm_rust::UseDirectoryDecl {
                                 source: cm_rust::UseSource::Parent,
@@ -2054,6 +2059,7 @@ mod tests {
                                 target_path: "/example".try_into().unwrap(),
                                 rights: fio2::RW_STAR_DIR,
                                 subdir: None,
+                                dependency_type: cm_rust::DependencyType::Strong,
                             }),
                         ],
                         ..cm_rust::ComponentDecl::default()

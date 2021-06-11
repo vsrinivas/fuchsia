@@ -60,24 +60,28 @@ fn main() {
         };
         let uses = vec![
             UseDecl::Service(UseServiceDecl {
+                dependency_type: Some(DependencyType::Strong),
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("fuchsia.fonts.Provider".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
                 ..UseServiceDecl::EMPTY
             }),
             UseDecl::Protocol(UseProtocolDecl {
+                dependency_type: Some(DependencyType::Strong),
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("fuchsia.fonts.LegacyProvider".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.OldProvider".to_string()),
                 ..UseProtocolDecl::EMPTY
             }),
             UseDecl::Protocol(UseProtocolDecl {
+                dependency_type: Some(DependencyType::Strong),
                 source: Some(Ref::Debug(DebugRef {})),
                 source_name: Some("fuchsia.log.LegacyLog".to_string()),
                 target_path: Some("/svc/fuchsia.log.LegacyLog".to_string()),
                 ..UseProtocolDecl::EMPTY
             }),
             UseDecl::Event(UseEventDecl {
+                dependency_type: Some(DependencyType::Strong),
                 source: Some(Ref::Framework(FrameworkRef {})),
                 source_name: Some("started".to_string()),
                 target_name: Some("began".to_string()),
@@ -86,6 +90,7 @@ fn main() {
                 ..UseEventDecl::EMPTY
             }),
             UseDecl::Event(UseEventDecl {
+                dependency_type: Some(DependencyType::Strong),
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("destroyed".to_string()),
                 target_name: Some("destroyed".to_string()),
@@ -94,6 +99,7 @@ fn main() {
                 ..UseEventDecl::EMPTY
             }),
             UseDecl::Event(UseEventDecl {
+                dependency_type: Some(DependencyType::Strong),
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("stopped".to_string()),
                 target_name: Some("stopped".to_string()),
@@ -102,6 +108,7 @@ fn main() {
                 ..UseEventDecl::EMPTY
             }),
             UseDecl::Event(UseEventDecl {
+                dependency_type: Some(DependencyType::Strong),
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("directory_ready".to_string()),
                 target_name: Some("diagnostics_ready".to_string()),
@@ -139,6 +146,7 @@ fn main() {
                 ..UseEventStreamDecl::EMPTY
             }),
             UseDecl::Protocol(UseProtocolDecl {
+                dependency_type: Some(DependencyType::Strong),
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("fuchsia.logger.LogSink".to_string()),
                 target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),

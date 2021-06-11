@@ -674,9 +674,9 @@ mod tests {
             },
         },
         cm_rust::{
-            self, CapabilityName, CapabilityPath, ComponentDecl, DirectoryDecl, EventMode,
-            EventSubscription, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource,
-            ExposeTarget, ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
+            self, CapabilityName, CapabilityPath, ComponentDecl, DependencyType, DirectoryDecl,
+            EventMode, EventSubscription, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
+            ExposeSource, ExposeTarget, ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
             UseEventStreamDecl, UseProtocolDecl, UseSource,
         },
         cm_rust_testing::ComponentDeclBuilder,
@@ -868,6 +868,7 @@ mod tests {
                 decl: ComponentDeclBuilder::new()
                     .add_lazy_child("a")
                     .use_(UseDecl::Directory(UseDirectoryDecl {
+                        dependency_type: DependencyType::Strong,
                         source: UseSource::Framework,
                         source_name: "hub".into(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
@@ -921,6 +922,7 @@ mod tests {
                 decl: ComponentDeclBuilder::new()
                     .add_lazy_child("a")
                     .use_(UseDecl::Directory(UseDirectoryDecl {
+                        dependency_type: DependencyType::Strong,
                         source: UseSource::Framework,
                         source_name: "hub".into(),
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
@@ -1012,11 +1014,13 @@ mod tests {
                         target_path: CapabilityPath::try_from("/hub").unwrap(),
                         rights: *rights::READ_RIGHTS,
                         subdir: Some("exec".into()),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .use_(UseDecl::Protocol(UseProtocolDecl {
                         source: UseSource::Parent,
                         source_name: "baz-svc".into(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .use_(UseDecl::Directory(UseDirectoryDecl {
                         source: UseSource::Parent,
@@ -1024,6 +1028,7 @@ mod tests {
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         rights: *rights::READ_RIGHTS | *rights::WRITE_RIGHTS,
                         subdir: None,
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
                 host_fn: None,
@@ -1062,6 +1067,7 @@ mod tests {
                 decl: ComponentDeclBuilder::new()
                     .add_lazy_child("a")
                     .use_(UseDecl::Event(UseEventDecl {
+                        dependency_type: DependencyType::Strong,
                         source: UseSource::Framework,
                         source_name: "started".into(),
                         target_name: "started".into(),

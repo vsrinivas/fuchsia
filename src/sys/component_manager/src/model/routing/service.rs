@@ -266,6 +266,7 @@ mod tests {
                         source: UseSource::Framework,
                         source_name: "fuchsia.sys2.Realm".into(),
                         target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .expose(ExposeDecl::Service(ExposeServiceDecl {
                         source: ExposeSource::Collection("coll".to_string()),

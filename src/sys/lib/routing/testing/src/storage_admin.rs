@@ -86,6 +86,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -166,6 +167,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -220,6 +222,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -314,6 +317,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -381,6 +385,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -454,6 +459,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -509,6 +515,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -606,6 +613,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source_name: "unrelated.protocol".into(),
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .add_lazy_child("b")
                     .build(),
@@ -677,6 +685,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -731,6 +740,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         source_name: "fuchsia.sys2.StorageAdmin".into(),
                         target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.StorageAdmin")
                             .unwrap(),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),

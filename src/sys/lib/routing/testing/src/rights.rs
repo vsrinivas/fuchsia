@@ -65,6 +65,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         rights: *READ_RIGHTS,
                         subdir: None,
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -118,6 +119,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         rights: *READ_RIGHTS,
                         subdir: None,
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -176,6 +178,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         rights: *READ_RIGHTS,
                         subdir: None,
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -229,6 +232,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         rights: *READ_RIGHTS,
                         subdir: None,
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -287,6 +291,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         rights: *READ_RIGHTS,
                         subdir: None,
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -336,6 +341,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         rights: *READ_RIGHTS,
                         subdir: None,
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),
@@ -383,6 +389,7 @@ impl<T: RoutingTestModelBuilder> CommonRightsTest<T> {
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         rights: *READ_RIGHTS,
                         subdir: None,
+                        dependency_type: DependencyType::Strong,
                     }))
                     .build(),
             ),

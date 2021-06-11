@@ -515,7 +515,7 @@ pub type NamespaceCapabilities = Vec<CapabilityDecl>;
 mod tests {
     use {
         super::*,
-        cm_rust::{EventMode, StorageDirectorySource},
+        cm_rust::{DependencyType, EventMode, StorageDirectorySource},
         fidl_fuchsia_sys2 as fsys,
     };
 
@@ -531,6 +531,7 @@ mod tests {
         assert_eq!(storage_capability.type_name(), CapabilityTypeName::Storage);
 
         let event_capability = ComponentCapability::Use(UseDecl::Event(UseEventDecl {
+            dependency_type: DependencyType::Strong,
             source: cm_rust::UseSource::Parent,
             source_name: "started".into(),
             target_name: "started-x".into(),
