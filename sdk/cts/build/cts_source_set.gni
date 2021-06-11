@@ -14,7 +14,6 @@ import("//sdk/cts/build/write_cts_file.gni")
 # Example:
 # ```
 # cts_source_set("my-source-set") {
-#   suite_name = "my_test_suite"
 #   sources = [
 #     "//sdk/cts/tests/my_test/my_lib.h",
 #     "//sdk/cts/tests/my_test/my_lib.cc",
@@ -24,13 +23,13 @@ import("//sdk/cts/build/write_cts_file.gni")
 #
 # Parameters:
 #
-#   suite_name (required)
-#     Name of the test suite this executable belongs to.
-#     The sources for this target will be placed in tests/$suite_name
+#   dest (optional)
+#     Location to copy this target to in the CTS archive.
+#     Dest should only be specified if the target is not in //sdk/cts. If the
+#     target is in //sdk/cts, it will be placed in the same path in the CTS
+#     archive.
 #     Type: string
 template("cts_source_set") {
-  assert(defined(invoker.suite_name), "Suite name must be defined.")
-
   invoker_deps = []
   if (defined(invoker.deps)) {
     invoker_deps += invoker.deps
@@ -58,8 +57,8 @@ template("cts_source_set") {
     forward_variables_from(invoker,
                            "*",
                            [
+                             "dest",
                              "non_cts_deps",
-                             "suite_name",
                            ])
     if (!defined(deps)) {
       deps = []
@@ -75,11 +74,11 @@ template("cts_source_set") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "dest",
                              "non_cts_deps",
                              "public",
                              "public_deps",
                              "sources",
-                             "suite_name",
                              "testonly",
                            ])
   }

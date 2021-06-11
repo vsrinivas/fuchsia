@@ -14,7 +14,6 @@ import("//build/sdk/sdk_atom.gni")
 #  # same file.
 #  cts_copy_to_sdk("build") {
 #    testonly = true
-#    suite_name = "my_test_suite"
 #    sources = [ "BUILD.gn" ]
 #  }
 #  ```
@@ -25,17 +24,31 @@ import("//build/sdk/sdk_atom.gni")
 #     A list of sources to include in the atom.
 #     Type: list(labels)
 #
-#   suite_name (required)
-#     Name of the test suite this executable belongs to.
-#     This will determine where in the SDK these files are grouped.
+#   dest (optional)
+#     Location to copy this target to in the CTS archive.
+#     Dest should only be specified if the target is not in //sdk/cts. If the
+#     target is in //sdk/cts, it will be placed in the same path in the CTS
+#     archive.
 #     Type: string
 template("cts_copy_to_sdk") {
   assert(defined(invoker.sources), "Sources must be defined.")
-  assert(defined(invoker.suite_name), "Suite name must be defined.")
+
+  if (defined(invoker.dest)) {
+    file_base = invoker.dest
+  } else {
+    path = get_label_info(":${target_name}", "dir")
+    if (string_replace(path, "//sdk/cts", "") == path) {
+      assert(defined(invoker.dest),
+             "dest must be defined if the source file is not in //sdk/cts")
+    }
+
+    file_base = ""
+    if (path != "//sdk/cts") {
+      file_base = string_replace(path, "//sdk/cts/", "")
+    }
+  }
 
   main_target_name = target_name
-  suite_name = invoker.suite_name
-  file_base = "tests/${suite_name}"
   sdk_target_name = "${target_name}_sdk"
 
   foreach(src, invoker.sources) {
@@ -50,7 +63,11 @@ template("cts_copy_to_sdk") {
   sdk_atom(sdk_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
     category = "cts"
-    id = "sdk://${file_base}/${main_target_name}"
+    if (file_base != "") {
+      id = "sdk://${file_base}/${main_target_name}"
+    } else {
+      id = "sdk://${main_target_name}"
+    }
     files = sdk_files
 
     meta = {

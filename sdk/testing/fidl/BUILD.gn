@@ -7,7 +7,7 @@ import("//sdk/cts/build/cts.gni")
 cts_source_set("test_support") {
   testonly = true
 
-  suite_name = "fidl"
+  dest = "pkg/fidl_test_support"
 
   public = [ "async_loop_for_test.h" ]
 
@@ -23,7 +23,7 @@ cts_source_set("test_support") {
 cts_source_set("test") {
   testonly = true
 
-  suite_name = "fidl"
+  dest = "pkg/fidl_test_support"
 
   public = [
     "fidl_types.h",
@@ -45,7 +45,7 @@ cts_source_set("test") {
 cts_fidl("frobinator") {
   testonly = true
 
-  suite_name = "fidl"
+  dest = "pkg/fidl_test_support"
 
   # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
@@ -62,7 +62,7 @@ cts_fidl("frobinator") {
 cts_fidl("fidl_test") {
   name = "fidl.test.misc"
 
-  suite_name = "fidl"
+  dest = "pkg/fidl_test_support"
 
   testonly = true
 
@@ -72,7 +72,7 @@ cts_fidl("fidl_test") {
 cts_fidl("fidl_test_handles") {
   name = "fidl.test.handles"
 
-  suite_name = "fidl"
+  dest = "pkg/fidl_test_support"
 
   testonly = true
 
@@ -83,15 +83,22 @@ cts_fidl("fidl_test_handles") {
 cts_fidl("collision_test") {
   name = "fidl.test.collision"
 
-  suite_name = "fidl"
+  dest = "pkg/fidl_test_support"
 
   testonly = true
 
   sources = [ "collision.test.fidl" ]
 }
 
+cts_copy_to_sdk("build") {
+  sources = [ "BUILD.gn" ]
+  dest = "pkg/fidl_test_support"
+  testonly = true
+}
+
 sdk_molecule("test_sdks") {
   deps = [
+    ":build_sdk",
     ":collision_test_sdk",
     ":fidl_test_handles_sdk",
     ":fidl_test_sdk",

@@ -15,20 +15,20 @@ import("//sdk/cts/build/write_cts_file.gni")
 # Example:
 # ```
 # cts_fuchsia_component("my-test-component") {
-#   suite_name = "my_test_suite"
 #   deps = [ ":my-test" ]
 #   manifest = "meta/my-test.cmx"
 #   testonly = true
 # }
 # ```
 #
-#   suite_name (required)
-#     Name of the test suite this executable belongs to.
-#     The sources for this target will be placed in tests/$suite_name
+# Parameters
+#   dest (optional)
+#     Location to copy this target to in the CTS archive.
+#     Dest should only be specified if the target is not in //sdk/cts. If the
+#     target is in //sdk/cts, it will be placed in the same path in the CTS
+#     archive.
 #     Type: string
 template("cts_fuchsia_component") {
-  assert(defined(invoker.suite_name), "Suite name must be defined.")
-
   if (!defined(invoker.deps)) {
     invoker.deps = []
   }
@@ -49,7 +49,7 @@ template("cts_fuchsia_component") {
   }
 
   fuchsia_component(target_name) {
-    forward_variables_from(invoker, "*", [ "suite_name" ])
+    forward_variables_from(invoker, "*", [ "dest" ])
 
     if (defined(verify_target)) {
       deps += [ ":$verify_target" ]
@@ -60,8 +60,8 @@ template("cts_fuchsia_component") {
   cts_copy_to_sdk(target_name) {
     forward_variables_from(invoker,
                            [
+                             "dest",
                              "manifest",
-                             "suite_name",
                              "testonly",
                            ])
     sources = [ manifest ]

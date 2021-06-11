@@ -1,7 +1,7 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-import("//build/sdk/sdk_molecule.gni")
+import("//sdk/cts/build/cts.gni")
 
 group("tests_no_e2e") {
   testonly = true
@@ -27,8 +27,14 @@ group("tests") {
   ]
 }
 
+cts_copy_to_sdk("build") {
+  sources = [ "BUILD.gn" ]
+  testonly = true
+}
+
 sdk_molecule("test_sdks") {
   deps = [
+    ":build_sdk",
     "fidl:test_sdks",
     "pkg:test_sdks",
 

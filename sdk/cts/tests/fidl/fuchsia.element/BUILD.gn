@@ -7,7 +7,6 @@ import("//sdk/cts/build/cts.gni")
 import("//src/session/build/session_config.gni")
 
 cts_executable("element-manager-test-bin") {
-  suite_name = "fuchsia.element"
   output_name = "element-manager-test"
   testonly = true
 
@@ -24,7 +23,6 @@ cts_executable("element-manager-test-bin") {
 }
 
 cts_fuchsia_component("element-manager-test") {
-  suite_name = "fuchsia.element"
   manifest = "meta/element-manager-test.cmx"
   testonly = true
 
@@ -42,7 +40,6 @@ cts_fuchsia_test_package("fuchsia-element-tests") {
 }
 
 cts_executable("reference-element-bin") {
-  suite_name = "fuchsia.element"
   output_name = "reference-element"
   testonly = true
 
@@ -55,14 +52,12 @@ cts_executable("reference-element-bin") {
 }
 
 cts_fuchsia_component("reference-element") {
-  suite_name = "fuchsia.element"
   manifest = "meta/reference-element.cml"
   testonly = true
   deps = [ ":reference-element-bin" ]
 }
 
 cts_executable("reference-session-bin") {
-  suite_name = "fuchsia.element"
   output_name = "reference-session"
   testonly = true
 
@@ -75,7 +70,6 @@ cts_executable("reference-session-bin") {
 }
 
 cts_fuchsia_component("reference-session") {
-  suite_name = "fuchsia.element"
   manifest = "meta/reference-session.cml"
   testonly = true
   deps = [ ":reference-session-bin" ]
@@ -95,7 +89,6 @@ session_config("reference-session-config") {
 
 cts_copy_to_sdk("build") {
   testonly = true
-  suite_name = "fuchsia.element"
   sources = [ "BUILD.gn" ]
 }
 

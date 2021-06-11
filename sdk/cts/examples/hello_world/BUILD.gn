@@ -9,13 +9,11 @@ import("//sdk/cts/build/cts.gni")
 # TODO(johnshamoon): Add documentation to describe what this example is doing
 # and how a developer could use these templates to add their own CTS tests.
 cts_source_set("my-cts-source-set") {
-  suite_name = "hello_world_cts"
   sources = [ "hello_world_util.h" ]
   testonly = true
 }
 
 cts_executable("my-cts-test") {
-  suite_name = "hello_world_cts"
   deps = [
     ":my-cts-source-set",
     "//zircon/system/ulib/zxtest",
@@ -25,7 +23,6 @@ cts_executable("my-cts-test") {
 }
 
 cts_fuchsia_component("my-cts-component") {
-  suite_name = "hello_world_cts"
   deps = [ ":my-cts-test" ]
   manifest = "meta/my-cts-test.cmx"
   testonly = true
@@ -42,7 +39,6 @@ group("tests") {
 
 cts_copy_to_sdk("build") {
   testonly = true
-  suite_name = "hello_world_cts"
   sources = [ "BUILD.gn" ]
 }
 

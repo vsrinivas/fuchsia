@@ -5,8 +5,6 @@
 import("//sdk/cts/build/cts.gni")
 
 cts_executable("memfs-cts-test") {
-  suite_name = "memfs"
-
   deps = [
     "//sdk/lib/fdio",
     "//src/storage/memfs:memfs",
@@ -23,7 +21,6 @@ cts_executable("memfs-cts-test") {
 }
 
 cts_fuchsia_component("memfs-component") {
-  suite_name = "memfs"
   deps = [ ":memfs-cts-test" ]
   manifest = "meta/memfs-cts-test.cmx"
   testonly = true
@@ -35,7 +32,6 @@ cts_fuchsia_test_package("memfs-test-package") {
 
 cts_copy_to_sdk("build") {
   testonly = true
-  suite_name = "memfs"
   sources = [ "BUILD.gn" ]
 }
 

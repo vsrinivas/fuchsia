@@ -7,15 +7,27 @@ import("//build/sdk/sdk_atom.gni")
 # This should not be called directly, but through the other CTS build rules.
 #
 # Parameters
-#   suite_name (required)
-#     Name of the test suite this executable belongs to.
-#     This will determine where in the SDK these files are grouped.
+#   dest (optional)
+#     Location to copy this target to in the CTS archive.
+#     Dest should only be specified if the target is not in //sdk/cts. If the
+#     target is in //sdk/cts, it will be placed in the same path in the CTS
+#     archive.
 #     Type: string
 template("cts_source_library") {
-  assert(defined(invoker.suite_name), "Suite name must be defined.")
+  if (defined(invoker.dest)) {
+    file_base = invoker.dest
+  } else {
+    path = get_label_info(":${target_name}", "dir")
+    if (string_replace(path, "//sdk/cts", "") == path) {
+      assert(defined(invoker.dest),
+             "dest must be defined if the source file is not in //sdk/cts")
+    }
 
-  suite_name = invoker.suite_name
-  file_base = "tests/${suite_name}"
+    file_base = ""
+    if (path != "//sdk/cts") {
+      file_base = string_replace(path, "//sdk/cts/", "")
+    }
+  }
 
   main_target_name = target_name
   sdk_target_name = target_name + "_sdk"
@@ -84,7 +96,7 @@ template("cts_source_library") {
       "--out",
       rebase_path(metadata_file),
       "--name",
-      suite_name,
+      target_name,
       "--root",
       file_base,
       "--include-dir",

@@ -1,14 +1,22 @@
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-import("//build/sdk/sdk_molecule.gni")
+import("//sdk/cts/build/cts.gni")
 
 group("tests") {
   deps = [ "hello_world:tests" ]
   testonly = true
 }
 
+cts_copy_to_sdk("build") {
+  sources = [ "BUILD.gn" ]
+  testonly = true
+}
+
 sdk_molecule("test_sdks") {
-  deps = [ "hello_world:test_sdks" ]
+  deps = [
+    ":build_sdk",
+    "hello_world:test_sdks",
+  ]
   testonly = true
 }

@@ -9,7 +9,14 @@ import("//sdk/cts/build/write_cts_file.gni")
 
 # Declares a FIDL Library that can be used in CTS.
 #
-# An equivalent to fidl.gni, but ensures deendencies are allowed in CTS.
+# An equivalent to fidl.gni, but ensures dependencies are allowed in CTS.
+#
+# dest (optional)
+#     Location to copy this target to in the CTS archive.
+#     Dest should only be specified if the target is not in //sdk/cts. If the
+#     target is in //sdk/cts, it will be placed in the same path in the CTS
+#     archive.
+#     Type: string
 template("cts_fidl") {
   assert(defined(invoker.sources), "Sources must be defined.")
   assert(!defined(invoker.deps), "All FIDL dependencies should be public.")
@@ -38,7 +45,7 @@ template("cts_fidl") {
   }
 
   fidl(target_name) {
-    forward_variables_from(invoker, "*", [ "suite_name" ])
+    forward_variables_from(invoker, "*", [ "dest" ])
     if (!defined(non_fidl_deps)) {
       non_fidl_deps = []
     }
@@ -52,9 +59,9 @@ template("cts_fidl") {
   cts_source_library(target_name) {
     forward_variables_from(invoker,
                            [
+                             "dest",
                              "public_deps",
                              "sources",
-                             "suite_name",
                              "testonly",
                            ])
   }

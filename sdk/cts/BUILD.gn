@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/sdk/sdk_molecule.gni")
+import("//sdk/cts/build/cts.gni")
 
 group("cts_no_e2e") {
   testonly = true
@@ -24,9 +24,15 @@ group("cts") {
   ]
 }
 
+cts_copy_to_sdk("build") {
+  sources = [ "BUILD.gn" ]
+  testonly = true
+}
+
 sdk_molecule("cts_tests") {
   category = "cts"
   deps = [
+    ":build_sdk",
     "examples:test_sdks",
     "tests:test_sdks",
     "//sdk/testing/fidl:test_sdks",
