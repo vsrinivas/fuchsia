@@ -7,9 +7,23 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
-go_library("lib") {
-  sources = [ "fvdl_intree_test.go" ]
+go_library("intree_lib") {
+  sources = [
+    "common.go",
+    "fvdl_intree_test.go",
+  ]
   deps = [ "//tools/fvdl/e2e/e2etest" ]
+}
+
+go_library("sdk_lib") {
+  sources = [
+    "common.go",
+    "fvdl_sdk_test.go",
+  ]
+  deps = [
+    "//third_party/golibs:cloud.google.com/go/storage",
+    "//tools/fvdl/e2e/e2etest",
+  ]
 }
 
 group("tests") {
@@ -18,7 +32,10 @@ group("tests") {
   # TODO(fxbug.dev/78190): this flaky test is super flaky on coverage.
   # Please fix the flakiness issue and then remove the condition below.
   if (!is_coverage) {
-    deps = [ ":fvdl_intree_test($host_toolchain)" ]
+    deps = [
+      ":fvdl_intree_test($host_toolchain)",
+      ":fvdl_sdk_test($host_toolchain)",
+    ]
   }
 }
 
@@ -108,13 +125,25 @@ if (is_linux) {
   go_test("fvdl_intree_test") {
     output_name = "fvdl_intree_test"
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
-    deps = [ ":lib" ]
+    deps = [ ":intree_lib" ]
     non_go_deps = [
       ":copy_aemu",
       ":copy_device_launcher",
       ":copy_grpcwebproxy",
       ":copy_host_tools",
       ":copy_images",
+    ]
+  }
+
+  go_test("fvdl_sdk_test") {
+    output_name = "fvdl_sdk_test"
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
+    deps = [ ":sdk_lib" ]
+    non_go_deps = [
+      ":copy_aemu",
+      ":copy_device_launcher",
+      ":copy_grpcwebproxy",
+      ":copy_host_tools",
     ]
   }
 }
