@@ -114,8 +114,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
                    uint32_t vmo_index,
                    fuchsia::ui::scenic::internal::ImageProperties properties) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void SetImageDestinationSize(ContentId image_id,
-                               fuchsia::ui::scenic::internal::SizeU size) override;
+  void SetImageDestinationSize(ContentId image_id, fuchsia::math::SizeU size) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void SetOpacity(TransformId transform_id, float val) override;
   // |fuchsia::ui::scenic::internal::Flatland|

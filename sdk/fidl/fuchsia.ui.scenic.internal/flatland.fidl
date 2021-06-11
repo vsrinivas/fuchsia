@@ -4,6 +4,7 @@
 
 library fuchsia.ui.scenic.internal;
 
+using fuchsia.math;
 using fuchsia.scenic.allocation;
 using fuchsia.scenic.scheduling;
 using zx;
@@ -16,15 +17,10 @@ enum Error {
 };
 
 // TODO(fxbug.dev/78161): Remove floating point types.
+// TODO(fxbug.dev/36766): Use the corresponding fuchsia.math Size type.
 struct Vec2 {
     float32 x;
     float32 y;
-};
-
-// TODO(fxbug.dev/36766): Unify with math types for other APIs.
-struct SizeU {
-    uint32 width;
-    uint32 height;
 };
 
 enum Orientation {
@@ -448,7 +444,7 @@ protocol Flatland {
     /// The content size for an Image is the size of the rectangle in the parent's space that the
     /// image occupies. This combined with the global translation of the transform it is attached
     /// to determines the size and location of where the content is rendered on the display.
-    SetImageDestinationSize(ContentId image_id, SizeU size);
+    SetImageDestinationSize(ContentId image_id, fuchsia.math.SizeU size);
 
     // Content management
 

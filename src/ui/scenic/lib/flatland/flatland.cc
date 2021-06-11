@@ -644,8 +644,7 @@ void Flatland::CreateImage(ContentId image_id,
   image_metadatas_[handle] = metadata;
 }
 
-void Flatland::SetImageDestinationSize(ContentId image_id,
-                                       fuchsia::ui::scenic::internal::SizeU size) {
+void Flatland::SetImageDestinationSize(ContentId image_id, fuchsia::math::SizeU size) {
   if (image_id.value == kInvalidId) {
     FX_LOGS(ERROR) << "SetImageSize called with image_id 0";
     ReportError();

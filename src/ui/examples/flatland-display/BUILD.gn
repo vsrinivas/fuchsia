@@ -31,6 +31,7 @@ rustc_binary("bin-rust") {
   sources = [ "src/main.rs" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
     "//sdk/fidl/fuchsia.scenic.allocation:fuchsia.scenic.allocation-rustc",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
     "//sdk/fidl/fuchsia.ui.scenic.internal:fuchsia.ui.scenic.internal-rustc",

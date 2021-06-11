@@ -4,8 +4,9 @@
 
 use {
     fidl_fuchsia_scenic_allocation as scenic_alloc, fidl_fuchsia_ui_scenic_internal as fland,
-    fuchsia_async as fasync, fuchsia_component::client::connect_to_protocol,
-    fuchsia_syslog as syslog, fuchsia_zircon as zx, log::*,
+    fidl_fuchsia_math as fmath, fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_protocol, fuchsia_syslog as syslog,
+    fuchsia_zircon as zx, log::*,
 };
 
 use fidl::endpoints::create_proxy;
@@ -208,7 +209,7 @@ async fn main() {
     flatland
         .set_image_destination_size(
             &mut IMAGE_ID.clone(),
-            &mut fland::SizeU { width: RECT_WIDTH, height: RECT_HEIGHT },
+            &mut fmath::SizeU { width: RECT_WIDTH, height: RECT_HEIGHT },
         )
         .expect("fidl error");
 

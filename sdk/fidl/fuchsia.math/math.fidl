@@ -81,6 +81,20 @@ struct SizeF {
     float32 height;
 };
 
+/// The unsigned integer dimensions of a rectangular region in a 2D cartesian
+/// space.
+///
+/// This type does not specify units. Protocols that use this type should
+/// specify the characteristics of the vector space, including orientation and
+/// units.
+struct SizeU {
+    /// The distance along the x-axis.
+    uint32 width;
+
+    /// The distance along the y-axis.
+    uint32 height;
+};
+
 /// An integral, rectangular, axis-aligned region in a 2D cartesian
 /// space.
 ///
