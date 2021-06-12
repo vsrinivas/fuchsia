@@ -16,6 +16,7 @@ pub struct LifecycleController {
     prefix: AbsoluteMoniker,
 }
 
+#[derive(Debug)]
 enum LifecycleOperation {
     Bind,
     Resolve,
@@ -32,23 +33,33 @@ impl LifecycleController {
         operation: LifecycleOperation,
         moniker: String,
     ) -> Result<(), fcomponent::Error> {
+        println!("Requested lifecycle operation: {:?}, moniker: {}", operation, moniker);
         if let (Some(model), Ok(moniker)) =
             (self.model.upgrade(), RelativeMoniker::try_from(moniker.as_str()))
         {
             if let Ok(abs_moniker) = AbsoluteMoniker::from_relative(&self.prefix, &moniker) {
                 match model.look_up(&abs_moniker).await {
                     Ok(component) => match operation {
-                        LifecycleOperation::Resolve => Ok(()),
-                        LifecycleOperation::Bind => component
-                            .bind(&BindReason::Debug)
-                            .await
-                            .map(|_| ())
-                            .map_err(|_| fcomponent::Error::Internal),
-                        LifecycleOperation::Stop => component
-                            .stop_instance(false)
-                            .await
-                            .map(|_| ())
-                            .map_err(|_| fcomponent::Error::Internal),
+                        LifecycleOperation::Resolve => {
+                            println!("Found component {} and resolving", abs_moniker);
+                            Ok(())
+                        }
+                        LifecycleOperation::Bind => {
+                            println!("Found component {} and binding", abs_moniker);
+                            component
+                                .bind(&BindReason::Debug)
+                                .await
+                                .map(|_| ())
+                                .map_err(|_| fcomponent::Error::Internal)
+                        }
+                        LifecycleOperation::Stop => {
+                            println!("Found component {} and stopping", abs_moniker);
+                            component
+                                .stop_instance(false)
+                                .await
+                                .map(|_| ())
+                                .map_err(|_| fcomponent::Error::Internal)
+                        }
                     },
                     Err(ModelError::ResolverError { .. }) => {
                         Err(fcomponent::Error::InstanceCannotResolve)

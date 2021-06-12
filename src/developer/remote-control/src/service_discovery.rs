@@ -236,13 +236,13 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
                         .to_string()
                         == "expose".to_string()
                     {
-                        let resolve_path = path
+                        let lifecycle_controller_path = path
                             .debug_hub_path
                             .as_ref()
                             .context("missing debug path")?
                             .join(fsys::LifecycleControllerMarker::NAME);
                         let node_proxy = io_util::open_node_in_namespace(
-                            resolve_path.to_str().expect("invalid chars"),
+                            lifecycle_controller_path.to_str().expect("invalid chars"),
                             io::OPEN_RIGHT_READABLE,
                         )?;
                         let lifecycle_controller_proxy = fsys::LifecycleControllerProxy::new(

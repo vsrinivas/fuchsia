@@ -28,7 +28,10 @@
 ///
 /// Display notation: ".", "./down1", ".\up1/down1", ".\up1\up2/down1", ...
 use {
-    crate::{abs_moniker::AbsoluteMoniker, child_moniker::ChildMoniker, error::MonikerError},
+    crate::{
+        abs_moniker::AbsoluteMoniker, child_moniker::ChildMoniker, error::MonikerError,
+        partial_child_moniker::PartialChildMoniker,
+    },
     std::{convert::TryFrom, fmt, iter},
 };
 
@@ -90,12 +93,7 @@ impl RelativeMoniker {
         res
     }
 
-    /// Parses n `RelativeMoniker` from a string.
-    ///
-    /// Input strings should be of the format
-    /// `.(\<name>(:<collection>)?:<instance_id>)*(/<name>(:<collection>)?:<instance_id>)*`, such
-    /// as `.\foo:42/bar:12/baz:54` or `./biz:foo:42`.
-    fn parse(rep: &str) -> Result<Self, MonikerError> {
+    fn parse_up_down_paths(rep: &str) -> Result<(Vec<&str>, Vec<&str>), MonikerError> {
         if rep.chars().nth(0) != Some('.') {
             return Err(MonikerError::invalid_moniker(rep));
         }
@@ -108,33 +106,53 @@ impl RelativeMoniker {
         let up_string = set_one.strip_prefix("\\").unwrap_or(set_one);
         let down_string = set_two.unwrap_or("");
 
-        if up_string == "" && down_string == "" {
-            return Ok(Self::new(vec![], vec![]));
-        }
-
         if down_string.contains("\\") {
             return Err(MonikerError::invalid_moniker(rep));
         }
 
-        let up_path;
-        if up_string == "" {
-            up_path = vec![];
-        } else {
-            up_path = up_string
-                .split("\\")
-                .map(ChildMoniker::parse)
-                .collect::<Result<Vec<ChildMoniker>, MonikerError>>()?;
-        }
+        let up_path: Vec<&str> = match up_string {
+            "" => vec![],
+            _ => up_string.split("\\").collect(),
+        };
 
-        let down_path;
+        let down_path: Vec<&str>;
         if down_string == "" {
             down_path = vec![];
         } else {
-            down_path = down_string
-                .split("/")
-                .map(ChildMoniker::parse)
-                .collect::<Result<Vec<ChildMoniker>, MonikerError>>()?;
+            down_path = down_string.split("/").collect()
         }
+
+        Ok((up_path, down_path))
+    }
+
+    /// Parses n `RelativeMoniker` from a string.
+    ///
+    /// Input strings should be of the format
+    /// `.(\<name>(:<collection>)?:<instance_id>)*(/<name>(:<collection>)?:<instance_id>)*`, such
+    /// as `.\foo:42/bar:12/baz:54` or `./biz:foo:42`.
+    fn parse(rep: &str) -> Result<Self, MonikerError> {
+        let (up_path, down_path) = Self::parse_up_down_paths(rep)?;
+
+        let up_path = up_path.iter().map(ChildMoniker::parse).collect::<Result<_, MonikerError>>()?;
+        let down_path = down_path.iter().map(ChildMoniker::parse).collect::<Result<_, MonikerError>>()?;
+
+        Ok(RelativeMoniker { up_path, down_path })
+    }
+
+    /// Parse the given string as an relative moniker. The string should be a '/' delimited series
+    /// of child monikers without any instance identifiers, e.g. "/", or "/name1/name2" or
+    /// "/name1:collection1".
+    pub fn parse_string_without_instances(rep: &str) -> Result<Self, MonikerError> {
+        let (up_path, down_path) = Self::parse_up_down_paths(rep)?;
+        let up_path = up_path.iter()
+                    .map(PartialChildMoniker::parse)
+                    .map(|p| p.map(|ok_p| ChildMoniker::from_partial(&ok_p, 0)))
+                    .collect::<Result<_, MonikerError>>()?;
+        let down_path = down_path.iter()
+                    .map(PartialChildMoniker::parse)
+                    .map(|p| p.map(|ok_p| ChildMoniker::from_partial(&ok_p, 0)))
+                    .collect::<Result<_, MonikerError>>()?;
+
         Ok(RelativeMoniker { up_path, down_path })
     }
 }
@@ -162,7 +180,7 @@ impl TryFrom<&str> for RelativeMoniker {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::convert::TryInto};
+    use {super::*, anyhow::Error, std::convert::TryInto};
 
     #[test]
     fn relative_monikers() {
@@ -375,5 +393,34 @@ mod tests {
                 invalid_string_to_parse
             );
         }
+    }
+
+    #[test]
+    fn relative_monikers_parse_string_without_instances() -> Result<(), Error> {
+        let under_test = |s| RelativeMoniker::parse_string_without_instances(s);
+
+        let a = ChildMoniker::new("a".to_string(), None, 0);
+        let bb = ChildMoniker::new("b".to_string(), Some("b".to_string()), 0);
+
+        assert_eq!(under_test("./a")?, RelativeMoniker::new(vec![], vec![a.clone()]));
+        assert_eq!(
+            under_test("./a/b:b")?,
+            RelativeMoniker::new(vec![], vec![a.clone(), bb.clone()])
+        );
+        assert_eq!(
+            under_test("./a/b:b/a/b:b")?,
+            RelativeMoniker::new(vec![], vec![a.clone(), bb.clone(), a.clone(), bb.clone()])
+        );
+
+        assert!(under_test("").is_err(), "cannot be empty");
+        assert!(under_test("a").is_err(), "must start with root");
+        assert!(under_test("/").is_err(), "must start with root");
+        assert!(under_test("..a/b").is_err(), "double dot");
+        assert!(under_test(".//").is_err(), "path segments cannot be empty");
+        assert!(under_test("./a/").is_err(), "path segments cannot be empty");
+        assert!(under_test("./a//b").is_err(), "path segments cannot be empty");
+        assert!(under_test("./a:a:0").is_err(), "cannot contain instance id");
+
+        Ok(())
     }
 }

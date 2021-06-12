@@ -21,3 +21,6 @@ pub const COMPONENT_SHOW_HELP: &str = "Filter accepts a partial component name o
 Example:
 'appmgr', 'appmgr.cm', 'fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm'
 will all return information about the appmgr component.";
+
+pub const COMPONENT_BIND_HELP: &str = "Moniker format: {name}/{name}
+Example: 'core/brightness_manager'";

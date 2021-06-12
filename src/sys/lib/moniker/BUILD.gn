@@ -11,6 +11,7 @@ rustc_library("moniker") {
   edition = "2018"
 
   visibility = [
+    "//src/developer/ffx/plugins/component/*",
     "//src/sys/component_manager/*",
     "//src/sys/lib/component_id_index/*",
     "//src/sys/lib/moniker/*",
