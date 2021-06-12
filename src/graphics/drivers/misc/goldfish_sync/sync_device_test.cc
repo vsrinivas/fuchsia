@@ -12,6 +12,7 @@
 #include <lib/fake_ddk/fidl-helper.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/eventpair.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <zircon/errors.h>
@@ -29,7 +30,6 @@
 
 #include <zxtest/zxtest.h>
 
-#include "lib/zx/eventpair.h"
 #include "src/graphics/drivers/misc/goldfish_sync/sync_common_defs.h"
 
 namespace goldfish {
@@ -552,6 +552,28 @@ TEST_F(SyncDeviceTest, TriggerHostWaitAndSignalFence) {
   wait_status =
       event_client.wait_one(ZX_EVENTPAIR_SIGNALED, zx::deadline_after(zx::sec(15)), nullptr);
   EXPECT_EQ(wait_status, ZX_OK);
+}
+
+// This test case creates an orphaned SyncTimeline and let it creates a
+// |Fence| object which contains a RefPtr to the timeline. Once the
+// |event_client| object is closed, both Fence and SyncTimeline should be
+// destroyed safely without causing any errors.
+TEST_F(SyncDeviceTest, TimelineDestroyedAfterFenceClosed) {
+  ASSERT_OK(dut_->Bind());
+  // Instead of running the loop in another thread, we reset that loop and
+  // will run it later in this test.
+  dut_->loop()->ResetQuit();
+
+  zx::eventpair event_client, event_server;
+  zx_status_t status = zx::eventpair::create(0u, &event_client, &event_server);
+  ASSERT_EQ(status, ZX_OK);
+
+  fbl::RefPtr<SyncTimeline> tl = fbl::MakeRefCounted<SyncTimeline>(dut_.get());
+  tl->CreateFence(std::move(event_server));
+  tl.reset();
+
+  event_client.reset();
+  ASSERT_EQ(ZX_OK, dut_->loop()->RunUntilIdle());
 }
 
 }  // namespace sync

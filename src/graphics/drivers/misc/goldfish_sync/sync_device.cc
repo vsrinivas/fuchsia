@@ -373,13 +373,18 @@ void SyncTimeline::CreateFence(zx::eventpair event, std::optional<uint64_t> seqn
     // fence.
     fence->peer_closed_wait = std::make_unique<async::Wait>(
         fence_ptr->event.get(), ZX_EVENTPAIR_PEER_CLOSED, 0u,
-        [fence = fence_ptr, this](async_dispatcher_t* dispatcher, async::Wait* wait,
-                                  zx_status_t status, const zx_packet_signal_t* signal) {
+        // We keep the RefPtr of |this| so that we can ensure |timeline| is
+        // always valid in the callback, otherwise when the last fence is
+        // removed from the container, it will destroy the sync timeline and
+        // cause a use-after-free error.
+        [fence = fence_ptr, timeline = fbl::RefPtr(this)](async_dispatcher_t* dispatcher,
+                                                          async::Wait* wait, zx_status_t status,
+                                                          const zx_packet_signal_t* signal) {
           if (signal == nullptr || (signal->observed & ZX_EVENTPAIR_PEER_CLOSED)) {
             if (status != ZX_OK && status != ZX_ERR_CANCELED) {
               zxlogf(ERROR, "CreateFence: Unexpected Wait status: %d", status);
             }
-            fbl::AutoLock lock(&lock_);
+            fbl::AutoLock lock(&timeline->lock_);
             ZX_DEBUG_ASSERT(fence->InContainer());
             fence->RemoveFromContainer();
           }
