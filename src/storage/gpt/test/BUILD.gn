@@ -2,23 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":gpt-unit" ]
+  deps = [ ":gpt-tests" ]
 }
 
-test("gpt-unit") {
-  output_name = "gpt-unit-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+test("gpt-unit-test") {
   sources = [
     "gpt-tests.cc",
     "main.cc",
@@ -30,6 +23,10 @@ test("gpt-unit") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+
+    # TODO(https://fxbug.dev/74373) replace once `RecursiveWaitForFile` is
+    # extracted to a library.
+    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/mbr",
@@ -38,7 +35,22 @@ test("gpt-unit") {
   ]
 }
 
-bootfs_test("gpt-unit-bootfs-test") {
-  name = "gpt-unit-test"
-  deps = [ ":gpt-unit" ]
+isolated_devmgr_v2_component("ramdisk-devmgr") {
+  package_name = "gpt-tests"
+  deps = [
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/tests/sysdev:renamed_sys_binary",
+  ]
+}
+
+fuchsia_test_component("gpt-unit-test-component") {
+  component_name = "gpt-unit-test"
+  manifest = "meta/gpt-unit-test.cml"
+  deps = [ ":gpt-unit-test" ]
+}
+
+fuchsia_test_package("gpt-tests") {
+  deps = [ ":ramdisk-devmgr" ]
+  test_components = [ ":gpt-unit-test-component" ]
 }

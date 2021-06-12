@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/devmgr-integration-test/fixture.h>
 #include <limits.h>
 #include <time.h>
 #include <zircon/assert.h>
@@ -28,6 +29,20 @@ int main(int argc, char** argv) {
   fprintf(stdout, "Starting test with %u\n", gRandSeed);
   srand(gRandSeed);
 
+  // isolated_devmgr loads drivers asynchronously, causing an inherent race here. Wait for the
+  // ramdisk driver to load before proceeding with the test to ensure it's there when we need it.
+  fbl::unique_fd dev(open("/dev", O_RDONLY));
+  if (!dev) {
+    fprintf(stderr, "open(\"/dev\"): %s\n", strerror(errno));
+    return -1;
+  }
+  fbl::unique_fd out;
+  zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(dev, "misc/ramctl", &out);
+  if (status != ZX_OK) {
+    fprintf(stderr, "RecursiveWaitForFile(dev, \"misc/ramctl\"): %s\n",
+            zx_status_get_string(status));
+    return -1;
+  }
+
   return RUN_ALL_TESTS(argc, argv);
-  return 0;
 }

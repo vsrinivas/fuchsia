@@ -21,6 +21,7 @@ group("tests") {
     "fuchsia-fatfs:tests",
     "fvm:tests",
     "fxfs:tests",
+    "gpt:tests",
     "host_fs_test:tests",
     "lib:tests",
     "memfs/test:tests",

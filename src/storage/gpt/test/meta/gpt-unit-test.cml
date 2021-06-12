@@ -1,0 +1,37 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/elf/default.shard.cml",
+    ],
+    program: {
+        binary: "test/gpt-unit-test",
+    },
+    children: [
+        {
+            name: "isolated_devmgr",
+            url: "fuchsia-pkg://fuchsia.com/gpt-tests#meta/isolated-devmgr.cm",
+        },
+    ],
+    use: [
+        {
+            directory: "dev",
+            from: "#isolated_devmgr",
+            rights: [ "r*" ],
+            path: "/dev",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: "#isolated_devmgr",
+        },
+    ],
+}

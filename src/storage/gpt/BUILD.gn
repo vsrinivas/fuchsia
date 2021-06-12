@@ -36,3 +36,8 @@ zx_library("gpt") {
     ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test" ]
+}

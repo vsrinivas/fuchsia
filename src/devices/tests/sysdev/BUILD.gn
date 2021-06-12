@@ -4,10 +4,26 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/dist/renamed_binary.gni")
 
 bind_rules("sysdev-bind") {
   output = "sysdev-bind.h"
   disable_autobind = true
+}
+
+# TODO(https://fxbug.dev/77388): enable tests to select only 1 of the 3
+# root device drivers (test, misc, and sys).
+#
+# This is a workaround to include the sysdev test driver as the sys root
+# device driver. It would be better to do this by specifying the
+# `--sys-device-driver` flag to `driver-manager-test`, but this is
+# currently not possible to do at build time with the v2 isolated_devmgr
+# template. With this flag unspecified, `driver-manager-test` falls back to
+# looking for driver/platform-bus.so, so we rename this sys driver to that.
+renamed_binary("renamed_sys_binary") {
+  source = "$root_out_dir/sysdev.so"
+  source_deps = [ ":sysdev" ]
+  dest = "driver/platform-bus.so"
 }
 
 driver_module("sysdev") {
