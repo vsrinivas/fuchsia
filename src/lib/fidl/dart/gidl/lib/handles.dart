@@ -22,6 +22,13 @@ enum HandleSubtype {
   channel,
 }
 
+// Descriptor of a handle type and rights, as defined in GIDL.
+class HandleDef {
+  HandleDef(this.subtype, this.rights);
+  final HandleSubtype subtype;
+  final int rights;
+}
+
 // To support a new subtype in createHandles, add a new entry to this map.
 const Map<HandleSubtype, List<Handle> Function(int numHandles)> _handleFactory =
     {
@@ -29,12 +36,13 @@ const Map<HandleSubtype, List<Handle> Function(int numHandles)> _handleFactory =
   HandleSubtype.channel: _createChannels,
 };
 
-/// Create a list of Handles `result` where `subtype of result[i] == subtypes[i]`
-List<Handle> createHandles(List<HandleSubtype> subtypes) {
+/// Create a list of HandleInfos `result` where `subtype of result[i] == subtypes[i]`
+List<HandleInfo> createHandleInfos(List<HandleDef> handleDefs) {
   // First, calculate the number of handles of each subtype that is needed
   Map<HandleSubtype, int> handleCounts = {};
-  for (final subtype in subtypes) {
-    handleCounts[subtype] = handleCounts.putIfAbsent(subtype, () => 0) + 1;
+  for (final def in handleDefs) {
+    handleCounts[def.subtype] =
+        handleCounts.putIfAbsent(def.subtype, () => 0) + 1;
   }
 
   // Then, batch create the correct number of handles for each subtype. This
@@ -45,13 +53,35 @@ List<Handle> createHandles(List<HandleSubtype> subtypes) {
     value: (entry) => _handleFactory[entry.key](entry.value),
   );
 
-  // Rearrange the created handles into the order specified by the input.
-  List<Handle> result = [];
-  for (final subtype in subtypes) {
+  // Rearrange the created handles into the order specified by the input and reduce
+  // their rights appropriately.
+  List<HandleInfo> result = [];
+  for (final def in handleDefs) {
     // reuse the handle counts as an index into the handles list
-    result.add(handles[subtype][--handleCounts[subtype]]);
+    final handle = handles[def.subtype][--handleCounts[def.subtype]];
+    final reducedRightsHandle = handle.replace(def.rights);
+    int type;
+    if (def.subtype == HandleSubtype.event) {
+      type = ZX.OBJ_TYPE_EVENT;
+    } else if (def.subtype == HandleSubtype.channel) {
+      type = ZX.OBJ_TYPE_CHANNEL;
+    } else {
+      throw Exception('unknown handle subtype');
+    }
+    result.add(HandleInfo(
+      reducedRightsHandle,
+      type,
+      def.rights,
+    ));
   }
   return result;
+}
+
+/// Create a list of Handles `result` where `subtype of result[i] == subtypes[i]`
+List<Handle> createHandles(List<HandleDef> handleDefs) {
+  return createHandleInfos(handleDefs)
+      .map((handleInfo) => handleInfo.handle)
+      .toList();
 }
 
 List<Handle> _createChannels(int numHandles) {

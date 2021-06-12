@@ -281,7 +281,7 @@ success("GoldenNullableStructNull") {
     },
 }
 encode_success("GoldenHandleBasicRightsStruct") {
-    bindings_allowlist = [llcpp, hlcpp, go],
+    bindings_allowlist = [llcpp, hlcpp, go, dart],
     handle_defs = {
         #0 = channel(rights: channel_default),
     },

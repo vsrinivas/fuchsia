@@ -39,7 +39,7 @@ void main() {
 			EncodeSuccessCase.runWithHandles(
 				{{ .EncoderName }},
 				{{ .Name }},
-				(List<Handle> handleDefs) => {{ .Value }},
+				(List<Handle> handles) => {{ .Value }},
 				{{ .ValueType }},
 				{{ .Bytes }},
 				{{ .HandleDefs }},
@@ -60,7 +60,7 @@ void main() {
 			{{- if .HandleDefs }}
 			DecodeSuccessCase.runWithHandles(
 				{{ .Name }},
-				(List<Handle> handleDefs) => {{ .Value }},
+				(List<Handle> handles) => {{ .Value }},
 				{{ .ValueType }},
 				{{ .Bytes }},
 				{{ .HandleDefs }},
@@ -82,7 +82,7 @@ void main() {
 			EncodeFailureCase.runWithHandles(
 				{{ .EncoderName }},
 				{{ .Name }},
-				(List<Handle> handleDefs) => {{ .Value }},
+				(List<Handle> handles) => {{ .Value }},
 				{{ .ValueType }},
 				{{ .ErrorCode }},
 				{{ .HandleDefs }});

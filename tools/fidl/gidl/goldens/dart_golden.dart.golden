@@ -243,14 +243,28 @@ void main() {
 			
 			EncodeSuccessCase.runWithHandles(
 				Encoders.v1,
+				'GoldenHandleBasicRightsStruct_v1',
+				(List<Handle> handles) => GoldenHandleBasicRightsStruct(v: handles[0]),
+				kGoldenHandleBasicRightsStruct_Type,
+				Uint8List.fromList([
+0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00, //
+]),
+				[
+HandleDef(HandleSubtype.channel, 61454),// #0
+],
+				[
+0,]);
+			
+			EncodeSuccessCase.runWithHandles(
+				Encoders.v1,
 				'GoldenNullableHandleStructNonNull_v1',
-				(List<Handle> handleDefs) => GoldenNullableHandleStruct(v: handleDefs[0]),
+				(List<Handle> handles) => GoldenNullableHandleStruct(v: handles[0]),
 				kGoldenNullableHandleStruct_Type,
 				Uint8List.fromList([
 0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00, //
 ]),
 				[
-HandleSubtype.channel, // #0
+HandleDef(HandleSubtype.event, 2147483648),// #0
 ],
 				[
 0,]);
@@ -472,13 +486,13 @@ HandleSubtype.channel, // #0
 			
 			DecodeSuccessCase.runWithHandles(
 				'GoldenNullableHandleStructNonNull_v1',
-				(List<Handle> handleDefs) => GoldenNullableHandleStruct(v: handleDefs[0]),
+				(List<Handle> handles) => GoldenNullableHandleStruct(v: handles[0]),
 				kGoldenNullableHandleStruct_Type,
 				Uint8List.fromList([
 0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00, //
 ]),
 				[
-HandleSubtype.channel, // #0
+HandleDef(HandleSubtype.event, 2147483648),// #0
 ],
 				[
 0,],

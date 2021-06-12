@@ -9,7 +9,8 @@ import 'package:zircon/zircon.dart';
 void main() {
   group('handle library tests', () {
     test('create single channel', () {
-      final handles = createHandles([HandleSubtype.channel]);
+      final handles =
+          createHandles([HandleDef(HandleSubtype.channel, ZX.RIGHT_TRANSFER)]);
       addTearDown(() {
         closeHandles(handles);
       });

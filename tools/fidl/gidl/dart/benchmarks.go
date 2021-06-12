@@ -109,9 +109,9 @@ class BenchmarkGroup {
 {{ range .Benchmarks }}
 void encode{{ .Name }}Benchmark(run, teardown) {
 {{- if .HandleDefs }}
-  final handleDefs = createHandles({{ .HandleDefs }});
+  final handles = createHandles({{ .HandleDefs }});
   teardown(() {
-    closeHandles(handleDefs);
+    closeHandles(handles);
   });
 {{- end }}
 	final value = {{ .Value }};
@@ -123,9 +123,9 @@ void encode{{ .Name }}Benchmark(run, teardown) {
 }
 void decode{{ .Name }}Benchmark(run, teardown) {
 {{- if .HandleDefs }}
-  final handleDefs = createHandles({{ .HandleDefs }});
+  final handles = createHandles({{ .HandleDefs }});
   teardown(() {
-    closeHandles(handleDefs);
+    closeHandles(handles);
   });
 {{- end }}
 	final value = {{ .Value }};

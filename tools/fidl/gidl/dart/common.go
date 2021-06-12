@@ -21,16 +21,17 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 	var builder strings.Builder
 	builder.WriteString("[\n")
 	for i, d := range defs {
+		builder.WriteString("HandleDef(")
 		switch d.Subtype {
-		case fidlgen.Channel:
-			builder.WriteString(fmt.Sprint("HandleSubtype.event,"))
 		case fidlgen.Event:
-			builder.WriteString(fmt.Sprint("HandleSubtype.channel,"))
+			builder.WriteString(fmt.Sprint("HandleSubtype.event, "))
+		case fidlgen.Channel:
+			builder.WriteString(fmt.Sprint("HandleSubtype.channel, "))
 		default:
 			panic(fmt.Sprintf("unknown handle subtype: %v", d.Subtype))
 		}
 		// Write indices corresponding to the .gidl file handle_defs block.
-		builder.WriteString(fmt.Sprintf(" // #%d\n", i))
+		builder.WriteString(fmt.Sprintf("%d),// #%d\n", d.Rights, i))
 	}
 	builder.WriteString("]")
 	return builder.String()
@@ -192,5 +193,5 @@ func typeName(decl gidlmixer.NamedDeclaration) string {
 }
 
 func buildHandleValue(handle gidlir.Handle) string {
-	return fmt.Sprintf("handleDefs[%d]", handle)
+	return fmt.Sprintf("handles[%d]", handle)
 }
