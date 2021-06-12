@@ -533,6 +533,55 @@ the information about their interleaving is lost.  Zircon currently
 preserves message ordering only within a channel, not between
 channels.
 
+## Transition plan
+
+Switching to using the MBMQ model can be done incrementally.  There
+are some dependencies between the following steps, but some of them
+could be reordered or done in parallel:
+
+*   Implement most of the new kernel primitives, including MsgQueues,
+    MBOs and CMHs.  Channels will be modified so that they can contain
+    both legacy messages (those sent with `zx_channel_write()`) and
+    MBO messages (those sent with `zx_channel_write_mbo()`).
+    MsgQueues will be added as a new object type, separate from Zircon
+    ports.
+
+*   Switch processes over to using MsgQueues instead of Zircon ports.
+    An initial conversion can replace uses of `zx_object_wait_async()`
+    with `zx_object_wait_async_mbo()`, but a later version should use
+    `zx_channel_redirect()` for waiting on channels, which should give
+    some performance improvements.
+
+*   Change all server processes to accept requests via both MBO
+    messages and legacy messages.  Servers will send replies via
+    either legacy messages or MBOs (using `zx_cmh_send_reply()`)
+    depending on the request type.
+
+*   Switch client code over to sending requests via MBOs instead of
+    via legacy messages.  Change `zx_channel_call()` to send requests
+    via MBOs.
+
+*   The ability of servers to accept requests via legacy messages can
+    now be dropped.
+
+*   Convert users of FIDL event messages to use a separate channel for
+    sending events.
+
+*   Channels can now be made unidirectional.
+
+*   Channels can be made shareable.  That is, we can allow channel
+    handles to be duplicated.  We might want to hold off on this, or
+    allow it selectively, if there are concerns about FIDL protocols
+    that assume they have only one client process.
+
+*   Legacy channel messages can be removed.
+
+*   Zircon ports can be removed.
+
+*   The transaction ID (`txid`) field can be removed from FIDL
+    messages, because we no longer need it for matching up replies
+    with requests.
+
 ## Notes on terminology
 
 ### Role of the "key" values
