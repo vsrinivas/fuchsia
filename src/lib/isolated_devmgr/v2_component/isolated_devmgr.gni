@@ -69,8 +69,15 @@ template("isolated_devmgr_v2_component") {
       ]
       offer = [
         {
+          protocol = [ "fuchsia.logger.LogSink" ]
+          from = "parent"
+          to = [
+            "#driver-manager-support",
+            "#driver-manager-test",
+          ]
+        },
+        {
           protocol = [
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",
           ]
