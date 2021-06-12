@@ -577,6 +577,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
                 {
                   "lib": "libfoo2.so",
                   "effect": "effect3",
+                  "name": "ef3",
                   "output_channels": 4
                 }
               ],
@@ -590,6 +591,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
                     {
                       "lib": "libfoo.so",
                       "effect": "effect1",
+                      "name": "ef1",
                       "config": {
                         "some_config": 0
                       }
@@ -597,6 +599,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
                     {
                       "lib": "libbar.so",
                       "effect": "effect2",
+                      "name": "ef2",
                       "config": {
                         "arg1": 55,
                         "arg2": 3.14
@@ -615,6 +618,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
                     {
                       "lib": "libbaz.so",
                       "effect": "baz",
+                      "name": "baz",
                       "_comment": "Ignore me",
                       "config": {
                         "string_param": "some string value"
@@ -676,6 +680,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       const auto& effect = mix_group.effects[0];
       EXPECT_EQ("libfoo2.so", effect.lib_name);
       EXPECT_EQ("effect3", effect.effect_name);
+      EXPECT_EQ("ef3", effect.instance_name);
       EXPECT_EQ("", effect.effect_config);
       EXPECT_TRUE(effect.output_channels);
       EXPECT_EQ(4, *effect.output_channels);
@@ -697,6 +702,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       const auto& effect = mix_group.effects[0];
       EXPECT_EQ("libfoo.so", effect.lib_name);
       EXPECT_EQ("effect1", effect.effect_name);
+      EXPECT_EQ("ef1", effect.instance_name);
       EXPECT_EQ("{\"some_config\":0}", effect.effect_config);
       EXPECT_FALSE(effect.output_channels);
     }
@@ -704,6 +710,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       const auto& effect = mix_group.effects[1];
       EXPECT_EQ("libbar.so", effect.lib_name);
       EXPECT_EQ("effect2", effect.effect_name);
+      EXPECT_EQ("ef2", effect.instance_name);
       EXPECT_EQ("{\"arg1\":55,\"arg2\":3.14}", effect.effect_config);
       EXPECT_FALSE(effect.output_channels);
     }
@@ -725,6 +732,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       const auto& effect = mix_group.effects[0];
       EXPECT_EQ("libbaz.so", effect.lib_name);
       EXPECT_EQ("baz", effect.effect_name);
+      EXPECT_EQ("baz", effect.instance_name);
       EXPECT_EQ("{\"string_param\":\"some string value\"}", effect.effect_config);
       EXPECT_FALSE(effect.output_channels);
     }
@@ -933,6 +941,7 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithInvalidChannelCount) {
               {
                 "lib": "fake_effects.so",
                 "effect": "effect1",
+                "name": "ef1",
                 "output_channels": )JSON"
         << effect_chans << R"JSON(,
                 "config": { }

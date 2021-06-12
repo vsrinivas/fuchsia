@@ -55,6 +55,7 @@
       "properties": {
         "lib": "string",
         "effect": "string",
+        // A unique name to identify an effect instance; necessary for enabling effect updates.
         "name": "string",
         // The number of channels in the audio stream output by this effect. If unspecified this
         // will be equal to the number of input channels.
@@ -62,7 +63,7 @@
         "config": {},
         "_comment": "string"
       },
-      "required": [ "lib", "effect" ],
+      "required": [ "lib", "effect", "name" ],
       "additionalProperties": false
     },
     "mix_group": {
