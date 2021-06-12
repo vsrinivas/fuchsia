@@ -595,7 +595,7 @@ and [`zx_port_wait()`][zx_port_wait] syscalls.
 
 In the MBMQ model, a key value is used by a process to identify which
 of its incoming channels a message came from, or which of its earlier
-requests an incoming reply correponds to.  A process can use whatever
+requests an incoming reply corresponds to.  A process can use whatever
 key values it wants when passing them to `zx_object_wait_async()` or
 `zx_channel_redirect()`.  We expect that the typical usage will be for
 a process to treat a key as being a pointer to some data structure in
