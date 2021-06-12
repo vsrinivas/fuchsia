@@ -219,7 +219,8 @@ VK_TEST_P(DisplayCompositorParameterizedSmokeTest, FullscreenRectangleTest) {
   DisplayInfo display_info{
       .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
-  display_compositor->AddDisplay(display->display_id(), display_info, /*num_vmos*/ 0);
+  display_compositor->AddDisplay(display->display_id(), display_info, /*num_vmos*/ 0,
+                                 /*out_collection_info*/ nullptr);
 
   // Setup the uberstruct data.
   auto uberstruct = session.CreateUberStructWithCurrentTopology(root_handle);
