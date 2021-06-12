@@ -65,7 +65,7 @@ service to its children or access it at runtime.
 For a more detailed walkthrough of capability routing with this example, see the
 [component manifest capability routing example][component-manifest-examples].
 
-## Child component instances
+## Child component instances {#child-component-instances}
 
 Component instances may contain children. Child component instances are
 considered part of the parent instance's definition and are wholly owned by the
@@ -76,10 +76,10 @@ parent. This has the following implications:
 -   A component instance cannot exist without its parent.
 -   A component instance may not execute unless its parent is executing.
 -   A component instance determines the capabilities available to its children
-    by making [`offer`](#offer) declarations to them.
+    by making [`offer`][offer] declarations to them.
 -   A component instance has some degree of control over the behavior of its
     children. For example, a component instance may bind to capabilities exposed
-    from the child's realm through the [`Realm`](#the-realm-framework-service)
+    from the child's realm through the [`Realm`](#realm-framework-protocol)
     framework service, or set hooks to intercept child lifecycle events. This
     control is not absolute, however. For example, a component instance cannot
     use a capability from a sub-realm that was not explicitly exposed to it.
@@ -87,7 +87,7 @@ parent. This has the following implications:
 There are two varieties of child component instances, [static](#static-children)
 and [dynamic](#dynamic-children).
 
-### Static children
+### Static children {#static-children}
 
 A *static child* is a component instance that was statically declared in the
 component's [manifest][component-manifests] by a [`children`][children]
@@ -109,7 +109,7 @@ A static child is defined, foremost, by two pieces of information:
 For information on providing additional configuration information to child
 declarations, see [children][children].
 
-### Dynamic children
+### Dynamic children {#dynamic-children}
 
 A *dynamic child* is a component instance that was created at runtime in a
 [component collection](#collections). A dynamic child is always scoped
@@ -132,7 +132,7 @@ routed from the collection as a whole. TODO: service directories as an example
 
 A *collection* is a container for [dynamic children](#dynamic-children) that
 may be created and destroyed at runtime using the
-[Realm](#the-realm-framework-service) framework service.
+[Realm](#realm-framework-protocol) framework service.
 
 Collections support two modes of *durability*:
 
@@ -199,12 +199,13 @@ definitions for full documentation.
 [component-urls]: /docs/concepts/components/component_urls.md
 [environments]: ./environments.md
 [expose]: ./component_manifests.md#expose
+[offer]: ./component_manifests.md#offer
 [framework-protocols]: ./component_manifests.md#framework-protocols
 [glossary-storage]: /docs/glossary.md#storage-capability
 [monikers]: ./monikers.md
 [offer]: ./component_manifests.md#offer
 [realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm
-[capabilities/runners]: ./capabilities/runners.md
+[runners]: ./capabilities/runners.md
 [topology-instance-tree]: ./topology.md#component-instance-tree
 [use]: ./component_manifests.md#use
 [lifecycle]: /docs/concepts/components/v2/lifecycle.md
