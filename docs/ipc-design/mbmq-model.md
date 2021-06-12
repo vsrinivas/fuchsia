@@ -555,7 +555,8 @@ could be reordered or done in parallel:
 *   Change all server processes to accept requests via both MBO
     messages and legacy messages.  Servers will send replies via
     either legacy messages or MBOs (using `zx_cmh_send_reply()`)
-    depending on the request type.
+    depending on the request type.  This work can be made easier using
+    the "legacy reply mode" for CMHs described below.
 
 *   Switch client code over to sending requests via MBOs instead of
     via legacy messages.  Change `zx_channel_call()` to send requests
@@ -581,6 +582,26 @@ could be reordered or done in parallel:
 *   The transaction ID (`txid`) field can be removed from FIDL
     messages, because we no longer need it for matching up replies
     with requests.
+
+### Legacy reply mode for CMHs
+
+To simplify the work of converting servers to accept requests via both
+MBOs and legacy messages, we can temporarily extend CMHs with a
+"legacy reply mode": When a legacy request message is read into a CMH
+using `zx_msgqueue_read()`, the CMH will store a reference to the
+channel endpoint that the request was written to.  Calling
+`zx_cmh_send_reply()` on that CMH will then enqueue the reply as a
+legacy message so that it is readable from that channel endpoint.
+This feature can be removed after client code no longer sends requests
+via legacy messages.
+
+This means that server code will be able to handle legacy requests
+without having to be aware of them.  Server code can be converted
+directly to using CMHs.  We won't have to add and later remove
+server-side code for conditionalising based on whether a request was
+an MBO or a legacy message.  The conditionalising only needs to be
+done once, in the kernel's IPC implementation, rather than for each
+set of FIDL language bindings.
 
 ### Alternative transition plan
 
