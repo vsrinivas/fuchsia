@@ -254,16 +254,12 @@ if (current_toolchain != default_toolchain) {
       ":backtrace-test",
       ":hello-world-test",
       ":phys-unittests",
+      ":zbi-chain-load-core-tests",
+      ":zbi-chain-load-hello-world-test",
       ":zbi-decompress-test",
       ":zbi-memory-test",
       "code-patching",
     ]
-    if (current_cpu == "arm64") {
-      deps += [
-        ":zbi-chain-load-core-tests",
-        ":zbi-chain-load-hello-world-test",
-      ]
-    }
     if (current_cpu == "x64") {
       deps += [ ":qemu-memory-test" ]
     }
