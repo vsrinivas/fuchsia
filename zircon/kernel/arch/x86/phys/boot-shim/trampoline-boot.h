@@ -16,13 +16,17 @@ class TrampolineBoot : public BootZbi {
 
   using BootZbi::BootZbi;
 
+  // In the legacy fixed-address format, the entry address is always above 1M.
+  // In the new format, it's an offset and in practice it's never > 1M.  So
+  // this is a safe-enough heuristic to distinguish the new from the old.
+  bool Relocating() const { return KernelHeader()->entry > kFixedLoadAddress; }
+
   uint64_t KernelEntryAddress() const {
-    // In the legacy fixed-address format, the entry address is always
-    // above 1M.  In the new format, it's an offset and in practice it's
-    // never > 1M.  So this is a safe-enough heuristic to distinguish the
-    // new format from the old.
-    uint64_t entry = KernelHeader()->entry;
-    return entry < kFixedLoadAddress ? BootZbi::KernelEntryAddress() : entry;
+    return Relocating() ? KernelHeader()->entry : BootZbi::KernelEntryAddress();
+  }
+
+  bool MustRelocateDataZbi() const {
+    return Relocating() && FixedKernelOverlapsData(kFixedLoadAddress);
   }
 
   fitx::result<Error> Load(uint32_t extra_data_capacity = 0);

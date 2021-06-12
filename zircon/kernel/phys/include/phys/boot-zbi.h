@@ -51,6 +51,10 @@ class BootZbi {
   BootZbi(BootZbi&&) = default;
   BootZbi& operator=(BootZbi&&) = default;
 
+  // These are overridden in TrampolineBoot (see x86/phys/boot-shim).
+  bool Relocating() const { return false; }
+  bool MustRelocateDataZbi() const { return false; }
+
   // Suggest allocation parameters for a whole bootable ZBI image whose
   // incoming size is known but whose contents haven't been seen yet.  A
   // conforming allocation will be optimal for reuse by Load().
@@ -112,6 +116,8 @@ class BootZbi {
  protected:
   void LogAddresses();
   void LogBoot(uint64_t entry) const;
+
+  bool FixedKernelOverlapsData(uint64_t kernel_load_address) const;
 
  private:
   // These are set on construction by Init().

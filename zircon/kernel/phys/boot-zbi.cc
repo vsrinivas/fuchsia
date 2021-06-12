@@ -131,6 +131,14 @@ bool BootZbi::KernelCanLoadInPlace() const {
   return in_place_space >= KernelMemorySize();
 }
 
+bool BootZbi::FixedKernelOverlapsData(uint64_t kernel_load_address) const {
+  uint64_t start1 = kernel_load_address;
+  uint64_t start2 = reinterpret_cast<uintptr_t>(data_.storage().data());
+  uint64_t end1 = start1 + KernelMemorySize();
+  uint64_t end2 = start2 + data_.storage().size();
+  return start1 <= start2 ? start2 < end1 : start1 < end2;
+}
+
 fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
                                            ktl::optional<uintptr_t> kernel_load_address) {
   auto input_address = reinterpret_cast<uintptr_t>(zbi_.storage().data());
@@ -276,17 +284,11 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
     };
   }
 
-  if (kernel_load_address) {
+  if (kernel_load_address && FixedKernelOverlapsData(*kernel_load_address)) {
     // There's a fixed kernel load address, so the data ZBI cannot be allowed
     // to reuse the memory where it will go.  This memory will already have
     // been reserved from the allocator, but the incoming data might be there.
-    uintptr_t start1 = *kernel_load_address;
-    size_t len1 = static_cast<size_t>(KernelMemorySize());
-    uintptr_t start2 = reinterpret_cast<uintptr_t>(data_.storage().data());
-    size_t len2 = data_.storage().size();
-    if (start1 <= start2 ? start1 + len1 > start2 : start1 < start2 + len2) {
-      data_.storage() = {};
-    }
+    data_.storage() = {};
   }
 
   // If we can reuse either the kernel image or the data ZBI items in place,

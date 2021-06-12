@@ -168,6 +168,8 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) 
 }
 
 [[noreturn]] void TrampolineBoot::Boot() {
+  ZX_ASSERT(!MustRelocateDataZbi());
+
   uintptr_t entry = static_cast<uintptr_t>(KernelEntryAddress());
   ZX_ASSERT(entry == KernelEntryAddress());
 

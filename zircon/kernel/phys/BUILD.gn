@@ -293,4 +293,8 @@ zbi_executable("physboot") {
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zbitl",
   ]
+  if (current_cpu == "x64") {
+    deps += [ "//zircon/kernel/arch/x86/phys/boot-shim:trampoline-boot" ]
+    include_dirs = [ "//zircon/kernel/arch/x86/phys/boot-shim" ]
+  }
 }

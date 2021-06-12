@@ -22,6 +22,17 @@
 #include <phys/zbitl-allocation.h>
 #include <pretty/cpp/sizes.h>
 
+#ifdef __x86_64__
+#include "trampoline-boot.h"
+
+using ChainBoot = TrampolineBoot;
+
+#else
+
+using ChainBoot = BootZbi;
+
+#endif
+
 const char Symbolize::kProgramName_[] = "physboot";
 
 namespace {
@@ -32,7 +43,7 @@ constexpr uint64_t kKernelBssEstimate = 1024 * 1024 * 2;
 
 struct LoadedZircon {
   Allocation buffer;
-  BootZbi boot;
+  ChainBoot boot;
   arch::EarlyTicks decompress_ts;
 };
 
@@ -71,9 +82,15 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
            pretty::FormattedBytes(kernel_zbi.size_bytes()).c_str());
   }
 
-  BootZbi boot;
+  ChainBoot boot;
   if (auto result = boot.Init(kernel_zbi); result.is_error()) {
     printf("physboot: Cannot read STORAGE_KERNEL item ZBI: ");
+    zbitl::PrintViewCopyError(result.error_value());
+    abort();
+  }
+
+  if (auto result = boot.Load(reserve_memory_estimate); result.is_error()) {
+    printf("physboot: Cannot load decompressed kernel: ");
     zbitl::PrintViewCopyError(result.error_value());
     abort();
   }
@@ -84,8 +101,9 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
 [[noreturn]] void BootZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kernel_item,
                              arch::EarlyTicks entry_ts) {
   auto zircon = LoadZircon(zbi, kernel_item, kKernelBssEstimate);
-  if (!zircon.boot.KernelCanLoadInPlace() ||
-      zircon.buffer.size_bytes() < zircon.boot.KernelMemorySize()) {
+  if (!zircon.boot.Relocating() &&  //
+      (!zircon.boot.KernelCanLoadInPlace() ||
+       zircon.buffer.size_bytes() < zircon.boot.KernelMemorySize())) {
     printf("physboot: Kernel ZBI at %#" PRIx64 " cannot be loaded in place!\n",
            zircon.boot.KernelLoadAddress());
     uint64_t bss_size = zircon.boot.KernelHeader()->reserve_memory_size;
@@ -112,6 +130,28 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
       const_cast<std::byte*>(zbi.storage().data()),
       zbi.storage().size(),
   };
+
+  Allocation relocated_zbi;
+  if (boot.MustRelocateDataZbi()) {
+    // Actually, the original data ZBI must be moved elsewhere since it
+    // overlaps the space where the fixed-address kernel will be loaded.
+    fbl::AllocChecker ac;
+    relocated_zbi = Allocation::New(ac, zbi.storage().size(), arch::kZbiBootDataAlignment);
+    if (!ac.check()) {
+      printf("physboot: Cannot allocate %#zx bytes aligned to %#zx for relocated data ZBI!\n",
+             zbi.storage().size(), arch::kZbiBootDataAlignment);
+      abort();
+    }
+    if (auto result = zbi.Copy(relocated_zbi.data(), zbi.begin(), zbi.end()); result.is_error()) {
+      zbi.ignore_error();
+      printf("physboot: Failed to relocate data ZBI: ");
+      zbitl::PrintViewCopyError(result.error_value());
+      printf("\n");
+      abort();
+    }
+    ZX_ASSERT(zbi.take_error().is_ok());
+    boot.DataZbi().storage() = relocated_zbi.data();
+  }
 
   boot.Boot();
 }

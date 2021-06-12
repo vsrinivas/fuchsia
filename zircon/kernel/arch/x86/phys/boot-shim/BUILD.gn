@@ -70,7 +70,10 @@ zbi_executable("pic-1mb-boot-shim") {
 if (toolchain.environment == "kernel.phys" ||
     toolchain.environment == "kernel.phys32") {
   source_set("trampoline-boot") {
-    visibility = [ ":*" ]
+    visibility = [
+      ":*",
+      "//zircon/kernel/phys/*",
+    ]
     sources = [ "trampoline-boot.cc" ]
     public = [ "trampoline-boot.h" ]
     public_deps = [ "//zircon/kernel/phys:boot-zbi" ]
