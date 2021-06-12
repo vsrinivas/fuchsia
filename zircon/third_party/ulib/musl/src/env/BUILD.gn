@@ -3,10 +3,8 @@
 # found in the LICENSE file.
 
 source_set("env") {
-  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [
     "__environ.c",
-    "__libc_start_main.c",
     "__stack_chk_fail.c",
     "clearenv.c",
     "getenv.c",
@@ -15,5 +13,24 @@ source_set("env") {
     "unsetenv.c",
   ]
 
+  deps = [
+    ":start-main",
+    "//zircon/third_party/ulib/musl:musl_internal",
+  ]
+
   configs -= [ "//build/config/zircon:visibility_hidden" ]
+}
+
+source_set("start-main") {
+  visibility = [ ":*" ]
+
+  sources = [ "__libc_start_main.c" ]
+
+  deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
+
+  # Make sure this code is compiled with frame pointers so the outermost few
+  # frames seen in user backtraces are always coherent and consistent between
+  # frame-pointer and shadow-call-stack backtraces.
+  configs -= [ "//build/config/zircon:default_frame_pointers" ]
+  configs += [ "//build/config/zircon:frame_pointers" ]
 }

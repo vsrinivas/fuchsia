@@ -60,4 +60,9 @@ libc_test("unittests") {
     ":backtrace.testonly",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # This is hack!  Approximate guess for whether zxtest and libc will have been
+  # compiled with frame pointers.
+  incomplete_fp = !is_debug
+  defines = [ "INCOMPLETE_FRAME_POINTERS=$incomplete_fp" ]
 }

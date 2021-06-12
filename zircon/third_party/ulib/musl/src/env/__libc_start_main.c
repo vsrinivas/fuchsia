@@ -39,6 +39,18 @@ __asm__(".weakref __asan_memset,__libc_memset");
 static _Noreturn void start_main(const struct start_params*) __asm__("start_main")
     __attribute__((used));
 static void start_main(const struct start_params* p) {
+#if defined(__aarch64__) && !__has_feature(shadow_call_stack)
+  // Ensure shadow-call-stack backtraces consistent with the frame pointer
+  // backtraces for the initial frames, so they will stay consistent if main
+  // and its callees use shadow-call-stack.
+  __asm__ volatile(
+      "str %0, [x18], #8\n"
+      // DW_CFA_val_expression 18, { DW_OP_breg18 -8 }
+      ".cfi_escape 0x16, 18, 2, 0x70 + 18, (-8 & 0x7f)"
+      :
+      : "r"(__builtin_return_address(0)));
+#endif
+
   uint32_t argc = p->procargs->args_num;
   uint32_t envc = p->procargs->environ_num;
   uint32_t namec = p->procargs->names_num;
@@ -126,8 +138,8 @@ static void start_main(const struct start_params* p) {
   exit((*p->main)(argc, argv, __environ));
 }
 
-NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
-                                                        int (*main)(int, char**, char**)) {
+__EXPORT NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
+                                                                 int (*main)(int, char**, char**)) {
   // Initialize stack-protector canary value first thing.  Do the setjmp
   // manglers in the same call to avoid the overhead of two system calls.
   // That means we need a temporary buffer on the stack, which we then
@@ -183,44 +195,123 @@ NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
     // original stack stays around just to hold the message buffer and handles
     // array.  The new stack is whole pages, so it's sufficiently aligned.
 
+    // The stack switching takes care to maintain valid CFI throughout so that
+    // CFI-based unwinding works correctly from the start_main frame back to
+    // this frame and back to its caller, which is the program's entry point
+    // (usually _start in crt1.o).  It also sets up both frame pointer and
+    // (when available) shadow call stack state to make the basic backtrace
+    // (i.e. PC list) between CFI, frame pointers, and shadow call stack
+    // collection methods all consistent.  For CFI, this is basically a matter
+    // of correct metadata.  For both frame pointers and shadow call stack, the
+    // backtrace collection relies on a contiguous stack and won't see anything
+    // that's not stored within those bounds.  So the actual original stack
+    // frame where this frame's own FP points is not available, and there is no
+    // shadow call stack at all yet.  Instead synthesize artifical "frames"
+    // that are just enough to appear normal to basic backtrace collection by
+    // each method and give the same results.
 #ifdef __x86_64__
-    // The x86-64 ABI requires %rsp % 16 = 8 on entry.  The zero word
-    // at (%rsp) serves as the return address for the outermost frame.
-    __asm__(
-        "lea -8(%[base], %[len], 1), %%rsp\n"
-        "jmp start_main\n"
+    __asm__ volatile(
+        // Adjust the CFI to track the existing CFA via a different call-saved
+        // register so unwinding will work after we reset the FP below.  Note
+        // that __builtin_frame_address(0) returns the value of the FP register
+        // (as documented in the GCC manual), *not* the value of the CFA.
+        // Moreover, there is no mandated relationship between the two values!
+        // The compiler will tell us the value of the FP with the built-in, but
+        // it won't tell us how it's calculating the CFA.  Since we force frame
+        // pointers on when compiling this function, we assume that the
+        // compiler will have defined its CFA rule as an offset from the FP
+        // register.  So this CFI directive adjusts the CFA rule to refer to a
+        // different register, one that's safely called-saved here, but reusing
+        // the existing CFA rule's offset from the FP.
+        ".cfi_def_cfa_register %[frame_address]\n"
+
+        // Switch to the new stack.
+        "lea -16(%[base], %[len], 1), %%rsp\n"
+
+        // Synthesize a fake frame on the new stack that's sufficient for FP
+        // backtrace collection.  It would ignore the original real frame
+        // _start pushed because that FP value is not in the recorded bounds of
+        // the thread's machine stack.
+        "mov %[return_address], 8(%%rsp)\n"
+        "mov %%rsp, %%rbp\n"
+        // Since we force frame pointers on when compiling this function, we
+        // assume that the compiler will have defined its CFI rule for the
+        // caller's FP register in terms of the CFA, so that's still correct
+        // after we clobber it here.
+
+        "call start_main\n"
+        "ud2\n"
         "# Target receives %[arg]"
         :
         : [base] "r"(p.td->safe_stack.iov_base), [len] "r"(p.td->safe_stack.iov_len),
+          [return_address] "r"(__builtin_return_address(0)),
+          // The "b" constraint forces the value into the %rbx register, which
+          // is call-saved so the compiler will spill it in the prologue and
+          // produce CFI to read it relative to the CFA.
+          [frame_address] "b"(__builtin_frame_address(0)),
           "m"(p),  // Tell the compiler p's fields are all still alive.
           [arg] "D"(&p));
 #elif defined(__aarch64__)
-    __asm__(
+    __asm__ volatile(
+        // Adjust the CFI to track the existing CFA via a different call-saved
+        // register so unwinding will work after we reset the FP below.  Note
+        // that __builtin_frame_address(0) returns the value of the FP register
+        // (as documented in the GCC manual), *not* the value of the CFA.
+        // Moreover, there is no mandated relationship between the two values!
+        // The compiler will tell us the value of the FP with the built-in, but
+        // it won't tell us how it's calculating the CFA.  Since we force frame
+        // pointers on when compiling this function, we assume that the
+        // compiler will have defined its CFA rule as an offset from the FP
+        // register.  So this CFI directive adjusts the CFA rule to refer to a
+        // different register, one that's safely called-saved here, but reusing
+        // the existing CFA rule's offset from the FP.
+        "mov x28, %[frame_address]\n"
+        ".cfi_def_cfa_register x28\n"
+
+        // Switch to the new stacks.
         "add sp, %[base], %[len]\n"
         "mov x18, %[shadow_call_stack]\n"
+        // The starting CFI rule for x18 should have been same-value, but we're
+        // not going to be able to recover the caller's x18 value any more.
+        ".cfi_undefined x18\n"
+
+        // Synthesize a backtrace frame on the new stack.  Backtrace collection
+        // would ignore the original real frame _start pushed because that FP
+        // value is not in the recorded bounds of the thread's machine stack.
+        "stp xzr, %[return_address], [sp, #-16]!\n"
+        "mov x29, sp\n"
+        // Since we force frame pointers on when compiling this function, we
+        // assume that the compiler will have defined its CFI rule for the
+        // caller's FP register in terms of the CFA, so that's still correct
+        // after we clobber it here.
+
         // Push our own return address on the shadow call stack so it appears
         // in a backtrace just as it would if this function itself were using
         // the normal shadow-call-stack protocol.  Before that, push a zero
         // return address as an end marker similar to how CFI unwinding marks
         // the base frame by having its return address column compute zero.
         "stp xzr, %[return_address], [x18], #16\n"
-        // Neither sp nor x18 might be used as an input operand, but x0 might
-        // be.  So clobber x0 last.  We don't need to declare it to the
+
+        // Neither sp, x29, nor x18 might be used as an input operand, but x0
+        // might be.  So clobber x0 last.  We don't need to declare it to the
         // compiler as a clobber since we'll never come back and it's fine if
         // it's used as an input operand.
         "mov x0, %[arg]\n"
-        "b start_main"
+        "bl start_main\n"
+        "brk #1"
         :
         : [base] "r"(p.td->safe_stack.iov_base), [len] "r"(p.td->safe_stack.iov_len),
           // Shadow call stack grows up.
           [shadow_call_stack] "r"(p.td->shadow_call_stack.iov_base),
           [return_address] "r"(__builtin_return_address(0)),
+          [frame_address] "r"(__builtin_frame_address(0)),
           "m"(p),  // Tell the compiler p's fields are all still alive.
-          [arg] "r"(&p));
+          [arg] "r"(&p)
+        : "x28");
 #else
 #error what architecture?
 #endif
   }
 
-  __builtin_unreachable();
+  __builtin_trap();
 }

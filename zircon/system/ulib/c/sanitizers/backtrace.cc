@@ -79,8 +79,8 @@ size_t BacktraceByShadowCallStack(cpp20::span<uintptr_t> pcs) {
   const uintptr_t* next_pc = reinterpret_cast<const uintptr_t*>(sp);
   const uintptr_t* last_pc = reinterpret_cast<const uintptr_t*>(stack_base);
   size_t i = 0;
-  while (i < pcs.size() && next_pc > last_pc) {
-    pcs[i++] = *--next_pc;
+  while (i < pcs.size() && next_pc > last_pc && *--next_pc != 0) {
+    pcs[i++] = *next_pc;
   }
   return i;
 }

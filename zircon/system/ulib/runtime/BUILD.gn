@@ -18,8 +18,13 @@ zx_library("runtime") {
     "//zircon/system/ulib/elf-psabi",
   ]
 
-  configs += [
-    # This code is used in early startup, where safe-stack is not ready yet.
-    "//build/config/zircon:no_sanitizers",
-  ]
+  # This code is used in early startup, where safe-stack is not ready yet.
+  configs += [ "//build/config/zircon:no_sanitizers" ]
+
+  if (zircon_toolchain != false) {
+    # Make sure the thread_trampoline function has a frame pointer so that
+    # user-visible thread backtraces are consistent across collection methods.
+    configs -= [ "//build/config/zircon:default_frame_pointers" ]
+    configs += [ "//build/config/zircon:frame_pointers" ]
+  }
 }

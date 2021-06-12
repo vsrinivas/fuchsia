@@ -285,6 +285,8 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
           vmar.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, stack_vmo, 0, stack_size, &stack_base);
       check(log, status, "zx_vmar_map failed for child stack");
       sp = compute_initial_stack_pointer(stack_base, stack_size);
+      printl(log, "stack [%p, %p) sp=%p", reinterpret_cast<void*>(stack_base),
+             reinterpret_cast<void*>(stack_base + stack_size), reinterpret_cast<void*>(sp));
     }
 
     // We're done doing mappings, so clear out the reservation VMAR.
