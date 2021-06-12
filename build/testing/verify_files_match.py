@@ -31,7 +31,7 @@ def main():
             flush=True)
         if args.diff_on_failure:
             subprocess.call(
-                ['diff', args.first, args.second], stderr=sys.stdout)
+                ['diff', '-u', args.first, args.second], stderr=sys.stdout)
         return 1
 
     with open(args.stamp, 'w') as stamp_file:
