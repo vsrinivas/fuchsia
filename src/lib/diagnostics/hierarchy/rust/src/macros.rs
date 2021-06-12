@@ -150,7 +150,7 @@ macro_rules! impl_into_property_with_key {
     };
 }
 
-// TODO(fxbug.dev/75992): support missing data types -> bytes, histograms and string list.
+// TODO(fxbug.dev/75992): support missing data types -> bytes, histograms
 impl_into_property_with_key!(String, [String, &str]);
 impl_into_property_with_key!(Int, [i64, i32, i16, i8]);
 impl_into_property_with_key!(Uint, [u64, u32, u16, u8]);
@@ -159,6 +159,7 @@ impl_into_property_with_key!(Bool, [bool]);
 impl_into_property_with_key!(DoubleArray, map:[Vec<f64>, Vec<f32>]);
 impl_into_property_with_key!(IntArray, map:[Vec<i64>, Vec<i32>, Vec<i16>, Vec<i8>]);
 impl_into_property_with_key!(UintArray, map:[Vec<u64>, Vec<u32>, Vec<u16>]);
+impl_into_property_with_key!(StringList, [Vec<String>]);
 
 #[cfg(test)]
 mod tests {
@@ -173,6 +174,7 @@ mod tests {
 
     #[test]
     fn test_all_types() {
+        let string_list = vec!["foo".to_string(), "bar".to_string()];
         let result = hierarchy! {
             root: {
                 string: "some string".to_string(),
@@ -196,6 +198,7 @@ mod tests {
                 array_uint16: vec![0u16,9],
                 array_uint32: vec![1u32,3, 5],
                 array_uint64: vec![7u64, 9],
+                string_list: string_list.clone(),
             }
         };
         assert_data_tree!(result, root: {
@@ -220,6 +223,7 @@ mod tests {
                 array_uint16: vec![0u64,9],
                 array_uint32: vec![1u64,3, 5],
                 array_uint64: vec![7u64, 9],
+                string_list: string_list,
         });
     }
 

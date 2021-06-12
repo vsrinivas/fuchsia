@@ -523,6 +523,25 @@ impl<K> PropertyAssertion<K> for NonZeroUintProperty {
     }
 }
 
+impl<K> PropertyAssertion<K> for Vec<String> {
+    fn run(&self, actual: &Property<K>) -> Result<(), Error> {
+        let this = self.iter().map(|s| s.as_ref()).collect::<Vec<&str>>();
+        this.run(actual)
+    }
+}
+
+impl<K> PropertyAssertion<K> for Vec<&str> {
+    fn run(&self, actual: &Property<K>) -> Result<(), Error> {
+        match actual {
+            Property::StringList(_key, value) => {
+                eq_or_bail!(self, value);
+                Ok(())
+            }
+            _ => Err(format_err!("expected StringList, found {}", actual.discriminant_name())),
+        }
+    }
+}
+
 /// An assertion for a histogram property.
 pub struct HistogramAssertion<T> {
     format: ArrayFormat,
@@ -985,6 +1004,38 @@ mod tests {
             value1: NonZeroUintProperty,
             value2: NonZeroUintProperty,
             value3: NonZeroUintProperty,
+        });
+    }
+
+    #[test]
+    fn test_string_list() {
+        let diagnostics_hierarchy = DiagnosticsHierarchy::new(
+            "key",
+            vec![
+                Property::StringList("value1".to_string(), vec!["a".to_string(), "b".to_string()]),
+                Property::StringList("value2".to_string(), vec!["c".to_string(), "d".to_string()]),
+            ],
+            vec![],
+        );
+        assert_data_tree!(diagnostics_hierarchy, key: {
+            value1: vec!["a", "b"],
+            value2: vec!["c".to_string(), "d".to_string()],
+        });
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_string_list_failure() {
+        let diagnostics_hierarchy = DiagnosticsHierarchy::new(
+            "key",
+            vec![Property::StringList(
+                "value1".to_string(),
+                vec!["a".to_string(), "b".to_string()],
+            )],
+            vec![],
+        );
+        assert_data_tree!(diagnostics_hierarchy, key: {
+            value1: vec![1i64, 2],
         });
     }
 
