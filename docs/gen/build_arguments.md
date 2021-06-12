@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/9e72149dc21e1c2c21167e5cb9b5a07c54d07991/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/8f48237c524294cba7e5237ba6848b2dd2c2446d/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/9e72149dc21e1c2c21167e5cb9b5a07c54d07991/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/8f48237c524294cba7e5237ba6848b2dd2c2446d/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -3022,7 +3022,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"ZAeunAnLYUY9eY-9FhisxuvlNycRl-IfZiuok2QfKlgC"`
+**Current value (from the default):** `"RGvNx_-InWScNjD6DO2FtsYXe_uu4Qp278-3OCx2TwkC"`
 
 From //build/rust/config.gni:32
 
