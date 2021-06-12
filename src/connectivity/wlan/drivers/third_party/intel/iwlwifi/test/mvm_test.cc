@@ -508,9 +508,9 @@ class TxqTest : public MvmTest, public MockTrans {
  public:
   TxqTest()
       : sta_{
-            .addr = {0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
             .sta_id = 0,
             .mvmvif = mvmvif_,
+            .addr = {0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
         } {
     BIND_TEST(mvm_->trans);
 

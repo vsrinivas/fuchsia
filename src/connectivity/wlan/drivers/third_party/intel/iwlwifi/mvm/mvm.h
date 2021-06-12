@@ -1606,9 +1606,10 @@ const char* iwl_mvm_get_tx_fail_reason(uint32_t status);
 #else
 static inline const char* iwl_mvm_get_tx_fail_reason(uint32_t status) { return ""; }
 #endif
-int iwl_mvm_flush_tx_path(struct iwl_mvm* mvm, uint32_t tfd_msk, uint32_t flags);
-int iwl_mvm_flush_sta(struct iwl_mvm* mvm, void* sta, bool internal, uint32_t flags);
-int iwl_mvm_flush_sta_tids(struct iwl_mvm* mvm, uint32_t sta_id, uint16_t tids, uint32_t flags);
+zx_status_t iwl_mvm_flush_tx_path(struct iwl_mvm* mvm, uint32_t tfd_msk, uint32_t flags);
+zx_status_t iwl_mvm_flush_sta(struct iwl_mvm* mvm, void* sta, bool internal, uint32_t flags);
+zx_status_t iwl_mvm_flush_sta_tids(struct iwl_mvm* mvm, uint32_t sta_id, uint16_t tids,
+                                   uint32_t flags);
 
 void iwl_mvm_async_handlers_purge(struct iwl_mvm* mvm);
 

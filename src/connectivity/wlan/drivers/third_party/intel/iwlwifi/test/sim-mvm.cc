@@ -61,6 +61,7 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
         case POWER_TABLE_CMD:
         case BT_CONFIG:
         case MAC_CONTEXT_CMD:
+        case TXPATH_FLUSH:
         case SCAN_OFFLOAD_REQUEST_CMD:
         case MAC_PM_POWER_TABLE:
         case SCD_QUEUE_CFG:
@@ -73,7 +74,8 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
           ret = ZX_OK;
           break;
 
-        case ADD_STA:
+        case ADD_STA:  // fall-thru
+        case REMOVE_STA:
           build_response_with_status(&resp, ADD_STA_SUCCESS);
           ret = ZX_OK;
           break;

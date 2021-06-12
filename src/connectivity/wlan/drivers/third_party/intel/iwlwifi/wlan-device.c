@@ -227,7 +227,21 @@ zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t*
 
 void mac_stop(void* ctx) {
   struct iwl_mvm_vif* mvmvif = ctx;
+  zx_status_t ret;
 
+  // Change the sta state linking to the AP.
+  struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
+  if (!mvm_sta) {
+    IWL_ERR(mvmvif, "sta info is not set before stop.\n");
+
+  } else {
+    ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_NOTEXIST);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvmvif, "Cannot set station state to NOT EXIST: %s\n", zx_status_get_string(ret));
+    }
+  }
+
+  // Clean up other sta info.
   for (size_t i = 0; i < ARRAY_SIZE(mvmvif->mvm->fw_id_to_mac_id); i++) {
     struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[i];
     if (mvm_sta) {
@@ -236,7 +250,7 @@ void mac_stop(void* ctx) {
     }
   }
 
-  zx_status_t ret = iwl_mvm_mac_remove_interface(mvmvif);
+  ret = iwl_mvm_mac_remove_interface(mvmvif);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "Cannot remove MAC interface: %s\n", zx_status_get_string(ret));
   }
@@ -361,7 +375,7 @@ unlock:
   mtx_unlock(&mvmvif->mvm->mutex);
 
 exit:
-  // If it is successful, the ownership has been transferred.
+  // If it is successful, the ownership has been transferred. If not, free the resource.
   if (ret != ZX_OK) {
     free_ap_mvm_sta(mvm_sta);
     mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id] = NULL;

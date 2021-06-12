@@ -184,6 +184,14 @@ static zx_status_t iwl_trans_sim_suspend(struct iwl_trans* trans) { return ZX_ER
 
 static void iwl_trans_sim_resume(struct iwl_trans* trans) {}
 
+static zx_status_t iwl_trans_sim_wait_tx_queues_empty(struct iwl_trans* trans, uint32_t txq_bm) {
+  return ZX_OK;
+}
+
+static zx_status_t iwl_trans_sim_wait_txq_empty(struct iwl_trans* trans, int queue) {
+  return ZX_OK;
+}
+
 static zx_handle_t iwl_trans_sim_get_bti(struct iwl_trans* trans) {
   zx_handle_t bti = ZX_HANDLE_INVALID;
   fake_bti_create(&bti);
@@ -201,6 +209,8 @@ static struct iwl_trans_ops trans_ops_trans_sim = {
     .reclaim = iwl_trans_sim_reclaim,
     .txq_enable = iwl_trans_sim_txq_enable,
     .txq_disable = iwl_trans_sim_txq_disable,
+    .wait_tx_queues_empty = iwl_trans_sim_wait_tx_queues_empty,
+    .wait_txq_empty = iwl_trans_sim_wait_txq_empty,
     .write8 = iwl_trans_sim_write8,
     .write32 = iwl_trans_sim_write32,
     .read32 = iwl_trans_sim_read32,
@@ -231,8 +241,6 @@ static struct iwl_trans_ops trans_ops_trans_sim = {
 
     void (*txq_set_shared_mode)(struct iwl_trans* trans, uint32_t txq_id, bool shared);
 
-    int (*wait_tx_queues_empty)(struct iwl_trans* trans, uint32_t txq_bm);
-    int (*wait_txq_empty)(struct iwl_trans* trans, int queue);
     void (*freeze_txq_timer)(struct iwl_trans* trans, unsigned long txqs, bool freeze);
     void (*block_txq_ptrs)(struct iwl_trans* trans, bool block);
 

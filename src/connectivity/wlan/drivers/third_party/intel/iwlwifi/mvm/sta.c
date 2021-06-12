@@ -336,10 +336,12 @@ static int iwl_mvm_invalidate_sta_queue(struct iwl_mvm* mvm, int queue,
 
   return ret;
 }
+#endif  // NEEDS_PORTING
 
-// TODO(49531): implement iwl_mvm_disable_txq()
-static int iwl_mvm_disable_txq(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int queue,
-                               uint8_t tid, uint8_t flags) {
+static zx_status_t iwl_mvm_disable_txq(struct iwl_mvm* mvm, struct iwl_mvm_sta* sta, int queue,
+                                       uint8_t tid, uint8_t flags) {
+  return ZX_ERR_NOT_SUPPORTED;
+#if 0   // NEEDS_PORTING
   struct iwl_scd_txq_cfg_cmd cmd = {
       .scd_queue = queue,
       .action = SCD_CFG_DISABLE_QUEUE,
@@ -397,8 +399,10 @@ static int iwl_mvm_disable_txq(struct iwl_mvm* mvm, struct ieee80211_sta* sta, i
     IWL_ERR(mvm, "Failed to disable queue %d (ret=%d)\n", queue, ret);
   }
   return ret;
+#endif  // NEEDS_PORTING
 }
 
+#if 0   // NEEDS_PORTING
 static int iwl_mvm_get_queue_agg_tids(struct iwl_mvm* mvm, int queue) {
   struct ieee80211_sta* sta;
   struct iwl_mvm_sta* mvmsta;
@@ -1670,7 +1674,7 @@ update_fw:
 
   ret = iwl_mvm_sta_send_to_fw(mvmvif->mvm, mvm_sta, sta_update, sta_flags);
   if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "Add sta cannot send the comment to firmware: %s\n", zx_status_get_string(ret));
+    IWL_ERR(mvmvif, "Add sta cannot send the command to firmware: %s\n", zx_status_get_string(ret));
     goto err;
   }
 
@@ -1694,8 +1698,7 @@ err:
   return ret;
 }
 
-#if 0  // NEEDS_PORTING
-int iwl_mvm_drain_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool drain) {
+zx_status_t iwl_mvm_drain_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool drain) {
   struct iwl_mvm_add_sta_cmd cmd = {};
   int ret;
   uint32_t status;
@@ -1719,7 +1722,7 @@ int iwl_mvm_drain_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool drai
       IWL_DEBUG_INFO(mvm, "Frames for staid %d will drained in fw\n", mvmsta->sta_id);
       break;
     default:
-      ret = -EIO;
+      ret = ZX_ERR_IO;
       IWL_ERR(mvm, "Couldn't drain frames for staid %d\n", mvmsta->sta_id);
       break;
   }
@@ -1732,34 +1735,33 @@ int iwl_mvm_drain_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool drai
  * the station validate that the station is indeed known to the driver (sanity
  * only).
  */
-static int iwl_mvm_rm_sta_common(struct iwl_mvm* mvm, uint8_t sta_id) {
-  struct ieee80211_sta* sta;
+static zx_status_t iwl_mvm_rm_sta_common(struct iwl_mvm* mvm, uint8_t sta_id) {
   struct iwl_mvm_rm_sta_cmd rm_sta_cmd = {
       .sta_id = sta_id,
   };
-  int ret;
+  zx_status_t ret;
 
-  sta = rcu_dereference_protected(mvm->fw_id_to_mac_id[sta_id], lockdep_is_held(&mvm->mutex));
+  iwl_assert_lock_held(&mvm->mutex);
+
+  struct iwl_mvm_sta* mvm_sta = mvm->fw_id_to_mac_id[sta_id];
 
   /* Note: internal stations are marked as error values */
-  if (!sta) {
+  if (!mvm_sta) {
     IWL_ERR(mvm, "Invalid station id\n");
-    return -EINVAL;
+    return ZX_ERR_INVALID_ARGS;
   }
 
   ret = iwl_mvm_send_cmd_pdu(mvm, REMOVE_STA, 0, sizeof(rm_sta_cmd), &rm_sta_cmd);
-  if (ret) {
+  if (ret != ZX_OK) {
     IWL_ERR(mvm, "Failed to remove station. Id=%d\n", sta_id);
     return ret;
   }
 
-  return 0;
+  return ZX_OK;
 }
 
-static void iwl_mvm_disable_sta_queues(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                       struct ieee80211_sta* sta) {
-  struct iwl_mvm_sta* mvm_sta = iwl_mvm_sta_from_mac80211(sta);
-  int i;
+static void iwl_mvm_disable_sta_queues(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta) {
+  unsigned int i;
 
   iwl_assert_lock_held(&mvm->mutex);
 
@@ -1768,61 +1770,62 @@ static void iwl_mvm_disable_sta_queues(struct iwl_mvm* mvm, struct ieee80211_vif
       continue;
     }
 
-    iwl_mvm_disable_txq(mvm, sta, mvm_sta->tid_data[i].txq_id, i, 0);
+    iwl_mvm_disable_txq(mvm, mvm_sta, mvm_sta->tid_data[i].txq_id, i, 0);
     mvm_sta->tid_data[i].txq_id = IWL_MVM_INVALID_QUEUE;
   }
 
-  for (i = 0; i < ARRAY_SIZE(sta->txq); i++) {
-    struct iwl_mvm_txq* mvmtxq = iwl_mvm_txq_from_mac80211(sta->txq[i]);
+  for (i = 0; i < ARRAY_SIZE(mvm_sta->txq); i++) {
+    struct iwl_mvm_txq* mvmtxq = mvm_sta->txq[i];
 
     mvmtxq->txq_id = IWL_MVM_INVALID_QUEUE;
   }
 }
 
-int iwl_mvm_wait_sta_queues_empty(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta) {
-  int i;
-
-  for (i = 0; i < ARRAY_SIZE(mvm_sta->tid_data); i++) {
+zx_status_t iwl_mvm_wait_sta_queues_empty(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta) {
+  for (size_t i = 0; i < ARRAY_SIZE(mvm_sta->tid_data); i++) {
     uint16_t txq_id;
-    int ret;
+    zx_status_t ret;
 
-    spin_lock_bh(&mvm_sta->lock);
+    mtx_lock(&mvm_sta->lock);
     txq_id = mvm_sta->tid_data[i].txq_id;
-    spin_unlock_bh(&mvm_sta->lock);
+    mtx_unlock(&mvm_sta->lock);
 
     if (txq_id == IWL_MVM_INVALID_QUEUE) {
       continue;
     }
 
     ret = iwl_trans_wait_txq_empty(mvm->trans, txq_id);
-    if (ret) {
+    if (ret != ZX_OK) {
       return ret;
     }
   }
 
-  return 0;
+  return ZX_OK;
 }
 
-int iwl_mvm_rm_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80211_sta* sta) {
-  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-  struct iwl_mvm_sta* mvm_sta = iwl_mvm_sta_from_mac80211(sta);
+zx_status_t iwl_mvm_rm_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta) {
+  struct iwl_mvm* mvm = mvmvif->mvm;
   uint8_t sta_id = mvm_sta->sta_id;
-  int ret;
+  zx_status_t ret;
 
   iwl_assert_lock_held(&mvm->mutex);
 
+#if 0   // // NEEDS_PORTING
   if (iwl_mvm_has_new_rx_api(mvm)) {
     kfree(mvm_sta->dup_data);
   }
+#endif  // NEEDS_PORTING
 
   ret = iwl_mvm_drain_sta(mvm, mvm_sta, true);
-  if (ret) {
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Error occurs while marking station draining\n");
     return ret;
   }
 
   /* flush its queues here since we are freeing mvm_sta */
   ret = iwl_mvm_flush_sta(mvm, mvm_sta, false, 0);
-  if (ret) {
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Error occurs while flushing station\n");
     return ret;
   }
   if (iwl_mvm_has_new_tx_api(mvm)) {
@@ -1832,13 +1835,14 @@ int iwl_mvm_rm_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80
 
     ret = iwl_trans_wait_tx_queues_empty(mvm->trans, q_mask);
   }
-  if (ret) {
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Error occurs while waiting for Tx queue empty\n");
     return ret;
   }
 
   ret = iwl_mvm_drain_sta(mvm, mvm_sta, false);
 
-  iwl_mvm_disable_sta_queues(mvm, vif, sta);
+  iwl_mvm_disable_sta_queues(mvm, mvm_sta);
 
   /* If there is a TXQ still marked as reserved - free it */
   if (mvm_sta->reserved_queue != IEEE80211_INVAL_HW_QUEUE) {
@@ -1851,17 +1855,18 @@ int iwl_mvm_rm_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80
      * should be manually marked as free again
      */
     status = &mvm->queue_info[reserved_txq].status;
-    if (WARN((*status != IWL_MVM_QUEUE_RESERVED) && (*status != IWL_MVM_QUEUE_FREE),
-             "sta_id %d reserved txq %d status %d", sta_id, reserved_txq, *status)) {
-      return -EINVAL;
+    if ((*status != IWL_MVM_QUEUE_RESERVED) && (*status != IWL_MVM_QUEUE_FREE)) {
+      IWL_ERR(mvmvif, "sta_id %d reserved txq %d status %d", sta_id, reserved_txq, *status);
+      return ZX_ERR_INVALID_ARGS;
     }
 
     *status = IWL_MVM_QUEUE_FREE;
   }
 
-  if (vif->type == NL80211_IFTYPE_STATION && mvmvif->ap_sta_id == sta_id) {
+  if (mvmvif->mac_role == WLAN_INFO_MAC_ROLE_CLIENT && mvmvif->ap_sta_id == sta_id) {
     /* if associated - we can't remove the AP STA now */
-    if (vif->bss_conf.assoc) {
+    if (mvmvif->bss_conf.assoc) {
+      IWL_WARN(mvmvif, "Ignore the AP station removal since it is still associated\n");
       return ret;
     }
 
@@ -1874,6 +1879,7 @@ int iwl_mvm_rm_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80
     }
   }
 
+#if 0   // NEEDS_PORTING
   /*
    * This shouldn't happen - the TDLS channel switch should be canceled
    * before the STA is removed.
@@ -1889,13 +1895,14 @@ int iwl_mvm_rm_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80
    */
   spin_lock_bh(&mvm_sta->lock);
   spin_unlock_bh(&mvm_sta->lock);
+#endif  // NEEDS_PORTING
 
   ret = iwl_mvm_rm_sta_common(mvm, mvm_sta->sta_id);
-  RCU_INIT_POINTER(mvm->fw_id_to_mac_id[mvm_sta->sta_id], NULL);
 
   return ret;
 }
 
+#if 0  // NEEDS_PORTING
 int iwl_mvm_rm_sta_id(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint8_t sta_id) {
   int ret = iwl_mvm_rm_sta_common(mvm, sta_id);
 

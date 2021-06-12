@@ -2851,7 +2851,7 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
 #endif  // NEEDS_PORTING
 
     /* enable beacon filtering */
-    if (iwl_mvm_enable_beacon_filter(mvmvif, 0)) {
+    if (ZX_OK != iwl_mvm_enable_beacon_filter(mvmvif, 0)) {
       IWL_WARN(mvm, "cannot enable beacon filter\n");
     }
     ret = ZX_OK;
@@ -2859,28 +2859,34 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
 #if 0   // NEEDS_PORTING
         iwl_mvm_rs_rate_init(mvm, sta, mvmvif->phy_ctxt->channel->band, true);
 
+        // TODO(36677): Supports AP role
         /* if wep is used, need to set the key for the station now */
         if (mvmvif->mac_role == WLAN_INFO_MAC_ROLE_AP && mvmvif->ap_wep_key) {
             ret = iwl_mvm_set_sta_key(mvm, vif, sta, mvmvif->ap_wep_key, STA_KEY_IDX_INVALID);
         } else {
             ret = ZX_OK;
         }
-    } else if (old_state == IWL_STA_AUTHORIZED && new_state == IWL_STA_ASSOC) {
-        /* disable beacon filtering */
-        if (iwl_mvm_disable_beacon_filter(mvm, vif, 0)) {
-          IWL_WARN(mvm, "cannot enable beacon filter\n");
-        }
-        ret = ZX_OK;
-    } else if (old_state == IWL_STA_ASSOC && new_state == IWL_STA_AUTH) {
+#endif  // NEEDS_PORTING
+  } else if (old_state == IWL_STA_AUTHORIZED && new_state == IWL_STA_ASSOC) {
+    /* disable beacon filtering */
+    if (ZX_OK != iwl_mvm_disable_beacon_filter(mvmvif, 0)) {
+      IWL_WARN(mvm, "cannot enable beacon filter\n");
+    }
+    ret = ZX_OK;
+  } else if (old_state == IWL_STA_ASSOC && new_state == IWL_STA_AUTH) {
+#if 0   // NEEDS_PORTING
+        // TODO(36677): Supports AP role
         if (mvmvif->mac_role == WLAN_INFO_MAC_ROLE_AP) {
             mvmvif->ap_assoc_sta_count--;
-            iwl_mvm_mac_ctxt_changed(mvm, vif, false, NULL);
+            iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
         }
-        ret = ZX_OK;
-    } else if (old_state == IWL_STA_AUTH && new_state == IWL_STA_NONE) {
-        ret = ZX_OK;
-    } else if (old_state == IWL_STA_NONE && new_state == IWL_STA_NOTEXIST) {
-        ret = iwl_mvm_rm_sta(mvm, vif, sta);
+#endif  // NEEDS_PORTING
+    ret = ZX_OK;
+  } else if (old_state == IWL_STA_AUTH && new_state == IWL_STA_NONE) {
+    ret = ZX_OK;
+  } else if (old_state == IWL_STA_NONE && new_state == IWL_STA_NOTEXIST) {
+    ret = iwl_mvm_rm_sta(mvmvif, mvm_sta);
+#if 0   // NEEDS_PORTING
         if (sta->tdls) {
             iwl_mvm_recalc_tdls_state(mvm, vif, false);
             iwl_mvm_tdls_check_trigger(mvm, vif, sta->addr, NL80211_TDLS_DISABLE_LINK);
@@ -3658,7 +3664,7 @@ static zx_status_t __iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif,
      * available.
      */
     ret = iwl_mvm_ref_sync(mvmvif->mvm, IWL_MVM_REF_PROTECT_CSA);
-    if (ret) {
+    if (ret != ZX_OK) {
       goto out_remove_binding;
     }
 
@@ -3682,7 +3688,7 @@ out_remove_binding:
   iwl_mvm_binding_remove_vif(mvmvif);
   iwl_mvm_power_update_mac(mvmvif->mvm);
 out:
-  if (ret) {
+  if (ret != ZX_OK) {
     mvmvif->phy_ctxt = NULL;
   }
   return ret;

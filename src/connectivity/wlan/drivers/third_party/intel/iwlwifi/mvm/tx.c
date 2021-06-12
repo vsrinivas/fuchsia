@@ -165,7 +165,7 @@ void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, const wlan_tx_packet_t* pkt, struct
   tx_cmd->tid_tspec = IWL_MAX_TID_COUNT;
 
   // TODO(51120): below code needs rewrite to support QoS.
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     struct ieee80211_hdr* hdr = (void*)skb->data;
     __le16 fc = hdr->frame_control;
     uint32_t tx_flags = le32_to_cpu(tx_cmd->tx_flags);
@@ -259,7 +259,7 @@ void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, const wlan_tx_packet_t* pkt, struct
   tx_cmd->life_time = cpu_to_le32(TX_CMD_LIFE_TIME_INFINITE);
   tx_cmd->sta_id = sta_id;
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     /* padding is inserted later in transport */
     if (ieee80211_get_header_len(fc) % 4 && !(offload_assist & BIT(TX_CMD_OFFLD_AMSDU))) {
         offload_assist |= BIT(TX_CMD_OFFLD_PAD);
@@ -381,7 +381,7 @@ void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm* mvm, struct iwl_tx_cmd* tx_cmd) {
 #endif  // NEEDS_PORTING
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static inline void iwl_mvm_set_tx_cmd_pn(struct ieee80211_tx_info* info, uint8_t* crypto_hdr) {
     struct ieee80211_key_conf* keyconf = info->control.hw_key;
     uint64_t pn;
@@ -476,7 +476,7 @@ static void iwl_mvm_set_tx_params(struct iwl_mvm* mvm, const wlan_tx_packet_t* p
   memset(dev_cmd, 0, sizeof(dev_cmd->hdr) + sizeof(*tx_cmd));
   dev_cmd->hdr.cmd = TX_CMD;
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     if (iwl_mvm_has_new_tx_api(mvm)) {
         uint16_t offload_assist = 0;
         uint32_t rate_n_flags = 0;
@@ -545,7 +545,7 @@ static void iwl_mvm_set_tx_params(struct iwl_mvm* mvm, const wlan_tx_packet_t* p
 
   tx_cmd = (struct iwl_tx_cmd*)dev_cmd->payload;
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     if (info->control.hw_key) { iwl_mvm_set_tx_cmd_crypto(mvm, info, tx_cmd, skb, hdrlen); }
 #endif  // NEEDS_PORTING
 
@@ -1008,7 +1008,7 @@ zx_status_t iwl_mvm_tx_mpdu(struct iwl_mvm* mvm, const wlan_tx_packet_t* pkt,
 
   return iwl_mvm_tx_pkt_queued(mvm, mvmsta, tid == IWL_MAX_TID_COUNT ? 0 : tid);
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     // TODO(fxbug.dev/49224): support power saving.
     /*
      * we handle that entirely ourselves -- for uAPSD the firmware
@@ -1117,7 +1117,7 @@ zx_status_t iwl_mvm_tx_skb(struct iwl_mvm* mvm, const wlan_tx_packet_t* pkt,
 
   return iwl_mvm_tx_mpdu(mvm, pkt, mvmsta);
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     // TODO(fxbug.dev/61069): supports TSO (TCP Segment Offload)/
     memcpy(&info, skb->cb, sizeof(info));
 
@@ -1340,7 +1340,7 @@ static void iwl_mvm_rx_tx_cmd_single(struct iwl_mvm* mvm, struct iwl_rx_packet* 
   /* struct iwl_mvm_tx_resp_v3 is almost the same */
   struct iwl_mvm_tx_resp* tx_resp = (void*)pkt->data;
   uint16_t ssn = iwl_mvm_get_scd_ssn(mvm, tx_resp);
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     struct ieee80211_sta* sta;
     int sta_id = IWL_MVM_TX_RES_GET_RA(tx_resp->ra_tid);
     int tid = IWL_MVM_TX_RES_GET_TID(tx_resp->ra_tid);
@@ -1461,7 +1461,7 @@ static void iwl_mvm_rx_tx_cmd_single(struct iwl_mvm* mvm, struct iwl_rx_packet* 
         if (info->flags & IEEE80211_TX_STAT_ACK) {
             iwl_mvm_tdls_peer_cache_pkt(mvm, (void*)skb->data, skb->len, -1);
         }
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
+#endif  /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
         ieee80211_tx_status(mvm->hw, skb);
     }
@@ -1606,11 +1606,11 @@ static void iwl_mvm_rx_tx_cmd_agg_dbg(struct iwl_mvm* mvm, struct iwl_rx_packet*
 }
 #else
 static void iwl_mvm_rx_tx_cmd_agg_dbg(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt) {}
-#endif /* CPTCFG_IWLWIFI_DEBUG */
+#endif  /* CPTCFG_IWLWIFI_DEBUG */
 #endif  // NEEDS_PORTING
 
 static void iwl_mvm_rx_tx_cmd_agg(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt) {
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     struct iwl_mvm_tx_resp* tx_resp = (void*)pkt->data;
     int sta_id = IWL_MVM_TX_RES_GET_RA(tx_resp->ra_tid);
     int tid = IWL_MVM_TX_RES_GET_TID(tx_resp->ra_tid);
@@ -1738,7 +1738,7 @@ static void iwl_mvm_tx_reclaim(struct iwl_mvm* mvm, int sta_id, int tid, int txq
 
 #ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
         iwl_mvm_tdls_peer_cache_pkt(mvm, hdr, skb->len, -1);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
+#endif  /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
         /* this is the first skb we deliver in this batch */
         /* put the rate scaling data there */
@@ -1782,7 +1782,7 @@ out:
 #endif  // NEEDS_PORTING
 
 void iwl_mvm_rx_ba_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     int sta_id, tid, txq, index;
     struct ieee80211_tx_info ba_info = {};
@@ -1873,7 +1873,6 @@ void iwl_mvm_rx_ba_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
 #endif  // NEEDS_PORTING
 }
 
-#if 0  // NEEDS_PORTING
 /*
  * Note that there are transports that buffer frames before they reach
  * the firmware. This means that after flush_tx_path is called, the
@@ -1882,46 +1881,52 @@ void iwl_mvm_rx_ba_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
  * 2) flush the Tx path
  * 3) wait for the transport queues to be empty
  */
-int iwl_mvm_flush_tx_path(struct iwl_mvm* mvm, uint32_t tfd_msk, uint32_t flags) {
-    int ret;
-    struct iwl_tx_path_flush_cmd_v1 flush_cmd = {
-        .queues_ctl = cpu_to_le32(tfd_msk),
-        .flush_ctl = cpu_to_le16(DUMP_TX_FIFO_FLUSH),
-    };
+zx_status_t iwl_mvm_flush_tx_path(struct iwl_mvm* mvm, uint32_t tfd_msk, uint32_t flags) {
+  zx_status_t ret;
+  struct iwl_tx_path_flush_cmd_v1 flush_cmd = {
+      .queues_ctl = cpu_to_le32(tfd_msk),
+      .flush_ctl = cpu_to_le16(DUMP_TX_FIFO_FLUSH),
+  };
 
-    WARN_ON(iwl_mvm_has_new_tx_api(mvm));
+  WARN_ON(iwl_mvm_has_new_tx_api(mvm));
 
-    ret = iwl_mvm_send_cmd_pdu(mvm, TXPATH_FLUSH, flags, sizeof(flush_cmd), &flush_cmd);
-    if (ret) { IWL_ERR(mvm, "Failed to send flush command (%d)\n", ret); }
-    return ret;
+  ret = iwl_mvm_send_cmd_pdu(mvm, TXPATH_FLUSH, flags, sizeof(flush_cmd), &flush_cmd);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvm, "Failed to send flush command (%d)\n", ret);
+  }
+  return ret;
 }
 
-int iwl_mvm_flush_sta_tids(struct iwl_mvm* mvm, uint32_t sta_id, uint16_t tids, uint32_t flags) {
-    int ret;
-    struct iwl_tx_path_flush_cmd flush_cmd = {
-        .sta_id = cpu_to_le32(sta_id),
-        .tid_mask = cpu_to_le16(tids),
-    };
+zx_status_t iwl_mvm_flush_sta_tids(struct iwl_mvm* mvm, uint32_t sta_id, uint16_t tids,
+                                   uint32_t flags) {
+  zx_status_t ret;
+  struct iwl_tx_path_flush_cmd flush_cmd = {
+      .sta_id = cpu_to_le32(sta_id),
+      .tid_mask = cpu_to_le16(tids),
+  };
 
-    WARN_ON(!iwl_mvm_has_new_tx_api(mvm));
+  WARN_ON(!iwl_mvm_has_new_tx_api(mvm));
 
-    ret = iwl_mvm_send_cmd_pdu(mvm, TXPATH_FLUSH, flags, sizeof(flush_cmd), &flush_cmd);
-    if (ret) { IWL_ERR(mvm, "Failed to send flush command (%d)\n", ret); }
-    return ret;
+  ret = iwl_mvm_send_cmd_pdu(mvm, TXPATH_FLUSH, flags, sizeof(flush_cmd), &flush_cmd);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvm, "Failed to send flush command (%d)\n", ret);
+  }
+  return ret;
 }
 
-int iwl_mvm_flush_sta(struct iwl_mvm* mvm, void* sta, bool internal, uint32_t flags) {
-    struct iwl_mvm_int_sta* int_sta = sta;
-    struct iwl_mvm_sta* mvm_sta = sta;
+zx_status_t iwl_mvm_flush_sta(struct iwl_mvm* mvm, void* sta, bool internal, uint32_t flags) {
+  struct iwl_mvm_int_sta* int_sta = sta;
+  struct iwl_mvm_sta* mvm_sta = sta;
 
-    BUILD_BUG_ON(offsetof(struct iwl_mvm_int_sta, sta_id) != offsetof(struct iwl_mvm_sta, sta_id));
+  BUILD_BUG_ON(offsetof(struct iwl_mvm_int_sta, sta_id) != offsetof(struct iwl_mvm_sta, sta_id));
 
-    if (iwl_mvm_has_new_tx_api(mvm)) {
-        return iwl_mvm_flush_sta_tids(mvm, mvm_sta->sta_id, 0xff | BIT(IWL_MGMT_TID), flags);
-    }
+  if (iwl_mvm_has_new_tx_api(mvm)) {
+    return iwl_mvm_flush_sta_tids(mvm, mvm_sta->sta_id, 0xff | BIT(IWL_MGMT_TID), flags);
+  }
 
-    if (internal) { return iwl_mvm_flush_tx_path(mvm, int_sta->tfd_queue_msk, flags); }
+  if (internal) {
+    return iwl_mvm_flush_tx_path(mvm, int_sta->tfd_queue_msk, flags);
+  }
 
-    return iwl_mvm_flush_tx_path(mvm, mvm_sta->tfd_queue_msk, flags);
+  return iwl_mvm_flush_tx_path(mvm, mvm_sta->tfd_queue_msk, flags);
 }
-#endif  // NEEDS_PORTING

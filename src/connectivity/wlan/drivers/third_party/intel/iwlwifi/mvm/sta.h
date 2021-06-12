@@ -357,7 +357,6 @@ struct iwl_mvm_txq {
 
 /**
  * struct iwl_mvm_sta - representation of a station in the driver
- * @addr: ethernet address of the peer.
  * @sta_id: the index of the station in the fw (will be replaced by id_n_color)
  * @tfd_queue_msk: the tfd queues used by the station
  * @mac_id_n_color: the MAC context this station is linked to
@@ -396,6 +395,7 @@ struct iwl_mvm_txq {
  * @tx_ant: the index of the antenna to use for data tx to this station. Only
  *  used during connection establishment (e.g. for the 4 way handshake
  *  exchange).
+ * @addr: ethernet address of the peer.
  *
  * When mac80211 creates a station it reserves some space (hw->sta_data_size)
  * in the structure for use by driver. This structure is placed in that
@@ -403,7 +403,6 @@ struct iwl_mvm_txq {
  *
  */
 struct iwl_mvm_sta {
-  uint8_t addr[ETH_ALEN];
   uint32_t sta_id;
   uint32_t tfd_queue_msk;
   uint32_t mac_id_n_color;
@@ -444,6 +443,8 @@ struct iwl_mvm_sta {
   uint8_t sleep_tx_count;
   uint8_t avg_energy;
   uint8_t tx_ant;
+
+  uint8_t addr[ETH_ALEN];
 
   bool tdls;  // not really used, but add here to make code compile
 };
@@ -486,7 +487,7 @@ static inline int iwl_mvm_update_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mv
 }
 
 int iwl_mvm_wait_sta_queues_empty(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta);
-int iwl_mvm_rm_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80211_sta* sta);
+zx_status_t iwl_mvm_rm_sta(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta);
 int iwl_mvm_rm_sta_id(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint8_t sta_id);
 int iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80211_sta* sta,
                         struct ieee80211_key_conf* keyconf, uint8_t key_offset);

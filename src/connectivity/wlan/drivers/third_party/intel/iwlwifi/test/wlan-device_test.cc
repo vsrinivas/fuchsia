@@ -412,7 +412,6 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
 
     // Add the interface to MVM instance.
     mvmvif_sta_.mvm->mvmvif[0] = &mvmvif_sta_;
-    mvmvif_sta_.mvm->vif_count++;
   }
 
   ~MacInterfaceTest() {
@@ -427,6 +426,7 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
     // This must be called after we verify the expected commands and restore the mock command
     // callback so that the stop command doesn't mess up the test case expectation.
     wlanmac_ops.stop(&mvmvif_sta_);
+    VerifyStaHasBeenRemoved();
   }
 
   // Used in MockCommand constructor to indicate if the command needs to be either
@@ -532,6 +532,16 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
     ASSERT_TRUE(expected_cmd_ids.empty(), "The expected command set is not empty.");
 
     mock_tx_.VerifyAndClear();
+  }
+
+  void VerifyStaHasBeenRemoved() {
+    auto mvm = mvmvif_sta_.mvm;
+
+    for (size_t i = 0; i < ARRAY_SIZE(mvm->fw_id_to_mac_id); i++) {
+      struct iwl_mvm_sta* mvm_sta = mvm->fw_id_to_mac_id[i];
+      ASSERT_EQ(nullptr, mvm_sta);
+    }
+    ASSERT_EQ(0, mvm->vif_count);
   }
 
   // Mock function for Tx.

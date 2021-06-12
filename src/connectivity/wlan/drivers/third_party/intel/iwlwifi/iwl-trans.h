@@ -1042,43 +1042,40 @@ static inline void iwl_trans_block_txq_ptrs(struct iwl_trans* trans, bool block)
   }
 }
 
-#if 0  // NEEDS_PORTING
-static inline int iwl_trans_wait_tx_queues_empty(struct iwl_trans* trans,
-        uint32_t txqs) {
-    if (WARN_ON_ONCE(!trans->ops->wait_tx_queues_empty)) {
-        return -ENOTSUPP;
-    }
+static inline zx_status_t iwl_trans_wait_tx_queues_empty(struct iwl_trans* trans, uint32_t txqs) {
+  if (WARN_ON_ONCE(!trans->ops->wait_tx_queues_empty)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
-        IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-        return -EIO;
-    }
+  if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
+    IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+    return ZX_ERR_BAD_STATE;
+  }
 
-    return trans->ops->wait_tx_queues_empty(trans, txqs);
+  return trans->ops->wait_tx_queues_empty(trans, txqs);
 }
 
-static inline int iwl_trans_wait_txq_empty(struct iwl_trans* trans, int queue) {
-    if (WARN_ON_ONCE(!trans->ops->wait_txq_empty)) {
-        return -ENOTSUPP;
-    }
+static inline zx_status_t iwl_trans_wait_txq_empty(struct iwl_trans* trans, int queue) {
+  if (WARN_ON_ONCE(!trans->ops->wait_txq_empty)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
-        IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-        return -EIO;
-    }
+  if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
+    IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+    return ZX_ERR_BAD_STATE;
+  }
 
-    return trans->ops->wait_txq_empty(trans, queue);
+  return trans->ops->wait_txq_empty(trans, queue);
 }
 
 #if IS_ENABLED(CPTCFG_IWLXVT)
 static inline int iwl_trans_test_mode_cmd(struct iwl_trans* trans, bool enable) {
-    if (trans->ops->test_mode_cmd) {
-        return trans->ops->test_mode_cmd(trans, enable);
-    }
-    return -ENOTSUPP;
+  if (trans->ops->test_mode_cmd) {
+    return trans->ops->test_mode_cmd(trans, enable);
+  }
+  return -ENOTSUPP;
 }
 #endif
-#endif  // NEEDS_PORTING
 
 static inline void iwl_trans_write8(struct iwl_trans* trans, uint32_t ofs, uint8_t val) {
   trans->ops->write8(trans, ofs, val);
