@@ -24,6 +24,35 @@ inline zx_clock_transformation_t CopyTransform(const affine::Transform& src) {
   return {src.a_offset(), src.b_offset(), {src.numerator(), src.denominator()}};
 }
 
+// Helpers which normalize access to the two versions of the update args.
+template <typename UpdateArgsType>
+class UpdateArgsAccessor {
+ public:
+  static constexpr bool IsV1 = ktl::is_same_v<UpdateArgsType, zx_clock_update_args_v1_t>;
+  static constexpr bool IsV2 = ktl::is_same_v<UpdateArgsType, zx_clock_update_args_v2_t>;
+
+  UpdateArgsAccessor(const UpdateArgsType& args) : args_(args) {}
+  int32_t rate_adjust() const { return args_.rate_adjust; }
+  uint64_t error_bound() const { return args_.error_bound; }
+
+  int64_t synthetic_value() const {
+    if constexpr (IsV1) {
+      return args_.value;
+    } else {
+      return args_.synthetic_value;
+    }
+  }
+
+  // Reference value is an invalid field in the v1 struct.
+  int64_t reference_value() const {
+    static_assert(!IsV1, "v1 clock update structures have no reference value field");
+    return args_.reference_value;
+  }
+
+ private:
+  const UpdateArgsType& args_;
+};
+
 }  // namespace
 
 zx_status_t ClockDispatcher::Create(uint64_t options, const zx_clock_create_args_v1_t& create_args,
@@ -153,16 +182,32 @@ zx_status_t ClockDispatcher::GetDetails(zx_clock_details_v1_t* out_details) {
   return ZX_OK;
 }
 
-zx_status_t ClockDispatcher::Update(uint64_t options, const zx_clock_update_args_v1_t& args) {
-  const bool do_set = options & ZX_CLOCK_UPDATE_OPTION_VALUE_VALID;
+template <typename UpdateArgsType>
+zx_status_t ClockDispatcher::Update(uint64_t options, const UpdateArgsType& _args) {
+  const bool do_set = options & ZX_CLOCK_UPDATE_OPTION_SYNTHETIC_VALUE_VALID;
   const bool do_rate = options & ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID;
+  const bool reference_valid = options & ZX_CLOCK_UPDATE_OPTION_REFERENCE_VALUE_VALID;
+  const UpdateArgsAccessor args(_args);
 
-  // if this is a set operation, and we are trying to set the time to something
-  // before the backstop, just deny the operation.  The backstop time is a fixed
-  // property of the clock determined at creation time; we don't need to even
-  // enter into the writer lock to know that this is an illegal operation.
-  if (do_set && (args.value < backstop_time_)) {
-    return ZX_ERR_INVALID_ARGS;
+  static_assert((args.IsV1 || args.IsV2) && (args.IsV1 != args.IsV2),
+                "Clock update arguments must be either version 1, or version 2");
+
+  // Perform the v1/v2 parameter sanity checks that we can perform without being
+  // in the writer lock.
+  if constexpr (args.IsV1) {
+    // v1 clocks are not allowed to specify a reference value (the v1 struct
+    // does not have a field for it)
+    if (reference_valid) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+  } else {
+    static_assert(args.IsV2, "Unrecognized clock update args version!");
+
+    // A reference value may only be provided during a V2 update as part of
+    // either a value set, or rate change operation (or both).
+    if (reference_valid && !do_set && !do_rate) {
+      return ZX_ERR_INVALID_ARGS;
+    }
   }
 
   bool clock_was_started = false;
@@ -187,115 +232,146 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const zx_clock_update_args
       return ZX_ERR_INVALID_ARGS;
     }
 
-    // Bump the generation counter.  This will disable all read operations until
-    // we bump the counter again.
+    // Checks specific to non-V1 update arguments.
+    if constexpr (!args.IsV1) {
+      // The following checks only apply if the clock is a monotonic clock which
+      // has already been started.
+      if (is_started() && is_monotonic()) {
+        // Set operations for non-V1 update arguments made to a monotonic clock
+        // must supply an explicit reference time.
+        if (do_set && !reference_valid) {
+          return ZX_ERR_INVALID_ARGS;
+        }
+
+        // non-v1 set operations on monotonic clocks may not be combined with rate
+        // change operations.  Additionally, rate change operations may not specify
+        // an explicit reference time when being applied to monotonic clocks.
+        if (is_monotonic() && (do_set || reference_valid) && do_rate) {
+          return ZX_ERR_INVALID_ARGS;
+        }
+      }
+    }
+
+    // Mark the time at which this update will take place.
+    int64_t now_ticks = static_cast<int64_t>(current_ticks());
+
+    // Don't bother updating the structures representing the transformation if:
+    //
+    // 1) We are not changing either the value or rate, or
+    // 2a) This is a rate-only change (the value is not being set)
+    // 2b) With no explicit reference time provided
+    // 2c) Which specifies the same rate that we are already using
+    const bool skip_update =
+        !do_set && (!do_rate || (!reference_valid && (args.rate_adjust() == cur_ppm_adj_)));
+
+    // Now compute the new transformations
+    affine::Transform m2s;
+    affine::Transform t2s;
+    if (!skip_update) {
+      // Figure out the reference times at which this change will take place at.
+      affine::Ratio ticks_to_mono_ratio = platform_get_ticks_to_time_ratio();
+      int64_t now_mono = ticks_to_mono_ratio.Scale(now_ticks);
+      int64_t reference_ticks = now_ticks;
+      int64_t reference_mono = now_mono;
+      if constexpr (!args.IsV1) {
+        if (reference_valid) {
+          reference_mono = args.reference_value();
+          reference_ticks = ticks_to_mono_ratio.Inverse().Scale(reference_mono);
+        }
+      }
+
+      // Next, figure out the synthetic value this clock will have after the
+      // change.  If this is a set operation, it will be the explicit value
+      // provided by the user, otherwise it will be the synthetic value computed
+      // using the old transformation applied to the target reference time.
+      //
+      // In the case that we need to compute the target synthetic time from a
+      // previous transformation, use the old mono->synthetic time
+      // transformation if the user explicitly supplied a monotonic reference
+      // time for the update operation.  Otherwise, use the old ticks->synthetic
+      // time transformation along with reference ticks value which we observed
+      // after entering the writer lock.
+      //
+      // In the case of a user supplied monotonic reference time, this avoids
+      // rounding error ensures that the old and the new transformations both
+      // pass through exactly the same [user_ref, synth] point (important during
+      // testing).
+      int64_t target_synthetic =
+          do_set ? args.synthetic_value()
+                 : (reference_valid ? mono_to_synthetic_.Apply(reference_mono)
+                                    : ticks_to_synthetic_.Apply(reference_ticks));
+
+      // Compute the new rate ratios.
+      affine::Ratio new_m2s_ratio;
+      affine::Ratio new_t2s_ratio;
+      if (do_rate) {
+        new_m2s_ratio = {static_cast<uint32_t>(1'000'000 + args.rate_adjust()), 1'000'000};
+        new_t2s_ratio = ticks_to_mono_ratio * new_m2s_ratio;
+      } else if (is_started()) {
+        new_m2s_ratio = mono_to_synthetic_.ratio();
+        new_t2s_ratio = ticks_to_synthetic_.ratio();
+      } else {
+        new_m2s_ratio = {1, 1};
+        new_t2s_ratio = ticks_to_mono_ratio;
+      }
+
+      // Update the local copies of the structures.
+      m2s = {reference_mono, target_synthetic, new_m2s_ratio};
+      t2s = {reference_ticks, target_synthetic, new_t2s_ratio};
+
+      // Make certain that the new transformations follow all of the rules
+      // before applying them. In specific, we need to make certain that:
+      //
+      // 1) Monotonic clocks do not move backwards.
+      // 2) Backstop times are not violated.
+      //
+      int64_t new_synthetic_now = t2s.Apply(now_ticks);
+      if (is_monotonic() && (new_synthetic_now < ticks_to_synthetic_.Apply(now_ticks))) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+
+      if (new_synthetic_now < backstop_time_) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+    } else {
+      m2s = mono_to_synthetic_;
+      t2s = ticks_to_synthetic_;
+    }
+
+    // Everything checks out, we can proceed with the update.  Start by bumping
+    // the generation counter.  This will disable all read operations until we
+    // bump the counter again.
     //
     // We should only need release semantics here.  Only things which hold the
     // writer spin-lock can make changes to the generation counter, and acquiring
     // that spin-lock should serve as our acquire barrier.
     auto prev_counter = gen_counter_.fetch_add(1, ktl::memory_order_release);
     ZX_DEBUG_ASSERT((prev_counter & 0x1) == 0);
-    int64_t now_ticks = static_cast<int64_t>(current_ticks());
 
-    // Are we updating the transformations at all?
-    if (do_set || do_rate) {
-      int64_t now_synthetic;
+    // Update the transformations, and record whether or not this is the initial
+    // start of the clock.
+    clock_was_started = !is_started();
+    mono_to_synthetic_ = m2s;
+    ticks_to_synthetic_ = t2s;
 
-      // Figure out the new synthetic offset
-      if (do_set) {
-        // We are performing a set operation.  If this clock is started and
-        // monotonic, and the set operation would result in non-monotonic
-        // behavior for the clock, disallow it.
-        if (is_started() && is_monotonic()) {
-          int64_t now_clock = ticks_to_synthetic_.Apply(now_ticks);
-          if (args.value < now_clock) {
-            // turns out we are not going to make any changes to the clock.
-            // Put the generation counter back to where it was.
-            gen_counter_.store(prev_counter, ktl::memory_order_release);
-            return ZX_ERR_INVALID_ARGS;
-          }
-        }
-
-        // Because this is a set operation, now on the synthetic timeline is
-        // what the user has specified.
-        now_synthetic = args.value;
-        last_value_update_ticks_ = now_ticks;
-
-        // We are past the point where this update can fail.  All of our
-        // parameters have been sanity checked, including the monotonic check
-        // which can only be performed while we are holding off readers using
-        // the generation counter.  At this point, because we are performing a
-        // set operation, we are starting the clock if it was not already
-        // started.
-        clock_was_started = !is_started();
-      } else {
-        // Looks like we are updating the rate, but not explicitly setting the
-        // clock.  Make sure that the offsets we choose for the new affine
-        // transformation result in it being 1st order continuous with the
-        // previous transformation.  The simple way to do this is to choose the
-        // reference time at which the change is taking place (now_ticks) as the
-        // first offset, and the same value transformed by the previous
-        // transformation as the second (synthetic) offset.  By definition, this
-        // point marks the point at which the previous transformation's domain
-        // ended and the new one started, and must exist on the line defined by
-        // both transformations.
-        now_synthetic = ticks_to_synthetic_.Apply(now_ticks);
-      }
-
-      // Figure out the new rates.
-      affine::Ratio ticks_to_mono_ratio = platform_get_ticks_to_time_ratio();
-      affine::Ratio mono_to_synthetic_rate;
-      affine::Ratio ticks_to_synthetic_rate;
-      bool skip_update = false;
-
-      if (do_rate) {
-        // We want to explicitly update the rate.  Encode the PPM adjustment
-        // as a ratio, then compute the ticks_to_synthetic_rate.
-        //
-        // If the PPM adjustment being applied is identical to the last
-        // adjustment being applied, then don't bother to recompute these.  Just
-        // use the rates we already have.
-        if (do_set || args.rate_adjust != cur_ppm_adj_) {
-          mono_to_synthetic_rate = {static_cast<uint32_t>(1000000 + args.rate_adjust), 1000000};
-          ticks_to_synthetic_rate = ticks_to_mono_ratio * mono_to_synthetic_rate;
-          cur_ppm_adj_ = args.rate_adjust;
-        } else {
-          mono_to_synthetic_rate = mono_to_synthetic_.ratio();
-          ticks_to_synthetic_rate = ticks_to_synthetic_.ratio();
-
-          // If our rate is being "adjusted" to the same thing that it already
-          // was, and we are not updating the position at all, then we can just
-          // go ahead and skip the update of the transformation equations (even
-          // though we will record the time of this update as the last rate
-          // adjustment time).  See fxbug.dev/57593
-          skip_update = true;
-        }
-        last_rate_adjust_update_ticks_ = now_ticks;
-      } else if (!is_started()) {
-        // The clock has never been started, then the default rate is 1:1
-        // with the mono reference.
-        mono_to_synthetic_rate = {1, 1};
-        ticks_to_synthetic_rate = ticks_to_mono_ratio;
-        last_rate_adjust_update_ticks_ = now_ticks;
-      } else {
-        // Otherwise, preserve the existing rate.
-        mono_to_synthetic_rate = mono_to_synthetic_.ratio();
-        ticks_to_synthetic_rate = ticks_to_synthetic_.ratio();
-      }
-
-      // Now, simply update the transformations with the proper offsets and
-      // the calculated rates.
-      if (!skip_update) {
-        zx_time_t now_mono = ticks_to_mono_ratio.Scale(now_ticks);
-        mono_to_synthetic_ = {now_mono, now_synthetic, mono_to_synthetic_rate};
-        ticks_to_synthetic_ = {now_ticks, now_synthetic, ticks_to_synthetic_rate};
-      }
+    // If this was a set operation, record the new last update time.
+    if (do_set) {
+      last_value_update_ticks_ = now_ticks;
     }
 
-    // If we are supposed to update the error bound, do so.
+    // If this was a rate adjustment operation, or the clock was just started,
+    // record the new last update time as well as the new current ppm
+    // adjustment.
+    if (do_rate || clock_was_started) {
+      last_rate_adjust_update_ticks_ = now_ticks;
+      cur_ppm_adj_ = do_rate ? args.rate_adjust() : 0;
+    }
+
+    // If this was an error bounds update operations, record the new last update
+    // time as well as the new error bound.
     if (options & ZX_CLOCK_UPDATE_OPTION_ERROR_BOUND_VALID) {
-      error_bound_ = args.error_bound;
       last_error_bounds_update_ticks_ = now_ticks;
+      error_bound_ = args.error_bound();
     }
 
     // We are finished.  Update the generation counter to allow clock reading again.
@@ -310,3 +386,9 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const zx_clock_update_args
 
   return ZX_OK;
 }
+
+// Explicit instantiation of the two types of update we might encounter.
+template zx_status_t ClockDispatcher::Update(uint64_t options,
+                                             const zx_clock_update_args_v1_t& args);
+template zx_status_t ClockDispatcher::Update(uint64_t options,
+                                             const zx_clock_update_args_v2_t& args);

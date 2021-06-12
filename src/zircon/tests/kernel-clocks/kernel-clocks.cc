@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <lib/affine/transform.h>
 #include <lib/zx/clock.h>
 #include <zircon/syscalls/clock.h>
@@ -11,6 +12,93 @@
 #include <zxtest/zxtest.h>
 
 namespace {
+
+constexpr uint32_t kInvalidUpdateVersion = 3u;
+
+// Helper class which make it a bit easier for us to test both the V1 and the V2
+// versions of the update arguments.
+template <typename UpdateStructType>
+class UpdateClockArgs {
+ public:
+  static constexpr bool IsV1 = std::is_same_v<UpdateStructType, zx_clock_update_args_v1_t>;
+  static constexpr bool IsV2 = std::is_same_v<UpdateStructType, zx_clock_update_args_v2_t>;
+
+  constexpr UpdateClockArgs() {
+    static_assert((IsV1 || IsV2) && (IsV1 != IsV2), "Unsupported clock update args version");
+  }
+
+  UpdateClockArgs& reset() {
+    options_ = ZX_CLOCK_ARGS_VERSION(IsV1 ? 1 : 2);
+    return *this;
+  }
+
+  UpdateClockArgs& override_version(uint32_t version) {
+    options_ &= ~ZX_CLOCK_ARGS_VERSION_MASK;
+    options_ |= ZX_CLOCK_ARGS_VERSION(version);
+    return *this;
+  }
+
+  UpdateClockArgs& set_value(zx::time synthetic_value) {
+    if constexpr (IsV1) {
+      args_.value = synthetic_value.get();
+      options_ |= ZX_CLOCK_UPDATE_OPTION_VALUE_VALID;
+    } else {
+      static_assert(IsV2, "Unsupported clock update args version");
+      args_.synthetic_value = synthetic_value.get();
+      options_ |= ZX_CLOCK_UPDATE_OPTION_SYNTHETIC_VALUE_VALID;
+    }
+    return *this;
+  }
+
+  UpdateClockArgs& set_reference_value(zx::time reference_value) {
+    static_assert(IsV2, "Set reference value is only supported for V2 update structures");
+    args_.reference_value = reference_value.get();
+    options_ |= ZX_CLOCK_UPDATE_OPTION_REFERENCE_VALUE_VALID;
+    return *this;
+  }
+
+  UpdateClockArgs& set_both_values(zx::time reference_value, zx::time synthetic_value) {
+    static_assert(
+        IsV2, "Set both synthetic and reference values is only supported for V2 update structures");
+    args_.reference_value = reference_value.get();
+    args_.synthetic_value = synthetic_value.get();
+    options_ |= ZX_CLOCK_UPDATE_OPTION_BOTH_VALUES_VALID;
+    return *this;
+  }
+
+  UpdateClockArgs& set_rate_adjust(int32_t rate) {
+    args_.rate_adjust = rate;
+    options_ |= ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID;
+    return *this;
+  }
+
+  UpdateClockArgs& set_error_bound(uint64_t error_bound) {
+    args_.error_bound = error_bound;
+    options_ |= ZX_CLOCK_UPDATE_OPTION_ERROR_BOUND_VALID;
+    return *this;
+  }
+
+  const UpdateStructType& args() const { return args_; }
+  uint64_t options() const { return options_; }
+
+ protected:
+  UpdateStructType args_;
+  uint64_t options_ = ZX_CLOCK_ARGS_VERSION(IsV1 ? 1 : 2);
+};
+
+using UpdateClockArgsV1 = UpdateClockArgs<zx_clock_update_args_v1_t>;
+using UpdateClockArgsV2 = UpdateClockArgs<zx_clock_update_args_v2_t>;
+
+template <typename UpdateArgsType>
+zx_status_t ApplyUpdate(const zx::clock& clock, const UpdateArgsType& args) {
+  return zx_clock_update(clock.get(), args.options(), &args.args());
+}
+
+template <>
+zx_status_t ApplyUpdate<zx::clock::update_args>(const zx::clock& clock,
+                                                const zx::clock::update_args& args) {
+  return clock.update(args);
+}
 
 // Unpack a zx_clock_transformation_t from a syscall result and put it into an
 // affine::Transform so we can call methods on it.
@@ -25,6 +113,15 @@ inline affine::Ratio UnpackRatio(const zx_clock_rate_t& rate) {
   return affine::Ratio{rate.synthetic_ticks, rate.reference_ticks};
 }
 
+inline zx::time MapRefToSynth(const zx::clock& clock, zx::time ref_time) {
+  zx_clock_details_v1_t details;
+  zx_status_t status = clock.get_details(&details);
+  EXPECT_OK(status);
+  return (status == ZX_OK)
+             ? zx::time{UnpackTransform(details.mono_to_synthetic).Apply(ref_time.get())}
+             : zx::time{0};
+}
+
 inline zx_status_t CreateClock(uint64_t options, zx::time backstop, zx::clock* result) {
   if (backstop.get() != 0) {
     zx_clock_create_args_v1 args;
@@ -34,6 +131,35 @@ inline zx_status_t CreateClock(uint64_t options, zx::time backstop, zx::clock* r
 
   return zx::clock::create(options, nullptr, result);
 }
+
+template <typename T>
+class LoopContext {
+ public:
+  LoopContext(const char* tag, const T& ctx) : tag_(tag), ctx_(ctx) {}
+  ~LoopContext() {
+    if (valid_) {
+      std::array<char, 128> ctx_buf = {0};
+      ContextToString(ctx_, ctx_buf);
+      printf("    Loop context \"%s\" during failure was : %s\n", tag_, ctx_buf.data());
+    }
+  }
+
+  void cancel() { valid_ = false; }
+
+ private:
+  template <size_t N>
+  static void ContextToString(const T& ctx, std::array<char, N>& buf) {
+    if constexpr (std::is_signed_v<T>) {
+      snprintf(buf.data(), N, "%" PRId64, static_cast<int64_t>(ctx));
+    } else {
+      snprintf(buf.data(), N, "%" PRIu64, static_cast<uint64_t>(ctx));
+    }
+  }
+
+  const char* const tag_;
+  const T ctx_;
+  bool valid_{true};
+};
 
 TEST(KernelClocksTestCase, Create) {
   zx::clock clock;
@@ -457,7 +583,9 @@ TEST(KernelClocksTestCase, GetDetails) {
   }
 }
 
-TEST(KernelClocksTestCase, Update) {
+template <typename UpdateArgsType>
+void DoUpdateTest() {
+  constexpr bool IsV1 = std::is_same_v<UpdateArgsType, UpdateClockArgsV1>;
   zx::clock basic;
   zx::clock mono;
   zx::clock mono_cont;
@@ -472,12 +600,12 @@ TEST(KernelClocksTestCase, Update) {
   // Set each clock to its initial value.  All clocks need to allow being
   // initially set, so this should be just fine.
   constexpr zx::time INITIAL_VALUE{1'000'000};
-  zx::clock::update_args args;
+  UpdateArgsType args;
   args.set_value(INITIAL_VALUE);
 
-  ASSERT_OK(basic.update(args));
-  ASSERT_OK(mono.update(args));
-  ASSERT_OK(mono_cont.update(args));
+  ASSERT_OK(ApplyUpdate(basic, args));
+  ASSERT_OK(ApplyUpdate(mono, args));
+  ASSERT_OK(ApplyUpdate(mono_cont, args));
 
   // Attempt to make each clock jump forward.  This should succeed for the
   // basic clock and the monotonic clock, but fail for the continuous clock
@@ -487,19 +615,26 @@ TEST(KernelClocksTestCase, Update) {
   // To make sure this does not happen, make the jump be something enormous;
   // much larger than the maximum conceivable test watchdog timeout.  We use a
   // full day.
+  //
+  // Note: Update of a monotonic clock position using a non-V1 update argument
+  // structure should fail unless the target reference time is also specified.
+  // This change of behavior between the V1 and V2 update structures was part of
+  // RFC-0077, and meant to remove the timing sensitivity mentioned above.
   constexpr zx::duration FWD_JUMP = zx::sec(86400);
   args.set_value(INITIAL_VALUE + FWD_JUMP);
-
-  ASSERT_OK(basic.update(args));
-  ASSERT_OK(mono.update(args));
-  ASSERT_STATUS(mono_cont.update(args), ZX_ERR_INVALID_ARGS);
+  {
+    constexpr zx_status_t expected_mono_status = IsV1 ? ZX_OK : ZX_ERR_INVALID_ARGS;
+    ASSERT_OK(ApplyUpdate(basic, args));
+    ASSERT_STATUS(ApplyUpdate(mono, args), expected_mono_status);
+    ASSERT_STATUS(ApplyUpdate(mono_cont, args), ZX_ERR_INVALID_ARGS);
+  }
 
   // Attempt to make each clock jump backwards.  This should only succeed the
   // basic clock.  Neither flavor of monotonic should allow this.
   args.set_value(INITIAL_VALUE - zx::nsec(1));
-  ASSERT_OK(basic.update(args));
-  ASSERT_STATUS(mono.update(args), ZX_ERR_INVALID_ARGS);
-  ASSERT_STATUS(mono_cont.update(args), ZX_ERR_INVALID_ARGS);
+  ASSERT_OK(ApplyUpdate(basic, args));
+  ASSERT_STATUS(ApplyUpdate(mono, args), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(ApplyUpdate(mono_cont, args), ZX_ERR_INVALID_ARGS);
 
   // Test rate adjustments.  All clocks should permit rate adjustment, but the
   // legal rate adjustment is fixed.
@@ -517,9 +652,9 @@ TEST(KernelClocksTestCase, Update) {
 
   for (const auto& v : RATE_TEST_VECTORS) {
     args.reset().set_rate_adjust(v.adj);
-    ASSERT_STATUS(basic.update(args), v.expected_result);
-    ASSERT_STATUS(mono.update(args), v.expected_result);
-    ASSERT_STATUS(mono_cont.update(args), v.expected_result);
+    ASSERT_STATUS(ApplyUpdate(basic, args), v.expected_result);
+    ASSERT_STATUS(ApplyUpdate(mono, args), v.expected_result);
+    ASSERT_STATUS(ApplyUpdate(mono_cont, args), v.expected_result);
   }
 
   // Test error bound reporting.  Error bounds are just information which is
@@ -534,9 +669,9 @@ TEST(KernelClocksTestCase, Update) {
 
   for (const auto& err_bound : ERROR_BOUND_VECTORS) {
     args.reset().set_error_bound(err_bound);
-    ASSERT_OK(basic.update(args));
-    ASSERT_OK(mono.update(args));
-    ASSERT_OK(mono_cont.update(args));
+    ASSERT_OK(ApplyUpdate(basic, args));
+    ASSERT_OK(ApplyUpdate(mono, args));
+    ASSERT_OK(ApplyUpdate(mono_cont, args));
   }
 
   // Attempt to set an illegal option for update option.  This should always
@@ -546,40 +681,205 @@ TEST(KernelClocksTestCase, Update) {
   static_assert((ZX_CLOCK_UPDATE_OPTIONS_ALL & ILLEGAL_OPTION) == 0,
                 "Illegal opt is actually legal!");
 
-  zx_clock_update_args_v1_t update_args;
-  uint64_t options = ZX_CLOCK_ARGS_VERSION(1) | ILLEGAL_OPTION;
-  ASSERT_STATUS(zx_clock_update(basic.get_handle(), options, &update_args), ZX_ERR_INVALID_ARGS);
-  ASSERT_STATUS(zx_clock_update(mono.get_handle(), options, &update_args), ZX_ERR_INVALID_ARGS);
-  ASSERT_STATUS(zx_clock_update(mono_cont.get_handle(), options, &update_args),
-                ZX_ERR_INVALID_ARGS);
+  if constexpr (!std::is_same_v<UpdateArgsType, zx::clock::update_args>) {
+    ASSERT_STATUS(
+        zx_clock_update(basic.get_handle(), args.options() | ILLEGAL_OPTION, &args.args()),
+        ZX_ERR_INVALID_ARGS);
+    ASSERT_STATUS(zx_clock_update(mono.get_handle(), args.options() | ILLEGAL_OPTION, &args.args()),
+                  ZX_ERR_INVALID_ARGS);
+    ASSERT_STATUS(
+        zx_clock_update(mono_cont.get_handle(), args.options() | ILLEGAL_OPTION, &args.args()),
+        ZX_ERR_INVALID_ARGS);
 
-  // Attempt to pass an invalid version number for the update argument struct.
-  options = ZX_CLOCK_ARGS_VERSION(2);
-  ASSERT_STATUS(zx_clock_update(basic.get_handle(), options, &update_args), ZX_ERR_INVALID_ARGS);
-  ASSERT_STATUS(zx_clock_update(mono.get_handle(), options, &update_args), ZX_ERR_INVALID_ARGS);
-  ASSERT_STATUS(zx_clock_update(mono_cont.get_handle(), options, &update_args),
-                ZX_ERR_INVALID_ARGS);
+    // Attempt to pass a bad pointer update argument struct.
+    ASSERT_STATUS(zx_clock_update(basic.get_handle(), args.options(), nullptr),
+                  ZX_ERR_INVALID_ARGS);
+    ASSERT_STATUS(zx_clock_update(mono.get_handle(), args.options(), nullptr), ZX_ERR_INVALID_ARGS);
+    ASSERT_STATUS(zx_clock_update(mono_cont.get_handle(), args.options(), nullptr),
+                  ZX_ERR_INVALID_ARGS);
 
-  // Attempt to pass a bad pointer update argument struct.
-  ASSERT_STATUS(zx_clock_update(basic.get_handle(), options, nullptr), ZX_ERR_INVALID_ARGS);
-  ASSERT_STATUS(zx_clock_update(mono.get_handle(), options, nullptr), ZX_ERR_INVALID_ARGS);
-  ASSERT_STATUS(zx_clock_update(mono_cont.get_handle(), options, nullptr), ZX_ERR_INVALID_ARGS);
+    // Attempt to pass an invalid version number for the update argument struct.
+    args.override_version(kInvalidUpdateVersion);
+    ASSERT_STATUS(ApplyUpdate(basic, args), ZX_ERR_INVALID_ARGS);
+    ASSERT_STATUS(ApplyUpdate(mono, args), ZX_ERR_INVALID_ARGS);
+    ASSERT_STATUS(ApplyUpdate(mono_cont, args), ZX_ERR_INVALID_ARGS);
+  }
 
   // Attempt to send an update command with no valid flags at all (eg; a
   // no-op).  This should also fail.
   args.reset();
-  ASSERT_STATUS(basic.update(args), ZX_ERR_INVALID_ARGS);
-  ASSERT_STATUS(mono.update(args), ZX_ERR_INVALID_ARGS);
-  ASSERT_STATUS(mono_cont.update(args), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(ApplyUpdate(basic, args), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(ApplyUpdate(mono, args), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(ApplyUpdate(mono_cont, args), ZX_ERR_INVALID_ARGS);
+
+  // Now test the set of operations which can only be performed using V2 of
+  // the update arguments (note that libzx is using the V2 structures, and
+  // should be capable of these operations as well.
+  if constexpr (!IsV1) {
+    const struct {
+      const zx::clock& clock;
+      uint64_t create_flags;
+    } CLOCKS[] = {
+        {basic, 0u},
+        {mono, ZX_CLOCK_OPT_MONOTONIC},
+        {mono_cont, ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS},
+    };
+
+    // Perform a series of tests which involve explicitly setting the reference
+    // timeline's value as well as the synthetic value.
+    for (const auto& v : CLOCKS) {
+      LoopContext clock_loop_ctx("clock options", v.create_flags);
+
+      // Reset each of the clock's rate so it is tracking the reference clock.
+      args.reset().set_rate_adjust(0);
+      ASSERT_OK(ApplyUpdate(v.clock, args));
+
+      // Attempting to specify a reference value without also specifying either a
+      // synthetic value or a rate is not allowed.
+      args.reset().set_reference_value(zx::clock::get_monotonic());
+      ASSERT_STATUS(ApplyUpdate(v.clock, args), ZX_ERR_INVALID_ARGS);
+
+      // Attempt to make the clock jump both forwards and backwards. Forward
+      // jumps should work for the basic clock, and the monotonic clock, but not
+      // for the continuous clock, while backwards jumps should only ever work
+      // for the basic clock.
+      constexpr std::array JUMP_AMOUNTS{FWD_JUMP, FWD_JUMP};
+      enum class SetValueType { Individual, Both };
+      constexpr std::array SET_VALUE_OPS{SetValueType::Individual, SetValueType::Both};
+
+      for (const auto jump_amt : JUMP_AMOUNTS) {
+        LoopContext jump_amt_ctx("jump amount", jump_amt.get());
+        for (const auto op : SET_VALUE_OPS) {
+          LoopContext set_op_ctx("set operation", op);
+          zx_status_t expected_status =
+              ((v.create_flags & ZX_CLOCK_OPT_MONOTONIC) && (jump_amt < zx::duration{0})) ||
+                      (v.create_flags & ZX_CLOCK_OPT_CONTINUOUS)
+                  ? ZX_ERR_INVALID_ARGS
+                  : ZX_OK;
+          zx::time now_mono = zx::clock::get_monotonic();
+          zx::time now_synth = MapRefToSynth(v.clock, now_mono) + jump_amt;
+
+          if (op == SetValueType::Individual) {
+            args.reset().set_reference_value(now_mono).set_value(zx::time{now_synth});
+          } else {
+            args.reset().set_both_values(now_mono, now_synth);
+          }
+          ASSERT_STATUS(ApplyUpdate(v.clock, args), expected_status);
+
+          // If we expected this operation to succeed, make sure that the
+          // transformation passes through the point that we explicitly set.
+          if (expected_status == ZX_OK) {
+            zx::time actual = MapRefToSynth(v.clock, now_mono);
+            ASSERT_EQ(now_synth.get(), actual.get());
+          }
+
+          set_op_ctx.cancel();
+        }
+        jump_amt_ctx.cancel();
+      }
+
+      // Attempt to change the rate of the clock, effective at a specified
+      // reference time.  This operation is not allowed for monotonic (and
+      // by implication, continuous) clocks.  See RFC-0077 for details.
+      constexpr std::array RATE_ADJUSTMENTS{50, -50, 0};
+      for (const auto rate_adj : RATE_ADJUSTMENTS) {
+        LoopContext rate_adj_ctx("rate adjustment (ppm)", rate_adj);
+        zx_status_t expected_status =
+            (v.create_flags & (ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS))
+                ? ZX_ERR_INVALID_ARGS
+                : ZX_OK;
+        zx::time rate_adj_ref{zx::clock::get_monotonic() - zx::usec(50)};
+        zx::time prev_synth_time{MapRefToSynth(v.clock, rate_adj_ref)};
+
+        // Apply the change.
+        args.reset().set_reference_value(rate_adj_ref).set_rate_adjust(rate_adj);
+        ASSERT_STATUS(ApplyUpdate(v.clock, args), expected_status);
+
+        // If we expected that to work, check to be sure that:
+        //
+        // 1) Our new transformation passes through the previous transformation
+        //    at the point (rate_adj_ref, pref_synth_time)
+        // 2) The slope of the new transformation matches what we specified.
+        if (expected_status == ZX_OK) {
+          ASSERT_EQ(prev_synth_time.get(), MapRefToSynth(v.clock, rate_adj_ref).get());
+
+          zx_clock_details_v1_t details;
+          ASSERT_OK(v.clock.get_details(&details));
+
+          affine::Ratio expected_ratio = affine::Ratio(1'000'000 + rate_adj, 1'000'000);
+          affine::Ratio actual_ratio = UnpackRatio(details.mono_to_synthetic.rate);
+
+          expected_ratio.Reduce();
+          actual_ratio.Reduce();
+          ASSERT_TRUE(expected_ratio.numerator() == actual_ratio.numerator() &&
+                          expected_ratio.denominator() == actual_ratio.denominator(),
+                      "Expected rate %u/%u does not match actual rate %u/%u",
+                      expected_ratio.numerator(), expected_ratio.denominator(),
+                      actual_ratio.numerator(), actual_ratio.denominator());
+        }
+        rate_adj_ctx.cancel();
+      }
+
+      // Finally, attempt to change both the value and the rate of the clock at
+      // the same time, and at a specified reference time.  This should not work
+      // for continuous or monotonic clocks.
+      for (const auto jump_amt : JUMP_AMOUNTS) {
+        LoopContext jump_amt_ctx("jump amount", jump_amt.get());
+        for (const auto rate_adj : RATE_ADJUSTMENTS) {
+          LoopContext rate_adj_ctx("rate adjustment (ppm)", rate_adj);
+          zx_status_t expected_status =
+              (v.create_flags & (ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS))
+                  ? ZX_ERR_INVALID_ARGS
+                  : ZX_OK;
+          zx::time ref_time{zx::clock::get_monotonic()};
+          zx::time synth_time{MapRefToSynth(v.clock, ref_time) + jump_amt};
+
+          // Apply the change.
+          args.reset().set_both_values(ref_time, synth_time).set_rate_adjust(rate_adj);
+          ASSERT_STATUS(ApplyUpdate(v.clock, args), expected_status);
+
+          // If we expected that to work, check to be sure that:
+          //
+          // 1) Our new transformation passes through the point we explicitly specified.
+          // 2) The slope of the new transformation matches what we specified.
+          if (expected_status == ZX_OK) {
+            ASSERT_EQ(synth_time.get(), MapRefToSynth(v.clock, ref_time).get());
+
+            zx_clock_details_v1_t details;
+            ASSERT_OK(v.clock.get_details(&details));
+
+            affine::Ratio expected_ratio = affine::Ratio(1'000'000 + rate_adj, 1'000'000);
+            affine::Ratio actual_ratio = UnpackRatio(details.mono_to_synthetic.rate);
+
+            expected_ratio.Reduce();
+            actual_ratio.Reduce();
+            ASSERT_TRUE(expected_ratio.numerator() == actual_ratio.numerator() &&
+                            expected_ratio.denominator() == actual_ratio.denominator(),
+                        "Expected rate %u/%u does not match actual rate %u/%u",
+                        expected_ratio.numerator(), expected_ratio.denominator(),
+                        actual_ratio.numerator(), actual_ratio.denominator());
+          }
+          rate_adj_ctx.cancel();
+        }
+        jump_amt_ctx.cancel();
+      }
+      clock_loop_ctx.cancel();
+    }
+  }
 
   // Remove the WRITE rights from the basic clock handle, then verify that we
   // can no longer update it.
   args.reset().set_rate_adjust(0);
   ASSERT_OK(basic.replace(ZX_DEFAULT_CLOCK_RIGHTS & ~ZX_RIGHT_WRITE, &basic));
-  ASSERT_STATUS(basic.update(args), ZX_ERR_ACCESS_DENIED);
+  ASSERT_STATUS(ApplyUpdate(basic, args), ZX_ERR_ACCESS_DENIED);
 }
 
-TEST(KernelClocksTestCase, Backstop) {
+TEST(KernelClocksTestCase, UpdateLibZxStruct) { DoUpdateTest<zx::clock::update_args>(); }
+TEST(KernelClocksTestCase, UpdateV1Struct) { DoUpdateTest<UpdateClockArgsV1>(); }
+TEST(KernelClocksTestCase, UpdateV2Struct) { DoUpdateTest<UpdateClockArgsV2>(); }
+
+template <typename UpdateArgsType>
+void DoBackstopTest() {
   constexpr zx::time INITIAL_VALUE{zx::sec(86400).get()};
   constexpr zx::time BACKSTOP{12345};
   zx::clock the_clock;
@@ -590,9 +890,9 @@ TEST(KernelClocksTestCase, Backstop) {
 
   // Attempt to perform an initial set of the clock which would violate the
   // backstop.  This should fail.
-  zx::clock::update_args args;
+  UpdateArgsType args;
   args.set_value(BACKSTOP - zx::nsec(1));
-  ASSERT_STATUS(the_clock.update(args), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(ApplyUpdate(the_clock, args), ZX_ERR_INVALID_ARGS);
 
   // The clock should still be at its backstop value and not advancing because
   // the initial set failed.
@@ -605,12 +905,12 @@ TEST(KernelClocksTestCase, Backstop) {
 
   // Set the clock to a valid initial value.  This should succeed.
   args.set_value(INITIAL_VALUE);
-  ASSERT_OK(the_clock.update(args));
+  ASSERT_OK(ApplyUpdate(the_clock, args));
 
   // Attempt to roll the clock back to before the backstop.  This should fail,
   // and the clock should still have a value >= the initial value we set.
   args.set_value(BACKSTOP - zx::nsec(1));
-  ASSERT_STATUS(the_clock.update(args), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(ApplyUpdate(the_clock, args), ZX_ERR_INVALID_ARGS);
 
   ASSERT_OK(the_clock.read(&read_val));
   ASSERT_GE(read_val, INITIAL_VALUE.get());
@@ -618,7 +918,7 @@ TEST(KernelClocksTestCase, Backstop) {
   // Roll the clock all of the way back to the backstop.  We did not declare the
   // clock to be monotonic, so this should be OK.
   args.set_value(BACKSTOP);
-  ASSERT_OK(the_clock.update(args));
+  ASSERT_OK(ApplyUpdate(the_clock, args));
 
   // The clock now must be >= the backstop value we set.  Also check to be sure
   // that it is <= the initial value set.  While this is technically a race and
@@ -629,7 +929,44 @@ TEST(KernelClocksTestCase, Backstop) {
   ASSERT_OK(the_clock.read(&read_val));
   ASSERT_GE(read_val, BACKSTOP.get());
   ASSERT_LT(read_val, INITIAL_VALUE.get());
+
+  // Now try to cheat our way around the backstop time using some techniques
+  // which cannot be done with V1 update structures.
+  constexpr bool IsV1 = std::is_same_v<UpdateArgsType, UpdateClockArgsV1>;
+  if constexpr (!IsV1) {
+    // Attempt to set the clock to the backstop time, but do so using an
+    // explicit reference time which is in the future (which, should put "now"
+    // on the synthetic timeline in the past).  Note that there is an
+    // unavoidable race here.  If we allow monotonic time to catch up to the
+    // reference time we specify (meaning, it is no longer in the future), the
+    // update operation will become valid.  We use a future offset of one full
+    // day in order to avoid flake.
+    zx::time reference{zx::clock::get_monotonic() + zx::sec(86'400)};
+    args.reset().set_both_values(reference, BACKSTOP);
+    ASSERT_STATUS(ApplyUpdate(the_clock, args), ZX_ERR_INVALID_ARGS);
+
+    // Now try to cheat by attempting to slow the clock down at a point in the
+    // past. Start by resetting the clock to it's backstop.  Then change the
+    // rate of the clock to run as slowly as possible (-1000ppm) relative to the
+    // reference, and at a point so far enough back on the reference timeline
+    // that "now" on the synthetic timeline ends up in the past.
+    //
+    // At -1000ppm, we lose 1 mSec/Sec, meaning that we need go back about 1000
+    // days (just about three years) on our reference timeline to have built up
+    // a full day's worth of gap between the backstop and now.  Note that
+    // someone does not have to go back nearly this far in order to produce a
+    // violation, we do it in order to mitigate the unavoidable race described
+    // above.
+    ASSERT_OK(ApplyUpdate(the_clock, args.reset().set_value(BACKSTOP)));
+    reference = zx::clock::get_monotonic() - zx::sec(86'400 * 1000);
+    args.reset().set_reference_value(reference).set_rate_adjust(-1000);
+    ASSERT_STATUS(ApplyUpdate(the_clock, args), ZX_ERR_INVALID_ARGS);
+  }
 }
+
+TEST(KernelClocksTestCase, BackstopLibZxStruct) { DoBackstopTest<zx::clock::update_args>(); }
+TEST(KernelClocksTestCase, BackstopV1Struct) { DoBackstopTest<UpdateClockArgsV1>(); }
+TEST(KernelClocksTestCase, BackstopV2Struct) { DoBackstopTest<UpdateClockArgsV2>(); }
 
 TEST(KernelClocksTestCase, StartedSignal) {
   std::array OPTIONS{
@@ -704,10 +1041,12 @@ TEST(KernelClocksTestCase, DefaultRights) {
   ASSERT_EQ(ZX_DEFAULT_CLOCK_RIGHTS, basic_info.rights);
 }
 
-TEST(KernelClocksTestCase, AutoStarted) {
+template <typename UpdateArgsType>
+void DoAutoStartedTest() {
   // Perform this test 3 times, one for each of the valid combinations of the
   // clock behavior flags.  IOW - no guarantees, a guarantee of monotonicity,
   // but not continuity, and a guarantee of both monotonicity and continuity.
+  constexpr bool IsV1 = std::is_same_v<UpdateArgsType, UpdateClockArgsV1>;
   constexpr std::array BASE_CREATE_OPTIONS = {
       static_cast<uint64_t>(0),
       ZX_CLOCK_OPT_MONOTONIC,
@@ -759,23 +1098,38 @@ TEST(KernelClocksTestCase, AutoStarted) {
     // monotonic clock, we should not be able to go backwards, but forwards
     // should be fine.  For a continuous clock, neither backwards nor forwards
     // should be OK.
-    zx::clock::update_args args;
+    UpdateArgsType args;
     switch (base_create_option) {
       case 0:
-        ASSERT_OK(clock.update(args.reset().set_value(the_dawn_of_time_itself)));
-        ASSERT_OK(clock.update(args.reset().set_value(one_year_from_now)));
+        ASSERT_OK(ApplyUpdate(clock, args.reset().set_value(the_dawn_of_time_itself)));
+        ASSERT_OK(ApplyUpdate(clock, args.reset().set_value(one_year_from_now)));
         break;
 
       case ZX_CLOCK_OPT_MONOTONIC:
-        ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
-                      clock.update(args.reset().set_value(the_dawn_of_time_itself)));
-        ASSERT_OK(clock.update(args.reset().set_value(one_year_from_now)));
-        break;
-
       case ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS:
+        // Monotonic clocks updated using non-V1 update structures require that
+        // the reference time be explicitly provided.
+        if constexpr (IsV1) {
+          args.reset().set_value(the_dawn_of_time_itself);
+        } else {
+          args.reset().set_both_values(zx::clock::get_monotonic(), the_dawn_of_time_itself);
+        }
+
+        // Rollback should fail for both continuous and monotonic clocks.
         ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
-                      clock.update(args.reset().set_value(the_dawn_of_time_itself)));
-        ASSERT_STATUS(ZX_ERR_INVALID_ARGS, clock.update(args.reset().set_value(one_year_from_now)));
+                      ApplyUpdate(clock, args.reset().set_value(the_dawn_of_time_itself)));
+
+        // Jumping forward should succeed for monotonic clocks, but fail for
+        // continuous clocks.
+        zx_status_t expected_status;
+        expected_status =
+            (base_create_option & ZX_CLOCK_OPT_CONTINUOUS) ? ZX_ERR_INVALID_ARGS : ZX_OK;
+        if constexpr (IsV1) {
+          args.reset().set_value(one_year_from_now);
+        } else {
+          args.reset().set_both_values(zx::clock::get_monotonic(), one_year_from_now);
+        }
+        ASSERT_STATUS(expected_status, ApplyUpdate(clock, args));
         break;
 
       default:
@@ -787,8 +1141,8 @@ TEST(KernelClocksTestCase, AutoStarted) {
     // Now check to be sure we can adjust the rate and the error bound.
     // Provided that we have write access to the clock, this should always be
     // OK.
-    ASSERT_OK(clock.update(args.reset().set_rate_adjust(35)));
-    ASSERT_OK(clock.update(args.reset().set_error_bound(100000)));
+    ASSERT_OK(ApplyUpdate(clock, args.reset().set_rate_adjust(35)));
+    ASSERT_OK(ApplyUpdate(clock, args.reset().set_error_bound(100000)));
   }
 
   // Finally, attempt to create an auto-started clock, but specify a backstop
@@ -807,6 +1161,10 @@ TEST(KernelClocksTestCase, AutoStarted) {
   ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
                 zx::clock::create(ZX_CLOCK_OPT_AUTO_START, &create_args, &clock));
 }
+
+TEST(KernelClocksTestCase, AutoStartedLibZxStruct) { DoAutoStartedTest<zx::clock::update_args>(); }
+TEST(KernelClocksTestCase, AutoStartedV1Struct) { DoAutoStartedTest<UpdateClockArgsV1>(); }
+TEST(KernelClocksTestCase, AutoStartedV2Struct) { DoAutoStartedTest<UpdateClockArgsV2>(); }
 
 TEST(KernelClocksTestCase, TrivialRateUpdates) {
   // Perform this test a number of times for different combinations of clock

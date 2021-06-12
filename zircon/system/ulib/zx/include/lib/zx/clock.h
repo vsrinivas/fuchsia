@@ -24,8 +24,21 @@ class clock final : public object<clock> {
     }
 
     update_args& set_value(zx::time value) {
-      args_.value = value.get();
-      options_ |= ZX_CLOCK_UPDATE_OPTION_VALUE_VALID;
+      args_.synthetic_value = value.get();
+      options_ |= ZX_CLOCK_UPDATE_OPTION_SYNTHETIC_VALUE_VALID;
+      return *this;
+    }
+
+    update_args& set_reference_value(zx::time reference_value) {
+      args_.reference_value = reference_value.get();
+      options_ |= ZX_CLOCK_UPDATE_OPTION_REFERENCE_VALUE_VALID;
+      return *this;
+    }
+
+    update_args& set_both_values(zx::time reference_value, zx::time synthetic_value) {
+      args_.reference_value = reference_value.get();
+      args_.synthetic_value = synthetic_value.get();
+      options_ |= ZX_CLOCK_UPDATE_OPTION_BOTH_VALUES_VALID;
       return *this;
     }
 
@@ -43,7 +56,8 @@ class clock final : public object<clock> {
 
    private:
     friend class ::zx::clock;
-    zx_clock_update_args_v1_t args_{};
+    static constexpr uint32_t kArgsVersion = 2u;
+    zx_clock_update_args_v2_t args_{};
     uint64_t options_ = 0;
   };
 
@@ -83,7 +97,7 @@ class clock final : public object<clock> {
   }
 
   zx_status_t update(const update_args& args) const {
-    uint64_t options = args.options_ | ZX_CLOCK_ARGS_VERSION(1);
+    uint64_t options = args.options_ | ZX_CLOCK_ARGS_VERSION(args.kArgsVersion);
     return zx_clock_update(value_, options, &args.args_);
   }
 

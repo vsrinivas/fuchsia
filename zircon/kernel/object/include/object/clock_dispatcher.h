@@ -16,8 +16,7 @@
 #include <object/dispatcher.h>
 #include <object/handle.h>
 
-class ClockDispatcher final
-    : public SoloDispatcher<ClockDispatcher, ZX_DEFAULT_CLOCK_RIGHTS> {
+class ClockDispatcher final : public SoloDispatcher<ClockDispatcher, ZX_DEFAULT_CLOCK_RIGHTS> {
  public:
   static zx_status_t Create(uint64_t options, const zx_clock_create_args_v1_t& create_args,
                             KernelHandle<ClockDispatcher>* handle, zx_rights_t* rights);
@@ -27,7 +26,9 @@ class ClockDispatcher final
 
   zx_status_t Read(zx_time_t* out_now);
   zx_status_t GetDetails(zx_clock_details_v1_t* out_details);
-  zx_status_t Update(uint64_t options, const zx_clock_update_args_v1_t& args);
+
+  template <typename UpdateArgsType>
+  zx_status_t Update(uint64_t options, const UpdateArgsType& args);
 
  private:
   ClockDispatcher(uint64_t options, zx_time_t backstop_time);

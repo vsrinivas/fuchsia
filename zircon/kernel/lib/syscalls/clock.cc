@@ -100,16 +100,34 @@ zx_status_t sys_clock_get_details(zx_handle_t clock_handle, uint64_t options,
 
 zx_status_t sys_clock_update(zx_handle_t clock_handle, uint64_t options,
                              user_in_ptr<const void> user_args) {
-  // Currently, the only version of the update structure defined is V1.  If the
-  // user failed to provide a buffer, or signaled a different version of the
-  // structure, then it is an error.
-  zx_clock_update_args_v1_t args{};
-  if ((GetArgsVersion(options) != 1) || !user_args) {
+  // Currently, there are only 2 versions of the update structure defined; V1
+  // and V2.  If the user failed to provide a buffer, or signaled any other
+  // version of the structure, then it is an error.
+  if (!user_args) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t status =
-      user_args.reinterpret<const zx_clock_update_args_v1_t>().copy_from_user(&args);
+  union {
+    zx_clock_update_args_v1_t v1;
+    zx_clock_update_args_v2_t v2;
+  } args;
+
+  zx_status_t status;
+  const uint32_t version = GetArgsVersion(options);
+  int32_t rate_adjust;
+  switch (version) {
+    case 1:
+      status = user_args.reinterpret<const zx_clock_update_args_v1_t>().copy_from_user(&args.v1);
+      rate_adjust = args.v1.rate_adjust;
+      break;
+    case 2:
+      status = user_args.reinterpret<const zx_clock_update_args_v2_t>().copy_from_user(&args.v2);
+      rate_adjust = args.v2.rate_adjust;
+      break;
+    default:
+      return ZX_ERR_INVALID_ARGS;
+  }
+
   if (status != ZX_OK) {
     return status;
   }
@@ -125,8 +143,8 @@ zx_status_t sys_clock_update(zx_handle_t clock_handle, uint64_t options,
 
   // The PPM adjustment must be within the legal range.
   if ((options & ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID) &&
-      ((args.rate_adjust < ZX_CLOCK_UPDATE_MIN_RATE_ADJUST) ||
-       (args.rate_adjust > ZX_CLOCK_UPDATE_MAX_RATE_ADJUST))) {
+      ((rate_adjust < ZX_CLOCK_UPDATE_MIN_RATE_ADJUST) ||
+       (rate_adjust > ZX_CLOCK_UPDATE_MAX_RATE_ADJUST))) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -137,5 +155,9 @@ zx_status_t sys_clock_update(zx_handle_t clock_handle, uint64_t options,
     return status;
   }
 
-  return clock->Update(options, args);
+  if (version == 1) {
+    return clock->Update(options, args.v1);
+  } else {
+    return clock->Update(options, args.v2);
+  }
 }
