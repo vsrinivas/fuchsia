@@ -4,6 +4,7 @@
 
 library fuchsia.web;
 
+using fuchsia.mem;
 using fuchsia.net.http;
 
 /// Interface supplied by the embedder for receiving notifications about navigation events in a
@@ -104,6 +105,10 @@ resource table NavigationState {
 
     /// Indicates that the main document's statically declared resources have been loaded.
     6: bool is_main_document_loaded;
+
+    /// Current favicon for the page. The field is set only when the `FAVICON` flag is set for the
+    /// `NavigationEventListener` and the favicon has changed.
+    7: Favicon favicon;
 };
 
 /// Characterizes the type of reload.
@@ -202,4 +207,19 @@ resource union NavigationDecision {
 
     /// Navigation should be aborted. The frame should stay on the current page.
     2: NoArgumentsAction abort;
+};
+
+/// Used to represent a favicon for a page. An empty table (all fields are unset) is used to indicate
+/// that the page doesn't have a favicon.
+resource table Favicon {
+    /// The image content encoded as an RGBA bitmap with premultiplied alpha channel. The data is
+    /// densely packed, so the stride is always `4 * width` and the total size is
+    /// `4 * width * height`.
+    1: fuchsia.mem.Buffer data;
+
+    /// The width of the image.
+    2: uint32 width;
+
+    /// The height of the image.
+    3: uint32 height;
 };

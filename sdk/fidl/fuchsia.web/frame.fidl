@@ -226,7 +226,16 @@ protocol Frame {
     /// Sets the listener for handling page navigation events.
     ///
     /// - `listener`: The observer to use. Unregisters any existing listener if null.
+    [Transitional]
     SetNavigationEventListener(NavigationEventListener? listener);
+
+    /// Sets the listener for handling page navigation events.
+    ///
+    /// - `listener`: The observer to use. Unregisters any existing listener if null.
+    /// - `flags`: Flags for optional features that should be enabled for the listener.
+    [Transitional]
+    SetNavigationEventListener2(NavigationEventListener? listener,
+                                NavigationEventListenerFlags flags);
 
     /// If set to a value other than [`ConsoleLogLevel.NONE`], allows web content to log messages
     /// to the [`fuchsia.logger/LogSink`] configured for this [`Frame`], via the
@@ -342,29 +351,7 @@ protocol Frame {
     /// resolution at which the view is rendered. Native (non-web) UI elements, such as default
     /// scroll bars and default mouse cursor, are not scaled. User may zoom the page further when
     /// pinch-zoom is enabled (see [`InputTypes.GESTURE_PINCH`]).
-    [Transitional]
     SetPageScale(float32 scale);
-
-    /// Returns the favicon for the main document. The first call returns immediately.
-    /// Subsequent calls will block until the favicon is updated.
-    /// If the page has no favicon or a navigation has not yet completed, the WebImage will be
-    /// an empty table.
-    /// On navigations that change the document, an empty WebImage will be sent when the
-    /// navigation begins. The favicon for the new page will be sent once it is available.
-    /// The favicon may also change between navigations, such as to indicate a notification.
-    [Transitional]
-    WatchFavicon() -> (WebImage image);
-};
-
-resource table WebImage {
-    /// The message payload, encoded as an RGBA bitmap. The size will be 4 x width x height.
-    1: fuchsia.mem.Buffer data;
-
-    /// The width of the image.
-    2: uint32 width;
-
-    /// The height of the image.
-    3: uint32 height;
 };
 
 resource table WebMessage {
@@ -420,4 +407,11 @@ protocol PopupFrameCreationListener {
     /// and how it was created, is provided via `info`. Additional popup frames are delivered after
     /// the acknowledgement callback is invoked.
     OnPopupFrameCreated(Frame frame, PopupFrameCreationInfo info) -> ();
+};
+
+/// Flags clients can set when connecting a [`NavigationEventListener`] to indicates interest in
+/// optional features.
+bits NavigationEventListenerFlags : uint64 {
+    /// Enables `favicon` field in [`NavigationState`].
+    FAVICON = 0x1;
 };
