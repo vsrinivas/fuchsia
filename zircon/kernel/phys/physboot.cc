@@ -126,7 +126,7 @@ void UnredactEntropyMixin(zbitl::ByteView payload) {
         payload.size(),
     };
     for (auto word : WordView(cmdline)) {
-      if (word.starts_with(kPrefix)) {
+      if (ktl::starts_with(word, kPrefix)) {
         word.remove_prefix(kPrefix.size());
         memcpy(const_cast<char*>(word.data()), gBootOptions->entropy_mixin.hex.data(),
                std::min(gBootOptions->entropy_mixin.len, word.size()));
