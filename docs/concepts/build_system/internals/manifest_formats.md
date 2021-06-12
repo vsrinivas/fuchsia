@@ -90,7 +90,8 @@ path.
 When used to generate a distribution manifest, they are copied as-is
 into the output file, unless they have the same source as another
 regular entry (see [this section](#duplicate-entries) for details),
-in which case only one of the entries is preserved.
+in which case only one of the entries is preserved, or if its source
+path is used by a renamed entry (see below).
 
 Example:
 
@@ -101,6 +102,108 @@ Example:
     "label": "//some/dir:foo"
   }
 ```
+
+### Copy entries.
+
+These entries are used to indicate that the build copied a specific file to
+a new output location. This information is later used to process renamed
+entries properly (see below), and are otherwise ignored. Their schema is:
+
+- `copy_from`: A source path string, relative to the build directory
+  (REQUIRED).
+
+- `copy_to`: A destination path string, relative to the build directory
+   (REQUIRED).
+
+- `label`: A GN label pointing to the target that generated this entry
+   (OPTIONAL).
+
+For example, the following entry is used to indicate that the 'foo'
+executable binary, built with the "asan" build variant in
+`${BUILD_DIR}/x64-asan/foo` was also copied to `${BUILD_DIR}/foo`.
+
+Example:
+
+```json {:.devsite-disable-click-to-copy}
+  {
+    "copy_from": "x64-asan/foo",
+    "copy_to": "foo"
+    "label": "//some/dir:foo"
+  }
+```
+
+See the section below that explains how copy and renamed entries interact,
+with an actual example.
+
+### Renamed entries
+
+These entries are used to indicate that a given regular entry should be
+installed at an alternative destination location. This is useful for certain
+programs (e.g. `busybox`, `grand_unified_binary`) which will behave differently,
+depending on the program name used to launch them. The `renamed_binary()` GN
+template relies on them. Their schema is:
+
+- `destination`: A destination path string (REQUIRED).
+
+- `renamed_source`: A source path that matches another regular entry
+  (REQUIRED).
+
+- `label`: A GB label pointing to the target that generated this entry
+  (OPTIONAL).
+
+- `keep_original`: A boolean flag, set to true to indicate that the original
+  renamed binary should still be installed in the container (OPTIONAL).
+
+Note that a renaming entry can  only point to the `source` path of a regular
+entry, or to the `copy_to` path of a copy entry. Using an unknown path, or the
+destination path of another renaming entry is a build error.
+
+It is possible to rename the same entry multiple times. This is useful when the
+same original binary needs to be installed several times under different names.
+
+Here is an example where the `busybox` binary is installed as `bin/cp`,
+`bin/cat` and `bin/ls` in the same container. Note that `bin/busybox` will
+*not* be installed to the container though.
+
+
+```json {:.devsite-disable-click-to-copy}
+  {
+    "destination": "bin/busybox",
+    "source": "busybox",
+    "label": "//third_party/busybox:busybox"
+  },
+  {
+    "destination": "bin/cp",
+    "renamed_from": "busybox"
+  },
+  {
+    "destination": "bin/cat",
+    "renamed_from": "busybox"
+  },
+  {
+    "destination": "bin/ls",
+    "renamed_from": "busybox"
+  }
+```
+
+If any renaming entry sets the `keep_original` flag to true, the original entry
+is not removed from the manifest, keeping the original binary in it, as in:
+
+```json {:.devsite-disable-click-to-copy}
+  {
+    "destination": "bin/busybox",
+    "source": "busybox",
+    "label": "//third_party/busybox:busybox"
+  },
+  {
+    "destination": "bin/cp",
+    "renamed_from": "busybox",
+    "keep_original": true
+  }
+```
+
+Which will ensure that both `bin/busybox` and `bin/cp` are installed into the
+container.
 
 ### File entries
 
@@ -134,6 +237,93 @@ case duplicates will simply be ignored.
 The case where multiple entries have the same destination path, but different
 source path _and_ content, is treated as a build error by the processing
 scripts.
+
+## Interaction between copy and renamed entries
+
+To clarify how copy and rename entries interact, consider the example of a given
+`renamed_binary()` target used to rename the install location of a `foo` binary.
+When no build variants are selected, the corresponding build manifest will contain
+two entries that look like this:
+
+```json {:.devsite-disable-click-to-copy}
+  {
+    "destination": "bin/foo",
+    "source": "foo",
+    "label": "//src:foo",
+  },
+  {
+    "destination": "bin/foo_renamed",
+    "renamed_from": "foo",
+  },
+```
+
+The first regular entry tells that `${BUILD_DIR}/foo` was built by the
+`//src:foo` target in the default toolchain, and should be installed to
+`bin/foo` inside containers.
+
+The second copy entry tells that the binary built as `${BUILD_DIR}/foo` should
+really be instealled to `bin/foo_renamed` instead of its default location
+(i.e. `bin/foo`).
+
+Logically speaking, this is equivalent to a single entry:
+
+
+```json {:.devsite-disable-click-to-copy}
+  {
+    "destination": "bin/foo_renamed",
+    "source": "foo",
+    "label": "//src/foo",
+  },
+```
+
+I.e. the first entry, where only the destination path was changed.
+
+However, when building the same thing with the `asan` variant is enabled,
+the manifest content will be slightly different than before:
+
+
+```json {:.devsite-disable-click-to-copy}
+  {
+    "destination": "bin/foo",
+    "source": "x64-asan/foo",
+    "label": "//src:foo(//build/toolchain:x64-asan)",
+  },
+  {
+    "copy_from": "x64-asan/foo",
+    "copy_to": "foo",
+  },
+  {
+    "destination": "bin/foo_renamed",
+    "renamed_from": "foo",
+  },
+```
+
+Now, the first entry tells that `${BUILD_DIR}/x64-asan/foo` was built
+by the `//src:foo` target in the asan toolchain (`//build/toolchain:x64-asan`),
+and still be installed by default to `bin/foo`.
+
+The second entry tells that `${BUILD_DIR}/foo` is an actual copy of
+`${BUILD_DIR}/x64-asan/foo`, because that's what our build system does.
+
+The third entry is the same as before, because the `renamed_binary()` target
+doesn't know anything about which toolchain or variant was used to build
+`${BUILD_DIR}/foo`.
+
+This is all logically equivalent to a single entry that looks like:
+
+```json {:.devsite-disable-click-to-copy}
+  {
+    "destination": "bin/foo_renamed",
+    "source": "x64-shared/foo",
+    "label": "//src/foo(//build/toolchain:x64-asan)",
+  },
+```
+
+Copy entries are only used when build variants are enabled, they link renamed
+entries with the variant-specific regular entries. The reason all this
+information is spread out is that each entry is generated through a different
+target in our build graph, and that there is no way to link everything together
+during the GN generation pass.
 
 [windows-ini]: https://en.wikipedia.org/wiki/INI_file
 [fuchsia-package-archive]: /docs/concepts/packages/package.md#structure-of-a-package

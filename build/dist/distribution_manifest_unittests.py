@@ -110,6 +110,164 @@ class TestExpandManifestItems(unittest.TestCase):
             self.assertListEqual(result, expected)
             self.assertSetEqual(opened_files, {inner_file1, inner_file2})
 
+    def test_renamed_entries(self):
+        input = [
+            {
+                'destination': 'bin/foo',
+                'source': 'some/file',
+                'label': '//src/foo',
+            },
+            {
+                'destination': 'bin/bar',
+                'renamed_source': 'some/file',
+            },
+            {
+                'destination': 'bin/zoo',
+                'renamed_source': 'some/file',
+                'label': '//other',
+            },
+        ]
+        opened_files = set()
+        result, error = dm.expand_manifest(input, opened_files)
+
+        expected = [
+            Entry(destination='bin/bar', source='some/file', label='//src/foo'),
+            Entry(destination='bin/zoo', source='some/file', label='//other'),
+        ]
+        self.assertListEqual(result, expected)
+        self.assertEqual(opened_files, set())
+        self.assertFalse(error)
+
+    def test_renamed_entries_with_persistent_entry(self):
+        input = [
+            {
+                'destination': 'bin/foo',
+                'source': 'some/file',
+                'label': '//src/foo',
+            },
+            {
+                'destination': 'bin/bar',
+                'renamed_source': 'some/file',
+                'label': '//src/bar',
+                'keep_original': True,
+            },
+        ]
+        opened_files = set()
+        result, error = dm.expand_manifest(input, opened_files)
+
+        expected = [
+            Entry(destination='bin/bar', source='some/file', label='//src/bar'),
+            Entry(destination='bin/foo', source='some/file', label='//src/foo'),
+        ]
+        self.assertListEqual(result, expected)
+        self.assertEqual(opened_files, set())
+        self.assertFalse(error)
+
+    def test_renamed_entries_with_errors(self):
+        input = [
+            {
+                'destination': 'bin/foo',
+                'source': 'some/foo',
+                'label': '//src/foo',
+            },
+            {
+                'destination': 'bin/bar',
+                'renamed_source': 'something/missing',
+            },
+            {
+                'destination': 'bin/zoo',
+                'renamed_source': 'some/foo',
+                'label': '//other',
+            },
+            {
+                'destination': 'bin/tool',
+                'renamed_source': 'some/foo2',
+            },
+        ]
+        opened_files = set()
+        result, errors = dm.expand_manifest_items_with_errors(
+            input, opened_files)
+
+        expected_errors = []
+        expected_errors += [
+            'ERROR: Renamed distribution entries have unknown source destination:'
+        ]
+        expected_errors += [
+            '  - {"destination": "bin/bar", "renamed_source": "something/missing"}'
+        ]
+        expected_errors += [
+            '  - {"destination": "bin/tool", "renamed_source": "some/foo2"}'
+        ]
+        self.assertEqual(errors, expected_errors)
+        self.assertEqual(opened_files, set())
+
+    def test_renamed_entries_with_resource_errors(self):
+        input = [
+            {
+                'destination': 'bin/foo',
+                'source': 'some/foo',
+                'label': '//src/foo',
+            },
+            {
+                'destination': 'bin/bar',
+                'source': 'some/foo',
+                'label': '//src/bar'
+            },
+            {
+                'destination': 'bin/zoo',
+                'renamed_source': 'some/foo',
+                'label': '//other',
+            },
+        ]
+        opened_files = set()
+        result, errors = dm.expand_manifest_items_with_errors(
+            input, opened_files)
+
+        expected_errors = []
+        expected_errors += [
+            'ERROR: Multiple regular entries with the same source path:',
+            '  - destination=bin/bar source=some/foo label=//src/bar',
+            '  - destination=bin/foo source=some/foo label=//src/foo',
+        ]
+        expected_errors.append(
+            '\nThis generally means a mix of renamed_binary() and resource() targets\n'
+            +
+            'that reference the same source. Try replacing the resource() targets by\n'
+            + 'renamed_binary() ones to fix the problem\n')
+
+        self.assertEqual(errors, expected_errors)
+        self.assertEqual(opened_files, set())
+
+    def test_renamed_entries_with_copy(self):
+        input = [
+            {
+                'destination': 'bin/foo',
+                'source': 'some-variant/foo',
+                'label': '//src/foo(variant)',
+            },
+            {
+                'copy_from': 'some-variant/foo',
+                'copy_to': 'foo',
+                'label': '//src/foo',
+            },
+            {
+                'destination': 'bin/foo_renamed',
+                'renamed_source': 'foo',
+            },
+        ]
+        opened_files = set()
+        result, errors = dm.expand_manifest(input, opened_files)
+
+        expected = [
+            Entry(
+                destination='bin/foo_renamed',
+                source='some-variant/foo',
+                label='//src/foo(variant)')
+        ]
+        self.assertListEqual(result, expected)
+        self.assertEqual(opened_files, set())
+        self.assertFalse(errors)
+
 
 class TestExpandManifest(unittest.TestCase):
 

@@ -72,6 +72,10 @@ renamed_binary("renamed_a11y_manager") {
   source = "$root_out_dir/a11y_manager"
   source_deps = [ "//src/ui/a11y/bin/a11y_manager:bin" ]
   dest = "bin/intl_services"
+
+  # NOTE: Keep the original to ensure the binary's size doesn't
+  # move from the I18N component to the UI one!
+  keep_original = true
 }
 
 fuchsia_package_with_single_component("pkg_small") {

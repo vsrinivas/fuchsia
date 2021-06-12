@@ -2172,6 +2172,16 @@ template("variant_target") {
 
       sources = [ "$variant_out_dir/$full_output_name" ]
       outputs = [ "$local_out_dir/$full_output_name" ]
+
+      metadata = {
+        # Used by the distribution_manifest() template.
+        distribution_entries = [
+          {
+            copy_from = rebase_path(sources[0], root_build_dir)
+            copy_to = rebase_path(outputs[0], root_build_dir)
+          },
+        ]
+      }
     }
   }
 }

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dist/resource.gni")
+import("//build/dist/renamed_binary.gni")
 
 # Defines a renamed binary based on grand_unified_binary.
 #
@@ -27,14 +27,14 @@ template("grand_unified_binary") {
     output_name = invoker.output_name
   }
 
-  resource(target_name) {
+  renamed_binary(target_name) {
     forward_variables_from(invoker,
                            [
                              "testonly",
                              "visibility",
                            ])
-    data_deps = [ "//src/go/grand_unified_binary" ]
-    sources = [ "$root_out_dir/grand_unified_binary" ]
-    outputs = [ "bin/$output_name" ]
+    source_deps = [ "//src/go/grand_unified_binary" ]
+    source = "$root_out_dir/grand_unified_binary"
+    dest = "bin/$output_name"
   }
 }

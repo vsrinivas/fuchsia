@@ -28,9 +28,220 @@ Entry = collections.namedtuple('Entry', ['destination', 'source', 'label'])
 # can be merged into a single one. Otherwise, it is a build error.
 #
 
+PartialEntry = Dict[str, str]
+
+
+def expand_manifest_items_inner(
+    manifest_items: Iterable[PartialEntry],
+    opened_files: Set[str],
+    default_label: Optional[str] = None
+) -> Tuple[List[Entry], List[PartialEntry]]:
+    """Expand the content of a distribution manifest file.
+
+    Note that this function does not try to de-duplicate identical entries.
+
+    Args:
+        manifest_items: A list of dictionaries, corresponding to the
+            content of a manifest file.
+        opened_files: A set of file paths, which will be updated with
+            the paths of the files that have been read during expansion.
+        default_label: An optional string that will be used as a default
+            "label" value if an entry does not have one.
+    Returns:
+        An (entries, extras) tuple, where `entries` is an Entry list,
+        and `extras` is a list of input items that need further processing,
+        e.g. renaming entries.
+    """
+    entries: List[Entry] = []
+    extras: List[PartialEntry] = []
+    for item in manifest_items:
+        if 'label' not in item and default_label is not None:
+            item['label'] = default_label
+        if 'renamed_source' in item:
+            # A renaming entry, for now just add it to the 'extras' list to
+            # be processed by the caller.
+            extras.append(item)
+        if 'copy_from' in item:
+            # A copy entry, for now just add it to the 'extras' list.
+            extras.append(item)
+        if 'source' in item:
+            entries.append(Entry(**item))
+        elif 'file' in item:
+            file_path = item['file']
+            item_label = item['label']
+            opened_files.add(file_path)
+            with open(file_path) as data_file:
+                data = json.load(data_file)
+            new_entries, new_extras = expand_manifest_items_inner(
+                data, opened_files, item_label)
+            entries += new_entries
+            extras += new_extras
+
+    return entries, extras
+
+
+def expand_manifest_items_with_errors(
+        manifest_items: Iterable[PartialEntry],
+        opened_files: Set[str],
+        default_label: Optional[str] = None) -> Tuple[List[Entry], List[str]]:
+    """Expand the content of a distribution manifest file.
+
+    Note that this function does not try to de-duplicate identical entries.
+
+    Args:
+        manifest_items: A list of dictionaries, corresponding to the
+            content of a manifest file.
+        opened_files: A set of file paths, which will be updated with
+            the paths of the files that have been read during expansion.
+        default_label: An optional string that will be used as a default
+            "label" value if an entry does not have one.
+    Returns:
+        An (entries, errors) tuple, where `entries` is an Entry list, and
+        `errors` is a list of string describing errors found in the input,
+        which will be empty on success.
+    """
+    entries, extras = expand_manifest_items_inner(
+        manifest_items, opened_files, default_label)
+
+    # Process extra entries here.
+    errors: List[str] = []
+    unknown_renames: List[PartialEntry] = [
+    ]  # rename entries with unknown renamed_source path.
+    renamed_entries: List[Entry] = []
+    renamed_sources: Set[str] = set(
+    )  # Source paths of original entries that are renamed.
+    persistent_sources: Set[str] = set(
+    )  # Source paths of original entries that must be preserved.
+    if extras:
+        # Verify that each renaming entry references a given regular entry.
+        source_to_entries = {e.source: e for e in entries}
+
+        # A map built from all copy entries, that maps their destination path
+        # to the corresponding source path.
+        copy_reverse_map = {
+            e['copy_to']: e['copy_from'] for e in extras if 'copy_from' in e
+        }
+
+        for extra in extras:
+            if 'renamed_source' in extra:
+                source = extra['renamed_source']
+                dest = extra['destination']
+
+                source_entry = source_to_entries.get(source)
+                if source_entry is None:
+                    # Try with the copy entries.
+                    alt_source = copy_reverse_map.get(source)
+                    if alt_source:
+                        source = alt_source
+                        source_entry = source_to_entries.get(source)
+
+                if source_entry is None:
+                    unknown_renames.append(extra)
+                    continue
+
+                new_entry = source_entry._replace(destination=dest)
+                extra_label = extra.get('label')
+                if extra_label:
+                    new_entry = new_entry._replace(label=extra_label)
+                renamed_entries.append(new_entry)
+                renamed_sources.add(source)
+                if extra.get('keep_original', False):
+                    persistent_sources.add(source)
+
+            elif 'copy_from' in extra:
+                # Already handled by copy_reverse_map above.
+                pass
+
+            else:
+                # Should not happen unless there is a bug in
+                # expand_manifest_entries_inner.
+                assert False, 'Unsupported extra item: %s' % extra
+
+    if unknown_renames:
+        errors.append(
+            'ERROR: Renamed distribution entries have unknown source destination:'
+        )
+        for extra in unknown_renames:
+            errors.append('  - %s' % json.dumps(extra))
+
+    # When the source path of a copy entry is actually provided by several
+    # regular entries, it means that one of the latter comes from a resource()
+    # target, instead of a renamed_binary() one. Unfortunately, there is no
+    # way to know from the input data which regular entry should be preserved.
+    #
+    # For example:
+    #
+    #   resource("bar") {
+    #     outputs = [ "bin/bar" ]
+    #     deps = [ "//src:foo" ]
+    #     sources = [ "$root_build_dir/foo" ]
+    #   }
+    #
+    #   renamed_binary("zoo") {
+    #     dest = "bin/zoo"
+    #     source = "$root_build_dir/foo"
+    #     deps = [ "//src:foo" ]
+    #   }
+    #
+    # Would generate:
+    #
+    #   {
+    #     "destination": "bin/bar",
+    #     "source": "foo",
+    #     "label": "//whatever:bar",
+    #   }
+    #
+    #   {
+    #     "destination": "bin/foo",
+    #     "source": "foo",
+    #     "label": "//src:foo",
+    #   }
+    #
+    #   {
+    #      renamed_from = "foo",
+    #      destination: "bin/zoo",
+    #      label = "//whatever:zoo"
+    #   }
+    #
+    # Notice that from the data above, it's impossible to tell whether to
+    # remove the first or second entry from the final manifest.
+    #
+    # Since this is a seldom case, detect it here and generate an error
+    # message that explains how to solve the issue.
+    #
+    source_to_multi_entries: Dict[str,
+                                  Set[Entry]] = collections.defaultdict(set)
+    for e in entries:
+        source_to_multi_entries[e.source].add(e)
+
+    multi_source_entries = []
+    for src, src_entries in source_to_multi_entries.items():
+        if src in renamed_sources and len(src_entries) > 1:
+            multi_source_entries += list(src_entries)
+
+    if multi_source_entries:
+        errors.append(
+            'ERROR: Multiple regular entries with the same source path:')
+        for e in sorted(multi_source_entries):
+            errors.append(
+                '  - destination=%s source=%s label=%s' %
+                (e.destination, e.source, e.label))
+        errors.append(
+            '\nThis generally means a mix of renamed_binary() and resource() targets\n'
+            +
+            'that reference the same source. Try replacing the resource() targets by\n'
+            + 'renamed_binary() ones to fix the problem\n')
+
+    renamed_sources -= persistent_sources
+    entries = [
+        e for e in entries if e.source not in renamed_sources
+    ] + renamed_entries
+
+    return entries, errors
+
 
 def expand_manifest_items(
-        manifest_items: Iterable[dict],
+        manifest_items: Iterable[PartialEntry],
         opened_files: Set[str],
         default_label: Optional[str] = None) -> List[Entry]:
     """Expand the content of a distribution manifest file.
@@ -47,19 +258,10 @@ def expand_manifest_items(
     Returns:
         An Entry list.
     """
-    entries : List[Entry] = []
-    for item in manifest_items:
-        if 'label' not in item:
-            item['label'] = default_label
-        if 'source' in item:
-            entries.append(Entry(**item))
-        elif 'file' in item:
-            file_path = item['file']
-            item_label = item['label']
-            opened_files.add(file_path)
-            with open(file_path) as data_file:
-                data = json.load(data_file)
-            entries += expand_manifest_items(data, opened_files, item_label)
+    entries, errors = expand_manifest_items_with_errors(
+        manifest_items, opened_files, default_label)
+    if errors:
+        raise Exception('\n'.join(errors))
     return entries
 
 
@@ -160,7 +362,7 @@ def convert_fini_manifest_to_distribution_entries(
     Returns:
         An Entry list.
     """
-    result : List[Entry] = []
+    result: List[Entry] = []
     for line in fini_manifest_lines:
         dst, _, src = line.strip().partition('=')
         entry = Entry(destination=dst, source=src, label=label)
@@ -231,7 +433,7 @@ def verify_elf_dependencies(
     #     libunwind.so-----------'
     #
     errors: List[str] = []
-    queue : Set[str] = set(deps)
+    queue: Set[str] = set(deps)
     while queue:
         dep = queue.pop()
         dep2 = _rewrite_elf_needed(dep)

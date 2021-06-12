@@ -518,12 +518,9 @@ if (bootfs_only) {
   }
 }
 
-generated_file(labels.bootfs_entries_metadata) {
+distribution_manifest(labels.bootfs_entries_metadata) {
   testonly = true
-  data_keys = [ "distribution_entries" ]
-  walk_keys = [ "distribution_entries_barrier" ]
   outputs = [ files.bootfs_entries_metadata ]
-  output_conversion = "json"
   deps = [ dep_labels.bootfs_entries ]
   if (uses_base_package) {
     # Use the devmgr config for pkgfs

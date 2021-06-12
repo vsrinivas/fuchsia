@@ -23,10 +23,13 @@ import("//build/images/shell_commands.gni")
 # one also ensures that all runtime library dependencies will
 # be properly installed as well.
 #
-# Note that the original binary file is always installed with its
-# renamed version (there is no way to prevent this), but since
-# Fuchsia package archives are content-hash based, this doesn't
-# make their size significantly larger.
+# It is possible to use several renamed_binary() targets that all
+# use the same source binary, each one will correspond to a different
+# copy installed into the package.
+#
+# Note that the original binary file will _not_ be installed by default.
+# This can be overridden by setting `keep_original` to true, in at least
+# one of the renamed_binary() targets that use it.
 #
 # Optionally, one can also declare that the binary should be
 # available in the shell, when a given package depends on this
@@ -66,6 +69,12 @@ import("//build/images/shell_commands.gni")
 # Will only make 'foo' available to the shell, which is
 # generally better.
 #
+# Finally, it is not possible to mix resource() and renamed_binary()
+# targets that use the same source path. This will be detected as a
+# conflict during the build, and an error message will be printed
+# listing the affected targets. To solve the issue, simply replace
+# the resource() target with a renamed_binary() one.
+#
 # Arguments:
 #   dest (required)
 #     [path] Destination path inside the package. Typically
@@ -86,6 +95,11 @@ import("//build/images/shell_commands.gni")
 #     original source binary, while also installed in the package,
 #     will _not_ be made visible to the shell through this target,
 #     only the renamed one.
+#
+#   keep_original (optional)
+#     [boolean] Set this to true to keep the original binary in the
+#     package as well. By default, it will be removed, replaced by
+#     its renamed version.
 #
 #   deps, testonly, visibility
 #     Usual GN meaning.
@@ -121,25 +135,6 @@ template("renamed_binary") {
     }
   }
 
-  # The resource target that ensures the renamed executable is installed
-  # to the right location. Note that runtime dependencies are also needed,
-  # and this is achieved by having the main target also depending on
-  # invoker.source_deps below.
-  _resource_target = "${main_target_name}.renamed_executable"
-  resource(_resource_target) {
-    forward_variables_from(invoker, [ "testonly" ])
-    sources = [ invoker.source ]
-    outputs = [ invoker.dest ]
-    data_deps = invoker.source_deps
-    visibility = [
-      ":${main_target_name}",
-      ":*",
-    ]
-    if (defined(_shell_file_target)) {
-      deps = [ ":${_shell_file_target}" ]
-    }
-  }
-
   group(main_target_name) {
     forward_variables_from(invoker,
                            [
@@ -151,14 +146,44 @@ template("renamed_binary") {
       deps = []
     }
 
-    # Ensure the renamed binary is installed into any Fuchsia
-    # package that depends on main_target_name.
-    deps += [ ":${_resource_target}" ]
-
     # Also depend on the original source binary target(s). This
     # is required to ensure that all runtime library dependencies
     # are also properly installed, because the resource() target
     # will actually block metadata collection for these.
     deps += invoker.source_deps
+
+    if (defined(_shell_file_target)) {
+      deps += [ ":${_shell_file_target}" ]
+    }
+
+    _rebased_source = rebase_path(invoker.source, root_build_dir)
+
+    metadata = {
+      # Used by the zbi() template.
+      zbi_input_barrier = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      # Stop *_manifest() and zbi_test() from picking up files or
+      # zbi_input() items from the deps, but let them reach the data_deps.
+      if (defined(invoker.data_deps)) {
+        zbi_input_barrier += invoker.data_deps
+      }
+
+      # Used by the distribution_manifest() template.
+      # This create a 'renaming entry' as described in
+      # //docs/concepts/build_system/internals/manifest_formats.mg.
+      distribution_entries = [
+        {
+          renamed_source = _rebased_source
+          destination = invoker.dest
+          label = get_label_info(":$main_target_name", "label_with_toolchain")
+          keep_original =
+              defined(invoker.keep_original) && invoker.keep_original
+        },
+      ]
+    }
   }
 }
