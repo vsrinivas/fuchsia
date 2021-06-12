@@ -166,7 +166,7 @@ int32_t PosixPlatform::Exec(char** args, char** env, int32_t* user_std_in, int32
       exit(-errno);
     }
 
-    execve(args[0], &args[0], &env[0]);
+    execve(args[0], args, env);
     exit(-errno);
   } else if (child_pid < 0) {
     return -errno;

@@ -46,7 +46,7 @@ class QcowTest : public testing::Test {
   QcowTest() {}
 
   void SetUp() override {
-    fd_.reset(mkstemp(&path_[0]));
+    fd_.reset(mkstemp(path_.data()));
     ASSERT_TRUE(fd_);
   }
 
