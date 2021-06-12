@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, Error},
+    bt_rfcomm::{profile::server_channel_from_protocol, ServerChannel},
     fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
     fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
     futures::{channel::mpsc, select, FutureExt, StreamExt, TryStreamExt},
@@ -11,21 +12,7 @@ use {
     std::{convert::TryFrom, sync::Arc},
 };
 
-use crate::types::{ProfileState, ServerChannelNumber};
-
-/// Returns the Server Channel number from the provided `protocol` or None if the
-/// protocol is not RFCOMM or is invalidly formatted.
-fn server_channel_from_protocol(
-    protocol: &Vec<bredr::ProtocolDescriptor>,
-) -> Option<ServerChannelNumber> {
-    protocol
-        .iter()
-        .find(|descriptor| descriptor.protocol == bredr::ProtocolIdentifier::Rfcomm)
-        .and_then(|rfcomm| match rfcomm.params.first() {
-            Some(bredr::DataElement::Uint8(sc)) => Some(ServerChannelNumber(*sc)),
-            _ => None,
-        })
-}
+use crate::types::ProfileState;
 
 /// Returns a valid SPP Service Definition.
 /// See SPP V12 Table 6.1.
@@ -57,7 +44,7 @@ pub fn spp_service_definition() -> bredr::ServiceDefinition {
 /// Processes data received from the remote peer over the provided RFCOMM `channel`.
 /// Processes data in the `write_requests` queue to be sent to the remote peer.
 pub async fn rfcomm_channel_task(
-    server_channel: ServerChannelNumber,
+    server_channel: ServerChannel,
     state: Arc<RwLock<ProfileState>>,
     mut channel: Channel,
     mut write_requests: mpsc::Receiver<Vec<u8>>,
@@ -108,6 +95,7 @@ pub async fn handle_profile_events(
                     connect_request?.ok_or(anyhow!("BR/EDR ended service registration"))?;
 
                 // Received an incoming connection request for our advertised service.
+                let protocol = protocol.iter().map(Into::into).collect();
                 let server_channel =
                     server_channel_from_protocol(&protocol).ok_or(anyhow!("Invalid"))?;
                 let channel = Channel::try_from(channel).unwrap();
@@ -116,7 +104,7 @@ pub async fn handle_profile_events(
                 fasync::Task::spawn(
                     rfcomm_channel_task(server_channel, state.clone(), channel, receiver)
                 ).detach();
-                println!("Inbound Rfcomm Channel ({}) established", server_channel.0);
+                println!("Inbound Rfcomm Channel ({:?}) established", server_channel);
             }
             results_request = results_requests.try_next() => {
                 let bredr::SearchResultsRequest::ServiceFound { peer_id, protocol, responder, .. } =
@@ -125,11 +113,12 @@ pub async fn handle_profile_events(
 
                 // Discovered an advertised service for the remote peer identified by `peer_id`.
                 let id: PeerId = peer_id.into();
+                let protocol = protocol.expect("Protocol should exist").iter().map(Into::into).collect();
                 let server_channel =
-                    server_channel_from_protocol(&protocol.expect("Protocol should exist"))
+                    server_channel_from_protocol(&protocol)
                     .ok_or(anyhow!("Invalid"))?;
-                println!("Found service for {:?} with server channel: {}",
-                    id.to_string(), server_channel.0
+                println!("Found service for {:?} with server channel: {:?}",
+                    id.to_string(), server_channel
                 );
             }
             complete => return Ok(()),
@@ -143,66 +132,10 @@ mod tests {
     use futures::task::Poll;
 
     #[test]
-    fn server_channel_from_invalid_protocol() {
-        // Empty.
-        let protocol0 = vec![];
-        assert_eq!(server_channel_from_protocol(&protocol0), None);
-
-        // Missing RFCOMM descriptor.
-        let protocol1 = vec![bredr::ProtocolDescriptor {
-            protocol: bredr::ProtocolIdentifier::L2Cap,
-            params: vec![bredr::DataElement::Uint16(10)],
-        }];
-        assert_eq!(server_channel_from_protocol(&protocol1), None);
-
-        // Missing ServerChannel.
-        let protocol2 = vec![
-            bredr::ProtocolDescriptor {
-                protocol: bredr::ProtocolIdentifier::L2Cap,
-                params: vec![],
-            },
-            bredr::ProtocolDescriptor {
-                protocol: bredr::ProtocolIdentifier::Rfcomm,
-                params: vec![],
-            },
-        ];
-        assert_eq!(server_channel_from_protocol(&protocol2), None);
-
-        // Invalid ServerChannel.
-        let protocol3 = vec![
-            bredr::ProtocolDescriptor {
-                protocol: bredr::ProtocolIdentifier::L2Cap,
-                params: vec![],
-            },
-            bredr::ProtocolDescriptor {
-                protocol: bredr::ProtocolIdentifier::Rfcomm,
-                params: vec![bredr::DataElement::Uint16(150)],
-            },
-        ];
-        assert_eq!(server_channel_from_protocol(&protocol3), None);
-    }
-
-    #[test]
-    fn server_channel_from_valid_protocol() {
-        let expected = ServerChannelNumber(10);
-        let protocol = vec![
-            bredr::ProtocolDescriptor {
-                protocol: bredr::ProtocolIdentifier::L2Cap,
-                params: vec![],
-            },
-            bredr::ProtocolDescriptor {
-                protocol: bredr::ProtocolIdentifier::Rfcomm,
-                params: vec![bredr::DataElement::Uint8(expected.0)],
-            },
-        ];
-        assert_eq!(server_channel_from_protocol(&protocol), Some(expected));
-    }
-
-    #[test]
     fn rfcomm_task_finishes_when_peer_disconnects() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
-        let server_channel = ServerChannelNumber(5);
+        let server_channel = ServerChannel::try_from(5).expect("valid server channel number");
         let state = Arc::new(RwLock::new(ProfileState::new()));
         let (local, remote) = Channel::create();
         let receiver = state.write().rfcomm.create_channel(server_channel);
@@ -239,7 +172,7 @@ mod tests {
     fn rfcomm_task_finishes_when_tool_closes_channel() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
-        let server_channel = ServerChannelNumber(5);
+        let server_channel = ServerChannel::try_from(5).expect("valid server channel number");
         let state = Arc::new(RwLock::new(ProfileState::new()));
         let (local, _remote) = Channel::create();
         let receiver = state.write().rfcomm.create_channel(server_channel);

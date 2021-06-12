@@ -6,8 +6,8 @@
 
 use {
     anyhow::{anyhow, Context, Error},
-    fidl::encoding::Decodable,
-    fidl::endpoints::create_request_stream,
+    bt_rfcomm::ServerChannel,
+    fidl::{encoding::Decodable, endpoints::create_request_stream},
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_async::{self as fasync, futures::select},
     fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
@@ -303,13 +303,13 @@ async fn connect_rfcomm(
     let peer_id: PeerId = args[0].parse()?;
     let server_channel =
         args[1].parse::<u8>().map_err(|_| anyhow!("Server channel must be a u8"))?;
-    let server_channel = ServerChannelNumber::try_from(server_channel)?;
+    let server_channel = ServerChannel::try_from(server_channel)?;
 
     let res = profile_svc
         .connect(
             &mut peer_id.into(),
             &mut ConnectParameters::Rfcomm(RfcommParameters {
-                channel: Some(server_channel.0),
+                channel: Some(server_channel.into()),
                 ..RfcommParameters::EMPTY
             }),
         )
@@ -319,7 +319,7 @@ async fn connect_rfcomm(
     let receiver = state.write().rfcomm.create_channel(server_channel);
     fasync::Task::spawn(rfcomm_channel_task(server_channel, state.clone(), channel, receiver))
         .detach();
-    println!("Established outbound Rfcomm channel: {}", server_channel.0);
+    println!("Established outbound Rfcomm channel: {:?}", server_channel);
     Ok(())
 }
 
@@ -344,7 +344,7 @@ fn disconnect_rfcomm(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Re
 
     let server_channel =
         args[0].parse::<u8>().map_err(|_| anyhow!("Server channel must be a u8"))?;
-    let server_channel = ServerChannelNumber::try_from(server_channel)?;
+    let server_channel = ServerChannel::try_from(server_channel)?;
 
     if state.write().rfcomm.remove_channel(server_channel) {
         println!("RFCOMM Channel {:?} disconnected", server_channel);
@@ -371,7 +371,7 @@ fn write_l2cap(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(
     Ok(())
 }
 
-/// Sends a user data payload to the ServerChannelNumber specified in `args`.
+/// Sends a user data payload to the ServerChannel specified in `args`.
 fn write_rfcomm(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
     if args.len() != 2 {
         return Err(anyhow!("Invalid number of arguments"));
@@ -379,7 +379,7 @@ fn write_rfcomm(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<
 
     let server_channel =
         args[0].parse::<u8>().map_err(|_| anyhow!("Server channel must be a u8"))?;
-    let server_channel = ServerChannelNumber::try_from(server_channel)?;
+    let server_channel = ServerChannel::try_from(server_channel)?;
     let bytes = args[1].as_bytes().to_vec();
     state.write().rfcomm.send_user_data(server_channel, bytes)
 }
@@ -555,7 +555,7 @@ mod tests {
     #[test]
     fn disconnect_rfcomm_channel_succeeds() {
         let state = Arc::new(RwLock::new(ProfileState::new()));
-        let server_channel = ServerChannelNumber(10);
+        let server_channel = ServerChannel::try_from(10).expect("valid server channel number");
         let _receiver = state.write().rfcomm.create_channel(server_channel);
         let args = vec!["10".to_string()];
         assert!(disconnect_rfcomm(state.clone(), &args).is_ok());
