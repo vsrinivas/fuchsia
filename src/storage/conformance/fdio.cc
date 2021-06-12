@@ -82,7 +82,7 @@ class FdioTest : public testing::Test {
   static zx::vmo MakeTestVmo(const std::vector<char>& buffer) {
     zx::vmo ret;
     EXPECT_EQ(ZX_OK, zx::vmo::create(kTestVmoSize, 0, &ret));
-    EXPECT_EQ(ZX_OK, ret.write(&buffer[0], 0, kTestVmoSize));
+    EXPECT_EQ(ZX_OK, ret.write(buffer.data(), 0, kTestVmoSize));
     return ret;
   }
 

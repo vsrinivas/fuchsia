@@ -123,7 +123,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
 
     // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
     data.resize(size);
-    if (zx_status_t status = vmo.read(&data[0], 0, size); status != ZX_OK) {
+    if (zx_status_t status = vmo.read(data.data(), 0, size); status != ZX_OK) {
       data.resize(0);
       return status;
     }
@@ -189,7 +189,7 @@ TEST_P(BlobLoaderTest, SmallBlob) {
   auto blob = LookupBlob(*info);
 
   std::vector<uint8_t> data = LoadBlobData(blob.get());
-  ASSERT_TRUE(info->DataEquals(&data[0], data.size()));
+  ASSERT_TRUE(info->DataEquals(data.data(), data.size()));
 
   // Verify there's no Merkle data for this small blob.
   const auto& merkle = GetBlobMerkleMapper(blob.get());
@@ -206,7 +206,7 @@ TEST_P(BlobLoaderTest, LargeBlob) {
   auto blob = LookupBlob(*info);
 
   std::vector<uint8_t> data = LoadBlobData(blob.get());
-  ASSERT_TRUE(info->DataEquals(&data[0], data.size()));
+  ASSERT_TRUE(info->DataEquals(data.data(), data.size()));
 
   CheckMerkleTreeContents(GetBlobMerkleMapper(blob.get()), *info);
 }
@@ -220,7 +220,7 @@ TEST_P(BlobLoaderTest, LargeBlobWithNonAlignedLength) {
   auto blob = LookupBlob(*info);
 
   std::vector<uint8_t> data = LoadBlobData(blob.get());
-  ASSERT_TRUE(info->DataEquals(&data[0], data.size()));
+  ASSERT_TRUE(info->DataEquals(data.data(), data.size()));
 
   CheckMerkleTreeContents(GetBlobMerkleMapper(blob.get()), *info);
 }

@@ -46,7 +46,7 @@ TEST_P(SparseTest, ReadAfterSparseWriteReturnsCorrectData) {
   }
 
   // Dump write buffer to file
-  ASSERT_EQ(pwrite(fd.get(), &wbuf[0], write_size(), write_offset()),
+  ASSERT_EQ(pwrite(fd.get(), wbuf.data(), write_size(), write_offset()),
             static_cast<ssize_t>(write_size()));
 
   // Reopen file
@@ -60,7 +60,7 @@ TEST_P(SparseTest, ReadAfterSparseWriteReturnsCorrectData) {
       (file_size - read_offset()) > write_size() ? write_size() : (file_size - read_offset());
   ASSERT_GT(bytes_to_read, 0ul) << "We want to test writing AND reading";
   std::vector<uint8_t> rbuf(bytes_to_read);
-  ASSERT_EQ(pread(fd.get(), &rbuf[0], bytes_to_read, read_offset()),
+  ASSERT_EQ(pread(fd.get(), rbuf.data(), bytes_to_read, read_offset()),
             static_cast<ssize_t>(bytes_to_read));
 
   const size_t sparse_length = (read_offset() < write_offset())

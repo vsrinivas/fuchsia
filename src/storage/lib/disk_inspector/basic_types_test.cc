@@ -75,7 +75,7 @@ TEST(DiskInpectorTest, TestUint32Array) {
   // Testing element at index 0
   std::unique_ptr<DiskObject> elem_obj = out_obj->GetElementAt(0);
   ASSERT_NE(nullptr, elem_obj.get());
-  TestPrimitiveType(elem_obj.get(), &inp_arr[0], sizeof(inp_arr[0]));
+  TestPrimitiveType(elem_obj.get(), inp_arr, sizeof(inp_arr[0]));
 
   // Testing element at index 1
   std::unique_ptr<DiskObject> elem_obj1 = out_obj->GetElementAt(1);
@@ -96,7 +96,7 @@ TEST(DiskInpectorTest, TestUint64Array) {
   // Testing element at index 0
   std::unique_ptr<DiskObject> elem_obj = out_obj->GetElementAt(0);
   ASSERT_NE(nullptr, elem_obj.get());
-  TestPrimitiveType(elem_obj.get(), &inp_arr[0], sizeof(inp_arr[0]));
+  TestPrimitiveType(elem_obj.get(), inp_arr, sizeof(inp_arr[0]));
 
   // Testing element at index 1
   std::unique_ptr<DiskObject> elem_obj1 = out_obj->GetElementAt(1);
@@ -117,7 +117,7 @@ TEST(DiskInpectorTest, TestCharArray) {
   // Testing element at index 0
   std::unique_ptr<DiskObject> elem_obj = out_obj->GetElementAt(0);
   ASSERT_NE(nullptr, elem_obj.get());
-  TestPrimitiveType(elem_obj.get(), &inp_arr[0], sizeof(inp_arr[0]));
+  TestPrimitiveType(elem_obj.get(), inp_arr, sizeof(inp_arr[0]));
 
   // Testing element at index 1
   std::unique_ptr<DiskObject> elem_obj1 = out_obj->GetElementAt(1);

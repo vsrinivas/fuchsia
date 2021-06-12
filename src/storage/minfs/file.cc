@@ -97,7 +97,7 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
 
     // Since we reserved enough space ahead of time, this should not fail.
     ZX_ASSERT_MSG(
-        BlocksSwap(transaction.get(), bno_start, bno_count, &allocated_blocks[0]) == ZX_OK,
+        BlocksSwap(transaction.get(), bno_start, bno_count, allocated_blocks.data()) == ZX_OK,
         "Failed to reserve blocks.");
 
     // Enqueue each data block one at a time, as they may not be contiguous on disk.

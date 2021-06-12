@@ -23,7 +23,7 @@ std::string GetBasePath() {
   uint32_t length = 0;
   _NSGetExecutablePath(nullptr, &length);
   result.resize(length);
-  _NSGetExecutablePath(&result[0], &length);
+  _NSGetExecutablePath(result.data(), &length);
   result.resize(length - 1);  // Length included terminator.
 #elif defined(__linux__)
   // The realpath() call below will resolve the symbolic link.

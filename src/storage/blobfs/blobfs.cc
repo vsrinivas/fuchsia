@@ -93,7 +93,7 @@ zx_status_t LoadSuperblock(const fuchsia_hardware_block_BlockInfo& block_info, i
     FX_LOGS(ERROR) << "could not read info block";
     return status;
   }
-  const Superblock* superblock = reinterpret_cast<Superblock*>(&block[0]);
+  const Superblock* superblock = reinterpret_cast<Superblock*>(block);
 
   uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
   if (kBlobfsBlockSize % block_info.block_size != 0) {
@@ -139,7 +139,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     // Backup superblocks are only valid with FVM.
     fvm_required = true;
   }
-  const Superblock* superblock = reinterpret_cast<Superblock*>(&block[0]);
+  const Superblock* superblock = reinterpret_cast<Superblock*>(block);
 
   // Construct the Blobfs object, without intensive validation, since it
   // may require upgrades / journal replays to become valid.
@@ -1030,7 +1030,7 @@ zx_status_t Blobfs::ReloadSuperblock() {
     return status;
   }
 
-  Superblock* info = reinterpret_cast<Superblock*>(&block[0]);
+  Superblock* info = reinterpret_cast<Superblock*>(block);
   if (zx_status_t status = CheckSuperblock(info, TotalBlocks(*info)); status != ZX_OK) {
     FX_LOGS(ERROR) << "Check info failure";
     return status;

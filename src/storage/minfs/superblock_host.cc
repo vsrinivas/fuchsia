@@ -19,7 +19,7 @@
 namespace minfs {
 
 SuperblockManager::SuperblockManager(const Superblock* info) {
-  memcpy(&info_blk_[0], info, sizeof(Superblock));
+  memcpy(info_blk_, info, sizeof(Superblock));
 }
 
 SuperblockManager::~SuperblockManager() = default;
@@ -44,7 +44,7 @@ zx_status_t SuperblockManager::Create(const Superblock* info, uint32_t max_block
 
 void SuperblockManager::Write(PendingWork* transaction, UpdateBackupSuperblock write_backup) {
   UpdateChecksum(MutableInfo());
-  fs::internal::BorrowedBuffer data(&info_blk_[0]);
+  fs::internal::BorrowedBuffer data(info_blk_);
 
   storage::Operation operation = {
       .type = storage::OperationType::kWrite,

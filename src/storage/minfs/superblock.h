@@ -103,7 +103,7 @@ class SuperblockManager {
 
   bool is_dirty() const { return dirty_; }
 
-  const Superblock& Info() const { return *reinterpret_cast<const Superblock*>(&info_blk_[0]); }
+  const Superblock& Info() const { return *reinterpret_cast<const Superblock*>(info_blk_); }
 
   uint32_t BlockSize() const {
     // Either intentionally or unintenttionally, we do not want to change block
@@ -119,7 +119,7 @@ class SuperblockManager {
   // the next time "Write" is invoked.
   Superblock* MutableInfo() {
     dirty_ = true;
-    return reinterpret_cast<Superblock*>(&info_blk_[0]);
+    return reinterpret_cast<Superblock*>(info_blk_);
   }
 
   // Write the superblock/backup superblock back to persistent storage at respective locations.

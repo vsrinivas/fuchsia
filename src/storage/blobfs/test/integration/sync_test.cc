@@ -126,7 +126,7 @@ TEST(SyncNandTest, Sync) {
   std::unique_ptr<char[]> read_data = std::make_unique<char[]>(info->size_data);
   ASSERT_EQ(read(file.get(), read_data.get(), info->size_data),
             static_cast<ssize_t>(info->size_data));
-  EXPECT_EQ(memcmp(info->data.get(), &read_data[0], info->size_data), 0);
+  EXPECT_EQ(memcmp(info->data.get(), read_data.get(), info->size_data), 0);
 }
 
 }  // namespace blobfs

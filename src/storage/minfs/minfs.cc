@@ -1607,7 +1607,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
   }
 
   // Setup root inode
-  Inode* ino = reinterpret_cast<Inode*>(&blk[0]);
+  Inode* ino = reinterpret_cast<Inode*>(blk);
   ino[kMinfsRootIno].magic = kMinfsMagicDir;
   ino[kMinfsRootIno].size = info.BlockSize();
   ino[kMinfsRootIno].block_count = 1;

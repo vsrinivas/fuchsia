@@ -349,7 +349,7 @@ VnodeMinfs::~VnodeMinfs() {
     request_count++;
   }
   if (request_count) {
-    fs_->bc_->GetDevice()->FifoTransaction(&request[0], request_count);
+    fs_->bc_->GetDevice()->FifoTransaction(request, request_count);
   }
 #endif
   if (indirect_file_) {

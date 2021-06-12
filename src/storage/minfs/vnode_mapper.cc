@@ -239,7 +239,7 @@ zx::status<DeviceBlockRange> VnodeIndirectMapper::MapForWrite(PendingWork* trans
   } else {
     if (allocated)
       *allocated = false;
-    block_count = Coalesce(&view[0], view.count());
+    block_count = Coalesce(view.data(), view.count());
   }
   return zx::ok(DeviceBlockRange(ToDeviceBlock(&vnode_, *view), block_count));
 }

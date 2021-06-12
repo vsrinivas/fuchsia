@@ -154,11 +154,11 @@ class VPartitionManagerTestAtRevision : public zxtest::Test {
 
     // Generates a test-unique id for the type and instance.
     fuchsia_hardware_block_partition::wire::Guid type_guid{.value = {0}};
-    memcpy(&type_guid.value[0], &next_id, sizeof(int));
+    memcpy(type_guid.value.data(), &next_id, sizeof(int));
     next_id++;
 
     fuchsia_hardware_block_partition::wire::Guid instance_guid{.value = {0}};
-    memcpy(&instance_guid.value[0], &next_id, sizeof(int));
+    memcpy(instance_guid.value.data(), &next_id, sizeof(int));
     next_id++;
 
     return device_->AllocatePartition(slices, type_guid, instance_guid,

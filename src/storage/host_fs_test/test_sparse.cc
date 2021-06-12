@@ -38,7 +38,7 @@ TEST_P(SparseHostFilesystemTest, Sparse) {
   }
 
   // Dump write buffer to file
-  ASSERT_EQ(emu_pwrite(fd, &wbuf[0], GetParam().write_size, GetParam().write_offset),
+  ASSERT_EQ(emu_pwrite(fd, wbuf.data(), GetParam().write_size, GetParam().write_offset),
             static_cast<ssize_t>(GetParam().write_size));
   // Reopen file
   ASSERT_EQ(emu_close(fd), 0);
@@ -52,7 +52,7 @@ TEST_P(SparseHostFilesystemTest, Sparse) {
                                    : (file_size - GetParam().read_offset);
   ASSERT_GT(bytes_to_read, 0u) << "We want to test writing AND reading";
   std::vector<uint8_t> rbuf(bytes_to_read);
-  ASSERT_EQ(emu_pread(fd, &rbuf[0], bytes_to_read, GetParam().read_offset),
+  ASSERT_EQ(emu_pread(fd, rbuf.data(), bytes_to_read, GetParam().read_offset),
             static_cast<ssize_t>(bytes_to_read));
 
   const size_t sparse_length = (GetParam().read_offset < GetParam().write_offset)

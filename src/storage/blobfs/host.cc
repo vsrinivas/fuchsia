@@ -880,9 +880,9 @@ fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlob(uin
   std::vector<uint8_t> merkle_tree_blocks(blob_layout->MerkleTreeBlockAlignedSize(), 0);
   std::vector<uint8_t> data_blocks(blob_layout->DataBlockAlignedSize(), 0);
   if (blob_layout->MerkleTreeBlockAlignedSize() > 0) {
-    if (zx_status_t status = ReadBlocksForInode(node_index, blob_layout->MerkleTreeBlockOffset(),
-                                                blob_layout->MerkleTreeBlockCount(),
-                                                reinterpret_cast<uint8_t*>(&merkle_tree_blocks[0]));
+    if (zx_status_t status = ReadBlocksForInode(
+            node_index, blob_layout->MerkleTreeBlockOffset(), blob_layout->MerkleTreeBlockCount(),
+            reinterpret_cast<uint8_t*>(merkle_tree_blocks.data()));
         status != ZX_OK) {
       return make_error("Failed to read in merkle tree blocks: " + std::to_string(status));
     }
@@ -890,7 +890,7 @@ fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlob(uin
   if (blob_layout->DataBlockAlignedSize() > 0) {
     if (zx_status_t status = ReadBlocksForInode(node_index, blob_layout->DataBlockOffset(),
                                                 blob_layout->DataBlockCount(),
-                                                reinterpret_cast<uint8_t*>(&data_blocks[0]));
+                                                reinterpret_cast<uint8_t*>(data_blocks.data()));
         status != ZX_OK) {
       return make_error("Failed to read in data blocks: " + std::to_string(status));
     }

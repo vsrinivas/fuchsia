@@ -131,7 +131,7 @@ TEST_P(PersistWithDataTest, ReadsReturnWrittenDataAfterRemount) {
     ASSERT_EQ(buf.st_nlink, 1ul);
     ASSERT_EQ(buf.st_size, static_cast<off_t>(buffer_size()));
 
-    ASSERT_EQ(read(fd.get(), &rbuf[0], buffer_size()), static_cast<ssize_t>(buffer_size()));
+    ASSERT_EQ(read(fd.get(), rbuf.get(), buffer_size()), static_cast<ssize_t>(buffer_size()));
     for (size_t j = 0; j < buffer_size(); j++) {
       ASSERT_EQ(rbuf[j], buffers[i][j]);
     }

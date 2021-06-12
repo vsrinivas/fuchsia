@@ -61,7 +61,7 @@ void VerifyCorruptedBlob(int fd, const uint8_t* data, size_t size_data) {
   fbl::Array<char> buf(new char[size_data], size_data);
 
   ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-  ASSERT_EQ(StreamAll(read, fd, &buf[0], size_data), -1) << "Expected reading to fail";
+  ASSERT_EQ(StreamAll(read, fd, buf.data(), size_data), -1) << "Expected reading to fail";
 }
 
 // Creates a corrupted blob with the provided Merkle tree + Data, and
@@ -211,7 +211,7 @@ TEST_P(BlobfsIntegrationTest, NullBlobCreateUnlink) {
   ASSERT_TRUE(fd);
   ASSERT_EQ(ftruncate(fd.get(), 0), 0);
   std::array<char, 1> buf;
-  ASSERT_EQ(read(fd.get(), &buf[0], 1), 0) << "Null Blob should reach EOF immediately";
+  ASSERT_EQ(read(fd.get(), buf.data(), 1), 0) << "Null Blob should reach EOF immediately";
   ASSERT_EQ(close(fd.release()), 0);
 
   fd.reset(open(info->path, O_CREAT | O_EXCL | O_RDWR));
@@ -626,13 +626,13 @@ TEST_P(BlobfsIntegrationTest, ReadTooLarge) {
     // Try read beyond end of blob.
     off_t end_off = info->size_data;
     ASSERT_EQ(end_off, lseek(fd.get(), end_off, SEEK_SET));
-    ASSERT_EQ(0, read(fd.get(), &buffer[0], 1)) << "Expected empty read beyond end of file";
+    ASSERT_EQ(0, read(fd.get(), buffer.get(), 1)) << "Expected empty read beyond end of file";
 
     // Try some reads which straddle the end of the blob.
     for (ssize_t j = 1; j < static_cast<ssize_t>(info->size_data); j *= 2) {
       end_off = info->size_data - j;
       ASSERT_EQ(end_off, lseek(fd.get(), end_off, SEEK_SET));
-      ASSERT_EQ(j, read(fd.get(), &buffer[0], j * 2))
+      ASSERT_EQ(j, read(fd.get(), buffer.get(), j * 2))
           << "Expected to only read one byte at end of file";
       ASSERT_EQ(memcmp(buffer.get(), &info->data[info->size_data - j], j), 0)
           << "Read data, but it was bad";
@@ -689,7 +689,7 @@ void VerifyCompromised(int fd, const uint8_t* data, size_t size_data) {
   std::unique_ptr<char[]> buf(new char[size_data]);
 
   ASSERT_EQ(0, lseek(fd, 0, SEEK_SET));
-  ASSERT_EQ(-1, StreamAll(read, fd, &buf[0], size_data)) << "Expected reading to fail";
+  ASSERT_EQ(-1, StreamAll(read, fd, buf.get(), size_data)) << "Expected reading to fail";
 }
 
 // Creates a blob with the provided Merkle tree + Data, and

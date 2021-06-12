@@ -470,47 +470,47 @@ TEST(AllocatorTest, ResetFromStorageTest) {
   allocator.SetLogging(false);
 
   uint8_t bitmap_data[kDeviceBlockSize];
-  RandomizeData(&bitmap_data[0], kDeviceBlockSize);
+  RandomizeData(bitmap_data, kDeviceBlockSize);
 
   // Set callback which reads |bitmap_data| into each vmo block.
-  transaction_manager.SetTransactionCallback([&bitmap_data](const block_fifo_request_t& request,
-                                                            const zx::vmo& vmo) {
-    if (request.opcode == BLOCKIO_READ) {
-      uint64_t vmo_size;
-      zx_status_t status = vmo.get_size(&vmo_size);
-      if (status != ZX_OK) {
-        return status;
-      }
+  transaction_manager.SetTransactionCallback(
+      [&bitmap_data](const block_fifo_request_t& request, const zx::vmo& vmo) {
+        if (request.opcode == BLOCKIO_READ) {
+          uint64_t vmo_size;
+          zx_status_t status = vmo.get_size(&vmo_size);
+          if (status != ZX_OK) {
+            return status;
+          }
 
-      if (vmo_size < kDeviceBlockSize) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-      }
+          if (vmo_size < kDeviceBlockSize) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+          }
 
-      // |request| may specify a greater length, but for this test its enough to verify that
-      // the first |kDeviceBlockSize| bytes were set.
-      status = vmo.write(&bitmap_data[0], request.vmo_offset * kBlobfsBlockSize, kDeviceBlockSize);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
+          // |request| may specify a greater length, but for this test its enough to verify that
+          // the first |kDeviceBlockSize| bytes were set.
+          status = vmo.write(bitmap_data, request.vmo_offset * kBlobfsBlockSize, kDeviceBlockSize);
+          if (status != ZX_OK) {
+            return status;
+          }
+        }
 
-    return ZX_OK;
-  });
+        return ZX_OK;
+      });
 
   ASSERT_EQ(allocator.ResetFromStorage(transaction_manager), ZX_OK);
 
-  CompareData(&bitmap_data[0], allocator.GetBlockMapVmo(), kDeviceBlockSize);
-  CompareData(&bitmap_data[0], allocator.GetNodeMapVmo(), kDeviceBlockSize);
+  CompareData(bitmap_data, allocator.GetBlockMapVmo(), kDeviceBlockSize);
+  CompareData(bitmap_data, allocator.GetNodeMapVmo(), kDeviceBlockSize);
 
   // Increase block and inode counts to force maps to resize.
   transaction_manager.MutableInfo().data_block_count *= 2;
   transaction_manager.MutableInfo().inode_count *= 2;
 
-  RandomizeData(&bitmap_data[0], kDeviceBlockSize);
+  RandomizeData(bitmap_data, kDeviceBlockSize);
   ASSERT_EQ(allocator.ResetFromStorage(transaction_manager), ZX_OK);
 
-  CompareData(&bitmap_data[0], allocator.GetBlockMapVmo(), kDeviceBlockSize);
-  CompareData(&bitmap_data[0], allocator.GetNodeMapVmo(), kDeviceBlockSize);
+  CompareData(bitmap_data, allocator.GetBlockMapVmo(), kDeviceBlockSize);
+  CompareData(bitmap_data, allocator.GetNodeMapVmo(), kDeviceBlockSize);
 }
 
 TEST(AllocatorTest, LiveInodePtrBlocksGrow) {

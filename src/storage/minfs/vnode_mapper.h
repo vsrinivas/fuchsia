@@ -124,7 +124,7 @@ class VnodeIterator {
 
   // Sets the target block. The iterator will need to be flushed after calling this (by calling the
   // Flush method).
-  [[nodiscard]] zx_status_t SetBlk(blk_t block) { return SetBlk(&levels_[0], block); }
+  [[nodiscard]] zx_status_t SetBlk(blk_t block) { return SetBlk(levels_.data(), block); }
 
   // Returns the length in blocks of a contiguous range at most |max_blocks|. For
   // efficiency/simplicity reasons, it might return fewer than there actually are.

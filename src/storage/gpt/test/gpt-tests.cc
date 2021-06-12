@@ -1089,7 +1089,7 @@ TEST_F(GptDeviceTest, FinalizeAndSync) {
       .num_sectors =
           static_cast<uint32_t>(std::min(0xffff'ffffUL, libGptTest->GetBlockCount() - 1)),
   };
-  EXPECT_BYTES_EQ(&expected, &mbr.partitions[0], sizeof(expected), "Invalid protective MBR");
+  EXPECT_BYTES_EQ(&expected, mbr.partitions, sizeof(expected), "Invalid protective MBR");
 }
 
 // Tests the range the GPT blocks falls within disk.

@@ -77,7 +77,6 @@ class BaseBufferView {
   ~BaseBufferView();
 
   bool IsValid() const { return data() != nullptr; }
-  void* data() const { return static_cast<uint8_t*>(buffer_.get()) + offset_; }
   size_t length() const { return length_; }
   size_t offset() const { return offset_; }
   ByteRange GetByteRange() const { return ByteRange(offset_, offset_ + length_); }
@@ -115,6 +114,8 @@ class BaseBufferView {
   }
 
  private:
+  void* data() const { return static_cast<uint8_t*>(buffer_.get()) + offset_; }
+
   BufferPtr buffer_;
   size_t offset_ = 0;
   size_t length_ = 0;
@@ -139,6 +140,7 @@ class BufferView : public BaseBufferView {
   BufferView(BufferView&& other) = default;
   BufferView& operator=(BufferView&& other) = default;
 
+  const T* data() const { return &as<T>(); }
   size_t count() const { return length() / sizeof(T); }
 
   // Non mutating accessors.

@@ -351,8 +351,9 @@ struct VPartitionEntry {
   // up the entire input buffer.
   template <size_t N>
   static std::string StringFromArray(const uint8_t (&array)[N]) {
-    return std::string(reinterpret_cast<const char*>(&array[0]),
-                       std::find(&array[0], &array[N], 0) - &array[0]);
+    return std::string(
+        reinterpret_cast<const char*>(array),
+        std::distance(std::begin(array), std::find(std::begin(array), std::end(array), 0)));
   }
 
   // Returns the allowed set of flags in |raw_flags|.

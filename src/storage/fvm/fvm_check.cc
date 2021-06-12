@@ -194,7 +194,7 @@ bool Checker::LoadPartitions(const size_t slice_count, const fvm::SliceEntry* sl
 
 void Checker::DumpSlices(const fbl::Vector<Slice>& slices) const {
   logger_.Log("[  Slice Info  ]\n");
-  Slice* run_start = nullptr;
+  const Slice* run_start = nullptr;
   size_t run_length = 0;
 
   // Prints whatever information we can from the current contiguous range of
@@ -203,7 +203,7 @@ void Checker::DumpSlices(const fbl::Vector<Slice>& slices) const {
   // A run is a contiguous set of virtual / physical slices, all allocated to the same
   // virtual partition. Noncontiguity in either the virtual or physical range
   // "breaks" the run, since these cases provide new information.
-  auto start_run = [&run_start, &run_length](Slice* slice) {
+  auto start_run = [&run_start, &run_length](const Slice* slice) {
     run_start = slice;
     run_length = 1;
   };
@@ -224,7 +224,7 @@ void Checker::DumpSlices(const fbl::Vector<Slice>& slices) const {
   };
 
   if (!slices.is_empty()) {
-    start_run(&slices[0]);
+    start_run(slices.data());
   }
   for (size_t i = 1; i < slices.size(); i++) {
     const auto& slice = slices[i];
