@@ -100,17 +100,19 @@ void Symbolize::Printf(const char* fmt, ...) {
 ktl::string_view Symbolize::BuildIdString() { return BuildId::GetInstance().Print(); }
 
 void Symbolize::PrintModule() {
-  Printf("{{{module:0:%s:elf:%V}}}\n", kProgramName_, BuildId::GetInstance().Print());
+  Printf("%s: {{{module:0:%s:elf:%V}}}\n", kProgramName_, kProgramName_,
+         BuildId::GetInstance().Print());
 }
 
 void Symbolize::PrintMmap() {
   auto start = reinterpret_cast<uintptr_t>(__code_start);
   auto end = reinterpret_cast<uintptr_t>(_end);
-  Printf("{{{mmap:%p:%#zx:load:0:rwx:%p}}}\n", __code_start, end - start, kLinkTimeAddress);
+  Printf("%s: {{{mmap:%p:%#zx:load:0:rwx:%p}}}\n", kProgramName_, __code_start, end - start,
+         kLinkTimeAddress);
 }
 
 void Symbolize::ContextAlways() {
-  Printf("{{{reset}}}\n");
+  Printf("%s: {{{reset}}}\n", kProgramName_);
   PrintModule();
   PrintMmap();
 }
@@ -124,10 +126,10 @@ void Symbolize::Context() {
 
 void Symbolize::BackTraceFrame(unsigned int n, uintptr_t pc) {
   // Just print the line in markup format.  Context() was called earlier.
-  Printf("{{{bt:%u:%#zx}}}\n", n, pc);
+  Printf("%s: {{{bt:%u:%#zx}}}\n", kProgramName_, n, pc);
 }
 
 void Symbolize::DumpFile(ktl::string_view type, ktl::string_view name) {
   Context();
-  Printf("{{{dumpfile:%V:%V}}}\n", type, name);
+  Printf("%s: {{{dumpfile:%V:%V}}}\n", kProgramName_, type, name);
 }
