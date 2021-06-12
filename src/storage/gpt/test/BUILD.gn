@@ -23,10 +23,6 @@ test("gpt-unit") {
     "gpt-tests.cc",
     "main.cc",
   ]
-  include_dirs = [
-    "//src/storage/gpt",
-    "..",
-  ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/lib/fdio",

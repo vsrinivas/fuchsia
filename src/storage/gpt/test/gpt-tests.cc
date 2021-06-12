@@ -18,7 +18,7 @@
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
-#include "gpt.h"
+#include "src/storage/gpt/gpt.h"
 
 extern bool gUseRamDisk;
 extern char gDevPath[PATH_MAX];
