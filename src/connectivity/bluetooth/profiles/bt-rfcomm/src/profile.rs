@@ -5,12 +5,11 @@
 use {
     anyhow::{format_err, Error},
     bt_rfcomm::{
-        profile::{build_rfcomm_protocol, is_rfcomm_protocol},
+        profile::{build_rfcomm_protocol, is_rfcomm_protocol, server_channel_from_protocol},
         ServerChannel,
     },
-    fidl_fuchsia_bluetooth_bredr as bredr,
-    fuchsia_bluetooth::profile::{DataElement, Psm, ServiceDefinition},
-    std::{collections::HashSet, convert::TryFrom},
+    fuchsia_bluetooth::profile::{Psm, ServiceDefinition},
+    std::collections::HashSet,
 };
 
 /// Updates the provided `service` with the assigned `server_channel` if
@@ -43,34 +42,16 @@ pub fn service_definitions_request_rfcomm(services: &Vec<ServiceDefinition>) -> 
     services.iter().map(is_rfcomm_service_definition).fold(false, |acc, is_rfcomm| acc || is_rfcomm)
 }
 
-/// Returns the Server Channel from the provided `service` or None if the service
-/// is not RFCOMM or is invalidly formatted.
-pub fn server_channel_from_service_definition(
-    service: &ServiceDefinition,
-) -> Option<ServerChannel> {
-    for descriptor in &service.protocol_descriptor_list {
-        if descriptor.protocol == bredr::ProtocolIdentifier::Rfcomm {
-            // If the Protocol is RFCOMM, there should be one element with the Server Channel.
-            if descriptor.params.len() != 1 {
-                return None;
-            }
-
-            if let DataElement::Uint8(sc) = descriptor.params[0] {
-                return ServerChannel::try_from(sc).ok();
-            }
-            return None;
-        }
-    }
-    None
-}
-
 /// Returns the server channels specified in `services`. It's possible that
 /// none of the `services` request a ServerChannel in which case the returned set
 /// will be empty.
 pub fn server_channels_from_service_definitions(
     services: &Vec<ServiceDefinition>,
 ) -> HashSet<ServerChannel> {
-    services.iter().filter_map(server_channel_from_service_definition).collect()
+    services
+        .iter()
+        .filter_map(|def| server_channel_from_protocol(&def.protocol_descriptor_list))
+        .collect()
 }
 
 /// Returns a set of PSMs specified by a list of `services`.
@@ -84,28 +65,12 @@ pub fn psms_from_service_definitions(services: &Vec<ServiceDefinition>) -> HashS
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuchsia_bluetooth::profile::ProtocolDescriptor;
+    use {
+        fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_bluetooth::profile::ProtocolDescriptor,
+        std::convert::TryFrom,
+    };
 
     use crate::types::tests::rfcomm_protocol_descriptor_list;
-
-    #[test]
-    fn test_is_rfcomm_service_definition() {
-        let mut def = ServiceDefinition::default();
-
-        let empty_res = is_rfcomm_service_definition(&def);
-        assert!(!empty_res);
-
-        // Updated definition with L2CAP.
-        def.protocol_descriptor_list =
-            vec![ProtocolDescriptor { protocol: bredr::ProtocolIdentifier::L2Cap, params: vec![] }];
-        let l2cap_res = is_rfcomm_service_definition(&def);
-        assert!(!l2cap_res);
-
-        // Updated definition with L2CAP and RFCOMM.
-        def.protocol_descriptor_list = rfcomm_protocol_descriptor_list(None);
-        let rfcomm_res = is_rfcomm_service_definition(&def);
-        assert!(rfcomm_res);
-    }
 
     #[test]
     fn test_update_service_definition_with_rfcomm() {
@@ -129,64 +94,5 @@ mod tests {
         let updated = update_svc_def_with_server_channel(&mut def, server_channel);
         assert!(updated.is_ok());
         assert_eq!(expected, def);
-    }
-
-    #[test]
-    fn test_server_channel_from_empty_service_definition_is_none() {
-        assert_eq!(None, server_channel_from_service_definition(&ServiceDefinition::default()));
-    }
-
-    #[test]
-    fn test_server_channel_from_l2cap_is_none() {
-        let mut def = ServiceDefinition::default();
-        // Just L2CAP - should be no server channel.
-        def.protocol_descriptor_list = vec![ProtocolDescriptor {
-            protocol: bredr::ProtocolIdentifier::L2Cap,
-            params: vec![DataElement::Uint16(bredr::PSM_AVDTP)],
-        }];
-        assert_eq!(None, server_channel_from_service_definition(&def));
-    }
-
-    #[test]
-    fn test_server_channel_from_empty_rfcomm_is_none() {
-        let mut def = ServiceDefinition::default();
-
-        // RFCOMM but un-allocated Server Channel.
-        def.protocol_descriptor_list = vec![
-            ProtocolDescriptor { protocol: bredr::ProtocolIdentifier::L2Cap, params: vec![] },
-            ProtocolDescriptor { protocol: bredr::ProtocolIdentifier::Rfcomm, params: vec![] },
-        ];
-        assert_eq!(None, server_channel_from_service_definition(&def));
-    }
-
-    #[test]
-    fn test_server_channel_from_invalid_rfcomm_is_none() {
-        let mut def = ServiceDefinition::default();
-        // RFCOMM but invalidly formatted.
-        def.protocol_descriptor_list = vec![
-            ProtocolDescriptor { protocol: bredr::ProtocolIdentifier::L2Cap, params: vec![] },
-            ProtocolDescriptor {
-                protocol: bredr::ProtocolIdentifier::Rfcomm,
-                params: vec![DataElement::Uint16(100)],
-            },
-        ];
-        assert_eq!(None, server_channel_from_service_definition(&def));
-    }
-
-    #[test]
-    fn test_server_channel_from_rfcomm_is_present() {
-        let mut def = ServiceDefinition::default();
-
-        // RFCOMM service with assigned server channel.
-        let sc = 10;
-        def.protocol_descriptor_list = vec![
-            ProtocolDescriptor { protocol: bredr::ProtocolIdentifier::L2Cap, params: vec![] },
-            ProtocolDescriptor {
-                protocol: bredr::ProtocolIdentifier::Rfcomm,
-                params: vec![DataElement::Uint8(sc)],
-            },
-        ];
-        let expected = ServerChannel::try_from(sc).ok();
-        assert_eq!(server_channel_from_service_definition(&def), expected);
     }
 }
