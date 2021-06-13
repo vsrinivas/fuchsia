@@ -161,6 +161,22 @@ non-deterministic. For instance a memory leak may only happen under certain race
 conditions. If sanitizer errors appear flaky, consult the guide on [testing for
 flakiness in CQ][testing-flakiness].
 
+### File good bugs
+
+When encountering a sanitizer issue, file a bug containing all the
+troubleshooting information that's available.
+
+Example: [Issue 73214: ASAN use-after-scope in blobfs][fxb73214]
+
+The bug report contains:
+
+*   The error provided by the sanitizer (ASan in this case).
+*   Instructions on how to build & test to reproduce the error.
+*   Details of the investigation that followed, with specific code pointers as
+    needed.
+*   References to relevant changes, such as in this case the change to fix the
+    root cause for the bug.
+
 ## Roadmap
 
 Ongoing work:
@@ -189,6 +205,7 @@ Areas for future work:
 [ftrivial-rfc]: https://lists.llvm.org/pipermail/cfe-dev/2018-November/060172.html
 [fuzz-testing]: /docs/concepts/testing/fuzz_testing.md
 [fxb]: https://bugs.fuchsia.dev/p/fuchsia/issues/list
+[fxb73214]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=73214
 [kasan]: /zircon/kernel/lib/instrumentation/asan/README.md
 [lockdep]: /docs/concepts/kernel/lockdep.md
 [llvm-asan]: https://clang.llvm.org/docs/AddressSanitizer.html
