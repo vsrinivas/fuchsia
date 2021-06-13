@@ -41,7 +41,7 @@ void StreamImpl::FrameReady(const frame_available_info_t* info) {
   TRACE_FLOW_BEGIN("camera", "camera_stream_on_frame_available", info->metadata.timestamp);
   ZX_ASSERT(thread_checker_.is_thread_valid());
   fuchsia::camera2::FrameAvailableInfo frame_info;
-  frame_info.frame_status = fuchsia::camera2::FrameStatus::OK;
+  frame_info.frame_status = static_cast<fuchsia::camera2::FrameStatus>(info->frame_status);
   frame_info.buffer_id = info->buffer_id;
   frame_info.metadata.set_image_format_index(info->metadata.image_format_index);
   frame_info.metadata.set_timestamp(info->metadata.timestamp);
