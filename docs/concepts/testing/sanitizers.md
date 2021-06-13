@@ -192,12 +192,12 @@ Ongoing work:
 
 Areas for future work:
 
-*   [ThreadSanitizer][llvm-tsan]{:.external} (tsan): detecting data races.
+*   [ThreadSanitizer][llvm-tsan]{:.external} (TSan): detecting data races.
 *   Kernel support for detecting concurrency bugs.
 *   Extending sanitizer support for Rust, such as detecting memory safety bugs
     in Rust `unsafe {}` code blocks or across [FFI][ffi]{:.external} calls, or
     detecting undefined behavior bugs.
-*   [MemorySanitizer][llvm-msan]{:.external} (msan): detecting reads from
+*   [MemorySanitizer][llvm-msan]{:.external} (MSan): detecting reads from
     uninitialized memory.
 
 [enable-pmm-checker]:  /docs/gen/boot-options.md#kernel_pmm_checker_enable_bool
