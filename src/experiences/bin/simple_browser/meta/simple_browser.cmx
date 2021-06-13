@@ -1,6 +1,6 @@
 {
     "include": [
-        "src/lib/vulkan/application-container.shard.cmx"
+        "//src/lib/vulkan/application-container.shard.cmx"
     ],
     "program": {
         "data": "data/simple-browser"
