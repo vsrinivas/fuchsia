@@ -104,11 +104,9 @@ pub enum Commands {
         /// base path for resolving includes
         includepath: PathBuf,
 
-        #[structopt(short = "r", long = "includeroot", parse(from_os_str))]
+        #[structopt(short = "r", long = "includeroot", parse(from_os_str), default_value = "")]
         /// base path for resolving include paths that start with "//"
-        /// Temporarily optional for a soft transition.
-        /// If not specified, will take the value of `includepath`.
-        includeroot: Option<PathBuf>,
+        includeroot: PathBuf,
     },
 
     #[structopt(name = "check-includes")]
@@ -138,11 +136,9 @@ pub enum Commands {
         /// base path for resolving includes
         includepath: PathBuf,
 
-        #[structopt(short = "r", long = "includeroot", parse(from_os_str))]
+        #[structopt(short = "r", long = "includeroot", parse(from_os_str), default_value = "")]
         /// base path for resolving include paths that start with "//"
-        /// Temporarily optional for a soft transition.
-        /// If not specified, will take the value of `includepath`.
-        includeroot: Option<PathBuf>,
+        includeroot: PathBuf,
     },
 
     #[structopt(name = "format")]
@@ -191,11 +187,9 @@ pub enum Commands {
         /// base path for resolving includes
         includepath: PathBuf,
 
-        #[structopt(short = "r", long = "includeroot", parse(from_os_str))]
+        #[structopt(short = "r", long = "includeroot", parse(from_os_str), default_value = "")]
         /// base path for resolving include paths that start with "//"
-        /// Temporarily optional for a soft transition.
-        /// If not specified, will take the value of `includepath`.
-        includeroot: Option<PathBuf>,
+        includeroot: PathBuf,
 
         #[structopt(short = "f", long = "features")]
         /// The set of non-standard features to compile with.

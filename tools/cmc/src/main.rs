@@ -59,7 +59,7 @@ fn run_cmc() -> Result<(), Error> {
                 output.as_ref(),
                 depfile.as_ref(),
                 &includepath,
-                &includeroot.unwrap_or(includepath.clone()),
+                &includeroot,
             )?
         }
         opts::Commands::CheckIncludes {
@@ -79,7 +79,7 @@ fn run_cmc() -> Result<(), Error> {
                 depfile.as_ref(),
                 opt.stamp.as_ref(),
                 &includepath,
-                &includeroot.unwrap_or(includepath.clone()),
+                &includeroot,
             )?
         }
         opts::Commands::Format { file, pretty, cml, inplace, mut output } => {
@@ -104,7 +104,7 @@ fn run_cmc() -> Result<(), Error> {
                 &output.unwrap(),
                 depfile,
                 &includepath,
-                &includeroot.unwrap_or(includepath.clone()),
+                &includeroot,
                 &features.into(),
                 &experimental_force_runner,
             )?
