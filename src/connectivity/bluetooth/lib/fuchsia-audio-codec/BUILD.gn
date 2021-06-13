@@ -54,6 +54,7 @@ fuchsia_unittest_package("fuchsia-audio-codec-tests") {
   deps = [
     ":fuchsia-audio-codec_test",
     ":test-data",
+    "//src/media/codec:codec_factory",
   ]
 }
 
