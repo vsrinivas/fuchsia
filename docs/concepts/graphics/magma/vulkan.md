@@ -13,7 +13,7 @@ Include the following in your component manifest to enable access to the Vulkan 
 ```json
 {
    "include": [
-      "src/lib/vulkan/application.shard.cmx"
+      "//src/lib/vulkan/application.shard.cmx"
    ],
    ...
 }
@@ -25,7 +25,7 @@ these lines in its .cmx:
 ```json
 {
    "include": [
-      "src/lib/vulkan/test-application.shard.cmx"
+      "//src/lib/vulkan/test-application.shard.cmx"
    ],
    ...
 }

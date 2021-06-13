@@ -2,8 +2,8 @@
 // The test cases should run in parallel to succeed.
 {
     include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/sys/test_runners/gtest/default.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
     ],
     program: {
         binary: "bin/concurrency_test_driver_gtest",

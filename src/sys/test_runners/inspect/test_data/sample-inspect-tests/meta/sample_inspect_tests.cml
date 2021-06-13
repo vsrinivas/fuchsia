@@ -1,7 +1,7 @@
 // This test is intended to work for a core product built as well as
 // for the integration tests for the inspect test runner.
 {
-    include: [ "src/sys/test_runners/inspect/default.shard.cml" ],
+    include: [ "//src/sys/test_runners/inspect/default.shard.cml" ],
     program: {
         accessor: "ALL",
         timeout_seconds: "60",

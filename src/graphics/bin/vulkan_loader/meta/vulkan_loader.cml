@@ -1,8 +1,8 @@
 {
     include: [
-        "sdk/lib/diagnostics/inspect/client.shard.cml",
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "sdk/lib/diagnostics/syslog/elf_stdio.shard.cml",
+        "//sdk/lib/diagnostics/inspect/client.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//sdk/lib/diagnostics/syslog/elf_stdio.shard.cml",
     ],
     program: {
         binary: "bin/vulkan_loader",

@@ -11,7 +11,7 @@
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "test/use_h264_multi_decoder_concurrent_stream_switching_test"

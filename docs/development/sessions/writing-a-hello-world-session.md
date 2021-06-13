@@ -46,7 +46,7 @@ The following lines of code are from `hello-world-session.cml`:
 1. The file starts by including other cml files if needed.
 
    ```json5
-   include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+   include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
    ```
 
    This `include` key lets the session component use the

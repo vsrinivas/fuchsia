@@ -1,5 +1,5 @@
 {
-    include: [ "src/diagnostics/sampler/meta/common.shard.cml" ],
+    include: [ "//src/diagnostics/sampler/meta/common.shard.cml" ],
     program: {
         args: [
             "sampler",

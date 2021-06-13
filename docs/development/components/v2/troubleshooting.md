@@ -311,7 +311,7 @@ following declaration:
 
 ```json5
 // test_driver.cml
-include: [ "src/sys/test_runners/rust/default.shard.cml" ]
+include: [ "//src/sys/test_runners/rust/default.shard.cml" ]
 ```
 
 

@@ -1,10 +1,10 @@
 {
     include: [
         // Enable system logging
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
 
         // Use Rust test runner and expose fuchsia.test.Suite capability
-        "src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
         binary: "bin/brightness_manager_bin_test",

@@ -1,7 +1,7 @@
 // Realm for integration test that offers a child a protocol and directory from component
 // manager's namespace.
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/namespace_capabilities_integration_test_root",

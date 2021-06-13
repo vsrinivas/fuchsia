@@ -1,6 +1,6 @@
 {
     // TODO(fxbug.dev/67205): Running this test as a v2 component requires a zxtest-compatible v2 test runner.
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/element-manager-test",
     },

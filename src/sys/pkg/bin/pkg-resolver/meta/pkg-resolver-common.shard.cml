@@ -1,8 +1,8 @@
 {
     include: [
-        "sdk/lib/diagnostics/inspect/client.shard.cml",
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/lib/fuchsia-hyper/hyper.shard.cml",
+        "//sdk/lib/diagnostics/inspect/client.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/lib/fuchsia-hyper/hyper.shard.cml",
     ],
     program: {
         runner: "elf",

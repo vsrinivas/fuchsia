@@ -2,8 +2,8 @@
 // It connects to echo server and checks result.
 {
     include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/sys/test_runners/gotests/default.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/sys/test_runners/gotests/default.shard.cml",
     ],
     program: {
         binary: "test/echo_go_client",

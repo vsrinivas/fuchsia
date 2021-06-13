@@ -1,8 +1,8 @@
 // Realm for integration test that creates and binds to component instances in a collection.
 {
     include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/sys/test_runners/rust/default.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
         binary: "bin/collections_integration_test",

@@ -3,7 +3,7 @@
 // rights_integration_test that directories are having their rights correctly scoped when
 // passed.
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/dir_service_bin",

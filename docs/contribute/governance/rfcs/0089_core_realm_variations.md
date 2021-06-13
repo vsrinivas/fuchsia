@@ -117,7 +117,7 @@ this:
 
 ```
 core_shard("temperature_logger_shard") {
-  shard = "meta/temperature-logger.shard.cml"
+  shard = "//meta/temperature-logger.shard.cml"
 }
 ```
 

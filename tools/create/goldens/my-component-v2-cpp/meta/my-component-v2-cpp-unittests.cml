@@ -11,9 +11,9 @@
 // see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
 {
     include: [
-        "sdk/lib/diagnostics/inspect/client.shard.cml",
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/sys/test_runners/gtest/default.shard.cml",
+        "//sdk/lib/diagnostics/inspect/client.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
     ],
     program: {
         binary: "bin/my-component-v2-cpp_test",

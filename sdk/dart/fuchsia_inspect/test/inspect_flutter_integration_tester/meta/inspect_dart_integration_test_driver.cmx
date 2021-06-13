@@ -13,7 +13,7 @@
         }
     },
     "include": [
-        "src/lib/vulkan/test-application.shard.cmx"
+        "//src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
         "data": "data/inspect-dart-integration-test-driver"

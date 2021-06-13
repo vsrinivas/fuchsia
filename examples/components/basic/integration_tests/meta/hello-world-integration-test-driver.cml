@@ -1,8 +1,8 @@
 // [START example_snippet]
 {
     include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/sys/test_runners/rust/default.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
         binary: "bin/hello_world_integration_test",

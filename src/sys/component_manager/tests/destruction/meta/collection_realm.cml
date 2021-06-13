@@ -1,6 +1,6 @@
 // Realm for integration test that creates and binds to component instances in a collection.
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/destruction_collection_realm",

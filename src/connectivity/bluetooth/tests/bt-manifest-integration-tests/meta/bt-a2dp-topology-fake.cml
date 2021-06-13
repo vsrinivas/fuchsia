@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp.shard.cml" ],
+    include: [ "//src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp.shard.cml" ],
     program: {
         binary: "bin/bt_a2dp_topology_fake",
     },

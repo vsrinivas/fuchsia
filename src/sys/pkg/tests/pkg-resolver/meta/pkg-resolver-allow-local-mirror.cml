@@ -1,5 +1,5 @@
 {
-    include: [ "src/sys/pkg/tests/pkg-resolver/meta/pkg-resolver-test-common.shard.cml" ],
+    include: [ "//src/sys/pkg/tests/pkg-resolver/meta/pkg-resolver-test-common.shard.cml" ],
     program: {
         args: [
             "--allow-local-mirror",

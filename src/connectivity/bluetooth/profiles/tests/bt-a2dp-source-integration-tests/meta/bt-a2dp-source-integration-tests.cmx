@@ -12,7 +12,7 @@
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
         "args": [

@@ -1,6 +1,6 @@
 {
     "include": [
-        "src/lib/vulkan/application.shard.cmx"
+        "//src/lib/vulkan/application.shard.cmx"
     ],
     "program": {
         "data": "data/fuchsia_webview_flutter_target_tests"

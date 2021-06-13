@@ -1,7 +1,7 @@
 {
     include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/sys/test_runners/gotests/default.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/sys/test_runners/gotests/default.shard.cml",
     ],
     program: {
         binary: "test/empty_go_test",

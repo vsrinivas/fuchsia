@@ -45,7 +45,7 @@ and look as follows:
 
 ```json
 {
-    "include": [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ],
+    "include": [ "//sdk/lib/diagnostics/syslog/client.shard.cmx" ],
     "program": {
         "binary": "bin/my_test"
     }

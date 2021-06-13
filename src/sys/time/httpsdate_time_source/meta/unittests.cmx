@@ -1,6 +1,6 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/httpsdate_time_source_bin_test"

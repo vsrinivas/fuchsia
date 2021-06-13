@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/connectivity/bluetooth/core/bt-init/meta/bt-init.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/connectivity/bluetooth/core/bt-init/meta/bt-init.shard.cml",
     ],
     children: [
         {

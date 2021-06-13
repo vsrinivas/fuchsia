@@ -5,8 +5,8 @@
 // This realm contains the test cases for fuchsia_component_v2_test.
 {
     include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
     ],
     program: {
         runner: "elf",

@@ -17,7 +17,7 @@
         }
     },
     "include": [
-        "src/lib/vulkan/application.shard.cmx"
+        "//src/lib/vulkan/application.shard.cmx"
     ],
     "program": {
         "data": "data/webview_mod"

@@ -4,8 +4,8 @@
 // IMPORTANT: this means any changes made here should be made in test-fshost.cml
 {
     include: [
-        "sdk/lib/diagnostics/inspect/client.shard.cml",
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//sdk/lib/diagnostics/inspect/client.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     program: {
         runner: "elf",

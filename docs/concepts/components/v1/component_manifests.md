@@ -13,7 +13,7 @@ Here's a simple example of a cmx for an ELF binary component:
 ```
 {
     "include": [
-        "src/lib/syslog/client.shard.cmx"
+        "//src/lib/syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/example_app",

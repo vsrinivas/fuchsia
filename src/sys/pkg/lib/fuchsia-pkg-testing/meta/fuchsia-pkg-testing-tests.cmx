@@ -10,8 +10,8 @@
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx",
-        "src/lib/fuchsia-hyper/hyper.shard.cmx"
+        "//sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "//src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
         "binary": "bin/fuchsia_pkg_testing_lib_test"

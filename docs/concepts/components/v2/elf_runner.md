@@ -88,7 +88,7 @@ To enable this feature, add the following to your manifest file:
 
 ```json5
 {
-    include: [ "sdk/lib/diagnostics/syslog/elf_stdio.shard.cml" ],
+    include: [ "//sdk/lib/diagnostics/syslog/elf_stdio.shard.cml" ],
     ...
 }
 ```

@@ -1,5 +1,5 @@
 {
-    include: [ "src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-common.shard.cml" ],
+    include: [ "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-common.shard.cml" ],
     use: [
         {
             protocol: [ "fuchsia.paver.Paver" ],

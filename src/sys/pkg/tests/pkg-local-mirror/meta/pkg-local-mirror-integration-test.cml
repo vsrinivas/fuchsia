@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
-        "src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
-        "src/sys/test_runners/rust/default.shard.cml",
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
         binary: "bin/pkg_local_mirror_integration_test",

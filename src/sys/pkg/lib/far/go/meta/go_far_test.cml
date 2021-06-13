@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
-        "src/sys/test_runners/gotests/default.shard.cml",
-        "src/sys/test_runners/tmp_storage.shard.cml",
+        "//src/sys/test_runners/gotests/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
     ],
     program: {
         binary: "test/go_far_test",

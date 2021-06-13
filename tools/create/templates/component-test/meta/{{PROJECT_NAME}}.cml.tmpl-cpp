@@ -7,8 +7,8 @@
 // see https://fuchsia.dev/fuchsia-src/concepts/testing/v2/test_runner_framework.
 {
     include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/sys/test_runners/gtest/default.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
     ],
 
     // Information about the program to run.

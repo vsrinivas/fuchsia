@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 {
     include: [
-        "sdk/lib/diagnostics/inspect/client.shard.cml",
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "sdk/lib/diagnostics/syslog/elf_stdio.shard.cml",
-        "src/sys/test_runners/tmp_storage.shard.cml",
+        "//sdk/lib/diagnostics/inspect/client.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//sdk/lib/diagnostics/syslog/elf_stdio.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
     ],
     program: {
         binary: "bin/pkg_harness",

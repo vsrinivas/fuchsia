@@ -1,6 +1,6 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/file_utils_unittest_exe"

@@ -79,7 +79,7 @@ In order to use this runner, add the following to your component manifest:
 
 ```json5
 {
-    include: [ "src/sys/test_runners/gtest/default.shard.cml" ]
+    include: [ "//src/sys/test_runners/gtest/default.shard.cml" ]
 }
 ```
 
@@ -100,7 +100,7 @@ In order to use this runner, add the following to your component manifest:
 
 ```json5
 {
-    include: [ "src/sys/test_runners/rust/default.shard.cml" ]
+    include: [ "//src/sys/test_runners/rust/default.shard.cml" ]
 }
 ```
 
@@ -120,7 +120,7 @@ In order to use this runner, add the following to your component manifest:
 
 ```json5
 {
-    include: [ "src/sys/test_runners/gotests/default.shard.cml" ]
+    include: [ "//src/sys/test_runners/gotests/default.shard.cml" ]
 }
 ```
 
@@ -141,7 +141,7 @@ In order to use this runner, add the following to your component manifest:
 
 ```json5
 {
-    include: [ "src/sys/test_runners/elf/default.shard.cml" ]
+    include: [ "//src/sys/test_runners/elf/default.shard.cml" ]
 }
 ```
 
@@ -251,7 +251,7 @@ To use temporary storage in your test, add the following to your component manif
 
 ```json5
 {
-    include: [ "src/sys/test_runners/tmp_storage.shard.cml" ]
+    include: [ "//src/sys/test_runners/tmp_storage.shard.cml" ]
 }
 ```
 

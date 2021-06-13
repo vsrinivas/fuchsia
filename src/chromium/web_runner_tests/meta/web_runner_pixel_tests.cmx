@@ -27,13 +27,13 @@
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx",
-        "src/chromium/web_engine/meta/shards/web_engine_base.shard.cmx",
-        "src/chromium/web_engine/meta/shards/web_engine_feature_hardware_video_decoder.shard.cmx",
-        "src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx",
-        "src/chromium/web_engine/meta/shards/web_engine_feature_vulkan.shard.cmx",
-        "src/chromium/web_engine/meta/shards/web_engine_view.shard.cmx",
-        "src/lib/vulkan/test-application-container.shard.cmx"
+        "//sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "//src/chromium/web_engine/meta/shards/web_engine_base.shard.cmx",
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_hardware_video_decoder.shard.cmx",
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx",
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_vulkan.shard.cmx",
+        "//src/chromium/web_engine/meta/shards/web_engine_view.shard.cmx",
+        "//src/lib/vulkan/test-application-container.shard.cmx"
     ],
     "program": {
         "binary": "bin/web_runner_pixel_tests_bin"

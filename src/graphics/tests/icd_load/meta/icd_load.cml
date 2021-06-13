@@ -1,8 +1,8 @@
 {
     include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/lib/vulkan/application.shard.cml",
-        "src/sys/test_runners/gtest/default.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/lib/vulkan/application.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
     ],
     program: {
         binary: "bin/icd_load",

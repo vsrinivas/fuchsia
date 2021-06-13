@@ -1,5 +1,5 @@
 {
-    include: [ "src/sys/test_runners/gtest/tests/meta/common.shard.cml" ],
+    include: [ "//src/sys/test_runners/gtest/tests/meta/common.shard.cml" ],
     program: {
         binary: "bin/gtest_runner_stress_test",
     },

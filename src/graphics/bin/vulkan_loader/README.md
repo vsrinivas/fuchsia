@@ -42,7 +42,7 @@ manifest][component-manifest] `.cml` file similar to the following:
 
 ```json
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "icd_runner",
     },

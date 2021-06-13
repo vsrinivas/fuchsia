@@ -1,10 +1,4 @@
 {
-    "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
-    ],
-    "program": {
-        "binary": "bin/element-manager-test"
-    },
     "facets": {
         "fuchsia.test": {
             "injected-services": {
@@ -15,6 +9,12 @@
                 ]
             }
         }
+    },
+    "include": [
+        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/element-manager-test"
     },
     "sandbox": {
         "features": [

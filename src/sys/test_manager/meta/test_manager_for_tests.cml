@@ -1,7 +1,7 @@
 // We don't include "debug" section in this cml file as that is not
 // allowed by the security policy.
 {
-    include: [ "src/sys/test_manager/meta/common.shard.cml" ],
+    include: [ "//src/sys/test_manager/meta/common.shard.cml" ],
     environments: [
         {
             name: "test-env",

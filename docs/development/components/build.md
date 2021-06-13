@@ -120,7 +120,7 @@ capability replaced by a manifest shard `include`:
     ```json5
     {
         // Include capabilities for the syslog library
-        include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+        include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
 
         // Information about the program to run.
         program: {
@@ -144,7 +144,7 @@ capability replaced by a manifest shard `include`:
     ```json
     {
         "include": [
-            "sdk/lib/diagnostics/syslog/client.shard.cmx"
+            "//sdk/lib/diagnostics/syslog/client.shard.cmx"
         ],
         "program": {
             "binary": "bin/hello-world",
@@ -188,8 +188,8 @@ source_set("font_provider_client") {
 
 expect_includes("font_provider_client_includes") {
   includes = [
-    "client.shard.cmx",
-    "client.shard.cml",
+    "//client.shard.cmx",
+    "//client.shard.cml",
   ]
 }
 ```
@@ -205,7 +205,7 @@ expected manifest shards:
     ```json5
     {
         include: [
-            "sdk/lib/fonts/client.shard.cml",
+            "//sdk/lib/fonts/client.shard.cml",
         ]
         ...
     }
@@ -218,7 +218,7 @@ expected manifest shards:
     ```json
     {
         "include": [
-            "sdk/lib/fonts/client.shard.cmx"
+            "//sdk/lib/fonts/client.shard.cmx"
         ]
         ...
     }

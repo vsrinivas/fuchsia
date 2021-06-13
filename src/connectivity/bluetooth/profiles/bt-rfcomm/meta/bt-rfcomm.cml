@@ -5,8 +5,8 @@
     // TODO(fxbug.dev/72960): This v2 manifest is not yet used in production - it currently exists
     // for testing scenarios.
     include: [
-        "sdk/lib/diagnostics/inspect/client.shard.cml",
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//sdk/lib/diagnostics/inspect/client.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     program: {
         runner: "elf",

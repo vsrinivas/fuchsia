@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 {
     include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/sys/test_runners/gtest/default.shard.cml",
-        "src/sys/test_runners/tmp_storage.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
     ],
     program: {
         binary: "bin/validate-fars",

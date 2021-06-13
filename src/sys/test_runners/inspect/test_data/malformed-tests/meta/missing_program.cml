@@ -1,5 +1,5 @@
 {
-    include: [ "src/sys/test_runners/inspect/default.shard.cml" ],
+    include: [ "//src/sys/test_runners/inspect/default.shard.cml" ],
 
     // This component is missing the required program section.
 }

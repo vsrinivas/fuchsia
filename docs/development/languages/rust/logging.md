@@ -31,7 +31,7 @@ following in your component manifest:
    ```json
    {
      "include": [
-       "sdk/lib/diagnostics/syslog/client.shard.cmx"
+       "//sdk/lib/diagnostics/syslog/client.shard.cmx"
      ],
      ...
    }
@@ -42,7 +42,7 @@ following in your component manifest:
    ```json5
    {
      include: [
-       "sdk/lib/diagnostics/syslog/client.shard.cml"
+       "//sdk/lib/diagnostics/syslog/client.shard.cml"
      ],
      ...
    }

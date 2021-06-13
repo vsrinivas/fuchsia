@@ -264,7 +264,7 @@ The optional `include` property describes zero or more other component manifest
 files to be merged into this component manifest. For example:
 
 ```json5
-include: [ "src/lib/syslog/client.shard.cml" ]
+include: [ "//src/lib/syslog/client.shard.cml" ]
 ```
 
 In the example given above, the component manifest is including contents from a

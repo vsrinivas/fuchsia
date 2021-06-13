@@ -52,7 +52,7 @@ Take advantage of this when writing your CML file!
     {
         include: [
             // Enable system logging
-            "sdk/lib/diagnostics/syslog/client.shard.cml",
+            "//sdk/lib/diagnostics/syslog/client.shard.cml",
         ],
     }
     ```
@@ -102,7 +102,7 @@ be explicitly specified in CML.
 // fonts.cmx
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     {{ '<strong>' }}"program": {
         "binary": "bin/font_provider"
@@ -116,7 +116,7 @@ be explicitly specified in CML.
 {
     include: [
         // Enable system logging
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     {{ '<strong>' }}program: {
         runner: "elf",
@@ -134,7 +134,7 @@ approximate equivalent of the [`services`][cmx-services] list in CMX.
 // fonts.cmx
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/font_provider"
@@ -157,7 +157,7 @@ corresponding service `protocol`.
 {
     include: [
         // Enable system logging
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     program: {
       runner: "elf",
@@ -206,7 +206,7 @@ that apply to every product configuration.
     {
         include: [
             // Enable system logging
-            "sdk/lib/diagnostics/syslog/client.shard.cml",
+            "//sdk/lib/diagnostics/syslog/client.shard.cml",
         ],
         program: {
           runner: "elf",
@@ -292,7 +292,7 @@ Consider the following example test component:
 // fonts_test.cmx
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/font_test"
@@ -314,7 +314,7 @@ To migrate this test to the Test Runner Framework, do the following:
         include: [
             // Select the appropriate test runner shard here:
             // rust, gtest, go, etc.
-            "src/sys/test_runners/rust/default.shard.cml",
+            "//src/sys/test_runners/rust/default.shard.cml",
         ],
         program: {
             binary: "bin/font_test",
@@ -398,7 +398,7 @@ component manifest.
     include: [
         // Select the appropriate test runner shard here:
         // rust, gtest, go, etc.
-        "src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
         binary: "bin/my_test",
@@ -461,7 +461,7 @@ Do the following:
         include: [
             // Select the appropriate test runner shard here:
             // rust, gtest, go, etc.
-            "src/sys/test_runners/rust/default.shard.cml",
+            "//src/sys/test_runners/rust/default.shard.cml",
         ],
         program: {
             binary: "bin/font_provider_test",
@@ -902,7 +902,7 @@ shard:
 // my_component.cml
 {
     // Expose the diagnostics directory capability for Inspect
-    include: [ "sdk/lib/diagnostics/inspect/client.shard.cml" ],
+    include: [ "//sdk/lib/diagnostics/inspect/client.shard.cml" ],
     ...
 }
 ```
@@ -983,7 +983,7 @@ manifest shard:
 // my_component.cml
 {
     // Expose the LogSink capability for syslog
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
     ...
 }
 ```
@@ -1014,7 +1014,7 @@ the following manifest shard to enable forwarding:
 // my_component.cml
 {
     // Enable forwarding of stdio to syslog
-    include: [ "sdk/lib/diagnostics/syslog/elf_stdio.shard.cml" ],
+    include: [ "//sdk/lib/diagnostics/syslog/elf_stdio.shard.cml" ],
     ...
 }
 ```
@@ -1228,7 +1228,7 @@ lifecycle_allowlist.insert(component::Moniker{
 // my_component.cml
 {
     include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
     ],
     program: {
         runner: "elf",

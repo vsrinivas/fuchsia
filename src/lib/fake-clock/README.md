@@ -70,7 +70,7 @@ Include the fake-clock shard in the manifest for each component with fake time.
 ```
     ...
     "include": [
-        "src/lib/fake-clock/lib/client.shard.cmx"
+        "//src/lib/fake-clock/lib/client.shard.cmx"
     ],
 ```
 

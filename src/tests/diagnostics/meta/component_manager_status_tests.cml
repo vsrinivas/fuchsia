@@ -1,5 +1,5 @@
 {
-    include: [ "src/sys/test_runners/inspect/default.shard.cml" ],
+    include: [ "//src/sys/test_runners/inspect/default.shard.cml" ],
     program: {
         accessor: "ALL",
         timeout_seconds: "30",

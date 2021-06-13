@@ -5,7 +5,7 @@
 // Intentionally broken, component manifest for the `echo_server` example
 // program, to demonstrate failed routing due to a non-startable component.
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
 
