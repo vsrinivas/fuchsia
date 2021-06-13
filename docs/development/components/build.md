@@ -153,6 +153,12 @@ capability replaced by a manifest shard `include`:
     }
     ```
 
+#### Relative paths
+
+Include paths that begin with `"//"` are relative to the root of the source tree
+that you are working in. For include paths that don't begin with `"//"`, the
+build system will attempt to resolve them from the Fuchsia SDK.
+
 ### Client library includes {#component-manifest-includes}
 
 As shown above, the component manifest supports "include" syntax, which allows
