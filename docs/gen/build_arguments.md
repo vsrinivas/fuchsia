@@ -1867,13 +1867,13 @@ built and mounted inside the container at /mnt/chromeos.
 
 **Current value (from the default):** `false`
 
-From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:28
+From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:29
 
 ### linux_runner_gateway
 
 **Current value (from the default):** `"10.0.0.1"`
 
-From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:23
+From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:24
 
 ### linux_runner_ip
 Default values for the guest network configuration.
@@ -1885,20 +1885,20 @@ See //src/virtualization/bin/vmm/device/virtio_net.cc for more details.
 
 **Current value (from the default):** `"10.0.0.2"`
 
-From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:22
+From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:23
 
 ### linux_runner_netmask
 
 **Current value (from the default):** `"255.255.255.0"`
 
-From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:24
+From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:25
 
 ### linux_runner_user_extras
 Point this to the location of external files to be included as extras
 
 **Current value (from the default):** `[]`
 
-From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:36
+From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:37
 
 ### linux_runner_volatile_block
 If `true`, all block devices that would normally load as READ_WRITE will
@@ -1907,7 +1907,7 @@ the linux kernel as crashes and panics can sometimes corrupt the images.
 
 **Current value (from the default):** `false`
 
-From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:33
+From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:34
 
 ### local_bench
 Used to enable local benchmarking/fine-tuning when running benchmarks
@@ -3581,6 +3581,12 @@ otherwise the most recently validated version is used.
 **Current value (from the default):** `false`
 
 From //src/chromium/build_args.gni:14
+
+### use_custom_gbm
+
+**Current value (from the default):** `false`
+
+From //src/graphics/lib/gbm/gbm.gni:6
 
 ### use_cxx_relative_vtables
 Controls if we enable relative-vtables for C++ targets.
