@@ -390,6 +390,8 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
 
       "sys/platform/03:0a:27/thermistor-device/therm-thread",
       "sys/platform/03:0a:27/thermistor-device/therm-audio",
+
+      "brownout-protection/nelson-brownout-protection",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

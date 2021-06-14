@@ -105,6 +105,8 @@ static const gpio_pin_t gpio_pins[] = {
     // For radar sensor.
     {GPIO_SELINA_RESET},
     {GPIO_SELINA_IRQ},
+    // For power sensors
+    {GPIO_ALERT_PWR},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

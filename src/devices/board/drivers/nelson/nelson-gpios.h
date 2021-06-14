@@ -30,6 +30,7 @@ namespace nelson {
 #define GPIO_SOC_BT_REG_ON S905D3_GPIOX(17)
 #define GPIO_SELINA_RESET S905D3_GPIOH(2)
 #define GPIO_SELINA_IRQ S905D3_GPIOH(3)
+#define GPIO_ALERT_PWR S905D3_GPIOZ(10)
 
 }  // namespace nelson
 
