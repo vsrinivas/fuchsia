@@ -426,6 +426,7 @@ zx_clock_get_monotonic
 zx_cprng_draw
 zx_deadline_after
 zx_debuglog_create
+zx_debuglog_write
 zx_event_create
 zx_eventpair_create
 zx_fifo_create
@@ -467,6 +468,7 @@ zx_profile_create
 zx_resource_create
 zx_socket_create
 zx_socket_write
+zx_socket_read
 zx_status_get_string
 zx_stream_create
 zx_stream_readv
@@ -497,6 +499,7 @@ zx_vmo_get_size
 zx_vmo_op_range
 zx_vmo_read
 zx_vmo_set_cache_policy
+zx_vmo_set_size
 zx_vmo_write
 
 # libsync
