@@ -18,6 +18,16 @@ import (
 // HostTestUploads returns a set of Uploads corresponding to the host tests in testSpecs.
 func HostTestUploads(testSpecs []build.TestSpec, buildDir, namespace string) ([]Upload, error) {
 	var uploads []Upload
+	// Some host tests have dependencies on files in the checkout root outside
+	// of the build directory, so the destination paths within the namespace should
+	// be relative paths to the checkout root instead. The checkout root is two
+	// parent directories above the buildDir.
+	checkoutDir := filepath.Join(buildDir, "..", "..")
+	relBuildDir, err := filepath.Rel(checkoutDir, buildDir)
+	if err != nil {
+		return nil, err
+	}
+	relBuildDir = path.Join(filepath.SplitList(relBuildDir)...)
 	// Ensure we don't try to upload the same file twice, which can happen due to a file
 	// appearing in multiple runtime deps lists, or as a test path and a runtime dep.
 	sourceSet := make(map[string]bool)
@@ -29,7 +39,7 @@ func HostTestUploads(testSpecs []build.TestSpec, buildDir, namespace string) ([]
 		if _, seen := sourceSet[test.Path]; !seen {
 			uploads = append(uploads, Upload{
 				Source:      filepath.Join(buildDir, test.Path),
-				Destination: path.Join(namespace, test.Path),
+				Destination: path.Join(namespace, relBuildDir, test.Path),
 			})
 			sourceSet[test.Path] = true
 		}
@@ -85,7 +95,7 @@ func HostTestUploads(testSpecs []build.TestSpec, buildDir, namespace string) ([]
 					// and re-join it using path, but this will only be an issue on Windows.
 					// Since above we filter out any test that's not for linux or mac, this
 					// is not an issue.
-					Destination: path.Join(namespace, dep),
+					Destination: path.Join(namespace, relBuildDir, dep),
 				})
 				sourceSet[dep] = true
 			}

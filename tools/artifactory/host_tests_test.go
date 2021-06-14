@@ -17,7 +17,8 @@ import (
 )
 
 func TestHostTestUploads(t *testing.T) {
-	buildDir := t.TempDir()
+	checkoutDir := t.TempDir()
+	buildDir := filepath.Join(checkoutDir, "out", "build_dir")
 	runtimeDepsRelPath := "runtime_deps.json"
 	testSpecs := []build.TestSpec{
 		{Test: build.Test{OS: "linux", Path: "foo"}},
@@ -52,12 +53,12 @@ func TestHostTestUploads(t *testing.T) {
 	wantUploads := []Upload{
 		{
 			Source:      filepath.Join(buildDir, testSpecs[0].Test.Path),
-			Destination: path.Join("namespace", testSpecs[0].Test.Path),
+			Destination: path.Join("namespace", "out", "build_dir", testSpecs[0].Test.Path),
 		},
 		// testSpecs[1] is not a host test
 		{
 			Source:      filepath.Join(buildDir, testSpecs[2].Test.Path),
-			Destination: path.Join("namespace", testSpecs[2].Test.Path),
+			Destination: path.Join("namespace", "out", "build_dir", testSpecs[2].Test.Path),
 		},
 	}
 	// runtimeDepFilePaths[2] has the same path as testSpecs[0], so we don't expect to
@@ -65,7 +66,7 @@ func TestHostTestUploads(t *testing.T) {
 	for _, filePath := range runtimeDepFilePaths[:2] {
 		wantUploads = append(wantUploads, Upload{
 			Source:      filepath.Join(buildDir, filePath),
-			Destination: path.Join("namespace", filePath),
+			Destination: path.Join("namespace", "out", "build_dir", filePath),
 		})
 	}
 	if diff := cmp.Diff(wantUploads, uploads); diff != "" {
