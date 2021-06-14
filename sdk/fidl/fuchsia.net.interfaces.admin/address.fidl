@@ -95,9 +95,6 @@ enum AddressRemovalReason {
 };
 
 /// Offers state information about an IP address.
-///
-/// Closing the channel will cause the IP address to be removed from the
-/// interface.
 protocol AddressStateProvider {
     /// Push an update when the address properties change.
     ///
@@ -162,6 +159,8 @@ resource table AddressParameters {
     ///
     /// Used for exchanging state information about the address.
     ///
-    /// Optional field.
+    /// Optional field. If provided, the lifetime of the address is tied to the
+    /// lifetime of the channel; closing the channel causes the address to be
+    /// removed.
     3: request<AddressStateProvider> address_state_provider;
 };
