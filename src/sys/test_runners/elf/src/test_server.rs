@@ -164,6 +164,9 @@ async fn launch_component_process<E>(
 where
     E: From<NamespaceError> + From<launch::LaunchError>,
 {
+    let (client_end, loader) =
+        fidl::endpoints::create_endpoints().map_err(launch::LaunchError::Fidl)?;
+    component.loader_service(loader);
     Ok(launch::launch_process(launch::LaunchProcessArgs {
         bin_path: &component.binary,
         process_name: &component.name,
@@ -173,6 +176,7 @@ where
         name_infos: None,
         environs: None,
         handle_infos: None,
+        loader_proxy_chan: Some(client_end.into_channel()),
     })
     .await?)
 }
