@@ -85,6 +85,9 @@ flexible bits AllowableSegments {
     HIGHWAYS = 0b010;
     BIKE_PATHS = 0b100;
 };
+
+const AllowableSegments ROADS = AllowableSegments.TOLL_ROADS |
+    AllowableSegments.HIGHWAYS;
 // [END bits]
 
 // [START enums]

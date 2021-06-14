@@ -247,6 +247,10 @@ We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built-in-ali
   <!-- TODO(fxbug.dev/64463): update default -->
   * Bits default to `strict`.
 
+#### Operators
+
+'|' is the bitwise OR operator for bits
+
 #### Use
 
 ```fidl
