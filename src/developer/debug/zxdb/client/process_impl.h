@@ -70,6 +70,12 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   // ProcessSymbols::Notifications implementation (public portion):
   void OnSymbolLoadFailure(const Err& err) override;
 
+  // This is used when a breakpoint with automation is received, this stores the extra data that
+  // will be used later.
+  void SetMemoryBlocks(uint64_t thread_koid, std::vector<debug_ipc::MemoryBlock> memory_blocks) {
+    memory_blocks_[thread_koid] = std::move(memory_blocks);
+  }
+
  private:
   enum {
     kUnloaded,
@@ -119,6 +125,8 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   fxl::WeakPtrFactory<ProcessImpl> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessImpl);
+
+  std::map<uint64_t, std::vector<debug_ipc::MemoryBlock>> memory_blocks_;
 };
 
 }  // namespace zxdb

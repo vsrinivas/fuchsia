@@ -81,6 +81,11 @@ struct BreakpointSettings {
   // Break every hit_mult times the breakpoint gets hit. Must be positive.
   // The breakpoint will become conditional if hit_mult is greater than 1.
   int hit_mult = 1;
+
+  // Handles the automatic collection of memory if it's requested.
+  bool has_automation = false;
+
+  std::vector<debug_ipc::AutomationInstruction> instructions;
 };
 
 }  // namespace zxdb

@@ -260,6 +260,8 @@ void BreakpointImpl::SendBackendAddOrChange() {
   request.breakpoint.name = settings_.name;
   request.breakpoint.stop = SettingsStopToIpcStop(settings_.stop_mode);
   request.breakpoint.one_shot = settings_.one_shot;
+  request.breakpoint.has_automation = settings_.has_automation;
+  request.breakpoint.instructions = settings_.instructions;
 
   for (const auto& proc : procs_) {
     for (const auto& pair : proc.second.locs) {

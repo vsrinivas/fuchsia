@@ -12,6 +12,7 @@
 
 #include "lib/fit/defer.h"
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/client/process_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
@@ -172,6 +173,36 @@ void ProcessImpl::GetTLSHelpers(GetTLSHelpersCallback cb) {
 
 void ProcessImpl::ReadMemory(uint64_t address, uint32_t size,
                              fit::callback<void(const Err&, MemoryDump)> callback) {
+  // If the memory was read automatically been read and was cached, then this branch will get the
+  // memory locally as opposed to sending a remote message.
+  if (memory_blocks_.size() > 0) {
+    for (auto thread_blocks : memory_blocks_) {
+      for (auto block : thread_blocks.second) {
+        if (block.address <= address && block.address + block.size >= address + size) {
+          auto vec = std::vector<debug_ipc::MemoryBlock>();
+          if (block.address == address && block.size == size) {
+            vec.push_back(block);
+          } else if (!block.valid) {
+            vec.push_back({.address = address, .valid = false, .size = size});
+          } else {
+            debug_ipc::MemoryBlock subset_block = {.address = address, .valid = true, .size = size};
+            subset_block.data =
+                std::vector<uint8_t>(block.data.begin() + (address - block.address),
+                                     block.data.begin() + (address - block.address) + size);
+            vec.push_back(subset_block);
+          }
+          // The callers expect the callback to be called after this method returns. That means that
+          // we can't call it directly. Instead we post a task so that the callback will be called
+          // when the caller will be idle.
+          debug_ipc::MessageLoop::Current()->PostTask(
+              FROM_HERE, [callback = std::move(callback), vec = std::move(vec)]() mutable {
+                callback(Err(), MemoryDump(std::move(vec)));
+              });
+          return;
+        }
+      }
+    }
+  }
   debug_ipc::ReadMemoryRequest request;
   request.process_koid = koid_;
   request.address = address;

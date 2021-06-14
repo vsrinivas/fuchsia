@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -252,6 +253,97 @@ TEST_F(ProcessImplTest, GetTLSHelpers) {
   EXPECT_EQ(0xa, helpers.tlsbase[1]);
   EXPECT_EQ(0xb, helpers.tlsbase[2]);
   EXPECT_EQ(0xc, helpers.tlsbase[3]);
+}
+
+TEST_F(ProcessImplTest, ReadMemoryAutomation) {
+  constexpr uint64_t kProcessKoid = 1234;
+  constexpr uint64_t kThreadKoid = 5678;
+  constexpr uint64_t kBlockAddress = 0xdeadbeef;
+  constexpr uint64_t kBlockSize = 8;
+  Process* process = InjectProcess(kProcessKoid);
+  ASSERT_TRUE(process);
+  ProcessImpl* process_impl = session().system().ProcessImplFromKoid(process->GetKoid());
+  ASSERT_TRUE(process_impl);
+
+  // This creates the memory block to mimic getting a response from an automated breakpoint.
+  debug_ipc::MemoryBlock mem_block = {.address = kBlockAddress, .valid = true, .size = kBlockSize};
+  mem_block.data = {0, 1, 2, 3, 4, 5, 6, 7};
+
+  debug_ipc::MemoryBlock invalid_mem_block = {
+      .address = kBlockAddress + 32, .valid = false, .size = kBlockSize};
+  invalid_mem_block.data = {10, 11, 12, 13, 14, 15, 16, 17};
+
+  std::vector<debug_ipc::MemoryBlock> mem_block_vect = {mem_block, invalid_mem_block};
+  process_impl->SetMemoryBlocks(kThreadKoid, mem_block_vect);
+
+  // This puts some memory on the mock remote device such that if the read misses the memory block
+  // it'll read from this array.
+  sink()->AddMemory(kBlockAddress - 4, {100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111,
+                                        112, 113, 114, 115});
+
+  // Attempt to read the memory block. The read request must be for a subset of one of the blocks
+  // returned for it to hit the memory block, otherwise it falls through to the remote device.
+  process_impl->ReadMemory(
+      kBlockAddress, kBlockSize, [](const zxdb::Err& err, zxdb::MemoryDump dump) {
+        ASSERT_EQ(dump.blocks()[0].data, std::vector<uint8_t>({0, 1, 2, 3, 4, 5, 6, 7}));
+        ASSERT_TRUE(dump.blocks()[0].valid);
+      });
+
+  // Read with a lower address, which should fall through to the remote device.
+  process_impl->ReadMemory(kBlockAddress - 2, kBlockSize,
+                           [](const zxdb::Err& err, zxdb::MemoryDump dump) {
+                             ASSERT_EQ(dump.blocks()[0].data, std::vector<uint8_t>({
+                                                                  102,
+                                                                  103,
+                                                                  104,
+                                                                  105,
+                                                                  106,
+                                                                  107,
+                                                                  108,
+                                                                  109,
+                                                              }));
+                             ASSERT_TRUE(dump.blocks()[0].valid);
+                           });
+
+  // Read with a too large size, which should also fall through to the remote device.
+  process_impl->ReadMemory(kBlockAddress, kBlockSize + 2,
+                           [](const zxdb::Err& err, zxdb::MemoryDump dump) {
+                             ASSERT_EQ(dump.blocks()[0].data, std::vector<uint8_t>({
+                                                                  104,
+                                                                  105,
+                                                                  106,
+                                                                  107,
+                                                                  108,
+                                                                  109,
+                                                                  110,
+                                                                  111,
+                                                                  112,
+                                                                  113,
+                                                              }));
+                             ASSERT_TRUE(dump.blocks()[0].valid);
+                           });
+
+  // Read a subset of the block, which should not fall through.
+  process_impl->ReadMemory(kBlockAddress + 2, kBlockSize - 4,
+                           [](const zxdb::Err& err, zxdb::MemoryDump dump) {
+                             ASSERT_EQ(dump.blocks()[0].data, std::vector<uint8_t>({
+                                                                  2,
+                                                                  3,
+                                                                  4,
+                                                                  5,
+                                                              }));
+                             ASSERT_TRUE(dump.blocks()[0].valid);
+                           });
+
+  // Read a subset from the invalid block, which should not fall through, and also should not return
+  // any data in the blocks.
+  process_impl->ReadMemory(kBlockAddress + 32, kBlockSize - 2,
+                           [](const zxdb::Err& err, zxdb::MemoryDump dump) {
+                             ASSERT_EQ(dump.blocks()[0].data.size(), 0ul);
+                             ASSERT_FALSE(dump.blocks()[0].valid);
+                           });
+
+  loop().RunUntilNoTasks();
 }
 
 }  // namespace zxdb

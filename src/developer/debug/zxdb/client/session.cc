@@ -591,6 +591,9 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, 
   info.exception_record = notify.exception;
   info.timestamp = notify.timestamp;
 
+  ProcessImpl* process = thread->process();
+  process->SetMemoryBlocks(thread->GetKoid(), notify.memory_blocks);
+
   if (!notify.hit_breakpoints.empty()) {
     // Update breakpoints' hit counts and stats. This is done before any notifications are sent so
     // that all breakpoint state is consistent.
