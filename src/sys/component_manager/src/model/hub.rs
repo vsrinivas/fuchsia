@@ -153,8 +153,8 @@ impl Hub {
             vec![
                 EventType::CapabilityRouted,
                 EventType::Discovered,
+                EventType::Purged,
                 EventType::Destroyed,
-                EventType::MarkedForDestruction,
                 EventType::Started,
                 EventType::Resolved,
                 EventType::Stopped,
@@ -516,8 +516,8 @@ impl Hub {
         Ok(())
     }
 
-    async fn on_destroyed_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_destroyed_async");
+    async fn on_purged_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:on_purged_async");
         let mut instance_map = self.instances.lock().await;
 
         // TODO(xbhatnag): Investigate error handling scenarios here.
@@ -541,22 +541,19 @@ impl Hub {
         Ok(())
     }
 
-    async fn on_marked_for_destruction_async(
-        &self,
-        target_moniker: &AbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_marked_for_destruction_async");
+    async fn on_destroyed_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:on_destroyed_async");
         let parent_moniker = target_moniker.parent().expect("A root component cannot be destroyed");
         let instance_map = self.instances.lock().await;
         if !instance_map.contains_key(&parent_moniker) {
-            // Evidently this a duplicate dispatch of MarkedForDestruction.
+            // Evidently this a duplicate dispatch of Destroyed.
             return Ok(());
         }
 
         let leaf = target_moniker.leaf().expect("A root component cannot be destroyed");
 
         // In the children directory, the child's instance id is not used
-        // TODO: It's possible for the MarkedForDestruction event to be dispatched twice if there
+        // TODO: It's possible for the Destroyed event to be dispatched twice if there
         // are two concurrent `DestroyChild` operations. In such cases we should probably cause
         // this update to no-op instead of returning an error.
         let partial_moniker = leaf.to_partial();
@@ -627,14 +624,14 @@ impl Hook for Hub {
                 )
                 .await?;
             }
-            Ok(EventPayload::Destroyed) => {
-                self.on_destroyed_async(target_moniker).await?;
+            Ok(EventPayload::Purged) => {
+                self.on_purged_async(target_moniker).await?;
             }
             Ok(EventPayload::Discovered) => {
                 self.on_discovered_async(target_moniker, event.component_url.to_string()).await?;
             }
-            Ok(EventPayload::MarkedForDestruction) => {
-                self.on_marked_for_destruction_async(target_moniker).await?;
+            Ok(EventPayload::Destroyed) => {
+                self.on_destroyed_async(target_moniker).await?;
             }
             Ok(EventPayload::Started { component, runtime, component_decl, .. }) => {
                 self.on_started_async(target_moniker, component, &runtime, &component_decl).await?;

@@ -107,7 +107,7 @@ pub async fn bind_at(
                     fsys::StartupMode::Lazy => None,
                 })
                 .collect(),
-            InstanceState::Destroyed => {
+            InstanceState::Purged => {
                 return Err(ModelError::instance_not_found(component.abs_moniker.clone()));
             }
             InstanceState::New | InstanceState::Discovered => {

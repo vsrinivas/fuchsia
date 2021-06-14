@@ -135,7 +135,7 @@ For example, a component that was offered the events from the
             from: "parent",
         },
         {
-            event: ["stopped", "destroyed"],
+            event: ["stopped", "purged"],
             from: "framework"
         }
         {
@@ -152,7 +152,7 @@ this example, the component uses the `started` it was offered and
 `foo_bar_ready` but only for `/foo` capabilities, not `/bar`. Also, the
 component decided to not use the `stopped` event it was offered. Instead the
 component used the event from `framework`, which means that it will only see
-`stopped` and `destroyed` events for components in its own realm.
+`stopped` and `purged` events for components in its own realm.
 
 [hermetic-tests]: ../opaque_test.md
 [event-source]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#EventSource

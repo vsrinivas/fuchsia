@@ -4,8 +4,8 @@
 
 use {
     component_events::events::{
-        DirectoryReady, Event, EventMode, EventSource, EventSubscription, MarkedForDestruction,
-        Running, Started,
+        Destroyed, DirectoryReady, Event, EventMode, EventSource, EventSubscription, Running,
+        Started,
     },
     fuchsia_async as fasync,
     fuchsia_component_test::ScopedInstance,
@@ -44,7 +44,7 @@ async fn main() {
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(
-            vec![Started::NAME, Running::NAME, MarkedForDestruction::NAME, DirectoryReady::NAME],
+            vec![Started::NAME, Running::NAME, Destroyed::NAME, DirectoryReady::NAME],
             EventMode::Async,
         )])
         .await
@@ -90,17 +90,17 @@ async fn main() {
     // Dropping instances stops and destroys the children.
     drop(instances);
 
-    // The three instances were marked for destruction.
-    let mut seen_marked_for_destruction = 0;
-    while seen_marked_for_destruction != 3 {
+    // The three instances were destroyed.
+    let mut seen_destroyed = 0;
+    while seen_destroyed != 3 {
         let event = event_stream.next().await.unwrap();
         if let Some(header) = event.header {
             match header.event_type {
                 Some(DirectoryReady::TYPE) => {
                     // ignore. we could get a duplicate here.
                 }
-                Some(MarkedForDestruction::TYPE) => {
-                    seen_marked_for_destruction += 1;
+                Some(Destroyed::TYPE) => {
+                    seen_destroyed += 1;
                 }
                 event => {
                     panic!("Got unexpected event type: {:?}", event);

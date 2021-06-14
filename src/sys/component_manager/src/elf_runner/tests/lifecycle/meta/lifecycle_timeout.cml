@@ -27,7 +27,7 @@
         },
         {
             event: [
-                "destroyed",
+                "purged",
                 "stopped",
             ],
             from: "framework",

@@ -5,7 +5,7 @@
 use {
     crate::model::{
         actions::{
-            Action, ActionKey, ActionSet, DeleteChildAction, DiscoverAction, MarkDeletedAction,
+            Action, ActionKey, ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction,
             ResolveAction, StartAction,
         },
         component::{BindReason, ComponentInstance, InstanceState},
@@ -20,32 +20,32 @@ use {
 };
 
 /// Destroy this component instance, including all instances nested in its component.
-pub struct DestroyAction {}
+pub struct PurgeAction {}
 
-impl DestroyAction {
+impl PurgeAction {
     pub fn new() -> Self {
         Self {}
     }
 }
 
 #[async_trait]
-impl Action for DestroyAction {
+impl Action for PurgeAction {
     type Output = Result<(), ModelError>;
     async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
-        do_destroy(component).await
+        do_purge(component).await
     }
     fn key(&self) -> ActionKey {
-        ActionKey::Destroy
+        ActionKey::Purge
     }
 }
 
-async fn do_destroy(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
+async fn do_purge(component: &Arc<ComponentInstance>) -> Result<(), ModelError> {
     // It is always expected that the component shut down first.
     {
         let execution = component.lock_execution().await;
         assert!(
             execution.is_shut_down(),
-            "Component was not shut down before being destroyed? {}",
+            "Component was not shut down before being purged? {}",
             component.abs_moniker
         );
     }
@@ -60,16 +60,16 @@ async fn do_destroy(component: &Arc<ComponentInstance>) -> Result<(), ModelError
                     let nf = async move {
                         ActionSet::register(
                             component.clone(),
-                            MarkDeletedAction::new(m.to_partial()),
+                            DestroyChildAction::new(m.to_partial()),
                         )
                         .await?;
-                        ActionSet::register(component, DeleteChildAction::new(m)).await
+                        ActionSet::register(component, PurgeChildAction::new(m)).await
                     };
                     nfs.push(nf);
                 }
                 nfs
             }
-            InstanceState::New | InstanceState::Discovered | InstanceState::Destroyed => {
+            InstanceState::New | InstanceState::Discovered | InstanceState::Purged => {
                 // Component was never resolved. No explicit cleanup is required for children.
                 vec![]
             }
@@ -78,14 +78,14 @@ async fn do_destroy(component: &Arc<ComponentInstance>) -> Result<(), ModelError
     let results = join_all(nfs).await;
     ok_or_first_error(results)?;
 
-    // Now that all children have been destroyed, destroy the parent.
+    // Now that all children have been purged, purge the parent.
     component.destroy_instance().await?;
 
-    // Only consider the component fully destroyed once it's no longer executing any lifecycle
+    // Only consider the component fully purged once it's no longer executing any lifecycle
     // transitions.
     {
         let mut state = component.lock_state().await;
-        state.set(InstanceState::Destroyed);
+        state.set(InstanceState::Purged);
     }
     fn wait(nf: Option<impl Future + Send + 'static>) -> BoxFuture<'static, ()> {
         Box::pin(async {
@@ -118,7 +118,7 @@ pub mod tests {
         super::*,
         crate::model::{
             actions::{
-                test_utils::{is_child_deleted, is_destroyed, is_executing, is_marked_deleted},
+                test_utils::{is_child_deleted, is_destroyed, is_executing, is_purged},
                 ActionNotifier, ShutdownAction,
             },
             binding::Binder,
@@ -142,7 +142,7 @@ pub mod tests {
     };
 
     #[fuchsia::test]
-    async fn destroy_one_component() {
+    async fn purge_one_component() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
             ("a", component_decl_with_test_runner()),
@@ -162,13 +162,13 @@ pub mod tests {
         ActionSet::register(component_a.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        // Register delete child action, and wait for it. Component should be destroyed.
-        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
+        // Register delete child action, and wait for it. Component should be purged.
+        ActionSet::register(component_root.clone(), PurgeChildAction::new("a:0".into()))
             .await
-            .expect("destroy failed");
-        // DeleteChild should not mark the instance non-live. That's done by MarkDeleted which we
+            .expect("purge failed");
+        // DeleteChild should not mark the instance non-live. That's done by Destroyed which we
         // don't call here.
-        assert!(!is_marked_deleted(&component_root, &"a:0".into()).await);
+        assert!(!is_destroyed(&component_root, &"a:0".into()).await);
         assert!(is_child_deleted(&component_root, &component_a).await);
         {
             let events: Vec<_> = test
@@ -192,16 +192,16 @@ pub mod tests {
             .await
             .expect_err("successfully bound to a after shutdown");
 
-        // Destroy the component again. This succeeds, but has no additional effect.
-        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
+        // Purge the component again. This succeeds, but has no additional effect.
+        ActionSet::register(component_root.clone(), PurgeChildAction::new("a:0".into()))
             .await
-            .expect("destroy failed");
-        assert!(!is_marked_deleted(&component_root, &"a:0".into()).await);
+            .expect("purge failed");
+        assert!(!is_destroyed(&component_root, &"a:0".into()).await);
         assert!(is_child_deleted(&component_root, &component_a).await);
     }
 
     #[fuchsia::test]
-    async fn destroy_collection() {
+    async fn purge_collection() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("container").build()),
             ("container", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
@@ -236,22 +236,22 @@ pub mod tests {
         assert!(is_executing(&component_a).await);
         assert!(is_executing(&component_b).await);
 
-        // Register delete child action, and wait for it. Components should be destroyed.
+        // Register delete child action, and wait for it. Components should be purged.
         let component_container = test.look_up(vec!["container:0"].into()).await;
         ActionSet::register(component_container.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        ActionSet::register(component_root.clone(), DeleteChildAction::new("container:0".into()))
+        ActionSet::register(component_root.clone(), PurgeChildAction::new("container:0".into()))
             .await
-            .expect("destroy failed");
+            .expect("purge failed");
         assert!(is_child_deleted(&component_root, &component_container).await);
-        assert!(is_destroyed(&component_container).await);
-        assert!(is_destroyed(&component_a).await);
-        assert!(is_destroyed(&component_b).await);
+        assert!(is_purged(&component_container).await);
+        assert!(is_purged(&component_a).await);
+        assert!(is_purged(&component_b).await);
     }
 
     #[fuchsia::test]
-    async fn destroy_already_shut_down() {
+    async fn purge_already_shut_down() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
             ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
@@ -270,12 +270,12 @@ pub mod tests {
         assert!(execution_is_shut_down(&component_a.clone()).await);
         assert!(execution_is_shut_down(&component_b.clone()).await);
 
-        // Now delete child "a". This should cause all components to be destroyed.
-        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
+        // Now delete child "a". This should cause all components to be purged.
+        ActionSet::register(component_root.clone(), PurgeChildAction::new("a:0".into()))
             .await
-            .expect("destroy failed");
+            .expect("purge failed");
         assert!(is_child_deleted(&component_root, &component_a).await);
-        assert!(is_destroyed(&component_a).await);
+        assert!(is_purged(&component_a).await);
 
         // Check order of events.
         {
@@ -298,7 +298,7 @@ pub mod tests {
         }
     }
 
-    async fn setup_destroy_blocks_test(event_type: EventType) -> (ActionsTest, EventStream) {
+    async fn setup_purge_blocks_test(event_type: EventType) -> (ActionsTest, EventStream) {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
             ("a", component_decl_with_test_runner()),
@@ -330,7 +330,7 @@ pub mod tests {
         (test, event_stream)
     }
 
-    async fn run_destroy_blocks_test<A>(
+    async fn run_purge_blocks_test<A>(
         test: &ActionsTest,
         event_stream: &mut EventStream,
         event_type: EventType,
@@ -356,9 +356,9 @@ pub mod tests {
                 ActionSet::register(component_a, ShutdownAction::new())
                     .await
                     .expect("shutdown failed");
-                ActionSet::register(component_root, DeleteChildAction::new("a:0".into()))
+                ActionSet::register(component_root, PurgeChildAction::new("a:0".into()))
                     .await
-                    .expect("destroy failed");
+                    .expect("purge failed");
             }
             .remote_handle()
         };
@@ -375,7 +375,7 @@ pub mod tests {
                 .expect("action notifier has unexpected type");
             let refcount = rx.refcount.load(Ordering::Relaxed);
             if refcount == expected_ref_count {
-                assert!(actions.contains(&ActionKey::Destroy));
+                assert!(actions.contains(&ActionKey::Purge));
                 break;
             }
             drop(actions);
@@ -389,16 +389,16 @@ pub mod tests {
     }
 
     #[fuchsia::test]
-    async fn destroy_blocks_on_discover() {
-        let (test, mut event_stream) = setup_destroy_blocks_test(EventType::Discovered).await;
-        run_destroy_blocks_test(
+    async fn purge_blocks_on_discover() {
+        let (test, mut event_stream) = setup_purge_blocks_test(EventType::Discovered).await;
+        run_purge_blocks_test(
             &test,
             &mut event_stream,
             EventType::Discovered,
             DiscoverAction::new(),
             // expected_ref_count:
             // - 1 for the ActionSet
-            // - 1 for DestroyAction to wait on the action
+            // - 1 for PurgeAction to wait on the action
             // (the task that registers the action does not wait on it
             2,
         )
@@ -406,8 +406,8 @@ pub mod tests {
     }
 
     #[fuchsia::test]
-    async fn destroy_blocks_on_resolve() {
-        let (test, mut event_stream) = setup_destroy_blocks_test(EventType::Resolved).await;
+    async fn purge_blocks_on_resolve() {
+        let (test, mut event_stream) = setup_purge_blocks_test(EventType::Resolved).await;
         let event = event_stream.wait_until(EventType::Resolved, vec![].into()).await.unwrap();
         event.resume();
         // Cause `a` to resolve.
@@ -417,7 +417,7 @@ pub mod tests {
         };
         join!(
             look_up_a,
-            run_destroy_blocks_test(
+            run_purge_blocks_test(
                 &test,
                 &mut event_stream,
                 EventType::Resolved,
@@ -425,15 +425,15 @@ pub mod tests {
                 // expected_ref_count:
                 // - 1 for the ActionSet
                 // - 1 for the task that registers the action
-                // - 1 for DestroyAction to wait on the action
+                // - 1 for PurgeAction to wait on the action
                 3,
             ),
         );
     }
 
     #[fuchsia::test]
-    async fn destroy_blocks_on_start() {
-        let (test, mut event_stream) = setup_destroy_blocks_test(EventType::Started).await;
+    async fn purge_blocks_on_start() {
+        let (test, mut event_stream) = setup_purge_blocks_test(EventType::Started).await;
         let event = event_stream.wait_until(EventType::Started, vec![].into()).await.unwrap();
         event.resume();
         // Cause `a` to start.
@@ -443,7 +443,7 @@ pub mod tests {
         };
         join!(
             bind_a,
-            run_destroy_blocks_test(
+            run_purge_blocks_test(
                 &test,
                 &mut event_stream,
                 EventType::Started,
@@ -451,14 +451,14 @@ pub mod tests {
                 // expected_ref_count:
                 // - 1 for the ActionSet
                 // - 1 for the task that registers the action
-                // - 1 for DestroyAction to wait on the action
+                // - 1 for PurgeAction to wait on the action
                 3,
             ),
         );
     }
 
     #[fuchsia::test]
-    async fn destroy_not_resolved() {
+    async fn purge_not_resolved() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
             ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
@@ -485,13 +485,13 @@ pub mod tests {
         ActionSet::register(component_a.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), PurgeChildAction::new("a:0".into()))
             .await
-            .expect("destroy failed");
+            .expect("purge failed");
         assert!(is_child_deleted(&component_root, &component_a).await);
-        assert!(is_destroyed(&component_b).await);
+        assert!(is_purged(&component_b).await);
 
-        // Now "a" is destroyed. Expect destroy events for "a" and "b".
+        // Now "a" is purged. Expect purge events for "a" and "b".
         {
             let events: Vec<_> = test
                 .test_hook
@@ -522,7 +522,7 @@ pub mod tests {
     ///     / \
     ///    c   d
     #[fuchsia::test]
-    async fn destroy_hierarchy() {
+    async fn purge_hierarchy() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").add_lazy_child("x").build()),
             ("a", ComponentDeclBuilder::new().add_eager_child("b").build()),
@@ -554,20 +554,20 @@ pub mod tests {
         assert!(is_executing(&component_d).await);
         assert!(is_executing(&component_x).await);
 
-        // Register destroy action on "a", and wait for it. This should cause all components
-        // in "a"'s component to be shut down and destroyed, in bottom-up order, but "x" is still
+        // Register purge action on "a", and wait for it. This should cause all components
+        // in "a"'s component to be shut down and purged, in bottom-up order, but "x" is still
         // running.
         ActionSet::register(component_a.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), PurgeChildAction::new("a:0".into()))
             .await
             .expect("delete child failed");
         assert!(is_child_deleted(&component_root, &component_a).await);
-        assert!(is_destroyed(&component_a).await);
-        assert!(is_destroyed(&component_b).await);
-        assert!(is_destroyed(&component_c).await);
-        assert!(is_destroyed(&component_d).await);
+        assert!(is_purged(&component_a).await);
+        assert!(is_purged(&component_b).await);
+        assert!(is_purged(&component_c).await);
+        assert!(is_purged(&component_d).await);
         assert!(is_executing(&component_x).await);
         {
             // Expect only "x" as child of root.
@@ -612,7 +612,7 @@ pub mod tests {
                 ]
             );
 
-            // The leaves could be destroyed in any order.
+            // The leaves could be purged in any order.
             let mut first: Vec<_> = events.drain(0..2).collect();
             first.sort_unstable();
             assert_eq!(
@@ -643,7 +643,7 @@ pub mod tests {
     ///
     /// `b` is a child of itself, but destruction should still be able to complete.
     #[fuchsia::test]
-    async fn destroy_self_referential() {
+    async fn purge_self_referential() {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
             ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
@@ -672,18 +672,18 @@ pub mod tests {
         assert!(is_executing(&component_b).await);
         assert!(is_executing(&component_b2).await);
 
-        // Register destroy action on "a", and wait for it. This should cause all components
-        // that were started to be destroyed, in bottom-up order.
+        // Register purge action on "a", and wait for it. This should cause all components
+        // that were started to be purged, in bottom-up order.
         ActionSet::register(component_a.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), PurgeChildAction::new("a:0".into()))
             .await
             .expect("delete child failed");
         assert!(is_child_deleted(&component_root, &component_a).await);
-        assert!(is_destroyed(&component_a).await);
-        assert!(is_destroyed(&component_b).await);
-        assert!(is_destroyed(&component_b2).await);
+        assert!(is_purged(&component_a).await);
+        assert!(is_purged(&component_b).await);
+        assert!(is_purged(&component_b2).await);
         {
             let state = component_root.lock_state().await;
             let children: Vec<_> = match *state {
@@ -721,7 +721,7 @@ pub mod tests {
         }
     }
 
-    /// Destroy `a`:
+    /// Purge `a`:
     ///
     ///    a*
     ///     \
@@ -729,27 +729,27 @@ pub mod tests {
     ///     / \
     ///    c   d
     ///
-    /// `a` fails to destroy the first time, but succeeds the second time.
+    /// `a` fails to purge the first time, but succeeds the second time.
     #[fuchsia::test]
-    async fn destroy_error() {
-        struct DestroyErrorHook {
+    async fn purge_error() {
+        struct PurgeErrorHook {
             moniker: AbsoluteMoniker,
         }
 
-        impl DestroyErrorHook {
+        impl PurgeErrorHook {
             fn new(moniker: AbsoluteMoniker) -> Self {
                 Self { moniker }
             }
 
             fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
                 vec![HooksRegistration::new(
-                    "DestroyErrorHook",
-                    vec![EventType::Destroyed],
+                    "PurgeErrorHook",
+                    vec![EventType::Purged],
                     Arc::downgrade(self) as Weak<dyn Hook>,
                 )]
             }
 
-            async fn on_destroyed_async(
+            async fn on_purged_async(
                 &self,
                 target_moniker: &AbsoluteMoniker,
             ) -> Result<(), ModelError> {
@@ -761,13 +761,13 @@ pub mod tests {
         }
 
         #[async_trait]
-        impl Hook for DestroyErrorHook {
+        impl Hook for PurgeErrorHook {
             async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
                 let target_moniker = event
                     .target_moniker
                     .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
-                if let Ok(EventPayload::Destroyed) = event.result {
-                    self.on_destroyed_async(target_moniker).await?;
+                if let Ok(EventPayload::Purged) = event.result {
+                    self.on_purged_async(target_moniker).await?;
                 }
                 Ok(())
             }
@@ -780,10 +780,10 @@ pub mod tests {
             ("c", component_decl_with_test_runner()),
             ("d", component_decl_with_test_runner()),
         ];
-        // The destroy hook is invoked just after the component instance is removed from the
+        // The purge hook is invoked just after the component instance is removed from the
         // list of children. Therefore, to cause destruction of `a` to fail, fail removal of
         // `/a/b`.
-        let error_hook = Arc::new(DestroyErrorHook::new(vec!["a:0", "b:0"].into()));
+        let error_hook = Arc::new(PurgeErrorHook::new(vec!["a:0", "b:0"].into()));
         let test = ActionsTest::new_with_hooks("root", components, None, error_hook.hooks()).await;
         let component_root = test.look_up(vec![].into()).await;
         let component_a = test.look_up(vec!["a:0"].into()).await;
@@ -806,15 +806,15 @@ pub mod tests {
         ActionSet::register(component_a.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), PurgeChildAction::new("a:0".into()))
             .await
-            .expect_err("destroy succeeded unexpectedly");
+            .expect_err("purge succeeded unexpectedly");
         assert!(has_child(&component_root, "a:0").await);
         assert!(!has_child(&component_a, "b:0").await);
-        assert!(!is_destroyed(&component_a).await);
-        assert!(is_destroyed(&component_b).await);
-        assert!(is_destroyed(&component_c).await);
-        assert!(is_destroyed(&component_d).await);
+        assert!(!is_purged(&component_a).await);
+        assert!(is_purged(&component_b).await);
+        assert!(is_purged(&component_c).await);
+        assert!(is_purged(&component_d).await);
         {
             let mut events: Vec<_> = test
                 .test_hook
@@ -836,16 +836,16 @@ pub mod tests {
             assert_eq!(events, vec![Lifecycle::Destroy(vec!["a:0", "b:0"].into())]);
         }
 
-        // Register destroy action on "a:0" again. "b:0"'s delete succeeds, and "a:0" is deleted this
+        // Register purge action on "a:0" again. "b:0"'s delete succeeds, and "a:0" is deleted this
         // time.
-        ActionSet::register(component_root.clone(), DeleteChildAction::new("a:0".into()))
+        ActionSet::register(component_root.clone(), PurgeChildAction::new("a:0".into()))
             .await
-            .expect("destroy failed");
+            .expect("purge failed");
         assert!(!has_child(&component_root, "a:0").await);
-        assert!(is_destroyed(&component_a).await);
-        assert!(is_destroyed(&component_b).await);
-        assert!(is_destroyed(&component_c).await);
-        assert!(is_destroyed(&component_d).await);
+        assert!(is_purged(&component_a).await);
+        assert!(is_purged(&component_b).await);
+        assert!(is_purged(&component_c).await);
+        assert!(is_purged(&component_d).await);
         {
             let mut events: Vec<_> = test
                 .test_hook

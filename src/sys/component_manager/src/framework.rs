@@ -743,8 +743,8 @@ mod tests {
             .new_event_stream(
                 vec![
                     EventType::Stopped.into(),
-                    EventType::MarkedForDestruction.into(),
                     EventType::Destroyed.into(),
+                    EventType::Purged.into(),
                 ],
                 EventMode::Sync,
             )
@@ -786,7 +786,7 @@ mod tests {
             .unwrap();
         event.resume();
         let event = event_stream
-            .wait_until(EventType::MarkedForDestruction, vec!["system:0", "coll:a:1"].into())
+            .wait_until(EventType::Destroyed, vec!["system:0", "coll:a:1"].into())
             .await
             .unwrap();
 
@@ -823,7 +823,7 @@ mod tests {
 
         // Wait until 'PostDestroy' event for "a"
         let event = event_stream
-            .wait_until(EventType::Destroyed, vec!["system:0", "coll:a:1"].into())
+            .wait_until(EventType::Purged, vec!["system:0", "coll:a:1"].into())
             .await
             .unwrap();
         event.resume();

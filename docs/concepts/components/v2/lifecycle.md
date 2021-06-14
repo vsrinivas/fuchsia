@@ -3,7 +3,7 @@
 <<../_v2_banner.md>>
 
 Component instances progress through four major lifecycle events: create, start,
-stop, and destroy.
+stop, destroy and purge.
 
 Component instances may retain isolated persistent state on a storage medium
 while they are not running, which helps them maintain the
@@ -64,7 +64,7 @@ when subsequently restarted.
 
 The component framework may stop a component instance for the following reasons:
 
--   When the component is about to be destroyed.
+-   When the component is about to be purged.
 -   When the system is shutting down.
 
 A component can implement a lifecycle handler ([example][handler-example]) to be
@@ -80,12 +80,15 @@ Once stopped, a component instance can then be [restarted](#starting) or
 
 ### Destroying a component instance {#destroying}
 
-Destroying a component instance permanently deletes all of its associated state
-and releases the system resources it consumed.
-
 Once destroyed, a component instance ceases to exist and cannot be restarted.
 New instances of the same component can still be created but they will each have
-their own identity and state distinct from all prior instances.
+their own identity and state distinct from all prior instances. From an external
+point of view, the component doesn't exist anymore in the component topology.
+
+### Purging a component instance {#purging}
+
+Purging a destroyed component instance deletes any persistent storage it's using
+and all its internal state from component_manager.
 
 ## Legacy features {#legacy}
 

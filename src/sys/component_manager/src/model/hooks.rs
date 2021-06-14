@@ -157,7 +157,7 @@ events!([
     (CapabilityRouted, capability_routed),
     /// An instance was destroyed successfully. The instance is stopped and no longer
     /// exists in the parent's realm.
-    (Destroyed, destroyed),
+    (Purged, purged),
     /// A directory exposed to the framework by a component is available.
     (DirectoryReady, directory_ready),
     /// A component instance was discovered.
@@ -165,13 +165,13 @@ events!([
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
     /// The instance still exists in the parent's realm but will soon be removed.
     /// TODO(fxbug.dev/39417): Ensure the instance is stopped before this event.
-    (MarkedForDestruction, marked_for_destruction),
+    (Destroyed, destroyed),
     /// An instance's declaration was resolved successfully for the first time.
     (Resolved, resolved),
     /// An instance is about to be started.
     (Started, started),
     /// An instance was stopped successfully.
-    /// This event must occur before Destroyed.
+    /// This event must occur before Purged.
     (Stopped, stopped),
     /// A component is running.
     (Running, running),
@@ -202,10 +202,10 @@ pub enum EventErrorPayload {
     // Keep the events listed below in alphabetical order!
     CapabilityRequested { source_moniker: AbsoluteMoniker, name: String },
     CapabilityRouted,
-    Destroyed,
+    Purged,
     DirectoryReady { name: String },
     Discovered,
-    MarkedForDestruction,
+    Destroyed,
     Resolved,
     Started,
     Stopped,
@@ -229,9 +229,9 @@ impl fmt::Debug for EventErrorPayload {
                 formatter.field("name", &name).finish()
             }
             EventErrorPayload::CapabilityRouted
-            | EventErrorPayload::Destroyed
+            | EventErrorPayload::Purged
             | EventErrorPayload::Discovered
-            | EventErrorPayload::MarkedForDestruction
+            | EventErrorPayload::Destroyed
             | EventErrorPayload::Resolved
             | EventErrorPayload::Started
             | EventErrorPayload::Stopped
@@ -285,13 +285,13 @@ pub enum EventPayload {
         // a Mutex.
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     },
-    Destroyed,
+    Purged,
     DirectoryReady {
         name: String,
         node: NodeProxy,
     },
     Discovered,
-    MarkedForDestruction,
+    Destroyed,
     Resolved {
         component: WeakComponentInstance,
         resolved_url: String,
@@ -371,9 +371,9 @@ impl fmt::Debug for EventPayload {
                 formatter.field("decl", decl).finish()
             }
             EventPayload::Stopped { status } => formatter.field("status", status).finish(),
-            EventPayload::Destroyed
+            EventPayload::Purged
             | EventPayload::Discovered
-            | EventPayload::MarkedForDestruction
+            | EventPayload::Destroyed
             | EventPayload::Running { .. } => formatter.finish(),
         }
     }
@@ -545,9 +545,9 @@ impl fmt::Display for Event {
                     EventPayload::Stopped { status } => {
                         format!("with status: {}", status.to_string())
                     }
-                    EventPayload::Destroyed
+                    EventPayload::Purged
                     | EventPayload::Discovered
-                    | EventPayload::MarkedForDestruction
+                    | EventPayload::Destroyed
                     | EventPayload::Resolved { .. }
                     | EventPayload::Running { .. } => "".to_string(),
                 };

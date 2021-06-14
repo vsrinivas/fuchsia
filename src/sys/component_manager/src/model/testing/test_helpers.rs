@@ -130,7 +130,7 @@ pub async fn execution_is_shut_down(component: &ComponentInstance) -> bool {
 pub async fn has_child<'a>(component: &'a ComponentInstance, moniker: &'a str) -> bool {
     match *component.lock_state().await {
         InstanceState::Resolved(ref s) => s.all_children().contains_key(&moniker.into()),
-        InstanceState::Destroyed => false,
+        InstanceState::Purged => false,
         _ => {
             panic!("not resolved")
         }
@@ -151,7 +151,7 @@ pub async fn get_instance_id<'a>(component: &'a ComponentInstance, moniker: &'a 
 pub async fn get_live_children(component: &ComponentInstance) -> HashSet<PartialChildMoniker> {
     match *component.lock_state().await {
         InstanceState::Resolved(ref s) => s.live_children().map(|(m, _)| m.clone()).collect(),
-        InstanceState::Destroyed => HashSet::new(),
+        InstanceState::Purged => HashSet::new(),
         _ => {
             panic!("not resolved")
         }

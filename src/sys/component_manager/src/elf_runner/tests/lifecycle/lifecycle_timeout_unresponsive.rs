@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Destroyed, Event, EventMode, EventSource, EventSubscription, Stopped},
+        events::{Event, EventMode, EventSource, EventSubscription, Purged, Stopped},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
@@ -18,7 +18,7 @@ async fn test_stop_timeouts() {
     let event_source = EventSource::new().unwrap();
     let event_stream = event_source
         .subscribe(vec![EventSubscription::new(
-            vec![Stopped::NAME, Destroyed::NAME],
+            vec![Stopped::NAME, Purged::NAME],
             EventMode::Async,
         )])
         .await
@@ -64,9 +64,9 @@ async fn test_stop_timeouts() {
                 EventMatcher::ok()
                     .monikers(&target_monikers)
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok().r#type(Destroyed::TYPE).monikers(&target_monikers),
-                EventMatcher::ok().r#type(Destroyed::TYPE).monikers(&target_monikers),
-                EventMatcher::ok().r#type(Destroyed::TYPE).monikers(&target_monikers),
+                EventMatcher::ok().r#type(Purged::TYPE).monikers(&target_monikers),
+                EventMatcher::ok().r#type(Purged::TYPE).monikers(&target_monikers),
+                EventMatcher::ok().r#type(Purged::TYPE).monikers(&target_monikers),
             ],
             Ordering::Ordered,
         )

@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{Destroyed, Event, EventMode, EventSource, EventSubscription, Started},
+        events::{Event, EventMode, EventSource, EventSubscription, Purged, Started},
         matcher::EventMatcher,
     },
     fuchsia_async as fasync,
@@ -20,7 +20,7 @@ async fn main() {
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(
-            vec![Started::NAME, Destroyed::NAME],
+            vec![Started::NAME, Purged::NAME],
             EventMode::Async,
         )])
         .await
@@ -43,7 +43,7 @@ async fn main() {
     }
 
     for _ in 1..=3 {
-        let event = EventMatcher::ok().expect_match::<Destroyed>(&mut event_stream).await;
+        let event = EventMatcher::ok().expect_match::<Purged>(&mut event_stream).await;
         assert_eq!(event.component_url(), url);
     }
 }

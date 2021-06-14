@@ -41,7 +41,7 @@ async fn do_discover(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
             InstanceState::New => false,
             InstanceState::Discovered => true,
             InstanceState::Resolved(_) => true,
-            InstanceState::Destroyed => {
+            InstanceState::Purged => {
                 return Err(ModelError::instance_not_found(component.abs_moniker.clone()));
             }
         }
@@ -54,11 +54,11 @@ async fn do_discover(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
     {
         let mut state = component.lock_state().await;
         assert!(
-            matches!(*state, InstanceState::New | InstanceState::Destroyed),
+            matches!(*state, InstanceState::New | InstanceState::Purged),
             "Component in unexpected state after discover"
         );
         match *state {
-            InstanceState::Destroyed => {
+            InstanceState::Purged => {
                 // Nothing to do.
             }
             InstanceState::Discovered | InstanceState::Resolved(_) => {

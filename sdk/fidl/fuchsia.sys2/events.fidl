@@ -39,9 +39,9 @@ enum EventType {
     /// The event propagation system is used to supply the capability being requested.
     CAPABILITY_ROUTED = 2;
 
-    /// An instance was destroyed successfully. The instance is stopped and no longer
+    /// An instance was purged successfully. The instance is stopped and no longer
     /// exists in the parent's realm.
-    DESTROYED = 3;
+    PURGED = 3;
 
     /// A directory exposed to the framework by a component is available.
     DIRECTORY_READY = 4;
@@ -52,10 +52,11 @@ enum EventType {
     /// starts.
     DISCOVERED = 5;
 
-    /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
-    /// The instance still exists in the parent's realm but will soon be removed.
+    /// Destruction of an instance has begun. The instance is guranteed to be shut down at
+    /// this point. The instance still exists in the parent's realm but will soon be removed.
+    /// The instance is considered destroyed when this event is received.
     /// TODO(fxbug.dev/39417): Ensure the instance is stopped before this event.
-    MARKED_FOR_DESTRUCTION = 6;
+    DESTROYED = 6;
 
     /// An instance's declaration was resolved successfully for the first time.
     RESOLVED = 7;
@@ -65,7 +66,7 @@ enum EventType {
     STARTED = 8;
 
     /// An instance was stopped successfully.
-    /// This event must occur before Destroyed.
+    /// This event must occur before Purged.
     STOPPED = 9;
 
     /// If requested, this event is dispatched on subscription and indicates
@@ -103,8 +104,8 @@ flexible union EventErrorPayload {
     /// Payload for CapabilityRouted events
     2: CapabilityRoutedError capability_routed;
 
-    /// Payload for Destroyed events.
-    3: DestroyedError destroyed;
+    /// Payload for Purged events.
+    3: PurgedError purged;
 
     /// Payload for DirectoryReady events
     4: DirectoryReadyError directory_ready;
@@ -112,8 +113,8 @@ flexible union EventErrorPayload {
     /// Payload for Discovered events.
     5: DiscoveredError discovered;
 
-    /// Payload for MarkedForDestruction events.
-    6: MarkedForDestructionError marked_for_destruction;
+    /// Payload for Destroyed events.
+    6: DestroyedError destroyed;
 
     /// Payload for Resolved events
     7: ResolvedError resolved;
@@ -150,8 +151,8 @@ table CapabilityRoutedError {
 table DiscoveredError {
 };
 
-/// Error payload for Destroyed events.
-table DestroyedError {
+/// Error payload for Purged events.
+table PurgedError {
 };
 
 /// Error payload for Resolved events.
@@ -164,8 +165,8 @@ table RunningError {
     1: zx.time started_timestamp;
 };
 
-/// Error payload for MarkedForDestruction events.
-table MarkedForDestructionError {
+/// Error payload for Destroyed events.
+table DestroyedError {
 };
 
 /// Error payload for Started events.
@@ -184,8 +185,8 @@ flexible resource union EventPayload {
     /// Payload for CapabilityRouted events
     2: CapabilityRoutedPayload capability_routed;
 
-    /// Payload for Destroyed events.
-    3: DestroyedPayload destroyed;
+    /// Payload for Purged events.
+    3: PurgedPayload purged;
 
     /// Payload for DirectoryReady events
     4: DirectoryReadyPayload directory_ready;
@@ -193,8 +194,8 @@ flexible resource union EventPayload {
     /// Payload for Discovered events.
     5: DiscoveredPayload discovered;
 
-    /// Payload for MarkedForDestruction events.
-    6: MarkedForDestructionPayload marked_for_destruction;
+    /// Payload for Destroyed events.
+    6: DestroyedPayload destroyed;
 
     /// Payload for Resolved events
     7: ResolvedPayload resolved;
@@ -234,16 +235,16 @@ resource table CapabilityRoutedPayload {
     1: fuchsia.component.name name;
 };
 
-/// Payload for Destroyed events.
-table DestroyedPayload {
+/// Payload for Purged events.
+table PurgedPayload {
 };
 
 /// Payload for Discovered events.
 table DiscoveredPayload {
 };
 
-/// Payload for MarkedForDestruction events.
-table MarkedForDestructionPayload {
+/// Payload for Destroyed events.
+table DestroyedPayload {
 };
 
 /// Payload for Resolved events.

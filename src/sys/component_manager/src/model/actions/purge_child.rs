@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        actions::{Action, ActionKey, ActionSet, DestroyAction},
+        actions::{Action, ActionKey, ActionSet, PurgeAction},
         component::{ComponentInstance, InstanceState},
         error::ModelError,
         hooks::{Event, EventPayload},
@@ -15,28 +15,28 @@ use {
 };
 
 /// Completely deletes the given child of a component.
-pub struct DeleteChildAction {
+pub struct PurgeChildAction {
     moniker: ChildMoniker,
 }
 
-impl DeleteChildAction {
+impl PurgeChildAction {
     pub fn new(moniker: ChildMoniker) -> Self {
         Self { moniker }
     }
 }
 
 #[async_trait]
-impl Action for DeleteChildAction {
+impl Action for PurgeChildAction {
     type Output = Result<(), ModelError>;
     async fn handle(&self, component: &Arc<ComponentInstance>) -> Self::Output {
-        do_delete_child(component, self.moniker.clone()).await
+        do_purge_child(component, self.moniker.clone()).await
     }
     fn key(&self) -> ActionKey {
-        ActionKey::DeleteChild(self.moniker.clone())
+        ActionKey::PurgeChild(self.moniker.clone())
     }
 }
 
-async fn do_delete_child(
+async fn do_purge_child(
     component: &Arc<ComponentInstance>,
     moniker: ChildMoniker,
 ) -> Result<(), ModelError> {
@@ -45,15 +45,15 @@ async fn do_delete_child(
         let state = component.lock_state().await;
         match *state {
             InstanceState::Resolved(ref s) => s.all_children().get(&moniker).map(|r| r.clone()),
-            InstanceState::Destroyed => None,
+            InstanceState::Purged => None,
             InstanceState::New | InstanceState::Discovered => {
-                panic!("do_delete_child: not resolved");
+                panic!("do_purge_child: not resolved");
             }
         }
     };
     if let Some(child) = child {
         // Wait for the child component to be destroyed
-        ActionSet::register(child.clone(), DestroyAction::new()).await?;
+        ActionSet::register(child.clone(), PurgeAction::new()).await?;
 
         // Remove the child component from the parent's list of children
         {
@@ -62,15 +62,15 @@ async fn do_delete_child(
                 InstanceState::Resolved(ref mut s) => {
                     s.remove_child(&moniker);
                 }
-                InstanceState::Destroyed => {}
+                InstanceState::Purged => {}
                 InstanceState::New | InstanceState::Discovered => {
-                    panic!("do_delete_child: not resolved");
+                    panic!("do_purge_child: not resolved");
                 }
             }
         }
 
-        // Send the Destroyed event for the component
-        let event = Event::new(&child, Ok(EventPayload::Destroyed));
+        // Send the Purged event for the component
+        let event = Event::new(&child, Ok(EventPayload::Purged));
         component.hooks.dispatch(&event).await?;
     }
 

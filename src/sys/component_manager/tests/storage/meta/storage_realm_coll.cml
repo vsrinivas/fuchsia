@@ -36,7 +36,7 @@
         },
         {
             event: [
-                "destroyed",
+                "purged",
                 "stopped",
             ],
             from: "framework",
@@ -50,7 +50,7 @@
                     mode: "async",
                 },
                 {
-                    event: "destroyed",
+                    event: "purged",
                     mode: "async",
                 },
             ],

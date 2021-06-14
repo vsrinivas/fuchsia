@@ -8,7 +8,7 @@ use {
         channel,
         model::{
             actions::{
-                Action, ActionSet, DeleteChildAction, DiscoverAction, MarkDeletedAction,
+                Action, ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction,
                 ResolveAction, StopAction,
             },
             binding,
@@ -317,7 +317,7 @@ impl ComponentInstance {
                 InstanceState::Resolved(_) => {
                     return Ok(MutexGuard::map(state, get_resolved));
                 }
-                InstanceState::Destroyed => {
+                InstanceState::Purged => {
                     return Err(ComponentInstanceError::instance_not_found(
                         self.abs_moniker.clone(),
                     ));
@@ -330,7 +330,7 @@ impl ComponentInstance {
             .await
             .map_err(|err| ComponentInstanceError::resolve_failed(&self.abs_moniker, err))?;
         let state = self.state.lock().await;
-        if let InstanceState::Destroyed = *state {
+        if let InstanceState::Purged = *state {
             return Err(ComponentInstanceError::instance_not_found(self.abs_moniker.clone()));
         }
         Ok(MutexGuard::map(state, get_resolved))
@@ -361,7 +361,7 @@ impl ComponentInstance {
                 let state = self.lock_state().await;
                 match *state {
                     InstanceState::Resolved(ref s) => s.decl.clone(),
-                    InstanceState::Destroyed => {
+                    InstanceState::Purged => {
                         return Err(ModelError::instance_not_found(self.abs_moniker.clone()));
                     }
                     _ => {
@@ -453,10 +453,10 @@ impl ComponentInstance {
         if let Some(tup) = tup {
             let (instance, _) = tup;
             let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
-            ActionSet::register(self.clone(), MarkDeletedAction::new(partial_moniker.clone()))
+            ActionSet::register(self.clone(), DestroyChildAction::new(partial_moniker.clone()))
                 .await?;
             let mut actions = self.lock_actions().await;
-            let nf = actions.register_no_wait(self, DeleteChildAction::new(child_moniker));
+            let nf = actions.register_no_wait(self, PurgeChildAction::new(child_moniker));
             Ok(nf)
         } else {
             Err(ModelError::instance_not_found_in_realm(
@@ -582,9 +582,9 @@ impl ComponentInstance {
             // above.
             if let Some(coll) = m.collection() {
                 if transient_colls.contains(coll) {
-                    ActionSet::register(self.clone(), MarkDeletedAction::new(m.to_partial()))
+                    ActionSet::register(self.clone(), DestroyChildAction::new(m.to_partial()))
                         .await?;
-                    let nf = ActionSet::register(self.clone(), DeleteChildAction::new(m));
+                    let nf = ActionSet::register(self.clone(), PurgeChildAction::new(m));
                     futures.push(nf);
                 }
             }
@@ -634,7 +634,7 @@ impl ComponentInstance {
                 exposed_dir.open(flags, fio::MODE_TYPE_DIRECTORY, Path::empty(), server_end);
                 Ok(())
             }
-            InstanceState::Destroyed => {
+            InstanceState::Purged => {
                 Err(ModelError::instance_not_found(self.abs_moniker().clone()))
             }
             _ => {
@@ -776,7 +776,7 @@ pub enum InstanceState {
     Resolved(ResolvedInstanceState),
     /// The instance has been destroyed. It has no content and no further actions may be registered
     /// on it.
-    Destroyed,
+    Purged,
 }
 
 impl InstanceState {
@@ -787,9 +787,9 @@ impl InstanceState {
             | (Self::Discovered, Self::New)
             | (Self::Resolved(_), Self::Discovered)
             | (Self::Resolved(_), Self::New)
-            | (Self::Destroyed, Self::New)
-            | (Self::Destroyed, Self::Discovered)
-            | (Self::Destroyed, Self::Resolved(_)) => true,
+            | (Self::Purged, Self::New)
+            | (Self::Purged, Self::Discovered)
+            | (Self::Purged, Self::Resolved(_)) => true,
             _ => false,
         };
         if invalid {
@@ -805,7 +805,7 @@ impl fmt::Debug for InstanceState {
             Self::New => "New",
             Self::Discovered => "Discovered",
             Self::Resolved(_) => "Resolved",
-            Self::Destroyed => "Destroyed",
+            Self::Purged => "Purged",
         };
         f.write_str(s)
     }

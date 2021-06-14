@@ -19,7 +19,7 @@
         },
         {
             event: [
-                "destroyed",
+                "purged",
                 "started",
             ],
             from: "framework",

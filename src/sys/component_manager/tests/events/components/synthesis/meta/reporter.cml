@@ -23,7 +23,7 @@
         },
         {
             event: [
-                "marked_for_destruction",
+                "destroyed",
                 "running",
                 "started",
             ],

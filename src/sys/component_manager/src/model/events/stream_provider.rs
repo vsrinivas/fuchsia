@@ -56,7 +56,7 @@ impl EventStreamProvider {
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "EventStreamProvider",
-            vec![EventType::Destroyed, EventType::Resolved],
+            vec![EventType::Purged, EventType::Resolved],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
@@ -107,7 +107,7 @@ impl EventStreamProvider {
         }))
     }
 
-    async fn on_component_destroyed(
+    async fn on_component_purged(
         self: &Arc<Self>,
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
@@ -156,8 +156,8 @@ impl Hook for EventStreamProvider {
             .target_moniker
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match &event.result {
-            Ok(EventPayload::Destroyed) => {
-                self.on_component_destroyed(target_moniker).await?;
+            Ok(EventPayload::Purged) => {
+                self.on_component_purged(target_moniker).await?;
             }
             Ok(EventPayload::Resolved { decl, .. }) => {
                 self.on_component_resolved(target_moniker, decl).await?;

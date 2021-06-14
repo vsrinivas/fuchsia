@@ -158,7 +158,7 @@ pub fn should_return_early(
 ) -> Option<Result<(), ModelError>> {
     match component {
         InstanceState::New | InstanceState::Discovered | InstanceState::Resolved(_) => {}
-        InstanceState::Destroyed => {
+        InstanceState::Purged => {
             return Some(Err(ModelError::instance_not_found(abs_moniker.clone())));
         }
     }

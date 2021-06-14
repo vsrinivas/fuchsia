@@ -24,7 +24,7 @@ async fn destroy() {
     let mut event_source = test.connect_to_event_source().await.unwrap();
 
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Destroyed::NAME], EventMode::Sync)])
+        .subscribe(vec![EventSubscription::new(vec![Purged::NAME], EventMode::Sync)])
         .await
         .unwrap();
     let expectation = EventSequence::new()
@@ -38,21 +38,21 @@ async fn destroy() {
         .then(EventMatcher::ok().r#type(Stopped::TYPE).moniker("./coll:parent:1"))
         .all_of(
             vec![
-                EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./coll:parent:1/trigger_a:0"),
-                EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./coll:parent:1/trigger_b:0"),
+                EventMatcher::ok().r#type(Purged::TYPE).moniker("./coll:parent:1/trigger_a:0"),
+                EventMatcher::ok().r#type(Purged::TYPE).moniker("./coll:parent:1/trigger_b:0"),
             ],
             Ordering::Unordered,
         )
-        .then(EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./coll:parent:1"))
+        .then(EventMatcher::ok().r#type(Purged::TYPE).moniker("./coll:parent:1"))
         .subscribe_and_expect(&mut event_source)
         .await
         .unwrap();
     event_source.start_component_tree().await;
 
-    // Wait for `coll:parent` to be destroyed.
+    // Wait for `coll:parent` to be purged.
     let event = EventMatcher::ok()
         .moniker("./coll:parent:1$")
-        .wait::<Destroyed>(&mut event_stream)
+        .wait::<Purged>(&mut event_stream)
         .await
         .unwrap();
 
@@ -63,7 +63,7 @@ async fn destroy() {
     let child_dir_contents = list_directory(&child_dir).await.unwrap();
     assert!(child_dir_contents.is_empty());
 
-    // Assert the expected lifecycle events. The leaves can be stopped/destroyed in either order.
+    // Assert the expected lifecycle events. The leaves can be stopped/purged in either order.
     event.resume().await.unwrap();
     expectation.await.unwrap();
 }

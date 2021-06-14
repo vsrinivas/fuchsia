@@ -115,7 +115,7 @@ impl Hub {
     }
 
     /// Delete the given child component.
-    pub async fn delete_child(&self, child_name: impl ToString) -> Result<()> {
+    pub async fn purge_child(&self, child_name: impl ToString) -> Result<()> {
         let mut child_ref = fsys::ChildRef {
             name: child_name.to_string(),
             collection: Some(COLLECTION_NAME.to_string()),
@@ -166,7 +166,7 @@ impl Hub {
                 let prefix = format!("{}:", COLLECTION_NAME);
                 let child_name = child_name.strip_prefix(&prefix).unwrap();
 
-                self.delete_child(child_name).await.context("Could not delete random child")
+                self.purge_child(child_name).await.context("Could not delete random child")
             } else {
                 // Create a child at the current depth
                 self.add_child(rng).await.context("Could not create additional children")

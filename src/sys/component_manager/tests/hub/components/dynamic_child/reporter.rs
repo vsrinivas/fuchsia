@@ -84,7 +84,7 @@ async fn main() {
     // Wait for the dynamic child to begin deletion
     let event = EventMatcher::ok()
         .moniker("./coll:simple_instance:1")
-        .expect_match::<MarkedForDestruction>(&mut event_stream)
+        .expect_match::<Destroyed>(&mut event_stream)
         .await;
 
     expect_dir_listing("/hub/children", vec![]).await;
@@ -100,7 +100,7 @@ async fn main() {
     // Wait for the dynamic child's static child to begin deletion
     let event = EventMatcher::ok()
         .moniker("./coll:simple_instance:1/child:0")
-        .expect_match::<MarkedForDestruction>(&mut event_stream)
+        .expect_match::<Destroyed>(&mut event_stream)
         .await;
 
     expect_dir_listing("/hub/deleting/coll:simple_instance:1/children", vec![]).await;
@@ -108,10 +108,10 @@ async fn main() {
 
     event.resume().await.unwrap();
 
-    // Wait for the dynamic child's static child to be destroyed
+    // Wait for the dynamic child's static child to be purged
     let event = EventMatcher::ok()
         .moniker("./coll:simple_instance:1/child:0")
-        .expect_match::<Destroyed>(&mut event_stream)
+        .expect_match::<Purged>(&mut event_stream)
         .await;
 
     destroy_task.await.unwrap().unwrap();
@@ -120,10 +120,10 @@ async fn main() {
 
     event.resume().await.unwrap();
 
-    // Wait for the dynamic child to be destroyed
+    // Wait for the dynamic child to be purged
     let event = EventMatcher::ok()
         .moniker("./coll:simple_instance:1")
-        .expect_match::<Destroyed>(&mut event_stream)
+        .expect_match::<Purged>(&mut event_stream)
         .await;
 
     expect_dir_listing("/hub/deleting", vec![]).await;

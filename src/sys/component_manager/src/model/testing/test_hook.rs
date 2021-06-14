@@ -137,8 +137,8 @@ impl TestHook {
             "TestHook",
             vec![
                 EventType::Discovered,
+                EventType::Purged,
                 EventType::Destroyed,
-                EventType::MarkedForDestruction,
                 EventType::Started,
                 EventType::Stopped,
             ],
@@ -180,7 +180,7 @@ impl TestHook {
         Ok(())
     }
 
-    pub async fn on_marked_for_destruction_async<'a>(
+    pub async fn on_destroyed_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
@@ -197,7 +197,7 @@ impl TestHook {
         Ok(())
     }
 
-    pub async fn on_destroyed_async<'a>(
+    pub async fn on_purged_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
@@ -261,14 +261,14 @@ impl Hook for TestHook {
             .target_moniker
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match &event.result {
-            Ok(EventPayload::Destroyed) => {
-                self.on_destroyed_async(&target_moniker).await?;
+            Ok(EventPayload::Purged) => {
+                self.on_purged_async(&target_moniker).await?;
             }
             Ok(EventPayload::Discovered { .. }) => {
                 self.create_instance_if_necessary(&target_moniker).await?;
             }
-            Ok(EventPayload::MarkedForDestruction) => {
-                self.on_marked_for_destruction_async(&target_moniker).await?;
+            Ok(EventPayload::Destroyed) => {
+                self.on_destroyed_async(&target_moniker).await?;
             }
             Ok(EventPayload::Started { .. }) => {
                 self.on_started_async(&target_moniker).await?;

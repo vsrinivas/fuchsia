@@ -261,15 +261,15 @@ fn create_capability_routed_payload(source: &CapabilitySource) -> fsys::EventRes
 
 fn maybe_create_empty_payload(event_type: EventType) -> Option<fsys::EventResult> {
     let result = match event_type {
-        EventType::Destroyed => {
-            fsys::EventResult::Payload(fsys::EventPayload::Destroyed(fsys::DestroyedPayload::EMPTY))
+        EventType::Purged => {
+            fsys::EventResult::Payload(fsys::EventPayload::Purged(fsys::PurgedPayload::EMPTY))
         }
         EventType::Discovered => fsys::EventResult::Payload(fsys::EventPayload::Discovered(
             fsys::DiscoveredPayload::EMPTY,
         )),
-        EventType::MarkedForDestruction => fsys::EventResult::Payload(
-            fsys::EventPayload::MarkedForDestruction(fsys::MarkedForDestructionPayload::EMPTY),
-        ),
+        EventType::Destroyed => {
+            fsys::EventResult::Payload(fsys::EventPayload::Destroyed(fsys::DestroyedPayload::EMPTY))
+        }
         EventType::Resolved => {
             fsys::EventResult::Payload(fsys::EventPayload::Resolved(fsys::ResolvedPayload::EMPTY))
         }
@@ -283,11 +283,9 @@ fn maybe_create_empty_payload(event_type: EventType) -> Option<fsys::EventResult
 
 fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventResult> {
     let error_payload = match error.event_type() {
-        EventType::Destroyed => fsys::EventErrorPayload::Destroyed(fsys::DestroyedError::EMPTY),
+        EventType::Purged => fsys::EventErrorPayload::Purged(fsys::PurgedError::EMPTY),
         EventType::Discovered => fsys::EventErrorPayload::Discovered(fsys::DiscoveredError::EMPTY),
-        EventType::MarkedForDestruction => {
-            fsys::EventErrorPayload::MarkedForDestruction(fsys::MarkedForDestructionError::EMPTY)
-        }
+        EventType::Destroyed => fsys::EventErrorPayload::Destroyed(fsys::DestroyedError::EMPTY),
         EventType::Resolved => fsys::EventErrorPayload::Resolved(fsys::ResolvedError::EMPTY),
         EventType::Started => fsys::EventErrorPayload::Started(fsys::StartedError::EMPTY),
         EventType::Stopped => fsys::EventErrorPayload::Stopped(fsys::StoppedError::EMPTY),

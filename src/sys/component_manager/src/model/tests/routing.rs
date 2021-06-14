@@ -23,7 +23,7 @@ use {
         framework::REALM_SERVICE,
         model::{
             actions::{
-                ActionSet, DeleteChildAction, DestroyAction, MarkDeletedAction, ShutdownAction,
+                ActionSet, DestroyChildAction, PurgeAction, PurgeChildAction, ShutdownAction,
             },
             error::ModelError,
             events::registry::EventSubscription,
@@ -571,10 +571,10 @@ async fn destroying_instance_kills_framework_service_task() {
 
     // Destroy `b`. This should cause the task hosted for `Realm` to be cancelled.
     let root = test.model.look_up(&vec![].into()).await.unwrap();
-    ActionSet::register(root.clone(), MarkDeletedAction::new("b".into()))
+    ActionSet::register(root.clone(), DestroyChildAction::new("b".into()))
         .await
-        .expect("mark deleted failed");
-    ActionSet::register(root.clone(), DeleteChildAction::new("b:0".into()))
+        .expect("destroy failed");
+    ActionSet::register(root.clone(), PurgeChildAction::new("b:0".into()))
         .await
         .expect("destroy failed");
     let mut event_stream = proxy.take_event_stream();
@@ -1147,7 +1147,7 @@ async fn use_from_destroyed_but_not_removed() {
     // TODO: If we had a "pre-destroy" event we could delete the child through normal means and
     // block on the event instead of explicitly registering actions.
     ActionSet::register(component_b.clone(), ShutdownAction::new()).await.expect("shutdown failed");
-    ActionSet::register(component_b, DestroyAction::new()).await.expect("destroy failed");
+    ActionSet::register(component_b, PurgeAction::new()).await.expect("destroy failed");
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Protocol {

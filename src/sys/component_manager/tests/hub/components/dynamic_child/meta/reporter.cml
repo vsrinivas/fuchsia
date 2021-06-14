@@ -25,7 +25,7 @@
         {
             event: [
                 "destroyed",
-                "marked_for_destruction",
+                "purged",
                 "stopped",
             ],
             from: "framework",
@@ -35,11 +35,11 @@
             event_stream: "DynamicChildEventStream",
             subscriptions: [
                 {
-                    event: "destroyed",
+                    event: "purged",
                     mode: "sync",
                 },
                 {
-                    event: "marked_for_destruction",
+                    event: "destroyed",
                     mode: "sync",
                 },
                 {
