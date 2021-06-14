@@ -87,15 +87,13 @@ use {
     },
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableExt, ExpectableState},
-        types::{
-            emulator::{ControllerParameters, LegacyAdvertisingState},
-            Address,
-        },
+        types::Address,
     },
     futures::{
         future::{err, Either},
         Future,
     },
+    hci_emulator_client::types::{ControllerParameters, LegacyAdvertisingState},
     std::{
         collections::HashMap,
         convert::{AsMut, AsRef},

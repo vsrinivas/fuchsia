@@ -3,17 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        constants::{EMULATOR_DEVICE_DIR, EMULATOR_DRIVER_PATH, HOST_DEVICE_DIR},
-        device_watcher::{DeviceFile, DeviceWatcher, WatchFilter},
-        util::open_rdwr,
-    },
     anyhow::{format_err, Context, Error},
+    fdio,
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciEmulatorProxy},
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_device_test::{DeviceProxy, RootDeviceProxy, CONTROL_DEVICE, MAX_DEVICE_NAME_LEN},
     fidl_fuchsia_hardware_bluetooth::EmulatorProxy,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+    fuchsia_bluetooth::{
+        constants::HOST_DEVICE_DIR,
+        device_watcher::{DeviceFile, DeviceWatcher, WatchFilter},
+        util::open_rdwr,
+    },
     fuchsia_zircon::{self as zx, DurationNum},
     futures::TryFutureExt,
     log::error,
@@ -23,6 +24,11 @@ use {
 fn watch_timeout() -> zx::Duration {
     zx::Duration::from_seconds(10)
 }
+
+pub mod types;
+
+const EMULATOR_DRIVER_PATH: &str = "/system/driver/bt-hci-emulator.so";
+const EMULATOR_DEVICE_DIR: &str = "/dev/class/bt-emulator";
 
 /// Represents a bt-hci device emulator. Instances of this type can be used manage the
 /// bt-hci-emulator driver within the test device hierarchy. The associated driver instance gets

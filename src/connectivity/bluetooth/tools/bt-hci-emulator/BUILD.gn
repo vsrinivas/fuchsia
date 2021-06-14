@@ -10,7 +10,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/connectivity/bluetooth/testing/hci-emulator-client",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

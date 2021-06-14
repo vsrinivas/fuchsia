@@ -16,6 +16,7 @@ rustc_binary("integration_tests_bin") {
     "//src/connectivity/bluetooth/fidl:host-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/testing/bt-test-harness",
+    "//src/connectivity/bluetooth/testing/hci-emulator-client",
     "//src/connectivity/bluetooth/testing/test-harness",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",

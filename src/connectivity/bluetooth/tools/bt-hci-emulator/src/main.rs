@@ -4,8 +4,8 @@
 
 use {
     anyhow::Error,
-    fuchsia_bluetooth::hci_emulator::Emulator,
     futures::future::pending,
+    hci_emulator_client::Emulator,
     rand::{self, Rng},
 };
 

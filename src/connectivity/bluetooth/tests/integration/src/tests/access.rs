@@ -12,9 +12,9 @@ use {
     fidl_fuchsia_bluetooth_test::{AdvertisingData, LowEnergyPeerParameters, PeerProxy},
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableExt, ExpectableStateExt},
-        hci_emulator::Emulator,
         types::Address,
     },
+    hci_emulator_client::Emulator,
     test_harness::run_suite,
 };
 

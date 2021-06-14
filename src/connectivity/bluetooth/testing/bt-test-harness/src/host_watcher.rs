@@ -11,11 +11,11 @@ use {
             expectable, Expectable, ExpectableExt, ExpectableState, ExpectableStateExt,
         },
         expectation::Predicate,
-        hci_emulator::Emulator,
         types::{Address, HostId, HostInfo},
     },
     fuchsia_zircon as zx,
     futures::future::{self, BoxFuture, FutureExt, TryFutureExt},
+    hci_emulator_client::Emulator,
     log::error,
     std::{
         collections::HashMap,

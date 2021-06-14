@@ -16,10 +16,10 @@ use {
             },
             Predicate,
         },
-        hci_emulator::Emulator,
     },
     fuchsia_zircon::DurationNum,
     futures::{future::BoxFuture, FutureExt},
+    hci_emulator_client::Emulator,
     std::{
         ops::{Deref, DerefMut},
         path::PathBuf,

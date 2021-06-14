@@ -26,11 +26,11 @@ use {
             asynchronous::{ExpectableExt, ExpectableStateExt},
             peer,
         },
-        hci_emulator::Emulator,
         host,
         types::{Address, HostInfo, PeerId},
     },
     fuchsia_zircon as zx,
+    hci_emulator_client::Emulator,
     std::{convert::TryInto, path::PathBuf},
 };
 

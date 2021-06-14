@@ -12,8 +12,6 @@ mod address;
 pub mod bonding_data;
 /// Channel type
 mod channel;
-/// Bluetooth HCI emulator protocol types
-pub mod emulator;
 pub mod host_info;
 mod id;
 pub mod io_capabilities;

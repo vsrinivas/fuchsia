@@ -16,9 +16,6 @@ rustc_library("fuchsia-bluetooth") {
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test-rustc",
-    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
-    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth-rustc",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/derive",
@@ -43,7 +40,10 @@ rustc_library("fuchsia-bluetooth") {
     "//third_party/rust_crates:uuid",
   ]
 
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
+    "//third_party/rust_crates:matches",
+  ]
 
   sources = [
     "src/assigned_numbers.rs",
@@ -58,7 +58,6 @@ rustc_library("fuchsia-bluetooth") {
     "src/expectation/peer.rs",
     "src/expectation/prelude.rs",
     "src/expectation/test.rs",
-    "src/hci_emulator.rs",
     "src/host.rs",
     "src/inspect.rs",
     "src/lib.rs",
@@ -67,7 +66,6 @@ rustc_library("fuchsia-bluetooth") {
     "src/types/address.rs",
     "src/types/bonding_data.rs",
     "src/types/channel.rs",
-    "src/types/emulator.rs",
     "src/types/host_info.rs",
     "src/types/id.rs",
     "src/types/io_capabilities.rs",

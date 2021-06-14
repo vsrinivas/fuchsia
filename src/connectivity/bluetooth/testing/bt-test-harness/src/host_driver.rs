@@ -16,7 +16,6 @@ use {
             },
             Predicate,
         },
-        hci_emulator::Emulator,
         host,
         types::{HostInfo, Peer, PeerId},
     },
@@ -24,6 +23,7 @@ use {
         future::{self, BoxFuture},
         FutureExt, TryFutureExt,
     },
+    hci_emulator_client::Emulator,
     std::{
         collections::HashMap,
         convert::{AsMut, AsRef, TryInto},
