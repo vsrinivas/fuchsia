@@ -204,6 +204,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "sys/platform/05:06:26",  // power
       "aml-cpu",
       "sys/platform/05:06:1e",  // cpu
+      "fusb302",
 
       // Thermal
       "sys/platform/05:06:28",

@@ -4,10 +4,10 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <limits.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
 #include <soc/aml-a311d/a311d-gpio.h>
 #include <soc/aml-a311d/a311d-hw.h>
@@ -56,6 +56,14 @@ static const i2c_channel_t i2c_channels[] = {
         .vid = PDEV_VID_KHADAS,
         .pid = PDEV_PID_VIM3,
         .did = PDEV_DID_VIM3_MCU,
+    },
+    // USB PD
+    {
+        .bus_id = 0,
+        .address = 0x22,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
     },
 #if 0  // placeholder until driver implemented and vid/pid/did assigned
        // bus_ids and addresses are correct

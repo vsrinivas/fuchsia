@@ -5,6 +5,7 @@
 #include <fuchsia/hardware/usb/modeswitch/cpp/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/align.h>
@@ -15,7 +16,6 @@
 
 #include <cstring>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/usb-peripheral-config.h>
 #include <soc/aml-common/aml-registers.h>
 #include <soc/aml-meson/g12b-clk.h>

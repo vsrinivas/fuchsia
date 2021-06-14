@@ -23,6 +23,7 @@ _common_bootfs_deps = [
   "//src/devices/ml/drivers/aml-nna",
   "//src/devices/power/drivers/aml-meson-power",
   "//src/devices/power/drivers/aml-pwm-regulator",
+  "//src/devices/power/drivers/fusb302",
   "//src/devices/pwm/drivers/aml-pwm",
   "//src/devices/registers/drivers/registers",
   "//src/devices/rtc/drivers/nxp",

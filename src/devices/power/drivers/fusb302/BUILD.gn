@@ -1,0 +1,67 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+
+bind_rules("fusb302-bind") {
+  rules = "fusb302.bind"
+  output = "fusb302-bind.h"
+  tests = "bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
+
+group("common") {
+  public_deps = [
+    ":fusb302-bind",
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_llcpp",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/hwreg-i2c",
+    "//zircon/system/ulib/inspect",
+  ]
+}
+
+driver_module("fusb302") {
+  sources = [ "fusb302.cc" ]
+  deps = [
+    ":common",
+    "//src/devices/lib/driver",
+  ]
+}
+
+test("fusb302-test-bin") {
+  sources = [
+    "fusb302-test.cc",
+    "fusb302.cc",
+  ]
+  output_name = "fusb302-test"
+  deps = [
+    ":common",
+    "//sdk/lib/inspect/testing/cpp:zxtest",
+    "//src/devices/i2c/testing/mock-i2c",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("fusb302-test") {
+  deps = [ ":fusb302-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fusb302-bind_test",
+    ":fusb302-test",
+  ]
+}

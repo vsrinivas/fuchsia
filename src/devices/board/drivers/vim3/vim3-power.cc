@@ -162,6 +162,34 @@ constexpr composite_device_desc_t power_domain_little_core_desc = {
     .metadata_count = countof(power_domain_little_core_metadata),
 };
 
+zx_device_prop_t fusb302_props[] = {
+    {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+    {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
+    {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_FUSB302},
+};
+
+constexpr zx_bind_inst_t i2c_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
+    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x22),
+};
+
+constexpr device_fragment_part_t i2c_fragment[] = {
+    {countof(i2c_match), i2c_match},
+};
+
+constexpr device_fragment_t fusb302_fragments[] = {
+    {"i2c", countof(i2c_fragment), i2c_fragment},
+};
+
+constexpr composite_device_desc_t fusb302_desc = {
+    .props = fusb302_props,
+    .props_count = countof(fusb302_props),
+    .fragments = fusb302_fragments,
+    .fragments_count = countof(fusb302_fragments),
+    .coresident_device_index = 0,
+};
+
 }  // namespace
 
 zx_status_t Vim3::PowerInit() {
@@ -256,6 +284,13 @@ zx_status_t Vim3::PowerInit() {
   if (st != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd for power domain Little Arm Core failed, st = %d",
            __FUNCTION__, st);
+    return st;
+  }
+
+  // Add USB power delivery unit
+  st = DdkAddComposite("fusb302", &fusb302_desc);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "%s: DdkAddComposite for fusb302 failed, st = %d", __FUNCTION__, st);
     return st;
   }
 

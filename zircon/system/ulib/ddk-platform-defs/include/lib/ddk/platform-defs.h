@@ -55,6 +55,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_REGISTERS              0x29  // Registers device
 #define PDEV_DID_DAI_TEST               0x2A  // DAI testing codec
 #define PDEV_DID_PWM_VREG               0x2B  // PWM Voltage Regulator
+#define PDEV_DID_FUSB302                0x2C  // FUSB203, USB power delivery
 
 // QEMU emulator
 #define PDEV_VID_QEMU               0x01
