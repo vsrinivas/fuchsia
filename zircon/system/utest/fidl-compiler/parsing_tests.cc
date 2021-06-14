@@ -796,6 +796,42 @@ struct Empty{};
   ASSERT_ERR(warnings[1], fidl::WarnDocCommentMustBeFollowedByDeclaration);
 }
 
+TEST(ParsingTests, BadTrailingDocCommentInDeclTest) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+type Empty = struct {
+   a = int8;
+   /// bad
+};
+)FIDL",
+                      experimental_flags);
+
+  ASSERT_FALSE(library.Compile());
+
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 3);
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[2], fidl::ErrUnexpectedTokenOfKind);
+}
+
+TEST(ParsingTests, BadTrailingDocCommentInDeclTestOld) {
+  TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+struct Empty {
+   int8 a;
+   /// bad
+};
+)FIDL");
+
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrUnexpectedTokenOfKind);
+}
+
 TEST(ParsingTests, BadFinalMemberMissingSemicolon) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);

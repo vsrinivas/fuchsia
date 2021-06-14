@@ -9,6 +9,7 @@
 #include <deque>
 #include <regex>
 #include <set>
+#include <utility>
 
 #include <fidl/check_def.h>
 #include <fidl/findings.h>
@@ -16,8 +17,7 @@
 #include <fidl/tree_visitor.h>
 #include <fidl/utils.h>
 
-namespace fidl {
-namespace linter {
+namespace fidl::linter {
 
 // The primary business logic for lint-checks on a FIDL file is implemented in
 // the |Linter| class. This class is not thread safe.
@@ -58,7 +58,7 @@ class Linter {
   //   empty.
   // * excluded_checks_not_found (optional) - If not nullptr, excluded_checks_not_found is a
   //   pointer to the caller's std::set of check-ids that were
-  //   excluded and have not yet been removed via a pevious invocation of Lint() (if any). If this
+  //   excluded and have not yet been removed via a previous invocation of Lint() (if any). If this
   //   set is not empty, and a matching check-id is triggered, remove the check-id. An error
   //   status will be returned by the linter program, after all files have been linted, if any
   //   excluded check IDs remain in this set.
@@ -91,7 +91,7 @@ class Linter {
     struct RepeatsContextNames;
 
     Context(std::string type, std::string id, CheckDef context_check)
-        : type_(type), id_(id), context_check_(context_check) {}
+        : type_(std::move(type)), id_(std::move(id)), context_check_(std::move(context_check)) {}
 
     // Enables move construction and assignment
     Context(Context&& rhs) = default;
@@ -153,13 +153,14 @@ class Linter {
   const std::set<std::string>& permitted_library_prefixes() const;
   std::string kPermittedLibraryPrefixesas_string() const;
 
-  CheckDef DefineCheck(std::string check_id, std::string message_template);
+  CheckDef DefineCheck(std::string_view check_id, std::string message_template);
 
   Finding* AddFinding(SourceSpan source_span, std::string check_id, std::string message);
 
   const Finding* AddFinding(SourceSpan span, const CheckDef& check,
-                            Substitutions substitutions = {}, std::string suggestion_template = "",
-                            std::string replacement_template = "");
+                            const Substitutions& substitutions = {},
+                            const std::string& suggestion_template = "",
+                            const std::string& replacement_template = "");
 
   template <typename SourceElementSubtypeRefOrPtr>
   const Finding* AddFinding(const SourceElementSubtypeRefOrPtr& element, const CheckDef& check,
@@ -169,21 +170,19 @@ class Linter {
   const Finding* AddRepeatedNameFinding(const Context& context,
                                         const Context::RepeatsContextNames& name_repeater);
 
-  bool CurrentLibraryIsPlatformSourceLibrary();
-  bool CurrentFileIsInPlatformSourceTree();
-
   // Initialization and checks at the start of a new file. The |Linter|
   // can be called multiple times with many different files.
   void NewFile(const raw::File& element);
 
   // If a finding was added, return a pointer to that finding.
-  const Finding* CheckCase(std::string type, const std::unique_ptr<raw::Identifier>& identifier,
+  const Finding* CheckCase(const std::string& type,
+                           const std::unique_ptr<raw::Identifier>& identifier,
                            const CheckDef& check_def, const CaseType& case_type);
 
   // CheckRepeatedName() does not add Finding objects immediately. It checks for
   // potential violations, but must wait until ExitContext() so the potential
   // violation can be compared to its peers.
-  void CheckRepeatedName(std::string type, const std::unique_ptr<raw::Identifier>& id);
+  void CheckRepeatedName(const std::string& type, const std::unique_ptr<raw::Identifier>& id);
 
   template <typename... Args>
   void EnterContext(Args&&... args) {
@@ -313,7 +312,7 @@ class Linter {
   // (for example, "name-repeats-enclosing-type-name" checks cannot be added
   // until all members of the enclosing type are available). Other checks on
   // the same members will be added as they are encountered. Since |Finding|
-  // objects are collected out of source order, an ordered collecttion
+  // objects are collected out of source order, an ordered collection
   // ensures |Finding| objects are in sorted order.
   //
   // |Finding| objects must be returned in source order (filename, starting
@@ -324,8 +323,8 @@ class Linter {
   // added to an ordered collection that does not allow duplicates, and the
   // sort criteria is not specific enough to avoid a key collision, an
   // assertion error will halt the program, to be resolved either by adding
-  // additional sort criteriea or changing the Finding objects to ensure
-  // uinqueness.
+  // additional sort criteria or changing the Finding objects to ensure
+  // uniqueness.
   //
   // When the Visit() is over, the |Finding| objects are transferred, in order
   // (by filename and source location of each finding, with any duplicates
@@ -334,6 +333,5 @@ class Linter {
   std::set<FindingPtr, FindingPtrCompare> current_findings_;
 };
 
-}  // namespace linter
-}  // namespace fidl
+}  // namespace fidl::linter
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_LINTER_H_

@@ -17,11 +17,11 @@
 
 #include <iostream>
 #include <string>
+#include <utility>
 
 #include <fidl/template_string.h>
 
-namespace fidl {
-namespace linter {
+namespace fidl::linter {
 
 // Each CheckDef corresponds to some associated linting logic that verifies code
 // meets or fails to meet a FIDL Readability requirement.
@@ -30,10 +30,10 @@ class CheckDef {
   // A check includes an ID (in kebab-case) and a string message or
   // message_template (with optional placeholders for customizing the message,
   // if any). The check logic (code) is external to this class.
-  CheckDef(std::string id, TemplateString message_template)
-      : id_(id), message_template_(message_template) {}
+  CheckDef(std::string_view id, TemplateString message_template)
+      : id_(id), message_template_(std::move(message_template)) {}
 
-  inline const std::string& id() const { return id_; }
+  inline std::string_view id() const { return id_; }
 
   inline const TemplateString& message_template() const { return message_template_; }
 
@@ -49,7 +49,6 @@ class CheckDef {
   TemplateString message_template_;
 };
 
-}  // namespace linter
-}  // namespace fidl
+}  // namespace fidl::linter
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_CHECK_DEF_H_

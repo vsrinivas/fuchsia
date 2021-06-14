@@ -12,12 +12,11 @@
 #include <fidl/source_span.h>
 #include <fidl/tree_visitor.h>
 
-namespace fidl {
-namespace linter {
+namespace fidl::linter {
 
 // Supports TreeVisitor actions via delegation instead of inheritance, by
 // wrapping a TreeVisitor subclass that calls a list of callbacks for
-// each visitor method. In otherwords, this class implements a hardcoded "map"
+// each visitor method. In other words, this class implements a hardcoded "map"
 // from each source node type (represented by its TreeVisitor method) to a set
 // of callbacks, rather than implementing the callback logic directly inside
 // the overridden method.
@@ -32,7 +31,7 @@ class LintingTreeCallbacks {
   void Visit(std::unique_ptr<raw::File> const& element);
 
   // Register a callback for a "File" event. All of the remaining "On"
-  // functions similarly match their cooresponding TreeVisitor methods.
+  // functions similarly match their corresponding TreeVisitor methods.
   void OnFile(fit::function<void(const raw::File&)> callback) {
     file_callbacks_.push_back(std::move(callback));
   }
@@ -56,7 +55,7 @@ class LintingTreeCallbacks {
   // The OnLineComment callback takes two parameters:
   // * |SourceSpan| containing the comment
   // * |line_prefix_view| a std::string_view of all characters on the same line,
-  //   preceeding the comment
+  //   preceding the comment
   void OnLineComment(fit::function<void(const SourceSpan&, std::string_view)> callback) {
     line_comment_callbacks_.push_back(std::move(callback));
   }
@@ -64,7 +63,7 @@ class LintingTreeCallbacks {
   // * |SourceSpan| containing the whitespace characters, and if the whitespace characters
   //   end the line, it includes the newline character
   // * |line_prefix_view| a std::string_view of all characters on the same line,
-  //   preceeding the whitespace
+  //   preceding the whitespace
   void OnWhiteSpaceUpToNewline(fit::function<void(const SourceSpan&, std::string_view)> callback) {
     white_space_up_to_newline_callbacks_.push_back(std::move(callback));
   }
@@ -72,6 +71,9 @@ class LintingTreeCallbacks {
     ignored_token_callbacks_.push_back(std::move(callback));
   }
 
+  void OnAliasDeclaration(fit::function<void(const raw::AliasDeclaration&)> callback) {
+    alias_callbacks_.push_back(std::move(callback));
+  }
   void OnUsing(fit::function<void(const raw::Using&)> callback) {
     using_callbacks_.push_back(std::move(callback));
   }
@@ -154,7 +156,7 @@ class LintingTreeCallbacks {
   // callback methods. It is not necessary to define the class inline here.
   // We avoid having to declare all of the overridden methods unnecessarily
   // in this header; and avoid the alternative--defining the methods inline,
-  // in this header--which would make inclusing the header a costly thing to
+  // in this header--which would make including the header a costly thing to
   // do.
   std::unique_ptr<fidl::raw::TreeVisitor> tree_visitor_;
 
@@ -166,6 +168,7 @@ class LintingTreeCallbacks {
   std::vector<fit::function<void(const SourceSpan&, std::string_view)>>
       white_space_up_to_newline_callbacks_;
   std::vector<fit::function<void(const SourceSpan&)>> ignored_token_callbacks_;
+  std::vector<fit::function<void(const raw::AliasDeclaration&)>> alias_callbacks_;
   std::vector<fit::function<void(const raw::Using&)>> using_callbacks_;
   std::vector<fit::function<void(const raw::BitsDeclaration&)>> bits_declaration_callbacks_;
   std::vector<fit::function<void(const raw::BitsDeclaration&)>> exit_bits_declaration_callbacks_;
@@ -194,7 +197,6 @@ class LintingTreeCallbacks {
   std::vector<fit::function<void(const raw::UnionDeclaration&)>> exit_union_declaration_callbacks_;
 };
 
-}  // namespace linter
-}  // namespace fidl
+}  // namespace fidl::linter
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_LINTING_TREE_CALLBACKS_H_

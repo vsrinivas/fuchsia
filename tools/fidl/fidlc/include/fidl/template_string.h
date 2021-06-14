@@ -7,6 +7,7 @@
 
 #include <map>
 #include <string>
+#include <utility>
 
 namespace fidl {
 
@@ -26,13 +27,13 @@ using Substitutions = std::map<std::string, std::string>;
 //   });
 class TemplateString {
  public:
-  TemplateString(std::string str) : str_(str) {}
+  explicit TemplateString(std::string str) : str_(std::move(str)) {}
 
   // Constructs an empty template.
   TemplateString() : TemplateString("") {}
 
   // Returns true if the template string is not empty.
-  explicit operator bool() const { return str_.size() > 0; }
+  explicit operator bool() const { return !str_.empty(); }
 
   // Returns the string value after replacing all matched variables in the
   // template string with the values for the matching keys.
@@ -44,7 +45,7 @@ class TemplateString {
   // template string with the values for the matching keys.
   // Variables without matching keys are left in place.
   std::string Substitute(Substitutions substitutions) const {
-    return Substitute(substitutions, false);
+    return Substitute(std::move(substitutions), false);
   }
 
   // Returns the template string with unreplaced variables (as given at

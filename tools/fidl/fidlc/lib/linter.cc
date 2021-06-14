@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <set>
+#include <utility>
 
 #include <fidl/findings.h>
 #include <fidl/linter.h>
@@ -15,8 +16,7 @@
 #include <fidl/raw_ast.h>
 #include <fidl/utils.h>
 
-namespace fidl {
-namespace linter {
+namespace fidl::linter {
 
 namespace {
 
@@ -24,7 +24,7 @@ namespace {
 // to a std::string_view, spanning from the beginning of the start token, to the end
 // of the end token. The three methods support classes derived from
 // SourceElement, by reference, pointer, or unique_ptr.
-static std::string_view to_string_view(const fidl::raw::SourceElement& element) {
+std::string_view to_string_view(const fidl::raw::SourceElement& element) {
   return element.span().data();
 }
 
@@ -37,7 +37,7 @@ std::string_view to_string_view(const std::unique_ptr<SourceElementSubtype>& ele
 
 // Convert the SourceElement to a std::string, using the method described above
 // for std::string_view.
-static std::string to_string(const fidl::raw::SourceElement& element) {
+std::string to_string(const fidl::raw::SourceElement& element) {
   return std::string(to_string_view(element));
 }
 
@@ -45,14 +45,14 @@ template <typename SourceElementSubtype>
 std::string to_string(const std::unique_ptr<SourceElementSubtype>& element_ptr) {
   static_assert(std::is_base_of<fidl::raw::SourceElement, SourceElementSubtype>::value,
                 "Template parameter type is not derived from SourceElement");
-  return to_string(*element_ptr.get());
+  return to_string(*element_ptr);
 }
 
 }  // namespace
 
 std::string Linter::MakeCopyrightBlock() {
   std::string copyright_block;
-  for (auto line : kCopyrightLines) {
+  for (const auto& line : kCopyrightLines) {
     copyright_block.append("\n");
     copyright_block.append(line);
   }
@@ -99,7 +99,8 @@ const fidl::raw::SourceElement& GetElementAsRef(
 // This function is const because the Findings (TreeVisitor) object
 // is not modified. It's Findings object (not owned) is updated.
 Finding* Linter::AddFinding(SourceSpan span, std::string check_id, std::string message) {
-  auto result = current_findings_.emplace(new Finding(span, check_id, message));
+  auto result =
+      current_findings_.emplace(new Finding(span, std::move(check_id), std::move(message)));
   // Future checks may need to allow multiple findings of the
   // same check ID at the same location.
   assert(result.second && "Duplicate key. Check criteria in Finding.operator==() and operator<()");
@@ -108,14 +109,16 @@ Finding* Linter::AddFinding(SourceSpan span, std::string check_id, std::string m
 
 // Add a finding with optional suggestion and replacement
 const Finding* Linter::AddFinding(SourceSpan span, const CheckDef& check,
-                                  Substitutions substitutions, std::string suggestion_template,
-                                  std::string replacement_template) {
-  auto* finding = AddFinding(span, check.id(), check.message_template().Substitute(substitutions));
+                                  const Substitutions& substitutions,
+                                  const std::string& suggestion_template,
+                                  const std::string& replacement_template) {
+  auto* finding =
+      AddFinding(span, std::string(check.id()), check.message_template().Substitute(substitutions));
   if (finding == nullptr) {
     return nullptr;
   }
-  if (suggestion_template.size() > 0) {
-    if (replacement_template.size() == 0) {
+  if (!suggestion_template.empty()) {
+    if (replacement_template.empty()) {
       finding->SetSuggestion(TemplateString(suggestion_template).Substitute(substitutions));
     } else {
       finding->SetSuggestion(TemplateString(suggestion_template).Substitute(substitutions),
@@ -135,8 +138,8 @@ const Finding* Linter::AddFinding(const SourceElementSubtypeRefOrPtr& element,
                     replacement_template);
 }
 
-CheckDef Linter::DefineCheck(std::string check_id, std::string message_template) {
-  auto result = checks_.emplace(check_id, TemplateString(message_template));
+CheckDef Linter::DefineCheck(std::string_view check_id, std::string message_template) {
+  auto result = checks_.emplace(check_id, TemplateString(std::move(message_template)));
   assert(result.second && "DefineCheck called with a duplicate check_id");
   return *result.first;
 }
@@ -227,7 +230,7 @@ void Linter::NewFile(const raw::File& element) {
                kRepeatsLibraryNameCheck);
 }
 
-const Finding* Linter::CheckCase(std::string type,
+const Finding* Linter::CheckCase(const std::string& type,
                                  const std::unique_ptr<raw::Identifier>& identifier,
                                  const CheckDef& check_def, const CaseType& case_type) {
   std::string id = to_string(identifier);
@@ -243,7 +246,7 @@ const Finding* Linter::CheckCase(std::string type,
   return nullptr;
 }
 
-void Linter::CheckRepeatedName(std::string type,
+void Linter::CheckRepeatedName(const std::string& type,
                                const std::unique_ptr<raw::Identifier>& identifier) {
   std::string id = to_string(identifier);
   auto split_id = utils::id_to_words(id, kStopWords);
@@ -284,9 +287,8 @@ std::string Linter::GetCopyrightSuggestion() {
   }
   if (good_copyright_lines_found_ == 0) {
     return "Insert missing header:\n" + copyright_block;
-  } else {
-    return "Update your header with:\n" + copyright_block;
   }
+  return "Update your header with:\n" + copyright_block;
 }
 
 void Linter::AddInvalidCopyrightFinding(SourceSpan span) {
@@ -595,18 +597,23 @@ Linter::Linter()
       });
   // clang-format on
 
-  callbacks_.OnUsing(
-      [&linter = *this,
-       case_check = DefineCheck("invalid-case-for-primitive-alias",
-                                "Primitive aliases must be named in lower_snake_case"),
-       &case_type = lower_snake_]
-      //
-      (const raw::Using& element) {
-        if (element.maybe_alias != nullptr) {
-          linter.CheckCase("primitive alias", element.maybe_alias, case_check, case_type);
-          linter.CheckRepeatedName("primitive alias", element.maybe_alias);
-        }
-      });
+  callbacks_.OnAliasDeclaration([&linter = *this]
+                                //
+                                (const raw::AliasDeclaration& element) {
+                                  linter.CheckRepeatedName("type alias", element.alias);
+                                });
+  callbacks_.OnUsing([&linter = *this,
+                      case_check = DefineCheck("invalid-case-for-using-alias",
+                                               "Using aliases must be named in lower_snake_case"),
+                      &case_type = lower_snake_]
+                     //
+                     (const raw::Using& element) {
+                       if (element.maybe_alias != nullptr) {
+                         linter.CheckCase("using alias", element.maybe_alias, case_check,
+                                          case_type);
+                         linter.CheckRepeatedName("using alias", element.maybe_alias);
+                       }
+                     });
 
   auto invalid_case_for_constant =
       DefineCheck("invalid-case-for-constant", "${TYPE} must be named in ALL_CAPS_SNAKE_CASE");
@@ -655,7 +662,7 @@ Linter::Linter()
         linter.CheckCase("protocols", element.identifier, linter.invalid_case_for_decl_name(),
                          linter.decl_case_type_for_style());
         linter.CheckRepeatedName("protocol", element.identifier);
-        for (auto word : utils::id_to_words(to_string(element.identifier))) {
+        for (const auto& word : utils::id_to_words(to_string(element.identifier))) {
           if (word == "service") {
             linter.AddFinding(element.identifier, name_contains_service_check);
             break;
@@ -837,5 +844,4 @@ Linter::Linter()
   // clang-format on
 }
 
-}  // namespace linter
-}  // namespace fidl
+}  // namespace fidl::linter

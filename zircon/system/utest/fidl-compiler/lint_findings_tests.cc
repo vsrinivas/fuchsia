@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <sstream>
+#include <utility>
 
 #include <fidl/findings.h>
 #include <fidl/template_string.h>
@@ -24,11 +25,11 @@ namespace {
 
 class LintTest {
  public:
-  LintTest() {}
+  LintTest() = default;
 
   // Adds a Finding to the back of the list of Findings.
-  LintTest& AddFinding(std::string check_id, std::string message,
-                       std::string violation_string = "${TEST}", std::string suggestion = "",
+  LintTest& AddFinding(const std::string& check_id, const std::string& message,
+                       const std::string& violation_string = "${TEST}", std::string suggestion = "",
                        std::string replacement = "") {
     assert(!source_template_.str().empty() &&
            "source_template() must be called before AddFinding()");
@@ -40,7 +41,7 @@ class LintTest {
                 << template_string;
     }
     // Note, if there are any substitution variables in the template that
-    // preceed the violation_string, the test will probably fail because the
+    // precede the violation_string, the test will probably fail because the
     // string location will probably be different after substitution.
     assert(start != std::string::npos && "Bad test! violation_string not found in template");
     std::string expanded_violation_string =
@@ -67,7 +68,7 @@ class LintTest {
 
   // Adds a Finding to the back of the list of Findings using the default
   // check_id and message (via previous calls to check_id() and message()).
-  LintTest& AddFinding(std::string violation_string = "${TEST}") {
+  LintTest& AddFinding(const std::string& violation_string = "${TEST}") {
     return AddFinding(default_check_id_, default_message_, violation_string);
   }
 
@@ -78,26 +79,26 @@ class LintTest {
   // a follow-up test with a different purpose does not set a new
   // value.
   LintTest& that(std::string that) {
-    that_ = that;
+    that_ = std::move(that);
     return *this;
   }
 
   LintTest& filename(std::string filename) {
-    filename_ = filename;
+    filename_ = std::move(filename);
     return *this;
   }
 
   LintTest& check_id(std::string check_id) {
-    default_check_id_ = check_id;
+    default_check_id_ = std::move(check_id);
     return *this;
   }
 
   LintTest& message(std::string message) {
-    default_message_ = message;
+    default_message_ = std::move(message);
     return *this;
   }
 
-  LintTest& suggestion(std::string suggestion) {
+  LintTest& suggestion(const std::string& suggestion) {
     default_suggestion_ = suggestion;
     if (!expected_findings_.empty()) {
       Finding& finding = expected_findings_.back();
@@ -106,7 +107,7 @@ class LintTest {
     return *this;
   }
 
-  LintTest& replacement(std::string replacement) {
+  LintTest& replacement(const std::string& replacement) {
     default_replacement_ = replacement;
     if (!expected_findings_.empty()) {
       Finding& finding = expected_findings_.back();
@@ -118,17 +119,17 @@ class LintTest {
   }
 
   LintTest& source_template(std::string template_str) {
-    source_template_ = TemplateString(template_str);
+    source_template_ = TemplateString(std::move(template_str));
     return *this;
   }
 
   LintTest& substitute(Substitutions substitutions) {
-    substitutions_ = substitutions;
+    substitutions_ = std::move(substitutions);
     return *this;
   }
 
   // Shorthand for the common occurrence of a single substitution variable.
-  LintTest& substitute(std::string var_name, std::string value) {
+  LintTest& substitute(const std::string& var_name, const std::string& value) {
     return substitute({{var_name, value}});
   }
 
@@ -259,7 +260,7 @@ class LintTest {
                    "Missing template substitutions");
     }
     if (expected_findings_.empty()) {
-      ASSERT_FALSE(default_check_id_.size() == 0, "Missing check_id");
+      ASSERT_FALSE(default_check_id_.empty(), "Missing check_id");
     } else {
       auto& expected_finding = expected_findings_.front();
       ASSERT_FALSE(expected_finding.subcategory().empty(), "Missing check_id");
@@ -271,8 +272,9 @@ class LintTest {
   // Complex templates with more than one substitution variable will typically
   // throw off the location match. Set |assert_positions_match| to false to
   // skip this check.
-  void CompareExpectedToActualFinding(const Finding& expectf, const Finding& finding,
-                                      std::string test_context, bool assert_positions_match) const {
+  static void CompareExpectedToActualFinding(const Finding& expectf, const Finding& finding,
+                                             const std::string& test_context,
+                                             bool assert_positions_match) {
     std::ostringstream ss;
     ss << finding.span().position_str() << ": ";
     utils::PrintFinding(ss, finding);
@@ -298,7 +300,7 @@ class LintTest {
   }
 
   template <typename Iter>
-  void PrintFindings(std::ostream& os, Iter finding, Iter end, std::string title) {
+  void PrintFindings(std::ostream& os, Iter finding, Iter end, const std::string& title) {
     os << "\n\n";
     os << "============================" << std::endl;
     os << title << ":" << std::endl;
@@ -338,7 +340,7 @@ class LintTest {
   std::unique_ptr<TestLibrary> library_;
 };
 
-TEST(LintFindingsTests, constant_repeats_enclosing_type_name) {
+TEST(LintFindingsTests, ConstantRepeatsEnclosingTypeName) {
   std::map<std::string, std::string> named_templates = {
       {"enum", R"FIDL(
 library fidl.repeater;
@@ -371,7 +373,7 @@ bits ConstantContainer : uint32 {
   }
 }
 
-TEST(LintFindingsTests, constant_repeats_library_name) {
+TEST(LintFindingsTests, ConstantRepeatsLibraryName) {
   std::map<std::string, std::string> named_templates = {
       {"constant", R"FIDL(
 library fidl.repeater;
@@ -408,7 +410,7 @@ bits Uint32Bitfield : uint32 {
   }
 }
 
-TEST(LintFindingsTests, constant_should_use_common_prefix_suffix_please_implement_me) {
+TEST(LintFindingsTests, ConstantShouldUseCommonPrefixSuffixPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   // Warning for "MINIMUM_..." or "MAXIMUM...", or maybe(?) "..._CAP" Also for instance
@@ -490,7 +492,7 @@ const uint64 ${TEST} = 1234;
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, copyright_should_not_be_doc_comment) {
+TEST(LintFindingsTests, CopyrightShouldNotBeDocComment) {
   LintTest test;
   test.check_id("copyright-should-not-be-doc-comment")
       .message("Copyright notice should use non-flow-through comment markers")
@@ -515,7 +517,7 @@ library fidl.a;
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, decl_member_repeats_enclosing_type_name) {
+TEST(LintFindingsTests, DeclMemberRepeatsEnclosingTypeName) {
   std::map<std::string, std::string> named_templates = {
       {"struct", R"FIDL(
 library fidl.repeater;
@@ -538,13 +540,6 @@ union DeclName {
     1: string:64 ${TEST};
 };
 )FIDL"},
-      {"union", R"FIDL(
-library fidl.repeater;
-
-xunion DeclName {
-    1: string:64 ${TEST};
-};
-)FIDL"},
   };
 
   for (auto const& named_template : named_templates) {
@@ -562,7 +557,7 @@ xunion DeclName {
   }
 }
 
-TEST(LintFindingsTests, decl_member_repeats_enclosing_type_name_but_may_disambiguate) {
+TEST(LintFindingsTests, DeclMemberRepeatsEnclosingTypeNameButMayDisambiguate) {
   LintTest test;
   test.check_id("name-repeats-enclosing-type-name");
 
@@ -716,7 +711,7 @@ struct ShirtAndPantSupplies {
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, decl_member_repeats_library_name) {
+TEST(LintFindingsTests, DeclMemberRepeatsLibraryName) {
   std::map<std::string, std::string> named_templates = {
       {"struct", R"FIDL(
 library fidl.repeater;
@@ -739,13 +734,6 @@ union DeclName {
     1: string:64 ${TEST};
 };
 )FIDL"},
-      {"union", R"FIDL(
-library fidl.repeater;
-
-xunion DeclName {
-    1: string:64 ${TEST};
-};
-)FIDL"},
   };
 
   for (auto const& named_template : named_templates) {
@@ -763,7 +751,7 @@ xunion DeclName {
   }
 }
 
-TEST(LintFindingsTests, decl_name_repeats_library_name) {
+TEST(LintFindingsTests, DeclNameRepeatsLibraryName) {
   std::map<std::string, std::string> named_templates = {
       {"protocol", R"FIDL(
 library fidl.repeater;
@@ -812,13 +800,6 @@ union ${TEST} {
     1: string:64 decl_member;
 };
 )FIDL"},
-      {"union", R"FIDL(
-library fidl.repeater;
-
-xunion ${TEST} {
-    1: string:64 decl_member;
-};
-)FIDL"},
   };
 
   for (auto const& named_template : named_templates) {
@@ -835,7 +816,7 @@ xunion ${TEST} {
   }
 }
 
-TEST(LintFindingsTests, disallowed_library_name_component) {
+TEST(LintFindingsTests, DisallowedLibraryNameComponent) {
   LintTest test;
   test.check_id("disallowed-library-name-component")
       .message(
@@ -864,7 +845,7 @@ library fidl.${TEST};
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, protocol_name_includes_service) {
+TEST(LintFindingsTests, ProtocolNameIncludesService) {
   // Error if ends in "Service", warning if includes "Service" as a word, but "Serviceability"
   // ("Service" is only part of a word) is OK.
 
@@ -902,7 +883,7 @@ protocol ${TEST} {};
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, event_names_must_start_with_on) {
+TEST(LintFindingsTests, EventNamesMustStartWithOn) {
   LintTest test;
   test.check_id("event-names-must-start-with-on")
       .message("Event names must start with 'On'")
@@ -926,7 +907,7 @@ protocol TestProtocol {
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, excessive_number_of_separate_protocols_for_file_please_implement_me) {
+TEST(LintFindingsTests, ExcessiveNumberOfSeparateProtocolsForFilePleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   // Warning(?) if a fidl file contains more than some tolerance cap number of protocols.
@@ -959,7 +940,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, excessive_number_of_separate_protocols_for_library_please_implement_me) {
+TEST(LintFindingsTests, ExcessiveNumberOfSeparateProtocolsForLibraryPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   // Or if a directory of fidl files contains more than some tolerance number of files AND any
@@ -990,7 +971,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, inconsistent_type_for_recurring_file_concept_please_implement_me) {
+TEST(LintFindingsTests, InconsistentTypeForRecurringFileConceptPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   LintTest test;
@@ -1013,7 +994,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, inconsistent_type_for_recurring_library_concept_please_implement_me) {
+TEST(LintFindingsTests, InconsistentTypeForRecurringLibraryConceptPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   LintTest test;
@@ -1036,7 +1017,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, invalid_case_for_constant) {
+TEST(LintFindingsTests, InvalidCaseForConstant) {
   std::map<std::string, std::string> named_templates = {
       {"constants", R"FIDL(
 library fidl.a;
@@ -1080,7 +1061,7 @@ bits Uint32Bitfield : uint32 {
   }
 }
 
-TEST(LintFindingsTests, invalid_case_for_decl_member) {
+TEST(LintFindingsTests, InvalidCaseForDeclMember) {
   std::map<std::string, std::string> named_templates = {
       {"parameters", R"FIDL(
 library fidl.a;
@@ -1110,13 +1091,6 @@ union DeclName {
     1: string:64 ${TEST};
 };
 )FIDL"},
-      {"union members", R"FIDL(
-library fidl.a;
-
-xunion DeclName {
-    1: string:64 ${TEST};
-};
-)FIDL"},
   };
 
   for (auto const& named_template : named_templates) {
@@ -1135,7 +1109,7 @@ xunion DeclName {
   }
 }
 
-TEST(LintFindingsTests, invalid_case_for_decl_name_c_style) {
+TEST(LintFindingsTests, InvalidCaseForDeclNameCStyle) {
   std::map<std::string, std::string> named_templates = {
       {"protocols", R"FIDL(
 library zx;
@@ -1184,13 +1158,6 @@ union ${TEST} {
     1: string:64 decl_member;
 };
 )FIDL"},
-      {"unions", R"FIDL(
-library zx;
-
-xunion ${TEST} {
-    1: string:64 decl_member;
-};
-)FIDL"},
   };
 
   for (auto const& named_template : named_templates) {
@@ -1214,7 +1181,7 @@ xunion ${TEST} {
   }
 }
 
-TEST(LintFindingsTests, invalid_case_for_decl_name_ipc_style) {
+TEST(LintFindingsTests, InvalidCaseForDeclNameIpcStyle) {
   std::map<std::string, std::string> named_templates = {
       {"protocols", R"FIDL(
 library fidl.a;
@@ -1263,13 +1230,6 @@ union ${TEST} {
     1: string:64 decl_member;
 };
 )FIDL"},
-      {"unions", R"FIDL(
-library fidl.a;
-
-xunion ${TEST} {
-    1: string:64 decl_member;
-};
-)FIDL"},
   };
 
   for (auto const& named_template : named_templates) {
@@ -1293,7 +1253,7 @@ xunion ${TEST} {
   }
 }
 
-TEST(LintFindingsTests, invalid_case_for_decl_name_for_event) {
+TEST(LintFindingsTests, InvalidCaseForDeclNameForEvent) {
   LintTest test;
   test.check_id("invalid-case-for-decl-name")
       .message("events must be named in UpperCamelCase")
@@ -1314,15 +1274,14 @@ protocol TestProtocol {
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, invalid_case_for_primitive_alias) {
+TEST(LintFindingsTests, InvalidCaseForUsingAlias) {
   LintTest test;
-  test.check_id("invalid-case-for-primitive-alias")
-      .message("Primitive aliases must be named in lower_snake_case")
+  test.check_id("invalid-case-for-using-alias")
+      .message("Using aliases must be named in lower_snake_case")
       .source_template(R"FIDL(
 library fidl.a;
 
 using foo as ${TEST};
-using bar as baz;
 )FIDL");
 
   test.substitute("TEST", "what_if_someone_does_this");
@@ -1334,7 +1293,7 @@ using bar as baz;
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, invalid_copyright_for_platform_source_library) {
+TEST(LintFindingsTests, InvalidCopyrightForPlatformSourceLibrary) {
   TemplateString copyright_template(
       R"FIDL(// Copyright ${YYYY} The Fuchsia Authors.
 // Use of this source code is governed by a BSD-style license that can be
@@ -1490,7 +1449,7 @@ library fidl.a;
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, library_name_does_not_match_file_path_please_implement_me) {
+TEST(LintFindingsTests, LibraryNameDoesNotMatchFilePathPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   LintTest test;
@@ -1515,7 +1474,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, manager_protocols_are_discouraged_please_implement_me) {
+TEST(LintFindingsTests, ManagerProtocolsAreDiscouragedPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   LintTest test;
@@ -1540,7 +1499,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, method_repeats_enclosing_type_name) {
+TEST(LintFindingsTests, MethodRepeatsEnclosingTypeName) {
   LintTest test;
   test.check_id("name-repeats-enclosing-type-name").source_template(R"FIDL(
 library fidl.repeater;
@@ -1560,7 +1519,7 @@ protocol TestProtocol {
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, method_return_status_missing_ok_please_implement_me) {
+TEST(LintFindingsTests, MethodReturnStatusMissingOkPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   // Warning or error(?) if returning a "status" enum that does not have an OK value. Note there
@@ -1596,7 +1555,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, method_returns_status_with_non_optional_result_please_implement_me) {
+TEST(LintFindingsTests, MethodReturnsStatusWithNonOptionalResultPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   // Warning if return a status and a non-optional result? we now have another more expressive
@@ -1623,7 +1582,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, method_should_pipeline_protocols_please_implement_me) {
+TEST(LintFindingsTests, MethodShouldPipelineProtocolsPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   // Error(?) if the return tuple contains one value of another FIDL protocol type. Returning a
@@ -1651,7 +1610,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, no_commonly_reserved_words_please_implement_me) {
+TEST(LintFindingsTests, NoCommonlyReservedWordsPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   LintTest test;
@@ -1848,7 +1807,7 @@ using foo as ${TEST};
 
 // TODO(fxbug.dev/7978): Remove this check after issues are resolved with
 // trailing comments in existing source and tools
-TEST(LintFindingsTests, no_trailing_comment) {
+TEST(LintFindingsTests, NoTrailingComment) {
   LintTest test;
   test.check_id("no-trailing-comment")
       .message("Place comments above the thing being described")
@@ -1887,12 +1846,12 @@ struct SeasonToShirtAndPantMapEntry {
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, primitive_alias_repeats_library_name) {
+TEST(LintFindingsTests, TypeAliasRepeatsLibraryName) {
   LintTest test;
   test.check_id("name-repeats-library-name").source_template(R"FIDL(
 library fidl.repeater;
 
-using uint64 as ${TEST};
+alias ${TEST} = uint64;
 )FIDL");
 
   test.substitute("TEST", "some_alias");
@@ -1900,12 +1859,12 @@ using uint64 as ${TEST};
 
   test.substitute("TEST", "library_repeater")
       .message(
-          "primitive alias names (repeater) must not repeat names from the library "
+          "type alias names (repeater) must not repeat names from the library "
           "'fidl.repeater'");
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, service_hub_pattern_is_discouraged_please_implement_me) {
+TEST(LintFindingsTests, ServiceHubPatternIsDiscouragedPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   // Warning(?) Note this is a low-priority check.
@@ -1930,7 +1889,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, string_bounds_not_specified) {
+TEST(LintFindingsTests, StringBoundsNotSpecified) {
   LintTest test;
   test.check_id("string-bounds-not-specified")
       .message("Specify bounds for string")
@@ -1994,7 +1953,7 @@ struct SomeStruct {
   ASSERT_NO_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, todo_should_not_be_doc_comment) {
+TEST(LintFindingsTests, TodoShouldNotBeDocComment) {
   // Warning on TODO comments.
 
   std::string source_template = R"FIDL(
@@ -2051,25 +2010,11 @@ struct TestStruct {
 
   ASSERT_FINDINGS_IN_ANY_POSITION(test);
 
-  LintTest parser_test;
-  parser_test.source_template(source_template)
-      .substitute({
-          {"TEST1", "//"},
-          {"TEST2", "//"},
-          {"DOC_NOT_ALLOWED_HERE1", "///"},
-      })
-      .check_id("parser-error")
-      .message(
-          R"ERROR(example.fidl:9:1: error: unexpected token RightCurly, was expecting Identifier
-};
-^
-)ERROR")
-      .AddFinding("\n");  // Linter fails on first character
-
-  ASSERT_FINDINGS(parser_test);
+  // TEST1 and TEST2 as comments and DOC_NOT_ALLOWED_HERE1 as a doc comment leads to a parse error -
+  // see ParsingTests.BadTrailingDocCommentInDeclTest.
 }
 
-TEST(LintFindingsTests, too_many_nested_libraries) {
+TEST(LintFindingsTests, TooManyNestedLibraries) {
   LintTest test;
   test.check_id("too-many-nested-libraries")
       .message("Avoid library names with more than three dots")
@@ -2087,7 +2032,7 @@ library ${TEST};
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, unexpected_type_for_well_known_buffer_concept_please_implement_me) {
+TEST(LintFindingsTests, UnexpectedTypeForWellKnownBufferConceptPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   // Warning on struct, union, and table member name patterns.
@@ -2114,7 +2059,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, unexpected_type_for_well_known_bytes_concept_please_implement_me) {
+TEST(LintFindingsTests, UnexpectedTypeForWellKnownBytesConceptPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   // (two suggestions) recommend either bytes or array<uint8>. warning on struct, union, and table
@@ -2140,7 +2085,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, unexpected_type_for_well_known_socket_handle_concept_please_implement_me) {
+TEST(LintFindingsTests, UnexpectedTypeForWellKnownSocketHandleConceptPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   // Warning on struct, union, and table member name patterns.
@@ -2168,7 +2113,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, unexpected_type_for_well_known_string_concept_please_implement_me) {
+TEST(LintFindingsTests, UnexpectedTypeForWellKnownStringConceptPleaseImplementMe) {
   if (true)
     return;  // disabled pending feature implementation
   // Warning on struct, union, and table members that include certain well-known concepts (like
@@ -2195,7 +2140,7 @@ TO SUBSTITUTE WITH GOOD_VALUE AND BAD_VALUE CASES.
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, vector_bounds_not_specified) {
+TEST(LintFindingsTests, VectorBoundsNotSpecified) {
   LintTest test;
   test.check_id("vector-bounds-not-specified")
       .message("Specify bounds for vector")
@@ -2242,14 +2187,14 @@ struct SomeStruct {
   unbounded_vector test_vector;
 };
 )FIDL")
-      .substitute("TEST", "vector");
+      .substitute("TEST", "vector<uint8>");
   ASSERT_FINDINGS(test);
 
-  test.substitute("TEST", "vector:64");
+  test.substitute("TEST", "vector<uint8>:64");
   ASSERT_NO_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, wrong_prefix_for_platform_source_library) {
+TEST(LintFindingsTests, WrongPrefixForPlatformSourceLibrary) {
   LintTest test;
   test.check_id("wrong-prefix-for-platform-source-library")
       .message("FIDL library name is not currently allowed")
@@ -2272,7 +2217,7 @@ library ${TEST}.subcomponent;
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, include_and_exclude_checks) {
+TEST(LintFindingsTests, IncludeAndExcludeChecks) {
   LintTest test;
   test.check_id("multiple checks").source_template(R"FIDL(
 library ${LIBRARY};
