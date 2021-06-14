@@ -282,6 +282,17 @@ cannot be injected in the test realm.
 In the context of hermetic tests, a capability that originates from outside of
 the test's realm is called a *system capability*.
 
+## Performance
+
+When writing a test runner that launches processes, the runner needs to
+provide a [library loader][loader-service] implementation.
+
+Test runners typically launch individual test cases in separate processes to
+achieve a greater degree of isolation between test cases. However this can come
+at a significant performance cost. To mitigate this, the test runners listed
+above use a [caching loader service][caching-loader-service] which reduces the
+extra overhead per process launched.
+
 ## Test roles {#test-roles}
 
 Components in the test realm may play various roles in the test, as follows:
@@ -318,3 +329,5 @@ Components in the test realm may play various roles in the test, as follows:
 [runners]: /docs/concepts/components/v2/capabilities/runners.md
 [test-suite-protocol]: /docs/concepts/components/v2/realms.md
 [unit-tests]: /docs/development/components/build.md#unit_tests_with_generated_manifests
+[loader-service]: /docs/concepts/booting/program_loading.md#the_loader_service
+[caching-loader-service]: /src/sys/test_runners/src/elf/elf_component.rs

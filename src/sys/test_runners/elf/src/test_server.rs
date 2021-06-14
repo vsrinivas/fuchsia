@@ -17,7 +17,9 @@ use {
     std::sync::{Arc, Weak},
     test_runners_lib::{
         cases::TestCaseInfo,
-        elf::{Component, EnumeratedTestCases, FidlError, KernelError, SuiteServer},
+        elf::{
+            Component, ComponentError, EnumeratedTestCases, FidlError, KernelError, SuiteServer,
+        },
         errors::*,
         launch,
         logs::{LoggerStream, SocketLogWriter},
@@ -162,11 +164,13 @@ async fn launch_component_process<E>(
     args: Vec<String>,
 ) -> Result<(zx::Process, launch::ScopedJob, LoggerStream), E>
 where
-    E: From<NamespaceError> + From<launch::LaunchError>,
+    E: From<NamespaceError> + From<launch::LaunchError> + From<ComponentError>,
 {
     let (client_end, loader) =
         fidl::endpoints::create_endpoints().map_err(launch::LaunchError::Fidl)?;
     component.loader_service(loader);
+    let executable_vmo = Some(component.executable_vmo()?);
+
     Ok(launch::launch_process(launch::LaunchProcessArgs {
         bin_path: &component.binary,
         process_name: &component.name,
@@ -177,6 +181,7 @@ where
         environs: None,
         handle_infos: None,
         loader_proxy_chan: Some(client_end.into_channel()),
+        executable_vmo,
     })
     .await?)
 }
