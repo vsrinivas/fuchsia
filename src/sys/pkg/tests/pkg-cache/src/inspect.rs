@@ -272,7 +272,7 @@ async fn dynamic_index_needed_blobs() {
         }
     );
 
-    write_blob(&meta_far.contents, meta_blob).await;
+    let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
     env.wait_for_inspect_state(tree_assertion!(
         "root": contains {
             "index": {
@@ -351,7 +351,7 @@ async fn dynamic_index_package_hash_update() {
     let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
     assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
 
-    write_blob(&meta_far.contents, meta_blob).await;
+    let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
 
     assert_eq!(get_missing_blobs(&needed_blobs).await, vec![]);
     let () = get_fut.await.unwrap().unwrap();

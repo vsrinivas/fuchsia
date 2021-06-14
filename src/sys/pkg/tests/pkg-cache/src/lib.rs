@@ -30,6 +30,7 @@ use {
     fuchsia_pkg_testing::{get_inspect_hierarchy, Package, SystemImageBuilder},
     fuchsia_zircon as zx,
     futures::{future::BoxFuture, prelude::*},
+    io_util::file::*,
     maplit::{btreemap, hashmap},
     mock_paver::{MockPaverService, MockPaverServiceBuilder},
     mock_verifier::MockVerifierService,
@@ -55,16 +56,18 @@ mod open;
 mod space;
 mod sync;
 
-async fn write_blob(contents: &[u8], file: FileProxy) {
+async fn write_blob(contents: &[u8], file: FileProxy) -> Result<(), zx::Status> {
     let s = file.truncate(contents.len() as u64).await.unwrap();
     assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
 
-    let (s, len) = file.write(contents).await.unwrap();
-    assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
-    assert_eq!(len, contents.len() as u64);
+    io_util::file::write(&file, contents).await.map_err(|e| match e {
+        WriteError::WriteError(s) => s,
+        _ => zx::Status::INTERNAL,
+    })?;
 
     let s = file.close().await.unwrap();
     assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
+    Ok(())
 }
 
 async fn get_missing_blobs(proxy: &NeededBlobsProxy) -> Vec<BlobInfo> {
@@ -108,7 +111,7 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) -> Directory
     let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
     assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
 
-    write_blob(&meta_far.contents, meta_blob).await;
+    write_blob(&meta_far.contents, meta_blob).await.unwrap();
 
     let missing_blobs = get_missing_blobs(&needed_blobs).await;
     for mut blob in missing_blobs {
@@ -122,7 +125,7 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) -> Directory
             .unwrap()
             .unwrap());
 
-        let () = write_blob(&buf, content_blob).await;
+        let () = write_blob(&buf, content_blob).await.unwrap();
     }
     assert_eq!(contents, Default::default());
 

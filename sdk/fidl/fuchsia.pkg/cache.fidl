@@ -83,12 +83,20 @@ enum OpenBlobError {
 
 /// Represents the transaction for caching a particular package.
 ///
-/// Clients should start by requesting to `OpenMetaBlob()`, and fetch and write
-/// the metadata blob if needed. Once written, `GetMissingBlobs()` should be
-/// used to determine which content blobs need fetched and written using
-/// `OpenBlob()`. Violating the expected protocol state will result in the
-/// channel being closed by the package cache with a `ZX_ERR_BAD_STATE` epitaph
+/// Server expects client to follow the normal operation sequence defined below.
+/// Violating the protocol (e.g. calling wrong methods at the wrong time) will result
+/// in the channel being closed by the package cache with a `ZX_ERR_BAD_STATE` epitaph
 /// and aborting the package cache operation.
+/// If a fatal error occurs at any step, server will close the channel, and client
+/// should not proceed with the sequence.
+/// Non-fatal errors could be retried, as long as the channel remains open.
+///
+/// Normal operation sequence:
+/// 1. Clients should start by requesting to `OpenMetaBlob()`, and fetch and write
+/// the metadata blob if needed.
+/// 2. `GetMissingBlobs()` should be used to determine which content blobs need
+/// fetched and written.
+/// 3. Each of the missing content blobs needs to be written using `OpenBlob()`.
 ///
 /// Once all needed blobs are written by the client, the package cache will
 /// complete the pending [`PackageCache.Get`] request and close this channel

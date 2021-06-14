@@ -4,7 +4,7 @@
 
 use {
     crate::{get_missing_blobs, write_blob, TempDirPkgFs, TestEnv},
-    blobfs_ramdisk::BlobfsRamdisk,
+    blobfs_ramdisk::{BlobfsRamdisk, Ramdisk},
     fidl_fuchsia_io::{DirectoryMarker, FileMarker},
     fidl_fuchsia_paver as paver,
     fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker, PackageCacheProxy},
@@ -17,7 +17,9 @@ use {
     matches::assert_matches,
     mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
     pkgfs_ramdisk::PkgfsRamdisk,
+    rand::prelude::*,
     std::collections::{BTreeSet, HashMap},
+    std::io::Read,
 };
 
 // TODO(fxbug.dev/76724): Deduplicate this function.
@@ -46,7 +48,7 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {
     let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
     let res = needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap();
     assert!(res);
-    write_blob(&meta_far.contents, meta_blob).await;
+    let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
 
     let missing_blobs = get_missing_blobs(&needed_blobs).await;
     for mut blob in missing_blobs {
@@ -60,7 +62,7 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {
             .unwrap()
             .unwrap());
 
-        let () = write_blob(&buf, content_blob).await;
+        let () = write_blob(&buf, content_blob).await.unwrap();
     }
 
     let () = get_fut.await.unwrap().unwrap();
@@ -206,7 +208,7 @@ async fn gc_dynamic_index_protected() {
     let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
     let res = needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap();
     assert!(res);
-    write_blob(&meta_far.contents, meta_blob).await;
+    let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
 
     // Ensure that the new meta.far is persisted despite having missing blobs, and the "old" blobs
     // are not removed.
@@ -227,7 +229,7 @@ async fn gc_dynamic_index_protected() {
             .unwrap()
             .unwrap());
 
-        let () = write_blob(&buf, content_blob).await;
+        let () = write_blob(&buf, content_blob).await.unwrap();
 
         // Run a GC to try to reap blobs protected by meta far.
         assert_matches!(env.proxies.space_manager.gc().await, Ok(Ok(())));
@@ -341,7 +343,7 @@ async fn gc_updated_static_package() {
     let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
     let res = needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap();
     assert!(res);
-    write_blob(&meta_far.contents, meta_blob).await;
+    let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
 
     // Ensure that the new meta.far is persisted despite having missing blobs, and the "old" blobs
     // are not removed.
@@ -362,7 +364,7 @@ async fn gc_updated_static_package() {
             .unwrap()
             .unwrap());
 
-        let () = write_blob(&buf, content_blob).await;
+        let () = write_blob(&buf, content_blob).await.unwrap();
 
         // Run a GC to try to reap blobs protected by meta far.
         assert_matches!(env.proxies.space_manager.gc().await, Ok(Ok(())));
@@ -378,4 +380,77 @@ async fn gc_updated_static_package() {
         initial_blobs.union(&pkgprime.list_blobs().unwrap()).cloned().collect::<BTreeSet<_>>();
 
     assert_eq!(env.blobfs().list_blobs().expect("all blobs"), expected_blobs);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn blob_write_fails_when_out_of_space() {
+    let system_image_package = SystemImageBuilder::new().build().await;
+
+    // Create a 2MB blobfs (4096 blocks * 512 bytes / block), which is about the minimum size blobfs
+    // will fit in and still be able to write our small package.
+    // See https://fuchsia.dev/fuchsia-src/concepts/filesystems/blobfs for information on the
+    // blobfs format and metadata overhead.
+    let very_small_blobfs = Ramdisk::builder()
+        .block_count(4096)
+        .into_blobfs_builder()
+        .expect("made blobfs builder")
+        .start()
+        .expect("started blobfs");
+    system_image_package
+        .write_to_blobfs_dir(&very_small_blobfs.root_dir().expect("wrote system image to blobfs"));
+
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(very_small_blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .expect("started pkgfs");
+
+    // A very large version of the same package, to put in the repo.
+    // Critically, this package contains an incompressible 4MB asset in the meta.far,
+    // which is larger than our blobfs, and attempting to resolve this package will result in
+    // blobfs returning out of space.
+    const LARGE_ASSET_FILE_SIZE: u64 = 2 * 1024 * 1024;
+    let mut rng = StdRng::from_seed([0u8; 32]);
+    let rng = &mut rng as &mut dyn RngCore;
+    let pkg = PackageBuilder::new("pkg-a")
+        .add_resource_at("meta/asset", rng.take(LARGE_ASSET_FILE_SIZE))
+        .build()
+        .await
+        .expect("build large package");
+
+    // The size of the meta far should be the size of our asset, plus two 4k-aligned files:
+    // meta/package
+    // Content chunks in FARs are 4KiB-aligned, so the most empty FAR we can get is 8KiB:
+    // meta/package at one alignment boundary, and meta/contents is empty.
+    // This FAR should be 8KiB + the size of our asset file.
+    assert_eq!(
+        pkg.meta_far().unwrap().metadata().unwrap().len(),
+        LARGE_ASSET_FILE_SIZE + 4096 + 4096
+    );
+
+    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+
+    let mut meta_blob_info =
+        BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
+
+    let (needed_blobs, needed_blobs_server_end) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let _get_fut = env
+        .proxies
+        .package_cache
+        .get(
+            &mut meta_blob_info,
+            &mut std::iter::empty(),
+            needed_blobs_server_end,
+            Some(dir_server_end),
+        )
+        .map_ok(|res| res.map_err(Status::from_raw));
+
+    let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    let res = needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap();
+    assert!(res);
+
+    let (meta_far, _contents) = pkg.contents();
+    assert_eq!(write_blob(&meta_far.contents, meta_blob).await, Err(Status::NO_SPACE));
 }

@@ -60,7 +60,7 @@ async fn get_single_package_with_no_content_blobs() {
     let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
     assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
 
-    write_blob(&meta_far.contents, meta_blob).await;
+    let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
 
     assert_eq!(get_missing_blobs(&needed_blobs).await, vec![]);
 

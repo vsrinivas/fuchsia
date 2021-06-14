@@ -12,6 +12,7 @@ rustc_test("driver") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
@@ -49,6 +50,7 @@ rustc_test("driver") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:openat",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:tempfile",
   ]
 
