@@ -28,12 +28,12 @@ const std::map<std::string, std::string> LocalServices() {
   return {
       // Root Presenter protocols.
       {"fuchsia.ui.input.InputDeviceRegistry",
-       "fuchsia-pkg://fuchsia.com/consumer-controls-integration-tests#meta/root_presenter.cmx"},
+       "fuchsia-pkg://fuchsia.com/mediabuttons-integration-tests#meta/root_presenter.cmx"},
       {"fuchsia.ui.policy.DeviceListenerRegistry",
-       "fuchsia-pkg://fuchsia.com/consumer-controls-integration-tests#meta/root_presenter.cmx"},
+       "fuchsia-pkg://fuchsia.com/mediabuttons-integration-tests#meta/root_presenter.cmx"},
       // Scenic protocols.
       {"fuchsia.ui.scenic.Scenic",
-       "fuchsia-pkg://fuchsia.com/consumer-controls-integration-tests#meta/scenic.cmx"},
+       "fuchsia-pkg://fuchsia.com/mediabuttons-integration-tests#meta/scenic.cmx"},
       // Misc protocols.
       {"fuchsia.hardware.display.Provider",
        "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},

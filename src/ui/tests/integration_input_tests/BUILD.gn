@@ -8,8 +8,8 @@ group("integration_input_tests") {
   deps = [
     "factory-reset:tests",
     "focus:tests",
+    "media-buttons:tests",
     "pointerinjector_config:tests",
-    "scenic:tests",
     "touch:tests",
   ]
 }

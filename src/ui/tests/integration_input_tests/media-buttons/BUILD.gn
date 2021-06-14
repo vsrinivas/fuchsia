@@ -7,7 +7,7 @@ import("//build/components.gni")
 group("tests") {
   testonly = true
 
-  deps = [ ":consumer-controls-integration-tests" ]
+  deps = [ ":mediabuttons-integration-tests" ]
 }
 
 executable("mediabuttons_listener_test") {
@@ -38,7 +38,7 @@ fuchsia_unittest_component("mediabuttons-listener-test") {
   deps = [ ":mediabuttons_listener_test" ]
 }
 
-fuchsia_test_package("consumer-controls-integration-tests") {
+fuchsia_test_package("mediabuttons-integration-tests") {
   test_components = [ ":mediabuttons-listener-test" ]
 
   deps = [
