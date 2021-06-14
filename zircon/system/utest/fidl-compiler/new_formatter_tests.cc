@@ -2701,6 +2701,37 @@ protocol Populated_Abcdefghijklmnopqrs {
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// fxbug.dev/78688
+TEST(NewFormatterTests, ProtocolMethodBeforeCompose) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library example;
+
+protocol MyProtocol {
+    MyMethod(struct { t T; }) -> (struct { u U; });
+
+    compose Bar;
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library example;
+
+protocol MyProtocol {
+    MyMethod(struct {
+        t T;
+    }) -> (struct {
+        u U;
+    });
+
+    compose Bar;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 TEST(NewFormatterTests, StructOverflow) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(

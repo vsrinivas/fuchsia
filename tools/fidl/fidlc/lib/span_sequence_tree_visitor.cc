@@ -825,9 +825,24 @@ void SpanSequenceTreeVisitor::OnProtocolDeclaration(
     return;
   }
 
-  const auto first_child_start_token = !element->composed_protocols.empty()
-                                           ? element->composed_protocols[0]->start_
-                                           : element->methods[0]->start_;
+  Token first_child_start_token;
+  if (!element->composed_protocols.empty() && !element->methods.empty()) {
+    // If the protocol has both methods and compositions, compare the addresses of the first
+    // character of the first element of each to determine which is the first child start token.
+    if (element->composed_protocols[0]->start_.data().data() <
+        element->methods[0]->start_.data().data()) {
+      first_child_start_token = element->composed_protocols[0]->start_;
+    } else {
+      first_child_start_token = element->methods[0]->start_;
+    }
+  } else if (element->composed_protocols.empty()) {
+    // No compositions - the first token of the first method element is the first child start token.
+    first_child_start_token = element->methods[0]->start_;
+  } else {
+    // No methods - the first token of the first compose element is the first child start token.
+    first_child_start_token = element->composed_protocols[0]->start_;
+  }
+
   const auto builder = StatementBuilder<MultilineSpanSequence>(
       this, first_child_start_token, SpanSequence::Position::kNewlineUnindented);
 
