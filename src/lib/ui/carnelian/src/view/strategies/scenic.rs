@@ -125,6 +125,12 @@ impl Plumber {
 const RENDER_BUFFER_COUNT: usize = 3;
 const DEFAULT_PRESENT_INTERVAL: i64 = (1_000_000_000.0 / 60.0) as i64;
 
+#[derive(Clone, Copy)]
+struct PresentationTime {
+    presentation_time: i64,
+    latch_point: i64,
+}
+
 pub(crate) struct ScenicViewStrategy {
     #[allow(unused)]
     render_options: RenderOptions,
@@ -135,9 +141,10 @@ pub(crate) struct ScenicViewStrategy {
     session: SessionPtr,
     view_key: ViewKey,
     pending_present_count: usize,
-    next_presentation_times: Vec<i64>,
+    last_presentation_time: i64,
+    future_presentation_times: Vec<PresentationTime>,
     present_interval: i64,
-    remaining_presents_in_flight_allowed: i64,
+    present_allowed: bool,
     render_timer_scheduled: bool,
     missed_frame: bool,
     app_sender: UnboundedSender<MessageInternal>,
@@ -176,9 +183,10 @@ impl ScenicViewStrategy {
             view_key: key,
             app_sender: app_sender.clone(),
             pending_present_count: 1,
-            next_presentation_times: Vec::new(),
+            last_presentation_time: fasync::Time::now().into_nanos(),
+            future_presentation_times: Vec::new(),
             present_interval: DEFAULT_PRESENT_INTERVAL,
-            remaining_presents_in_flight_allowed: 3,
+            present_allowed: false,
             render_timer_scheduled: false,
             missed_frame: false,
             root_node,
@@ -377,18 +385,32 @@ impl ScenicViewStrategy {
         Ok(())
     }
 
-    fn next_presentation_time(&self) -> i64 {
-        // TODO: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=60306
+    fn next_presentation_time(&self) -> PresentationTime {
         let now = fasync::Time::now().into_nanos();
-        let legal_next = now + self.present_interval;
-        let next =
-            self.next_presentation_times.iter().find(|time| **time >= now).unwrap_or(&legal_next);
+        let legal_next = PresentationTime {
+            presentation_time: self.last_presentation_time + self.present_interval,
+            latch_point: now,
+        };
+        // Find a future presentation time that is at least half an interval past
+        // the last presentation time and has a latch point that is in the future.
+        let earliest_presentation_time = self.last_presentation_time + self.present_interval / 2;
+        let next = self
+            .future_presentation_times
+            .iter()
+            .find(|t| t.presentation_time >= earliest_presentation_time && t.latch_point > now)
+            .unwrap_or(&legal_next);
         *next
     }
 
-    fn schedule_render_timer(&mut self, presentation_time: i64) {
-        if !self.render_timer_scheduled {
-            let timer = fasync::Timer::new(fuchsia_async::Time::from_nanos(presentation_time));
+    fn schedule_render_timer(&mut self) {
+        if !self.render_timer_scheduled && !self.missed_frame {
+            let presentation_time = self.next_presentation_time();
+            // Conservative render offset to prefer throughput over of low-latency.
+            // TODO: allow applications that prefer low-latency to control this
+            // dynamically.
+            let render_offset = self.present_interval - 1_000_000;
+            let render_time = presentation_time.latch_point - render_offset;
+            let timer = fasync::Timer::new(fuchsia_async::Time::from_nanos(render_time));
             let timer_sender = self.app_sender.clone();
             let key = self.view_key;
             fasync::Task::local(async move {
@@ -421,7 +443,6 @@ impl ScenicViewStrategy {
         let plumber = self.plumber.as_mut().expect("plumber");
         if let Some(available) = plumber.frame_set.get_available_image() {
             duration!("gfx", "ScenicViewStrategy::render.render_to_image");
-            self.missed_frame = false;
             let available_index = plumber.image_indexes.get(&available).expect("index for image");
             let image2 = plumber.images.get(&available).expect("image2");
             self.content_material.set_texture_resource(Some(&image2));
@@ -430,7 +451,7 @@ impl ScenicViewStrategy {
                 available,
                 *available_index,
                 self.app_sender.clone(),
-                Time::from_nanos(presentation_time),
+                Time::from_nanos(presentation_time.presentation_time),
             );
             let buffer_ready_event = Event::create().expect("Event.create");
             view_assistant
@@ -457,8 +478,20 @@ impl ScenicViewStrategy {
             plumber.frame_set.mark_presented(available);
             true
         } else {
+            instant!(
+                "gfx",
+                "ScenicViewStrategy::no_available_image",
+                fuchsia_trace::Scope::Process
+            );
             self.missed_frame = true;
             false
+        }
+    }
+
+    fn retry_missed_frame(&mut self) {
+        if self.missed_frame {
+            self.missed_frame = false;
+            self.render_requested();
         }
     }
 }
@@ -484,6 +517,17 @@ impl ViewStrategy for ScenicViewStrategy {
         self.render_timer_scheduled = false;
         let size = view_details.logical_size.floor().to_u32();
         if size.width > 0 && size.height > 0 {
+            if !self.present_allowed {
+                instant!(
+                    "gfx",
+                    "ScenicViewStrategy::present_is_not_allowed",
+                    fuchsia_trace::Scope::Process,
+                    "pending_present_count" => format!("{:?}", self.pending_present_count).as_str()
+                );
+                self.missed_frame = true;
+                return false;
+            }
+
             self.adjust_scenic_resources(view_details);
 
             if self.plumber.is_none() {
@@ -506,25 +550,15 @@ impl ViewStrategy for ScenicViewStrategy {
 
     fn present(&mut self, _view_details: &ViewDetails) {
         duration!("gfx", "ScenicViewStrategy::present");
-        if self.remaining_presents_in_flight_allowed == 0 {
-            instant!(
-                "gfx",
-                "ScenicViewStrategy::zero_remaining_presents_in_flight_allowed",
-                fuchsia_trace::Scope::Process,
-                "remaining_presents_in_flight_allowed" => format!("{:?}", self.remaining_presents_in_flight_allowed).as_str()
-            );
-        } else if self.pending_present_count >= 3 {
-            instant!(
-                "gfx",
-                "ScenicViewStrategy::too_many_presents",
-                fuchsia_trace::Scope::Process,
-                "pending_present_count" => format!("{:?}", self.pending_present_count).as_str()
-            );
-        } else {
+        if !self.missed_frame {
             let presentation_time = self.next_presentation_time();
-            Self::do_present(&self.session, &self.app_sender, self.view_key, presentation_time);
-
-            // Advance presentation time.
+            Self::do_present(
+                &self.session,
+                &self.app_sender,
+                self.view_key,
+                presentation_time.presentation_time,
+            );
+            self.last_presentation_time = presentation_time.presentation_time;
             self.pending_present_count += 1;
         }
     }
@@ -535,14 +569,7 @@ impl ViewStrategy for ScenicViewStrategy {
         _view_assistant: &mut ViewAssistantPtr,
         info: fidl_fuchsia_scenic_scheduling::FuturePresentationTimes,
     ) {
-        self.next_presentation_times = info
-            .future_presentations
-            .iter()
-            .skip(1) // Skip the first one, as it is the time we are presenting to.
-            .filter_map(|info| info.presentation_time)
-            .collect();
-
-        let present_intervals = info.future_presentations.len().saturating_sub(1);
+        let present_intervals = info.future_presentations.len();
         if present_intervals > 0 {
             let times: Vec<_> = info
                 .future_presentations
@@ -556,17 +583,27 @@ impl ViewStrategy for ScenicViewStrategy {
         } else {
             self.present_interval = DEFAULT_PRESENT_INTERVAL;
         }
-        self.remaining_presents_in_flight_allowed = info.remaining_presents_in_flight_allowed;
+        self.future_presentation_times.splice(
+            ..,
+            info.future_presentations.iter().map(|t| PresentationTime {
+                presentation_time: t.presentation_time.expect("presentation_time"),
+                latch_point: t.latch_point.expect("latch_point"),
+            }),
+        );
     }
 
     fn present_done(
         &mut self,
         _view_details: &ViewDetails,
         _view_assistant: &mut ViewAssistantPtr,
-        _info: fidl_fuchsia_scenic_scheduling::FramePresentedInfo,
+        info: fidl_fuchsia_scenic_scheduling::FramePresentedInfo,
     ) {
-        assert_ne!(self.pending_present_count, 0);
-        self.pending_present_count -= 1;
+        let num_presents_handled = info.presentation_infos.len();
+        assert!(self.pending_present_count >= num_presents_handled);
+        self.pending_present_count -= num_presents_handled;
+        self.present_allowed =
+            (info.num_presents_allowed as usize - self.pending_present_count) > 0;
+        self.retry_missed_frame();
     }
 
     fn handle_focus(
@@ -640,9 +677,7 @@ impl ViewStrategy for ScenicViewStrategy {
             "image_freed" => format!("{} in {}", image_id, collection_id).as_str()
         );
 
-        if self.missed_frame {
-            self.render_requested();
-        }
+        self.retry_missed_frame();
 
         if let Some(plumber) = self.plumber.as_mut() {
             if plumber.collection_id == collection_id {
@@ -664,6 +699,6 @@ impl ViewStrategy for ScenicViewStrategy {
     }
 
     fn render_requested(&mut self) {
-        self.schedule_render_timer(self.next_presentation_time());
+        self.schedule_render_timer();
     }
 }
