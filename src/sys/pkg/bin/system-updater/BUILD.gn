@@ -8,7 +8,8 @@ import("//src/sys/core/build/core_shard.gni")
 import("epoch/generate_epoch.gni")
 
 base_epoch_file = "$target_out_dir/epoch.json"
-rebased_epoch_file = rebase_path(base_epoch_file)
+source_dir = "//" + rebase_path("src", "//")
+rebased_epoch_file = rebase_path(base_epoch_file, source_dir)
 
 config("env") {
   rustenv = [ "EPOCH_PATH=$rebased_epoch_file" ]
