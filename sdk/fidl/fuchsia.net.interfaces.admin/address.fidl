@@ -138,7 +138,7 @@ resource table AddressParameters {
     /// The initial properties of the address.
     ///
     /// If not set, interpreted as an empty `AddressProperties`.
-    1: AddressProperties intial_properties;
+    1: AddressProperties initial_properties;
 
     /// True if the address is temporary.
     ///
