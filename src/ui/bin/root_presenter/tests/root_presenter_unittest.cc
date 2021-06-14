@@ -97,9 +97,11 @@ class RootPresenterTest : public gtest::RealLoopFixture,
   void SetUpInputTest(bool use_fake_injector_registry = true) {
     ConnectInjectorRegistry(use_fake_injector_registry);
 
-    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-    presentation()->PresentView(std::move(view_holder_token), nullptr);
-    view_token_ = std::move(view_token);
+    // Present a fake view.
+    fuchsia::ui::scenic::ScenicPtr scenic =
+        context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+    testing::FakeView fake_view(context_provider_.context(), std::move(scenic));
+    presentation()->PresentView(fake_view.view_holder_token(), nullptr);
 
     RunLoopUntil([this]() { return presentation()->is_initialized(); });
   }
@@ -273,6 +275,37 @@ TEST_F(RootPresenterTest, TestAttachA11yView) {
 
     return false;
   });
+}
+
+TEST_F(RootPresenterTest, TestAttachA11yViewBeforeClient) {
+  ConnectInjectorRegistry(/* use_fake = */ true);
+  RunLoopUntilIdle();
+
+  fuchsia::ui::accessibility::view::RegistryPtr registry;
+  context_provider_.ConnectToPublicService(registry.NewRequest());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(registry.is_bound());
+
+  fuchsia::ui::scenic::ScenicPtr scenic =
+      context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+  a11y::AccessibilityView a11y_view(std::move(registry), std::move(scenic));
+
+  RunLoopUntilIdle();
+
+  // The a11y view should wait to complete its setup until the client view is
+  // attached.
+  EXPECT_FALSE(a11y_view.is_initialized());
+
+  // Present a fake view.
+  scenic = context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+  testing::FakeView fake_view(context_provider_.context(), std::move(scenic));
+  presentation()->PresentView(fake_view.view_holder_token(), nullptr);
+
+  // Run until the view is attached to the scene.
+  RunLoopUntil([&fake_view]() { return fake_view.IsAttachedToScene(); });
+
+  // Run loop until a11y view is attached to the scene.
+  RunLoopUntil([&a11y_view]() { return a11y_view.is_initialized(); });
 }
 
 TEST_F(RootPresenterTest, SinglePresentView_ShouldSucceed) {

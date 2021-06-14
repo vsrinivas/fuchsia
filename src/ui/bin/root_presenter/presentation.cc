@@ -345,11 +345,12 @@ void Presentation::AttachClient(
     fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
   if (client_view_holder_) {
-    client_attached_ = false;
+    client_view_holder_attached_ = false;
+    client_view_connected_ = false;
     proxy_view_->DetachChild(client_view_holder_.value());
   }
 
-  FX_DCHECK(!client_attached_);
+  FX_DCHECK(!client_view_holder_attached_);
   client_view_holder_.emplace(&proxy_session_, std::move(view_holder_token), "Client View Holder");
   proxy_view_->AddChild(client_view_holder_.value());
 
@@ -371,6 +372,13 @@ void Presentation::AttachClient(
             fuchsia::ui::views::ViewRef clone;
             fidl::Clone(view_ref, &clone);
             request_focus_(std::move(clone));
+            if (create_a11y_view_holder_callback_) {
+              create_a11y_view_holder_callback_(std::move(*proxy_view_holder_token_));
+              proxy_view_holder_token_ = std::nullopt;
+              create_a11y_view_holder_callback_ = {};
+            }
+            client_view_connected_ = true;
+            injector_->MarkSceneReady();
           } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewDisconnected &&
                      gfx_event.view_disconnected().view_holder_id == client_id) {
             FX_LOGS(WARNING) << "Client View disconnected. Closing channel.";
@@ -378,7 +386,8 @@ void Presentation::AttachClient(
             client_view_holder_.reset();
             safe_presenter_proxy_.QueuePresent([] {});
 
-            client_attached_ = false;
+            client_view_holder_attached_ = false;
+            client_view_connected_ = false;
             presentation_binding_.Unbind();
             proxy_session_.set_event_handler([](auto) {});
           }
@@ -386,10 +395,7 @@ void Presentation::AttachClient(
       });
 
   presentation_binding_.Bind(std::move(presentation_request));
-  safe_presenter_proxy_.QueuePresent([this] {
-    client_attached_ = true;
-    injector_->MarkSceneReady();
-  });
+  safe_presenter_proxy_.QueuePresent([this] { client_view_holder_attached_ = true; });
 }
 
 void Presentation::UpdateViewport(const DisplayMetrics& display_metrics) {
@@ -590,7 +596,16 @@ void Presentation::CreateAccessibilityViewHolder(
   // Send the client view holder token to the a11y manager.
   // The a11y manager will then create its view and the new proxy view holder,
   // and attach both to the scene.
-  callback(std::move(proxy_view_holder_token));
+  //
+  // We want to ensure that the a11y view finishes its setup AFTER the client
+  // view has been attached.
+  if (client_view_connected_) {
+    callback(std::move(proxy_view_holder_token));
+  } else {
+    create_a11y_view_holder_callback_ = std::move(callback);
+    proxy_view_holder_token_.emplace();
+    proxy_view_holder_token_ = std::move(proxy_view_holder_token);
+  }
 }
 
 }  // namespace root_presenter

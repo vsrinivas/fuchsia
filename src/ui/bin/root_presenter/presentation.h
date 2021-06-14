@@ -117,7 +117,7 @@ class Presentation : fuchsia::ui::policy::Presenter,
 
   // For tests. Returns true if the display has been initialized and if a client has been
   // successfully attached.
-  bool is_initialized() const { return display_model_initialized_ && client_attached_; }
+  bool is_initialized() const { return display_model_initialized_ && client_view_holder_attached_; }
 
  private:
   // Creates and attaches a new View using the passed in tokens.
@@ -202,12 +202,17 @@ class Presentation : fuchsia::ui::policy::Presenter,
   // |proxy_view_holder_| is initially connected directly to the |proxy_view_|, but after
   // CreateAccessibilityViewHolder() it is instead connected to the a11y view.
   std::optional<scenic::ViewHolder> proxy_view_holder_;
+  std::optional<fuchsia::ui::views::ViewHolderToken> proxy_view_holder_token_;
 
   // ViewHolder connected to the client View. Is std::nullopt until AttachClient() is called.
   std::optional<scenic::ViewHolder> client_view_holder_;
 
-  // Tracks whether or not the client view has been attached to the scene.
-  bool client_attached_ = false;
+  CreateAccessibilityViewHolderCallback create_a11y_view_holder_callback_ = {};
+
+  // TODO(fxbug.dev/78519): Consolidate these two pieces of state.
+  // Tracks whether or not the client view and view holder have been attached to the scene.
+  bool client_view_holder_attached_ = false;
+  bool client_view_connected_ = false;
 
   std::optional<input::InjectorConfigSetup> injector_config_setup_;
   std::optional<input::Injector> injector_;
