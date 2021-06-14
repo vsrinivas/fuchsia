@@ -42,8 +42,7 @@ def main():
         "--tables", help="The path for the tables file to generate, if any")
     parser.add_argument(
         "--deprecated-fuchsia-only-c-client",
-        help=
-        "The path for the C simple client file to generate, if any")
+        help="The path for the C simple client file to generate, if any")
     parser.add_argument(
         "--deprecated-fuchsia-only-c-header",
         help="The path for the C header file to generate, if any")
@@ -77,6 +76,8 @@ def main():
     write_libraries(args.out_libraries, target_libraries)
 
     response_file = []
+
+    response_file.append('--experimental old_syntax_only')
 
     if args.json:
         response_file.append("--json %s" % args.json)

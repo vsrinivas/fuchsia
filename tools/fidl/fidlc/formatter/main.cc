@@ -53,6 +53,7 @@ void Usage(const std::string& argv0) {
 bool Format(const fidl::SourceFile& source_file, fidl::Reporter* reporter, std::string& output) {
   fidl::Lexer lexer(source_file, reporter);
   fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kOldSyntaxOnly);
   fidl::Parser parser(&lexer, reporter, experimental_flags);
   std::unique_ptr<fidl::raw::File> ast = parser.Parse();
   if (!parser.Success()) {
