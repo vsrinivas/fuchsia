@@ -71,6 +71,11 @@ resource("keyboard-shortcuts") {
   outputs = [ "data/keyboard_shortcuts.json" ]
 }
 
+resource("material-icons") {
+  sources = [ "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf" ]
+  outputs = [ "data/MaterialIcons-Regular.otf" ]
+}
+
 flutter_component("component") {
   if (flutter_driver_enabled) {
     main_dart = "test_main.dart"
@@ -82,6 +87,7 @@ flutter_component("component") {
   deps = [
     ":keyboard-shortcuts",
     ":lib",
+    ":material-icons",
   ]
 }
 

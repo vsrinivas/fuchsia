@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 // ignore_for_file: unused_import
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,7 +31,17 @@ void main() {
   TldChecker().prefetchTlds();
   ComponentContext.createAndServe();
 
-  // Bind |tabsBloc| here so that it can be referenced in the TabsBloc
+  // Loads MaterialIcons-Regular.otf
+  File file = File('/pkg/data/MaterialIcons-Regular.otf');
+  if (file.existsSync()) {
+    FontLoader('MaterialIcons')
+      ..addFont(() async {
+        return file.readAsBytesSync().buffer.asByteData();
+      }())
+      ..load();
+  }
+
+  // Binds |tabsBloc| here so that it can be referenced in the TabsBloc
   // constructor arguments.
   late TabsBloc tabsBloc;
 
