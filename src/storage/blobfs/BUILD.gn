@@ -21,7 +21,7 @@ declare_args() {
 config("blobfs_config") {
   if (is_fuchsia) {
     # TODO(fxbug.dev/51111) Convert to new pager and remove this define.
-    # defines = [ "ENABLE_BLOBFS_NEW_PAGER" ]
+    defines = [ "ENABLE_BLOBFS_NEW_PAGER" ]
   }
 }
 
