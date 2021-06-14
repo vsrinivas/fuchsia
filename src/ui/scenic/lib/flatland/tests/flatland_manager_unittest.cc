@@ -275,9 +275,9 @@ TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
 
   uint32_t returned_tokens = 0;
   flatland.events().OnPresentProcessed =
-      [&returned_tokens](Error error, uint32_t present_tokens,
+      [&returned_tokens](Error error, uint32_t num_presents_returned,
                          Flatland::FuturePresentationInfos future_presentation_infos) {
-        returned_tokens = present_tokens;
+        returned_tokens = num_presents_returned;
       };
 
   // Run until the instance receives the initial allotment of tokens.
@@ -293,9 +293,9 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
 
   uint32_t returned_tokens1 = 0;
   flatland1.events().OnPresentProcessed =
-      [&returned_tokens1](Error error, uint32_t present_tokens,
+      [&returned_tokens1](Error error, uint32_t num_presents_returned,
                           Flatland::FuturePresentationInfos future_presentation_infos) {
-        returned_tokens1 = present_tokens;
+        returned_tokens1 = num_presents_returned;
         EXPECT_FALSE(future_presentation_infos.empty());
       };
 
@@ -304,9 +304,9 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
 
   uint32_t returned_tokens2 = 0;
   flatland2.events().OnPresentProcessed =
-      [&returned_tokens2](Error error, uint32_t present_tokens,
+      [&returned_tokens2](Error error, uint32_t num_presents_returned,
                           Flatland::FuturePresentationInfos future_presentation_infos) {
-        returned_tokens2 = present_tokens;
+        returned_tokens2 = num_presents_returned;
         EXPECT_FALSE(future_presentation_infos.empty());
       };
 
@@ -386,9 +386,9 @@ TEST_F(FlatlandManagerTest, ConsecutiveUpdateSessions_ReturnsCorrectPresentToken
 
   uint32_t returned_tokens = 0;
   flatland.events().OnPresentProcessed =
-      [&returned_tokens](Error error, uint32_t present_tokens,
+      [&returned_tokens](Error error, uint32_t num_presents_returned,
                          Flatland::FuturePresentationInfos future_presentation_infos) {
-        returned_tokens = present_tokens;
+        returned_tokens = num_presents_returned;
         EXPECT_FALSE(future_presentation_infos.empty());
       };
 
@@ -438,10 +438,10 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   uint32_t tokens_remaining = 1;
   flatland.events().OnPresentProcessed =
       [&error_returned, &tokens_remaining](
-          Error error, uint32_t present_tokens,
+          Error error, uint32_t num_presents_returned,
           Flatland::FuturePresentationInfos future_presentation_infos) {
         error_returned = error;
-        tokens_remaining += present_tokens;
+        tokens_remaining += num_presents_returned;
       };
 
   // Run until the instance receives the initial allotment of tokens.
@@ -475,10 +475,10 @@ TEST_F(FlatlandManagerTest, ErrorClosesSession) {
   uint32_t tokens_remaining = 1;
   flatland.events().OnPresentProcessed =
       [&error_returned, &tokens_remaining](
-          Error error, uint32_t present_tokens,
+          Error error, uint32_t num_presents_returned,
           Flatland::FuturePresentationInfos future_presentation_infos) {
         error_returned = error;
-        tokens_remaining += present_tokens;
+        tokens_remaining += num_presents_returned;
       };
 
   // Run until the instance receives the initial allotment of tokens.
@@ -504,9 +504,9 @@ TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
 
   uint32_t tokens_remaining = 1;
   flatland.events().OnPresentProcessed =
-      [&tokens_remaining](Error error, uint32_t present_tokens,
+      [&tokens_remaining](Error error, uint32_t num_presents_returned,
                           Flatland::FuturePresentationInfos future_presentation_infos) {
-        tokens_remaining += present_tokens;
+        tokens_remaining += num_presents_returned;
       };
 
   // Run until the instance receives the initial allotment of tokens.

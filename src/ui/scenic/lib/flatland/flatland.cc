@@ -93,11 +93,11 @@ void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args) {
   }
 
   // Close any clients that call Present() without any present tokens.
-  if (present_tokens_remaining_ == 0) {
+  if (num_presents_remaining_ == 0) {
     CloseConnection(Error::NO_PRESENTS_REMAINING);
     return;
   }
-  present_tokens_remaining_--;
+  num_presents_remaining_--;
 
   // If any fields are missing, replace them with the default values.
   if (!args.has_requested_presentation_time()) {
@@ -909,11 +909,11 @@ void Flatland::SetDebugName(std::string name) {
   error_reporter_->SetPrefix(stream.str());
 }
 
-void Flatland::OnPresentProcessed(uint32_t num_present_tokens,
+void Flatland::OnPresentProcessed(uint32_t num_presents_returned,
                                   FuturePresentationInfos presentation_infos) {
-  present_tokens_remaining_ += num_present_tokens;
+  num_presents_remaining_ += num_presents_returned;
   if (binding_.is_bound()) {
-    binding_.events().OnPresentProcessed(Error::NO_ERROR, num_present_tokens,
+    binding_.events().OnPresentProcessed(Error::NO_ERROR, num_presents_returned,
                                          std::move(presentation_infos));
   }
 }
@@ -950,7 +950,8 @@ void Flatland::ReportLinkProtocolError(const std::string& error_log) {
 
 void Flatland::CloseConnection(Error error) {
   // Send the error to the client before closing the connection.
-  binding_.events().OnPresentProcessed(error, /*num_present_tokens=*/0, FuturePresentationInfos());
+  binding_.events().OnPresentProcessed(error, /*num_presents_returned=*/0,
+                                       FuturePresentationInfos());
 
   // Cancel the async::Wait before closing the connection, or it will assert on destruction.
   zx_status_t status = peer_closed_waiter_.Cancel();

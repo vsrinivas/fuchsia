@@ -49,14 +49,14 @@ UberStructSystem::UpdateResults UberStructSystem::UpdateSessions(
     }
 
     bool successful_update = false;
-    uint32_t present_tokens = 0;
+    uint32_t num_presents_returned = 0;
 
     // Pop entries from that queue until the correct PresentId is found, then commit that
     // UberStruct to the snapshot. If the next pending UberStruct has a PresentId greater than the
     // target one, the update has failed because PresentIds are strictly increasing.
     auto pending_struct = queue_kv->second->Pop();
     while (pending_struct.has_value()) {
-      ++present_tokens;
+      ++num_presents_returned;
       if (pending_struct->present_id == present_id) {
         uber_struct_map_[session_id] = std::move(pending_struct->uber_struct);
         successful_update = true;
@@ -71,7 +71,7 @@ UberStructSystem::UpdateResults UberStructSystem::UpdateSessions(
     if (!successful_update) {
       results.scheduling_results.sessions_with_failed_updates.insert(session_id);
     } else {
-      results.present_tokens[session_id] = present_tokens;
+      results.num_presents_returned[session_id] = num_presents_returned;
     }
   }
   return results;

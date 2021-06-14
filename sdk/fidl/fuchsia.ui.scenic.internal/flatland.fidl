@@ -16,7 +16,7 @@ enum Error {
     NO_ERROR = 0;
     /// Indicates that the parameters used the function calls are invalid.
     BAD_OPERATION = 1;
-    /// Indicates that `present_tokens` field was not properly processed and the client queued more
+    /// Indicates that `num_presents_returned` field was not properly processed and the client queued more
     /// [`Present`]s than allowed.
     NO_PRESENTS_REMAINING = 2;
     /// Indicates that the client has overwritten hanging gets in the protocols returned.
@@ -222,15 +222,15 @@ protocol Flatland {
     /// [`OnPresentProcessed`] emits NO_ERROR along with other parameters.
     ///
     /// The client may only call [`Present`] when they have a non-zero number
-    /// of "present tokens", which are tracked by the server. The server may
+    /// of `num_presents_returned`, which are tracked by the server. The server may
     /// increment the counter when it fires the [`OnPresentProcessed`] event, which
-    /// informs the client when it receives additional tokens. Each [`Present`]
-    /// call uses one "present token" and decrements the server count by one. If
-    /// the client calls [`Present`] when no tokens remain, it will return
+    /// informs the client when it receives additional [`Present`] allowance. Each [`Present`]
+    /// call uses one of `num_presents_returned` and decrements the server count by one. If
+    /// the client calls [`Present`] when no [`Present`] allowance remain, it will return
     /// `NO_PRESENTS_REMAINING`.
     ///
     /// The client should assume that prior to receiving any [`OnPresentProcessed`]
-    /// events, they have one present token.
+    /// events, they have one [`Present`] allowance.
     ///
     /// Every [`Present`] call results in one [`OnPresentProcessed`] event, and one
     /// [`OnFramePresented`] event, typically in that order.
@@ -250,11 +250,11 @@ protocol Flatland {
     /// rendering work, using the information returned to inform their
     /// scheduling decsisions.
     ///
-    /// - response `present_tokens` the number of present tokens returned to the
-    /// client so that the client can call [`Present`] further times.
+    /// - response `num_presents_returned` the number of additional [`Present`] calls allowed to
+    /// the client so that they can call [`Present`] further times.
     /// - response `future_presentation_infos` information about future
     /// presentation and latch times.
-    -> OnPresentProcessed(Error error, uint32 present_tokens,
+    -> OnPresentProcessed(Error error, uint32 num_presents_returned,
                           FuturePresentationInfos future_presentation_infos);
 
     /// This event is fired whenever a set of one or more [`Present`]s are

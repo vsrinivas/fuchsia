@@ -76,7 +76,8 @@ class UberStructSystem {
     scheduling::SessionUpdater::UpdateResults scheduling_results;
     // The number of present tokens available to each updated session. Values will always be
     // positive; sessions with no available tokens will be excluded.
-    std::unordered_map<scheduling::SessionId, /*num_present_tokens=*/uint32_t> present_tokens;
+    std::unordered_map<scheduling::SessionId, /*num_presents_returned=*/uint32_t>
+        num_presents_returned;
   };
 
   // Commits a new UberStruct to the instance map for each key/value pair in |sessions_to_update|.

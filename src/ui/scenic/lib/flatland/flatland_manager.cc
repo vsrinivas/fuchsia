@@ -138,7 +138,7 @@ scheduling::SessionUpdater::UpdateResults FlatlandManager::UpdateSessions(
   auto results = uber_struct_system_->UpdateSessions(sessions_to_update);
 
   // Prepares the return of tokens to each session that didn't fail to update.
-  for (const auto& [session_id, num_present_tokens] : results.present_tokens) {
+  for (const auto& [session_id, num_presents_returned] : results.num_presents_returned) {
     auto instance_kv = flatland_instances_.find(session_id);
     FX_DCHECK((flatland_instances_.find(session_id) != flatland_instances_.end()) ||
               (flatland_display_instances_.find(session_id) != flatland_display_instances_.end()));
@@ -146,15 +146,15 @@ scheduling::SessionUpdater::UpdateResults FlatlandManager::UpdateSessions(
     // TODO(fxbug.dev/76640): we currently only keep track of present tokens for Flatland sessions,
     // not FlatlandDisplay sessions.  It's not clear what we could do with them for FlatlandDisplay:
     // there is no API that would allow sending them to the client.  Maybe the current approach is
-    // OK?  Maybe we should DCHECK that |num_present_tokens| is only non-zero for Flatlands, not
-    // FlatlandDisplays?
+    // OK?  Maybe we should DCHECK that |num_presents_returned| is only non-zero for Flatlands,
+    // not FlatlandDisplays?
 
     // Add the session to the map of updated_sessions, and increment the number of present tokens it
     // should receive after the firing of the OnCpuWorkDone() is issued from the scheduler.
     if (flatland_instances_updated_.find(session_id) == flatland_instances_updated_.end()) {
       flatland_instances_updated_[session_id] = 0;
     }
-    flatland_instances_updated_[session_id] += num_present_tokens;
+    flatland_instances_updated_[session_id] += num_presents_returned;
   }
 
   // TODO(fxbug.dev/62292): there shouldn't ever be sessions with failed updates, but if there
@@ -173,7 +173,7 @@ void FlatlandManager::OnCpuWorkDone() {
   // `this` is safe to capture, as the callback is guaranteed to run on the calling thread.
   flatland_presenter_->GetFuturePresentationInfos(
       [this](std::vector<scheduling::FuturePresentationInfo> presentation_infos) {
-        for (const auto& [session_id, num_present_tokens] : flatland_instances_updated_) {
+        for (const auto& [session_id, num_presents_returned] : flatland_instances_updated_) {
           auto instance_kv = flatland_instances_.find(session_id);
 
           // Skip sessions that have exited since their frame was rendered.
@@ -191,7 +191,7 @@ void FlatlandManager::OnCpuWorkDone() {
             presentation_infos_copy[i] = std::move(info_copy);
           }
 
-          SendPresentTokens(instance_kv->second.get(), num_present_tokens,
+          SendPresentTokens(instance_kv->second.get(), num_presents_returned,
                             std::move(presentation_infos_copy));
         }
 
@@ -221,21 +221,21 @@ void FlatlandManager::OnFramePresented(
 
 size_t FlatlandManager::GetSessionCount() const { return flatland_instances_.size(); }
 
-void FlatlandManager::SendPresentTokens(FlatlandInstance* instance, uint32_t num_present_tokens,
+void FlatlandManager::SendPresentTokens(FlatlandInstance* instance, uint32_t num_presents_returned,
                                         Flatland::FuturePresentationInfos presentation_infos) {
   CheckIsOnMainThread();
 
   // The Flatland impl must be accessed on the thread it is bound to; post a task to that thread.
   std::weak_ptr<Flatland> weak_impl = instance->impl;
   async::PostTask(instance->loop->dispatcher(),
-                  [weak_impl, num_present_tokens,
+                  [weak_impl, num_presents_returned,
                    presentation_infos = std::move(presentation_infos)]() mutable {
                     // |impl| is guaranteed to be non-null.  When destroying an instance, the
                     // manager erases the entry from the map, which means that subsequently
                     // |instance| would not be found to pass it to this method.
                     auto impl = weak_impl.lock();
                     FX_CHECK(impl) << "Missing Flatland instance in SendPresentTokens().";
-                    impl->OnPresentProcessed(num_present_tokens, std::move(presentation_infos));
+                    impl->OnPresentProcessed(num_presents_returned, std::move(presentation_infos));
                   });
 }
 

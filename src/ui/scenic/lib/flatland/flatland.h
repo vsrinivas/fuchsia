@@ -134,8 +134,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   void SetDebugName(std::string name) override;
 
   // Called just before the FIDL client receives the event of the same name, indicating that this
-  // Flatland instance should allow an additional |num_present_tokens| calls to Present().
-  void OnPresentProcessed(uint32_t num_present_tokens, FuturePresentationInfos presentation_infos);
+  // Flatland instance should allow an additional |num_presents_returned| calls to Present().
+  void OnPresentProcessed(uint32_t num_presents_returned,
+                          FuturePresentationInfos presentation_infos);
 
   // Called when this Flatland instance should send the OnFramePresented() event to the FIDL
   // client.
@@ -222,7 +223,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
 
   // The number of Present() calls remaining before the client runs out. Incremented when
   // OnPresentProcessed() is called, decremented by 1 for each Present() call.
-  uint32_t present_tokens_remaining_ = 1;
+  uint32_t num_presents_remaining_ = 1;
 
   // Must be managed by a shared_ptr because the implementation uses weak_from_this().
   std::shared_ptr<escher::FenceQueue> fence_queue_ = std::make_shared<escher::FenceQueue>();

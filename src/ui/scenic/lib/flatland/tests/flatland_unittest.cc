@@ -87,7 +87,7 @@ struct PresentArgs {
   bool skip_session_update_and_release_fences = false;
 
   // The number of present tokens that should be returned to the client.
-  uint32_t present_tokens_returned = 1;
+  uint32_t num_presents_returned = 1;
 
   // The future presentation infos that should be returned to the client.
   flatland::Flatland::FuturePresentationInfos presentation_infos = {};
@@ -139,7 +139,7 @@ struct GlobalIdPair {
       if (!args.skip_session_update_and_release_fences) {                                    \
         ApplySessionUpdatesAndSignalFences();                                                \
       }                                                                                      \
-      flatland->OnPresentProcessed(args.present_tokens_returned,                             \
+      flatland->OnPresentProcessed(args.num_presents_returned,                               \
                                    std::move(args.presentation_infos));                      \
     } else {                                                                                 \
       RunLoopUntilIdle();                                                                    \
@@ -502,7 +502,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
   void RegisterPresentError(fuchsia::ui::scenic::internal::FlatlandPtr& flatland_channel,
                             scheduling::SessionId session_id) {
     flatland_channel.events().OnPresentProcessed =
-        [this, session_id](Error error, uint32_t present_tokens,
+        [this, session_id](Error error, uint32_t num_presents_returned,
                            flatland::Flatland::FuturePresentationInfos future_presentation_infos) {
           flatland_errors_[session_id] = error;
         };
@@ -546,7 +546,7 @@ TEST_F(FlatlandTest, PresentErrorNoTokens) {
   // Present, but return no tokens so the client has none left.
   {
     PresentArgs args;
-    args.present_tokens_returned = 0;
+    args.num_presents_returned = 0;
     PRESENT_WITH_ARGS(flatland, std::move(args), true);
   }
 
@@ -567,7 +567,7 @@ TEST_F(FlatlandTest, MultiplePresentTokensAvailable) {
   // Present, but return no tokens so the client has only one left.
   {
     PresentArgs args;
-    args.present_tokens_returned = 0;
+    args.num_presents_returned = 0;
     PRESENT_WITH_ARGS(flatland, std::move(args), true);
   }
 
@@ -575,7 +575,7 @@ TEST_F(FlatlandTest, MultiplePresentTokensAvailable) {
   // the previous PRESENT_WITH_ARGS returned none.
   {
     PresentArgs args;
-    args.present_tokens_returned = 0;
+    args.num_presents_returned = 0;
     PRESENT_WITH_ARGS(flatland, std::move(args), true);
   }
 

@@ -101,8 +101,8 @@ class FlatlandManager : public scheduling::SessionUpdater {
     std::shared_ptr<scenic_impl::display::Display> display;
   };
 
-  // Sends |num_present_tokens| to a particular Flatland |instance|.
-  void SendPresentTokens(FlatlandInstance* instance, uint32_t num_present_tokens,
+  // Sends |num_presents_returned| to a particular Flatland |instance|.
+  void SendPresentTokens(FlatlandInstance* instance, uint32_t num_presents_returned,
                          Flatland::FuturePresentationInfos presentation_infos);
 
   // Sends the OnFramePresented event to a particular Flatland |instance|.
@@ -128,7 +128,7 @@ class FlatlandManager : public scheduling::SessionUpdater {
   std::shared_ptr<UberStructSystem> uber_struct_system_;
   std::shared_ptr<LinkSystem> link_system_;
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers_;
-  std::unordered_map<scheduling::SessionId, /*num_present_tokens*/ uint64_t>
+  std::unordered_map<scheduling::SessionId, /*num_presents_returned*/ uint64_t>
       flatland_instances_updated_;
 
   // FlatlandInstances are not moveable (because fidl::Binding is not movable), therefore are reffed
