@@ -200,6 +200,18 @@ format and to generate test coverage reports. In addition, `covargs` converts
 the data to protobuf format which is used as an interchange format with various
 dashboards.
 
+## Roadmap
+
+Ongoing work:
+
+*   Performance and reliability improvements to the coverage runtime.
+*   Performance and reliability improvements to the coverage processing
+    pipeline.
+
+Areas for future work:
+
+*   Kernel support for source code coverage from ZBI tests.
+
 [coverage-dashboard]: https://analysis.chromium.org/p/fuchsia/coverage
 [cfv2]: /docs/concepts/components/v2/
 [covargs]: /tools/debug/covargs/
