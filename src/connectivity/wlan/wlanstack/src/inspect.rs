@@ -13,10 +13,13 @@ use {
         nodes::BoundedListNode,
     },
     futures::FutureExt,
-    log::warn,
+    log::error,
     parking_lot::Mutex,
     paste, rand,
-    std::{collections::HashMap, sync::Arc},
+    std::{
+        collections::{HashMap, HashSet},
+        sync::Arc,
+    },
     wlan_common::hasher::WlanHasher,
     wlan_inspect::{IfaceTreeHolder, IfacesTrees},
 };
@@ -50,6 +53,9 @@ pub struct WlanstackTree {
     /// "active_iface" property, what's the currently active iface. This assumes only one iface
     /// is active at a time
     latest_active_client_iface: Mutex<Option<UintProperty>>,
+
+    // Keep track of removed ifaces. Not an Inspect node/property.
+    removed_ifaces: Arc<Mutex<HashSet<u16>>>,
 }
 
 impl WlanstackTree {
@@ -74,15 +80,18 @@ impl WlanstackTree {
             device_events: Mutex::new(device_events),
             ifaces_trees: Mutex::new(ifaces_trees),
             latest_active_client_iface: Mutex::new(None),
+            removed_ifaces: Arc::new(Mutex::new(HashSet::new())),
         }
     }
 
     pub fn create_iface_child(&self, iface_id: u16) -> Arc<IfaceTreeHolder> {
+        self.removed_ifaces.lock().remove(&iface_id);
         self.ifaces_trees.lock().create_iface_child(self.inspector.root(), iface_id)
     }
 
     pub fn notify_iface_removed(&self, iface_id: u16) {
-        self.ifaces_trees.lock().notify_iface_removed(iface_id)
+        self.ifaces_trees.lock().notify_iface_removed(iface_id);
+        self.removed_ifaces.lock().insert(iface_id);
     }
 
     pub fn mark_active_client_iface(
@@ -102,11 +111,18 @@ impl WlanstackTree {
         //       However, as some children of this node are queried by another component, we can't
         //       just change its name.
         // TODO(fxbug.dev/65093) - Rename this node by following migration steps.
+        let removed_ifaces = Arc::clone(&self.removed_ifaces);
         let histograms = iface_tree_holder.node.create_lazy_child("histograms", move || {
             {
                 let iface_map = iface_map.clone();
+                let removed_ifaces = Arc::clone(&removed_ifaces);
                 async move {
                     let inspector = Inspector::new();
+                    // Skip retrieving histograms for this iface if it's already removed because
+                    // the call would not succeed anyway.
+                    if removed_ifaces.lock().contains(&iface_id) {
+                        return Ok(inspector);
+                    }
                     match get_iface_stats(&iface_map, iface_id).await {
                         Ok(stats) => {
                             if let Some(mlme_stats) = &stats.lock().mlme_stats {
@@ -143,7 +159,7 @@ impl WlanstackTree {
                                 }
                             }
                         }
-                        Err(e) => warn!(
+                        Err(e) => error!(
                             "iface {} - unable to retrieve signal histograms for Inspect: {}",
                             iface_id, e
                         ),
