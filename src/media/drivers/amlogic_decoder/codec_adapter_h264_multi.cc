@@ -303,12 +303,18 @@ void CodecAdapterH264Multi::CoreCodecQueueInputEndOfStream() {
 // TODO(dustingreen): See comment on CoreCodecStartStream() re. not deleting
 // creating as much stuff for each stream.
 void CodecAdapterH264Multi::CoreCodecStopStream() {
-  std::list<CodecInputItem> leftover_input_items = CoreCodecStopStreamInternal();
-  for (auto& input_item : leftover_input_items) {
-    if (input_item.is_packet()) {
-      events_->onCoreCodecInputPacketDone(std::move(input_item.packet()));
+  std::unique_lock<std::mutex> lock(lock_);
+  std::condition_variable condition;
+  async::PostTask(core_loop_.dispatcher(), [this, &condition] {
+    std::list<CodecInputItem> leftover_input_items = CoreCodecStopStreamInternal();
+    for (auto& input_item : leftover_input_items) {
+      if (input_item.is_packet()) {
+        events_->onCoreCodecInputPacketDone(std::move(input_item.packet()));
+      }
     }
-  }
+    condition.notify_all();
+  });
+  condition.wait(lock);
 }
 
 // TODO(dustingreen): See comment on CoreCodecStartStream() re. not deleting
