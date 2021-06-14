@@ -1327,3 +1327,16 @@
   reviewers: ['computerdruid@google.com', 'pascallouis@google.com']
   submitted: '2021-05-19'
   reviewed: '2021-06-10'
+
+- name: 'RFC-0104'
+  title: 'Relative Component URLs'
+  short_description: 'Relative component URLs that resolve to their parent components package.'
+  authors: ['dgilhooley@google.com']
+  file: '0104_relative_urls.md'
+  area: ['Component Framework']
+  issue: ['74628']
+  gerrit_change_id: ['532808']
+  status: 'Accepted'
+  reviewers: ['ampearce@google.com', 'shayba@google.com', 'surajmalhotra@google.com', 'geb@google.com', 'jamesr@google.com']
+  submitted: '2021-05-20'
+  reviewed: '2021-06-14'

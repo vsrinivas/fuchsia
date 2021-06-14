@@ -217,3 +217,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0102_forbid_no_write_with_resizable.md
 - title: "RFC-0103: Software Delivery RFC Criteria"
   path: /docs/contribute/governance/rfcs/0103_software_delivery_rfc_criteria.md
+- title: "RFC-0104: Relative URLs"
+  path: /docs/contribute/governance/rfcs/0104_relative_urls.md
