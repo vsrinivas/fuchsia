@@ -488,6 +488,35 @@ TEST_F(PointerinjectorRegistryTest, ChannelDying_ShouldNotCrash) {
   RunLoopUntilIdle();
 }
 
+TEST_F(PointerinjectorRegistryTest, ContextAndTargetRelationshipBroken_ShouldCloseChannel) {
+  const auto [parent, child] = SetupSceneWithParentAndChildViews();
+
+  fuchsia::ui::pointerinjector::DevicePtr injector;
+  bool error_callback_fired = false;
+  {
+    bool register_callback_fired = false;
+    injector.set_error_handler(
+        [&error_callback_fired](zx_status_t status) { error_callback_fired = true; });
+    fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent.view_ref, child.view_ref);
+    registry_.Register(std::move(config), injector.NewRequest(),
+                       [&register_callback_fired] { register_callback_fired = true; });
+    RunLoopUntilIdle();
+    EXPECT_TRUE(register_callback_fired);
+    EXPECT_FALSE(error_callback_fired);
+  }
+
+  // Insert a new snapshot where the parent-child relationship is flipped. Observe channel closing.
+  const zx_koid_t parent_koid = utils::ExtractKoid(parent.view_ref);
+  const zx_koid_t child_koid = utils::ExtractKoid(child.view_ref);
+  auto snapshot = std::make_shared<view_tree::Snapshot>();
+  snapshot->root = child_koid;
+  snapshot->view_tree[child_koid] = {.children = {parent_koid}};
+  snapshot->view_tree[parent_koid] = {.parent = child_koid};
+  registry_.OnNewViewTreeSnapshot(snapshot);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(error_callback_fired);
+}
+
 TEST_F(PointerinjectorRegistryTest, MultipleRegistrations_ShouldSucceed) {
   const auto [parent, child] = SetupSceneWithParentAndChildViews();
 

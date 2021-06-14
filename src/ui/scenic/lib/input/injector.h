@@ -49,8 +49,6 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
  public:
   Injector(inspect::Node inspect_node, InjectorSettings settings, Viewport viewport,
            fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
-           fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
-               is_descendant_and_connected,
            fit::function<void(const InternalPointerEvent&, StreamId stream_id)> inject,
            fit::function<void()> on_channel_closed);
 
@@ -61,6 +59,12 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
   // |fuchsia::ui::pointerinjector::Device|
   void Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
               InjectCallback callback) override;
+
+  // Closes the fidl channel. This triggers the destruction of the Injector object through the
+  // error handler set in PointerinjectorRegistry.
+  // NOTE: No further method calls or member accesses should be made after CloseChannel(), since
+  // they might be made on a destroyed object.
+  void CloseChannel(zx_status_t epitaph);
 
  private:
   // Return value is either both valid, {ZX_OK, valid stream id} or both
@@ -77,12 +81,6 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
   // Injects a CANCEL event for each ongoing stream and stops tracking them.
   void CancelOngoingStreams();
 
-  // Closes the fidl channel. This triggers the destruction of the Injector object through the
-  // error handler set in InputSystem.
-  // NOTE: No further method calls or member accesses should be made after CloseChannel(), since
-  // they might be made on a destroyed object.
-  void CloseChannel(zx_status_t epitaph);
-
   InjectorInspector inspector_;
 
   fidl::Binding<fuchsia::ui::pointerinjector::Device> binding_;
@@ -98,9 +96,6 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
   // - REMOVE/CANCEL: remove stream from set.
   // Hence, each stream here matches ADD - CHANGE*.
   std::unordered_map<uint32_t, StreamId> ongoing_streams_;
-
-  fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
-      is_descendant_and_connected_;
 
   // Used to inject the event into InputSystem for dispatch to clients.
   const fit::function<void(const InternalPointerEvent&, StreamId)> inject_;

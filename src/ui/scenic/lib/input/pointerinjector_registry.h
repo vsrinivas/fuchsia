@@ -32,11 +32,26 @@ class PointerinjectorRegistry : public fuchsia::ui::pointerinjector::Registry {
                 fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> injector,
                 RegisterCallback callback) override;
 
-  void OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapshot> snapshot) {
-    view_tree_snapshot_ = std::move(snapshot);
-  }
+  // Updates the stored |view_tree_snapshot_| and checks that all injector still have valid contexts
+  // and targets. If they do not, the injectors are destroyed and their channels closed.
+  void OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapshot> snapshot);
 
  private:
+  struct InjectorStruct {
+    const zx_koid_t context;
+    const zx_koid_t target;
+    Injector injector;
+    InjectorStruct(zx_koid_t context, zx_koid_t target, inspect::Node inspect_node,
+                   InjectorSettings settings, Viewport viewport,
+                   fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
+                   fit::function<void(const InternalPointerEvent&, StreamId stream_id)> inject,
+                   fit::function<void()> on_channel_closed)
+        : context(context),
+          target(target),
+          injector(std::move(inspect_node), settings, viewport, std::move(device),
+                   std::move(inject), std::move(on_channel_closed)) {}
+  };
+
   using InjectorType = std::pair<fuchsia::ui::pointerinjector::DeviceType,
                                  fuchsia::ui::pointerinjector::DispatchPolicy>;
   struct InjectorTypeHash {
@@ -47,7 +62,7 @@ class PointerinjectorRegistry : public fuchsia::ui::pointerinjector::Registry {
 
   using InjectorId = uint64_t;
   InjectorId last_injector_id_ = 0;
-  std::unordered_map<InjectorId, Injector> injectors_;
+  std::unordered_map<InjectorId, InjectorStruct> injectors_;
 
   fidl::BindingSet<fuchsia::ui::pointerinjector::Registry> injector_registry_;
 
