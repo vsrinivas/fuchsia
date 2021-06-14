@@ -76,7 +76,6 @@ fuchsia_component("pkg-cache-integration-test") {
 }
 
 isolated_devmgr_v2_component("isolated-devmgr-component") {
-  package_name = "pkg-cache-integration-tests"
 }
 
 fuchsia_component("test-root") {

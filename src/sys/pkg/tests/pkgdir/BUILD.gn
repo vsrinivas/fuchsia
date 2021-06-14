@@ -39,7 +39,6 @@ fuchsia_component("pkgdir-integration-test") {
 }
 
 isolated_devmgr_v2_component("isolated-devmgr") {
-  package_name = "pkgdir-integration-tests"
 }
 
 fuchsia_component("test-root") {

@@ -59,7 +59,6 @@ fuchsia_component("unit-tests-driver") {
 }
 
 isolated_devmgr_v2_component("isolated-devmgr-component") {
-  package_name = "blobfs-ramdisk-unit-tests"
 }
 
 fuchsia_test_package("unit-tests-package") {

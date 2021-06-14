@@ -78,7 +78,6 @@ fuchsia_package("netemul-sandbox") {
 }
 
 isolated_devmgr_v2_component("netemul-devmgr") {
-  package_name = "netemul-sandbox-v2"
   deps = [
     ":network-drivers",
     "//src/devices/tests/sysdev:renamed_sys_binary",
@@ -104,7 +103,6 @@ group("network-drivers") {
 }
 
 isolated_devmgr_v2_component("netemul-devmgr-test") {
-  package_name = "netemul-v2-tests"
   deps = [
     ":network-drivers",
     "//src/devices/tests/sysdev:renamed_sys_binary",

@@ -4,6 +4,12 @@
 
 import("//build/components.gni")
 
+isolated_devmgr_v2_manifest_path = rebase_path("meta/isolated-devmgr.cml")
+isolated_devmgr_v2_deps = rebase_path([
+                                        ":driver-manager-support",
+                                        ":driver-manager-test",
+                                      ])
+
 # Produces a (testonly) component with an isolated driver manager to launch drivers. The component
 # name will always be `isolated-devmgr`.
 #
@@ -11,7 +17,6 @@ import("//build/components.gni")
 #
 # ```
 # isolated_devmgr_v2_component("my-component") {
-#   package_name = "my-package"
 # }
 #
 # fuchsia_package("my-package") {
@@ -39,106 +44,18 @@ import("//build/components.gni")
 # "my_driver.so".
 #
 # Parameters
-#
-#   package_name (required)
-#     The name of the package in which this component will run.
-#     Type: string
-#
 #   deps
 #   visibility
 template("isolated_devmgr_v2_component") {
-  assert(defined(invoker.package_name),
-         "the package_name where the IsolateDevMgr will run must be defined")
-  package_name = invoker.package_name
-  manifest_path = "${target_gen_dir}/meta/${package_name}-isolated-devmgr.cml"
-  generated_file(manifest_path) {
-    contents = {
-      include = [
-        "sdk/lib/diagnostics/inspect/client.shard.cml",
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-      ]
-      children = [
-        {
-          name = "driver-manager-test"
-          url = "fuchsia-pkg://fuchsia.com/${package_name}#meta/driver-manager-test.cm"
-        },
-        {
-          name = "driver-manager-support"
-          url = "fuchsia-pkg://fuchsia.com/${package_name}#meta/driver-manager-support.cm"
-        },
-      ]
-      offer = [
-        {
-          protocol = [ "fuchsia.logger.LogSink" ]
-          from = "parent"
-          to = [
-            "#driver-manager-support",
-            "#driver-manager-test",
-          ]
-        },
-        {
-          protocol = [
-            "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher",
-          ]
-          from = "parent"
-          to = [ "#driver-manager-test" ]
-        },
-        {
-          protocol = [
-            "fuchsia.boot.Arguments",
-            "fuchsia.kernel.RootJob",
-            "fuchsia.boot.Items",
-            "fuchsia.power.manager.DriverManagerRegistration",
-          ]
-          from = "#driver-manager-support"
-          to = [ "#driver-manager-test" ]
-        },
-        {
-          directory = "pkgfs-delayed"
-          from = "#driver-manager-support"
-          to = [ "#driver-manager-test" ]
-        },
-        {
-          directory = "system-delayed"
-          from = "#driver-manager-support"
-          to = [ "#driver-manager-test" ]
-        },
-      ]
-      expose = [
-        {
-          directory = "dev"
-          from = "#driver-manager-test"
-        },
-        {
-          protocol = [
-            "fuchsia.hardware.pci.DeviceWatcher",
-            "fuchsia.hardware.usb.DeviceWatcher",
-          ]
-          from = "#driver-manager-test"
-        },
-      ]
-    }
-    outputs = [ "$manifest_path" ]
-    output_conversion = "json"
-    testonly = true
-    visibility = [ ":*" ]
-  }
-
   fuchsia_component(target_name) {
     forward_variables_from(invoker, [ "visibility" ])
     testonly = true
     component_name = "isolated-devmgr"
-    manifest = manifest_path
-    deps = []
+    manifest = isolated_devmgr_v2_manifest_path
+    deps = isolated_devmgr_v2_deps
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
-    deps += [
-      ":$manifest_path",
-      "//src/lib/isolated_devmgr/v2_component:driver-manager-support",
-      "//src/lib/isolated_devmgr/v2_component:driver-manager-test",
-    ]
   }
 }
 

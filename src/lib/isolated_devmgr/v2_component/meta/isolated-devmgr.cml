@@ -1,0 +1,70 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+    children: [
+        {
+            name: "driver-manager-test",
+            url: "#meta/driver-manager-test.cm",
+        },
+        {
+            name: "driver-manager-support",
+            url: "#meta/driver-manager-support.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#driver-manager-support",
+                "#driver-manager-test",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: [ "#driver-manager-test" ],
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.power.manager.DriverManagerRegistration",
+            ],
+            from: "#driver-manager-support",
+            to: [ "#driver-manager-test" ],
+        },
+        {
+            directory: "pkgfs-delayed",
+            from: "#driver-manager-support",
+            to: [ "#driver-manager-test" ],
+        },
+        {
+            directory: "system-delayed",
+            from: "#driver-manager-support",
+            to: [ "#driver-manager-test" ],
+        },
+    ],
+    expose: [
+        {
+            directory: "dev",
+            from: "#driver-manager-test",
+        },
+        {
+            protocol: [
+                "fuchsia.hardware.pci.DeviceWatcher",
+                "fuchsia.hardware.usb.DeviceWatcher",
+            ],
+            from: "#driver-manager-test",
+        },
+    ],
+}

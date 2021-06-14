@@ -59,7 +59,6 @@ fuchsia_component("device-watcher-realm") {
 }
 
 isolated_devmgr_v2_component("devmgr") {
-  package_name = "device-watcher-test"
   deps = [ ":test-driver" ]
 }
 

@@ -722,7 +722,6 @@ resource("ca.cert-resource") {
 }
 
 isolated_devmgr_v2_component("isolated-devmgr-component") {
-  package_name = "pkg-resolver-integration-tests"
   deps = [
     "//src/devices/bus/drivers/platform",
     "//src/storage/testing:storage_drivers",

@@ -19,7 +19,6 @@ group("storage_drivers") {
 }
 
 isolated_devmgr_v2_component("isolated-devmgr-component") {
-  package_name = "storage-isolated-devmgr"
 }
 
 fuchsia_package("storage-isolated-devmgr") {
