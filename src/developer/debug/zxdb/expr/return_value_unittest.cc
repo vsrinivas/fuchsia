@@ -89,6 +89,40 @@ TEST_F(ReturnValue, BaseTypeX64) {
   EXPECT_EQ(static_cast<float>(kDoubleValue), result.value().GetAs<float>());
 }
 
+TEST_F(ReturnValue, BaseTypeARM64) {
+  auto context = fxl::MakeRefCounted<MockEvalContext>();
+  context->set_abi(std::make_shared<AbiArm64>());
+
+  // Integer return value.
+  constexpr uint64_t kIntValue = 42;
+  context->data_provider()->AddRegisterValue(RegisterID::kARMv8_x0, true, kIntValue);
+
+  // Returning an 8-byte integer.
+  auto int_fn = MakeFunctionReturningBaseType(BaseType::kBaseTypeSigned, 8);
+  ErrOrValue result = GetReturnValueSync(context, int_fn.get());
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ(kIntValue, result.value().GetAs<uint64_t>());
+
+  // Returning a 1-byte bool.
+  context->data_provider()->AddRegisterValue(RegisterID::kARMv8_x0, true, 1);
+  auto bool_fn = MakeFunctionReturningBaseType(BaseType::kBaseTypeBoolean, 1);
+  result = GetReturnValueSync(context, bool_fn.get());
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ(1u, result.value().GetAs<uint8_t>());
+
+  // Provide a floating-point return register value.
+  constexpr double kDoubleValue = 3.14;
+  std::vector<uint8_t> float_data(sizeof(kDoubleValue));
+  memcpy(float_data.data(), &kDoubleValue, sizeof(kDoubleValue));
+  context->data_provider()->AddRegisterValue(RegisterID::kARMv8_d0, false, float_data);
+
+  // Returning an 8-byte double.
+  auto double_fn = MakeFunctionReturningBaseType(BaseType::kBaseTypeFloat, 8);
+  result = GetReturnValueSync(context, double_fn.get());
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ(kDoubleValue, result.value().GetAs<double>());
+}
+
 TEST_F(ReturnValue, Pointer) {
   auto context = fxl::MakeRefCounted<MockEvalContext>();
 

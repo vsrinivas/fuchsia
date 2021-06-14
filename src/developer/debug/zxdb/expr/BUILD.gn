@@ -7,6 +7,7 @@ import("//build/fuzzing/fuzzer.gni")
 static_library("expr") {
   sources = [
     "abi.h",
+    "abi_arm64.cc",
     "abi_arm64.h",
     "abi_null.h",
     "abi_x64.cc",
