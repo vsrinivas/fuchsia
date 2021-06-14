@@ -188,8 +188,8 @@ source_set("font_provider_client") {
 
 expect_includes("font_provider_client_includes") {
   includes = [
-    "//client.shard.cmx",
-    "//client.shard.cml",
+    "client.shard.cmx",
+    "client.shard.cml",
   ]
 }
 ```
