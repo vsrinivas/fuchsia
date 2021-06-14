@@ -570,6 +570,8 @@ bool runtime_test() {
   END_TEST;
 }
 
+// TODO(fxbug.dev/78695): Test is disabled. Remove annotation once it's enabled.
+[[maybe_unused]]
 bool migrate_stress_test() {
   BEGIN_TEST;
 
@@ -754,7 +756,9 @@ UNITTEST("thread_conflicting_soft_and_hard_affinity", thread_conflicting_soft_an
 UNITTEST("set_migrate_fn_test", set_migrate_fn_test)
 UNITTEST("set_migrate_ready_threads_test", set_migrate_ready_threads_test)
 UNITTEST("migrate_unpinned_threads_test", migrate_unpinned_threads_test)
-UNITTEST("migrate_stress_test", migrate_stress_test)
+// TODO(fxbug.dev/78695): This test sometimes hangs on NUC. Deflake and
+// re-enable.
+// UNITTEST("migrate_stress_test", migrate_stress_test)
 UNITTEST("runtime_test", runtime_test)
 UNITTEST("backtrace_test", backtrace_test)
 UNITTEST("scoped_allocation_disabled_test", scoped_allocation_disabled_test)
