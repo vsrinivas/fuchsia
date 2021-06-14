@@ -19,7 +19,6 @@ fidl("fuchsia.ui.gfx") {
     "commands.fidl",
     "display_info.fidl",
     "events.fidl",
-    "hit.fidl",
     "nodes.fidl",
     "pose_buffer_provider.fidl",
     "renderer.fidl",
