@@ -259,6 +259,60 @@ dynamically reported as properties of codecs using protocols such as Intel HDA
 or the USB Audio specifications, or reported by down stream devices using
 mechanisms such as EDID when using HDMI or DisplayPort interconnects.
 
+## Determining turn on delay
+
+The `turn_on_delay` of an audio stream is defined as the amount of time it may
+take the audio samples on the ring buffer to actually start playing on the
+speakers after a `Start` command has been issued, or audio from the microphone
+to start getting recorded into the ring buffer also after the `Start`
+command. For instance, if we have an external codec connected to the system and
+we have turned it off to save power, then after a `Start` command is issued, the
+driver providing the ring buffer will reply with a `start_time` indicating when
+the position on the ring buffer started moving and audio samples started to be
+sent to the external codec. However, independent of the `external_delay` (see
+`Determining external latency` above), the external codec may still be powering
+up from a lower power mode. The `turn_on_delay`, specified in the
+`RingBufferProperties` table, is the driver's best upper bound estimation of the
+amount of time it takes to get the external codec to actually output the audio
+samples. The delay may also be due to other reasons, for instance, the codec's
+built in ramp up delay to avoid glitches, or if the driver abstracts Bluetooth
+communications the delay getting the remote device to start playing the audio
+samples. Since `turn_on_delay` is an upper limit estimation, audio may start
+playing or being-captured before `turn_on_delay` has passed, this is why this
+delay must be taken into account if not getting the initial audio samples played
+or captured is not acceptable.
+
+`external_delay` represents an amount of time the audio samples get delayed
+getting to the speakers or from microphones.  `turn_on_delay` does not delay the
+audio samples and it does not indicate any buffering, but rather indicates an
+amount of time during which audio samples may not actually be played/recorded.
+`turn_on_delay` does not affect the calculation of the presentation time, but it
+does affect if presentation is happening at all.  For playback, we can visualize
+these delays for getting audio samples into a speaker as:
+
+                       |<--- external delay --->|
+                 |S|--|T|----------------------|P|----|O|
+                       |<------- turn on delay ------->|
+
+Where `S` indicates the time when `Start` was issued, `T` indicates the time
+when the position in the ring buffer started to move i.e. `start_time` as
+returned from the `Start` command. `P` indicates the presentation time in the
+speaker, and `O` indicates the time the amplifier completed turning on and audio
+can be heard. Since `O` is past the `P`, `turn_on_delay` here affected actual
+presentation on the speaker.
+
+As time passes, we can visualize the current position on the ring buffer `C`
+below advancing and the samples now being presented in the speaker at time `P`
+past the time `O` when the amplifier turned on.
+
+                         |<--- external delay --->|
+       |S|--|T|---------|C|-----------------|O|--|P|
+             |<------- turn on delay ------->|
+
+                                                |<--- external delay --->|
+       |S|--|T|-----------------------------|O|-|C|---------------------|P|
+             |<------- turn on delay ------->|
+
 ## Hardware gain control
 
 ### Hardware gain control capability reporting
