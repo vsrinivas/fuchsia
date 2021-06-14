@@ -334,6 +334,12 @@ void DebuggedThread::SendExceptionNotification(debug_ipc::NotifyException* excep
 
   // TODO(brettw) suspend other threads in the process and other debugged processes as desired.
 
+  // The debug agent is able to automatically retrieve memory blocks when a breakpoint is reached
+  // based on a list of instructions.
+  // Calls the automation handler which computes the memory blocks and adds them to the exception.
+  automation_handler_.OnException(exception, regs, process_->process_handle(),
+                                  debug_agent_->breakpoints());
+
   LogExceptionNotification(FROM_HERE, this, *exception);
   // Send notification.
   debug_ipc::MessageWriter writer;

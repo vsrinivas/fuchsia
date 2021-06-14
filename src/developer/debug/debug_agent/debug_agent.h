@@ -41,6 +41,7 @@ class DebugAgent : public RemoteAPI,
   fxl::WeakPtr<DebugAgent> GetWeakPtr();
 
   SystemInterface& system_interface() { return *system_interface_; }
+  const std::map<uint32_t, Breakpoint>& breakpoints() { return breakpoints_; }
 
   // Connects the debug agent to a stream buffer.
   // The buffer can be disconnected and the debug agent will remain intact until the moment a new

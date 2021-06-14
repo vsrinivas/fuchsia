@@ -18,6 +18,8 @@ static_library("lib") {
     "align.h",
     "arch.cc",
     "arch.h",
+    "automation_handler.cc",
+    "automation_handler.h",
     "automation_instruction_executor.cc",
     "automation_instruction_executor.h",
     "binary_launcher.h",

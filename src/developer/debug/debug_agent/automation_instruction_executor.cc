@@ -145,7 +145,9 @@ uint64_t AutomationInstructionExecutor::EvalOperand(const debug_ipc::AutomationO
     case debug_ipc::AutomationOperandKind::kIndirectUInt64Loop:
       return 0;
     case debug_ipc::AutomationOperandKind::kStoredValue:
-      return stored_values_.at(operand.slot_offset());
+      if (stored_values_.find(operand.slot_offset()) != stored_values_.end())
+        return stored_values_.at(operand.slot_offset());
+      return 0;
   }
 }
 
