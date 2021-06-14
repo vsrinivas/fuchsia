@@ -22,7 +22,7 @@ use crate::service::message;
 
 use ::futures::FutureExt;
 use fuchsia_async as fasync;
-use futures::stream::{FuturesOrdered, StreamFuture};
+use futures::stream::{FuturesUnordered, StreamFuture};
 use futures::StreamExt;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -38,10 +38,13 @@ pub(crate) struct Manager {
     /// to retrieve the [handler](source::Handler) for job updates (inserting, retrieving,
     /// completing) and source maintenance (cleaning up on exit).
     sources: HashMap<source::Id, source::Handler>,
-    /// A future representing the collection of sources given to this manager. The future produces
-    /// a tuple containing the [Job] and [source id](source::Id) of the stream to associate with it.
-    /// None will be passed as the [Job] if the [Job] stream has been reached for a given source.
-    job_futures: FuturesOrdered<StreamFuture<PinStream<JobStreamItem>>>,
+    /// A collection of sources given to this manager. Each source is associated with a stream of
+    /// requests. Each item produced by streaming this collection represents the next request from
+    /// some particular source. It will produce a tuple of the intended item and the rest of
+    /// the stream for the corresponding source. The intended item is another tuple that contains a
+    /// [source id](source::Id) and a [Job]. Once the stream has been closed, `None` will be passed
+    /// as the [Job] portion of the tuple.
+    job_futures: FuturesUnordered<StreamFuture<PinStream<JobStreamItem>>>,
     /// A [Id generator](source::IdGenerator) responsible for producing unique [Ids](source::Id) for
     /// the received sources.
     source_id_generator: source::IdGenerator,
@@ -78,7 +81,7 @@ impl Manager {
 
         let mut manager = Self {
             sources: HashMap::new(),
-            job_futures: FuturesOrdered::new(),
+            job_futures: FuturesUnordered::new(),
             source_id_generator: source::IdGenerator::new(),
             execution_completion_sender,
             message_hub_delegate: message_hub_delegate.clone(),
@@ -221,16 +224,20 @@ mod tests {
     use crate::service::test;
     use crate::tests::scaffold::workload::Workload;
 
+    use async_trait::async_trait;
+    use futures::channel::mpsc;
+    use futures::channel::oneshot::{self, Receiver, Sender};
     use futures::lock::Mutex;
+    use futures::StreamExt;
     use matches::assert_matches;
     use std::sync::Arc;
 
     #[fuchsia_async::run_until_stalled(test)]
-    async fn test_manager_job_processing() {
+    async fn test_manager_job_processing_multiple_jobs_one_source() {
         // Create delegate for communication between components.
         let message_hub_delegate = message::create_hub();
 
-        let results: Vec<i64> = (0..10).collect();
+        let results = 0..10;
 
         // Create a top-level receptor to receive job results from.
         let mut receptor = message_hub_delegate
@@ -248,23 +255,22 @@ mod tests {
             .expect("should create messenger")
             .0;
 
-        let mut job_futures = FuturesOrdered::new();
+        let (requests_tx, requests_rx) = mpsc::unbounded();
 
-        // Send each job as a separate source.
-        for result in &results {
-            let result = *result;
+        // Send multiple jobs in one source.
+        for result in results.clone() {
             let signature = receptor.get_signature();
-            job_futures.push(async move {
-                Ok(Job::new(job::work::Load::Independent(Workload::new(
+            requests_tx
+                .unbounded_send(Ok(Job::new(job::work::Load::Independent(Workload::new(
                     test::Payload::Integer(result),
                     signature,
-                ))))
-            });
+                )))))
+                .expect("Should be able to queue requests");
         }
 
         messenger
             .message(
-                Payload::Source(Arc::new(Mutex::new(Some(job_futures.boxed())))).into(),
+                Payload::Source(Arc::new(Mutex::new(Some(requests_rx.boxed())))).into(),
                 Audience::Messenger(manager_signature),
             )
             .send()
@@ -275,5 +281,92 @@ mod tests {
             assert_matches!(receptor.next_of::<test::Payload>().await.expect("should have payload").0,
                 test::Payload::Integer(value) if value == result);
         }
+    }
+
+    struct WaitingWorkload {
+        rx: Receiver<()>,
+        execute_tx: Sender<()>,
+    }
+
+    impl WaitingWorkload {
+        fn new(rx: Receiver<()>, tx: Sender<()>) -> Self {
+            Self { rx, execute_tx: tx }
+        }
+    }
+
+    // This implementation can be used to imitate a hanging get by delaying or never sending a
+    // message across its channel.
+    #[async_trait]
+    impl job::work::Sequential for WaitingWorkload {
+        async fn execute(self: Box<Self>, _: message::Messenger, _: job::data::StoreHandle) {
+            self.execute_tx.send(()).expect("Should be able to signal start of execution");
+            self.rx.await.ok();
+        }
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_manager_job_processing_multiple_sources() {
+        // Create delegate for communication between components.
+        let message_hub_delegate = message::create_hub();
+
+        let manager_signature = Manager::spawn(&message_hub_delegate).await;
+
+        // Create a messenger to send job sources to the manager.
+        let messenger = message_hub_delegate
+            .create(MessengerType::Unbound)
+            .await
+            .expect("should create messenger")
+            .0;
+
+        // Send each job as a separate source.
+
+        // The first one should hang (hence the _tx) and never complete, to mimic a hanging get.
+        let (_tx, rx) = oneshot::channel();
+        let (execute_tx, execute_rx) = oneshot::channel();
+        let (requests_tx, requests_rx) = mpsc::unbounded();
+        requests_tx
+            .unbounded_send(Ok(Job::new(job::work::Load::Sequential(
+                Box::new(WaitingWorkload::new(rx, execute_tx)),
+                job::Signature::new(1),
+            ))))
+            .expect("Should be able to send queue");
+        messenger
+            .message(
+                Payload::Source(Arc::new(Mutex::new(Some(requests_rx.boxed())))).into(),
+                Audience::Messenger(manager_signature),
+            )
+            .send()
+            .ack();
+
+        // Ensure the requests is in the hanging portion of execute.
+        execute_rx.await.expect("Should have started hung execution");
+
+        // Then send the second request as a new source.
+        let result = 1;
+        let mut receptor = message_hub_delegate
+            .create(MessengerType::Unbound)
+            .await
+            .expect("should create receptor")
+            .1;
+        let signature = receptor.get_signature();
+        let (requests_tx, requests_rx) = mpsc::unbounded();
+        requests_tx
+            .unbounded_send(Ok(Job::new(job::work::Load::Sequential(
+                Workload::new(test::Payload::Integer(result), signature),
+                job::Signature::new(1),
+            ))))
+            .expect("Should be able to send queue");
+
+        messenger
+            .message(
+                Payload::Source(Arc::new(Mutex::new(Some(requests_rx.boxed())))).into(),
+                Audience::Messenger(manager_signature),
+            )
+            .send()
+            .ack();
+
+        // Confirm received value matches the value sent from workload.
+        assert_matches!(receptor.next_of::<test::Payload>().await.expect("should have payload").0,
+            test::Payload::Integer(value) if value == result);
     }
 }
