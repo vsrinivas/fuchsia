@@ -63,7 +63,7 @@ function main {
       --no-persist)
         ;;
       --persist)
-        persist="-persist"
+        persist="-p"
         ;;
       *)
         fx-error "Unrecognized option: $1"
@@ -91,10 +91,11 @@ function main {
 
   config_url="http://${addr}:${port}/config.json"
 
-  fx-command-run shell amberctl add_src \
+  fx-command-run shell pkgctl repo add url\
     -n "${source_name}" \
-    -f "${config_url}" \
-    "${persist}"
+    -f 1 \
+    "${persist}" \
+    "${config_url}"
   err=$?
 
   if [[ $err -ne 0 ]]; then
@@ -106,6 +107,28 @@ function main {
     fi
     return "$err"
   fi
+
+  rule="'{
+    \"version\": \"1\",
+    \"content\": [
+      {
+        \"host_match\": \"fuchsia.com\",
+        \"host_replacement\": \"${source_name}\",
+        \"path_prefix_match\": \"/\",
+        \"path_prefix_replacement\": \"/\"
+      }
+    ]
+  }'"
+
+  fx-command-run shell pkgctl rule replace json $rule
+  err=$?
+
+  if [[ $err -ne 0 ]]; then
+    fx-error "The repo has been set up, but there was an error setting the rewriting rule for ${source_name}: $rule"
+    fx-error "To remove the repo, run \"fx shell pkgctl repo rm fuchsia-pkg://${source_name}\"."
+    return $err
+  fi
+
 }
 
 main "$@"
