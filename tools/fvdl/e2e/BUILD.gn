@@ -26,6 +26,14 @@ go_library("sdk_lib") {
   ]
 }
 
+go_library("common_lib") {
+  sources = [
+    "common.go",
+    "common_test.go",
+  ]
+  deps = [ "//tools/fvdl/e2e/e2etest" ]
+}
+
 group("tests") {
   testonly = true
 
@@ -33,6 +41,7 @@ group("tests") {
   # Please fix the flakiness issue and then remove the condition below.
   if (!is_coverage) {
     deps = [
+      ":fvdl_common_test($host_toolchain)",
       ":fvdl_intree_test($host_toolchain)",
       ":fvdl_sdk_test($host_toolchain)",
     ]
@@ -145,5 +154,11 @@ if (is_linux) {
       ":copy_grpcwebproxy",
       ":copy_host_tools",
     ]
+  }
+
+  go_test("fvdl_common_test") {
+    output_name = "fvdl_common_test"
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
+    deps = [ ":common_lib" ]
   }
 }

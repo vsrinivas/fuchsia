@@ -5,6 +5,8 @@
 package e2e
 
 import (
+	"errors"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -91,6 +93,24 @@ func setUp(t *testing.T, intree bool) {
 	})
 }
 
+func launchEmuWithRetry(attempts int, cmd *exec.Cmd) error {
+	if err := cmd.Run(); err != nil {
+		var e *exec.ExitError
+		if errors.As(err, &e) {
+			// ExitCode == 1 means something went wrong with the launcher. Don't retry.
+			if e.ExitCode() == 1 {
+				return err
+			}
+		}
+		if attempts--; attempts > 0 {
+			log.Printf("Retry launching emulator... got err %s", err)
+			return launchEmuWithRetry(attempts, cmd)
+		}
+		return err
+	}
+	return nil
+}
+
 // runVDLWithArgs runs fvdl, if intree, use environment variables to set tools and image path.
 // if not intree, images will be downloaded from GCS.
 func runVDLWithArgs(t *testing.T, args []string, intree bool) string {
@@ -137,7 +157,7 @@ func runVDLWithArgs(t *testing.T, args []string, intree bool) string {
 		killEmu(t, intree, vdlOut)
 	})
 
-	if err := cmd.Run(); err != nil {
+	if err := launchEmuWithRetry(2, cmd); err != nil {
 		t.Fatal(err)
 	}
 	return vdlOut
