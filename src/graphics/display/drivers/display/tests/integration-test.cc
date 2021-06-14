@@ -722,6 +722,12 @@ TEST_F(IntegrationTest, ClampRgb) {
   }
   // close client and wait for virtcon to become active again
   primary_client.reset(nullptr);
+  // Apply a config for virtcon client to become active.
+  {
+    fbl::AutoLock lock(vc_client.mtx());
+    EXPECT_EQ(ZX_OK, vc_client.dc_->SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, vc_client.dc_->ApplyConfig().status());
+  }
   EXPECT_TRUE(
       RunLoopWithTimeoutOrUntil([this]() { return virtcon_client_connected(); }, zx::sec(1)));
   display()->SendVsync();
@@ -765,6 +771,12 @@ TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToVirtcon)
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  // Apply a config for client to become active.
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    EXPECT_EQ(ZX_OK, primary_client->dc_->SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, primary_client->dc_->ApplyConfig().status());
+  }
   EXPECT_TRUE(
       RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
 
@@ -816,6 +828,12 @@ TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToPrimary)
     auto primary_client2 = std::make_unique<TestFidlClient>(sysmem_.get());
     ASSERT_TRUE(primary_client2->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
     ASSERT_TRUE(primary_client2->Bind(dispatcher()));
+    // Apply a config for client to become active.
+    {
+      fbl::AutoLock lock(primary_client2->mtx());
+      EXPECT_EQ(ZX_OK, primary_client2->dc_->SetDisplayLayers(1, {}).status());
+      EXPECT_EQ(ZX_OK, primary_client2->dc_->ApplyConfig().status());
+    }
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
 
@@ -831,6 +849,62 @@ TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToPrimary)
         zx::sec(1)));
     EXPECT_EQ(0u, primary_client2->recent_vsync_images().size());
   }
+}
+
+TEST_F(IntegrationTest, EmptyConfigIsNotApplied) {
+  // Create and bind virtcon client.
+  TestFidlClient vc_client(sysmem_.get());
+  ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
+  {
+    fbl::AutoLock lock(vc_client.mtx());
+    EXPECT_EQ(ZX_OK, vc_client.dc_
+                         ->SetVirtconMode(static_cast<uint8_t>(
+                             fuchsia_hardware_display::wire::VirtconMode::kFallback))
+                         .status());
+  }
+  ASSERT_TRUE(vc_client.Bind(dispatcher()));
+  {
+    fbl::AutoLock lock(vc_client.mtx());
+    EXPECT_EQ(ZX_OK, vc_client.dc_->SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, vc_client.dc_->ApplyConfig().status());
+  }
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return virtcon_client_connected(); }, zx::sec(1)));
+
+  // Create and bind primary client.
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+
+  // Virtcon client should remain active until primary client has set a config.
+  auto vc_vsync_count = vc_client.vsync_count();
+  display()->SendVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = &vc_client, vc_vsync_count]() { return p->vsync_count() > vc_vsync_count; },
+      zx::sec(1)));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get()]() { return p->vsync_count() == 0; }, zx::sec(1)));
+
+  // Present an image from the primary client.
+  EXPECT_OK(primary_client->PresentImage());
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, id = primary_client->display_id()]() {
+        fbl::AutoLock lock(controller()->mtx());
+        auto info = display_info(id);
+        return info->vsync_layer_count == 1;
+      },
+      zx::sec(1)));
+
+  // Primary client should have become active after a config was set.
+  auto primary_vsync_count = primary_client->vsync_count();
+  display()->SendVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
+      },
+      zx::sec(1)));
 }
 
 }  // namespace display

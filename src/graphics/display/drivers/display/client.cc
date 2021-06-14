@@ -1204,7 +1204,10 @@ void Client::SetOwnership(bool is_owner) {
     zxlogf(ERROR, "Error writing remove message %d", status);
   }
 
-  ApplyConfig();
+  // Only apply the current config if the client has previously applied a config.
+  if (client_apply_count_) {
+    ApplyConfig();
+  }
 }
 
 void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
