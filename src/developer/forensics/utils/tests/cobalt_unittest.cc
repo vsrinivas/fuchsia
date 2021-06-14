@@ -37,10 +37,7 @@ using testing::UnorderedElementsAreArray;
 
 class CobaltTest : public UnitTestFixture {
  public:
-  CobaltTest()
-      : clock_(new timekeeper::TestClock()),
-        cobalt_(std::make_unique<Logger>(dispatcher(), services(),
-                                         std::unique_ptr<timekeeper::TestClock>(clock_))) {}
+  CobaltTest() : clock_(), cobalt_(std::make_unique<Logger>(dispatcher(), services(), &clock_)) {}
 
  protected:
   void LogOccurrence() {
@@ -55,8 +52,7 @@ class CobaltTest : public UnitTestFixture {
 
   const std::vector<Event> SentCobaltEvents() { return events_; }
 
-  // The lifetime of |clock_| is managed by |cobalt_|.
-  timekeeper::TestClock* clock_;
+  timekeeper::TestClock clock_;
   std::unique_ptr<Logger> cobalt_;
 
  private:
@@ -81,10 +77,10 @@ TEST_F(CobaltTest, Check_Timer) {
 
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
-  clock_->Set(kStartTime);
+  clock_.Set(kStartTime);
   const uint64_t timer_id = cobalt_->StartTimer();
 
-  clock_->Set(kEndTime);
+  clock_.Set(kEndTime);
   cobalt_->LogElapsedTime(SnapshotGenerationFlow::kSuccess, timer_id);
 
   RunLoopUntilIdle();

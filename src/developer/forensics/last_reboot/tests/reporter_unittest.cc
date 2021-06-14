@@ -29,6 +29,7 @@
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
 namespace last_reboot {
@@ -71,7 +72,7 @@ struct GracefulRebootWithCrashTestParam {
 template <typename TestParam>
 class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<TestParam> {
  public:
-  ReporterTest() : cobalt_(dispatcher(), services()) {}
+  ReporterTest() : cobalt_(dispatcher(), services(), &clock_) {}
 
   void TearDown() override { files::DeletePath(kHasReportedOnPath, /*recursive=*/false); }
 
@@ -110,6 +111,7 @@ class ReporterTest : public UnitTestFixture, public testing::WithParamInterface<
   std::unique_ptr<stubs::CrashReporterBase> crash_reporter_server_;
 
  private:
+  timekeeper::TestClock clock_;
   cobalt::Logger cobalt_;
   files::ScopedTempDir tmp_dir_;
   bool not_a_fdr_{true};

@@ -43,6 +43,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -76,7 +77,7 @@ class DatastoreTest : public UnitTestFixture {
 
   void SetUp() override {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services());
+    cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services(), &clock_);
 
     inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
     inspect_data_budget_ = std::make_unique<InspectDataBudget>(
@@ -191,6 +192,7 @@ class DatastoreTest : public UnitTestFixture {
 
  private:
   async::Executor executor_;
+  timekeeper::TestClock clock_;
   std::unique_ptr<cobalt::Logger> cobalt_;
 
  protected:

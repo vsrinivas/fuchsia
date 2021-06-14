@@ -138,12 +138,7 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 class DataProviderTest : public UnitTestFixture {
  public:
   void SetUp() override {
-    // |cobalt_| owns the test clock through a unique_ptr so we need to allocate |clock_| on the
-    // heap and then give |cobalt_| ownership of it. This allows us to control the time perceived by
-    // |cobalt_|.
-    clock_ = new timekeeper::TestClock();
-    cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services(),
-                                               std::unique_ptr<timekeeper::TestClock>(clock_));
+    cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services(), &clock_);
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
     inspect_node_manager_ = std::make_unique<InspectNodeManager>(&InspectRoot());
@@ -160,7 +155,7 @@ class DataProviderTest : public UnitTestFixture {
         PreviousBootFile::FromData(/*is_first_instance=*/true, "empty_build_version.txt"),
         inspect_data_budget_.get());
     data_provider_ = std::make_unique<DataProvider>(
-        dispatcher(), services(), clock_, /*is_first_instance=*/true, annotation_allowlist,
+        dispatcher(), services(), &clock_, /*is_first_instance=*/true, annotation_allowlist,
         attachment_allowlist, cobalt_.get(), datastore_.get(), inspect_data_budget_.get());
   }
 
@@ -185,7 +180,7 @@ class DataProviderTest : public UnitTestFixture {
 
   Snapshot GetSnapshot(std::optional<zx::channel> channel = std::nullopt,
                        zx::duration snapshot_flow_duration = kDefaultSnapshotFlowDuration) {
-    FX_CHECK(data_provider_ && clock_);
+    FX_CHECK(data_provider_);
 
     Snapshot snapshot;
 
@@ -193,14 +188,14 @@ class DataProviderTest : public UnitTestFixture {
     // independently of the loop while the call to end it happens in a task that is posted on the
     // loop. So, as long the end time is set before the loop is run, a non-zero duration will be
     // recorded.
-    clock_->Set(zx::time(0));
+    clock_.Set(zx::time(0));
     fuchsia::feedback::GetSnapshotParameters params;
     if (channel) {
       params.set_response_channel(*std::move(channel));
     }
     data_provider_->GetSnapshot(std::move(params),
                                 [&snapshot](Snapshot res) { snapshot = std::move(res); });
-    clock_->Set(zx::time(0) + snapshot_flow_duration);
+    clock_.Set(zx::time(0) + snapshot_flow_duration);
     RunLoopUntilIdle();
     return snapshot;
   }
@@ -216,8 +211,7 @@ class DataProviderTest : public UnitTestFixture {
   }
 
  private:
-  // The lifetime of |clock_| is managed by |cobalt_|.
-  timekeeper::TestClock* clock_;
+  timekeeper::TestClock clock_;
   std::unique_ptr<cobalt::Logger> cobalt_;
   std::unique_ptr<Datastore> datastore_;
 

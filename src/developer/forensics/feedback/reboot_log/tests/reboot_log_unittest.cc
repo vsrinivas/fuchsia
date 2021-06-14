@@ -17,6 +17,7 @@
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
 namespace feedback {
@@ -61,7 +62,7 @@ class RebootLogTest : public UnitTestFixture, public testing::WithParamInterface
     FX_CHECK(tmp_dir_.NewTempFileWithData("", &graceful_reboot_log_path_))
         << "Failed to create temporary graceful reboot log";
 
-    cobalt::Logger cobalt(dispatcher(), services());
+    cobalt::Logger cobalt(dispatcher(), services(), &clock_);
 
     FX_CHECK(
         files::WriteFile(graceful_reboot_log_path_, ToFileContent(ToGracefulRebootReason(reason))));
@@ -71,6 +72,7 @@ class RebootLogTest : public UnitTestFixture, public testing::WithParamInterface
   std::string graceful_reboot_log_path_;
 
  private:
+  timekeeper::TestClock clock_;
   files::ScopedTempDir tmp_dir_;
 };
 

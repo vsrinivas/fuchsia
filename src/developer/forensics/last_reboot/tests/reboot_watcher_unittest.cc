@@ -20,6 +20,7 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
 namespace last_reboot {
@@ -38,11 +39,12 @@ struct TestParam {
 class ImminentGracefulRebootWatcherTest : public UnitTestFixture,
                                           public testing::WithParamInterface<TestParam> {
  public:
-  ImminentGracefulRebootWatcherTest() : cobalt_(dispatcher(), services()) {}
+  ImminentGracefulRebootWatcherTest() : cobalt_(dispatcher(), services(), &clock_) {}
 
  protected:
   std::string Path() { return files::JoinPath(tmp_dir_.path(), kFilename); }
 
+  timekeeper::TestClock clock_;
   cobalt::Logger cobalt_;
 
  private:

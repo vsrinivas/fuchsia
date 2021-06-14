@@ -26,6 +26,7 @@
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -54,7 +55,7 @@ class BoardInfoProviderTest : public UnitTestFixture {
   Annotations GetBoardInfo(const AnnotationKeys& allowlist = {},
                            const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    cobalt::Logger cobalt(dispatcher(), services());
+    cobalt::Logger cobalt(dispatcher(), services(), &clock_);
 
     BoardInfoProvider provider(dispatcher(), services(), &cobalt);
     auto promise = provider.GetAnnotations(timeout, allowlist);
@@ -74,6 +75,7 @@ class BoardInfoProviderTest : public UnitTestFixture {
   async::Executor executor_;
 
  private:
+  timekeeper::TestClock clock_;
   std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_server_;
 };
 

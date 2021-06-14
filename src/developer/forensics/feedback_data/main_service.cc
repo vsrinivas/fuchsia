@@ -58,7 +58,7 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
                                                     inspect::Node* root_node,
                                                     timekeeper::Clock* clock,
                                                     const bool is_first_instance) {
-  auto cobalt = std::make_unique<cobalt::Logger>(dispatcher, services);
+  auto cobalt = std::make_unique<cobalt::Logger>(dispatcher, services, clock);
 
   // We want to move the previous boot logs from /cache to /tmp:
   // // (1) before we construct the static attachment from the /tmp file

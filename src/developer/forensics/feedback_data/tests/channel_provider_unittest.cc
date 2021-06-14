@@ -23,6 +23,7 @@
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/event.h"
 #include "src/developer/forensics/utils/errors.h"
+#include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -48,7 +49,7 @@ class ChannelProviderTest : public UnitTestFixture {
                                                              kAnnotationSystemUpdateChannelTarget},
                           const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    cobalt::Logger cobalt(dispatcher(), services());
+    cobalt::Logger cobalt(dispatcher(), services(), &clock_);
 
     ChannelProvider provider(dispatcher(), services(), &cobalt);
     auto promise = provider.GetAnnotations(timeout, allowlist);
@@ -75,6 +76,7 @@ class ChannelProviderTest : public UnitTestFixture {
   async::Executor executor_;
 
  private:
+  timekeeper::TestClock clock_;
   std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
 };
 

@@ -45,6 +45,7 @@ executable("main_service_unittest_exe") {
     "//src/developer/forensics/testing/stubs:cobalt",
     "//src/developer/forensics/testing/stubs:reboot_methods_watcher_register",
     "//src/lib/files",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/inspect",
@@ -65,6 +66,7 @@ executable("reboot_watcher_unittest_exe") {
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -85,6 +87,7 @@ executable("reporter_unittest_exe") {
     "//src/developer/forensics/testing/stubs:crash_reporter",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/files",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",

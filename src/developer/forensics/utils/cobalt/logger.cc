@@ -26,7 +26,7 @@ using fxl::StringPrintf;
 
 constexpr uint32_t kMaxPendingEvents = 500u;
 
-uint64_t CurrentTimeUSecs(const std::unique_ptr<timekeeper::Clock>& clock) {
+uint64_t CurrentTimeUSecs(const timekeeper::Clock* clock) {
   return zx::nsec(clock->Now().get()).to_usecs();
 }
 
@@ -50,10 +50,10 @@ inline std::string StatusToString(fuchsia::metrics::Status status) {
 }  // namespace
 
 Logger::Logger(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-               std::unique_ptr<timekeeper::Clock> clock)
+               timekeeper::Clock* clock)
     : dispatcher_(dispatcher),
       services_(services),
-      clock_(std::move(clock)),
+      clock_(clock),
       logger_reconnection_backoff_(/*initial_delay=*/zx::msec(100), /*retry_factor=*/2u,
                                    /*max_delay=*/zx::hour(1)) {
   logger_.set_error_handler([this](zx_status_t status) {

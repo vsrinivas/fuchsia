@@ -29,7 +29,7 @@ class Logger {
  public:
   // We expect fuchsia.metrics.MetricEventLoggerFactory to be in |services|.
   Logger(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-         std::unique_ptr<timekeeper::Clock> clock = std::make_unique<timekeeper::SystemClock>());
+         timekeeper::Clock* clock);
 
   // Log event with no dimensions.
   void LogIntegerEvent(uint32_t metric_id, uint64_t count) {
@@ -85,7 +85,7 @@ class Logger {
 
   async_dispatcher_t* dispatcher_;
   std::shared_ptr<sys::ServiceDirectory> services_;
-  std::unique_ptr<timekeeper::Clock> clock_;
+  timekeeper::Clock* clock_;
 
   fuchsia::metrics::MetricEventLoggerFactoryPtr logger_factory_;
   fuchsia::metrics::MetricEventLoggerPtr logger_;

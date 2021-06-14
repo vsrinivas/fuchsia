@@ -17,6 +17,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -42,7 +43,7 @@ class InspectDataBudgetTest : public UnitTestFixture {
  public:
   void SetUp() override {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services());
+    cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services(), &clock_);
   }
 
   void MakeUnlimitedBudget() {
@@ -77,6 +78,7 @@ class InspectDataBudgetTest : public UnitTestFixture {
   std::optional<size_t> GetSizeInBytes() { return inspect_data_budget_->SizeInBytes(); }
 
  private:
+  timekeeper::TestClock clock_;
   std::unique_ptr<InspectNodeManager> inspect_node_manager_;
 
   files::ScopedTempDir tmp_dir_;

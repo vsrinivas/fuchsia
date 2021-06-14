@@ -18,6 +18,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
 namespace last_reboot {
@@ -39,6 +40,7 @@ class MainServiceTest : public UnitTestFixture {
       : main_service_(MainService::Config{
             .dispatcher = dispatcher(),
             .services = services(),
+            .clock = &clock_,
             .root_node = &InspectRoot(),
             .reboot_log =
                 feedback::RebootLog(feedback::RebootReason::kNotParseable, "", std::nullopt),
@@ -61,6 +63,7 @@ class MainServiceTest : public UnitTestFixture {
   std::unique_ptr<stubs::RebootMethodsWatcherRegisterBase> reboot_watcher_register_server_;
 
  protected:
+  timekeeper::TestClock clock_;
   MainService main_service_;
 };
 

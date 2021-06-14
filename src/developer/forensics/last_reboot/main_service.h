@@ -27,6 +27,7 @@ class MainService {
   struct Config {
     async_dispatcher_t* dispatcher;
     std::shared_ptr<sys::ServiceDirectory> services;
+    timekeeper::Clock* clock;
     inspect::Node* root_node;
     feedback::RebootLog reboot_log;
     std::string graceful_reboot_reason_write_path;

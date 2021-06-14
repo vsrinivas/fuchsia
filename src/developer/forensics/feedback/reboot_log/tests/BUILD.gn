@@ -33,6 +33,7 @@ executable("reboot_log_unittest_exe") {
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/lib/files",
     "//src/lib/fxl",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",

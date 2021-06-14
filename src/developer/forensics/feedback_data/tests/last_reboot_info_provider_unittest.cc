@@ -22,6 +22,7 @@
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/time.h"
+#include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -51,7 +52,7 @@ class LastRebootInfoProviderTest : public UnitTestFixture {
   Annotations GetLastRebootReason(const AnnotationKeys& allowlist,
                                   const zx::duration timeout = zx::sec(1)) {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    cobalt::Logger cobalt(dispatcher(), services());
+    cobalt::Logger cobalt(dispatcher(), services(), &clock_);
 
     LastRebootInfoProvider provider(dispatcher(), services(), &cobalt);
     auto promise = provider.GetAnnotations(timeout, allowlist);
@@ -70,6 +71,7 @@ class LastRebootInfoProviderTest : public UnitTestFixture {
 
  private:
   async::Executor executor_;
+  timekeeper::TestClock clock_;
   std::unique_ptr<stubs::LastRebootInfoProviderBase> last_reboot_info_provider_server_;
 };
 

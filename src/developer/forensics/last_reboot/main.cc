@@ -74,6 +74,7 @@ int main() {
   MainService main_service(MainService::Config{
       .dispatcher = component.Dispatcher(),
       .services = component.Services(),
+      .clock = component.Clock(),
       .root_node = component.InspectRoot(),
       .reboot_log = feedback::RebootLog::ParseRebootLog(
           "/boot/log/last-panic.txt", kPreviousGracefulRebootReasonFile, TestAndSetNotAFdr()),

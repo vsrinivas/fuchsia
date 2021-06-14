@@ -11,7 +11,7 @@ namespace last_reboot {
 
 MainService::MainService(Config config)
     : config_(std::move(config)),
-      cobalt_(config_.dispatcher, config_.services),
+      cobalt_(config_.dispatcher, config_.services, config_.clock),
       reporter_(config_.dispatcher, config_.services, &cobalt_),
       last_reboot_info_provider_(config_.reboot_log),
       reboot_watcher_(config_.services, config_.graceful_reboot_reason_write_path, &cobalt_),

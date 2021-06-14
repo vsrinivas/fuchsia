@@ -23,7 +23,7 @@ class InfoContext {
  public:
   InfoContext(inspect::Node *root_node, timekeeper::Clock *clock, async_dispatcher_t *dispatcher,
               std::shared_ptr<sys::ServiceDirectory> services)
-      : inspect_manager_(root_node, clock), cobalt_(dispatcher, services) {}
+      : inspect_manager_(root_node, clock), cobalt_(dispatcher, services, clock) {}
 
   InspectManager &InspectManager() { return inspect_manager_; }
   cobalt::Logger &Cobalt() { return cobalt_; }
