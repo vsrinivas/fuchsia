@@ -19,7 +19,7 @@
 ##   is in $PATH and that it works.
 ##
 ## Usage: fx debug [(--core|-c) <CORE>] [--no-agent] [(--port|-p) <PORT>]
-##                 [--unwind=(aosp|ng|fuchsia)] [(--verbose-agent|-va)]
+##                 [--unwind=(aosp|ng|fuchsia)] [(--verbose-agent|-va)] [--gdb]
 ##
 ##    --core            Load a minidump file into zxdb.
 ##    --no-agent        Don't start a Debug Agent.
@@ -34,6 +34,8 @@
 ##                      Defaults to "aosp".
 ##    --verbose-agent   Whether the debug agent's stdout/stderr should be shown.
 ##                      Useful for debugging the debugger. Yo' dawg.
+##    --gdb             Launch zxdb using gdb. This is only useful to be able to debug zxdb. This
+##                      option only works if you have the unstripped version of zxdb.
 ##
 ## Flags after -- are parsed by zxdb.  See zxdb's documentation for more
 ## details.
@@ -50,6 +52,7 @@ unwind_flag=
 agent_out="/dev/null"
 no_agent=
 target_core=
+use_gdb=0
 
 # Flag parsing.
 while [[ $# -gt 0 ]]; do
@@ -70,6 +73,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     --verbose-agent|-va)
       agent_out="/dev/stdout"
+      ;;
+    --gdb)
+      use_gdb=1
       ;;
     --core|-c)
       arg=$1
@@ -128,9 +134,9 @@ fi
 
 if [[ -n "${target_core}" ]]; then
   id='fd81549e77f2f3b199d4dca16131c3525428140828f0843a0fd30e7c0d2e2631'
-  cache_coredumps=(`fx-command-run shell "find /data/cache/${id}/reports -name minidump.dmp -type f"`)
-  tmp_coredumps=(`fx-command-run shell "find /tmp/${id}/reports -name minidump.dmp -type f"`)
-  all_coredumps=(${cache_coredumps[@]} ${tmp_coredumps[@]})
+  cache_coredumps=$(fx-command-run shell "find /data/cache/${id}/reports -name minidump.dmp -type f")
+  tmp_coredumps=$(fx-command-run shell "find /tmp/${id}/reports -name minidump.dmp -type f")
+  all_coredumps=("${cache_coredumps[@]}" "${tmp_coredumps[@]}")
   num_coredumps=${#all_coredumps[@]}
 
   if [[  ${num_coredumps} -eq 0 ]]; then
@@ -138,7 +144,7 @@ if [[ -n "${target_core}" ]]; then
     exit 1
   elif [[ ${num_coredumps} -ge 2 ]]; then
     echo "Which core dump would you like to analyze?"
-    select choice in ${all_coredumps[@]}; do
+    select choice in "${all_coredumps[@]}"; do
       coredump=${choice}
       break
     done
@@ -147,7 +153,7 @@ if [[ -n "${target_core}" ]]; then
   fi
 
   core="/tmp/zxdb_fetched_core.dmp"
-  if ! fx-command-run cp --to-host ${coredump} ${core}; then
+  if ! fx-command-run cp --to-host "${coredump}" ${core}; then
     fx-error "Failed to copy core dump over to host"
     exit 1
   fi
@@ -158,15 +164,15 @@ if [[ -n "${core}" && ! -f "${core}" ]]; then
   exit 1
 fi
 
-connect_ops=()
+arguments=("--symbol-server" "gs://fuchsia-artifacts-release/debug")
 
-if [[ ! -z "${core}" ]]; then
-  connect_ops=("--core" "${core}")
-elif [[ ! -z "${no_agent}" ]]; then
+if [[ -n "${core}" ]]; then
+  arguments+=("--core" "${core}")
+elif [[ -n "${no_agent}" ]]; then
   echo "Not starting a debug agent."
 else
   if launch_debug_agent "${port}" "${unwind_flag}" "${agent_out}"; then
-    connect_ops=("--connect" "$(get-device-addr-resource):${port}" "--quit-agent-on-exit")
+    arguments+=("--connect" "$(get-device-addr-resource):${port}" "--quit-agent-on-exit")
   else
     fx-error "Could not launch debug agent. Exiting. Make sure you're running 'fx serve'."
     exit 1
@@ -175,10 +181,16 @@ fi
 
 ensure-symbol-index-registered || fx-warn "Failed to register ${FUCHSIA_DIR} in symbol-index!"
 
-"${FUCHSIA_BUILD_DIR}/host-tools/zxdb" \
-  ${connect_ops[@]} \
-  "--symbol-server" "gs://fuchsia-artifacts-release/debug" \
-  "$@"
+ZXDB=$(fx-command-run list-build-artifacts --name zxdb --expect-one tools)
+ZXDB_UNSTRIPPED="$(dirname "$ZXDB")/exe.unstripped/$(basename "$ZXDB")"
+
+if [[ ${use_gdb} -eq 1 ]]; then
+  # Starts gdb.
+  gdb --args "$ZXDB_UNSTRIPPED" "${arguments[@]}"
+else
+  # Now that the debug agent is launched, start zxdb.
+  $ZXDB "${arguments[@]}"
+fi
 
 # launch_debug_agent starts the agent in a subprocess, which zxdb will
 # terminate by --quit-agent-on-exit, we want to wait that process however.
