@@ -11,24 +11,24 @@
 
 #include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 
+using fuchsia::math::SizeU;
 using fuchsia::ui::scenic::internal::GraphLinkStatus;
 using fuchsia::ui::scenic::internal::LayoutInfo;
-using fuchsia::ui::scenic::internal::Vec2;
 
 namespace flatland {
 namespace test {
 
 TEST(HangingGetHelperTest, HangingGetProducesValidResponse) {
   async::TestLoop loop;
-  HangingGetHelper<Vec2> helper(
+  HangingGetHelper<SizeU> helper(
       std::make_shared<utils::UnownedDispatcherHolder>(loop.dispatcher()));
 
-  std::optional<Vec2> data;
-  helper.SetCallback([&](Vec2 d) { data = d; });
+  std::optional<SizeU> data;
+  helper.SetCallback([&](SizeU d) { data = d; });
   EXPECT_TRUE(helper.HasPendingCallback());
   EXPECT_FALSE(data);
 
-  helper.Update(Vec2{1.0f, 2.0f});
+  helper.Update(SizeU{1, 2});
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   EXPECT_FALSE(data);
@@ -36,121 +36,121 @@ TEST(HangingGetHelperTest, HangingGetProducesValidResponse) {
 
   EXPECT_FALSE(helper.HasPendingCallback());
   ASSERT_TRUE(data);
-  EXPECT_TRUE(fidl::Equals(Vec2{1.0f, 2.0f}, data.value()));
+  EXPECT_TRUE(fidl::Equals(SizeU{1, 2}, data.value()));
 }
 
 TEST(HangingGetHelperTest, NonHangingGetProducesValidResponse) {
   async::TestLoop loop;
-  HangingGetHelper<Vec2> helper(
+  HangingGetHelper<SizeU> helper(
       std::make_shared<utils::UnownedDispatcherHolder>(loop.dispatcher()));
 
-  helper.Update(Vec2{1.0f, 2.0f});
+  helper.Update(SizeU{1, 2});
 
-  std::optional<Vec2> data;
-  helper.SetCallback([&](Vec2 d) { data = d; });
+  std::optional<SizeU> data;
+  helper.SetCallback([&](SizeU d) { data = d; });
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   EXPECT_FALSE(data);
   loop.RunUntilIdle();
 
   ASSERT_TRUE(data);
-  EXPECT_TRUE(fidl::Equals(Vec2{1.0f, 2.0f}, data.value()));
+  EXPECT_TRUE(fidl::Equals(SizeU{1, 2}, data.value()));
 }
 
 TEST(HangingGetHelperTest, DataOverrideResultsInFinalValue) {
   async::TestLoop loop;
-  HangingGetHelper<Vec2> helper(
+  HangingGetHelper<SizeU> helper(
       std::make_shared<utils::UnownedDispatcherHolder>(loop.dispatcher()));
 
-  helper.Update(Vec2{1.0f, 2.0f});
-  helper.Update(Vec2{3.0f, 4.0f});
-  helper.Update(Vec2{5.0f, 6.0f});
+  helper.Update(SizeU{1, 2});
+  helper.Update(SizeU{3, 4});
+  helper.Update(SizeU{5, 6});
 
-  std::optional<Vec2> data;
-  helper.SetCallback([&](Vec2 d) { data = d; });
+  std::optional<SizeU> data;
+  helper.SetCallback([&](SizeU d) { data = d; });
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   EXPECT_FALSE(data);
   loop.RunUntilIdle();
 
   ASSERT_TRUE(data);
-  EXPECT_TRUE(fidl::Equals(Vec2{5.0f, 6.0f}, data.value()));
+  EXPECT_TRUE(fidl::Equals(SizeU{5, 6}, data.value()));
 }
 
 TEST(HangingGetHelperTest, DataOverrideInBatches) {
   async::TestLoop loop;
-  HangingGetHelper<Vec2> helper(
+  HangingGetHelper<SizeU> helper(
       std::make_shared<utils::UnownedDispatcherHolder>(loop.dispatcher()));
 
-  std::optional<Vec2> data;
-  helper.SetCallback([&](Vec2 d) { data = d; });
+  std::optional<SizeU> data;
+  helper.SetCallback([&](SizeU d) { data = d; });
   EXPECT_FALSE(data);
 
-  helper.Update(Vec2{1.0f, 2.0f});
+  helper.Update(SizeU{1, 2});
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   EXPECT_FALSE(data);
   loop.RunUntilIdle();
 
   ASSERT_TRUE(data);
-  EXPECT_TRUE(fidl::Equals(Vec2{1.0f, 2.0f}, data.value()));
+  EXPECT_TRUE(fidl::Equals(SizeU{1, 2}, data.value()));
 
-  helper.Update(Vec2{3.0f, 4.0f});
-  helper.Update(Vec2{5.0f, 6.0f});
+  helper.Update(SizeU{3, 4});
+  helper.Update(SizeU{5, 6});
 
-  EXPECT_TRUE(fidl::Equals(Vec2{1.0f, 2.0f}, data.value()));
+  EXPECT_TRUE(fidl::Equals(SizeU{1, 2}, data.value()));
   data.reset();
-  helper.SetCallback([&](Vec2 d) { data = d; });
+  helper.SetCallback([&](SizeU d) { data = d; });
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   EXPECT_FALSE(data);
   loop.RunUntilIdle();
 
   ASSERT_TRUE(data);
-  EXPECT_TRUE(fidl::Equals(Vec2{5.0f, 6.0f}, data.value()));
+  EXPECT_TRUE(fidl::Equals(SizeU{5, 6}, data.value()));
 }
 
 TEST(HangingGetHelperTest, DuplicateDataIsIgnored) {
   async::TestLoop loop;
-  HangingGetHelper<Vec2> helper(
+  HangingGetHelper<SizeU> helper(
       std::make_shared<utils::UnownedDispatcherHolder>(loop.dispatcher()));
 
-  std::optional<Vec2> data;
-  helper.SetCallback([&](Vec2 d) { data = d; });
+  std::optional<SizeU> data;
+  helper.SetCallback([&](SizeU d) { data = d; });
   EXPECT_FALSE(data);
 
-  helper.Update(Vec2{1.0f, 2.0f});
+  helper.Update(SizeU{1, 2});
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   EXPECT_FALSE(data);
   loop.RunUntilIdle();
 
   ASSERT_TRUE(data);
-  EXPECT_TRUE(fidl::Equals(Vec2{1.0f, 2.0f}, data.value()));
+  EXPECT_TRUE(fidl::Equals(SizeU{1, 2}, data.value()));
 
   data.reset();
-  helper.SetCallback([&](Vec2 d) { data = d; });
+  helper.SetCallback([&](SizeU d) { data = d; });
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   loop.RunUntilIdle();
 
   EXPECT_FALSE(data);
 
-  helper.Update(Vec2{1.0f, 2.0f});
+  helper.Update(SizeU{1, 2});
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   loop.RunUntilIdle();
 
   EXPECT_FALSE(data);
 
-  helper.Update(Vec2{3.0f, 4.0f});
+  helper.Update(SizeU{3, 4});
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   EXPECT_FALSE(data);
   loop.RunUntilIdle();
 
   ASSERT_TRUE(data);
-  EXPECT_TRUE(fidl::Equals(Vec2{3.0f, 4.0f}, data.value()));
+  EXPECT_TRUE(fidl::Equals(SizeU{3, 4}, data.value()));
 }
 
 TEST(HangingGetHelperTest, EnumDuplicateDataIsIgnored) {
@@ -213,8 +213,8 @@ TEST(HangingGetHelperTest, TableDuplicateDataIsIgnored) {
   EXPECT_FALSE(data);
 
   LayoutInfo info;
-  info.set_logical_size(Vec2{1.0f, 2.0f});
-  info.set_pixel_scale(Vec2{3.f, 4.f});
+  info.set_logical_size(SizeU{1, 2});
+  info.set_pixel_scale(SizeU{3, 4});
 
   {
     LayoutInfo info2;
@@ -250,7 +250,7 @@ TEST(HangingGetHelperTest, TableDuplicateDataIsIgnored) {
 
   // Updating just one part of the table is enough for it to not be a duplicate.
   LayoutInfo new_info;
-  new_info.set_logical_size(Vec2{5.0f, 6.0f});
+  new_info.set_logical_size(SizeU{5, 6});
 
   {
     LayoutInfo info4;

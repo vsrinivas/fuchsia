@@ -50,6 +50,7 @@ using flatland::TransformGraph;
 using flatland::TransformHandle;
 using flatland::UberStruct;
 using flatland::UberStructSystem;
+using fuchsia::math::SizeU;
 using fuchsia::scenic::allocation::Allocator_RegisterBufferCollection_Result;
 using fuchsia::scenic::allocation::BufferCollectionExportToken;
 using fuchsia::scenic::allocation::BufferCollectionImportToken;
@@ -66,7 +67,6 @@ using fuchsia::ui::scenic::internal::LayoutInfo;
 using fuchsia::ui::scenic::internal::LinkProperties;
 using fuchsia::ui::scenic::internal::Orientation;
 using fuchsia::ui::scenic::internal::TransformId;
-using fuchsia::ui::scenic::internal::Vec2;
 
 namespace {
 
@@ -189,8 +189,8 @@ struct GlobalIdPair {
     }                                                                                            \
   }
 
-const float kDefaultSize = 1.f;
-const glm::vec2 kDefaultPixelScale = {1.f, 1.f};
+const uint32_t kDefaultSize = 1;
+const glm::ivec2 kDefaultPixelScale = {1, 1};
 
 float GetOrientationAngle(fuchsia::ui::scenic::internal::Orientation orientation) {
   switch (orientation) {
@@ -1207,14 +1207,14 @@ TEST_F(FlatlandTest, SetTranslationErrorCases) {
   // Zero is not a valid transform ID.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    flatland->SetTranslation({0}, {1.f, 2.f});
+    flatland->SetTranslation({0}, {1, 2});
     PRESENT(flatland, false);
   }
 
   // Transform does not exist.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    flatland->SetTranslation(kIdNotCreated, {1.f, 2.f});
+    flatland->SetTranslation(kIdNotCreated, {1, 2});
     PRESENT(flatland, false);
   }
 }
@@ -1287,17 +1287,17 @@ TEST_F(FlatlandTest, SetGeometricTransformProperties) {
   EXPECT_TRUE(uber_struct->local_matrices.empty());
 
   // Set up one property per transform.
-  flatland->SetTranslation(kId1, {1.f, 2.f});
+  flatland->SetTranslation(kId1, {1, 2});
   PRESENT(flatland, true);
 
   // The two handles should have the expected matrices.
   uber_struct = GetUberStruct(flatland.get());
-  EXPECT_MATRIX(uber_struct, handle1, glm::translate(glm::mat3(), {1.f, 2.f}));
+  EXPECT_MATRIX(uber_struct, handle1, glm::translate(glm::mat3(), {1, 2}));
 
   // Fill out the remaining properties on both transforms.
   flatland->SetOrientation(kId1, Orientation::CCW_90_DEGREES);
 
-  flatland->SetTranslation(kId2, {6.f, 7.f});
+  flatland->SetTranslation(kId2, {6, 7});
   flatland->SetOrientation(kId2, Orientation::CCW_270_DEGREES);
 
   PRESENT(flatland, true);
@@ -1306,12 +1306,12 @@ TEST_F(FlatlandTest, SetGeometricTransformProperties) {
   uber_struct = GetUberStruct(flatland.get());
 
   glm::mat3 matrix1 = glm::mat3();
-  matrix1 = glm::translate(matrix1, {1.f, 2.f});
+  matrix1 = glm::translate(matrix1, {1, 2});
   matrix1 = glm::rotate(matrix1, GetOrientationAngle(Orientation::CCW_90_DEGREES));
   EXPECT_MATRIX(uber_struct, handle1, matrix1);
 
   glm::mat3 matrix2 = glm::mat3();
-  matrix2 = glm::translate(matrix2, {6.f, 7.f});
+  matrix2 = glm::translate(matrix2, {6, 7});
   matrix2 = glm::rotate(matrix2, GetOrientationAngle(Orientation::CCW_270_DEGREES));
   EXPECT_MATRIX(uber_struct, handle2, matrix2);
 }
@@ -1342,19 +1342,19 @@ TEST_F(FlatlandTest, MatrixReleasesWhenTransformNotReferenced) {
   const auto handle2 = uber_struct->local_topology[2].handle;
 
   // Set a geometric property on kId1.
-  flatland->SetTranslation(kId1, {1.f, 2.f});
+  flatland->SetTranslation(kId1, {1, 2});
   PRESENT(flatland, true);
 
   // Only handle1 should have a local matrix.
   uber_struct = GetUberStruct(flatland.get());
-  EXPECT_MATRIX(uber_struct, handle1, glm::translate(glm::mat3(), {1.f, 2.f}));
+  EXPECT_MATRIX(uber_struct, handle1, glm::translate(glm::mat3(), {1, 2}));
 
   // Release kId1, but ensure its matrix stays around.
   flatland->ReleaseTransform(kId1);
   PRESENT(flatland, true);
 
   uber_struct = GetUberStruct(flatland.get());
-  EXPECT_MATRIX(uber_struct, handle1, glm::translate(glm::mat3(), {1.f, 2.f}));
+  EXPECT_MATRIX(uber_struct, handle1, glm::translate(glm::mat3(), {1, 2}));
 
   // Clear kId1 as the root transform, which should clear the matrix.
   flatland->SetRootTransform({0});
@@ -1622,7 +1622,7 @@ TEST_F(FlatlandTest, ContentLinkFailsInvalidLogicalSize) {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
     ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
     LinkProperties properties;
-    properties.set_logical_size({0.f, kDefaultSize});
+    properties.set_logical_size({0, kDefaultSize});
     flatland->CreateLink({0}, std::move(parent_token), std::move(properties),
                          content_link.NewRequest());
     PRESENT(flatland, false);
@@ -1633,7 +1633,7 @@ TEST_F(FlatlandTest, ContentLinkFailsInvalidLogicalSize) {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
     ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
     LinkProperties properties2;
-    properties2.set_logical_size({kDefaultSize, 0.f});
+    properties2.set_logical_size({kDefaultSize, 0});
     flatland->CreateLink({0}, std::move(parent_token), std::move(properties2),
                          content_link.NewRequest());
     PRESENT(flatland, false);
@@ -1752,7 +1752,7 @@ TEST_F(FlatlandTest, ChildGetsLayoutUpdateWithoutPresenting) {
 
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
-  properties.set_logical_size({1.0f, 2.0f});
+  properties.set_logical_size({1, 2});
   parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                      content_link.NewRequest());
 
@@ -1762,8 +1762,8 @@ TEST_F(FlatlandTest, ChildGetsLayoutUpdateWithoutPresenting) {
   // Request a layout update.
   bool layout_updated = false;
   graph_link->GetLayout([&](LayoutInfo info) {
-    EXPECT_EQ(1.0f, info.logical_size().x);
-    EXPECT_EQ(2.0f, info.logical_size().y);
+    EXPECT_EQ(1u, info.logical_size().width);
+    EXPECT_EQ(2u, info.logical_size().height);
     layout_updated = true;
   });
 
@@ -1784,7 +1784,7 @@ TEST_F(FlatlandTest, OverwrittenHangingGetsReturnError) {
   const ContentId kLinkId = {1};
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
-  properties.set_logical_size({1.0f, 2.0f});
+  properties.set_logical_size({1, 2});
   parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                      content_link.NewRequest());
 
@@ -1832,7 +1832,7 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
   const ContentId kLinkId = {1};
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
-  properties.set_logical_size({1.0f, 2.0f});
+  properties.set_logical_size({1, 2});
   parent_ptr->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                          content_link.NewRequest());
   EXPECT_TRUE(parent_loop.RunUntilIdle());
@@ -1905,7 +1905,7 @@ TEST_F(FlatlandTest, ConnectedToDisplayParentPresentsBeforeChild) {
 
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
-  properties.set_logical_size({1.0f, 2.0f});
+  properties.set_logical_size({1, 2});
   parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                      content_link.NewRequest());
   parent->SetContent(kTransformId, kLinkId);
@@ -1962,7 +1962,7 @@ TEST_F(FlatlandTest, ConnectedToDisplayChildPresentsBeforeParent) {
 
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
-  properties.set_logical_size({1.0f, 2.0f});
+  properties.set_logical_size({1, 2});
   parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                      content_link.NewRequest());
   parent->SetContent(kTransformId, kLinkId);
@@ -2019,7 +2019,7 @@ TEST_F(FlatlandTest, ChildReceivesDisconnectedFromDisplay) {
 
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
-  properties.set_logical_size({1.0f, 2.0f});
+  properties.set_logical_size({1, 2});
   parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                      content_link.NewRequest());
   parent->SetContent(kTransformId, kLinkId);
@@ -2067,7 +2067,7 @@ TEST_F(FlatlandTest, ValidChildToParentFlow) {
 
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
-  properties.set_logical_size({1.0f, 2.0f});
+  properties.set_logical_size({1, 2});
   parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                      content_link.NewRequest());
 
@@ -2105,8 +2105,8 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
   {
     bool layout_updated = false;
     graph_link->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(kDefaultSize, info.logical_size().x);
-      EXPECT_EQ(kDefaultSize, info.logical_size().y);
+      EXPECT_EQ(kDefaultSize, info.logical_size().width);
+      EXPECT_EQ(kDefaultSize, info.logical_size().height);
       layout_updated = true;
     });
 
@@ -2118,7 +2118,7 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
   // Set the logical size to something new.
   {
     LinkProperties properties;
-    properties.set_logical_size({2.0f, 3.0f});
+    properties.set_logical_size({2, 3});
     parent->SetLinkProperties(kLinkId, std::move(properties));
     PRESENT(parent, true);
   }
@@ -2126,8 +2126,8 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
   {
     bool layout_updated = false;
     graph_link->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(2.0f, info.logical_size().x);
-      EXPECT_EQ(3.0f, info.logical_size().y);
+      EXPECT_EQ(2u, info.logical_size().width);
+      EXPECT_EQ(3u, info.logical_size().height);
       layout_updated = true;
     });
 
@@ -2171,8 +2171,8 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
   {
     bool layout_updated = false;
     graph_link->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(kDefaultSize, info.logical_size().x);
-      EXPECT_EQ(kDefaultSize, info.logical_size().y);
+      EXPECT_EQ(kDefaultSize, info.logical_size().width);
+      EXPECT_EQ(kDefaultSize, info.logical_size().height);
       layout_updated = true;
     });
 
@@ -2184,7 +2184,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
   // Set the logical size to something new.
   {
     LinkProperties properties;
-    properties.set_logical_size({2.0f, 3.0f});
+    properties.set_logical_size({2, 3});
     parent->SetLinkProperties(kLinkId, std::move(properties));
     PRESENT(parent, true);
   }
@@ -2193,8 +2193,8 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
   {
     bool layout_updated = false;
     graph_link->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(2.0f, info.logical_size().x);
-      EXPECT_EQ(3.0f, info.logical_size().y);
+      EXPECT_EQ(2u, info.logical_size().width);
+      EXPECT_EQ(3u, info.logical_size().height);
       layout_updated = true;
     });
 
@@ -2236,8 +2236,8 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
   {
     int num_updates = 0;
     graph_link->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(kDefaultSize, info.logical_size().x);
-      EXPECT_EQ(kDefaultSize, info.logical_size().y);
+      EXPECT_EQ(kDefaultSize, info.logical_size().width);
+      EXPECT_EQ(kDefaultSize, info.logical_size().height);
       ++num_updates;
     });
 
@@ -2252,12 +2252,12 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
   parent->SetContent(kTransformId, kLinkId);
   PRESENT(parent, true);
 
-  const float kInitialSize = 100.0f;
+  const uint32_t kInitialSize = 100;
 
   // Set the logical size to something new multiple times.
   for (int i = 10; i >= 0; --i) {
     LinkProperties properties;
-    properties.set_logical_size({kInitialSize + i + 1.0f, kInitialSize + i + 1.0f});
+    properties.set_logical_size({kInitialSize + i + 1, kInitialSize + i + 1});
     parent->SetLinkProperties(kLinkId, std::move(properties));
     LinkProperties properties2;
     properties2.set_logical_size({kInitialSize + i, kInitialSize + i});
@@ -2269,8 +2269,8 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
   {
     int num_updates = 0;
     graph_link->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(kInitialSize, info.logical_size().x);
-      EXPECT_EQ(kInitialSize, info.logical_size().y);
+      EXPECT_EQ(kInitialSize, info.logical_size().width);
+      EXPECT_EQ(kInitialSize, info.logical_size().height);
       ++num_updates;
     });
 
@@ -2279,15 +2279,15 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
     EXPECT_EQ(1, num_updates);
   }
 
-  const float kNewSize = 50.0f;
+  const uint32_t kNewSize = 50u;
 
   // Confirm that calling GetLayout again results in a hung get.
   int num_updates = 0;
   graph_link->GetLayout([&](LayoutInfo info) {
     // When we receive the new layout information, confirm that we receive the last update in the
     // batch.
-    EXPECT_EQ(kNewSize, info.logical_size().x);
-    EXPECT_EQ(kNewSize, info.logical_size().y);
+    EXPECT_EQ(kNewSize, info.logical_size().width);
+    EXPECT_EQ(kNewSize, info.logical_size().height);
     ++num_updates;
   });
 
@@ -2335,14 +2335,12 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
   }
   UpdateLinks(parent->GetRoot());
 
-  const float kDefaultSize = 1.0f;
-
   // Confirm that all children are at the default value
   for (int i = 0; i < kNumChildren; ++i) {
     bool layout_updated = false;
     graph_link[i]->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(kDefaultSize, info.logical_size().x);
-      EXPECT_EQ(kDefaultSize, info.logical_size().y);
+      EXPECT_EQ(kDefaultSize, info.logical_size().width);
+      EXPECT_EQ(kDefaultSize, info.logical_size().height);
       layout_updated = true;
     });
 
@@ -2353,8 +2351,11 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
 
   // Resize the content on all children.
   for (auto id : kLinkIds) {
+    SizeU size;
+    size.width = id.value;
+    size.height = id.value * 2;
     LinkProperties properties;
-    properties.set_logical_size({static_cast<float>(id.value), id.value * 2.0f});
+    properties.set_logical_size(size);
     parent->SetLinkProperties(id, std::move(properties));
   }
 
@@ -2363,8 +2364,8 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
   for (int i = 0; i < kNumChildren; ++i) {
     bool layout_updated = false;
     graph_link[i]->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(kLinkIds[i].value, info.logical_size().x);
-      EXPECT_EQ(kLinkIds[i].value * 2.0f, info.logical_size().y);
+      EXPECT_EQ(kLinkIds[i].value, info.logical_size().width);
+      EXPECT_EQ(kLinkIds[i].value * 2, info.logical_size().height);
       layout_updated = true;
     });
 
@@ -2393,7 +2394,7 @@ TEST_F(FlatlandTest, DisplayPixelScaleAffectsPixelScale) {
   UpdateLinks(parent->GetRoot());
 
   // Change the display pixel scale.
-  const glm::vec2 new_display_pixel_scale = {0.1f, 0.2f};
+  const glm::uvec2 new_display_pixel_scale = {2, 4};
   SetDisplayPixelScale(new_display_pixel_scale);
 
   // Call and ignore GetLayout() to guarantee the next call hangs.
@@ -2403,57 +2404,8 @@ TEST_F(FlatlandTest, DisplayPixelScaleAffectsPixelScale) {
   {
     bool layout_updated = false;
     graph_link->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(new_display_pixel_scale.x, info.pixel_scale().x);
-      EXPECT_EQ(new_display_pixel_scale.y, info.pixel_scale().y);
-      layout_updated = true;
-    });
-
-    EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent->GetRoot());
-    EXPECT_TRUE(layout_updated);
-  }
-}
-
-TEST_F(FlatlandTest, LinkSizesAffectPixelScale) {
-  std::shared_ptr<Flatland> parent = CreateFlatland();
-  std::shared_ptr<Flatland> child = CreateFlatland();
-
-  const TransformId kTransformId = {1};
-  const ContentId kLinkId = {2};
-
-  fidl::InterfacePtr<ContentLink> content_link;
-  fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(parent.get(), child.get(), kLinkId, &content_link, &graph_link);
-
-  parent->CreateTransform(kTransformId);
-  parent->SetRootTransform(kTransformId);
-  parent->SetContent(kTransformId, kLinkId);
-  PRESENT(parent, true);
-
-  UpdateLinks(parent->GetRoot());
-
-  // Change the link size and logical size of the link.
-  const Vec2 kNewLinkSize = {2.f, 3.f};
-  parent->SetLinkSize(kLinkId, kNewLinkSize);
-
-  const Vec2 kNewLogicalSize = {5.f, 7.f};
-  {
-    LinkProperties properties;
-    properties.set_logical_size(kNewLogicalSize);
-    parent->SetLinkProperties(kLinkId, std::move(properties));
-  }
-
-  PRESENT(parent, true);
-
-  // Call and ignore GetLayout() to guarantee the next call hangs.
-  graph_link->GetLayout([&](LayoutInfo info) {});
-
-  // Confirm that the new pixel scale is (2 / 5, 3 / 7).
-  {
-    bool layout_updated = false;
-    graph_link->GetLayout([&](LayoutInfo info) {
-      EXPECT_FLOAT_EQ(kNewLinkSize.x / kNewLogicalSize.x, info.pixel_scale().x);
-      EXPECT_FLOAT_EQ(kNewLinkSize.y / kNewLogicalSize.y, info.pixel_scale().y);
+      EXPECT_EQ(new_display_pixel_scale.x, info.pixel_scale().width);
+      EXPECT_EQ(new_display_pixel_scale.y, info.pixel_scale().height);
       layout_updated = true;
     });
 
@@ -2484,7 +2436,7 @@ TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
   UpdateLinks(parent->GetRoot());
 
   // Set a scale on the parent transform.
-  const Vec2 scale = {2.f, 3.f};
+  const SizeU scale = {2, 3};
 
   // TODO(fxbug.dev/77887): Reintroduce this once the effects API is able to handle
   // floating point scaling.
@@ -2498,8 +2450,8 @@ TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
   {
     bool layout_updated = false;
     graph_link->GetLayout([&](LayoutInfo info) {
-      EXPECT_FLOAT_EQ(scale.x, info.pixel_scale().x);
-      EXPECT_FLOAT_EQ(scale.y, info.pixel_scale().y);
+      EXPECT_FLOAT_EQ(scale.width, info.pixel_scale().width);
+      EXPECT_FLOAT_EQ(scale.height, info.pixel_scale().height);
       layout_updated = true;
     });
 
@@ -2538,8 +2490,8 @@ TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
   {
     bool layout_updated = false;
     graph_link->GetLayout([&](LayoutInfo info) {
-      EXPECT_FLOAT_EQ(scale.y, info.pixel_scale().x);
-      EXPECT_FLOAT_EQ(scale.x, info.pixel_scale().y);
+      EXPECT_FLOAT_EQ(scale.width, info.pixel_scale().width);
+      EXPECT_FLOAT_EQ(scale.height, info.pixel_scale().height);
       layout_updated = true;
     });
 
@@ -2980,177 +2932,6 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
 
   // The old instance is not re-linked.
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
-}
-
-TEST_F(FlatlandTest, SetLinkSizeErrorCases) {
-  std::shared_ptr<Allocator> allocator = CreateAllocator();
-
-  // Zero is not a valid transform ID.
-  {
-    std::shared_ptr<Flatland> flatland = CreateFlatland();
-    flatland->SetLinkSize({0}, {1.f, 2.f});
-    PRESENT(flatland, false);
-  }
-
-  // Size contains non-positive components.
-  {
-    std::shared_ptr<Flatland> flatland = CreateFlatland();
-    flatland->SetLinkSize({0}, {-1.f, 2.f});
-    PRESENT(flatland, false);
-  }
-
-  // Link does not exist.
-  {
-    std::shared_ptr<Flatland> flatland = CreateFlatland();
-    const ContentId kIdNotCreated = {1};
-    flatland->SetLinkSize(kIdNotCreated, {1.f, 2.f});
-    PRESENT(flatland, false);
-  }
-
-  // ContentId is not a Link.
-  {
-    std::shared_ptr<Flatland> flatland = CreateFlatland();
-    const ContentId kImageId = {2};
-    BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
-
-    ImageProperties properties;
-    properties.set_width(100);
-    properties.set_height(200);
-
-    CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
-                std::move(properties));
-
-    flatland->SetLinkSize(kImageId, {1.f, 2.f});
-    PRESENT(flatland, false);
-  }
-}
-
-TEST_F(FlatlandTest, LinkSizeRatiosCreateScaleMatrix) {
-  std::shared_ptr<Flatland> parent = CreateFlatland();
-  std::shared_ptr<Flatland> child = CreateFlatland();
-
-  const ContentId kLinkId1 = {1};
-
-  fidl::InterfacePtr<ContentLink> content_link;
-  fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
-
-  const TransformId kId1 = {1};
-
-  parent->CreateTransform(kId1);
-  parent->SetRootTransform(kId1);
-  parent->SetContent(kId1, kLinkId1);
-
-  PRESENT(parent, true);
-
-  const auto maybe_link_handle = parent->GetContentHandle(kLinkId1);
-  ASSERT_TRUE(maybe_link_handle.has_value());
-  const auto link_handle = maybe_link_handle.value();
-
-  // The default size is the same as the logical size, so the link handle won't have a matrix.
-  auto uber_struct = GetUberStruct(parent.get());
-  EXPECT_MATRIX(uber_struct, link_handle, glm::mat3());
-
-  // Change the link size to half the width and a quarter the height.
-  const float kNewLinkWidth = 0.5f * kDefaultSize;
-  const float kNewLinkHeight = 0.25f * kDefaultSize;
-  parent->SetLinkSize(kLinkId1, {kNewLinkWidth, kNewLinkHeight});
-
-  PRESENT(parent, true);
-
-  // This should change the expected matrix to apply the same scales.
-  const glm::mat3 expected_scale_matrix = glm::scale(glm::mat3(), {kNewLinkWidth, kNewLinkHeight});
-
-  uber_struct = GetUberStruct(parent.get());
-  EXPECT_MATRIX(uber_struct, link_handle, expected_scale_matrix);
-
-  // Changing the logical size to the same values returns the matrix to the identity matrix.
-  LinkProperties properties;
-  properties.set_logical_size({kNewLinkWidth, kNewLinkHeight});
-  parent->SetLinkProperties(kLinkId1, std::move(properties));
-
-  PRESENT(parent, true);
-
-  uber_struct = GetUberStruct(parent.get());
-  EXPECT_MATRIX(uber_struct, link_handle, glm::mat3());
-
-  // Change the logical size back to the default size.
-  LinkProperties properties2;
-  properties2.set_logical_size({kDefaultSize, kDefaultSize});
-  parent->SetLinkProperties(kLinkId1, std::move(properties2));
-
-  PRESENT(parent, true);
-
-  // This should change the expected matrix back to applying the scales.
-  uber_struct = GetUberStruct(parent.get());
-  EXPECT_MATRIX(uber_struct, link_handle, expected_scale_matrix);
-}
-
-TEST_F(FlatlandTest, EmptyLogicalSizePreservesOldSize) {
-  std::shared_ptr<Flatland> parent = CreateFlatland();
-  std::shared_ptr<Flatland> child = CreateFlatland();
-
-  const ContentId kLinkId1 = {1};
-
-  fidl::InterfacePtr<ContentLink> content_link;
-  fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
-
-  const TransformId kId1 = {1};
-
-  parent->CreateTransform(kId1);
-  parent->SetRootTransform(kId1);
-  parent->SetContent(kId1, kLinkId1);
-
-  PRESENT(parent, true);
-
-  const auto maybe_link_handle = parent->GetContentHandle(kLinkId1);
-  ASSERT_TRUE(maybe_link_handle.has_value());
-  const auto link_handle = maybe_link_handle.value();
-
-  // Set the link size and logical size to new values
-  const float kNewLinkWidth = 2.f * kDefaultSize;
-  const float kNewLinkHeight = 3.f * kDefaultSize;
-  parent->SetLinkSize(kLinkId1, {kNewLinkWidth, kNewLinkHeight});
-
-  const float kNewLinkLogicalWidth = 5.f * kDefaultSize;
-  const float kNewLinkLogicalHeight = 7.f * kDefaultSize;
-  LinkProperties properties;
-  properties.set_logical_size({kNewLinkLogicalWidth, kNewLinkLogicalHeight});
-  parent->SetLinkProperties(kLinkId1, std::move(properties));
-
-  PRESENT(parent, true);
-
-  // This should result in an expected matrix that applies the ratio of the scales.
-  glm::mat3 expected_scale_matrix = glm::scale(
-      glm::mat3(), {kNewLinkWidth / kNewLinkLogicalWidth, kNewLinkHeight / kNewLinkLogicalHeight});
-
-  auto uber_struct = GetUberStruct(parent.get());
-  EXPECT_MATRIX(uber_struct, link_handle, expected_scale_matrix);
-
-  // Setting a new LinkProperties with no logical size shouldn't change the matrix.
-  LinkProperties properties2;
-  parent->SetLinkProperties(kLinkId1, std::move(properties2));
-
-  PRESENT(parent, true);
-
-  uber_struct = GetUberStruct(parent.get());
-  EXPECT_MATRIX(uber_struct, link_handle, expected_scale_matrix);
-
-  // But it should still preserve the old logical size so that a subsequent link size update uses
-  // the old logical size.
-  const float kNewLinkWidth2 = 11.f * kDefaultSize;
-  const float kNewLinkHeight2 = 13.f * kDefaultSize;
-  parent->SetLinkSize(kLinkId1, {kNewLinkWidth2, kNewLinkHeight2});
-
-  PRESENT(parent, true);
-
-  // This should result in an expected matrix that applies the ratio of the scales.
-  expected_scale_matrix = glm::scale(glm::mat3(), {kNewLinkWidth2 / kNewLinkLogicalWidth,
-                                                   kNewLinkHeight2 / kNewLinkLogicalHeight});
-
-  uber_struct = GetUberStruct(parent.get());
-  EXPECT_MATRIX(uber_struct, link_handle, expected_scale_matrix);
 }
 
 TEST_F(FlatlandTest, CreateImageValidCase) {
@@ -4185,8 +3966,8 @@ TEST_F(FlatlandDisplayTest, SimpleSetContent) {
   // LayoutInfo is sent as soon as the content/graph link is established, to allow clients to
   // generate their first frame with minimal latency.
   EXPECT_TRUE(layout_info.has_value());
-  EXPECT_EQ(layout_info.value().logical_size().x, kWidth);
-  EXPECT_EQ(layout_info.value().logical_size().y, kHeight);
+  EXPECT_EQ(layout_info.value().logical_size().width, kWidth);
+  EXPECT_EQ(layout_info.value().logical_size().height, kHeight);
 
   // The GraphLink's status must wait until the first frame is generated (represented here by the
   // call to UpdateLinks() below).

@@ -95,6 +95,19 @@ struct SizeU {
     uint32 height;
 };
 
+/// Representes a 2D vector with integer coordinates.
+///
+/// This type does not specify units. Protocols that use this type should
+/// specify the characteristics of the vector space, including orientation and
+/// units.
+struct Vec {
+    // The direction along the x-axis.
+    int32 x;
+
+    // The direction along the y-axis.
+    int32 y;
+};
+
 /// An integral, rectangular, axis-aligned region in a 2D cartesian
 /// space.
 ///

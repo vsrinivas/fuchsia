@@ -82,10 +82,10 @@ void FlatlandDisplay::SetContent(ContentLinkToken token,
 
   LinkProperties properties;
   {
-    fuchsia::ui::scenic::internal::Vec2 vec2;
-    vec2.x = display_->width_in_px();
-    vec2.y = display_->height_in_px();
-    properties.set_logical_size(vec2);
+    fuchsia::math::SizeU size;
+    size.width = display_->width_in_px();
+    size.height = display_->height_in_px();
+    properties.set_logical_size(size);
   }
 
   // We can initialize the Link importer immediately, since no state changes actually occur before

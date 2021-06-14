@@ -197,7 +197,8 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
           const auto pixel_scale = display_pixel_scale * ComputeScale(global_matrices[i]);
           LayoutInfo info;
           info.set_logical_size(properties_kv->second.logical_size());
-          info.set_pixel_scale({pixel_scale.x, pixel_scale.y});
+          info.set_pixel_scale(
+              {static_cast<uint32_t>(pixel_scale.x), static_cast<uint32_t>(pixel_scale.y)});
           graph_kv->second.impl->UpdateLayoutInfo(std::move(info));
         }
       }

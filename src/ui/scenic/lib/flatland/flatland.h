@@ -94,8 +94,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   // |fuchsia::ui::scenic::internal::Flatland|
   void CreateTransform(TransformId transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void SetTranslation(TransformId transform_id,
-                      fuchsia::ui::scenic::internal::Vec2 translation) override;
+  void SetTranslation(TransformId transform_id, fuchsia::math::Vec translation) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void SetOrientation(TransformId transform_id,
                       fuchsia::ui::scenic::internal::Orientation orientation) override;
@@ -124,8 +123,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   // |fuchsia::ui::scenic::internal::Flatland|
   void SetLinkProperties(ContentId link_id,
                          fuchsia::ui::scenic::internal::LinkProperties properties) override;
-  // |fuchsia::ui::scenic::internal::Flatland|
-  void SetLinkSize(ContentId link_id, fuchsia::ui::scenic::internal::Vec2 size) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void ReleaseTransform(TransformId transform_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
@@ -258,12 +255,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   struct ChildLinkData {
     LinkSystem::ChildLink link;
     fuchsia::ui::scenic::internal::LinkProperties properties;
-    fuchsia::ui::scenic::internal::Vec2 size;
+    fuchsia::math::SizeU size;
   };
-
-  // Recomputes the scale matrix responsible for fitting a Link's logical size into the actual size
-  // designated for it.
-  void UpdateLinkScale(const ChildLinkData& link_data);
 
   // A mapping from Flatland-generated TransformHandle to the ChildLinkData it represents.
   std::unordered_map<TransformHandle, ChildLinkData> child_links_;
@@ -276,9 +269,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   // origin as defined by the translation), and scale (relative to the new rotated origin).
   class MatrixData {
    public:
-    void SetTranslation(fuchsia::ui::scenic::internal::Vec2 translation);
+    void SetTranslation(fuchsia::math::Vec translation);
     void SetOrientation(fuchsia::ui::scenic::internal::Orientation orientation);
-    void SetScale(fuchsia::ui::scenic::internal::Vec2 scale);
+    void SetScale(fuchsia::math::SizeU scale);
 
     // Returns this geometric transformation as a single 3x3 matrix using the order of operations
     // above: translation, orientation, then scale.
@@ -290,6 +283,11 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
     // Applies the translation, then orientation, then scale to the identity matrix.
     void RecomputeMatrix();
 
+    // TODO(fxbug.dev/77993) Figure out how we want to handle matrices going forward. Do we replace
+    // the matrices wholesale and just have a freestanding translation vector since we don't scale
+    // directly in the Flatland API anymore? Or do we keep it because we might have the Effects API
+    // integrate directly with these matrices (i.e. when the Effects API scales a node - we update
+    // these matrices here, or do we keep that separate?).
     glm::vec2 translation_ = glm::vec2(0.f, 0.f);
     glm::vec2 scale_ = glm::vec2(1.f, 1.f);
 

@@ -22,13 +22,13 @@ using flatland::TransformGraph;
 using flatland::UberStructSystem;
 using TopologyEntry = flatland::TransformGraph::TopologyEntry;
 using flatland::TransformHandle;
+using fuchsia::math::SizeU;
 using fuchsia::ui::scenic::internal::ContentLink;
 using fuchsia::ui::scenic::internal::ContentLinkToken;
 using fuchsia::ui::scenic::internal::GraphLink;
 using fuchsia::ui::scenic::internal::GraphLinkToken;
 using fuchsia::ui::scenic::internal::LayoutInfo;
 using fuchsia::ui::scenic::internal::LinkProperties;
-using fuchsia::ui::scenic::internal::Vec2;
 
 namespace flatland {
 namespace test {
@@ -132,7 +132,7 @@ TEST_F(LinkSystemTest, ResolvedLinkCreatesLinkTopology) {
 
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
-  properties.set_logical_size(Vec2{1.0f, 2.0f});
+  properties.set_logical_size(SizeU{1, 2});
   ChildLink child_link = link_system->CreateChildLink(
       dispatcher_holder_, std::move(parent_token), std::move(properties), content_link.NewRequest(),
       parent_graph.CreateTransform(),
@@ -148,8 +148,8 @@ TEST_F(LinkSystemTest, ResolvedLinkCreatesLinkTopology) {
 
   bool layout_updated = false;
   graph_link->GetLayout([&](LayoutInfo info) {
-    EXPECT_EQ(1.0f, info.logical_size().x);
-    EXPECT_EQ(2.0f, info.logical_size().y);
+    EXPECT_EQ(1u, info.logical_size().width);
+    EXPECT_EQ(2u, info.logical_size().height);
     layout_updated = true;
   });
   EXPECT_FALSE(layout_updated);

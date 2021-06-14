@@ -20,6 +20,8 @@
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+using fuchsia::math::SizeU;
+using fuchsia::math::Vec;
 using fuchsia::ui::scenic::internal::ContentLink;
 using fuchsia::ui::scenic::internal::ContentLinkStatus;
 using fuchsia::ui::scenic::internal::ContentLinkToken;
@@ -29,7 +31,6 @@ using fuchsia::ui::scenic::internal::GraphLinkToken;
 using fuchsia::ui::scenic::internal::ImageProperties;
 using fuchsia::ui::scenic::internal::LinkProperties;
 using fuchsia::ui::scenic::internal::Orientation;
-using fuchsia::ui::scenic::internal::Vec2;
 
 namespace flatland {
 
@@ -365,7 +366,7 @@ void Flatland::CreateTransform(TransformId transform_id) {
   transforms_.insert({transform_id.value, handle});
 }
 
-void Flatland::SetTranslation(TransformId transform_id, Vec2 translation) {
+void Flatland::SetTranslation(TransformId transform_id, Vec translation) {
   if (transform_id.value == kInvalidId) {
     error_reporter_->ERROR() << "SetTranslation called with transform_id 0";
     ReportBadOperationError();
@@ -517,9 +518,9 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
   }
 
   auto logical_size = properties.logical_size();
-  if (logical_size.x <= 0.f || logical_size.y <= 0.f) {
+  if (logical_size.width == 0 || logical_size.height == 0) {
     error_reporter_->ERROR()
-        << "CreateLink must be provided a logical size with positive X and Y values";
+        << "CreateLink must be provided a logical size with positive width and height values";
     ReportBadOperationError();
     return;
   }
@@ -567,7 +568,7 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
 
   // Default the link size to the logical size, which is just an identity scale matrix, so
   // that future logical size changes will result in the correct scale matrix.
-  Vec2 size = properties.logical_size();
+  SizeU size = properties.logical_size();
 
   content_handles_[link_id.value] = link.graph_handle;
   child_links_[link.graph_handle] = {
@@ -646,7 +647,7 @@ void Flatland::CreateImage(ContentId image_id,
   image_metadatas_[handle] = metadata;
 }
 
-void Flatland::SetImageDestinationSize(ContentId image_id, fuchsia::math::SizeU size) {
+void Flatland::SetImageDestinationSize(ContentId image_id, SizeU size) {
   if (image_id.value == kInvalidId) {
     error_reporter_->ERROR() << "SetImageSize called with image_id 0";
     ReportBadOperationError();
@@ -668,8 +669,7 @@ void Flatland::SetImageDestinationSize(ContentId image_id, fuchsia::math::SizeU 
   }
 
   // TODO(fxbug.dev/77993): Remove matrices from flatland and make this a vec.
-  matrices_[content_kv->second].SetScale(
-      {static_cast<float>(size.width), static_cast<float>(size.height)});
+  matrices_[content_kv->second].SetScale(size);
 }
 
 void Flatland::SetOpacity(TransformId transform_id, float val) {
@@ -767,13 +767,13 @@ void Flatland::SetLinkProperties(ContentId link_id, LinkProperties properties) {
   }
 
   // Callers do not have to provide a new logical size on every call to SetLinkProperties, but if
-  // they do, it must have positive X and Y values.
+  // they do, it must have positive width and height values.
   if (properties.has_logical_size()) {
     auto logical_size = properties.logical_size();
-    if (logical_size.x <= 0.f || logical_size.y <= 0.f) {
+    if (logical_size.width == 0 || logical_size.height == 0) {
       error_reporter_->ERROR()
           << "SetLinkProperties failed, logical_size components must be positive, "
-          << "given (" << logical_size.x << ", " << logical_size.y << ")";
+          << "given (" << logical_size.width << ", " << logical_size.height << ")";
       ReportBadOperationError();
       return;
     }
@@ -787,44 +787,6 @@ void Flatland::SetLinkProperties(ContentId link_id, LinkProperties properties) {
   FX_DCHECK(link_kv->second.link.importer.valid());
 
   link_kv->second.properties = std::move(properties);
-  UpdateLinkScale(link_kv->second);
-}
-
-void Flatland::SetLinkSize(ContentId link_id, Vec2 size) {
-  if (link_id.value == kInvalidId) {
-    error_reporter_->ERROR() << "SetLinkSize called with link_id zero";
-    ReportBadOperationError();
-    return;
-  }
-
-  if (size.x <= 0.f || size.y <= 0.f) {
-    error_reporter_->ERROR() << "SetLinkSize failed, size components must be positive, given ("
-                             << size.x << ", " << size.y << ")";
-    ReportBadOperationError();
-    return;
-  }
-
-  auto content_kv = content_handles_.find(link_id.value);
-
-  if (content_kv == content_handles_.end()) {
-    error_reporter_->ERROR() << "SetLinkSize failed, link_id " << link_id.value << " not found";
-    ReportBadOperationError();
-    return;
-  }
-
-  auto link_kv = child_links_.find(content_kv->second);
-
-  if (link_kv == child_links_.end()) {
-    error_reporter_->ERROR() << "SetLinkSize failed, content_id " << link_id.value
-                             << " is not a Link";
-    ReportBadOperationError();
-    return;
-  }
-
-  FX_DCHECK(link_kv->second.link.importer.valid());
-
-  link_kv->second.size = std::move(size);
-  UpdateLinkScale(link_kv->second);
 }
 
 void Flatland::ReleaseTransform(TransformId transform_id) {
@@ -1000,14 +962,6 @@ void Flatland::CloseConnection(Error error) {
   destroy_instance_function_();
 }
 
-void Flatland::UpdateLinkScale(const ChildLinkData& link_data) {
-  FX_DCHECK(link_data.properties.has_logical_size());
-
-  auto logical_size = link_data.properties.logical_size();
-  matrices_[link_data.link.graph_handle].SetScale(
-      {link_data.size.x / logical_size.x, link_data.size.y / logical_size.y});
-}
-
 // MatrixData function implementations
 
 // static
@@ -1025,10 +979,11 @@ float Flatland::MatrixData::GetOrientationAngle(
   }
 }
 
-void Flatland::MatrixData::SetTranslation(fuchsia::ui::scenic::internal::Vec2 translation) {
-  translation_.x = translation.x;
-  translation_.y = translation.y;
-
+void Flatland::MatrixData::SetTranslation(Vec translation) {
+  // TODO(fxbug.dev/77993): Remove these casts once we remove the floating
+  // point matrices and replace with integer vectors.
+  translation_.x = static_cast<float>(translation.x);
+  translation_.y = static_cast<float>(translation.y);
   RecomputeMatrix();
 }
 
@@ -1038,9 +993,9 @@ void Flatland::MatrixData::SetOrientation(fuchsia::ui::scenic::internal::Orienta
   RecomputeMatrix();
 }
 
-void Flatland::MatrixData::SetScale(fuchsia::ui::scenic::internal::Vec2 scale) {
-  scale_.x = scale.x;
-  scale_.y = scale.y;
+void Flatland::MatrixData::SetScale(SizeU scale) {
+  scale_.x = static_cast<float>(scale.width);
+  scale_.y = static_cast<float>(scale.height);
 
   RecomputeMatrix();
 }

@@ -23,13 +23,6 @@ enum Error {
     BAD_HANGING_GET = 3;
 };
 
-// TODO(fxbug.dev/78161): Remove floating point types.
-// TODO(fxbug.dev/36766): Use the corresponding fuchsia.math Size type.
-struct Vec2 {
-    float32 x;
-    float32 y;
-};
-
 enum Orientation {
     CCW_0_DEGREES = 1;
     CCW_90_DEGREES = 2;
@@ -44,13 +37,11 @@ enum Orientation {
 table LayoutInfo {
     /// The layout size of a Graph in logical pixels, defined by the parent's call to
     /// SetLinkProperties(). Clients should re-layout their content when this value changes.
-    // TODO(fxbug.dev/78161): Remove floating point types.
-    1: Vec2 logical_size;
+    1: fuchsia.math.SizeU logical_size;
     /// The ratio from physical display pixels to logical pixels, defined by the sizes and scale
     /// transforms of the parent. Clients should not necessarily re-layout their content when this
     /// value changes.
-    // TODO(fxbug.dev/78161): Remove floating point types.
-    2: Vec2 pixel_scale;
+    2: fuchsia.math.SizeU pixel_scale;
 };
 
 /// GraphLinks will be informed when they are actively attached to a output display (either
@@ -134,8 +125,7 @@ resource struct ContentLinkToken {
 table LinkProperties {
     /// The size of the Link in logical pixels. This maps directly to the logical_size field in
     /// LayoutInfo.
-    // TODO(fxbug.dev/78161): Remove floating point types.
-    1: Vec2 logical_size;
+    1: fuchsia.math.SizeU logical_size;
 };
 
 /// The properties of an Image as defined by the client. These properties determine how an Image
@@ -349,13 +339,10 @@ protocol Flatland {
     /// Geometric attributes are applied in the following order:
     /// 1. Translation (relative to the parent's coordinate space)
     /// 2. Orientation (around the new origin as defined by the translation)
-    /// 3. Scale (relative to the new rotated origin)
-    /// 4. Crop (in the scaled coordinate space)
     ///
     /// Sets the translation on a Transform. The order of geometric attribute application is
     /// addressed above.
-    // TODO(fxbug.dev/78161): Remove floating point types.
-    SetTranslation(TransformId transform_id, Vec2 translation);
+    SetTranslation(TransformId transform_id, fuchsia.math.Vec translation);
 
     /// Sets the orientation on a Transform. The order of geometric attribute application is
     /// addressed in the documentation for SetTranslation().
@@ -404,8 +391,7 @@ protocol Flatland {
     // inherits the attributes of its parent Transform, and so on).
 
     // Content is contained within a unit rectangle, with the top-left corner at the origin of the
-    // coordinate space defined by the attached Transform. Content can be resized using either
-    // scale attributes on transforms, or the appropriate Content mutators.
+    // coordinate space defined by the attached Transform.
 
     // Content constructors
 
@@ -473,14 +459,6 @@ protocol Flatland {
     ///
     /// The logical_size must have positive X and Y components.
     SetLinkProperties(ContentId link_id, LinkProperties properties);
-
-    /// The Content size for a Link is the size of the rectangle in the parent's space that the
-    /// Link occupies. This effectively applies a scale to the Link Content equal to the ratio from
-    /// its Content size to its logical_size.
-    ///
-    /// The Link Content size must have positive X and Y components.
-    // TODO(fxbug.dev/78161): Remove floating point types.
-    SetLinkSize(ContentId link_id, Vec2 size);
 
     // ***** Cleanup operations *****
 
