@@ -36,10 +36,6 @@
 {% endif %}
 
 <style>
-:root {
-    --sm: 576px;
-}
-
 .comma-list {
   display: inline;
   list-style: none;
@@ -95,7 +91,7 @@ table {
   flex-direction: column;
 }
 
-@media (min-width: var(--sm)) { 
+@media (min-width: 576px) {
     .edit-buttons {
         flex-direction: row;
     }
