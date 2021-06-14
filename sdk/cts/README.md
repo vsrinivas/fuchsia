@@ -256,7 +256,45 @@ include a third party dependency, contact the OWNERS of `//sdk/cts/`.
 
 Code that runs on the host does not have this restriction.
 
-## Questions
+## FAQ
+
+Are there any examples of CTS tests?
+
+  * Yes!  See [//sdk/cts/examples](https://osscs.corp.google.com/fuchsia/fuchsia/+/main:sdk/cts/examples/) for some examples, or peruse the complete set of tests under [//sdk/cts/tests](https://osscs.corp.google.com/fuchsia/fuchsia/+/main:sdk/cts/tests/).
+
+Is CTS appropriate for unit tests of my service?
+
+  * CTS is used to test ABI and API exposed through Fuchsia SDKs, including (but not limited to) FIDL and C/C++ APIs.  Unit tests that exercise FIDL API exposed from your service are exactly what we want.  Unit tests that exercise functionality that isn't directly exposed to SDK users are out of scope.
+
+What is meant by compatibility in the C of CTS?
+
+  * CTS tests are intended to exercise all documented features of API and ABI exposed by Fuchsia SDKs.  If we take an older set of tests, and run it against a newer platform release, we say that the newer platform release is compatible with the older one if it exhibits the same behavior.
+
+What is the compatibility window that CTS attempts to uphold?
+
+  * The goal is to uphold the compatibility window required by the platform, which is currently 6 weeks.  We also intend to enforce the requirement for soft transitions for API - we will not accept hard breaking changes.
+
+Are CTS tests those that reach into the service or do they access the FIDL or API?
+
+  * CTS tests only target API/ABI exposed through Fuchsia SDKs.
+
+One responsibility Fuchsia.settings.display has is to change the brightness of the screen. Should the test change the brightness and then assert a response given that the brightness changed? Or should the test use an emulator to identify if the brightness actually changed?
+
+  * Tests should generally not assume that they are run on any particular device.  However, CTS tests will be run on emulators, and if you would like to provide additional useful compatibility testing by leveraging that fact (e.g., by instrumenting device drivers), we encourage you to reach out to us to discuss further.
+
+How will we know if a test fails?
+
+  * These tests will be run in CQ and will indicate status as part of their builder pipeline.
+
+Where will CTS tests run? Emulator? Devices?
+
+  * Initially, CTS tests will be automatically run on Emulators in CQ.  Developers will also be able to run the tests locally as part of their traditional workflows.  Over time, tests are likely to be run on all devices as part of qualification.
+
+How do we get started as a rust service? Why does language matter? What level of effort might it be to get rust tests to work?
+
+  * CTS tests are limited to C++ because part of the goal of CTS is to ensure that code targeted to SDKs continues to build and execute correctly.   Because there is currently no Rust support in SDKs, Rust-based tests do not capture the behavior of code that targets SDKs.  Depending on the level of demand from Rust-based teams, we may consider binary-only Rust tests, which can capture accurate execution, but not build.  We will have to balance the need to provide source based tests with the pain of having to write tests in C++.  Please reach out to the team with questions.
+
+### Additional questions
 
 For questions and clarification on this document, please reach out to the
 directory's owners.
