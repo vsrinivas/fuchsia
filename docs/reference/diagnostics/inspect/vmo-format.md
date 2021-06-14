@@ -133,22 +133,23 @@ All the supported types are defined in
 [//zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/block.h][block.h]
 which fall into categories as follows:
 
-enum             | value | type name | category
------------------|-------|----------------|-------
-`kFree`          | 0     | `FREE`             | Internal
-`kReserved`      | 1     | `RESERVED`         | Internal
-`kHeader`        | 2     | `HEADER`           | Header
-`kNodeValue`     | 3     | `NODE_VALUE`       | Value
-`kIntValue`      | 4     | `INT_VALUE`        | Value
-`kUintValue`     | 5     | `UINT_VALUE`       | Value
-`kDoubleValue`   | 6     | `DOUBLE_VALUE`     | Value
-`kBufferValue`   | 7     | `BUFFER_VALUE`     | Value
-`kExtent`        | 8     | `EXTENT`           | Extent
-`kName`          | 9     | `NAME`             | Name
-`kTombstone`     | 10    | `TOMBSTONE`        | Value
-`kArrayValue`    | 11    | `ARRAY_VALUE`      | Value
-`kLinkValue`     | 12    | `LINK_VALUE`       | Value
-`kBoolValue`     | 13    | `BOOL_VALUE`       | Value
+enum               | value | type name                | category
+-------------------|-------|--------------------------|-------
+`kFree`            | 0     | `FREE`                   | Internal
+`kReserved`        | 1     | `RESERVED`               | Internal
+`kHeader`          | 2     | `HEADER`                 | Header
+`kNodeValue`       | 3     | `NODE_VALUE`             | Value
+`kIntValue`        | 4     | `INT_VALUE`              | Value
+`kUintValue`       | 5     | `UINT_VALUE`             | Value
+`kDoubleValue`     | 6     | `DOUBLE_VALUE`           | Value
+`kBufferValue`     | 7     | `BUFFER_VALUE`           | Value
+`kExtent`          | 8     | `EXTENT`                 | Extent
+`kName`            | 9     | `NAME`                   | Name
+`kTombstone`       | 10    | `TOMBSTONE`              | Value
+`kArrayValue`      | 11    | `ARRAY_VALUE`            | Value
+`kLinkValue`       | 12    | `LINK_VALUE`             | Value
+`kBoolValue`       | 13    | `BOOL_VALUE`             | Value
+`kStringReference` | 14    | `STRING_REFERENCE`       | Reference
 
 * *Internal* - These types are provided for implementing block allocation, and
 they must be ignored by readers.
@@ -163,6 +164,8 @@ and a parent (which must be a `NODE_VALUE`).
 
 * *Name* - This type stores binary data that fits in a single block,
 and it is typically used to store the name of values.
+
+* *Reference* - This type holds a single canonical value to which other blocks can refer.
 
 Each type interprets the payload differently, as follows:
 
@@ -181,6 +184,7 @@ Each type interprets the payload differently, as follows:
 * [ARRAY\_VALUE](#array)
 * [LINK](#link)
 * [BOOL\_VALUE](#numeric)
+* [STRING\_REFERENCE](#stringreference)
 
 ## FREE {#free}
 
@@ -412,6 +416,33 @@ Payload = contents of the name. Size depends on the order
 
 `NAME` blocks give objects and values a human-readable identifier. They
 consist of a UTF-8 payload that fits entirely within the given block.
+
+## STRING\_REFERENCE {#stringreference}
+```
+.---------------------------------------------------------------.
+|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
+|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|---+---+-------+-----------------------+-----------------------|
+| O | R | Type  | Next Extent Index     | Reference Count       |
+|---------------------------------------------------------------|
+| Total length                  | Payload                       |
+'---------------------------------------------------------------'
+
+O = Order
+R = Reserved
+Type = 14
+Next Extent Index = index of the first overflow EXTENT, or 0 if Payload does not overflow
+Reference Count = number of references to this STRING_REFERENCE
+Total length = size of the Payload in bytes. Payload overflows into Next Extent if
+               Total length > ((16 << Order) - 12)
+Payload = the canonical instance of a string. The size of the Payload field depends on the
+          Order. If the size of the Payload + 12 is greater than 16 << Order, then the Payload
+          is too large to fit in one block and will overflow into Next Extent
+```
+
+`STRING_REFERENCE` blocks are used to implement strings with reference semantics in the VMO.
+They are the start of a linked list of `EXTENT`s, meaning that their values are not size-restricted.
+`STRING_REFERENCE` blocks may be used where a `NAME` is expected.
 
 ## ARRAY\_VALUE {#array}
 
