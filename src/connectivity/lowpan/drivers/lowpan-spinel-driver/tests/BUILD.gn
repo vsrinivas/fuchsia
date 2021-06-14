@@ -4,5 +4,8 @@
 
 group("tests") {
   testonly = true
-  deps = [ "test-components:lowpan-driver-provision-mock" ]
+  deps = [
+    # TODO(fxbug.dev/77055): Re-enable test once flake is fixed.
+    # "test-components:lowpan-driver-provision-mock",
+  ]
 }
