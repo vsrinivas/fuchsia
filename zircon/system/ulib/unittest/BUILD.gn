@@ -33,7 +33,7 @@ zx_library("unittest") {
     # Used by the fuchsia_test_component_manifest() template.
     test_component_manifest_cml = [
       {
-        include = [ "src/sys/test_runners/elf/default.shard.cml" ]
+        include = [ "//src/sys/test_runners/elf/default.shard.cml" ]
       },
     ]
   }
@@ -62,7 +62,7 @@ zx_library("unittest-static") {
     # Used by the fuchsia_test_component_manifest() template.
     test_component_manifest_cml = [
       {
-        include = [ "src/sys/test_runners/elf/default.shard.cml" ]
+        include = [ "//src/sys/test_runners/elf/default.shard.cml" ]
       },
     ]
   }

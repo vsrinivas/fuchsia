@@ -38,9 +38,9 @@ template("expect_includes") {
     foreach(include, includes) {
       ext = get_path_info(include, "extension")
       if (ext == "cmx") {
-        includes_cmx += [ rebase_path(include, "//") ]
+        includes_cmx += [ "//" + rebase_path(include, "//") ]
       } else if (ext == "cml") {
-        includes_cml += [ rebase_path(include, "//") ]
+        includes_cml += [ "//" + rebase_path(include, "//") ]
       } else {
         assert(false, "Unexpected include extension for " + include)
       }
