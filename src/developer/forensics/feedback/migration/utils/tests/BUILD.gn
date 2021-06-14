@@ -46,6 +46,19 @@ executable("file_utils_unittest_exe") {
   ]
 }
 
+executable("log_unittest_exe") {
+  testonly = true
+  sources = [ "log_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback/migration/utils",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/lib/files",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 ###############################################################################
 # COMPONENTS
 ###############################################################################
@@ -65,6 +78,14 @@ fuchsia_component("file_utils_unittest") {
   deps = [ ":file_utils_unittest_exe" ]
 }
 
+fuchsia_component("log_unittest") {
+  testonly = true
+
+  manifest = "meta/log_unittest.cmx"
+
+  deps = [ ":log_unittest_exe" ]
+}
+
 ###############################################################################
 # PACKAGES
 ###############################################################################
@@ -72,6 +93,7 @@ fuchsia_test_package("feedback-migration-utils-tests") {
   test_components = [
     ":directory_migrator_ptr_unittest",
     ":file_utils_unittest",
+    ":log_unittest",
   ]
   test_specs = {
     log_settings = {
