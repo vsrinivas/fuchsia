@@ -72,7 +72,7 @@ size_t IngestCommentLine(std::string_view text, size_t leading_blank_lines,
 void AppendToken(std::string_view word, size_t leading_blank_lines, AtomicSpanSequence* out) {
   if (!word.empty() && word[0] != '\0') {
     // TODO(fxbug.dev/77861): remove this once proper parser support is added.
-    static std::regex needs_trailing_space_regex("[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9])?|=|\\||->");
+    static std::regex needs_trailing_space_regex("[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9])?|=|\\||,|->");
     auto token_span_sequence = std::make_unique<TokenSpanSequence>(word, leading_blank_lines);
     if (std::regex_match(std::string(word), needs_trailing_space_regex) && word != "reserved") {
       token_span_sequence->SetTrailingSpace(true);
@@ -565,9 +565,12 @@ void SpanSequenceTreeVisitor::OnBinaryOperatorConstant(
     TreeVisitor::OnConstant(element->left_operand);
   }
 
-  const auto visiting = Visiting(this, VisitorKind::kBinaryOperatorSecondConstant);
-  const auto operand_builder = SpanBuilder<AtomicSpanSequence>(this, *element->right_operand);
-  TreeVisitor::OnConstant(element->right_operand);
+  {
+    const auto visiting = Visiting(this, VisitorKind::kBinaryOperatorSecondConstant);
+    const auto operand_builder = SpanBuilder<AtomicSpanSequence>(this, *element->right_operand);
+    TreeVisitor::OnConstant(element->right_operand);
+  }
+  AddSpacesBetweenChildren(building_.top());
 }
 
 void SpanSequenceTreeVisitor::OnCompoundIdentifier(
@@ -919,7 +922,7 @@ void SpanSequenceTreeVisitor::OnResourceDeclaration(
   const auto builder = StatementBuilder<MultilineSpanSequence>(
       this, element->start_, SpanSequence::Position::kNewlineUnindented);
 
-  // Build the opening "resource_defintion ..." line.
+  // Build the opening "resource_definition ..." line.
   {
     const auto first_line_builder =
         SpanBuilder<AtomicSpanSequence>(this, element->identifier->start_);
@@ -936,8 +939,7 @@ void SpanSequenceTreeVisitor::OnResourceDeclaration(
       // sub-typed resource definitions like `handle : uint32 {...`, we need to add this space in.
       // We can do this by adding spaces between every child of the first element of the
       // SpanSequence currently being built.
-      auto as_composite = static_cast<CompositeSpanSequence*>(building_.top().front().get());
-      AddSpacesBetweenChildren(as_composite->EditChildren());
+      AddSpacesBetweenChildren(building_.top());
     } else {
       auto postscript = IngestUntilChar('{');
       if (postscript.has_value())

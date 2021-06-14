@@ -425,6 +425,7 @@ std::optional<SpanSequence::Kind> MultilineSpanSequence::Print(
       // This is not the last child of this MultilineSpanSequence - just check the position of next
       // child to see if its indented.
       next_token_is_indented =
+          child->GetPosition() != SpanSequence::Position::kNewlineIndented &&
           children[i + 1]->GetPosition() == SpanSequence::Position::kNewlineIndented;
     }
 

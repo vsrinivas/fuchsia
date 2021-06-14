@@ -1280,10 +1280,10 @@ resource_definition subtype_a : uint32 {
 //  be fixed when proper token parsing is used.
 // This test's input is semantically identical to ResourceFormatted.  The only difference is that
 // the newlines and unnecessary spaces have been removed.
-TEST(NewFormatterTests, ResourceFormattedMinimalWhitespace) {
+TEST(NewFormatterTests, ResourceMinimalWhitespace) {
   // ---------------40---------------- |
   std::string unformatted =
-      R"FIDL(library foo.bar;resource_definition default_abcdefghij {properties{obj_type subtype_abcdefghijklmn;};};resource_definition subtype_a:uint32{properties{obj_type subtype_abcdefghijklmn;rights rights_abcdefghijklmnopq;};};)FIDL";
+      R"FIDL(library foo.bar;resource_definition default_abcdefghij{properties{obj_type subtype_abcdefghijklmn;};};resource_definition subtype_a:uint32{properties{obj_type subtype_abcdefghijklmn;rights rights_abcdefghijklmnopq;};};)FIDL";
 
   // ---------------40---------------- |
   std::string formatted = R"FIDL(
@@ -1293,7 +1293,7 @@ resource_definition default_abcdefghij {
         obj_type subtype_abcdefghijklmn;
     };
 };
-resource_definition subtype_a :uint32{
+resource_definition subtype_a : uint32{
     properties{
         obj_type subtype_abcdefghijklmn;
         rights rights_abcdefghijklmnopq;
@@ -4209,6 +4209,140 @@ type // C8
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+TEST(NewFormatterTests, DocCommentsMultiline) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+/// C1a
+/// C1b
+library foo.bar;  // C2
+
+/// C3a
+/// C3b
+using baz.qux;  // C4
+
+/// C5a
+/// C5b
+resource_definition thing : uint8 {  // C6
+    properties {  // C8
+/// C9a
+/// C9b
+        stuff rights;  // C10
+    };
+};
+
+/// C11a
+/// C11b
+const MY_CONST string = "abc";  // C12
+
+/// C13a
+/// C13b
+type MyEnum = enum {  // C14
+/// C15a
+/// C17b
+    MY_VALUE = 1;  // C16
+};
+
+/// C17a
+/// C17b
+type MyTable = resource table {  // C18
+/// C19a
+/// C19b
+    1: field thing;  // C20
+};
+
+/// C21a
+/// C21b
+alias MyAlias = MyStruct;  // C22
+
+/// C23a
+/// C23b
+protocol MyProtocol {  // C24
+/// C25a
+/// C25b
+    MyMethod(resource struct {  // C26
+/// C27a
+/// C27b
+        data MyTable;  // C28
+    }) -> () error MyEnum;  // C29
+};  // 30
+
+/// C29a
+/// C29b
+service MyService {  // C32
+/// C31a
+/// C31b
+    my_protocol client_end:MyProtocol;  // C34
+};  // C35
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+/// C1a
+/// C1b
+library foo.bar; // C2
+
+/// C3a
+/// C3b
+using baz.qux; // C4
+
+/// C5a
+/// C5b
+resource_definition thing : uint8 { // C6
+    properties { // C8
+        /// C9a
+        /// C9b
+        stuff rights; // C10
+    };
+};
+
+/// C11a
+/// C11b
+const MY_CONST string = "abc"; // C12
+
+/// C13a
+/// C13b
+type MyEnum = enum { // C14
+    /// C15a
+    /// C17b
+    MY_VALUE = 1; // C16
+};
+
+/// C17a
+/// C17b
+type MyTable = resource table { // C18
+    /// C19a
+    /// C19b
+    1: field thing; // C20
+};
+
+/// C21a
+/// C21b
+alias MyAlias = MyStruct; // C22
+
+/// C23a
+/// C23b
+protocol MyProtocol { // C24
+    /// C25a
+    /// C25b
+    MyMethod(resource struct { // C26
+        /// C27a
+        /// C27b
+        data MyTable; // C28
+    }) -> () error MyEnum; // C29
+}; // 30
+
+/// C29a
+/// C29b
+service MyService { // C32
+    /// C31a
+    /// C31b
+    my_protocol client_end:MyProtocol; // C34
+}; // C35
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 TEST(NewFormatterTests, NewlinesAbsent) {
   // ---------------40---------------- |
   std::string unformatted = R"FIDL(library foo.bar;
@@ -4327,6 +4461,28 @@ alias MyAlias_Abcdefghijklmnopqr = bool;
 @foo
 @bar
 const MY_TRUE_ABCDEFGHIJKLM bool = true;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, ListSpacing) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+const RIGHTS_BASIC rights = rights.TRANSFER|rights.DUPLICATE|rights.WAIT|rights.INSPECT;
+alias constrained_handle = zx.handle:<VMO,RIGHTS_BASIC>;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+const RIGHTS_BASIC rights
+        = rights.TRANSFER | rights.DUPLICATE | rights.WAIT | rights.INSPECT;
+alias constrained_handle
+        = zx.handle:<VMO, RIGHTS_BASIC>;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));

@@ -847,6 +847,13 @@ const std::vector<TestCase> new_syntax_test_cases = {
           }»;
          )FIDL",
          R"FIDL(library x; protocol X { Method(«struct { a «int32»; b «bool»; }») -> («struct {}») error «uint32»; };)FIDL",
+         R"FIDL(library x;
+          resource_definition foo : «uint8» {
+              properties {
+                  rights «rights»;
+              };
+          };
+         )FIDL",
      }},
     {ElementType::TypeDecl,
      {

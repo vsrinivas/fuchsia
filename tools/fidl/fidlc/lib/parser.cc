@@ -1219,13 +1219,14 @@ std::unique_ptr<raw::ResourceDeclaration> Parser::ParseResourceDeclaration(
   if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
     // TODO(fxbug.dev/70247): remove branching
     if (syntax_ == utils::Syntax::kNew) {
+      ASTScope type_identifier_scope(this);
       auto resource_type_identifier = ParseCompoundIdentifier();
       if (!Ok())
         return Fail();
 
       maybe_type_ctor = std::make_unique<raw::TypeConstructorNew>(
           scope.GetSourceElement(),
-          std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
+          std::make_unique<raw::NamedLayoutReference>(type_identifier_scope.GetSourceElement(),
                                                       std::move(resource_type_identifier)),
           /*parameters=*/nullptr,
           /*constraints=*/nullptr);
