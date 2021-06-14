@@ -36,7 +36,7 @@ constexpr uint32_t kGoldfishBtiId = 0x80888088;
 constexpr uint32_t kPipeMinDeviceVersion = 2;
 constexpr uint32_t kMaxSignalledPipes = 64;
 
-zx_device_prop_t kDefaultPipeDeviceProps[] = {
+constexpr zx_device_prop_t kDefaultPipeDeviceProps[] = {
     {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOOGLE},
     {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GOLDFISH},
     {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GOLDFISH_PIPE_CONTROL},
@@ -122,9 +122,6 @@ class Binder : public fake_ddk::Bind {
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) override {
     zx_status_t status;
-    if (parents_.find(parent) != parents_.end()) {
-      return ZX_ERR_ALREADY_BOUND;
-    }
     parents_.insert(parent);
 
     if (args && args->ops) {
@@ -223,6 +220,7 @@ class PipeDeviceTest : public zxtest::Test {
 
     ddk_.SetProtocol(ZX_PROTOCOL_ACPI, mock_acpi_.GetProto());
     dut_ = std::make_unique<PipeDevice>(fake_ddk::FakeParent());
+    dut_child_ = std::make_unique<PipeChildDevice>(dut_.get());
   }
 
   // |zxtest::Test|
@@ -241,6 +239,7 @@ class PipeDeviceTest : public zxtest::Test {
   ddk::MockAcpi mock_acpi_;
   Binder ddk_;
   std::unique_ptr<PipeDevice> dut_;
+  std::unique_ptr<PipeChildDevice> dut_child_;
   ProtocolDeviceOps child_device_ops_;
 
   zx::bti acpi_bti_;
@@ -258,7 +257,8 @@ TEST_F(PipeDeviceTest, Bind) {
     ctrl_regs->version = kPipeMinDeviceVersion;
   }
 
-  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
+  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_child_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   {
     auto mapped = MapControlRegisters();
@@ -282,10 +282,11 @@ TEST_F(PipeDeviceTest, Bind) {
 }
 
 TEST_F(PipeDeviceTest, Open) {
-  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
+  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_child_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   zx_device_t* instance_dev;
-  ASSERT_OK(dut_->DdkOpen(&instance_dev, 0u));
+  ASSERT_OK(dut_child_->DdkOpen(&instance_dev, 0u));
   ASSERT_EQ(instance_dev, fake_ddk::kFakeDevice);
   ASSERT_TRUE(ddk_.parents().find(fake_ddk::kFakeParent) != ddk_.parents().end());
   ASSERT_TRUE(ddk_.parents().find(fake_ddk::kFakeDevice) != ddk_.parents().end());
@@ -295,28 +296,30 @@ TEST_F(PipeDeviceTest, Open) {
 }
 
 TEST_F(PipeDeviceTest, CreatePipe) {
-  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
+  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_child_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   int32_t id;
   zx::vmo vmo;
-  ASSERT_OK(dut_->GoldfishPipeCreate(&id, &vmo));
+  ASSERT_OK(dut_child_->GoldfishPipeCreate(&id, &vmo));
   ASSERT_NE(id, 0u);
   ASSERT_TRUE(vmo.is_valid());
 
-  dut_->GoldfishPipeDestroy(id);
+  dut_child_->GoldfishPipeDestroy(id);
 
   dut_->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
 }
 
 TEST_F(PipeDeviceTest, CreatePipeMultiThreading) {
-  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
+  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_child_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   auto create_pipe = [this](size_t num_pipes, std::vector<int32_t>* ids) {
     for (size_t i = 0; i < num_pipes; i++) {
       int32_t id;
       zx::vmo vmo;
-      dut_->GoldfishPipeCreate(&id, &vmo);
+      dut_child_->GoldfishPipeCreate(&id, &vmo);
       ids->push_back(id);
     }
   };
@@ -342,15 +345,16 @@ TEST_F(PipeDeviceTest, CreatePipeMultiThreading) {
 }
 
 TEST_F(PipeDeviceTest, Exec) {
-  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
+  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_child_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   int32_t id;
   zx::vmo vmo;
-  ASSERT_OK(dut_->GoldfishPipeCreate(&id, &vmo));
+  ASSERT_OK(dut_child_->GoldfishPipeCreate(&id, &vmo));
   ASSERT_NE(id, 0u);
   ASSERT_TRUE(vmo.is_valid());
 
-  dut_->GoldfishPipeExec(id);
+  dut_child_->GoldfishPipeExec(id);
 
   {
     auto mapped = MapControlRegisters();
@@ -358,23 +362,24 @@ TEST_F(PipeDeviceTest, Exec) {
     ASSERT_EQ(ctrl_regs->command, static_cast<uint32_t>(id));
   }
 
-  dut_->GoldfishPipeDestroy(id);
+  dut_child_->GoldfishPipeDestroy(id);
 
   dut_->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
 }
 
 TEST_F(PipeDeviceTest, TransferObservedSignals) {
-  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
+  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_child_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   int32_t id;
   zx::vmo vmo;
-  ASSERT_OK(dut_->GoldfishPipeCreate(&id, &vmo));
+  ASSERT_OK(dut_child_->GoldfishPipeCreate(&id, &vmo));
 
   zx::event old_event, old_event_dup;
   ASSERT_OK(zx::event::create(0u, &old_event));
   ASSERT_OK(old_event.duplicate(ZX_RIGHT_SAME_RIGHTS, &old_event_dup));
-  ASSERT_OK(dut_->GoldfishPipeSetEvent(id, std::move(old_event_dup)));
+  ASSERT_OK(dut_child_->GoldfishPipeSetEvent(id, std::move(old_event_dup)));
 
   // Trigger signals on "old" event.
   old_event.signal(0u, fuchsia_hardware_goldfish::wire::kSignalReadable);
@@ -384,7 +389,7 @@ TEST_F(PipeDeviceTest, TransferObservedSignals) {
   // Clear the target signal.
   ASSERT_OK(new_event.signal(fuchsia_hardware_goldfish::wire::kSignalReadable, 0u));
   ASSERT_OK(new_event.duplicate(ZX_RIGHT_SAME_RIGHTS, &new_event_dup));
-  ASSERT_OK(dut_->GoldfishPipeSetEvent(id, std::move(new_event_dup)));
+  ASSERT_OK(dut_child_->GoldfishPipeSetEvent(id, std::move(new_event_dup)));
 
   // Wait for `SIGNAL_READABLE` signal on the new event.
   zx_signals_t observed;
@@ -396,10 +401,11 @@ TEST_F(PipeDeviceTest, TransferObservedSignals) {
 }
 
 TEST_F(PipeDeviceTest, GetBti) {
-  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
+  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_child_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   zx::bti bti;
-  ASSERT_OK(dut_->GoldfishPipeGetBti(&bti));
+  ASSERT_OK(dut_child_->GoldfishPipeGetBti(&bti));
 
   zx_info_bti_t goldfish_bti_info, acpi_bti_info;
   ASSERT_OK(
@@ -414,7 +420,8 @@ TEST_F(PipeDeviceTest, GetBti) {
 }
 
 TEST_F(PipeDeviceTest, ConnectToSysmem) {
-  ASSERT_OK(dut_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
+  ASSERT_OK(dut_->Bind());
+  ASSERT_OK(dut_child_->Bind(kDefaultPipeDeviceProps, kDefaultPipeDeviceName));
 
   zx::channel sysmem_server, sysmem_client;
   zx_koid_t server_koid = ZX_KOID_INVALID, client_koid = ZX_KOID_INVALID;
@@ -425,7 +432,7 @@ TEST_F(PipeDeviceTest, ConnectToSysmem) {
   server_koid = info.koid;
   client_koid = info.related_koid;
 
-  ASSERT_OK(dut_->GoldfishPipeConnectSysmem(std::move(sysmem_server)));
+  ASSERT_OK(dut_child_->GoldfishPipeConnectSysmem(std::move(sysmem_server)));
   ASSERT_NE(sysmem_request_koid_, ZX_KOID_INVALID);
   ASSERT_EQ(sysmem_request_koid_, server_koid);
 
@@ -440,11 +447,51 @@ TEST_F(PipeDeviceTest, ConnectToSysmem) {
     client_koid = info.related_koid;
 
     uint64_t heap_id = static_cast<uint64_t>(heap);
-    ASSERT_OK(dut_->GoldfishPipeRegisterSysmemHeap(heap_id, std::move(heap_server)));
+    ASSERT_OK(dut_child_->GoldfishPipeRegisterSysmemHeap(heap_id, std::move(heap_server)));
     ASSERT_TRUE(sysmem_heap_request_koids_.find(heap_id) != sysmem_heap_request_koids_.end());
     ASSERT_NE(sysmem_heap_request_koids_.at(heap_id), ZX_KOID_INVALID);
     ASSERT_EQ(sysmem_heap_request_koids_.at(heap_id), server_koid);
   }
+
+  dut_->DdkAsyncRemove();
+  EXPECT_TRUE(ddk_.Ok());
+}
+
+TEST_F(PipeDeviceTest, ChildDevice) {
+  // Test creating multiple child devices. Each child device can access the
+  // GoldfishPipe banjo protocol, and they should share the same parent device.
+
+  ASSERT_OK(dut_->Bind());
+  auto child1 = std::make_unique<PipeChildDevice>(dut_.get());
+  auto child2 = std::make_unique<PipeChildDevice>(dut_.get());
+
+  constexpr zx_device_prop_t kPropsChild1[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOOGLE},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GOLDFISH},
+      {BIND_PLATFORM_DEV_DID, 0, 0x01},
+  };
+  constexpr const char* kDeviceNameChild1 = "goldfish-pipe-child1";
+  ASSERT_OK(child1->Bind(kPropsChild1, kDeviceNameChild1));
+
+  constexpr zx_device_prop_t kPropsChild2[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOOGLE},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GOLDFISH},
+      {BIND_PLATFORM_DEV_DID, 0, 0x02},
+  };
+  constexpr const char* kDeviceNameChild2 = "goldfish-pipe-child2";
+  ASSERT_OK(child2->Bind(kPropsChild2, kDeviceNameChild2));
+
+  int32_t id1 = 0u;
+  zx::vmo vmo1;
+  ASSERT_OK(dut_child_->GoldfishPipeCreate(&id1, &vmo1));
+  ASSERT_NE(id1, 0);
+
+  int32_t id2 = 0u;
+  zx::vmo vmo2;
+  ASSERT_OK(dut_child_->GoldfishPipeCreate(&id2, &vmo2));
+  ASSERT_NE(id2, 0);
+
+  ASSERT_NE(id1, id2);
 
   dut_->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());

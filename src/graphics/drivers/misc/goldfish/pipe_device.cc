@@ -17,6 +17,7 @@
 
 #include <fbl/auto_lock.h>
 
+#include "lib/ddk/driver.h"
 #include "src/graphics/drivers/misc/goldfish/goldfish-bind.h"
 #include "src/graphics/drivers/misc/goldfish/instance.h"
 
@@ -71,17 +72,26 @@ uint32_t lower_32_bits(uint64_t n) { return static_cast<uint32_t>(n); }
 // static
 zx_status_t PipeDevice::Create(void* ctx, zx_device_t* device) {
   auto pipe_device = std::make_unique<goldfish::PipeDevice>(device);
-  zx_device_prop_t props[] = {
+  zx_status_t status = pipe_device->Bind();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  constexpr zx_device_prop_t kControlProps[] = {
       {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOOGLE},
       {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GOLDFISH},
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GOLDFISH_PIPE_CONTROL},
   };
-  zx_status_t status = pipe_device->Bind(props, "goldfish-pipe");
-  if (status == ZX_OK) {
-    // devmgr now owns device.
-    __UNUSED auto* dev = pipe_device.release();
+  constexpr const char* kControlDeviceName = "goldfish-pipe-control";
+  status = pipe_device->CreateChildDevice(kControlProps, kControlDeviceName);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: create %s child device failed: %d", kTag, kControlDeviceName, status);
+    return status;
   }
-  return status;
+
+  // devmgr now owns the device.
+  __UNUSED auto* dev = pipe_device.release();
+  return ZX_OK;
 }
 
 PipeDevice::PipeDevice(zx_device_t* parent) : DeviceType(parent), acpi_(parent) {}
@@ -93,7 +103,7 @@ PipeDevice::~PipeDevice() {
   }
 }
 
-zx_status_t PipeDevice::Bind(const cpp20::span<zx_device_prop_t>& props, const char* dev_name) {
+zx_status_t PipeDevice::Bind() {
   if (!acpi_.is_valid()) {
     zxlogf(ERROR, "%s: no acpi protocol", kTag);
     return ZX_ERR_NOT_SUPPORTED;
@@ -158,35 +168,31 @@ zx_status_t PipeDevice::Bind(const cpp20::span<zx_device_prop_t>& props, const c
   mmio_->Write32(upper_32_bits(pa_open_command_buffer), PIPE_V2_REG_OPEN_BUFFER_HIGH);
   mmio_->Write32(lower_32_bits(pa_open_command_buffer), PIPE_V2_REG_OPEN_BUFFER);
 
-  status =
-      DdkAdd(ddk::DeviceAddArgs(dev_name).set_props(props).set_proto_id(ZX_PROTOCOL_GOLDFISH_PIPE));
+  status = DdkAdd("goldfish-pipe", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: create %s device failed: %d", kTag, dev_name, status);
+    zxlogf(ERROR, "%s: create goldfish-pipe root device failed: %d", kTag, status);
     return status;
   }
   return ZX_OK;
 }
 
-zx_status_t PipeDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
-  auto instance = std::make_unique<Instance>(zxdev());
-
-  zx_status_t status = instance->Bind();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to init instance: %d", kTag, status);
-    return status;
+zx_status_t PipeDevice::CreateChildDevice(cpp20::span<const zx_device_prop_t> props,
+                                          const char* dev_name) {
+  auto child_device = std::make_unique<PipeChildDevice>(this);
+  zx_status_t status = child_device->Bind(props, dev_name);
+  if (status == ZX_OK) {
+    // devmgr now owns device.
+    __UNUSED auto* dev = child_device.release();
   }
-
-  Instance* instance_ptr = instance.release();
-  *dev_out = instance_ptr->zxdev();
-  return ZX_OK;
+  return status;
 }
 
 void PipeDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void PipeDevice::DdkRelease() { delete this; }
 
-zx_status_t PipeDevice::GoldfishPipeCreate(int32_t* out_id, zx::vmo* out_vmo) {
-  TRACE_DURATION("gfx", "PipeDevice::GoldfishPipeCreate");
+zx_status_t PipeDevice::Create(int32_t* out_id, zx::vmo* out_vmo) {
+  TRACE_DURATION("gfx", "PipeDevice::Create");
 
   static_assert(sizeof(pipe_cmd_buffer_t) <= PAGE_SIZE, "cmd size");
   zx::vmo vmo;
@@ -212,8 +218,8 @@ zx_status_t PipeDevice::GoldfishPipeCreate(int32_t* out_id, zx::vmo* out_vmo) {
   return ZX_OK;
 }
 
-zx_status_t PipeDevice::GoldfishPipeSetEvent(int32_t id, zx::event pipe_event) {
-  TRACE_DURATION("gfx", "PipeDevice::GoldfishPipeSetEvent");
+zx_status_t PipeDevice::SetEvent(int32_t id, zx::event pipe_event) {
+  TRACE_DURATION("gfx", "PipeDevice::SetEvent");
 
   fbl::AutoLock lock(&pipes_lock_);
 
@@ -243,16 +249,16 @@ zx_status_t PipeDevice::GoldfishPipeSetEvent(int32_t id, zx::event pipe_event) {
   return ZX_OK;
 }
 
-void PipeDevice::GoldfishPipeDestroy(int32_t id) {
-  TRACE_DURATION("gfx", "PipeDevice::GoldfishPipeDestroy");
+void PipeDevice::Destroy(int32_t id) {
+  TRACE_DURATION("gfx", "PipeDevice::Destroy");
 
   fbl::AutoLock lock(&pipes_lock_);
   ZX_DEBUG_ASSERT(pipes_.count(id) == 1);
   pipes_.erase(id);
 }
 
-void PipeDevice::GoldfishPipeOpen(int32_t id) {
-  TRACE_DURATION("gfx", "PipeDevice::GoldfishPipeOpen");
+void PipeDevice::Open(int32_t id) {
+  TRACE_DURATION("gfx", "PipeDevice::Open");
 
   zx_paddr_t paddr;
   {
@@ -268,27 +274,27 @@ void PipeDevice::GoldfishPipeOpen(int32_t id) {
   mmio_->Write32(id, PIPE_V2_REG_CMD);
 }
 
-void PipeDevice::GoldfishPipeExec(int32_t id) {
-  TRACE_DURATION("gfx", "PipeDevice::GoldfishPipeExec", "id", id);
+void PipeDevice::Exec(int32_t id) {
+  TRACE_DURATION("gfx", "PipeDevice::Exec", "id", id);
 
   fbl::AutoLock lock(&mmio_lock_);
   mmio_->Write32(id, PIPE_V2_REG_CMD);
 }
 
-zx_status_t PipeDevice::GoldfishPipeGetBti(zx::bti* out_bti) {
-  TRACE_DURATION("gfx", "PipeDevice::GoldfishPipeGetBti");
+zx_status_t PipeDevice::GetBti(zx::bti* out_bti) {
+  TRACE_DURATION("gfx", "PipeDevice::GetBti");
 
   return bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, out_bti);
 }
 
-zx_status_t PipeDevice::GoldfishPipeConnectSysmem(zx::channel connection) {
-  TRACE_DURATION("gfx", "PipeDevice::GoldfishPipeConnectSysmem");
+zx_status_t PipeDevice::ConnectSysmem(zx::channel connection) {
+  TRACE_DURATION("gfx", "PipeDevice::ConnectSysmem");
 
   return acpi_.ConnectSysmem(std::move(connection));
 }
 
-zx_status_t PipeDevice::GoldfishPipeRegisterSysmemHeap(uint64_t heap, zx::channel connection) {
-  TRACE_DURATION("gfx", "PipeDevice::GoldfishPipeRegisterSysmemHeap");
+zx_status_t PipeDevice::RegisterSysmemHeap(uint64_t heap, zx::channel connection) {
+  TRACE_DURATION("gfx", "PipeDevice::RegisterSysmemHeap");
 
   return acpi_.RegisterSysmemHeap(heap, std::move(connection));
 }
@@ -355,6 +361,65 @@ void PipeDevice::Pipe::SignalEvent(uint32_t flags) const {
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: zx_signal_object failed: %d", kTag, status);
   }
+}
+
+PipeChildDevice::PipeChildDevice(PipeDevice* parent)
+    : PipeChildDeviceType(parent->zxdev()), parent_(parent) {
+  ZX_DEBUG_ASSERT(parent_);
+}
+
+zx_status_t PipeChildDevice::Bind(cpp20::span<const zx_device_prop_t> props, const char* dev_name) {
+  zx_status_t status =
+      DdkAdd(ddk::DeviceAddArgs(dev_name).set_props(props).set_proto_id(ZX_PROTOCOL_GOLDFISH_PIPE));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: create %s device failed: %d", kTag, dev_name, status);
+    return status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t PipeChildDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
+  auto instance = std::make_unique<Instance>(zxdev());
+
+  zx_status_t status = instance->Bind();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to init instance: %d", kTag, status);
+    return status;
+  }
+
+  Instance* instance_ptr = instance.release();
+  *dev_out = instance_ptr->zxdev();
+  return ZX_OK;
+}
+
+void PipeChildDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
+
+void PipeChildDevice::DdkRelease() { delete this; }
+
+zx_status_t PipeChildDevice::GoldfishPipeCreate(int32_t* out_id, zx::vmo* out_vmo) {
+  return parent_->Create(out_id, out_vmo);
+}
+
+zx_status_t PipeChildDevice::GoldfishPipeSetEvent(int32_t id, zx::event pipe_event) {
+  return parent_->SetEvent(id, std::move(pipe_event));
+}
+
+void PipeChildDevice::GoldfishPipeDestroy(int32_t id) { parent_->Destroy(id); }
+
+void PipeChildDevice::GoldfishPipeOpen(int32_t id) { parent_->Open(id); }
+
+void PipeChildDevice::GoldfishPipeExec(int32_t id) { parent_->Exec(id); }
+
+zx_status_t PipeChildDevice::GoldfishPipeGetBti(zx::bti* out_bti) {
+  return parent_->GetBti(out_bti);
+}
+
+zx_status_t PipeChildDevice::GoldfishPipeConnectSysmem(zx::channel connection) {
+  return parent_->ConnectSysmem(std::move(connection));
+}
+
+zx_status_t PipeChildDevice::GoldfishPipeRegisterSysmemHeap(uint64_t heap, zx::channel connection) {
+  return parent_->RegisterSysmemHeap(heap, std::move(connection));
 }
 
 }  // namespace goldfish
