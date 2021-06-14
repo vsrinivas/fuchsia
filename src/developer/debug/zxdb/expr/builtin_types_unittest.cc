@@ -23,6 +23,11 @@ TEST(BuiltinTypes, C) {
 
   auto unfound = GetBuiltinType(ExprLanguage::kC, "unfound");
   EXPECT_FALSE(unfound);
+
+  EXPECT_EQ("uint16_t", GetBuiltinUnsignedType(ExprLanguage::kC, 2)->GetFullName());
+  EXPECT_EQ("nonstandard_unsigned", GetBuiltinUnsignedType(ExprLanguage::kC, 7)->GetFullName());
+  EXPECT_EQ("double", GetBuiltinFloatType(ExprLanguage::kC, 8)->GetFullName());
+  EXPECT_EQ("nonstandard_float", GetBuiltinFloatType(ExprLanguage::kC, 7)->GetFullName());
 }
 
 TEST(BuiltinTypes, Rust) {
@@ -37,6 +42,11 @@ TEST(BuiltinTypes, Rust) {
   EXPECT_EQ("f32", found_f32->GetFullName());
   EXPECT_EQ(BaseType::kBaseTypeFloat, found_f32->base_type());
   EXPECT_EQ(4u, found_f32->byte_size());
+
+  EXPECT_EQ("u16", GetBuiltinUnsignedType(ExprLanguage::kRust, 2)->GetFullName());
+  EXPECT_EQ("nonstandard_unsigned", GetBuiltinUnsignedType(ExprLanguage::kRust, 7)->GetFullName());
+  EXPECT_EQ("f64", GetBuiltinFloatType(ExprLanguage::kRust, 8)->GetFullName());
+  EXPECT_EQ("nonstandard_float", GetBuiltinFloatType(ExprLanguage::kRust, 7)->GetFullName());
 }
 
 }  // namespace zxdb

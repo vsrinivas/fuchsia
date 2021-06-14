@@ -109,7 +109,68 @@ TEST(FormatRegisters, GeneralRegisters) {
       FormatRegisters(options, registers).AsString());
 }
 
-TEST(FormatRegisters, VectorRegisters) {
+TEST(FormatRegisters, VectorRegistersARM) {
+  std::vector<Register> registers;
+
+  registers.emplace_back(RegisterID::kARMv8_v5,
+                         std::vector<uint8_t>{0xd0, 0x0f, 0x49, 0x40});  // = 3.14159 in float.
+  // Pad out to 16 bytes (128-bit vector revisters).
+  while (registers[0].data.size() < 16)
+    registers[0].data.push_back(0);
+
+  FormatRegisterOptions options;
+  options.arch = debug_ipc::Arch::kArm64;
+
+  // Format as 32-bit floats.
+  options.vector_format = VectorRegisterFormat::kFloat;
+  EXPECT_EQ(
+      "Vector Registers\n"
+      "  Name [3] [2] [1]     [0]\n"
+      "    v5   0   0   0 3.14159\n"
+      "    (Use \"get/set vector-format\" to control vector register intepretation.\n"
+      "     Currently showing vectors of \"float\".)\n"
+      "\n",
+      FormatRegisters(options, registers).AsString());
+
+  // Format as 128-bit hex.
+  options.vector_format = VectorRegisterFormat::kUnsigned128;
+  EXPECT_EQ(
+      "Vector Registers\n"
+      "  Name                                [0]\n"
+      "    v5 0x00000000000000000000000040490fd0\n"
+      "    (Use \"get/set vector-format\" to control vector register intepretation.\n"
+      "     Currently showing vectors of \"u128\".)\n"
+      "\n",
+      FormatRegisters(options, registers).AsString());
+
+  // Format as 8-bit hex.
+  options.vector_format = VectorRegisterFormat::kUnsigned8;
+  EXPECT_EQ(
+      "Vector Registers\n"
+      "  Name [15] [14] [13] [12] [11] [10]  [9]  [8]  [7]  [6]  [5]  [4]  [3]  [2]  [1]  [0]\n"
+      "    v5 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x40 0x49 0x0f 0xd0\n"
+      "    (Use \"get/set vector-format\" to control vector register intepretation.\n"
+      "     Currently showing vectors of \"u8\".)\n"
+      "\n",
+      FormatRegisters(options, registers).AsString());
+
+  // Set the value again so it has a reasonable interpretation in 64-bits.
+  // "2.718" in double = 40 05 be 76 c8 b4 39 58
+  // "99.0" in double =  40 58 c0 00 00 00 00 00
+  registers[0].data = std::vector<uint8_t>{0x58, 0x39, 0xb4, 0xc8, 0x76, 0xbe, 0x05, 0x40,
+                                           0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x58, 0x40};
+  options.vector_format = VectorRegisterFormat::kDouble;
+  EXPECT_EQ(
+      "Vector Registers\n"
+      "  Name [1]   [0]\n"
+      "    v5  99 2.718\n"
+      "    (Use \"get/set vector-format\" to control vector register intepretation.\n"
+      "     Currently showing vectors of \"double\".)\n"
+      "\n",
+      FormatRegisters(options, registers).AsString());
+}
+
+TEST(FormatRegisters, VectorRegistersX64) {
   // Add a zmm register. This should be converted to a ymm register.
   std::vector<Register> registers;
 

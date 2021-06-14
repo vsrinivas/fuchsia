@@ -19,9 +19,10 @@ namespace zxdb {
 // (normally DWARF would represent void as the absence of a type, but that's not possible here.
 fxl::RefPtr<BaseType> GetBuiltinType(ExprLanguage lang, std::string_view name);
 
-fxl::RefPtr<BaseType> GetBuiltinFloatType(ExprLanguage lang);
-fxl::RefPtr<BaseType> GetBuiltinDoubleType(ExprLanguage lang);
-fxl::RefPtr<BaseType> GetBuiltinLongDoubleType(ExprLanguage lang);
+// These will always return a type of rhte given size. If the language doesn't have a built-in for
+// the name, one will be made up.
+fxl::RefPtr<BaseType> GetBuiltinUnsignedType(ExprLanguage lang, size_t byte_size);
+fxl::RefPtr<BaseType> GetBuiltinFloatType(ExprLanguage lang, size_t byte_size);
 
 }  // namespace zxdb
 

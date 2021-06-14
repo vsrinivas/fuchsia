@@ -31,6 +31,17 @@ enum class SpecialRegisterType {
   kTP   // Thread Pointer
 };
 
+// Note that we separate out "void" addresses and "word" addresses so the debugger frontend can
+// assign types to register values when appropriate.
+enum class RegisterFormat {
+  kGeneral,      // General register that might hold any integer or an address.
+  kFloat,        // Floating-point number.
+  kVector,       // Vector registers that hold multiple values.
+  kVoidAddress,  // Registers that point to void*.
+  kWordAddress,  // Registers that point to uint64_t.
+  kSpecial,      // Things like flag registers that neither hold addresses nor numbers.
+};
+
 struct RegisterInfo {
   RegisterID id;
   std::string name;
@@ -52,6 +63,8 @@ struct RegisterInfo {
   // DWARF register ID if there is one.
   static constexpr uint32_t kNoDwarfId = 0xffffffff;
   uint32_t dwarf_id = kNoDwarfId;
+
+  RegisterFormat format = RegisterFormat::kGeneral;
 };
 
 const RegisterInfo* InfoForRegister(RegisterID id);
@@ -229,6 +242,74 @@ enum class RegisterID : uint32_t {
   kARMv8_v29 = 1229,
   kARMv8_v30 = 1230,
   kARMv8_v31 = 1231,
+
+  // Double-precision aliases.
+  kARMv8_d0 = 1232,
+  kARMv8_d1 = 1233,
+  kARMv8_d2 = 1234,
+  kARMv8_d3 = 1235,
+  kARMv8_d4 = 1236,
+  kARMv8_d5 = 1237,
+  kARMv8_d6 = 1238,
+  kARMv8_d7 = 1239,
+  kARMv8_d8 = 1240,
+  kARMv8_d9 = 1241,
+  kARMv8_d10 = 1242,
+  kARMv8_d11 = 1243,
+  kARMv8_d12 = 1244,
+  kARMv8_d13 = 1245,
+  kARMv8_d14 = 1246,
+  kARMv8_d15 = 1247,
+  kARMv8_d16 = 1248,
+  kARMv8_d17 = 1249,
+  kARMv8_d18 = 1250,
+  kARMv8_d19 = 1251,
+  kARMv8_d20 = 1252,
+  kARMv8_d21 = 1253,
+  kARMv8_d22 = 1254,
+  kARMv8_d23 = 1255,
+  kARMv8_d24 = 1256,
+  kARMv8_d25 = 1257,
+  kARMv8_d26 = 1258,
+  kARMv8_d27 = 1259,
+  kARMv8_d28 = 1260,
+  kARMv8_d29 = 1261,
+  kARMv8_d30 = 1262,
+  kARMv8_d31 = 1263,
+
+  // Single-precision aliases.
+  kARMv8_s0 = 1264,
+  kARMv8_s1 = 1265,
+  kARMv8_s2 = 1266,
+  kARMv8_s3 = 1267,
+  kARMv8_s4 = 1268,
+  kARMv8_s5 = 1269,
+  kARMv8_s6 = 1270,
+  kARMv8_s7 = 1271,
+  kARMv8_s8 = 1272,
+  kARMv8_s9 = 1273,
+  kARMv8_s10 = 1274,
+  kARMv8_s11 = 1275,
+  kARMv8_s12 = 1276,
+  kARMv8_s13 = 1277,
+  kARMv8_s14 = 1278,
+  kARMv8_s15 = 1279,
+  kARMv8_s16 = 1280,
+  kARMv8_s17 = 1281,
+  kARMv8_s18 = 1282,
+  kARMv8_s19 = 1283,
+  kARMv8_s20 = 1284,
+  kARMv8_s21 = 1285,
+  kARMv8_s22 = 1286,
+  kARMv8_s23 = 1287,
+  kARMv8_s24 = 1289,
+  kARMv8_s25 = 1290,
+  kARMv8_s26 = 1291,
+  kARMv8_s27 = 1292,
+  kARMv8_s28 = 1293,
+  kARMv8_s29 = 1294,
+  kARMv8_s30 = 1295,
+  kARMv8_s31 = 1296,
 
   // Debug.
 

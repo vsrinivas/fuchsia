@@ -248,6 +248,9 @@ bool FormatCategoryARM64(const FormatRegisterOptions& options, debug_ipc::Regist
     case RegisterCategory::kGeneral:
       FormatGeneralRegisters(options, registers, out);
       return true;
+    case RegisterCategory::kVector:
+      FormatGeneralVectorRegisters(options, registers, out);
+      return true;
     case RegisterCategory::kDebug:
       FormatDebugRegisters(options, registers, out);
       return true;

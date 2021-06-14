@@ -64,10 +64,11 @@ class EvalContextImplTest : public TestWithLoop {
 
   // Returns an evaluation context for a code block. If the code block is null, a default one will
   // be created with MakeCodeBlock().
-  fxl::RefPtr<EvalContext> MakeEvalContext(fxl::RefPtr<CodeBlock> code_block = nullptr) {
-    return fxl::MakeRefCounted<EvalContextImpl>(
-        std::make_shared<AbiNull>(), fxl::WeakPtr<const ProcessSymbols>(), provider(),
-        ExprLanguage::kC, code_block ? code_block : MakeCodeBlock());
+  fxl::RefPtr<EvalContext> MakeEvalContext(ExprLanguage lang = ExprLanguage::kC,
+                                           fxl::RefPtr<CodeBlock> code_block = nullptr) {
+    return fxl::MakeRefCounted<EvalContextImpl>(std::make_shared<AbiNull>(),
+                                                fxl::WeakPtr<const ProcessSymbols>(), provider(),
+                                                lang, code_block ? code_block : MakeCodeBlock());
   }
 
  private:
@@ -190,7 +191,7 @@ TEST_F(EvalContextImplTest, FoundThis) {
   function->set_parameters({LazySymbol(this_var)});
   function->set_object_pointer(this_var);
 
-  auto context = MakeEvalContext(function);
+  auto context = MakeEvalContext(ExprLanguage::kC, function);
 
   // First get d2 on the derived class. "this" should be implicit.
   ValueResult result_d2;
@@ -243,7 +244,7 @@ TEST_F(EvalContextImplTest, DwarfEvalFailure) {
   block->set_variables({LazySymbol(std::move(var))});
 
   ValueResult result;
-  GetNamedValue(MakeEvalContext(block), kEmptyExprVarName, &result);
+  GetNamedValue(MakeEvalContext(ExprLanguage::kC, block), kEmptyExprVarName, &result);
   EXPECT_TRUE(result.called);
   ASSERT_TRUE(result.value.has_error());
   EXPECT_EQ("DWARF expression produced no results.", result.value.err().msg());
@@ -394,14 +395,16 @@ TEST_F(EvalContextImplTest, NodeIntegation) {
 TEST_F(EvalContextImplTest, RegisterByName) {
   ASSERT_EQ(debug_ipc::Arch::kArm64, provider()->GetArch());
 
+  // Integer value.
   constexpr uint64_t kRegValue = 0xdeadb33f;
   provider()->AddRegisterValue(kDWARFReg0ID, false, kRegValue);
-  auto context = MakeEvalContext();
+
+  auto c_context = MakeEvalContext(ExprLanguage::kC);
 
   // We've defined no variables*, so this should fall back and give us the register by name.
   // *(Except kPresentVarName which MakeCodeBlock defines).
   ValueResult reg;
-  GetNamedValue(context, "x0", &reg);
+  GetNamedValue(c_context, "x0", &reg);
 
   // Should not have been called yet since retrieving the register is asynchronous.
   EXPECT_FALSE(reg.called);
@@ -410,18 +413,23 @@ TEST_F(EvalContextImplTest, RegisterByName) {
   loop().RunUntilNoTasks();
   EXPECT_TRUE(reg.called);
   EXPECT_FALSE(reg.value.has_error()) << reg.value.err().msg();
-  EXPECT_EQ(ExprValue(static_cast<uint64_t>(kRegValue)), reg.value.value());
 
-  // Test again, this time with $ prefix
+  EXPECT_EQ(kRegValue, reg.value.value().GetAs<uint64_t>());
+  EXPECT_EQ("uint64_t", reg.value.value().type()->GetFullName());
+
+  // Test again, this time with $ prefix and Rust types.
+  auto rust_context = MakeEvalContext(ExprLanguage::kRust);
   reg.called = false;
-  GetNamedValue(context, "$reg(x0)", &reg);
+  GetNamedValue(rust_context, "$reg(x0)", &reg);
 
   EXPECT_FALSE(reg.called);
 
   loop().RunUntilNoTasks();
   EXPECT_TRUE(reg.called);
   EXPECT_FALSE(reg.value.has_error()) << reg.value.err().msg();
-  EXPECT_EQ(ExprValue(static_cast<uint64_t>(kRegValue)), reg.value.value());
+
+  EXPECT_EQ(kRegValue, reg.value.value().GetAs<uint64_t>());
+  EXPECT_EQ("u64", reg.value.value().type()->GetFullName());
 
   // The value source should map back to the input register.
   const ExprValueSource& source = reg.value.value().source();
@@ -432,7 +440,7 @@ TEST_F(EvalContextImplTest, RegisterByName) {
   // This register is synchronously known unavailable.
   provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_x2, true, std::vector<uint8_t>{});
   reg.called = false;
-  GetNamedValue(context, "x2", &reg);
+  GetNamedValue(c_context, "x2", &reg);
   ASSERT_TRUE(reg.called);
   ASSERT_TRUE(reg.value.has_error());
   EXPECT_EQ("Register x2 unavailable in this context.", reg.value.err().msg());
@@ -440,7 +448,7 @@ TEST_F(EvalContextImplTest, RegisterByName) {
   // This register is synchronously unavailable.
   provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_x3, false, std::vector<uint8_t>{});
   reg.called = false;
-  GetNamedValue(context, "x3", &reg);
+  GetNamedValue(c_context, "x3", &reg);
   ASSERT_FALSE(reg.called);
   loop().RunUntilNoTasks();
   EXPECT_TRUE(reg.called);
@@ -462,7 +470,7 @@ TEST_F(EvalContextImplTest, RegisterShadowed) {
   provider()->set_ip(kBeginValidRange);
   provider()->AddRegisterValue(kDWARFReg0ID, false, kRegValue);
   provider()->AddRegisterValue(kDWARFReg1ID, false, kVarValue);
-  auto context = MakeEvalContext(block);
+  auto context = MakeEvalContext(ExprLanguage::kC, block);
 
   // This should just look up our variable, x0, which is in the register x1. If It looks up the
   // register x0 something has gone very wrong.
@@ -495,6 +503,8 @@ TEST_F(EvalContextImplTest, RegisterShadowed) {
 TEST_F(EvalContextImplTest, RegisterShort) {
   ASSERT_EQ(debug_ipc::Arch::kArm64, provider()->GetArch());
 
+  // Value for the "w0" register. The mock data provider doesn't extract sub-registers (unlike the
+  // real one) so we need to provide the exact enum the caller will request.
   constexpr uint64_t kRegValue = 0x44332211;
   provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_w0, true, {0x11, 0x22, 0x33, 0x44});
   auto context = MakeEvalContext();
@@ -514,6 +524,40 @@ TEST_F(EvalContextImplTest, RegisterShort) {
   EXPECT_EQ(ExprValueSource::Type::kRegister, source.type());
   EXPECT_EQ(debug_ipc::RegisterID::kARMv8_w0, source.register_id());
   EXPECT_FALSE(source.is_bitfield());
+}
+
+// Extracts the "s" (low 32-bits) and "d" (low 64-bits) of the ARM vector registers.
+TEST_F(EvalContextImplTest, FloatRegisterByName) {
+  ASSERT_EQ(debug_ipc::Arch::kArm64, provider()->GetArch());
+
+  // Value for the "d0" register. The mock data provider doesn't extract sub-registers (unlike the
+  // real one) so we need to provide the exact enum the caller will request.
+  constexpr double kDoubleValue = 3.14;
+  std::vector<uint8_t> double_data(sizeof(double));
+  memcpy(double_data.data(), &kDoubleValue, sizeof(double));
+  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_d0, false, double_data);
+
+  // Same for the "s1" register.
+  constexpr float kFloatValue = 2.99;
+  std::vector<uint8_t> float_data(sizeof(float));
+  memcpy(float_data.data(), &kFloatValue, sizeof(float));
+  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_s1, false, float_data);
+
+  auto c_context = MakeEvalContext(ExprLanguage::kC);
+  ValueResult reg;
+  GetNamedValue(c_context, "d0", &reg);
+
+  loop().RunUntilNoTasks();
+  ASSERT_FALSE(reg.value.has_error()) << reg.value.err().msg();
+  EXPECT_EQ("double", reg.value.value().type()->GetFullName());
+  EXPECT_EQ(double_data, reg.value.value().data());
+
+  GetNamedValue(c_context, "s1", &reg);
+
+  loop().RunUntilNoTasks();
+  ASSERT_FALSE(reg.value.has_error()) << reg.value.err().msg();
+  EXPECT_EQ("float", reg.value.value().type()->GetFullName());
+  EXPECT_EQ(float_data, reg.value.value().data());
 }
 
 TEST_F(EvalContextImplTest, VectorRegister) {
@@ -561,7 +605,7 @@ TEST_F(EvalContextImplTest, DataResult) {
 
   auto block = MakeCodeBlock();
   block->set_variables({LazySymbol(variable)});
-  auto context = MakeEvalContext(block);
+  auto context = MakeEvalContext(ExprLanguage::kC, block);
 
   ValueResult val;
   GetNamedValue(context, kVarName, &val);

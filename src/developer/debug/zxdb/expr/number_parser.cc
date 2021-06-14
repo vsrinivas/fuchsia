@@ -406,14 +406,14 @@ ErrOrValue ValueForFloatToken(ExprLanguage lang, const ExprToken& token) {
           converter.StringToDouble(digits.data(), static_cast<int>(digits.size()), &consumed);
       data.resize(sizeof(double));
       memcpy(data.data(), &d, sizeof(double));
-      type = GetBuiltinDoubleType(lang);
+      type = GetBuiltinFloatType(lang, 8);
       break;
     }
     case FloatSuffix::kFloat: {
       float f = converter.StringToFloat(digits.data(), static_cast<int>(digits.size()), &consumed);
       data.resize(sizeof(float));
       memcpy(data.data(), &f, sizeof(float));
-      type = GetBuiltinFloatType(lang);
+      type = GetBuiltinFloatType(lang, 4);
       break;
     }
     case FloatSuffix::kLong: {
@@ -424,7 +424,7 @@ ErrOrValue ValueForFloatToken(ExprLanguage lang, const ExprToken& token) {
       long double ld = d;
       data.resize(sizeof(long double));
       memcpy(data.data(), &ld, sizeof(long double));
-      type = GetBuiltinLongDoubleType(lang);
+      type = GetBuiltinFloatType(lang, data.size());
       break;
     }
   }

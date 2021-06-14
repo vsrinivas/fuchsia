@@ -56,6 +56,9 @@ const BuiltinTypeInfo kCBuiltinInfo[] = {
     { "uint32_t", BaseType::kBaseTypeUnsigned,     4 },
     { "int64_t",  BaseType::kBaseTypeSigned,       8 },
     { "uint64_t", BaseType::kBaseTypeUnsigned,     8 },
+    // Not technically defined in C but we need a name for 128-bit values.
+    { "int128_t",  BaseType::kBaseTypeSigned,      16 },
+    { "uint128_t", BaseType::kBaseTypeUnsigned,    16 },
 
     // Special Zircon types (see note below).
     { "zx_status_t", BaseType::kBaseTypeSigned,    4 },
@@ -139,38 +142,78 @@ fxl::RefPtr<BaseType> GetBuiltinType(ExprLanguage lang, std::string_view name) {
   return fxl::MakeRefCounted<BaseType>(info.base_type, info.byte_size, info.name);
 }
 
-fxl::RefPtr<BaseType> GetBuiltinFloatType(ExprLanguage lang) {
+fxl::RefPtr<BaseType> GetBuiltinUnsigned64Type(ExprLanguage lang) {
   switch (lang) {
     case ExprLanguage::kC:
-      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float");
+      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 8, "uint64_t");
     case ExprLanguage::kRust:
-      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "f32");
+      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 8, "u64");
   }
   FX_NOTREACHED();
   return fxl::RefPtr<BaseType>();
 }
 
-fxl::RefPtr<BaseType> GetBuiltinDoubleType(ExprLanguage lang) {
+fxl::RefPtr<BaseType> GetBuiltinUnsignedType(ExprLanguage lang, size_t byte_size) {
   switch (lang) {
     case ExprLanguage::kC:
-      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double");
+      switch (byte_size) {
+        case 1:
+          return GetBuiltinType(lang, "uint8_t");
+        case 2:
+          return GetBuiltinType(lang, "uint16_t");
+        case 4:
+          return GetBuiltinType(lang, "uint32_t");
+        case 8:
+          return GetBuiltinType(lang, "uint64_t");
+        case 16:
+          return GetBuiltinType(lang, "uint128_t");
+      }
+      break;
     case ExprLanguage::kRust:
-      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "f64");
+      switch (byte_size) {
+        case 1:
+          return GetBuiltinType(lang, "u8");
+        case 2:
+          return GetBuiltinType(lang, "u16");
+        case 4:
+          return GetBuiltinType(lang, "u32");
+        case 8:
+          return GetBuiltinType(lang, "u64");
+        case 16:
+          return GetBuiltinType(lang, "u128");
+      }
+      break;
   }
-  FX_NOTREACHED();
-  return fxl::RefPtr<BaseType>();
+
+  // No builtin, in this case just make up a type.
+  return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, byte_size,
+                                       "nonstandard_unsigned");
 }
 
-fxl::RefPtr<BaseType> GetBuiltinLongDoubleType(ExprLanguage lang) {
+fxl::RefPtr<BaseType> GetBuiltinFloatType(ExprLanguage lang, size_t byte_size) {
   switch (lang) {
     case ExprLanguage::kC:
-      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 10, "long double");
+      switch (byte_size) {
+        case 4:
+          return GetBuiltinType(lang, "float");
+        case 8:
+          return GetBuiltinType(lang, "double");
+        case 10:
+          return GetBuiltinType(lang, "long double");
+      }
+      break;
     case ExprLanguage::kRust:
-      // Rust doesn't have a "long double" type, just return a 64-bit double.
-      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "f64");
+      switch (byte_size) {
+        case 4:
+          return GetBuiltinType(lang, "f32");
+        case 8:
+          return GetBuiltinType(lang, "f64");
+      }
+      break;
   }
-  FX_NOTREACHED();
-  return fxl::RefPtr<BaseType>();
+
+  // No builtin, in this case just make up a type.
+  return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, byte_size, "nonstandard_float");
 }
 
 }  // namespace zxdb

@@ -53,13 +53,6 @@ std::optional<VectorRegisterFormat> StringToVectorRegisterFormat(const std::stri
 ExprValue VectorRegisterToValue(debug_ipc::RegisterID id, VectorRegisterFormat fmt,
                                 std::vector<uint8_t> data);
 
-// Returns true if the given register should be formatted as a vector register.
-//
-// This is not quite the same as checking the category because some control registers are in the
-// "vector" category, and x86 has the mmx registers in the FP category because they're aliased on
-// the FP ones.
-bool ShouldFormatRegisterAsVector(debug_ipc::RegisterID id);
-
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_VECTOR_REGISTER_FORMAT_H_

@@ -34,8 +34,6 @@ void MockSymbolDataProvider::AddMemory(uint64_t address, std::vector<uint8_t> da
   memory_.AddMemory(address, std::move(data));
 }
 
-debug_ipc::Arch MockSymbolDataProvider::GetArch() { return debug_ipc::Arch::kArm64; }
-
 std::optional<containers::array_view<uint8_t>> MockSymbolDataProvider::GetRegister(
     debug_ipc::RegisterID id) {
   if (GetSpecialRegisterType(id) == debug_ipc::SpecialRegisterType::kIP) {

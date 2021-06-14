@@ -168,31 +168,4 @@ ExprValue VectorRegisterToValue(RegisterID id, VectorRegisterFormat fmt,
   return ExprValue(std::move(array_type), std::move(data), ExprValueSource(id));
 }
 
-bool ShouldFormatRegisterAsVector(RegisterID id_enum) {
-  uint32_t id = static_cast<uint32_t>(id_enum);
-
-  // ARM
-  if (id >= static_cast<uint32_t>(RegisterID::kARMv8_v0) &&
-      id <= static_cast<uint32_t>(RegisterID::kARMv8_v31))
-    return true;
-
-  // Old-style MMX.
-  if (id >= static_cast<uint32_t>(RegisterID::kX64_mm0) &&
-      id <= static_cast<uint32_t>(RegisterID::kX64_mm7))
-    return true;
-
-  // New-style x/y/zmm.
-  if (id >= static_cast<uint32_t>(RegisterID::kX64_xmm0) &&
-      id <= static_cast<uint32_t>(RegisterID::kX64_xmm31))
-    return true;
-  if (id >= static_cast<uint32_t>(RegisterID::kX64_ymm0) &&
-      id <= static_cast<uint32_t>(RegisterID::kX64_ymm31))
-    return true;
-  if (id >= static_cast<uint32_t>(RegisterID::kX64_zmm0) &&
-      id <= static_cast<uint32_t>(RegisterID::kX64_zmm31))
-    return true;
-
-  return false;
-}
-
 }  // namespace zxdb

@@ -56,41 +56,44 @@ Err GetUnavailableRegisterErr(RegisterID id) {
   return Err("Register %s unavailable in this context.", debug_ipc::RegisterIDToString(id));
 }
 
-ErrOrValue RegisterDataToValue(RegisterID id, VectorRegisterFormat vector_fmt,
+ErrOrValue RegisterDataToValue(ExprLanguage lang, RegisterID id, VectorRegisterFormat vector_fmt,
                                containers::array_view<uint8_t> data) {
-  if (ShouldFormatRegisterAsVector(id))
-    return VectorRegisterToValue(id, vector_fmt, std::vector<uint8_t>(data.begin(), data.end()));
+  const debug_ipc::RegisterInfo* info = debug_ipc::InfoForRegister(id);
+  if (!info)
+    return Err("Unknown register");
 
   ExprValueSource source(id);
 
-  if (data.size() <= sizeof(uint64_t)) {
-    uint64_t int_value = 0;
-    memcpy(&int_value, data.data(), data.size());
+  switch (info->format) {
+    case debug_ipc::RegisterFormat::kGeneral:
+    case debug_ipc::RegisterFormat::kSpecial: {
+      return ExprValue(GetBuiltinUnsignedType(lang, data.size()),
+                       std::vector<uint8_t>(data.begin(), data.end()), source);
+    }
 
-    // Use the types defined by ExprValue for the unsigned number of the corresponding size.
-    // Passing a null type will cause ExprValue to create one matching the input type.
-    switch (data.size()) {
-      case 1:
-        return ExprValue(static_cast<uint8_t>(int_value), fxl::RefPtr<Type>(), source);
-      case 2:
-        return ExprValue(static_cast<uint16_t>(int_value), fxl::RefPtr<Type>(), source);
-      case 4:
-        return ExprValue(static_cast<uint32_t>(int_value), fxl::RefPtr<Type>(), source);
-      case 8:
-        return ExprValue(static_cast<uint64_t>(int_value), fxl::RefPtr<Type>(), source);
+    case debug_ipc::RegisterFormat::kFloat: {
+      return ExprValue(GetBuiltinFloatType(lang, data.size()),
+                       std::vector<uint8_t>(data.begin(), data.end()), source);
+    }
+
+    case debug_ipc::RegisterFormat::kVector: {
+      return VectorRegisterToValue(id, vector_fmt, std::vector<uint8_t>(data.begin(), data.end()));
+    }
+
+    case debug_ipc::RegisterFormat::kVoidAddress: {
+      // A void* is a pointer to no type.
+      return ExprValue(fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol()),
+                       std::vector<uint8_t>(data.begin(), data.end()), source);
+    }
+
+    case debug_ipc::RegisterFormat::kWordAddress: {
+      auto word_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
+                                                             GetBuiltinUnsignedType(lang, 8));
+      return ExprValue(word_ptr_type, std::vector<uint8_t>(data.begin(), data.end()), source);
     }
   }
 
-  // Large and/or weird sized registers.
-  const char* type_name;
-  if (data.size() == sizeof(uint128_t))
-    type_name = "uint128_t";
-  else
-    type_name = "(register data)";
-
-  return ExprValue(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, data.size(), type_name),
-      std::vector<uint8_t>(data.begin(), data.end()), source);
+  return Err("Unknown register type");
 }
 
 }  // namespace
@@ -175,24 +178,26 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, EvalCall
   if (reg == RegisterID::kUnknown || GetArchForRegisterID(reg) != data_provider_->GetArch())
     return cb(Err("No variable '%s' found.", identifier.GetFullName().c_str()));
 
-  // Fall back to matching registers when no symbol is found.
+  // Fall back to matching registers when no symbol is found. The data_provider is in charge
+  // of extracting the bits for non-canonical sub registers (like "ah" and "al" on x86) so we
+  // can pass the register enums through directly.
   if (std::optional<containers::array_view<uint8_t>> opt_reg_data =
           data_provider_->GetRegister(reg)) {
     // Available synchronously.
     if (opt_reg_data->empty())
       cb(GetUnavailableRegisterErr(reg));
     else
-      cb(RegisterDataToValue(reg, GetVectorRegisterFormat(), *opt_reg_data));
+      cb(RegisterDataToValue(language_, reg, GetVectorRegisterFormat(), *opt_reg_data));
   } else {
     data_provider_->GetRegisterAsync(
-        reg, [reg, vector_fmt = GetVectorRegisterFormat(), cb = std::move(cb)](
+        reg, [lang = language_, reg, vector_fmt = GetVectorRegisterFormat(), cb = std::move(cb)](
                  const Err& err, std::vector<uint8_t> value) mutable {
           if (err.has_error()) {
             cb(err);
           } else if (value.empty()) {
             cb(GetUnavailableRegisterErr(reg));
           } else {
-            cb(RegisterDataToValue(reg, vector_fmt, value));
+            cb(RegisterDataToValue(lang, reg, vector_fmt, value));
           }
         });
   }
