@@ -46,8 +46,7 @@ void PromotePtrRefToDerived(const fxl::RefPtr<EvalContext>& context, PromoteToDe
     return cb(std::move(value));
 
   // Type must be the right match pointer or a reference.
-  fxl::RefPtr<Type> input_concrete = context->GetConcreteType(value.type());
-  const ModifiedType* mod_type = input_concrete->AsModifiedType();
+  fxl::RefPtr<ModifiedType> mod_type = context->GetConcreteTypeAs<ModifiedType>(value.type());
   if (!mod_type)
     return cb(std::move(value));
 
@@ -66,19 +65,17 @@ void PromotePtrRefToDerived(const fxl::RefPtr<EvalContext>& context, PromoteToDe
   if (!tag_match)
     return cb(std::move(value));
 
-  // Referenced type must be a collection.
-  const Type* type = mod_type->modified().Get()->AsType();
-  if (!type)
+  // Referenced type must be a collection. Save the original non-concrete type for below.
+  const Type* original_type = mod_type->modified().Get()->As<Type>();
+  if (!original_type)
     return cb(std::move(value));
-  fxl::RefPtr<Type> modified_concrete = context->GetConcreteType(type);
-  if (!modified_concrete)
-    return cb(std::move(value));
-  const Collection* modified_collection = modified_concrete->AsCollection();
+  fxl::RefPtr<Collection> modified_collection =
+      context->GetConcreteTypeAs<Collection>(original_type);
   if (!modified_collection)
     return cb(std::move(value));
 
   // Referenced collection must have a vtable pointer.
-  fxl::RefPtr<DataMember> vtable_member = GetVtableMember(modified_collection);
+  fxl::RefPtr<DataMember> vtable_member = GetVtableMember(modified_collection.get());
   if (!vtable_member)
     return cb(std::move(value));
 
@@ -88,12 +85,13 @@ void PromotePtrRefToDerived(const fxl::RefPtr<EvalContext>& context, PromoteToDe
   if (value.PromoteTo64(&object_loc).has_error())
     return cb(std::move(value));
 
-  // Get the value of the vtable member.
+  // Get the value of the vtable member. We user the original (non-concrete) type so the resulting
+  // type is correct, with all C-V qualifiers.
   TargetPointer vtable_member_loc = object_loc + vtable_member->member_location();
   ResolvePointer(
       context, vtable_member_loc, RefPtrTo(vtable_member->type().Get()->AsType()),
       [context, original_value = std::move(value), modifier_tag = mod_type->tag(),
-       modified_type = RefPtrTo(type), cb = std::move(cb)](ErrOrValue result) mutable {
+       modified_type = RefPtrTo(original_type), cb = std::move(cb)](ErrOrValue result) mutable {
         if (result.has_error())
           return cb(std::move(original_value));
 

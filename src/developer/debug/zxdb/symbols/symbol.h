@@ -170,6 +170,53 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   virtual const Variant* AsVariant() const;
   virtual const VariantPart* AsVariantPart() const;
 
+  // Allows templatized conversion to a base class. Both const and non-const variants are supported
+  // using the above virtual functions. This is basically dynamic_cast but we're required to
+  // avoid compiling with RTTI.
+  //
+  //   const Collection* c = symbol->As<Collection>();
+  //   if (!c)
+  //     return false;
+  //
+  template <typename Derived>
+  const Derived* As() const;
+
+  template <typename Derived>
+  Derived* As();
+
+#define IMPLEMENT_TEMPLATIZED_AS(DerivedType)                                            \
+  template <>                                                                            \
+  const DerivedType* As<DerivedType>() const {                                           \
+    return As##DerivedType();                                                            \
+  }                                                                                      \
+  template <>                                                                            \
+  DerivedType* As<DerivedType>() {                                                       \
+    return const_cast<DerivedType*>(const_cast<const Symbol*>(this)->As##DerivedType()); \
+  }
+
+  IMPLEMENT_TEMPLATIZED_AS(ArrayType);
+  IMPLEMENT_TEMPLATIZED_AS(BaseType);
+  IMPLEMENT_TEMPLATIZED_AS(CodeBlock);
+  IMPLEMENT_TEMPLATIZED_AS(Collection);
+  IMPLEMENT_TEMPLATIZED_AS(CompileUnit);
+  IMPLEMENT_TEMPLATIZED_AS(DataMember);
+  IMPLEMENT_TEMPLATIZED_AS(ElfSymbol);
+  IMPLEMENT_TEMPLATIZED_AS(Enumeration);
+  IMPLEMENT_TEMPLATIZED_AS(Function);
+  IMPLEMENT_TEMPLATIZED_AS(FunctionType);
+  IMPLEMENT_TEMPLATIZED_AS(InheritedFrom);
+  IMPLEMENT_TEMPLATIZED_AS(MemberPtr);
+  IMPLEMENT_TEMPLATIZED_AS(ModifiedType);
+  IMPLEMENT_TEMPLATIZED_AS(Namespace);
+  IMPLEMENT_TEMPLATIZED_AS(TemplateParameter);
+  IMPLEMENT_TEMPLATIZED_AS(Type);
+  IMPLEMENT_TEMPLATIZED_AS(Value);
+  IMPLEMENT_TEMPLATIZED_AS(Variable);
+  IMPLEMENT_TEMPLATIZED_AS(Variant);
+  IMPLEMENT_TEMPLATIZED_AS(VariantPart);
+
+#undef IMPLEMENT_TEMPLATIZED_AS
+
   // Non-const manual RTTI wrappers.
   ArrayType* AsArrayType() {
     return const_cast<ArrayType*>(const_cast<const Symbol*>(this)->AsArrayType());

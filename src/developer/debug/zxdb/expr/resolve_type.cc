@@ -6,6 +6,7 @@
 
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
+#include "src/developer/debug/zxdb/symbols/lazy_symbol.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 
 namespace zxdb {
@@ -29,6 +30,17 @@ fxl::RefPtr<Type> GetConcreteType(const FindNameContext& find_name_context, cons
     cur = RefPtrTo(cur->StripCVT());
   } while (cur && cur->is_declaration());
   return cur;
+}
+
+fxl::RefPtr<Type> GetConcreteType(const FindNameContext& context, const LazySymbol& symbol) {
+  if (!symbol)
+    return fxl::RefPtr<Type>();
+
+  const Type* type = symbol.Get()->AsType();
+  if (!type)
+    return fxl::RefPtr<Type>();
+
+  return GetConcreteType(context, type);
 }
 
 fxl::RefPtr<Type> FindTypeDefinition(const FindNameContext& context, const Type* type) {

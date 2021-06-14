@@ -71,10 +71,21 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   // into a Variable when the extern is resolved).
   virtual void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const = 0;
 
-  // Convenience wrapper around the toplevel GetConcreteType() that uses the FindNameContext()
+  // Convenience wrappers around the toplevel GetConcreteType() that uses the FindNameContext()
   // from this class.
-  inline fxl::RefPtr<Type> GetConcreteType(const Type* type) const {
+  fxl::RefPtr<Type> GetConcreteType(const Type* type) const {
     return zxdb::GetConcreteType(GetFindNameContext(), type);
+  }
+  fxl::RefPtr<Type> GetConcreteType(const LazySymbol& symbol) const {
+    return zxdb::GetConcreteType(GetFindNameContext(), symbol);
+  }
+  template <typename DerivedType>
+  fxl::RefPtr<DerivedType> GetConcreteTypeAs(const Type* type) {
+    return zxdb::GetConcreteTypeAs<DerivedType>(GetFindNameContext(), type);
+  }
+  template <typename DerivedType>
+  fxl::RefPtr<DerivedType> GetConcreteTypeAs(const LazySymbol& symbol) {
+    return zxdb::GetConcreteTypeAs<DerivedType>(GetFindNameContext(), symbol);
   }
 
   // May return null (ProcessSymbols are destroyed with the process, and the EvalContext is

@@ -383,8 +383,7 @@ VisitResult FindInIndexLevelRecursiveNs(const FindNameOptions& options,
 VisitResult FindMemberOn(const FindNameContext& context, const FindNameOptions& options,
                          const InheritancePath& path, const ParsedIdentifier& looking_for,
                          const Variable* optional_object_ptr, std::vector<FoundName>* result) {
-  auto base = GetConcreteType(context, path.base());
-  const Collection* base_coll = base->AsCollection();
+  auto base_coll = GetConcreteTypeAs<Collection>(context, path.base());
   if (!base_coll)
     return VisitResult::kContinue;  // Nothing to do at this level.
 
@@ -575,22 +574,17 @@ void FindMemberOnThis(const FindNameContext& context, const FindNameOptions& opt
   if (!this_var)
     return;  // No "this" pointer.
 
-  // Type for "this".
-  fxl::RefPtr<Type> this_type = GetConcreteType(context, this_var->type().Get()->AsType());
-  if (!this_type)
-    return;  // Bad type.
-
-  const ModifiedType* modified = this_type->AsModifiedType();
+  // Type for "this" (expect it to be a pointer).
+  fxl::RefPtr<ModifiedType> modified = GetConcreteTypeAs<ModifiedType>(context, this_var->type());
   if (!modified || modified->tag() != DwarfTag::kPointerType)
-    return;  // Not a pointer.
+    return;  // Bad type or not a pointer.
 
-  // The pointed-to type may itself be non-concrete.
-  const Collection* this_coll =
-      GetConcreteType(context, modified->modified().Get()->AsType())->AsCollection();
+  // Extract the pointed-to collection.
+  fxl::RefPtr<Collection> this_coll = GetConcreteTypeAs<Collection>(context, modified->modified());
   if (!this_coll)
     return;  // "this" is not a collection, probably corrupt.
 
-  FindMember(context, options, this_coll, looking_for, this_var, result);
+  FindMember(context, options, this_coll.get(), looking_for, this_var, result);
 }
 
 VisitResult FindIndexedName(const FindNameContext& context, const FindNameOptions& options,

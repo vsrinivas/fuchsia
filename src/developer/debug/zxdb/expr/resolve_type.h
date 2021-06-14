@@ -5,7 +5,10 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_RESOLVE_TYPE_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_RESOLVE_TYPE_H_
 
+#include "src/developer/debug/zxdb/common/ref_ptr_to.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
+#include "src/developer/debug/zxdb/symbols/lazy_symbol.h"
+#include "src/developer/debug/zxdb/symbols/type.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
@@ -21,7 +24,27 @@ class Type;
 // It will return null only if the input type is null. Sometimes forward declarations can't be
 // resolved or the "const" refers to nothing, in which case this function will return the original
 // type.
+//
+// The variant that takes a LazySymbol will extract the symbol and will additionally return null if
+// the symbol is not a type.
 fxl::RefPtr<Type> GetConcreteType(const FindNameContext& context, const Type* type);
+fxl::RefPtr<Type> GetConcreteType(const FindNameContext& context, const LazySymbol& symbol);
+
+// These variants of GetConcreteType() automatically convert to the requested destination type if
+// possible.
+template <typename DerivedType>
+fxl::RefPtr<DerivedType> GetConcreteTypeAs(const FindNameContext& context, const Type* type) {
+  if (fxl::RefPtr<Type> concrete = GetConcreteType(context, type))
+    return RefPtrTo(concrete->As<DerivedType>());
+  return nullptr;
+}
+template <typename DerivedType>
+fxl::RefPtr<DerivedType> GetConcreteTypeAs(const FindNameContext& context,
+                                           const LazySymbol& symbol) {
+  if (fxl::RefPtr<Type> concrete = GetConcreteType(context, symbol))
+    return RefPtrTo(concrete->As<DerivedType>());
+  return nullptr;
+}
 
 // Looks for a type definition matching the name of the input type. If none exists, returns the
 // input type. The only time this will return null is if the input is null. This will search for an
