@@ -7,4 +7,8 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "log", description = "Dumps the daemon log")]
-pub struct LogCommand {}
+pub struct LogCommand {
+    #[argh(option, long = "line-count", short = 'l')]
+    /// display most recent log lines.
+    pub line_count: Option<usize>,
+}
