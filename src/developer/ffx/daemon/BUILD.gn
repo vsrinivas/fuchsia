@@ -85,7 +85,6 @@ if (is_host) {
     sources = [
       "src/constants.rs",
       "src/daemon.rs",
-      "src/discovery.rs",
       "src/events.rs",
       "src/fastboot/client.rs",
       "src/fastboot/mod.rs",
@@ -94,7 +93,6 @@ if (is_host) {
       "src/logger/mod.rs",
       "src/logger/streamer.rs",
       "src/manual_targets.rs",
-      "src/mdns.rs",
       "src/onet.rs",
       "src/ssh.rs",
       "src/target.rs",

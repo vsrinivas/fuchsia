@@ -19,12 +19,10 @@ use {
 
 mod constants;
 mod daemon;
-mod discovery;
 mod events;
 mod fastboot;
 mod logger;
 mod manual_targets;
-mod mdns;
 mod onet;
 mod ssh;
 mod target_control;

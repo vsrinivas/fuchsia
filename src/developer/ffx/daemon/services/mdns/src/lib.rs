@@ -4,8 +4,11 @@
 use {
     anyhow::{anyhow, Result},
     async_trait::async_trait,
+    ffx_core::TryStreamUtilExt,
+    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge as bridge,
     fuchsia_async::Task,
+    futures::TryStreamExt,
     services::prelude::*,
     std::cell::RefCell,
     std::collections::HashSet,
@@ -155,6 +158,19 @@ impl FidlService for Mdns {
     async fn stop(&mut self, _cx: &Context) -> Result<()> {
         self.mdns_task.take().ok_or(anyhow!("mdns_task never started"))?.cancel().await;
         Ok(())
+    }
+
+    async fn serve<'a>(
+        &'a self,
+        cx: &'a Context,
+        stream: <Self::Service as ServiceMarker>::RequestStream,
+    ) -> Result<()> {
+        // This is necessary as we'll be hanging forever waiting on incoming
+        // traffic. This will exit early if the stream is closed at any point.
+        stream
+            .map_err(|err| anyhow!("{}", err))
+            .try_for_each_concurrent_while_connected(None, |req| self.handle(cx, req))
+            .await
     }
 }
 

@@ -3,13 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{get_socket, CURRENT_EXE_HASH, MDNS_BROADCAST_INTERVAL},
-    crate::discovery::{TargetFinder, TargetFinderConfig},
+    crate::constants::{get_socket, CURRENT_EXE_HASH},
     crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
     crate::fastboot::{spawn_fastboot_discovery, Fastboot},
     crate::logger::streamer::GenericDiagnosticsStreamer,
     crate::manual_targets,
-    crate::mdns::MdnsTargetFinder,
     crate::target::{
         target_addr_info_to_socketaddr, ConnectionState, RcsConnection, Target, TargetAddrEntry,
         TargetCollection, TargetEvent,
@@ -24,13 +22,10 @@ use {
     ffx_core::{build_info, TryStreamUtilExt},
     ffx_daemon_core::events::{self, EventHandler},
     ffx_daemon_services::create_service_register_map,
-    fidl::endpoints::ClientEnd,
-    fidl::endpoints::DiscoverableService,
-    fidl::endpoints::RequestStream,
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::{ClientEnd, DiscoverableService, Proxy, RequestStream, ServiceMarker},
     fidl_fuchsia_developer_bridge::{
-        DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream, DiagnosticsStreamError,
-        RepositoriesMarker,
+        self as bridge, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
+        DiagnosticsStreamError, RepositoriesMarker,
     },
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, RemoteControlMarker,
@@ -314,14 +309,7 @@ impl Daemon {
         Daemon::spawn_onet_discovery(self.event_queue.clone());
         spawn_fastboot_discovery(self.event_queue.clone());
         self.tasks.push(Rc::new(zedboot_discovery(self.event_queue.clone())?));
-
-        let config = TargetFinderConfig {
-            interface_discovery_interval: Duration::from_secs(1),
-            broadcast_interval: MDNS_BROADCAST_INTERVAL,
-            mdns_ttl: 255,
-        };
-        let mut mdns = MdnsTargetFinder::new(&config)?;
-        mdns.start(self.event_queue.clone())?;
+        self.start_mdns_event_forwarding().await?;
         Ok(())
     }
 
@@ -357,6 +345,31 @@ impl Daemon {
                 }
             }
         })))
+    }
+
+    async fn start_mdns_event_forwarding(&mut self) -> Result<()> {
+        let mdns = self.open_service_proxy(bridge::MdnsMarker::SERVICE_NAME.to_owned()).await?;
+        let mdns = bridge::MdnsProxy::from_channel(fidl::handle::AsyncChannel::from_channel(mdns)?);
+        let event_queue = self.event_queue.clone();
+        self.tasks.push(Rc::new(Task::local(async move {
+            while let Ok(Some(e)) = mdns.get_next_event().await {
+                match *e {
+                    bridge::MdnsEventType::TargetFound(t)
+                    | bridge::MdnsEventType::TargetRediscovered(t) => event_queue
+                        .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
+                            nodename: t.nodename,
+                            addresses: t
+                                .addresses
+                                .map(|a| a.into_iter().map(Into::into).collect())
+                                .unwrap_or(Vec::new()),
+                            ..Default::default()
+                        })))
+                        .unwrap(),
+                    _ => {}
+                }
+            }
+        })));
+        Ok(())
     }
 
     async fn load_manual_targets(&self) {
