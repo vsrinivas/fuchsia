@@ -1,48 +1,53 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fdio/spawn.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/real_loop_fixture.h>
-#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/enclosing_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 
-#include "src/lib/ui/base_view/base_view.h"
-
-// NOTE WELL. Run each of these integration tests in its own executable.  They each
-// consume and maintain process-global context, so it's better to keep them
-// separate.  Plus, separation means they start up components in a known good
-// state, instead of reusing component state possibly dirtied by other tests.
-
 namespace {
-
 using fuchsia::ui::input::MediaButtonsEvent;
 
-// Shared context for all tests in this process.
-// Set it up once, never delete it.
-sys::ComponentContext* g_context = nullptr;
+// Common services for each test.
+const std::map<std::string, std::string> LocalServices() {
+  return {
+      // Root Presenter protocols.
+      {"fuchsia.ui.input.InputDeviceRegistry",
+       "fuchsia-pkg://fuchsia.com/consumer-controls-integration-tests#meta/root_presenter.cmx"},
+      {"fuchsia.ui.policy.DeviceListenerRegistry",
+       "fuchsia-pkg://fuchsia.com/consumer-controls-integration-tests#meta/root_presenter.cmx"},
+      // Scenic protocols.
+      {"fuchsia.ui.scenic.Scenic",
+       "fuchsia-pkg://fuchsia.com/consumer-controls-integration-tests#meta/scenic.cmx"},
+      // Misc protocols.
+      {"fuchsia.hardware.display.Provider",
+       "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
+  };
+}
 
-// Max timeout in failure cases.
-// Set this as low as you can that still works across all test platforms.
-constexpr zx::duration kTimeout = zx::min(5);
+// Allow these global services from outside the test environment.
+const std::vector<std::string> GlobalServices() {
+  return {"fuchsia.sysmem.Allocator", "fuchsia.vulkan.loader.Loader",
+          "fuchsia.tracing.provider.Registry", "fuchsia.logger.LogSink"};
+}
 
-// This implements the MediaButtonsListener class. Its purpose is to attach
-// to the presentation and test that MediaButton Events are actually sent
-// out to the Listeners.
+// This implements the MediaButtonsListener class. Its purpose is to test that MediaButton Events
+// are actually sent out to the Listeners.
 class ButtonsListenerImpl : public fuchsia::ui::policy::MediaButtonsListener {
  public:
   ButtonsListenerImpl(
@@ -54,62 +59,81 @@ class ButtonsListenerImpl : public fuchsia::ui::policy::MediaButtonsListener {
  private:
   // |MediaButtonsListener|
   void OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) override {
-    if (observed_count_ == 0) {
-      // Terminate on first event.
-      on_terminate_(event);
-      ++observed_count_;
-    }
+    on_terminate_(event);
   }
-
+  // |MediaButtonsListener|
+  void OnEvent(fuchsia::ui::input::MediaButtonsEvent event, OnEventCallback callback) override {
+    on_terminate_(event);
+    callback();
+  }
   fidl::Binding<fuchsia::ui::policy::MediaButtonsListener> listener_binding_;
   fit::function<void(const MediaButtonsEvent&)> on_terminate_;
-  uint32_t observed_count_ = 0;
 };
 
-class MediaButtonsListenerTest : public gtest::RealLoopFixture {
+class MediaButtonsListenerTestWithEnvironment : public sys::testing::TestWithEnvironment {
  protected:
-  MediaButtonsListenerTest() {
-    // This fixture constructor may run multiple times, but we want the context
-    // to be set up just once per process.
-    if (g_context == nullptr) {
-      g_context = sys::ComponentContext::CreateAndServeOutgoingDirectory().release();
+  explicit MediaButtonsListenerTestWithEnvironment() {
+    auto services = sys::testing::EnvironmentServices::Create(real_env());
+
+    // Add common services.
+    for (const auto& [name, url] : LocalServices()) {
+      const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
+      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
     }
+
+    // Enable services from outside this test.
+    for (const auto& service : GlobalServices()) {
+      const zx_status_t is_ok = services->AllowParentService(service);
+      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
+    }
+
+    test_env_ = CreateNewEnclosingEnvironment("media_buttons_test_env", std::move(services));
+
+    WaitForEnclosingEnvToStart(test_env_.get());
+    FX_VLOGS(1) << "Created test environment.";
   }
 
-  ~MediaButtonsListenerTest() override {
-    FX_CHECK(injection_count_ == 1) << "Oops, didn't actually do anything.";
+  ~MediaButtonsListenerTestWithEnvironment() override {
+    FX_CHECK(injection_count_ > 0) << "injection expected but didn't happen.";
   }
 
-  void InjectInput(std::vector<const char*> args) {
-    // Start with process name, end with nullptr.
-    args.insert(args.begin(), "input");
-    args.push_back(nullptr);
+  sys::testing::EnclosingEnvironment* test_env() { return test_env_.get(); }
 
-    // Start the /bin/input process.
-    zx_handle_t proc;
-    zx_status_t status =
-        fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/bin/input", args.data(), &proc);
-    FX_CHECK(status == ZX_OK) << "fdio_spawn: " << zx_status_get_string(status);
-
-    // Wait for termination.
-    status = zx_object_wait_one(proc, ZX_PROCESS_TERMINATED,
-                                (zx::clock::get_monotonic() + kTimeout).get(), nullptr);
-    FX_CHECK(status == ZX_OK) << "zx_object_wait_one: " << zx_status_get_string(status);
-
-    // Check termination status.
-    zx_info_process_t info;
-    status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
-    FX_CHECK(status == ZX_OK) << "zx_object_get_info: " << zx_status_get_string(status);
-    FX_CHECK(info.return_code == 0) << "info.return_code: " << info.return_code;
+  void InjectInput(fuchsia::ui::input::MediaButtonsReport media_buttons_report) {
+    fuchsia::ui::input::DeviceDescriptor device;
+    device.media_buttons = std::make_unique<fuchsia::ui::input::MediaButtonsDescriptor>();
+    auto registry = test_env()->ConnectToService<fuchsia::ui::input::InputDeviceRegistry>();
+    fuchsia::ui::input::InputDevicePtr connection;
+    registry->RegisterDevice(std::move(device), connection.NewRequest());
+    fuchsia::ui::input::InputReport input_report;
+    input_report.media_buttons =
+        std::make_unique<fuchsia::ui::input::MediaButtonsReport>(std::move(media_buttons_report));
+    connection->DispatchReport(std::move(input_report));
+    injection_count_++;
   }
 
-  std::unique_ptr<ButtonsListenerImpl> button_listener_impl_;
-  fuchsia::ui::policy::DeviceListenerRegistryPtr root_presenter_;
-
+ private:
+  std::unique_ptr<sys::testing::EnclosingEnvironment> test_env_;
   uint32_t injection_count_ = 0;
 };
 
-TEST_F(MediaButtonsListenerTest, MediaButtons) {
+TEST_F(MediaButtonsListenerTestWithEnvironment, MediaButtons) {
+  std::optional<MediaButtonsEvent> observed_event;
+  fit::function<void(const MediaButtonsEvent&)> on_terminate =
+      [&observed_event](const MediaButtonsEvent& observed) {
+        observed_event = fidl::Clone(observed);
+      };
+
+  // Register the MediaButtons listener against Root Presenter.
+  fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener_handle;
+  auto button_listener_impl =
+      std::make_unique<ButtonsListenerImpl>(listener_handle.NewRequest(), std::move(on_terminate));
+  auto root_presenter = test_env()->ConnectToService<fuchsia::ui::policy::DeviceListenerRegistry>();
+  root_presenter.set_error_handler([](zx_status_t status) {
+    FX_LOGS(FATAL) << "Lost connection to RootPresenter: " << zx_status_get_string(status);
+  });
+  root_presenter->RegisterMediaButtonsListener(std::move(listener_handle));
+
   // Post input injection in the future, "long enough" that the RegisterMediaButtonsListener will
   // have succeeded.
   // TODO(fxbug.dev/41384): Make this more reliable by parking a callback on a response for
@@ -117,51 +141,68 @@ TEST_F(MediaButtonsListenerTest, MediaButtons) {
   async::PostDelayedTask(
       dispatcher(),
       [this] {
-        // Set up inputs. Fires when display and content are available.
-        // Inject a media button input with all buttons but the factory reset button
-        // set. If fdr is set, FactoryResetManager will handle the buttons event
-        // instead of the MediaButtonListener, which we are testing.
-        InjectInput({"media_button", "1", "1", "1", "0", "1", "0", nullptr});
-        ++injection_count_;
+        auto report = fuchsia::ui::input::MediaButtonsReport{.volume_up = true,
+                                                             .volume_down = true,
+                                                             .mic_mute = true,
+                                                             .reset = false,
+                                                             .pause = true,
+                                                             .camera_disable = false};
+        InjectInput(std::move(report));
       },
       zx::sec(1));
 
-  // Set up expectations. Terminate when we see 1 message.
+  RunLoopUntil([&observed_event] { return observed_event.has_value(); });
+
+  ASSERT_TRUE(observed_event->has_volume());
+  EXPECT_EQ(observed_event->volume(), 0);
+  ASSERT_TRUE(observed_event->has_mic_mute());
+  EXPECT_TRUE(observed_event->mic_mute());
+  ASSERT_TRUE(observed_event->has_pause());
+  ASSERT_TRUE(observed_event->pause());
+  ASSERT_TRUE(observed_event->has_camera_disable());
+  EXPECT_FALSE(observed_event->camera_disable());
+}
+
+TEST_F(MediaButtonsListenerTestWithEnvironment, MediaButtonsWithCallback) {
+  std::optional<MediaButtonsEvent> observed_event;
   fit::function<void(const MediaButtonsEvent&)> on_terminate =
-      [this](const MediaButtonsEvent& observed) {
-        ASSERT_TRUE(observed.has_mic_mute());
-        EXPECT_TRUE(observed.mic_mute());
-
-        ASSERT_TRUE(observed.has_camera_disable());
-        EXPECT_FALSE(observed.camera_disable());
-
-        ASSERT_TRUE(observed.has_volume());
-        EXPECT_EQ(observed.volume(), 0);
-
-        QuitLoop();
-        // TODO(fxbug.dev/24638): Cleanly break the View/ViewHolder connection.
+      [&observed_event](const MediaButtonsEvent& observed) {
+        observed_event = fidl::Clone(observed);
       };
 
   // Register the MediaButtons listener against Root Presenter.
   fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener_handle;
-  button_listener_impl_ =
+  auto button_listener_impl =
       std::make_unique<ButtonsListenerImpl>(listener_handle.NewRequest(), std::move(on_terminate));
 
-  root_presenter_ = g_context->svc()->Connect<fuchsia::ui::policy::DeviceListenerRegistry>();
-  root_presenter_.set_error_handler([](zx_status_t status) {
+  auto root_presenter = test_env()->ConnectToService<fuchsia::ui::policy::DeviceListenerRegistry>();
+  root_presenter.set_error_handler([](zx_status_t status) {
     FX_LOGS(FATAL) << "Lost connection to RootPresenter: " << zx_status_get_string(status);
   });
-  root_presenter_->RegisterMediaButtonsListener(std::move(listener_handle));
 
-  // Post a "just in case" quit task, if the test hangs.
-  async::PostDelayedTask(
-      dispatcher(),
-      [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating. <<\n\n"; },
-      kTimeout);
+  bool listener_registered = false;
+  root_presenter->RegisterListener(std::move(listener_handle),
+                                   [&listener_registered] { listener_registered = true; });
 
-  RunLoop();  // Go!
+  RunLoopUntil([&listener_registered] { return listener_registered; });
+
+  auto report = fuchsia::ui::input::MediaButtonsReport{.volume_up = true,
+                                                       .volume_down = true,
+                                                       .mic_mute = true,
+                                                       .reset = false,
+                                                       .pause = true,
+                                                       .camera_disable = false};
+  InjectInput(std::move(report));
+
+  RunLoopUntil([&observed_event] { return observed_event.has_value(); });
+
+  ASSERT_TRUE(observed_event->has_volume());
+  EXPECT_EQ(observed_event->volume(), 0);
+  ASSERT_TRUE(observed_event->has_mic_mute());
+  EXPECT_TRUE(observed_event->mic_mute());
+  ASSERT_TRUE(observed_event->has_pause());
+  ASSERT_TRUE(observed_event->pause());
+  ASSERT_TRUE(observed_event->has_camera_disable());
+  EXPECT_FALSE(observed_event->camera_disable());
 }
-
 }  // namespace
-
-// NOTE: We link in FXL's gtest_main to enable proper logging.
