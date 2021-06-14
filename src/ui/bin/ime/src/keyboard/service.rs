@@ -4,9 +4,12 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl_fuchsia_ui_input as ui_input, fidl_fuchsia_ui_input3 as ui_input3,
-    fuchsia_syslog::{fx_log_debug, fx_log_err},
+    fidl_fuchsia_ui_input as ui_input,
+    fidl_fuchsia_ui_input3::{self as ui_input3, KeyMeaning, NonPrintableKey},
+    fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_warn},
     futures::{TryFutureExt, TryStreamExt},
+    keymaps::{inverse_keymap::InverseKeymap, usages::hid_usage_to_input3_key},
+    std::convert::TryFrom,
 };
 
 use fidl_fuchsia_ui_keyboard_focus as fidl_focus;
@@ -62,6 +65,7 @@ impl Service {
         let mut ime_service = self.ime_service.clone();
         fuchsia_async::Task::spawn(
             async move {
+                let inverse_keymap = InverseKeymap::new(&keymaps::US_QWERTY);
                 while let Some(msg) = stream.try_next().await.context(concat!(
                     "keyboard::Service::spawn_key_event_injector: ",
                     "error while reading the request stream for ",
@@ -69,12 +73,20 @@ impl Service {
                 ))? {
                     match msg {
                         ui_input3::KeyEventInjectorRequest::Inject {
-                            key_event, responder, ..
+                            mut key_event,
+                            responder,
+                            ..
                         } => {
-                            let key_event_obj =
-                                KeyEvent::new(&key_event, keyboard3.get_keys_pressed().await)?;
-                            ime_service.inject_input(key_event_obj.clone()).await.unwrap_or_else(
-                                |e| {
+                            key_event.key = key_event.key.or_else(|| {
+                                key_from_key_meaning(&inverse_keymap, key_event.key_meaning)
+                            });
+                            ime_service
+                                .inject_input(KeyEvent::new(
+                                    &key_event,
+                                    keyboard3.get_keys_pressed().await,
+                                )?)
+                                .await
+                                .unwrap_or_else(|e| {
                                     // Most of the time this is not a real error: what it actually
                                     // means is that we tried to offer text input to a text edit
                                     // field, but no such field is currently in focus.  Therefore
@@ -87,8 +99,7 @@ impl Service {
                                         ),
                                         e
                                     )
-                                },
-                            );
+                                });
                             let was_handled = if keyboard3
                                 .handle_key_event(key_event)
                                 .await
@@ -138,5 +149,39 @@ impl Service {
                 .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
         )
         .detach();
+    }
+}
+
+fn key_from_key_meaning(
+    inverse_keymap: &InverseKeymap,
+    key_meaning: Option<KeyMeaning>,
+) -> Option<fidl_fuchsia_input::Key> {
+    match key_meaning {
+        Some(KeyMeaning::Codepoint(cp)) => char::from_u32(cp)
+            .as_ref()
+            .and_then(|c| inverse_keymap.get(c))
+            .and_then(|keystroke| Some(keystroke.usage))
+            .and_then(|usage| Some((usage, u16::try_from(usage))))
+            .and_then(|(usage_u32, usage_u16)| match usage_u16 {
+                Ok(usage) => hid_usage_to_input3_key(usage),
+                Err(_) => {
+                    fx_log_warn!("inverse_keymap yielded usage {:#x}; expected a u16", usage_u32);
+                    None
+                }
+            }),
+        Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Enter)) => {
+            Some(fidl_fuchsia_input::Key::Enter)
+        }
+        Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Tab)) => {
+            Some(fidl_fuchsia_input::Key::Tab)
+        }
+        Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Backspace)) => {
+            Some(fidl_fuchsia_input::Key::Backspace)
+        }
+        Some(KeyMeaning::NonPrintableKey(unrecognized)) => {
+            fx_log_warn!("received unrecognized NonPrintableKey {:?}", unrecognized);
+            None
+        }
+        None => None,
     }
 }
