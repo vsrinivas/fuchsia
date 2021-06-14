@@ -130,10 +130,9 @@ template("cmc_compile") {
       rebase_path(output_file, root_build_dir),
       "--includeroot",
       rebase_path("//", root_build_dir),
-      "--includepath",
 
-      # TODO(shayba): agree on a base include path for Fuchsia tree
-      rebase_path("//", root_build_dir),
+      # TODO(fxbug.dev/78686): set --includepath to meaningful values.
+      #"--includepath",
       "--depfile",
       rebase_path(depfile, root_build_dir),
     ]
