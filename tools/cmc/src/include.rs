@@ -26,10 +26,10 @@ pub fn merge_includes(
     file: &PathBuf,
     output: Option<&PathBuf>,
     depfile: Option<&PathBuf>,
-    includepath: &PathBuf,
+    includepath: &Vec<PathBuf>,
     includeroot: &PathBuf,
 ) -> Result<(), Error> {
-    let includes = transitive_includes(&file, &includepath, &includeroot)?;
+    let includes = transitive_includes(&file, includepath, &includeroot)?;
     let mut v: Value = json_or_json5_from_file(&file)?;
     v.as_object_mut().and_then(|v| v.remove("include"));
 
@@ -75,7 +75,7 @@ pub fn check_includes(
     fromfile: Option<&PathBuf>,
     depfile: Option<&PathBuf>,
     stamp: Option<&PathBuf>,
-    includepath: &PathBuf,
+    includepath: &Vec<PathBuf>,
     includeroot: &PathBuf,
 ) -> Result<(), Error> {
     if let Some(path) = fromfile {
@@ -97,9 +97,9 @@ pub fn check_includes(
         return Ok(());
     }
 
-    let actual = transitive_includes(&file, &includepath, &includeroot)?;
+    let actual = transitive_includes(&file, includepath, &includeroot)?;
     for expected in
-        expected_includes.iter().map(|i| canonicalize_include(&i, &includepath, &includeroot))
+        expected_includes.iter().map(|i| canonicalize_include(&i, includepath, &includeroot))
     {
         if !actual.contains(&expected) {
             return Err(Error::Validate {
@@ -128,11 +128,11 @@ pub fn check_includes(
 /// Includes are returned as canonicalized paths.
 pub fn transitive_includes(
     file: &PathBuf,
-    includepath: &PathBuf,
+    includepath: &Vec<PathBuf>,
     includeroot: &PathBuf,
 ) -> Result<Vec<PathBuf>, Error> {
     fn helper(
-        includepath: &PathBuf,
+        includepath: &Vec<PathBuf>,
         includeroot: &PathBuf,
         doc: &Value,
         entered: &mut HashSet<PathBuf>,
@@ -142,7 +142,7 @@ pub fn transitive_includes(
             for include in includes
                 .into_iter()
                 .filter_map(|v| v.as_str().map(String::from))
-                .map(|i| canonicalize_include(&i, &includepath, &includeroot))
+                .map(|i| canonicalize_include(&i, includepath, &includeroot))
             {
                 // Avoid visiting the same include more than once
                 if !entered.insert(include.clone()) {
@@ -161,7 +161,7 @@ pub fn transitive_includes(
                             None,
                         )
                     })?;
-                    helper(&includepath, &includeroot, &include_doc, entered, exited)?;
+                    helper(includepath, &includeroot, &include_doc, entered, exited)?;
                     exited.insert(include);
                 }
             }
@@ -172,21 +172,31 @@ pub fn transitive_includes(
     let mut entered = HashSet::new();
     let mut exited = HashSet::new();
     let doc = json_or_json5_from_file(&file)?;
-    helper(&includepath, &includeroot, &doc, &mut entered, &mut exited)?;
+    helper(includepath, &includeroot, &doc, &mut entered, &mut exited)?;
     let mut includes = Vec::from_iter(exited);
     includes.sort();
     Ok(includes)
 }
 
 /// Resolves an include to a canonical path.
-/// Includes that start with "//" are resolved at `includeroot`.
-/// Otherwise they are resolved at `includepath`.
-fn canonicalize_include(include: &String, includepath: &PathBuf, includeroot: &PathBuf) -> PathBuf {
+fn canonicalize_include(
+    include: &String,
+    includepath: &Vec<PathBuf>,
+    includeroot: &PathBuf,
+) -> PathBuf {
     if include.starts_with("//") {
-        includeroot.join(&include[2..])
-    } else {
-        includepath.join(&include)
+        // Resolve against sources root
+        return includeroot.join(&include[2..]);
     }
+    for prefix in includepath {
+        // Resolve against first matching includepath
+        let resolved = prefix.join(&include);
+        if resolved.exists() {
+            return resolved;
+        }
+    }
+    // Resolve against CWD
+    return PathBuf::from(include);
 }
 
 #[cfg(test)]
@@ -202,8 +212,8 @@ mod tests {
     struct TestContext {
         // Root of source tree
         root_path: PathBuf,
-        // Root of includes
-        include_path: PathBuf,
+        // Resolve includes in these paths
+        include_path: Vec<PathBuf>,
         // Various inputs and outputs
         fromfile: PathBuf,
         depfile: PathBuf,
@@ -216,8 +226,12 @@ mod tests {
         fn new() -> Self {
             let tmpdir = TempDir::new().unwrap();
             let tmpdir_path = tmpdir.path();
-            let include_path = tmpdir_path.join("includes");
-            fs::create_dir(&include_path).unwrap();
+            let includedir_path = tmpdir_path.join("includes");
+            fs::create_dir(&includedir_path).unwrap();
+            // Includes may also be resolved from a secondary directory
+            let includedir_path_secondary = tmpdir_path.join("more_includes");
+            fs::create_dir(&includedir_path_secondary).unwrap();
+            let include_path = vec![includedir_path, includedir_path_secondary];
             Self {
                 root_path: tmpdir_path.to_path_buf(),
                 include_path: include_path,
@@ -230,7 +244,13 @@ mod tests {
         }
 
         fn new_include(&self, name: &str, contents: impl Display) -> PathBuf {
-            let path = self.include_path.join(name);
+            let path = self.include_path[0].join(name);
+            File::create(&path).unwrap().write_all(format!("{:#}", contents).as_bytes()).unwrap();
+            path
+        }
+
+        fn new_include_secondary(&self, name: &str, contents: impl Display) -> PathBuf {
+            let path = self.include_path[1].join(name);
             File::create(&path).unwrap().write_all(format!("{:#}", contents).as_bytes()).unwrap();
             path
         }
@@ -350,6 +370,81 @@ mod tests {
             "use": [{
                 "protocol": ["fuchsia.foo.Bar"]
             }]
+        }));
+        ctx.assert_depfile_eq(&ctx.output, &[&shard_path]);
+    }
+
+    #[test]
+    fn test_include_not_from_first_path() {
+        let ctx = TestContext::new();
+        let cmx_path = ctx.new_file(
+            "some.cmx",
+            json!({
+                "include": ["shard.cmx"],
+                "program": {
+                    "binary": "bin/hello_world"
+                }
+            }),
+        );
+        let shard_path = ctx.new_include_secondary(
+            "shard.cmx",
+            json!({
+                "sandbox": {
+                    "services": ["fuchsia.foo.Bar"]
+                }
+            }),
+        );
+        ctx.merge_includes(&cmx_path).unwrap();
+
+        ctx.assert_output_eq(json!({
+            "program": {
+                "binary": "bin/hello_world"
+            },
+            "sandbox": {
+                "services": ["fuchsia.foo.Bar"]
+            }
+        }));
+        ctx.assert_depfile_eq(&ctx.output, &[&shard_path]);
+    }
+
+    #[test]
+    fn test_include_paths_take_priority_by_order() {
+        let ctx = TestContext::new();
+        let cmx_path = ctx.new_file(
+            "some.cmx",
+            json!({
+                "include": ["shard.cmx"],
+                "program": {
+                    "binary": "bin/hello_world"
+                }
+            }),
+        );
+        let shard_path = ctx.new_include(
+            "shard.cmx",
+            json!({
+                "sandbox": {
+                    "services": ["fuchsia.foo.Bar"]
+                }
+            }),
+        );
+        // This shard won't be included because the one above will match first
+        ctx.new_include_secondary(
+            "shard.cmx",
+            json!({
+                "sandbox": {
+                    "services": ["fuchsia.foo.Qux"]
+                }
+            }),
+        );
+        ctx.merge_includes(&cmx_path).unwrap();
+
+        ctx.assert_output_eq(json!({
+            "program": {
+                "binary": "bin/hello_world"
+            },
+            "sandbox": {
+                "services": ["fuchsia.foo.Bar"]
+            }
         }));
         ctx.assert_depfile_eq(&ctx.output, &[&shard_path]);
     }

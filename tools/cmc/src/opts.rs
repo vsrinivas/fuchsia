@@ -100,9 +100,9 @@ pub enum Commands {
         /// If specified, include paths will be listed here, delimited by newlines.
         depfile: Option<PathBuf>,
 
-        #[structopt(short = "p", long = "includepath", parse(from_os_str))]
-        /// base path for resolving includes
-        includepath: PathBuf,
+        #[structopt(short = "p", long = "includepath", parse(from_os_str), default_value = "")]
+        /// base paths for resolving includes
+        includepath: Vec<PathBuf>,
 
         #[structopt(short = "r", long = "includeroot", parse(from_os_str), default_value = "")]
         /// base path for resolving include paths that start with "//"
@@ -132,9 +132,9 @@ pub enum Commands {
         /// If specified, include paths will be listed here, delimited by newlines.
         depfile: Option<PathBuf>,
 
-        #[structopt(short = "p", long = "includepath", parse(from_os_str))]
-        /// base path for resolving includes
-        includepath: PathBuf,
+        #[structopt(short = "p", long = "includepath", parse(from_os_str), default_value = "")]
+        /// base paths for resolving includes
+        includepath: Vec<PathBuf>,
 
         #[structopt(short = "r", long = "includeroot", parse(from_os_str), default_value = "")]
         /// base path for resolving include paths that start with "//"
@@ -183,9 +183,9 @@ pub enum Commands {
         /// If specified, include paths will be listed here, delimited by newlines.
         depfile: Option<PathBuf>,
 
-        #[structopt(short = "p", long = "includepath", parse(from_os_str))]
-        /// base path for resolving includes
-        includepath: PathBuf,
+        #[structopt(short = "p", long = "includepath", parse(from_os_str), default_value = "")]
+        /// base paths for resolving includes
+        includepath: Vec<PathBuf>,
 
         #[structopt(short = "r", long = "includeroot", parse(from_os_str), default_value = "")]
         /// base path for resolving include paths that start with "//"
