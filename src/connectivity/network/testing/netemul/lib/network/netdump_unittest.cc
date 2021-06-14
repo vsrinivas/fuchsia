@@ -25,7 +25,7 @@ TEST_F(NetworkDumpTest, ExpectedDump) {
 
   NetDumpParser parser;
   auto bytes = dump.CopyBytes();
-  ASSERT_TRUE(parser.Parse(&bytes[0], bytes.size()));
+  ASSERT_TRUE(parser.Parse(bytes.data(), bytes.size()));
   ASSERT_EQ(parser.interfaces().size(), 2ul);
   ASSERT_EQ(parser.packets().size(), 3ul);
 

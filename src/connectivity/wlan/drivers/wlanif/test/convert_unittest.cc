@@ -473,9 +473,9 @@ TEST(ConvertTest, ToFidlPmkInfo) {
   std::vector<uint8_t> pmk = {1, 2, 3, 4, 5, 6, 7, 8};
   std::vector<uint8_t> pmkid = {1, 1, 2, 2, 3, 3, 4, 4};
   wlanif_pmk_info_t info{
-      .pmk_list = &pmk[0],
+      .pmk_list = pmk.data(),
       .pmk_count = pmk.size(),
-      .pmkid_list = &pmkid[0],
+      .pmkid_list = pmkid.data(),
       .pmkid_count = pmkid.size(),
   };
   wlan_mlme::PmkInfo fidl_info;

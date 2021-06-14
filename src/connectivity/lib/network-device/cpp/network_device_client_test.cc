@@ -212,7 +212,7 @@ TEST_F(NetDeviceTest, TestRxTx) {
     ASSERT_EQ(data.frame_type(), fuchsia_hardware_network::wire::FrameType::kEthernet);
     ASSERT_EQ(data.len(), send_data.size());
     ASSERT_EQ(data.parts(), 1u);
-    ASSERT_EQ(memcmp(&send_data[0], &data.part(0).data()[0], data.len()), 0);
+    ASSERT_EQ(memcmp(send_data.data(), data.part(0).data().data(), data.len()), 0);
   });
 
   bool wrote_frame = false;
@@ -254,7 +254,7 @@ TEST_F(NetDeviceTest, TestRxTx) {
   auto tx = client->AllocTx();
   ASSERT_TRUE(tx.is_valid());
   tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
-  ASSERT_EQ(tx.data().Write(&send_data[0], send_data.size()), send_data.size());
+  ASSERT_EQ(tx.data().Write(send_data.data(), send_data.size()), send_data.size());
   ASSERT_OK(tx.Send());
 
   ASSERT_TRUE(RunLoopUntilOrFailure([&done]() { return done; }));

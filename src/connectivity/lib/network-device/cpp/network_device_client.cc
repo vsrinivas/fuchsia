@@ -490,7 +490,7 @@ zx_status_t NetworkDeviceClient::PrepareDescriptors() {
 void NetworkDeviceClient::FlushRx() {
   size_t flush = std::min(rx_out_queue_.size(), static_cast<size_t>(device_info_.rx_depth));
   ZX_ASSERT(flush != 0);
-  zx_status_t status = rx_fifo_.write(sizeof(uint16_t), &rx_out_queue_[0], flush, &flush);
+  zx_status_t status = rx_fifo_.write(sizeof(uint16_t), rx_out_queue_.data(), flush, &flush);
   bool sched_more;
   if (status == ZX_OK) {
     rx_out_queue_.erase(rx_out_queue_.begin(), rx_out_queue_.begin() + flush);
@@ -507,7 +507,7 @@ void NetworkDeviceClient::FlushRx() {
 void NetworkDeviceClient::FlushTx() {
   size_t flush = std::min(tx_out_queue_.size(), static_cast<size_t>(device_info_.tx_depth));
   ZX_ASSERT(flush != 0);
-  zx_status_t status = tx_fifo_.write(sizeof(uint16_t), &tx_out_queue_[0], flush, &flush);
+  zx_status_t status = tx_fifo_.write(sizeof(uint16_t), tx_out_queue_.data(), flush, &flush);
   bool sched_more;
   if (status == ZX_OK) {
     tx_out_queue_.erase(tx_out_queue_.begin(), tx_out_queue_.begin() + flush);

@@ -5,13 +5,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_MACADDR_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_MACADDR_H_
 
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <string>
-
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 namespace wlan {
 namespace common {

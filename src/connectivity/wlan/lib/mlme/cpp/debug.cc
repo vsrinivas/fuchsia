@@ -722,7 +722,7 @@ std::string ToAsciiOrHexStr(const uint8_t bytes[], size_t len) {
 }
 
 std::string ToAsciiOrHexStr(const std::vector<uint8_t>& vec) {
-  return ToAsciiOrHexStr(&vec[0], vec.size());
+  return ToAsciiOrHexStr(vec.data(), vec.size());
 }
 
 }  // namespace debug

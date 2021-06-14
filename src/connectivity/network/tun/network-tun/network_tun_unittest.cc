@@ -230,7 +230,7 @@ class SimpleClient {
         MintData(descs[i]);
       }
     }
-    return fifo->write(sizeof(uint16_t), &descs[0], count, nullptr);
+    return fifo->write(sizeof(uint16_t), descs.data(), count, nullptr);
   }
 
   zx_status_t SendTx(const std::vector<uint16_t>& descs, bool reset = false, size_t count = 0) {
@@ -1231,7 +1231,7 @@ TEST_F(TunTest, PairEcho) {
   while (echoed < tx_depth) {
     ASSERT_OK(right.WaitRx());
     size_t count = rx_depth;
-    ASSERT_OK(right.FetchRx(&rx_buffer[0], &count));
+    ASSERT_OK(right.FetchRx(rx_buffer.data(), &count));
     for (size_t i = 0; i < count; i++) {
       tx_buffer[i] = tx_descriptors[i + echoed];
       auto* rx_desc = right.descriptor(rx_buffer[i]);
@@ -1252,7 +1252,7 @@ TEST_F(TunTest, PairEcho) {
   while (received < tx_depth) {
     ASSERT_OK(left.WaitRx());
     size_t count = rx_depth;
-    ASSERT_OK(left.FetchRx(&rx_buffer[0], &count));
+    ASSERT_OK(left.FetchRx(rx_buffer.data(), &count));
     for (size_t i = 0; i < count; i++) {
       auto orig_desc = tx_descriptors[received + i];
       ASSERT_NO_FATAL_FAILURE(left.ValidateDataInPlace(rx_buffer[i], orig_desc, 4));

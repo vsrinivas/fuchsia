@@ -577,7 +577,7 @@ TEST_F(PlatformAuthDelegateTest, KeyExport_GetNodeCertSet) {
   EXPECT_EQ(cert_set.CertCount, 1U);
 
   // Check that the CommonName of the certificate matches our dummy account id.
-  Profiles::Security::WeaveCertificateData* cert = &cert_set.Certs[0];
+  Profiles::Security::WeaveCertificateData* cert = cert_set.Certs;
   EXPECT_EQ(cert->SubjectDN.AttrOID, ASN1::kOID_AttributeType_CommonName);
   EXPECT_EQ(strncmp((const char*)cert->SubjectDN.AttrValue.String.Value, kTestDeviceCertName,
                     cert->SubjectDN.AttrValue.String.Len),

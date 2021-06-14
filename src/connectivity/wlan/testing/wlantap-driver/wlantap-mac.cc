@@ -174,7 +174,7 @@ struct WlantapMacImpl : WlantapMac {
                                        .mcs = rx_info.mcs,
                                        .rssi_dbm = rx_info.rssi_dbm,
                                        .snr_dbh = rx_info.snr_dbh};
-      ifc_.Recv(0, &data[0], data.size(), &converted_info);
+      ifc_.Recv(0, data.data(), data.size(), &converted_info);
     }
   }
 

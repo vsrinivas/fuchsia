@@ -100,7 +100,7 @@ TEST_F(EthertapClientTest, EthertapReceive) {
   // listen for data coming through tap
   tap()->SetPacketCallback([&ok, &testSend](std::vector<uint8_t> data) {
     ASSERT_EQ(data.size(), static_cast<size_t>(TEST_BUFF_SIZE));
-    ASSERT_EQ(0, memcmp(&data[0], testSend, data.size()));
+    ASSERT_EQ(0, memcmp(data.data(), testSend, data.size()));
 
     ok = true;
   });

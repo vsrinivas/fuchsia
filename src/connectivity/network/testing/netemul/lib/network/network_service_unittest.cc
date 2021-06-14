@@ -1031,7 +1031,7 @@ TEST_F(NetworkServiceTest, NetWatcher) {
   // check that all the saved data is correct:
   NetDumpParser parser;
   auto dump_bytes = watcher.dump().CopyBytes();
-  ASSERT_TRUE(parser.Parse(&dump_bytes[0], dump_bytes.size()));
+  ASSERT_TRUE(parser.Parse(dump_bytes.data(), dump_bytes.size()));
   ASSERT_EQ(parser.interfaces().size(), 1ul);
   ASSERT_EQ(parser.packets().size(), packet_count);
 

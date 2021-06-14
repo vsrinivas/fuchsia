@@ -29,7 +29,7 @@ namespace {
 template <typename T, size_t N>
 ::std::array<T, N> ToFidlArray(const T (&c_array)[N]) {
   ::std::array<T, N> ret;
-  std::copy_n(&c_array[0], N, ret.begin());
+  std::copy_n(c_array, N, ret.begin());
   return ret;
 }
 

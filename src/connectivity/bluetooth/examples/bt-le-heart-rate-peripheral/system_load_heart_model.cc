@@ -96,7 +96,7 @@ bool SystemLoadHeartModel::ReadCpuStats() {
   size_t actual, available;
 
   zx_status_t err =
-      root_resource_.get_info(ZX_INFO_CPU_STATS, &cpu_stats_[0],
+      root_resource_.get_info(ZX_INFO_CPU_STATS, cpu_stats_.data(),
                               cpu_stats_.size() * sizeof(zx_info_cpu_stats), &actual, &available);
 
   return (err == ZX_OK && actual == available);

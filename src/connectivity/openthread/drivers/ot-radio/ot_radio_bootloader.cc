@@ -126,8 +126,7 @@ OtRadioBlResult OtRadioDeviceBootloader::SendSpiCmdAndGetResponse(uint8_t *cmd, 
       uint8_t i;
       size_t rx_actual;
       size_t read_length = exp_resp_size;
-      dev_handle_->spi_.Receive(read_length, &dev_handle_->spi_rx_buffer_[0], read_length,
-                                &rx_actual);
+      dev_handle_->spi_.Receive(read_length, dev_handle_->spi_rx_buffer_, read_length, &rx_actual);
       zxlogf(DEBUG, "ot-radio: rx_actual %lu expected : %lu", rx_actual, read_length);
       for (i = 0; i < read_length; i++) {
         zxlogf(DEBUG, "ot-radio: RX %2X %c", dev_handle_->spi_rx_buffer_[i],
@@ -140,8 +139,7 @@ OtRadioBlResult OtRadioDeviceBootloader::SendSpiCmdAndGetResponse(uint8_t *cmd, 
       // Check if response corresponds to appropriate command.
       // Reinterpret as cmd as first field in basic_response is basic_cmd, which
       // contains all the necessary fields
-      NlSpiBlBasicCmd *response =
-          reinterpret_cast<NlSpiBlBasicCmd *>(&dev_handle_->spi_rx_buffer_[0]);
+      NlSpiBlBasicCmd *response = reinterpret_cast<NlSpiBlBasicCmd *>(dev_handle_->spi_rx_buffer_);
 
       // Special case to ignore -- in some cases it is found a spurious response
       // of all 0xff's is received. Ignore such responses for now
@@ -246,7 +244,7 @@ OtRadioBlResult OtRadioDeviceBootloader::GetBootloaderVersion(std::string &bl_ve
   }
 
   NlSpiBlGetVersionResponse *response =
-      reinterpret_cast<NlSpiBlGetVersionResponse *>(&dev_handle_->spi_rx_buffer_[0]);
+      reinterpret_cast<NlSpiBlGetVersionResponse *>(dev_handle_->spi_rx_buffer_);
 
   // Ensure that final byte in version is null (just in case response was buggy)
   response->version[kNlBootloaderVersionMaxLength - 1] = '\0';
@@ -301,7 +299,7 @@ OtRadioBlResult OtRadioDeviceBootloader::UploadFirmware(const std::vector<uint8_
   unsigned long bytes_left = fw_bytes.size();
   unsigned retry_count = 0;
   const unsigned max_retry_count = 10;
-  const uint8_t *current_ptr = reinterpret_cast<const uint8_t *>(&fw_bytes[0]);
+  const uint8_t *current_ptr = fw_bytes.data();
   uint32_t address = kFwStartAddr;
   while ((bytes_left > 0) && (retry_count < max_retry_count)) {
     NlSpiBlCmdFlashWrite write_cmd;
@@ -332,7 +330,7 @@ OtRadioBlResult OtRadioDeviceBootloader::UploadFirmware(const std::vector<uint8_
 
     // Response is stored in dev_handle_->spi_rx_buffer_ so read that
     NlSpiBlBasicResponse *basic_response =
-        reinterpret_cast<NlSpiBlBasicResponse *>(&dev_handle_->spi_rx_buffer_[0]);
+        reinterpret_cast<NlSpiBlBasicResponse *>(dev_handle_->spi_rx_buffer_);
 
     if (basic_response->status != BL_ERROR_NONE) {
       zxlogf(ERROR, "ot-radio: Flash write error @ 0x%x, status=%d", address,
@@ -363,7 +361,7 @@ OtRadioBlResult OtRadioDeviceBootloader::VerifyUpload(const std::vector<uint8_t>
   NlSpiCmdFlashVerify verify_cmd;
   verify_cmd.address = kFwStartAddr;
   verify_cmd.length = fw_bytes.size();
-  verify_cmd.crc32_check = BlModeCrc32(kSpiPacketCrc32InitValue, &fw_bytes[0], fw_bytes.size());
+  verify_cmd.crc32_check = BlModeCrc32(kSpiPacketCrc32InitValue, fw_bytes.data(), fw_bytes.size());
   BlPrepareCmd(&verify_cmd.cmd, sizeof(verify_cmd), BL_SPI_CMD_FLASH_VERIFY);
   zxlogf(DEBUG, "ot-radio: Verifying crc32 of flashed image");
 
@@ -376,7 +374,7 @@ OtRadioBlResult OtRadioDeviceBootloader::VerifyUpload(const std::vector<uint8_t>
   }
 
   NlSpiBlBasicResponse *basic_response =
-      reinterpret_cast<NlSpiBlBasicResponse *>(&dev_handle_->spi_rx_buffer_[0]);
+      reinterpret_cast<NlSpiBlBasicResponse *>(dev_handle_->spi_rx_buffer_);
 
   if (basic_response->status != BL_ERROR_NONE) {
     zxlogf(ERROR, "ot-radio: Verification failed");

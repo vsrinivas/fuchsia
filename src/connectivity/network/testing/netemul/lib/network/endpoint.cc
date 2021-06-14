@@ -140,7 +140,7 @@ class EthertapImpl : public EndpointImpl {
     }
 
     ethertap_->SetPacketCallback(
-        [this](std::vector<uint8_t> data) { ForwardData(&data[0], data.size()); });
+        [this](std::vector<uint8_t> data) { ForwardData(data.data(), data.size()); });
 
     ethertap_->SetPeerClosedCallback([this]() { Closed(); });
     return ZX_OK;
@@ -375,7 +375,7 @@ class NetworkDeviceImpl : public EndpointImpl,
     tun_device_->ReadFrame([this](fuchsia::net::tun::Device_ReadFrame_Result result) {
       if (result.is_response()) {
         auto& data = result.response().frame.data();
-        ForwardData(&data[0], data.size());
+        ForwardData(data.data(), data.size());
       } else {
         FX_LOGS(ERROR) << "ReadFrame from Tun Device failed " << zx_status_get_string(result.err());
       }

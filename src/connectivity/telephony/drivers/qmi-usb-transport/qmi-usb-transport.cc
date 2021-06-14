@@ -592,7 +592,7 @@ void Device::GenInboundEthFrameHdr(EthFrameHdr* eth_frame_hdr) {
   // Dest mac addr.
   std::copy(eth_dst_mac_addr_->begin(), eth_dst_mac_addr_->end(), eth_frame_hdr->dst_mac_addr);
   // Src mac addr.
-  std::copy(&kFakeMacAddr[0], &kFakeMacAddr[kMacAddrLen], eth_frame_hdr->src_mac_addr);
+  std::copy(kFakeMacAddr.begin(), kFakeMacAddr.end(), eth_frame_hdr->src_mac_addr);
   // Ethertype.
   eth_frame_hdr->ethertype = betoh16(kEthertypeIpv4);
   return;
