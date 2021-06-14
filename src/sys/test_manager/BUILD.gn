@@ -39,12 +39,14 @@ rustc_library("lib") {
     "//src/sys/lib/cm_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:glob",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
 
   sources = [
     "src/diagnostics.rs",

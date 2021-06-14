@@ -5,10 +5,10 @@
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
-rustc_test("test_manager_test_bin") {
+rustc_test("test_manager_legacy_test_bin") {
   edition = "2018"
-  name = "test_manager_test"
-  source_root = "src/main.rs"
+  name = "test_manager_legacy_test"
+  source_root = "src/legacy_tests.rs"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -26,11 +26,51 @@ rustc_test("test_manager_test_bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  sources = [ "src/main.rs" ]
+  sources = [ "src/legacy_tests.rs" ]
+
+  inputs = [ "//src/sys/test_runners/gtest/test_data/sample_tests_golden_events_legacy.rsf" ]
+}
+
+rustc_test("test_manager_test_bin") {
+  edition = "2018"
+  name = "test_manager_test"
+  source_root = "src/tests.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/test_executor/rust:test_executor",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [ "src/tests.rs" ]
 
   inputs = [
     "//src/sys/test_runners/gtest/test_data/sample_tests_golden_events.rsf",
   ]
+}
+
+fuchsia_unittest_package("test_manager_test_legacy") {
+  manifest = "meta/test_manager_legacy_test.cml"
+  deps = [
+    ":test_manager_legacy_test_bin",
+    "test_data",
+  ]
+
+  # There's expected error logs that happen during the test such as not resolving an instance when
+  # testing that we fail to execute a test with an unknown URL.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fuchsia_unittest_package("test_manager_test") {
@@ -85,6 +125,7 @@ group("tests") {
   deps = [
     ":debug-data-test",
     ":test_manager_test",
+    ":test_manager_test_legacy",
     "diagnostics_tests:tests",
     "//examples/tests:example-tests",
     "//src/sys/test_manager",

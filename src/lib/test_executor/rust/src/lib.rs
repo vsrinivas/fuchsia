@@ -13,7 +13,11 @@ use {
         RunListenerRequest::{OnFinished, OnTestCaseStarted},
         SuiteProxy,
     },
-    fidl_fuchsia_test_manager::{HarnessProxy, LaunchOptions, SuiteControllerProxy},
+    fidl_fuchsia_test_manager::{
+        self as ftest_manager, HarnessProxy, LaunchOptions, LegacySuiteControllerProxy,
+        SuiteControllerProxy, SuiteEvent as FidlSuiteEvent,
+        SuiteEventPayload as FidlSuiteEventPayload,
+    },
     fuchsia_async as fasync,
     futures::{
         channel::mpsc,
@@ -256,13 +260,31 @@ impl Stream for StdoutStream {
     }
 }
 
+#[derive(Clone)]
+enum LogEventSender {
+    TestEvent(mpsc::Sender<TestEvent>),
+    SuiteEvent(mpsc::Sender<SuiteEvent>),
+}
+
+impl From<mpsc::Sender<TestEvent>> for LogEventSender {
+    fn from(sender: mpsc::Sender<TestEvent>) -> Self {
+        LogEventSender::TestEvent(sender)
+    }
+}
+
+impl From<mpsc::Sender<SuiteEvent>> for LogEventSender {
+    fn from(sender: mpsc::Sender<SuiteEvent>) -> Self {
+        LogEventSender::SuiteEvent(sender)
+    }
+}
+
 struct LogOpt {
     /// Name of the test.
     name: String,
-    /// Socket of which tets serves stdout.
+    /// Socket of which test serves stdout.
     stdout_socket: fidl::Socket,
     /// Send Log Event over this channel.
-    sender: mpsc::Sender<TestEvent>,
+    sender: LogEventSender,
     /// Duration to buffer the logs before flushing them.
     buffering_duration: std::time::Duration,
     /// MAx buffer size before logs are flushed.
@@ -282,10 +304,10 @@ impl TestCaseProcessor {
         stdout_socket: fidl::Socket,
         mut sender: mpsc::Sender<TestEvent>,
     ) -> Self {
-        let stdout_fut = Self::collect_and_send_stdout(LogOpt {
+        let stdout_fut = collect_and_send_stdout(LogOpt {
             name: test_case_name.to_string(),
             stdout_socket,
-            sender: sender.clone(),
+            sender: LogEventSender::TestEvent(sender.clone()),
             buffering_duration: LOG_BUFFERING_DURATION,
             buffer_size: LOG_BUFFER_SIZE,
         });
@@ -339,38 +361,38 @@ impl TestCaseProcessor {
         }
     }
 
-    /// Internal method that put a listener on `stdout_socket`, process and send test stdout logs
-    /// asynchronously in the background. Returns immediately if the provided socket is an invalid
-    /// handle.
-    async fn collect_and_send_stdout(log_opt: LogOpt) -> Result<(), anyhow::Error> {
-        if log_opt.stdout_socket.as_handle_ref().is_invalid() {
-            return Ok(());
-        }
-
-        let mut stream = match StdoutStream::new(log_opt.stdout_socket) {
-            Err(e) => {
-                error!("Stdout Logger: Failed to create fuchsia async socket: {:?}", e);
-                return Ok(());
-            }
-            Ok(stream) => stream,
-        };
-        let mut log_buffer = LogBuffer::new(
-            log_opt.name,
-            log_opt.buffering_duration,
-            log_opt.sender,
-            log_opt.buffer_size,
-        );
-
-        while let Some(log) = stream.try_next().await.context("Error reading stdout log msg")? {
-            log_buffer.send_log(&log).await?;
-        }
-        log_buffer.done().await
-    }
-
     /// This will wait for all the stdout logs and events to be collected
     pub async fn wait_for_finish(self) -> Result<(), anyhow::Error> {
         self.f.await.context("Failure waiting for stdout and events")
     }
+}
+
+/// Internal method that put a listener on `stdout_socket`, process and send test stdout logs
+/// asynchronously in the background. Returns immediately if the provided socket is an invalid
+/// handle.
+async fn collect_and_send_stdout(log_opt: LogOpt) -> Result<(), anyhow::Error> {
+    if log_opt.stdout_socket.as_handle_ref().is_invalid() {
+        return Ok(());
+    }
+
+    let mut stream = match StdoutStream::new(log_opt.stdout_socket) {
+        Err(e) => {
+            error!("Stdout Logger: Failed to create fuchsia async socket: {:?}", e);
+            return Ok(());
+        }
+        Ok(stream) => stream,
+    };
+    let mut log_buffer = LogBuffer::new(
+        log_opt.name,
+        log_opt.buffering_duration,
+        log_opt.sender,
+        log_opt.buffer_size,
+    );
+
+    while let Some(log) = stream.try_next().await.context("Error reading stdout log msg")? {
+        log_buffer.send_log(&log).await?;
+    }
+    log_buffer.done().await
 }
 
 /// Buffers logs in memory for `duration` before sending it out.
@@ -392,7 +414,7 @@ impl LogBuffer {
     pub fn new(
         test_name: String,
         duration: std::time::Duration,
-        sender: mpsc::Sender<TestEvent>,
+        sender: LogEventSender,
         max_capacity: usize,
     ) -> Self {
         let inner = LogBufferInner::new(test_name, sender, max_capacity);
@@ -439,7 +461,7 @@ impl LogBuffer {
 struct LogBufferInner {
     test_name: String,
     logs: String,
-    sender: mpsc::Sender<TestEvent>,
+    sender: LogEventSender,
     /// Whether to buffer logs or not.
     buffer: bool,
     error: Option<anyhow::Error>,
@@ -447,15 +469,11 @@ struct LogBufferInner {
 }
 
 impl LogBufferInner {
-    fn new(
-        test_name: String,
-        sender: mpsc::Sender<TestEvent>,
-        max_capacity: usize,
-    ) -> Arc<Mutex<Self>> {
+    fn new(test_name: String, sender: LogEventSender, max_capacity: usize) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(LogBufferInner {
             test_name,
             logs: String::with_capacity(max_capacity),
-            sender,
+            sender: sender.into(),
             buffer: true,
             error: None,
             max_capacity,
@@ -482,14 +500,20 @@ impl LogBufferInner {
     }
 
     async fn send(
-        sender: &mut mpsc::Sender<TestEvent>,
+        sender: &mut LogEventSender,
         test_name: &str,
         message: &str,
     ) -> Result<(), anyhow::Error> {
-        sender
-            .send(TestEvent::stdout_message(test_name, message))
-            .await
-            .context("Error sending stdout log msg")
+        match sender {
+            LogEventSender::TestEvent(sender) => sender
+                .send(TestEvent::stdout_message(test_name, message))
+                .await
+                .context("Error sending stdout msg"),
+            LogEventSender::SuiteEvent(sender) => sender
+                .send(SuiteEvent::case_stdout(None, test_name.to_string(), message.into()))
+                .await
+                .context("Error sending stdout msg"),
+        }
     }
 
     async fn send_log(&mut self, message: &str) -> Result<(), anyhow::Error> {
@@ -524,7 +548,7 @@ impl Drop for LogBufferInner {
 pub struct SuiteInstance {
     suite: SuiteProxy,
     // For safekeeping so that running component remains alive.
-    controller: SuiteControllerProxy,
+    controller: LegacySuiteControllerProxy,
     log_stream: Option<LogStream>,
 }
 
@@ -568,7 +592,7 @@ impl SuiteInstance {
 
     async fn launch_test_suite(
         opts: SuiteInstanceOpts<'_>,
-    ) -> Result<(SuiteProxy, SuiteControllerProxy, LogStream), anyhow::Error> {
+    ) -> Result<(SuiteProxy, LegacySuiteControllerProxy, LogStream), anyhow::Error> {
         let (suite_proxy, suite_server_end) = fidl::endpoints::create_proxy().unwrap();
         let (controller_proxy, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
 
@@ -733,7 +757,7 @@ impl SuiteInstance {
     }
 
     /// Consume this instance and returns underlying proxies.
-    pub fn into_proxies(self) -> (SuiteProxy, SuiteControllerProxy) {
+    pub fn into_proxies(self) -> (SuiteProxy, LegacySuiteControllerProxy) {
         return (self.suite, self.controller);
     }
 }
@@ -746,6 +770,418 @@ fn suite_error(err: fidl::Error) -> anyhow::Error {
             https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test"
         ),
         err => err.into(),
+    }
+}
+
+/// Builds and runs test suite(s).
+pub struct TestBuilder {
+    proxy: ftest_manager::RunBuilderProxy,
+}
+
+impl TestBuilder {
+    /// Create new instance
+    pub fn new(proxy: ftest_manager::RunBuilderProxy) -> Self {
+        Self { proxy }
+    }
+
+    pub fn take_proxy(self) -> ftest_manager::RunBuilderProxy {
+        self.proxy
+    }
+
+    /// Add suite to run.
+    pub async fn add_suite(
+        &self,
+        test_url: &str,
+        run_options: ftest_manager::RunOptions,
+    ) -> Result<SuiteRunInstance, Error> {
+        let (controller_proxy, controller) =
+            fidl::endpoints::create_proxy().context("Cannot create proxy")?;
+        self.proxy.add_suite(test_url, run_options, controller)?;
+        Ok(SuiteRunInstance { controller_proxy: controller_proxy.into() })
+    }
+
+    /// Runs all tests to completion.
+    pub async fn run(self) -> Result<(), Error> {
+        let (controller_proxy, controller) =
+            fidl::endpoints::create_proxy().context("Cannot create proxy")?;
+        self.proxy.build(controller).context("Error starting tests")?;
+        // wait for test to end
+        let v = controller_proxy.get_events().await.context("Cannot wait for tests to end")?;
+        if v.len() != 0 {
+            return Err(anyhow::format_err!("The vector should have been empty, something wrong with test manager. Please file bug."));
+        }
+        Ok(())
+    }
+}
+
+/// Events produced by test suite.
+pub struct SuiteEvent {
+    pub timestamp: Option<i64>,
+    pub payload: SuiteEventPayload,
+}
+
+impl SuiteEvent {
+    pub fn case_found(timestamp: Option<i64>, name: String) -> Self {
+        SuiteEvent { timestamp, payload: SuiteEventPayload::RunEvent(RunEvent::case_found(name)) }
+    }
+
+    pub fn case_started(timestamp: Option<i64>, name: String) -> Self {
+        SuiteEvent { timestamp, payload: SuiteEventPayload::RunEvent(RunEvent::case_started(name)) }
+    }
+
+    pub fn case_stdout(timestamp: Option<i64>, name: String, stdout_message: String) -> Self {
+        SuiteEvent {
+            timestamp,
+            payload: SuiteEventPayload::RunEvent(RunEvent::case_stdout(name, stdout_message)),
+        }
+    }
+
+    pub fn case_stopped(
+        timestamp: Option<i64>,
+        name: String,
+        status: ftest_manager::CaseStatus,
+    ) -> Self {
+        SuiteEvent {
+            timestamp,
+            payload: SuiteEventPayload::RunEvent(RunEvent::case_stopped(name, status)),
+        }
+    }
+
+    pub fn case_finished(timestamp: Option<i64>, name: String) -> Self {
+        SuiteEvent {
+            timestamp,
+            payload: SuiteEventPayload::RunEvent(RunEvent::case_finished(name)),
+        }
+    }
+
+    pub fn suite_finished(timestamp: Option<i64>, status: ftest_manager::SuiteStatus) -> Self {
+        SuiteEvent {
+            timestamp,
+            payload: SuiteEventPayload::RunEvent(RunEvent::suite_finished(status)),
+        }
+    }
+
+    pub fn suite_log(timestamp: Option<i64>, log_stream: LogStream) -> Self {
+        SuiteEvent { timestamp, payload: SuiteEventPayload::SuiteLog { log_stream } }
+    }
+
+    pub fn test_case_log(timestamp: Option<i64>, name: String, log_stream: LogStream) -> Self {
+        SuiteEvent { timestamp, payload: SuiteEventPayload::TestCaseLog { name, log_stream } }
+    }
+}
+
+pub enum SuiteEventPayload {
+    /// Logger for test suite
+    SuiteLog { log_stream: LogStream },
+
+    /// Logger for a test case in suite.
+    TestCaseLog { name: String, log_stream: LogStream },
+
+    /// Test events.
+    RunEvent(RunEvent),
+}
+
+#[derive(PartialEq, Debug, Eq, Hash, Ord, PartialOrd, Clone)]
+pub enum RunEvent {
+    CaseFound { name: String },
+    CaseStarted { name: String },
+    CaseStdout { name: String, stdout_message: String },
+    CaseStopped { name: String, status: ftest_manager::CaseStatus },
+    CaseFinished { name: String },
+    SuiteFinished { status: ftest_manager::SuiteStatus },
+}
+
+impl RunEvent {
+    pub fn case_found<S>(name: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Self::CaseFound { name: name.into() }
+    }
+
+    pub fn case_started<S>(name: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Self::CaseStarted { name: name.into() }
+    }
+
+    pub fn case_stdout<S, L>(name: S, stdout_message: L) -> Self
+    where
+        S: Into<String>,
+        L: Into<String>,
+    {
+        Self::CaseStdout { name: name.into(), stdout_message: stdout_message.into() }
+    }
+
+    pub fn case_stopped<S>(name: S, status: ftest_manager::CaseStatus) -> Self
+    where
+        S: Into<String>,
+    {
+        Self::CaseStopped { name: name.into(), status }
+    }
+
+    pub fn case_finished<S>(name: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Self::CaseFinished { name: name.into() }
+    }
+
+    pub fn suite_finished(status: ftest_manager::SuiteStatus) -> Self {
+        Self::SuiteFinished { status }
+    }
+    /// Returns the name of the test case to which the event belongs, if applicable.
+    pub fn test_case_name(&self) -> Option<&String> {
+        match self {
+            RunEvent::CaseFound { name }
+            | RunEvent::CaseStarted { name }
+            | RunEvent::CaseStdout { name, .. }
+            | RunEvent::CaseStopped { name, .. }
+            | RunEvent::CaseFinished { name } => Some(name),
+            RunEvent::SuiteFinished { .. } => None,
+        }
+    }
+
+    /// Same as `test_case_name`, but returns an owned `Option<String>`.
+    pub fn owned_test_case_name(&self) -> Option<String> {
+        self.test_case_name().map(String::from)
+    }
+}
+
+/// Trait allowing iterators over `RunEvent` to be partitioned by test case name.
+pub trait GroupRunEventByTestCase: Iterator<Item = RunEvent> + Sized {
+    /// Groups the `RunEvent`s by test case name into a map that preserves insertion order.
+    /// The overall order of test cases (by first event) and the orders of events within each test
+    /// case are preserved, but events from different test cases are effectively de-interleaved.
+    ///
+    /// Example:
+    /// ```rust
+    /// use test_executor::{RunEvent, GroupRunEventByTestCase as _};
+    /// use linked_hash_map::LinkedHashMap;
+    ///
+    /// let events: Vec<RunEvent> = get_events();
+    /// let grouped: LinkedHashMap<Option<String>, RunEvent> =
+    ///     events.into_iter().group_by_test_case();
+    /// ```
+    fn group_by_test_case_ordered(self) -> LinkedHashMap<Option<String>, Vec<RunEvent>> {
+        let mut map = LinkedHashMap::new();
+        for run_event in self {
+            map.entry(run_event.owned_test_case_name()).or_insert(Vec::new()).push(run_event);
+        }
+        map
+    }
+
+    /// De-interleaves the `RunEvents` by test case. The overall order of test cases (by first
+    /// event) and the orders of events within each test case are preserved.
+    fn deinterleave(self) -> Box<dyn Iterator<Item = RunEvent>> {
+        Box::new(
+            self.group_by_test_case_ordered()
+                .into_iter()
+                .flat_map(|(_, events)| events.into_iter()),
+        )
+    }
+
+    /// Groups the `RunEvent`s by test case name into an unordered map. The orders of events within
+    /// each test case are preserved, but the test cases themselves are not in a defined order.
+    fn group_by_test_case_unordered(self) -> HashMap<Option<String>, Vec<RunEvent>> {
+        let mut map = HashMap::new();
+        for run_event in self {
+            map.entry(run_event.owned_test_case_name()).or_insert(Vec::new()).push(run_event);
+        }
+        map
+    }
+}
+
+impl<T> GroupRunEventByTestCase for T where T: Iterator<Item = RunEvent> + Sized {}
+
+#[derive(Default)]
+struct FidlSuiteEventProcessor {
+    case_map: HashMap<u32, String>,
+    stdout_map: HashMap<u32, Vec<fasync::Task<Result<(), Error>>>>,
+}
+
+impl FidlSuiteEventProcessor {
+    fn new() -> Self {
+        FidlSuiteEventProcessor::default()
+    }
+
+    fn get_test_case_name(&self, identifier: u32) -> String {
+        self.case_map
+            .get(&identifier)
+            .expect(&format!("invalid test case identifier: {}", identifier))
+            .clone()
+    }
+
+    async fn process(
+        &mut self,
+        event: FidlSuiteEvent,
+        mut sender: mpsc::Sender<SuiteEvent>,
+    ) -> Result<(), Error> {
+        let timestamp = event.timestamp;
+        let e = match event.payload.expect("Payload cannot be null, please file bug.") {
+            FidlSuiteEventPayload::CaseFound(cf) => {
+                self.case_map.insert(cf.identifier, cf.test_case_name.clone());
+                SuiteEvent::case_found(timestamp, cf.test_case_name).into()
+            }
+            FidlSuiteEventPayload::CaseStarted(cs) => {
+                let test_case_name = self.get_test_case_name(cs.identifier);
+                SuiteEvent::case_started(timestamp, test_case_name).into()
+            }
+            FidlSuiteEventPayload::CaseStopped(cs) => {
+                let test_case_name = self.get_test_case_name(cs.identifier);
+                if let Some(stdouts) = self.stdout_map.remove(&cs.identifier) {
+                    for s in stdouts {
+                        s.await
+                            .context(format!("error collecting stdout of {}", test_case_name))?;
+                    }
+                }
+                SuiteEvent::case_stopped(timestamp, test_case_name, cs.status).into()
+            }
+            FidlSuiteEventPayload::CaseFinished(cf) => {
+                let test_case_name = self.get_test_case_name(cf.identifier);
+                SuiteEvent::case_finished(timestamp, test_case_name).into()
+            }
+            FidlSuiteEventPayload::CaseArtifact(ca) => {
+                let name = self.get_test_case_name(ca.identifier);
+                match ca.artifact {
+                    ftest_manager::Artifact::Stdout(stdout) => {
+                        let t = fasync::Task::spawn(collect_and_send_stdout(LogOpt {
+                            name: name.clone(),
+                            stdout_socket: stdout,
+                            sender: sender.clone().into(),
+                            buffering_duration: LOG_BUFFERING_DURATION,
+                            buffer_size: LOG_BUFFER_SIZE,
+                        }));
+                        match self.stdout_map.get_mut(&ca.identifier) {
+                            Some(v) => {
+                                v.push(t);
+                            }
+                            None => {
+                                self.stdout_map.insert(ca.identifier, vec![t]);
+                            }
+                        }
+                        None
+                    }
+                    ftest_manager::Artifact::Stderr(_) => {
+                        panic!("not supported")
+                    }
+                    ftest_manager::Artifact::Log(log) => match LogStream::from_syslog(log) {
+                        Ok(log_stream) => {
+                            SuiteEvent::test_case_log(timestamp, name, log_stream).into()
+                        }
+                        Err(e) => {
+                            warn!("Cannot collect logs for test suite: {:?}", e);
+                            None
+                        }
+                    },
+                    _ => {
+                        panic!("not supported")
+                    }
+                }
+            }
+            FidlSuiteEventPayload::SuiteArtifact(sa) => match sa.artifact {
+                ftest_manager::Artifact::Stdout(_) => {
+                    panic!("not supported")
+                }
+                ftest_manager::Artifact::Stderr(_) => {
+                    panic!("not supported")
+                }
+                ftest_manager::Artifact::Log(log) => match LogStream::from_syslog(log) {
+                    Ok(log_stream) => SuiteEvent::suite_log(timestamp, log_stream).into(),
+                    Err(e) => {
+                        warn!("Cannot collect logs for test suite: {:?}", e);
+                        None
+                    }
+                },
+                _ => {
+                    panic!("not supported")
+                }
+            },
+            FidlSuiteEventPayload::SuiteFinished(sf) => SuiteEvent {
+                timestamp,
+                payload: SuiteEventPayload::RunEvent(RunEvent::SuiteFinished { status: sf.status }),
+            }
+            .into(),
+        };
+        if let Some(item) = e {
+            sender.send(item).await.context("Cannot send event")?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq, Copy, Clone)]
+pub enum SuiteLaunchError {
+    #[error("Cannot enumerate tests")]
+    CaseEnumeration,
+
+    #[error("Cannot resolve test url")]
+    InstanceCannotResolve,
+
+    #[error("Invalid arguments passed")]
+    InvalidArgs,
+
+    #[error("Cannot connect to test suite")]
+    FailedToConnectToTestSuite,
+
+    #[error("resource unavailable")]
+    ResourceUnavailable,
+
+    #[error("Some internal error ocurred. Please file bug")]
+    InternalError,
+}
+
+impl From<ftest_manager::LaunchError> for SuiteLaunchError {
+    fn from(error: ftest_manager::LaunchError) -> Self {
+        match error {
+            ftest_manager::LaunchError::ResourceUnavailable => {
+                SuiteLaunchError::ResourceUnavailable
+            }
+            ftest_manager::LaunchError::InstanceCannotResolve => {
+                SuiteLaunchError::InstanceCannotResolve
+            }
+            ftest_manager::LaunchError::InvalidArgs => SuiteLaunchError::InvalidArgs,
+            ftest_manager::LaunchError::FailedToConnectToTestSuite => {
+                SuiteLaunchError::FailedToConnectToTestSuite
+            }
+            ftest_manager::LaunchError::CaseEnumeration => SuiteLaunchError::CaseEnumeration,
+            ftest_manager::LaunchError::InternalError => SuiteLaunchError::InternalError,
+        }
+    }
+}
+
+/// Instance to control a single test suite run.
+pub struct SuiteRunInstance {
+    controller_proxy: Arc<SuiteControllerProxy>,
+}
+
+impl SuiteRunInstance {
+    pub fn controller(&self) -> Arc<SuiteControllerProxy> {
+        self.controller_proxy.clone()
+    }
+
+    pub async fn collect_events(&self, sender: mpsc::Sender<SuiteEvent>) -> Result<(), Error> {
+        let controller_proxy = self.controller_proxy.clone();
+        let mut processor = FidlSuiteEventProcessor::new();
+        loop {
+            match controller_proxy.get_events().await? {
+                Err(e) => return Err(SuiteLaunchError::from(e).into()),
+                Ok(events) => {
+                    if events.len() == 0 {
+                        break;
+                    }
+                    for event in events {
+                        if let Err(e) = processor.process(event, sender.clone()).await {
+                            warn!("error running test suite: {:?}", e);
+                            let _ = controller_proxy.kill();
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
 
@@ -771,10 +1207,10 @@ mod tests {
 
         let (sender, mut recv) = mpsc::channel(1);
 
-        let fut = fuchsia_async::Task::spawn(TestCaseProcessor::collect_and_send_stdout(LogOpt {
+        let fut = fuchsia_async::Task::spawn(collect_and_send_stdout(LogOpt {
             name: name.to_string(),
             stdout_socket: sock_client,
-            sender,
+            sender: sender.into(),
             buffering_duration: std::time::Duration::from_millis(1),
             buffer_size: LOG_BUFFER_SIZE,
         }));
@@ -849,8 +1285,12 @@ mod tests {
         fn log_buffer_without_timeout() {
             let mut executor = TestExecutor::new_with_fake_time().unwrap();
             let (sender, mut recv) = mpsc::channel(1);
-            let mut log_buffer =
-                LogBuffer::new("my_test".into(), std::time::Duration::from_secs(5), sender, 100);
+            let mut log_buffer = LogBuffer::new(
+                "my_test".into(),
+                std::time::Duration::from_secs(5),
+                sender.into(),
+                100,
+            );
             let msg1 = "message1".to_owned();
             let msg2 = "message2".to_owned();
 
@@ -876,8 +1316,12 @@ mod tests {
         fn log_buffer_with_timeout() {
             let mut executor = TestExecutor::new_with_fake_time().unwrap();
             let (sender, mut recv) = mpsc::channel(1);
-            let mut log_buffer =
-                LogBuffer::new("my_test".into(), std::time::Duration::from_secs(5), sender, 100);
+            let mut log_buffer = LogBuffer::new(
+                "my_test".into(),
+                std::time::Duration::from_secs(5),
+                sender.into(),
+                100,
+            );
             let msg1 = "message1".to_owned();
             let msg2 = "message2".to_owned();
 
@@ -919,8 +1363,12 @@ mod tests {
         fn log_buffer_capacity_reached() {
             let mut executor = TestExecutor::new_with_fake_time().unwrap();
             let (sender, mut recv) = mpsc::channel(1);
-            let mut log_buffer =
-                LogBuffer::new("my_test".into(), std::time::Duration::from_secs(5), sender, 10);
+            let mut log_buffer = LogBuffer::new(
+                "my_test".into(),
+                std::time::Duration::from_secs(5),
+                sender.into(),
+                10,
+            );
             let msg1 = "message1".to_owned();
             let msg2 = "message2".to_owned();
 
@@ -958,10 +1406,10 @@ mod tests {
             let name = "test_name";
 
             let (sender, mut recv) = mpsc::channel(1);
-            let mut fut = TestCaseProcessor::collect_and_send_stdout(LogOpt {
+            let mut fut = collect_and_send_stdout(LogOpt {
                 name: name.to_string(),
                 stdout_socket: sock_client,
-                sender,
+                sender: sender.into(),
                 buffering_duration: std::time::Duration::from_secs(10),
                 buffer_size: LOG_BUFFER_SIZE,
             })

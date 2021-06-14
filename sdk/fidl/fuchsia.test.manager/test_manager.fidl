@@ -8,6 +8,7 @@ using fuchsia.developer.remotecontrol;
 using fuchsia.diagnostics;
 using fuchsia.test;
 using fuchsia.url;
+using zx;
 
 /// Holds the server end of an iterator over the isolated logs of a test.
 resource flexible union LogsIterator {
@@ -38,12 +39,19 @@ enum LaunchError {
     /// expose.
     FAILED_TO_CONNECT_TO_TEST_SUITE = 4;
 
-    /// Some internal error occured. Something wrong with test manager setup. Check logs and report bug.
-    INTERNAL_ERROR = 5;
+    /// Failed to enumerate tests.
+    CASE_ENUMERATION = 5;
+
+    /// Some internal error occured. Something wrong with test manager setup.
+    /// Check logs and report bug.
+    INTERNAL_ERROR = 6;
 };
 
-/// Controller for running suite. Suite would be destroyed when client end of this protocol is closed.
-protocol SuiteController {
+/// Controller for running suite. Suite would be destroyed when client end of
+/// this protocol is closed.
+/// Note: Plan to deprecate and remove this as soon as all the clients are moved
+/// to new protocol.
+protocol LegacySuiteController {
     /// Destroys running suite.
     Kill();
 };
@@ -59,6 +67,247 @@ protocol SuiteController {
 [Discoverable]
 protocol Harness {
     LaunchSuite(fuchsia.url.Url test_url, LaunchOptions options,
-                request<fuchsia.test.Suite> suite, request<SuiteController> controller) -> ()
+                request<fuchsia.test.Suite> suite, request<LegacySuiteController> controller) -> ()
         error LaunchError;
+};
+
+/// This is the entry point of running test suites. A test "run" consists of
+/// multiple test "suites" which consists of running multiple "test cases".
+[Discoverable]
+protocol RunBuilder {
+    /// Add a suite to this run. A suite is a component that implements
+    /// `fuchsia.test.Suite`. Implementors of this API will talk to test suites
+    /// using "Suite" protocol and return results using `controller`. The
+    /// controller is also used to control the execution of the test suite.
+    AddSuite(fuchsia.url.Url test_url, RunOptions options, request<SuiteController> controller);
+
+    // Build and schedule the run.
+    //
+    // This runs all suites added with their respective filters and closes the
+    // channel once it is done.
+    Build(request<RunController> controller);
+};
+
+/// Optional additional instructions for executing a test suite.
+table RunOptions {
+    /// If set to true, test cases that have been disabled by the test author
+    /// will nonetheless be executed. Defaults to false.
+    1: bool run_disabled_tests;
+
+    /// Defines maximum number of test cases to run simultaneously.
+    /// If unspecified, the default behavior is chosen by the `Suite`
+    /// implementation.
+    2: uint16 parallel;
+
+    /// Optional arguments to pass to the test.
+    /// Test runners will decide how to pass these arguments to tests.
+    3: vector<string:MAX>:MAX arguments;
+
+    /// Timeout for the entire suite.
+    4: zx.duration timeout;
+
+    /// glob case filter. This filter will match based on glob pattern
+    /// [https://en.wikipedia.org/wiki/Glob_(programming)].
+    /// All the filters are ORed. If passed in, only tests matching these
+    /// filters would be executed. If not specified then all test cases will
+    /// be admitted which is equivalent to specifying [ "*" ]
+    5: vector<string:MAX>:MAX case_filters_to_run;
+
+    /// Defines what kind of log iterator the client supports. Default value is
+    /// Batch iterator.
+    6: LogsIteratorOption log_iterator;
+};
+
+/// Option which specifies which kind of iterator the client supports
+flexible enum LogsIteratorOption {
+    BATCH_ITERATOR = 0;
+    ARCHIVE_ITERATOR = 1;
+};
+
+/// The server end will disconnect after all the suite runs have finished and
+/// the events are drained.
+/// If the client disconnects, the tests will be terminated immediately and all
+/// results discarded.
+[Discoverable]
+protocol RunController {
+    /// Stop the run gracefully. RunController will disconnect after all
+    /// resources are released and all the events in this controller are drained.
+    /// This method is used to allow the run to complete tests that are in progress,
+    /// but will prevent starting new tests.
+    Stop();
+
+    /// Immediately terminate the run. RunController will disconnect after all
+    /// resources are released. This method will terminate tests even if they
+    /// are in progress.
+    Kill();
+
+    // Iterator over events for the run.
+    GetEvents() -> (vector<RunEvent>:MAX events);
+};
+
+// Placeholder for future events.
+resource table RunEvent {
+};
+
+/// The server end will disconnect after all the suite run has finished and
+/// all events are drained. If the client disconnects, the suite will be
+/// terminated immediately and all results discarded.
+[Discoverable]
+protocol SuiteController {
+    /// Stop the suite run gracefully. SuiteController will disconnect after
+    /// all resources are released and all the events in this controller are drained.
+    Stop();
+
+    /// Immediately terminate the run. SuiteController will disconnect after
+    /// all resources are released. This method will terminate tests even if
+    /// they are in progress.
+    Kill();
+
+    /// Iterator over events for the run. This method is a hanging get; it
+    /// returns an empty vector only when there will be no further events
+    /// (the run completed).
+    GetEvents() -> (vector<SuiteEvent>:MAX events) error LaunchError;
+};
+
+resource table SuiteEvent {
+    // The monotonic timestamp for the event.
+    1: zx.time timestamp;
+    2: SuiteEventPayload payload;
+};
+
+/// Various events for test execution.
+///
+/// First event for a test case will always be `case_found` and last will be
+/// `case_finished`. Events `case_started` and `case_artifact` can come in any
+/// order. There can be some `case_artifact` between `case_stopped` and
+/// `case_finished`. `suite_finished` event will always fire when the whole
+/// suite has finished executing and `suite_artifact` may be fired anytime
+/// before `suite_finished`.
+resource union SuiteEventPayload {
+    /// A case was found.
+    1: CaseFound case_found;
+
+    /// A case started execution
+    2: CaseStarted case_started;
+
+    /// A case stopped executing, includes the pass/fail/skipped result of
+    /// the case. The client might still get artifacts pertaining to this test
+    /// after this event.
+    3: CaseStopped case_stopped;
+
+    /// A case has finished and all artifact events have been dispatched to the
+    /// client.
+    4: CaseFinished case_finished;
+
+    /// Artifact from a case
+    5: CaseArtifact case_artifact;
+
+    /// Artifact from a suite.
+    6: SuiteArtifact suite_artifact;
+
+    /// Suite run finished executing
+    7: SuiteFinished suite_finished;
+};
+
+/// Human-readable name for a test case.
+alias CaseName = string:512;
+
+/// Test case identifier. Unique in a suite run.
+alias TestCaseId = uint32;
+
+struct CaseFound {
+    /// Name of this test case.
+    CaseName test_case_name;
+
+    /// Used to identify this test case in subsequent payloads
+    TestCaseId identifier;
+};
+
+struct CaseStarted {
+    TestCaseId identifier;
+};
+
+/// Represent status of a test case run execution.
+flexible enum CaseStatus {
+    /// The test case passed.
+    PASSED = 0;
+
+    /// Test case failed.
+    FAILED = 1;
+
+    /// Test case timed out.
+    TIMED_OUT = 2;
+
+    /// Test case was skipped.
+    SKIPPED = 3;
+
+    /// Suite implementation did not return status.
+    ERROR = 4;
+};
+
+/// Represents status of a suite run. This ordering is the explicit ordering of
+/// preference, from lowest priority to highest priority.
+/// for example, if all Cases PASSED except one that FAILED, the status for the
+/// whole suite will be FAILED.
+flexible enum SuiteStatus {
+    /// All tests cases passed/skipped.
+    PASSED = 0;
+
+    /// At least one test case in the suite failed.
+    FAILED = 1;
+
+    /// Suite implementation crashed or did not send `Finish` event.
+    DID_NOT_FINISH = 3;
+
+    /// At least one test case in the suite timed out.
+    TIMED_OUT = 4;
+
+    /// The test suite was stopped.
+    STOPPED = 5;
+
+    // Some internal error occurred, please file bug.
+    INTERNAL_ERROR = 6;
+};
+
+struct CaseStopped {
+    TestCaseId identifier;
+    CaseStatus status;
+};
+
+struct CaseFinished {
+    TestCaseId identifier;
+};
+
+struct SuiteFinished {
+    SuiteStatus status;
+};
+
+resource flexible union Artifact {
+    1: zx.handle:SOCKET stdout;
+    2: zx.handle:SOCKET stderr;
+    3: Syslog log;
+};
+
+resource struct Stdout {
+    zx.handle:SOCKET socket;
+};
+
+resource struct Stderr {
+    zx.handle:SOCKET socket;
+};
+
+resource flexible union Syslog {
+    /// Client end of the iterator, when this protocol is used by host-side clients.
+    1: fuchsia.developer.remotecontrol.ArchiveIterator archive;
+    /// Client end of the iterator, when this protocol is used by Fuchsia clients.
+    2: fuchsia.diagnostics.BatchIterator batch;
+};
+
+resource struct CaseArtifact {
+    TestCaseId identifier;
+    Artifact artifact;
+};
+
+resource struct SuiteArtifact {
+    Artifact artifact;
 };

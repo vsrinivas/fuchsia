@@ -29,7 +29,7 @@ async fn launch_and_run_sample_test() {
     .into_iter()
     .group_by_test_case_unordered();
 
-    let expected_events = include!("../test_data/sample_tests_golden_events.rsf");
+    let expected_events = include!("../test_data/sample_tests_golden_events_legacy.rsf");
 
     assert_events_eq(&events, &expected_events);
 }
@@ -75,7 +75,7 @@ async fn launch_and_run_sample_test_no_concurrent() {
     .into_iter()
     .group_by_test_case_unordered();
 
-    let expected_events = include!("../test_data/sample_tests_golden_events.rsf");
+    let expected_events = include!("../test_data/sample_tests_golden_events_legacy.rsf");
 
     assert_events_eq(&events, &expected_events);
 }

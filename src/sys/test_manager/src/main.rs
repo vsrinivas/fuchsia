@@ -15,13 +15,23 @@ fn main() -> Result<(), Error> {
     fuchsia_syslog::init()?;
     info!("started");
     let mut executor = fasync::LocalExecutor::new().context("error creating executor")?;
-    let mut fs = ServiceFs::new_local();
+    let mut fs = ServiceFs::new();
     let test_map = test_manager_lib::TestMap::new(zx::Duration::from_minutes(5));
     let test_map_clone = test_map.clone();
+    let test_map_clone2 = test_map.clone();
     fs.dir("svc")
         .add_fidl_service(move |stream| {
             let test_map = test_map_clone.clone();
-            fasync::Task::local(async move {
+            fasync::Task::spawn(async move {
+                test_manager_lib::run_test_manager_old(stream, test_map.clone())
+                    .await
+                    .unwrap_or_else(|error| warn!(?error, "test manager returned error"))
+            })
+            .detach();
+        })
+        .add_fidl_service(move |stream| {
+            let test_map = test_map_clone2.clone();
+            fasync::Task::spawn(async move {
                 test_manager_lib::run_test_manager(stream, test_map.clone())
                     .await
                     .unwrap_or_else(|error| warn!(?error, "test manager returned error"))
@@ -30,7 +40,7 @@ fn main() -> Result<(), Error> {
         })
         .add_fidl_service(move |stream| {
             let test_map = test_map.clone();
-            fasync::Task::local(async move {
+            fasync::Task::spawn(async move {
                 test_manager_lib::run_test_manager_info_server(stream, test_map.clone())
                     .await
                     .unwrap_or_else(|error| warn!(?error, "test manager returned error"))

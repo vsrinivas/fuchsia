@@ -22,13 +22,31 @@ rustc_binary("no_suite_service_bin") {
   sources = [ "no_suite_service.rs" ]
 }
 
+rustc_test("hanging_test_bin") {
+  testonly = true
+  name = "hanging_test"
+  edition = "2018"
+  source_root = "hanging_test.rs"
+
+  sources = [ "hanging_test.rs" ]
+}
+
 fuchsia_component("no_suite_service") {
   testonly = true
   deps = [ ":no_suite_service_bin" ]
   manifest = "meta/no_suite_service.cml"
 }
 
+fuchsia_component("hanging_test") {
+  testonly = true
+  deps = [ ":hanging_test_bin" ]
+  manifest = "meta/hanging_test.cml"
+}
+
 group("test_data") {
   testonly = true
-  public_deps = [ ":no_suite_service" ]
+  public_deps = [
+    ":hanging_test",
+    ":no_suite_service",
+  ]
 }

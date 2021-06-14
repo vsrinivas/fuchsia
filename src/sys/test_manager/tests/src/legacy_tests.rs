@@ -39,11 +39,11 @@ async fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
         .context("failed to open test suite service")
 }
 
-/// Returns SuiteProxy and SuiteControllerProxy. Keep SuiteControllerProxy alive for
+/// Returns SuiteProxy and LegacySuiteControllerProxy. Keep LegacySuiteControllerProxy alive for
 /// length of your test run so that your test doesn't die.
 async fn launch_test(
     test_url: &str,
-) -> Result<(ftest::SuiteProxy, ftest_manager::SuiteControllerProxy), Error> {
+) -> Result<(ftest::SuiteProxy, ftest_manager::LegacySuiteControllerProxy), Error> {
     let harness = connect_test_manager().await?;
     let suite_instance = test_executor::SuiteInstance::new(test_executor::SuiteInstanceOpts {
         harness: &harness,
@@ -227,7 +227,7 @@ async fn launch_and_test_gtest_runner_sample_test() {
     let events = events.into_iter().group_by_test_case_unordered();
 
     let expected_events =
-        include!("../../../test_runners/gtest/test_data/sample_tests_golden_events.rsf");
+        include!("../../../test_runners/gtest/test_data/sample_tests_golden_events_legacy.rsf");
 
     assert_eq!(logs, Vec::<String>::new());
     assert_eq!(&expected_events, &events);

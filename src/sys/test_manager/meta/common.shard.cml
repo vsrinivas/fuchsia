@@ -79,6 +79,7 @@
         },
         { protocol: "fuchsia.test.manager.Harness" },
         { protocol: "fuchsia.test.internal.Info" },
+        { protocol: "fuchsia.test.manager.RunBuilder" },
     ],
     use: [
         {
@@ -288,6 +289,10 @@
         },
         {
             protocol: "fuchsia.test.internal.Info",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.test.manager.RunBuilder",
             from: "self",
         },
         {

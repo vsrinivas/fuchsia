@@ -26,7 +26,7 @@ rustc_test("tests_bin") {
     "tests.rs",
   ]
 
-  inputs = [ "../test_data/sample_tests_golden_events.rsf" ]
+  inputs = [ "../test_data/sample_tests_golden_events_legacy.rsf" ]
 }
 
 fuchsia_component("gtest_runner_integration_test") {

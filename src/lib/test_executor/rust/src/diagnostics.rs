@@ -5,6 +5,7 @@
 use {
     anyhow::{format_err, Error},
     diagnostics_data::LogsData,
+    fidl::endpoints::ClientEnd,
     fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorMarker, ArchiveIteratorProxy},
     fidl_fuchsia_test_manager as ftest_manager, fuchsia_async as fasync,
     futures::Stream,
@@ -33,15 +34,17 @@ pub enum LogStreamProtocol {
 pub struct LogStream {
     #[pin]
     stream: BoxStream<'static, Result<LogsData, Error>>,
+
+    // TODO(75807): remove this field.
     iterator_server_end: Option<ftest_manager::LogsIterator>,
 }
 
 impl LogStream {
-    fn new<S>(stream: S, iterator: ftest_manager::LogsIterator) -> Self
+    fn new<S>(stream: S, iterator: Option<ftest_manager::LogsIterator>) -> Self
     where
         S: Stream<Item = Result<LogsData, Error>> + Send + 'static,
     {
-        Self { stream: stream.boxed(), iterator_server_end: Some(iterator) }
+        Self { stream: stream.boxed(), iterator_server_end: iterator }
     }
 
     /// Creates a new `LogStream` forcing the backing log iterator protocol to the given one or the
@@ -49,12 +52,16 @@ impl LogStream {
     /// ArchiveIterator. If the platform is host and BatchIterator is requested, the request is
     /// ignored since that one is not supported in host.
     pub fn create(force_log_protocol: Option<LogStreamProtocol>) -> Result<LogStream, fidl::Error> {
-        get_log_stream(force_log_protocol)
+        get_log_legacy_stream(force_log_protocol)
     }
 
     /// Takes the server end of the backing log iterator protocol.
     pub fn take_iterator_server_end(&mut self) -> Option<ftest_manager::LogsIterator> {
         self.iterator_server_end.take()
+    }
+
+    pub fn from_syslog(syslog: ftest_manager::Syslog) -> Result<LogStream, fidl::Error> {
+        get_log_stream(syslog)
     }
 }
 
@@ -67,34 +74,66 @@ impl Stream for LogStream {
 }
 
 #[cfg(target_os = "fuchsia")]
-fn get_log_stream(force_log_protocol: Option<LogStreamProtocol>) -> Result<LogStream, fidl::Error> {
+fn get_log_legacy_stream(
+    force_log_protocol: Option<LogStreamProtocol>,
+) -> Result<LogStream, fidl::Error> {
     match force_log_protocol {
         Some(LogStreamProtocol::BatchIterator) => {
             let (stream, iterator) = BatchLogStream::new()?;
-            Ok(LogStream::new(stream, iterator))
+            Ok(LogStream::new(stream, iterator.into()))
         }
         Some(LogStreamProtocol::ArchiveIterator) => {
             let (stream, iterator) = ArchiveLogStream::new()?;
-            Ok(LogStream::new(stream, iterator))
+            Ok(LogStream::new(stream, iterator.into()))
         }
         None => {
             let (stream, iterator) = BatchLogStream::new()?;
-            Ok(LogStream::new(stream, iterator))
+            Ok(LogStream::new(stream, iterator.into()))
+        }
+    }
+}
+
+#[cfg(target_os = "fuchsia")]
+fn get_log_stream(syslog: ftest_manager::Syslog) -> Result<LogStream, fidl::Error> {
+    match syslog {
+        ftest_manager::Syslog::Archive(client_end) => {
+            Ok(LogStream::new(ArchiveLogStream::from_client_end(client_end)?, None))
+        }
+        ftest_manager::Syslog::Batch(client_end) => {
+            Ok(LogStream::new(BatchLogStream::from_client_end(client_end)?, None))
+        }
+        _ => {
+            panic!("not supported")
         }
     }
 }
 
 #[cfg(not(target_os = "fuchsia"))]
-fn get_log_stream(force_log_protocol: Option<LogStreamProtocol>) -> Result<LogStream, fidl::Error> {
+fn get_log_legacy_stream(
+    force_log_protocol: Option<LogStreamProtocol>,
+) -> Result<LogStream, fidl::Error> {
     match force_log_protocol {
         Some(LogStreamProtocol::BatchIterator) => {
             warn!("Batch iterator is not supported in host, ignoring force_log_protocol");
             let (stream, iterator) = ArchiveLogStream::new()?;
-            Ok(LogStream::new(stream, iterator))
+            Ok(LogStream::new(stream, iterator.into()))
         }
         None | Some(LogStreamProtocol::ArchiveIterator) => {
             let (stream, iterator) = ArchiveLogStream::new()?;
-            Ok(LogStream::new(stream, iterator))
+            Ok(LogStream::new(stream, iterator.into()))
+        }
+    }
+}
+
+#[cfg(not(target_os = "fuchsia"))]
+fn get_log_stream(syslog: ftest_manager::Syslog) -> Result<LogStream, fidl::Error> {
+    match syslog {
+        ftest_manager::Syslog::Archive(client_end) => {
+            Ok(LogStream::new(ArchiveLogStream::from_client_end(client_end)?, None))
+        }
+        ftest_manager::Syslog::Batch(_) => panic!("batch iterator not supported on host"),
+        _ => {
+            panic!("not supported")
         }
     }
 }
@@ -118,6 +157,12 @@ mod fuchsia {
                 let subscription = Subscription::new(proxy);
                 (Self { subscription }, ftest_manager::LogsIterator::Batch(server_end))
             })
+        }
+
+        pub fn from_client_end(
+            client_end: ClientEnd<BatchIteratorMarker>,
+        ) -> Result<Self, fidl::Error> {
+            Ok(Self { subscription: Subscription::new(client_end.into_proxy()?) })
         }
     }
 
@@ -148,6 +193,13 @@ impl ArchiveLogStream {
             let (receiver, _drain_task) = Self::start_streaming_logs(proxy);
             (Self { _drain_task, receiver }, ftest_manager::LogsIterator::Archive(server_end))
         })
+    }
+
+    pub fn from_client_end(
+        client_end: ClientEnd<ArchiveIteratorMarker>,
+    ) -> Result<Self, fidl::Error> {
+        let (receiver, _drain_task) = Self::start_streaming_logs(client_end.into_proxy()?);
+        Ok(Self { _drain_task, receiver })
     }
 }
 
@@ -291,7 +343,7 @@ mod tests {
         }
 
         #[fasync::run_singlethreaded(test)]
-        async fn get_log_stream_on_fuchsia() {
+        async fn get_log_legacy_stream_on_fuchsia() {
             let mut stream = LogStream::create(None).expect("get log stream ok");
             assert_matches!(
                 stream.take_iterator_server_end(),
@@ -357,7 +409,7 @@ mod tests {
         }
 
         #[fasync::run_singlethreaded(test)]
-        async fn get_log_stream_always_returns_archive_in_host() {
+        async fn get_log_legacy_stream_always_returns_archive_in_host() {
             let mut stream = LogStream::create(None).expect("get log stream ok");
             assert_matches!(
                 stream.take_iterator_server_end(),
