@@ -74,7 +74,7 @@ The following kinds of changes must use the RFC process:
    decision can be escalated to the RFC process either by one of the disagreeing
    parties or by another contributor.
 
-In addition to the general considerations outlined above, Zircon changes in
+In addition to the general considerations outlined above, **Zircon** changes in
 the source directories:
 
  * /zircon
@@ -116,8 +116,8 @@ that meet the following criteria must use RFC process:
    that itself has significant dependencies or that is large by itself, should use
    the RFC process.
 
-In addition to the general considerations outlined above, FIDL changes that meet
-the following criteria must use RFC process:
+In addition to the general considerations outlined above, **FIDL** changes that
+meet the following criteria must use RFC process:
 
 1. The **solution space is large**, i.e. the change is one of many possibly good
    other solutions and there is a difficult design tradeoff to make;
@@ -143,10 +143,25 @@ For instance, changes to the following FIDL areas will likely require an RFC:
 Additional details are provided in [RFC-0049: FIDL Tuning Process
 Evolution](/docs/contribute/governance/rfcs/0049_fidl_tuning_process_evolution.md).
 
-Other changes that might benefit of the RFC process are ones that require manual or
-automated large scale changes of the codebase. For example how logs are written or how
-error paths are handled. Rather than live with islands of consistency, the aspiration
-is to find the best patterns and uniformly apply them to the entire codebase.
+In addition to the general considerations outlined above, changes to the
+**Software Delivery** area that are of the following types will generally
+require RFCs:
+
+* System update process restrictions
+* Changes to package repository format
+* Changes to package format
+* Changes to requirements to support OTAs
+* Changes to security or privacy enforcement.
+* Resource usage increases
+
+More details on SWD changes are provided in [RFC-0103: Software Delivery RFC
+Criteria][swd].
+
+Other changes that might benefit of the RFC process are ones that require manual
+or automated large scale changes of the codebase. For example how logs are
+written or how error paths are handled. Rather than live with islands of
+consistency, the aspiration is to find the best patterns and uniformly apply
+them to the entire codebase.
 
 The RFC process may also be used for other kinds of changes that would benefit
 from its structured approach to decision making and its durable record of the
@@ -476,3 +491,5 @@ existing processes:
    similar process [to make decisions about the FIDL
    language](/docs/contribute/governance/deprecated-ftp-process.md). This
    proposal exists because of the success of that decision-making process.
+
+[swd]: /docs/contribute/governance/rfcs/0103_software_delivery_rfc_criteria.md

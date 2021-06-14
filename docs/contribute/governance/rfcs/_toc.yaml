@@ -215,3 +215,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0101_dynamic_components_with_numbered_handles.md
 - title: 'RFC-0102: Forbid CHILD_NO_WRITE with CHILD_RESIZABLE'
   path: /docs/contribute/governance/rfcs/0102_forbid_no_write_with_resizable.md
+- title: "RFC-0103: Software Delivery RFC Criteria"
+  path: /docs/contribute/governance/rfcs/0103_software_delivery_rfc_criteria.md

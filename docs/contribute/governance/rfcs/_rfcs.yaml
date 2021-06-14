@@ -1314,3 +1314,16 @@
   status: 'Accepted'
   reviewers: ['bryanhenry@google.com','bprosnitz@google.com','rashaeqbal@google.com','cpu@google.com']
   reviewed: '2021-06-10'
+
+- name: 'RFC-0103'
+  title: 'Software Delivery RFC Criteria'
+  short_description: 'An addendum to the RFC process for changes which affect the Software Delivery codebase or policies.'
+  authors: ['wittrock@google.com']
+  file: '0103_software_delivery_rfc_criteria.md'
+  area: ['Software Delivery', 'Governance']
+  issue: ['']
+  gerrit_change_id: ['531983']
+  status: 'Accepted'
+  reviewers: ['computerdruid@google.com', 'pascallouis@google.com']
+  submitted: '2021-05-19'
+  reviewed: '2021-06-10'
