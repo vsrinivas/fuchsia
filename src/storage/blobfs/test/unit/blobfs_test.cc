@@ -9,6 +9,7 @@
 #include <zircon/errors.h>
 
 #include <chrono>
+#include <mutex>
 #include <sstream>
 
 #include <block-client/cpp/fake-device.h>
@@ -345,17 +346,17 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     std::map<size_t, uint64_t> free_fragments;
     std::map<size_t, uint64_t> in_use_fragments;
 
-    static bool MapsMatch(const std::map<size_t, uint64_t>& a,
-                          const std::map<size_t, uint64_t>& b) {
-      return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin());
+    bool operator==(const Stats& other) const {
+      return total_nodes == other.total_nodes && blobs_in_use == other.blobs_in_use &&
+             extent_containers_in_use == other.extent_containers_in_use &&
+             extents_per_blob == other.extents_per_blob && free_fragments == other.free_fragments &&
+             in_use_fragments == other.in_use_fragments;
     }
 
-    static bool Match(const Stats& a, const Stats& b) {
-      return a.total_nodes == b.total_nodes && a.blobs_in_use == b.blobs_in_use &&
-             a.extent_containers_in_use == b.extent_containers_in_use &&
-             MapsMatch(a.extents_per_blob, b.extents_per_blob) &&
-             MapsMatch(a.free_fragments, b.free_fragments) &&
-             MapsMatch(a.in_use_fragments, b.in_use_fragments);
+    void ClearMaps() {
+      extents_per_blob.clear();
+      free_fragments.clear();
+      in_use_fragments.clear();
     }
   };
 
@@ -371,14 +372,19 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
         if (sync_completion_wait(&sync_, zx::usec(sync_timeout.count()).get()) != ZX_OK) {
           break;
         }
-        if (Stats::Match(found_, expected)) {
+        sync_completion_reset(&sync_);
+        std::lock_guard<std::mutex> lock(mtx_);
+        if (found_ == expected) {
+          found_.ClearMaps();
           return true;
         }
       }
+      std::lock_guard<std::mutex> lock(mtx_);
+      found_.ClearMaps();
       return false;
     }
 
-    void MaybeSignal() {
+    void MaybeSignal() FXL_REQUIRE(mtx_) {
       // Wake up if all of the relevant metrics have been logged more than past the last wakeup
       // watermark.
       constexpr const std::array<fs_metrics::Event, 6> kRelevantEvents{
@@ -401,17 +407,11 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
       }
     }
 
-    void ResetSignal() { sync_completion_reset(&sync_); }
-
-    void UpdateMetrics(Blobfs* fs) {
-      ResetSignal();
-      fs->UpdateFragmentationMetrics();
-    }
-
     bool LogInteger(const cobalt_client::MetricOptions& metric_info, int64_t value) override {
       if (!InMemoryLogger::LogInteger(metric_info, value)) {
         return false;
       }
+      std::lock_guard<std::mutex> lock(mtx_);
 
       auto id = static_cast<fs_metrics::Event>(metric_info.metric_id);
       log_counts_[id]++;
@@ -443,6 +443,7 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
       if (!InMemoryLogger::Log(metric_info, buckets, num_buckets)) {
         return false;
       }
+      std::lock_guard<std::mutex> lock(mtx_);
       if (num_buckets == 0) {
         MaybeSignal();
         return true;
@@ -471,25 +472,25 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
       if (map == nullptr) {
         return true;
       }
-      map->clear();
       for (size_t i = 0; i < num_buckets; i++) {
         if (buckets[i].count > 0)
-          (*map)[i] = buckets[i].count;
+          (*map)[i] += buckets[i].count;
       }
       MaybeSignal();
       return true;
     }
 
-    const Stats& GetStats() const { return found_; }
-
    private:
-    Stats found_;
+    // The metric flushing thread in Blobfs calls Log and LogInteger while the test is looping in
+    // WaitUntilStatsEq. This mutex guards the members that are used by both threads.
+    std::mutex mtx_;
+    Stats found_ FXL_GUARDED_BY(mtx_);
     sync_completion_t sync_;
 
-    std::map<fs_metrics::Event, uint64_t> log_counts_;
+    std::map<fs_metrics::Event, uint64_t> log_counts_ FXL_GUARDED_BY(mtx_);
     // The last signal was delivered when the min of the relevant entries in log_counts_ was this
     // value.
-    uint64_t last_signal_watermark_ = 0;
+    uint64_t last_signal_watermark_ FXL_GUARDED_BY(mtx_) = 0;
   };
 
   std::unique_ptr<Logger> logger = std::make_unique<Logger>();
@@ -518,8 +519,7 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     Stats expected;
     expected.total_nodes = static_cast<int64_t>(setup.blobfs()->Info().inode_count);
     expected.free_fragments[6] = 2;
-    logger_ptr->UpdateMetrics(setup.blobfs());
-    auto found = logger_ptr->GetStats();
+    setup.blobfs()->UpdateFragmentationMetrics();
     ASSERT_TRUE(logger_ptr->WaitUntilStatsEq(expected));
   }
 
@@ -542,8 +542,7 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     expected.extents_per_blob[1] = kSmallBlobCount;
     expected.in_use_fragments[1] = kSmallBlobCount;
     expected.free_fragments[6] = 1;
-    logger_ptr->UpdateMetrics(setup.blobfs());
-    auto found = logger_ptr->GetStats();
+    setup.blobfs()->UpdateFragmentationMetrics();
     ASSERT_TRUE(logger_ptr->WaitUntilStatsEq(expected));
   }
 
@@ -564,8 +563,7 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     expected.free_fragments[6] = 1;
     expected.extents_per_blob[1] = kSmallBlobCount - kBlobsDeleted;
     expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted;
-    logger_ptr->UpdateMetrics(setup.blobfs());
-    auto found = logger_ptr->GetStats();
+    setup.blobfs()->UpdateFragmentationMetrics();
     ASSERT_TRUE(logger_ptr->WaitUntilStatsEq(expected));
   }
 
@@ -592,8 +590,7 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     expected.extents_per_blob[1] = kSmallBlobCount - kBlobsDeleted + 1;
     expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted + 2;
     expected.in_use_fragments[2] = 1;
-    logger_ptr->UpdateMetrics(setup.blobfs());
-    auto found = logger_ptr->GetStats();
+    setup.blobfs()->UpdateFragmentationMetrics();
     ASSERT_TRUE(logger_ptr->WaitUntilStatsEq(expected));
   }
 }
