@@ -51,6 +51,17 @@ and thread=1904 at time=278.14, the default output would be:
 [278.14][1902][1904][my-component.cmx] WARN: something happened
 ```
 
+[`log_listener`] has `--hide_metadata` and `--pretty` flags that reduces the printed metadata,
+and color codes log lines by severity, respectively. With these flags, some metadata is hidden
+(PID, TID, etc.) while others are trimmed down (timestamp, severity).
+
+For example, if the message "something happened" is printed at WARN level by my-component.cmx at
+time=278.14, the pretty output will look like:
+
+```
+[278.14][my-component.cmx][W] something happened
+```
+
 With a running device available, run `fx log -h` to see the options for modifying the output format.
 
 #### `fx test`
@@ -90,6 +101,30 @@ resulting output would be:
 
 ```
 [00278.140] 01902:01904> something happened
+```
+
+The `fx pretty_serial` command can be used to reduce the metadata printed by klog and color code
+log lines by severity. With this command, some metadata is hidden (PID, TID, filenames, etc.)
+while others are trimmed down (timestamp, severity).
+
+Serial output should be piped in from the emulator or from other sources:
+
+```
+fx emu | fx pretty_serial
+```
+
+For example, if the message "something happened" is printed to klog at WARN level by
+my-component.cmx at time=278.14, the pretty output will look like:
+
+```
+[278.14][my-component.cmx][W] something happened
+```
+
+For example, if the message "something happened" is printed to klog by an unknown component with
+unknown severity at time=278.14, the pretty output will look like:
+
+```
+[278.14] something happened
 ```
 
 ## Offline: CQ/GI
