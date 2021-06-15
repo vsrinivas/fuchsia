@@ -16,7 +16,7 @@
 
 #include "controller.h"
 
-#define PAGE_MASK (PAGE_SIZE - 1ull)
+#define AHCI_PAGE_MASK (AHCI_PAGE_SIZE - 1ull)
 
 namespace ahci {
 
@@ -374,7 +374,8 @@ zx_status_t Port::TxnBeginLocked(uint32_t slot, sata_txn_t* txn) {
 
   uint64_t offset_vmo = txn->bop.rw.offset_vmo * devinfo_.block_size;
   uint64_t bytes = txn->bop.rw.length * devinfo_.block_size;
-  size_t pagecount = ((offset_vmo & (PAGE_SIZE - 1)) + bytes + (PAGE_SIZE - 1)) / PAGE_SIZE;
+  size_t pagecount =
+      ((offset_vmo & (AHCI_PAGE_SIZE - 1)) + bytes + (AHCI_PAGE_SIZE - 1)) / AHCI_PAGE_SIZE;
   zx_paddr_t pages[AHCI_MAX_PAGES];
   if (pagecount > AHCI_MAX_PAGES) {
     zxlogf(TRACE, "ahci.%u: txn %p too many pages (%zu)", num_, txn, pagecount);
@@ -385,8 +386,8 @@ zx_status_t Port::TxnBeginLocked(uint32_t slot, sata_txn_t* txn) {
   bool is_write = cmd_is_write(txn->cmd);
   uint32_t options = is_write ? ZX_BTI_PERM_READ : ZX_BTI_PERM_WRITE;
   zx::pmt pmt;
-  zx_status_t st = bus_->BtiPin(options, vmo, offset_vmo & ~PAGE_MASK, pagecount * PAGE_SIZE, pages,
-                                pagecount, &pmt);
+  zx_status_t st = bus_->BtiPin(options, vmo, offset_vmo & ~AHCI_PAGE_MASK,
+                                pagecount * AHCI_PAGE_SIZE, pages, pagecount, &pmt);
   if (st != ZX_OK) {
     zxlogf(TRACE, "ahci.%u: failed to pin pages, err = %d", num_, st);
     return st;

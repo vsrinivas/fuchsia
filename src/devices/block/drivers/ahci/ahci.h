@@ -2,21 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_AHCI_AHCI_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_AHCI_AHCI_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_AHCI_AHCI_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_AHCI_AHCI_H_
 
 #include <limits.h>
 #include <stdint.h>
 
+// For the purposes of calculating other constants we expect this to be the system page size. This
+// is validated at run time prior to binding.
+#define AHCI_PAGE_SIZE 4096
+
 #define AHCI_MAX_PORTS 32
 #define AHCI_MAX_COMMANDS 32
-#define AHCI_MAX_PRDS ((PAGE_SIZE / sizeof(zx_paddr_t)) + 1)
+#define AHCI_MAX_PRDS ((AHCI_PAGE_SIZE / sizeof(zx_paddr_t)) + 1)
 #define AHCI_MAX_PAGES AHCI_MAX_PRDS
 // one page less of 2M because of unaligned offset
 #define AHCI_MAX_BYTES (2 * 1024 * 1024)
 
 #define AHCI_PRD_MAX_SIZE 0x400000  // 4mb
-static_assert(PAGE_SIZE <= AHCI_PRD_MAX_SIZE, "page size must be less than PRD max size\n");
+static_assert(AHCI_PAGE_SIZE <= AHCI_PRD_MAX_SIZE, "page size must be less than PRD max size\n");
 
 #define AHCI_PORT_INT_CPD (1u << 31)  // Cold Port Detect Status.
 #define AHCI_PORT_INT_TFE (1u << 30)  // Task File Error status.
@@ -207,4 +211,4 @@ static_assert(sizeof(ahci_prd_t) == 0x10, "unexpected prd entry size");
 
 }  // namespace ahci
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_AHCI_AHCI_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_AHCI_AHCI_H_

@@ -302,6 +302,11 @@ void Controller::Shutdown() {
 // implement driver object:
 
 zx_status_t ahci_bind(void* ctx, zx_device_t* parent) {
+  if (AHCI_PAGE_SIZE != zx_system_get_page_size()) {
+    zxlogf(ERROR, "ahci: System page size of %u does not match expected page size of %u\n",
+           zx_system_get_page_size(), AHCI_PAGE_SIZE);
+    return ZX_ERR_INTERNAL;
+  }
   std::unique_ptr<Controller> controller;
   zx_status_t status = Controller::Create(parent, &controller);
   if (status != ZX_OK) {
