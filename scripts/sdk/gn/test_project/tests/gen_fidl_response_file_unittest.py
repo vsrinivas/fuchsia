@@ -74,7 +74,7 @@ class GNFidlResponseFileTest(unittest.TestCase):
         self.assertTrue(os.path.exists(out_response_file_filepath))
         with open(out_response_file_filepath) as f:
             file_contents = f.read()
-            self.assertTrue(file_contents.startswith('--files'))
+            self.assertIn('--files', file_contents)
 
         out_libraries_filepath = os.path.join(outdir, OUT_LIBRARIES_FILENAME)
         self.assertTrue(os.path.exists(out_libraries_filepath))

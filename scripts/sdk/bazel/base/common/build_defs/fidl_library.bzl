@@ -56,6 +56,8 @@ def _fidl_library_impl(context):
     context.actions.run(
         executable = context.executable._fidlc,
         arguments = [
+            "--experimental",
+            "old_syntax_only",
             "--json",
             ir.path,
             "--name",
