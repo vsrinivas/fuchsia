@@ -33,6 +33,9 @@ if (!is_host) {
       # For `fx lint`.
       "//tools/fidl/fidlc:fidl-lint",
 
+      # For `fx pretty_serial`.
+      "//tools/pretty_serial:install($host_toolchain)",
+
       # For 'fx create'.
       "//tools/create",
 
