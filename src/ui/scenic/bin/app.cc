@@ -408,6 +408,9 @@ void App::InitializeInput() {
         }
       });
   FX_DCHECK(input_);
+  scenic_->SetRegisterTouchSource(
+      [this](fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> touch_source,
+             zx_koid_t vrf) { input_->RegisterTouchSource(std::move(touch_source), vrf); });
 
   focus_manager_ = std::make_unique<focus::FocusManager>(
       scenic_->inspect_node()->CreateChild("FocusManager"),

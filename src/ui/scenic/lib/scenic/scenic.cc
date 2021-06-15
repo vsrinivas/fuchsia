@@ -169,8 +169,19 @@ void Scenic::CreateSessionImmediately(SessionEndpoints endpoints) {
     }
   }
 
-  // TODO(fxbug.dev/64379): Implement handling for fuchsia.ui.pointer.TouchSource and MouseSource.
+  if (endpoints.has_touch_source()) {
+    if (register_touch_source_) {
+      on_view_created_callbacks.emplace_back(
+          [this, touch_source = std::move(*endpoints.mutable_touch_source())](
+              zx_koid_t view_ref_koid) mutable {
+            register_touch_source_(std::move(touch_source), view_ref_koid);
+          });
+    } else if (!register_touch_source_) {
+      FX_LOGS(ERROR) << "Failed to register fuchsia.ui.pointer.TouchSource request.";
+    }
+  }
 
+  // TODO(fxbug.dev/64379): Implement handling for fuchsia.ui.pointer.MouseSource.
   {
     const auto it = dispatchers.find(System::kGfx);
     if (it != dispatchers.end()) {
