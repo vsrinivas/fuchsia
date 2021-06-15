@@ -512,8 +512,15 @@ impl super::Station for ClientSme {
                             info!("  {}", bss.to_string(&self.context.inspect.hasher));
                         }
 
-                        let mut compatible_bss_iter =
-                            filter_to_compatible_bss(&bss_list, &self.cfg, &token.credential);
+                        // Cloning this to appease borrow checker, because `self.context` is
+                        // borrowed mutably later on.
+                        let device_info = self.context.device_info.clone();
+                        let mut compatible_bss_iter = filter_to_compatible_bss(
+                            &bss_list,
+                            &self.cfg,
+                            &token.credential,
+                            &device_info,
+                        );
 
                         if compatible_bss_iter.peek() == None {
                             let error_msg_str = "incompatible connect request for scan results";
@@ -603,7 +610,13 @@ impl super::Station for ClientSme {
                         let result = result.map(|bss_list| {
                             bss_list
                                 .iter()
-                                .map(|bss| self.cfg.convert_bss_description(&bss, None))
+                                .map(|bss| {
+                                    self.cfg.convert_bss_description(
+                                        &bss,
+                                        None,
+                                        &self.context.device_info,
+                                    )
+                                })
                                 .collect()
                         });
                         for responder in tokens {
@@ -698,11 +711,12 @@ fn filter_to_compatible_bss<'a>(
     bss_list: &'a Vec<BssDescription>,
     client_config: &'a ClientConfig,
     credential: &'a fidl_sme::Credential,
+    device_info: &'a DeviceInfo,
 ) -> Peekable<impl Iterator<Item = &'a BssDescription>> {
     bss_list
         .iter()
         .filter_map(move |bss| {
-            if !client_config.is_bss_compatible(bss) {
+            if !client_config.is_bss_compatible(bss, device_info) {
                 return None;
             }
             if let fidl_sme::Credential::None(_) = credential {

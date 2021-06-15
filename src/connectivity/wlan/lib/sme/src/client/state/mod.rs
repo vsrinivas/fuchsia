@@ -1144,9 +1144,13 @@ impl ClientState {
                 },
                 LinkState::LinkUp { .. } => Status {
                     connected_to: {
-                        let mut bss = associated
-                            .cfg
-                            .convert_bss_description(&associated.bss, associated.wmm_param);
+                        let mut bss =
+                            associated.cfg.convert_bss_description_skip_compatibility_check(
+                                &associated.bss,
+                                associated.wmm_param,
+                            );
+                        // Since we are already in LinkUp, we are sure that BSS is compatible
+                        bss.compatible = true;
                         bss.rssi_dbm = associated.last_rssi;
                         bss.snr_db = associated.last_snr;
                         bss.signal_report_time = associated.last_signal_report_time;

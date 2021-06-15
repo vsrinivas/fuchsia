@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    super::capabilities::derive_join_channel_and_capabilities,
     crate::{Config, Ssid},
-    fidl_fuchsia_wlan_internal as fidl_internal, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     wlan_common::{
         bss::{BssDescription, Protection},
         channel::Channel,
@@ -28,6 +30,20 @@ impl ClientConfig {
         &self,
         bss: &BssDescription,
         wmm_param: Option<ie::WmmParam>,
+        device_info: &fidl_mlme::DeviceInfo,
+    ) -> BssInfo {
+        BssInfo {
+            compatible: self.is_bss_compatible(bss, device_info),
+            ..self.convert_bss_description_skip_compatibility_check(bss, wmm_param)
+        }
+    }
+
+    /// Convert a given BssDescription into a BssInfo. Because we don't do compatibility check
+    /// in this method, the |compatible| flag is always set to `false`.
+    pub fn convert_bss_description_skip_compatibility_check(
+        &self,
+        bss: &BssDescription,
+        wmm_param: Option<ie::WmmParam>,
     ) -> BssInfo {
         BssInfo {
             bssid: bss.bssid.clone(),
@@ -37,17 +53,28 @@ impl ClientConfig {
             signal_report_time: zx::Time::ZERO,
             channel: Channel::from_fidl(bss.chan),
             protection: bss.protection(),
-            compatible: self.is_bss_compatible(bss),
             ht_cap: bss.raw_ht_cap(),
             vht_cap: bss.raw_vht_cap(),
             probe_resp_wsc: bss.probe_resp_wsc(),
             wmm_param,
             bss_desc: Some(bss.clone().to_fidl()),
+
+            // Default to false since we didn't do compatibility check
+            compatible: false,
         }
     }
 
     /// Determines whether a given BSS is compatible with this client SME configuration.
-    pub fn is_bss_compatible(&self, bss: &BssDescription) -> bool {
+    pub fn is_bss_compatible(
+        &self,
+        bss: &BssDescription,
+        device_info: &fidl_mlme::DeviceInfo,
+    ) -> bool {
+        self.is_bss_protection_compatible(bss)
+            && self.are_bss_channel_and_data_rates_compatible(bss, device_info)
+    }
+
+    fn is_bss_protection_compatible(&self, bss: &BssDescription) -> bool {
         let privacy = wlan_common::mac::CapabilityInfo(bss.cap).privacy();
         let protection = bss.protection();
         match &protection {
@@ -77,6 +104,20 @@ impl ClientConfig {
             _ => false,
         }
     }
+
+    fn are_bss_channel_and_data_rates_compatible(
+        &self,
+        bss: &BssDescription,
+        device_info: &fidl_mlme::DeviceInfo,
+    ) -> bool {
+        derive_join_channel_and_capabilities(
+            Channel::from_fidl(bss.chan),
+            None,
+            bss.rates(),
+            device_info,
+        )
+        .is_ok()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -101,6 +142,7 @@ mod tests {
     use {
         super::*,
         crate::client::test_utils::fake_wmm_param,
+        crate::test_utils,
         fidl_fuchsia_wlan_common as fidl_common,
         wlan_common::{
             channel::Cbw,
@@ -115,33 +157,45 @@ mod tests {
     };
 
     #[test]
-    fn verify_compatibility() {
+    fn verify_protection_compatibility() {
         // Compatible:
         let cfg = ClientConfig::default();
-        assert!(cfg.is_bss_compatible(&fake_bss!(Open)));
-        assert!(cfg.is_bss_compatible(&fake_bss!(Wpa1Wpa2TkipOnly)));
-        assert!(cfg.is_bss_compatible(&fake_bss!(Wpa2TkipOnly)));
-        assert!(cfg.is_bss_compatible(&fake_bss!(Wpa2)));
-        assert!(cfg.is_bss_compatible(&fake_bss!(Wpa2Wpa3)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Open)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa1Wpa2TkipOnly)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa2TkipOnly)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa2)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa2Wpa3)));
 
         // Not compatible:
-        assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa1)));
-        assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa3)));
-        assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa3Transition)));
-        assert!(!cfg.is_bss_compatible(&fake_bss!(Eap)));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss!(Wpa1)));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss!(Wpa3)));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss!(Wpa3Transition)));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss!(Eap)));
 
         // WEP support is configurable to be on or off:
         let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
-        assert!(cfg.is_bss_compatible(&fake_bss!(Wep)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wep)));
 
         // WPA1 support is configurable to be on or off:
         let cfg = ClientConfig::from_config(Config::default().with_wpa1(), false);
-        assert!(cfg.is_bss_compatible(&fake_bss!(Wpa1)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa1)));
 
         // WPA3 support is configurable to be on or off:
         let cfg = ClientConfig::from_config(Config::default(), true);
-        assert!(cfg.is_bss_compatible(&fake_bss!(Wpa3)));
-        assert!(cfg.is_bss_compatible(&fake_bss!(Wpa3Transition)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa3)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa3Transition)));
+    }
+
+    #[test]
+    fn verify_rates_compatibility() {
+        // Compatible:
+        let cfg = ClientConfig::default();
+        let device_info = test_utils::fake_device_info([1u8; 6]);
+        assert!(cfg.are_bss_channel_and_data_rates_compatible(&fake_bss!(Open), &device_info));
+
+        // Not compatible:
+        let bss = fake_bss!(Open, rates: vec![140, 255]);
+        assert!(!cfg.are_bss_channel_and_data_rates_compatible(&bss, &device_info));
     }
 
     #[test]
@@ -161,7 +215,8 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let bss_info = cfg.convert_bss_description(&bss_desc, None);
+        let device_info = test_utils::fake_device_info([1u8; 6]);
+        let bss_info = cfg.convert_bss_description(&bss_desc, None, &device_info);
 
         assert_eq!(
             bss_info,
@@ -198,7 +253,7 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let bss_info = cfg.convert_bss_description(&bss_desc, Some(wmm_param));
+        let bss_info = cfg.convert_bss_description(&bss_desc, Some(wmm_param), &device_info);
 
         assert_eq!(
             bss_info,
@@ -233,7 +288,7 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let bss_info = cfg.convert_bss_description(&bss_desc, None);
+        let bss_info = cfg.convert_bss_description(&bss_desc, None, &device_info);
         assert_eq!(
             bss_info,
             BssInfo {
@@ -268,7 +323,7 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let bss_info = cfg.convert_bss_description(&bss_desc, None);
+        let bss_info = cfg.convert_bss_description(&bss_desc, None, &device_info);
         assert_eq!(
             bss_info,
             BssInfo {
