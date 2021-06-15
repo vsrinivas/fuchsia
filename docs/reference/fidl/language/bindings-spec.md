@@ -357,8 +357,35 @@ initializing result unions.
 Protocols MAY surface transport errors back to the user. Transport errors can be
 categorized as errors encountered when converting between the native type and
 the wire format data, or as errors from the underlying transport mechanism (for
-example, an error obtained from calling `zx_channel_write`). These errors MAY
-consist of the error status, as well as any other diagnostics information.
+example, an error obtained from calling `zx_channel_write_etc`). These errors
+MAY consist of the error status, as well as any other diagnostics information.
+
+## Handle Type and Rights Checking
+
+Bindings MUST enforce handle type and rights checking in both the incoming and
+outgoing directions. This means that `zx_channel_write_etc`,
+`zx_channel_read_etc` and `zx_channel_call_etc` MUST be used instead of their
+non-etc equivalents.
+
+In the outgoing direction, rights and type information must be populated based
+on the FIDL definition. Concretely, this metadata should be placed in a
+`zx_handle_disposition_t` in order to invoke `zx_channel_write_etc` or
+`zx_channel_call_etc`. These system calls will perform type and rights checking
+on behalf of the caller.
+
+In the incoming direction, `zx_channel_read_etc` and `zx_channel_call_etc`
+provide type and rights information in the form of `zx_handle_info_t` objects.
+The bindings themselves must perform the appropriate checks as follows:
+
+Suppose a handle *h* is read and its rights in the FIDL file are *R*:
+
+* It is an error for handle *h* to be missing rights that are present in rights
+  *R*. The channel MUST be closed if this condition is encountered.
+* If handle *h* has more rights than rights *R*, its rights MUST be reduced to
+  *R* through `zx_handle_replace`.
+
+Additionally, it is an error for *h* to have the wrong type. The channel
+MUST be closed if this condition is encountered.
 
 ## Iovec Support
 
