@@ -871,7 +871,7 @@ features to Components v2.
 Note: If your component shares Inspect data in product feedback reports, you may
 also need to update the approved selectors to reference the new component moniker.
 For more details on updating feedback selectors, see
-[go/tq-feedback-privacy](http://go/tq-feedback-privacy).
+[go/tq-diagnostics-migration](http://go/tq-diagnostics-migration).
 
 {% dynamic endif %}
 
