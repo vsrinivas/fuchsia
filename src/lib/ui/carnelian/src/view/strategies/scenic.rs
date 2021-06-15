@@ -21,7 +21,6 @@ use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_ui_gfx::{self as gfx};
-use fidl_fuchsia_ui_input::SetHardKeyboardDeliveryCmd;
 use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_async::{self as fasync, OnSignals};
 use fuchsia_component::client::connect_to_protocol;
@@ -170,7 +169,6 @@ impl ScenicViewStrategy {
         let view_ref_key = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
         let (view, root_node, content_material, content_node) =
             Self::create_scenic_resources(session, view_token, control_ref, view_ref);
-        Self::request_hard_keys(session);
         Self::listen_for_session_events(session, &app_sender, key);
         Self::listen_for_key_events(view_ref_key, &app_sender, key)?;
 
@@ -226,14 +224,6 @@ impl ScenicViewStrategy {
         view.add_child(&root_node);
 
         (view, root_node, content_material, content_node)
-    }
-
-    fn request_hard_keys(session: &SessionPtr) {
-        session.lock().enqueue(fidl_fuchsia_ui_scenic::Command::Input(
-            fidl_fuchsia_ui_input::Command::SetHardKeyboardDelivery(SetHardKeyboardDeliveryCmd {
-                delivery_request: true,
-            }),
-        ));
     }
 
     fn listen_for_session_events(
