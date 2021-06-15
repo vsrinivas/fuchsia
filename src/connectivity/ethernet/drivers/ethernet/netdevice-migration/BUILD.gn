@@ -1,0 +1,65 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":netdevice-migration-tests" ]
+}
+
+bind_rules("netdevice-migration-bind") {
+  rules = "netdevice_migration.bind"
+  output = "netdevice_migration_bind.h"
+  tests = "bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.ethernet" ]
+}
+
+source_set("src") {
+  sources = [
+    "netdevice_migration.cc",
+    "netdevice_migration.h",
+  ]
+  public_deps = [
+    ":netdevice-migration-bind",
+    "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
+    "//src/lib/ddktl",
+  ]
+}
+
+driver_module("netdevice-migration") {
+  output_name = "netdevice-migration"
+  deps = [
+    ":netdevice-migration-bind",
+    ":src",
+  ]
+}
+
+fuchsia_system_package("pkg") {
+  package_name = "netdevice-migration"
+  deps = [ ":netdevice-migration" ]
+
+  # TODO(https://fxbug.dev/78293): Change the line below, as needed, once there exists a
+  # compile-time mechanism for binding the migration driver.
+  allowed_in_extra_deps = true
+}
+
+test("unit-tests") {
+  output_name = "netdevice-migration-unit-tests"
+  sources = [ "unit-tests.cc" ]
+  deps = [
+    ":netdevice-migration-bind",
+    ":src",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("netdevice-migration-tests") {
+  deps = [ ":unit-tests" ]
+}

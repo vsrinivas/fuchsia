@@ -106,5 +106,6 @@ group("tests") {
     ":ethernet-integration-test",
     ":ethernet-unittest-package",
     ":ethernet_bind_test",
+    "netdevice-migration:tests",
   ]
 }

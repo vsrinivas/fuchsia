@@ -1,0 +1,16 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.ethernet.BIND_PROTOCOL.IMPL"
+        },
+        "expected": "match",
+        "name": "Protocol Match"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.ethernet.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol Mismatch"
+    }
+]
