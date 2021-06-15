@@ -48,6 +48,12 @@ template("brcmfmac_driver") {
     _deps += [ ":brcmfmac-clm-${orig_target_name}" ]
   }
 
+  # Targets not needed for the driver itself, but should be included whenever
+  # the driver is.
+  if (defined(invoker.diagnostic_deps)) {
+    _deps += invoker.diagnostic_deps
+  }
+
   # Driver package for the brcmfmac driver.
   fuchsia_system_package(orig_target_name) {
     deps = _deps

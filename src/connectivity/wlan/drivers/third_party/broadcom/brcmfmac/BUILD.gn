@@ -287,6 +287,7 @@ brcmfmac_driver("brcmfmac-astro") {
   bus = "sdio"
   chip = "brcmfmac43455"
   clm_present = true
+  diagnostic_deps = [ "//src/diagnostics/config/triage:brcmfmac-detect" ]
 }
 
 brcmfmac_driver("brcmfmac-astro-mfg") {
@@ -294,6 +295,7 @@ brcmfmac_driver("brcmfmac-astro-mfg") {
   bus = "sdio"
   chip = "brcmfmac43455"
   clm_present = true
+  diagnostic_deps = [ "//src/diagnostics/config/triage:brcmfmac-detect" ]
 }
 
 brcmfmac_driver("brcmfmac-sherlock") {
@@ -301,6 +303,7 @@ brcmfmac_driver("brcmfmac-sherlock") {
   bus = "sdio"
   chip = "brcmfmac43455"
   clm_present = true
+  diagnostic_deps = [ "//src/diagnostics/config/triage:brcmfmac-detect" ]
 }
 
 brcmfmac_driver("brcmfmac-sherlock-mfg") {
@@ -308,6 +311,7 @@ brcmfmac_driver("brcmfmac-sherlock-mfg") {
   bus = "sdio"
   chip = "brcmfmac43455"
   clm_present = true
+  diagnostic_deps = [ "//src/diagnostics/config/triage:brcmfmac-detect" ]
 }
 
 brcmfmac_driver("brcmfmac-luis") {
@@ -315,6 +319,7 @@ brcmfmac_driver("brcmfmac-luis") {
   bus = "sdio"
   chip = "brcmfmac43455"
   clm_present = true
+  diagnostic_deps = [ "//src/diagnostics/config/triage:brcmfmac-detect" ]
 }
 
 brcmfmac_driver("brcmfmac-luis-mfg") {
@@ -322,6 +327,7 @@ brcmfmac_driver("brcmfmac-luis-mfg") {
   bus = "sdio"
   chip = "brcmfmac43455"
   clm_present = true
+  diagnostic_deps = [ "//src/diagnostics/config/triage:brcmfmac-detect" ]
 }
 
 brcmfmac_driver("brcmfmac-nelson") {
@@ -329,6 +335,7 @@ brcmfmac_driver("brcmfmac-nelson") {
   bus = "sdio"
   chip = "brcmfmac43455"
   clm_present = true
+  diagnostic_deps = [ "//src/diagnostics/config/triage:brcmfmac-detect" ]
 }
 
 brcmfmac_driver("brcmfmac-nelson-mfg") {
@@ -336,6 +343,7 @@ brcmfmac_driver("brcmfmac-nelson-mfg") {
   bus = "sdio"
   chip = "brcmfmac43455"
   clm_present = true
+  diagnostic_deps = [ "//src/diagnostics/config/triage:brcmfmac-detect" ]
 }
 
 #brcmfmac_driver("brcmfmac-x64") {
@@ -343,6 +351,7 @@ brcmfmac_driver("brcmfmac-nelson-mfg") {
 #  bus = "pcie"
 #  chip = "brcmfmac4356"
 #  clm_present = false
+#  diagnostic_deps = [ "//src/diagnostics/config/triage:brcmfmac-detect" ]
 #}
 
 # The test package, including tests in subdirs.

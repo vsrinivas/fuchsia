@@ -8,7 +8,10 @@ import("//build/dist/resource.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 group("msd-system") {
-  public_deps = [ ":msd-arm-mali" ]
+  public_deps = [
+    ":msd-arm-mali",
+    "//src/diagnostics/config/triage:mali-detect",
+  ]
 }
 
 group("test-driver") {

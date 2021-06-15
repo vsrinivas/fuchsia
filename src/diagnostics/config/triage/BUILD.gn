@@ -35,19 +35,43 @@ triage_files = [
   "timezone.triage",
 ]
 
-detect_files = [
-  "detect/mali-detect.triage",
-  "detect/omaha-client-detect.triage",
+detect_unconditional_files = [
   "detect/sysmem-detect.triage",
   "detect/wlan-detect.triage",
+]
+
+detect_conditional_files = [
+  "detect/mali-detect.triage",
+  "detect/omaha-client-detect.triage",
   "detect/brcmfmac-detect.triage",
 ]
 
-triage_files += detect_files
+triage_files += detect_unconditional_files + detect_conditional_files
 
 config_data("triage-detect") {
   for_pkg = "triage-detect"
-  sources = detect_files
+  sources = detect_unconditional_files
+}
+
+# This file will be included in builds that include the
+# group //src/sys/pkg:omaha-client
+config_data("omaha-client-detect") {
+  for_pkg = "triage-detect"
+  sources = [ "detect/omaha-client-detect.triage" ]
+}
+
+# This file will be included with the brcmfmac driver versions. See
+# //src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/BUILD.gn
+config_data("brcmfmac-detect") {
+  for_pkg = "triage-detect"
+  sources = [ "detect/brcmfmac-detect.triage" ]
+}
+
+# This file will be included in builds that include the
+# group src/graphics/lib/magma/gnbuild/magma-arm-mali:msd-system
+config_data("mali-detect") {
+  for_pkg = "triage-detect"
+  sources = [ "detect/mali-detect.triage" ]
 }
 
 group("triage") {
