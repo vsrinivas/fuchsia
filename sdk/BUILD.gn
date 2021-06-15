@@ -380,6 +380,7 @@ sdk("core") {
 
   deps = [
     ":core_idk",
+    ":ddk_host_tools",
     ":host_tools",
   ]
 }

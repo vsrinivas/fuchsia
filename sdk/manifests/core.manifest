@@ -166,6 +166,7 @@ sdk://pkg/vfs_cpp
 sdk://pkg/vulkan
 sdk://pkg/vulkan_layers
 sdk://pkg/zx
+sdk://tools/arm64/bindc
 sdk://tools/arm64/blobfs-compression
 sdk://tools/arm64/bootserver
 sdk://tools/arm64/cmc
@@ -177,6 +178,8 @@ sdk://tools/arm64/fidl-format
 sdk://tools/arm64/fidlc
 sdk://tools/arm64/fidlcat
 sdk://tools/arm64/fidlgen
+sdk://tools/arm64/fidlgen_banjo
+sdk://tools/arm64/fidlgen_llcpp_experimental_driver_only_toolchain
 sdk://tools/arm64/fpublish
 sdk://tools/arm64/fserve
 sdk://tools/arm64/fssh
@@ -204,6 +207,7 @@ sdk://tools/minfs
 sdk://tools/pm
 sdk://tools/symbol-index
 sdk://tools/symbolize
+sdk://tools/x64/bindc
 sdk://tools/x64/blobfs-compression
 sdk://tools/x64/bootserver
 sdk://tools/x64/cmc
@@ -215,6 +219,8 @@ sdk://tools/x64/fidl-format
 sdk://tools/x64/fidlc
 sdk://tools/x64/fidlcat
 sdk://tools/x64/fidlgen
+sdk://tools/x64/fidlgen_banjo
+sdk://tools/x64/fidlgen_llcpp_experimental_driver_only_toolchain
 sdk://tools/x64/fpublish
 sdk://tools/x64/fserve
 sdk://tools/x64/fssh
