@@ -359,7 +359,7 @@ fi
 
 ensure-symbol-index-registered || echo "Failed to register ${FUCHSIA_DIR} in symbol-index!"
 
-FIDLCAT=$(fx-command-run list-build-artifacts --name fidlcat --expect-one tools)
+FIDLCAT=$(fx-command-run host-tool --print fidlcat)
 FIDLCAT_UNSTRIPPED="$(dirname "$FIDLCAT")/exe.unstripped/$(basename "$FIDLCAT")"
 
 if [[ ${launch_agent} -eq 1 ]]; then
@@ -374,7 +374,7 @@ if [[ ${launch_agent} -eq 1 ]]; then
       gdb --args "$FIDLCAT_UNSTRIPPED" "${arguments[@]}"
     else
       # Now that the debug agent is launched, start fidlcat.
-      $FIDLCAT "${arguments[@]}"
+      "$FIDLCAT" "${arguments[@]}"
     fi
 
     # --quit-agent-on-exit should quit the debug_agent so we just need to wait for ssh to terminate.
@@ -392,6 +392,6 @@ else
     gdb --args "$FIDLCAT_UNSTRIPPED" "${arguments[@]}"
   else
     # Now that the debug agent is launched, start fidlcat.
-    $FIDLCAT "${arguments[@]}"
+    "$FIDLCAT" "${arguments[@]}"
   fi
 fi
