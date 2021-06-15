@@ -25,14 +25,14 @@ namespace {
 // This includes all base types except floating point.
 bool IsIntegerLike(const Type* t) {
   // Pointers count.
-  if (const ModifiedType* modified_type = t->AsModifiedType())
+  if (const ModifiedType* modified_type = t->As<ModifiedType>())
     return modified_type->tag() == DwarfTag::kPointerType;
 
   // Enums count.
-  if (t->AsEnumeration())
+  if (t->As<Enumeration>())
     return true;
 
-  const BaseType* base_type = t->AsBaseType();
+  const BaseType* base_type = t->As<BaseType>();
   if (!base_type)
     return false;
 
@@ -44,21 +44,21 @@ bool IsIntegerLike(const Type* t) {
 }
 
 bool IsSignedBaseType(const Type* type) {
-  const BaseType* base_type = type->AsBaseType();
+  const BaseType* base_type = type->As<BaseType>();
   if (!base_type)
     return false;
   return BaseType::IsSigned(base_type->base_type());
 }
 
 bool IsBooleanBaseType(const Type* type) {
-  const BaseType* base_type = type->AsBaseType();
+  const BaseType* base_type = type->As<BaseType>();
   if (!base_type)
     return false;
   return base_type->base_type() == BaseType::kBaseTypeBoolean;
 }
 
 bool IsFloatingPointBaseType(const Type* type) {
-  const BaseType* base_type = type->AsBaseType();
+  const BaseType* base_type = type->As<BaseType>();
   if (!base_type)
     return false;
   return base_type->base_type() == BaseType::kBaseTypeFloat;
@@ -240,11 +240,11 @@ bool TypesAreBinaryCoercable(const Type* a, const Type* b) {
 //
 // The two types must have c-v qualifiers stripped.
 std::optional<InheritancePath> GetDerivedClassPath(const Type* base, const Type* derived) {
-  const Collection* derived_collection = derived->AsCollection();
+  const Collection* derived_collection = derived->As<Collection>();
   if (!derived_collection)
     return std::nullopt;
 
-  const Collection* base_collection = base->AsCollection();
+  const Collection* base_collection = base->As<Collection>();
   if (!base_collection)
     return std::nullopt;
   std::string base_name = base_collection->GetFullName();
@@ -292,8 +292,8 @@ void StaticCastPointerOrRef(const fxl::RefPtr<EvalContext>& eval_context, const 
   }
 
   // Can assume they're ModifiedTypes due to tag checks above.
-  const ModifiedType* modified_from = concrete_from->AsModifiedType();
-  const ModifiedType* modified_to = concrete_to->AsModifiedType();
+  const ModifiedType* modified_from = concrete_from->As<ModifiedType>();
+  const ModifiedType* modified_to = concrete_to->As<ModifiedType>();
   if (modified_from->ModifiesVoid() || modified_to->ModifiesVoid()) {
     // Always allow conversions to and from void*. This technically handles void& which isn't
     // expressible C++, but should be fine.
@@ -311,8 +311,8 @@ void StaticCastPointerOrRef(const fxl::RefPtr<EvalContext>& eval_context, const 
   }
 
   // Get the pointed-to or referenced types.
-  const Type* refed_from_abstract = modified_from->modified().Get()->AsType();
-  const Type* refed_to_abstract = modified_to->modified().Get()->AsType();
+  const Type* refed_from_abstract = modified_from->modified().Get()->As<Type>();
+  const Type* refed_to_abstract = modified_to->modified().Get()->As<Type>();
   if (!refed_from_abstract || !refed_to_abstract) {
     // Error decoding (not void* because that was already checked above).
     return cb(MakeCastError(concrete_from, concrete_to));

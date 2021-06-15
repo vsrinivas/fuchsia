@@ -92,7 +92,7 @@ TEST(FormatSymbol, Collection) {
   // This const cast is evil but it's cleaner to use the test utilities to create all the data
   // members and then reach in and make them the way we want (with extra padding) than duplicate all
   // of that logic.
-  const_cast<DataMember*>(coll->data_members()[1].Get()->AsDataMember())->set_member_location(8);
+  const_cast<DataMember*>(coll->data_members()[1].Get()->As<DataMember>())->set_member_location(8);
   coll->set_byte_size(12);
 
   // Say it inherits from this empty base class. Since it's empty, it will start at the same offset

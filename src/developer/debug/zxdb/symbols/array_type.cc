@@ -26,7 +26,7 @@ std::string ArrayType::ComputeFullName() const {
 
 std::string ArrayType::ComputeFullNameOfNestedArray(const std::string& outer_dims) const {
   std::string elt_count = num_elts_ ? fxl::StringPrintf("[%zu]", *num_elts_) : "[]";
-  if (const ArrayType* inner_array = value_type_->AsArrayType()) {
+  if (const ArrayType* inner_array = value_type_->As<ArrayType>()) {
     // Special-case nested arrays.
     return inner_array->ComputeFullNameOfNestedArray(outer_dims + elt_count);
   }

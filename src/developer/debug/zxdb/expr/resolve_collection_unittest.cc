@@ -77,8 +77,8 @@ fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a, const Data
   auto sc =
       MakeCollectionType(DwarfTag::kStructureType, "Foo", {{"a", int32_type}, {"b", int32_type}});
 
-  *member_a = sc->data_members()[0].Get()->AsDataMember();
-  *member_b = sc->data_members()[1].Get()->AsDataMember();
+  *member_a = sc->data_members()[0].Get()->As<DataMember>();
+  *member_b = sc->data_members()[1].Get()->As<DataMember>();
   return sc;
 }
 

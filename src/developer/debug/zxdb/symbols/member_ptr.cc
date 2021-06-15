@@ -21,12 +21,12 @@ MemberPtr::~MemberPtr() = default;
 const MemberPtr* MemberPtr::AsMemberPtr() const { return this; }
 
 std::string MemberPtr::ComputeFullName() const {
-  const Type* member = member_type_.Get()->AsType();
+  const Type* member = member_type_.Get()->As<Type>();
   if (!member)
     return "<invalid>";
 
   std::string container_name;
-  if (const Type* container = container_type_.Get()->AsType()) {
+  if (const Type* container = container_type_.Get()->As<Type>()) {
     container_name = container->GetFullName();
   } else {
     // Can still compute function description from the type when the container is bad.
@@ -34,7 +34,7 @@ std::string MemberPtr::ComputeFullName() const {
   }
 
   // Special-case pointer-to-member-functions.
-  if (const FunctionType* func = member->AsFunctionType())
+  if (const FunctionType* func = member->As<FunctionType>())
     return func->ComputeFullNameForFunctionPtr(container_name);
 
   // Everything else is a pointer to member data.

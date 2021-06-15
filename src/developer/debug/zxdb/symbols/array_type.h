@@ -25,10 +25,12 @@ namespace zxdb {
 // extern to getting the real variable definition will give an array type with a real length.
 class ArrayType final : public Type {
  public:
-  const ArrayType* AsArrayType() const override;
-
   const Type* value_type() const { return value_type_.get(); }
   std::optional<size_t> num_elts() const { return num_elts_; }
+
+ protected:
+  // Symbol protected override.
+  const ArrayType* AsArrayType() const override;
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(ArrayType);

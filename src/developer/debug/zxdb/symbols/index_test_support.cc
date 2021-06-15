@@ -13,13 +13,13 @@ namespace zxdb {
 namespace {
 
 IndexNode::Kind KindForSymbol(const fxl::RefPtr<Symbol>& sym) {
-  if (sym->AsType())
+  if (sym->As<Type>())
     return IndexNode::Kind::kType;
-  if (sym->AsNamespace())
+  if (sym->As<Namespace>())
     return IndexNode::Kind::kNamespace;
-  if (sym->AsFunction())
+  if (sym->As<Function>())
     return IndexNode::Kind::kFunction;
-  if (sym->AsVariable())
+  if (sym->As<Variable>())
     return IndexNode::Kind::kVar;
 
   FX_NOTREACHED();
@@ -43,6 +43,6 @@ TestIndexedGlobalVariable::TestIndexedGlobalVariable(MockModuleSymbols* mod_sym,
                                                      const std::string& var_name)
     : TestIndexedSymbol(mod_sym, index_parent, var_name,
                         MakeVariableForTest(var_name, MakeInt32Type(), 0x100, 0x200, DwarfExpr())),
-      var(symbol->AsVariable()) {}
+      var(symbol->As<Variable>()) {}
 
 }  // namespace zxdb

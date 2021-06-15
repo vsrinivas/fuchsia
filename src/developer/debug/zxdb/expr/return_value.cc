@@ -70,13 +70,13 @@ void GetReturnValue(const fxl::RefPtr<EvalContext>& context, const Function* fun
 
   std::optional<Abi::RegisterReturn> reg_or;
 
-  if (const BaseType* base_type = return_type->AsBaseType()) {
+  if (const BaseType* base_type = return_type->As<BaseType>()) {
     if (base_type->base_type() == BaseType::kBaseTypeNone) {
       // This means void (we want to differentiate this from failure to find the register).
       return cb(ExprValue());
     }
     reg_or = context->GetAbi()->GetReturnRegisterForBaseType(base_type);
-  } else if (const ModifiedType* mod_type = return_type->AsModifiedType()) {
+  } else if (const ModifiedType* mod_type = return_type->As<ModifiedType>()) {
     // Modified types.
     if (mod_type->tag() == DwarfTag::kPointerType || mod_type->tag() == DwarfTag::kReferenceType ||
         mod_type->tag() == DwarfTag::kRvalueReferenceType) {
@@ -84,11 +84,11 @@ void GetReturnValue(const fxl::RefPtr<EvalContext>& context, const Function* fun
       reg_or = Abi::RegisterReturn{.reg = context->GetAbi()->GetReturnRegisterForMachineInt(),
                                    .base_type = Abi::RegisterReturn::kInt};
     }
-  } else if (const Enumeration* enum_type = return_type->AsEnumeration()) {
+  } else if (const Enumeration* enum_type = return_type->As<Enumeration>()) {
     // All enums should fit into machine words.
     reg_or = Abi::RegisterReturn{.reg = context->GetAbi()->GetReturnRegisterForMachineInt(),
                                  .base_type = Abi::RegisterReturn::kInt};
-  } else if (const Collection* coll_type = return_type->AsCollection()) {
+  } else if (const Collection* coll_type = return_type->As<Collection>()) {
     // Collections are complex and handled separately.
     return GetCollectionReturnValue(context, coll_type, return_type, std::move(cb));
   }

@@ -223,12 +223,12 @@ bool IsIntegerRealm(MathRealm realm) {
 // Computes how math should be done on the given type. The type should be concrete.
 Err GetRealm(const Type* type, MathRealm* realm) {
   // Check for pointers.
-  if (const ModifiedType* mod = type->AsModifiedType()) {
+  if (const ModifiedType* mod = type->As<ModifiedType>()) {
     if (mod->tag() == DwarfTag::kPointerType) {
       *realm = MathRealm::kPointer;
       return Err();
     }
-  } else if (const BaseType* base = type->AsBaseType()) {
+  } else if (const BaseType* base = type->As<BaseType>()) {
     // Everything else should be a base type.
     switch (base->base_type()) {
       case BaseType::kBaseTypeNone:

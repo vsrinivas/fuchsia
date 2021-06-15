@@ -65,7 +65,7 @@ ErrOrValue ResolveBitfieldMember(const fxl::RefPtr<EvalContext>& context, const 
 
   // Destination type. Here we need to save the original (possibly non-concrete type) for assigning
   // to the result type at the bottom.
-  const Type* dest_type = data_member->type().Get()->AsType();
+  const Type* dest_type = data_member->type().Get()->As<Type>();
   if (!dest_type)
     return Err("Bitfield member has no type.");
   fxl::RefPtr<Type> concrete_dest_type = context->GetConcreteType(dest_type);

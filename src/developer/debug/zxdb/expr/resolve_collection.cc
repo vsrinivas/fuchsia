@@ -57,10 +57,10 @@ ErrOr<FoundMember> FindMemberWithErr(const fxl::RefPtr<EvalContext>& context,
 // Variant of the above that extracts the collection type from the given base value.
 ErrOr<FoundMember> FindMemberWithErr(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
                                      const ParsedIdentifier& identifier) {
-  fxl::RefPtr<Type> concrete_base = context->GetConcreteType(base.type());
-  if (!concrete_base)
+  fxl::RefPtr<Collection> base_type = context->GetConcreteTypeAs<Collection>(base.type());
+  if (!base_type)
     return Err("No type information for collection.");
-  return FindMemberWithErr(context, concrete_base->AsCollection(), identifier);
+  return FindMemberWithErr(context, base_type.get(), identifier);
 }
 
 Err GetErrorForInvalidMemberOf(const Collection* coll) {
@@ -73,7 +73,7 @@ Err GetErrorForInvalidMemberOf(const ExprValue& value) {
   if (!value.type())
     return Err("No type information.");
 
-  if (const Collection* coll = value.type()->AsCollection())
+  if (const Collection* coll = value.type()->As<Collection>())
     return GetErrorForInvalidMemberOf(coll);
 
   // Something other than a collection is the base.
@@ -89,7 +89,7 @@ Err GetMemberType(const fxl::RefPtr<EvalContext>& context, const Collection* col
   if (!member)
     return GetErrorForInvalidMemberOf(coll);
 
-  *member_type = RefPtrTo(member->type().Get()->AsType());
+  *member_type = RefPtrTo(member->type().Get()->As<Type>());
   if (!*member_type) {
     return Err("Bad type information for '%s.%s'.", coll->GetFullName().c_str(),
                member->GetAssignedName().c_str());
@@ -399,7 +399,7 @@ void ResolveInheritedPtr(const fxl::RefPtr<EvalContext>& context, TargetPointer 
 
 ErrOrValue ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
                             const InheritedFrom* from) {
-  const Type* from_type = from->from().Get()->AsType();
+  const Type* from_type = from->from().Get()->As<Type>();
   if (!from_type)
     return GetErrorForInvalidMemberOf(value);
 

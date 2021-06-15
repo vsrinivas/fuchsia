@@ -13,19 +13,18 @@ namespace zxdb {
 
 namespace {
 
-VisitResult DoVisitClassHierarchy(
-    InheritancePath* path,
-    fit::function<VisitResult(const InheritancePath& path)>& cb) {
+VisitResult DoVisitClassHierarchy(InheritancePath* path,
+                                  fit::function<VisitResult(const InheritancePath& path)>& cb) {
   if (VisitResult result = cb(*path); result != VisitResult::kContinue)
     return result;
 
   // Iterate through base classes.
   for (const auto& lazy_from : path->path().back().collection->inherited_from()) {
-    const InheritedFrom* inherited_from = lazy_from.Get()->AsInheritedFrom();
+    const InheritedFrom* inherited_from = lazy_from.Get()->As<InheritedFrom>();
     if (!inherited_from)
       continue;
 
-    const Collection* from_coll = inherited_from->from().Get()->AsCollection();
+    const Collection* from_coll = inherited_from->from().Get()->As<Collection>();
     if (!from_coll)
       continue;
 
@@ -49,10 +48,10 @@ VisitResult VisitLocalBlocks(const CodeBlock* starting,
     if (result != VisitResult::kContinue)
       return result;
 
-    if (cur_block->AsFunction() || !cur_block->parent())
+    if (cur_block->As<Function>() || !cur_block->parent())
       break;  // Don't iterate above functions.
     auto parent_ref = cur_block->parent().Get();
-    cur_block = RefPtrTo(parent_ref->AsCodeBlock());
+    cur_block = RefPtrTo(parent_ref->As<CodeBlock>());
   }
   return VisitResult::kContinue;
 }

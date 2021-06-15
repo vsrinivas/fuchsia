@@ -19,9 +19,6 @@ class Variable : public Value {
  public:
   // Construct with fxl::MakeRefCounted().
 
-  // Symbol overrides.
-  const Variable* AsVariable() const override;
-
   // Holds the location of the variable value if it has a memory or register value. The symbols
   // could also be encoded to express a constant value as a DWARF expression which will be stored
   // here.
@@ -41,6 +38,9 @@ class Variable : public Value {
   Variable(DwarfTag tag, const std::string& assigned_name, LazySymbol type,
            VariableLocation location);
   ~Variable();
+
+  // Symbol overrides.
+  const Variable* AsVariable() const override;
 
  private:
   VariableLocation location_;

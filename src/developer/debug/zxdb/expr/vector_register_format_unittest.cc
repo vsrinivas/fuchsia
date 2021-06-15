@@ -22,7 +22,7 @@ bool IsTypeArrayOf(const ExprValue& value, const char* expected_type, uint32_t e
   if (!type)
     return false;
 
-  const ArrayType* array = type->AsArrayType();
+  const ArrayType* array = type->As<ArrayType>();
   if (!array)
     return false;
 

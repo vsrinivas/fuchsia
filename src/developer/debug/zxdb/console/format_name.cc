@@ -40,7 +40,7 @@ bool FormatClangLambda(const Function* function, OutputBuffer* out) {
   //   out->Append("λ @ " + FormatFileLine(function->decl_line(), optional_target_symbols));
   // so users can tell where the lambda function is.
   auto parent_ref = function->parent().Get();  // Hold a ref to keep alive.
-  const Collection* coll = parent_ref->AsCollection();
+  const Collection* coll = parent_ref->As<Collection>();
   if (coll && coll->tag() == DwarfTag::kClassType && coll->GetAssignedName().empty()) {
     // Clang-style.
     out->Append("λ");
@@ -163,7 +163,7 @@ OutputBuffer FormatFunctionName(const Function* function,
       for (size_t i = 0; i < params.size(); i++) {
         if (i > 0)
           params_str += ", ";
-        if (const Variable* var = params[i].Get()->AsVariable())
+        if (const Variable* var = params[i].Get()->As<Variable>())
           params_str += var->type().Get()->GetFullName();
       }
       params_str.push_back(')');

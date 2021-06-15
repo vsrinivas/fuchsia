@@ -21,9 +21,6 @@ class FunctionType final : public Type {
  public:
   // Construct with fxl::MakeRefCounted().
 
-  // Symbol overrides.
-  const FunctionType* AsFunctionType() const override;
-
   // The return value type. This should be some kind of Type object. Will be empty for void return
   // types.
   const LazySymbol& return_type() const { return return_type_; }
@@ -40,6 +37,7 @@ class FunctionType final : public Type {
 
  protected:
   // Symbol protected overrides.
+  const FunctionType* AsFunctionType() const override;
   std::string ComputeFullName() const override;
 
  private:

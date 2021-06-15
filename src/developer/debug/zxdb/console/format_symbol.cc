@@ -81,7 +81,7 @@ OutputBuffer FormatCollectionMembers(const ProcessSymbols* process_symbols,
 
   // Inherited base classes.
   for (const auto& lazy_from : coll->inherited_from()) {
-    const InheritedFrom* from = lazy_from.Get()->AsInheritedFrom();
+    const InheritedFrom* from = lazy_from.Get()->As<InheritedFrom>();
     if (!from)
       continue;
 
@@ -100,11 +100,11 @@ OutputBuffer FormatCollectionMembers(const ProcessSymbols* process_symbols,
 
   // Data members.
   for (const auto& lazy_member : coll->data_members()) {
-    const DataMember* member = lazy_member.Get()->AsDataMember();
+    const DataMember* member = lazy_member.Get()->As<DataMember>();
     if (!member)
       continue;
 
-    const Type* member_type = member->type().Get()->AsType();
+    const Type* member_type = member->type().Get()->As<Type>();
     if (!member_type)
       continue;
 
@@ -173,7 +173,7 @@ OutputBuffer FormatTypeDescription(const char* heading, const LazySymbol& lazy_t
   out.Append(Syntax::kHeading, fxl::StringPrintf("  %s: ", heading));
   // DWARF uses empty types for "void".
   if (lazy_type) {
-    out.Append(GetFormattedName(lazy_type.Get()->AsType()));
+    out.Append(GetFormattedName(lazy_type.Get()->As<Type>()));
   } else {
     out.Append("void");
   }
@@ -273,15 +273,15 @@ OutputBuffer FormatType(const ProcessSymbols* process_symbols, const Type* type)
   out.Append(std::to_string(type->byte_size()) + "\n");
 
   // Subtype-specific handling.
-  if (const BaseType* base_type = type->AsBaseType()) {
+  if (const BaseType* base_type = type->As<BaseType>()) {
     out.Append(Syntax::kHeading, "  DWARF base type: ");
     out.Append(BaseType::BaseTypeToString(base_type->base_type(), true) + "\n");
-  } else if (const Collection* collection = type->AsCollection()) {
+  } else if (const Collection* collection = type->As<Collection>()) {
     out.Append(Syntax::kHeading, "  Calling convention: ");
     out.Append(Collection::CallingConventionToString(collection->calling_convention()));
     out.Append("\n");
     out.Append(FormatCollectionMembers(process_symbols, collection));
-  } else if (const ModifiedType* modified = type->AsModifiedType()) {
+  } else if (const ModifiedType* modified = type->As<ModifiedType>()) {
     if (modified->tag() == DwarfTag::kTypedef) {
       out.Append(FormatTypeDescription("Underlying type", modified->modified()));
 
@@ -289,7 +289,7 @@ OutputBuffer FormatType(const ProcessSymbols* process_symbols, const Type* type)
       // a thing is a typedef and doing this can save a step. Additionally, in C it's common to do
       // "typedef struct { ... } Name;" which creates a typedef of an anonymous struct. There's no
       // way to refer to the underlying struct so putting them here is the only way to see them.
-      if (const Collection* modified_collection = modified->modified().Get()->AsCollection())
+      if (const Collection* modified_collection = modified->modified().Get()->As<Collection>())
         out.Append(FormatCollectionMembers(process_symbols, modified_collection));
     } else {
       out.Append(FormatTypeDescription("Modified type", modified->modified()));
@@ -430,15 +430,15 @@ OutputBuffer FormatSymbol(const ProcessSymbols* process_symbols, const Symbol* s
                           const FormatSymbolOptions& opts) {
   SymbolContext symbol_context = symbol->GetSymbolContext(process_symbols);
 
-  if (const Type* type = symbol->AsType())
+  if (const Type* type = symbol->As<Type>())
     return FormatType(process_symbols, type);
-  if (const Function* function = symbol->AsFunction())
+  if (const Function* function = symbol->As<Function>())
     return FormatFunction(symbol_context, function, opts);
-  if (const Variable* variable = symbol->AsVariable())
+  if (const Variable* variable = symbol->As<Variable>())
     return FormatVariable("Variable", 0, symbol_context, variable, opts);
-  if (const DataMember* data_member = symbol->AsDataMember())
+  if (const DataMember* data_member = symbol->As<DataMember>())
     return FormatDataMember(data_member);
-  if (const ElfSymbol* elf_symbol = symbol->AsElfSymbol())
+  if (const ElfSymbol* elf_symbol = symbol->As<ElfSymbol>())
     return FormatElfSymbol(symbol_context, elf_symbol);
 
   return FormatOtherSymbol(symbol);

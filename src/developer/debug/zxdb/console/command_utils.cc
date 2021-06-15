@@ -677,7 +677,7 @@ void JobCommandCallback(const char* verb, fxl::WeakPtr<Job> job, bool display_me
 
 void PrintReturnValue(const FunctionReturnInfo& info) {
   // This only works for symbolized functions.
-  const Function* func = info.symbol.Get()->AsFunction();
+  const Function* func = info.symbol.Get()->As<Function>();
   if (!func)
     return;
 

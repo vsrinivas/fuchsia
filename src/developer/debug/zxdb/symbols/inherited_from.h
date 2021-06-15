@@ -32,9 +32,6 @@ class InheritedFrom final : public Symbol {
     kExpression,  // Expressed as a location_expression().
   };
 
-  // Symbol override.
-  const InheritedFrom* AsInheritedFrom() const;
-
   Kind kind() const { return kind_; }
 
   const LazySymbol& from() const { return from_; }
@@ -49,6 +46,10 @@ class InheritedFrom final : public Symbol {
 
   // We could add the value of the DW_AT_accessibility for public/private and DW_TAG_virtuality for
   // virtual inheritance.
+
+ protected:
+  // Symbol override.
+  const InheritedFrom* AsInheritedFrom() const override;
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(InheritedFrom);

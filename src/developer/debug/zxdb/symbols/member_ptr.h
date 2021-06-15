@@ -18,9 +18,6 @@ class MemberPtr final : public Type {
  public:
   // Construct with fxl::MakeRefCounted().
 
-  // Symbol overrides.
-  const MemberPtr* AsMemberPtr() const override;
-
   // This is the containing class type, i.e. "Foo" in "int Foo::*".
   const LazySymbol& container_type() const { return container_type_; }
 
@@ -29,6 +26,7 @@ class MemberPtr final : public Type {
 
  protected:
   // Symbol protected overrides.
+  const MemberPtr* AsMemberPtr() const override;
   std::string ComputeFullName() const override;
 
  private:

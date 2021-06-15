@@ -26,14 +26,14 @@ const Variable* Function::GetObjectPointerVariable() const {
   if (!object_pointer())
     return nullptr;  // No object pointer on this function.
 
-  const Variable* var = object_pointer().Get()->AsVariable();
+  const Variable* var = object_pointer().Get()->As<Variable>();
   if (!var)
     return nullptr;  // Symbols corrupt.
   const std::string& name = var->GetAssignedName();
 
   // Check the parameters for a var with the same name.
   for (const auto& lazy_param : parameters()) {
-    const Variable* param = lazy_param.Get()->AsVariable();
+    const Variable* param = lazy_param.Get()->As<Variable>();
     if (!param)
       continue;  // This symbol is corrupt.
     if (param->GetAssignedName() == name)

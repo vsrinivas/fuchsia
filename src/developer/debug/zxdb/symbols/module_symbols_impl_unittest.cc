@@ -286,10 +286,10 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
       setup.symbols()->ResolveInputLocation(symbol_context, InputLocation(global_name), options);
   ASSERT_LE(1u, addrs.size());
   EXPECT_TRUE(addrs[0].symbol());
-  const Variable* var = addrs[0].symbol().Get()->AsVariable();
+  const Variable* var = addrs[0].symbol().Get()->As<Variable>();
   ASSERT_TRUE(var);
   EXPECT_EQ(TestSymbolModule::kGlobalName, var->GetFullName());
-  const Type* var_type = var->type().Get()->AsType();
+  const Type* var_type = var->type().Get()->As<Type>();
   ASSERT_TRUE(var_type);
   EXPECT_EQ("int", var_type->GetFullName());
 
@@ -305,10 +305,10 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
       InputLocation(TestSymbolModule::SplitName(TestSymbolModule::kClassStaticName)), options);
   ASSERT_LE(1u, addrs.size());
   EXPECT_TRUE(addrs[0].symbol());
-  var = addrs[0].symbol().Get()->AsVariable();
+  var = addrs[0].symbol().Get()->As<Variable>();
   ASSERT_TRUE(var);
   EXPECT_EQ(TestSymbolModule::kClassStaticName, var->GetFullName());
-  var_type = var->type().Get()->AsType();
+  var_type = var->type().Get()->As<Type>();
   ASSERT_TRUE(var_type);
   EXPECT_EQ("int", var_type->GetFullName());
 
@@ -347,7 +347,7 @@ TEST(ModuleSymbols, ResolvePLTEntry) {
   EXPECT_TRUE(result[0].is_valid());
   EXPECT_EQ(TestSymbolModule::kPltFunctionOffset, result[0].address());
 
-  const ElfSymbol* elf_symbol = result[0].symbol().Get()->AsElfSymbol();
+  const ElfSymbol* elf_symbol = result[0].symbol().Get()->As<ElfSymbol>();
   ASSERT_TRUE(elf_symbol);
   EXPECT_EQ(ElfSymbolType::kPlt, elf_symbol->elf_type());
   EXPECT_EQ(TestSymbolModule::kPltFunctionName, elf_symbol->linkage_name());
@@ -357,7 +357,7 @@ TEST(ModuleSymbols, ResolvePLTEntry) {
       symbol_context, InputLocation(TestSymbolModule::kPltFunctionOffset), options);
   ASSERT_EQ(1u, result.size());
 
-  elf_symbol = result[0].symbol().Get()->AsElfSymbol();
+  elf_symbol = result[0].symbol().Get()->As<ElfSymbol>();
   ASSERT_TRUE(elf_symbol);
   EXPECT_EQ(ElfSymbolType::kPlt, elf_symbol->elf_type());
   EXPECT_EQ(TestSymbolModule::kPltFunctionName, elf_symbol->linkage_name());
@@ -424,7 +424,7 @@ TEST(ModuleSymbols, SkipPrologue) {
   ASSERT_EQ(1u, no_skip_addrs.size());
   EXPECT_EQ(TestSymbolModule::kMyFunctionAddress, no_skip_addrs[0].address());
   EXPECT_EQ(TestSymbolModule::kMyFunctionName,
-            no_skip_addrs[0].symbol().Get()->AsFunction()->GetFullName());
+            no_skip_addrs[0].symbol().Get()->As<Function>()->GetFullName());
 
   // Now with prologue skipping.
   ResolveOptions skip_options;
@@ -436,7 +436,7 @@ TEST(ModuleSymbols, SkipPrologue) {
   EXPECT_EQ(no_skip_addrs[0].address() + TestSymbolModule::kMyFunctionPrologueSize,
             skip_addrs[0].address());
   EXPECT_EQ(TestSymbolModule::kMyFunctionName,
-            skip_addrs[0].symbol().Get()->AsFunction()->GetFullName());
+            skip_addrs[0].symbol().Get()->As<Function>()->GetFullName());
 
   // Query by line. No skipping.
   InputLocation input_line_loc(FileLine("zxdb_symbol_test.cc", TestSymbolModule::kMyFunctionLine));
@@ -445,7 +445,7 @@ TEST(ModuleSymbols, SkipPrologue) {
   ASSERT_EQ(1u, no_skip_addrs.size());
   EXPECT_EQ(TestSymbolModule::kMyFunctionAddress, no_skip_addrs[0].address());
   EXPECT_EQ(TestSymbolModule::kMyFunctionName,
-            no_skip_addrs[0].symbol().Get()->AsFunction()->GetFullName());
+            no_skip_addrs[0].symbol().Get()->As<Function>()->GetFullName());
 
   // With skipping.
   skip_addrs = setup.symbols()->ResolveInputLocation(symbol_context, input_line_loc, skip_options);
@@ -453,7 +453,7 @@ TEST(ModuleSymbols, SkipPrologue) {
   EXPECT_EQ(TestSymbolModule::kMyFunctionAddress + TestSymbolModule::kMyFunctionPrologueSize,
             skip_addrs[0].address());
   EXPECT_EQ(TestSymbolModule::kMyFunctionName,
-            skip_addrs[0].symbol().Get()->AsFunction()->GetFullName());
+            skip_addrs[0].symbol().Get()->As<Function>()->GetFullName());
 
   // Query by address. No skipping.
   InputLocation input_addr_loc(TestSymbolModule::kMyFunctionAddress);
@@ -462,7 +462,7 @@ TEST(ModuleSymbols, SkipPrologue) {
   ASSERT_EQ(1u, no_skip_addrs.size());
   EXPECT_EQ(TestSymbolModule::kMyFunctionAddress, no_skip_addrs[0].address());
   EXPECT_EQ(TestSymbolModule::kMyFunctionName,
-            no_skip_addrs[0].symbol().Get()->AsFunction()->GetFullName());
+            no_skip_addrs[0].symbol().Get()->As<Function>()->GetFullName());
 
   // With skipping.
   skip_addrs = setup.symbols()->ResolveInputLocation(symbol_context, input_addr_loc, skip_options);
@@ -470,7 +470,7 @@ TEST(ModuleSymbols, SkipPrologue) {
   EXPECT_EQ(TestSymbolModule::kMyFunctionAddress + TestSymbolModule::kMyFunctionPrologueSize,
             skip_addrs[0].address());
   EXPECT_EQ(TestSymbolModule::kMyFunctionName,
-            skip_addrs[0].symbol().Get()->AsFunction()->GetFullName());
+            skip_addrs[0].symbol().Get()->As<Function>()->GetFullName());
 }
 
 TEST(ModuleSymbols, ElfSymbols) {
@@ -493,7 +493,7 @@ TEST(ModuleSymbols, ElfSymbols) {
 
   // It should have found the ELF symbol.
   ASSERT_TRUE(result[0].symbol());
-  auto elf_symbol = result[0].symbol().Get()->AsElfSymbol();
+  auto elf_symbol = result[0].symbol().Get()->As<ElfSymbol>();
   ASSERT_TRUE(elf_symbol);
   EXPECT_EQ(kVirtualDerivedVtableName, elf_symbol->linkage_name());
   EXPECT_EQ(kVirtualDerivedVtableUnmangledName, elf_symbol->GetFullName());
@@ -509,7 +509,7 @@ TEST(ModuleSymbols, ElfSymbols) {
 
   // Symbols, names, and addresses should match as above.
   ASSERT_TRUE(result[0].symbol());
-  elf_symbol = result[0].symbol().Get()->AsElfSymbol();
+  elf_symbol = result[0].symbol().Get()->As<ElfSymbol>();
   ASSERT_TRUE(elf_symbol);
   EXPECT_EQ(kVirtualDerivedVtableName, elf_symbol->linkage_name());
   EXPECT_EQ(kVirtualDerivedVtableUnmangledName, elf_symbol->GetFullName());

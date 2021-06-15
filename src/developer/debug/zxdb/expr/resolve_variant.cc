@@ -19,7 +19,7 @@ Err ResolveVariant(const fxl::RefPtr<EvalContext>& context, const ExprValue& val
                    const Collection* collection, const VariantPart* variant_part,
                    fxl::RefPtr<Variant>* result) {
   // Resolve the discriminant value. It is effectively a member of the enclosing structure.
-  const DataMember* discr_member = variant_part->discriminant().Get()->AsDataMember();
+  const DataMember* discr_member = variant_part->discriminant().Get()->As<DataMember>();
   if (!discr_member)
     return Err("Missing discriminant for variant.");
 
@@ -41,7 +41,7 @@ Err ResolveVariant(const fxl::RefPtr<EvalContext>& context, const ExprValue& val
   // Check against all variants and also look for the default variant.
   const Variant* default_var = nullptr;
   for (const auto& lazy_var : variant_part->variants()) {
-    const Variant* var = lazy_var.Get()->AsVariant();
+    const Variant* var = lazy_var.Get()->As<Variant>();
     if (!var)
       continue;
 

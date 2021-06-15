@@ -48,7 +48,7 @@ TEST(ModuleSymbols, AmbiguousInline) {
   ASSERT_EQ(1u, result.size());
 
   // Most specific function should resolve to the inner inline one.
-  const Function* func = result[0].symbol().Get()->AsFunction();
+  const Function* func = result[0].symbol().Get()->As<Function>();
   ASSERT_TRUE(func);
   EXPECT_EQ("std::__2::char_traits<char>::copy", func->GetFullName());
 
@@ -57,7 +57,7 @@ TEST(ModuleSymbols, AmbiguousInline) {
   result = setup.symbols()->ResolveInputLocation(symbol_context, input_location, options);
   ASSERT_EQ(1u, result.size());
 
-  func = result[0].symbol().Get()->AsFunction();
+  func = result[0].symbol().Get()->As<Function>();
   ASSERT_TRUE(func);
   EXPECT_EQ("cmdline::GeneralArgsParser::GeneralArgsParser", func->GetFullName());
 }

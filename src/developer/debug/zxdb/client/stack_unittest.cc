@@ -254,7 +254,7 @@ TEST_F(StackTest, InlineExpansion) {
   Location loc = stack[2]->GetLocation();
   EXPECT_EQ(kBottomAddr, loc.address());
   EXPECT_EQ(inline_call_line, loc.file_line());
-  EXPECT_EQ(bottom_func.get(), loc.symbol().Get()->AsFunction());
+  EXPECT_EQ(bottom_func.get(), loc.symbol().Get()->As<Function>());
 
   // Middle stack frame should be the inline bottom function, referencing the bottom one as the
   // physical frame. The location should be the call line of the ambiguous inline function because
@@ -265,7 +265,7 @@ TEST_F(StackTest, InlineExpansion) {
   loc = stack[1]->GetLocation();
   EXPECT_EQ(kBottomAddr, loc.address());
   EXPECT_EQ(inline_ambig_call_line, loc.file_line());
-  EXPECT_EQ(bottom_inline_func.get(), loc.symbol().Get()->AsFunction());
+  EXPECT_EQ(bottom_inline_func.get(), loc.symbol().Get()->As<Function>());
 
   // The bottom_ambig_inline_func should be skipped because it's at the beginning of an inline call
   // and it's not at the top physical frame of the stack.
@@ -277,7 +277,7 @@ TEST_F(StackTest, InlineExpansion) {
   loc = stack[0]->GetLocation();
   EXPECT_EQ(kTopAddr, loc.address());
   EXPECT_EQ(top_line, loc.file_line());
-  EXPECT_EQ(top_func.get(), loc.symbol().Get()->AsFunction());
+  EXPECT_EQ(top_func.get(), loc.symbol().Get()->As<Function>());
 }
 
 TEST_F(StackTest, InlineHiding) {

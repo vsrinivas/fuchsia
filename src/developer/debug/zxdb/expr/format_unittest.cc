@@ -296,7 +296,7 @@ TEST_F(FormatTest, Struct_Artificial) {
 
   // Mark second one as artificial.
   DataMember* artificial_member =
-      const_cast<DataMember*>(foo_type->data_members()[1].Get()->AsDataMember());
+      const_cast<DataMember*>(foo_type->data_members()[1].Get()->As<DataMember>());
   artificial_member->set_artificial(true);
 
   EXPECT_EQ(

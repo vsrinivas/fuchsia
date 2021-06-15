@@ -44,7 +44,7 @@ TEST(Index, CrossUnitInline) {
   // The resolved symbol should be a function.
   LazySymbol lazy = setup.symbols()->symbol_factory()->MakeLazy(refs[0].offset());
   const Symbol* symbol = lazy.Get();
-  const Function* function = symbol->AsFunction();
+  const Function* function = symbol->As<Function>();
   ASSERT_TRUE(function);
 
   // Validate name and code ranges.

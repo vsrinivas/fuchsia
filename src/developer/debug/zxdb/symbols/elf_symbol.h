@@ -28,9 +28,12 @@ class ElfSymbol : public Symbol {
   uint64_t size() const { return record_.size; }
 
   // Symbol public overrides:
-  const ElfSymbol* AsElfSymbol() const override { return this; }
   const std::string& GetAssignedName() const override { return record_.unmangled_name; }
   fxl::WeakPtr<ModuleSymbols> GetModuleSymbols() const override { return module_; }
+
+ protected:
+  // Symbol protected overrides:
+  const ElfSymbol* AsElfSymbol() const override { return this; }
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(ElfSymbol);

@@ -89,7 +89,7 @@ void PromotePtrRefToDerived(const fxl::RefPtr<EvalContext>& context, PromoteToDe
   // type is correct, with all C-V qualifiers.
   TargetPointer vtable_member_loc = object_loc + vtable_member->member_location();
   ResolvePointer(
-      context, vtable_member_loc, RefPtrTo(vtable_member->type().Get()->AsType()),
+      context, vtable_member_loc, RefPtrTo(vtable_member->type().Get()->As<Type>()),
       [context, original_value = std::move(value), modifier_tag = mod_type->tag(),
        modified_type = RefPtrTo(original_type), cb = std::move(cb)](ErrOrValue result) mutable {
         if (result.has_error())
@@ -128,7 +128,7 @@ void PromotePtrRefToDerived(const fxl::RefPtr<EvalContext>& context, PromoteToDe
 
 fxl::RefPtr<DataMember> GetVtableMember(const Collection* coll) {
   for (const auto& lazy_member : coll->data_members()) {
-    const DataMember* member = lazy_member.Get()->AsDataMember();
+    const DataMember* member = lazy_member.Get()->As<DataMember>();
     if (!member)
       continue;
 
@@ -151,7 +151,7 @@ fxl::RefPtr<Type> DerivedTypeForVtable(const fxl::RefPtr<EvalContext>& context, 
 
   // Expect vtable symbols to be ELF ones. There won't be DWARF entries since they don't appear in
   // the program.
-  const ElfSymbol* elf_symbol = loc.symbol().Get()->AsElfSymbol();
+  const ElfSymbol* elf_symbol = loc.symbol().Get()->As<ElfSymbol>();
   if (!elf_symbol)
     return nullptr;
 

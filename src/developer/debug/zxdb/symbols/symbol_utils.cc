@@ -26,7 +26,7 @@ Identifier GetSymbolScopePrefix(const Symbol* symbol) {
   if (parent->tag() == DwarfTag::kCompileUnit)
     return Identifier(IdentifierQualification::kGlobal);  // Don't go above compilation units.
 
-  if (parent->AsNamespace() || parent->AsCollection() || parent->AsFunction()) {
+  if (parent->As<Namespace>() || parent->As<Collection>() || parent->As<Function>()) {
     // These are the types that get qualified.
     return parent->GetIdentifier();
   }
@@ -65,12 +65,12 @@ fxl::RefPtr<Type> MakeStringLiteralType(size_t length) {
 fxl::RefPtr<Type> AddCVQualifiersToMatch(const Type* reference, fxl::RefPtr<Type> modified) {
   const Type* source = reference;
   while (source) {
-    const ModifiedType* mod_source = source->AsModifiedType();
+    const ModifiedType* mod_source = source->As<ModifiedType>();
     if (!mod_source || !DwarfTagIsCVQualifier(mod_source->tag()))
       break;
 
     modified = fxl::MakeRefCounted<ModifiedType>(mod_source->tag(), std::move(modified));
-    source = mod_source->modified().Get()->AsType();
+    source = mod_source->modified().Get()->As<Type>();
   }
 
   return modified;

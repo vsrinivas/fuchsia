@@ -133,7 +133,7 @@ fxl::RefPtr<Variant> MakeRustVariant(const std::string& name, std::optional<uint
   uint32_t byte_size = 0;
   if (members.size() > 0) {
     byte_size =
-        members.back()->member_location() + members.back()->type().Get()->AsType()->byte_size();
+        members.back()->member_location() + members.back()->type().Get()->As<Type>()->byte_size();
   }
 
   // The single member of the variant has a type name of the variant name.  This type holds all the
@@ -169,10 +169,10 @@ fxl::RefPtr<Collection> MakeRustEnum(const std::string& name, fxl::RefPtr<DataMe
   for (const auto& var : variants) {
     // Pick the size based on the largest variant
     if (!var->data_members().empty()) {
-      const DataMember* last_member = var->data_members().back().Get()->AsDataMember();
+      const DataMember* last_member = var->data_members().back().Get()->As<DataMember>();
       FX_DCHECK(last_member);  // ASsume test code has set up properly.
       uint32_t var_byte_size =
-          last_member->member_location() + last_member->type().Get()->AsType()->byte_size();
+          last_member->member_location() + last_member->type().Get()->As<Type>()->byte_size();
       if (var_byte_size > byte_size)
         byte_size = var_byte_size;
     }

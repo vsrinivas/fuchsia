@@ -245,8 +245,8 @@ TEST(FindName, FindMemberOnThis) {
   ASSERT_TRUE(found.is_found());
 
   ASSERT_EQ(FoundName::kMemberVariable, found.kind());
-  EXPECT_EQ(const_ptr_const_class_type.get(), found.object_ptr()->type().Get()->AsType());
-  EXPECT_EQ(class_type->data_members()[0].Get()->AsDataMember(), found.member().data_member());
+  EXPECT_EQ(const_ptr_const_class_type.get(), found.object_ptr()->type().Get()->As<Type>());
+  EXPECT_EQ(class_type->data_members()[0].Get()->As<DataMember>(), found.member().data_member());
 }
 
 TEST(FindName, FindAnonUnion) {

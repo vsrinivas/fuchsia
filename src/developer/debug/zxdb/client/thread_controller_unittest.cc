@@ -69,10 +69,10 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
   // frame below them (index 2) should also have the same code address.
   ASSERT_EQ(
       kMiddleInline2FunctionRange,
-      mock_frames[0]->GetLocation().symbol().Get()->AsFunction()->GetFullRange(symbol_context));
+      mock_frames[0]->GetLocation().symbol().Get()->As<Function>()->GetFullRange(symbol_context));
   ASSERT_EQ(
       kMiddleInline1FunctionRange,
-      mock_frames[1]->GetLocation().symbol().Get()->AsFunction()->GetFullRange(symbol_context));
+      mock_frames[1]->GetLocation().symbol().Get()->As<Function>()->GetFullRange(symbol_context));
   ASSERT_EQ(kMiddleInline1FunctionRange.begin(), address);
   ASSERT_EQ(kMiddleInline2FunctionRange.begin(), address);
 

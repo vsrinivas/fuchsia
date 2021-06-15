@@ -120,7 +120,7 @@ void IndexNode::Dump(const std::string& name, std::ostream& out,
 
       LazySymbol lazy = factory_for_loc->MakeLazy(die_ref.offset());
       const Symbol* symbol = lazy.Get();
-      if (const Function* function = symbol->AsFunction()) {
+      if (const Function* function = symbol->As<Function>()) {
         out << function->code_ranges().ToString();
       } else {
         // Everything else just gets the DIE offset so we can identify it. This can be customized

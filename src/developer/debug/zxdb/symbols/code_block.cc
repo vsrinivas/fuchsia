@@ -54,7 +54,7 @@ const CodeBlock* CodeBlock::GetMostSpecificChild(const SymbolContext& symbol_con
     // Don't expect more than one inner block to cover the address, so return
     // the first match. Everything in the inner_blocks_ should resolve to a
     // CodeBlock object.
-    const CodeBlock* inner_block = inner.Get()->AsCodeBlock();
+    const CodeBlock* inner_block = inner.Get()->As<CodeBlock>();
     if (!inner_block)
       continue;  // Corrupted symbols.
     if (!recurse_into_inlines && inner_block->tag() == DwarfTag::kInlinedSubroutine)
@@ -74,11 +74,11 @@ fxl::RefPtr<Function> CodeBlock::GetContainingFunction() const {
   // Need to hold references when walking up the symbol hierarchy.
   fxl::RefPtr<CodeBlock> cur_block = RefPtrTo(this);
   while (cur_block) {
-    if (const Function* function = cur_block->AsFunction())
+    if (const Function* function = cur_block->As<Function>())
       return RefPtrTo(function);
 
     auto parent_ref = cur_block->parent().Get();
-    cur_block = RefPtrTo(parent_ref->AsCodeBlock());
+    cur_block = RefPtrTo(parent_ref->As<CodeBlock>());
   }
   return fxl::RefPtr<Function>();
 }
@@ -89,21 +89,21 @@ std::vector<fxl::RefPtr<Function>> CodeBlock::GetInlineChain() const {
   // Need to hold references when walking up the symbol hierarchy.
   fxl::RefPtr<CodeBlock> cur_block = RefPtrTo(this);
   while (cur_block) {
-    if (const Function* function = cur_block->AsFunction()) {
+    if (const Function* function = cur_block->As<Function>()) {
       result.push_back(RefPtrTo(function));
 
       if (function->is_inline()) {
         // Follow the inlined structure via containing_block() rather than the lexical structure of
         // the inlined function (e.g. its parent class).
         auto containing = function->containing_block().Get();
-        cur_block = RefPtrTo(containing->AsCodeBlock());
+        cur_block = RefPtrTo(containing->As<CodeBlock>());
       } else {
         // Just added containing non-inline function so we're done.
         break;
       }
     } else {
       auto parent_ref = cur_block->parent().Get();
-      cur_block = RefPtrTo(parent_ref->AsCodeBlock());
+      cur_block = RefPtrTo(parent_ref->As<CodeBlock>());
     }
   }
   return result;

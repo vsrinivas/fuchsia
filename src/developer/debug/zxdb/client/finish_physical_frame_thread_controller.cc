@@ -84,7 +84,7 @@ void FinishPhysicalFrameThreadController::InitWithThread(Thread* thread,
 #endif
 
   if (enable_debug_logging()) {
-    auto function = stack[frame_to_finish_]->GetLocation().symbol().Get()->AsFunction();
+    auto function = stack[frame_to_finish_]->GetLocation().symbol().Get()->As<Function>();
     if (function)
       Log("Finishing %s", function->GetFullName().c_str());
     else

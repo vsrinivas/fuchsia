@@ -22,9 +22,6 @@ class CodeBlock : public Symbol {
  public:
   // Construct with fxl::MakeRefCounted().
 
-  // Symbol overrides.
-  const CodeBlock* AsCodeBlock() const override;
-
   // The valid ranges of code for this block. In many cases there will be only one range (most
   // functions specify DW_AT_low_pc and DW_AT_high_pc), but some blocks, especially inlined
   // subroutines, may be at multiple discontiguous ranges in the code (DW_AT_ranges are specified).
@@ -113,6 +110,9 @@ class CodeBlock : public Symbol {
 
   explicit CodeBlock(DwarfTag tag);
   ~CodeBlock() override;
+
+  // Symbol protected overrides.
+  const CodeBlock* AsCodeBlock() const override;
 
  private:
   AddressRanges code_ranges_;

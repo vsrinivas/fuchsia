@@ -94,7 +94,7 @@ void EvalExpressions(const std::vector<std::string>& inputs,
 Err ValueToAddressAndSize(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& value,
                           uint64_t* address, std::optional<uint32_t>* size) {
   fxl::RefPtr<Type> concrete_type = eval_context->GetConcreteType(value.type());
-  if (concrete_type->AsCollection()) {
+  if (concrete_type->As<Collection>()) {
     // Don't allow structs and classes that are <= 64 bits to be converted
     // to addresses.
     return Err("Can't convert '%s' to an address.", concrete_type->GetFullName().c_str());

@@ -264,7 +264,7 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
     const zxdb::Location location = stack[i]->GetLocation();
     if (location.symbol().is_valid()) {
       auto symbol = location.symbol().Get();
-      if (auto function = symbol->AsFunction()) {
+      if (auto function = symbol->As<zxdb::Function>()) {
         out += " " + zxdb::FormatFunctionName(function, {}).AsString();
       } else {
         out += " " + symbol->GetFullName();

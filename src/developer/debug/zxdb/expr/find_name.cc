@@ -85,7 +85,7 @@ bool NameMatches(const FindNameOptions& options, const std::string& name,
 VisitResult VisitVariableVector(const std::vector<LazySymbol>& vect,
                                 fit::function<VisitResult(const Variable*)>& visitor) {
   for (const auto& cur : vect) {
-    const Variable* var = cur.Get()->AsVariable();
+    const Variable* var = cur.Get()->As<Variable>();
     if (!var)
       continue;  // Symbols are corrupt.
 
@@ -103,32 +103,32 @@ FoundName FoundNameFromSymbolRef(const ModuleSymbols* module_symbols,
     return FoundName();
   const Symbol* symbol = lazy_symbol.Get();
 
-  if (const Function* func = symbol->AsFunction()) {
+  if (const Function* func = symbol->As<Function>()) {
     if (options.find_functions)
       return FoundName(func);
     return FoundName();
   }
 
-  if (const Variable* var = symbol->AsVariable()) {
+  if (const Variable* var = symbol->As<Variable>()) {
     if (options.find_vars)
       return FoundName(var);
     return FoundName();
   }
 
-  if (const DataMember* dm = symbol->AsDataMember()) {
+  if (const DataMember* dm = symbol->As<DataMember>()) {
     FX_DCHECK(dm->is_external());  // Only static ("external") members should be in the index.
     if (options.find_vars)
       return FoundName(nullptr, FoundMember(nullptr, dm));
     return FoundName();
   }
 
-  if (const Namespace* ns = symbol->AsNamespace()) {
+  if (const Namespace* ns = symbol->As<Namespace>()) {
     if (options.find_namespaces)
       return FoundName(FoundName::kNamespace, ns->GetFullName());
     return FoundName();
   }
 
-  if (const Type* type = symbol->AsType()) {
+  if (const Type* type = symbol->As<Type>()) {
     if (options.find_types)  // All types.
       return FoundName(RefPtrTo(type));
     if (options.find_type_defs && !type->is_declaration())  // Type definitions only.
@@ -391,7 +391,7 @@ VisitResult FindMemberOn(const FindNameContext& context, const FindNameOptions& 
   if (const std::string* looking_for_name = GetSingleComponentIdentifierName(looking_for);
       looking_for_name && options.find_vars) {
     for (const auto& lazy : base_coll->data_members()) {
-      if (const DataMember* data = lazy.Get()->AsDataMember()) {
+      if (const DataMember* data = lazy.Get()->As<DataMember>()) {
         // TODO(brettw) allow "BaseClass::foo" syntax for specifically naming a member of a base
         // class. Watch out: the base class could be qualified (or not) in various ways:
         // ns::BaseClass::foo, BaseClass::foo, etc.
@@ -405,7 +405,7 @@ VisitResult FindMemberOn(const FindNameContext& context, const FindNameOptions& 
         if (data->GetAssignedName().empty()) {
           // Recursively search into anonymous unions. We assume this is C++ and anonymous
           // collections can't have base classes so we don't need to VisitClassHierarchy().
-          if (const Collection* member_coll = data->type().Get()->AsCollection()) {
+          if (const Collection* member_coll = data->type().Get()->As<Collection>()) {
             // Construct a new inheritance path with a synthetic InheritedFrom member to represent
             // the offset of the anonymous collection within the containing one.
             InheritancePath synthetic_path(path);
@@ -518,7 +518,7 @@ VisitResult VisitLocalVariables(const CodeBlock* block,
       return vr;
 
     // Function parameters.
-    if (const Function* function = cur_block->AsFunction()) {
+    if (const Function* function = cur_block->As<Function>()) {
       // Found a function, check for a match in its parameters.
       vr = VisitVariableVector(function->parameters(), visitor);
       if (vr != VisitResult::kContinue)

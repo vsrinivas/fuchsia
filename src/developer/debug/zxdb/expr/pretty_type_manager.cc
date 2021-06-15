@@ -87,7 +87,7 @@ PrettyType* PrettyTypeManager::GetForType(const Type* in_type) const {
   }
 
   if (type->GetLanguage() == DwarfLang::kRust) {
-    const Collection* coll = type->AsCollection();
+    const Collection* coll = type->As<Collection>();
     if (!coll) {
       return nullptr;
     }

@@ -223,7 +223,7 @@ Err PopulateLocalVariables(
   if (!location.symbol())
     return Err("There is no symbol information for the frame.");
 
-  const Function* function = location.symbol().Get()->AsFunction();
+  const Function* function = location.symbol().Get()->As<Function>();
   if (!function)
     return Err("Symbols are corrupt.");
 
@@ -254,7 +254,7 @@ Err PopulateLocalVariables(
   VisitLocalBlocks(function->GetMostSpecificChild(location.symbol_context(), location.address()),
                    [&vars](const CodeBlock* block) {
                      for (const auto& lazy_var : block->variables()) {
-                       const Variable* var = lazy_var.Get()->AsVariable();
+                       const Variable* var = lazy_var.Get()->As<Variable>();
                        if (!var)
                          continue;  // Symbols are corrupt.
 
@@ -279,13 +279,13 @@ Err PopulateFunctionArguments(
   if (!location.symbol())
     return Err("There is no symbol information for the frame.");
 
-  const Function* function = location.symbol().Get()->AsFunction();
+  const Function* function = location.symbol().Get()->As<Function>();
   if (!function)
     return Err("Symbols are corrupt.");
 
   // Add function parameters.
   for (const auto& param : function->parameters()) {
-    const Variable* var = param.Get()->AsVariable();
+    const Variable* var = param.Get()->As<Variable>();
     if (!var)
       continue;  // Symbols are corrupt.
 

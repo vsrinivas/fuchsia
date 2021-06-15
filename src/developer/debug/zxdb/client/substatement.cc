@@ -43,7 +43,7 @@ std::vector<SubstatementCall> GetInlineCallsForLocation(const ProcessSymbols* sy
                                                         const Location& loc) {
   std::vector<SubstatementCall> result;
 
-  const Function* func = loc.symbol().Get()->AsFunction();
+  const Function* func = loc.symbol().Get()->As<Function>();
   if (!func)
     return result;
 
@@ -58,7 +58,7 @@ std::vector<SubstatementCall> GetInlineCallsForLocation(const ProcessSymbols* sy
   // Check for inlines that are children of the current block for ones that start at the current
   // line.
   for (const auto& child : block->inner_blocks()) {
-    const Function* call = child.Get()->AsFunction();
+    const Function* call = child.Get()->As<Function>();
     if (!call || !call->is_inline())
       continue;
 
@@ -168,7 +168,7 @@ void GetSubstatementCallsForLine(
       inline_ranges.empty() ? loc.address() : inline_ranges.back().end();
   // Compute the end of the function to know where to stop searching.
   TargetPointer function_end = end_inline_address + 1;  // Default to querying one byte.
-  if (const Function* func = loc.symbol().Get()->AsFunction()) {
+  if (const Function* func = loc.symbol().Get()->As<Function>()) {
     // There can be more than one discontiguous address range for the function, use the one
     // that contains the address we're starting the query from. It's theoretically possible the
     // range we want to query covers a discontiguous memory region, but ignore that case since it

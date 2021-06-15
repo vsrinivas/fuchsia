@@ -38,7 +38,6 @@ class Function final : public CodeBlock {
   // Construct with fxl::MakeRefCounted().
 
   // Symbol overrides.
-  const Function* AsFunction() const override;
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
   // Returns true if this function is an inlined function instance.
@@ -127,6 +126,10 @@ class Function final : public CodeBlock {
   const LazySymbol& object_pointer() const { return object_pointer_; }
   void set_object_pointer(const LazySymbol& op) { object_pointer_ = op; }
   const Variable* GetObjectPointerVariable() const;
+
+ protected:
+  // Symbol protected overrides.
+  const Function* AsFunction() const override;
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Function);

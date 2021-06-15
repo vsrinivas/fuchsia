@@ -14,7 +14,6 @@ class Namespace final : public Symbol {
   // Construct with fxl::MakeRefCounted().
 
   // Symbol overrides.
-  const Namespace* AsNamespace() const override;
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
   // The name of the namespace. This will be empty for anonymous namespaces. It will not include
@@ -23,6 +22,10 @@ class Namespace final : public Symbol {
 
   // Currently we don't have any notion of the stuff contained in the namespace because currently
   // there's no need. That could be added here if necessary.
+
+ protected:
+  // Symbol protected overrides:
+  const Namespace* AsNamespace() const override;
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Namespace);

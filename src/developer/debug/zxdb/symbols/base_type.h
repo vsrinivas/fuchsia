@@ -43,14 +43,17 @@ class BaseType final : public Type {
   // Returns wiether the given base type is a signed integer.
   static bool IsSigned(int base_type);
 
-  // Symbol overrides.
-  const BaseType* AsBaseType() const final;
+  // Symbol override.
   const std::string& GetAssignedName() const final;
 
   // Returns one of kBaseType* or possibly something else if the language is new or unusual. Don't
   // handle, but also don't crash on unexpected values.
   int base_type() const { return base_type_; }
   void set_base_type(int type) { base_type_ = type; }
+
+ protected:
+  // Symbol protected override.
+  const BaseType* AsBaseType() const final;
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(BaseType);

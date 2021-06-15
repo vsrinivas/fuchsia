@@ -55,9 +55,6 @@ class Collection final : public Type {
   };
   static const char* CallingConventionToString(CallingConvention cc);
 
-  // Symbol overrides.
-  const Collection* AsCollection() const override;
-
   // Data members. These should be DataMember objects.
   const std::vector<LazySymbol>& data_members() const { return data_members_; }
   void set_data_members(std::vector<LazySymbol> d) { data_members_ = std::move(d); }
@@ -97,6 +94,10 @@ class Collection final : public Type {
 
   // Currently we don't have any notion of member functions because there's no need. That could be
   // added here if necessary (generally the symbols will contain this).
+
+ protected:
+  // Symbol protected overrides.
+  const Collection* AsCollection() const override;
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Collection);

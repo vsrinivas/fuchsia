@@ -18,9 +18,6 @@ class ModuleSymbols;
 // Represents a DWARF "unit" DIE. See also DwarfUnit.
 class CompileUnit final : public Symbol {
  public:
-  // Symbol overrides.
-  const CompileUnit* AsCompileUnit() const override { return this; }
-
   // Module. This can be null if the module was unloaded while somebody held onto this symbol. It
   // is also null in many unit testing situations where mock symbols are created.
   const fxl::WeakPtr<ModuleSymbols>& module() const { return module_; }
@@ -37,6 +34,10 @@ class CompileUnit final : public Symbol {
 
   // Compilation units have a lot of other stuff which we currently have no need for. These can be
   // added here as needed.
+
+ protected:
+  // Symbol protected overrides.
+  const CompileUnit* AsCompileUnit() const override { return this; }
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(CompileUnit);

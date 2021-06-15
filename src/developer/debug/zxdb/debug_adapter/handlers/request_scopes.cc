@@ -34,7 +34,7 @@ dap::ResponseOrError<dap::ScopesResponse> OnRequestScopes(DebugAdapterContext* c
   if (!location.symbol())
     return dap::Error("There is no symbol information for the frame.");
 
-  const Function* function = location.symbol().Get()->AsFunction();
+  const Function* function = location.symbol().Get()->As<Function>();
   if (!function)
     return dap::Error("Symbols are corrupt.");
 

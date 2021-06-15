@@ -196,7 +196,7 @@ Err RunDisassembleVerb(ConsoleContext* context, const Command& cmd) {
           // All input locations will have the same type (matching the user input type).
           if (size_is_default && locs.value()[0].type == InputLocation::Type::kName) {
             if (location.symbol()) {
-              if (const CodeBlock* block = location.symbol().Get()->AsCodeBlock()) {
+              if (const CodeBlock* block = location.symbol().Get()->As<CodeBlock>()) {
                 size = block->GetFullRange(location.symbol_context()).size();
                 options.max_instructions = 0;  // No instruction limit.
               }

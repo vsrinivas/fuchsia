@@ -303,7 +303,7 @@ std::vector<fxl::RefPtr<Function>> ModuleSymbolsImpl::GetMainFunctions() const {
   std::vector<fxl::RefPtr<Function>> result;
   for (const auto& ref : index_.main_functions()) {
     auto symbol_ref = IndexSymbolRefToSymbol(ref);
-    const Function* func = symbol_ref.Get()->AsFunction();
+    const Function* func = symbol_ref.Get()->As<Function>();
     if (func)
       result.emplace_back(RefPtrTo(func));
   }
@@ -416,10 +416,10 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     LazySymbol lazy_symbol = IndexSymbolRefToSymbol(ref);
     const Symbol* symbol = lazy_symbol.Get();
 
-    if (const Function* function = symbol->AsFunction()) {
+    if (const Function* function = symbol->As<Function>()) {
       // Symbol is a function.
       AppendLocationForFunction(symbol_context, options, function, &result);
-    } else if (const Variable* variable = symbol->AsVariable()) {
+    } else if (const Variable* variable = symbol->As<Variable>()) {
       // Symbol is a variable. This will be the case for global variables and file- and class-level
       // statics. This always symbolizes since we already computed the symbol.
       result.push_back(LocationForVariable(symbol_context, RefPtrTo(variable)));
@@ -488,7 +488,7 @@ std::optional<Location> ModuleSymbolsImpl::DwarfLocationForAddress(
     if (llvm::DWARFDie subroutine = unit->FunctionForRelativeAddress(relative_address)) {
       // getSubroutineForAddress() will return the most specific inlined function for the address.
       lazy_function = symbol_factory_->MakeLazy(subroutine);
-      function = RefPtrTo(lazy_function.Get()->AsFunction());
+      function = RefPtrTo(lazy_function.Get()->As<Function>());
 
       // The is_inline() check is strictly unnecessary since ambiguous inline computations will
       // work either way. This check allows us to skip the ambiguous inline computations in the

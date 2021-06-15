@@ -117,7 +117,7 @@ Err RunVerbSymInfo(ConsoleContext* context, const Command& cmd) {
     // just skip local variables in that case.
     process_symbols = cmd.target()->GetProcess()->GetSymbols();
     const CodeBlock* code_block =
-        cmd.frame() ? cmd.frame()->GetLocation().symbol().Get()->AsCodeBlock() : nullptr;
+        cmd.frame() ? cmd.frame()->GetLocation().symbol().Get()->As<CodeBlock>() : nullptr;
     find_context =
         FindNameContext(process_symbols, SymbolContext::ForRelativeAddresses(), code_block);
   } else {

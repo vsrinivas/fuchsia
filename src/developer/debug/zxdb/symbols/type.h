@@ -15,7 +15,6 @@ namespace zxdb {
 class Type : public Symbol {
  public:
   // Symbol overrides.
-  const Type* AsType() const final;
   const std::string& GetAssignedName() const { return assigned_name_; }
 
   // Strips "const" and "volatile", and "atomic" qualifiers, as well as the uncommon "restrict" C
@@ -55,6 +54,9 @@ class Type : public Symbol {
 
   explicit Type(DwarfTag kind);
   virtual ~Type();
+
+  // Symbol protected overrides:
+  const Type* AsType() const final;
 
  private:
   std::string assigned_name_;

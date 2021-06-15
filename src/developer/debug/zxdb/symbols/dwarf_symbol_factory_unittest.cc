@@ -58,7 +58,7 @@ fxl::RefPtr<Function> GetFunctionWithName(ModuleSymbolsImpl* module_symbols,
   if (locs.size() != 1)
     return nullptr;
 
-  return RefPtrTo(locs[0].symbol().Get()->AsFunction());
+  return RefPtrTo(locs[0].symbol().Get()->As<Function>());
 }
 
 }  // namespace
@@ -101,7 +101,7 @@ TEST(DwarfSymbolFactory, PtrToMemberFunction) {
 
   // Get the return type, this is a typedef (because functions can't return pointers to member
   // functions).
-  auto return_typedef = get_function->return_type().Get()->AsModifiedType();
+  auto return_typedef = get_function->return_type().Get()->As<ModifiedType>();
   ASSERT_TRUE(return_typedef);
 
   // The typedef references the member pointer. The type name encapsulates all return values and
@@ -125,7 +125,7 @@ TEST(DwarfSymbolFactory, InlinedMemberFunction) {
 
   // It should have one inner block that's the inline function.
   ASSERT_EQ(1u, call_function->inner_blocks().size());
-  const Function* inline_func = call_function->inner_blocks()[0].Get()->AsFunction();
+  const Function* inline_func = call_function->inner_blocks()[0].Get()->As<Function>();
   ASSERT_TRUE(inline_func);
   EXPECT_EQ(DwarfTag::kInlinedSubroutine, inline_func->tag());
 
@@ -133,9 +133,9 @@ TEST(DwarfSymbolFactory, InlinedMemberFunction) {
 
   // The inline function should have two parameters, "this" and "param".  ASSERT_EQ(2u,
   // inline_func->parameters().size());
-  const Variable* param0 = inline_func->parameters()[0].Get()->AsVariable();
+  const Variable* param0 = inline_func->parameters()[0].Get()->As<Variable>();
   ASSERT_TRUE(param0);
-  const Variable* param1 = inline_func->parameters()[1].Get()->AsVariable();
+  const Variable* param1 = inline_func->parameters()[1].Get()->As<Variable>();
   ASSERT_TRUE(param1);
 
   // They can appear in either order. Because it's an inlined function, the abtract origin can
@@ -169,7 +169,7 @@ TEST(DwarfSymbolFactory, InlinedFunction) {
 
   // It should have one inner block that's the inline function.
   ASSERT_EQ(1u, call_function->inner_blocks().size());
-  const Function* inline_func = call_function->inner_blocks()[0].Get()->AsFunction();
+  const Function* inline_func = call_function->inner_blocks()[0].Get()->As<Function>();
   ASSERT_TRUE(inline_func);
   EXPECT_EQ(DwarfTag::kInlinedSubroutine, inline_func->tag());
 
@@ -187,7 +187,7 @@ TEST(DwarfSymbolFactory, InlinedFunction) {
   // objects may not be the same.
   ASSERT_TRUE(inline_func->containing_block());
   auto containing_block = inline_func->containing_block().Get();
-  auto containing_func = containing_block->AsFunction();
+  auto containing_func = containing_block->As<Function>();
   ASSERT_TRUE(containing_func);
   EXPECT_EQ(kCallInlineName, containing_func->GetFullName());
 }
@@ -202,19 +202,19 @@ TEST(DwarfSymbolFactory, ModifiedBaseType) {
 
   // Get the return type, this references a "pointer" modifier.
   EXPECT_TRUE(function->return_type().is_valid());
-  const ModifiedType* ptr_mod = function->return_type().Get()->AsModifiedType();
+  const ModifiedType* ptr_mod = function->return_type().Get()->As<ModifiedType>();
   ASSERT_TRUE(ptr_mod) << "Tag = " << static_cast<int>(function->return_type().Get()->tag());
   EXPECT_EQ(DwarfTag::kPointerType, ptr_mod->tag());
   EXPECT_EQ("const int*", ptr_mod->GetFullName());
 
   // The modified type should be a "const" modifier.
-  const ModifiedType* const_mod = ptr_mod->modified().Get()->AsModifiedType();
+  const ModifiedType* const_mod = ptr_mod->modified().Get()->As<ModifiedType>();
   ASSERT_TRUE(const_mod) << "Tag = " << static_cast<int>(function->return_type().Get()->tag());
   EXPECT_EQ(DwarfTag::kConstType, const_mod->tag());
   EXPECT_EQ("const int", const_mod->GetFullName());
 
   // The modified type should be the int base type.
-  const BaseType* base = const_mod->modified().Get()->AsBaseType();
+  const BaseType* base = const_mod->modified().Get()->As<BaseType>();
   ASSERT_TRUE(base);
   EXPECT_EQ(DwarfTag::kBaseType, base->tag());
   EXPECT_EQ("int", base->GetFullName());
@@ -237,9 +237,9 @@ TEST(DwarfSymbolFactory, RValueRef) {
 
   // Should have one parameter of rvalue ref type.
   ASSERT_EQ(1u, function->parameters().size());
-  const Variable* var = function->parameters()[0].Get()->AsVariable();
+  const Variable* var = function->parameters()[0].Get()->As<Variable>();
   ASSERT_TRUE(var);
-  const ModifiedType* modified = var->type().Get()->AsModifiedType();
+  const ModifiedType* modified = var->type().Get()->As<ModifiedType>();
   ASSERT_TRUE(modified);
   EXPECT_EQ(DwarfTag::kRvalueReferenceType, modified->tag());
 
@@ -257,12 +257,12 @@ TEST(DwarfSymbolFactory, ArrayType) {
 
   // Find the "str_array" variable in the function.
   ASSERT_EQ(1u, function->variables().size());
-  const Variable* str_array = function->variables()[0].Get()->AsVariable();
+  const Variable* str_array = function->variables()[0].Get()->As<Variable>();
   ASSERT_TRUE(str_array);
   EXPECT_EQ("str_array", str_array->GetAssignedName());
 
   // It should be an array type with length 14.
-  const ArrayType* array_type = str_array->type().Get()->AsArrayType();
+  const ArrayType* array_type = str_array->type().Get()->As<ArrayType>();
   ASSERT_TRUE(array_type);
   EXPECT_EQ(14u, array_type->num_elts());
   EXPECT_EQ("const char[14]", array_type->GetFullName());
@@ -287,12 +287,12 @@ TEST(DwarfSymbolFactory, Array2D) {
   //   volatile int array[3][4]
   //
   ASSERT_EQ(1u, function->variables().size());
-  const Variable* array = function->variables()[0].Get()->AsVariable();
+  const Variable* array = function->variables()[0].Get()->As<Variable>();
   ASSERT_TRUE(array);
   EXPECT_EQ("array", array->GetAssignedName());
 
   // It should be an array type with length 3 (outer dimension).
-  const ArrayType* outer_array_type = array->type().Get()->AsArrayType();
+  const ArrayType* outer_array_type = array->type().Get()->As<ArrayType>();
   ASSERT_TRUE(outer_array_type);
   EXPECT_EQ(3u, outer_array_type->num_elts());
   EXPECT_EQ("volatile int[3][4]", outer_array_type->GetFullName());
@@ -300,7 +300,7 @@ TEST(DwarfSymbolFactory, Array2D) {
   // The inner array type should be a int[4].
   const Type* inner_type = outer_array_type->value_type();
   ASSERT_TRUE(inner_type);
-  const ArrayType* inner_array_type = inner_type->AsArrayType();
+  const ArrayType* inner_array_type = inner_type->As<ArrayType>();
   ASSERT_TRUE(inner_array_type);
   EXPECT_EQ(4u, inner_array_type->num_elts());
   EXPECT_EQ("volatile int[4]", inner_array_type->GetFullName());
@@ -321,7 +321,7 @@ TEST(DwarfSymbolFactory, Collection) {
   ASSERT_TRUE(function);
 
   // The return type should be the struct.
-  auto* struct_type = function->return_type().Get()->AsCollection();
+  auto* struct_type = function->return_type().Get()->As<Collection>();
   ASSERT_TRUE(struct_type);
   EXPECT_EQ("my_ns::Struct", struct_type->GetFullName());
 
@@ -330,44 +330,44 @@ TEST(DwarfSymbolFactory, Collection) {
   ASSERT_EQ(2u, struct_type->inherited_from().size());
 
   // The first thing should be Base1 at offset 0.
-  auto* base1 = struct_type->inherited_from()[0].Get()->AsInheritedFrom();
+  auto* base1 = struct_type->inherited_from()[0].Get()->As<InheritedFrom>();
   ASSERT_TRUE(base1);
-  auto* base1_type = base1->from().Get()->AsType();
+  auto* base1_type = base1->from().Get()->As<Type>();
   EXPECT_EQ("my_ns::Base1", base1_type->GetFullName());
   EXPECT_EQ(InheritedFrom::kConstant, base1->kind());
   EXPECT_EQ(0u, base1->offset());
 
   // It should be followed by Base2. To allow flexibility in packing without breaking this test, all
   // offsets below check only that the offset is greater than the previous one and a multiple of 4.
-  auto* base2 = struct_type->inherited_from()[1].Get()->AsInheritedFrom();
+  auto* base2 = struct_type->inherited_from()[1].Get()->As<InheritedFrom>();
   ASSERT_TRUE(base2);
-  auto* base2_type = base2->from().Get()->AsType();
+  auto* base2_type = base2->from().Get()->As<Type>();
   EXPECT_EQ("my_ns::Base2", base2_type->GetFullName());
   EXPECT_EQ(InheritedFrom::kConstant, base2->kind());
   EXPECT_LT(0u, base2->offset());
   EXPECT_TRUE(base2->offset() % 4 == 0);
 
   // The base classes should be followed by the data members on the struct.
-  auto* member_a = struct_type->data_members()[0].Get()->AsDataMember();
+  auto* member_a = struct_type->data_members()[0].Get()->As<DataMember>();
   ASSERT_TRUE(member_a);
-  auto* member_a_type = member_a->type().Get()->AsType();
+  auto* member_a_type = member_a->type().Get()->As<Type>();
   EXPECT_EQ("int", member_a_type->GetFullName());
   EXPECT_LT(base2->offset(), member_a->member_location());
   EXPECT_TRUE(member_a->member_location() % 4 == 0);
 
   // The second data member should be "Struct* member_b".
-  auto* member_b = struct_type->data_members()[1].Get()->AsDataMember();
+  auto* member_b = struct_type->data_members()[1].Get()->As<DataMember>();
   ASSERT_TRUE(member_b);
-  auto* member_b_type = member_b->type().Get()->AsType();
+  auto* member_b_type = member_b->type().Get()->As<Type>();
   EXPECT_EQ("my_ns::Struct*", member_b_type->GetFullName());
   EXPECT_LT(member_a->member_location(), member_b->member_location());
   EXPECT_TRUE(member_b->member_location() % 4 == 0);
 
   // The third data member is "const void* v". Void is weird because it will be represented as a
   // modified pointer type of nothing.
-  auto* member_v = struct_type->data_members()[2].Get()->AsDataMember();
+  auto* member_v = struct_type->data_members()[2].Get()->As<DataMember>();
   ASSERT_TRUE(member_v);
-  auto* member_v_type = member_v->type().Get()->AsType();
+  auto* member_v_type = member_v->type().Get()->As<Type>();
   EXPECT_EQ("const void*", member_v_type->GetFullName());
   EXPECT_LT(member_b->member_location(), member_v->member_location());
   EXPECT_TRUE(member_v->member_location() % 4 == 0);
@@ -378,19 +378,19 @@ TEST(DwarfSymbolFactory, Collection) {
   // This assumes the compiler has encoded the constexpr as a DW_AT_const_value. It's theoretically
   // possible for the constant value to be encoded as a DWARF expression but none of our compilers
   // currently do that and we really want to test ConstValue here.
-  auto* member_ci = struct_type->data_members()[3].Get()->AsDataMember();
+  auto* member_ci = struct_type->data_members()[3].Get()->As<DataMember>();
   ASSERT_TRUE(member_ci);
   EXPECT_TRUE(member_ci->is_external());
-  EXPECT_EQ("const int", member_ci->type().Get()->AsType()->GetFullName());
+  EXPECT_EQ("const int", member_ci->type().Get()->As<Type>()->GetFullName());
   EXPECT_TRUE(member_ci->const_value().has_value());
   std::vector<uint8_t> expected_minus_two{0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
   EXPECT_EQ(expected_minus_two, member_ci->const_value().GetConstValue(8));
 
   // kConstLongDouble (see kConstInt above for notes).
-  auto* member_cd = struct_type->data_members()[4].Get()->AsDataMember();
+  auto* member_cd = struct_type->data_members()[4].Get()->As<DataMember>();
   ASSERT_TRUE(member_cd);
   EXPECT_TRUE(member_cd->is_external());
-  EXPECT_EQ("const long double", member_cd->type().Get()->AsType()->GetFullName());
+  EXPECT_EQ("const long double", member_cd->type().Get()->As<Type>()->GetFullName());
   EXPECT_TRUE(member_cd->const_value().has_value());
   // This is a "long double" which can vary according to platform and compiler settings. Accept the
   // standard encodings for 64, 80, and 128 bits.
@@ -412,12 +412,12 @@ TEST(DwarfSymbolFactory, InheritedFrom) {
   fxl::RefPtr<const Function> function = GetFunctionWithName(setup.symbols(), {kGetVirtualDerived});
   ASSERT_TRUE(function);
 
-  auto* derived_type = function->return_type().Get()->AsCollection();
+  auto* derived_type = function->return_type().Get()->As<Collection>();
   ASSERT_TRUE(derived_type);
   EXPECT_EQ("VirtualDerived", derived_type->GetFullName());
 
   ASSERT_EQ(1u, derived_type->inherited_from().size());
-  const InheritedFrom* inherited = derived_type->inherited_from()[0].Get()->AsInheritedFrom();
+  const InheritedFrom* inherited = derived_type->inherited_from()[0].Get()->As<InheritedFrom>();
   ASSERT_TRUE(inherited);
 
   // Validate that it has a nonempty expression. This test doesn't require that the expression
@@ -436,7 +436,7 @@ TEST(DwarfSymbolFactory, Enum) {
   ASSERT_TRUE(function);
 
   // The return type should be the struct.
-  auto* struct_type = function->return_type().Get()->AsCollection();
+  auto* struct_type = function->return_type().Get()->As<Collection>();
   ASSERT_TRUE(struct_type);
   EXPECT_EQ("StructWithEnums", struct_type->GetFullName());
 
@@ -445,7 +445,7 @@ TEST(DwarfSymbolFactory, Enum) {
 
   // First is a regular enum with no values.
   auto regular_enum =
-      struct_type->data_members()[0].Get()->AsDataMember()->type().Get()->AsEnumeration();
+      struct_type->data_members()[0].Get()->As<DataMember>()->type().Get()->As<Enumeration>();
   ASSERT_TRUE(regular_enum);
   EXPECT_EQ("StructWithEnums::RegularEnum", regular_enum->GetFullName());
   EXPECT_TRUE(regular_enum->values().empty());
@@ -453,7 +453,7 @@ TEST(DwarfSymbolFactory, Enum) {
   // Second is an anonymous signed enum with two values. We don't bother to test the enumerator
   // values on this one since some aspects will be compiler-dependent.
   auto anon_enum =
-      struct_type->data_members()[1].Get()->AsDataMember()->type().Get()->AsEnumeration();
+      struct_type->data_members()[1].Get()->As<DataMember>()->type().Get()->As<Enumeration>();
   ASSERT_TRUE(anon_enum);
   EXPECT_EQ("StructWithEnums::(anon enum)", anon_enum->GetFullName());
   EXPECT_TRUE(anon_enum->is_signed());
@@ -461,7 +461,7 @@ TEST(DwarfSymbolFactory, Enum) {
 
   // Third is a type enum with two values.
   auto typed_enum =
-      struct_type->data_members()[2].Get()->AsDataMember()->type().Get()->AsEnumeration();
+      struct_type->data_members()[2].Get()->As<DataMember>()->type().Get()->As<Enumeration>();
   ASSERT_TRUE(typed_enum);
   EXPECT_EQ("StructWithEnums::TypedEnum", typed_enum->GetFullName());
   EXPECT_TRUE(typed_enum->is_signed());
@@ -493,7 +493,7 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
   const Variable* int_arg = nullptr;
   ASSERT_EQ(2u, function->parameters().size());
   for (const auto& param : function->parameters()) {
-    const Variable* cur_var = param.Get()->AsVariable();
+    const Variable* cur_var = param.Get()->As<Variable>();
     ASSERT_TRUE(cur_var);  // Each parameter should decode to a variable.
     if (cur_var->GetAssignedName() == "arg1")
       struct_arg = cur_var;
@@ -510,33 +510,33 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
 
   // Validate the arg1 type (const Struct&).
   ASSERT_TRUE(struct_arg);
-  const Type* struct_arg_type = struct_arg->type().Get()->AsType();
+  const Type* struct_arg_type = struct_arg->type().Get()->As<Type>();
   ASSERT_TRUE(struct_arg_type);
   EXPECT_EQ("const my_ns::Struct&", struct_arg_type->GetFullName());
 
   // Validate the arg2 type (int).
   ASSERT_TRUE(int_arg);
-  const Type* int_arg_type = int_arg->type().Get()->AsType();
+  const Type* int_arg_type = int_arg->type().Get()->As<Type>();
   ASSERT_TRUE(int_arg_type);
   EXPECT_EQ("int", int_arg_type->GetFullName());
 
   // The function block should have one variable (var1).
   ASSERT_EQ(1u, function->variables().size());
-  const Variable* var1 = function->variables()[0].Get()->AsVariable();
+  const Variable* var1 = function->variables()[0].Get()->As<Variable>();
   ASSERT_TRUE(var1);
-  const Type* var1_type = var1->type().Get()->AsType();
+  const Type* var1_type = var1->type().Get()->As<Type>();
   ASSERT_TRUE(var1_type);
   EXPECT_EQ("volatile int", var1_type->GetFullName());
 
   // There should be one child lexical scope.
   ASSERT_EQ(1u, function->inner_blocks().size());
-  const CodeBlock* inner = function->inner_blocks()[0].Get()->AsCodeBlock();
+  const CodeBlock* inner = function->inner_blocks()[0].Get()->As<CodeBlock>();
 
   // The lexical scope should have one child variable.
   ASSERT_EQ(1u, inner->variables().size());
-  const Variable* var2 = inner->variables()[0].Get()->AsVariable();
+  const Variable* var2 = inner->variables()[0].Get()->As<Variable>();
   ASSERT_TRUE(var2);
-  const Type* var2_type = var2->type().Get()->AsType();
+  const Type* var2_type = var2->type().Get()->As<Type>();
   ASSERT_TRUE(var2_type);
   EXPECT_EQ("volatile my_ns::Struct", var2_type->GetFullName());
 
@@ -555,17 +555,17 @@ TEST(DwarfSymbolFactory, NullPtrTTypedef) {
   ASSERT_TRUE(function);
 
   // The return type should be nullptr_t.
-  auto* nullptr_t_type = function->return_type().Get()->AsType();
+  auto* nullptr_t_type = function->return_type().Get()->As<Type>();
   ASSERT_TRUE(nullptr_t_type);
   EXPECT_EQ("std::nullptr_t", nullptr_t_type->GetFullName());
 
   // The standard defined nullptr_t as "typedef decltype(nullptr) nullptr_t"
-  auto* typedef_type = nullptr_t_type->AsModifiedType();
+  auto* typedef_type = nullptr_t_type->As<ModifiedType>();
   ASSERT_TRUE(typedef_type);
   EXPECT_EQ(DwarfTag::kTypedef, typedef_type->tag());
 
   // Check the type underlying the typedef.
-  auto* underlying = typedef_type->modified().Get()->AsType();
+  auto* underlying = typedef_type->modified().Get()->As<Type>();
   ASSERT_TRUE(underlying);
   EXPECT_EQ("decltype(nullptr)", underlying->GetFullName());
 
@@ -588,7 +588,7 @@ TEST(DwarfSymbolFactory, TemplateParams) {
   ASSERT_TRUE(function);
 
   // The return type should be our collection
-  auto* my_template = function->return_type().Get()->AsCollection();
+  auto* my_template = function->return_type().Get()->As<Collection>();
   ASSERT_TRUE(my_template);
   EXPECT_EQ("MyTemplate<my_ns::Struct, 42>", my_template->GetFullName());
 
@@ -596,22 +596,22 @@ TEST(DwarfSymbolFactory, TemplateParams) {
   ASSERT_EQ(2u, my_template->template_params().size());
 
   // The first one is "T = my_ns::Struct".
-  auto first_param = my_template->template_params()[0].Get()->AsTemplateParameter();
+  auto first_param = my_template->template_params()[0].Get()->As<TemplateParameter>();
   ASSERT_TRUE(first_param);
   EXPECT_EQ("T", first_param->GetAssignedName());
   EXPECT_EQ("T", first_param->GetFullName());
 
-  auto first_type = first_param->type().Get()->AsType();
+  auto first_type = first_param->type().Get()->As<Type>();
   ASSERT_TRUE(first_type);
   EXPECT_EQ("my_ns::Struct", first_type->GetFullName());
 
   // The second one is "i = int(42)".
-  auto second_param = my_template->template_params()[1].Get()->AsTemplateParameter();
+  auto second_param = my_template->template_params()[1].Get()->As<TemplateParameter>();
   ASSERT_TRUE(second_param);
   EXPECT_EQ("i", second_param->GetAssignedName());
   EXPECT_EQ("i", second_param->GetFullName());
 
-  auto second_type = second_param->type().Get()->AsType();
+  auto second_type = second_param->type().Get()->As<Type>();
   ASSERT_TRUE(second_type);
   EXPECT_EQ("int", second_type->GetFullName());
 }

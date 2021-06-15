@@ -563,7 +563,7 @@ void SizeofExprNode::SizeofType(const fxl::RefPtr<EvalContext>& context, const T
     return cb(Err("Can't resolve forward declaration for '%s'.", in_type->GetFullName().c_str()));
 
   if (DwarfTagIsEitherReference(type->tag()))
-    type = RefPtrTo(type->AsModifiedType()->modified().Get()->AsType());
+    type = RefPtrTo(type->As<ModifiedType>()->modified().Get()->As<Type>());
   if (!type)
     return cb(Err("Symbol error for '%s'.", in_type->GetFullName().c_str()));
 

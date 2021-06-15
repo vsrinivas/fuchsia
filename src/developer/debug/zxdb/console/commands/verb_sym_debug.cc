@@ -85,7 +85,7 @@ ErrOr<fxl::RefPtr<Function>> GetFunctionAtAddress(ProcessSymbols* process_symbol
   if (!loc.symbol())
     return Err("No symbol at address " + to_hex_string(address) + ".\n");
 
-  const Function* func = loc.symbol().Get()->AsFunction();
+  const Function* func = loc.symbol().Get()->As<Function>();
   if (!func)
     return Err("No function at address " + to_hex_string(address) + ".\n");
 
@@ -157,7 +157,7 @@ OutputBuffer DumpInlineChain(ProcessSymbols* process_symbols, uint64_t address,
 // Recursive function to print the inlines.
 void PrintInlineRecursive(const SymbolContext& context, uint64_t address, const CodeBlock* block,
                           int indent, OutputBuffer& output) {
-  const Function* function = block->AsFunction();
+  const Function* function = block->As<Function>();
 
   // This block could be a lexical block (takes no indents and produces no output), or a function.
   int next_indent = indent;
@@ -177,7 +177,7 @@ void PrintInlineRecursive(const SymbolContext& context, uint64_t address, const 
 
   // Print child blocks.
   for (auto& child : block->inner_blocks()) {
-    if (const CodeBlock* child_block = child.Get()->AsCodeBlock())
+    if (const CodeBlock* child_block = child.Get()->As<CodeBlock>())
       PrintInlineRecursive(context, address, child_block, next_indent, output);
   }
 }

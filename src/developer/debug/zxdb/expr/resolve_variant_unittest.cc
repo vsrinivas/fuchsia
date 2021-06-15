@@ -33,7 +33,7 @@ TEST(ResolveVariant, TwoValues) {
   auto discr = fxl::MakeRefCounted<DataMember>(std::string(), u8_type, 0);
 
   auto rust_enum = MakeRustEnum("RustEnum", discr, {a, b});
-  auto variant_part = rust_enum->variant_part().Get()->AsVariantPart();
+  auto variant_part = rust_enum->variant_part().Get()->As<VariantPart>();
 
   // A value.
   ExprValue a_value(rust_enum, {0});
@@ -70,7 +70,7 @@ TEST(ResolveVariant, DefaultValue) {
   auto discr = fxl::MakeRefCounted<DataMember>(std::string(), u8_type, 0);
 
   auto rust_enum = MakeRustEnum("RustEnum", discr, {a, b});
-  auto variant_part = rust_enum->variant_part().Get()->AsVariantPart();
+  auto variant_part = rust_enum->variant_part().Get()->As<VariantPart>();
 
   // A value.
   ExprValue a_value(rust_enum, {0});

@@ -24,10 +24,10 @@ FoundName::FoundName(const Variable* variable) : kind_(kVariable), variable_(Ref
 FoundName::FoundName(const Function* function) : kind_(kFunction), function_(RefPtrTo(function)) {}
 
 FoundName::FoundName(const Symbol* sym) {
-  if (const Function* fn = sym->AsFunction()) {
+  if (const Function* fn = sym->As<Function>()) {
     kind_ = kFunction;
     function_ = RefPtrTo(fn);
-  } else if (const Variable* var = sym->AsVariable()) {
+  } else if (const Variable* var = sym->As<Variable>()) {
     kind_ = kVariable;
     variable_ = RefPtrTo(var);
   } else {

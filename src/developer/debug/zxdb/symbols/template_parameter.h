@@ -32,9 +32,12 @@ class TemplateParameter : public Symbol {
   // a value of whatever the value was.
   bool is_value() const { return is_value_; }
 
-  // Symbol pubilc overrides:
-  const TemplateParameter* AsTemplateParameter() const override { return this; }
+  // Symbol public overrides:
   const std::string& GetAssignedName() const override;
+
+ protected:
+  // Symbol protected overrides:
+  const TemplateParameter* AsTemplateParameter() const override { return this; }
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(TemplateParameter);

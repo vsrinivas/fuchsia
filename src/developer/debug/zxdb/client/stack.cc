@@ -87,7 +87,7 @@ class InlineFrame final : public Frame {
     // Extract the inline function.
     if (!loc.symbol())
       return false;
-    const Function* function = loc.symbol().Get()->AsFunction();
+    const Function* function = loc.symbol().Get()->As<Function>();
     if (!function)
       return false;
     if (!function->is_inline())
@@ -257,7 +257,7 @@ void Stack::AppendFrame(const debug_ipc::StackFrame& record) {
   // The symbols will provide the location for the innermost inlined function.
   Location inner_loc = delegate_->GetSymbolizedLocationForStackFrame(record);
 
-  const Function* cur_func = inner_loc.symbol().Get()->AsFunction();
+  const Function* cur_func = inner_loc.symbol().Get()->As<Function>();
   if (!cur_func) {
     // No function associated with this location.
     frames_.push_back(delegate_->MakeFrameForStack(record, inner_loc));

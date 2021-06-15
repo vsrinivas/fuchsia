@@ -16,7 +16,7 @@ namespace zxdb {
 
 void PrettyRustTuple::Format(FormatNode* node, const FormatOptions& options,
                              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
-  auto collection = node->value().type()->AsCollection();
+  auto collection = node->value().type()->As<Collection>();
 
   if (collection->GetSpecialType() == Collection::kRustTupleStruct) {
     node->set_description_kind(FormatNode::kRustTupleStruct);
@@ -26,7 +26,7 @@ void PrettyRustTuple::Format(FormatNode* node, const FormatOptions& options,
 
   // Rust tuple (and tuple struct) symbols have the tuple members encoded as "__0", "__1", etc.
   for (const auto& lazy_member : collection->data_members()) {
-    const DataMember* member = lazy_member.Get()->AsDataMember();
+    const DataMember* member = lazy_member.Get()->As<DataMember>();
     if (!member)
       continue;
 
@@ -63,7 +63,7 @@ PrettyRustTuple::EvalFunction PrettyRustTuple::GetMember(const std::string& gett
 void PrettyRustZirconStatus::Format(FormatNode* node, const FormatOptions& options,
                                     const fxl::RefPtr<EvalContext>& context,
                                     fit::deferred_callback cb) {
-  auto collection = node->value().type()->AsCollection();
+  auto collection = node->value().type()->As<Collection>();
   if (!collection || collection->GetSpecialType() != Collection::kRustTupleStruct) {
     return;
   }
@@ -75,7 +75,7 @@ void PrettyRustZirconStatus::Format(FormatNode* node, const FormatOptions& optio
     return;
   }
 
-  if (const DataMember* member = members[0].Get()->AsDataMember()) {
+  if (const DataMember* member = members[0].Get()->As<DataMember>()) {
     auto child = std::make_unique<FormatNode>(
         "0", ResolveNonstaticMember(context, node->value(), FoundMember(collection, member)));
 

@@ -51,7 +51,7 @@ std::string FunctionType::ComputeFullName() const {
 std::string FunctionType::ComputeReturnTypeString() const {
   std::string result;
   if (return_type_) {
-    if (const Type* return_type_ptr = return_type_.Get()->AsType())
+    if (const Type* return_type_ptr = return_type_.Get()->As<Type>())
       result += return_type_ptr->GetFullName();
     else
       result += "<invalid>";
@@ -68,8 +68,8 @@ std::string FunctionType::ComputeParameterString() const {
       result += ", ";
 
     const Type* param_type = nullptr;
-    if (const Variable* param_var = parameters_[i].Get()->AsVariable())
-      param_type = param_var->type().Get()->AsType();
+    if (const Variable* param_var = parameters_[i].Get()->As<Variable>())
+      param_type = param_var->type().Get()->As<Type>();
     if (param_type)
       result += param_type->GetFullName();
     else

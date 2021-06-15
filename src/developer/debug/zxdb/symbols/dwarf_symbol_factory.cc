@@ -268,7 +268,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
   // locations. Then we'll overlay our values on that object.
   if (!is_specification && specification) {
     auto spec = DecodeFunction(specification, tag, true);
-    Function* spec_function = spec->AsFunction();
+    Function* spec_function = spec->As<Function>();
     // If the specification is invalid, just ignore it and read out the values that we can find in
     // this DIE. An empty one will be created below.
     if (spec_function)
@@ -369,7 +369,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeArrayType(const llvm::DWARFDie& di
   auto contained = DecodeSymbol(type);
   if (!contained)
     return fxl::MakeRefCounted<Symbol>();
-  Type* contained_type = contained->AsType();
+  Type* contained_type = contained->As<Type>();
   if (!contained_type)
     return fxl::MakeRefCounted<Symbol>();
 
@@ -953,7 +953,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(const llvm::DWARFDie& die
   // Then we'll overlay our values on that object.
   if (!is_specification && specification) {
     auto spec = DecodeVariable(specification, true);
-    Variable* spec_variable = spec->AsVariable();
+    Variable* spec_variable = spec->As<Variable>();
     // If the specification is invalid, just ignore it and read out the values
     // that we can find in this DIE. An empty one will be created below.
     if (spec_variable)

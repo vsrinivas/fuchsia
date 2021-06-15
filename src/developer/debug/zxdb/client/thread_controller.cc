@@ -43,7 +43,7 @@ std::string ThreadController::FrameFunctionNameForLog(const Frame* frame) {
   if (!loc.symbol())
     return kNone;
 
-  const Function* func = loc.symbol().Get()->AsFunction();
+  const Function* func = loc.symbol().Get()->As<Function>();
   if (!func)
     return kNone;
 

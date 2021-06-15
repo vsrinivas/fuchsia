@@ -93,7 +93,7 @@ Collection::SpecialType Collection::ComputeSpecialType() const {
   // encoded in order in the symbols and that __0 will be first. Currently
   // we check only the first one but this could be more precise (if slower)
   // by checking to make sure all members are such numbers in sequential order.
-  const DataMember* first_member = data_members_[0].Get()->AsDataMember();
+  const DataMember* first_member = data_members_[0].Get()->As<DataMember>();
   if (!first_member)
     return kNotSpecial;
 

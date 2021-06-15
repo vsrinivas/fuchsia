@@ -20,7 +20,6 @@ class Value : public Symbol {
   // Don't construct by itself, used as a base class for Variable and DataMember.
 
   // Symbol overrides.
-  const Value* AsValue() const override;
   const std::string& GetAssignedName() const final { return assigned_name_; }
 
   // The name of the variable, parameter, or member name. See
@@ -59,6 +58,9 @@ class Value : public Symbol {
   explicit Value(DwarfTag tag);
   Value(DwarfTag tag, const std::string& assigned_name, LazySymbol type);
   ~Value();
+
+  // Symbol protected overrides.
+  const Value* AsValue() const override;
 
  private:
   std::string assigned_name_;

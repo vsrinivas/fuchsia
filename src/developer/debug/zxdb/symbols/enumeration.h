@@ -30,9 +30,6 @@ class Enumeration final : public Type {
   // everything is casted to an unsigned 64-bit value.
   using Map = std::map<uint64_t, std::string>;
 
-  // Symbol overrides.
-  const Enumeration* AsEnumeration() const;
-
   // Underlying type of the data. This is marked as optional in the spec in which case you need to
   // use the byte_size() and assume an integer of sign matching is_signed().
   const LazySymbol& underlying_type() const { return underlying_type_; }
@@ -43,6 +40,10 @@ class Enumeration final : public Type {
   bool is_signed() const { return is_signed_; }
 
   const Map& values() const { return values_; }
+
+ protected:
+  // Symbol overrides.
+  const Enumeration* AsEnumeration() const override;
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Enumeration);

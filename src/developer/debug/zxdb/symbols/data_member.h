@@ -17,9 +17,6 @@ class DataMember final : public Value {
  public:
   // Construct with fxl::MakeRefCounted().
 
-  // Symbol overrides.
-  const DataMember* AsDataMember() const;
-
   // The byte offset from the containing class or struct of this data member. This is only valid
   // if !is_external() -- see the base class' Value::is_external().
   uint32_t member_location() const { return member_location_; }
@@ -99,6 +96,10 @@ class DataMember final : public Value {
   // Number of bits that count. 0 means all.
   uint32_t bit_size() const { return bit_size_; }
   void set_bit_size(uint32_t bs) { bit_size_ = bs; }
+
+ protected:
+  // Symbol protected overrides.
+  const DataMember* AsDataMember() const override;
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(DataMember);

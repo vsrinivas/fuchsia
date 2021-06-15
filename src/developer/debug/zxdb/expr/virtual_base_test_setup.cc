@@ -43,7 +43,7 @@ VirtualBaseTestSetup::VirtualBaseTestSetup(MockSymbolDataProvider* data_provider
                          {{"_vptr$BaseClass", vtbl_ptr_type_ptr}, {kBaseIName, int32_type}});
   FX_DCHECK(base_class->byte_size() == 12);  // point = 8 bytes, int32 = 4.
   // The artificial flag must be set on the vtable pointer.
-  const_cast<DataMember*>(base_class->data_members()[0].Get()->AsDataMember())
+  const_cast<DataMember*>(base_class->data_members()[0].Get()->As<DataMember>())
       ->set_artificial(true);
   base_class_indexed = std::make_unique<TestIndexedSymbol>(mock_module_symbols, &index_root,
                                                            kBaseClassName, base_class);

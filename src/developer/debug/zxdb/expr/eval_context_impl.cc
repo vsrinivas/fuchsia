@@ -120,7 +120,7 @@ EvalContextImpl::EvalContextImpl(std::shared_ptr<Abi> abi,
       weak_factory_(this) {
   const CodeBlock* function = nullptr;
   if (location.symbol())
-    function = location.symbol().Get()->AsCodeBlock();
+    function = location.symbol().Get()->As<CodeBlock>();
 
   if (function) {
     block_ =
@@ -215,14 +215,14 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, EvalCallbac
       return cb(err);
   } else {
     // Everything else should be a variable.
-    var = RefPtrTo(input_val->AsVariable());
+    var = RefPtrTo(input_val->As<Variable>());
     FX_DCHECK(var);
   }
 
   SymbolContext symbol_context = var->GetSymbolContext(process_symbols_.get());
 
   // Need to explicitly take a reference to the type.
-  fxl::RefPtr<Type> type = RefPtrTo(var->type().Get()->AsType());
+  fxl::RefPtr<Type> type = RefPtrTo(var->type().Get()->As<Type>());
   if (!type)
     return cb(Err("Missing type information."));
 

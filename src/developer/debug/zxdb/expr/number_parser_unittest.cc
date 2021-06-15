@@ -205,7 +205,7 @@ TEST(NumberParser, StringToNumber) {
           [&result, cur](auto expected) {
             using ExpectedType = std::decay_t<decltype(expected)>;
 
-            const BaseType* expr_type = result.value().type()->AsBaseType();
+            const BaseType* expr_type = result.value().type()->As<BaseType>();
             ASSERT_TRUE(expr_type) << "Input = " << cur.input;
 
             // Size of types should match.

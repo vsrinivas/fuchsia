@@ -67,7 +67,7 @@ void FinishThreadController::InitWithThread(Thread* thread, fit::callback<void(c
 #endif
 
   if (enable_debug_logging()) {
-    auto function = stack[frame_to_finish_]->GetLocation().symbol().Get()->AsFunction();
+    auto function = stack[frame_to_finish_]->GetLocation().symbol().Get()->As<Function>();
     if (function)
       Log("Finishing inline %s", function->GetFullName().c_str());
   }
@@ -213,7 +213,7 @@ bool FinishThreadController::CreateInlineStepOverController(fit::callback<void(c
   }
 
   const Location& location = stack[0]->GetLocation();
-  const Function* func = location.symbol().Get()->AsFunction();
+  const Function* func = location.symbol().Get()->As<Function>();
   if (!func) {
     const char kMsg[] = "No function symbol for inline frame, giving up.";
     Log(kMsg);

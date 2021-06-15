@@ -50,7 +50,7 @@ bool IsNumericBaseType(int base_type) {
 // member function).
 bool IsPointerToFunction(const ModifiedType* pointer) {
   FX_DCHECK(pointer->tag() == DwarfTag::kPointerType);
-  return !!pointer->modified().Get()->AsFunctionType();
+  return !!pointer->modified().Get()->As<FunctionType>();
 }
 
 void FormatBoolean(FormatNode* node) {
@@ -131,7 +131,7 @@ bool IsCharacterType(const fxl::RefPtr<EvalContext>& eval_context, const Type* t
   // TODO(brettw) handle Unicode.
   if (concrete->byte_size() != 1)
     return false;
-  const BaseType* base_type = concrete->AsBaseType();
+  const BaseType* base_type = concrete->As<BaseType>();
   if (!base_type)
     return false;
 
@@ -210,7 +210,7 @@ void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatOption
                     const fxl::RefPtr<EvalContext>& eval_context) {
   node->set_description_kind(FormatNode::kRustEnum);
 
-  const VariantPart* variant_part = coll->variant_part().Get()->AsVariantPart();
+  const VariantPart* variant_part = coll->variant_part().Get()->As<VariantPart>();
   if (!variant_part) {
     node->set_err(Err("Missing variant part for Rust enum."));
     return;
@@ -227,7 +227,7 @@ void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatOption
   // can't hurt to be general.
   std::string enum_name;
   for (const auto& lazy_member : variant->data_members()) {
-    const DataMember* member = lazy_member.Get()->AsDataMember();
+    const DataMember* member = lazy_member.Get()->As<DataMember>();
     if (!member)
       continue;
 
@@ -296,7 +296,7 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
 
   // Data members.
   for (const auto& lazy_member : coll->data_members()) {
-    const DataMember* member = lazy_member.Get()->AsDataMember();
+    const DataMember* member = lazy_member.Get()->As<DataMember>();
     if (!member)
       continue;
 
@@ -384,7 +384,7 @@ void FormatFunctionPointer(FormatNode* node, const FormatOptions& options,
   Location loc = eval_context->GetLocationForAddress(address);
   std::string function_name;
   if (loc.symbol()) {
-    if (const Function* func = loc.symbol().Get()->AsFunction())
+    if (const Function* func = loc.symbol().Get()->As<Function>())
       function_name = func->GetFullName();
   }
   if (function_name.empty()) {
@@ -397,14 +397,14 @@ void FormatFunctionPointer(FormatNode* node, const FormatOptions& options,
 
 void FormatMemberPtr(FormatNode* node, const MemberPtr* type, const FormatOptions& options,
                      const fxl::RefPtr<EvalContext>& eval_context) {
-  const Type* container_type = type->container_type().Get()->AsType();
-  const Type* pointed_to_type = type->member_type().Get()->AsType();
+  const Type* container_type = type->container_type().Get()->As<Type>();
+  const Type* pointed_to_type = type->member_type().Get()->As<Type>();
   if (!container_type || !pointed_to_type) {
     node->set_err(Err("Missing symbol information."));
     return;
   }
 
-  if (const FunctionType* func = pointed_to_type->AsFunctionType()) {
+  if (const FunctionType* func = pointed_to_type->As<FunctionType>()) {
     // Pointers to member functions can be handled just like regular function pointers.
     FormatFunctionPointer(node, options, eval_context);
   } else {
@@ -451,11 +451,11 @@ bool TryFormatArrayOrString(FormatNode* node, const Type* type, const FormatOpti
 
   if (type->tag() == DwarfTag::kPointerType) {
     // Any pointer type (we only char about char*).
-    const ModifiedType* modified = type->AsModifiedType();
+    const ModifiedType* modified = type->As<ModifiedType>();
     if (!modified)
       return false;
 
-    const Type* char_type = modified->modified().Get()->AsType();
+    const Type* char_type = modified->modified().Get()->As<Type>();
     if (IsCharacterType(eval_context, char_type)) {
       FormatCharPointer(node, char_type, options, eval_context, std::move(cb));
       return true;
@@ -463,7 +463,7 @@ bool TryFormatArrayOrString(FormatNode* node, const Type* type, const FormatOpti
     return false;  // All other pointer types are unhandled.
   } else if (type->tag() == DwarfTag::kArrayType) {
     // Any array type with a known size (we care about both).
-    const ArrayType* array = type->AsArrayType();
+    const ArrayType* array = type->As<ArrayType>();
     if (!array)
       return false;
 
@@ -549,7 +549,7 @@ void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& o
   if (TryFormatArrayOrString(node, type.get(), options, context, cb))
     return;
 
-  if (const ModifiedType* modified_type = type->AsModifiedType()) {
+  if (const ModifiedType* modified_type = type->As<ModifiedType>()) {
     // Modified types (references were handled above).
     switch (modified_type->tag()) {
       case DwarfTag::kPointerType:
@@ -568,7 +568,7 @@ void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& o
                           static_cast<unsigned>(modified_type->tag())));
         break;
     }
-  } else if (const BaseType* base_type = type->AsBaseType()) {
+  } else if (const BaseType* base_type = type->As<BaseType>()) {
     if (IsNumericBaseType(node->value().GetBaseType())) {
       // Numeric types.
       FormatNumericNode(node, options);
@@ -579,17 +579,17 @@ void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& o
     } else {
       node->set_err(Err("Unsupported base type %d.", base_type->base_type()));
     }
-  } else if (const MemberPtr* member_ptr = type->AsMemberPtr()) {
+  } else if (const MemberPtr* member_ptr = type->As<MemberPtr>()) {
     // Pointers to class/struct members.
     FormatMemberPtr(node, member_ptr, options, context);
-  } else if (const FunctionType* func = type->AsFunctionType()) {
+  } else if (const FunctionType* func = type->As<FunctionType>()) {
     // Functions. These don't have a direct C++ equivalent without being
     // modified by a "pointer". Assume these act like pointers to functions.
     FormatFunctionPointer(node, options, context);
-  } else if (const Enumeration* enum_type = type->AsEnumeration()) {
+  } else if (const Enumeration* enum_type = type->As<Enumeration>()) {
     // Enumerations.
     FormatEnum(node, enum_type, options);
-  } else if (const Collection* coll = type->AsCollection()) {
+  } else if (const Collection* coll = type->As<Collection>()) {
     // Collections (structs, classes, and unions).
     FormatCollection(node, coll, options, context);
   } else if (type->tag() == DwarfTag::kUnspecifiedType) {

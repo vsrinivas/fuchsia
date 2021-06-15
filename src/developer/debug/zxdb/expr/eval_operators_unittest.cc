@@ -241,7 +241,7 @@ TEST_F(EvalOperators, IntArithmetic) {
                                ExprValue(uint32_type, {2, 0, 0, 0}));
   ASSERT_FALSE(out.has_error()) << out.err().msg();
   EXPECT_EQ(3, out.value().GetAs<int64_t>());
-  EXPECT_EQ(BaseType::kBaseTypeUnsigned, out.value().type()->AsBaseType()->base_type());
+  EXPECT_EQ(BaseType::kBaseTypeUnsigned, out.value().type()->As<BaseType>()->base_type());
 
   // Signed subtraction.
   out = SyncEvalBinaryOperator(ExprValue(static_cast<int8_t>(100)), ExprTokenType::kMinus,

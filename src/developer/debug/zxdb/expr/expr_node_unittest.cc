@@ -205,10 +205,10 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   // The type should be a pointer modifier on the old type. The pointer modifier will be a
   // dynamically created one so won't match the original we made above, but the underlying "const
   // int" should still match.
-  const ModifiedType* out_mod_type = out_value.type()->AsModifiedType();
+  const ModifiedType* out_mod_type = out_value.type()->As<ModifiedType>();
   ASSERT_TRUE(out_mod_type);
   EXPECT_EQ(DwarfTag::kPointerType, out_mod_type->tag());
-  EXPECT_EQ(const_base_type.get(), out_mod_type->modified().Get()->AsModifiedType());
+  EXPECT_EQ(const_base_type.get(), out_mod_type->modified().Get()->As<ModifiedType>());
   EXPECT_EQ("const uint32_t*", out_mod_type->GetFullName());
 }
 

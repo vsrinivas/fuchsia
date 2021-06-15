@@ -245,7 +245,7 @@ bool FrameImpl::EnsureBasePointer() {
     return true;
   }
 
-  const Function* function = loc.symbol().Get()->AsFunction();
+  const Function* function = loc.symbol().Get()->As<Function>();
   const VariableLocation::Entry* location_entry = nullptr;
   if (!function ||
       !(location_entry = function->frame_base().EntryForIP(loc.symbol_context(), GetAddress()))) {

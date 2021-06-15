@@ -29,9 +29,6 @@ class VariantPart final : public Symbol {
  public:
   // Construct with fxl::MakeRefCounted().
 
-  // Symbol overrides.
-  const VariantPart* AsVariantPart() const override { return this; }
-
   // DataMember whose value indicates which variant is active. Most callers will want only
   // GetVariant(). The offsets of the data member will be from the structure containing this
   // VariantPart.
@@ -46,6 +43,9 @@ class VariantPart final : public Symbol {
 
   VariantPart(const LazySymbol& discriminant, std::vector<LazySymbol> variants);
   virtual ~VariantPart();
+
+  // Symbol overrides.
+  const VariantPart* AsVariantPart() const override { return this; }
 
   LazySymbol discriminant_;
   std::vector<LazySymbol> variants_;

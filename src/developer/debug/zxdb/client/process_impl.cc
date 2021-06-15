@@ -373,7 +373,7 @@ uint64_t ProcessImpl::GetElfSymbolAddress(const std::string& symbol, uint64_t* s
 
   for (const auto& loc : locs) {
     if (auto sym = loc.symbol().Get()) {
-      if (auto elf_sym = sym->AsElfSymbol()) {
+      if (auto elf_sym = sym->As<ElfSymbol>()) {
         *size = elf_sym->size();
         return loc.address();
       }

@@ -63,9 +63,9 @@ void DoEnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, Expr
   }
 
   // The symbol provider should have created the right object type.
-  const ModifiedType* reference = concrete->AsModifiedType();
+  const ModifiedType* reference = concrete->As<ModifiedType>();
   FX_DCHECK(reference);
-  const Type* underlying_type = reference->modified().Get()->AsType();
+  const Type* underlying_type = reference->modified().Get()->As<Type>();
 
   TargetPointer pointer_value = 0;
   if (Err err = GetPointerValue(value, &pointer_value); err.has_error()) {
@@ -154,7 +154,7 @@ Err GetPointedToType(const fxl::RefPtr<EvalContext>& eval_context, const Type* i
                                  input->GetFullName().c_str()));
   }
 
-  *pointed_to = RefPtrTo(mod_type->modified().Get()->AsType());
+  *pointed_to = RefPtrTo(mod_type->modified().Get()->As<Type>());
   if (!*pointed_to)
     return Err("Can not dereference a pointer to 'void'.");
   return Err();

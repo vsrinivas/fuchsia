@@ -22,7 +22,6 @@ namespace zxdb {
 class ModifiedType final : public Type {
  public:
   // Type/Symbol overrides.
-  const ModifiedType* AsModifiedType() const override;
   const Type* StripCV() const override;
   const Type* StripCVT() const override;
 
@@ -35,6 +34,10 @@ class ModifiedType final : public Type {
 
   // Returns true if this modified type is a modification of "void", e.g.  "void*".
   bool ModifiesVoid() const;
+
+ protected:
+  // Symbol protected overrides:
+  const ModifiedType* AsModifiedType() const override;
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(ModifiedType);

@@ -39,7 +39,7 @@ OutputBuffer FormatLocation(const Location& loc, const FormatLocationOptions& op
   bool show_file_line = opts.show_file_line && loc.file_line().is_valid();
 
   const Symbol* symbol = loc.symbol().Get();
-  if (const Function* func = symbol->AsFunction()) {
+  if (const Function* func = symbol->As<Function>()) {
     // Regular function.
     OutputBuffer func_output = FormatFunctionName(func, opts.func);
     if (!func_output.empty()) {
@@ -60,7 +60,7 @@ OutputBuffer FormatLocation(const Location& loc, const FormatLocationOptions& op
         }
       }
     }
-  } else if (const ElfSymbol* elf_symbol = symbol->AsElfSymbol()) {
+  } else if (const ElfSymbol* elf_symbol = symbol->As<ElfSymbol>()) {
     // ELF symbol.
     FormatIdentifierOptions opts;
     opts.show_global_qual = false;

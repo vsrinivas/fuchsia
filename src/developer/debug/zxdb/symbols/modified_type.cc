@@ -24,7 +24,7 @@ bool IsTransparentTag(DwarfTag tag) {
 ModifiedType::ModifiedType(DwarfTag kind, LazySymbol modified) : Type(kind), modified_(modified) {
   FX_DCHECK(DwarfTagIsTypeModifier(kind));
   if (IsTransparentTag(kind)) {
-    const Type* mod_type = modified_.Get()->AsType();
+    const Type* mod_type = modified_.Get()->As<Type>();
     if (mod_type)
       set_byte_size(mod_type->byte_size());
   } else if (DwarfTagIsPointerOrReference(kind)) {
@@ -38,7 +38,7 @@ const ModifiedType* ModifiedType::AsModifiedType() const { return this; }
 
 const Type* ModifiedType::StripCV() const {
   if (DwarfTagIsCVQualifier(tag())) {
-    if (const Type* mod = modified_.Get()->AsType())  // Apply recursively.
+    if (const Type* mod = modified_.Get()->As<Type>())  // Apply recursively.
       return mod->StripCV();
   }
   return this;
@@ -46,7 +46,7 @@ const Type* ModifiedType::StripCV() const {
 
 const Type* ModifiedType::StripCVT() const {
   if (IsTransparentTag(tag())) {
-    const Type* mod = modified_.Get()->AsType();
+    const Type* mod = modified_.Get()->As<Type>();
     if (mod)  // Apply recursively.
       return mod->StripCVT();
   }
@@ -59,14 +59,14 @@ bool ModifiedType::ModifiesVoid() const {
   if (!modified_)
     return true;
 
-  const Type* type = modified_.Get()->AsType();
+  const Type* type = modified_.Get()->As<Type>();
   if (!type) {
     // Corrupted symbols as this references a non-type or there was an error decoding. Say it's
     // non-void for the caller to handle when it tries to figure out what the type is.
     return false;
   }
 
-  if (const BaseType* base = type->StripCVT()->AsBaseType())
+  if (const BaseType* base = type->StripCVT()->As<BaseType>())
     return base->base_type() == BaseType::kBaseTypeNone;
   return false;
 }
@@ -85,13 +85,13 @@ std::string ModifiedType::ComputeFullName() const {
     // No modified type means "void".
     modified_name = "void";
   } else {
-    if (auto func_type = modified().Get()->AsFunctionType();
+    if (auto func_type = modified().Get()->As<FunctionType>();
         func_type && tag() == DwarfTag::kPointerType) {
       // Special-case pointer-to-funcion which has unusual syntax.
       // TODO(fxbug.dev/5533) this doesn't handle pointers of references to pointers-to-member
       // functions
       return func_type->ComputeFullNameForFunctionPtr(std::string());
-    } else if ((modified_type = modified().Get()->AsType())) {
+    } else if ((modified_type = modified().Get()->As<Type>())) {
       // All other types.
       modified_name = modified_type->GetFullName();
     } else {
@@ -102,7 +102,7 @@ std::string ModifiedType::ComputeFullName() const {
 
   switch (tag()) {
     case DwarfTag::kConstType:
-      if (modified_type && modified_type->AsModifiedType()) {
+      if (modified_type && modified_type->As<ModifiedType>()) {
         // When the underlying type is another modifier, add it to the end, e.g. a "constant pointer
         // to a nonconstant int" is "int* const".
         return modified_name + " const";

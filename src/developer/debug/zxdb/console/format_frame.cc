@@ -156,11 +156,11 @@ fxl::RefPtr<AsyncOutputBuffer> FormatFrame(const Frame* frame, const FormatFrame
   }
 
   if (opts.detail != FormatFrameOptions::kSimple && location.symbol()) {
-    const Function* func = location.symbol().Get()->AsFunction();
+    const Function* func = location.symbol().Get()->As<Function>();
     if (func) {
       // Always list function parameters in the order specified.
       for (const auto& param : func->parameters()) {
-        const Variable* value = param.Get()->AsVariable();
+        const Variable* value = param.Get()->As<Variable>();
         if (!value)
           continue;  // Symbols are corrupt.
 

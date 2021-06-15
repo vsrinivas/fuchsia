@@ -48,7 +48,7 @@ std::vector<InputLocation> GetIdentifierMatchesOnThis(const ProcessSymbols* proc
                                                       const Identifier& input) {
   if (!loc.symbol())
     return {};
-  const CodeBlock* code_block = loc.symbol().Get()->AsCodeBlock();
+  const CodeBlock* code_block = loc.symbol().Get()->As<CodeBlock>();
   if (!code_block)
     return {};
 
@@ -374,7 +374,7 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
   if (const Frame* frame = command.frame()) {
     const Location& location = frame->GetLocation();
-    if (const CodeBlock* fn_block = location.symbol().Get()->AsCodeBlock()) {
+    if (const CodeBlock* fn_block = location.symbol().Get()->As<CodeBlock>()) {
       symbol_context = location.symbol_context();
       code_block = fn_block->GetMostSpecificChild(symbol_context, location.address());
     }
@@ -433,7 +433,7 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
   FindName(*find_context, options, prefix_identifier, &found_names);
   for (const FoundName& found : found_names) {
     FX_DCHECK(found.kind() == zxdb::FoundName::kType);
-    if (const Collection* collection = found.type()->AsCollection())
+    if (const Collection* collection = found.type()->As<Collection>())
       completions->push_back(found.GetName().GetFullName() + "::");
   }
   options.find_types = false;

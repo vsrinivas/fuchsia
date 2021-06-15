@@ -416,7 +416,7 @@ void StepThreadControllerTest::DoIntoInlineFunctionTest(bool separate_line) {
 
   // Fix up the inline call location based on the type of test we're doing.
   Location loc = mock_frames[0]->GetLocation();
-  Function* function = const_cast<Function*>(loc.symbol().Get()->AsFunction());
+  Function* function = const_cast<Function*>(loc.symbol().Get()->As<Function>());
   ASSERT_TRUE(function);
 
   FileLine call_line;

@@ -22,9 +22,6 @@ class Variant final : public Symbol {
  public:
   // Construct with fxl::MakeRefCounted().
 
-  // Symbol overrides.
-  const Variant* AsVariant() const override { return this; }
-
   // The discriminant value associated with this variant. See VariantPart.
   //
   // The discriminant value may be unset which indicates that this variant is the default one.
@@ -56,6 +53,10 @@ class Variant final : public Symbol {
   // one member) and each variant's data members will contain a DataMember of that type. The "name"
   // of these data members will match the type ("Foo" and "Bar" in this example).
   const std::vector<LazySymbol>& data_members() const { return data_members_; }
+
+ protected:
+  // Symbol overrides.
+  const Variant* AsVariant() const override { return this; }
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Variant);

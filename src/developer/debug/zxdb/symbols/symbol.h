@@ -149,30 +149,10 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   DwarfLang GetLanguage() const;
 
   // Manual RTTI.
-  virtual const ArrayType* AsArrayType() const;
-  virtual const BaseType* AsBaseType() const;
-  virtual const CodeBlock* AsCodeBlock() const;
-  virtual const Collection* AsCollection() const;
-  virtual const CompileUnit* AsCompileUnit() const;
-  virtual const DataMember* AsDataMember() const;
-  virtual const ElfSymbol* AsElfSymbol() const;
-  virtual const Enumeration* AsEnumeration() const;
-  virtual const Function* AsFunction() const;
-  virtual const FunctionType* AsFunctionType() const;
-  virtual const InheritedFrom* AsInheritedFrom() const;
-  virtual const MemberPtr* AsMemberPtr() const;
-  virtual const ModifiedType* AsModifiedType() const;
-  virtual const Namespace* AsNamespace() const;
-  virtual const TemplateParameter* AsTemplateParameter() const;
-  virtual const Type* AsType() const;
-  virtual const Value* AsValue() const;
-  virtual const Variable* AsVariable() const;
-  virtual const Variant* AsVariant() const;
-  virtual const VariantPart* AsVariantPart() const;
 
   // Allows templatized conversion to a base class. Both const and non-const variants are supported
-  // using the above virtual functions. This is basically dynamic_cast but we're required to
-  // avoid compiling with RTTI.
+  // using the protected virtual functions below. This is basically dynamic_cast but we're required
+  // to avoid compiling with RTTI.
   //
   //   const Collection* c = symbol->As<Collection>();
   //   if (!c)
@@ -217,64 +197,6 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
 
 #undef IMPLEMENT_TEMPLATIZED_AS
 
-  // Non-const manual RTTI wrappers.
-  ArrayType* AsArrayType() {
-    return const_cast<ArrayType*>(const_cast<const Symbol*>(this)->AsArrayType());
-  }
-  BaseType* AsBaseType() {
-    return const_cast<BaseType*>(const_cast<const Symbol*>(this)->AsBaseType());
-  }
-  CodeBlock* AsCodeBlock() {
-    return const_cast<CodeBlock*>(const_cast<const Symbol*>(this)->AsCodeBlock());
-  }
-  Collection* AsCollection() {
-    return const_cast<Collection*>(const_cast<const Symbol*>(this)->AsCollection());
-  }
-  CompileUnit* AsCompileUnit() {
-    return const_cast<CompileUnit*>(const_cast<const Symbol*>(this)->AsCompileUnit());
-  }
-  DataMember* AsDataMember() {
-    return const_cast<DataMember*>(const_cast<const Symbol*>(this)->AsDataMember());
-  }
-  ElfSymbol* AsElfSymbol() {
-    return const_cast<ElfSymbol*>(const_cast<const Symbol*>(this)->AsElfSymbol());
-  }
-  Enumeration* AsEnumeration() {
-    return const_cast<Enumeration*>(const_cast<const Symbol*>(this)->AsEnumeration());
-  }
-  Function* AsFunction() {
-    return const_cast<Function*>(const_cast<const Symbol*>(this)->AsFunction());
-  }
-  FunctionType* AsFunctionType() {
-    return const_cast<FunctionType*>(const_cast<const Symbol*>(this)->AsFunctionType());
-  }
-  InheritedFrom* AsInheritedFrom() {
-    return const_cast<InheritedFrom*>(const_cast<const Symbol*>(this)->AsInheritedFrom());
-  }
-  MemberPtr* AsMemberPtr() {
-    return const_cast<MemberPtr*>(const_cast<const Symbol*>(this)->AsMemberPtr());
-  }
-  ModifiedType* AsModifiedType() {
-    return const_cast<ModifiedType*>(const_cast<const Symbol*>(this)->AsModifiedType());
-  }
-  Namespace* AsNamespace() {
-    return const_cast<Namespace*>(const_cast<const Symbol*>(this)->AsNamespace());
-  }
-  TemplateParameter* AsTempalteParameter() {
-    return const_cast<TemplateParameter*>(const_cast<const Symbol*>(this)->AsTemplateParameter());
-  }
-  Type* AsType() { return const_cast<Type*>(const_cast<const Symbol*>(this)->AsType()); }
-  Value* AsValue() { return const_cast<Value*>(const_cast<const Symbol*>(this)->AsValue()); }
-  Variable* AsVariable() {
-    return const_cast<Variable*>(const_cast<const Symbol*>(this)->AsVariable());
-  }
-  Variant* AsVariant() {
-    return const_cast<Variant*>(const_cast<const Symbol*>(this)->AsVariant());
-  }
-  VariantPart* AsVariantPart() {
-    return const_cast<VariantPart*>(const_cast<const Symbol*>(this)->AsVariantPart());
-  }
-
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(Symbol);
   FRIEND_MAKE_REF_COUNTED(Symbol);
@@ -283,6 +205,29 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   Symbol();
   explicit Symbol(DwarfTag tag);
   virtual ~Symbol();
+
+  // Manual RTTI. See "As<...>" template above for the public versions (these are protected just
+  // so callers are consistent).
+  virtual const ArrayType* AsArrayType() const;
+  virtual const BaseType* AsBaseType() const;
+  virtual const CodeBlock* AsCodeBlock() const;
+  virtual const Collection* AsCollection() const;
+  virtual const CompileUnit* AsCompileUnit() const;
+  virtual const DataMember* AsDataMember() const;
+  virtual const ElfSymbol* AsElfSymbol() const;
+  virtual const Enumeration* AsEnumeration() const;
+  virtual const Function* AsFunction() const;
+  virtual const FunctionType* AsFunctionType() const;
+  virtual const InheritedFrom* AsInheritedFrom() const;
+  virtual const MemberPtr* AsMemberPtr() const;
+  virtual const ModifiedType* AsModifiedType() const;
+  virtual const Namespace* AsNamespace() const;
+  virtual const TemplateParameter* AsTemplateParameter() const;
+  virtual const Type* AsType() const;
+  virtual const Value* AsValue() const;
+  virtual const Variable* AsVariable() const;
+  virtual const Variant* AsVariant() const;
+  virtual const VariantPart* AsVariantPart() const;
 
   // Computes the full name and identifier. Used by GetFullName() and GetIdentifier() which add a
   // caching layer.

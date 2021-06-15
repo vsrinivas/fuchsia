@@ -36,7 +36,7 @@ fxl::RefPtr<Type> GetConcreteType(const FindNameContext& context, const LazySymb
   if (!symbol)
     return fxl::RefPtr<Type>();
 
-  const Type* type = symbol.Get()->AsType();
+  const Type* type = symbol.Get()->As<Type>();
   if (!type)
     return fxl::RefPtr<Type>();
 
