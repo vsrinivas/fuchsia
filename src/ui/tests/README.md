@@ -1,0 +1,398 @@
+# Writing integration tests for graphics, input, and accessibility
+
+## Checklist
+
+1.  Use [TestWithEnvironment](/sdk/lib/sys/cpp/testing/test_with_environment.h)
+    to ensure that each test runs with a fresh component topology.
+1.  Do not use CMX `injected-services` to construct component topology. (It
+    shares the same component instances between different test runs.)
+1.  Set up `fuchsia.hardware.display.Provider` to be vended by
+    `fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"`,
+    and bundle `fake-hardware-display-controller` with your test package.
+1.  Bundle [Root Presenter](/src/ui/bin/root_presenter/BUILD.gn)'s
+    `component_v1_for_test` with the test's package. It prevents the actual
+    input driver from interacting with the test. Invoke Root Presenter from the
+    test package's URL. E.g.,
+    `fuchsia-pkg://touch-input-test#meta/root_presenter.cmx`.
+1.  Bundle [Scenic](/src/ui/scenic/BUILD.gn)'s `component` with the test's
+    package. It ensures that the test uses the Scenic it was built with. Invoke
+    Scenic from the test package's URL. E.g.,
+    `fuchsia-pkg://touch-input-test#meta/scenic.cmx`.
+1.  Don't invoke components from *another* test's package!
+1.  No sleeps or waits, unless the API is deficient. Every action by the test is
+    gated on a logical condition that the test can observe. E.g., inject touch
+    events only when the test observes the child view is actually connected to
+    the view tree and vending content to hit.
+
+## Guidelines for writing integration tests
+
+We have Fuchsia-based *products* built on the Fuchsia *platform*. As Fuchsia
+platform developers, we want to ship a solid platform, and validate that the the
+*platform* works correctly for all our supported *products*. Integration tests
+ensure we uphold correctness and stability of platform functionality that spans
+two or more components, via our prebuilt binaries (such as Scenic) and API
+contracts (over FIDL). This is especially valuable in validating our ongoing
+platform migrations. One example is the set of touch dispatch paths, such as
+from Input Pipeline to Scenic to Flutter.
+
+### Models of production
+
+Integration tests model a specific product scenario by running multiple Fuchsia
+components together. For example, to ensure that the "touch dispatch path from
+device to client" continues to work as intended, we have a "touch-input-test"
+that exercises the actual components involved in touch dispatch, over the actual
+FIDLs used in production.
+
+Because integration tests are a model, there can (and should) be some
+simplification from actual production. Obviously, these tests won't run the
+actual product binaries; instead, a reasonable stand-in is crafted for a test.
+The idea is that it's the simplest stand-in that can be used in a test, which
+still can catch serious problems and regressions.
+
+Sometimes, it's not straightforward for the test to use an actual platform path
+used in production; we use a reasonable stand-in for these cases too. For
+example, we can't actually inject into `/dev/class/input-report`, so we have a
+dedicated
+[API surface](/sdk/fidl/fuchsia.input.injection/input_device_registry.fidl) on
+Input Pipeline to accept injections in a test scenario.
+
+The important thing is that the test gives us *confidence* that evolution of
+platform code and platform protocols will not break existing product scenarios.
+
+### No flakes
+
+When the scenario involves graphics, it's very easy to accidentally introduce
+flakiness into the test, robbing us of confidence in our changes. Graphics APIs
+operate across several dimensions of lifecycle, topology, and
+synchronization/signaling schemes, in the domains of components, graphical
+memory management, view system, and visual asset placement. Furthermore, these
+APIs provide the basis for, and closely interact with, the Input APIs and the
+Accessibility APIs.
+
+The principal challenge is to write tests that set up a real graphics stack, in
+a way that is robust against elasticity in execution time. We talk about those
+challenges in "Synchronization challenges", below. There are other reasons for
+tests going wrong, and most of them can be dealt with by enforcing hermeticity
+at various levels. We talk about these first. A final challenge is to author
+tests that model enough of the interesting complexity on just the platform side,
+so that we know complex product scenarios don't break with platform evolution.
+
+### Precarious stack of stuff
+
+At the bottom we have graphics tests. Input tests build on top of graphics
+tests. And accessibility tests build on top of input tests. Hence they have all
+the same problems, just with more components. It is thus critical that a basic
+graphics test is reasonable to write and understand, because they form the basis
+for "higher level" tests that inherently have more complexity.
+
+### Questions and answers
+
+#### Why not just rely on product-side e2e tests?
+
+Product owners must write e2e tests to ensure their product is safe from
+platform changes. E2e tests are big, heavy, and expensive to run; often, they
+are flaky as well. They are authored in a different repository, and run in their
+own test automation regime ("CQ"). And they care about the subset of OS
+functionality that their product relies on.
+
+Given these realities, platform developers cannot rely on these e2e tests to
+catch problems in platform APIs and platform code.
+
+By authoring platform-side integration tests, platform developers can get
+breakage signals much faster with less code in the tests, and systematically
+exercise all the functionality used across the full range of supported products.
+Product owners benefit by increased confidence in the platform's reliability.
+
+#### Why all this emphasis on hermeticity?
+
+Deterministic, flake-free tests increase the signal-to-noise ratio from test
+runs. They make life better.
+
+When your tests rain down flakes every day, we ignore these tests, and they
+become noise. But when we try to fix the source of flakes, it often reveals a
+defect in our practices, or APIs, or documentation, which we can fix (think
+"impact"). Each of these hermeticity goals address a real problem that someone
+in Fuchsia encountered. When we have hermeticity, everyone benefits, and Fuchsia
+becomes better.
+
+#### Why all this emphasis on integration tests?
+
+Fuchsia's platform teams have important migrations in progress that affect
+products. Integration tests are a critical method of guaranteeing that our
+platform changes are safe and stable with respect to our product partners.
+Examples: Components Framework v2, Input API migration, Flatland API migration,
+etc.
+
+#### What about CTS tests?
+
+The
+[Fuchsia Compatibility Test Suite](/docs/contribute/governance/rfcs/0015_cts?hl=en)
+ensures that the implementations offered by the Fuchsia platform conform to the
+specifications of the Fuchsia platform. An effective CTS will have UI
+integration tests, and so this guidance doc applies to those UI integration
+tests.
+
+## Prefer hermeticity
+
+Various types of
+[hermeticity](/docs/concepts/testing/v2/test_runner_framework?hl=en#hermeticity)
+make our tests more reliable.
+
+### Package hermeticity
+
+All components used in the test should come from the same test package. This can
+be verified by examining the fuchsia-pkg URLs launched in the test; they should
+reference the test package.
+
+If we don't have package hermeticity, and a component C is defined in the
+universe U, then the C launched will come from U, instead of your locally
+modified copy of C. This issue isn't so much a problem in CQ, because it
+rebuilds everything from scratch. However, it is definitely an issue for local
+development, where it causes surprises - another sharp corner to trap the
+unwary. That is, a fix to C won't necessarily run in your test, and hampers
+developer productivity.
+
+There is a further advantage to package hermeticity. For those components that
+read from the `config-data` package, this practice allows a test package to
+define their own config-data for the components they contain. In fact, this is
+the only way to define a piece of custom config-data for a test. For example,
+the display rotation in Root Presenter is conveyed with config-data.
+
+### Environment hermeticity
+
+All components in the test should be brought up and torn down in a custom
+Fuchsia environment. For example, in Components Framework v1, the
+"TestWithEnvironment" fixture allows the test to construct the precise
+environment it needs for the test to run properly.
+
+This practice forces component state to be re-initialized on each run of the
+test, thereby preventing inter-test state pollution.
+
+The advantages of doing so are:
+
+*   The test is far more reproducible, as the initial component state is always
+    known to be good.
+*   It's trivial to run the test hundreds of times in a tight loop, thus
+    speeding up flake detection.
+*   The test author can adjust the environment more precisely, and more
+    flexibly, than otherwise possible.
+
+#### No to `injected-services`
+
+In component framework v1, it's possible to declare
+[`injected-services`](/docs/concepts/testing/v1_test_component?hl=en#integration_testing)
+in a test's CMX manifest. Declaring `injected-services` is somewhat of an
+anti-pattern. It, too, also constructs a test environment, but *all the test
+executions* run in the *same environment*. If a service component had dirtied
+state, a subsequent `TEST_F` execution will inadvertently run against that
+dirtied state.
+
+### Capability hermeticity
+
+All components in the test should not be exposed to the actual root environment.
+For FIDL protocols, this is not so much an issue. However, there are other types
+of capabilities where CF v1 has leaks. A good example is access to device
+capabilities, such as `/dev/class/input-report` and
+`/dev/class/display-controller`. Components that declare access to device
+capabilities will actually access these capabilities, on the real device, in a
+test environment.
+
+We can gain capability hermeticity by relying on a reasonable fake. Two
+examples.
+
+*   The display controller, with some configuration, can be faked out. A
+    subsequent advantage is that graphics tests can be run in parallel!
+    *   One downside is that it's not easy to physically observe what the
+        graphical state is, because the test no longer drives the real display.
+        So development can be a little harder.
+*   The input devices are faked out with an injection FIDL, and that's how tests
+    can trigger custom input. However, the component that receives injections
+    still needs to avoid declaring access to `/dev/class/input-report`! The
+    recommendation here is to put a `/dev`-less copy of the component manifest
+    into the test package.
+    *   Example:
+        [root_presenter.cmx](/src/ui/bin/root_presenter/meta/root_presenter.cmx)
+        (production) vs
+        [root_presenter_base.cmx](/src/ui/bin/root_presenter/meta/root_presenter_base.cmx)
+        (production, minus `/dev/class/input-report`).
+
+## Synchronization challenges
+
+Correct, flake-free inter-component graphics synchronization depends intimately
+on the specific graphics API being used. The
+[legacy Scenic API](/sdk/fidl/fuchsia.ui.scenic/session.fidl), sometimes called
+"GFX", has sparse guarantees for when something is "on screen", so extra care
+must be taken to ensure a flake free test. As a rule of thumb, if you imagine
+the timeline of actions for every component stretching and shrinking by
+arbitrary amounts, a robust test will complete for all CPU-schedulable
+timelines. The challenge is to construct action gates where the test will hold
+steady until a desired outcome happens. Sleeps and timeouts are notoriously
+problematic for this reason. Repeated queries of global state (such as a pixel
+color test) are another mechanism by which we could construct higher-level
+gates, but incur a heavy performance penalty and adds complexity to debugging.
+
+Another dimension of complexity is that much of client code does not interact
+directly with Fuchsia graphics APIs; instead they run in an abstracted runner
+environment. Flutter and Web are good examples where the client code cannot
+directly use Scenic APIs. Some facilities can be piped through the runner, but
+tests generally cannot rely on full API access. Some runners even coarsen the
+timestamps, which also complicates testing a bit.
+
+One more subtlety. We're interested in the "state of the scene graph", which is
+not precisely the same thing as "state of the rendering buffer". For most
+purposes, they are loosely equivalent, because the entity taking a visual
+screenshot is the same entity that holds the scene graph - Scenic. However,
+specific actions, like accessibility color adjustments, will not be accurately
+portrayed in a visual screenshot, because the color adjustment takes place in
+hardware, below Scenic.
+
+### GFX is hard
+
+For [GFX](/sdk/fidl/fuchsia.ui.scenic/session.fidl) in particular, nested views
+are particularly difficult to synchronize. The key difficulty is that a client
+needs two discrete pieces of information, relative view size and pixel metrics,
+to construct a correctly scaled content on a particular physical screen, but GFX
+conveys the view metrics only *after* the view is already "linked up" to the
+global scene graph. So from the parent view's perspective, child view
+connectivity cannot imply the child view's content has rendered to screen.
+
+A workaround signal,
+[`fuchsia.ui.gfx.ViewState.is_rendering`](/sdk/fidl/fuchsia.ui.gfx/types.fidl),
+tells the parent view that something in the child view started rendering actual
+content. This is actually sufficient for a single-depth child view, when the
+child's content is simple. In fact, some input tests rely on this signal to
+successfully gate input injection. But for a child view that actually consists
+of a 2+ view hierarchy, the `is_rendering` signal does not say *which* views in
+the child view hierarchy have rendered content, only that *some* descendant view
+has rendered content to screen.
+
+For client views that have direct access to the GFX API, it's possible to
+construct a tower of signals along the child view hierarchy, but this is
+fragile, complex, and subtle. It is also not feasible for clients that employ a
+runner, like web clients. (The web runner internally constructs a parent view
+and a child view for security.) From the test's perspective, such a client will
+not generate a reliable signal in the GFX API.
+
+### Flatland makes it easier
+
+The upcoming Flatland API, in contrast, solves this problem with a sophisticated
+linkage system, where scene graph connectivity is made independent of view
+metrics. That is, a parent view can send a child view the correct view metrics
+*prior* to the child view actually connecting to the global scene graph. Then,
+when the child view has finished preparing the rendered content, it can connect
+to the global scene graph in an atomic step, without revealing intermediate
+content construction phases (for example, nested content in a view hierarchy).
+
+### Test setup - one GFX child view
+
+For a single GFX child view, the test can set up a "interceptor" or "proxy"
+view, to harvest the
+[`fuchsia.ui.gfx.ViewState.is_rendering`](/sdk/fidl/fuchsia.ui.gfx/types.fidl)
+signal from Scenic. Then subsequent actions, such as injecting touch events, can
+be reliably performed, with good assumptions about the child's graphical
+content.
+
+An example is how `touch-input-test.cc` sets up `touch-gfx-client` in
+[`TouchInputTest.CppGfxClientTap`](/src/ui/tests/integration_input_tests/touch/touch-input-test.cc#395).
+Here, the test sets up its own Scenic view, links the child's view underneath
+its own, and waits for the child view to connect, using it as a gate for touch
+injection.
+
+Advantages:
+
+*   Programmatically correct use of APIs
+*   Reliable
+*   Fast, minimal computational disturbance; good for performance work
+
+Disadvantages:
+
+*   Setup and control flow can be delicate to manage
+
+### Test setup - child is a GFX view hierarchy
+
+For a stacked view hierarchy, current best practice is still to set up an
+interceptor view, and gate subsequent actions on the `ViewState.is_rendering`
+signal. However, the signal merely indicates that at least one of the child
+views in the hierarchy started rendering content; for some scenarios, like
+Chromium, this is not a sufficiently robust gating mechanism. That is, the
+signal is a little too early, since the test actually needs both child view and
+grandchild view to be in a rendering state.
+
+To work around this nondeterminism, the subsequent action (touch injection)
+needs to run in a loop, until all descendant views have published their content
+to the scene graph. For example, for `TouchInputTest.ChromiumTap`, the test
+issues a repeated "tap-tap-tap" until it sees the client respond in an expected
+way.
+
+Advantages: same as above
+
+Disadvantages:
+
+*   Can't manage a child view hierarchy in a completely deterministic way.
+
+### Test setup - gate on screenshot histogram
+
+An alternate synchronization scheme is to set up the scene with various
+predefined colors, which may get toggled in response to actions, such as touch
+input. The test requests screenshots in succession, until the desired color
+condition is reached, by counting the number of pixels in each color value (a
+"histogram"). For example, if the child view is expected to present a red
+rectangle, the test will loop until the histogram returns predominantly red, and
+then perform a subsequent action.
+
+Advantages:
+
+*   The resulting test code is nicely linear in control flow, and easy to grasp
+    at a high level.
+*   Works with arbitrarily deep child hierarchies, assuming a good enough color
+    scheme.
+
+Disadvantages:
+
+*   The color scheme has to be relatively simple, and the reader needs to
+    understand the scheme.
+*   Heavyweight and slow, due to all those screenshots taken.
+*   Scenic actually has to work to generate those screenshots, so it can skew
+    tests used for performance analysis.
+*   Not completely foolproof. Flakes can still happen.
+*   Screenshotting is a grandfathered global-scope capability (see
+    [`fuchsia.ui.scenic.Scenic`](/sdk/fidl/fuchsia.ui.scenic/scenic.fidl#89)),
+    and it will be more tightly controlled in the future.
+
+Example: see
+[`FlutterEmbedderTests.Embedding`](/src/ui/tests/integration_flutter_tests/embedder/flutter-embedder-test.cc).
+
+### Test setup - one Flatland child view (TBD)
+
+## Modeling complex scenarios
+
+The graphics API allows each product to generate an arbitrarily complex scene
+graph. However, the products we have today typically rely on a few "core
+topologies" that are stable and suitable for the product to build on.
+
+It's a valuable exercise to capture each of these core topologies in our
+platform integration tests. Some examples:
+
+*   Touch dispatch to the Flutter runner.
+    *   The intra-component connection between the Flutter runner (C++) and the
+        Flutter framework (Dart) is delicate, and a runner test will catch bad
+        rolls into fuchsia.git. Workstation was once broken for many months due
+        to a problem here.
+*   Touch dispatch to the Chromium runner.
+    *   Chromium employs a two-view topology as part of its JS sandboxing
+        strategy. Having a test ensures that Chromium is correctly using our
+        APIs, and that our changes don't accidentally break Chromium.
+*   Touch dispatch from Flutter runner to Chromium runner.
+    *   This scenario models a critical production path where the product
+        reinjects touch events into its Chromium child view.
+*   One parent view and two child views, using assorted runners, to ensure touch
+    dispatch is routed to the correct view.
+
+Developing new models are also how we test new topologies and interaction
+patterns to make sure the APIs are sensible and usable, and serve as as a
+foundation for converting an entire product.
+
+*   For example, converting a product to
+    [Session Framework](/docs/concepts/session/introduction?hl=en) has many
+    moving parts, and validating specific graphics scenarios builds confidence
+    in APIs, implementations, and migration strategy.

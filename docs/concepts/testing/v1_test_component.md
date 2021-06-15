@@ -141,9 +141,9 @@ fuchsia.sys.Loader
 ### Integration testing
 
 A test component may need to interact with other components, such as in an
-integration test. The recommended way to do this is to include all components
-under test in the test's package, and then specify in the test's manifest a
-mapping between the services that these components offer and their launch URLs.
+integration test. One way to do this is to include all components under test in
+the test's package, and then specify in the test's manifest a mapping between
+the services that these components offer and their launch URLs.
 
 This is done as follows:
 
@@ -157,6 +157,13 @@ This is done as follows:
   }
 }
 ```
+
+However, note that *all the test executions* will run in the *same environment*.
+If a service had dirtied state, a subsequent `TEST_F` execution will
+inadvertently run against that dirtied state.
+
+See [this doc](/src/ui/tests/README.md) for authoring more sophisticated
+scenarios (such as graphics and UI tests) in v1.
 
 ### Additional system services
 
