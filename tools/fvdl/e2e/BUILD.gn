@@ -117,6 +117,7 @@ if (is_linux) {
                      "target_out_dir") + "/fvm.blk",
       get_label_info("//build/images:fuchsia($target_toolchain)",
                      "root_out_dir") + "/fuchsia.zbi",
+      "${root_build_dir}/multiboot.bin",
       "${root_build_dir}/packages.tar.gz",
     ]
     outputs = [ "${_build_out}/{{source_file_part}}" ]
@@ -124,11 +125,8 @@ if (is_linux) {
       "//build/gn:package_archive($target_toolchain)",
       "//build/images:fuchsia($target_toolchain)",
       "//build/images:fvm.blk($target_toolchain)",
+      "//zircon/kernel/target/pc/multiboot:multiboot($target_toolchain)",
     ]
-    if (target_cpu == "x64") {
-      sources += [ "${root_build_dir}/multiboot.bin" ]
-      deps += [ "//zircon/kernel/arch/x86/phys/boot-shim:multiboot-shim($target_toolchain)" ]
-    }
   }
 
   go_test("fvdl_intree_test") {

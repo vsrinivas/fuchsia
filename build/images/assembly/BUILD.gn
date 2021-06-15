@@ -79,7 +79,7 @@ dep_labels = {
   kernel_image = "//zircon/kernel"
   kernel_cmdline_args = "//build/input:bootfs"
   bootfs_entries = "//build/input:bootfs"
-  vboot_multiboot = "//zircon/kernel/arch/x86/phys/boot-shim:multiboot-shim"
+  vboot_multiboot = "//zircon/kernel/target/pc/multiboot:multiboot"
 
   ####
   # External labels whose outputs are compared against for validity (temporary)

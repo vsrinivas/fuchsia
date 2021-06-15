@@ -29,13 +29,13 @@ _phys_linker_scripts = [
 #
 #   * output_extension
 #     - Optional: See executable(), but defaults to "bin".
-#     - Type: string
 #     - Default: "bin"
 #
-#   * images_metadata
-#     - Optional: This can override keys in the `images` metadata entry.
-#     - Type: scope
-#     - Default: {}
+#   * tags
+#     - Optional: Tags to put in the //:images metadata for the target.
+#     - Type: list(string)
+#     - Default: []
+#
 # See executable() for other parameters.
 #
 template("phys_executable") {
@@ -64,10 +64,10 @@ template("phys_executable") {
       forward_variables_from(invoker,
                              "*",
                              [
-                               "images_metadata",
                                "metadata",
                                "output_dir",
                                "output_extension",
+                               "tags",
                                "target_name",
                                "visibility",
                              ])
@@ -115,21 +115,14 @@ template("phys_executable") {
         # For the //:images build_api_module().
         images += [
           {
-            name = target_name
             label = get_label_info(":$target_name", "label_with_toolchain")
+            name = target_name
+            forward_variables_from(invoker, [ "tags" ])
+            path = rebase_path(output_path, root_build_dir)
             cpu = current_cpu
 
             # Botanist needs this exact value for images used as QEMU kernels.
             type = "kernel"
-
-            # The caller can override those values and/or add others.
-            if (defined(invoker.images_metadata)) {
-              forward_variables_from(invoker.images_metadata, "*")
-            }
-
-            # The caller can't override `path` since that would
-            # not refer to this target's output any more.
-            path = rebase_path(output_path, root_build_dir)
           },
         ]
       }
