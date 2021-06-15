@@ -34,7 +34,7 @@ The returned record will have the following format:
 
 ```c
 typedef struct zx_log_record {
-  uint32_t unused;
+  uint32_t sequence;
   uint16_t datalen;
   uint8_t severity;
   uint8_t flags;
@@ -49,6 +49,10 @@ The fields are defined as follows:
 
 | Field       | Description                                                    |
 | ----------- | -------------------------------------------------------------- |
+| *sequence*  | The sequence number of this record. Each record's sequence     :
+:             : number is 1 greater than the preceding records's. The sequence :
+:             : starts with 0. Gaps in the sequence indidate dropped log       :
+:             : records.                                                       :
 | *datalen*   | Number of bytes of data in the *data* field.                   |
 | *severity*  | Severity of this log message. Standard severity levels are     |
 :             : defined in the header `zircon/syscalls/log.h`.                 :

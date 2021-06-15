@@ -487,7 +487,7 @@ impl TestDebugEntry {
     pub fn new(log_data: &[u8]) -> Self {
         let mut rec = zx::sys::zx_log_record_t::default();
         let len = rec.data.len().min(log_data.len());
-        rec.unused = 0;
+        rec.sequence = 0;
         rec.datalen = len as u16;
         rec.flags = TEST_KLOG_FLAGS;
         rec.timestamp = TEST_KLOG_TIMESTAMP;

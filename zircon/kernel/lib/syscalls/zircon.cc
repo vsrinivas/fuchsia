@@ -217,6 +217,7 @@ zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options,
 static zx::status<size_t> CopyOutLogRecord(const dlog_record_t& internal_record,
                                            user_out_ptr<zx_log_record_t> dst, size_t len) {
   zx_log_record_t external_record{};
+  external_record.sequence = internal_record.hdr.sequence;
   external_record.datalen = internal_record.hdr.datalen;
   external_record.severity = internal_record.hdr.severity;
   external_record.flags = internal_record.hdr.flags;
