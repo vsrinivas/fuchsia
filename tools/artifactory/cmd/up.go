@@ -531,7 +531,7 @@ func (s *cloudSink) write(ctx context.Context, upload *artifactory.Upload) error
 			continue
 		}
 		if !bytes.Equal(attrs.MD5, d) {
-			return fmt.Errorf("MD5 mismatch for %s; local: %s, remote: %s", upload.Destination, d, attrs.MD5)
+			return fmt.Errorf("MD5 mismatch for %s; local: %x, remote: %x", upload.Destination, d, attrs.MD5)
 		}
 		logger.Infof(ctx, "Uploaded: %s", upload.Destination)
 		break
