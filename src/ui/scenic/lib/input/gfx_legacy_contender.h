@@ -19,13 +19,13 @@ namespace scenic_impl::input {
 class GfxLegacyContender : public GestureContender {
  public:
   GfxLegacyContender(
-      fit::function<void(GestureResponse)> respond,
+      zx_koid_t view_ref_koid, fit::function<void(GestureResponse)> respond,
       fit::function<void(const std::vector<InternalPointerEvent>&)> deliver_events_to_client,
       fit::function<void()> self_destruct);
   ~GfxLegacyContender() = default;
 
-  void UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
-                    bool is_end_of_stream) override;
+  void UpdateStream(StreamId stream_id, const InternalPointerEvent& event, bool is_end_of_stream,
+                    view_tree::BoundingBox unused) override;
 
   void EndContest(StreamId stream_id, bool awarded_win) override;
 

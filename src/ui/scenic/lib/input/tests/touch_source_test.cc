@@ -26,9 +26,14 @@ using scenic_impl::input::StreamId;
 using scenic_impl::input::TouchSource;
 using scenic_impl::input::Viewport;
 
+constexpr zx_koid_t kViewRefKoid = 25;
 constexpr StreamId kStreamId = 1;
 constexpr uint32_t kDeviceId = 2;
 constexpr uint32_t kPointerId = 3;
+
+constexpr view_tree::BoundingBox kEmptyBoundingBox{};
+constexpr bool kStreamOngoing = false;
+constexpr bool kStreamEnding = true;
 
 namespace {
 
@@ -38,17 +43,34 @@ fuchsia::ui::pointer::TouchResponse CreateResponse(TouchResponseType response_ty
   return response;
 }
 
-void ExpectEqual(const fuchsia::ui::pointer::ViewParameters& view_parameters,
-                 const Viewport& viewport) {
-  EXPECT_THAT(view_parameters.viewport.min,
-              testing::ElementsAre(viewport.extents.min[0], viewport.extents.min[1]));
-  EXPECT_THAT(view_parameters.viewport.max,
-              testing::ElementsAre(viewport.extents.max[0], viewport.extents.max[1]));
+void ExpectEqual(const fuchsia::ui::pointer::ViewParameters& received_view_parameters,
+                 const Viewport& expected_viewport,
+                 const view_tree::BoundingBox expected_view_bounds) {
+  EXPECT_THAT(
+      received_view_parameters.viewport.min,
+      testing::ElementsAre(expected_viewport.extents.min[0], expected_viewport.extents.min[1]));
+  EXPECT_THAT(
+      received_view_parameters.viewport.max,
+      testing::ElementsAre(expected_viewport.extents.max[0], expected_viewport.extents.max[1]));
 
-  const auto& mat = viewport.context_from_viewport_transform;
-  EXPECT_THAT(view_parameters.viewport_to_view_transform,
-              testing::ElementsAre(mat[0][0], mat[0][1], mat[0][2], mat[1][0], mat[1][1], mat[1][2],
-                                   mat[2][0], mat[2][1], mat[2][2]));
+  EXPECT_THAT(received_view_parameters.view.min,
+              testing::ElementsAreArray(expected_view_bounds.min));
+  EXPECT_THAT(received_view_parameters.view.max,
+              testing::ElementsAreArray(expected_view_bounds.max));
+
+  ASSERT_TRUE(expected_viewport.receiver_from_viewport_transform.has_value());
+  EXPECT_THAT(
+      received_view_parameters.viewport_to_view_transform,
+      testing::ElementsAreArray(expected_viewport.receiver_from_viewport_transform.value()));
+}
+
+InternalPointerEvent IPEventTemplate(Phase phase) {
+  return {
+      .device_id = kDeviceId,
+      .pointer_id = kPointerId,
+      .phase = phase,
+      .viewport.receiver_from_viewport_transform = std::array<float, 9>(),
+  };
 }
 
 }  // namespace
@@ -59,7 +81,7 @@ class TouchSourceTest : public gtest::TestLoopFixture {
     client_ptr_.set_error_handler([this](auto) { channel_closed_ = true; });
 
     touch_source_.emplace(
-        client_ptr_.NewRequest(),
+        kViewRefKoid, client_ptr_.NewRequest(),
         /*respond*/
         [this](StreamId stream_id, const std::vector<GestureResponse>& responses) {
           std::copy(responses.begin(), responses.end(),
@@ -124,7 +146,8 @@ TEST_F(TouchSourceTest, ForcedChannelClosing_ShouldFireInternalErrorHandler) {
 }
 
 TEST_F(TouchSourceTest, EmptyResponse_ForPointerEvent_ShouldCloseChannel) {
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kAdd}, /*is_end_of_stream*/ false);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
   client_ptr_->Watch({}, [](auto events) { EXPECT_EQ(events.size(), 1u); });
   RunLoopUntilIdle();
 
@@ -141,7 +164,8 @@ TEST_F(TouchSourceTest, EmptyResponse_ForPointerEvent_ShouldCloseChannel) {
 }
 
 TEST_F(TouchSourceTest, NonEmptyResponse_ForNonPointerEvent_ShouldCloseChannel) {
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kAdd}, /*is_end_of_stream*/ false);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
   // This event expects an empty response table.
   touch_source_->EndContest(kStreamId, /*awarded_win*/ true);
   client_ptr_->Watch({}, [](auto events) { EXPECT_EQ(events.size(), 2u); });
@@ -170,9 +194,10 @@ TEST_F(TouchSourceTest, Watch_BeforeEvents_ShouldReturnOnFirstEvent) {
   EXPECT_EQ(num_events, 0u);
 
   // Sending fidl message on first event, so expect the second one not to arrive.
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kAdd}, /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kChange},
-                              /*is_end_of_stream*/ false);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kChange), kStreamOngoing,
+                              kEmptyBoundingBox);
 
   RunLoopUntilIdle();
   EXPECT_TRUE(received_responses_.empty());
@@ -192,10 +217,11 @@ TEST_F(TouchSourceTest, Watch_BeforeEvents_ShouldReturnOnFirstEvent) {
 
 TEST_F(TouchSourceTest, Watch_ShouldAtMostReturn_TOUCH_MAX_EVENT_Events_PerCall) {
   // Sending fidl message on first event, so expect the second one not to arrive.
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kAdd}, /*is_end_of_stream*/ false);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
   for (size_t i = 0; i < fuchsia::ui::pointer::TOUCH_MAX_EVENT + 3; ++i) {
-    touch_source_->UpdateStream(kStreamId, {.phase = Phase::kChange},
-                                /*is_end_of_stream*/ false);
+    touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kChange), kStreamOngoing,
+                                kEmptyBoundingBox);
   }
 
   client_ptr_->Watch(
@@ -226,7 +252,8 @@ TEST_F(TouchSourceTest, Watch_ResponseBeforeEvent_ShouldCloseChannel) {
 }
 
 TEST_F(TouchSourceTest, Watch_MoreResponsesThanEvents_ShouldCloseChannel) {
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kAdd}, /*is_end_of_stream*/ false);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
   client_ptr_->Watch({}, [](auto events) { EXPECT_EQ(events.size(), 1u); });
   RunLoopUntilIdle();
   EXPECT_FALSE(channel_closed_);
@@ -244,9 +271,10 @@ TEST_F(TouchSourceTest, Watch_MoreResponsesThanEvents_ShouldCloseChannel) {
 }
 
 TEST_F(TouchSourceTest, Watch_FewerResponsesThanEvents_ShouldCloseChannel) {
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kAdd}, /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kChange},
-                              /*is_end_of_stream*/ false);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kChange), kStreamOngoing,
+                              kEmptyBoundingBox);
   client_ptr_->Watch({}, [](auto events) { EXPECT_EQ(events.size(), 2u); });
   RunLoopUntilIdle();
   EXPECT_FALSE(channel_closed_);
@@ -276,7 +304,8 @@ TEST_F(TouchSourceTest, MissingArgument_ShouldCloseChannel) {
   EXPECT_EQ(num_events, 0u);
   EXPECT_FALSE(channel_closed_);
 
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kAdd}, /*is_end_of_stream*/ false);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
   RunLoopUntilIdle();
   EXPECT_EQ(num_events, 1u);
   EXPECT_FALSE(channel_closed_);
@@ -294,10 +323,10 @@ TEST_F(TouchSourceTest, MissingArgument_ShouldCloseChannel) {
 TEST_F(TouchSourceTest, UpdateResponse) {
   {  // Complete a stream and respond HOLD to it.
     client_ptr_->Watch({}, [](auto) {});
-    touch_source_->UpdateStream(kStreamId, {.phase = Phase::kAdd},
-                                /*is_end_of_stream*/ false);
-    touch_source_->UpdateStream(kStreamId, {.phase = Phase::kRemove},
-                                /*is_end_of_stream*/ true);
+    touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                                kEmptyBoundingBox);
+    touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kRemove), kStreamEnding,
+                                kEmptyBoundingBox);
     RunLoopUntilIdle();
 
     std::vector<fuchsia::ui::pointer::TouchResponse> responses;
@@ -343,8 +372,8 @@ TEST_F(TouchSourceTest, UpdateResponse_BeforeStreamEnd_ShouldCloseChannel) {
   {  // Start a stream and respond to it.
     bool callback_triggered = false;
     client_ptr_->Watch({}, [&callback_triggered](auto) { callback_triggered = true; });
-    touch_source_->UpdateStream(kStreamId, {.phase = Phase::kAdd},
-                                /*is_end_of_stream*/ false);
+    touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                                kEmptyBoundingBox);
     RunLoopUntilIdle();
     EXPECT_TRUE(callback_triggered);
 
@@ -374,10 +403,10 @@ TEST_F(TouchSourceTest, UpdateResponse_WhenLastResponseWasntHOLD_ShouldCloseChan
   {  // Start a stream and respond to it.
     bool callback_triggered = false;
     client_ptr_->Watch({}, [&callback_triggered](auto) { callback_triggered = true; });
-    touch_source_->UpdateStream(kStreamId, {.phase = Phase::kAdd},
-                                /*is_end_of_stream*/ false);
-    touch_source_->UpdateStream(kStreamId, {.phase = Phase::kRemove},
-                                /*is_end_of_stream*/ true);
+    touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                                kEmptyBoundingBox);
+    touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kRemove), kStreamEnding,
+                                kEmptyBoundingBox);
     RunLoopUntilIdle();
     EXPECT_TRUE(callback_triggered);
 
@@ -410,10 +439,10 @@ TEST_F(TouchSourceTest, UpdateResponse_WithHOLD_ShouldCloseChannel) {
   {  // Start a stream and respond to it.
     bool callback_triggered = false;
     client_ptr_->Watch({}, [&callback_triggered](auto) { callback_triggered = true; });
-    touch_source_->UpdateStream(kStreamId, {.phase = Phase::kAdd},
-                                /*is_end_of_stream*/ false);
-    touch_source_->UpdateStream(kStreamId, {.phase = Phase::kRemove},
-                                /*is_end_of_stream*/ true);
+    touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                                kEmptyBoundingBox);
+    touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kRemove), kStreamEnding,
+                                kEmptyBoundingBox);
     RunLoopUntilIdle();
     EXPECT_TRUE(callback_triggered);
 
@@ -443,45 +472,54 @@ TEST_F(TouchSourceTest, UpdateResponse_WithHOLD_ShouldCloseChannel) {
 TEST_F(TouchSourceTest, ViewportIsDeliveredCorrectly) {
   Viewport viewport1;
   viewport1.extents = std::array<std::array<float, 2>, 2>{{{0, 0}, {10, 10}}};
-  viewport1.context_from_viewport_transform = {
+  viewport1.receiver_from_viewport_transform = {
       // clang-format off
-    1, 0, 0, 0,
-    0, 1, 0, 0,
-    0, 0, 1, 0,
-    0, 0, 0, 1
+    1, 0, 0, // column one
+    0, 1, 0, // column two
+    0, 0, 1, // column three
       // clang-format on
   };
+  const view_tree::BoundingBox view_bounds1{.min = {5, 5}, .max = {10, 10}};
+
   Viewport viewport2;
   viewport2.extents = std::array<std::array<float, 2>, 2>{{{-5, 1}, {100, 40}}};
-  viewport2.context_from_viewport_transform = {
+  viewport2.receiver_from_viewport_transform = {
       // clang-format off
-    1, 2, 3, 0,
-    4, 5, 6, 0,
-    7, 8, 9, 0,
-    0, 0, 0, 1
+     1,  2,  3, // column one
+     4,  5,  6, // column two
+     7,  8,  9  // column three
       // clang-format on
   };
+  const view_tree::BoundingBox view_bounds2{.min = {-1, -2}, .max = {3, 4}};
 
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kAdd, .viewport = viewport1},
-                              /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kChange, .viewport = viewport1},
-                              /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kRemove, .viewport = viewport2},
-                              /*is_end_of_stream*/ true);
+  {
+    auto event = IPEventTemplate(Phase::kAdd);
+    event.viewport = viewport1;
+    touch_source_->UpdateStream(kStreamId, event, kStreamOngoing, view_bounds1);
+  }
+  {
+    auto event = IPEventTemplate(Phase::kChange);
+    event.viewport = viewport1;
+    touch_source_->UpdateStream(kStreamId, event, kStreamOngoing, view_bounds1);
+  }
+  {
+    auto event = IPEventTemplate(Phase::kRemove);
+    event.viewport = viewport2;
+    touch_source_->UpdateStream(kStreamId, event, kStreamEnding, view_bounds2);
+  }
 
   client_ptr_->Watch({}, [&](auto events) {
     ASSERT_EQ(events.size(), 3u);
-    EXPECT_TRUE(events[0].has_view_parameters());
     EXPECT_TRUE(events[0].has_pointer_sample());
+    ASSERT_TRUE(events[0].has_view_parameters());
+    ExpectEqual(events[0].view_parameters(), viewport1, view_bounds1);
 
     EXPECT_FALSE(events[1].has_view_parameters());
     EXPECT_TRUE(events[1].has_pointer_sample());
 
-    EXPECT_TRUE(events[2].has_view_parameters());
     EXPECT_TRUE(events[2].has_pointer_sample());
-
-    ExpectEqual(events[0].view_parameters(), viewport1);
-    // ExpectEqual(events[2].view_parameters(), viewport2);
+    ASSERT_TRUE(events[2].has_view_parameters());
+    ExpectEqual(events[2].view_parameters(), viewport2, view_bounds2);
   });
 
   RunLoopUntilIdle();
@@ -489,15 +527,14 @@ TEST_F(TouchSourceTest, ViewportIsDeliveredCorrectly) {
 
 // Sends a full stream and observes that GestureResponses are as expected.
 TEST_F(TouchSourceTest, NormalStream) {
-  touch_source_->UpdateStream(
-      kStreamId, {.device_id = kDeviceId, .pointer_id = kPointerId, .phase = Phase::kAdd},
-      /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kChange},
-                              /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kChange},
-                              /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kRemove},
-                              /*is_end_of_stream*/ true);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kChange), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kChange), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kRemove), kStreamEnding,
+                              kEmptyBoundingBox);
 
   EXPECT_TRUE(received_responses_.empty());
 
@@ -549,17 +586,18 @@ TEST_F(TouchSourceTest, NormalStream) {
 // are included for the extra events not seen by clients. Each filtered event should duplicate the
 // response of the previous event.
 TEST_F(TouchSourceTest, LegacyInteraction) {
-  touch_source_->UpdateStream(
-      kStreamId, {.device_id = kDeviceId, .pointer_id = kPointerId, .phase = Phase::kAdd},
-      /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kDown}, /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kChange},
-                              /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kChange},
-                              /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kUp}, /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kRemove},
-                              /*is_end_of_stream*/ true);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kDown), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kChange), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kChange), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kUp), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kRemove), kStreamEnding,
+                              kEmptyBoundingBox);
 
   EXPECT_TRUE(received_responses_.empty());
 
@@ -606,32 +644,26 @@ TEST_F(TouchSourceTest, OnDestruction_ShouldExitOngoingContests) {
   constexpr StreamId kStreamId2 = 2, kStreamId3 = 3, kStreamId4 = 4, kStreamId5 = 5, kStreamId6 = 6;
 
   // Start a few streams.
-  touch_source_->UpdateStream(
-      kStreamId, {.device_id = kDeviceId, .pointer_id = kPointerId, .phase = Phase::kAdd},
-      /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(
-      kStreamId2, {.device_id = kDeviceId, .pointer_id = kPointerId, .phase = Phase::kAdd},
-      /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(
-      kStreamId3, {.device_id = kDeviceId, .pointer_id = kPointerId, .phase = Phase::kAdd},
-      /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(
-      kStreamId4, {.device_id = kDeviceId, .pointer_id = kPointerId, .phase = Phase::kAdd},
-      /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(
-      kStreamId5, {.device_id = kDeviceId, .pointer_id = kPointerId, .phase = Phase::kAdd},
-      /*is_end_of_stream*/ false);
-  touch_source_->UpdateStream(
-      kStreamId6, {.device_id = kDeviceId, .pointer_id = kPointerId, .phase = Phase::kAdd},
-      /*is_end_of_stream*/ false);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId2, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId3, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId4, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId5, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId6, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
 
   // End streams 1-3.
-  touch_source_->UpdateStream(kStreamId, {.phase = Phase::kRemove},
-                              /*is_end_of_stream*/ true);
-  touch_source_->UpdateStream(kStreamId2, {.phase = Phase::kRemove},
-                              /*is_end_of_stream*/ true);
-  touch_source_->UpdateStream(kStreamId3, {.phase = Phase::kRemove},
-                              /*is_end_of_stream*/ true);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kRemove), kStreamEnding,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId2, IPEventTemplate(Phase::kRemove), kStreamEnding,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId3, IPEventTemplate(Phase::kRemove), kStreamEnding,
+                              kEmptyBoundingBox);
 
   // Award some wins and losses.
   touch_source_->EndContest(kStreamId, /*awarded_win*/ true);
@@ -666,9 +698,8 @@ TEST_F(TouchSourceTest, WatchAfterContestEnd_ShouldNotRespond) {
   client_ptr_->Watch({}, [](auto) {});
 
   // Start a stream, then end the contest before receiving responses.
-  touch_source_->UpdateStream(
-      kStreamId, {.device_id = kDeviceId, .pointer_id = kPointerId, .phase = Phase::kAdd},
-      /*is_end_of_stream*/ false);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
   RunLoopUntilIdle();
   touch_source_->EndContest(kStreamId, /*awarded_win*/ false);
   RunLoopUntilIdle();
@@ -689,7 +720,7 @@ TEST_F(TouchSourceTest, WatchAfterContestEnd_ShouldNotRespond) {
 TEST_F(TouchSourceTest, ReentryOnDestruction_ShouldNotCauseUseAfterFreeErrors) {
   bool respond_called = false;
   touch_source_.emplace(
-      client_ptr_.NewRequest(),
+      kViewRefKoid, client_ptr_.NewRequest(),
       /*respond*/
       [this, &respond_called](StreamId stream_id, const std::vector<GestureResponse>& responses) {
         respond_called = true;
@@ -697,8 +728,8 @@ TEST_F(TouchSourceTest, ReentryOnDestruction_ShouldNotCauseUseAfterFreeErrors) {
       },
       /*error_handler*/ [] {});
 
-  touch_source_->UpdateStream(
-      kStreamId, {.device_id = kDeviceId, .pointer_id = kPointerId, .phase = Phase::kAdd}, false);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd),
+                              /*end_of_stream*/ false, kEmptyBoundingBox);
 
   EXPECT_FALSE(respond_called);
   touch_source_.reset();

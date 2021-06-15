@@ -15,6 +15,10 @@ using scenic_impl::input::GestureResponse;
 using scenic_impl::input::InternalPointerEvent;
 using scenic_impl::input::StreamId;
 
+constexpr view_tree::BoundingBox kViewBoundsEmpty{};
+constexpr bool kStreamOngoing = false;
+constexpr bool kStreamEnding = true;
+
 TEST(A11yLegacyContenderTest, SingleStream_ConsumedAtSweep) {
   constexpr StreamId kId1 = 1;
   constexpr uint32_t kPointerId1 = 4;
@@ -31,13 +35,16 @@ TEST(A11yLegacyContenderTest, SingleStream_ConsumedAtSweep) {
   // Start a stream. No events shuld get responses until the client makes a decision,
   // and all events should be forwarded to client.
   EXPECT_EQ(events_sent_to_client.size(), 0u);
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 1u);
   EXPECT_TRUE(responses.empty());
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 2u);
   EXPECT_TRUE(responses.empty());
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ true);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamEnding,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 3u);
   EXPECT_TRUE(responses.empty());
 
@@ -70,8 +77,10 @@ TEST(A11yLegacyContenderTest, SingleStream_ConsumedMidContest) {
   // Start a stream. No events should get responses until the client makes a decision,
   // and all events should be forwarded to client.
   EXPECT_EQ(events_sent_to_client.size(), 0u);
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 2u);
   EXPECT_TRUE(responses.empty());
 
@@ -83,7 +92,8 @@ TEST(A11yLegacyContenderTest, SingleStream_ConsumedMidContest) {
   EXPECT_THAT(responses, testing::Each(GestureResponse::kYesPrioritize));
 
   // Subsequent events should have a YES response.
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
   ASSERT_EQ(responses.size(), 3u);
   EXPECT_EQ(responses[2], GestureResponse::kYesPrioritize);
 
@@ -91,8 +101,10 @@ TEST(A11yLegacyContenderTest, SingleStream_ConsumedMidContest) {
   responses.clear();
   events_sent_to_client.clear();
   contender.EndContest(kId1, /*awarded_win*/ true);
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ true);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamEnding,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 2u);
   EXPECT_TRUE(responses.empty());
 }
@@ -110,8 +122,10 @@ TEST(A11yLegacyContenderTest, SingleStream_Rejected) {
         events_sent_to_client.emplace_back(event);
       });
 
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 2u);
   EXPECT_TRUE(responses.empty());
 
@@ -141,9 +155,12 @@ TEST(A11yLegacyContenderTest, ContestEndedOnResponse) {
       });
   contender_ptr = &contender;
 
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 3u);
   EXPECT_TRUE(responses.empty());
 
@@ -156,7 +173,8 @@ TEST(A11yLegacyContenderTest, ContestEndedOnResponse) {
 
   // Check that events are delivered after contest end.
   events_sent_to_client.clear();
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 1u);
 }
 
@@ -175,18 +193,24 @@ TEST(A11yLegacyContenderTest, MultipleStreams) {
 
   // Start three streams and make sure they're all handled correctly individually.
   EXPECT_EQ(events_sent_to_client.size(), 0u);
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 2u);
   EXPECT_TRUE(responses.empty());
 
-  contender.UpdateStream(kId2, /*event*/ {.pointer_id = kPointerId2}, /*is_end_of_stream*/ false);
-  contender.UpdateStream(kId2, /*event*/ {.pointer_id = kPointerId2}, /*is_end_of_stream*/ true);
+  contender.UpdateStream(kId2, /*event*/ {.pointer_id = kPointerId2}, kStreamOngoing,
+                         kViewBoundsEmpty);
+  contender.UpdateStream(kId2, /*event*/ {.pointer_id = kPointerId2}, kStreamEnding,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 4u);
   EXPECT_TRUE(responses.empty());
 
-  contender.UpdateStream(kId3, /*event*/ {.pointer_id = kPointerId3}, /*is_end_of_stream*/ false);
-  contender.UpdateStream(kId3, /*event*/ {.pointer_id = kPointerId3}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kId3, /*event*/ {.pointer_id = kPointerId3}, kStreamOngoing,
+                         kViewBoundsEmpty);
+  contender.UpdateStream(kId3, /*event*/ {.pointer_id = kPointerId3}, kStreamOngoing,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 6u);
   EXPECT_TRUE(responses.empty());
 
@@ -217,16 +241,19 @@ TEST(A11yLegacyContenderTest, MultipleStreams) {
 
   // Since streams 2 and 3 ended and lost respectively they should count as new streams if used
   // again.
-  contender.UpdateStream(kId2, /*event*/ {.pointer_id = kPointerId2}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kId2, /*event*/ {.pointer_id = kPointerId2}, kStreamOngoing,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 1u);
   EXPECT_TRUE(responses.empty());
-  contender.UpdateStream(kId3, /*event*/ {.pointer_id = kPointerId3}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kId3, /*event*/ {.pointer_id = kPointerId3}, kStreamOngoing,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 2u);
   EXPECT_TRUE(responses.empty());
 
   // Stream 1 should continue to receive YES_PRIORITIZE on each new message, since that stream is
   // still ongoing.
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
+                         kViewBoundsEmpty);
   EXPECT_EQ(events_sent_to_client.size(), 3u);
   EXPECT_EQ(responses.size(), 1u);
   EXPECT_EQ(responses[kId1][0], GestureResponse::kYesPrioritize);
@@ -245,9 +272,9 @@ TEST(A11yLegacyContenderTest, MultipleStreams_WithSamePointer) {
       [](auto) {});
 
   // Create three streams and end them.
-  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId}, /*is_end_of_stream*/ true);
-  contender.UpdateStream(kId2, /*event*/ {.pointer_id = kPointerId}, /*is_end_of_stream*/ true);
-  contender.UpdateStream(kId3, /*event*/ {.pointer_id = kPointerId}, /*is_end_of_stream*/ true);
+  contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId}, kStreamEnding, {});
+  contender.UpdateStream(kId2, /*event*/ {.pointer_id = kPointerId}, kStreamEnding, {});
+  contender.UpdateStream(kId3, /*event*/ {.pointer_id = kPointerId}, kStreamEnding, {});
   EXPECT_TRUE(responses.empty());
 
   // Return OnStreamHandled messages for all ongoing streams, but always reuse kPointerId.
@@ -284,26 +311,32 @@ TEST(A11yLegacyContenderTest, EndOngoingStreamsOnDestruction) {
     // Starting 6 streams to test all combinations that cause ongoing or ended streams.
 
     // Ended.
-    contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, /*is_end_of_stream*/ true);
+    contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamEnding,
+                           kViewBoundsEmpty);
     contender.EndContest(kId1, /*awarded_win*/ true);
 
     // Ended.
-    contender.UpdateStream(kId2, /*event*/ {.pointer_id = kPointerId2}, /*is_end_of_stream*/ true);
+    contender.UpdateStream(kId2, /*event*/ {.pointer_id = kPointerId2}, kStreamEnding,
+                           kViewBoundsEmpty);
     contender.EndContest(kId2, /*awarded_win*/ false);
 
     // Ongoing.
-    contender.UpdateStream(kId3, /*event*/ {.pointer_id = kPointerId3}, /*is_end_of_stream*/ false);
+    contender.UpdateStream(kId3, /*event*/ {.pointer_id = kPointerId3}, kStreamOngoing,
+                           kViewBoundsEmpty);
     contender.EndContest(kId3, /*awarded_win*/ true);
 
     // Ended.
-    contender.UpdateStream(kId4, /*event*/ {.pointer_id = kPointerId4}, /*is_end_of_stream*/ false);
+    contender.UpdateStream(kId4, /*event*/ {.pointer_id = kPointerId4}, kStreamOngoing,
+                           kViewBoundsEmpty);
     contender.EndContest(kId4, /*awarded_win*/ false);
 
     // Ongoing.
-    contender.UpdateStream(kId5, /*event*/ {.pointer_id = kPointerId5}, /*is_end_of_stream*/ false);
+    contender.UpdateStream(kId5, /*event*/ {.pointer_id = kPointerId5}, kStreamOngoing,
+                           kViewBoundsEmpty);
 
     // Stream ended, contest ongoing.
-    contender.UpdateStream(kId6, /*event*/ {.pointer_id = kPointerId6}, /*is_end_of_stream*/ false);
+    contender.UpdateStream(kId6, /*event*/ {.pointer_id = kPointerId6}, kStreamOngoing,
+                           kViewBoundsEmpty);
 
     responses.clear();
   }
@@ -332,9 +365,12 @@ TEST(A11yLegacyContenderTest, ContestsEndingOutOfOrder) {
         [](auto) {});
 
     // Start three streams for the same pointer.
-    contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId}, /*is_end_of_stream*/ false);
-    contender.UpdateStream(kId2, /*event*/ {.pointer_id = kPointerId}, /*is_end_of_stream*/ false);
-    contender.UpdateStream(kId3, /*event*/ {.pointer_id = kPointerId}, /*is_end_of_stream*/ false);
+    contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId}, kStreamOngoing,
+                           kViewBoundsEmpty);
+    contender.UpdateStream(kId2, /*event*/ {.pointer_id = kPointerId}, kStreamOngoing,
+                           kViewBoundsEmpty);
+    contender.UpdateStream(kId3, /*event*/ {.pointer_id = kPointerId}, kStreamOngoing,
+                           kViewBoundsEmpty);
 
     // Now end the second contest with a loss before any responses have been sent.
     contender.EndContest(kId2, /*awarded_win*/ false);

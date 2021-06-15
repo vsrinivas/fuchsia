@@ -144,6 +144,12 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   std::optional<glm::mat4> GetDestinationViewFromSourceViewTransform(zx_koid_t source,
                                                                      zx_koid_t destination) const;
 
+  // Returns the 2D-transform from the viewport space of |event| to the destination view space as
+  // a mat3 in column-major array form.
+  // Prereq: |destination| must exist in the |view_tree_snapshot_|.
+  Mat3ColumnMajorArray GetDestinationFromViewportTransform(const InternalPointerEvent& event,
+                                                           zx_koid_t destination) const;
+
   // For a view hierarchy where context is an ancestor of target, returns
   // target's ancestor hierarchy below context: (context, target].
   std::vector<zx_koid_t> GetAncestorChainUpToButExcludingContext(zx_koid_t target,
@@ -184,12 +190,13 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   struct TouchContender {
     ContenderId contender_id;
     TouchSource touch_source;
-    TouchContender(ContenderId id,
+    TouchContender(zx_koid_t view_ref_koid, ContenderId id,
                    fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> event_provider,
                    fit::function<void(StreamId, const std::vector<GestureResponse>&)> respond,
                    fit::function<void()> error_handler)
         : contender_id(id),
-          touch_source(std::move(event_provider), std::move(respond), std::move(error_handler)) {}
+          touch_source(view_ref_koid, std::move(event_provider), std::move(respond),
+                       std::move(error_handler)) {}
   };
 
   // Each gesture arena tracks one touch event stream and a set of contenders.

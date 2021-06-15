@@ -24,8 +24,8 @@ class A11yLegacyContender final : public GestureContender {
                       fit::function<void(const InternalPointerEvent& event)> deliver_to_client);
   ~A11yLegacyContender();
 
-  void UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
-                    bool is_end_of_stream) override;
+  void UpdateStream(StreamId stream_id, const InternalPointerEvent& event, bool is_end_of_stream,
+                    view_tree::BoundingBox unused) override;
 
   void EndContest(StreamId stream_id, bool awarded_win) override;
 

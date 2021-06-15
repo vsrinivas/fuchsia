@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
+#include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace scenic_impl::input {
 
@@ -37,14 +38,18 @@ StreamId NewStreamId();
 // a GestureArena.
 class GestureContender {
  public:
+  explicit GestureContender(zx_koid_t view_ref_koid) : view_ref_koid_(view_ref_koid) {}
+
   // Called whenever there's a new event for a stream.
   virtual void UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
-                            bool is_end_of_stream) = 0;
+                            bool is_end_of_stream, view_tree::BoundingBox view_bounds) = 0;
   // Called at the end of a contest. If |awarded_win| is false the GestureContender will
   // receive no further events for stream |stream_id|.
   // If called before the first call to UpdateStream() for |stream_id|, the win message should
   // be delivered to the client along with the initial UpdateStream() event.
   virtual void EndContest(StreamId stream_id, bool awarded_win) = 0;
+
+  const zx_koid_t view_ref_koid_;
 };
 
 }  // namespace scenic_impl::input

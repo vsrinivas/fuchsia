@@ -207,8 +207,8 @@ ContenderId InputSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t vie
   FX_DCHECK(view_ref_koid != ZX_KOID_INVALID);
 
   const ContenderId contender_id = next_contender_id_++;
-  gfx_legacy_contenders_.try_emplace(
-      contender_id,
+  auto [contender_it, success] = gfx_legacy_contenders_.try_emplace(
+      contender_id, view_ref_koid,
       /*respond*/
       [this, stream_id, contender_id](GestureResponse response) {
         RecordGestureDisambiguationResponse(stream_id, contender_id, {response});
@@ -239,7 +239,8 @@ ContenderId InputSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t vie
         contenders_.erase(contender_id);
         gfx_legacy_contenders_.erase(contender_id);
       });
-  contenders_.emplace(contender_id, &gfx_legacy_contenders_.at(contender_id));
+  FX_DCHECK(success);
+  contenders_.emplace(contender_id, &contender_it->second);
   return contender_id;
 }
 
@@ -252,7 +253,7 @@ void InputSystem::RegisterTouchSource(
   // Note: These closure must'nt be called in the constructor, since they depend on the
   // |contenders_| map, which isn't filled until after construction completes.
   const auto [it, success1] = touch_contenders_.try_emplace(
-      client_view_ref_koid, contender_id, std::move(touch_source_request),
+      client_view_ref_koid, client_view_ref_koid, contender_id, std::move(touch_source_request),
       /*respond*/
       [this, contender_id](StreamId stream_id, const std::vector<GestureResponse>& responses) {
         RecordGestureDisambiguationResponse(stream_id, contender_id, responses);
@@ -424,8 +425,18 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
 }
 
 void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event, StreamId stream_id) {
+  FX_DCHECK(view_tree_snapshot_->view_tree.count(event.context) != 0 &&
+            view_tree_snapshot_->view_tree.count(event.target) != 0)
+      << "Should never allow injection into broken scene graph";
+
   auto it = touch_contenders_.find(event.target);
   if (it != touch_contenders_.end()) {
+    // Copy the event and replace the viewport transform with the correct one in relation to the
+    // target.
+    InternalPointerEvent event_copy = event;
+    event_copy.viewport.receiver_from_viewport_transform =
+        GetDestinationFromViewportTransform(event, event.target);
+
     auto& touch_source = it->second.touch_source;
     // Calling EndContest() before the first event causes them to be combined in the first message
     // to the client.
@@ -433,8 +444,9 @@ void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event, S
       touch_source.EndContest(stream_id, /*awarded_win*/ true);
     }
     touch_source.UpdateStream(
-        stream_id, event,
-        /*is_end_of_stream*/ event.phase == Phase::kRemove || event.phase == Phase::kCancel);
+        stream_id, event_copy,
+        /*is_end_of_stream*/ event.phase == Phase::kRemove || event.phase == Phase::kCancel,
+        view_tree_snapshot_->view_tree.at(event.target).bounding_box);
   } else {
     ReportPointerEventToGfxLegacyView(event, event.target,
                                       fuchsia::ui::input::PointerEventType::TOUCH);
@@ -563,8 +575,25 @@ void InputSystem::UpdateGestureContest(const InternalPointerEvent& event, Stream
   // Update remaining contenders.
   // Copy the vector to avoid problems if the arena is destroyed inside of UpdateStream().
   const std::vector<ContenderId> contenders = arena.contenders();
+  const glm::mat4 world_from_viewport_transform = GetWorldFromViewTransform(event.context).value() *
+                                                  event.viewport.context_from_viewport_transform;
   for (const auto contender_id : contenders) {
-    contenders_.at(contender_id)->UpdateStream(stream_id, event, is_end_of_stream);
+    auto contender_ptr = contenders_.at(contender_id);
+    const zx_koid_t view_ref_koid = contender_ptr->view_ref_koid_;
+
+    // Copy the event and replace the viewport transform with the correct one in relation to the
+    // receiver.
+    InternalPointerEvent event_copy = event;
+    view_tree::BoundingBox view_bounds;
+    // TODO(fxbug.dev/76470, fxbug.dev/50549): |view_ref_koid| should always exist in the view tree
+    // snapshot at this point. This is a workaround until we handle breaking of the scene graph
+    // mid-stream, and to allow the legacy a11y contender to not have a view.
+    if (view_tree_snapshot_->view_tree.count(view_ref_koid) != 0) {
+      event_copy.viewport.receiver_from_viewport_transform =
+          GetDestinationFromViewportTransform(event, /*destination*/ view_ref_koid);
+      view_bounds = view_tree_snapshot_->view_tree.at(view_ref_koid).bounding_box;
+    }
+    contender_ptr->UpdateStream(stream_id, event_copy, is_end_of_stream, view_bounds);
   }
 
   DestroyArenaIfComplete(stream_id);
@@ -767,6 +796,15 @@ std::optional<glm::mat4> InputSystem::GetDestinationViewFromSourceViewTransform(
   }
 
   return destination_from_world_transform.value() * world_from_source_transform.value();
+}
+
+Mat3ColumnMajorArray InputSystem::GetDestinationFromViewportTransform(
+    const InternalPointerEvent& event, zx_koid_t destination) const {
+  FX_DCHECK(view_tree_snapshot_->view_tree.count(destination) != 0);
+  const glm::mat4 destination_from_viewport_transform =
+      GetDestinationViewFromSourceViewTransform(/*source*/ event.context, destination).value() *
+      event.viewport.context_from_viewport_transform;
+  return Mat4ToMat3ColumnMajorArray(destination_from_viewport_transform);
 }
 
 }  // namespace input

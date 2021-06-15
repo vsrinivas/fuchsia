@@ -36,6 +36,7 @@ struct BoundingBox {
   // Used to detect changes. The bounding box is defined in local space and not affected by
   // any transformations, so exact matching is preferred. No need for an epsilon comparison.
   bool operator==(const BoundingBox& other) const { return min == other.min && max == other.max; }
+  bool operator!=(const BoundingBox& other) const { return !(*this == other); }
 };
 
 // Represents an element in a View hierarchy, used in both Snapshot and SubtreeSnapshot (both of

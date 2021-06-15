@@ -14,7 +14,9 @@ namespace input {
 A11yLegacyContender::A11yLegacyContender(
     fit::function<void(StreamId, GestureResponse)> respond,
     fit::function<void(const InternalPointerEvent& event)> deliver_to_client)
-    : respond_(std::move(respond)), deliver_to_client_(std::move(deliver_to_client)) {}
+    : GestureContender(ZX_KOID_INVALID),
+      respond_(std::move(respond)),
+      deliver_to_client_(std::move(deliver_to_client)) {}
 
 A11yLegacyContender::~A11yLegacyContender() {
   // Reject all ongoing streams.
@@ -24,7 +26,7 @@ A11yLegacyContender::~A11yLegacyContender() {
 }
 
 void A11yLegacyContender::UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
-                                       bool is_end_of_stream) {
+                                       bool is_end_of_stream, view_tree::BoundingBox) {
   deliver_to_client_(event);
 
   const bool is_new_stream = ongoing_streams_.count(stream_id) == 0;

@@ -14,11 +14,13 @@ using scenic_impl::input::GfxLegacyContender;
 using scenic_impl::input::InternalPointerEvent;
 using scenic_impl::input::StreamId;
 
+constexpr zx_koid_t kViewRefKoid = 1;
 constexpr StreamId kStreamId = 1;
 
 TEST(GfxLegacyContenderTest, ShouldGetYESResponseForEachMessage) {
   uint64_t num_responses = 0;
   auto contender = GfxLegacyContender(
+      kViewRefKoid,
       /*respond*/
       [&num_responses](GestureResponse response) {
         ++num_responses;
@@ -28,11 +30,11 @@ TEST(GfxLegacyContenderTest, ShouldGetYESResponseForEachMessage) {
       /*self_destruct*/ [] {});
 
   EXPECT_EQ(num_responses, 0u);
-  contender.UpdateStream(kStreamId, /*event*/ {}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {}, /*is_end_of_stream*/ false, {});
   EXPECT_EQ(num_responses, 1u);
-  contender.UpdateStream(kStreamId, /*event*/ {}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {}, /*is_end_of_stream*/ false, {});
   EXPECT_EQ(num_responses, 2u);
-  contender.UpdateStream(kStreamId, /*event*/ {}, /*is_end_of_stream*/ true);
+  contender.UpdateStream(kStreamId, /*event*/ {}, /*is_end_of_stream*/ true, {});
   EXPECT_EQ(num_responses, 3u);
 }
 
@@ -40,6 +42,7 @@ TEST(GfxLegacyContenderTest, ShouldGetAllEventsOnWin) {
   constexpr StreamId kStreamId = 1;
   std::vector<InternalPointerEvent> last_delivered_events;
   auto contender = GfxLegacyContender(
+      kViewRefKoid,
       /*respond*/ [](auto) {}, /*deliver_events_to_client*/
       [&last_delivered_events](const std::vector<InternalPointerEvent>& events) {
         last_delivered_events = events;
@@ -47,9 +50,9 @@ TEST(GfxLegacyContenderTest, ShouldGetAllEventsOnWin) {
       /*self_destruct*/ [] {});
 
   // No events delivered before being awarded a win.
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false, {});
   EXPECT_TRUE(last_delivered_events.empty());
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 1}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 1}, /*is_end_of_stream*/ false, {});
   EXPECT_TRUE(last_delivered_events.empty());
 
   // All previous events should be delivered on win.
@@ -59,7 +62,7 @@ TEST(GfxLegacyContenderTest, ShouldGetAllEventsOnWin) {
   EXPECT_EQ(last_delivered_events[1].timestamp, 1);
 
   // Subsequent events are delivered immediately.
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 2}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 2}, /*is_end_of_stream*/ false, {});
   ASSERT_EQ(last_delivered_events.size(), 1u);
   EXPECT_EQ(last_delivered_events[0].timestamp, 2);
 }
@@ -68,11 +71,12 @@ TEST(GfxLegacyContenderTest, ShouldSelfDestructOnLoss) {
   bool deliver_called = false;
   bool self_destruct_called = false;
   auto contender = GfxLegacyContender(
+      kViewRefKoid,
       /*respond*/ [](auto) {},
       /*deliver_events_to_client*/ [&deliver_called](auto) { deliver_called = true; },
       /*self_destruct*/ [&self_destruct_called] { self_destruct_called = true; });
 
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false, {});
   EXPECT_FALSE(deliver_called);
   EXPECT_FALSE(self_destruct_called);
 
@@ -87,12 +91,13 @@ TEST(GfxLegacyContenderTest, ShouldSelfDescructOnStreamEndAfterWin) {
 
   bool self_destruct_called = false;
   auto contender = GfxLegacyContender(
+      kViewRefKoid,
       /*respond*/ [](auto) {},
       /*deliver_events_to_client*/
       [&num_delivered_events](auto events) { num_delivered_events += events.size(); },
       /*self_destruct*/ [&self_destruct_called] { self_destruct_called = true; });
 
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false, {});
   EXPECT_EQ(num_delivered_events, 0u);
   EXPECT_FALSE(self_destruct_called);
 
@@ -102,12 +107,12 @@ TEST(GfxLegacyContenderTest, ShouldSelfDescructOnStreamEndAfterWin) {
   EXPECT_FALSE(self_destruct_called);
 
   // No destruction while stream is ongoing.
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false, {});
   EXPECT_EQ(num_delivered_events, 2u);
   EXPECT_FALSE(self_destruct_called);
 
   // Deliver the last event and then self destruct on stream end.
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ true);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ true, {});
   EXPECT_EQ(num_delivered_events, 3u);
   EXPECT_TRUE(self_destruct_called);
 }
@@ -117,12 +122,13 @@ TEST(GfxLegacyContenderTest, ShouldSelfDescructOnWinAfterStreamEnd) {
 
   bool self_destruct_called = false;
   auto contender = GfxLegacyContender(
+      kViewRefKoid,
       /*respond*/ [](auto) {},
       /*deliver_events_to_client*/
       [&num_delivered_events](auto events) { num_delivered_events += events.size(); },
       /*self_destruct*/ [&self_destruct_called] { self_destruct_called = true; });
 
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ true);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ true, {});
   EXPECT_EQ(num_delivered_events, 0u);
   EXPECT_FALSE(self_destruct_called);
 

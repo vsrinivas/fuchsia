@@ -101,6 +101,8 @@ class GestureDisambiguationTest : public gtest::TestLoopFixture {
     client1_ptr_.set_error_handler([](auto) { FAIL() << "Client1's channel closed"; });
     client2_ptr_.set_error_handler([](auto) { FAIL() << "Client2's channel closed"; });
 
+    input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+        /*hits*/ {}, /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
     input_system_.RegisterTouchSource(client1_ptr_.NewRequest(), kClient1Koid);
     input_system_.RegisterTouchSource(client2_ptr_.NewRequest(), kClient2Koid);
   }

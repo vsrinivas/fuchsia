@@ -14,6 +14,7 @@
 #include <unordered_set>
 
 #include "src/ui/scenic/lib/input/gesture_contender.h"
+#include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace scenic_impl::input {
 
@@ -22,15 +23,18 @@ namespace scenic_impl::input {
 class TouchSource : public GestureContender, public fuchsia::ui::pointer::TouchSource {
  public:
   // |respond_| must not destroy the TouchSource object.
-  TouchSource(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> event_provider,
+  TouchSource(zx_koid_t view_ref_koid,
+              fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> event_provider,
               fit::function<void(StreamId, const std::vector<GestureResponse>&)> respond,
               fit::function<void()> error_handler);
 
   ~TouchSource() override;
 
   // |GestureContender|
-  void UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
-                    bool is_end_of_stream) override;
+  // For |view_bounds| |event.viewport| new values are only sent to the client when they've changed
+  // from their previous seen values.
+  void UpdateStream(StreamId stream_id, const InternalPointerEvent& event, bool is_end_of_stream,
+                    view_tree::BoundingBox view_bounds) override;
 
   // |GestureContender|
   void EndContest(StreamId stream_id, bool awarded_win) override;
@@ -94,6 +98,7 @@ class TouchSource : public GestureContender, public fuchsia::ui::pointer::TouchS
 
   bool is_first_event_ = true;
   Viewport current_viewport_;
+  view_tree::BoundingBox current_view_bounds_;
 
   // Events waiting to be sent to client. Sent in batches of up to
   // fuchsia::ui::pointer::TOUCH_MAX_EVENT events on each call to Watch().

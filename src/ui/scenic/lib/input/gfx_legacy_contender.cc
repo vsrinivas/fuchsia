@@ -11,15 +11,16 @@
 namespace scenic_impl::input {
 
 GfxLegacyContender::GfxLegacyContender(
-    fit::function<void(GestureResponse)> respond,
+    zx_koid_t view_ref_koid, fit::function<void(GestureResponse)> respond,
     fit::function<void(const std::vector<InternalPointerEvent>&)> deliver_events_to_client,
     fit::function<void()> self_destruct)
-    : respond_(std::move(respond)),
+    : GestureContender(view_ref_koid),
+      respond_(std::move(respond)),
       deliver_events_to_client_(std::move(deliver_events_to_client)),
       self_destruct_(std::move(self_destruct)) {}
 
 void GfxLegacyContender::UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
-                                      bool is_end_of_stream) {
+                                      bool is_end_of_stream, view_tree::BoundingBox) {
   is_end_of_stream_ = is_end_of_stream;
   if (awarded_win_) {
     FX_DCHECK(undelivered_events_.empty());

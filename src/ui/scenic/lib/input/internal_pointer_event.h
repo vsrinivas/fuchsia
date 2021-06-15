@@ -8,11 +8,13 @@
 #include <zircon/types.h>
 
 #include <array>
+#include <optional>
 
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 
-namespace scenic_impl {
-namespace input {
+namespace scenic_impl::input {
+
+using Mat3ColumnMajorArray = std::array<float, 9>;
 
 // Possible states the pointer can be in.
 // TODO(fxbug.dev/53316): Remove UP and DOWN phases when old input injection API is removed.
@@ -45,6 +47,10 @@ struct Viewport {
   // A transform defining the Viewport in relation to a context (a View).
   glm::mat4 context_from_viewport_transform = glm::mat4(1.f);
 
+  // A 2D transform defining the Viewport in relation to a receiver (a View), in column-major order.
+  // Must be set when handed to GestureContender (since that's when the receiver is determined).
+  std::optional<Mat3ColumnMajorArray> receiver_from_viewport_transform;
+
   // Used to check for exact equality in TouchSource
   inline bool operator==(const Viewport& other) const {
     return extents == other.extents &&
@@ -76,7 +82,6 @@ struct InternalPointerEvent {
   uint32_t buttons = 0;
 };
 
-}  // namespace input
-}  // namespace scenic_impl
+}  // namespace scenic_impl::input
 
 #endif  // SRC_UI_SCENIC_LIB_INPUT_INTERNAL_POINTER_EVENT_H_

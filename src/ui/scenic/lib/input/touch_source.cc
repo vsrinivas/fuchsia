@@ -97,26 +97,17 @@ fuchsia::ui::pointer::TouchEvent NewEndEvent(StreamId stream_id, uint32_t device
   return new_event;
 }
 
-void AddViewParametersToEvent(fuchsia::ui::pointer::TouchEvent& event, const Viewport& viewport) {
+void AddViewParametersToEvent(fuchsia::ui::pointer::TouchEvent& event, const Viewport& viewport,
+                              view_tree::BoundingBox view_bounds) {
   event.set_view_parameters(
       fuchsia::ui::pointer::ViewParameters{
-          .view =
-              fuchsia::ui::pointer::Rectangle{
-                  // TODO(fxbug.dev/73639): Add view bounds.
-              },
+          .view = fuchsia::ui::pointer::Rectangle{.min = view_bounds.min, .max = view_bounds.max},
           .viewport =
               fuchsia::ui::pointer::Rectangle{
                   .min = {{viewport.extents.min[0], viewport.extents.min[1]}},
                   .max = {{viewport.extents.max[0], viewport.extents.max[1]}}},
-          .viewport_to_view_transform = {viewport.context_from_viewport_transform[0][0],
-                                         viewport.context_from_viewport_transform[0][1],
-                                         viewport.context_from_viewport_transform[0][2],
-                                         viewport.context_from_viewport_transform[1][0],
-                                         viewport.context_from_viewport_transform[1][1],
-                                         viewport.context_from_viewport_transform[1][2],
-                                         viewport.context_from_viewport_transform[2][0],
-                                         viewport.context_from_viewport_transform[2][1],
-                                         viewport.context_from_viewport_transform[2][2]}});
+          .viewport_to_view_transform = viewport.receiver_from_viewport_transform.value(),
+      });
 }
 
 bool IsHold(GestureResponse response) {
@@ -141,10 +132,12 @@ bool IsHold(fuchsia::ui::pointer::TouchResponseType response) {
 
 }  // namespace
 
-TouchSource::TouchSource(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> event_provider,
+TouchSource::TouchSource(zx_koid_t view_ref_koid,
+                         fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> event_provider,
                          fit::function<void(StreamId, const std::vector<GestureResponse>&)> respond,
                          fit::function<void()> error_handler)
-    : binding_(this, std::move(event_provider)),
+    : GestureContender(view_ref_koid),
+      binding_(this, std::move(event_provider)),
       respond_(std::move(respond)),
       error_handler_(std::move(error_handler)) {
   binding_.set_error_handler([this](zx_status_t) { error_handler_(); });
@@ -165,7 +158,7 @@ TouchSource::~TouchSource() {
 }
 
 void TouchSource::UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
-                               bool is_end_of_stream) {
+                               bool is_end_of_stream, view_tree::BoundingBox view_bounds) {
   const bool is_new_stream = ongoing_streams_.count(stream_id) == 0;
   FX_CHECK(is_new_stream == (event.phase == Phase::kAdd)) << "Stream must only start with ADD.";
   FX_CHECK(is_end_of_stream == (event.phase == Phase::kRemove || event.phase == Phase::kCancel));
@@ -202,11 +195,12 @@ void TouchSource::UpdateStream(StreamId stream_id, const InternalPointerEvent& e
   }
 
   stream.stream_has_ended = is_end_of_stream;
-  const auto viewport = event.viewport;
-  if (current_viewport_ != viewport || is_first_event_) {
+  if (current_viewport_ != event.viewport || current_view_bounds_ != view_bounds ||
+      is_first_event_) {
     is_first_event_ = false;
-    current_viewport_ = viewport;
-    AddViewParametersToEvent(out_event, current_viewport_);
+    current_viewport_ = event.viewport;
+    current_view_bounds_ = view_bounds;
+    AddViewParametersToEvent(out_event, current_viewport_, current_view_bounds_);
   }
 
   pending_events_.push({.stream_id = stream_id, .event = std::move(out_event)});
