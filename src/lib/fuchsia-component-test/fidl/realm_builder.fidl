@@ -77,6 +77,7 @@ resource table MockComponentStartInfo {
 flexible union Component {
     1: fuchsia.sys2.ComponentDecl decl;
     2: string:fuchsia.component.types.MAX_URL_LENGTH url;
+    3: string:fuchsia.component.types.MAX_URL_LENGTH legacy_url;
 };
 
 /// A capability route, denoting where a capability comes from and where it goes

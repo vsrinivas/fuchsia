@@ -11,7 +11,7 @@
     collections: [
         {
             name: "fuchsia_component_test_collection",
-            environment: "#fuchsia_component_test_env_with_registry",
+            environment: "#realm_builder_env",
             durability: "transient",
         },
     ],
@@ -38,22 +38,30 @@
             from: "parent",
             to: [ "#fuchsia_component_test_collection" ],
         },
+        {
+            protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+            from: "parent",
+            to: [ "#fuchsia_component_test_framework_intermediary" ],
+        },
     ],
     environments: [
         {
-            name: "fuchsia_component_test_env_with_registry",
+            name: "realm_builder_env",
             extends: "realm",
             runners: [
                 {
-                    runner: "fuchsia_component_test_mocks",
+                    runner: "realm_builder",
                     from: "#fuchsia_component_test_framework_intermediary",
                 },
             ],
             resolvers: [
                 {
-                    resolver: "fuchsia_component_test_registry",
+                    resolver: "realm_builder_resolver",
                     from: "#fuchsia_component_test_framework_intermediary",
-                    scheme: "fuchsia-component-test-registry",
+                    scheme: "realm-builder",
                 },
             ],
         },

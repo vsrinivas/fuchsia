@@ -6,22 +6,30 @@
     },
     capabilities: [
         {
-            resolver: "fuchsia_component_test_registry",
+            resolver: "realm_builder_resolver",
             path: "/svc/fuchsia.sys2.ComponentResolver",
         },
         {
-            runner: "fuchsia_component_test_mocks",
+            runner: "realm_builder",
             path: "/svc/fuchsia.component.runner.ComponentRunner",
         },
         { protocol: "fuchsia.realm.builder.FrameworkIntermediary" },
     ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+        },
+    ],
     expose: [
         {
-            resolver: "fuchsia_component_test_registry",
+            resolver: "realm_builder_resolver",
             from: "self",
         },
         {
-            runner: "fuchsia_component_test_mocks",
+            runner: "realm_builder",
             from: "self",
         },
         {

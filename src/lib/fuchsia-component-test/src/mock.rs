@@ -14,7 +14,7 @@ use {
 };
 
 pub const MOCK_ID_KEY: &'static str = "mock_id";
-pub const RUNNER_NAME: &'static str = "fuchsia_component_test_mocks";
+pub const RUNNER_NAME: &'static str = "realm_builder";
 
 /// The implementation for a mock component. The contained function is called when the framework
 /// asks the mock to run, and the function is given the component's handles for its namespace and

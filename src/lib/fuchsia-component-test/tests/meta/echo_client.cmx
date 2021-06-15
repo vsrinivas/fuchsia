@@ -1,0 +1,13 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/echo_client"
+    },
+    "sandbox": {
+        "services": [
+            "fidl.examples.routing.echo.Echo"
+        ]
+    }
+}

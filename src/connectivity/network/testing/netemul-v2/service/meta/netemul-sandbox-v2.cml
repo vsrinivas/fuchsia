@@ -13,7 +13,7 @@
     collections: [
         {
             name: "netemul",
-            environment: "#fuchsia_component_test_env_with_registry",
+            environment: "#realm_builder_env",
             durability: "transient",
         },
     ],

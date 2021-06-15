@@ -246,6 +246,17 @@ impl Realm {
             .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))
     }
 
+    pub async fn set_component_legacy_url(
+        &self,
+        moniker: &Moniker,
+        url: String,
+    ) -> Result<(), Error> {
+        self.framework_intermediary_proxy
+            .set_component(&moniker.to_string(), &mut ffrb::Component::LegacyUrl(url))
+            .await?
+            .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))
+    }
+
     /// Returns whether or not the given component exists in this realm. This will return true if
     /// the component exists in the realm tree itself, or if the parent contains a child
     /// declaration for the moniker.

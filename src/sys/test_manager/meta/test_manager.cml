@@ -34,15 +34,15 @@
                     from: "#go_test_runner",
                 },
                 {
-                    runner: "fuchsia_component_test_mocks",
+                    runner: "realm_builder",
                     from: "#fuchsia_component_test_framework_intermediary",
                 },
             ],
             resolvers: [
                 {
-                    resolver: "fuchsia_component_test_registry",
+                    resolver: "realm_builder_resolver",
                     from: "#fuchsia_component_test_framework_intermediary",
-                    scheme: "fuchsia-component-test-registry",
+                    scheme: "realm-builder",
                 },
             ],
             debug: [

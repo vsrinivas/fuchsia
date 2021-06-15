@@ -11,7 +11,7 @@ use {
     std::{collections::HashMap, sync::Arc},
 };
 
-const RESOLVER_SCHEME: &'static str = "fuchsia-component-test-registry";
+const RESOLVER_SCHEME: &'static str = "realm-builder";
 
 pub struct Registry {
     next_unique_component_id: Mutex<u64>,

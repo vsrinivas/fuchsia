@@ -5,7 +5,8 @@
 use {
     cm_rust::{FidlIntoNative, NativeIntoFidl},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_realm_builder as ffrb, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_realm_builder as ffrb, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_syslog as syslog,
     futures::{future::BoxFuture, FutureExt, StreamExt, TryStreamExt},
@@ -30,7 +31,7 @@ async fn main() {
 
     let mut fs = fserver::ServiceFs::new_local();
     let registry = resolver::Registry::new();
-    let runner = runner::MocksRunner::new();
+    let runner = runner::Runner::new();
 
     let registry_clone = registry.clone();
     fs.dir("svc").add_fidl_service(move |stream| registry_clone.run_resolver_service(stream));
@@ -56,7 +57,7 @@ async fn main() {
 async fn handle_framework_intermediary_stream(
     mut stream: ffrb::FrameworkIntermediaryRequestStream,
     registry: Arc<resolver::Registry>,
-    runner: Arc<runner::MocksRunner>,
+    runner: Arc<runner::Runner>,
 ) -> Result<(), anyhow::Error> {
     let mut realm_tree = RealmNode::default();
     while let Some(req) = stream.try_next().await? {
@@ -326,6 +327,35 @@ impl RealmNode {
                     startup: fsys::StartupMode::Lazy,
                     environment: None,
                 });
+            }
+            ffrb::Component::LegacyUrl(url) => {
+                if let Some(parent_moniker) = moniker.parent() {
+                    let parent_node =
+                        self.get_node_mut(&parent_moniker, GetBehavior::CreateIfMissing)?;
+                    let child_name = moniker.child_name().unwrap().to_string();
+                    parent_node.decl.children = parent_node
+                        .decl
+                        .children
+                        .iter()
+                        .filter(|c| c.name != child_name)
+                        .cloned()
+                        .collect();
+                }
+                let node = self.get_node_mut(&moniker, GetBehavior::CreateIfMissing)?;
+                node.decl = cm_rust::ComponentDecl {
+                    program: Some(cm_rust::ProgramDecl {
+                        runner: Some(crate::runner::RUNNER_NAME.try_into().unwrap()),
+                        info: fdata::Dictionary {
+                            entries: Some(vec![fdata::DictionaryEntry {
+                                key: runner::LEGACY_URL_KEY.to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str(url))),
+                            }]),
+                            ..fdata::Dictionary::EMPTY
+                        },
+                    }),
+                    ..cm_rust::ComponentDecl::default()
+                };
+                node.validate(&moniker)?;
             }
             _ => return Err(Error::BadFidl),
         }

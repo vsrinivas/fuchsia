@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_realm_builder as ffrb, fuchsia_async as fasync,
     futures::{future::BoxFuture, FutureExt},
     maplit::hashmap,
-    std::collections::HashMap,
+    std::{collections::HashMap, fmt},
 };
 
 /// A capability that is routed through the custom realms
@@ -151,6 +151,9 @@ pub enum ComponentSource {
 
     /// An in-process component mock
     Mock(mock::Mock),
+
+    /// A v1 component URL, such as `fuchsia-pkg://fuchsia.com/package-name#meta/manifest.cmx`
+    LegacyUrl(String),
 }
 
 impl ComponentSource {
@@ -166,6 +169,24 @@ impl ComponentSource {
             + 'static,
     {
         Self::Mock(mock::Mock::new(mock_fn))
+    }
+
+    pub fn legacy_url(url: impl Into<String>) -> Self {
+        Self::LegacyUrl(url.into())
+    }
+}
+
+impl fmt::Debug for ComponentSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ComponentSource::Url(url) => f.debug_tuple("Componentsource::Url").field(url).finish(),
+            ComponentSource::Mock(_) => {
+                f.debug_tuple("Componentsource::Mock").field(&"<mock fn>".to_string()).finish()
+            }
+            ComponentSource::LegacyUrl(legacy_url) => {
+                f.debug_tuple("Componentsource::LegacyUrl").field(legacy_url).finish()
+            }
+        }
     }
 }
 
@@ -277,6 +298,9 @@ impl RealmBuilder {
             }
             ComponentSource::Mock(mock) => {
                 self.realm.add_mocked_component(moniker, mock).await?;
+            }
+            ComponentSource::LegacyUrl(url) => {
+                self.realm.set_component_legacy_url(&moniker, url).await?;
             }
         }
         Ok(self)

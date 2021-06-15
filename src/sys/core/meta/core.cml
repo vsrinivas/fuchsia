@@ -979,6 +979,15 @@
             to: [ "#vulkan_loader" ],
             subdir: "class/goldfish-sync",
         },
+        {
+            protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+            from: "#appmgr",
+            to: [ "#test_manager" ],
+            dependency: "weak_for_migration",
+        },
     ],
     expose: [
         // Non-zircon services for svchost

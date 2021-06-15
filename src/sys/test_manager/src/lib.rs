@@ -1198,6 +1198,17 @@ async fn get_realm(
             capability: Capability::protocol("fuchsia.kernel.VmexResource"),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        // The two following are for v1 components being run by the nested realm builder
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.sys.Loader"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.sys.Environment"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?;
 
     Ok(builder.build())

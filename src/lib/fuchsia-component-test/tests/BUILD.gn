@@ -36,6 +36,18 @@ fuchsia_test_component("fuchsia_component_test_tests_component") {
   deps = [ ":fuchsia_component_test_tests_bin" ]
 }
 
+fuchsia_component("echo_client_component") {
+  manifest = "meta/echo_client.cmx"
+  component_name = "echo_client"
+  deps = [ "//examples/components/routing/echo_client" ]
+}
+
+fuchsia_component("echo_server_component") {
+  manifest = "meta/echo_server.cmx"
+  component_name = "echo_server"
+  deps = [ "//examples/components/routing/echo_server" ]
+}
+
 rustc_test("scoped-instance-test") {
   edition = "2018"
   source_root = "scoped_instance/lib.rs"
@@ -104,6 +116,8 @@ fuchsia_test_component("realm_with_wait_component") {
 
 fuchsia_test_package("fuchsia-component-test-tests") {
   deps = [
+    ":echo_client_component",
+    ":echo_server_component",
     ":fuchsia_component_test_tests_component",
     ":realm_component",
     ":realm_with_wait_component",
