@@ -94,7 +94,7 @@ async fn second_resolve_succeeds_when_blob_404() {
 
 #[fasync::run_singlethreaded(test)]
 async fn second_resolve_succeeds_when_far_errors_mid_download() {
-    let pkg = PackageBuilder::new("large_meta_far")
+    let pkg = PackageBuilder::new("second_resolve_succeeds_when_far_errors_mid_download")
         .add_resource_at(
             "meta/large_file",
             vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING].as_slice(),
@@ -115,7 +115,7 @@ async fn second_resolve_succeeds_when_far_errors_mid_download() {
 #[fasync::run_singlethreaded(test)]
 async fn second_resolve_succeeds_when_blob_errors_mid_download() {
     let blob = vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING];
-    let pkg = PackageBuilder::new("large_blob")
+    let pkg = PackageBuilder::new("second_resolve_succeeds_when_blob_errors_mid_download")
         .add_resource_at("blobbity/blob", blob.as_slice())
         .build()
         .await
@@ -135,7 +135,7 @@ async fn second_resolve_succeeds_when_blob_errors_mid_download() {
 
 #[fasync::run_singlethreaded(test)]
 async fn second_resolve_succeeds_disconnect_before_far_complete() {
-    let pkg = PackageBuilder::new("large_meta_far")
+    let pkg = PackageBuilder::new("second_resolve_succeeds_disconnect_before_far_complete")
         .add_resource_at(
             "meta/large_file",
             vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING].as_slice(),
@@ -156,7 +156,7 @@ async fn second_resolve_succeeds_disconnect_before_far_complete() {
 #[fasync::run_singlethreaded(test)]
 async fn second_resolve_succeeds_disconnect_before_blob_complete() {
     let blob = vec![0; FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING];
-    let pkg = PackageBuilder::new("large_blob")
+    let pkg = PackageBuilder::new("second_resolve_succeeds_disconnect_before_blob_complete")
         .add_resource_at("blobbity/blob", blob.as_slice())
         .build()
         .await
@@ -216,7 +216,10 @@ async fn second_resolve_succeeds_when_tuf_metadata_update_fails() {
     // from scratch, but if update fails, pkg-resolver will keep its Repository object which
     // contains a rust-tuf client in a possibly invalid state, and we want to verify that
     // pkg-resolver calls update on the client again and that this update recovers the client.
-    let pkg = PackageBuilder::new("no-blobs").build().await.unwrap();
+    let pkg = PackageBuilder::new("second_resolve_succeeds_when_tuf_metadata_update_fails")
+        .build()
+        .await
+        .unwrap();
     verify_resolve_fails_then_succeeds(
         pkg,
         responder::ForPath::new("/2.snapshot.json", responder::OneByteShortThenDisconnect),
@@ -247,7 +250,7 @@ async fn second_resolve_succeeds_when_tuf_metadata_update_fails() {
 // http2.
 #[fasync::run_singlethreaded(test)]
 async fn blob_timeout_causes_new_tcp_connection() {
-    let pkg = PackageBuilder::new("test").build().await.unwrap();
+    let pkg = PackageBuilder::new("blob_timeout_causes_new_tcp_connection").build().await.unwrap();
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
             .add_package(&pkg)
@@ -279,7 +282,12 @@ async fn blob_timeout_causes_new_tcp_connection() {
     // future can fire prior to the body being downloaded on the retry. However, we expect to
     // observe three connections: one for the TUF client, one for the initial resolve that timed
     // out, and one for the retried resolve.
-    let _ = env.resolve_package("fuchsia-pkg://test/test").await;
+    match env.resolve_package("fuchsia-pkg://test/blob_timeout_causes_new_tcp_connection").await {
+        Ok(_) | Err(fidl_fuchsia_pkg::ResolveError::UnavailableBlob) => {}
+        Err(e) => {
+            panic!("unexpected error: {:?}", e);
+        }
+    };
     assert_eq!(server.connection_attempts(), 3);
 
     env.stop().await;
