@@ -131,9 +131,7 @@ void AcpiPwrbtnDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx
   // Handle powerbutton events via the notify interface
   bool power_btn = false;
   if (info->Valid & ACPI_VALID_HID) {
-    if (value == 128 &&
-        (!strncmp(info->HardwareId.String, "PNP0C0C", info->HardwareId.Length) ||
-         !strncmp(info->HardwareId.String, LID_HID_STRING, info->HardwareId.Length))) {
+    if (value == 128 && !strncmp(info->HardwareId.String, "PNP0C0C", info->HardwareId.Length)) {
       power_btn = true;
     } else if (value == 199 &&
                (!strncmp(info->HardwareId.String, "MSHW0028", info->HardwareId.Length) ||
