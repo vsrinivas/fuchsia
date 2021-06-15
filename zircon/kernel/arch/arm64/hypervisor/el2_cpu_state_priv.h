@@ -54,8 +54,4 @@ class El2CpuState : public hypervisor::IdAllocator<uint8_t, 64> {
 zx_status_t alloc_vmid(uint8_t* vmid);
 zx_status_t free_vmid(uint8_t vmid);
 
-// Allocate and free virtual processor IDs.
-zx_status_t alloc_vpid(uint8_t* vpid);
-zx_status_t free_vpid(uint8_t vpid);
-
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_HYPERVISOR_EL2_CPU_STATE_PRIV_H_
