@@ -60,7 +60,11 @@ void NetdeviceMigration::EthernetIfcRecv(const uint8_t* data_buffer, size_t data
                                          uint32_t flags) {}
 
 zx_status_t NetdeviceMigration::NetworkDeviceImplInit(const network_device_ifc_protocol_t* iface) {
-  return ZX_ERR_NOT_SUPPORTED;
+  if (netdevice_.is_valid()) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+  netdevice_ = ddk::NetworkDeviceIfcProtocolClient(iface);
+  return ZX_OK;
 }
 
 void NetdeviceMigration::NetworkDeviceImplStart(network_device_impl_start_callback callback,

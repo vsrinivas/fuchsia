@@ -49,6 +49,7 @@ class NetdeviceMigration : public DeviceType,
 
  private:
   ddk::EthernetImplProtocolClient ethernet_;
+  ddk::NetworkDeviceIfcProtocolClient netdevice_;
   ethernet_info_t eth_info_;
   zx::bti eth_bti_;
 };
