@@ -40,6 +40,22 @@ driver_module("ethernet") {
   ]
 }
 
+source_set("test_util") {
+  sources = [ "test_util.h" ]
+  testonly = true
+  public_deps = [
+    "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
+    "//src/devices/lib/dev-operation",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/fzl",
+  ]
+}
+
 test("ethernet-unittest") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "ethernet-unittest"
@@ -50,18 +66,10 @@ test("ethernet-unittest") {
   ]
   deps = [
     ":ethernet_bind",
-    "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
+    ":test_util",
     "//sdk/lib/fidl/cpp:cpp_base",
-    "//src/devices/lib/dev-operation",
-    "//src/devices/testing/fake_ddk",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/fidl-utils",
-    "//zircon/system/ulib/fzl",
   ]
 }
 

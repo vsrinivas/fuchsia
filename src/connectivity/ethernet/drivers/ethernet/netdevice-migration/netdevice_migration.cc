@@ -4,13 +4,53 @@
 
 #include "netdevice_migration.h"
 
+#include <lib/ddk/debug.h>
+
+#include <fbl/alloc_checker.h>
+
 #include "src/connectivity/ethernet/drivers/ethernet/netdevice-migration/netdevice_migration_bind.h"
 
 namespace netdevice_migration {
 
-zx_status_t NetdeviceMigration::Bind(void* ctx, zx_device_t* dev) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t NetdeviceMigration::Bind(void* ctx, zx_device_t* dev) {
+  fbl::AllocChecker ac;
+  auto netdevm = std::unique_ptr<NetdeviceMigration>(new (&ac) NetdeviceMigration(dev));
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
 
-zx_status_t NetdeviceMigration::Add() { return DdkAdd(ddk::DeviceAddArgs("netdevice_migration")); }
+  if (zx_status_t status = netdevm->Init(); status != ZX_OK) {
+    return status;
+  }
+
+  // On a successful call to Bind(), Devmgr takes ownership of the driver, which it releases by
+  // calling DdkRelease(). Consequently, we transfer our ownership to a local and let it drop.
+  auto __UNUSED temp_ref = netdevm.release();
+  return ZX_OK;
+}
+
+zx_status_t NetdeviceMigration::Init() {
+  if (!ethernet_.is_valid()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (zx_status_t status = ethernet_.Query(0, &eth_info_); status != ZX_OK) {
+    zxlogf(ERROR, "netdevice-migration: failed to query parent: %s\n",
+           zx_status_get_string(status));
+    return status;
+  }
+
+  ethernet_.GetBti(&eth_bti_);
+
+  if (zx_status_t status = DdkAdd(
+          ddk::DeviceAddArgs("netdevice-migration").set_proto_id(ZX_PROTOCOL_NETWORK_DEVICE_IMPL));
+      status != ZX_OK) {
+    zxlogf(ERROR, "netdevice-migration: failed to bind: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  return ZX_OK;
+}
 
 void NetdeviceMigration::DdkRelease() { delete this; }
 

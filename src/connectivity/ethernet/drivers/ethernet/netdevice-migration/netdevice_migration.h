@@ -18,15 +18,16 @@ class NetdeviceMigration : public DeviceType,
                            public ddk::EthernetIfcProtocol<NetdeviceMigration>,
                            public ddk::NetworkDeviceImplProtocol<NetdeviceMigration> {
  public:
-  explicit NetdeviceMigration(zx_device_t* parent) : DeviceType(parent) {}
+  explicit NetdeviceMigration(zx_device_t* parent) : DeviceType(parent), ethernet_(parent) {}
   virtual ~NetdeviceMigration() = default;
 
   // Initializes the driver and binds it to the parent device `dev`. The DDK calls Bind through
   // the zx_driver_ops_t published for this driver; consequently, a client of this driver will not
   // need to directly call this function.
   static zx_status_t Bind(void* ctx, zx_device_t* dev);
-  // Adds an initialized driver to the DDK.
-  zx_status_t Add();
+  // Initializes the driver's client to the parent EthernetImplProtocol and adds the driver to
+  // devmgr.
+  zx_status_t Init();
 
   // For DeviceType.
   void DdkRelease();
@@ -45,6 +46,11 @@ class NetdeviceMigration : public DeviceType,
   void NetworkDeviceImplPrepareVmo(uint8_t id, zx::vmo vmo);
   void NetworkDeviceImplReleaseVmo(uint8_t id);
   void NetworkDeviceImplSetSnoop(bool snoop);
+
+ private:
+  ddk::EthernetImplProtocolClient ethernet_;
+  ethernet_info_t eth_info_;
+  zx::bti eth_bti_;
 };
 
 }  // namespace netdevice_migration
