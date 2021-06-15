@@ -21,6 +21,7 @@ use {
         stream::{FusedStream, StreamExt},
     },
     matches::assert_matches,
+    test_case::test_case,
     test_helpers::create_key_event,
 };
 
@@ -396,134 +397,54 @@ impl TestHandles {
     }
 }
 
-async fn inject_key_and_receive_keyboard_protocol_message(
+fn inject_key_and_receive_keyboard_protocol_message(
     event: ui_input3::KeyEvent,
-) -> Result<ui_input3::KeyEvent> {
-    let mut handles = TestHandles::new().await?;
+) -> Result<(Result<ui_input3::KeyEventStatus, fidl::Error>, ui_input3::KeyEvent)> {
+    fasync::TestExecutor::new()?.run_singlethreaded(async {
+        let mut handles = TestHandles::new().await?;
 
-    let (was_handled, received_event) = future::join(
-        handles.injector_service.inject(event),
-        expect_key_event(&mut handles.listener_stream),
+        let (was_handled, received_event) = future::join(
+            handles.injector_service.inject(event),
+            expect_key_event(&mut handles.listener_stream),
+        )
+        .await;
+        Ok((was_handled, received_event))
+    })
+}
+
+#[test_case(input::Key::A, None => (Some(input::Key::A), None); "without_key_meaning")]
+#[test_case(input::Key::A, 'a'
+             => (Some(input::Key::A), Some(ui_input3::KeyMeaning::Codepoint(0x61)));
+            "key_and_meaning")]
+#[test_case(None, 'a'
+            => (Some(input::Key::A), Some(ui_input3::KeyMeaning::Codepoint(0x61)));
+            "only_key_meaning_lower_alpha")]
+#[test_case(None, 'A'
+            => (Some(input::Key::A), Some(ui_input3::KeyMeaning::Codepoint(0x41)));
+            "only_key_meaning_upper_alpha")]
+#[test_case(None, '1'
+            => (Some(input::Key::Key1), Some(ui_input3::KeyMeaning::Codepoint(0x31)));
+            "only_key_meaning_numeric")]
+#[test_case(None, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Enter)
+            => (Some(input::Key::Enter),
+                Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Enter)));
+            "only_key_meaning_enter")]
+#[test_case(None, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Tab)
+            => (Some(input::Key::Tab),
+                Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Tab)));
+            "only_key_meaning_tab")]
+#[test_case(None, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Backspace)
+            => (Some(input::Key::Backspace),
+                Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Backspace)));
+            "only_key_meaning_backspace")]
+fn test_inject_key_yields_expected_key_and_key_meaning(
+    key: impl Into<Option<input::Key>>,
+    key_meaning: impl Into<test_helpers::KeyMeaningWrapper>,
+) -> (Option<input::Key>, Option<ui_input3::KeyMeaning>) {
+    let (was_handled, received_event) = inject_key_and_receive_keyboard_protocol_message(
+        create_key_event(ui_input3::KeyEventType::Pressed, key, None, key_meaning),
     )
-    .await;
-
-    assert_eq!(was_handled?, ui_input3::KeyEventStatus::Handled);
-    Ok(received_event)
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_inject_key_without_meaning() -> Result<()> {
-    let injected_event =
-        create_key_event(ui_input3::KeyEventType::Pressed, input::Key::A, None, None);
-    let received_event =
-        inject_key_and_receive_keyboard_protocol_message(injected_event.clone()).await?;
-    assert_eq!(received_event, injected_event);
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_inject_key_and_meaning() -> Result<()> {
-    let injected_event =
-        create_key_event(ui_input3::KeyEventType::Pressed, input::Key::A, None, 'a');
-    let received_event =
-        inject_key_and_receive_keyboard_protocol_message(injected_event.clone()).await?;
-    assert_eq!(received_event, injected_event);
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_inject_only_key_meaning_lower_alpha() -> Result<()> {
-    let injected_event = create_key_event(ui_input3::KeyEventType::Pressed, None, None, 'a');
-    let received_event = inject_key_and_receive_keyboard_protocol_message(injected_event).await?;
-    assert_eq!(
-        received_event,
-        create_key_event(ui_input3::KeyEventType::Pressed, input::Key::A, None, 'a')
-    );
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_inject_only_key_meaning_upper_alpha() -> Result<()> {
-    let injected_event = create_key_event(ui_input3::KeyEventType::Pressed, None, None, 'A');
-    let received_event = inject_key_and_receive_keyboard_protocol_message(injected_event).await?;
-    assert_eq!(
-        received_event,
-        create_key_event(ui_input3::KeyEventType::Pressed, input::Key::A, None, 'A')
-    );
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_inject_only_key_meaning_numeric() -> Result<()> {
-    let injected_event = create_key_event(ui_input3::KeyEventType::Pressed, None, None, '1');
-    let received_event = inject_key_and_receive_keyboard_protocol_message(injected_event).await?;
-    assert_eq!(
-        received_event,
-        // Main board 1, not numeric keypad 1.
-        create_key_event(ui_input3::KeyEventType::Pressed, input::Key::Key1, None, '1')
-    );
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_inject_only_key_meaning_enter() -> Result<()> {
-    let injected_event = create_key_event(
-        ui_input3::KeyEventType::Pressed,
-        None,
-        None,
-        ui_input3::NonPrintableKey::Enter,
-    );
-    let received_event = inject_key_and_receive_keyboard_protocol_message(injected_event).await?;
-    assert_eq!(
-        received_event,
-        create_key_event(
-            ui_input3::KeyEventType::Pressed,
-            input::Key::Enter,
-            None,
-            ui_input3::NonPrintableKey::Enter
-        )
-    );
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_inject_only_key_meaning_tab() -> Result<()> {
-    let injected_event = create_key_event(
-        ui_input3::KeyEventType::Pressed,
-        None,
-        None,
-        ui_input3::NonPrintableKey::Tab,
-    );
-    let received_event = inject_key_and_receive_keyboard_protocol_message(injected_event).await?;
-    assert_eq!(
-        received_event,
-        create_key_event(
-            ui_input3::KeyEventType::Pressed,
-            input::Key::Tab,
-            None,
-            ui_input3::NonPrintableKey::Tab
-        )
-    );
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn test_inject_only_key_meaning_backspace() -> Result<()> {
-    let injected_event = create_key_event(
-        ui_input3::KeyEventType::Pressed,
-        None,
-        None,
-        ui_input3::NonPrintableKey::Backspace,
-    );
-    let received_event = inject_key_and_receive_keyboard_protocol_message(injected_event).await?;
-    assert_eq!(
-        received_event,
-        create_key_event(
-            ui_input3::KeyEventType::Pressed,
-            input::Key::Backspace,
-            None,
-            ui_input3::NonPrintableKey::Backspace
-        )
-    );
-    Ok(())
+    .expect("injection failed");
+    matches::assert_matches!(was_handled, Ok(ui_input3::KeyEventStatus::Handled));
+    (received_event.key, received_event.key_meaning)
 }
