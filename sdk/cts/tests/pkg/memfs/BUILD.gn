@@ -5,6 +5,7 @@
 import("//sdk/cts/build/cts.gni")
 
 cts_executable("memfs-cts-test") {
+  output_name = "memfs-cts-test"
   deps = [
     "//sdk/lib/fdio",
     "//src/storage/memfs:memfs",

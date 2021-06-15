@@ -28,6 +28,8 @@ import("//sdk/cts/build/write_cts_file.gni")
 #     archive.
 #     Type: string
 template("cts_executable") {
+  assert(defined(invoker.output_name),
+         "output_name must be defined for binaries.")
   invoker_deps = []
   if (defined(invoker.deps)) {
     invoker_deps += invoker.deps

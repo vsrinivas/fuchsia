@@ -5,6 +5,7 @@
 import("//sdk/cts/build/cts.gni")
 
 cts_executable("fdio-spawn-tests-bin") {
+  output_name = "fdio-spawn-tests-bin"
   testonly = true
   visibility = [ ":*" ]
 
@@ -256,6 +257,7 @@ sdk_molecule("test_sdks") {
     ":fake-launcher-util-bin_sdk",
     ":fake-launcher-util-component_sdk",
     ":fdio-spawn-tests-bin_sdk",
+    ":fdio-spawn-tests-component_sdk",
     ":resolve-infinite-loop-bin_sdk",
     ":resolve-infinite-loop-component_sdk",
     ":resolve-once-bin_sdk",

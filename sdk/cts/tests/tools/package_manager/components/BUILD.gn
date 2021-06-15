@@ -10,11 +10,13 @@ group("components") {
 }
 
 cts_executable("cts-package-manager-sample-bin") {
+  output_name = "cts-package-manager-sample-bin"
   testonly = true
   sources = [ "hello_world.cc" ]
 }
 
 cts_executable("cts-package-manager-sample-bin2") {
+  output_name = "cts-package-manager-sample-bin2"
   testonly = true
   sources = [ "hello_world2.cc" ]
 }

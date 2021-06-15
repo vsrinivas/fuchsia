@@ -51,14 +51,32 @@ template("cts_copy_to_sdk") {
   main_target_name = target_name
   sdk_target_name = "${target_name}_sdk"
 
-  foreach(src, invoker.sources) {
-    sdk_files = [
-      {
-        source = src
-        dest = "${file_base}/${src}"
-      },
+  relative_path = invoker.sources
+  relative_path = relative_path[0]
+  update_binary_names_target = "${target_name}_update_name"
+  abspath = get_path_info(relative_path, "abspath")
+  output_path = "${root_gen_dir}/cts/${abspath}"
+
+  action(update_binary_names_target) {
+    script = "//sdk/cts/build/scripts/update_binary_names.py"
+    inputs = [ relative_path ]
+    outputs = [ output_path ]
+    args = [
+      "--source",
+      rebase_path(abspath),
+      "--dest",
+      rebase_path(output_path),
+      "--suffix",
+      "_canary",
     ]
   }
+
+  sdk_files = [
+    {
+      source = output_path
+      dest = "${file_base}/${relative_path}"
+    },
+  ]
 
   sdk_atom(sdk_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
@@ -76,8 +94,10 @@ template("cts_copy_to_sdk") {
       value = {
         type = "resource"
         name = main_target_name
-        resources = invoker.sources
+        resources = [ relative_path ]
       }
     }
+
+    non_sdk_deps = [ ":${update_binary_names_target}" ]
   }
 }
