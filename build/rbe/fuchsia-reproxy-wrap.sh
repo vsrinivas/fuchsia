@@ -28,8 +28,8 @@ example:
   $script -- ninja
 
 options:
-  --cfg FILE: reclient config for reproxy and rewrapper tools
-  --bindir DIR: location of reproxy and rewrapper tools
+  --cfg FILE: reclient config for reproxy
+  --bindir DIR: location of reproxy tools
 EOF
 }
 
@@ -62,7 +62,6 @@ done
 test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
 reproxy_cfg="$config"
-rewrapper_cfg="$config"
 
 bootstrap="$reclient_bindir"/bootstrap
 reproxy="$reclient_bindir"/reproxy
