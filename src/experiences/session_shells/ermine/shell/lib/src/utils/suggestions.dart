@@ -23,7 +23,7 @@ class SuggestionService {
     // Allow only non empty queries.
     if (query.isEmpty) {
       return <Suggestion>[];
-    } else if (query.startsWith('fuchsia-pkg')) {
+    } else if (query.startsWith('fuchsia-pkg') || query.startsWith('linux')) {
       return <Suggestion>[
         Suggestion(
           id: '$query:$now',
