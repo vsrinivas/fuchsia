@@ -35,7 +35,7 @@ group("tests") {
 # a set of storage tools useful for development and debugging
 group("tools") {
   deps = [
-    "extractor/bin:bin",
+    "extractor:tools",
     "factory/export_ffs:export-ffs",
     "tools/blobfs-compression:blobfs-compression",
   ]

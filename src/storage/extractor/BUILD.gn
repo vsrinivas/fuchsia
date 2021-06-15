@@ -41,6 +41,13 @@ fuchsia_unittest_package("disk-extractor-lib-tests") {
   manifest = "meta/disk-extractor-lib-unit-tests.cmx"
 }
 
+group("tools") {
+  deps = [
+    "bin:disk-extract",
+    "bin:disk_extract_host",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
