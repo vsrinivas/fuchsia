@@ -23,10 +23,16 @@ pub enum MetricValue {
     Bool(bool),
     Vector(Vec<MetricValue>),
     Bytes(Vec<u8>),
-    Missing(String),
+    Problem(Problem),
     Lambda(Box<Lambda>),
     /// An unknown (not supported yet) value that is present but cannot be used in computation.
     Unhandled,
+}
+
+/// Some kind of problematic non-value. In most cases, this should be treated as a thrown error.
+#[derive(Deserialize, Clone)]
+pub enum Problem {
+    Missing(String),
 }
 
 impl PartialEq for MetricValue {
@@ -56,7 +62,7 @@ impl std::fmt::Display for MetricValue {
             MetricValue::String(n) => write!(f, "String({})", n),
             MetricValue::Vector(n) => write!(f, "Vector({:?})", n),
             MetricValue::Bytes(n) => write!(f, "Bytes({:?})", n),
-            MetricValue::Missing(n) => write!(f, "Missing({})", n),
+            MetricValue::Problem(Problem::Missing(n)) => write!(f, "Missing({})", n),
             MetricValue::Lambda(n) => write!(f, "Fn({:?})", n),
             MetricValue::Unhandled => write!(f, "Unhandled"),
         }
@@ -111,7 +117,7 @@ impl From<JsonValue> for MetricValue {
             JsonValue::Array(values) => {
                 Self::Vector(values.into_iter().map(|v| Self::from(v)).collect())
             }
-            _ => Self::Missing("Unsupported JSON type".to_owned()),
+            _ => Self::Problem(Problem::Missing("Unsupported JSON type".to_owned())),
         }
     }
 }
@@ -129,13 +135,21 @@ impl From<&JsonValue> for MetricValue {
                 } else if value.is_f64() {
                     Self::Float(value.as_f64().unwrap())
                 } else {
-                    Self::Missing("Unable to convert JSON number".to_owned())
+                    Self::Problem(Problem::Missing("Unable to convert JSON number".to_owned()))
                 }
             }
             JsonValue::Array(values) => {
                 Self::Vector(values.iter().map(|v| Self::from(v)).collect())
             }
-            _ => Self::Missing("Unsupported JSON type".to_owned()),
+            _ => Self::Problem(Problem::Missing("Unsupported JSON type".to_owned())),
+        }
+    }
+}
+
+impl std::fmt::Debug for Problem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &*self {
+            Problem::Missing(s) => write!(f, "Missing: {}", s),
         }
     }
 }
@@ -200,9 +214,12 @@ pub(crate) mod test {
         );
 
         // Missing should never be equal
-        assert!(MetricValue::Missing("err".to_string()) != MetricValue::Missing("err".to_string()));
+        assert!(
+            MetricValue::Problem(Problem::Missing("err".to_string()))
+                != MetricValue::Problem(Problem::Missing("err".to_string()))
+        );
         // Use assert_missing() macro to test error messages.
-        assert_missing!(MetricValue::Missing("err".to_string()), "err");
+        assert_missing!(MetricValue::Problem(Problem::Missing("err".to_string())), "err");
 
         // We don't have a contract for Lambda equality. We probably don't need one.
     }
@@ -251,7 +268,7 @@ pub(crate) mod test {
         );
         assert_eq!(format!("{}", MetricValue::Bytes(vec![1u8, 2u8])), "Bytes([1, 2])");
         assert_eq!(
-            format!("{}", MetricValue::Missing("Where is Waldo?".to_string())),
+            format!("{}", MetricValue::Problem(Problem::Missing("Where is Waldo?".to_string()))),
             "Missing(Where is Waldo?)"
         );
     }

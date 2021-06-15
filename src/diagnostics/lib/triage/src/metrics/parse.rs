@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::metrics::{variable::VariableName, Expression, Function, MathFunction, MetricValue},
+    crate::metrics::{
+        variable::VariableName, Expression, Function, MathFunction, MetricValue, Problem,
+    },
     anyhow::{format_err, Error},
     nom::{
         branch::alt,
@@ -375,15 +377,15 @@ fn build_expression<'a>(mut items: Vec<Expression>, mut operators: Vec<Function>
     // reverse the vec's before we start.
     items.reverse();
     operators.reverse();
-    let mut res = items.pop().unwrap_or(Expression::Value(MetricValue::Missing(
+    let mut res = items.pop().unwrap_or(Expression::Value(MetricValue::Problem(Problem::Missing(
         "Bug in parser: zero items".to_string(),
-    )));
+    ))));
     for _i in 0..operators.len() {
         let args = vec![
             res,
-            items.pop().unwrap_or(Expression::Value(MetricValue::Missing(
+            items.pop().unwrap_or(Expression::Value(MetricValue::Problem(Problem::Missing(
                 "Bug in parser: too few items".to_string(),
-            ))),
+            )))),
         ];
         res = Expression::Function(operators.pop().unwrap(), args);
     }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{MathFunction, MetricValue};
+use super::{MathFunction, MetricValue, Problem};
 
 enum PromotedOperands {
     Float(Vec<f64>),
@@ -87,11 +87,11 @@ fn promote_type(operands: &Vec<MetricValue>) -> Result<PromotedOperands, MetricV
             MetricValue::Float(value) => {
                 float_vec.push(*value);
             }
-            MetricValue::Missing(message) => {
-                error_vec.push(message.to_string());
+            MetricValue::Problem(problem) => {
+                error_vec.push(problem.clone());
             }
             bad_type => {
-                error_vec.push(format!("{} not numeric", bad_type));
+                error_vec.push(Problem::Missing(format!("{} not numeric", bad_type)));
             }
         }
     }
@@ -101,7 +101,12 @@ fn promote_type(operands: &Vec<MetricValue>) -> Result<PromotedOperands, MetricV
     if float_vec.len() == operands.len() {
         return Ok(PromotedOperands::Float(float_vec));
     }
-    return Err(MetricValue::Missing(format!("Non-numeric operand: {}", error_vec.join("; "))));
+    let error_strings =
+        error_vec.iter().map(|Problem::Missing(string)| string.to_string()).collect::<Vec<_>>();
+    return Err(MetricValue::Problem(Problem::Missing(format!(
+        "Non-numeric operand: {}",
+        error_strings.join("; ")
+    ))));
 }
 
 // Correct operation of this file is tested in parse.rs.

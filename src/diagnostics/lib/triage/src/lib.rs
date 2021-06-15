@@ -81,7 +81,7 @@ pub fn evaluate_int_math(expression: &str) -> Result<i64, Error> {
             Some(i) => Ok(i),
             None => bail!("Non-numeric float result {}", f),
         },
-        MetricValue::Missing(msg) => bail!("Eval error: {}", msg),
+        MetricValue::Problem(problem) => bail!("Eval error: {:?}", problem),
         bad_type => bail!("Non-numeric result: {:?}", bad_type),
     }
 }

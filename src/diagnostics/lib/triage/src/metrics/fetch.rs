@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::MetricValue,
+    super::{MetricValue, Problem},
     crate::config::{DataFetcher, DiagnosticData, Source},
     anyhow::{anyhow, bail, Context, Error, Result},
     diagnostics_hierarchy::DiagnosticsHierarchy,
@@ -144,7 +144,10 @@ impl<'a> TrialDataFetcher<'a> {
     pub(crate) fn fetch(&self, name: &str) -> MetricValue {
         match self.values.get(name) {
             Some(value) => MetricValue::from(value),
-            None => MetricValue::Missing(format!("Value {} not overridden in test", name)),
+            None => MetricValue::Problem(Problem::Missing(format!(
+                "Value {} not overridden in test",
+                name
+            ))),
         }
     }
 
@@ -260,7 +263,10 @@ impl KeyValueFetcher {
     pub fn fetch(&self, key: &str) -> MetricValue {
         match self.map.get(key) {
             Some(value) => MetricValue::from(value),
-            None => MetricValue::Missing(format!("Key '{}' not found in annotations", key)),
+            None => MetricValue::Problem(Problem::Missing(format!(
+                "Key '{}' not found in annotations",
+                key
+            ))),
         }
     }
 }
@@ -414,10 +420,10 @@ impl InspectFetcher {
             }
         }
         if !found_component {
-            return Ok(vec![MetricValue::Missing(format!(
+            return Ok(vec![MetricValue::Problem(Problem::Missing(format!(
                 "No component found matching selector {}",
                 selector_string.to_string()
-            ))]);
+            )))]);
         }
         if values.is_empty() {
             return Ok(Vec::new());
@@ -428,7 +434,10 @@ impl InspectFetcher {
     pub fn fetch(&self, selector: &SelectorString) -> Vec<MetricValue> {
         match self.try_fetch(selector.body()) {
             Ok(v) => v,
-            Err(e) => vec![MetricValue::Missing(format!("Fetch {:?} -> {}", selector, e))],
+            Err(e) => vec![MetricValue::Problem(Problem::Missing(format!(
+                "Fetch {:?} -> {}",
+                selector, e
+            )))],
         }
     }
 
@@ -436,7 +445,10 @@ impl InspectFetcher {
     fn fetch_str(&self, selector_str: &str) -> Vec<MetricValue> {
         match SelectorString::try_from(selector_str.to_owned()) {
             Ok(selector) => self.fetch(&selector),
-            Err(e) => vec![MetricValue::Missing(format!("Bad selector {}: {}", selector_str, e))],
+            Err(e) => vec![MetricValue::Problem(Problem::Missing(format!(
+                "Bad selector {}: {}",
+                selector_str, e
+            )))],
         }
     }
 }
@@ -516,7 +528,7 @@ mod test {
     // message. It flags `message` if `value` is not Missing(_).
     fn require_missing(value: MetricValue, message: &'static str) {
         match value {
-            MetricValue::Missing(_) => {}
+            MetricValue::Problem(Problem::Missing(_)) => {}
             _ => assert!(false, "{}", message),
         }
     }
@@ -774,11 +786,11 @@ mod test {
             _ => bail!("Should not have accepted a bad selector"),
         }
         match fetcher1.try_fetch("a:b:c").unwrap()[0] {
-            MetricValue::Missing(_) => {}
+            MetricValue::Problem(Problem::Missing(_)) => {}
             _ => bail!("Should have Missing'd a valid selector"),
         }
         match fetcher2.try_fetch("a:b:c").unwrap()[0] {
-            MetricValue::Missing(_) => {}
+            MetricValue::Problem(Problem::Missing(_)) => {}
             _ => bail!("Should have Missing'd a valid selector"),
         }
         Ok(())

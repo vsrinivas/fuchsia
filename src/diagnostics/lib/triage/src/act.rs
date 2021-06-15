@@ -10,7 +10,7 @@ use {
         config::DiagnosticData,
         metrics::{
             fetch::{Fetcher, FileDataFetcher},
-            metric_value::MetricValue,
+            metric_value::{MetricValue, Problem},
             Metric, MetricState, Metrics,
         },
         plugins::{register_plugins, Plugin},
@@ -239,7 +239,7 @@ impl ActionContext<'_> {
                 true
             }
             MetricValue::Bool(false) => false,
-            MetricValue::Missing(reason) => {
+            MetricValue::Problem(Problem::Missing(reason)) => {
                 self.action_results
                     .add_warning(format!("[MISSING] In config '{}': {}", namespace, reason));
                 false
@@ -278,11 +278,11 @@ impl ActionContext<'_> {
                 }
             }
             MetricValue::Bool(false) => false,
-            MetricValue::Missing(reason) => {
+            MetricValue::Problem(reason) => {
                 #[cfg(target_os = "fuchsia")]
-                warn!("Snapshot trigger was missing: {}", reason);
+                warn!("Snapshot trigger was missing: {:?}", reason);
                 self.action_results
-                    .add_warning(format!("[MISSING] In config '{}': {}", namespace, reason));
+                    .add_warning(format!("[MISSING] In config '{}': {:?}", namespace, reason));
                 false
             }
             other => {
