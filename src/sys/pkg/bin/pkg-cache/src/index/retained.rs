@@ -17,54 +17,78 @@ pub struct RetainedIndex {
     packages: HashMap<Hash, Option<Vec<Hash>>>,
 }
 
-/// An error encountered while setting the content blobs associated with a package.
-#[derive(thiserror::Error, Debug, PartialEq, Eq)]
-pub enum SetContentBlobsError {
-    #[error("{0} is not a package in the retained index")]
-    UnknownPackage(Hash),
-
-    #[error("{0} already has known content blobs")]
-    Collision(Hash),
-}
-
 impl RetainedIndex {
+    /// Creates a new, empty instance of the RetainedIndex.
+    pub fn new() -> Self {
+        Self { packages: Default::default() }
+    }
+
+    /// Determines if the given meta_hash is tracked by this index.
+    pub fn contains_package(&self, meta_hash: &Hash) -> bool {
+        self.packages.contains_key(meta_hash)
+    }
+
+    /// Produces an iterator of all packages in this index that do not yet know the content blobs
+    /// associated with it.
+    pub fn iter_packages_with_unknown_content_blobs(&self) -> impl Iterator<Item = Hash> + '_ {
+        self.packages.iter().filter_map(|(k, v)| match v {
+            None => Some(*k),
+            Some(_) => None,
+        })
+    }
+
+    #[cfg(test)]
+    fn packages_with_unknown_content_blobs(&self) -> Vec<Hash> {
+        let mut res = self.iter_packages_with_unknown_content_blobs().collect::<Vec<_>>();
+        res.sort_unstable();
+        res
+    }
+
+    #[cfg(test)]
+    pub fn from_packages(packages: HashMap<Hash, Option<Vec<Hash>>>) -> Self {
+        Self { packages }
+    }
+
+    #[cfg(test)]
+    pub fn packages(&self) -> HashMap<Hash, Option<Vec<Hash>>> {
+        self.packages.clone()
+    }
+
     /// Clears this index, replacing it with an empty set of retained packages
+    // TODO(fxbug.dev/77363) use this, remove dead_code allow
+    #[allow(dead_code)]
     pub fn clear(&mut self) {
         self.packages.clear();
     }
 
-    /// Populates the content blobs associated with the given package hash, protecting those
-    /// content blobs from garbage collection.  It is an error to set the content blobs for a
-    /// package that is not in the index or to set the content blobs for a package that already has
-    /// its content blobs known.
+    /// Populates the content blobs associated with the given package hash if that package is known
+    /// to the retained index, protecting those content blobs from garbage collection. Returns true
+    /// if the package is known to this index.
     ///
     /// # Panics
     ///
     /// Panics if the content blobs for the given package are already known and the provided
     /// content_blobs are different.
-    pub fn set_content_blobs(
-        &mut self,
-        meta_hash: &Hash,
-        content_blobs: &HashSet<Hash>,
-    ) -> Result<(), SetContentBlobsError> {
+    pub fn set_content_blobs(&mut self, meta_hash: &Hash, content_blobs: &HashSet<Hash>) -> bool {
+        let content_hashes: &mut Option<Vec<Hash>> = match self.packages.get_mut(meta_hash) {
+            Some(content_hashes) => content_hashes,
+            None => return false,
+        };
+
         let mut content_blobs = content_blobs.iter().copied().collect::<Vec<Hash>>();
         content_blobs.sort_unstable();
         let content_blobs = content_blobs;
 
-        let content_hashes: &mut Option<Vec<Hash>> = self
-            .packages
-            .get_mut(meta_hash)
-            .ok_or_else(|| SetContentBlobsError::UnknownPackage(*meta_hash))?;
-
         if let Some(hashes) = content_hashes {
-            // TODO(fxbug.dev/77361) may need this path to silently ignore duplicate sets, or
-            // provide an API to see if this is already Some().
-            assert_eq!(hashes, &content_blobs);
-            return Err(SetContentBlobsError::Collision(*meta_hash));
+            assert_eq!(
+                hashes, &content_blobs,
+                "index already has content blobs for {}, and the new set is different",
+                meta_hash
+            );
         }
 
         *content_hashes = Some(content_blobs);
-        Ok(())
+        true
     }
 
     /// Replaces this retained index instance with other, populating other's content blob sets
@@ -177,30 +201,74 @@ mod tests {
     }
 
     #[test]
-    fn set_content_blobs_fails_if_content_blobs_are_already_known() {
-        let mut index = RetainedIndex {
+    fn contains_package_returns_true_on_any_known_state() {
+        let index = RetainedIndex {
             packages: hashmap! {
-                hash(0) => Some(vec![]),
+                hash(0) => None,
+                hash(1) => Some(vec![]),
+                hash(2) => Some(vec![hash(7), hash(8), hash(9)]),
             },
         };
 
+        assert!(index.contains_package(&hash(0)));
+        assert!(index.contains_package(&hash(1)));
+        assert!(index.contains_package(&hash(2)));
+
+        assert!(!index.contains_package(&hash(3)));
+        assert!(!index.contains_package(&hash(7)));
+    }
+
+    #[test]
+    fn iter_packages_with_unknown_content_blobs_does_what_it_says_it_does() {
+        let index = RetainedIndex {
+            packages: hashmap! {
+                hash(0) => None,
+                hash(1) => Some(vec![]),
+                hash(2) => Some(vec![hash(7), hash(8), hash(9)]),
+                hash(3) => None,
+            },
+        };
+
+        assert_eq!(index.packages_with_unknown_content_blobs(), vec![hash(0), hash(3)]);
+    }
+
+    #[test]
+    fn set_content_blobs_nops_if_content_blobs_are_already_known() {
+        let mut index = RetainedIndex {
+            packages: hashmap! {
+                hash(0) => Some(vec![hash(1)]),
+            },
+        };
+
+        assert!(index.set_content_blobs(&hash(0), &hashset! {hash(1)}));
+
         assert_eq!(
-            index.set_content_blobs(&hash(0), &hashset! {}),
-            Err(SetContentBlobsError::Collision(hash(0)))
+            index,
+            RetainedIndex {
+                packages: hashmap! {
+                    hash(0) => Some(vec![hash(1)]),
+                },
+            }
         );
     }
 
     #[test]
-    fn set_content_blobs_fails_if_meta_far_is_unknown() {
+    fn set_content_blobs_ignores_unknown_packages() {
         let mut index = RetainedIndex {
             packages: hashmap! {
                 hash(0) => Some(vec![]),
             },
         };
 
+        assert!(!index.set_content_blobs(&hash(1), &hashset! {}));
+
         assert_eq!(
-            index.set_content_blobs(&hash(1), &hashset! {}),
-            Err(SetContentBlobsError::UnknownPackage(hash(1)))
+            index,
+            RetainedIndex {
+                packages: hashmap! {
+                    hash(0) => Some(vec![]),
+                },
+            }
         );
     }
 
@@ -212,7 +280,7 @@ mod tests {
             },
         };
 
-        let () = index.set_content_blobs(&hash(0), &hashset! {hash(1), hash(2), hash(3)}).unwrap();
+        assert!(index.set_content_blobs(&hash(0), &hashset! {hash(1), hash(2), hash(3)}));
 
         assert_eq!(
             index,

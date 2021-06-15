@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{blob_location::BlobLocation, index::DynamicIndex, pkgfs_inspect::PkgfsInspectState},
+    crate::{blob_location::BlobLocation, index::PackageIndex, pkgfs_inspect::PkgfsInspectState},
     anyhow::{anyhow, Context as _, Error},
     argh::FromArgs,
     cobalt_sw_delivery_registry as metrics,
@@ -75,7 +75,7 @@ async fn main_inner() -> Result<(), Error> {
         pkgfs::needs::Client::open_from_namespace().context("error opening /pkgfs/needs")?;
     let blobfs = blobfs::Client::open_from_namespace().context("error opening blobfs")?;
 
-    let mut dynamic_index = DynamicIndex::new(index_node.create_child("dynamic"));
+    let mut package_index = PackageIndex::new(index_node);
     let (static_packages, _pkgfs_inspect, blob_location, _load_cache_packages) = {
         let static_packages_fut = get_static_packages(&pkgfs_system);
 
@@ -89,7 +89,7 @@ async fn main_inner() -> Result<(), Error> {
         );
 
         let load_cache_packages_fut =
-            index::load_cache_packages(&mut dynamic_index, &pkgfs_system, &pkgfs_versions)
+            index::load_cache_packages(&mut package_index, &pkgfs_system, &pkgfs_versions)
                 .unwrap_or_else(|e| fx_log_err!("Failed to load cache packages: {:#}", anyhow!(e)));
 
         future::join4(
@@ -125,7 +125,7 @@ async fn main_inner() -> Result<(), Error> {
         .add_fidl_service(IncomingService::PackageCache)
         .add_fidl_service(IncomingService::SpaceManager);
 
-    let dynamic_index = Arc::new(Mutex::new(dynamic_index));
+    let package_index = Arc::new(Mutex::new(package_index));
     let system_image_blobs = Arc::new(system_image_blobs);
 
     let () = fs
@@ -137,7 +137,7 @@ async fn main_inner() -> Result<(), Error> {
                         pkgfs_ctl.clone(),
                         pkgfs_install.clone(),
                         pkgfs_needs.clone(),
-                        Arc::clone(&dynamic_index),
+                        Arc::clone(&package_index),
                         blobfs.clone(),
                         Arc::clone(&static_packages),
                         stream,
@@ -149,7 +149,7 @@ async fn main_inner() -> Result<(), Error> {
                     gc_service::serve(
                         blobfs.clone(),
                         Arc::clone(&system_image_blobs),
-                        Arc::clone(&dynamic_index),
+                        Arc::clone(&package_index),
                         commit_status_provider.clone(),
                         stream,
                     )

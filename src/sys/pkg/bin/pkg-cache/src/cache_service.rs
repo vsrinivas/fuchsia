@@ -5,7 +5,7 @@
 use {
     crate::{
         blobs::{open_blob, BlobKind, OpenBlob, OpenBlobError, OpenBlobSuccess},
-        index::{fulfill_meta_far_blob, DynamicIndex, DynamicIndexError},
+        index::{fulfill_meta_far_blob, CompleteInstallError, FulfillMetaFarError, PackageIndex},
     },
     anyhow::{anyhow, Context as _, Error},
     cobalt_sw_delivery_registry as metrics,
@@ -38,7 +38,7 @@ pub async fn serve(
     pkgfs_ctl: pkgfs::control::Client,
     pkgfs_install: pkgfs::install::Client,
     pkgfs_needs: pkgfs::needs::Client,
-    dynamic_index: Arc<Mutex<DynamicIndex>>,
+    package_index: Arc<Mutex<PackageIndex>>,
     blobfs: blobfs::Client,
     static_packages: Arc<StaticPackages>,
     stream: PackageCacheRequestStream,
@@ -64,7 +64,7 @@ pub async fn serve(
                         &pkgfs_versions,
                         &pkgfs_install,
                         &pkgfs_needs,
-                        &dynamic_index,
+                        &package_index,
                         &blobfs,
                         meta_far_blob,
                         selectors,
@@ -113,7 +113,7 @@ async fn get<'a>(
     pkgfs_versions: &'a pkgfs::versions::Client,
     pkgfs_install: &'a pkgfs::install::Client,
     pkgfs_needs: &'a pkgfs::needs::Client,
-    dynamic_index: &Arc<Mutex<DynamicIndex>>,
+    package_index: &Arc<Mutex<PackageIndex>>,
     blobfs: &blobfs::Client,
     meta_far_blob: BlobInfo,
     selectors: Vec<String>,
@@ -140,7 +140,7 @@ async fn get<'a>(
             meta_far_blob,
             pkgfs_install,
             pkgfs_needs,
-            dynamic_index,
+            package_index,
             blobfs,
         )
         .await
@@ -288,8 +288,11 @@ enum ServeNeededBlobsError {
     #[error("the operation was aborted by the caller")]
     Aborted,
 
-    #[error("while updating dynamic index")]
-    DynamicIndex(#[from] DynamicIndexError),
+    #[error("while updating package index install state")]
+    CompleteInstall(#[from] CompleteInstallError),
+
+    #[error("while updating package index with meta far info")]
+    FulfillMetaFar(#[from] FulfillMetaFarError),
 }
 
 #[derive(Debug)]
@@ -329,13 +332,13 @@ async fn serve_needed_blobs(
     meta_far_info: BlobInfo,
     pkgfs_install: &pkgfs::install::Client,
     pkgfs_needs: &pkgfs::needs::Client,
-    dynamic_index: &Arc<Mutex<DynamicIndex>>,
+    package_index: &Arc<Mutex<PackageIndex>>,
     blobfs: &blobfs::Client,
 ) -> Result<(), ServeNeededBlobsError> {
     let res = async {
         // Step 1: Open and write the meta.far, or determine it is not needed.
         let () =
-            handle_open_meta_blob(&mut stream, meta_far_info, pkgfs_install, dynamic_index, blobfs)
+            handle_open_meta_blob(&mut stream, meta_far_info, pkgfs_install, package_index, blobfs)
                 .await?;
 
         // Step 2: Determine which data blobs are needed and report them to the client.
@@ -351,9 +354,9 @@ async fn serve_needed_blobs(
     .await;
 
     if res.is_ok() {
-        dynamic_index.lock().await.complete_install(meta_far_info.blob_id.into())?;
+        package_index.lock().await.complete_install(meta_far_info.blob_id.into())?;
     } else {
-        dynamic_index.lock().await.cancel_install(&meta_far_info.blob_id.into());
+        package_index.lock().await.cancel_install(&meta_far_info.blob_id.into());
     }
 
     // TODO in the Err(_) case, a responder was likely dropped, which would have already shutdown
@@ -373,11 +376,11 @@ async fn handle_open_meta_blob(
     stream: &mut NeededBlobsRequestStream,
     meta_far_info: BlobInfo,
     pkgfs_install: &pkgfs::install::Client,
-    dynamic_index: &Arc<Mutex<DynamicIndex>>,
+    package_index: &Arc<Mutex<PackageIndex>>,
     blobfs: &blobfs::Client,
 ) -> Result<(), ServeNeededBlobsError> {
     let hash = meta_far_info.blob_id.into();
-    dynamic_index.lock().await.start_install(hash);
+    package_index.lock().await.start_install(hash);
 
     loop {
         let (file, responder) =
@@ -406,7 +409,7 @@ async fn handle_open_meta_blob(
         }
     }
 
-    fulfill_meta_far_blob(dynamic_index, blobfs, hash).await?;
+    fulfill_meta_far_blob(package_index, blobfs, hash).await?;
 
     Ok(())
 }
@@ -1158,7 +1161,7 @@ mod serve_needed_blobs_tests {
         let (pkgfs_needs, _) = pkgfs::needs::Client::new_test();
         let (blobfs, _) = blobfs::Client::new_test();
         let inspector = finspect::Inspector::new();
-        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new(
+        let package_index = Arc::new(Mutex::new(PackageIndex::new(
             inspector.root().create_child("test_does_not_use_inspect "),
         )));
 
@@ -1168,7 +1171,7 @@ mod serve_needed_blobs_tests {
                 meta_blob_info,
                 &pkgfs_install,
                 &pkgfs_needs,
-                &dynamic_index,
+                &package_index,
                 &blobfs
             )
             .await,
@@ -1192,7 +1195,7 @@ mod serve_needed_blobs_tests {
         let (pkgfs_needs, pkgfs_needs_mock) = pkgfs::needs::Client::new_mock();
         let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
         let inspector = finspect::Inspector::new();
-        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new(
+        let package_index = Arc::new(Mutex::new(PackageIndex::new(
             inspector.root().create_child("test_does_not_use_inspect "),
         )));
 
@@ -1203,7 +1206,7 @@ mod serve_needed_blobs_tests {
                     meta_blob_info,
                     &pkgfs_install,
                     &pkgfs_needs,
-                    &dynamic_index,
+                    &package_index,
                     &blobfs,
                 )
                 .await
@@ -2179,7 +2182,7 @@ mod get_handler_tests {
         let (pkgfs_needs, pkgfs_needs_mock) = pkgfs::needs::Client::new_mock();
         let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
         let inspector = finspect::Inspector::new();
-        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new(
+        let package_index = Arc::new(Mutex::new(PackageIndex::new(
             inspector.root().create_child("test_does_not_use_inspect "),
         )));
 
@@ -2192,7 +2195,7 @@ mod get_handler_tests {
                     &pkgfs_versions,
                     &pkgfs_install,
                     &pkgfs_needs,
-                    &dynamic_index,
+                    &package_index,
                     &blobfs,
                     meta_blob_info,
                     vec![],
@@ -2221,7 +2224,7 @@ mod get_handler_tests {
         let (pkgfs_needs, _) = pkgfs::needs::Client::new_test();
         let (blobfs, _) = blobfs::Client::new_test();
         let inspector = finspect::Inspector::new();
-        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new(
+        let package_index = Arc::new(Mutex::new(PackageIndex::new(
             inspector.root().create_child("test_does_not_use_inspect "),
         )));
 
@@ -2233,7 +2236,7 @@ mod get_handler_tests {
                 &pkgfs_versions,
                 &pkgfs_install,
                 &pkgfs_needs,
-                &dynamic_index,
+                &package_index,
                 &blobfs,
                 meta_blob_info,
                 vec![],

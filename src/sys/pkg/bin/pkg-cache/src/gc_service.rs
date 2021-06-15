@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::index::DynamicIndex,
+    crate::index::PackageIndex,
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_space::{
         ErrorCode as SpaceErrorCode, ManagerRequest as SpaceManagerRequest,
@@ -20,7 +20,7 @@ use {
 pub async fn serve(
     blobfs: blobfs::Client,
     system_image_blobs: Arc<Option<HashSet<Hash>>>,
-    dynamic_index: Arc<futures::lock::Mutex<DynamicIndex>>,
+    package_index: Arc<Mutex<PackageIndex>>,
     commit_status_provider: CommitStatusProviderProxy,
     mut stream: SpaceManagerRequestStream,
 ) -> Result<(), Error> {
@@ -31,7 +31,7 @@ pub async fn serve(
 
     while let Some(event) = stream.try_next().await? {
         let SpaceManagerRequest::Gc { responder } = event;
-        responder.send(&mut gc(&blobfs, &system_image_blobs, &dynamic_index, &event_pair).await)?;
+        responder.send(&mut gc(&blobfs, &system_image_blobs, &package_index, &event_pair).await)?;
     }
     Ok(())
 }
@@ -39,7 +39,7 @@ pub async fn serve(
 async fn gc(
     blobfs: &blobfs::Client,
     system_image_blobs: &Arc<Option<HashSet<Hash>>>,
-    dynamic_index: &Arc<Mutex<DynamicIndex>>,
+    package_index: &Arc<Mutex<PackageIndex>>,
     event_pair: &zx::EventPair,
 ) -> Result<(), SpaceErrorCode> {
     fx_log_info!("performing gc");
@@ -64,9 +64,9 @@ async fn gc(
         // implicitly protected, because only blobs that appear in this list can be collected.
         let mut eligible_blobs = blobfs.list_known_blobs().await?;
 
-        // Any blobs protected by the dynamic index are ineligible for collection.
-        let dynamic_index = dynamic_index.lock().await;
-        dynamic_index.all_blobs().iter().for_each(|blob| {
+        // Any blobs protected by the package index are ineligible for collection.
+        let package_index = package_index.lock().await;
+        package_index.all_blobs().iter().for_each(|blob| {
             eligible_blobs.remove(blob);
         });
 

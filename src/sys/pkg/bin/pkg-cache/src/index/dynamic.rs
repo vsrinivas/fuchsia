@@ -9,12 +9,9 @@ use {
     fuchsia_pkg::PackagePath,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     fuchsia_zircon as zx,
-    futures::lock::Mutex,
-    pkgfs::{system::Client as SystemImage, versions::Client as Versions},
     std::{
         collections::{HashMap, HashSet},
         convert::TryInto,
-        sync::Arc,
     },
     system_image::CachePackages,
 };
@@ -30,27 +27,16 @@ pub struct DynamicIndex {
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum DynamicIndexError {
-    #[error("the blob being fulfilled ({hash}) is not needed, dynamic index state in {state}")]
-    FulfillNotNeededBlob { hash: Hash, state: &'static str },
+#[error("the blob being fulfilled ({hash}) is not needed, dynamic index package state is {state}")]
+pub struct FulfillNotNeededBlobError {
+    pub hash: Hash,
+    pub state: &'static str,
+}
 
-    #[error("the blob ({0}) is not present in blobfs")]
-    BlobNotFound(Hash),
-
+#[derive(thiserror::Error, Debug)]
+pub enum CompleteInstallError {
     #[error("the package is in an unexpected state: {0:?}")]
     UnexpectedPackageState(Option<Package>),
-
-    #[error("failed to open blob")]
-    OpenBlob(#[source] io_util::node::OpenError),
-
-    #[error("failed to parse meta far")]
-    ParseMetaFar(#[from] fuchsia_archive::Error),
-
-    #[error("failed to parse meta package")]
-    ParseMetaPackage(#[from] fuchsia_pkg::MetaPackageError),
-
-    #[error("failed to parse meta contents")]
-    ParseMetaContents(#[from] fuchsia_pkg::MetaContentsError),
 }
 
 impl DynamicIndex {
@@ -59,12 +45,17 @@ impl DynamicIndex {
     }
 
     #[cfg(test)]
-    fn packages(&self) -> HashMap<Hash, Package> {
+    pub fn packages(&self) -> HashMap<Hash, Package> {
         let mut package_map = HashMap::new();
         for (key, val) in &self.packages {
             package_map.insert(key.clone(), val.package.clone());
         }
         package_map
+    }
+
+    #[cfg(test)]
+    pub fn active_packages(&self) -> HashMap<PackagePath, Hash> {
+        self.active_packages.clone()
     }
 
     fn make_package_node(&mut self, package: &Package, hash: &Hash) -> PackageNode {
@@ -112,6 +103,11 @@ impl DynamicIndex {
         self.packages.insert(hash, PackageWithInspect { package, package_node });
     }
 
+    /// Returns the content blobs associated with the given package hash, if known.
+    pub fn lookup_content_blobs(&self, package_hash: &Hash) -> Option<&HashSet<Hash>> {
+        self.packages.get(package_hash)?.package.content_blobs()
+    }
+
     /// Returns all blobs protected by the dynamic index.
     pub fn all_blobs(&self) -> HashSet<Hash> {
         self.packages
@@ -145,8 +141,30 @@ impl DynamicIndex {
         });
     }
 
+    /// Notifies dynamic index that the given package's meta far is now present in blobfs,
+    /// providing the meta far's internal name and set of content blobs it references.
+    pub fn fulfill_meta_far(
+        &mut self,
+        package_hash: Hash,
+        package_path: PackagePath,
+        required_blobs: HashSet<Hash>,
+    ) -> Result<(), FulfillNotNeededBlobError> {
+        if let Some(wrong_state) = match self.packages.get(&package_hash).map(|pwi| &pwi.package) {
+            Some(Package::Pending) => None,
+            None => Some("missing"),
+            Some(Package::Active { .. }) => Some("Active"),
+            Some(Package::WithMetaFar { .. }) => Some("WithMetaFar"),
+        } {
+            return Err(FulfillNotNeededBlobError { hash: package_hash, state: wrong_state });
+        }
+
+        self.add_package(package_hash, Package::WithMetaFar { path: package_path, required_blobs });
+
+        Ok(())
+    }
+
     /// Notifies dynamic index that the given package has completed installation.
-    pub fn complete_install(&mut self, package_hash: Hash) -> Result<(), DynamicIndexError> {
+    pub fn complete_install(&mut self, package_hash: Hash) -> Result<(), CompleteInstallError> {
         match self.packages.get_mut(&package_hash) {
             Some(PackageWithInspect {
                 package: package @ Package::WithMetaFar { .. },
@@ -176,7 +194,7 @@ impl DynamicIndex {
                 }
             }
             package => {
-                return Err(DynamicIndexError::UnexpectedPackageState(
+                return Err(CompleteInstallError::UnexpectedPackageState(
                     package.map(|pwi| pwi.package.to_owned()),
                 ));
             }
@@ -200,11 +218,13 @@ impl DynamicIndex {
     }
 }
 
-// Load present cache packages into the dynamic index.
+/// Loads the cache_packages manifest from the provided system_image package, and then, for any
+/// package referenced by that manifest that has all of its blobs present in blobfs, imports those
+/// packages into the provided dynamic index.
 pub async fn load_cache_packages(
     index: &mut DynamicIndex,
-    system_image: &SystemImage,
-    versions: &Versions,
+    system_image: &pkgfs::system::Client,
+    versions: &pkgfs::versions::Client,
 ) -> Result<(), Error> {
     let cache_packages = CachePackages::deserialize(
         system_image
@@ -230,36 +250,6 @@ pub async fn load_cache_packages(
 
         index.add_package(package_hash, Package::Active { path, required_blobs });
     }
-    Ok(())
-}
-
-/// Notifies dynamic index that the given meta far blob is now available in blobfs.
-/// Do not use this for regular blob (unless it's also a meta far).
-pub async fn fulfill_meta_far_blob(
-    index: &Arc<Mutex<DynamicIndex>>,
-    blobfs: &blobfs::Client,
-    blob_hash: Hash,
-) -> Result<(), DynamicIndexError> {
-    if let Some(wrong_state) =
-        match index.lock().await.packages.get(&blob_hash).map(|pwi| &pwi.package) {
-            Some(Package::Pending) => None,
-            None => Some("missing"),
-            Some(Package::Active { .. }) => Some("Active"),
-            Some(Package::WithMetaFar { .. }) => Some("WithMetaFar"),
-        }
-    {
-        return Err(DynamicIndexError::FulfillNotNeededBlob {
-            hash: blob_hash,
-            state: wrong_state,
-        });
-    }
-
-    let (path, required_blobs) = crate::index::enumerate_package_blobs(blobfs, &blob_hash)
-        .await?
-        .ok_or_else(|| DynamicIndexError::BlobNotFound(blob_hash))?;
-
-    index.lock().await.add_package(blob_hash, Package::WithMetaFar { path, required_blobs });
-
     Ok(())
 }
 
@@ -312,11 +302,20 @@ pub enum Package {
     },
 }
 
+impl Package {
+    fn content_blobs(&self) -> Option<&HashSet<Hash>> {
+        match self {
+            Package::Pending => None,
+            Package::WithMetaFar { required_blobs, .. } => Some(required_blobs),
+            Package::Active { required_blobs, .. } => Some(required_blobs),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::test_utils::add_meta_far_to_blobfs,
         fidl_fuchsia_io::DirectoryProxy,
         fuchsia_async as fasync,
         fuchsia_pkg::MetaContents,
@@ -364,6 +363,39 @@ mod tests {
     }
 
     #[test]
+    fn lookup_content_blobs_handles_withmetafar_and_active_states() {
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
+
+        dynamic_index.add_package(Hash::from([1; 32]), Package::Pending);
+        dynamic_index.add_package(
+            Hash::from([2; 32]),
+            Package::WithMetaFar {
+                path: PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
+                required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
+            },
+        );
+        dynamic_index.add_package(
+            Hash::from([5; 32]),
+            Package::Active {
+                path: PackagePath::from_name_and_variant("fake-package-2", "0").unwrap(),
+                required_blobs: hashset! { Hash::from([6; 32]) },
+            },
+        );
+
+        assert_eq!(dynamic_index.lookup_content_blobs(&Hash::from([0; 32])), None);
+        assert_eq!(dynamic_index.lookup_content_blobs(&Hash::from([1; 32])), None);
+        assert_eq!(
+            dynamic_index.lookup_content_blobs(&Hash::from([2; 32])),
+            Some(&hashset! { Hash::from([3; 32]), Hash::from([4; 32]) })
+        );
+        assert_eq!(
+            dynamic_index.lookup_content_blobs(&Hash::from([5; 32])),
+            Some(&hashset! { Hash::from([6; 32]) })
+        );
+    }
+
+    #[test]
     fn test_complete_install() {
         let inspector = finspect::Inspector::new();
         let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
@@ -405,7 +437,7 @@ mod tests {
 
         assert_matches!(
             dynamic_index.complete_install(Hash::from([2; 32])),
-            Err(DynamicIndexError::UnexpectedPackageState(None))
+            Err(CompleteInstallError::UnexpectedPackageState(None))
         );
     }
 
@@ -418,7 +450,7 @@ mod tests {
         dynamic_index.add_package(hash, Package::Pending);
         assert_matches!(
             dynamic_index.complete_install(hash),
-            Err(DynamicIndexError::UnexpectedPackageState(Some(Package::Pending)))
+            Err(CompleteInstallError::UnexpectedPackageState(Some(Package::Pending)))
         );
     }
 
@@ -435,7 +467,7 @@ mod tests {
         dynamic_index.add_package(hash, package.clone());
         assert_matches!(
             dynamic_index.complete_install(hash),
-            Err(DynamicIndexError::UnexpectedPackageState(Some(p))) if p == package
+            Err(CompleteInstallError::UnexpectedPackageState(Some(p))) if p == package
         );
     }
 
@@ -559,12 +591,12 @@ mod tests {
             )
         }
 
-        fn system_image(&self) -> SystemImage {
-            SystemImage::open_from_pkgfs_root(&self.root_proxy()).unwrap()
+        fn system_image(&self) -> pkgfs::system::Client {
+            pkgfs::system::Client::open_from_pkgfs_root(&self.root_proxy()).unwrap()
         }
 
-        fn versions(&self) -> Versions {
-            Versions::open_from_pkgfs_root(&self.root_proxy()).unwrap()
+        fn versions(&self) -> pkgfs::versions::Client {
+            pkgfs::versions::Client::open_from_pkgfs_root(&self.root_proxy()).unwrap()
         }
     }
 
@@ -645,7 +677,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn fulfill_meta_far_blob_with_missing_blobs() {
+    async fn fulfill_meta_far_transitions_package_from_pending_to_with_meta_far() {
         let inspector = finspect::Inspector::new();
         let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
@@ -653,16 +685,11 @@ mod tests {
         let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
         dynamic_index.start_install(hash);
 
-        let dynamic_index = Arc::new(Mutex::new(dynamic_index));
-
-        let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
-
         let blob_hash = Hash::from([3; 32]);
-        add_meta_far_to_blobfs(&blobfs_fake, hash, "fake-package", vec![blob_hash]);
 
-        fulfill_meta_far_blob(&dynamic_index, &blobfs, hash).await.unwrap();
+        let () =
+            dynamic_index.fulfill_meta_far(hash, path.clone(), hashset! { blob_hash }).unwrap();
 
-        let dynamic_index = dynamic_index.lock().await;
         assert_eq!(
             dynamic_index.packages(),
             hashmap! {
@@ -676,34 +703,49 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn fulfill_meta_far_blob_not_needed() {
+    async fn fulfill_meta_far_fails_on_unknown_package() {
         let inspector = finspect::Inspector::new();
-        let dynamic_index =
-            Arc::new(Mutex::new(DynamicIndex::new(inspector.root().create_child("index"))));
-
-        let (blobfs, _) = blobfs::Client::new_test();
+        let mut index = DynamicIndex::new(inspector.root().create_child("index"));
 
         assert_matches!(
-            fulfill_meta_far_blob(&dynamic_index, &blobfs, Hash::from([2; 32])).await,
-            Err(DynamicIndexError::FulfillNotNeededBlob{hash, state}) if hash == Hash::from([2; 32]) && state == "missing"
+            index.fulfill_meta_far(Hash::from([2; 32]), PackagePath::from_name_and_variant("unknown", "0").unwrap(), hashset!{}),
+            Err(FulfillNotNeededBlobError{hash, state}) if hash == Hash::from([2; 32]) && state == "missing"
         );
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn fulfill_meta_far_blob_not_found() {
+    async fn fulfill_meta_far_fails_on_package_with_meta_far() {
         let inspector = finspect::Inspector::new();
-        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
+        let mut index = DynamicIndex::new(inspector.root().create_child("index"));
 
-        let meta_far_hash = Hash::from([2; 32]);
-        dynamic_index.start_install(meta_far_hash);
-
-        let dynamic_index = Arc::new(Mutex::new(dynamic_index));
-
-        let (_blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
+        let hash = Hash::from([2; 32]);
+        let path = PackagePath::from_name_and_variant("with-meta-far-pkg", "0").unwrap();
+        let required_blobs = hashset! { Hash::from([3; 32]), Hash::from([4; 32]) };
+        let package =
+            Package::WithMetaFar { path: path.clone(), required_blobs: required_blobs.clone() };
+        index.add_package(hash, package);
 
         assert_matches!(
-            fulfill_meta_far_blob(&dynamic_index, &blobfs, meta_far_hash).await,
-            Err(DynamicIndexError::BlobNotFound(hash)) if hash == meta_far_hash
+            index.fulfill_meta_far(hash, path, required_blobs),
+            Err(FulfillNotNeededBlobError{hash, state}) if hash == Hash::from([2; 32]) && state == "WithMetaFar"
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn fulfill_meta_far_fails_on_active_package() {
+        let inspector = finspect::Inspector::new();
+        let mut index = DynamicIndex::new(inspector.root().create_child("index"));
+
+        let hash = Hash::from([2; 32]);
+        let path = PackagePath::from_name_and_variant("active", "0").unwrap();
+        let required_blobs = hashset! { Hash::from([3; 32]), Hash::from([4; 32]) };
+        let package =
+            Package::Active { path: path.clone(), required_blobs: required_blobs.clone() };
+        index.add_package(hash, package);
+
+        assert_matches!(
+            index.fulfill_meta_far(hash, path, required_blobs),
+            Err(FulfillNotNeededBlobError{hash, state}) if hash == Hash::from([2; 32]) && state == "Active"
         );
     }
 }

@@ -10,26 +10,42 @@ use {
     std::collections::HashSet,
 };
 
-// TODO(fxbug.dev/77361) use this module, remove this allow.
 mod dynamic;
 mod package;
-#[allow(dead_code)]
 mod retained;
 
-pub use dynamic::{fulfill_meta_far_blob, load_cache_packages, DynamicIndex, DynamicIndexError};
+pub use package::{
+    fulfill_meta_far_blob, load_cache_packages, set_retained_index, CompleteInstallError,
+    FulfillMetaFarError, PackageIndex,
+};
+
+#[derive(thiserror::Error, Debug)]
+pub enum QueryPackageMetadataError {
+    #[error("failed to open blob")]
+    OpenBlob(#[source] io_util::node::OpenError),
+
+    #[error("failed to parse meta far")]
+    ParseMetaFar(#[from] fuchsia_archive::Error),
+
+    #[error("failed to parse meta package")]
+    ParseMetaPackage(#[from] fuchsia_pkg::MetaPackageError),
+
+    #[error("failed to parse meta contents")]
+    ParseMetaContents(#[from] fuchsia_pkg::MetaContentsError),
+}
 
 /// Parses the meta far blob, if it exists in blobfs, returning the package path in meta/package and
 /// the set of all content blobs specified in meta/contents.
-pub async fn enumerate_package_blobs(
+async fn enumerate_package_blobs(
     blobfs: &blobfs::Client,
     meta_hash: &Hash,
-) -> Result<Option<(PackagePath, HashSet<Hash>)>, DynamicIndexError> {
+) -> Result<Option<(PackagePath, HashSet<Hash>)>, QueryPackageMetadataError> {
     let file = match blobfs.open_blob_for_read(&meta_hash).await {
         Ok(file) => file,
         Err(io_util::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND)) => {
             return Ok(None)
         }
-        Err(e) => return Err(DynamicIndexError::OpenBlob(e)),
+        Err(e) => return Err(QueryPackageMetadataError::OpenBlob(e)),
     };
 
     let mut meta_far =
