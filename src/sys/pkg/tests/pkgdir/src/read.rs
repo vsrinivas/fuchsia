@@ -50,7 +50,8 @@ async fn read_per_package_source(root_dir: DirectoryProxy) {
         assert_seek_past_end_end_origin(&root_dir, path).await;
     }
 
-    assert_read_exceeds_buffer_success(&root_dir).await;
+    assert_read_exceeds_buffer_success(&root_dir, "exceeds_max_buf").await;
+    assert_read_exceeds_buffer_success(&root_dir, "meta/exceeds_max_buf").await;
 }
 
 async fn assert_read_max_buffer_success(root_dir: &DirectoryProxy, path: &str) {
@@ -178,8 +179,8 @@ async fn assert_read_at_does_not_affect_seek_end_origin(root_dir: &DirectoryProx
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
 }
 
-async fn assert_read_exceeds_buffer_success(root_dir: &DirectoryProxy) {
-    let file = open_file(&root_dir, "exceeds_max_buf", OPEN_RIGHT_READABLE).await.unwrap();
+async fn assert_read_exceeds_buffer_success(root_dir: &DirectoryProxy, path: &str) {
+    let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
 
     // Read the first MAX_BUF contents.
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
