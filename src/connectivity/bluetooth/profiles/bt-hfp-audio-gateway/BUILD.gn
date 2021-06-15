@@ -16,6 +16,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.hfp.test:fuchsia.bluetooth.hfp.test-rustc",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers",
+    "//src/connectivity/bluetooth/lib/bt-rfcomm",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/lib/profile-client",
     "//src/connectivity/lib/at-commands",

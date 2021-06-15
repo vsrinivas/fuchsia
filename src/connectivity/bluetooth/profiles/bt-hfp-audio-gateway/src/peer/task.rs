@@ -5,6 +5,7 @@
 use {
     anyhow::format_err,
     async_utils::hanging_get::client::HangingGetStream,
+    bt_rfcomm::profile::server_channel_from_protocol,
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::{NetworkInformation, PeerHandlerProxy},
     fuchsia_async::Task,
@@ -132,14 +133,20 @@ impl PeerTask {
 
     async fn on_search_result(
         &mut self,
-        _protocol: Option<Vec<ProtocolDescriptor>>,
+        protocol: Option<Vec<ProtocolDescriptor>>,
         _attributes: Vec<Attribute>,
     ) {
         info!("search results received for peer {:?}", self.id);
 
-        // TODO (fxbug.dev/77178): Don't hardcode channel.
+        let server_channel = match protocol.as_ref().map(server_channel_from_protocol) {
+            Some(Some(sc)) => sc,
+            _ => {
+                info!("Search result received for non-RFCOMM protocol: {:?}", protocol);
+                return;
+            }
+        };
         let params = bredr::ConnectParameters::Rfcomm(bredr::RfcommParameters {
-            channel: Some(1),
+            channel: Some(server_channel.into()),
             ..bredr::RfcommParameters::EMPTY
         });
 
@@ -529,6 +536,7 @@ mod tests {
         super::*,
         async_utils::PollExt,
         at_commands::{self as at, SerDe},
+        bt_rfcomm::{profile::build_rfcomm_protocol, ServerChannel},
         core::task::Poll,
         fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
         fidl_fuchsia_bluetooth_hfp::{
@@ -545,6 +553,7 @@ mod tests {
         },
         matches::assert_matches,
         proptest::prelude::*,
+        std::convert::TryFrom,
     };
 
     use crate::{
@@ -1117,21 +1126,34 @@ mod tests {
         let _peer_task = fasync::Task::local(peer.run(receiver));
 
         // First check that a connection is made when search results are received.
-        // Send search results.
-        let event =
-            ProfileEvent::SearchResult { id: PeerId(1), protocol: None, attributes: vec![] };
+        // Send a valid search result.
+        let random_channel_number = ServerChannel::try_from(4).expect("valid server channel");
+        let protocol =
+            Some(build_rfcomm_protocol(random_channel_number).iter().map(Into::into).collect());
+        let event = ProfileEvent::SearchResult {
+            id: PeerId(1),
+            protocol: protocol.clone(),
+            attributes: vec![],
+        };
         exec.run_singlethreaded(sender.send(PeerRequest::Profile(event))).expect("Send to succeed");
 
         // Get a connection request on the `profile` stream.
         let result = exec.run_until_stalled(&mut profile.next());
-        let (_c, _r) = match result {
+        let _channel = match result {
             Poll::Ready(Some(Ok(bredr::ProfileRequest::Connect {
-                connection, responder, ..
+                connection:
+                    bredr::ConnectParameters::Rfcomm(bredr::RfcommParameters {
+                        channel: Some(sc), ..
+                    }),
+                responder,
+                ..
             }))) => {
+                assert_eq!(sc, u8::from(random_channel_number));
                 let (local, remote) = Channel::create();
                 let local = local.try_into().unwrap();
                 responder.send(&mut Ok(local)).unwrap();
-                (connection, remote)
+
+                remote
             }
             x => panic!("unexpected result: {:?}", x),
         };
@@ -1144,13 +1166,36 @@ mod tests {
 
         // Connection is not made after autoconnect is disabled
         // Send search results.
-        let event =
-            ProfileEvent::SearchResult { id: PeerId(1), protocol: None, attributes: vec![] };
+        let event = ProfileEvent::SearchResult { id: PeerId(1), protocol, attributes: vec![] };
         exec.run_singlethreaded(sender.send(PeerRequest::Profile(event))).expect("Send to succeed");
 
         // No request is received on stream.
         let result = exec.run_until_stalled(&mut profile.next());
         assert!(result.is_pending());
+    }
+
+    #[test]
+    fn non_rfcomm_search_result_is_ignored() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (peer, mut sender, receiver, mut profile) = setup_peer_task(None);
+
+        let _peer_task = fasync::Task::local(peer.run(receiver));
+
+        // No connection should be made for a non RFCOMM search result.
+        // Send a valid search result with some random L2CAP protocol.
+        let protocol = vec![bredr::ProtocolDescriptor {
+            protocol: bredr::ProtocolIdentifier::L2Cap,
+            params: vec![bredr::DataElement::Uint16(25)],
+        }];
+        let event = ProfileEvent::SearchResult {
+            id: PeerId(1),
+            protocol: Some(protocol),
+            attributes: vec![],
+        };
+        exec.run_singlethreaded(sender.send(PeerRequest::Profile(event))).expect("Send to succeed");
+
+        // No connection request on the `profile` stream.
+        assert!(exec.run_until_stalled(&mut profile.next()).is_pending());
     }
 
     #[test]
