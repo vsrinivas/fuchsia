@@ -15,4 +15,4 @@ phys_configs = [
 phys_tags = [ "static-pie" ]
 phys_exclude_variant_tags = []
 
-phys_zbi_configs = [ "//zircon/kernel/phys:load-pic" ]
+phys_zbi_configs = [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
