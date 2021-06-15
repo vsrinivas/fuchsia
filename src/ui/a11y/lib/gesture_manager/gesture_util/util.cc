@@ -26,6 +26,17 @@ namespace {
   return centroid;
 }
 
+void UpdateLastEventInfo(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event,
+                         GestureContext* gesture_context) {
+  gesture_context->last_event_pointer_id = pointer_event.pointer_id();
+
+  gesture_context->last_event_time =
+      pointer_event.has_event_time() ? pointer_event.event_time() : 0;
+
+  FX_DCHECK(pointer_event.has_phase());
+  gesture_context->last_event_phase = pointer_event.phase();
+}
+
 }  // namespace
 
 ::fuchsia::math::PointF GestureContext::StartingCentroid(bool local) const {
@@ -74,13 +85,7 @@ bool InitializeStartingGestureContext(
   gesture_context->starting_pointer_locations[pointer_id] =
       gesture_context->current_pointer_locations[pointer_id] = location;
 
-  gesture_context->last_event_pointer_id = pointer_id;
-
-  gesture_context->last_event_time =
-      pointer_event.has_event_time() ? pointer_event.event_time() : 0;
-
-  FX_DCHECK(pointer_event.has_phase());
-  gesture_context->last_event_phase = pointer_event.phase();
+  UpdateLastEventInfo(pointer_event, gesture_context);
 
   return true;
 }
@@ -103,6 +108,8 @@ bool UpdateGestureContext(const fuchsia::ui::input::accessibility::PointerEvent&
   }
 
   gesture_context->current_pointer_locations[pointer_id].pointer_on_screen = pointer_on_screen;
+
+  UpdateLastEventInfo(pointer_event, gesture_context);
 
   return true;
 }
