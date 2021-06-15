@@ -57,7 +57,7 @@ class ViewManagerTest : public gtest::TestLoopFixture {
     auto annotation_view_factory = std::make_unique<MockAnnotationViewFactory>();
     annotation_view_factory_ = annotation_view_factory.get();
     auto view_injector_factory = std::make_unique<MockViewInjectorFactory>();
-    auto mock_injector = std::make_unique<input_test::MockInjector>();
+    auto mock_injector = std::make_shared<input_test::MockInjector>();
     mock_injector_ = mock_injector.get();
     view_injector_factory->set_injector(std::move(mock_injector));
     auto accessibility_view = std::make_unique<MockAccessibilityView>();
@@ -485,8 +485,13 @@ TEST_F(ViewManagerTest, VirtualkeyboardListenerUpdates) {
 
 TEST_F(ViewManagerTest, InjectorManagerTest) {
   fuchsia::ui::input::InputEvent event;
+  EXPECT_FALSE(view_manager_->InjectEventIntoView(event, semantic_provider_->koid()));
+  EXPECT_FALSE(mock_injector_->on_event_called());
+  view_manager_->MarkViewReadyForInjection(semantic_provider_->koid(), true);
   EXPECT_TRUE(view_manager_->InjectEventIntoView(event, semantic_provider_->koid()));
   EXPECT_TRUE(mock_injector_->on_event_called());
+  view_manager_->MarkViewReadyForInjection(semantic_provider_->koid(), false);
+  EXPECT_FALSE(view_manager_->InjectEventIntoView(event, semantic_provider_->koid()));
 }
 
 }  // namespace

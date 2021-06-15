@@ -26,12 +26,24 @@ namespace a11y {
 // coordinate transforms to its subtree.
 class AccessibilityViewInterface {
  public:
+  using ViewPropertiesChangedCallback = fit::function<bool(fuchsia::ui::gfx::ViewProperties)>;
+  using SceneReadyCallback = fit::function<bool()>;
+
   AccessibilityViewInterface() = default;
   virtual ~AccessibilityViewInterface() = default;
 
   // Returns the current a11y view properties if the a11y view is ready.
   // If the a11y view is not yet ready, this method returns std::nullopt.
   virtual std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() = 0;
+
+  // Adds a callback to be invoked when the view properties for the a11y view change. When
+  // registering this callback, if view properties are available this callback also gets invoked. If
+  // the callback returns false when invoked, it no longer will receive future updates.
+  virtual void add_view_properties_changed_callback(ViewPropertiesChangedCallback callback) = 0;
+
+  // Adds a callback to be invoked when the scene is ready. If the callback returns false when
+  // invoked, it no longer will receive future updates.
+  virtual void add_scene_ready_callback(SceneReadyCallback callback) = 0;
 
   // Returns the view ref of the a11y view if the a11y view is ready.
   // If the a11y view is not yet ready, this method returns std::nullopt.
@@ -55,10 +67,19 @@ class AccessibilityView : public AccessibilityViewInterface {
   std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() override {
     return a11y_view_properties_;
   }
-  bool is_initialized() const { return is_initialized_; }
+  bool is_initialized() const {
+    return proxy_view_holder_attached_ && proxy_view_connected_ &&
+           proxy_view_holder_properties_set_;
+  }
 
   // |AccessibilityViewInterface |
   std::optional<fuchsia::ui::views::ViewRef> view_ref() override;
+
+  // |AccessibilityViewInterface |
+  void add_view_properties_changed_callback(ViewPropertiesChangedCallback callback) override;
+
+  // |AccessibilityViewInterface |
+  void add_scene_ready_callback(SceneReadyCallback callback) override;
 
  private:
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events);
@@ -91,13 +112,26 @@ class AccessibilityView : public AccessibilityViewInterface {
   // If not present, the a11y view has not yet been connected to the scene.
   std::optional<fuchsia::ui::gfx::ViewProperties> a11y_view_properties_;
 
-  // True if the a11y view and proxy view holder have been created, and
-  // their properties have been set.
-  bool is_initialized_ = false;
+  // True if the Present() call that creates the proxy view holder and attaches it as a child of the
+  // a11y view has completed.
+  bool proxy_view_holder_attached_ = false;
+
+  // True if the event that connects the proxy view to the client view was received.
+  bool proxy_view_connected_ = false;
+
+  // True if the Present() call that sets the proxy view holder's properties has
+  // completed.
+  bool proxy_view_holder_properties_set_ = false;
 
   // Holds a copy of the view ref of the a11y view.
   // If not present, the a11y view has not yet been connected to the scene.
   std::optional<fuchsia::ui::views::ViewRef> view_ref_;
+
+  // If set, gets invoked whenever the view properties for the a11y view change.
+  std::vector<ViewPropertiesChangedCallback> view_properties_changed_callbacks_;
+
+  // If set, gets invoked when the scene becomes ready.
+  std::vector<SceneReadyCallback> scene_ready_callbacks_;
 };
 
 }  // namespace a11y

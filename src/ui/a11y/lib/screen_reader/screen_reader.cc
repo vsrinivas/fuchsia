@@ -205,11 +205,11 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // Add MFingerNTapDragRecognizer (1 finger, 2 taps), recognizer.
   gesture_bind_status = gesture_handler->BindMFingerNTapDragAction(
       [this](GestureContext context) {
+        // Enable injector for the view that is receiving pointer events.
+        action_context_->injector_manager->MarkViewReadyForInjection(context.view_ref_koid, true);
         // When the gesture detects, events are already under way. We need to inject an (ADD ->
         // DOWN) event here to simulate the beginning of the stream that will be injected.
         context.last_event_phase = fuchsia::ui::input::PointerEventPhase::ADD;
-        ExecuteAction(kInjectPointerEventActionLabel, context);
-        context.last_event_phase = fuchsia::ui::input::PointerEventPhase::DOWN;
         ExecuteAction(kInjectPointerEventActionLabel, context);
       }, /*on_start*/
       [this](GestureContext context) {
@@ -217,10 +217,11 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
       }, /*on_update*/
       [this](GestureContext context) {
         // Simulate the end of the stream.
-        context.last_event_phase = fuchsia::ui::input::PointerEventPhase::UP;
-        ExecuteAction(kInjectPointerEventActionLabel, context);
         context.last_event_phase = fuchsia::ui::input::PointerEventPhase::REMOVE;
         ExecuteAction(kInjectPointerEventActionLabel, context);
+
+        // End injection for the view.
+        action_context_->injector_manager->MarkViewReadyForInjection(context.view_ref_koid, false);
       } /*on_complete*/,
       1u /*num_fingers*/, 2u /*num_taps*/);
   FX_DCHECK(gesture_bind_status);

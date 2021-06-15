@@ -73,7 +73,7 @@ class ViewWrapperTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(annotation_view_->IsInitialized());
 
     view_wrapper_ = std::make_unique<a11y::ViewWrapper>(
-        std::move(view_ref_), std::move(view_semantics), std::move(annotation_view), nullptr);
+        std::move(view_ref_), std::move(view_semantics), std::move(annotation_view));
 
     view_wrapper_->EnableSemanticUpdates(true);
   }

@@ -118,6 +118,9 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   // |InjectorManagerInterface|
   bool InjectEventIntoView(fuchsia::ui::input::InputEvent& event, zx_koid_t koid) override;
 
+  // |InjectorManagerInterface|
+  bool MarkViewReadyForInjection(zx_koid_t koid, bool ready) override;
+
  private:
   // Helper function to retrieve the semantic tree corresponding to |koid|.
   // Returns nullptr if no such tree is found.

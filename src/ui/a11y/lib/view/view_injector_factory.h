@@ -24,7 +24,7 @@ class ViewInjectorFactoryInterface {
   // Builds and configures an injector with |context| as its context view, with an exclusive
   // injection policy into |target|. |a11y_view| is used to set the view port of the injector.
   // Please see input::Injector for a full documentation.
-  virtual std::unique_ptr<input::Injector> BuildAndConfigureInjector(
+  virtual std::shared_ptr<input::Injector> BuildAndConfigureInjector(
       AccessibilityViewInterface* a11y_view, sys::ComponentContext* component_context,
       fuchsia::ui::views::ViewRef context, fuchsia::ui::views::ViewRef target) = 0;
 };
@@ -35,7 +35,7 @@ class ViewInjectorFactory : public ViewInjectorFactoryInterface {
   ~ViewInjectorFactory() override = default;
 
   //  |ViewInjectorFactoryInterface|
-  std::unique_ptr<input::Injector> BuildAndConfigureInjector(
+  std::shared_ptr<input::Injector> BuildAndConfigureInjector(
       AccessibilityViewInterface* a11y_view, sys::ComponentContext* component_context,
       fuchsia::ui::views::ViewRef context, fuchsia::ui::views::ViewRef target) override;
 };

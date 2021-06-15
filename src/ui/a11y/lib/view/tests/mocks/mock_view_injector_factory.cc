@@ -6,7 +6,7 @@
 
 namespace accessibility_test {
 
-std::unique_ptr<input::Injector> MockViewInjectorFactory::BuildAndConfigureInjector(
+std::shared_ptr<input::Injector> MockViewInjectorFactory::BuildAndConfigureInjector(
     a11y::AccessibilityViewInterface* a11y_view, sys::ComponentContext* component_context,
     fuchsia::ui::views::ViewRef context, fuchsia::ui::views::ViewRef target) {
   if (injector_) {

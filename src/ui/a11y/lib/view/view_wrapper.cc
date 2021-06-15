@@ -36,12 +36,10 @@ fuchsia::ui::gfx::mat4 MakeTranslationTransform(const fuchsia::ui::gfx::vec2& of
 
 ViewWrapper::ViewWrapper(fuchsia::ui::views::ViewRef view_ref,
                          std::unique_ptr<ViewSemantics> view_semantics,
-                         std::unique_ptr<AnnotationViewInterface> annotation_view,
-                         std::unique_ptr<input::Injector> view_injector)
+                         std::unique_ptr<AnnotationViewInterface> annotation_view)
     : view_ref_(std::move(view_ref)),
       view_semantics_(std::move(view_semantics)),
-      annotation_view_(std::move(annotation_view)),
-      view_injector_(std::move(view_injector)) {}
+      annotation_view_(std::move(annotation_view)) {}
 
 void ViewWrapper::EnableSemanticUpdates(bool enabled) {
   view_semantics_->EnableSemanticUpdates(enabled);
@@ -236,6 +234,12 @@ void ViewWrapper::ClearAllHighlights() { annotation_view_->ClearAllAnnotations()
 void ViewWrapper::ClearFocusHighlights() { annotation_view_->ClearFocusHighlights(); }
 void ViewWrapper::ClearMagnificationHighlights() {
   annotation_view_->ClearMagnificationHighlights();
+}
+
+std::shared_ptr<input::Injector> ViewWrapper::take_view_injector() {
+  auto tmp = view_injector_;
+  view_injector_.reset();
+  return tmp;
 }
 
 }  // namespace a11y

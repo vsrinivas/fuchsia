@@ -197,8 +197,8 @@ TEST_F(ScreenReaderTest, RegisteredActionsAreInvokedWhenGestureTriggers) {
   // see it twice in the list of called actions.
   mock_gesture_handler_->TriggerGesture(GestureType::kOneFingerSingleTap);
 
-  // Corresponds to five times the action being invoked! 2 to start a new stream, one to inject one
-  // event from the stream, two to end the stream.
+  // Corresponds to three times the action being invoked! 1 to start a new stream, one to inject one
+  // event from the stream, 1 to end the stream.
   mock_gesture_handler_->TriggerGesture(GestureType::kOneFingerDoubleTapDrag);
   mock_gesture_handler_->TriggerGesture(GestureType::kOneFingerDrag);
   RunLoopUntilIdle();
@@ -209,7 +209,6 @@ TEST_F(ScreenReaderTest, RegisteredActionsAreInvokedWhenGestureTriggers) {
                   StrEq("Next Action"), StrEq("Previous Action"),
                   StrEq("Previous Semantic Level Action"), StrEq("Next Semantic Level Action"),
                   StrEq("Default Action"), StrEq("Explore Action"),
-                  StrEq("Inject Pointer Event Action"), StrEq("Inject Pointer Event Action"),
                   StrEq("Inject Pointer Event Action"), StrEq("Inject Pointer Event Action"),
                   StrEq("Inject Pointer Event Action"), StrEq("Explore Action")));
 }

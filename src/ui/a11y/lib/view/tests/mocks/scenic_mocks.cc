@@ -227,6 +227,14 @@ void MockSession::SendViewAttachedToSceneEvent(uint32_t view_id) {
   SendGfxEvent(std::move(event));
 }
 
+void MockSession::SendViewConnectedEvent(uint32_t view_holder_id) {
+  fuchsia::ui::gfx::ViewConnectedEvent view_connected_event = {.view_holder_id = view_holder_id};
+  fuchsia::ui::gfx::Event event;
+  event.set_view_connected(view_connected_event);
+
+  SendGfxEvent(std::move(event));
+}
+
 void MockScenic::CreateSession(
     fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {

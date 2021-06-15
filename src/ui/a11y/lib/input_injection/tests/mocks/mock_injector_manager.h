@@ -20,6 +20,9 @@ class MockInjectorManager : public a11y::InjectorManagerInterface {
   // |InjectorManager|
   bool InjectEventIntoView(fuchsia::ui::input::InputEvent& event, zx_koid_t koid) override;
 
+  // |InjectorManager|
+  bool MarkViewReadyForInjection(zx_koid_t koid, bool ready) override { return true; }
+
   // Returns a list of events received for the given koid.
   // Note that this method will return an empty vector for a koid for which no
   // events were received.

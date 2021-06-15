@@ -94,17 +94,8 @@ void ViewManager::RegisterViewForSemantics(
       // TODO: add callbacks
       []() {}, []() {}, []() {});
 
-  auto context_view = a11y_view_->view_ref();
-  std::unique_ptr<input::Injector> view_injector;
-  if (context_view) {
-    fuchsia::ui::views::ViewRef target_view;
-    fidl::Clone(view_ref, &target_view);
-    view_injector = view_injector_factory_->BuildAndConfigureInjector(
-        a11y_view_.get(), context_, std::move(*context_view), std::move(target_view));
-  }
-  view_wrapper_map_[koid] =
-      std::make_unique<ViewWrapper>(std::move(view_ref), std::move(view_semantics),
-                                    std::move(annotation_view), std::move(view_injector));
+  view_wrapper_map_[koid] = std::make_unique<ViewWrapper>(
+      std::move(view_ref), std::move(view_semantics), std::move(annotation_view));
 }
 
 void ViewManager::Register(
@@ -410,11 +401,39 @@ bool ViewManager::InjectEventIntoView(fuchsia::ui::input::InputEvent& event, zx_
   }
   auto* injector = it->second->view_injector();
   if (!injector) {
-    FX_LOGS(WARNING) << "Trying to inject pointer events into view " << koid
-                     << " which does not have an instantiated injector.";
     return false;
   }
   injector->OnEvent(event);
+  return true;
+}
+
+bool ViewManager::MarkViewReadyForInjection(zx_koid_t koid, bool ready) {
+  auto it = view_wrapper_map_.find(koid);
+  if (it == view_wrapper_map_.end()) {
+    return false;
+  }
+  const bool has_injector = it->second->view_injector();
+
+  if (has_injector == ready) {
+    // No change of status.
+    return true;
+  }
+
+  if (!ready) {
+    it->second->take_view_injector();
+    return true;
+  }
+
+  // Instantiates a new injector.
+  auto context_view = a11y_view_->view_ref();
+  if (!context_view) {
+    return false;
+  }
+
+  auto target_view = it->second->ViewRefClone();
+  auto view_injector = view_injector_factory_->BuildAndConfigureInjector(
+      a11y_view_.get(), context_, std::move(*context_view), std::move(target_view));
+  it->second->set_view_injector(std::move(view_injector));
   return true;
 }
 

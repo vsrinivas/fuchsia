@@ -11,6 +11,33 @@
 #include <zircon/status.h>
 
 namespace a11y {
+namespace {
+
+void InvokeViewPropertiesChangedCallbacks(
+    const fuchsia::ui::gfx::ViewProperties& properties,
+    std::vector<AccessibilityView::ViewPropertiesChangedCallback>* callbacks) {
+  auto it = callbacks->begin();
+  while (it != callbacks->end()) {
+    if ((*it)(properties)) {
+      it++;
+    } else {
+      callbacks->erase(it);
+    }
+  }
+}
+
+void InvokeSceneReadyCallbacks(std::vector<AccessibilityView::SceneReadyCallback>* callbacks) {
+  auto it = callbacks->begin();
+  while (it != callbacks->end()) {
+    if ((*it)()) {
+      it++;
+    } else {
+      callbacks->erase(it);
+    }
+  }
+}
+
+}  // namespace
 
 AccessibilityView::AccessibilityView(
     fuchsia::ui::accessibility::view::RegistryPtr accessibility_view_registry,
@@ -36,6 +63,7 @@ AccessibilityView::AccessibilityView(
   fuchsia::ui::views::ViewRef a11y_view_ref_copy;
   fidl::Clone(a11y_view_ref, &a11y_view_ref_copy);
 
+  view_ref_.emplace();
   fidl::Clone(a11y_view_ref, &(*view_ref_));
 
   // Create a11y view. We need to do this step before we ask root presenter to
@@ -74,7 +102,12 @@ AccessibilityView::AccessibilityView(
               session_.Present(
                   /* presentation_time = */ 0,
                   /* presentation_callback = */ [this](fuchsia::images::PresentationInfo info) {
-                    is_initialized_ |= a11y_view_properties_.has_value();
+                    const bool old = is_initialized();
+                    proxy_view_holder_attached_ = true;
+                    if (is_initialized() && !old) {
+                      // The scene just became ready.
+                      InvokeSceneReadyCallbacks(&scene_ready_callbacks_);
+                    }
                   });
             });
       });
@@ -82,6 +115,7 @@ AccessibilityView::AccessibilityView(
 
 void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
   bool changes_to_present = false;
+  bool view_properties_changed = false;
   for (const auto& event : events) {
     if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx) {
       const auto& gfx_event = event.gfx();
@@ -89,6 +123,7 @@ void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> ev
         const auto& view_attached_event = gfx_event.view_attached_to_scene();
         if (view_attached_event.view_id == a11y_view_->id()) {
           a11y_view_properties_ = view_attached_event.properties;
+          view_properties_changed = true;
           // If the client view holder was already created, then we need to set
           // its properties.
           if (proxy_view_holder_) {
@@ -101,12 +136,22 @@ void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> ev
         const auto& view_properties_changed_event = gfx_event.view_properties_changed();
         if (view_properties_changed_event.view_id == a11y_view_->id()) {
           a11y_view_properties_ = view_properties_changed_event.properties;
+          view_properties_changed = true;
           // If the client view holder was already created, then we need to set
           // its properties.
           if (proxy_view_holder_) {
             session_.Enqueue(
                 scenic::NewSetViewPropertiesCmd(proxy_view_holder_->id(), *a11y_view_properties_));
             changes_to_present = true;
+          }
+        }
+      } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewConnected) {
+        const auto& view_connected_event = gfx_event.view_connected();
+        if (view_connected_event.view_holder_id == proxy_view_holder_->id()) {
+          const bool old = is_initialized();
+          proxy_view_connected_ = true;
+          if (is_initialized() && !old) {
+            InvokeSceneReadyCallbacks(&scene_ready_callbacks_);
           }
         }
       }
@@ -117,8 +162,18 @@ void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> ev
     session_.Present(
         /* presentation_time = */ 0,
         /* presentation_callback = */ [this](fuchsia::images::PresentationInfo info) {
-          is_initialized_ |= proxy_view_holder_.has_value();
+          const bool old = is_initialized();
+          proxy_view_holder_properties_set_ = true;
+          if (is_initialized() && !old) {
+            // The scene just became ready.
+            InvokeSceneReadyCallbacks(&scene_ready_callbacks_);
+          }
         });
+  }
+
+  if (view_properties_changed && !view_properties_changed_callbacks_.empty()) {
+    InvokeViewPropertiesChangedCallbacks(*a11y_view_properties_,
+                                         &view_properties_changed_callbacks_);
   }
 }
 
@@ -129,6 +184,21 @@ std::optional<fuchsia::ui::views::ViewRef> AccessibilityView::view_ref() {
   fuchsia::ui::views::ViewRef copy;
   fidl::Clone(*view_ref_, &copy);
   return std::move(copy);
+}
+
+void AccessibilityView::add_view_properties_changed_callback(
+    ViewPropertiesChangedCallback callback) {
+  view_properties_changed_callbacks_.push_back(std::move(callback));
+  if (a11y_view_properties_) {
+    view_properties_changed_callbacks_.back()(*a11y_view_properties_);
+  }
+}
+
+void AccessibilityView::add_scene_ready_callback(SceneReadyCallback callback) {
+  scene_ready_callbacks_.push_back(std::move(callback));
+  if (is_initialized()) {
+    scene_ready_callbacks_.back()();
+  }
 }
 
 }  // namespace a11y

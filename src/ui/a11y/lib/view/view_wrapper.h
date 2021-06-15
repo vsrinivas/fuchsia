@@ -26,8 +26,7 @@ class ViewWrapper {
  public:
   // Creates a Wrapper for this view and binds the associated semantic tree.
   ViewWrapper(fuchsia::ui::views::ViewRef view_ref, std::unique_ptr<ViewSemantics> view_semantics,
-              std::unique_ptr<AnnotationViewInterface> annotation_view,
-              std::unique_ptr<input::Injector> view_injector);
+              std::unique_ptr<AnnotationViewInterface> annotation_view);
 
   ~ViewWrapper() = default;
 
@@ -74,6 +73,14 @@ class ViewWrapper {
   // turns nullptr.
   input::Injector* view_injector() { return view_injector_.get(); }
 
+  void set_view_injector(std::shared_ptr<input::Injector> view_injector) {
+    view_injector_ = std::move(view_injector);
+  }
+
+  // Takes the injector (if any), owned by this class and resets the object owned by this class to
+  // nullptr.
+  std::shared_ptr<input::Injector> take_view_injector();
+
  private:
   fuchsia::ui::views::ViewRef view_ref_;
 
@@ -84,7 +91,7 @@ class ViewWrapper {
   std::unique_ptr<AnnotationViewInterface> annotation_view_;
 
   // Used to inject pointer events into the view.
-  std::unique_ptr<input::Injector> view_injector_;
+  std::shared_ptr<input::Injector> view_injector_;
 };
 
 }  // namespace a11y

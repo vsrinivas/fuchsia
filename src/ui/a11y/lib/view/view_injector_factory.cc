@@ -6,26 +6,39 @@
 
 namespace a11y {
 
-std::unique_ptr<input::Injector> ViewInjectorFactory::BuildAndConfigureInjector(
+std::shared_ptr<input::Injector> ViewInjectorFactory::BuildAndConfigureInjector(
     AccessibilityViewInterface* a11y_view, sys::ComponentContext* component_context,
     fuchsia::ui::views::ViewRef context, fuchsia::ui::views::ViewRef target) {
-  auto view_properties = a11y_view->get_a11y_view_properties();
-  if (!view_properties) {
-    return nullptr;
-  }
-
   auto injector =
-      std::make_unique<input::Injector>(component_context, std::move(context), std::move(target));
-  // TODO(fxbug.dev/77608): Verify viewport configuration to match a11y view.
-  input::Injector::Viewport viewport;
-  viewport.height = view_properties->bounding_box.max.y;
-  viewport.width = view_properties->bounding_box.max.x;
-  injector->SetViewport(viewport);
+      std::make_shared<input::Injector>(component_context, std::move(context), std::move(target));
+  std::weak_ptr<input::Injector> injector_weak_ptr = injector;
+  a11y_view->add_scene_ready_callback([injector = injector_weak_ptr]() {
+    auto ptr = injector.lock();
+    if (!ptr) {
+      return false;
+    }
+    // Note: a11y uses a device id == 1 here since only one touch screen device is supported at the
+    // moment.
+    ptr->OnDeviceAdded(1);
+    ptr->MarkSceneReady();
+    return true;
+  });
 
-  // Note: a11y uses a device id == 1 here since only one touch screen device is supported at the
-  // moment.
-  injector->OnDeviceAdded(1);
-  injector->MarkSceneReady();
+  // TODO(fxbug.dev/77608): Verify viewport configuration to match a11y view.
+  a11y_view->add_view_properties_changed_callback(
+      [injector = injector_weak_ptr](fuchsia::ui::gfx::ViewProperties properties) {
+        auto ptr = injector.lock();
+        if (!ptr) {
+          return false;
+        }
+
+        input::Injector::Viewport viewport;
+        viewport.height = properties.bounding_box.max.y;
+        viewport.width = properties.bounding_box.max.x;
+        ptr->SetViewport(viewport);
+        return true;
+      });
+
   return injector;
 }
 

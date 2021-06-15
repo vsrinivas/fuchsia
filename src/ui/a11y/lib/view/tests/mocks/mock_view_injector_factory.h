@@ -23,15 +23,15 @@ class MockViewInjectorFactory : public a11y::ViewInjectorFactoryInterface {
 
   // Sets the injector that will be returned by this factory when |BuildAndConfigureInjector| is
   // called.
-  void set_injector(std::unique_ptr<input::Injector> injector) { injector_ = std::move(injector); }
+  void set_injector(std::shared_ptr<input::Injector> injector) { injector_ = std::move(injector); }
 
   //  |ViewInjectorFactoryInterface|
-  std::unique_ptr<input::Injector> BuildAndConfigureInjector(
+  std::shared_ptr<input::Injector> BuildAndConfigureInjector(
       a11y::AccessibilityViewInterface* a11y_view, sys::ComponentContext* component_context,
       fuchsia::ui::views::ViewRef context, fuchsia::ui::views::ViewRef target) override;
 
  private:
-  std::unique_ptr<input::Injector> injector_;
+  std::shared_ptr<input::Injector> injector_;
 };
 
 }  // namespace accessibility_test

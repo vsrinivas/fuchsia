@@ -33,9 +33,17 @@ class MockAccessibilityView : public a11y::AccessibilityViewInterface {
     view_ref_ = std::move(view_ref);
   }
 
+  // |AccessibilityViewInterface |
+  void add_view_properties_changed_callback(ViewPropertiesChangedCallback callback) override {
+    callback_ = std::move(callback);
+  }
+
+  void add_scene_ready_callback(SceneReadyCallback callback) override {}
+
  private:
   std::optional<fuchsia::ui::gfx::ViewProperties> a11y_view_properties_;
   std::optional<fuchsia::ui::views::ViewRef> view_ref_;
+  ViewPropertiesChangedCallback callback_;
 };
 
 }  // namespace accessibility_test

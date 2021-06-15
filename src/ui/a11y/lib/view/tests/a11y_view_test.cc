@@ -153,5 +153,68 @@ TEST_F(AccessibilityViewTest, TestViewProperties) {
   EXPECT_EQ(a11y_view_properties->bounding_box.min.z, new_view_properties.bounding_box.min.z);
 }
 
+TEST_F(AccessibilityViewTest, InvokesRegisteredCallbacks) {
+  fuchsia::ui::scenic::ScenicPtr scenic =
+      context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+  fuchsia::ui::accessibility::view::RegistryPtr registry =
+      context_provider_.context()->svc()->Connect<fuchsia::ui::accessibility::view::Registry>();
+  a11y::AccessibilityView a11y_view(std::move(registry), std::move(scenic));
+
+  RunLoopUntilIdle();
+
+  bool scene_ready = false;
+  bool scene_ready_2 = false;
+  bool view_properties_received = false;
+
+  a11y_view.add_scene_ready_callback([&scene_ready]() {
+    scene_ready = true;
+    return true;
+  });
+
+  a11y_view.add_scene_ready_callback([&scene_ready_2]() {
+    scene_ready_2 = true;
+    return true;
+  });
+
+  a11y_view.add_view_properties_changed_callback(
+      [&view_properties_received](fuchsia::ui::gfx::ViewProperties properties) {
+        view_properties_received = true;
+        return true;
+      });
+
+  const auto& views = mock_session_->views();
+  EXPECT_EQ(views.size(), 1u);
+  const auto a11y_view_id = views.begin()->second.id;
+
+  // Send "view attached to scene" event for a11y view.
+  mock_session_->SendViewAttachedToSceneEvent(a11y_view_id);
+
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(scene_ready);
+  EXPECT_FALSE(scene_ready_2);
+  EXPECT_TRUE(view_properties_received);
+  view_properties_received = false;
+
+  // Send "view properties changed" event for a11y view.
+  auto new_view_properties = MockSession::kDefaultViewProperties;
+  new_view_properties.bounding_box.min.z = 100;
+  mock_session_->SendViewPropertiesChangedEvent(a11y_view_id, new_view_properties);
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(view_properties_received);
+
+  const auto& view_holders = mock_session_->view_holders();
+  auto proxy_view_id = view_holders.begin()->second.id;
+
+  mock_session_->SendViewConnectedEvent(proxy_view_id);
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(scene_ready);
+  EXPECT_TRUE(scene_ready_2);
+}
+
 }  // namespace
 }  // namespace accessibility_test
