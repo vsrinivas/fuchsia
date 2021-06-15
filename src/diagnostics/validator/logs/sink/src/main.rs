@@ -145,20 +145,30 @@ impl Puppet {
     }
 
     async fn read_record(&self, new_file_line_rules: bool) -> Result<TestRecord, Error> {
-        let mut buf: Vec<u8> = vec![];
-        let bytes_read = self.socket.read_datagram(&mut buf).await.unwrap();
-        TestRecord::parse(&buf[0..bytes_read], new_file_line_rules)
+        loop {
+            let mut buf: Vec<u8> = vec![];
+            let bytes_read = self.socket.read_datagram(&mut buf).await.unwrap();
+            if bytes_read == 0 {
+                continue;
+            }
+            return TestRecord::parse(&buf[0..bytes_read], new_file_line_rules);
+        }
     }
 
     // For the CPP puppet it's necessary to strip out the TID from the comparison
     // as interest events happen outside the main thread due to HLCPP.
     async fn read_record_no_tid(&self, expected_tid: u64) -> Result<TestRecord, Error> {
-        let mut buf: Vec<u8> = vec![];
-        let bytes_read = self.socket.read_datagram(&mut buf).await.unwrap();
-        let mut record = TestRecord::parse(&buf[0..bytes_read], self.new_file_line_rules)?;
-        record.arguments.remove("tid");
-        record.arguments.insert("tid".to_string(), Value::UnsignedInt(expected_tid));
-        return Ok(record);
+        loop {
+            let mut buf: Vec<u8> = vec![];
+            let bytes_read = self.socket.read_datagram(&mut buf).await.unwrap();
+            if bytes_read == 0 {
+                continue;
+            }
+            let mut record = TestRecord::parse(&buf[0..bytes_read], self.new_file_line_rules)?;
+            record.arguments.remove("tid");
+            record.arguments.insert("tid".to_string(), Value::UnsignedInt(expected_tid));
+            return Ok(record);
+        }
     }
 
     async fn test(&self) -> Result<(), Error> {
