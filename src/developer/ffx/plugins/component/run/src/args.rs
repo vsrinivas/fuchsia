@@ -12,29 +12,17 @@ use {argh::FromArgs, ffx_core::ffx_command};
     example = "To run the 'hello_world_rust' component:
 
     $ ffx component run \\
-    fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx
+    fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cm",
+    description = "Create and run a v2 component instance in an isolated realm",
+    note = "The <url> must follow the format:
 
-To run the Remote Control Service:
-
-    $ ffx component run \\
-    fuchsia-pkg://fuchsia.com/remote-control#meta/remote-control-runner.cmx",
-    description = "Run a component on the target",
-    note = "Runs a specified v1 component on the target. The <url> must follow the
-format:
-
-`fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cmx`."
+`fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cm`"
 )]
 
 pub struct RunComponentCommand {
     #[argh(positional)]
     /// url of component to run
     pub url: String,
-    #[argh(positional)]
-    /// args for the component
-    pub args: Vec<String>,
-    #[argh(switch, long = "background", short = 'b')]
-    /// switch to turn on background info
-    pub background: bool,
 }
 
 #[cfg(test)]
@@ -44,31 +32,11 @@ mod tests {
 
     #[test]
     fn test_command() {
-        fn check(
-            args: &[&str],
-            expected_url: String,
-            expected_args: Vec<String>,
-            expected_background: bool,
-        ) {
-            assert_eq!(
-                RunComponentCommand::from_args(CMD_NAME, args),
-                Ok(RunComponentCommand {
-                    url: expected_url,
-                    args: expected_args,
-                    background: expected_background
-                })
-            )
-        }
-
-        let test_url = "http://test.com";
-        let arg1 = "test1";
-        let arg2 = "test2";
-        let args = vec![arg1.to_string(), arg2.to_string()];
-        let background = "--background";
-
-        check(&[test_url, arg1, arg2, background], test_url.to_string(), args.clone(), true);
-        check(&[test_url, arg1, arg2], test_url.to_string(), args.clone(), false);
-        check(&[test_url, background, arg1, arg2], test_url.to_string(), args.clone(), true);
-        check(&[background, test_url, arg1, arg2], test_url.to_string(), args.clone(), true);
+        let url = "http://test.com";
+        let args = &[url];
+        assert_eq!(
+            RunComponentCommand::from_args(CMD_NAME, args),
+            Ok(RunComponentCommand { url: url.to_string() })
+        )
     }
 }

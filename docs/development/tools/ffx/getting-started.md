@@ -252,18 +252,19 @@ $ fx ffx component knock 'core/appmgr:out:not.a.real.service'
 Failed to connect to service: NoMatchingServices
 ```
 
-### Running a component
+### Running a CML component
 
-`ffx` can run components on a device given their package URL and arguments.
-`stdout` and `stderr` will be streamed to the corresponding descriptor on the
-host terminal.
+`ffx` can run CML components in an isolated realm given their package URL. Currently, this isolated
+realm provides the following capabilities:
 
-Only v1 components can be `run`: v2 components are only started on-demand by
-the framework. Learn more about the component lifecycle
-[here](/docs/concepts/components/v2/lifecycle.md).
+* `fuchsia.logger.LogSink` protocol
+* `tmp` storage
+* `data` storage
 
-Note: `fx serve ` must be running in order to `component run` a package that is
-not
+CMX components are run with the `ffx component run` subcommand. These components are automatically
+destroyed when they stop.
+
+Note: `fx serve` must be running in order to run a package that is not
 [in base or cached](/docs/concepts/build_system/boards_and_products.md#dependency_sets).
 
 Here's an example of running the Rust hello-world component. First, you'll need
@@ -272,7 +273,36 @@ the hello-world package in your universe:
 ```
 $ fx set <product>.<board> --with //examples/hello_world/rust:hello-world-rust && fx build
 ...
-$ fx ffx component run fuchsia-pkg://fuchsia.com/hello-world-rust#meta/hello-world-rust.cmx
+$ fx ffx component run fuchsia-pkg://fuchsia.com/hello-world-rust#meta/hello-world-rust.cm
+Created component instance: C1234
+...
+$ fx ffx component show C1234
+Moniker: ./core/ffx-laboratory:C1234
+URL: fuchsia-pkg://fuchsia.com/hello-world-rust#meta/hello-world-rust.cm
+Type: v2 dynamic component
+Execution State: Running
+Job ID: 50775
+Process ID: 50819
+...
+```
+
+### Running a CMX component
+
+`ffx` can run CMX components on a device given their package URL and arguments.
+
+CMX components are run with the `ffx component run-legacy` subcommand. `stdout` and `stderr` will
+be streamed to the corresponding descriptor on the host terminal.
+
+Note: `fx serve` must be running in order to run a package that is not
+[in base or cached](/docs/concepts/build_system/boards_and_products.md#dependency_sets).
+
+Here's an example of running the Rust hello-world component. First, you'll need
+the hello-world package in your universe:
+
+```
+$ fx set <product>.<board> --with //examples/hello_world/rust:hello-world-rust && fx build
+...
+$ fx ffx component run-legacy fuchsia-pkg://fuchsia.com/hello-world-rust#meta/hello-world-rust.cmx
 Hello, world!
 ```
 

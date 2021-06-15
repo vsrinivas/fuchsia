@@ -8,6 +8,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/test_spec.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 group("remote-control") {
   testonly = true
@@ -174,4 +175,9 @@ group("runtime") {
     "//build/validate:non_production_tag",
     "//src/connectivity/overnet:runtime",
   ]
+}
+
+# This shard enables ffx component laboratory functionality
+core_shard("laboratory-core-shard") {
+  shard_file = "meta/laboratory.core_shard.cml"
 }
