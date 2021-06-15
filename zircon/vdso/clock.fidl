@@ -12,9 +12,6 @@ enum clock : uint32 {
 
 [Transport = "Syscall", NoProtocolPrefix]
 protocol clockfuncs {
-    /// Acquire the current time.
-    clock_get(clock clock_id) -> (status status, time out);
-
     /// Acquire the current monotonic time.
     [vdsocall]
     clock_get_monotonic() -> (time time);

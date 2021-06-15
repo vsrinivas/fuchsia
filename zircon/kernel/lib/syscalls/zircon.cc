@@ -40,9 +40,6 @@
 
 KCOUNTER(syscalls_zx_ticks_get, "syscalls.zx_ticks_get")
 KCOUNTER(syscalls_zx_clock_get_monotonic, "syscalls.zx_clock_get_monotonic")
-KCOUNTER(syscalls_zx_clock_get_type_monotonic, "syscalls.zx_clock_get.zx_clock_monotonic")
-KCOUNTER(syscalls_zx_clock_get_type_utc, "syscalls.zx_clock_get.zx_clock_utc")
-KCOUNTER(syscalls_zx_clock_get_type_thread, "syscalls.zx_clock_get.zx_clock_thread")
 KCOUNTER(syscalls_zx_nanosleep, "syscalls.zx_nanosleep")
 KCOUNTER(syscalls_zx_nanosleep_zero_duration, "syscalls.zx_nanosleep_zero_duration")
 
@@ -69,34 +66,6 @@ zx_status_t sys_nanosleep(zx_time_t deadline) {
   // This syscall is declared as "blocking", so a higher layer will automatically
   // retry if we return ZX_ERR_INTERNAL_INTR_RETRY.
   return Thread::Current::SleepEtc(slackDeadline, Interruptible::Yes, now);
-}
-
-// This must be accessed atomically from any given thread.
-//
-// NOTE(abdulla): This is used by pv_clock. If logic here is changed, please
-// update pv_clock too.
-ktl::atomic<int64_t> utc_offset;
-
-zx_status_t sys_clock_get(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time) {
-  zx_time_t time;
-  switch (clock_id) {
-    case ZX_CLOCK_MONOTONIC:
-      time = current_time();
-      kcounter_add(syscalls_zx_clock_get_type_monotonic, 1);
-      break;
-    case ZX_CLOCK_UTC:
-      time = current_time() + utc_offset.load();
-      kcounter_add(syscalls_zx_clock_get_type_utc, 1);
-      break;
-    case ZX_CLOCK_THREAD:
-      time = Thread::Current::Get()->Runtime();
-      kcounter_add(syscalls_zx_clock_get_type_thread, 1);
-      break;
-    default:
-      return ZX_ERR_INVALID_ARGS;
-  }
-
-  return out_time.copy_to_user(time);
 }
 
 zx_time_t sys_clock_get_monotonic_via_kernel() {
