@@ -120,16 +120,9 @@ void ArrayAccessExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCall
 // static
 Err ArrayAccessExprNode::InnerValueToOffset(const fxl::RefPtr<EvalContext>& context,
                                             const ExprValue& inner, int64_t* offset) {
-  // Type should be some kind of number.
-  const Type* abstract_type = inner.type();
-  if (!abstract_type)
-    return Err("Bad type, please file a bug with a repro.");
-
   // Skip "const", etc.
-  fxl::RefPtr<Type> concrete_type = context->GetConcreteType(abstract_type);
-
-  const BaseType* base_type = concrete_type->AsBaseType();
-  if (!base_type || !BaseTypeCanBeArrayIndex(base_type))
+  fxl::RefPtr<BaseType> base_type = context->GetConcreteTypeAs<BaseType>(inner.type());
+  if (!base_type || !BaseTypeCanBeArrayIndex(base_type.get()))
     return Err("Bad type for array index.");
 
   // This uses signed integers to explicitly allow negative indexing which the user may want to do
@@ -481,7 +474,7 @@ void MemberAccessExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCal
 
     // Rust references can be accessed with '.'
     if (!by_pointer) {
-      fxl::RefPtr<Type> concrete_base = base_value.GetConcreteType(context.get());
+      fxl::RefPtr<Type> concrete_base = context->GetConcreteType(base_value.type());
 
       if (!concrete_base || concrete_base->tag() != DwarfTag::kPointerType ||
           concrete_base->GetLanguage() != DwarfLang::kRust ||

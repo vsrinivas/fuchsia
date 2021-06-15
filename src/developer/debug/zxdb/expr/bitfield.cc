@@ -21,8 +21,7 @@ namespace {
 // bitfields are signed or unsigned is actually implementation-defined in the C standard.
 bool NeedsSignExtension(const fxl::RefPtr<EvalContext>& context, const Type* type, uint128_t value,
                         uint32_t bit_size) {
-  fxl::RefPtr<Type> concrete = context->GetConcreteType(type);
-  const BaseType* base_type = concrete->AsBaseType();
+  fxl::RefPtr<BaseType> base_type = context->GetConcreteTypeAs<BaseType>(type);
   if (!base_type)
     return false;
 
@@ -64,7 +63,8 @@ ErrOrValue ResolveBitfieldMember(const fxl::RefPtr<EvalContext>& context, const 
     return Err("The bitfield spans more than 128 bits which is unsupported.");
   }
 
-  // Destination type.
+  // Destination type. Here we need to save the original (possibly non-concrete type) for assigning
+  // to the result type at the bottom.
   const Type* dest_type = data_member->type().Get()->AsType();
   if (!dest_type)
     return Err("Bitfield member has no type.");

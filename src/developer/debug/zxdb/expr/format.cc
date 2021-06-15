@@ -264,22 +264,19 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
 
   // Base classes.
   for (const auto& lazy_inherited : coll->inherited_from()) {
-    const InheritedFrom* inherited = lazy_inherited.Get()->AsInheritedFrom();
+    const InheritedFrom* inherited = lazy_inherited.Get()->As<InheritedFrom>();
     if (!inherited)
       continue;
 
-    auto from = eval_context->GetConcreteType(inherited->from().Get()->AsType());
-    const Collection* from_coll = from->AsCollection();
+    auto from_coll = eval_context->GetConcreteTypeAs<Collection>(inherited->from());
     if (!from_coll)
       continue;
 
     // Some base classes are empty. Only show if this base class or any of its base classes have
     // member values.
     VisitResult has_members_result =
-        VisitClassHierarchy(from_coll, [eval_context](const InheritancePath& path) {
-          auto base = eval_context->GetConcreteType(path.base());
-
-          const Collection* base_coll = base->AsCollection();
+        VisitClassHierarchy(from_coll.get(), [eval_context](const InheritancePath& path) {
+          auto base_coll = eval_context->GetConcreteTypeAs<Collection>(path.base());
           if (!base_coll)
             return VisitResult::kContinue;  // No concrete base class, skip.
 
@@ -292,7 +289,7 @@ void FormatCollection(FormatNode* node, const Collection* coll, const FormatOpti
 
     // Derived class nodes are named by the type of the base class.
     std::unique_ptr<FormatNode> base_class_node = std::make_unique<FormatNode>(
-        from->GetFullName(), ResolveInherited(eval_context, node->value(), inherited));
+        from_coll->GetFullName(), ResolveInherited(eval_context, node->value(), inherited));
     base_class_node->set_child_kind(FormatNode::kBaseClass);
     node->children().push_back(std::move(base_class_node));
   }
@@ -540,7 +537,7 @@ void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& o
   // Trim "const", "volatile", etc. and follow typedef and using for the type checking below.
   //
   // Always use this variable below instead of value.type().
-  fxl::RefPtr<Type> type = node->value().GetConcreteType(context.get());
+  fxl::RefPtr<Type> type = context->GetConcreteType(node->value().type());
 
   // Check for pretty-printers again now that we've resolved concrete types. Either the source or
   // the destination of a typedef could have a pretty-printer.

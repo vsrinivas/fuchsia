@@ -85,7 +85,7 @@ OutputBuffer FormatCollectionMembers(const ProcessSymbols* process_symbols,
     if (!from)
       continue;
 
-    auto from_type = GetConcreteType(find_name_context, from->from().Get()->AsType());
+    auto from_type = GetConcreteType(find_name_context, from->from());
     if (!from_type)
       continue;
 

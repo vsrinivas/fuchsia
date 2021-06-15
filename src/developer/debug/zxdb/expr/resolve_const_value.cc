@@ -13,6 +13,7 @@ namespace zxdb {
 ErrOrValue ResolveConstValue(const fxl::RefPtr<EvalContext>& context, const Value* value) {
   FX_DCHECK(value->const_value().has_value());
 
+  // Need to keep the original (possibly non-concrete) type to assign as the type of the result.
   const Type* type = value->type().Get()->AsType();
   if (!type)
     return Err("Invalid type for '%s'.", value->GetFullName().c_str());

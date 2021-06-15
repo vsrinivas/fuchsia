@@ -93,7 +93,7 @@ void EvalExpressions(const std::vector<std::string>& inputs,
 // TODO(bug 44074) support non-pointer values and take their address implicitly.
 Err ValueToAddressAndSize(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& value,
                           uint64_t* address, std::optional<uint32_t>* size) {
-  fxl::RefPtr<Type> concrete_type = value.GetConcreteType(eval_context.get());
+  fxl::RefPtr<Type> concrete_type = eval_context->GetConcreteType(value.type());
   if (concrete_type->AsCollection()) {
     // Don't allow structs and classes that are <= 64 bits to be converted
     // to addresses.
@@ -102,9 +102,9 @@ Err ValueToAddressAndSize(const fxl::RefPtr<EvalContext>& eval_context, const Ex
 
   // See if there's an intrinsic size to the object being pointed to. This is true for pointers.
   // References should have been followed and stripped before here.
-  if (auto modified = concrete_type->AsModifiedType();
+  if (auto modified = concrete_type->As<ModifiedType>();
       modified && modified->tag() == DwarfTag::kPointerType) {
-    if (auto modified_type = modified->modified().Get()->AsType())
+    if (auto modified_type = modified->modified().Get()->As<Type>())
       *size = modified_type->byte_size();
   }
 

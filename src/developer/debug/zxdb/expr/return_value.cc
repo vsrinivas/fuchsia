@@ -64,10 +64,7 @@ void GetReturnValue(const fxl::RefPtr<EvalContext>& context, const Function* fun
   // Empty means void.
   if (!func->return_type())
     return cb(ExprValue());
-  const Type* abstract_return_type = func->return_type().Get()->AsType();
-  if (!abstract_return_type)
-    return cb(ExprValue());
-  fxl::RefPtr<Type> return_type = context->GetConcreteType(abstract_return_type);
+  fxl::RefPtr<Type> return_type = context->GetConcreteType(func->return_type());
   if (!return_type)
     return cb(ExprValue());
 

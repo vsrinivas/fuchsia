@@ -84,10 +84,6 @@ int ExprValue::GetBaseType() const {
   return base_type->base_type();
 }
 
-fxl::RefPtr<Type> ExprValue::GetConcreteType(EvalContext* context) const {
-  return context->GetConcreteType(type_.get());
-}
-
 Err ExprValue::EnsureSizeIs(size_t size) const {
   if (data_.size() != size) {
     return Err(

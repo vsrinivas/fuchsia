@@ -57,7 +57,7 @@ ErrOr<FoundMember> FindMemberWithErr(const fxl::RefPtr<EvalContext>& context,
 // Variant of the above that extracts the collection type from the given base value.
 ErrOr<FoundMember> FindMemberWithErr(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
                                      const ParsedIdentifier& identifier) {
-  fxl::RefPtr<Type> concrete_base = base.GetConcreteType(context.get());
+  fxl::RefPtr<Type> concrete_base = context->GetConcreteType(base.type());
   if (!concrete_base)
     return Err("No type information for collection.");
   return FindMemberWithErr(context, concrete_base->AsCollection(), identifier);
@@ -189,14 +189,13 @@ ErrOrValue DoResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, con
   if (member.data_member()->const_value().has_value())
     return ResolveConstValue(context, member.data_member());
 
-  fxl::RefPtr<Type> concrete_type = base.GetConcreteType(context.get());
-  const Collection* coll = nullptr;
-  if (!base.type() || !(coll = concrete_type->AsCollection()))
+  fxl::RefPtr<Collection> coll = context->GetConcreteTypeAs<Collection>(base.type());
+  if (!coll)
     return Err("Can't resolve data member on non-struct/class value.");
 
   fxl::RefPtr<Type> member_type;
   uint32_t member_size = 0;
-  Err err = GetMemberType(context, coll, member.data_member(), &member_type, &member_size);
+  Err err = GetMemberType(context, coll.get(), member.data_member(), &member_type, &member_size);
   if (err.has_error())
     return err;
 
@@ -419,10 +418,8 @@ Err GetConcretePointedToCollection(const fxl::RefPtr<EvalContext>& eval_context,
     return err;
   to_type = eval_context->GetConcreteType(to_type.get());
 
-  if (const Collection* collection = to_type->AsCollection()) {
-    *pointed_to = fxl::RefPtr<Collection>(const_cast<Collection*>(collection));
+  if ((*pointed_to = eval_context->GetConcreteTypeAs<Collection>(to_type.get())))
     return Err();
-  }
 
   return Err("Attempting to dereference a pointer to '%s' which is not a class, struct, or union.",
              to_type->GetFullName().c_str());

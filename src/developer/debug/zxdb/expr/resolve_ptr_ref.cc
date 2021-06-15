@@ -148,14 +148,13 @@ Err GetPointedToType(const fxl::RefPtr<EvalContext>& eval_context, const Type* i
   // Convert to a pointer. GetConcreteType() here is more theoretical since current C compilers
   // won't forward-declare pointer types. But it's nice to be sure and this will also strip
   // CV-qualifiers which we do need.
-  fxl::RefPtr<Type> input_concrete = eval_context->GetConcreteType(input);
-  const ModifiedType* mod_type = input_concrete->AsModifiedType();
+  auto mod_type = eval_context->GetConcreteTypeAs<ModifiedType>(input);
   if (!mod_type || mod_type->tag() != DwarfTag::kPointerType) {
     return Err(fxl::StringPrintf("Attempting to dereference '%s' which is not a pointer.",
                                  input->GetFullName().c_str()));
   }
 
-  *pointed_to = fxl::RefPtr<Type>(const_cast<Type*>(mod_type->modified().Get()->AsType()));
+  *pointed_to = RefPtrTo(mod_type->modified().Get()->AsType());
   if (!*pointed_to)
     return Err("Can not dereference a pointer to 'void'.");
   return Err();

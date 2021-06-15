@@ -61,14 +61,12 @@ ErrOrValueVector ResolveStaticArray(const ExprValue& array, const ArrayType* arr
 void ResolvePointerArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
                          const ModifiedType* ptr_type, size_t begin_index, size_t end_index,
                          fit::callback<void(ErrOrValueVector)> cb) {
-  const Type* abstract_value_type = ptr_type->modified().Get()->AsType();
-  if (!abstract_value_type)
+  fxl::RefPtr<Type> value_type = eval_context->GetConcreteType(ptr_type->modified());
+  if (!value_type)
     return cb(Err("Bad type information."));
-  fxl::RefPtr<Type> value_type = eval_context->GetConcreteType(abstract_value_type);
 
   // The address is stored in the contents of the array value.
-  Err err = array.EnsureSizeIs(kTargetPointerSize);
-  if (err.has_error())
+  if (Err err = array.EnsureSizeIs(kTargetPointerSize); err.has_error())
     return cb(err);
   TargetPointer base_address = array.GetAs<TargetPointer>();
 
@@ -114,11 +112,11 @@ bool DoResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValu
   }
 
   fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(array.type());
-  if (const ArrayType* array_type = concrete->AsArrayType()) {
+  if (const ArrayType* array_type = concrete->As<ArrayType>()) {
     std::vector<ExprValue> result;
     cb(ResolveStaticArray(array, array_type, begin_index, end_index));
     return true;
-  } else if (const ModifiedType* modified_type = concrete->AsModifiedType()) {
+  } else if (const ModifiedType* modified_type = concrete->As<ModifiedType>()) {
     if (modified_type->tag() == DwarfTag::kPointerType) {
       ResolvePointerArray(eval_context, array, modified_type, begin_index, end_index,
                           std::move(cb));
@@ -134,12 +132,8 @@ bool DoResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValu
 
 ErrOrValueVector ResolveArray(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& array,
                               size_t begin_index, size_t end_index) {
-  if (!array.type())
-    return Err("No type information.");
-
-  fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(array.type());
-  if (const ArrayType* array_type = concrete->AsArrayType())
-    return ResolveStaticArray(array, array_type, begin_index, end_index);
+  if (fxl::RefPtr<ArrayType> array_type = eval_context->GetConcreteTypeAs<ArrayType>(array.type()))
+    return ResolveStaticArray(array, array_type.get(), begin_index, end_index);
   return Err("Can't dereference a non-array type.");
 }
 
