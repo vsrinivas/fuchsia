@@ -104,5 +104,9 @@ fuchsia_test_package("pkg-cache-integration-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":pkg-cache-integration-tests" ]
+  if (!is_coverage) {
+    # TODO(https://fxbug.dev/78749): Re-enable this test when this test does
+    # not timeout.
+    public_deps = [ ":pkg-cache-integration-tests" ]
+  }
 }
