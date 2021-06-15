@@ -246,6 +246,14 @@ async fn add_del_interface_address() -> Result {
         .await
         .context("failed to call add interface address")?;
     assert_eq!(res, Ok(()));
+
+    // Should be an error the second time.
+    let res = stack
+        .add_interface_address(loopback.id, &mut interface_address)
+        .await
+        .context("failed to call add interface address")?;
+    assert_eq!(res, Err(fidl_fuchsia_net_stack::Error::BadState));
+
     let loopback =
         exec_fidl!(stack.get_interface_info(loopback.id), "failed to get loopback interface")?;
 

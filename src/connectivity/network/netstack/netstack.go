@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
@@ -1028,10 +1029,12 @@ func (ns *Netstack) getIfStateInfo(nicInfo map[tcpip.NICID]stack.NICInfo) map[tc
 func findAddress(addrs []tcpip.ProtocolAddress, addr tcpip.ProtocolAddress) (tcpip.ProtocolAddress, bool) {
 	// Ignore prefix length.
 	addr.AddressWithPrefix.PrefixLen = 0
-	for _, a := range addrs {
-		a.AddressWithPrefix.PrefixLen = 0
-		if a == addr {
-			return a, true
+	for _, candidate := range addrs {
+		// Copy to avoid mutating the return value.
+		matcher := candidate
+		matcher.AddressWithPrefix.PrefixLen = 0
+		if matcher == addr {
+			return candidate, true
 		}
 	}
 	return tcpip.ProtocolAddress{}, false

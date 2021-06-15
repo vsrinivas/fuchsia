@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
@@ -266,7 +267,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAd
 
 	found, err := ns.addInterfaceAddress(tcpip.NICID(id), protocolAddr)
 	if err != nil {
-		syslog.Errorf("(*Netstack).addInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, err)
+		_ = syslog.Warnf("(*Netstack).addInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, err)
 		result.SetErr(stack.ErrorBadState)
 		return result
 	}
