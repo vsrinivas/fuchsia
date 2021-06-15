@@ -144,7 +144,7 @@ pub(crate) struct ScenicViewStrategy {
     last_presentation_time: i64,
     future_presentation_times: Vec<PresentationTime>,
     present_interval: i64,
-    present_allowed: bool,
+    num_presents_allowed: usize,
     render_timer_scheduled: bool,
     missed_frame: bool,
     app_sender: UnboundedSender<MessageInternal>,
@@ -186,7 +186,7 @@ impl ScenicViewStrategy {
             last_presentation_time: fasync::Time::now().into_nanos(),
             future_presentation_times: Vec::new(),
             present_interval: DEFAULT_PRESENT_INTERVAL,
-            present_allowed: false,
+            num_presents_allowed: 1,
             render_timer_scheduled: false,
             missed_frame: false,
             root_node,
@@ -494,6 +494,10 @@ impl ScenicViewStrategy {
             self.render_requested();
         }
     }
+
+    fn present_allowed(&self) -> bool {
+        self.pending_present_count < self.num_presents_allowed
+    }
 }
 
 #[async_trait(?Send)]
@@ -517,12 +521,12 @@ impl ViewStrategy for ScenicViewStrategy {
         self.render_timer_scheduled = false;
         let size = view_details.logical_size.floor().to_u32();
         if size.width > 0 && size.height > 0 {
-            if !self.present_allowed {
+            if !self.present_allowed() {
                 instant!(
                     "gfx",
                     "ScenicViewStrategy::present_is_not_allowed",
                     fuchsia_trace::Scope::Process,
-                    "pending_present_count" => format!("{:?}", self.pending_present_count).as_str()
+                    "counts" => format!("{} pending {} allowed", self.pending_present_count, self.num_presents_allowed).as_str()
                 );
                 self.missed_frame = true;
                 return false;
@@ -601,9 +605,14 @@ impl ViewStrategy for ScenicViewStrategy {
         let num_presents_handled = info.presentation_infos.len();
         assert!(self.pending_present_count >= num_presents_handled);
         self.pending_present_count -= num_presents_handled;
-        self.present_allowed =
-            (info.num_presents_allowed as usize - self.pending_present_count) > 0;
+        self.num_presents_allowed = info.num_presents_allowed as usize;
         self.retry_missed_frame();
+        instant!(
+            "gfx",
+            "ScenicViewStrategy::present_done",
+            fuchsia_trace::Scope::Process,
+            "presents" => format!("{} handled {} allowed", num_presents_handled, info.num_presents_allowed).as_str()
+        );
     }
 
     fn handle_focus(
