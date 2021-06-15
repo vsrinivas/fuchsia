@@ -108,25 +108,28 @@ pub struct BoardInfo {
 }
 
 impl BoardInfo {
-    fn read_config(path: &str) -> Result<Self, Error> {
-        let mut board_info: BoardInfo =
-            serde_json::from_reader(io::BufReader::new(File::open(path)?))?;
+    fn get_cpu_architecture() -> Option<Architecture> {
         match std::env::consts::ARCH {
-            "x86_64" => board_info.cpu_architecture = Some(Architecture::X64),
-            "aarch64" => board_info.cpu_architecture = Some(Architecture::ARM64),
-            _ => board_info.cpu_architecture = None,
+            "x86_64" => Some(Architecture::X64),
+            "aarch64" => Some(Architecture::ARM64),
+            _ => None,
         }
+    }
+
+    fn read_config(path: &str) -> Result<Self, Error> {
+        let board_info: BoardInfo = serde_json::from_reader(io::BufReader::new(File::open(path)?))?;
         Ok(board_info)
     }
 
     pub fn load() -> Self {
-        let board_info = BoardInfo::read_config(BOARD_CONFIG_JSON_FILE).unwrap_or_else(|err| {
+        let mut board_info = BoardInfo::read_config(BOARD_CONFIG_JSON_FILE).unwrap_or_else(|err| {
             fx_log_err!("Failed to read board_config.json due to {}", err);
             BoardInfo::read_config(DEFAULT_BOARD_CONFIG_JSON_FILE).unwrap_or_else(|err| {
                 fx_log_err!("Failed to read default_board_config.json due to {}", err);
                 BoardInfo { name: None, revision: None, cpu_architecture: None }
             })
         });
+        board_info.cpu_architecture = BoardInfo::get_cpu_architecture();
         board_info
     }
 }

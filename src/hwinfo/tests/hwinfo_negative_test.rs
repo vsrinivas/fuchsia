@@ -6,7 +6,7 @@
 
 use {
     anyhow::Error,
-    fidl_fuchsia_hwinfo::{BoardMarker, DeviceMarker, ProductMarker},
+    fidl_fuchsia_hwinfo::{Architecture, BoardMarker, DeviceMarker, ProductMarker},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
 };
@@ -28,7 +28,14 @@ async fn request_board_info() -> Result<(), Error> {
     let response = board_info_provider.get_info().await?;
     assert!(response.name.is_none());
     assert!(response.revision.is_none());
-    assert!(response.cpu_architecture.is_none());
+
+    // CPU architecture is not derived from config files and should not fail to
+    // provide the correct value.
+    match std::env::consts::ARCH {
+        "x86_64" => assert_eq!(response.cpu_architecture, Some(Architecture::X64)),
+        "aarch64" => assert_eq!(response.cpu_architecture, Some(Architecture::Arm64)),
+        _ => assert_eq!(response.cpu_architecture, None),
+    }
     Ok(())
 }
 
