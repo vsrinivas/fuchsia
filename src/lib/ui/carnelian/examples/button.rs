@@ -15,7 +15,10 @@ use carnelian::{
             FacetId, SetColorMessage, TextFacetOptions, TextHorizontalAlignment,
             TextVerticalAlignment,
         },
-        layout::{CrossAxisAlignment, Flex, FlexOptions, MainAxisAlignment, MainAxisSize, Stack},
+        layout::{
+            Alignment, CrossAxisAlignment, Flex, FlexOptions, MainAxisAlignment, MainAxisSize,
+            Stack, StackOptions,
+        },
         scene::{Scene, SceneBuilder},
     },
     App, AppAssistant, Message, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
@@ -90,7 +93,8 @@ impl Button {
         padding: f32,
         builder: &mut SceneBuilder,
     ) -> Result<Button, Error> {
-        builder.start_group("button", Stack::new_ptr());
+        let options = StackOptions { alignment: Alignment::center(), ..StackOptions::default() };
+        builder.start_group("button", Stack::with_options_ptr(options));
         let face = load_font(PathBuf::from("/pkg/data/fonts/RobotoSlab-Regular.ttf"))?;
         let label_width = measure_text_width(&face, font_size, text);
         let label = builder.text(
