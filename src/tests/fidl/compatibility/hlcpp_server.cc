@@ -95,7 +95,7 @@ class EchoServerApp : public Echo {
   void EchoStructNoRetVal(Struct value, std::string forward_to_server) override {
     if (!forward_to_server.empty()) {
       std::unique_ptr<EchoClientApp> app(new EchoClientApp);
-      app->echo().set_error_handler([this, &forward_to_server](zx_status_t status) {
+      app->echo().set_error_handler([this, forward_to_server](zx_status_t status) {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
