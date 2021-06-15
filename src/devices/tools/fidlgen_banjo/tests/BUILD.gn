@@ -18,8 +18,11 @@ if (current_toolchain == host_toolchain) {
   # Write a .rs file containing all the IRs needed by tests.
   irs_contents = []
   all_irs = []
+  source_root_dir = rebase_path("//", root_build_dir)
+  test_source_dir = "//" + rebase_path("tests/fidl", "//")
   foreach(test, fidlgen_tests) {
-    _path = rebase_path(test.ir)
+    # For remote-build-ability, paths must be relative to test source.
+    _path = source_root_dir + rebase_path(test.ir, test_source_dir)
     irs_contents += [
       "pub mod ${test.name} {",
       "  pub static IR: &str = include_str!(\"$_path\");",
