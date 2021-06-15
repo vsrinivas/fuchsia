@@ -48,6 +48,25 @@ struct MemRange {
 
 // TODO(joshuaseaton): static_assert(cpp20::is_layout_compatible_v<MemRange, zbi_mem_range_t>);
 
+namespace internal {
+
+// Effectively just a span and an iterator. This is used internally to iterate
+// over a variable number of range arrays.
+struct MemRangeIterationContext {
+  MemRangeIterationContext() = default;
+
+  // Lexicographically sorts the ranges on construction.
+  explicit MemRangeIterationContext(cpp20::span<MemRange> ranges)
+      : ranges_(ranges), it_(ranges.begin()) {
+    std::sort(ranges_.begin(), ranges_.end());
+  }
+
+  cpp20::span<MemRange> ranges_;
+  typename cpp20::span<MemRange>::iterator it_;
+};
+
+}  // namespace internal
+
 }  // namespace memalloc
 
 #endif  // ZIRCON_KERNEL_PHYS_LIB_MEMALLOC_INCLUDE_LIB_MEMALLOC_RANGE_H_

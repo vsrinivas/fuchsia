@@ -165,19 +165,29 @@ class ActiveRanges {
 
 }  // namespace
 
-// Returns the next range in the stream, returning nullptr when all ranges
-// have been streamed (until the stream itself has been reset).
 const MemRange* MemRangeStream::operator()() {
+  static constexpr auto at_end = [](const auto& ctx) { return ctx.it_ == ctx.ranges_.end(); };
+
   // Dereferencing a cpp20::span iterator returns a reference.
   constexpr auto to_ptr = [](auto it) -> const MemRange* { return &(*it); };
 
-  if (it_ == ranges_.end() && aux_it_ == aux_ranges_.end()) {
+  // We want to take the lexicographic minimum among the ranges currently
+  // pointed to by the context.
+  auto state_it =
+      std::min_element(state_.begin(), state_.end(), [](const auto& ctx_a, const auto& ctx_b) {
+        // Take any non-'end' iterator to be strictly less than any 'end' one.
+        if (at_end(ctx_a)) {
+          return false;
+        }
+        if (at_end(ctx_b)) {
+          return !at_end(ctx_a);
+        }
+        return *ctx_a.it_ < *ctx_b.it_;
+      });
+  if (state_it == state_.end() || at_end(*state_it)) {
     return nullptr;
   }
-  if (aux_it_ == aux_ranges_.end() || (it_ != ranges_.end() && *it_ < *aux_it_)) {
-    return to_ptr(it_++);
-  }
-  return to_ptr(aux_it_++);
+  return to_ptr(state_it->it_++);
 }
 
 void FindNormalizedRamRanges(MemRangeStream ranges, MemRangeCallback cb) {
