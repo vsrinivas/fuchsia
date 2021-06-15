@@ -170,7 +170,10 @@ impl Control {
         let default_table_points = &*BRIGHTNESS_TABLE.lock().await.points;
         let brightness_table = read_brightness_table_file(BRIGHTNESS_TABLE_FILE_PATH)
             .unwrap_or_else(|e| {
-                fx_log_warn!("Error occurred when trying to read existing settings: {}, using default table instead.", e);
+                fx_log_warn!(
+                    "Failed to read existing settings: {}, using default table instead.",
+                    e
+                );
                 BrightnessTable { points: default_table_points.to_vec() }
             });
 
