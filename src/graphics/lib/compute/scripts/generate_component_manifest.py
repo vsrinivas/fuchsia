@@ -43,7 +43,7 @@ def main(argv):
 
     # Output is a JSON dictionary.
     content = {
-        'include': ['sdk/lib/diagnostics/syslog/client.shard.cmx'],
+        'include': ['//sdk/lib/diagnostics/syslog/client.shard.cmx'],
         'program': {
             'binary': 'bin/' + args.name
         },

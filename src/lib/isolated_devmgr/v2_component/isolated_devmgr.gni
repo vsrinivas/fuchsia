@@ -67,8 +67,8 @@ template("isolated_devmgr_unittest_v2_component") {
     generated_file(generated_target) {
       contents = {
         include = [
-          "sdk/lib/diagnostics/inspect/client.shard.cml",
-          "sdk/lib/diagnostics/syslog/client.shard.cml",
+          "//sdk/lib/diagnostics/inspect/client.shard.cml",
+          "//sdk/lib/diagnostics/syslog/client.shard.cml",
         ]
         program = {
           if (defined(invoker.runner)) {

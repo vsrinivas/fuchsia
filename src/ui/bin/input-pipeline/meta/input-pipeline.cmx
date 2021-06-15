@@ -1,6 +1,6 @@
 {
     "include": [
-        "src/ui/bin/input-pipeline/meta/input-pipeline-base.cmx"
+        "//src/ui/bin/input-pipeline/meta/input-pipeline-base.cmx"
     ],
     "sandbox": {
         "dev": [

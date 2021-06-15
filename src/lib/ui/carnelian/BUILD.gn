@@ -575,7 +575,8 @@ carnelian_examples = [
 carnelian_examples_deps = []
 
 # Rebased path to the example shard
-carnelian_example_manifest_include = rebase_path("meta/example.shard.cmx")
+carnelian_example_manifest_include =
+    "//" + rebase_path("meta/example.shard.cmx")
 
 foreach(carnelian_example_details, carnelian_examples) {
   carnelian_example_package_name =
