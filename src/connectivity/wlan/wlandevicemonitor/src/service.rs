@@ -25,10 +25,7 @@ pub(crate) async fn serve_monitor_requests(
         match req {
             DeviceMonitorRequest::ListPhys { responder } => responder.send(&mut list_phys(&phys)),
             DeviceMonitorRequest::GetDevPath { phy_id, responder } => {
-                match query_phy(&phys, phy_id).await {
-                    Some(info) => responder.send(info.dev_path.as_deref()),
-                    None => responder.send(None),
-                }
+                responder.send(get_dev_path(&phys, phy_id).as_deref())
             }
             DeviceMonitorRequest::GetSupportedMacRoles { phy_id, responder } => {
                 match query_phy(&phys, phy_id).await {
@@ -66,6 +63,11 @@ pub(crate) async fn serve_monitor_requests(
 
 fn list_phys(phys: &PhyMap) -> Vec<u16> {
     phys.get_snapshot().iter().map(|(phy_id, _)| *phy_id).collect()
+}
+
+fn get_dev_path(phys: &PhyMap, phy_id: u16) -> Option<String> {
+    let phy = phys.get(&phy_id)?;
+    Some(phy.device.path().to_string_lossy().to_string())
 }
 
 async fn get_country(
@@ -121,7 +123,6 @@ async fn clear_country(phys: &PhyMap, req: fidl_svc::ClearCountryRequest) -> zx:
 }
 
 async fn query_phy(phys: &PhyMap, id: u16) -> Option<fidl_dev::PhyInfo> {
-    info!("query_phy(id = {})", id);
     let phy = phys.get(&id)?;
     let query_result = phy
         .proxy
@@ -131,7 +132,6 @@ async fn query_phy(phys: &PhyMap, id: u16) -> Option<fidl_dev::PhyInfo> {
             error!("query_phy(id = {}): error sending 'Query' request to phy: {}", id, e);
         })
         .ok()?;
-    info!("query_phy(id = {}): received a 'QueryResult' from device", id);
     zx::Status::ok(query_result.status)
         .map_err(move |e| {
             error!("query_phy(id = {}): returned an error: {}", id, e);
@@ -265,7 +265,7 @@ mod tests {
     fn test_get_dev_path_success() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let test_values = test_setup();
-        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let (phy, _) = fake_phy("/dev/null");
         test_values.phys.insert(10u16, phy);
 
         let service_fut = serve_monitor_requests(
@@ -281,21 +281,9 @@ mod tests {
         let query_fut = test_values.proxy.get_dev_path(10u16);
         pin_mut!(query_fut);
         assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
-
-        // The call above should trigger a Query message to the phy.
-        // Pretend that we are the phy and read the message from the other side.
-        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
-        let responder = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
-            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::Query { responder }))) => responder
-        );
-
-        // Reply with a fake phy info
-        responder
-            .send(&mut fidl_dev::QueryResponse { status: zx::sys::ZX_OK, info: fake_phy_info() })
-            .expect("failed to send QueryResponse");
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
-        // Our original future should complete now, and return the dev path.
+        // Our original future should complete, and return the dev path.
         assert_variant!(
             exec.run_until_stalled(&mut query_fut),
             Poll::Ready(Ok(Some(path))) => {
