@@ -4,5 +4,8 @@
 
 group("tests") {
   testonly = true
-  public_deps = [ "//src/developer/ffx/logger/utils:tests" ]
+  public_deps = [
+    "data:tests",
+    "//src/developer/ffx/logger/utils:tests",
+  ]
 }
