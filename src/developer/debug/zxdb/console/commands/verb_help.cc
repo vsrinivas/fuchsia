@@ -65,7 +65,7 @@ Casting
 
   Unlike in C++, const has no effect in the debugger so there is no const_cast.
 
-  Rust expressions in zxdb should currently use C++ casts (bug 6001)
+  In Rust, use normal "as" syntax for casting.
 
 Special names
 
