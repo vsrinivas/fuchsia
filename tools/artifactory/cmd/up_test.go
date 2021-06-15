@@ -266,6 +266,9 @@ func TestUploading(t *testing.T) {
 		if !isTransientError(transientError{err: errors.New("foo")}) {
 			t.Fatal("explicit transient error: got false, want true")
 		}
+		if !isTransientError(context.DeadlineExceeded) {
+			t.Fatal("explicit transient error: got false, want true")
+		}
 		// True on HTTP response code 500.
 		gErr.Code = 500
 		if !isTransientError(gErr) {

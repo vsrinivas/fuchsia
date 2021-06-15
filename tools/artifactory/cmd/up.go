@@ -185,7 +185,7 @@ func (cmd *upCommand) SetFlags(f *flag.FlagSet) {
 func isTransientError(err error) bool {
 	_, transient := err.(transientError)
 	var apiErr *googleapi.Error
-	return transient || (errors.As(err, &apiErr) && apiErr.Code >= 500)
+	return transient || (errors.As(err, &apiErr) && apiErr.Code >= 500) || errors.Is(err, context.DeadlineExceeded)
 }
 
 func (cmd upCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -449,7 +449,7 @@ func (s *cloudSink) write(ctx context.Context, upload *artifactory.Upload) error
 		reader = bytes.NewBuffer(upload.Contents)
 	}
 	obj := s.bucket.Object(upload.Destination)
-	// Setting timeouts to fail fast on unresponsive connections.
+	// Set timeouts to fail fast on unresponsive connections.
 	tctx, cancel := context.WithTimeout(ctx, perFileUploadTimeout)
 	defer cancel()
 	sw := obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(tctx)
