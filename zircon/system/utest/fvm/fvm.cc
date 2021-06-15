@@ -290,7 +290,7 @@ class VmoClient : public fbl::RefCounted<VmoClient> {
   void CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
   void CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
   void Transaction(block_fifo_request_t* requests, size_t count) {
-    ASSERT_OK(block_fifo_txn(client_, &requests[0], count));
+    ASSERT_OK(block_fifo_txn(client_, requests, count));
   }
 
   int fd() const { return fd_; }
@@ -1719,8 +1719,8 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   // Try extending the vpartition, and checking that the extension persists.
   // This is the last 'accessible' block.
   size_t last_block = (kSliceSize / block_info.block_size) - 1;
-  CheckWrite(vp_fd.get(), block_info.block_size * last_block, block_info.block_size, &buf[0]);
-  CheckRead(vp_fd.get(), block_info.block_size * last_block, block_info.block_size, &buf[0]);
+  CheckWrite(vp_fd.get(), block_info.block_size * last_block, block_info.block_size, buf.get());
+  CheckRead(vp_fd.get(), block_info.block_size * last_block, block_info.block_size, buf.get());
 
   // Try writing out of bounds -- check that we don't have access.
   CheckNoAccessBlock(vp_fd.get(), (kSliceSize / block_info.block_size) - 1, 2);
@@ -1756,9 +1756,9 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   CheckRead(vp_fd.get(), block_info.block_size * (last_block + 1), block_info.block_size,
             &buf[block_info.block_size]);
   // ... We can still access the previous slice...
-  CheckRead(vp_fd.get(), block_info.block_size * last_block, block_info.block_size, &buf[0]);
+  CheckRead(vp_fd.get(), block_info.block_size * last_block, block_info.block_size, buf.get());
   // ... And we can cross slices
-  CheckRead(vp_fd.get(), block_info.block_size * last_block, block_info.block_size * 2, &buf[0]);
+  CheckRead(vp_fd.get(), block_info.block_size * last_block, block_info.block_size * 2, buf.get());
 
   // Try allocating the rest of the slices, rebinding, and ensuring
   // that the size stays updated.

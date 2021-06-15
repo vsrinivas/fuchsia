@@ -45,13 +45,13 @@ TEST(LookupPage, LookupZero) {
                       .set_page_paddr(/*level=*/0, 0xabcd'e000));
 
   // Ensure the returned physical addresses are valid.
-  EXPECT_THAT(LookupPage(allocator, &nodes[0], Vaddr(0x0)), MapsToPaddr(0xabcd'e000));
-  EXPECT_THAT(LookupPage(allocator, &nodes[0], Vaddr(0x123)), MapsToPaddr(0xabcd'e123));
-  EXPECT_THAT(LookupPage(allocator, &nodes[0], Vaddr(0xfff)), MapsToPaddr(0xabcd'efff));
-  EXPECT_EQ(LookupPage(allocator, &nodes[0], Vaddr(0x1000)), std::nullopt);
+  EXPECT_THAT(LookupPage(allocator, nodes, Vaddr(0x0)), MapsToPaddr(0xabcd'e000));
+  EXPECT_THAT(LookupPage(allocator, nodes, Vaddr(0x123)), MapsToPaddr(0xabcd'e123));
+  EXPECT_THAT(LookupPage(allocator, nodes, Vaddr(0xfff)), MapsToPaddr(0xabcd'efff));
+  EXPECT_EQ(LookupPage(allocator, nodes, Vaddr(0x1000)), std::nullopt);
 
   // Ensure that the returned level and PTE values are correct.
-  std::optional<LookupResult> result = LookupPage(allocator, &nodes[0], Vaddr(0x0));
+  std::optional<LookupResult> result = LookupPage(allocator, nodes, Vaddr(0x0));
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(result->phys_addr, Paddr(0xabcd'e000));
   EXPECT_EQ(result->level, 0);
@@ -80,13 +80,10 @@ TEST(LookupPage, LookupLast) {
                                         .set_is_page(/*level=*/0, true)
                                         .set_page_paddr(/*level=*/0, 0xabcd'e000));
 
-  EXPECT_THAT(LookupPage(allocator, &nodes[0], Vaddr(0xffff'ffff'ffff'f000)),
-              MapsToPaddr(0xabcd'e000));
-  EXPECT_THAT(LookupPage(allocator, &nodes[0], Vaddr(0xffff'ffff'ffff'f123)),
-              MapsToPaddr(0xabcd'e123));
-  EXPECT_THAT(LookupPage(allocator, &nodes[0], Vaddr(0xffff'ffff'ffff'ffff)),
-              MapsToPaddr(0xabcd'efff));
-  EXPECT_EQ(LookupPage(allocator, &nodes[0], Vaddr(0xffff'ffff'ffff'efff)), std::nullopt);
+  EXPECT_THAT(LookupPage(allocator, nodes, Vaddr(0xffff'ffff'ffff'f000)), MapsToPaddr(0xabcd'e000));
+  EXPECT_THAT(LookupPage(allocator, nodes, Vaddr(0xffff'ffff'ffff'f123)), MapsToPaddr(0xabcd'e123));
+  EXPECT_THAT(LookupPage(allocator, nodes, Vaddr(0xffff'ffff'ffff'ffff)), MapsToPaddr(0xabcd'efff));
+  EXPECT_EQ(LookupPage(allocator, nodes, Vaddr(0xffff'ffff'ffff'efff)), std::nullopt);
 }
 
 TEST(LookupPage, LookupLargePages) {
@@ -104,14 +101,14 @@ TEST(LookupPage, LookupLargePages) {
                       .set_page_paddr(/*level=*/2, 0x000a'bcde'c000'0000));
 
   // Expect the lookup to return the correct address, level, and PTE.
-  std::optional<LookupResult> result = LookupPage(allocator, &nodes[0], Vaddr(0x0000'0000u));
+  std::optional<LookupResult> result = LookupPage(allocator, nodes, Vaddr(0x0000'0000u));
   ASSERT_TRUE(result.has_value());
   EXPECT_THAT(result, MapsToPaddr(0x000a'bcde'c000'0000));
   EXPECT_EQ(result->level, 2);
   EXPECT_EQ(result->entry, nodes[1].at(0));
 
   // Also check the last byte of the page.
-  result = LookupPage(allocator, &nodes[0], Vaddr(0x3fff'ffffu));
+  result = LookupPage(allocator, nodes, Vaddr(0x3fff'ffffu));
   ASSERT_TRUE(result.has_value());
   EXPECT_THAT(result, MapsToPaddr(0x000a'bcde'ffff'ffff));
   EXPECT_EQ(result->level, 2);

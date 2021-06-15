@@ -32,9 +32,9 @@ using SmallString = std::array<char, 160>;
 // RedactedHex option's value is redacted (the buffer modified in place) so it
 // does not propagate to userland.
 struct RedactedHex {
-  constexpr const char* c_str() const { return &hex[0]; }
+  constexpr const char* c_str() const { return hex.data(); }
 
-  constexpr explicit operator std::string_view() const { return {&hex[0], len}; }
+  constexpr explicit operator std::string_view() const { return {hex.data(), len}; }
 
   constexpr bool operator==(const RedactedHex& other) const {
     return std::string_view(*this) == std::string_view(other);

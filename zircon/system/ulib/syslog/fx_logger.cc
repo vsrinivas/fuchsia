@@ -175,7 +175,7 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
       // truncated
       constexpr char kEllipsis[] = "...";
       constexpr size_t kEllipsisSize = sizeof(kEllipsis);
-      snprintf(&fmt_string[0] + kFormatStringLength - 1 - kEllipsisSize, kEllipsisSize, kEllipsis);
+      snprintf(fmt_string + kFormatStringLength - 1 - kEllipsisSize, kEllipsisSize, kEllipsis);
     }
 
     // TODO(fxbug.dev/72675): Pass file/line info regardless of severity in all cases.

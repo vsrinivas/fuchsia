@@ -35,7 +35,7 @@ bool log_format() {
 
   uint8_t* msg_bytes = log->data + sizeof(dlog_header);
 
-  EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&msg[0]), msg_bytes, sizeof(msg));
+  EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(msg), msg_bytes, sizeof(msg));
 
   END_TEST;
 }

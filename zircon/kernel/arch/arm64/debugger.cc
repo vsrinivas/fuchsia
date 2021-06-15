@@ -43,7 +43,7 @@ zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs_t
   DEBUG_ASSERT(in);
 
   static_assert(sizeof(in->r) == sizeof(out->r), "");
-  memcpy(&out->r[0], &in->r[0], sizeof(in->r));
+  memcpy(out->r, in->r, sizeof(in->r));
   out->lr = in->lr;
   out->sp = in->usp;
   out->pc = in->elr;
@@ -68,7 +68,7 @@ zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_
   DEBUG_ASSERT(out);
 
   static_assert(sizeof(out->r) == sizeof(in->r), "");
-  memcpy(&out->r[0], &in->r[0], sizeof(in->r));
+  memcpy(out->r, in->r, sizeof(in->r));
   out->lr = in->lr;
   out->usp = in->sp;
   out->elr = in->pc;

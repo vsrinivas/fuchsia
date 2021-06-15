@@ -1465,7 +1465,7 @@ TEST(ChannelTest, ReadFaultDoesNotLeakHandles) {
   // This value should be larger than the kernel's maximum number of handles to ensure that if we do
   // create a leak we will completely exhaust the handle arena.
   static constexpr size_t kCount = (256 + 1) * 1024;
-  for (size_t i = 0; i < kCount; ++i){
+  for (size_t i = 0; i < kCount; ++i) {
     zx::event event;
     // If the handle area is exhausted, we may see this call fail with ZX_ERR_NO_MEMORY.
     ASSERT_OK(zx::event::create(0, &event));

@@ -129,7 +129,7 @@ zx_status_t block_fifo_txn(fifo_client_t* client, block_fifo_request_t* requests
 
   requests[count - 1].opcode |= BLOCKIO_GROUP_LAST;
 
-  if ((status = do_write(client->fifo, &requests[0], count)) != ZX_OK) {
+  if ((status = do_write(client->fifo, requests, count)) != ZX_OK) {
     mtx_lock(&client->mutex);
     sync->in_use = false;
     mtx_unlock(&client->mutex);

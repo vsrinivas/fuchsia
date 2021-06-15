@@ -1632,7 +1632,7 @@ TEST(TftpSendData, test_tftp_send_data_receive_ack_skip_block_wrap) {
   // Create a DATA packet for block kLastBlockSent + 1
   uint8_t data_buf[4 + kBlockSize] = {0};
   size_t data_buf_len = sizeof(data_buf);
-  tftp_data_msg* msg = reinterpret_cast<tftp_data_msg*>(&data_buf[0]);
+  tftp_data_msg* msg = reinterpret_cast<tftp_data_msg*>(data_buf);
   ifc.read = [](void* data, size_t* length, off_t offset, void* cookie) -> tftp_status {
     // Keep in mind that the block index starts at 1, so the offset calculation
     // is not necessarily intuitive

@@ -203,7 +203,7 @@ zx_status_t MinfsCreator::ProcessManifestLine(FILE* manifest, const char* dir_pa
   dst[0] = '\0';
 
   zx_status_t status;
-  if ((status = ParseManifestLine(manifest, dir_path, &src[0], &dst[0])) != ZX_OK) {
+  if ((status = ParseManifestLine(manifest, dir_path, src, dst)) != ZX_OK) {
     return status;
   }
 

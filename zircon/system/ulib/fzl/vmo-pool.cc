@@ -176,8 +176,8 @@ std::optional<VmoPool::Buffer> VmoPool::LockBufferForWrite() {
     return std::nullopt;
   }
   ListableBuffer* buf = free_buffers_.pop_front();
-  ZX_DEBUG_ASSERT(buf >= &buffers_[0]);
-  uint32_t buffer_offset = static_cast<uint32_t>(buf - &buffers_[0]);
+  ZX_DEBUG_ASSERT(buf >= buffers_.data());
+  uint32_t buffer_offset = static_cast<uint32_t>(buf - buffers_.begin());
   ZX_DEBUG_ASSERT(buffer_offset < buffers_.size());
   return Buffer(this, buffer_offset);
 }

@@ -324,7 +324,7 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
 
   auto converted_handles = std::make_unique<zx_handle_info_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
   zx_status_t status =
-      FidlHandleDispositionsToHandleInfos(handles, &converted_handles[0], num_handles);
+      FidlHandleDispositionsToHandleInfos(handles, converted_handles.get(), num_handles);
   if (status != ZX_OK) {
     return fidl::IncomingMessage(fidl::Result::EncodeError(status));
   }

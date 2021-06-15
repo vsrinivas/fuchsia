@@ -277,7 +277,7 @@ const VDso* VDso::Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles) {
   ASSERT(!instance_);
 
   fbl::AllocChecker ac;
-  VDso* vdso = new (&ac) VDso(&vmo_kernel_handles[0]);
+  VDso* vdso = new (&ac) VDso(vmo_kernel_handles);
   ASSERT(ac.check());
 
   // Sanity-check that it's the exact vDSO image the kernel was compiled for.

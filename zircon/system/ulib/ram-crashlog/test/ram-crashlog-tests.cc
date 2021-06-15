@@ -163,7 +163,7 @@ TEST(RamCrashlogTestCase, IntegrityChecks) {
   // after the log headers.
   payload[0] = TEST_PAYLOAD_FILL;
   log.hdr[0].payload_len = sizeof(crashlog_buffer);
-  log.hdr[0].header_crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&log.hdr[0]),
+  log.hdr[0].header_crc32 = crc32(0, reinterpret_cast<const uint8_t*>(log.hdr),
                                   offsetof(ram_crashlog_header_t, header_crc32));
   res = ram_crashlog_recover(crashlog_buffer, sizeof(crashlog_buffer), &rlog);
   ASSERT_OK(res);

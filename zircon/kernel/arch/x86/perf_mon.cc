@@ -402,7 +402,8 @@ static unsigned x86_perfmon_lbr_stack_size() {
       {X86_MICROARCH_INTEL_CANNONLAKE, 32},
   };
 
-  unsigned g_lbr_format = perfmon_capabilities & ((1u << IA32_PERF_CAPABILITIES_LBR_FORMAT_LEN) - 1);
+  unsigned g_lbr_format =
+      perfmon_capabilities & ((1u << IA32_PERF_CAPABILITIES_LBR_FORMAT_LEN) - 1);
   // TODO(dje): KISS and only support these formats for now.
   switch (g_lbr_format) {
     case LBR_FORMAT_INFO:
@@ -1711,7 +1712,7 @@ static perfmon::RecordHeader* x86_perfmon_write_last_branches(PerfmonState* stat
   rec->num_branches = num_entries;
   rec->aspace = cr3;
 
-  auto branches = &rec->branches[0];
+  auto* branches = rec->branches;
   unsigned tos =
       ((read_msr(SKL_LAST_BRANCH_TOS) & IA32_LBR_TOS_TOS_MASK) >> IA32_LBR_TOS_TOS_SHIFT);
   for (unsigned i = 0; i < num_entries; ++i) {

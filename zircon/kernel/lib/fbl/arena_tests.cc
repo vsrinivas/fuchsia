@@ -125,7 +125,7 @@ static bool out_of_memory() {
   fbl::AllocChecker ac;
   ktl::unique_ptr<void*[]> objs = ktl::make_unique<void*[]>(&ac, num_slots);
   ASSERT_TRUE(ac.check());
-  void** top = &objs[0];
+  void** top = objs.get();
   for (size_t i = 0; i < num_slots; i++) {
     char msg[32];
     snprintf(msg, sizeof(msg), "[%zu]", i);
@@ -303,7 +303,7 @@ static bool uncommitting_tests() {
   fbl::AllocChecker ac;
   ktl::unique_ptr<void*[]> objs = ktl::make_unique<void*[]>(&ac, num_slots);
   ASSERT_TRUE(ac.check());
-  void** top = &objs[0];
+  void** top = objs.get();
   for (size_t i = 0; i < num_slots; i++) {
     char msg[32];
     snprintf(msg, sizeof(msg), "[%zu]", i);

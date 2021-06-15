@@ -70,7 +70,7 @@ struct BootOptions {
       return;
     }
     constexpr char kRedacted = 'x';
-    char* begin = const_cast<char*>(&string[0]);
+    char* begin = const_cast<char*>(string.data());
     char* end = begin + string.size();
     std::fill(begin, end, kRedacted);
   }

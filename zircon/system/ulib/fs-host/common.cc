@@ -388,7 +388,7 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
     size_t len = strlen(device);
     assert(len + 2 < PATH_MAX);
     char buf[PATH_MAX] = {0};
-    memcpy(&buf[0], device, strlen(device));
+    memcpy(buf, device, strlen(device));
     buf[len++] = '.';
     buf[len++] = 'd';
 
@@ -402,7 +402,7 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
     buf[len - 2] = ':';
     buf[len - 1] = 0;
 
-    if ((status = AppendDepfile(&buf[0])) != ZX_OK) {
+    if ((status = AppendDepfile(buf)) != ZX_OK) {
       return status;
     }
   }
@@ -446,7 +446,7 @@ zx_status_t FsCreator::AppendDepfile(const char* str) {
   size_t len = strlen(str);
   assert(len < PATH_MAX);
   char buf[PATH_MAX] = {0};
-  memcpy(&buf[0], str, len);
+  memcpy(buf, str, len);
   buf[len++] = ' ';
 
   std::lock_guard<std::mutex> lock(depfile_lock_);

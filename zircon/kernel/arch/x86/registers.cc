@@ -158,7 +158,7 @@ static void set_x87_initial_state(x86_xsave_legacy_area* legacy_area) {
   // Register values are all 0.
   constexpr size_t fp_reg_size = sizeof(legacy_area->st);
   static_assert(fp_reg_size == 128, "Struct size is wrong");
-  memset(&legacy_area->st[0], 0, fp_reg_size);
+  memset(legacy_area->st, 0, fp_reg_size);
 }
 
 // SSE state is only the XMM registers which is all 0 and does not count MXCSR as defined by Intel
@@ -166,7 +166,7 @@ static void set_x87_initial_state(x86_xsave_legacy_area* legacy_area) {
 static void set_sse_initial_state(x86_xsave_legacy_area* legacy_area) {
   constexpr size_t sse_reg_size = sizeof(legacy_area->xmm);
   static_assert(sse_reg_size == 256, "Struct size is wrong");
-  memset(&legacy_area->xmm[0], 0, sse_reg_size);
+  memset(legacy_area->xmm, 0, sse_reg_size);
 }
 
 /* Figure out what forms of register saving this machine supports and

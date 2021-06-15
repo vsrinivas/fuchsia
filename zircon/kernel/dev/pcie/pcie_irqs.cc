@@ -139,7 +139,7 @@ void SharedLegacyIrqHandler::Handler() {
     }
 
     if ((status & PCIE_CFG_STATUS_INT_STS) && !(command & PCIE_CFG_COMMAND_INT_DISABLE)) {
-      pcie_irq_handler_state_t* hstate = &dev.irq_.handlers[0];
+      pcie_irq_handler_state_t* hstate = dev.irq_.handlers;
 
       if (hstate) {
         pcie_irq_handler_retval_t irq_ret = PCIE_IRQRET_MASK;

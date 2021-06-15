@@ -327,7 +327,7 @@ zx_status_t arch_get_fp_regs(Thread* thread, zx_thread_state_fp_regs* out) {
   out->fop = save->fop;
   out->fip = save->fip;
   out->fdp = save->fdp;
-  memcpy(&out->st[0], &save->st[0], sizeof(out->st));
+  memcpy(out->st, save->st, sizeof(out->st));
 
   return ZX_OK;
 }
@@ -349,7 +349,7 @@ zx_status_t arch_set_fp_regs(Thread* thread, const zx_thread_state_fp_regs* in) 
   save->fop = in->fop;
   save->fip = in->fip;
   save->fdp = in->fdp;
-  memcpy(&save->st[0], &in->st[0], sizeof(in->st));
+  memcpy(save->st, in->st, sizeof(in->st));
 
   return ZX_OK;
 }

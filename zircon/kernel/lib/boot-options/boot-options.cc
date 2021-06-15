@@ -308,7 +308,7 @@ void BootOptions::PrintValue(const uint8_t& value, FILE* out) { fprintf(out, "%#
 
 bool BootOptions::Parse(std::string_view value, SmallString BootOptions::*member) {
   SmallString& result = this->*member;
-  size_t wrote = value.copy(&result[0], result.size());
+  size_t wrote = value.copy(result.data(), result.size());
   // In the event of a value of size greater or equal to SmallString's capacity,
   // truncate to keep invariant that the string is NUL-terminated.
   result[std::min(wrote, result.size() - 1)] = '\0';
@@ -317,13 +317,13 @@ bool BootOptions::Parse(std::string_view value, SmallString BootOptions::*member
 
 void BootOptions::PrintValue(const SmallString& value, FILE* out) {
   ZX_ASSERT(value.back() == '\0');
-  fprintf(out, "%s", &value[0]);
+  fprintf(out, "%s", value.data());
 }
 
 bool BootOptions::Parse(std::string_view value, RedactedHex BootOptions::*member) {
   RedactedHex& result = this->*member;
   if (std::all_of(value.begin(), value.end(), isxdigit)) {
-    result.len = value.copy(&result.hex[0], result.hex.size());
+    result.len = value.copy(result.hex.data(), result.hex.size());
     Redact(value);
   };
   return true;

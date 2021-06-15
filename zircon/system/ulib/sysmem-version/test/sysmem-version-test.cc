@@ -44,11 +44,11 @@ class LinearSnap {
   FidlType& value() { return *decoded_.value().PrimaryObject(); }
 
   const fidl::BytePart snap_bytes() const {
-    return fidl::BytePart(const_cast<uint8_t*>(&snap_data_[0]), snap_data_size_, snap_data_size_);
+    return fidl::BytePart(const_cast<uint8_t*>(snap_data_), snap_data_size_, snap_data_size_);
   }
 
   const fidl::HandleDispositionPart snap_handles() const {
-    return fidl::HandleDispositionPart(const_cast<zx_handle_disposition_t*>(&snap_handles_[0]),
+    return fidl::HandleDispositionPart(const_cast<zx_handle_disposition_t*>(snap_handles_),
                                        snap_handles_count_, snap_handles_count_);
   }
 

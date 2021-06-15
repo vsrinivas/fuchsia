@@ -20,18 +20,15 @@
 //      - call TestPrepAndSegv()
 //      - send RESP_RECOVERED_FROM_CRASH
 
+#include "crash-and-recover.h"
+
 #include <assert.h>
-#include <atomic>
 #include <inttypes.h>
+#include <lib/backtrace-request/backtrace-request.h>
+#include <lib/zx/thread.h>
 #include <link.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <lib/backtrace-request/backtrace-request.h>
-#include <lib/zx/thread.h>
-#include <pretty/hexdump.h>
-#include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -41,10 +38,15 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
-#include "crash-and-recover.h"
+#include <atomic>
+
+#include <pretty/hexdump.h>
+#include <test-utils/test-utils.h>
+#include <unittest/unittest.h>
+
 #include "debugger.h"
-#include "inferior.h"
 #include "inferior-control.h"
+#include "inferior.h"
 #include "utils.h"
 
 namespace {
@@ -77,7 +79,7 @@ bool test_prep_and_segv() {
         movq (%%r8),%%rax\
 "
       :
-      : [ zero ] "g"(0), [ test_data ] "g"(&test_data[0]), [ pc ] "g"(segv_pc)
+      : [zero] "g"(0), [test_data] "g"(test_data), [pc] "g"(segv_pc)
       : "rax", "r8", "r9", "r10");
 #endif
 
@@ -102,7 +104,7 @@ bool test_prep_and_segv() {
         ldr x0,[x8]\
 "
       :
-      : [ test_data ] "r"(&test_data[0]), [ pc ] "r"(segv_pc)
+      : [test_data] "r"(test_data), [pc] "r"(segv_pc)
       : "x0", "x8", "x9", "x10");
 #endif
 

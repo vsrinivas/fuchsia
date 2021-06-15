@@ -179,7 +179,7 @@ class ParseState {
     mem += fields_sz;
     auto dest_colls = reinterpret_cast<Collection*>(mem);
 
-    Fixup<Collection> coll_fixup(&coll_[0], &dest_colls[0]);
+    Fixup<Collection> coll_fixup(coll_.data(), dest_colls);
 
     // Copy and fix the collections first.
     for (size_t i = 0; i < coll_size_; i++) {

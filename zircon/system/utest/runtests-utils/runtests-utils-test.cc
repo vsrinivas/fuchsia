@@ -431,7 +431,7 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsWithOutput) {
 
   // The order of the tests in summary.json is not defined, so first check the
   // prefix, then be permissive about order of the actual tests.
-  EXPECT_EQ(0, strncmp(kExpectedJSONOutputPrefix, &buf[0], kExpectedJSONOutputPrefixSize));
+  EXPECT_EQ(0, strncmp(kExpectedJSONOutputPrefix, buf, kExpectedJSONOutputPrefixSize));
 
   std::cmatch fail_output_match;
   std::cmatch pass_output_match;

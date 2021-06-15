@@ -38,7 +38,7 @@ TEST(TraceFileReader, Records) {
   thread_record[1] = kProcessKoid;
   thread_record[2] = kThreadKoid;
 
-  ASSERT_EQ(fwrite(&thread_record[0], sizeof(thread_record[0]), std::size(thread_record), f),
+  ASSERT_EQ(fwrite(thread_record, sizeof(*thread_record), std::size(thread_record), f),
             std::size(thread_record));
   ASSERT_EQ(fclose(f), 0);
 

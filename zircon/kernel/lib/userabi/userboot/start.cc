@@ -307,7 +307,7 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     for (const auto& h : handles) {
       zx_info_handle_basic_t info;
       status = zx_object_get_info(h, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-      check(log, status, "bad handle %d is %x", (int)(&h - &handles[0]), h);
+      check(log, status, "bad handle %d is %x", (int)(&h - handles.begin()), h);
     }
 
     // Now send the bootstrap message.  This transfers away all the handles

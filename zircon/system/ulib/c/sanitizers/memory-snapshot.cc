@@ -501,7 +501,7 @@ auto CurrentThreadRegs() {
       "stp x26, x27, [%1, #(8 * 26)]\n"
       "stp x28, x29, [%1, #(8 * 28)]\n"
       : "=m"(regs)
-      : "r"(&regs.r[0]));
+      : "r"(regs.r));
   regs.lr = regs.pc = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
   regs.sp = reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
   __asm__("mrs %0, nzcv" : "=r"(regs.cpsr));

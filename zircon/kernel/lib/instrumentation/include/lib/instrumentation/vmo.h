@@ -49,7 +49,7 @@ class InstrumentationData {
   InstrumentationData(const InstrumentationData&) = delete;
   InstrumentationData& operator=(const InstrumentationData&) = delete;
 
-  Vmo which() const { return static_cast<Vmo>(this - &instances_[0]); }
+  Vmo which() const { return static_cast<Vmo>(this - instances_.begin()); }
 
   zx_status_t Create();
   bool Publish(FILE*);

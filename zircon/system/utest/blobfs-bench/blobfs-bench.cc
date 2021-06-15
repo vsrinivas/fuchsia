@@ -228,7 +228,7 @@ class BlobfsTest {
       ASSERT_TRUE(fd);
       state->NextStep();
 
-      ASSERT_EQ(StreamAll(read, fd.get(), &buffer[0], info_.blob_size), 0);
+      ASSERT_EQ(StreamAll(read, fd.get(), buffer.get(), info_.blob_size), 0);
       ASSERT_EQ(memcmp(buffer.get(), new_blob->data.get(), new_blob->size_data), 0);
       state->NextStep();
 
@@ -264,7 +264,7 @@ class BlobfsTest {
       fbl::unique_fd fd(open(info_.paths[path_index].c_str(), O_RDONLY));
       ASSERT_TRUE(fd);
       state->NextStep();
-      ASSERT_EQ(StreamAll(read, fd.get(), &buffer[0], info_.blob_size), 0);
+      ASSERT_EQ(StreamAll(read, fd.get(), buffer.get(), info_.blob_size), 0);
       state->NextStep();
       fbl::unique_fd no_fd(open(negative_path.c_str(), O_RDONLY));
       ASSERT_FALSE(no_fd);

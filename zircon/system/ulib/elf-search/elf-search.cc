@@ -281,7 +281,7 @@ zx_status_t ForEachModule(const zx::process& process, ModuleAction action) {
     // Look for a DT_SONAME.
     char soname[kMaxSonameSize] = "";
     if (strtab != 0 && soname_offset != 0) {
-      status = reader.ReadString(strtab + soname_offset, &soname[0], sizeof(soname));
+      status = reader.ReadString(strtab + soname_offset, soname, sizeof(soname));
       // Ignore status, if it fails we get an empty soname which falls back to the VMO name below.
       // TODO(tbodt): log when this happens.
     }

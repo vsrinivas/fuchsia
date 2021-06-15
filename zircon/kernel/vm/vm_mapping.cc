@@ -881,7 +881,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
 
       // assert that we're not accidentally mapping the zero page writable
       DEBUG_ASSERT(!(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) ||
-                   ktl::all_of(&lookup_info.paddrs[0], &lookup_info.paddrs[lookup_info.num_pages],
+                   ktl::all_of(lookup_info.paddrs, &lookup_info.paddrs[lookup_info.num_pages],
                                [](paddr_t p) { return p != vm_get_zero_page_paddr(); }));
 
       // unmap the old one and put the new one in place
@@ -907,7 +907,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
 
     // assert that we're not accidentally mapping the zero page writable
     DEBUG_ASSERT(!(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) ||
-                 ktl::all_of(&lookup_info.paddrs[0], &lookup_info.paddrs[lookup_info.num_pages],
+                 ktl::all_of(lookup_info.paddrs, &lookup_info.paddrs[lookup_info.num_pages],
                              [](paddr_t p) { return p != vm_get_zero_page_paddr(); }));
 
     size_t mapped;
