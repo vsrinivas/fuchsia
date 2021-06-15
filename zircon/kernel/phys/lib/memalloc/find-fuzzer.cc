@@ -4,7 +4,9 @@
 
 #include <lib/memalloc/range.h>
 #include <lib/stdcompat/span.h>
+#include <zircon/assert.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <vector>
@@ -12,39 +14,77 @@
 #include <fuzzer/FuzzedDataProvider.h>
 
 #include "algorithm.h"
+#include "test.h"
 
 namespace {
 
 using memalloc::MemRange;
 
-cpp20::span<MemRange> RangesFromBytes(const std::vector<std::byte>& bytes) {
-  void* ptr = const_cast<void*>(static_cast<const void*>(bytes.data()));
-  size_t space = bytes.size();
-  for (size_t size = space; size > 0; --size) {
-    if (void* aligned = std::align(alignof(MemRange), size, ptr, space); aligned) {
-      return {static_cast<MemRange*>(aligned), size / sizeof(MemRange)};
-    }
-  }
-  return {};
+// What our fuzzer should do.
+enum class Action {
+  kFindRam,
+  kFindAll,
+  kFindBothAndCompare,
+  kMaxValue,  // Required by FuzzedDataProvider::ConsumeEnum().
+};
+
+// Assumes that `ranges` is sorted.
+bool Contains(const std::vector<MemRange>& ranges, const MemRange& range) {
+  return std::binary_search(ranges.begin(), ranges.end(), range);
 }
 
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   FuzzedDataProvider provider(data, size);
+  std::vector<MemRange> ram, all;
 
-  const bool just_ram = provider.ConsumeBool();
-
+  const Action action = provider.ConsumeEnum<Action>();
   std::vector<std::byte> bytes = provider.ConsumeRemainingBytes<std::byte>();
   cpp20::span<MemRange> ranges = RangesFromBytes(bytes);
 
-  constexpr auto find_all = [](const MemRange& range) { return true; };
-  if (just_ram) {
-    memalloc::FindNormalizedRamRanges(ranges, find_all);
-  } else {
-    const size_t scratch_size = 4 * ranges.size() * sizeof(void*);
+  // If we are only going to call FindNormalizedRamRanges(), then there are no
+  // input type restrictions; sanitize outside of that case.
+  if (action != Action::kFindRam) {
+    SanitizeTypes(ranges);
+  }
+
+  // Whether we are to exercise FindNormalizedRamRanges().
+  if (action == Action::kFindRam || action == Action::kFindBothAndCompare) {
+    auto find_ram = [&ram](const MemRange& range) {
+      ram.push_back(range);
+      return true;
+    };
+    memalloc::FindNormalizedRamRanges(ranges, find_ram);
+    ZX_ASSERT_MSG(std::is_sorted(ram.begin(), ram.end()),
+                  "output RAM ranges are not sorted:\n%s\noriginal ranges:\n%s",
+                  ToString(ram).c_str(), ToString(ranges).c_str());
+  }
+
+  // Whether we are to exercise FindNormalizedRanges().
+  if (action == Action::kFindAll || action == Action::kFindBothAndCompare) {
+    auto find_all = [&all](const MemRange& range) {
+      all.push_back(range);
+      return true;
+    };
+    const size_t scratch_size = 4 * ranges.size();
     auto scratch = std::make_unique<void*[]>(scratch_size);
     memalloc::FindNormalizedRanges(ranges, {scratch.get(), scratch_size}, find_all);
+    ZX_ASSERT_MSG(std::is_sorted(all.begin(), all.end()),
+                  "output ranges are not sorted:\n%s\noriginal ranges:\n%s", ToString(all).c_str(),
+                  ToString(ranges).c_str());
   }
+
+  // Whether we have exercised both FindNormalizedRamRanges() and
+  // FindNormalizedRanges(), and now wish to compare the results.
+  if (action == Action::kFindBothAndCompare) {
+    for (const MemRange& range : ram) {
+      ZX_ASSERT_MSG(Contains(all, range),
+                    "normalized RAM range (%s) not found among all normalized "
+                    "ranges:\n%s\noriginal ranges:\n%s",
+                    ToString(range).c_str(), ToString(all).c_str(), ToString(ranges).c_str());
+    }
+  }
+
   return 0;
 }

@@ -57,6 +57,16 @@ zx_library("memalloc") {
   ]
 }
 
+source_set("testing") {
+  testonly = true
+  public_deps = [
+    ":memalloc",
+
+    # test.h has #include <gtest/gtest.h>.
+    "//third_party/googletest:gtest",
+  ]
+}
+
 test("memalloc-test") {
   sources = [
     "algorithm-test.cc",
@@ -64,6 +74,7 @@ test("memalloc-test") {
   ]
   deps = [
     ":memalloc",
+    ":testing",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -82,7 +93,10 @@ fuzzer_package("memalloc-fuzzers") {
 
 cpp_fuzzer("find-fuzzer") {
   sources = [ "find-fuzzer.cc" ]
-  deps = [ ":memalloc" ]
+  deps = [
+    ":memalloc",
+    ":testing",
+  ]
 }
 
 group("tests") {

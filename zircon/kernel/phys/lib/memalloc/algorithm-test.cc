@@ -11,14 +11,12 @@
 #include <zircon/assert.h>
 
 #include <memory>
-#include <random>
-#include <sstream>
 #include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 
-#include "ostream.h"  // Enables MemRange auto-stringification in gtest error messages
+#include "test.h"
 
 namespace {
 
@@ -27,40 +25,6 @@ constexpr uint64_t kMax = std::numeric_limits<uint64_t>::max();
 using memalloc::MemRangeStream;
 using memalloc::Type;
 using memalloc::internal::MemRangeIterationContext;
-
-std::string ToString(const memalloc::MemRange& range) {
-  std::stringstream ss;
-  ss << range;
-  return ss.str();
-}
-
-template <size_t N>
-void Shuffle(memalloc::MemRange (&ranges)[N]) {
-  static std::default_random_engine engine{0xc0ffee};
-  std::shuffle(std::begin(ranges), std::end(ranges), engine);
-}
-
-void CompareRanges(cpp20::span<const memalloc::MemRange> expected,
-                   cpp20::span<const memalloc::MemRange> actual) {
-  EXPECT_EQ(expected.size(), actual.size());
-  size_t num_comparable = std::min(expected.size(), actual.size());
-  for (size_t i = 0; i < num_comparable; ++i) {
-    EXPECT_EQ(expected[i], actual[i]);
-  }
-
-  if (expected.size() > num_comparable) {
-    printf("Unaccounted for expected ranges:\n");
-    for (size_t i = num_comparable; i < expected.size(); ++i) {
-      printf("  %s\n", ToString(expected[i]).c_str());
-    }
-  }
-  if (actual.size() > num_comparable) {
-    printf("Unaccounted for actual ranges:\n");
-    for (size_t i = num_comparable; i < actual.size(); ++i) {
-      printf("  %s\n", ToString(actual[i]).c_str());
-    }
-  }
-}
 
 void TestFindNormalizedRamRanges(cpp20::span<memalloc::MemRange> input,
                                  cpp20::span<const memalloc::MemRange> expected) {
@@ -74,7 +38,7 @@ void TestFindNormalizedRamRanges(cpp20::span<memalloc::MemRange> input,
 
 void TestFindNormalizedRanges(cpp20::span<memalloc::MemRange> input,
                               cpp20::span<const memalloc::MemRange> expected) {
-  const size_t scratch_size = 4 * input.size() * sizeof(void*);
+  const size_t scratch_size = 4 * input.size();
   auto scratch = std::make_unique<void*[]>(scratch_size);
   std::vector<memalloc::MemRange> actual;
   memalloc::FindNormalizedRanges(input, {scratch.get(), scratch_size},
@@ -328,7 +292,7 @@ TEST(MemallocFindTests, HighlyIntersectingLikeRanges) {
   ASSERT_NO_FATAL_FAILURE(TestFindNormalizedRanges({ranges}, {normalized}));
 }
 
-TEST(MemallocFindTests, MixedRanges) {
+TEST(MemallocFindTests, MixedRanges1) {
   memalloc::MemRange ranges[] = {
       // reserved: [0, 10)
       {.addr = 0, .size = 10, .type = Type::kReserved},
@@ -366,6 +330,76 @@ TEST(MemallocFindTests, MixedRanges) {
       {.addr = 40, .size = 20, .type = Type::kFreeRam},
       // peripheral: [60, 80)
       {.addr = 60, .size = 20, .type = Type::kPeripheral},
+  };
+
+  Shuffle(ranges);
+  ASSERT_NO_FATAL_FAILURE(TestFindNormalizedRamRanges({ranges}, {normalized_ram}));
+
+  Shuffle(ranges);
+  ASSERT_NO_FATAL_FAILURE(TestFindNormalizedRanges({ranges}, {normalized}));
+}
+
+TEST(MemallocFindTests, MixedRanges2) {
+  memalloc::MemRange ranges[] = {
+      // reserved: [0, 60)
+      {.addr = 0, .size = 60, .type = Type::kReserved},
+      // RAM: [5, 90)
+      {.addr = 5, .size = 85, .type = Type::kFreeRam},
+      // RAM: [10, 40)
+      {.addr = 10, .size = 30, .type = Type::kFreeRam},
+      // reserved: [80, 100)
+      {.addr = 80, .size = 20, .type = Type::kReserved},
+  };
+
+  const memalloc::MemRange normalized_ram[] = {
+      // RAM: [60, 80)
+      {.addr = 60, .size = 20, .type = Type::kFreeRam},
+  };
+
+  const memalloc::MemRange normalized[] = {
+      // reserved: [0, 60)
+      {.addr = 0, .size = 60, .type = Type::kReserved},
+      // RAM: [60, 80)
+      {.addr = 60, .size = 20, .type = Type::kFreeRam},
+      // reserved: [80, 100)
+      {.addr = 80, .size = 20, .type = Type::kReserved},
+  };
+
+  Shuffle(ranges);
+  ASSERT_NO_FATAL_FAILURE(TestFindNormalizedRamRanges({ranges}, {normalized_ram}));
+
+  Shuffle(ranges);
+  ASSERT_NO_FATAL_FAILURE(TestFindNormalizedRanges({ranges}, {normalized}));
+}
+
+TEST(MemallocFindTests, MixedRanges3) {
+  memalloc::MemRange ranges[] = {
+      // RAM: [0, 90)
+      {.addr = 0, .size = 90, .type = Type::kFreeRam},
+      // reserved: [10, 70)
+      {.addr = 10, .size = 60, .type = Type::kReserved},
+      // RAM: [20, 30)
+      {.addr = 20, .size = 10, .type = Type::kFreeRam},
+      // RAM: [40, 50)
+      {.addr = 40, .size = 10, .type = Type::kFreeRam},
+      // RAM: [60, 80)
+      {.addr = 60, .size = 20, .type = Type::kFreeRam},
+  };
+
+  const memalloc::MemRange normalized_ram[] = {
+      // RAM: [0, 10)
+      {.addr = 0, .size = 10, .type = Type::kFreeRam},
+      // RAM: [70, 90)
+      {.addr = 70, .size = 20, .type = Type::kFreeRam},
+  };
+
+  const memalloc::MemRange normalized[] = {
+      // RAM: [0, 10)
+      {.addr = 0, .size = 10, .type = Type::kFreeRam},
+      // reserved: [10, 70)
+      {.addr = 10, .size = 60, .type = Type::kReserved},
+      // RAM: [70, 90)
+      {.addr = 70, .size = 20, .type = Type::kFreeRam},
   };
 
   Shuffle(ranges);

@@ -222,6 +222,9 @@ void FindNormalizedRamRanges(MemRangeStream ranges, MemRangeCallback cb) {
       if (interval.IntersectsWith(current_non_ram)) {
         ZX_DEBUG_ASSERT(interval.HeadBeforeIntersection(current_non_ram).empty());
         interval = interval.TailAfterIntersection(current_non_ram);
+        if (interval.empty()) {
+          continue;
+        }
       }
 
       // Merge the new RAM range into the current candidate if possible.
@@ -274,13 +277,13 @@ void FindNormalizedRanges(MemRangeStream ranges, cpp20::span<void*> scratch, Mem
   // This algorithm relies on creating a sorted array of endpoints. For every
   // range, we need two endpoints, each of which we represent with two words.
   {
-    static_assert(std::alignment_of_v<Endpoint> % std::alignment_of_v<void*> == 0);
+    static_assert(std::alignment_of_v<void*> % std::alignment_of_v<Endpoint> == 0);
     static_assert(sizeof(Endpoint) == 2 * sizeof(void*));
-    const size_t min_size = 4 * ranges.size() * sizeof(void*);
-    ZX_ASSERT_MSG(scratch.size() >= min_size,
+    const size_t min_size_bytes = 4 * ranges.size() * sizeof(void*);
+    ZX_ASSERT_MSG(scratch.size_bytes() >= min_size_bytes,
                   "scratch space must be at least 4*sizeof(void*) times the number of ranges "
-                  "(%zu): expected >= %zu bytes; got %zu bytes",
-                  ranges.size(), min_size, scratch.size());
+                  "(%zu) in bytes: expected >= %zu bytes; got %zu bytes",
+                  ranges.size(), min_size_bytes, scratch.size_bytes());
   }
 
   cpp20::span<Endpoint> endpoints{reinterpret_cast<Endpoint*>(scratch.data()), 2 * ranges.size()};
