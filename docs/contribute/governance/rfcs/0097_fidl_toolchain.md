@@ -615,7 +615,7 @@ Standard testing of the toolchain.
 
 ## Drawbacks, alternatives, and unknowns
 
-TBD
+As noted in text.
 
 <!-- link labels -->
 [`fidl_api_summarize`]: /tools/fidl/fidl_api_summarize/
