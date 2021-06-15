@@ -13,5 +13,6 @@ fidl("fuchsia.net.interfaces") {
     "//sdk/fidl/fuchsia.hardware.network",
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.posix.socket",
+    "//zircon/vdso/zx",
   ]
 }
