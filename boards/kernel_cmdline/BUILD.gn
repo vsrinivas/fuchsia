@@ -103,3 +103,8 @@ kernel_cmdline("vim3") {
     "netsvc.interface=/dev/dwmac/dwmac/Designware-MAC/ethernet",
   ]
 }
+
+kernel_cmdline("chromebook-x64") {
+  # Depthcharge will fill this in.
+  args = [ "zvb.boot-partition-uuid=%U" ]
+}

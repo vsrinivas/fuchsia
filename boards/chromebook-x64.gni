@@ -17,6 +17,14 @@ avb_key =
 avb_atx_metadata =
     "//third_party/android/platform/external/avb/test/data/atx_metadata.bin"
 
+_common_bootfs_deps = [ "//boards/kernel_cmdline:chromebook-x64" ]
+
+board_bootfs_labels += _common_bootfs_deps
+
+board_zedboot_bootfs_labels += _common_bootfs_deps
+
+board_recovery_bootfs_labels += _common_bootfs_deps
+
 # Some users leave a USB key (containing zedboot) plugged into their
 # device at all times. To avoid unintentionally breaking remote workflows,
 # we permit multiple GPT devices.
