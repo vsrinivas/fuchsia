@@ -516,6 +516,56 @@ be sent.
 At the same time, the MBMQ model is compatible with bidirectional
 channels.
 
+### FIDL events
+
+FIDL event messages are sent on Zircon channels in the same direction
+as reply messages.  If we wanted to change channels to be
+unidirectional and shareable, we would need to change users of FIDL
+events to send event messages on a separate channel.  We could
+implement that in the FIDL bindings to avoid the need to modify users
+of FIDL.
+
+As an example, consider this FIDL protocol:
+
+```
+protocol Foo {
+    Method(Arg arg) -> ();
+    -> OnEvent1(Arg arg);
+    -> OnEvent2(Arg arg);
+};
+```
+
+That could be implicitly converted to this:
+
+```
+protocol Foo {
+    Method(Arg arg) -> ();
+
+    GetEventStream() -> (request<FooEventCallback>);
+
+    // Alternative version:
+    //   SetEventCallback(FooEventCallback callback);
+};
+
+protocol FooEventCallback {
+    OnEvent1(Arg arg);
+    OnEvent2(Arg arg);
+};
+```
+
+The use of `request<FooEventCallback>` as a return type in
+`GetEventStream` allows the `Foo` server to queue up event messages on
+the `FooEventCallback` channel in advance, before the client calls
+`GetEventStream`.  The alternative version, `SetEventCallback`, does
+not allow that.
+
+One reason for not applying this transformation with Zircon's current
+IPC primitives is that the relative ordering of the request and event
+messages would no longer be preserved.  It is possible that some code
+uses FIDL event messages (rather than using request messages on a
+separate channel) for that reason.  However, the MBMQ model allows the
+message ordering to be preserved across channels, as described below.
+
 ## Preserving message ordering across channels
 
 The MBMQ model is able to preserve the ordering of messages sent on
