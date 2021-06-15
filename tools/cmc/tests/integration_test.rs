@@ -24,6 +24,7 @@ fn main() {
                     assert_eq!(
                         decl,
                         &UseProtocolDecl {
+                            dependency_type: Some(DependencyType::Strong),
                             source: Some(Ref::Debug(DebugRef {})),
                             source_name: Some("fuchsia.debugdata.DebugData".to_string()),
                             target_path: Some("/svc/fuchsia.debugdata.DebugData".to_string()),
