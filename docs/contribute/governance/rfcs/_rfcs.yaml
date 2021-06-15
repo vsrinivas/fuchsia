@@ -1289,6 +1289,19 @@
   submitted: '2021-05-06'
   reviewed: '2021-06-03'
 
+- name: 'RFC-0100'
+  title: 'Product Metadata'
+  short_description: 'A canonical representation for product metadata'
+  authors: ['gridman@google.com', 'jeremymanson@google.com']
+  file: '0100_product_metadata.md'
+  area: ['Developer']
+  issue: []
+  gerrit_change_id: ['523152']
+  status: 'Accepted'
+  reviewers: ['chonggu@google.com', 'omerlevran@google.com', 'wilkinsonclay@google.com']
+  submitted: '2021-04-30'
+  reviewed: '2021-06-02'
+
 - name: 'RFC-0101'
   title: 'Dynamic components with numbered handles'
   short_description: 'Provides a way to pass numbered handles to dynamic components.'
