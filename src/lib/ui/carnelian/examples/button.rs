@@ -414,6 +414,11 @@ impl ViewAssistant for ButtonViewAssistant {
         }
         Ok(())
     }
+
+    fn ownership_changed(&mut self, owned: bool) -> Result<(), Error> {
+        println!("ownership_changed {}", owned);
+        Ok(())
+    }
 }
 
 fn main() -> Result<(), Error> {

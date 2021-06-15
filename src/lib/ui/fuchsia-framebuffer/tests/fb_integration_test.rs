@@ -4,7 +4,7 @@
 
 use anyhow::{Context as _, Error};
 use fuchsia_async::{self as fasync, DurationExt, Timer};
-use fuchsia_framebuffer::{FrameBuffer, FrameUsage, ImageId, PixelFormat, VSyncMessage};
+use fuchsia_framebuffer::{FrameBuffer, FrameUsage, ImageId, Message, PixelFormat};
 use fuchsia_zircon::DurationNum;
 use futures::{channel::mpsc::unbounded, StreamExt};
 use std::{cell::RefCell, rc::Rc};
@@ -33,7 +33,7 @@ fn test_main() -> Result<(), Error> {
         let (test_sender, mut test_receiver) = unbounded::<TestResult>();
         let timeout_sender = test_sender.clone();
 
-        let (sender, mut receiver) = unbounded::<VSyncMessage>();
+        let (sender, mut receiver) = unbounded::<Message>();
 
         let mut fb = FrameBuffer::new(FrameUsage::Cpu, None, None, Some(sender))
             .await

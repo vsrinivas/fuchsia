@@ -25,7 +25,7 @@ use fuchsia_component::{
     client::connect_to_protocol,
     server::{ServiceFs, ServiceObjLocal},
 };
-use fuchsia_framebuffer::{FrameBuffer, FrameUsage, VSyncMessage};
+use fuchsia_framebuffer::{FrameBuffer, FrameUsage};
 use fuchsia_zircon::{Duration, Time};
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
@@ -98,7 +98,7 @@ pub(crate) async fn create_app_strategy(
 
     let usage = if render_options.use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
 
-    let (sender, mut receiver) = unbounded::<VSyncMessage>();
+    let (sender, mut receiver) = unbounded::<fuchsia_framebuffer::Message>();
     let fb = FrameBuffer::new(usage, config.virtcon_mode, None, Some(sender)).await;
     if fb.is_err() {
         let scenic = connect_to_protocol::<ScenicMarker>()?;
@@ -112,20 +112,29 @@ pub(crate) async fn create_app_strategy(
         // TODO: improve scheduling of updates
         fasync::Task::local(
             async move {
-                while let Some(VSyncMessage { display_id: _, timestamp, cookie, owned, .. }) =
-                    receiver.next().await
-                {
-                    vsync_internal_sender
-                        .unbounded_send(MessageInternal::HandleVSyncParametersChanged(
-                            Time::from_nanos(timestamp as i64),
-                            vsync_interval,
-                            cookie,
-                        ))
-                        .expect("unbounded_send");
-                    if owned {
-                        vsync_internal_sender
-                            .unbounded_send(MessageInternal::RenderAllViews)
-                            .expect("unbounded_send");
+                let mut owned = true;
+                while let Some(message) = receiver.next().await {
+                    match message {
+                        fuchsia_framebuffer::Message::VSync(vsync) => {
+                            vsync_internal_sender
+                                .unbounded_send(MessageInternal::HandleVSyncParametersChanged(
+                                    Time::from_nanos(vsync.timestamp as i64),
+                                    vsync_interval,
+                                    vsync.cookie,
+                                ))
+                                .expect("unbounded_send");
+                            if owned {
+                                vsync_internal_sender
+                                    .unbounded_send(MessageInternal::RenderAllViews)
+                                    .expect("unbounded_send");
+                            }
+                        }
+                        fuchsia_framebuffer::Message::Ownership(in_owned) => {
+                            owned = in_owned;
+                            vsync_internal_sender
+                                .unbounded_send(MessageInternal::OwnershipChanged(owned))
+                                .expect("unbounded_send");
+                        }
                     }
                 }
                 Ok(())

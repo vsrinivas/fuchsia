@@ -5,7 +5,7 @@
 use anyhow::{Context as _, Error};
 use fuchsia_async::{self as fasync, DurationExt, Timer};
 use fuchsia_framebuffer::{
-    to_565, Config, Frame, FrameBuffer, FrameSet, FrameUsage, ImageId, PixelFormat, VSyncMessage,
+    to_565, Config, Frame, FrameBuffer, FrameSet, FrameUsage, ImageId, Message, PixelFormat,
 };
 use fuchsia_zircon::DurationNum;
 use futures::{channel::mpsc::unbounded, future, StreamExt, TryFutureExt};
@@ -140,7 +140,7 @@ fn main() -> Result<(), Error> {
 
     executor.run_singlethreaded(async {
         // create async channel sender/receiver pair to receive vsync messages
-        let (sender, mut receiver) = unbounded::<VSyncMessage>();
+        let (sender, mut receiver) = unbounded::<Message>();
 
         // create a framebuffer
         let mut fb = FrameBuffer::new(FrameUsage::Cpu, None, None, Some(sender)).await?;
@@ -222,29 +222,35 @@ fn main() -> Result<(), Error> {
         // Listen for vsync messages to schedule an update of the displayed image
         fasync::Task::local(
             async move {
-                while let Some(vsync_message) = receiver.next().await {
+                let mut owned = false;
+                while let Some(message) = receiver.next().await {
                     let mut fb = fb_ptr2.borrow_mut();
-                    if vsync_message.owned {
-                        // Wait an arbitrary 10 milliseconds after vsync to present the
-                        // next prepared image.
-                        Timer::new(10_i64.millis().after_now()).await;
+                    match message {
+                        Message::Ownership(in_owned) => owned = in_owned,
+                        Message::VSync(vsync_message) => {
+                            if owned {
+                                // Wait an arbitrary 10 milliseconds after vsync to present the
+                                // next prepared image.
+                                Timer::new(10_i64.millis().after_now()).await;
 
-                        // Grab a mutable reference. This is guaranteed to work
-                        // since only one of this closure or the vsync closure can
-                        // be in scope at once.
-                        let mut frame_manager = frame_manager.borrow_mut();
+                                // Grab a mutable reference. This is guaranteed to work
+                                // since only one of this closure or the vsync closure can
+                                // be in scope at once.
+                                let mut frame_manager = frame_manager.borrow_mut();
 
-                        // Present the previously prepared image. As a side effect,
-                        // the currently presented image will be eventually freed.
-                        frame_manager
-                            .present_prepared(&mut fb, Some(image_sender.clone()))
-                            .expect("FrameManager::present_prepared to work");
+                                // Present the previously prepared image. As a side effect,
+                                // the currently presented image will be eventually freed.
+                                frame_manager
+                                    .present_prepared(&mut fb, Some(image_sender.clone()))
+                                    .expect("FrameManager::present_prepared to work");
+                            }
+                            fb.acknowledge_vsync(vsync_message.cookie).unwrap_or_else(
+                                |e: anyhow::Error| {
+                                    println!("acknowledge_vsync: error {:#?}", e);
+                                },
+                            );
+                        }
                     }
-                    fb.acknowledge_vsync(vsync_message.cookie).unwrap_or_else(
-                        |e: anyhow::Error| {
-                            println!("acknowledge_vsync: error {:#?}", e);
-                        },
-                    );
                 }
                 Ok(())
             }

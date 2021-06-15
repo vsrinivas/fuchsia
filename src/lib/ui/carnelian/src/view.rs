@@ -331,6 +331,12 @@ pub trait ViewAssistant {
     fn uses_pointer_events(&self) -> bool {
         true
     }
+
+    /// This method is called when running on the framebuffer and the ownership
+    /// of the display changes.
+    fn ownership_changed(&mut self, _owned: bool) -> Result<(), Error> {
+        Ok(())
+    }
 }
 
 /// Reference to a view assistant. _This type is likely to change in the future so
@@ -407,6 +413,12 @@ impl ViewController {
 
     pub(crate) fn send_update_message(&mut self) {
         self.app_sender.unbounded_send(MessageInternal::Render(self.key)).expect("unbounded_send");
+    }
+
+    pub(crate) fn ownership_changed(&mut self, owned: bool) {
+        self.assistant
+            .ownership_changed(owned)
+            .unwrap_or_else(|e| println!("ownership_changed error: {}", e));
     }
 
     pub(crate) fn request_render(&mut self) {

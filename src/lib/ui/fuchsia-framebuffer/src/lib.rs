@@ -417,12 +417,16 @@ impl Frame {
     }
 }
 
-pub struct VSyncMessage {
+pub struct VSync {
     pub display_id: u64,
     pub timestamp: u64,
     pub images: Vec<u64>,
     pub cookie: u64,
-    pub owned: bool,
+}
+
+pub enum Message {
+    VSync(VSync),
+    Ownership(bool),
 }
 
 pub struct FrameBuffer {
@@ -564,7 +568,7 @@ impl FrameBuffer {
         usage: FrameUsage,
         virtcon_mode: Option<VirtconMode>,
         display_index: Option<usize>,
-        vsync_sender: Option<futures::channel::mpsc::UnboundedSender<VSyncMessage>>,
+        sender: Option<futures::channel::mpsc::UnboundedSender<Message>>,
     ) -> Result<FrameBuffer, Error> {
         let device_path = if let Some(index) = display_index {
             format!("/dev/class/display-controller/{:03}", index)
@@ -599,7 +603,7 @@ impl FrameBuffer {
         if let Some(virtcon_mode) = virtcon_mode {
             proxy.set_virtcon_mode(virtcon_mode as u8)?;
         }
-        FrameBuffer::new_with_proxy(virtcon_mode, usage, proxy, device_client, vsync_sender).await
+        FrameBuffer::new_with_proxy(virtcon_mode, usage, proxy, device_client, sender).await
     }
 
     async fn new_with_proxy(
@@ -607,36 +611,30 @@ impl FrameBuffer {
         usage: FrameUsage,
         proxy: ControllerProxy,
         device_client: zx::Channel,
-        vsync_sender: Option<futures::channel::mpsc::UnboundedSender<VSyncMessage>>,
+        sender: Option<futures::channel::mpsc::UnboundedSender<Message>>,
     ) -> Result<FrameBuffer, Error> {
         let mut stream = proxy.take_event_stream();
         let config = Self::create_config_from_event_stream(&mut stream).await?;
 
-        if let Some(vsync_sender) = vsync_sender {
-            let mut owned = true;
+        if let Some(sender) = sender {
             proxy.enable_vsync(true).context("enable_vsync failed")?;
             fasync::Task::local(
                 stream
                     .map_ok(move |request| match request {
-                        // Note: this area is likely to change as part of the work on
-                        // https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=73665.
-                        // In particular, ownership events should likely be broken out
-                        // of vsync.
                         ControllerEvent::OnVsync { display_id, timestamp, images, cookie } => {
-                            if owned {
-                                vsync_sender
-                                    .unbounded_send(VSyncMessage {
-                                        display_id,
-                                        timestamp,
-                                        images,
-                                        cookie,
-                                        owned,
-                                    })
-                                    .unwrap_or_else(|e| eprintln!("{:?}", e));
-                            }
+                            sender
+                                .unbounded_send(Message::VSync(VSync {
+                                    display_id,
+                                    timestamp,
+                                    images,
+                                    cookie,
+                                }))
+                                .unwrap_or_else(|e| eprintln!("{:?}", e));
                         }
                         ControllerEvent::OnClientOwnershipChange { has_ownership } => {
-                            owned = has_ownership;
+                            sender
+                                .unbounded_send(Message::Ownership(has_ownership))
+                                .unwrap_or_else(|e| eprintln!("{:?}", e));
                         }
                         _ => (),
                     })

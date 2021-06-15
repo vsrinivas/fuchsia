@@ -184,6 +184,7 @@ pub(crate) enum MessageInternal {
     TargetedMessage(ViewKey, Message),
     RegisterDevice(DeviceId, hid_input_report::DeviceDescriptor),
     InputReport(DeviceId, ViewKey, hid_input_report::InputReport),
+    OwnershipChanged(bool),
 }
 
 /// Future that returns an application assistant.
@@ -298,6 +299,9 @@ impl App {
                 let view = self.get_view(view_id);
                 view.handle_input_events(input_events);
             }
+            MessageInternal::OwnershipChanged(owned) => {
+                self.ownership_changed(owned);
+            }
         }
         Ok(())
     }
@@ -373,6 +377,12 @@ impl App {
     fn render_all_views(&mut self) {
         for (_, view_controller) in &mut self.view_controllers {
             view_controller.send_update_message();
+        }
+    }
+
+    fn ownership_changed(&mut self, owned: bool) {
+        for (_, view_controller) in &mut self.view_controllers {
+            view_controller.ownership_changed(owned);
         }
     }
 
