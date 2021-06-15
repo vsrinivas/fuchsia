@@ -3,8 +3,8 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
-                "fuchsia.net.routes.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                "fuchsia.net.routes.State": "fuchsia-pkg://fuchsia.com/httpdate-hyper-tests#meta/netstack-debug.cmx",
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/httpdate-hyper-tests#meta/netstack-debug.cmx"
             }
         }
     },

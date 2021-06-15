@@ -52,5 +52,8 @@ rustc_library("httpdate-hyper") {
 
 fuchsia_unittest_package("httpdate-hyper-tests") {
   manifest = "meta/httpdate-hyper-lib-test.cmx"
-  deps = [ ":httpdate-hyper_test" ]
+  deps = [
+    ":httpdate-hyper_test",
+    "//src/connectivity/network/netstack:component-debug",
+  ]
 }
