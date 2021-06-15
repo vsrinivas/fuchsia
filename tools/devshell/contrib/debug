@@ -183,6 +183,7 @@ ensure-symbol-index-registered || fx-warn "Failed to register ${FUCHSIA_DIR} in 
 
 ZXDB=$(fx-command-run host-tool --print zxdb)
 ZXDB_UNSTRIPPED="$(dirname "$ZXDB")/exe.unstripped/$(basename "$ZXDB")"
+arguments+=("$@")
 
 if [[ ${use_gdb} -eq 1 ]]; then
   # Starts gdb.

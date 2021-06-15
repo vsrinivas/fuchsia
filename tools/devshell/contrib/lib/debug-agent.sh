@@ -36,7 +36,7 @@ launch_debug_agent() {
 
   # See if the debug agent is already there.
   echo "Checking for debug agent on $(get-device-addr-resource):${port}."
-  if fx-command-run "shell" "ps" | grep "debug_agent.cmx" > /dev/null; then
+  if check_for_agent "${port}" 1; then
     echo "Found agent already running."
     return 0
   fi
