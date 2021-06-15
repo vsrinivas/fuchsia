@@ -66,7 +66,7 @@ impl InspectFetcher {
             if &s[..INSPECT_PREFIX.len()] == INSPECT_PREFIX {
                 Some(s[INSPECT_PREFIX.len()..].to_string())
             } else {
-                error!("All selectors should begin with 'INSPECT:' - '{}'", s);
+                warn!("All selectors should begin with 'INSPECT:' - '{}'", s);
                 None
             }
         };
@@ -91,8 +91,8 @@ mod tests {
             "INSPECT:name:nodes:item".to_string(),
         ];
 
-        assert_eq(InspectFetcher::process_selectors(empty_vec), Ok(vec![]));
-        assert_eq(InspectFetcher::process_selectors(ok_selectors), Ok(ok_processed));
-        assert(InspectFetcher::process_selectors(bad_selector).is_err());
+        assert_eq!(InspectFetcher::process_selectors(empty_vec).unwrap(), Vec::<String>::new());
+        assert_eq!(InspectFetcher::process_selectors(ok_selectors).unwrap(), ok_processed);
+        assert_eq!(InspectFetcher::process_selectors(bad_selector).unwrap(), ok_processed);
     }
 }
