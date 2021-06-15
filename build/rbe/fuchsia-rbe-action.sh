@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -15,12 +15,11 @@
 # rewrapper and reproxy, so you need to make sure it contains all needed
 # arguments for both.
 #
-# To override the location of reclient binaries, set --bindir
-# before using the script.
+# To override the location of reclient binaries, set --bindir.
 
 set -e
 
-script=$0
+script="$0"
 script_dir="$(dirname "$script")"
 
 # defaults
@@ -32,6 +31,8 @@ reclient_bindir=../../prebuilt/proprietary/third_party/reclient/linux-x64
 usage() {
   cat <<EOF
 $script [rewrapper options] -- command [args...]
+
+This script runs a command remotely (RBE).
 
 options:
   --cfg FILE: reclient config for reproxy and rewrapper tools
@@ -69,6 +70,7 @@ do
   esac
   shift
 done
+test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
 reproxy_cfg="$config"
 rewrapper_cfg="$config"

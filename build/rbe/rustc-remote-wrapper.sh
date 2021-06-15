@@ -78,6 +78,7 @@ do
   esac
   shift
 done
+test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
 # Copy the original command.
 # Prefix with env, in case command starts with VAR=VALUE ...
@@ -98,6 +99,14 @@ dep_only_command=()
 # Infer the source_root.
 first_source=
 
+# C toolchain linker
+linker=()
+link_arg_files=()
+link_sysroot=()
+
+# input files referenced in environment variables
+envvar_files=()
+
 # Examine the rustc compile command
 prev_opt=
 for opt in "${rustc_command[@]}"
@@ -115,8 +124,8 @@ do
   fi
   # Extract optarg from --opt=optarg
   case "$opt" in
-    -*=?*) optarg=$(expr "X$opt" : '[^=]*=\(.*\)') ;;
-    -*=) optarg= ;;
+    *=?*) optarg=$(expr "X$opt" : '[^=]*=\(.*\)') ;;
+    *=) optarg= ;;
   esac
 
   case "$opt" in
@@ -154,8 +163,46 @@ do
       dep_only_command+=( "-Zbinary-dep-depinfo" )
       ;;
 
+    # Detect custom linker, preserve symlinks
+    -Clinker=*) linker=("$(realpath -s --relative-to="$project_root" "$optarg")") ;;
+
+    # Link arguments that reference .o or .a files need to be uploaded.
+    -Clink-arg=*.o | -Clink-arg=*.a | -Clink-arg=*.so | -Clink-arg=*.so.debug)
+        link_arg_files+=("$(realpath --relative-to="$project_root" "$optarg")")
+        ;;
+
+    -Clink-arg=--sysroot=*)
+        sysroot="$(expr "X$optarg" : '[^=]*=\(.*\)')"
+        link_sysroot=("$(realpath --relative-to="$project_root" "$sysroot")")
+        ;;
+
+    -Lnative=* )
+        link_arg_files+=("$(realpath --relative-to="$project_root" "$optarg")")
+        ;;
+
+    --*=* ) ;;  # forward
+
+    # Find files referenced in prefix environment variables.
+    *=*)
+        envvar=$(expr "X$opt" : '\([^=]*\)=.*')
+        case "envvar" in
+          # The following are used in src/lib/assembly/vbmeta/BUILD.gn:
+          AVB_KEY) envvar_files+=("$optarg") ;;
+          AVB_METADATA) envvar_files+=("$optarg") ;;
+          EXPECTED_VBMETA) envvar_files+=("$optarg") ;;
+          # from src/sys/pkg/bin/system-updater/BUILD.gn:
+          EPOCH_PATH) envvar_files+=("$optarg") ;;
+          # ignore all others
+          *) ;;
+        esac
+        ;;
+
     # Capture the first named source file as the source-root.
     *.rs) test -n "$first_source" || first_source="$opt" ;;
+
+    *.a | *.o | *.so | *.so.debug)
+        link_arg_files+=("$(realpath --relative-to="$project_root" "$opt")")
+        ;;
 
     # Preserve all other tokens.
     *) ;;
@@ -164,19 +211,26 @@ do
   dep_only_command+=( "$dep_only_token" )
   shift
 done
+test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
 # Specify the rustc binary to be uploaded.
 rustc_relative="$(realpath --relative-to="$project_root" "$rustc")"
 test "$verbose" = 0 || echo "rustc binary: $rustc_relative"
 
-# The rustc binary might be linked against shared libraries.
-# Exclude system libraries in /usr/lib and /lib.
-# convert to paths relative to $project_root for rewrapper.
 # TODO(fangism): if possible, determine these shlibs statically to avoid `ldd`-ing.
 # TODO(fangism): for host-independence, use llvm-otool and `llvm-readelf -d`,
 #   which requires uploading more tools.
-mapfile -t rustc_shlibs < <(ldd "$rustc" | grep "=>" | cut -d\  -f3 | grep -v -e '^/lib' -e '^/usr/lib' | \
-  xargs -n 1 realpath --relative-to="$project_root")
+function nonsystem_shlibs() {
+  # $1 is a binary
+  ldd "$1" | grep "=>" | cut -d\  -f3 | \
+    grep -v -e '^/lib' -e '^/usr/lib' | \
+    xargs -n 1 realpath --relative-to="$project_root"
+}
+
+# The rustc binary might be linked against shared libraries.
+# Exclude system libraries in /usr/lib and /lib.
+# convert to paths relative to $project_root for rewrapper.
+mapfile -t rustc_shlibs < <(nonsystem_shlibs "$rustc")
 test "$verbose" = 0 || {
   echo "rustc shlibs:"
   for f in "${rustc_shlibs[@]}"
@@ -184,11 +238,32 @@ test "$verbose" = 0 || {
   done
 }
 
+# At this time, the linker we pass is known to be statically linked itself
+# and doesn't need to be accompanied by any shlibs.
+
 # If --source was not specified, infer it from the command-line.
 # This source file is likely to appear as the first input in the depfile.
 test -n "$top_source" || top_source="$first_source"
 top_source="$(realpath --relative-to="$project_root" "$top_source")"
 test "$verbose" = 0 || echo "source root: $top_source"
+
+test "$verbose" = 0 || test "${#linker[@]}" = 0 || echo "linker: ${linker[@]}"
+
+test "$verbose" = 0 || test "${#link_arg_files[@]}" = 0 || {
+  echo "link args:"
+  for f in "${link_arg_files[@]}"
+  do echo "  $f"
+  done
+}
+
+test "$verbose" = 0 || test "${#link_sysroot[@]}" = 0 || echo "link sysroot: ${link_sysroot[@]}"
+
+test "$verbose" = 0 || test "${#envvar_files[@]}" = 0 || {
+  echo "env var files:"
+  for f in "${envvar_files[@]}"
+  do echo "  $f"
+  done
+}
 
 test "$verbose" = 0 || echo "depfile: $depfile"
 
@@ -215,11 +290,27 @@ test "$verbose" = 0 || {
 #   * indirect source files [$depfile.nolink]
 #   * direct dependent libraries [$depfile.nolink]
 #   * transitive dependent libraries [$depfile.nolink]
+#   * objects and libraries used as linker arguments [$link_arg_files]
 #   * system rust libraries [$depfile.nolink]
 #   * TODO(fangism): clang toolchain binaries for codegen and linking
 #     For example: -Clinker=.../lld
 
-remote_inputs=("$rustc_relative" "${rustc_shlibs[@]}" "$top_source" "${depfile_inputs[@]}" )
+# Need more than the bin/ directory, but its parent dir which contains tool
+# libraries, and system libraries needed for linking.
+# This is expected to cover the custom linker referenced by -Clinker=.
+tools_dir="$(dirname "$(dirname "${linker[0]}")")"
+test "$verbose" = 0 || echo "tools_dir: $tools_dir"
+
+remote_inputs=(
+  "$rustc_relative"
+  "${rustc_shlibs[@]}"
+  "$top_source"
+  "${depfile_inputs[@]}"
+  "${envvar_files[@]}"
+  "$tools_dir"
+  "${link_arg_files[@]}"
+  "${link_sysroot[@]}"
+)
 remote_inputs_joined="$(IFS=, ; echo "${remote_inputs[*]}")"
 
 # Outputs include the declared output file and a depfile.
@@ -236,6 +327,11 @@ test "$verbose" = 0 || {
 }
 
 # Assemble the remote execution command.
+# During development, if you need to test a pre-release at top-of-tree,
+# symlink the bazel-built binaries into a single directory, e.g.:
+#  --bindir=$HOME/re-client/install-bin
+# and pass options available in the new version, e.g.:
+#  --preserve_symlink
 remote_rustc_command=("$script_dir"/fuchsia-rbe-action.sh \
   --exec_root="$project_root" \
   --inputs="$remote_inputs_joined" \
@@ -244,7 +340,7 @@ remote_rustc_command=("$script_dir"/fuchsia-rbe-action.sh \
 
 if test "$dry_run" = 1
 then
-  echo "[skipped]:" "${remote_rustc_command[@]}"
+  echo "[$script: skipped]:" "${remote_rustc_command[@]}"
 else
   test "$verbose" = 0 || echo "[$script: remote]" "${remote_rustc_command[@]}"
   exec "${remote_rustc_command[@]}"
