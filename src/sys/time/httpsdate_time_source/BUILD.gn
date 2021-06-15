@@ -66,7 +66,6 @@ fuchsia_component("service") {
 }
 
 fuchsia_unittest_package("httpsdate-time-source-tests") {
-  manifest = "meta/unittests.cmx"
   deps = [ ":bin_test" ]
   test_specs = {
     log_settings = {

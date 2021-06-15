@@ -28,6 +28,5 @@ rustc_library("time-util") {
 }
 
 fuchsia_unittest_package("time-util-tests") {
-  manifest = "meta/time-util-lib-test.cmx"
   deps = [ ":time-util_test" ]
 }

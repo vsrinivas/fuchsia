@@ -39,6 +39,5 @@ rustc_library("push-source") {
 }
 
 fuchsia_unittest_package("push-source-tests") {
-  manifest = "meta/push-source-lib-test.cmx"
   deps = [ ":push-source_test" ]
 }

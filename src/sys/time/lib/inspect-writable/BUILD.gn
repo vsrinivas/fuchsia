@@ -38,14 +38,6 @@ group("tests") {
   deps = [ ":inspect-writable-tests" ]
 }
 
-fuchsia_component("inspect_writable_test") {
-  testonly = true
-  component_name = "inspect_writable_test"
-  manifest = "meta/inspect_writable_test.cmx"
+fuchsia_unittest_package("inspect-writable-tests") {
   deps = [ ":test_bin" ]
-}
-
-fuchsia_test_package("inspect-writable-tests") {
-  deps = [ ":test_bin" ]
-  test_components = [ ":inspect_writable_test" ]
 }
