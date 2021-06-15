@@ -5,7 +5,6 @@ The following FIDL attributes are supported:
 * [`[Deprecated]`](#deprecated)
 * [`[Discoverable]`](#discoverable)
 * [`[Doc]`](#doc)
-* [`[Internal]`](#internal)
 * [`[ForDeprecatedCBindings]`](#layout)
 * [`[MaxBytes]`](#maxbytes)
 * [`[MaxHandles]`](#maxhandles)
@@ -92,14 +91,6 @@ the target language.
 
 Note: To be identical, the `[Doc]` version should be `[Doc = " Foo\n"]`. Note
 the space before the "Foo" and the line-feed "`\n`".
-
-## `[Internal]` {#internal}
-
-**USAGE**: `[Internal]`
-
-**MEANING**:
-This marks internal libraries, such as library `zx`.
-It should be used only by Fuchsia developers.
 
 ## `[ForDeprecatedCBindings]` {#layout}
 

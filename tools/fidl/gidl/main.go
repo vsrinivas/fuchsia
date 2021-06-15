@@ -184,11 +184,9 @@ func main() {
 	gidl := gidlir.FilterByBinding(gidlir.Merge(parsedGidlFiles), *flags.Language)
 
 	// For simplicity, we do not allow FIDL that GIDL depends on to have
-	// dependent libraries. This makes it much simpler to have everything
-	// in the IR, and avoid cross-references.
+	// dependent libraries, with the exception of zx. This makes it much simpler
+	// to have everything in the IR, and avoid cross-references.
 
-	// TODO(fxbug.dev/7802): While transitioning "zx" from [Internal] to a normal
-	// library, tolerate but ignore a dependency on zx.
 	if len(ir.Libraries) == 1 && ir.Libraries[0].Name == "zx" {
 		ir.Libraries = make([]fidlgen.Library, 0)
 	}

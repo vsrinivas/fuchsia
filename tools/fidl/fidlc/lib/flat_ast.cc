@@ -5872,21 +5872,16 @@ const std::set<Library*>& Library::dependencies() const { return dependencies_.d
 
 std::set<const Library*, LibraryComparator> Library::DirectDependencies() const {
   std::set<const Library*, LibraryComparator> direct_dependencies;
-  auto add_dependency = [&](const Library* dep_library) {
-    if (!dep_library->HasAttribute("Internal")) {
-      direct_dependencies.insert(dep_library);
-    }
-  };
   auto add_constant_deps = [&](const Constant* constant) {
     if (constant->kind != Constant::Kind::kIdentifier)
       return;
     auto* dep_library = static_cast<const IdentifierConstant*>(constant)->name.library();
     assert(dep_library != nullptr && "all identifier constants have a library");
-    add_dependency(dep_library);
+    direct_dependencies.insert(dep_library);
   };
   auto add_type_ctor_deps = [&](const TypeConstructor& type_ctor) {
     if (auto dep_library = GetName(type_ctor).library())
-      add_dependency(dep_library);
+      direct_dependencies.insert(dep_library);
 
     // TODO(fxbug.dev/64629): Add dependencies introduced through handle constraints.
     // This code currently assumes the handle constraints are always defined in the same
@@ -5898,15 +5893,15 @@ std::set<const Library*, LibraryComparator> Library::DirectDependencies() const 
       add_constant_deps(invocation.protocol_decl_raw);
     if (IsTypeConstructorDefined(invocation.element_type_raw)) {
       if (auto dep_library = GetName(invocation.element_type_raw).library())
-        add_dependency(dep_library);
+        direct_dependencies.insert(dep_library);
     }
     if (IsTypeConstructorDefined(invocation.boxed_type_raw)) {
       if (auto dep_library = GetName(invocation.boxed_type_raw).library())
-        add_dependency(dep_library);
+        direct_dependencies.insert(dep_library);
     }
   };
   for (const auto& dep_library : dependencies()) {
-    add_dependency(dep_library);
+    direct_dependencies.insert(dep_library);
   }
   // Discover additional dependencies that are required to support
   // cross-library protocol composition.
@@ -5922,7 +5917,7 @@ std::set<const Library*, LibraryComparator> Library::DirectDependencies() const 
           add_type_ctor_deps(member.type_ctor);
         }
       }
-      add_dependency(method_with_info.method->owning_protocol->name.library());
+      direct_dependencies.insert(method_with_info.method->owning_protocol->name.library());
     }
   }
   direct_dependencies.erase(this);

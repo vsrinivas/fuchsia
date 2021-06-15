@@ -27,8 +27,7 @@ pertaining to documentation ([Doc][fidl-attributes-doc],
 [MaxHandles][fidl-attributes-max-handles]), code generation
 ([Transitional][fidl-attributes-transitional],
 [Transport][fidl-attributes-transport]), desired API availability
-([Discoverable][fidl-attributes-discoverable],
-[Internal][fidl-attributes-internal]), and so on. In addition to these
+([Discoverable][fidl-attributes-discoverable]), and so on. In addition to these
 "official" attributes, FIDL authors are allowed to define their own "custom"
 attributes, which do not affect compilation, but are still attached to the
 resulting [FIDL JSON Intermediate Representation][fidl-json-ir] for potential
@@ -515,7 +514,6 @@ the syntax proposed in this document.
 [fidl-attributes-discoverable]: /docs/reference/fidl/language/attributes.md#discoverable
 [fidl-attributes-doc]: /docs/reference/fidl/language/attributes.md#doc
 [fidl-attributes-for-deprecated-c-bindings]: /docs/reference/fidl/language/attributes.md#layout
-[fidl-attributes-internal]: /docs/reference/fidl/language/attributes.md#internal
 [fidl-attributes-max-bytes]: /docs/reference/fidl/language/attributes.md#maxbytes
 [fidl-attributes-max-handles]: /docs/reference/fidl/language/attributes.md#maxhandles
 [fidl-attributes-no-doc]: /docs/reference/fidl/language/attributes.md#nodoc

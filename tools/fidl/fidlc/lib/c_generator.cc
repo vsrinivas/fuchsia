@@ -824,8 +824,6 @@ void CGenerator::GeneratePrologues() {
   for (const auto& dep_library : library_->dependencies()) {
     if (dep_library == library_)
       continue;
-    if (dep_library->HasAttribute("Internal"))
-      continue;
     add_includes.insert(NameLibraryCHeader(dep_library->name()));
   }
   for (const auto& include : add_includes) {
