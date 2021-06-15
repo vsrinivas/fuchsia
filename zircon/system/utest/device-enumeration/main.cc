@@ -582,7 +582,11 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
       "pci-00:0b.0/goldfish-address-space",
 
       "sys/platform/acpi/goldfish",
+      // Verify goldfish pipe root device created.
       "sys/platform/acpi/goldfish/goldfish-pipe",
+      // Verify goldfish pipe child devices created.
+      "sys/platform/acpi/goldfish/goldfish-pipe/goldfish-pipe-control",
+      "sys/platform/acpi/goldfish/goldfish-pipe/goldfish-pipe-sensor",
       "sys/platform/acpi/goldfish-sync",
       "sys/platform/acpi/goldfish-sync/goldfish-sync",
 

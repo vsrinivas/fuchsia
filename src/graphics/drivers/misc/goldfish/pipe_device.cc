@@ -89,6 +89,18 @@ zx_status_t PipeDevice::Create(void* ctx, zx_device_t* device) {
     return status;
   }
 
+  constexpr zx_device_prop_t kSensorProps[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOOGLE},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GOLDFISH},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_GOLDFISH_PIPE_SENSOR},
+  };
+  constexpr const char* kSensorDeviceName = "goldfish-pipe-sensor";
+  status = pipe_device->CreateChildDevice(kSensorProps, kSensorDeviceName);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: create %s child device failed: %d", kTag, kSensorDeviceName, status);
+    return status;
+  }
+
   // devmgr now owns the device.
   __UNUSED auto* dev = pipe_device.release();
   return ZX_OK;
