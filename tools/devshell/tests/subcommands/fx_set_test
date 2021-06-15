@@ -29,6 +29,9 @@ export BT_MKDIR_DEPS=(
 )
 
 BT_SET_UP() {
+  # These tests are specific to the legacy version of fx set.
+  export FUCHSIA_DISABLED_legacy_set=0
+
   _FUCHSIA_DIR="${BT_TEMP_DIR}"
   fx="${_FUCHSIA_DIR}/scripts/fx"
   BT_ASSERT_FILE_EXISTS "${fx}"

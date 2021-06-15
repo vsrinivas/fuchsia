@@ -16,7 +16,7 @@ function is_feature_enabled_by_default {
   case "$1" in
   "incremental") return 1 ;;
   "ffx_discovery") return 0 ;;
-  "legacy_set") return 0 ;;
+  "legacy_set") return 1 ;;
   "legacy_fastboot") return 1 ;;
   esac
 
