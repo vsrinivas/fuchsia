@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <sstream>
+#include <random>
 #include <utility>
 
 #include <fidl/findings.h>
@@ -23,6 +24,21 @@ namespace {
 
 #define ASSERT_NO_FINDINGS(TEST) ASSERT_NO_FATAL_FAILURES(TEST.ExpectNoFindings())
 
+// Generate a string of 12 random lower-case letters.
+std::string random_string() {
+  static size_t desired_size = 12;
+  static std::string characters = "abcdefghijklmnopqrstuvwxyz";
+  constexpr size_t kSeed = 1337;
+  static std::default_random_engine gen(kSeed);
+  static std::uniform_int_distribution<size_t> distribution(0, characters.size() - 1);
+  std::string random_str;
+  random_str.reserve(desired_size);
+  while (random_str.size() < desired_size) {
+    random_str += characters[distribution(gen)];
+  }
+  return random_str;
+}
+
 class LintTest {
  public:
   LintTest() = default;
@@ -33,7 +49,7 @@ class LintTest {
                        std::string replacement = "") {
     assert(!source_template_.str().empty() &&
            "source_template() must be called before AddFinding()");
-    std::string template_string = source_template_.str();
+    std::string template_string = convert_template().str();
     size_t start = template_string.find(violation_string);
     if (start == std::string::npos) {
       std::cout << "ERROR: violation_string '" << violation_string
@@ -123,14 +139,36 @@ class LintTest {
     return *this;
   }
 
-  LintTest& substitute(Substitutions substitutions) {
-    substitutions_ = std::move(substitutions);
+  LintTest& substitute(const Substitutions& substitutions) {
+    // TODO(fxbug.dev/70247): Delete this
+    // Make sure we add "random" characters to each substitution.
+    Substitutions with_rands_added;
+    for (const auto& substitution : substitutions) {
+      std::visit(fidl::utils::matchers{
+         [&](const std::string& str) -> void {
+           with_rands_added.insert(std::pair(substitution.first, SubstitutionWithRandom{str, random_string()}));
+         },
+         [&](const SubstitutionWithRandom& with_rand) -> void {
+           with_rands_added.insert(std::pair(substitution.first, with_rand));
+         },
+      },
+      substitution.second);
+    }
+    substitutions_ = with_rands_added;
     return *this;
   }
 
   // Shorthand for the common occurrence of a single substitution variable.
-  LintTest& substitute(const std::string& var_name, const std::string& value) {
-    return substitute({{var_name, value}});
+  LintTest& substitute(const std::string& var_name, SubstitutionValue sub) {
+    return substitute({{var_name, std::visit(fidl::utils::matchers{
+       [&](const std::string& str) -> SubstitutionValue {
+         return SubstitutionWithRandom{str, random_string()};
+       },
+       [&](const SubstitutionWithRandom& with_rand) -> SubstitutionValue {
+         return with_rand;
+       },
+    },
+    sub)}});
   }
 
   LintTest& include_checks(std::vector<std::string> included_check_ids) {
@@ -168,6 +206,7 @@ class LintTest {
  private:
   // Removes all expected findings previously added with AddFinding().
   void execute_helper(bool expect_findings, bool assert_positions_match) {
+    convert_template();
     std::ostringstream ss;
     if (default_check_id_.empty()) {
       ss << std::endl << "Failed test";
@@ -244,6 +283,7 @@ class LintTest {
     excluded_check_ids_.clear();
     excluded_check_ids_to_confirm_.clear();
     exclude_by_default_ = false;
+    converted_template_ = TemplateString();
     that_ = "";
   }
 
@@ -254,9 +294,10 @@ class LintTest {
 
   void ValidTest() const {
     ASSERT_FALSE(source_template_.str().empty(), "Missing source template");
+    ASSERT_FALSE(converted_template_.str().empty(), "Template not converted to new syntax");
     if (!substitutions_.empty()) {
-      ASSERT_FALSE(source_template_.Substitute(substitutions_, false) !=
-                       source_template_.Substitute(substitutions_, true),
+      ASSERT_FALSE(converted_template_.Substitute(substitutions_, false) !=
+                       converted_template_.Substitute(substitutions_, true),
                    "Missing template substitutions");
     }
     if (expected_findings_.empty()) {
@@ -313,12 +354,39 @@ class LintTest {
     os << "============================" << std::endl;
   }
 
+  // Convert a template to the new syntax.
+  TemplateString& convert_template() {
+    if (!converted_template_) {
+      assert(!source_template_.str().empty() &&
+          "source_template() must be set before convert_template() is called");
+      TestLibrary
+          old_syntax_lib = WithLibraryZx(filename_, source_template_.SubstituteWithRandomized(substitutions_));
+      old_syntax_lib.Compile();
+      auto& source_file = old_syntax_lib.source_file();
+      fidl::ExperimentalFlags old_flags;
+      old_flags.SetFlag(fidl::ExperimentalFlags::Flag::kOldSyntaxOnly);
+      fidl::Lexer lexer(source_file, old_syntax_lib.Reporter());
+      fidl::Parser parser(&lexer, old_syntax_lib.Reporter(), old_flags);
+      auto ast = parser.Parse();
+      assert(parser.Success());
+
+      fidl::conv::ConvertingTreeVisitor converter =
+          fidl::conv::ConvertingTreeVisitor(fidl::utils::Syntax::kNew, old_syntax_lib.library());
+      converter.OnFile(ast);
+
+      auto converted = *converter.converted_output();
+      converted_template_ = TemplateString::Unsubstitute(converted, substitutions_);
+    }
+    return converted_template_;
+  }
+
   TestLibrary& library() {
     if (!library_) {
-      assert(!source_template_.str().empty() &&
-             "source_template() must be set before library() is called");
+      fidl::ExperimentalFlags flags;
+      flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+      const auto subbed = convert_template().Substitute(substitutions_);
       library_ =
-          std::make_unique<TestLibrary>(filename_, source_template_.Substitute(substitutions_));
+          std::make_unique<TestLibrary>(filename_, subbed, flags);
     }
     return *library_;
   }
@@ -335,6 +403,7 @@ class LintTest {
   bool exclude_by_default_ = false;
   Findings expected_findings_;
   TemplateString source_template_;
+  TemplateString converted_template_;
   Substitutions substitutions_;
 
   std::unique_ptr<TestLibrary> library_;
@@ -1274,14 +1343,16 @@ protocol TestProtocol {
   ASSERT_FINDINGS(test);
 }
 
-TEST(LintFindingsTests, InvalidCaseForUsingAlias) {
+TEST(LintFindingsTests, InvalidCaseForPrimitiveAlias) {
   LintTest test;
   test.check_id("invalid-case-for-using-alias")
       .message("Using aliases must be named in lower_snake_case")
       .source_template(R"FIDL(
 library fidl.a;
 
-using foo as ${TEST};
+using zx as ${TEST};
+
+alias unused = ${TEST}.handle;
 )FIDL");
 
   test.substitute("TEST", "what_if_someone_does_this");
@@ -1443,7 +1514,7 @@ library fidl.a;
 
 library fidl.a;
 )FIDL")
-      .substitute("BLANK_LINE", "")
+      .substitute("BLANK_LINE", SubstitutionWithRandom{"", "//" + random_string()})
       .suggestion("Update your header with:\n\n" + copyright_template.str())
       .AddFinding("${BLANK_LINE}");
   ASSERT_FINDINGS(test);
@@ -1619,7 +1690,7 @@ TEST(LintFindingsTests, NoCommonlyReservedWordsPleaseImplementMe) {
       .source_template(R"FIDL(
 library fidl.a;
 
-using foo as ${TEST};
+using zx as ${TEST};
 )FIDL");
 
   // Unique union of reserved words from:
@@ -1896,60 +1967,58 @@ TEST(LintFindingsTests, StringBoundsNotSpecified) {
       .source_template(R"FIDL(
 library fidl.a;
 
-const string TEST_STRING = "A const string";
-
 struct SomeStruct {
-  ${TEST} test_string;
+  ${TEST} test_str;
 };
 )FIDL");
 
-  test.substitute("TEST", "string:64");
+  test.substitute("TEST", SubstitutionWithRandom{"string:64", ""});
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", "vector<string:64>:64");
+  test.substitute("TEST", SubstitutionWithRandom{"vector<string:64>:64", ""});
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", "string");
+  test.substitute("TEST", SubstitutionWithRandom{"string", ""});
   ASSERT_FINDINGS(test);
 
   test.source_template(R"FIDL(
 library fidl.a;
 
-const ${TEST} TEST_STRING = "A const string";
+const ${TEST} TEST_STRING = "A const str";
 
 )FIDL");
 
-  test.substitute("TEST", "string");
+  test.substitute("TEST", SubstitutionWithRandom{"string", ""});
   ASSERT_NO_FINDINGS(test);
 
   test.source_template(R"FIDL(
 library fidl.a;
 
 struct SomeStruct {
-  vector<${TEST}>:64 test_string;
+  vector<${TEST}>:64 test_str;
 };
 )FIDL");
 
-  test.substitute("TEST", "string:64");
+  test.substitute("TEST", SubstitutionWithRandom{"string:64", ""});
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", "string");
+  test.substitute("TEST", SubstitutionWithRandom{"string", ""});
   ASSERT_FINDINGS(test);
 
   test.that("developer cannot work around the check by aliasing").source_template(R"FIDL(
 library fidl.a;
 
-alias unbounded_string = ${TEST};
+alias unbounded_str = ${TEST};
 
 struct SomeStruct {
-  unbounded_string test_string;
+  unbounded_str test_string;
 };
 )FIDL");
 
-  test.substitute("TEST", "string");
+  test.substitute("TEST", SubstitutionWithRandom{"string", ""});
   ASSERT_FINDINGS(test);
 
-  test.substitute("TEST", "string:64");
+  test.substitute("TEST", SubstitutionWithRandom{"string:64", ""});
   ASSERT_NO_FINDINGS(test);
 }
 
@@ -2152,13 +2221,13 @@ struct SomeStruct {
 };
 )FIDL");
 
-  test.substitute("TEST", "vector<uint8>:64");
+  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:64", ""});
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", "vector<uint8>");
+  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>", ""});
   ASSERT_FINDINGS(test);
 
-  test.substitute("TEST", "vector<vector<uint8>:64>");
+  test.substitute("TEST", SubstitutionWithRandom{"vector<vector<uint8>:64>", ""});
   ASSERT_FINDINGS(test);
 
   // Test nested vectors
@@ -2170,10 +2239,10 @@ struct SomeStruct {
 };
 )FIDL");
 
-  test.substitute("TEST", "vector<uint8>:64");
+  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:64", ""});
   ASSERT_NO_FINDINGS(test);
 
-  test.substitute("TEST", "vector<uint8>");
+  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>", ""});
   ASSERT_FINDINGS(test);
 
   test.that("developer cannot work around the check by indirect typing using an alias")
@@ -2187,10 +2256,10 @@ struct SomeStruct {
   unbounded_vector test_vector;
 };
 )FIDL")
-      .substitute("TEST", "vector<uint8>");
+      .substitute("TEST", SubstitutionWithRandom{"vector<uint8>", ""});
   ASSERT_FINDINGS(test);
 
-  test.substitute("TEST", "vector<uint8>:64");
+  test.substitute("TEST", SubstitutionWithRandom{"vector<uint8>:64", ""});
   ASSERT_NO_FINDINGS(test);
 }
 

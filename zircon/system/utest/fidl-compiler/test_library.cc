@@ -9,7 +9,15 @@ TestLibrary WithLibraryZx(const std::string& source_code) {
 }
 
 TestLibrary WithLibraryZx(const std::string& source_code, fidl::ExperimentalFlags flags) {
-  TestLibrary main_lib(source_code, flags);
+  return WithLibraryZx("example.fidl", source_code, flags);
+}
+
+TestLibrary WithLibraryZx(const std::string& filename, const std::string& source_code) {
+  return WithLibraryZx(filename, source_code, fidl::ExperimentalFlags());
+}
+
+TestLibrary WithLibraryZx(const std::string& filename, const std::string& source_code, fidl::ExperimentalFlags flags) {
+  TestLibrary main_lib(filename, source_code, flags);
 
   std::string zx = R"FIDL(
 deprecated_syntax;

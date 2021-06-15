@@ -4,6 +4,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -30,92 +31,106 @@ namespace {
     }                                                            \
   } while (0)
 
-TEST(LintTest, BadConstNames) {
+TEST(LintTests, BadConstNames) {
   TestLibrary library(R"FIDL(
 library fuchsia.a;
 
 const uint64 bad_CONST = 1234;
-
 )FIDL");
-  ASSERT_FALSE(library.Lint());
-  ASSERT_WARNINGS(1, library, "bad_CONST");
+  TestLibrary converted;
+  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
+  ASSERT_FALSE(converted.Lint());
+  ASSERT_WARNINGS(1, converted, "bad_CONST");
 }
 
-TEST(LintTest, BadConstNamesKconst) {
+TEST(LintTests, BadConstNamesKconst) {
   TestLibrary library(R"FIDL(
 library fuchsia.a;
 
 const uint64 kAllIsCalm = 1234;
-
 )FIDL");
-  ASSERT_FALSE(library.Lint());
-  ASSERT_WARNINGS(1, library, "kAllIsCalm");
-  const auto& warnings = library.lints();
+  TestLibrary converted;
+  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
+  ASSERT_FALSE(converted.Lint());
+  ASSERT_WARNINGS(1, converted, "kAllIsCalm");
+  const auto& warnings = converted.lints();
   ASSERT_SUBSTR(warnings[0].c_str(), "ALL_IS_CALM");
 }
 
-TEST(LintTest, GoodConstNames) {
-  TestLibrary library_yes(R"FIDL(
+TEST(LintTests, GoodConstNames) {
+  TestLibrary library(R"FIDL(
 library fuchsia.a;
 
 const uint64 GOOD_CONST = 1234;
-
 )FIDL");
-  ASSERT_TRUE(library_yes.Lint());
-  ASSERT_WARNINGS(0, library_yes, "");
+  TestLibrary converted;
+  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
+  ASSERT_TRUE(converted.Lint());
+  ASSERT_WARNINGS(0, converted, "");
 }
 
-TEST(LintTest, BadProtocolNames) {
+TEST(LintTests, BadProtocolNames) {
   TestLibrary library(R"FIDL(
 library fuchsia.a;
 
 protocol URLLoader {};
 )FIDL");
-  ASSERT_FALSE(library.Lint());
-  ASSERT_WARNINGS(1, library, "URLLoader");
-  const auto& warnings = library.lints();
+  TestLibrary converted;
+  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
+  ASSERT_FALSE(converted.Lint());
+  ASSERT_WARNINGS(1, converted, "URLLoader");
+  const auto& warnings = converted.lints();
   ASSERT_SUBSTR(warnings[0].c_str(), "UrlLoader");
 }
 
-TEST(LintTest, GoodProtocolNames) {
-  TestLibrary functioning(R"FIDL(
+TEST(LintTests, GoodProtocolNames) {
+  TestLibrary library(R"FIDL(
 library fuchsia.a;
 
 protocol UrlLoader {};
 )FIDL");
-  ASSERT_TRUE(functioning.Lint());
-  ASSERT_WARNINGS(0, functioning, "");
+  TestLibrary converted;
+  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
+  ASSERT_TRUE(converted.Lint());
+  ASSERT_WARNINGS(0, converted, "");
 }
 
-TEST(LintTest, BadLibraryNamesBannedName) {
-  TestLibrary banned(R"FIDL(
+TEST(LintTests, BadLibraryNamesBannedName) {
+  TestLibrary library(R"FIDL(
 library fuchsia.zxsocket;
 )FIDL");
-  ASSERT_FALSE(banned.Lint());
-  ASSERT_WARNINGS(1, banned, "zxsocket");
+  TestLibrary converted;
+  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
+  ASSERT_FALSE(converted.Lint());
+  ASSERT_WARNINGS(1, converted, "zxsocket");
 }
 
-TEST(LintTest, BadUsingNames) {
-  TestLibrary library(R"FIDL(
+TEST(LintTests, BadUsingNames) {
+  auto library = WithLibraryZx(R"FIDL(
 library fuchsia.a;
 
-using foo as bad_USING;
+using zx as bad_USING;
 
+alias unused = bad_USING.handle;
 )FIDL");
-  ASSERT_FALSE(library.Lint());
-  ASSERT_WARNINGS(1, library, "bad_USING");
+  TestLibrary converted;
+  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
+  ASSERT_FALSE(converted.Lint());
+  ASSERT_WARNINGS(1, converted, "bad_USING");
 }
 
-TEST(LintTest, GoodUsingNames) {
-  TestLibrary library_yes(R"FIDL(
+TEST(LintTests, GoodUsingNames) {
+  auto library = WithLibraryZx(R"FIDL(
 library fuchsia.a;
 
-using foo as good_using;
-using bar as baz;
+using zx as good_using;
 
+alias unused = good_using.handle;
 )FIDL");
-  ASSERT_TRUE(library_yes.Lint());
-  ASSERT_WARNINGS(0, library_yes, "");
+  TestLibrary converted;
+  ASSERT_COMPILED_AND_CONVERT_INTO(library, converted);
+  ASSERT_TRUE(converted.Lint());
+  ASSERT_WARNINGS(0, converted, "");
 }
 
 }  // namespace

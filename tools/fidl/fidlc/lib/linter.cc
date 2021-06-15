@@ -391,7 +391,7 @@ Linter::Linter()
           "// found in the LICENSE file.",
       }),
       kCopyrightBlock(MakeCopyrightBlock()),
-      kDocAttribute("Doc"),
+      kDocAttribute("doc"),
       kYearRegex(R"(\b(\d{4})\b)"),
       kDisallowedLibraryComponentRegex(R"(^(common|service|util|base|f[a-z]l|zx\w*)$)"),
       kPermittedLibraryPrefixes({
@@ -497,6 +497,20 @@ Linter::Linter()
           "with",
           // clang-format on
       }) {
+  auto copyright_should_not_be_doc_comment =
+      DefineCheck("copyright-should-not-be-doc-comment","Copyright notice should use non-flow-through comment markers");
+  auto invalid_case_for_constant =
+      DefineCheck("invalid-case-for-constant", "${TYPE} must be named in ALL_CAPS_SNAKE_CASE");
+  auto name_repeats_enclosing_type_name =
+      DefineCheck("name-repeats-enclosing-type-name",
+                  "${TYPE} names (${REPEATED_NAMES}) must not repeat names from the "
+                  "enclosing ${CONTEXT_TYPE} '${CONTEXT_ID}'");
+  auto invalid_case_for_decl_member =
+      DefineCheck("invalid-case-for-decl-member", "${TYPE} must be named in lower_snake_case");
+  auto todo_should_not_be_doc_comment = DefineCheck("todo-should-not-be-doc-comment", "TODO comment should use a non-flow-through comment marker");
+  auto string_bounds_not_specified = DefineCheck("string-bounds-not-specified", "Specify bounds for string");
+  auto vector_bounds_not_specified = DefineCheck("vector-bounds-not-specified", "Specify bounds for vector");
+
   // clang-format off
   callbacks_.OnFile(
     [& linter = *this]
@@ -552,36 +566,6 @@ Linter::Linter()
                           linter.ExitContext();
                         });
 
-  callbacks_.OnAttribute(
-      [&linter = *this,
-       todo_check = DefineCheck("todo-should-not-be-doc-comment",
-                                "TODO comment should use a non-flow-through comment marker"),
-       regex = std::regex(R"REGEX(^[ \t]*TODO\W)REGEX")]
-      //
-      (const raw::AttributeOld& element) {
-        if (element.name == linter.kDocAttribute) {
-          auto doc_comment = static_cast<raw::DocCommentLiteral*>(element.value.get());
-          if (std::regex_search(doc_comment->MakeContents(), regex)) {
-            linter.AddFinding(element, todo_check, {}, "change '///' to '//'", "//");
-          }
-        }
-      });
-
-  callbacks_.OnAttribute(
-      [&linter = *this,
-       check = DefineCheck("copyright-should-not-be-doc-comment",
-                           "Copyright notice should use non-flow-through comment markers"),
-       regex = std::regex(R"REGEX(^[ \t]*Copyright \d\d\d\d\W)REGEX", std::regex_constants::icase)]
-      //
-      (const raw::AttributeOld& element) {
-        if (element.name == linter.kDocAttribute) {
-          auto doc_comment = static_cast<raw::DocCommentLiteral*>(element.value.get());
-          if (std::regex_search(doc_comment->MakeContents(), regex)) {
-            linter.AddFinding(element, check, {}, "change '///' to '//'", "//");
-          }
-        }
-      });
-
   // TODO(fxbug.dev/7978): Remove this check after issues are resolved with
   // trailing comments in existing source and tools
   // clang-format off
@@ -615,9 +599,6 @@ Linter::Linter()
                        }
                      });
 
-  auto invalid_case_for_constant =
-      DefineCheck("invalid-case-for-constant", "${TYPE} must be named in ALL_CAPS_SNAKE_CASE");
-
   callbacks_.OnConstDeclaration(
       [&linter = *this, case_check = invalid_case_for_constant, &case_type = upper_snake_]
       //
@@ -631,27 +612,6 @@ Linter::Linter()
       [&linter = *this]
       //
       (const raw::ConstDeclaration& element) { linter.in_const_declaration_ = false; });
-
-  callbacks_.OnEnumMember(
-      [&linter = *this, case_check = invalid_case_for_constant, &case_type = upper_snake_]
-      //
-      (const raw::EnumMember& element) {
-        linter.CheckCase("enum members", element.identifier, case_check, case_type);
-        linter.CheckRepeatedName("enum member", element.identifier);
-      });
-
-  callbacks_.OnBitsMember(
-      [&linter = *this, case_check = invalid_case_for_constant, &case_type = upper_snake_]
-      //
-      (const raw::BitsMember& element) {
-        linter.CheckCase("bitfield members", element.identifier, case_check, case_type);
-        linter.CheckRepeatedName("bitfield member", element.identifier);
-      });
-
-  auto name_repeats_enclosing_type_name =
-      DefineCheck("name-repeats-enclosing-type-name",
-                  "${TYPE} names (${REPEATED_NAMES}) must not repeat names from the "
-                  "enclosing ${CONTEXT_TYPE} '${CONTEXT_ID}'");
 
   callbacks_.OnProtocolDeclaration(
       [&linter = *this, context_check = name_repeats_enclosing_type_name,
@@ -670,12 +630,6 @@ Linter::Linter()
         }
         linter.EnterContext("protocol", to_string(element.identifier), context_check);
       });
-
-  callbacks_.OnExitProtocolDeclaration(
-      [&linter = *this]
-      //
-      (const raw::ProtocolDeclaration& element) { linter.ExitContext(); });
-
   callbacks_.OnMethod([&linter = *this]
                       //
                       (const raw::ProtocolMethod& element) {
@@ -684,7 +638,6 @@ Linter::Linter()
                                          linter.decl_case_type_for_style());
                         linter.CheckRepeatedName("method", element.identifier);
                       });
-
   callbacks_.OnEvent(
       [&linter = *this, event_check = DefineCheck("event-names-must-start-with-on",
                                                   "Event names must start with 'On'")]
@@ -711,6 +664,57 @@ Linter::Linter()
         }
         linter.CheckRepeatedName("event", element.identifier);
       });
+  callbacks_.OnParameter(
+      [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
+          //
+          (const raw::Parameter& element) {
+        linter.CheckCase("parameters", element.identifier, case_check, case_type);
+      });
+  callbacks_.OnExitProtocolDeclaration(
+      [&linter = *this]
+          //
+          (const raw::ProtocolDeclaration& element) { linter.ExitContext(); });
+
+  // TODO(fxbug.dev/70247): Delete this.
+  // --- start old syntax ---
+  callbacks_.OnAttributeOld(
+      [&linter = *this,
+          check = copyright_should_not_be_doc_comment,
+          copyright_regex = std::regex(R"REGEX(^[ \t]*Copyright \d\d\d\d\W)REGEX", std::regex_constants::icase),
+          todo_check = todo_should_not_be_doc_comment,
+          todo_regex = std::regex(R"REGEX(^[ \t]*TODO\W)REGEX")]
+          //
+          (const raw::AttributeOld& element) {
+        if (utils::to_lower_snake_case(element.name) == linter.kDocAttribute) {
+          auto doc_comment = static_cast<raw::DocCommentLiteral*>(element.value.get());
+          if (std::regex_search(doc_comment->MakeContents(), copyright_regex)) {
+            linter.AddFinding(element, check, {}, "change '///' to '//'", "//");
+          }
+          if (std::regex_search(doc_comment->MakeContents(), todo_regex)) {
+            linter.AddFinding(element, todo_check, {}, "change '///' to '//'", "//");
+          }
+        }
+      });
+
+  callbacks_.OnBitsDeclaration(
+      [&linter = *this, context_check = name_repeats_enclosing_type_name]
+          //
+          (const raw::BitsDeclaration& element) {
+        linter.CheckCase("bitfields", element.identifier, linter.invalid_case_for_decl_name(),
+                         linter.decl_case_type_for_style());
+        linter.CheckRepeatedName("bitfield", element.identifier);
+        linter.EnterContext("bitfield", to_string(element.identifier), context_check);
+      });
+  callbacks_.OnBitsMember(
+      [&linter = *this, case_check = invalid_case_for_constant, &case_type = upper_snake_]
+          //
+          (const raw::BitsMember& element) {
+        linter.CheckCase("bitfield members", element.identifier, case_check, case_type);
+        linter.CheckRepeatedName("bitfield member", element.identifier);
+      });
+  callbacks_.OnExitBitsDeclaration([&linter = *this]
+                                       //
+                                       (const raw::BitsDeclaration& element) { linter.ExitContext(); });
 
   callbacks_.OnEnumDeclaration(
       [&linter = *this, context_check = name_repeats_enclosing_type_name]
@@ -721,24 +725,16 @@ Linter::Linter()
         linter.CheckRepeatedName("enum", element.identifier);
         linter.EnterContext("enum", to_string(element.identifier), context_check);
       });
-
+  callbacks_.OnEnumMember(
+      [&linter = *this, case_check = invalid_case_for_constant, &case_type = upper_snake_]
+          //
+          (const raw::EnumMember& element) {
+        linter.CheckCase("enum members", element.identifier, case_check, case_type);
+        linter.CheckRepeatedName("enum member", element.identifier);
+      });
   callbacks_.OnExitEnumDeclaration([&linter = *this]
                                    //
                                    (const raw::EnumDeclaration& element) { linter.ExitContext(); });
-
-  callbacks_.OnBitsDeclaration(
-      [&linter = *this, context_check = name_repeats_enclosing_type_name]
-      //
-      (const raw::BitsDeclaration& element) {
-        linter.CheckCase("bitfields", element.identifier, linter.invalid_case_for_decl_name(),
-                         linter.decl_case_type_for_style());
-        linter.CheckRepeatedName("bitfield", element.identifier);
-        linter.EnterContext("bitfield", to_string(element.identifier), context_check);
-      });
-
-  callbacks_.OnExitBitsDeclaration([&linter = *this]
-                                   //
-                                   (const raw::BitsDeclaration& element) { linter.ExitContext(); });
 
   callbacks_.OnStructDeclaration(
       [&linter = *this, context_check = name_repeats_enclosing_type_name]
@@ -749,7 +745,13 @@ Linter::Linter()
         linter.CheckRepeatedName("struct", element.identifier);
         linter.EnterContext("struct", to_string(element.identifier), context_check);
       });
-
+  callbacks_.OnStructMember(
+      [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
+          //
+          (const raw::StructMember& element) {
+        linter.CheckCase("struct members", element.identifier, case_check, case_type);
+        linter.CheckRepeatedName("struct member", element.identifier);
+      });
   callbacks_.OnExitStructDeclaration(
       [&linter = *this]
       //
@@ -764,7 +766,15 @@ Linter::Linter()
         linter.CheckRepeatedName("table", element.identifier);
         linter.EnterContext("table", to_string(element.identifier), context_check);
       });
-
+  callbacks_.OnTableMember(
+      [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
+          //
+          (const raw::TableMember& element) {
+        if (element.maybe_used == nullptr)
+          return;
+        linter.CheckCase("table members", element.maybe_used->identifier, case_check, case_type);
+        linter.CheckRepeatedName("table member", element.maybe_used->identifier);
+      });
   callbacks_.OnExitTableDeclaration(
       [&linter = *this]
       //
@@ -779,37 +789,6 @@ Linter::Linter()
         linter.CheckRepeatedName("union", element.identifier);
         linter.EnterContext("union", to_string(element.identifier), context_check);
       });
-
-  callbacks_.OnExitUnionDeclaration(
-      [&linter = *this]
-      //
-      (const raw::UnionDeclaration& element) { linter.ExitContext(); });
-
-  auto invalid_case_for_decl_member =
-      DefineCheck("invalid-case-for-decl-member", "${TYPE} must be named in lower_snake_case");
-
-  callbacks_.OnParameter(
-      [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
-      //
-      (const raw::Parameter& element) {
-        linter.CheckCase("parameters", element.identifier, case_check, case_type);
-      });
-  callbacks_.OnStructMember(
-      [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
-      //
-      (const raw::StructMember& element) {
-        linter.CheckCase("struct members", element.identifier, case_check, case_type);
-        linter.CheckRepeatedName("struct member", element.identifier);
-      });
-  callbacks_.OnTableMember(
-      [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
-      //
-      (const raw::TableMember& element) {
-        if (element.maybe_used == nullptr)
-          return;
-        linter.CheckCase("table members", element.maybe_used->identifier, case_check, case_type);
-        linter.CheckRepeatedName("table member", element.maybe_used->identifier);
-      });
   callbacks_.OnUnionMember(
       [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
       //
@@ -819,13 +798,16 @@ Linter::Linter()
         linter.CheckCase("union members", element.maybe_used->identifier, case_check, case_type);
         linter.CheckRepeatedName("union member", element.maybe_used->identifier);
       });
+  callbacks_.OnExitUnionDeclaration(
+      [&linter = *this]
+      //
+      (const raw::UnionDeclaration& element) { linter.ExitContext(); });
+
   // clang-format off
   callbacks_.OnTypeConstructorOld(
       [& linter = *this,
-       string_bounds_check = DefineCheck("string-bounds-not-specified",
-                                         "Specify bounds for string"),
-       vector_bounds_check = DefineCheck("vector-bounds-not-specified",
-                                         "Specify bounds for vector")]
+       string_bounds_check = string_bounds_not_specified,
+       vector_bounds_check = vector_bounds_not_specified]
       //
       (const raw::TypeConstructorOld& element) {
         if (element.identifier->components.size() != 1) {
@@ -842,6 +824,151 @@ Linter::Linter()
         }
       });
   // clang-format on
+  // --- end old syntax ---
+
+  // --- start new syntax ---
+  callbacks_.OnAttributeNew(
+      [&linter = *this,
+          check = copyright_should_not_be_doc_comment,
+          copyright_regex = std::regex(R"REGEX(^[ \t]*Copyright \d\d\d\d\W)REGEX", std::regex_constants::icase),
+          todo_check = todo_should_not_be_doc_comment,
+          todo_regex = std::regex(R"REGEX(^[ \t]*TODO\W)REGEX")]
+          //
+          (const raw::AttributeNew& element) {
+        if (utils::to_lower_snake_case(element.name) == linter.kDocAttribute) {
+          if (element.args.empty())
+            return;
+          auto doc_comment = static_cast<raw::DocCommentLiteral*>(element.args.front().value.get());
+          if (std::regex_search(doc_comment->MakeContents(), copyright_regex)) {
+            linter.AddFinding(element, check, {}, "change '///' to '//'", "//");
+          }
+          if (std::regex_search(doc_comment->MakeContents(), todo_regex)) {
+            linter.AddFinding(element, todo_check, {}, "change '///' to '//'", "//");
+          }
+        }
+      });
+  callbacks_.OnTypeDecl(
+      [&linter = *this, context_check = name_repeats_enclosing_type_name]
+          //
+          (const raw::TypeDecl& element) {
+        std::string context_type;
+        const auto& layout = static_cast<raw::InlineLayoutReference*>(element.type_ctor->layout_ref.get())->layout;
+        switch (layout->kind) {
+          case raw::Layout::kBits: {
+            context_type = "bitfield";
+            break;
+          }
+          case raw::Layout::kEnum: {
+            context_type = "enum";
+            break;
+          }
+          case raw::Layout::kStruct: {
+            context_type = "struct";
+            break;
+          }
+          case raw::Layout::kTable: {
+            context_type = "table";
+            break;
+          }
+          case raw::Layout::kUnion: {
+            context_type = "union";
+            break;
+          }
+        }
+
+        linter.CheckCase(context_type + "s", element.identifier, linter.invalid_case_for_decl_name(),
+                         linter.decl_case_type_for_style());
+        linter.CheckRepeatedName(context_type, element.identifier);
+        linter.EnterContext(context_type, to_string(element.identifier), context_check);
+      });
+  callbacks_.OnOrdinaledLayoutMember(
+      [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
+          //
+          (const raw::OrdinaledLayoutMember& element) {
+        if (element.reserved)
+          return;
+        std::string parent_type = linter.context_stack_.front().type();
+        linter.CheckCase(parent_type + " members", element.identifier, case_check, case_type);
+        linter.CheckRepeatedName(parent_type + " member", element.identifier);
+      });
+  callbacks_.OnStructLayoutMember(
+      [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
+          //
+          (const raw::StructLayoutMember& element) {
+        std::string parent_type = linter.context_stack_.front().type();
+        if (parent_type == "protocol") {
+          linter.CheckCase("parameters", element.identifier, case_check, case_type);
+          linter.CheckRepeatedName("parameters member", element.identifier);
+          return;
+        }
+
+        linter.CheckCase("struct members", element.identifier, case_check, case_type);
+        linter.CheckRepeatedName("struct member", element.identifier);
+      });
+  callbacks_.OnValueLayoutMember(
+      [&linter = *this, case_check = invalid_case_for_constant, &case_type = upper_snake_]
+          //
+          (const raw::ValueLayoutMember& element) {
+        std::string parent_type = linter.context_stack_.front().type();
+        linter.CheckCase(parent_type + " members", element.identifier, case_check, case_type);
+        linter.CheckRepeatedName(parent_type + " member", element.identifier);
+      });
+  callbacks_.OnExitTypeDecl(
+      [&linter = *this]
+          //
+          (const raw::TypeDecl& element) {
+        linter.ExitContext();
+      });
+
+  // clang-format off
+  callbacks_.OnIdentifierLayoutParameter(
+      [& linter = *this,
+          string_bounds_check = string_bounds_not_specified,
+          vector_bounds_check = vector_bounds_not_specified]
+          //
+          (const raw::IdentifierLayoutParameter& element) {
+        if (element.identifier->span().data() == "string") {
+          linter.AddFinding(element.identifier, string_bounds_check);
+        }
+      });
+  callbacks_.OnTypeConstructorNew(
+      [& linter = *this,
+          string_bounds_check = string_bounds_not_specified,
+          vector_bounds_check = vector_bounds_not_specified]
+          //
+          (const raw::TypeConstructorNew& element) {
+        if (element.layout_ref->kind != raw::LayoutReference::kNamed)
+          return;
+        const auto as_named = static_cast<raw::NamedLayoutReference*>(element.layout_ref.get());
+
+        if (as_named->identifier->components.size() != 1) {
+          return;
+        }
+        auto type = to_string((as_named->identifier->components[0]));
+        if (!linter.in_const_declaration_) {
+          // If there is a size attached to this type, it will always be the first numeric value in
+          // the constraints list.
+          bool has_size = false;
+          if (element.constraints != nullptr && !element.constraints->items.empty()) {
+            const auto& first_constraint = element.constraints->items.front();
+            if (first_constraint->kind == raw::Constant::Kind::kLiteral) {
+              const auto as_lit_const = static_cast<raw::LiteralConstant*>(first_constraint.get());
+              if (as_lit_const->literal->kind == raw::Literal::Kind::kNumeric) {
+                has_size = true;
+              }
+            }
+          }
+
+          if (type == "string" && !has_size) {
+            linter.AddFinding(as_named->identifier, string_bounds_check);
+          }
+          if (type == "vector" && !has_size) {
+            linter.AddFinding(as_named->identifier, vector_bounds_check);
+          }
+        }
+      });
+  // clang-format on
+  // --- end new syntax ---
 }
 
 }  // namespace fidl::linter

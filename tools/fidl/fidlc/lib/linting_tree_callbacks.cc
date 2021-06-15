@@ -52,11 +52,6 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       DeclarationOrderTreeVisitor::OnAliasDeclaration(element);
       ProcessGapText(element->end_);
     }
-    void OnAttributeOld(const raw::AttributeOld& element) override {
-      for (auto& callback : callbacks_.attribute_callbacks_) {
-        callback(element);
-      }
-    }
     void OnUsing(std::unique_ptr<raw::Using> const& element) override {
       ProcessGapText(element->start_);
       for (auto& callback : callbacks_.using_callbacks_) {
@@ -75,6 +70,47 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
         callback(*element);
       }
       ProcessGapText(element->end_);
+    }
+    void OnProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> const& element) override {
+      ProcessGapText(element->start_);
+      for (auto& callback : callbacks_.protocol_declaration_callbacks_) {
+        callback(*element);
+      }
+      DeclarationOrderTreeVisitor::OnProtocolDeclaration(element);
+      for (auto& callback : callbacks_.exit_protocol_declaration_callbacks_) {
+        callback(*element);
+      }
+      ProcessGapText(element->end_);
+    }
+    void OnProtocolMethod(std::unique_ptr<raw::ProtocolMethod> const& element) override {
+      ProcessGapText(element->start_);
+      if (raw::IsParameterListDefined(element->maybe_request)) {
+        for (auto& callback : callbacks_.method_callbacks_) {
+          callback(*element);
+        }
+      } else {
+        for (auto& callback : callbacks_.event_callbacks_) {
+          callback(*element);
+        }
+      }
+      DeclarationOrderTreeVisitor::OnProtocolMethod(element);
+      ProcessGapText(element->end_);
+    }
+    void OnParameter(std::unique_ptr<raw::Parameter> const& element) override {
+      ProcessGapText(element->start_);
+      for (auto& callback : callbacks_.parameter_callbacks_) {
+        callback(*element);
+      }
+      DeclarationOrderTreeVisitor::OnParameter(element);
+      ProcessGapText(element->end_);
+    }
+
+    // TODO(fxbug.dev/70247): Delete this.
+    // --- start old syntax ---
+    void OnAttributeOld(const raw::AttributeOld& element) override {
+      for (auto& callback : callbacks_.attribute_old_callbacks_) {
+        callback(element);
+      }
     }
     void OnBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> const& element) override {
       ProcessGapText(element->start_);
@@ -112,39 +148,6 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       for (auto& callback : callbacks_.exit_enum_declaration_callbacks_) {
         callback(*element);
       }
-      ProcessGapText(element->end_);
-    }
-    void OnProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> const& element) override {
-      ProcessGapText(element->start_);
-      for (auto& callback : callbacks_.protocol_declaration_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnProtocolDeclaration(element);
-      for (auto& callback : callbacks_.exit_protocol_declaration_callbacks_) {
-        callback(*element);
-      }
-      ProcessGapText(element->end_);
-    }
-    void OnProtocolMethod(std::unique_ptr<raw::ProtocolMethod> const& element) override {
-      ProcessGapText(element->start_);
-      if (raw::IsParameterListDefined(element->maybe_request)) {
-        for (auto& callback : callbacks_.method_callbacks_) {
-          callback(*element);
-        }
-      } else {
-        for (auto& callback : callbacks_.event_callbacks_) {
-          callback(*element);
-        }
-      }
-      DeclarationOrderTreeVisitor::OnProtocolMethod(element);
-      ProcessGapText(element->end_);
-    }
-    void OnParameter(std::unique_ptr<raw::Parameter> const& element) override {
-      ProcessGapText(element->start_);
-      for (auto& callback : callbacks_.parameter_callbacks_) {
-        callback(*element);
-      }
-      DeclarationOrderTreeVisitor::OnParameter(element);
       ProcessGapText(element->end_);
     }
     void OnStructMember(std::unique_ptr<raw::StructMember> const& element) override {
@@ -186,7 +189,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       ProcessGapText(element->end_);
     }
     void OnTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld> const& element) override {
-      for (auto& callback : callbacks_.type_constructor_callbacks_) {
+      for (auto& callback : callbacks_.type_constructor_old_callbacks_) {
         callback(*element);
       }
       DeclarationOrderTreeVisitor::OnTypeConstructorOld(element);
@@ -210,6 +213,66 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       }
       ProcessGapText(element->end_);
     }
+    // --- end old syntax ---
+
+    // --- start new syntax ---
+    void OnAttributeNew(const raw::AttributeNew& element) override {
+      for (auto& callback : callbacks_.attribute_callbacks_) {
+        callback(element);
+      }
+    }
+    void OnOrdinaledLayoutMember(std::unique_ptr<raw::OrdinaledLayoutMember> const& element) override {
+      ProcessGapText(element->start_);
+      for (auto& callback : callbacks_.ordinaled_layout_member_callbacks_) {
+        callback(*element);
+      }
+      DeclarationOrderTreeVisitor::OnOrdinaledLayoutMember(element);
+      ProcessGapText(element->end_);
+    }
+    void OnStructLayoutMember(std::unique_ptr<raw::StructLayoutMember> const& element) override {
+      ProcessGapText(element->start_);
+      for (auto& callback : callbacks_.struct_layout_member_callbacks_) {
+        callback(*element);
+      }
+      DeclarationOrderTreeVisitor::OnStructLayoutMember(element);
+      ProcessGapText(element->end_);
+    }
+    void OnValueLayoutMember(std::unique_ptr<raw::ValueLayoutMember> const& element) override {
+      ProcessGapText(element->start_);
+      for (auto& callback : callbacks_.value_layout_member_callbacks_) {
+        callback(*element);
+      }
+      DeclarationOrderTreeVisitor::OnValueLayoutMember(element);
+      ProcessGapText(element->end_);
+    }
+    void OnTypeDecl(std::unique_ptr<raw::TypeDecl> const& element) override {
+      ProcessGapText(element->start_);
+      for (auto& callback : callbacks_.type_decl_callbacks_) {
+        callback(*element);
+      }
+      DeclarationOrderTreeVisitor::OnTypeDecl(element);
+      for (auto& callback : callbacks_.exit_type_decl_callbacks_) {
+        callback(*element);
+      }
+      ProcessGapText(element->end_);
+    }
+    void OnIdentifierLayoutParameter(std::unique_ptr<raw::IdentifierLayoutParameter> const& element) override {
+      // For the time being, the the first type parameter in a layout must either be a
+      // TypeConstructor (like `vector<uint8>`), or else a reference to on (like `vector<Foo>`).
+      // Because of this, we can treat an IdentifierLayoutParameter as a TypeConstructor for the
+      // purposes of linting.
+      for (auto& callback : callbacks_.identifier_layout_parameter_callbacks_) {
+        callback(*element);
+      }
+      DeclarationOrderTreeVisitor::OnIdentifierLayoutParameter(element);
+    }
+    void OnTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> const& element) override {
+      for (auto& callback : callbacks_.type_constructor_callbacks_) {
+        callback(*element);
+      }
+      DeclarationOrderTreeVisitor::OnTypeConstructorNew(element);
+    }
+    // --- end new syntax ---
 
    private:
     void InitGapTextRegex() {
