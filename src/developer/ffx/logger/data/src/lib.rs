@@ -166,7 +166,7 @@ mod test {
           "errors": null,
           "component_url": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
           "timestamp": 403649538626725,
-          "severity": "INFO",
+          "severity": "Info",
           "size_bytes": 158
         },
         "moniker": "sys/netstack.cmx",
