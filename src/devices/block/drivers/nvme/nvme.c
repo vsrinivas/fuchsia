@@ -50,20 +50,14 @@ typedef struct {
 
 #define UTXN_COUNT 63
 
-// There's no system constant for this.  Ensure it matches reality.
-#define PAGE_SHIFT (12ULL)
-static_assert(PAGE_SIZE == (1ULL << PAGE_SHIFT), "");
-
-#define PAGE_MASK (PAGE_SIZE - 1ULL)
-
 // Limit maximum transfer size to 1MB which fits comfortably
 // within our single scatter gather page per utxn setup
 #define MAX_XFER (1024 * 1024)
 
 // Maximum submission and completion queue item counts, for
 // queues that are a single page in size.
-#define SQMAX (PAGE_SIZE / sizeof(nvme_cmd_t))
-#define CQMAX (PAGE_SIZE / sizeof(nvme_cpl_t))
+#define SQMAX(PageSize) ((PageSize) / sizeof(nvme_cmd_t))
+#define CQMAX(PageSize) ((PageSize) / sizeof(nvme_cpl_t))
 
 // global driver state bits
 #define FLAG_IRQ_THREAD_STARTED 0x0001
@@ -145,6 +139,11 @@ typedef struct {
   nvme_utxn_t utxn[UTXN_COUNT];
 } nvme_device_t;
 
+// Takes the log2 of a page size to turn it into a shift.
+static inline size_t PageShift(size_t page_size) {
+  return (sizeof(int) * 8) - __builtin_clz((int)page_size) - 1;
+}
+
 // We break IO transactions down into one or more "micro transactions" (utxn)
 // based on the transfer limits of the controller, etc.  Each utxn has an
 // id associated with it, which is used as the command id for the command
@@ -180,7 +179,7 @@ static zx_status_t nvme_admin_cq_get(nvme_device_t* nvme, nvme_cpl_t* cpl) {
   *cpl = nvme->admin_cq[nvme->admin_cq_head];
 
   // advance the head pointer, wrapping and inverting toggle at max
-  uint16_t next = (nvme->admin_cq_head + 1) & (CQMAX - 1);
+  uint16_t next = (nvme->admin_cq_head + 1) & (CQMAX(zx_system_get_page_size()) - 1);
   if ((nvme->admin_cq_head = next) == 0) {
     nvme->admin_cq_toggle ^= 1;
   }
@@ -194,7 +193,7 @@ static zx_status_t nvme_admin_cq_get(nvme_device_t* nvme, nvme_cpl_t* cpl) {
 }
 
 static zx_status_t nvme_admin_sq_put(nvme_device_t* nvme, nvme_cmd_t* cmd) {
-  uint16_t next = (nvme->admin_sq_tail + 1) & (SQMAX - 1);
+  uint16_t next = (nvme->admin_sq_tail + 1) & (SQMAX(zx_system_get_page_size()) - 1);
 
   // if head+1 == tail: queue is full
   if (next == nvme->admin_sq_head) {
@@ -216,7 +215,7 @@ static zx_status_t nvme_io_cq_get(nvme_device_t* nvme, nvme_cpl_t* cpl) {
   *cpl = nvme->io_cq[nvme->io_cq_head];
 
   // advance the head pointer, wrapping and inverting toggle at max
-  uint16_t next = (nvme->io_cq_head + 1) & (CQMAX - 1);
+  uint16_t next = (nvme->io_cq_head + 1) & (CQMAX(zx_system_get_page_size()) - 1);
   if ((nvme->io_cq_head = next) == 0) {
     nvme->io_cq_toggle ^= 1;
   }
@@ -232,7 +231,7 @@ static void nvme_io_cq_ack(nvme_device_t* nvme) {
 }
 
 static zx_status_t nvme_io_sq_put(nvme_device_t* nvme, nvme_cmd_t* cmd) {
-  uint16_t next = (nvme->io_sq_tail + 1) & (SQMAX - 1);
+  uint16_t next = (nvme->io_sq_tail + 1) & (SQMAX(zx_system_get_page_size()) - 1);
 
   // if head+1 == tail: queue is full
   if (next == nvme->io_sq_head) {
@@ -305,6 +304,10 @@ static bool io_process_txn(nvme_device_t* nvme, nvme_txn_t* txn) {
   zx_paddr_t* pages;
   zx_status_t r;
 
+  const size_t kPageSize = zx_system_get_page_size();
+  const size_t kPageMask = kPageSize - 1;
+  const size_t kPageShift = PageShift(kPageSize);
+
   for (;;) {
     // If there are no available utxns, we can't proceed
     // and we tell the caller to retain the txn (true)
@@ -321,13 +324,13 @@ static bool io_process_txn(nvme_device_t* nvme, nvme_txn_t* txn) {
     size_t bytes = ((size_t)blocks) * ((size_t)nvme->info.block_size);
 
     // Page offset of first page of transfer
-    size_t pageoffset = txn->op.rw.offset_vmo & (~PAGE_MASK);
+    size_t pageoffset = txn->op.rw.offset_vmo & (~kPageMask);
 
     // Byte offset into first page of transfer
-    size_t byteoffset = txn->op.rw.offset_vmo & PAGE_MASK;
+    size_t byteoffset = txn->op.rw.offset_vmo & kPageMask;
 
     // Total pages mapped / touched
-    size_t pagecount = (byteoffset + bytes + PAGE_MASK) >> PAGE_SHIFT;
+    size_t pagecount = (byteoffset + bytes + kPageMask) >> kPageShift;
 
     // read disk (OP_READ) -> memory (PERM_WRITE) or
     // write memory (PERM_READ) -> disk (OP_WRITE)
@@ -335,7 +338,7 @@ static bool io_process_txn(nvme_device_t* nvme, nvme_txn_t* txn) {
 
     pages = utxn->virt;
 
-    if ((r = zx_bti_pin(nvme->bti, opt, vmo, pageoffset, pagecount << PAGE_SHIFT, pages, pagecount,
+    if ((r = zx_bti_pin(nvme->bti, opt, vmo, pageoffset, pagecount << kPageShift, pages, pagecount,
                         &utxn->pmt)) != ZX_OK) {
       zxlogf(ERROR, "nvme: could not pin pages: %d", r);
       break;
@@ -705,13 +708,15 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   zxlogf(INFO, "nvme: maximum queue entries supported (MQES): %u",
          ((unsigned)NVME_CAP_MQES(cap)) + 1);
 
-  if ((1 << NVME_CAP_MPSMIN(cap)) > PAGE_SIZE) {
+  const size_t kPageSize = zx_system_get_page_size();
+
+  if ((1 << NVME_CAP_MPSMIN(cap)) > kPageSize) {
     zxlogf(ERROR, "nvme: minimum page size larger than platform page size");
     return ZX_ERR_NOT_SUPPORTED;
   }
   // allocate pages for various queues and the utxn scatter lists
   // TODO: these should all be RO to hardware apart from the scratch io page(s)
-  if (io_buffer_init(&nvme->iob, nvme->bti, PAGE_SIZE * IO_PAGE_COUNT, IO_BUFFER_RW) ||
+  if (io_buffer_init(&nvme->iob, nvme->bti, kPageSize * IO_PAGE_COUNT, IO_BUFFER_RW) ||
       io_buffer_physmap(&nvme->iob)) {
     zxlogf(ERROR, "nvme: could not allocate io buffers");
     return ZX_ERR_NO_MEMORY;
@@ -722,7 +727,7 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   for (uint16_t n = 0; n < UTXN_COUNT; n++) {
     nvme->utxn[n].id = n;
     nvme->utxn[n].phys = nvme->iob.phys_list[IDX_UTXN_POOL + n];
-    nvme->utxn[n].virt = nvme->iob.virt + (IDX_UTXN_POOL + n) * PAGE_SIZE;
+    nvme->utxn[n].virt = nvme->iob.virt + (IDX_UTXN_POOL + n) * kPageSize;
   }
 
   if (rd32(CSTS) & NVME_CSTS_RDY) {
@@ -745,7 +750,7 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   // configure admin submission and completion queues
   wr64(nvme->iob.phys_list[IDX_ADMIN_SQ], ASQ);
   wr64(nvme->iob.phys_list[IDX_ADMIN_CQ], ACQ);
-  wr32(NVME_AQA_ASQS(SQMAX - 1) | NVME_AQA_ACQS(CQMAX - 1), AQA);
+  wr32(NVME_AQA_ASQS(SQMAX(kPageSize) - 1) | NVME_AQA_ACQS(CQMAX(kPageSize) - 1), AQA);
 
   zxlogf(INFO, "nvme: enabling");
   wr32(NVME_CC_EN | NVME_CC_AMS_RR | NVME_CC_MPS(0) | NVME_CC_IOCQES(NVME_CPL_SHIFT) |
@@ -766,11 +771,11 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   nvme->io_admin_sq_tail_db = nvme->mmio.vaddr + NVME_REG_SQnTDBL(0, cap);
   nvme->io_admin_cq_head_db = nvme->mmio.vaddr + NVME_REG_CQnHDBL(0, cap);
 
-  nvme->admin_sq = nvme->iob.virt + PAGE_SIZE * IDX_ADMIN_SQ;
+  nvme->admin_sq = nvme->iob.virt + kPageSize * IDX_ADMIN_SQ;
   nvme->admin_sq_head = 0;
   nvme->admin_sq_tail = 0;
 
-  nvme->admin_cq = nvme->iob.virt + PAGE_SIZE * IDX_ADMIN_CQ;
+  nvme->admin_cq = nvme->iob.virt + kPageSize * IDX_ADMIN_CQ;
   nvme->admin_cq_head = 0;
   nvme->admin_cq_toggle = 1;
 
@@ -778,16 +783,16 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   nvme->io_sq_tail_db = nvme->mmio.vaddr + NVME_REG_SQnTDBL(1, cap);
   nvme->io_cq_head_db = nvme->mmio.vaddr + NVME_REG_CQnHDBL(1, cap);
 
-  nvme->io_sq = nvme->iob.virt + PAGE_SIZE * IDX_IO_SQ;
+  nvme->io_sq = nvme->iob.virt + kPageSize * IDX_IO_SQ;
   nvme->io_sq_head = 0;
   nvme->io_sq_tail = 0;
 
-  nvme->io_cq = nvme->iob.virt + PAGE_SIZE * IDX_IO_CQ;
+  nvme->io_cq = nvme->iob.virt + kPageSize * IDX_IO_CQ;
   nvme->io_cq_head = 0;
   nvme->io_cq_toggle = 1;
 
   // scratch page for admin ops
-  void* scratch = nvme->iob.virt + PAGE_SIZE * IDX_SCRATCH;
+  void* scratch = nvme->iob.virt + kPageSize * IDX_SCRATCH;
 
   if (thrd_create_with_name(&nvme->irqthread, irq_thread, nvme, "nvme-irq-thread")) {
     zxlogf(ERROR, "nvme; cannot create irq thread");
@@ -838,8 +843,8 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
 
   // Maximum transfer is in units of 2^n * PAGESIZE, n == 0 means "infinite"
   nvme->max_xfer = 0xFFFFFFFF;
-  if ((ci->MDTS != 0) && (ci->MDTS < (31 - PAGE_SHIFT))) {
-    nvme->max_xfer = (1 << ci->MDTS) * PAGE_SIZE;
+  if ((ci->MDTS != 0) && (ci->MDTS < (31 - PageShift(kPageSize)))) {
+    nvme->max_xfer = (1 << ci->MDTS) * kPageSize;
   }
 
   zxlogf(INFO, "nvme: max data transfer: %u bytes", nvme->max_xfer);
@@ -897,8 +902,8 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   cmd.cmd =
       NVME_CMD_CID(0) | NVME_CMD_PRP | NVME_CMD_NORMAL | NVME_CMD_OPC(NVME_ADMIN_OP_CREATE_IOCQ);
   cmd.dptr.prp[0] = nvme->iob.phys_list[IDX_IO_CQ];
-  cmd.u.raw[0] = ((CQMAX - 1) << 16) | 1;  // queue size, queue id
-  cmd.u.raw[1] = (0 << 16) | 2 | 1;        // irq vector, irq enable, phys contig
+  cmd.u.raw[0] = ((CQMAX(kPageSize) - 1) << 16) | 1;  // queue size, queue id
+  cmd.u.raw[1] = (0 << 16) | 2 | 1;                   // irq vector, irq enable, phys contig
 
   if (nvme_admin_txn(nvme, &cmd, NULL) != ZX_OK) {
     zxlogf(ERROR, "nvme: completion queue creation op failed");
@@ -910,8 +915,8 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   cmd.cmd =
       NVME_CMD_CID(0) | NVME_CMD_PRP | NVME_CMD_NORMAL | NVME_CMD_OPC(NVME_ADMIN_OP_CREATE_IOSQ);
   cmd.dptr.prp[0] = nvme->iob.phys_list[IDX_IO_SQ];
-  cmd.u.raw[0] = ((SQMAX - 1) << 16) | 1;  // queue size, queue id
-  cmd.u.raw[1] = (1 << 16) | 0 | 1;        // cqid, qprio, phys contig
+  cmd.u.raw[0] = ((SQMAX(kPageSize) - 1) << 16) | 1;  // queue size, queue id
+  cmd.u.raw[1] = (1 << 16) | 0 | 1;                   // cqid, qprio, phys contig
 
   if (nvme_admin_txn(nvme, &cmd, NULL) != ZX_OK) {
     zxlogf(ERROR, "nvme: submit queue creation op failed");
