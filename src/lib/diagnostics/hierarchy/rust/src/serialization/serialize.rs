@@ -37,7 +37,17 @@ where
                 Property::String(_, value) => s.serialize_entry(name, &value)?,
                 Property::Int(_, value) => s.serialize_entry(name, &value)?,
                 Property::Uint(_, value) => s.serialize_entry(name, &value)?,
-                Property::Double(_, value) => s.serialize_entry(name, &value)?,
+                Property::Double(_, value) => {
+                    let value =
+                        if value.is_nan() || (value.is_infinite() && value.is_sign_positive()) {
+                            f64::MAX
+                        } else if value.is_infinite() && value.is_sign_negative() {
+                            f64::MIN
+                        } else {
+                            *value
+                        };
+                    s.serialize_entry(name, &value)?;
+                }
                 Property::Bool(_, value) => s.serialize_entry(name, &value)?,
                 Property::Bytes(_, array) => {
                     s.serialize_entry(name, &format!("b64:{}", base64::encode(&array)))?
@@ -109,7 +119,7 @@ impl<'a> Serialize for Bucket<f64> {
         let mut s = serializer.serialize_map(Some(3))?;
         let parts = [("count", self.count), ("floor", self.floor), ("ceiling", self.ceiling)];
         for (entry_key, value) in parts.iter() {
-            if *value == std::f64::MAX || *value == std::f64::INFINITY {
+            if *value == std::f64::MAX || *value == std::f64::INFINITY || *value == std::f64::MAX {
                 s.serialize_entry(entry_key, &std::f64::MAX)?;
             } else if *value == std::f64::MIN || *value == std::f64::NEG_INFINITY {
                 s.serialize_entry(entry_key, &std::f64::MIN)?;
@@ -126,7 +136,10 @@ impl_serialize_for_array_bucket![i64, u64,];
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::ArrayFormat};
+    use {
+        super::*,
+        crate::{hierarchy, ArrayFormat},
+    };
 
     #[test]
     fn serialize_json() {
@@ -135,6 +148,28 @@ mod tests {
         let expected = expected_json();
         let result = serde_json::to_string_pretty(&hierarchy).expect("failed to serialize");
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn serialize_doubles() {
+        let hierarchy = hierarchy! {
+            root: {
+                inf: f64::INFINITY,
+                neg_inf: f64::NEG_INFINITY,
+                nan: f64::NAN,
+            }
+        };
+        let result = serde_json::to_string_pretty(&hierarchy).expect("serialized");
+        assert_eq!(
+            result,
+            r#"{
+  "root": {
+    "inf": 1.7976931348623157e308,
+    "neg_inf": -1.7976931348623157e308,
+    "nan": 1.7976931348623157e308
+  }
+}"#
+        );
     }
 
     fn test_hierarchy() -> DiagnosticsHierarchy {
