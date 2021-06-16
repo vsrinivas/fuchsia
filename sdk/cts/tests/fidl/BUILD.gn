@@ -14,6 +14,9 @@ cts_copy_to_sdk("build") {
 }
 
 sdk_molecule("test_sdks") {
-  deps = [ "fuchsia.element:test_sdks" ]
+  deps = [
+    ":build_sdk",
+    "fuchsia.element:test_sdks",
+  ]
   testonly = true
 }

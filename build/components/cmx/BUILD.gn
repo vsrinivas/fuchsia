@@ -98,6 +98,7 @@ group("cmx_allowlist") {
     "//garnet/lib/rust/sysconfig-client/*",
     "//garnet/lib/rust/webpki-roots-fuchsia/*",
     "//garnet/public/lib/fostr/*",
+    "//prebuilt/cts/*",
     "//sdk/cts/*",
     "//sdk/dart/*",
     "//sdk/lib/*",

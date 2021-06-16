@@ -18,7 +18,11 @@ template("cts_source_library") {
     file_base = invoker.dest
   } else {
     path = get_label_info(":${target_name}", "dir")
-    if (string_replace(path, "//sdk/cts", "") == path) {
+
+    # No need to specify 'dest' if the sources are in //sdk/cts (CTS at TOT)
+    # or a previously released CTS archive (//prebuilt/cts/...)
+    if (string_replace(path, "//sdk/cts", "") == path &&
+        string_replace(path, "//prebuilt/cts", "") == path) {
       assert(defined(invoker.dest),
              "dest must be defined if the source file is not in //sdk/cts")
     }
