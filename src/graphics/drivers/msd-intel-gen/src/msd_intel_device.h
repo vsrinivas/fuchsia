@@ -139,7 +139,7 @@ class MsdIntelDevice : public msd_device_t,
   bool InitContextForRender(MsdIntelContext* context);
 
   void ProcessCompletedCommandBuffers();
-  void HangCheckTimeout();
+  void HangCheckTimeout(uint64_t timeout_ms);
 
   magma::Status ProcessBatch(std::unique_ptr<MappedBatch> batch);
   magma::Status ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);

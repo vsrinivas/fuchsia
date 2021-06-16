@@ -351,7 +351,11 @@ int MsdIntelDevice::DeviceThreadLoop() {
   DLOG("DeviceThreadLoop starting thread 0x%lx", device_thread_id_->id());
 
   while (true) {
+#ifdef HANGCHECK_TIMEOUT_MS
+    constexpr uint32_t kTimeoutMs = HANGCHECK_TIMEOUT_MS;
+#else
     constexpr uint32_t kTimeoutMs = 1000;
+#endif
 
     auto timeout = std::chrono::duration_cast<std::chrono::milliseconds>(
         progress_->GetHangcheckTimeout(kTimeoutMs, std::chrono::steady_clock::now()));
@@ -373,7 +377,7 @@ int MsdIntelDevice::DeviceThreadLoop() {
           bool empty = device_request_list_.empty();
           lock.unlock();
           if (empty) {
-            HangCheckTimeout();
+            HangCheckTimeout(kTimeoutMs);
           }
         }
         break;
@@ -479,28 +483,29 @@ magma::Status MsdIntelDevice::ProcessDumpStatusToLog() {
   return MAGMA_STATUS_OK;
 }
 
-void MsdIntelDevice::HangCheckTimeout() {
+void MsdIntelDevice::HangCheckTimeout(uint64_t timeout_ms) {
   std::vector<std::string> dump;
   DumpToString(dump);
   uint32_t master_interrupt_control = registers::MasterInterruptControl::read(register_io_.get());
   if (master_interrupt_control &
       registers::MasterInterruptControl::kRenderInterruptsPendingBitMask) {
-    MAGMA_LOG(WARNING,
-              "Hang check timeout while pending render interrupt; slow interrupt handler?\n"
-              "last submitted sequence number 0x%x master_interrupt_control 0x%08x "
-              "last_interrupt_callback_timestamp %lu last_interrupt_timestamp %lu",
-              progress_->last_submitted_sequence_number(), master_interrupt_control,
-              last_interrupt_callback_timestamp_.load(), last_interrupt_timestamp_.load());
+    MAGMA_LOG(
+        WARNING,
+        "Hang check timeout (%lu ms) while pending render interrupt; slow interrupt handler?\n"
+        "last submitted sequence number 0x%x master_interrupt_control 0x%08x "
+        "last_interrupt_callback_timestamp %lu last_interrupt_timestamp %lu",
+        timeout_ms, progress_->last_submitted_sequence_number(), master_interrupt_control,
+        last_interrupt_callback_timestamp_.load(), last_interrupt_timestamp_.load());
     for (auto& str : dump) {
       MAGMA_LOG(WARNING, "%s", str.c_str());
     }
     return;
   }
   MAGMA_LOG(WARNING,
-            "Suspected GPU hang:\nlast submitted sequence number "
+            "Suspected GPU hang (%lu ms):\nlast submitted sequence number "
             "0x%x master_interrupt_control 0x%08x last_interrupt_callback_timestamp %lu "
             "last_interrupt_timestamp %lu",
-            progress_->last_submitted_sequence_number(), master_interrupt_control,
+            timeout_ms, progress_->last_submitted_sequence_number(), master_interrupt_control,
             last_interrupt_callback_timestamp_.load(), last_interrupt_timestamp_.load());
   for (auto& str : dump) {
     MAGMA_LOG(WARNING, "%s", str.c_str());

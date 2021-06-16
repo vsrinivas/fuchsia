@@ -4,8 +4,17 @@
 
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
+declare_args() {
+  # Set this to accommodate long running tests
+  hangcheck_timeout_ms = 0
+}
+
 source_set("src") {
   public_configs = [ "$msd_intel_gen_build_root:msd_src_include_config" ]
+
+  if (hangcheck_timeout_ms != 0) {
+    defines = [ "HANGCHECK_TIMEOUT_MS=$hangcheck_timeout_ms" ]
+  }
 
   sources = [
     "address_space.h",
