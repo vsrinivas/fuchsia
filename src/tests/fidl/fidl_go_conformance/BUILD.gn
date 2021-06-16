@@ -48,7 +48,6 @@ go_library("conformance_tests_library") {
 }
 
 go_test("fidl_go_conformance_tests") {
-  test = true
   gopackages = [ "conformance_tests" ]
   deps = [ ":conformance_tests_library" ]
   non_go_deps = [ ":conformance_suite" ]

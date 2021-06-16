@@ -12,6 +12,8 @@ import("//build/rust/rustc_test.gni")
 import("//build/testing/golden_test.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
+import(
+    "//third_party/go/src/syscall/zx/fidl/fidl_test/conformance_test_files.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
 if (is_host) {
@@ -191,6 +193,53 @@ fuchsia_unittest_package("rust_empty_gidl_tests") {
   deps = [ ":rust_empty_gidl_test_bin" ]
 }
 
+go_generated_dir = target_gen_dir
+go_generated_source = "$go_generated_dir/empty_gidl_test.go"
+
+gidl("go_empty_gidl") {
+  type = "conformance"
+  language = "go"
+  inputs = [ "//tools/fidl/gidl/empty.gidl" ]
+  fidl = conformance_suite_fidl_target
+  output = go_generated_source
+}
+
+copy("go_copy_test_utils") {
+  sources = []
+  foreach(filename, go_conformance_test_files) {
+    sources += [ "//third_party/go/src/syscall/zx/fidl/fidl_test/" + filename ]
+  }
+  outputs = [ "${go_generated_dir}/{{source_file_part}}" ]
+}
+
+go_library("go_empty_gidl_tests_library") {
+  testonly = true
+  name = "empty_gidl_tests"
+  source_dir = go_generated_dir
+
+  sources = rebase_path(
+          [ go_generated_source ] + get_target_outputs(":go_copy_test_utils"),
+          go_generated_dir)
+
+  non_go_deps = [
+    ":go_copy_test_utils",
+    ":go_empty_gidl",
+  ]
+
+  deps = [ "${conformance_suite_fidl_target}(${go_toolchain})" ]
+}
+
+go_test("go_empty_gidl_test_bin") {
+  gopackages = [ "empty_gidl_tests" ]
+  deps = [ ":go_empty_gidl_tests_library" ]
+  non_go_deps = [ ":go_empty_gidl" ]
+  use_prebuilt_go = false
+}
+
+fuchsia_unittest_package("go_empty_gidl_tests") {
+  deps = [ ":go_empty_gidl_test_bin" ]
+}
+
 group("tests") {
   testonly = true
 
@@ -199,6 +248,7 @@ group("tests") {
     ":gidl_golden_tests($host_toolchain)",
     ":gidl_mixer_test($host_toolchain)",
     ":gidl_parser_test($host_toolchain)",
+    ":go_empty_gidl_tests",
     ":rust_empty_gidl_tests",
   ]
 }

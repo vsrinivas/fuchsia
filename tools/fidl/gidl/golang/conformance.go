@@ -34,8 +34,12 @@ import (
 // Avoid unused import warnings if certain tests are disabled.
 var _ = math.Float32frombits
 var _ = reflect.Copy
-var _ = zx.HandleInvalid
 var _ = runtime.GOOS
+type _ = testing.T
+type _ = conformance.MyByte
+var _ = zx.HandleInvalid
+type _ = fidl.Context
+
 
 {{ if .EncodeSuccessCases }}
 func TestAllEncodeSuccessCases(t *testing.T) {
