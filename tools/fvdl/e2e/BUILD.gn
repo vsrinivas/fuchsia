@@ -36,16 +36,11 @@ go_library("common_lib") {
 
 group("tests") {
   testonly = true
-
-  # TODO(fxbug.dev/78190): this flaky test is super flaky on coverage.
-  # Please fix the flakiness issue and then remove the condition below.
-  if (!is_coverage) {
-    deps = [
-      ":fvdl_common_test($host_toolchain)",
-      ":fvdl_intree_test($host_toolchain)",
-      ":fvdl_sdk_test($host_toolchain)",
-    ]
-  }
+  deps = [
+    ":fvdl_common_test($host_toolchain)",
+    ":fvdl_intree_test($host_toolchain)",
+    ":fvdl_sdk_test($host_toolchain)",
+  ]
 }
 
 if (is_linux) {

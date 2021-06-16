@@ -5,40 +5,34 @@
 group("tests") {
   testonly = true
 
-  deps = []
+  # WARNING: Only tests that are NOT end to end (E2E) product tests must be
+  # added to this target.
+  #
+  # E2E tests, by contrast, must be added directly to the product they test, so
+  # that they get executed only against their product, and not others.
+  #
+  # Cf. //products/terminal.gni for an example of the screen_is_not_black test.
+  deps = [
+    "diagnostics:tests",
+    "disable_shell:tests",
+    "disable_syscalls:tests",
+    "end_to_end/diagnostics:tests",
 
-  # TODO(fxbug.dev/67539): remove this check when we can better distinguish e2e
-  # tests.
-  if (!is_coverage) {
-    # WARNING: Only tests that are NOT end to end (E2E) product tests must be
-    # added to this target.
-    #
-    # E2E tests, by contrast, must be added directly to the product they test, so
-    # that they get executed only against their product, and not others.
-    #
-    # Cf. //products/terminal.gni for an example of the screen_is_not_black test.
-    deps = [
-      "diagnostics:tests",
-      "disable_shell:tests",
-      "disable_syscalls:tests",
-      "end_to_end/diagnostics:tests",
-
-      # fidlcat is an e2e test for all products.
-      "end_to_end/fidlcat:tests",
-      "end_to_end/harvester:tests",
-      "end_to_end/perf:tests",
-      "end_to_end/snapshot:tests",
-      "end_to_end/time_sync:test",
-      "femu:tests",
-      "intl:tests",
-      "kernel_crashlog:tests",
-      "kernel_lockup_detector:tests",
-      "kernel_panic:tests",
-      "limited_netsvc:tests",
-      "microbenchmarks:tests",
-      "oom:tests",
-      "reboot:tests",
-      "shutdown:tests",
-    ]
-  }
+    # fidlcat is an e2e test for all products.
+    "end_to_end/fidlcat:tests",
+    "end_to_end/harvester:tests",
+    "end_to_end/perf:tests",
+    "end_to_end/snapshot:tests",
+    "end_to_end/time_sync:test",
+    "femu:tests",
+    "intl:tests",
+    "kernel_crashlog:tests",
+    "kernel_lockup_detector:tests",
+    "kernel_panic:tests",
+    "limited_netsvc:tests",
+    "microbenchmarks:tests",
+    "oom:tests",
+    "reboot:tests",
+    "shutdown:tests",
+  ]
 }
