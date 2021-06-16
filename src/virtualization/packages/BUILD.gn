@@ -6,6 +6,7 @@ group("packages") {
   testonly = true
 
   deps = [
+    "biscotti_guest/linux_runner",
     "debian_guest",
     "termina_guest",
     "zircon_guest",
