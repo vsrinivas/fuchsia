@@ -240,8 +240,7 @@ class Device(object):
 
     def dump_log(self, *args):
         """Retrieve a syslog from the device."""
-        cmd = ['log_listener', '--dump_logs', 'yes', '--pretty', 'no'
-              ] + list(args)
+        cmd = ['log_listener', '--dump_logs'] + list(args)
         return self.ssh(cmd).check_output()
 
     def guess_pid(self):

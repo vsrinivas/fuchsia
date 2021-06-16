@@ -459,10 +459,7 @@ class FuzzerTest(TestCaseWithFuzzer):
         self.assertSsh(*run_cmd)
 
         # Check that appropriate logs were fetched
-        log_cmd = [
-            'log_listener', '--dump_logs', 'yes', '--pretty', 'no', '--pid',
-            '123'
-        ]
+        log_cmd = ['log_listener', '--dump_logs', '--pid', '123']
         self.assertSsh(*log_cmd)
 
         # Check that both the libFuzzer and symbolizer outputs were echoed to the

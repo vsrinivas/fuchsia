@@ -144,8 +144,7 @@ func (c *SSHConnector) Command(name string, args ...string) InstanceCmd {
 
 // GetSysLog will fetch the syslog by running a remote command
 func (c *SSHConnector) GetSysLog(pid int) (string, error) {
-	cmd := c.Command("log_listener", "--dump_logs", "yes", "--pretty", "no",
-		"--pid", strconv.Itoa(pid))
+	cmd := c.Command("log_listener", "--dump_logs", "--pid", strconv.Itoa(pid))
 
 	out, err := cmd.Output()
 	if err != nil {

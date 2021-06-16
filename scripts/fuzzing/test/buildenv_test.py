@@ -470,10 +470,7 @@ class BuildEnvTest(TestCaseWithFactory):
             reset=True)
 
         # Capture device dumplog
-        cmd_2 = [
-            'log_listener', '--dump_logs', 'yes', '--pretty', 'no', '--pid',
-            str(fake_pid)
-        ]
+        cmd_2 = ['log_listener', '--dump_logs', '--pid', str(fake_pid)]
         raw_log_dump = [
             'Cupcake ipsum dolor sit amet cake pastry sesame snaps.',
             'Jujubes chocolate cake lemon drops cotton candy lemon drops.',

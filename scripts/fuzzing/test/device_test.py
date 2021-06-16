@@ -189,17 +189,13 @@ class DeviceTest(TestCaseWithFactory):
         self.assertSsh(*cmd)
 
     def test_dump_log(self):
-        cmd = [
-            'log_listener', '--dump_logs', 'yes', '--pretty', 'no', '--some',
-            'other-arg'
-        ]
+        cmd = ['log_listener', '--dump_logs', '--some', 'other-arg']
         self.device.dump_log('--some', 'other-arg')
         self.assertSsh(*cmd)
 
     def test_guess_pid(self):
         cmd = [
-            'log_listener', '--dump_logs', 'yes', '--pretty', 'no', '--only',
-            'reset,Fuzzer,Sanitizer'
+            'log_listener', '--dump_logs', '--only', 'reset,Fuzzer,Sanitizer'
         ]
         self.assertEqual(self.device.guess_pid(), -1)
         self.assertSsh(*cmd)
