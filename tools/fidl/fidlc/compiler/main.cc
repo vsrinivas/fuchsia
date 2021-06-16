@@ -571,7 +571,7 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
                 fidl::conv::ConvertingTreeVisitor(fidl::utils::Syntax::kNew, compiled_libraries[i]);
             visitor.OnFile(ast);
             std::ostringstream o;
-            o << *visitor.converted_output();
+            o << visitor.converted_output();
             auto converted_sf = std::make_unique<fidl::SourceFile>(
                 std::string(source_file->filename()) + ".new", o.str());
             // TODO(azaslavsky): also format and lint the converted file.

@@ -36,7 +36,7 @@ std::string Convert(const std::string& source, const std::vector<std::string>& d
   fidl::conv::ConvertingTreeVisitor visitor =
       fidl::conv::ConvertingTreeVisitor(syntax, flat_lib.library());
   visitor.OnFile(ast);
-  return *visitor.converted_output();
+  return visitor.converted_output();
 }
 
 std::string ToOldSyntax(const std::string& in) {
@@ -3072,6 +3072,58 @@ protocol Foo {
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, DeprecatedSyntaxToken) {
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  std::string old_version = R"FIDL(deprecated_syntax;
+library example;
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
+}
+
+TEST(ConverterTests, DeprecatedSyntaxTokenAfterComment) {
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  std::string old_version = R"FIDL(
+// Foo
+deprecated_syntax;
+library example;
+)FIDL";
+
+  std::string new_version = R"FIDL(
+// Foo
+library example;
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
+}
+
+TEST(ConverterTests, DeprecatedSyntaxTokenWeird) {
+  fidl::ExperimentalFlags flags;
+  flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  std::string old_version = R"FIDL(
+  deprecated_syntax  ;
+library example;
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
 }
 
 }  // namespace

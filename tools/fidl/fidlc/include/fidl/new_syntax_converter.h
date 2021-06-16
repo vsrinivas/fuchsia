@@ -7,6 +7,7 @@
 
 // The ConvertingTreeVisitor takes a raw::File, and translates its textual
 // representation from one syntax to another.
+#include <regex>
 #include <stack>
 
 #include "flat/name.h"
@@ -153,7 +154,15 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
 
   // Used to return a string with the converted output upon converter
   // completion.
-  std::string* converted_output() { return &converted_output_; }
+  std::string converted_output() {
+    if (to_syntax_ == utils::Syntax::kOld) {
+      return converted_output_;
+    }
+
+    static std::regex find_deprecated_syntax("(^|\n)\\s*deprecated_syntax\\s*;\\s*\n");
+    return std::regex_replace(converted_output_, find_deprecated_syntax, "\n",
+                              std::regex_constants::format_first_only);
+  }
 
  private:
   // String built over the course of the visitor's execution containing the

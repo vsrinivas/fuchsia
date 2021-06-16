@@ -188,7 +188,7 @@ class TestLibrary final {
           fidl::conv::ConvertingTreeVisitor(to_syntax, library_.get());
       converter.OnFile(ast);
       auto converted = std::make_unique<fidl::SourceFile>(std::string(source_file->filename()),
-                                                          *converter.converted_output());
+                                                          converter.converted_output());
       converted_files.push_back(std::move(converted));
       // TODO(fxbug.dev/72918): format the file and compare it to expected result
       // (if provided)

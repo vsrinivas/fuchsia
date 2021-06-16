@@ -374,7 +374,7 @@ class LintTest {
           fidl::conv::ConvertingTreeVisitor(fidl::utils::Syntax::kNew, old_syntax_lib.library());
       converter.OnFile(ast);
 
-      auto converted = *converter.converted_output();
+      auto converted = converter.converted_output();
       converted_template_ = TemplateString::Unsubstitute(converted, substitutions_);
     }
     return converted_template_;
