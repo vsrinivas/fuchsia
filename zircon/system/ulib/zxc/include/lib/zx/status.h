@@ -10,12 +10,6 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#if defined(__Fuchsia__)
-#if !defined(_KERNEL)
-#include <zircon/status.h>
-#endif  // !defined(_KERNEL)
-#endif  // defined(__Fuchsia__)
-
 namespace zx {
 
 // Simplified result type for returning either a zx_status_t error or zero/one values. See
@@ -109,10 +103,8 @@ class LIB_FITX_NODISCARD status<T> : public ::fitx::result<zx_status_t, T> {
   }
 
 #if defined(__Fuchsia__)
-#if !defined(_KERNEL)
   // Returns the string representation of the status value.
-  const char* status_string() const { return zx_status_get_string(status_value()); }
-#endif  // !defined(_KERNEL)
+  const char* status_string() const;
 #endif  // defined(__Fuchsia__)
 };
 
@@ -141,10 +133,8 @@ class LIB_FITX_NODISCARD status<> : public ::fitx::result<zx_status_t> {
   }
 
 #if defined(__Fuchsia__)
-#if !defined(_KERNEL)
   // Returns the string representation of the status value.
-  const char* status_string() const { return zx_status_get_string(status_value()); }
-#endif  // !defined(_KERNEL)
+  const char* status_string() const;
 #endif  // defined(__Fuchsia__)
 };
 
@@ -222,6 +212,13 @@ constexpr status<std::remove_reference_t<T>> make_status(zx_status_t status, T&&
   }
   return error_status{status};
 }
+
+#if defined(__Fuchsia__)
+template <typename T>
+const char* status<T>::status_string() const {
+  return make_status(status_value()).status_string();
+}
+#endif  // defined(__Fuchsia__)
 
 }  // namespace zx
 

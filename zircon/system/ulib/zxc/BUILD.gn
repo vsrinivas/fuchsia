@@ -26,7 +26,12 @@ sdk_source_set("zx") {
 }
 
 zx_library("zxc") {
+  host = true
+  kernel = true
+  static = true
+
   sdk = "source"
+  sdk_migrated = true
   sdk_publishable = true
   sdk_name = "zxc-experimental-driver-only"
   sdk_headers = [
@@ -36,15 +41,18 @@ zx_library("zxc") {
     "lib/fitx/result.h",
     "lib/zx/status.h",
   ]
-  sdk_migrated = true
+
   sources = []
+  deps = []
   public_deps = [
     ":fitx",
     ":zx",
   ]
-  host = true
-  kernel = true
-  static = true
+
+  if (is_fuchsia && !is_kernel) {
+    sources += [ "status_string.cc" ]
+    deps += [ "//src/zircon/lib/zircon" ]
+  }
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config/zircon:Wno-conversion" ]

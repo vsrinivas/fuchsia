@@ -6,6 +6,7 @@
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/status.h>
 
 #include <iostream>
 

@@ -5,6 +5,7 @@
 #include "src/lib/storage/vfs/cpp/journal/replay.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <optional>

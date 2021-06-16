@@ -6,6 +6,7 @@
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/zx/status.h>
+#include <zircon/status.h>
 
 #include <iostream>
 
