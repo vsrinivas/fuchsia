@@ -8,5 +8,5 @@ cases are in settings_manager_test.cc. This test covers the code written
 in a11y/a11y_manager/settings.
 To run test:
 ```sh
-fx run-test a11y_tests 
+fx test a11y_tests
 ```

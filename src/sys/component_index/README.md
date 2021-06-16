@@ -28,7 +28,7 @@ Unit tests for `component_index` are available in the `component_index_tests`
 package.
 
 ```
-$ fx run-test component_index_tests
+$ fx test component_index_tests
 ```
 
 ## Source layout

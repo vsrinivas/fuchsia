@@ -21,5 +21,5 @@ GN target and then using the `library_loader` crate in a rust project.
 Unit tests for `library_loader` are available in the `library_loader_tests` package.
 
 ```
-$ fx run-test library_loader_tests
+$ fx test library_loader_tests
 ```

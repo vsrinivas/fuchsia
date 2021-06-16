@@ -175,5 +175,5 @@ will automatically be included as part of `//src/lib:tests`).
 To run the tests:
 
 ```
-$ fx run-test chunked-compression-unittests
+$ fx test chunked-compression-unittests
 ```

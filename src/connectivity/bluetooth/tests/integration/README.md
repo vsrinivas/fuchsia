@@ -39,7 +39,7 @@ In order to run the tests:
 
 Run from your development host via the `fx` tool:
 ```
-  $  fx run-test bluetooth-tests -t bt-integration-tests
+  $  fx test bluetooth-tests -t bt-integration-tests
 ```
 
 Run directly in a shell on the fuchsia target:
@@ -82,7 +82,7 @@ Then run the package server:
 
 Then finally in a third terminal, run the tests:
 ```
-   $ fx run-test bluetooth-tests -t bt-integration-tests
+   $ fx test bluetooth-tests -t bt-integration-tests
 ```
 
 ## Writing Tests

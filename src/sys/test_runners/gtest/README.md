@@ -22,7 +22,7 @@ Examples to demonstrate how to write v2 test
 To run this example:
 
 ```bash
-fx run-test gtest-runner-example-tests
+fx test gtest-runner-example-tests
 ```
 
 ## Concurrency
@@ -51,7 +51,7 @@ Partial Support
 Run:
 
 ```bash
-fx run-test gtest_runner_tests
+fx test gtest_runner_tests
 ```
 
 ## Source layout

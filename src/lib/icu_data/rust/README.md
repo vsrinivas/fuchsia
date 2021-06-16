@@ -46,12 +46,12 @@ example.
 fx set workstation.chromebook-x64 --with=//src/lib/icu_data/rust:tests
 fx build
 fx serve
-fx run-tests src/lib/icu_data/rust:tests
+fx test src/lib/icu_data/rust:tests
 ```
 
 Run tests like so:
 
 ```console
-fx run-test icu_data_rust_tests
+fx test icu_data_rust_tests
 ```
 

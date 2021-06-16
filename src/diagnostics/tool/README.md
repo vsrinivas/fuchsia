@@ -93,5 +93,5 @@ To run unit tests:
 
 ```
 fx set ... --with //src/diagnostics/tool:diag_tool_tests
-fx run-test inspect_validator_tests
+fx test inspect_validator_tests
 ```

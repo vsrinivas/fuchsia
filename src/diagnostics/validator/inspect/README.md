@@ -31,7 +31,7 @@ Also valid: "--output text" or "--output json" (defaults to json).
 To run unit tests:
 ```
 --with //src/diagnostics/validator/inspect:tests
-fx run-test inspect_validator_tests
+fx test inspect_validator_tests
 ```
 ```
 fx build && fx shell run_test_component fuchsia-pkg://fuchsia.com/inspect_validator_tests#meta/validator_bin_test.cmx && echo Success!
@@ -40,7 +40,7 @@ fx build && fx shell run_test_component fuchsia-pkg://fuchsia.com/inspect_valida
 To run an integration test to evaluate the Rust Inspect library:
 ```
 --with //src/diagnostics/validator/inspect/lib/rust:tests
-fx run-test inspect_validator_test_rust
+fx test inspect_validator_test_rust
 ```
 ```
 fx build && fx shell run fuchsia-pkg://fuchsia.com/inspect_validator_test_rust#meta/validator.cmx && echo Success!

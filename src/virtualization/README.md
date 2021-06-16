@@ -119,7 +119,7 @@ hypervisor, and each of the virtio devices. To run the tests:
 
 ```sh
 fx set core.${ARCH} --with-base //src/virtualization
-fx run-test guest_integration_tests
+fx test guest_integration_tests
 ```
 
 # Guest Configuration

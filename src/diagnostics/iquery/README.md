@@ -19,7 +19,7 @@ Documentation on using iquery is available [here][iquery].
 Tests for iquery are available in the `iquery_tests` package:
 
 ```
-$ fx run-test iquery_tests
+$ fx test iquery_tests
 ```
 
 ## Source layout

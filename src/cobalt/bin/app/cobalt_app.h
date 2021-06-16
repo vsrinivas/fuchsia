@@ -37,7 +37,7 @@ namespace cobalt {
 //
 // To test run:
 //    fx set --with-base //bundles:tools,//src/cobalt/bin:cobalt_tests;
-//    fx run-test-component cobalt_testapp_no_network
+//    fx test cobalt_testapp_no_network
 class CobaltApp {
  public:
   // |dispatcher| The async_t to be used for all asynchronous operations.

@@ -47,7 +47,7 @@ template("graphics_compute_vulkan_executable") {
 # Create a host program or Fuchsia test package.
 #
 # This creates a test component that can be invoked with
-#     "fx run-test <name>" (to run on a device), or
+#     "fx test <name>" (to run on a device), or
 #     "fx run-host-tests <name>" (to run on the host).
 #
 # Note that on Fuchsia, this runs the test component in an hermetic process,

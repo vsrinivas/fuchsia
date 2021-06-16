@@ -15,7 +15,7 @@ Include the `tests` target in your `fx set`:
 --with //src/connectivity/bluetooth/tools/bt-bredr-profile:tests
 ```
 
-Then run `fx run-test bt-bredr-profile-tests`.
+Then run `fx test bt-bredr-profile-tests`.
 
 ## Commands
 ### setup-rfcomm

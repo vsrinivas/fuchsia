@@ -22,5 +22,5 @@ then using the `runner` crate in a rust project.
 Unit tests for `runner` are available in the `runner_tests` package.
 
 ```
-$ fx run-test runner_tests
+$ fx test runner_tests
 ```

@@ -22,11 +22,11 @@ the [`fuchsia.sys` FIDL apis](/sdk/fidl/fuchsia.sys).
 Unit tests for appmgr are available in the `appmgr_unittests` package.
 
 ```
-$ fx run-test appmgr_unittests
+$ fx test appmgr_unittests
 ```
 
 Integration tests are available in the following packages, and each can be run
-with `fx run-test`.
+with `fx test`.
 
 - `appmgr_integration_tests`
 - `build_info_tests`

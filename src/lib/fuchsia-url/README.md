@@ -23,5 +23,5 @@ GN target and then using the `fuchsia_url` crate in a rust project.
 Unit tests for `fuchsia-url` are available in the `fuchsia-url-tests` package.
 
 ```
-$ fx run-test fuchsia-url-tests
+$ fx test fuchsia-url-tests
 ```

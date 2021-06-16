@@ -22,7 +22,7 @@ $ fx shell run fuchsia-pkg://fuchsia.com/component_manager#meta/component_manage
 Tests for this project are available in the `tests` folder.
 
 ```
-$ fx run-test test_manager_tests
+$ fx test test_manager_tests
 ```
 
 ## Source layout

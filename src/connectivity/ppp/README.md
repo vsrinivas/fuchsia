@@ -39,9 +39,9 @@ The root `BUILD.gn` defines the main build targets. `:ppp` builds all drivers,
 services, and tools. `:tests` builds all tests.
 
 ## Test
-- `% fx run-test ppp-tests`: Runs Serial PPP tests, and HDLC tests.
-- `% fx run-test ppp-packet-tests`: Runs PPP Packet tests.
-- `% fx run-test ppp-protocol-tests`: Runs PPP Protocol tests.
+- `% fx test ppp-tests`: Runs Serial PPP tests, and HDLC tests.
+- `% fx test ppp-packet-tests`: Runs PPP Packet tests.
+- `% fx test ppp-protocol-tests`: Runs PPP Protocol tests.
 
 ## Example IPv4 Configuration with QEMU and PPPD on Linux
 Host commands begin with `%`. Client commands begin with `$`. QEMU monitor

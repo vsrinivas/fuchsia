@@ -12,7 +12,7 @@ Make sure your `fx set` arguments include `--with //bundles:tests`.
 
 ### Fuchsia
 ```shell
-fx run-test font_info_tests
+fx test font_info_tests
 ```
 
 ## Host

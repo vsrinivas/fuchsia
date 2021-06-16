@@ -42,7 +42,7 @@ set to the expected value.
 To run the unit and integration tests:
 
 ```sh
-(host) $ fx run-test crash-reports-tests
+(host) $ fx test crash-reports-tests
 ```
 
 ### Kernel crash

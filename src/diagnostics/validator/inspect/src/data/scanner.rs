@@ -644,7 +644,7 @@ mod tests {
         dest[offset..offset + source.len()].copy_from_slice(source);
     }
 
-    // Run "fx run-test inspect_validator_tests -- --nocapture" to see all the output
+    // Run "fx test inspect_validator_tests -- --nocapture" to see all the output
     // and verify you're getting appropriate error messages for each tweaked byte.
     // (The alternative is hard-coding expected error strings, which is possible but ugh.)
     fn try_byte(

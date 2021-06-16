@@ -36,7 +36,7 @@ group("compute") {
 #              and test packages that should not or cannot run during
 #              continuous integration.
 #
-# 'fx run-test <name>' or 'fx run-host-tests <name>' can be used to manually
+# 'fx test <name>' or 'fx run-host-tests <name>' can be used to manually
 # launch a test that was defined with graphics_compute_test_package() or
 # graphics_compute_unittests_package().
 #

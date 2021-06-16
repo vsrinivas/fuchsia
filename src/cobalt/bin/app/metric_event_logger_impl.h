@@ -15,7 +15,7 @@ namespace cobalt {
 //
 // To test run:
 //    fx set --with-base //bundles:tools,//src/cobalt/bin:cobalt_tests;
-//    fx run-test-component cobalt_testapp_no_network
+//    fx test cobalt_testapp_no_network
 class MetricEventLoggerImpl : public fuchsia::metrics::MetricEventLogger {
  public:
   MetricEventLoggerImpl(std::unique_ptr<logger::LoggerInterface> logger);
@@ -39,9 +39,9 @@ class MetricEventLoggerImpl : public fuchsia::metrics::MetricEventLogger {
       std::vector<fuchsia::metrics::MetricEvent> events,
       fuchsia::metrics::MetricEventLogger::LogMetricEventsCallback callback) override;
 
-  void LogCustomEvent(uint32_t metric_id,
-                      std::vector<fuchsia::metrics::CustomEventValue> event_values,
-                      fuchsia::metrics::MetricEventLogger::LogCustomEventCallback callback) override;
+  void LogCustomEvent(
+      uint32_t metric_id, std::vector<fuchsia::metrics::CustomEventValue> event_values,
+      fuchsia::metrics::MetricEventLogger::LogCustomEventCallback callback) override;
 
  private:
   fuchsia::metrics::Status LogMetricEvent(fuchsia::metrics::MetricEvent event);

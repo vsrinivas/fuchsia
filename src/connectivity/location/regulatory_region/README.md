@@ -20,8 +20,8 @@ The Regulatory Region Service provides the following protocols:
 
 ## Testing
 
-* Unit tests can be run with `fx run-test regulatory_region_tests`.
-* Integration tests can be run with `fx run-test regulatory_region_integration_test`.
+* Unit tests can be run with `fx test regulatory_region_tests`.
+* Integration tests can be run with `fx test regulatory_region_integration_test`.
 
 ## Source layout
 

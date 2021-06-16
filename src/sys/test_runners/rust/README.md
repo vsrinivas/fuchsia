@@ -20,7 +20,7 @@ Examples to demonstrate how to write v2 test:
 To run this example:
 
 ```bash
-fx run-test rust-test-runner-example
+fx test rust-test-runner-example
 ```
 
 ## Concurrency
@@ -41,9 +41,9 @@ No known current limitations.
 Run:
 
 ```bash
-fx run-test rust-test-runner-unit-test
+fx test rust-test-runner-unit-test
 
-fx run-test rust-runner-integration-test
+fx test rust-runner-integration-test
 ```
 
 ## Source layout

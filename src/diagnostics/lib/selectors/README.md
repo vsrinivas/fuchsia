@@ -21,7 +21,7 @@ Unit tests for `selectors` are available in the
 `selectors` package:
 
 ```
-$ fx run-test selectors_tests
+$ fx test selectors_tests
 ```
 
 You'll need to include `//src/diagnostics/lib/selectors:tests` in your

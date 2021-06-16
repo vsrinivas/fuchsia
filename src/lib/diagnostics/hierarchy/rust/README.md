@@ -21,7 +21,7 @@ Unit tests for `diagnostics_hierarchy` are available in the
 `diagnostics_hierarchy_tests` package:
 
 ```
-$ fx run-test diagnostics_hierarchy_tests
+$ fx test diagnostics_hierarchy_tests
 ```
 
 You'll need to include `//src/lib/diagnostics/hierarchy/rust:tests` in your

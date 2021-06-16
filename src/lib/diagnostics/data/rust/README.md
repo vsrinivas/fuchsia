@@ -18,7 +18,7 @@ in a rust project.
 Unit tests for `diagnostics-data` are available in the `diagnostics-data-tests` package:
 
 ```
-$ fx run-test diagnostics-data-tests
+$ fx test diagnostics-data-tests
 ```
 
 You'll need to include `//src/lib/diagnostics/data:tests` in your

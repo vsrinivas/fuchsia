@@ -37,4 +37,4 @@ The test ensures this by running four separate components.
 
 ## Running the test
 
-`fx run-test fuchsia_component_test_outer`
+`fx test fuchsia_component_test_outer`

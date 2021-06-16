@@ -21,5 +21,5 @@ GN target and then using the `by_addr` crate in a rust project.
 Unit tests for `by_addr` are available in the `by_addr_tests` package.
 
 ```
-$ fx run-test by_addr_tests
+$ fx test by_addr_tests
 ```

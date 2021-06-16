@@ -24,7 +24,7 @@ unit tests for `inspect_fetcher` are available in the
 `inspect_fetcher` package:
 
 ```
-$ fx run-test inspect_fetcher_tests
+$ fx test inspect_fetcher_tests
 ```
 
 You'll need to include `//src/diagnostics/lib/inspect-fetcher:tests` in your

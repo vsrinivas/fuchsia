@@ -317,7 +317,7 @@ if (target_cpu == "arm64") {
       deps = [ ":test_amlogic_codec_factory" ]
       test_specs = {
         environments = [
-          # Manual only test; uncomment out to use `fx run-test`
+          # Manual only test; uncomment out to use `fx test`
           #astro_env
         ]
       }

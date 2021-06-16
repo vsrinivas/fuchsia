@@ -21,7 +21,7 @@ Unit tests for `fuchsia_inspect` are available in the
 `fuchsia_inspect_tests` package:
 
 ```
-$ fx run-test fuchsia_inspect_tests
+$ fx test fuchsia_inspect_tests
 ```
 
 You'll need to include `//src/lib/diagnostics/inspect/rust:tests` in your

@@ -22,7 +22,7 @@ unit tests for `inspect_fidl_load` are available in the
 `inspect_fidl_load` package:
 
 ```
-$ fx run-test inspect_fidl_load_tests
+$ fx test inspect_fidl_load_tests
 ```
 
 You'll need to include `//src/diagnostics/lib/inspect-fidl-load:tests` in your

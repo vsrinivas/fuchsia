@@ -20,7 +20,7 @@ in `build_rules.gni` to see how to use them. In a nutshell:
  Supports `needs_vulkan = true` to add Vulkan dependencies automatically.
 
  These are always run during continuous integration!
- Use '`fx run-test <name>`' or '`fx run-host-tests <name>`' to run them.
+ Use '`fx test <name>`' or '`fx run-host-tests <name>`' to run them.
 
  IMPORTANT: Vulkan-based host test packages will currently fail on
  CI bots, because these do not provide a valid Vulkan loader + ICD, so

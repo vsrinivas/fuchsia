@@ -29,7 +29,7 @@ See [passsing-arguments](passing-arguments) to learn more.
 Run:
 
 ```bash
-fx run-test elf_runner_tests
+fx test elf_runner_tests
 ```
 
 ## Source layout

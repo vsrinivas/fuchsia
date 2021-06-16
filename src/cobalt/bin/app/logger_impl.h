@@ -16,7 +16,7 @@ namespace cobalt {
 //
 // To test run:
 //    fx set --with-base //bundles:tools,//src/cobalt/bin:cobalt_tests;
-//    fx run-test-component cobalt_testapp_no_network
+//    fx test cobalt_testapp_no_network
 class LoggerImpl : public fuchsia::cobalt::Logger, public fuchsia::cobalt::LoggerSimple {
  public:
   LoggerImpl(std::unique_ptr<logger::LoggerInterface> logger, TimerManager* timer_manager);

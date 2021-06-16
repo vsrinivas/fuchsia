@@ -91,7 +91,7 @@ graphics_compute_gtest_main_target = "//src/lib/fxl/test:gtest_main"
 #    Fuchsia process to run the test program inside, decoupled from the
 #    caller.
 #
-#    Incidentally, this is what "fx run-test <component>" does too, after
+#    Incidentally, this is what "fx test <component>" does too, after
 #    eventually rebuilding the package then updating it on the target device.
 #
 #  - By default, said hermetic process environment is very limited, but the
@@ -139,7 +139,7 @@ graphics_compute_gtest_main_target = "//src/lib/fxl/test:gtest_main"
 #
 #    test_package (optional)
 #      [boolean] Set to true to turn this into a test package that can
-#      run with 'fx run-test' or 'fx shell runtests'. Will force |testonly|
+#      run with 'fx test' or 'fx shell runtests'. Will force |testonly|
 #      to be true.
 #
 #    test_environments (optional)

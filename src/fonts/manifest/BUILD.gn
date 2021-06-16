@@ -57,7 +57,7 @@ fuchsia_test_package("manifest_tests") {
 # The host target is called `manifest_test`, but the binary's name is `manifest_lib_test`.
 #
 # fx run-host-tests manifest_lib_test # Host
-# fx run-test manifest_tests          # Fuchsia
+# fx test manifest_tests          # Fuchsia
 group("tests") {
   testonly = true
   public_deps = [

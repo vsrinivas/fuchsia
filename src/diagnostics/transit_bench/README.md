@@ -23,7 +23,7 @@ fx gen-cargo //src/diagnostics/transit_bench:bin
 
 ### Running benchmarks
 
-`fx run-test transit_bench`
+`fx test transit_bench`
 
 ### Viewing logs without spam
 
