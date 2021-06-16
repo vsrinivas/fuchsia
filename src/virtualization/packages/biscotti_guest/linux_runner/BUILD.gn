@@ -35,6 +35,16 @@ declare_args() {
 
   # Point this to the location of external files to be included as extras
   linux_runner_user_extras = []
+
+  # Point this to the location of a prebuilt stateful image
+  linux_runner_stateful_image_path = ""
+}
+
+if (linux_runner_stateful_image_path != "") {
+  resource("stateful_img") {
+    sources = [ linux_runner_stateful_image_path ]
+    outputs = [ "data/stateful.img" ]
+  }
 }
 
 config("linux_runner_net_config") {
@@ -81,8 +91,13 @@ source_set("lib") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+  defines = []
   if (linux_runner_volatile_block) {
-    defines = [ "USE_VOLATILE_BLOCK" ]
+    defines += [ "USE_VOLATILE_BLOCK" ]
+  }
+  if (linux_runner_stateful_image_path != "") {
+    public_deps += [ ":stateful_img" ]
+    defines += [ "USE_PREBUILT_STATEFUL_IMAGE" ]
   }
 }
 

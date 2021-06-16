@@ -39,13 +39,21 @@ static constexpr const char* kContainerImageServer =
 static constexpr const char* kDefaultContainerUser = "machina";
 static constexpr const char* kLinuxUriScheme = "linux://";
 
+#ifdef USE_PREBUILT_STATEFUL_IMAGE
+static constexpr const char* kStatefulImagePath = "/pkg/data/stateful.img";
+#else
 // Minfs max file size is currently just under 4GB.
 static constexpr const char* kStatefulImagePath = "/data/stateful.img";
+#endif
 static constexpr const char* kExtrasImagePath = "/pkg/data/extras.img";
 
 static fidl::InterfaceHandle<fuchsia::io::File> GetOrCreateStatefulPartition(size_t image_size) {
   TRACE_DURATION("linux_runner", "GetOrCreateStatefulPartition");
+#ifdef USE_PREBUILT_STATEFUL_IMAGE
+  int fd = open(kStatefulImagePath, O_RDONLY);
+#else
   int fd = open(kStatefulImagePath, O_RDWR);
+#endif
   if (fd < 0 && errno == ENOENT) {
     fd = open(kStatefulImagePath, O_RDWR | O_CREAT);
     if (fd < 0) {
@@ -91,7 +99,7 @@ static std::vector<fuchsia::virtualization::BlockSpec> GetBlockDevices(size_t st
   auto file_handle = GetOrCreateStatefulPartition(stateful_image_size);
   FX_CHECK(file_handle) << "Failed to open stateful file";
   std::vector<fuchsia::virtualization::BlockSpec> devices;
-#ifdef USE_VOLATILE_BLOCK
+#if defined(USE_VOLATILE_BLOCK) || defined(USE_PREBUILT_STATEFUL_IMAGE)
   auto stateful_block_mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE;
 #else
   auto stateful_block_mode = fuchsia::virtualization::BlockMode::READ_WRITE;
