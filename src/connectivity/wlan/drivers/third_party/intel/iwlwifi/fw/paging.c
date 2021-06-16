@@ -33,13 +33,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <lib/ddk/io-buffer.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/runtime.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 
 void iwl_free_fw_paging(struct iwl_fw_runtime* fwrt) {
   int i;
@@ -47,7 +47,10 @@ void iwl_free_fw_paging(struct iwl_fw_runtime* fwrt) {
   for (i = 0; i < NUM_OF_FW_PAGING_BLOCKS; i++) {
     struct iwl_fw_paging* paging = &fwrt->fw_paging_db[i];
 
-    io_buffer_release(&paging->io_buf);
+    if (paging->io_buf != NULL) {
+      iwl_iobuf_release(paging->io_buf);
+      paging->io_buf = NULL;
+    }
   }
 }
 
@@ -56,7 +59,7 @@ static zx_status_t iwl_alloc_fw_paging_mem(struct iwl_fw_runtime* fwrt,
   size_t size = 0;
   zx_status_t ret;
 
-  if (io_buffer_is_valid(&fwrt->fw_paging_db[0].io_buf)) {
+  if (fwrt->fw_paging_db[0].io_buf) {
     return ZX_OK;
   }
 
@@ -76,13 +79,12 @@ static zx_status_t iwl_alloc_fw_paging_mem(struct iwl_fw_runtime* fwrt,
   /*
    * Allocate CSS and paging blocks in dram.
    */
-  for (int blk_idx = 0; blk_idx < fwrt->num_of_paging_blk + 1; blk_idx++) {
+  for (size_t blk_idx = 0; blk_idx < fwrt->num_of_paging_blk + 1; blk_idx++) {
     /* For CSS allocate 4KB, for others PAGING_BLOCK_SIZE (32K) */
     size = blk_idx ? PAGING_BLOCK_SIZE : FW_PAGING_SIZE;
 
-    zx_handle_t bti = iwl_trans_get_bti(fwrt->trans);
-    ret = io_buffer_init(&fwrt->fw_paging_db[blk_idx].io_buf, bti, size,
-                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    ret =
+        iwl_iobuf_allocate_contiguous(fwrt->trans->dev, size, &fwrt->fw_paging_db[blk_idx].io_buf);
     if (ret != ZX_OK) {
       IWL_ERR(fwrt, "Cannot initialize the IO buffer of firmware page: %s\n",
               zx_status_get_string(ret));
@@ -98,7 +100,8 @@ static zx_status_t iwl_alloc_fw_paging_mem(struct iwl_fw_runtime* fwrt,
 // fwrt->fw_paging_db[].io_buf).
 //
 static zx_status_t iwl_fill_paging_mem(struct iwl_fw_runtime* fwrt, const struct fw_img* image) {
-  int sec_idx, idx;
+  size_t idx;
+  int sec_idx;
   zx_status_t ret;
 
   /*
@@ -131,8 +134,8 @@ static zx_status_t iwl_fill_paging_mem(struct iwl_fw_runtime* fwrt, const struct
   /* copy the CSS block to the dram */
   IWL_DEBUG_FW(fwrt, "Paging: load paging CSS to FW, sec = %d\n", sec_idx);
 
-  io_buffer_t* io_buf = &fwrt->fw_paging_db[0].io_buf;
-  size_t size = io_buffer_size(io_buf, 0);
+  struct iwl_iobuf* io_buf = fwrt->fw_paging_db[0].io_buf;
+  size_t size = iwl_iobuf_size(io_buf);
   if (image->sec[sec_idx].len > size) {
     IWL_ERR(fwrt, "CSS block is larger than paging size: %d > %zu\n", image->sec[sec_idx].len,
             size);
@@ -140,8 +143,8 @@ static zx_status_t iwl_fill_paging_mem(struct iwl_fw_runtime* fwrt, const struct
     goto err;
   }
 
-  memcpy(io_buffer_virt(io_buf), image->sec[sec_idx].data, image->sec[sec_idx].len);
-  ret = io_buffer_cache_flush(io_buf, 0, size);
+  memcpy(iwl_iobuf_virtual(io_buf), image->sec[sec_idx].data, image->sec[sec_idx].len);
+  ret = iwl_iobuf_cache_flush(io_buf, 0, size);
   if (ret != ZX_OK) {
     IWL_ERR(fwrt, "Cannot flush the cache of firmware page 0: %s\n", zx_status_get_string(ret));
     return ret;
@@ -159,9 +162,9 @@ static zx_status_t iwl_fill_paging_mem(struct iwl_fw_runtime* fwrt, const struct
   uint32_t offset = 0;  // offset in source: image->sec[sec_idx].data
   for (idx = 1; idx < fwrt->num_of_paging_blk + 1; idx++) {
     struct iwl_fw_paging* block = &fwrt->fw_paging_db[idx];
-    io_buffer_t* io_buf = &block->io_buf;
-    int remaining = image->sec[sec_idx].len - offset;
-    int len = io_buffer_size(io_buf, 0);
+    struct iwl_iobuf* io_buf = block->io_buf;
+    size_t remaining = image->sec[sec_idx].len - offset;
+    size_t len = iwl_iobuf_size(io_buf);
 
     /*
      * For the last block, we copy all that is remaining,
@@ -170,25 +173,25 @@ static zx_status_t iwl_fill_paging_mem(struct iwl_fw_runtime* fwrt, const struct
     if (idx == fwrt->num_of_paging_blk) {
       len = remaining;
       if (remaining != fwrt->num_of_pages_in_last_blk * FW_PAGING_SIZE) {
-        IWL_ERR(fwrt, "Paging: last block contains more data than expected %d\n", remaining);
+        IWL_ERR(fwrt, "Paging: last block contains more data than expected %zu\n", remaining);
         ret = ZX_ERR_INVALID_ARGS;
         goto err;
       }
     } else if (len > remaining) {
-      IWL_ERR(fwrt, "Paging: not enough data in other in block %d (%d)\n", idx, remaining);
+      IWL_ERR(fwrt, "Paging: not enough data in other in block %zu (%zu)\n", idx, remaining);
       ret = ZX_ERR_INVALID_ARGS;
       goto err;
     }
 
-    memcpy(io_buffer_virt(io_buf), image->sec[sec_idx].data + offset, len);
-    ret = io_buffer_cache_flush(io_buf, 0, len);
+    memcpy(iwl_iobuf_virtual(io_buf), image->sec[sec_idx].data + offset, len);
+    ret = iwl_iobuf_cache_flush(io_buf, 0, len);
     if (ret != ZX_OK) {
-      IWL_ERR(fwrt, "Cannot flush the cache of firmware page %d: %s\n", idx,
+      IWL_ERR(fwrt, "Cannot flush the cache of firmware page %zu: %s\n", idx,
               zx_status_get_string(ret));
       return ret;
     }
 
-    IWL_DEBUG_FW(fwrt, "Paging: copied %d paging bytes to block %d\n", len, idx);
+    IWL_DEBUG_FW(fwrt, "Paging: copied %zu paging bytes to block %zu\n", len, idx);
 
     offset += len;
   }
@@ -233,7 +236,7 @@ static zx_status_t iwl_send_paging_cmd(struct iwl_fw_runtime* fwrt, const struct
 
   /* loop for for all paging blocks + CSS block */
   for (blk_idx = 0; blk_idx < fwrt->num_of_paging_blk + 1; blk_idx++) {
-    dma_addr_t addr = io_buffer_phys(&fwrt->fw_paging_db[blk_idx].io_buf);
+    dma_addr_t addr = iwl_iobuf_physical(fwrt->fw_paging_db[blk_idx].io_buf);
     __le32 phy_addr;
 
     addr = addr >> PAGE_2_EXP_SIZE;

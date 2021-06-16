@@ -16,7 +16,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/ddk/io-buffer.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-function/mock-function.h>
@@ -39,6 +38,7 @@ extern "C" {
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/pcie_device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ddk-tester-pci.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
 
@@ -75,15 +75,14 @@ static void FakeEchoWrite32(struct iwl_trans* trans, uint32_t ofs, uint32_t val)
     return;
   }
 
-  io_buffer_t io_buf;
-  zx::bti fake_bti;
-  fake_bti_create(fake_bti.reset_and_get_address());
-  io_buffer_init(&io_buf, fake_bti.get(), 128, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  struct iwl_iobuf* io_buf = nullptr;
+  ASSERT_OK(iwl_iobuf_allocate_contiguous(trans->dev, 128, &io_buf));
   struct iwl_rx_cmd_buffer rxcb = {
-      ._io_buf = io_buf,
+      ._iobuf = io_buf,
       ._offset = 0,
   };
-  struct iwl_rx_packet* resp_pkt = reinterpret_cast<struct iwl_rx_packet*>(io_buffer_virt(&io_buf));
+  struct iwl_rx_packet* resp_pkt =
+      reinterpret_cast<struct iwl_rx_packet*>(iwl_iobuf_virtual(io_buf));
   resp_pkt->len_n_flags = cpu_to_le32(0);
   resp_pkt->hdr.cmd = ECHO_CMD;
   resp_pkt->hdr.group_id = 0;
@@ -111,7 +110,8 @@ static void FakeEchoWrite32(struct iwl_trans* trans, uint32_t ofs, uint32_t val)
   mtx_lock(&txq->lock);
   mtx_lock(&trans_pcie->reg_lock);
 
-  io_buffer_release(&io_buf);
+  iwl_iobuf_release(io_buf);
+  io_buf = nullptr;
 }
 #pragma GCC diagnostic pop
 
@@ -120,7 +120,8 @@ class PcieTest : public zxtest::Test {
   PcieTest() {
     loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_OK(loop_->StartThread("iwlwifi-pcie-test-worker", nullptr));
-    device_.task_dispatcher = loop_->dispatcher();
+    pci_dev_.dev.task_dispatcher = loop_->dispatcher();
+    fake_bti_create(&pci_dev_.dev.bti);
 
     trans_ops_.write8 = write8_wrapper;
     trans_ops_.write32 = write32_wrapper;
@@ -135,13 +136,14 @@ class PcieTest : public zxtest::Test {
     trans_ops_.unref = unref_wrapper;
 
     cfg_.base_params = &base_params_;
-    trans_ = iwl_trans_alloc(sizeof(struct iwl_trans_pcie_wrapper), &device_, &cfg_, &trans_ops_);
+    trans_ =
+        iwl_trans_alloc(sizeof(struct iwl_trans_pcie_wrapper), &pci_dev_.dev, &cfg_, &trans_ops_);
     ASSERT_NE(trans_, nullptr);
     trans_->dispatcher = loop_->dispatcher();
     auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans_));
     wrapper->test = this;
     trans_pcie_ = &wrapper->trans_pcie;
-    fake_bti_create(&trans_pcie_->bti);
+    trans_pcie_->pci_dev = &pci_dev_;
 
     // Setup the op_mode and its ops. Note that we re-define the 'op_mode_specific' filed to pass
     // the test object reference into the mock function.
@@ -154,8 +156,8 @@ class PcieTest : public zxtest::Test {
   }
 
   ~PcieTest() override {
-    zx_handle_close(trans_pcie_->bti);
     iwl_trans_free(trans_);
+    zx_handle_close(pci_dev_.dev.bti);
   }
 
   mock_function::MockFunction<void, uint32_t, uint8_t> mock_write8_;
@@ -294,10 +296,10 @@ class PcieTest : public zxtest::Test {
     struct iwl_rxq* rxq = &trans_pcie_->rxq[0];  // the command queue
     for (uint32_t i = from; i <= to; ++i) {
       struct iwl_rx_mem_buffer* rxb = rxq->queue[i];
-      for (size_t offset = 0; offset < io_buffer_size(&rxb->io_buf, 0);
+      for (size_t offset = 0; offset < iwl_iobuf_size(rxb->io_buf);
            offset += ZX_ALIGN(1, FH_RSCSR_FRAME_ALIGN)) {  // move to next packet
         struct iwl_rx_cmd_buffer rxcb = {
-            ._io_buf = rxb->io_buf,
+            ._iobuf = rxb->io_buf,
             ._offset = static_cast<int>(offset),
         };
         struct iwl_rx_packet* pkt = (struct iwl_rx_packet*)rxb_addr(&rxcb);
@@ -308,7 +310,7 @@ class PcieTest : public zxtest::Test {
 
  protected:
   std::unique_ptr<::async::Loop> loop_;
-  struct device device_ = {};
+  struct iwl_pci_dev pci_dev_ = {};
   struct iwl_trans* trans_ = {};
   struct iwl_trans_pcie* trans_pcie_ = {};
   struct iwl_base_params base_params_ = {};
@@ -356,12 +358,12 @@ TEST_F(PcieTest, RxInit) {
   EXPECT_EQ(trans_pcie_->rxq->write_actual, 0);
   EXPECT_EQ(trans_pcie_->rxq->queue_size, RX_QUEUE_SIZE);
   EXPECT_GE(list_length(&trans_pcie_->rxq->rx_free), RX_QUEUE_SIZE);
-  EXPECT_TRUE(io_buffer_is_valid(&trans_pcie_->rxq->rb_status));
+  EXPECT_NOT_NULL(trans_pcie_->rxq->rb_status);
 
   struct iwl_rx_mem_buffer* rxb;
   list_for_every_entry (&trans_pcie_->rxq->rx_free, rxb, struct iwl_rx_mem_buffer, list) {
-    EXPECT_TRUE(io_buffer_is_valid(&rxb->io_buf));
-    EXPECT_EQ(io_buffer_size(&rxb->io_buf, 0), 2 * 1024);
+    EXPECT_NOT_NULL(rxb->io_buf);
+    EXPECT_EQ(iwl_iobuf_size(rxb->io_buf), 2 * 1024);
   }
 
   iwl_pcie_rx_free(trans_);
@@ -371,12 +373,12 @@ TEST_F(PcieTest, IctTable) {
   ASSERT_OK(iwl_pcie_alloc_ict(trans_));
 
   // Check the initial state.
-  ASSERT_TRUE(io_buffer_is_valid(&trans_pcie_->ict_tbl));
+  ASSERT_NOT_NULL(trans_pcie_->ict_tbl);
   EXPECT_EQ(iwl_pcie_int_cause_ict(trans_), 0);
   EXPECT_EQ(trans_pcie_->ict_index, 0);
 
   // Reads an interrupt from the table.
-  uint32_t* ict_table = static_cast<uint32_t*>(io_buffer_virt(&trans_pcie_->ict_tbl));
+  uint32_t* ict_table = static_cast<uint32_t*>(iwl_iobuf_virtual(trans_pcie_->ict_tbl));
   trans_pcie_->ict_index = 0;
   ict_table[0] = 0x1234;
   ict_table[1] = 0;
@@ -393,7 +395,7 @@ TEST_F(PcieTest, IctTable) {
   EXPECT_EQ(trans_pcie_->ict_index, 4);
 
   // This should match ICT_COUNT defined in pcie/rx.c.
-  size_t ict_count = io_buffer_size(&trans_pcie_->ict_tbl, 0) / sizeof(uint32_t);
+  size_t ict_count = iwl_iobuf_size(trans_pcie_->ict_tbl) / sizeof(uint32_t);
 
   // Guarantee that we have enough room in the table for the tests.
   ASSERT_GT(ict_count, 42);
@@ -437,8 +439,8 @@ TEST_F(PcieTest, RxInterrupts) {
   trans_pcie_->tfd_size = sizeof(struct iwl_tfh_tfd);
   ASSERT_OK(iwl_pcie_tx_init(trans_));
 
-  ASSERT_TRUE(io_buffer_is_valid(&trans_pcie_->ict_tbl));
-  uint32_t* ict_table = static_cast<uint32_t*>(io_buffer_virt(&trans_pcie_->ict_tbl));
+  ASSERT_NOT_NULL(trans_pcie_->ict_tbl);
+  uint32_t* ict_table = static_cast<uint32_t*>(iwl_iobuf_virtual(trans_pcie_->ict_tbl));
 
   // Spurious interrupt.
   trans_pcie_->ict_index = 0;
@@ -453,7 +455,7 @@ TEST_F(PcieTest, RxInterrupts) {
   // This struct is controlled by the device, closed_rb_num is the read index for the shared ring
   // buffer. For the tests we manually increment the index to push forward the index.
   struct iwl_rb_status* rb_status =
-      static_cast<struct iwl_rb_status*>(io_buffer_virt(&trans_pcie_->rxq->rb_status));
+      static_cast<struct iwl_rb_status*>(iwl_iobuf_virtual(trans_pcie_->rxq->rb_status));
 
   // Process 128 buffers. The driver should process each buffer and indicate this to the hardware by
   // setting the write index (rxq->write_actual).
@@ -477,6 +479,7 @@ TEST_F(PcieTest, RxInterrupts) {
 
   iwl_pcie_rx_free(trans_);
   iwl_pcie_tx_free(trans_);
+  iwl_pcie_free_ict(trans_);
 }
 
 class TxTest : public PcieTest {
@@ -575,7 +578,7 @@ TEST_F(TxTest, AsyncHostCommandOneFragment) {
   ASSERT_OK(iwl_trans_pcie_send_hcmd(trans_, &hcmd));
 
   struct iwl_device_cmd* out_cmd =
-      static_cast<iwl_device_cmd*>(io_buffer_virt(&txq->entries[cmd_idx].cmd));
+      static_cast<iwl_device_cmd*>(iwl_iobuf_virtual(txq->entries[cmd_idx].cmd));
   EXPECT_BYTES_EQ(out_cmd->payload, fragment, sizeof(fragment));
 }
 
@@ -598,7 +601,7 @@ TEST_F(TxTest, AsyncHostCommandTwoFragments) {
   ASSERT_OK(iwl_trans_pcie_send_hcmd(trans_, &hcmd));
 
   struct iwl_device_cmd* out_cmd =
-      static_cast<iwl_device_cmd*>(io_buffer_virt(&txq->entries[cmd_idx].cmd));
+      static_cast<iwl_device_cmd*>(iwl_iobuf_virtual(txq->entries[cmd_idx].cmd));
   EXPECT_BYTES_EQ(out_cmd->payload, fragment1, sizeof(fragment1));
   EXPECT_BYTES_EQ(out_cmd->payload + sizeof(fragment1), fragment2, sizeof(fragment2));
 }
@@ -657,11 +660,11 @@ TEST_F(TxTest, SyncTwoFragmentsWithOneDup) {
   ASSERT_OK(iwl_trans_pcie_send_hcmd(trans_, &hcmd));
 
   struct iwl_device_cmd* out_cmd =
-      static_cast<iwl_device_cmd*>(io_buffer_virt(&txq->entries[cmd_idx].cmd));
+      static_cast<iwl_device_cmd*>(iwl_iobuf_virtual(txq->entries[cmd_idx].cmd));
   EXPECT_BYTES_EQ(out_cmd->payload, fragment0, sizeof(fragment0));
   EXPECT_BYTES_EQ(out_cmd->payload + sizeof(fragment0), fragment1, sizeof(fragment1));
-  ASSERT_TRUE(io_buffer_is_valid(&txq->entries[cmd_idx].dup_io_buf));
-  uint8_t* dup_buf = static_cast<uint8_t*>(io_buffer_virt(&txq->entries[cmd_idx].dup_io_buf));
+  ASSERT_NOT_NULL(txq->entries[cmd_idx].dup_io_buf);
+  uint8_t* dup_buf = static_cast<uint8_t*>(iwl_iobuf_virtual(txq->entries[cmd_idx].dup_io_buf));
   EXPECT_BYTES_EQ(dup_buf, fragment1, sizeof(fragment1));
 }
 
@@ -708,11 +711,11 @@ TEST_F(TxTest, SyncTwoFragmentsWithOneNocopy) {
   ASSERT_OK(iwl_trans_pcie_send_hcmd(trans_, &hcmd));
 
   struct iwl_device_cmd* out_cmd =
-      static_cast<iwl_device_cmd*>(io_buffer_virt(&txq->entries[cmd_idx].cmd));
+      static_cast<iwl_device_cmd*>(iwl_iobuf_virtual(txq->entries[cmd_idx].cmd));
   EXPECT_BYTES_EQ(out_cmd->payload, fragment0, sizeof(fragment0));
   EXPECT_BYTES_EQ(out_cmd->payload + sizeof(fragment0), fragment1, sizeof(fragment1));
-  ASSERT_TRUE(io_buffer_is_valid(&txq->entries[cmd_idx].dup_io_buf));
-  uint8_t* dup_buf = static_cast<uint8_t*>(io_buffer_virt(&txq->entries[cmd_idx].dup_io_buf));
+  ASSERT_NOT_NULL(txq->entries[cmd_idx].dup_io_buf);
+  uint8_t* dup_buf = static_cast<uint8_t*>(iwl_iobuf_virtual(txq->entries[cmd_idx].dup_io_buf));
   EXPECT_BYTES_EQ(dup_buf, fragment1, sizeof(fragment1));
 }
 
@@ -960,16 +963,9 @@ TEST_F(TxTest, TxNormal) {
   ASSERT_EQ(1, txq_->write_ptr);
   ASSERT_EQ(TFD_QUEUE_SIZE_MAX - 1 - /* this packet */ 1, iwl_queue_space(trans_, txq_));
   ref_.VerifyAndClear();
-}
 
-TEST_F(TxTest, TxNormalThenReclaim) {
-  SetupTxQueue();
-  SetupTxPacket();
-
-  ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, wlan_pkt_->pkt(), &dev_cmd_, txq_id_));
-
-  unref_.ExpectCall();
   // reclaim a packet and see the writer pointer advanced.
+  unref_.ExpectCall();
   iwl_trans_pcie_reclaim(trans_, txq_id_, /*ssn*/ 1);
   ASSERT_EQ(1, txq_->write_ptr);
   unref_.VerifyAndClear();
@@ -979,21 +975,6 @@ TEST_F(TxTest, TxNormalThenReclaim) {
 // OK. Beside checking the txq->write_ptr, we also expect queue_full is called.
 //
 TEST_F(TxTest, TxSoManyPackets) {
-  SetupTxQueue();
-  SetupTxPacket();
-
-  // Fill up all space.
-  op_mode_queue_full_.ExpectCall(txq_id_);
-  for (int i = 0; i < TFD_QUEUE_SIZE_MAX * 2; i++) {
-    ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, wlan_pkt_->pkt(), &dev_cmd_, txq_id_));
-    ASSERT_EQ(MIN(TFD_QUEUE_SIZE_MAX - TX_RESERVED_SPACE, i + 1), txq_->write_ptr);
-  }
-  op_mode_queue_full_.VerifyAndClear();
-}
-
-// Follow-up test of TxSoManyPackets(), but focus on queue_not_full.
-//
-TEST_F(TxTest, TxSoManyPacketsThenReclaim) {
   SetupTxQueue();
   SetupTxPacket();
 

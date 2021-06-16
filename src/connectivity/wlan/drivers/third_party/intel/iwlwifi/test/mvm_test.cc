@@ -4,11 +4,8 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fake-bti/bti.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/bti.h>
-#include <stdio.h>
 
 #include <memory>
 
@@ -19,6 +16,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock_trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
@@ -44,6 +42,27 @@ static void setup_phy_ctxt(struct iwl_mvm_vif* mvmvif) TA_NO_THREAD_SAFETY_ANALY
   mtx_lock(&mvm->mutex);
 }
 
+// An iwl_rx_cmd_buffer instance that cleans up its allocated resources.
+class TestRxcb : public iwl_rx_cmd_buffer {
+ public:
+  explicit TestRxcb(struct device* dev, void* pkt_data, size_t pkt_len) {
+    struct iwl_iobuf* io_buf = nullptr;
+    ASSERT_OK(iwl_iobuf_allocate_contiguous(dev, pkt_len + sizeof(struct iwl_rx_packet), &io_buf));
+    _iobuf = io_buf;
+    _offset = 0;
+
+    struct iwl_rx_packet* pkt = reinterpret_cast<struct iwl_rx_packet*>(iwl_iobuf_virtual(io_buf));
+    // Most fields are not cared but initialized with known values.
+    pkt->len_n_flags = cpu_to_le32(0);
+    pkt->hdr.cmd = 0;
+    pkt->hdr.group_id = 0;
+    pkt->hdr.sequence = 0;
+    memcpy(pkt->data, pkt_data, pkt_len);
+  }
+
+  ~TestRxcb() { iwl_iobuf_release(_iobuf); }
+};
+
 class MvmTest : public SingleApTest {
  public:
   MvmTest() TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -66,24 +85,6 @@ class MvmTest : public SingleApTest {
   }
 
  protected:
-  void buildRxcb(struct iwl_rx_cmd_buffer* rxcb, void* pkt_data, size_t pkt_len) {
-    io_buffer_t io_buf;
-    zx::bti fake_bti;
-    fake_bti_create(fake_bti.reset_and_get_address());
-    io_buffer_init(&io_buf, fake_bti.get(), pkt_len + sizeof(struct iwl_rx_packet),
-                   IO_BUFFER_RW | IO_BUFFER_CONTIG);
-    rxcb->_io_buf = io_buf;
-    rxcb->_offset = 0;
-
-    struct iwl_rx_packet* pkt = reinterpret_cast<struct iwl_rx_packet*>(io_buffer_virt(&io_buf));
-    // Most fields are not cared but initialized with known values.
-    pkt->len_n_flags = cpu_to_le32(0);
-    pkt->hdr.cmd = 0;
-    pkt->hdr.group_id = 0;
-    pkt->hdr.sequence = 0;
-    memcpy(pkt->data, pkt_data, pkt_len);
-  }
-
   // This function is kind of dirty. It hijacks the wlanmac_ifc_protocol_t.recv() so that we can
   // save the rx_info passed to MLME.  See TearDown() for cleanup logic related to this function.
   void MockRecv(wlan_rx_info_t* rx_info) {
@@ -118,8 +119,7 @@ TEST_F(MvmTest, rxMpdu) {
           },
       .rate_n_flags = cpu_to_le32(0x7),  // IWL_RATE_18M_PLCP
   };
-  struct iwl_rx_cmd_buffer phy_info_rxcb = {};
-  buildRxcb(&phy_info_rxcb, &phy_info, sizeof(phy_info));
+  TestRxcb phy_info_rxcb(sim_trans_.iwl_trans()->dev, &phy_info, sizeof(phy_info));
   iwl_mvm_rx_rx_phy_cmd(mvm_, &phy_info_rxcb);
 
   // Now, it comes the MPDU packet.
@@ -138,8 +138,7 @@ TEST_F(MvmTest, rxMpdu) {
       .frame = {},
       .rx_pkt_status = 0x0,
   };
-  struct iwl_rx_cmd_buffer mpdu_rxcb = {};
-  buildRxcb(&mpdu_rxcb, &mpdu, sizeof(mpdu));
+  TestRxcb mpdu_rxcb(sim_trans_.iwl_trans()->dev, &mpdu, sizeof(mpdu));
 
   wlan_rx_info_t rx_info = {};
   MockRecv(&rx_info);
@@ -257,9 +256,6 @@ class ScanTest : public MvmTest {
     mvm_->scan_timeout_task.handler = iwl_mvm_scan_timeout;
     mvm_->scan_timeout_task.state = (async_state_t)ASYNC_STATE_INIT;
     mvm_->scan_timeout_delay = ZX_SEC(10);
-
-    // Create fake FW scan response.
-    buildRxcb(&rxb, &scan_notif, sizeof(scan_notif));
   }
 
   ~ScanTest() {}
@@ -269,10 +265,6 @@ class ScanTest : public MvmTest {
   wlanmac_ifc_protocol_ops_t ops;
   struct iwl_mvm_vif mvmvif_sta;
   wlan_hw_scan_config_t scan_config{.num_channels = 4, .channels = {7, 1, 40, 136}};
-  struct iwl_rx_cmd_buffer rxb;
-  struct iwl_periodic_scan_complete scan_notif {
-    .status = IWL_SCAN_OFFLOAD_COMPLETED,
-  };
 
   // Structure to capture scan results.
   struct ScanResult {
@@ -292,10 +284,10 @@ TEST_F(ScanTest, RegPassiveScanSuccess) TA_NO_THREAD_SAFETY_ANALYSIS {
   EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
 
-  struct iwl_rx_packet* pkt =
-      (struct iwl_rx_packet*)((char*)io_buffer_virt(&rxb._io_buf) + rxb._offset);
-  struct iwl_periodic_scan_complete* scan_notif = (struct iwl_periodic_scan_complete*)pkt->data;
-  ASSERT_EQ(scan_notif->status, IWL_SCAN_OFFLOAD_COMPLETED);
+  struct iwl_periodic_scan_complete scan_notif {
+    .status = IWL_SCAN_OFFLOAD_COMPLETED
+  };
+  TestRxcb rxb(sim_trans_.iwl_trans()->dev, &scan_notif, sizeof(scan_notif));
 
   // Call notify complete to simulate scan completion.
   mtx_unlock(&mvm_->mutex);
@@ -319,10 +311,10 @@ TEST_F(ScanTest, RegPassiveScanAborted) TA_NO_THREAD_SAFETY_ANALYSIS {
   EXPECT_EQ(&mvmvif_sta, mvm_->scan_vif);
 
   // Set scan status to ABORTED so simulate a scan abort.
-  struct iwl_rx_packet* pkt =
-      (struct iwl_rx_packet*)((char*)io_buffer_virt(&rxb._io_buf) + rxb._offset);
-  struct iwl_periodic_scan_complete* scan_notif = (struct iwl_periodic_scan_complete*)pkt->data;
-  scan_notif->status = IWL_SCAN_OFFLOAD_ABORTED;
+  struct iwl_periodic_scan_complete scan_notif {
+    .status = IWL_SCAN_OFFLOAD_ABORTED
+  };
+  TestRxcb rxb(sim_trans_.iwl_trans()->dev, &scan_notif, sizeof(scan_notif));
 
   // Call notify complete to simulate scan abort.
   mtx_unlock(&mvm_->mutex);

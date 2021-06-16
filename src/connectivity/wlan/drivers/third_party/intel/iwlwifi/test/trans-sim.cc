@@ -192,12 +192,6 @@ static zx_status_t iwl_trans_sim_wait_txq_empty(struct iwl_trans* trans, int que
   return ZX_OK;
 }
 
-static zx_handle_t iwl_trans_sim_get_bti(struct iwl_trans* trans) {
-  zx_handle_t bti = ZX_HANDLE_INVALID;
-  fake_bti_create(&bti);
-  return bti;
-}
-
 static struct iwl_trans_ops trans_ops_trans_sim = {
     .start_hw = iwl_trans_sim_start_hw,
     .op_mode_leave = iwl_trans_sim_op_mode_leave,
@@ -247,8 +241,6 @@ static struct iwl_trans_ops trans_ops_trans_sim = {
     struct iwl_trans_dump_data* (*dump_data)(struct iwl_trans* trans, uint32_t dump_mask);
     void (*debugfs_cleanup)(struct iwl_trans* trans);
 #endif  // NEEDS_PORTING
-
-    .get_bti = iwl_trans_sim_get_bti,
 };
 
 // iwl_trans_alloc() will allocate memory containing iwl_trans + trans_sim_priv.
@@ -322,6 +314,7 @@ struct iwl_trans* TransportSim::iwl_trans() {
 TransportSim::TransportSim(::wlan::simulation::Environment* env)
     : SimMvm(env), device_{}, iwl_trans_(nullptr) {
   device_.zxdev = ::fake_ddk::kFakeParent;
+  fake_bti_create(&device_.bti);
   sim_device_ = nullptr;
 }
 
@@ -329,6 +322,7 @@ TransportSim::~TransportSim() {
   if (sim_device_) {
     sim_device_->DdkAsyncRemove();
   }
+  zx_handle_close(device_.bti);
 }
 
 zx_status_t TransportSim::Init() {

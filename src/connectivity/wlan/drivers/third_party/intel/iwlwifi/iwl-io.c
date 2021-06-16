@@ -35,6 +35,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
 
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
@@ -50,7 +51,7 @@ void iwl_write32(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
   iwl_trans_write32(trans, ofs, val);
 }
 
-void iwl_write64(struct iwl_trans* trans, uint64_t ofs, uint64_t val) {
+void iwl_write64(struct iwl_trans* trans, uint32_t ofs, uint64_t val) {
   iwl_trans_write32(trans, ofs, lower_32_bits(val));
   iwl_trans_write32(trans, ofs + 4, upper_32_bits(val));
 }
@@ -64,7 +65,7 @@ uint32_t iwl_read32(struct iwl_trans* trans, uint32_t ofs) {
 #define IWL_POLL_INTERVAL ZX_USEC(10)
 
 zx_status_t iwl_poll_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
-                         int timeout_usecs, zx_duration_t* elapsed_usecs) {
+                         zx_duration_t timeout, zx_duration_t* elapsed) {
   zx_status_t ret = ZX_ERR_TIMED_OUT;
   zx_duration_t t = 0;
 
@@ -75,10 +76,10 @@ zx_status_t iwl_poll_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, 
     }
     zx_nanosleep(zx_deadline_after(IWL_POLL_INTERVAL));
     t = zx_duration_add_duration(t, IWL_POLL_INTERVAL);
-  } while (t < ZX_USEC(timeout_usecs));
+  } while (t < timeout);
 
-  if (elapsed_usecs) {
-    *elapsed_usecs = t;
+  if (elapsed) {
+    *elapsed = t;
   }
   return ret;
 }
@@ -103,7 +104,7 @@ void iwl_write_direct32(struct iwl_trans* trans, uint32_t reg, uint32_t value) {
   }
 }
 
-void iwl_write_direct64(struct iwl_trans* trans, uint64_t reg, uint64_t value) {
+void iwl_write_direct64(struct iwl_trans* trans, uint32_t reg, uint64_t value) {
   unsigned long flags;
 
   if (iwl_trans_grab_nic_access(trans, &flags)) {
@@ -113,18 +114,23 @@ void iwl_write_direct64(struct iwl_trans* trans, uint64_t reg, uint64_t value) {
 }
 
 zx_status_t iwl_poll_direct_bit(struct iwl_trans* trans, uint32_t addr, uint32_t mask,
-                                int timeout) {
+                                zx_duration_t timeout, zx_duration_t* elapsed) {
+  zx_status_t ret = ZX_ERR_TIMED_OUT;
   zx_duration_t t = 0;
 
   do {
     if ((iwl_read_direct32(trans, addr) & mask) == mask) {
-      return t;
+      ret = ZX_OK;
+      break;
     }
     zx_nanosleep(zx_deadline_after(IWL_POLL_INTERVAL));
     t = zx_duration_add_duration(t, IWL_POLL_INTERVAL);
   } while (t < timeout);
 
-  return ZX_ERR_TIMED_OUT;
+  if (elapsed) {
+    *elapsed = t;
+  }
+  return ret;
 }
 
 uint32_t iwl_read_prph_no_grab(struct iwl_trans* trans, uint32_t ofs) {
@@ -136,7 +142,7 @@ void iwl_write_prph_no_grab(struct iwl_trans* trans, uint32_t ofs, uint32_t val)
   iwl_trans_write_prph(trans, ofs, val);
 }
 
-void iwl_write_prph64_no_grab(struct iwl_trans* trans, uint64_t ofs, uint64_t val) {
+void iwl_write_prph64_no_grab(struct iwl_trans* trans, uint32_t ofs, uint64_t val) {
   iwl_write_prph_no_grab(trans, ofs, val & 0xffffffff);
   iwl_write_prph_no_grab(trans, ofs + 4, val >> 32);
 }
@@ -162,18 +168,23 @@ void iwl_write_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
 }
 
 zx_status_t iwl_poll_prph_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
-                              int timeout) {
-  int t = 0;
+                              zx_duration_t timeout, zx_duration_t* elapsed) {
+  zx_status_t ret = ZX_ERR_TIMED_OUT;
+  zx_duration_t t = 0;
 
   do {
     if ((iwl_read_prph(trans, addr) & mask) == (bits & mask)) {
-      return t;
+      ret = ZX_OK;
+      break;
     }
     zx_nanosleep(zx_deadline_after(IWL_POLL_INTERVAL));
     t = zx_duration_add_duration(t, IWL_POLL_INTERVAL);
   } while (t < timeout);
 
-  return ZX_ERR_TIMED_OUT;
+  if (elapsed) {
+    *elapsed = t;
+  }
+  return ret;
 }
 
 void iwl_set_bits_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t mask) {

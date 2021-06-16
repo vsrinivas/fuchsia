@@ -1211,7 +1211,7 @@ static void iwl_mvm_rx_common(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb
       return;
     }
 
-    entry->rxb._page = rxb_steal_page(rxb);
+    entry->rxb._iobuf = rxb_steal_iobuf(rxb);
     entry->rxb._offset = rxb->_offset;
     entry->fn = rx_h->fn;
     entry->context = rx_h->context;

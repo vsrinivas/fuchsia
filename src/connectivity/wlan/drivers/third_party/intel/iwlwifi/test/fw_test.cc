@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fake-bti/bti.h>
-
 #include <zxtest/zxtest.h>
-
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-nvm.h"
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-nvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 
 namespace wlan::testing {
@@ -109,18 +107,20 @@ TEST_F(FwTest, TestPageInit) {
   EXPECT_EQ(fwrt.num_of_paging_blk, NUM_OF_PAGE_BLK);
   EXPECT_EQ(fwrt.num_of_pages_in_last_blk, NUM_OF_PAGES_IN_LAST_BLK);
   // CPU2 paging CSS
-  EXPECT_EQ(io_buffer_size(&fwrt.fw_paging_db[0].io_buf, 0), FW_PAGING_SIZE);
+  EXPECT_EQ(iwl_iobuf_size(fwrt.fw_paging_db[0].io_buf), FW_PAGING_SIZE);
   // CPU2 paging image: blk#0
-  EXPECT_EQ(io_buffer_size(&fwrt.fw_paging_db[1].io_buf, 0), PAGING_BLOCK_SIZE);
+  EXPECT_EQ(iwl_iobuf_size(fwrt.fw_paging_db[1].io_buf), PAGING_BLOCK_SIZE);
   EXPECT_EQ(
-      memcmp(io_buffer_virt(&fwrt.fw_paging_db[1].io_buf), &arbitrary_data[0], PAGING_BLOCK_SIZE),
+      memcmp(iwl_iobuf_virtual(fwrt.fw_paging_db[1].io_buf), &arbitrary_data[0], PAGING_BLOCK_SIZE),
       0);
   // CPU2 paging image: blk#1.
   // Allocated PAGING_BLOCK_SIZE, but only NUM_OF_PAGES_IN_LAST_BLK pages are copied.
-  EXPECT_EQ(io_buffer_size(&fwrt.fw_paging_db[2].io_buf, 0), PAGING_BLOCK_SIZE);
-  EXPECT_EQ(memcmp(io_buffer_virt(&fwrt.fw_paging_db[2].io_buf), &arbitrary_data[PAGING_BLOCK_SIZE],
-                   FW_PAGING_SIZE * NUM_OF_PAGES_IN_LAST_BLK),
+  EXPECT_EQ(iwl_iobuf_size(fwrt.fw_paging_db[2].io_buf), PAGING_BLOCK_SIZE);
+  EXPECT_EQ(memcmp(iwl_iobuf_virtual(fwrt.fw_paging_db[2].io_buf),
+                   &arbitrary_data[PAGING_BLOCK_SIZE], FW_PAGING_SIZE * NUM_OF_PAGES_IN_LAST_BLK),
             0);
+
+  iwl_free_fw_paging(&fwrt);
 }
 
 }  // namespace

@@ -38,7 +38,6 @@
 
 #include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <lib/async/dispatcher.h>
-#include <lib/ddk/io-buffer.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
@@ -54,6 +53,7 @@
 #endif
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/dbg-tlv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dbg-tlv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -248,23 +248,22 @@ static inline void iwl_free_resp(struct iwl_host_cmd* cmd) {
 }
 
 struct iwl_rx_cmd_buffer {
-  struct page* _page;
-  io_buffer_t _io_buf;
+  struct iwl_iobuf* _iobuf;
   int _offset;
   uint8_t status;
 };
 
 static inline void* rxb_addr(struct iwl_rx_cmd_buffer* r) {
-  return (char*)io_buffer_virt(&r->_io_buf) + r->_offset;
+  return (char*)iwl_iobuf_virtual(r->_iobuf) + r->_offset;
 }
 
 static inline int rxb_offset(struct iwl_rx_cmd_buffer* r) { return r->_offset; }
 
-static inline struct page* rxb_steal_page(struct iwl_rx_cmd_buffer* r) {
-#if 0   // NEEDS_PORTING
-    get_page(r->_page);
-#endif  // NEEDS_PORTING
-  return r->_page;
+static inline struct iwl_iobuf* rxb_steal_iobuf(struct iwl_rx_cmd_buffer* r) {
+  // The Linux driver passes buffers up the stack by increasing the refcount on and returning the
+  // page using get_page().  For Fuchsia, we take the simpler approach of copying data from the VMO
+  // directly, and no refcount increment is needed.
+  return r->_iobuf;
 }
 
 #if 0   // NEEDS_PORTING
@@ -520,7 +519,6 @@ struct iwl_trans_rxq_dma_data {
  *  Note that the transport must fill in the proper file headers.
  * @debugfs_cleanup: used in the driver unload flow to make a proper cleanup
  *  of the trans debugfs
- * @get_bti: used to get the 'bti' handle to initialize io_buffer.
  */
 struct iwl_trans_ops {
   zx_status_t (*start_hw)(struct iwl_trans* iwl_trans, bool low_power);
@@ -581,9 +579,6 @@ struct iwl_trans_ops {
 
   struct iwl_trans_dump_data* (*dump_data)(struct iwl_trans* trans, uint32_t dump_mask);
   void (*debugfs_cleanup)(struct iwl_trans* trans);
-
-  // TODO(fxbug.dev/76234): move this out of here.
-  zx_handle_t (*get_bti)(struct iwl_trans* trans);
 };
 
 /**
@@ -1174,12 +1169,6 @@ struct iwl_trans* iwl_trans_alloc(unsigned int priv_size, struct device* dev,
 void iwl_trans_free(struct iwl_trans* trans);
 void iwl_trans_ref(struct iwl_trans* trans);
 void iwl_trans_unref(struct iwl_trans* trans);
-
-// Although the 'bti' is a PCIE-concept, it is essential to initialize a io_buffer in zircon.
-// So add a new ops method in order to get it when the driver code needs to initialize io_buffer.
-static inline zx_handle_t iwl_trans_get_bti(struct iwl_trans* trans) {
-  return trans->ops->get_bti(trans);
-}
 
 /*****************************************************
  * driver (transport) register/unregister functions

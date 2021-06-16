@@ -75,6 +75,10 @@ void PcieDevice::DdkInit(::ddk::InitTxn txn) {
     }
 
     // Perform Fuchsia-specific PCI initialization.
+    if ((status = pci_get_bti(&pci_dev_.proto, /*index*/ 0, &pci_dev_.dev.bti)) != ZX_OK) {
+      IWL_ERR(nullptr, "Failed to get PCI BTI: %s\n", zx_status_get_string(status));
+      return status;
+    }
     pcie_device_info_t pci_info = {};
     if ((status = pci_get_device_info(&pci_dev_.proto, &pci_info)) != ZX_OK) {
       return status;
@@ -116,6 +120,7 @@ void PcieDevice::DdkInit(::ddk::InitTxn txn) {
 void PcieDevice::DdkUnbind(::ddk::UnbindTxn txn) {
   iwl_pci_remove(&pci_dev_);
   task_loop_->Shutdown();
+  zx_handle_close(pci_dev_.dev.bti);
   txn.Reply();
 }
 

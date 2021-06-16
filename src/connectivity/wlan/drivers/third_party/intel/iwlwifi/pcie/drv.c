@@ -1063,6 +1063,9 @@ out_free_trans:
 
 void iwl_pci_remove(struct iwl_pci_dev* pdev) {
   struct iwl_trans* trans = iwl_pci_get_drvdata(pdev);
+  if (!trans) {
+    return;
+  }
 
 #if 0   // NEEDS_PORTING
     /* if RTPM was in use, restore it to the state before probe */

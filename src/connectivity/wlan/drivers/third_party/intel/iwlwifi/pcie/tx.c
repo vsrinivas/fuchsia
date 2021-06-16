@@ -138,20 +138,20 @@ static zx_status_t iwl_queue_init(struct iwl_txq* q, uint16_t slots_num) {
 
 zx_status_t iwl_pcie_alloc_dma_ptr(struct iwl_trans* trans, struct iwl_dma_ptr* ptr, size_t size) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  zx_status_t status =
-      io_buffer_init(&ptr->io_buf, trans_pcie->bti, size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  zx_status_t status = iwl_iobuf_allocate_contiguous(&trans_pcie->pci_dev->dev, size, &ptr->io_buf);
   if (status != ZX_OK) {
     return status;
   }
 
   ptr->size = size;
-  ptr->addr = io_buffer_virt(&ptr->io_buf);
-  ptr->dma = io_buffer_phys(&ptr->io_buf);
+  ptr->addr = iwl_iobuf_virtual(ptr->io_buf);
+  ptr->dma = iwl_iobuf_physical(ptr->io_buf);
   return ZX_OK;
 }
 
 void iwl_pcie_free_dma_ptr(struct iwl_trans* trans, struct iwl_dma_ptr* ptr) {
-  io_buffer_release(&ptr->io_buf);
+  iwl_iobuf_release(ptr->io_buf);
+  ptr->io_buf = NULL;
 }
 
 static void iwl_pcie_txq_stuck_timer(async_dispatcher_t* dispatcher, async_task_t* task,
@@ -236,8 +236,8 @@ static void iwl_pcie_txq_update_byte_cnt_tbl(struct iwl_trans* trans, struct iwl
   uint16_t len = byte_cnt + IWL_TX_CRC_SIZE + IWL_TX_DELIMITER_SIZE;
   __le16 bc_ent;
   struct iwl_tx_cmd* tx_cmd =
-      (void*)((struct iwl_device_cmd*)io_buffer_virt(
-                  &txq->entries[iwl_pcie_get_cmd_index(txq, txq->write_ptr)].cmd))
+      (void*)((struct iwl_device_cmd*)iwl_iobuf_virtual(
+                  txq->entries[iwl_pcie_get_cmd_index(txq, txq->write_ptr)].cmd))
           ->payload;
   uint8_t sta_id = tx_cmd->sta_id;
 
@@ -397,7 +397,7 @@ static inline uint8_t iwl_pcie_tfd_get_num_tbs(struct iwl_trans* trans, void* _t
 }
 
 //
-// Since DMA addresses are manipulated by io_buffers, we don't do DMA unmap here. Instead,
+// Since DMA addresses are manipulated by iobufs, we don't do DMA unmap here. Instead,
 // we update the TFD entry only (zero-ing num_tbs).
 //
 static void iwl_pcie_tfd_unmap(struct iwl_trans* trans, struct iwl_cmd_meta* meta,
@@ -462,7 +462,7 @@ static zx_status_t iwl_pcie_txq_build_tfd(struct iwl_trans* trans, struct iwl_tx
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   void* tfd;
 
-  void* tfds = io_buffer_virt(&txq->tfds);
+  void* tfds = iwl_iobuf_virtual(txq->tfds);
   tfd = tfds + trans_pcie->tfd_size * txq->write_ptr;
 
   if (reset) {
@@ -491,7 +491,7 @@ zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, uin
                                bool cmd_queue) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-  if (WARN_ON(txq->entries || io_buffer_is_valid(&txq->tfds))) {
+  if (WARN_ON(txq->entries || txq->tfds)) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -513,9 +513,8 @@ zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, uin
 
   if (cmd_queue) {
     for (int i = 0; i < slots_num; i++) {
-      zx_status_t status =
-          io_buffer_init(&txq->entries[i].cmd, trans_pcie->bti, sizeof(struct iwl_device_cmd),
-                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
+      zx_status_t status = iwl_iobuf_allocate_contiguous(
+          &trans_pcie->pci_dev->dev, sizeof(struct iwl_device_cmd), &txq->entries[i].cmd);
       if (status != ZX_OK) {
         goto error;
       }
@@ -523,19 +522,18 @@ zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, uin
   }
 
   // Circular buffer of transmit frame descriptors (TFDs), shared with device.
-  zx_status_t status =
-      io_buffer_init(&txq->tfds, trans_pcie->bti, tfd_sz, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  zx_status_t status = iwl_iobuf_allocate_contiguous(&trans_pcie->pci_dev->dev, tfd_sz, &txq->tfds);
   if (status != ZX_OK) {
     goto error;
   }
-  txq->dma_addr = io_buffer_phys(&txq->tfds);
+  txq->dma_addr = iwl_iobuf_physical(txq->tfds);
 
   BUILD_BUG_ON(IWL_FIRST_TB_SIZE_ALIGN != sizeof(struct iwl_pcie_first_tb_buf));
 
   size_t tb0_buf_sz = sizeof(struct iwl_pcie_first_tb_buf) * slots_num;
 
-  status = io_buffer_init(&txq->first_tb_bufs, trans_pcie->bti, tb0_buf_sz,
-                          IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  status =
+      iwl_iobuf_allocate_contiguous(&trans_pcie->pci_dev->dev, tb0_buf_sz, &txq->first_tb_bufs);
   if (status != ZX_OK) {
     goto err_free_tfds;
   }
@@ -543,11 +541,13 @@ zx_status_t iwl_pcie_txq_alloc(struct iwl_trans* trans, struct iwl_txq* txq, uin
   return ZX_OK;
 
 err_free_tfds:
-  io_buffer_release(&txq->tfds);
+  iwl_iobuf_release(txq->tfds);
+  txq->tfds = NULL;
 error:
   if (txq->entries && cmd_queue) {
     for (int i = 0; i < slots_num; i++) {
-      io_buffer_release(&txq->entries[i].cmd);
+      iwl_iobuf_release(txq->entries[i].cmd);
+      txq->entries[i].cmd = NULL;
     }
   }
   free(txq->entries);
@@ -686,17 +686,21 @@ static void iwl_pcie_txq_free(struct iwl_trans* trans, int txq_id) {
   /* De-alloc array of command/tx buffers */
   if (txq_id == trans_pcie->cmd_queue) {
     for (i = 0; i < txq->n_window; i++) {
-      io_buffer_release(&txq->entries[i].cmd);
-      if (io_buffer_is_valid(&txq->entries[i].dup_io_buf)) {
-        io_buffer_release(&txq->entries[i].dup_io_buf);
+      iwl_iobuf_release(txq->entries[i].cmd);
+      txq->entries[i].cmd = NULL;
+      if (txq->entries[i].dup_io_buf) {
+        iwl_iobuf_release(txq->entries[i].dup_io_buf);
+        txq->entries[i].dup_io_buf = NULL;
       }
     }
   }
 
   /* De-alloc circular buffer of TFDs */
-  io_buffer_release(&txq->tfds);
+  iwl_iobuf_release(txq->tfds);
+  txq->tfds = NULL;
   txq->dma_addr = 0;
-  io_buffer_release(&txq->first_tb_bufs);
+  iwl_iobuf_release(txq->first_tb_bufs);
+  txq->first_tb_bufs = NULL;
 
   free(txq->entries);
   txq->entries = NULL;
@@ -1082,10 +1086,12 @@ void iwl_trans_pcie_reclaim(struct iwl_trans* trans, int txq_id, int ssn) {
         if (!trans->cfg->use_tfh) { iwl_pcie_txq_inval_byte_cnt_tbl(trans, txq); }
 #endif  // NEEDS_PORTING
 
-    ZX_ASSERT(io_buffer_is_valid(&txq->entries[read_ptr].cmd));
-    io_buffer_release(&txq->entries[read_ptr].cmd);
-    if (io_buffer_is_valid(&txq->entries[read_ptr].dup_io_buf)) {
-      io_buffer_release(&txq->entries[read_ptr].dup_io_buf);
+    ZX_ASSERT(txq->entries[read_ptr].cmd);
+    iwl_iobuf_release(txq->entries[read_ptr].cmd);
+    txq->entries[read_ptr].cmd = NULL;
+    if (txq->entries[read_ptr].dup_io_buf) {
+      iwl_iobuf_release(txq->entries[read_ptr].dup_io_buf);
+      txq->entries[read_ptr].dup_io_buf = NULL;
     }
 
     iwl_pcie_txq_free_tfd(trans, txq);
@@ -1459,7 +1465,7 @@ void iwl_trans_pcie_txq_disable(struct iwl_trans* trans, int txq_id, bool config
 //   - For medium-sized command (20 < len <= 328 bytes):
 //
 //     The first 20-byte still goes to 'tb0'. The remaining content will be mapped into the second
-//     descriptor -- the 'cmd' io_buffer in 'struct iwl_pcie_txq_entry'.
+//     descriptor -- the 'cmd' iwl_iobuf in 'struct iwl_pcie_txq_entry'.
 //
 //        <-----------   20 ~ 328 bytes   ----------->
 //       +------------+  +----------------------------+
@@ -1485,7 +1491,7 @@ void iwl_trans_pcie_txq_disable(struct iwl_trans* trans, int txq_id, bool config
 //
 //
 //     + If the first fragment is larger than 20-byte, similar as the medium-sized command, the
-//       first fragment will be split into 2 descriptos: 'tb0' and 'cmd' io_buffer. However, the
+//       first fragment will be split into 2 descriptos: 'tb0' and 'cmd' iwl_iobuf. However, the
 //       second fragment (with the NOCOPY flag) will be stored in 3rd descriptor.
 //
 //          <-----------   20 ~ 328 bytes   ----------->    <---------  any length  ---------->
@@ -1594,8 +1600,8 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
   }
 
   int cmd_idx = iwl_pcie_get_cmd_index(txq, txq->write_ptr);
-  struct iwl_device_cmd* out_cmd = io_buffer_virt(&txq->entries[cmd_idx].cmd);
-  zx_paddr_t phys_addr = io_buffer_phys(&txq->entries[cmd_idx].cmd);
+  struct iwl_device_cmd* out_cmd = iwl_iobuf_virtual(txq->entries[cmd_idx].cmd);
+  zx_paddr_t phys_addr = iwl_iobuf_physical(txq->entries[cmd_idx].cmd);
   out_meta = &txq->entries[cmd_idx].meta;
 
   memset(out_meta, 0, sizeof(*out_meta)); /* re-initialize to NULL */
@@ -1671,7 +1677,7 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
                trans_pcie->cmd_queue);
 
   // start the TFD with the minimum copy bytes (tb0).
-  struct iwl_pcie_first_tb_buf* tb_bufs = io_buffer_virt(&txq->first_tb_bufs);
+  struct iwl_pcie_first_tb_buf* tb_bufs = iwl_iobuf_virtual(txq->first_tb_bufs);
   uint16_t tb0_size = min_t(int, copy_size, IWL_FIRST_TB_SIZE);
   memcpy(&tb_bufs[cmd_idx], &out_cmd->hdr, tb0_size);
   uint32_t num_tbs;
@@ -1714,7 +1720,7 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
     // into the io_buffer and map it to physical address. However, the original purpose of this flag
     // is to avoid copy due to performance consideration. So created TODO(42212) to track this.
     //
-    io_buffer_t* dup_io_buf = &txq->entries[cmd_idx].dup_io_buf;
+    struct iwl_iobuf* dup_io_buf = txq->entries[cmd_idx].dup_io_buf;
 
     // Allocate a cached io_buffer, copy the data, and flush the cache at once. The io_buffer will
     // be released (reclaimed) in iwl_pcie_rx_handle_rb().
@@ -1728,14 +1734,15 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
     // support cached read. But this is not guaranteed on all platforms (e.g. ARM). So let's play
     // safe first.
     //
-    ZX_ASSERT(!io_buffer_is_valid(dup_io_buf));
+    ZX_ASSERT(!dup_io_buf);
     uint16_t dup_len = cmdlen[i];
-    io_buffer_init(dup_io_buf, trans_pcie->bti, dup_len, IO_BUFFER_RW | IO_BUFFER_CONTIG);
-    void* virt_addr = io_buffer_virt(dup_io_buf);
+    iwl_iobuf_allocate_contiguous(&trans_pcie->pci_dev->dev, dup_len, &dup_io_buf);
+    void* virt_addr = iwl_iobuf_virtual(dup_io_buf);
     memcpy(virt_addr, data, dup_len);
-    phys_addr = io_buffer_phys(dup_io_buf);
+    phys_addr = iwl_iobuf_physical(dup_io_buf);
     iwl_pcie_txq_build_tfd(trans, txq, phys_addr, dup_len, false, &num_tbs);
-    io_buffer_cache_flush(dup_io_buf, 0, dup_len);
+    iwl_iobuf_cache_flush(dup_io_buf, 0, dup_len);
+    txq->entries[cmd_idx].dup_io_buf = dup_io_buf;
   }
 
   BUILD_BUG_ON(IWL_TFH_NUM_TBS > sizeof(out_meta->tbs) * BITS_PER_BYTE);
@@ -1804,7 +1811,7 @@ void iwl_pcie_hcmd_complete(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* r
   mtx_lock(&txq->lock);
 
   cmd_index = iwl_pcie_get_cmd_index(txq, index);
-  cmd = (struct iwl_device_cmd*)io_buffer_virt(&txq->entries[cmd_index].cmd);
+  cmd = (struct iwl_device_cmd*)iwl_iobuf_virtual(txq->entries[cmd_index].cmd);
   meta = &txq->entries[cmd_index].meta;
   group_id = cmd->hdr.group_id;
   cmd_id = iwl_cmd_id(cmd->hdr.cmd, group_id, 0);
@@ -2040,22 +2047,23 @@ static zx_status_t iwl_fill_data_tbs(struct iwl_trans* trans, const wlan_tx_pack
 
   if (head_tb_len > 0) {
     // Allocate the dup_io_buf
-    io_buffer_t* dup_io_buf = &txq->entries[cmd_idx].dup_io_buf;
-    ZX_ASSERT(!io_buffer_is_valid(dup_io_buf));
+    struct iwl_iobuf* dup_io_buf = txq->entries[cmd_idx].dup_io_buf;
+    ZX_ASSERT(!dup_io_buf);
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     zx_status_t ret =
-        io_buffer_init(dup_io_buf, trans_pcie->bti, head_tb_len, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+        iwl_iobuf_allocate_contiguous(&trans_pcie->pci_dev->dev, head_tb_len, &dup_io_buf);
     if (ret != ZX_OK) {
       IWL_ERR(trans, "%s(): io_buffer_init() failed: %s\n", __func__, zx_status_get_string(ret));
       return ret;
     }
 
     // copy packet in
-    void* virt_addr = io_buffer_virt(dup_io_buf);
+    void* virt_addr = iwl_iobuf_virtual(dup_io_buf);
     memcpy(virt_addr, pkt->packet_head.data_buffer + hdr_len, head_tb_len);
-    io_buffer_cache_flush(dup_io_buf, 0, head_tb_len);
-    zx_paddr_t phys_addr = io_buffer_phys(dup_io_buf);
+    iwl_iobuf_cache_flush(dup_io_buf, 0, head_tb_len);
+    zx_paddr_t phys_addr = iwl_iobuf_physical(dup_io_buf);
     iwl_pcie_txq_build_tfd(trans, txq, phys_addr, head_tb_len, false, num_tbs);
+    txq->entries[cmd_idx].dup_io_buf = dup_io_buf;
   }
 
   return ZX_OK;
@@ -2326,16 +2334,15 @@ zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, const wlan_tx_packet_t* p
 
   // First copy 'dev_cmd' to 'out_cmd'. This is easier to copy the whole cmd to tb0 and tb1
   // respectively.
-  io_buffer_t* cmd_io_buf = &txq->entries[cmd_idx].cmd;
-  ZX_ASSERT(!io_buffer_is_valid(cmd_io_buf));
-  zx_status_t status =
-      io_buffer_init(cmd_io_buf, trans_pcie->bti, TB1_MAX_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  ZX_ASSERT(!txq->entries[cmd_idx].cmd);
+  zx_status_t status = iwl_iobuf_allocate_contiguous(&trans_pcie->pci_dev->dev, TB1_MAX_SIZE,
+                                                     &txq->entries[cmd_idx].cmd);
   if (status != ZX_OK) {
     IWL_ERR(trans, "pcie TX io_buffer_init() failed: %s\n", zx_status_get_string(status));
     ret = status;
     goto unlock;
   }
-  struct iwl_device_cmd* out_cmd = io_buffer_virt(cmd_io_buf);
+  struct iwl_device_cmd* out_cmd = iwl_iobuf_virtual(txq->entries[cmd_idx].cmd);
   *out_cmd = *dev_cmd;  // Copy into the TXQ memory shared with the firmware.
 
 #if 0   // NEEDS_PORTING
@@ -2358,7 +2365,7 @@ zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, const wlan_tx_packet_t* p
   /////////////////////////////////////////////////////////////////////////////////////////////////
   // (tb0) start the TFD with the minimum copy bytes.
   //
-  struct iwl_pcie_first_tb_buf* tb_bufs = io_buffer_virt(&txq->first_tb_bufs);
+  struct iwl_pcie_first_tb_buf* tb_bufs = iwl_iobuf_virtual(txq->first_tb_bufs);
   const uint16_t tb0_size = IWL_FIRST_TB_SIZE;
   memcpy(&tb_bufs[cmd_idx], &out_cmd->hdr, tb0_size);
   uint32_t num_tbs;
@@ -2392,7 +2399,7 @@ zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, const wlan_tx_packet_t* p
     tx_cmd->tx_flags |= cpu_to_le32(TX_CMD_FLG_MH_PAD);
   }
 
-  zx_paddr_t phys_addr = io_buffer_phys(cmd_io_buf);
+  zx_paddr_t phys_addr = iwl_iobuf_physical(txq->entries[cmd_idx].cmd);
   zx_paddr_t tb1_phys = phys_addr + tb0_size;
   iwl_pcie_txq_build_tfd(trans, txq, tb1_phys, tb1_len, false, &num_tbs);
 

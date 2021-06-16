@@ -12,6 +12,7 @@ source_set("platform") {
     "debug.cc",
     "device.cc",
     "ieee80211.cc",
+    "memory.cc",
     "module.cc",
   ]
   public = [
@@ -20,6 +21,7 @@ source_set("platform") {
     "device.h",
     "ieee80211.h",
     "kernel.h",
+    "memory.h",
     "module.h",
     "pci.h",
   ]

@@ -38,7 +38,6 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/async/task.h>
-#include <lib/ddk/io-buffer.h>
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/sync/completion.h>
 #include <lib/sync/condition.h>
@@ -54,6 +53,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 
 /* We need 2 entries for the TX command and header, and another one might
  * be needed for potential data in the SKB's head. The remaining ones can
@@ -93,7 +93,7 @@ struct iwl_host_cmd;
  * @size: size used from the buffer
  */
 struct iwl_rx_mem_buffer {
-  io_buffer_t io_buf;
+  struct iwl_iobuf* io_buf;
   uint16_t vid;
   bool invalid;
   list_node_t list;
@@ -187,7 +187,7 @@ struct iwl_rx_completion_desc {
  */
 struct iwl_rxq {
   int id;
-  io_buffer_t descriptors;
+  struct iwl_iobuf* descriptors;
 
 #if 0   // NEEDS_PORTING
   //  These fields are only used for multi-rx queue devices.
@@ -212,7 +212,7 @@ struct iwl_rxq {
   uint32_t queue_size;
   list_node_t rx_free;
   bool need_update;
-  io_buffer_t rb_status;
+  struct iwl_iobuf* rb_status;
   mtx_t lock;
   struct napi_struct napi;  // TODO(43218): replace with something like mvmvif so that when
                             //              packet is received we know where to dispatch.
@@ -220,7 +220,7 @@ struct iwl_rxq {
 };
 
 struct iwl_dma_ptr {
-  io_buffer_t io_buf;
+  struct iwl_iobuf* io_buf;
   dma_addr_t dma;
   void* addr;
   size_t size;
@@ -240,11 +240,11 @@ static inline int iwl_queue_inc_wrap(struct iwl_trans* trans, int index) {
  */
 static inline __le16 iwl_get_closed_rb_status(struct iwl_trans* trans, struct iwl_rxq* rxq) {
   if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
-    __le16* rb_status = (__le16*)io_buffer_virt(&rxq->rb_status);
+    __le16* rb_status = (__le16*)iwl_iobuf_virtual(rxq->rb_status);
 
     return READ_ONCE(*rb_status);
   } else {
-    struct iwl_rb_status* rb_status = (struct iwl_rb_status*)io_buffer_virt(&rxq->rb_status);
+    struct iwl_rb_status* rb_status = (struct iwl_rb_status*)iwl_iobuf_virtual(rxq->rb_status);
 
     return READ_ONCE(rb_status->closed_rb_num);
   }
@@ -281,8 +281,8 @@ struct iwl_cmd_meta {
 #define IWL_FIRST_TB_SIZE_ALIGN ROUND_UP(IWL_FIRST_TB_SIZE, 64)
 
 struct iwl_pcie_txq_entry {
-  io_buffer_t cmd;  // Used to store the command
-  io_buffer_t dup_io_buf;
+  struct iwl_iobuf* cmd;  // Used to store the command
+  struct iwl_iobuf* dup_io_buf;
   struct iwl_cmd_meta meta;
 };
 
@@ -355,8 +355,8 @@ void iwlwifi_timer_stop(struct iwlwifi_timer_info* timer);
  * data is a window overlayed over the HW queue.
  */
 struct iwl_txq {
-  io_buffer_t tfds;
-  io_buffer_t first_tb_bufs;
+  struct iwl_iobuf* tfds;
+  struct iwl_iobuf* first_tb_bufs;
   struct iwl_pcie_txq_entry* entries;
   mtx_t lock;
   unsigned long frozen_expiry_remainder;
@@ -380,7 +380,7 @@ struct iwl_txq {
 };
 
 static inline dma_addr_t iwl_pcie_get_first_tb_dma(struct iwl_txq* txq, int idx) {
-  return io_buffer_phys(&txq->first_tb_bufs) + (sizeof(struct iwl_pcie_first_tb_buf) * idx);
+  return iwl_iobuf_physical(txq->first_tb_bufs) + (sizeof(struct iwl_pcie_first_tb_buf) * idx);
 }
 
 struct iwl_tso_hdr_page {
@@ -466,7 +466,6 @@ struct cont_rec {
  * @rxq: all the RX queue data
  * @rx_pool: initial pool of iwl_rx_mem_buffer for all the queues
  * @global_table: table mapping received VID from hw to rxb
- * @bti: bus transaction initiator handle
  * @rba: allocator for RX replenishing
  * @ctxt_info: context information for FW self init
  * @ctxt_info_gen3: context information for gen3 devices
@@ -518,7 +517,6 @@ struct iwl_trans_pcie {
   struct iwl_rxq* rxq;
   struct iwl_rx_mem_buffer rx_pool[RX_POOL_SIZE];
   struct iwl_rx_mem_buffer* global_table[RX_POOL_SIZE];
-  zx_handle_t bti;
   union {
     struct iwl_context_info* ctxt_info;
     struct iwl_context_info_gen3* ctxt_info_gen3;
@@ -539,7 +537,7 @@ struct iwl_trans_pcie {
 #endif  // NEEDS_PORTING
 
   /* INT ICT Table */
-  io_buffer_t ict_tbl;
+  struct iwl_iobuf* ict_tbl;
   int ict_index;
   bool use_ict;
   bool is_down, opmode_down;
@@ -866,7 +864,7 @@ static inline void* iwl_pcie_get_tfd(struct iwl_trans* trans, struct iwl_txq* tx
     idx = iwl_pcie_get_cmd_index(txq, idx);
   }
 
-  char* ptr = (char*)io_buffer_virt(&txq->tfds);
+  char* ptr = (char*)iwl_iobuf_virtual(txq->tfds);
   return ptr + trans_pcie->tfd_size * idx;
 }
 

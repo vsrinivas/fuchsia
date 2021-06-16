@@ -46,6 +46,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
 
 zx_status_t _iwl_pcie_rx_init(struct iwl_trans* trans);
 void iwl_pcie_free_rbs_pool(struct iwl_trans* trans);
@@ -181,14 +182,15 @@ int iwl_pcie_rx_stop(struct iwl_trans* trans) {
   if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
     /* TODO: remove this for 22560 once fw does it */
     iwl_write_prph(trans, RFH_RXF_DMA_CFG_GEN3, 0);
-    return iwl_poll_prph_bit(trans, RFH_GEN_STATUS_GEN3, RXF_DMA_IDLE, RXF_DMA_IDLE, 1000);
+    return iwl_poll_prph_bit(trans, RFH_GEN_STATUS_GEN3, RXF_DMA_IDLE, RXF_DMA_IDLE, ZX_MSEC(1),
+                             NULL);
   } else if (trans->cfg->mq_rx_supported) {
     iwl_write_prph(trans, RFH_RXF_DMA_CFG, 0);
-    return iwl_poll_prph_bit(trans, RFH_GEN_STATUS, RXF_DMA_IDLE, RXF_DMA_IDLE, 1000);
+    return iwl_poll_prph_bit(trans, RFH_GEN_STATUS, RXF_DMA_IDLE, RXF_DMA_IDLE, ZX_MSEC(1), NULL);
   } else {
     iwl_write_direct32(trans, FH_MEM_RCSR_CHNL0_CONFIG_REG, 0);
     return iwl_poll_direct_bit(trans, FH_MEM_RSSR_RX_STATUS_REG, FH_RSSR_CHNL0_RX_STATUS_CHNL_IDLE,
-                               1000);
+                               ZX_MSEC(1), NULL);
   }
 }
 
@@ -246,16 +248,16 @@ static void iwl_pcie_rxq_check_wrptr(struct iwl_trans* trans) {
 static void iwl_pcie_restock_bd(struct iwl_trans* trans, struct iwl_rxq* rxq,
                                 struct iwl_rx_mem_buffer* rxb) {
   if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
-    struct iwl_rx_transfer_desc* bd = io_buffer_virt(&rxq->descriptors);
+    struct iwl_rx_transfer_desc* bd = iwl_iobuf_virtual(rxq->descriptors);
 
     bd[rxq->write].type_n_size = cpu_to_le32((IWL_RX_TD_TYPE & IWL_RX_TD_TYPE_MSK) |
                                              ((IWL_RX_TD_SIZE_2K >> 8) & IWL_RX_TD_SIZE_MSK));
-    bd[rxq->write].addr = cpu_to_le64(io_buffer_phys(&rxb->io_buf));
+    bd[rxq->write].addr = cpu_to_le64(iwl_iobuf_physical(rxb->io_buf));
     bd[rxq->write].rbid = cpu_to_le16(rxb->vid);
   } else {
-    __le64* bd = io_buffer_virt(&rxq->descriptors);
+    __le64* bd = iwl_iobuf_virtual(rxq->descriptors);
 
-    bd[rxq->write] = cpu_to_le64(io_buffer_phys(&rxb->io_buf) | rxb->vid);
+    bd[rxq->write] = cpu_to_le64(iwl_iobuf_physical(rxb->io_buf) | rxb->vid);
   }
 
   IWL_DEBUG_RX(trans, "Assigned virtual RB ID %u to queue %d index %d\n", (uint32_t)rxb->vid,
@@ -286,7 +288,7 @@ static void iwl_pcie_rxmq_restock(struct iwl_trans* trans, struct iwl_rxq* rxq) 
     rxb = list_remove_head_type(&rxq->rx_free, struct iwl_rx_mem_buffer, list);
     rxb->invalid = false;
     /* 12 first bits are expected to be empty */
-    WARN_ON(io_buffer_phys(&rxb->io_buf) & DMA_BIT_MASK(12));
+    WARN_ON(iwl_iobuf_physical(rxb->io_buf) & DMA_BIT_MASK(12));
     /* Point to Rx buffer via next RBD in circular buffer */
     iwl_pcie_restock_bd(trans, rxq, rxb);
     rxq->write = (rxq->write + 1) & MQ_RX_TABLE_MASK;
@@ -325,17 +327,17 @@ static void iwl_pcie_rxsq_restock(struct iwl_trans* trans, struct iwl_rxq* rxq) 
 
   mtx_lock(&rxq->lock);
   while ((iwl_rxq_space(rxq) > 0) && (rxq->free_count)) {
-    __le32* bd = (__le32*)(io_buffer_virt(&rxq->descriptors));
+    __le32* bd = (__le32*)(iwl_iobuf_virtual(rxq->descriptors));
     /* The overwritten rxb must be a used one */
     rxb = rxq->queue[rxq->write];
-    ZX_ASSERT(!(rxb && io_buffer_is_valid(&rxb->io_buf)));
+    ZX_ASSERT(!(rxb && rxb->io_buf));
 
     /* Get next free Rx buffer, remove from free list */
     rxb = list_remove_head_type(&rxq->rx_free, struct iwl_rx_mem_buffer, list);
     rxb->invalid = false;
 
     /* Point to Rx buffer via next RBD in circular buffer */
-    bd[rxq->write] = iwl_pcie_dma_addr2rbd_ptr(io_buffer_phys(&rxb->io_buf));
+    bd[rxq->write] = iwl_pcie_dma_addr2rbd_ptr(iwl_iobuf_physical(rxb->io_buf));
     rxq->queue[rxq->write] = rxb;
     rxq->write = (rxq->write + 1) & RX_QUEUE_MASK;
     rxq->free_count--;
@@ -375,10 +377,11 @@ void iwl_pcie_free_rbs_pool(struct iwl_trans* trans) {
   int i;
 
   for (i = 0; i < RX_POOL_SIZE; i++) {
-    if (!io_buffer_is_valid(&trans_pcie->rx_pool[i].io_buf)) {
+    if (!trans_pcie->rx_pool[i].io_buf) {
       continue;
     }
-    io_buffer_release(&trans_pcie->rx_pool[i].io_buf);
+    iwl_iobuf_release(trans_pcie->rx_pool[i].io_buf);
+    trans_pcie->rx_pool[i].io_buf = NULL;
   }
 }
 
@@ -393,8 +396,10 @@ static int iwl_pcie_free_bd_size(struct iwl_trans* trans, bool use_rx_td) {
 }
 
 static void iwl_pcie_free_rxq_dma(struct iwl_trans* trans, struct iwl_rxq* rxq) {
-  io_buffer_release(&rxq->descriptors);
-  io_buffer_release(&rxq->rb_status);
+  iwl_iobuf_release(rxq->descriptors);
+  rxq->descriptors = NULL;
+  iwl_iobuf_release(rxq->rb_status);
+  rxq->rb_status = NULL;
 
   // The following code is only used for the 22560+ device families. Which are not currently
   // supported.
@@ -443,8 +448,8 @@ static zx_status_t iwl_pcie_alloc_rxq_dma(struct iwl_trans* trans, struct iwl_rx
    * Allocate the circular buffer of Read Buffer Descriptors
    * (RBDs)
    */
-  zx_status_t status = io_buffer_init(&rxq->descriptors, trans_pcie->bti,
-                                      free_size * rxq->queue_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  zx_status_t status = iwl_iobuf_allocate_contiguous(
+      &trans_pcie->pci_dev->dev, free_size * rxq->queue_size, &rxq->descriptors);
   if (status != ZX_OK) {
     goto err;
   }
@@ -461,9 +466,9 @@ static zx_status_t iwl_pcie_alloc_rxq_dma(struct iwl_trans* trans, struct iwl_rx
 #endif
 
   /* Allocate the driver's pointer to receive buffer status */
-  status = io_buffer_init(&rxq->rb_status, trans_pcie->bti,
-                          use_rx_td ? sizeof(__le16) : sizeof(struct iwl_rb_status),
-                          IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  status = iwl_iobuf_allocate_contiguous(&trans_pcie->pci_dev->dev,
+                                         use_rx_td ? sizeof(__le16) : sizeof(struct iwl_rb_status),
+                                         &rxq->rb_status);
 
   if (status != ZX_OK) {
     goto err;
@@ -567,10 +572,10 @@ static void iwl_pcie_rx_hw_init(struct iwl_trans* trans, struct iwl_rxq* rxq) {
 
   /* Tell device where to find RBD circular buffer in DRAM */
   iwl_write32(trans, FH_RSCSR_CHNL0_RBDCB_BASE_REG,
-              (uint32_t)(io_buffer_phys(&rxq->descriptors) >> 8));
+              (uint32_t)(iwl_iobuf_physical(rxq->descriptors) >> 8));
 
   /* Tell device where in DRAM to update its Rx status */
-  iwl_write32(trans, FH_RSCSR_CHNL0_STTS_WPTR_REG, io_buffer_phys(&rxq->rb_status) >> 4);
+  iwl_write32(trans, FH_RSCSR_CHNL0_STTS_WPTR_REG, iwl_iobuf_physical(rxq->rb_status) >> 4);
 
   /* Enable Rx DMA
    * FH_RCSR_CHNL0_RX_IGNORE_RXF_EMPTY is set because of HW bug in
@@ -717,7 +722,7 @@ zx_status_t _iwl_pcie_rx_init(struct iwl_trans* trans) {
     rxq->read = 0;
     rxq->write = 0;
     rxq->write_actual = 0;
-    memset(io_buffer_virt(&rxq->rb_status), 0,
+    memset(iwl_iobuf_virtual(rxq->rb_status), 0,
            (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) ? sizeof(__le16)
                                                                   : sizeof(struct iwl_rb_status));
 
@@ -742,7 +747,7 @@ zx_status_t _iwl_pcie_rx_init(struct iwl_trans* trans) {
 
     // Initialize the io buffer.
     zx_status_t status =
-        io_buffer_init(&rxb->io_buf, trans_pcie->bti, buffer_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+        iwl_iobuf_allocate_contiguous(&trans_pcie->pci_dev->dev, buffer_size, &rxb->io_buf);
     if (status != ZX_OK) {
       IWL_WARN(trans, "Failed to allocate io buffer\n");
       return status;
@@ -838,12 +843,12 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
     return;
   }
 
-  uint32_t max_len = io_buffer_size(&rxb->io_buf, 0);
+  uint32_t max_len = iwl_iobuf_size(rxb->io_buf);
   while (offset + sizeof(uint32_t) + sizeof(struct iwl_cmd_header) < max_len) {
     struct iwl_rx_packet* pkt;
     struct iwl_rx_cmd_buffer rxcb = {
         ._offset = offset,
-        ._io_buf = rxb->io_buf,
+        ._iobuf = rxb->io_buf,
     };
 
 #if 0   // NEEDS_PORTING
@@ -914,7 +919,10 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
 
     if (reclaim) {
       // Release the duplicated buffer (for large transmitting packets) in TX (if any).
-      io_buffer_release(&txq->entries[cmd_index].dup_io_buf);
+      if (txq->entries[cmd_index].dup_io_buf) {
+        iwl_iobuf_release(txq->entries[cmd_index].dup_io_buf);
+        txq->entries[cmd_index].dup_io_buf = NULL;
+      }
 
       /* Invoke any callbacks, transfer the buffer to caller,
        * and fire off the (possibly) blocking
@@ -1138,7 +1146,7 @@ static uint32_t iwl_pcie_int_cause_non_ict(struct iwl_trans* trans) {
  */
 uint32_t iwl_pcie_int_cause_ict(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  uint32_t* ict_table = (uint32_t*)io_buffer_virt(&trans_pcie->ict_tbl);
+  uint32_t* ict_table = (uint32_t*)iwl_iobuf_virtual(trans_pcie->ict_tbl);
 
 #if 0   // NEEDS_PORTING
   trace_iwlwifi_dev_irq(trans->dev);
@@ -1491,7 +1499,8 @@ out:
 void iwl_pcie_free_ict(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-  io_buffer_release(&trans_pcie->ict_tbl);
+  iwl_iobuf_release(trans_pcie->ict_tbl);
+  trans_pcie->ict_tbl = NULL;
 }
 
 /*
@@ -1501,14 +1510,14 @@ void iwl_pcie_free_ict(struct iwl_trans* trans) {
 zx_status_t iwl_pcie_alloc_ict(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-  zx_status_t status = io_buffer_init(&trans_pcie->ict_tbl, trans_pcie->bti, ICT_SIZE,
-                                      IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  zx_status_t status =
+      iwl_iobuf_allocate_contiguous(&trans_pcie->pci_dev->dev, ICT_SIZE, &trans_pcie->ict_tbl);
   if (status != ZX_OK) {
     return status;
   }
 
   // The device expects the shifted physical address to be written to a 32-bit register.
-  zx_paddr_t dma_addr = io_buffer_phys(&trans_pcie->ict_tbl);
+  zx_paddr_t dma_addr = iwl_iobuf_physical(trans_pcie->ict_tbl);
   if ((dma_addr >> ICT_SHIFT) > UINT32_MAX) {
     return ZX_ERR_INTERNAL;
   }
@@ -1522,16 +1531,16 @@ zx_status_t iwl_pcie_alloc_ict(struct iwl_trans* trans) {
 void iwl_pcie_reset_ict(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-  if (!io_buffer_is_valid(&trans_pcie->ict_tbl)) {
+  if (!trans_pcie->ict_tbl) {
     return;
   }
 
   mtx_lock(&trans_pcie->irq_lock);
   _iwl_disable_interrupts(trans);
 
-  memset(io_buffer_virt(&trans_pcie->ict_tbl), 0, ICT_SIZE);
+  memset(iwl_iobuf_virtual(trans_pcie->ict_tbl), 0, ICT_SIZE);
 
-  uint32_t val = io_buffer_phys(&trans_pcie->ict_tbl) >> ICT_SHIFT;
+  uint32_t val = iwl_iobuf_physical(trans_pcie->ict_tbl) >> ICT_SHIFT;
   val |= CSR_DRAM_INT_TBL_ENABLE | CSR_DRAM_INIT_TBL_WRAP_CHECK | CSR_DRAM_INIT_TBL_WRITE_POINTER;
 
   IWL_DEBUG_ISR(trans, "CSR_DRAM_INT_TBL_REG =0x%x\n", val);

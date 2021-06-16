@@ -693,7 +693,8 @@ static zx_status_t iwl_pcie_load_section(struct iwl_trans* trans, uint8_t sectio
 
   // Allocate a VMO space.
   size_t vmo_size = ROUND_UP(chunk_sz, ZX_PAGE_SIZE);
-  ret = zx_vmo_create_contiguous(trans_pcie->bti, vmo_size, /*alignment_log2*/ 0, &vmo);
+  ret =
+      zx_vmo_create_contiguous(trans_pcie->pci_dev->dev.bti, vmo_size, /*alignment_log2*/ 0, &vmo);
   if (ret != ZX_OK) {
     goto out;
   }
@@ -701,9 +702,8 @@ static zx_status_t iwl_pcie_load_section(struct iwl_trans* trans, uint8_t sectio
   // Map the virtual address to physical address.
   zx_handle_t pmt;  // Pinned Memory Token -- for unpin.
   zx_paddr_t p_addr;
-  ret = zx_bti_pin(trans_pcie->bti, ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, vmo, /*offset*/ 0,
-                   vmo_size, &p_addr,
-                   /* addrs_count */ 1, &pmt);
+  ret = zx_bti_pin(trans_pcie->pci_dev->dev.bti, ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, vmo,
+                   /*offset*/ 0, vmo_size, &p_addr, /* addrs_count */ 1, &pmt);
   if (ret != ZX_OK) {
     goto out;
   }
@@ -1814,7 +1814,6 @@ void iwl_trans_pcie_free(struct iwl_trans* trans) {
 
   zx_interrupt_destroy(trans_pcie->irq_handle);
   thrd_join(trans_pcie->irq_thread, NULL);
-  zx_handle_close(trans_pcie->bti);
 
 #if 0   // NEEDS_PORTING
     int i;
@@ -1835,7 +1834,11 @@ void iwl_trans_pcie_free(struct iwl_trans* trans) {
 
         trans_pcie->msix_enabled = false;
     } else {
-        iwl_pcie_free_ict(trans);
+#endif  // NEEDS_PORTING
+
+  iwl_pcie_free_ict(trans);
+
+#if 0   // NEEDS_PORTING
     }
 
     iwl_pcie_free_fw_monitor(trans);
@@ -2690,11 +2693,6 @@ static void iwl_trans_pcie_debugfs_cleanup(struct iwl_trans* trans) {
 #endif  /*CPTCFG_IWLWIFI_DEBUGFS */
 #endif  // NEEDS_PORTING
 
-zx_handle_t iwl_trans_pcie_get_bti(struct iwl_trans* trans) {
-  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  return trans_pcie->bti;
-}
-
 #if 0  // NEEDS_PORTING
 static uint32_t iwl_trans_pcie_get_cmdlen(struct iwl_trans* trans, void* tfd) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
@@ -3123,7 +3121,6 @@ static struct iwl_trans_ops trans_ops_pcie = {
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
     .debugfs_cleanup = iwl_trans_pcie_debugfs_cleanup,
 #endif
-    .get_bti = iwl_trans_pcie_get_bti,
 };
 
 #if 0  // NEEDS_PORTING
@@ -3146,7 +3143,6 @@ static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
     .debugfs_cleanup = iwl_trans_pcie_debugfs_cleanup,
 #endif
-    .get_bti = iwl_trans_pcie_get_bti,
 };
 #endif  // NEEDS_PORTING
 
@@ -3218,12 +3214,6 @@ struct iwl_trans* iwl_trans_pcie_alloc(struct iwl_pci_dev* pdev,
     goto out_no_pci;
   }
 
-  status = pci_get_bti(trans_pcie->pci, /*index*/ 0, &trans_pcie->bti);
-  if (status != ZX_OK) {
-    IWL_ERR(trans, "Failed to get BTI: %s\n", zx_status_get_string(status));
-    goto out_no_pci;
-  }
-
 #if 0   // NEEDS_PORTING
     ret = pci_set_dma_mask(pdev, DMA_BIT_MASK(addr_size));
     if (!ret) { ret = pci_set_consistent_dma_mask(pdev, DMA_BIT_MASK(addr_size)); }
@@ -3249,6 +3239,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(struct iwl_pci_dev* pdev,
    * PCI Tx retries from interfering with C3 CPU state */
   pci_config_write8(trans_pcie->pci, PCI_CFG_RETRY_TIMEOUT, 0x00);
 
+  trans_pcie->pci_dev = pdev;
   iwl_disable_interrupts(trans);
 
   trans->hw_rev = iwl_read32(trans, CSR_HW_REV);
