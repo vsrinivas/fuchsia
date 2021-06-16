@@ -482,6 +482,10 @@ default_rust_proc_macro_configs = default_shared_library_configs + [
 
 # Known e2e test libraries. Any tests that transitively depend on these
 # libraries are considered e2e tests.
+#
+# See also: docs/concepts/testing/coverage.md
+#
+# [START e2e_test_libs]
 e2e_test_libs = [ "//sdk/testing/sl4f/client" ]
 if (is_linux) {
   e2e_test_libs += [
@@ -489,6 +493,8 @@ if (is_linux) {
     "//tools/fvdl/e2e/e2etest($host_toolchain)",
   ]
 }
+
+# [END e2e_test_libs]
 
 # Known unit tests for e2e test libraries.
 e2e_lib_unit_tests = [

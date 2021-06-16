@@ -4,8 +4,8 @@
 
 Software testing is a common practice that helps teams continuously deliver
 quality code. Tests exercise invariants on the software's behavior, catch and
-prevent regressions in functionality or other desired properties, and help
-scale engineering processes.
+prevent regressions in functionality or other desired properties, and help scale
+engineering processes.
 
 Measuring test coverage in terms of source code line coverage helps engineers
 identify gaps in their testing solutions. Using test coverage as a metric
@@ -38,10 +38,10 @@ internal code search.
 
 ## Incremental test coverage
 
-Incremental test coverage is shown in the context of a change on the [Gerrit
-code review web UI][gerrit]. Incremental coverage shows, specifically in the
-context of a given change, which modified lines are covered by tests and which
-modified lines are not.
+Incremental test coverage is shown in the context of a change on the
+[Gerrit code review web UI][gerrit]. Incremental coverage shows, specifically in
+the context of a given change, which modified lines are covered by tests and
+which modified lines are not.
 
 Incremental test coverage is collected by Fuchsia's Commit Queue (CQ)
 infrastructure. When sending a change to CQ (Commit-Queue+1), you can click
@@ -63,6 +63,45 @@ ask authors to close any testing gaps that they identify as important.
 
 ![Gerrit screenshot showing line coverage](incremental.png)
 
+## End-to-end (E2E) tests exclusion
+
+Only unit tests and hermetic integration tests are considered reliable sources
+of test coverage. No test coverage is collected or presented for E2E tests.
+
+E2E tests are large system tests that exercise the product as a whole and don't
+necessarily cover a well-defined portion of the source code. For example, it's
+common for E2E tests on Fuchsia to boot the system in an emulator, interact with
+it, and expect certain behaviors.
+
+### Why
+
+Because E2E tests exercise the system as a whole:
+
+*   They were observed to often trigger different code paths between runs,
+    making their coverage results flaky.
+*   They frequently time out on coverage builders, making the builders flaky.
+    E2E tests run considerably slower than unit tests and small integration
+    tests, usually take minutes to finish. And they run even slower on coverage
+    builders due to coverage overhead that slows down performance.
+
+### How
+
+For top-level buildbot bundles like [`core`][core_bundle]{:.external}, a
+counterpart [`core_no_e2e`][core_no_e2e_bundle]{:.external} is provided, so bots
+that collect coverage can use the `no_e2e` bundle to avoid building and running
+any E2E tests.
+
+Currently, there are no reliable ways to identify all E2E tests in-tree. As a
+proxy, `no_e2e` bundles maintain the invariant that they don't have any known
+e2e test libraries in their recursive dependencies, through GN's
+[`assert_no_deps`][assert-no-deps]{:.external}. The list of E2E test libraries
+is manually curated and maintained, with the assumption that it changes very
+infrequently:
+
+```gn
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="build/config/BUILDCONFIG.gn" region_tag="e2e_test_libs" adjust_indentation="auto" %}
+```
+
 ## Limitations
 
 Currently, test coverage is collected only if:
@@ -76,17 +115,17 @@ Currently, test coverage is collected only if:
 *   System tests, aka end-to-end (e2e) tests, are _excluded_.
 
 On that last note, e2e tests exercise a lot of code throughout the system, but
-they do so in a manner that's inconsistent between runs (or "flaky"). To
-achieve higher test coverage for code, it is possible and in fact recommended
-to do so using unit tests and integration tests.
+they do so in a manner that's inconsistent between runs (or "flaky"). To achieve
+higher test coverage for code, it is possible and in fact recommended to do so
+using unit tests and integration tests.
 
 Support for the following additional use cases is currently under development:
 
 *   Kernel code coverage.
-*   Coverage on product configurations other than `core`, for instance
-    `bringup` or `workstation`.
-*   Coverage on hardware targets, that is collecting from tests that don't
-    run on qemu.
+*   Coverage on product configurations other than `core`, for instance `bringup`
+    or `workstation`.
+*   Coverage on hardware targets, that is collecting from tests that don't run
+    on qemu.
 
 ## Troubleshooting
 
@@ -100,13 +139,12 @@ expected to receive coverage support in the first place.
 
 Absolute coverage reports are generated after the code is merged and may take a
 few hours to fully compile. The dashboard shows the commit hash for the
-generated report. If you're not seeing expected results on the dashboard,
-ensure that the data was generated past any recent changes that would have
-affected coverage. If the data appears stale, come back later and refresh the
-page.
+generated report. If you're not seeing expected results on the dashboard, ensure
+that the data was generated past any recent changes that would have affected
+coverage. If the data appears stale, come back later and refresh the page.
 
-Incremental coverage reports are generated by CQ. Ensure that you are looking
-at a patch set that was sent to CQ. You can click "show experimental tryjobs" to
+Incremental coverage reports are generated by CQ. Ensure that you are looking at
+a patch set that was sent to CQ. You can click "show experimental tryjobs" to
 reveal a tryjob named `fuchsia-coverage`. If the tryjob is still running, come
 back later and refresh the page.
 
@@ -115,13 +153,13 @@ back later and refresh the page.
 If your code is missing coverage that you expect to see, then pick a test that
 should have covered your code and ensure that it ran on the coverage tryjob.
 
-1.   Find the tryjob in Gerrit, or find a recent `fuchsia-coverage` run on the
-     [CI dashboard][fuchsia-coverage-ci].
-1.   In the Overview tab, find the "collect builds" step and expand it to find
-     links to the pages that show different coverage build & test runs for
-     different configurations.
-1.   Each of these pages should have a Test Results tab showing all tests that
-     ran. Ensure that your expected test ran, and preferably that it passed.
+1.  Find the tryjob in Gerrit, or find a recent `fuchsia-coverage` run on the
+    [CI dashboard][fuchsia-coverage-ci].
+1.  In the Overview tab, find the "collect builds" step and expand it to find
+    links to the pages that show different coverage build & test runs for
+    different configurations.
+1.  Each of these pages should have a Test Results tab showing all tests that
+    ran. Ensure that your expected test ran, and preferably that it passed.
 
 If your test didn't run on any coverage tryjob as expected then one reason might
 simply be that it only runs in configurations not currently covered by CI/CQ.
@@ -212,9 +250,12 @@ Areas for future work:
 
 *   Kernel support for source code coverage from ZBI tests.
 
-[coverage-dashboard]: https://analysis.chromium.org/p/fuchsia/coverage
+[assert-no-deps]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#var_assert_no_deps
 [cfv2]: /docs/concepts/components/v2/
+[core_bundle]: https://cs.opensource.google/fuchsia/fuchsia/+/main:bundles/buildbot/BUILD.gn;l=58;drc=9e1506dfbe789637c709fcc4ad43896f5044f947
+[core_no_e2e_bundle]: https://cs.opensource.google/fuchsia/fuchsia/+/main:bundles/buildbot/BUILD.gn;l=53;drc=9e1506dfbe789637c709fcc4ad43896f5044f947
 [covargs]: /tools/debug/covargs/
+[coverage-dashboard]: https://analysis.chromium.org/p/fuchsia/coverage
 [debugdata]: https://fuchsia.dev/reference/fidl/fuchsia.debugdata
 [flaky-policy]: /docs/concepts/testing/test_flake_policy.md
 [fuchsia-coverage-ci]: https://ci.chromium.org/p/fuchsia/builders/ci/fuchsia-coverage
@@ -224,8 +265,8 @@ Areas for future work:
 [fxr541525]: https://fuchsia-review.googlesource.com/c/fuchsia/+/541525
 [gerrit]: https://fuchsia-review.googlesource.com/
 [llvm-cov]: https://llvm.org/docs/CommandGuide/llvm-cov.html
-[llvm-coverage]: https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
 [llvm-coverage-mapping-format]: https://llvm.org/docs/CoverageMappingFormat.html
+[llvm-coverage]: https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
 [llvm-profdata]: https://llvm.org/docs/CommandGuide/llvm-profdata.html
 [trf]: /docs/concepts/testing/v2/test_runner_framework.md
 [vmo]: /docs/reference/kernel_objects/vm_object.md
