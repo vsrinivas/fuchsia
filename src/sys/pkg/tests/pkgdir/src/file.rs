@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::dirs_to_test,
+    crate::{dirs_to_test, repeat_by_n},
     fidl_fuchsia_io::{DirectoryProxy, SeekOrigin, MAX_BUF, OPEN_RIGHT_READABLE},
     fuchsia_zircon as zx,
     io_util::directory::open_file,
@@ -187,7 +187,7 @@ async fn assert_read_exceeds_buffer_success(root_dir: &DirectoryProxy, path: &st
     assert_eq!(zx::Status::ok(status), Ok(()));
     assert_eq!(
         std::str::from_utf8(&bytes).unwrap(),
-        &std::iter::repeat('a').take(MAX_BUF.try_into().unwrap()).collect::<String>()
+        &repeat_by_n('a', fidl_fuchsia_io::MAX_BUF.try_into().unwrap())
     );
 
     // There should be one remaining "a".

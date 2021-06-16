@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::dirs_to_test,
+    crate::{dirs_to_test, repeat_by_n},
     anyhow::{anyhow, Context as _, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io::{
@@ -14,12 +14,14 @@ use {
         OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
+    files_async::{DirEntry, DirentKind},
     fuchsia_zircon as zx,
     futures::future::Future,
     itertools::Itertools as _,
     std::{
         clone::Clone,
         collections::HashSet,
+        convert::TryInto,
         iter::{FromIterator, IntoIterator},
     },
 };
@@ -547,4 +549,150 @@ async fn verify_open_failed(node: NodeProxy) -> Result<(), Error> {
         }
         Err(e) => Err(e).context("failed with unexpected error"),
     }
+}
+
+#[fuchsia::test]
+async fn read_dirents() {
+    for dir in dirs_to_test().await {
+        read_dirents_per_package_source(dir).await
+    }
+}
+
+async fn read_dirents_per_package_source(root_dir: DirectoryProxy) {
+    // Handle overflow cases (e.g. when size of total dirents exceeds MAX_BUF).
+    assert_read_dirents_overflow(
+        &root_dir,
+        vec![
+            DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
+            DirEntry { name: "dir_overflow_readdirents".to_string(), kind: DirentKind::Directory },
+            DirEntry { name: "exceeds_max_buf".to_string(), kind: DirentKind::File },
+            DirEntry { name: "file".to_string(), kind: DirentKind::File },
+            DirEntry { name: "meta".to_string(), kind: DirentKind::Directory },
+        ],
+    )
+    .await;
+    assert_read_dirents_overflow(
+        &io_util::directory::open_directory(&root_dir, "meta", 0).await.expect("open meta as dir"),
+        vec![
+            DirEntry { name: "contents".to_string(), kind: DirentKind::File },
+            DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
+            DirEntry { name: "dir_overflow_readdirents".to_string(), kind: DirentKind::Directory },
+            DirEntry { name: "exceeds_max_buf".to_string(), kind: DirentKind::File },
+            DirEntry { name: "file".to_string(), kind: DirentKind::File },
+            DirEntry { name: "package".to_string(), kind: DirentKind::File },
+        ],
+    )
+    .await;
+    assert_read_dirents_overflow(
+        &io_util::directory::open_directory(&root_dir, "dir_overflow_readdirents", 0)
+            .await
+            .expect("open dir_overflow_readdirents"),
+        vec![],
+    )
+    .await;
+    assert_read_dirents_overflow(
+        &io_util::directory::open_directory(&root_dir, "meta/dir_overflow_readdirents", 0)
+            .await
+            .expect("open meta/dir_overflow_readdirents"),
+        vec![],
+    )
+    .await;
+
+    // Handle no-overflow cases (e.g. when size of total dirents does not exceed MAX_BUF).
+    assert_read_dirents_no_overflow(
+        &io_util::directory::open_directory(&root_dir, "dir", 0).await.expect("open dir"),
+        vec![
+            DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
+            DirEntry { name: "file".to_string(), kind: DirentKind::File },
+        ],
+    )
+    .await;
+    assert_read_dirents_no_overflow(
+        &io_util::directory::open_directory(&root_dir, "dir/dir", 0).await.expect("open dir/dir"),
+        vec![
+            DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
+            DirEntry { name: "file".to_string(), kind: DirentKind::File },
+        ],
+    )
+    .await;
+    assert_read_dirents_no_overflow(
+        &io_util::directory::open_directory(&root_dir, "dir/dir/dir", 0)
+            .await
+            .expect("open dir/dir/dir"),
+        vec![DirEntry { name: "file".to_string(), kind: DirentKind::File }],
+    )
+    .await;
+    assert_read_dirents_no_overflow(
+        &io_util::directory::open_directory(&root_dir, "meta/dir", 0).await.expect("open meta/dir"),
+        vec![
+            DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
+            DirEntry { name: "file".to_string(), kind: DirentKind::File },
+        ],
+    )
+    .await;
+    assert_read_dirents_no_overflow(
+        &io_util::directory::open_directory(&root_dir, "meta/dir/dir", 0)
+            .await
+            .expect("open meta/dir/dir"),
+        vec![
+            DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
+            DirEntry { name: "file".to_string(), kind: DirentKind::File },
+        ],
+    )
+    .await;
+    assert_read_dirents_no_overflow(
+        &io_util::directory::open_directory(&root_dir, "meta/dir/dir/dir", 0)
+            .await
+            .expect("open meta/dir/dir/dir"),
+        vec![DirEntry { name: "file".to_string(), kind: DirentKind::File }],
+    )
+    .await;
+}
+
+/// For a particular directory, verify that the overflow case is being hit on ReadDirents (e.g. it
+/// should take two ReadDirents calls to read all of the directory entries).
+/// Note: we considered making this a unit test for pkg-harness, but opted to include this in the
+/// integration tests so all the test cases are in one place.
+async fn assert_read_dirents_overflow(dir: &DirectoryProxy, additional_contents: Vec<DirEntry>) {
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(!buf.is_empty(), "first call should yield non-empty buffer");
+
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(!buf.is_empty(), "second call should yield non-empty buffer");
+
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert_eq!(buf, []);
+
+    assert_eq!(
+        files_async::readdir(dir).await.unwrap().into_iter().sorted().collect::<Vec<_>>(),
+        ('a'..='z')
+            .chain('A'..='E')
+            .map(|seed| DirEntry {
+                name: repeat_by_n(seed, fidl_fuchsia_io::MAX_FILENAME.try_into().unwrap()),
+                kind: DirentKind::File
+            })
+            .chain(additional_contents)
+            .sorted()
+            .collect::<Vec<_>>()
+    );
+}
+
+/// For a particular directory, verify that the overflow case is NOT being hit on ReadDirents
+/// (e.g. it should only take one ReadDirents call to read all of the directory entries).
+async fn assert_read_dirents_no_overflow(dir: &DirectoryProxy, expected_dirents: Vec<DirEntry>) {
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(!buf.is_empty(), "first call should yield non-empty buffer");
+
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert_eq!(buf, []);
+
+    assert_eq!(
+        files_async::readdir(dir).await.unwrap().into_iter().sorted().collect::<Vec<_>>(),
+        expected_dirents.into_iter().sorted().collect::<Vec<_>>()
+    );
 }

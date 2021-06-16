@@ -7,11 +7,14 @@ use {
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fidl_test_fidl_pkg::{Backing, ConnectError, HarnessMarker},
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_zircon as zx,
 };
 
 mod directory;
 mod file;
+
+fn repeat_by_n(seed: char, n: usize) -> String {
+    std::iter::repeat(seed).take(n).collect()
+}
 
 async fn dirs_to_test() -> impl Iterator<Item = DirectoryProxy> {
     let proxy = connect_to_protocol::<HarnessMarker>().unwrap();
@@ -30,28 +33,4 @@ async fn unsupported_backing() {
     let res = harness.connect_package(Backing::Pkgdir, server).await.unwrap();
 
     assert_eq!(res, Err(ConnectError::UnsupportedBacking));
-}
-
-/// Verify the overflow case is being hit on ReadDirents.
-/// Note: we considered making this a unit test for pkg-harness, but opted to include this in the
-/// integration tests so all the test cases are in one place.
-#[fuchsia::test]
-async fn overflow() {
-    let harness = connect_to_protocol::<HarnessMarker>().unwrap();
-    let (dir, server) = create_proxy::<DirectoryMarker>().unwrap();
-
-    let () = harness.connect_package(Backing::Pkgfs, server).await.unwrap().unwrap();
-
-    // Verify it takes three ReadDirents calls to read the directory entries.
-    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
-    zx::Status::ok(status).expect("status ok");
-    assert!(!buf.is_empty(), "first call should yield non-empty buffer");
-
-    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
-    zx::Status::ok(status).expect("status ok");
-    assert!(!buf.is_empty(), "second call should yield non-empty buffer");
-
-    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
-    zx::Status::ok(status).expect("status ok");
-    assert!(buf.is_empty(), "third call should yield empty buffer");
 }
