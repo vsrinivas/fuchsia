@@ -26,6 +26,7 @@
                 "fuchsia.overnet.ServicePublisher",
                 "fuchsia.sys.Launcher",
                 "fuchsia.test.manager.Harness",
+                "fuchsia.test.manager.RunBuilder",
             ],
         },
     ],

@@ -6,30 +6,34 @@ mod lib;
 
 use {
     crate::lib::{assert_events_eq, run_test},
+    fidl_fuchsia_test_manager as ftest_manager,
+    ftest_manager::{CaseStatus, SuiteStatus},
     maplit::{hashmap, hashset},
     pretty_assertions::assert_eq,
     std::{collections::HashSet, iter::FromIterator},
-    test_executor::{DisabledTestHandling, GroupByTestCase, TestEvent, TestResult, TestRunOptions},
+    test_executor::{GroupRunEventByTestCase, RunEvent},
 };
+
+fn default_options() -> ftest_manager::RunOptions {
+    ftest_manager::RunOptions {
+        run_disabled_tests: Some(false),
+        parallel: Some(10),
+        arguments: None,
+        timeout: None,
+        case_filters_to_run: None,
+        log_iterator: None,
+        ..ftest_manager::RunOptions::EMPTY
+    }
+}
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_sample_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
 
-    let events = run_test(
-        test_url,
-        TestRunOptions {
-            disabled_tests: DisabledTestHandling::Exclude,
-            parallel: Some(10),
-            arguments: vec![],
-        },
-    )
-    .await
-    .unwrap()
-    .into_iter()
-    .group_by_test_case_unordered();
+    let (events, _logs) = run_test(test_url, default_options()).await.unwrap();
+    let events = events.into_iter().group_by_test_case_unordered();
 
-    let expected_events = include!("../test_data/sample_tests_golden_events_legacy.rsf");
+    let expected_events = include!("../test_data/sample_tests_golden_events.rsf");
 
     assert_events_eq(&events, &expected_events);
 }
@@ -38,22 +42,16 @@ async fn launch_and_run_sample_test() {
 async fn launch_and_run_test_with_custom_args() {
     let test_url =
         "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/test_with_custom_args.cm";
-
-    let events = run_test(
-        test_url,
-        TestRunOptions {
-            disabled_tests: DisabledTestHandling::Exclude,
-            parallel: Some(10),
-            arguments: vec!["--my_custom_arg2".to_owned()],
-        },
-    )
-    .await
-    .unwrap();
+    let mut run_options = default_options();
+    run_options.arguments = Some(vec!["--my_custom_arg2".to_owned()]);
+    let (events, _logs) = run_test(test_url, run_options).await.unwrap();
 
     let expected_events = vec![
-        TestEvent::test_case_started("TestArg.TestArg"),
-        TestEvent::test_case_finished("TestArg.TestArg", TestResult::Passed),
-        TestEvent::test_finished(),
+        RunEvent::case_found("TestArg.TestArg"),
+        RunEvent::case_started("TestArg.TestArg"),
+        RunEvent::case_stopped("TestArg.TestArg", CaseStatus::Passed),
+        RunEvent::case_finished("TestArg.TestArg"),
+        RunEvent::suite_finished(SuiteStatus::Passed),
     ];
     assert_eq!(expected_events, events);
 }
@@ -61,21 +59,12 @@ async fn launch_and_run_test_with_custom_args() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_sample_test_no_concurrent() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
+    let mut run_options = default_options();
+    run_options.parallel = None;
+    let (events, _logs) = run_test(test_url, run_options).await.unwrap();
+    let events = events.into_iter().group_by_test_case_unordered();
 
-    let events = run_test(
-        test_url,
-        TestRunOptions {
-            disabled_tests: DisabledTestHandling::Exclude,
-            parallel: None,
-            arguments: vec![],
-        },
-    )
-    .await
-    .unwrap()
-    .into_iter()
-    .group_by_test_case_unordered();
-
-    let expected_events = include!("../test_data/sample_tests_golden_events_legacy.rsf");
+    let expected_events = include!("../test_data/sample_tests_golden_events.rsf");
 
     assert_events_eq(&events, &expected_events);
 }
@@ -84,36 +73,34 @@ async fn launch_and_run_sample_test_no_concurrent() {
 async fn launch_and_run_sample_test_include_disabled() {
     const TEST_URL: &str =
         "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
-    let events = run_test(
-        TEST_URL,
-        TestRunOptions {
-            disabled_tests: DisabledTestHandling::Include,
-            parallel: Some(10),
-            arguments: vec![],
-        },
-    )
-    .await
-    .unwrap()
-    .into_iter()
-    .group_by_test_case_unordered();
+    let mut run_options = default_options();
+    run_options.run_disabled_tests = Some(true);
+    let (events, _logs) = run_test(TEST_URL, run_options).await.unwrap();
+    let events = events.into_iter().group_by_test_case_unordered();
 
     let expected_pass_events = vec![
-        TestEvent::test_case_started("SampleDisabled.DISABLED_TestPass"),
-        TestEvent::test_case_finished("SampleDisabled.DISABLED_TestPass", TestResult::Passed),
+        RunEvent::case_found("SampleDisabled.DISABLED_TestPass"),
+        RunEvent::case_started("SampleDisabled.DISABLED_TestPass"),
+        RunEvent::case_stopped("SampleDisabled.DISABLED_TestPass", CaseStatus::Passed),
+        RunEvent::case_finished("SampleDisabled.DISABLED_TestPass"),
     ];
     let expected_fail_events = hashset![
-        TestEvent::test_case_started("SampleDisabled.DISABLED_TestFail"),
-        TestEvent::test_case_finished("SampleDisabled.DISABLED_TestFail", TestResult::Failed),
+        RunEvent::case_found("SampleDisabled.DISABLED_TestFail"),
+        RunEvent::case_started("SampleDisabled.DISABLED_TestFail"),
+        RunEvent::case_stopped("SampleDisabled.DISABLED_TestFail", CaseStatus::Failed),
+        RunEvent::case_finished("SampleDisabled.DISABLED_TestFail"),
     ];
     let expected_skip_events = vec![
-        TestEvent::test_case_started("SampleDisabled.DynamicSkip"),
-        TestEvent::stdout_message(
+        RunEvent::case_found("SampleDisabled.DynamicSkip"),
+        RunEvent::case_started("SampleDisabled.DynamicSkip"),
+        RunEvent::case_stdout(
             "SampleDisabled.DynamicSkip",
             "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:25: Skipped",
         ),
-        TestEvent::stdout_message("SampleDisabled.DynamicSkip", ""),
+        RunEvent::case_stdout("SampleDisabled.DynamicSkip", ""),
         // gtest treats tests that call `GTEST_SKIP()` as `Passed`.
-        TestEvent::test_case_finished("SampleDisabled.DynamicSkip", TestResult::Passed),
+        RunEvent::case_stopped("SampleDisabled.DynamicSkip", CaseStatus::Passed),
+        RunEvent::case_finished("SampleDisabled.DynamicSkip"),
     ];
 
     let actual_pass_events =
@@ -137,18 +124,9 @@ async fn launch_and_run_sample_test_include_disabled() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_empty_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/empty_test.cm";
-    let events = run_test(
-        test_url,
-        TestRunOptions {
-            disabled_tests: DisabledTestHandling::Exclude,
-            parallel: Some(10),
-            arguments: vec![],
-        },
-    )
-    .await
-    .unwrap();
+    let (events, _logs) = run_test(test_url, default_options()).await.unwrap();
 
-    let expected_events = vec![TestEvent::test_finished()];
+    let expected_events = vec![RunEvent::suite_finished(SuiteStatus::Passed)];
 
     assert_eq!(expected_events, events);
 }
@@ -156,21 +134,14 @@ async fn launch_and_run_empty_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_echo_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/echo_test_realm.cm";
-    let events = run_test(
-        test_url,
-        TestRunOptions {
-            disabled_tests: DisabledTestHandling::Exclude,
-            parallel: Some(10),
-            arguments: vec![],
-        },
-    )
-    .await
-    .unwrap();
+    let (events, _logs) = run_test(test_url, default_options()).await.unwrap();
 
     let expected_events = vec![
-        TestEvent::test_case_started("EchoTest.TestEcho"),
-        TestEvent::test_case_finished("EchoTest.TestEcho", TestResult::Passed),
-        TestEvent::test_finished(),
+        RunEvent::case_found("EchoTest.TestEcho"),
+        RunEvent::case_started("EchoTest.TestEcho"),
+        RunEvent::case_stopped("EchoTest.TestEcho", CaseStatus::Passed),
+        RunEvent::case_finished("EchoTest.TestEcho"),
+        RunEvent::suite_finished(SuiteStatus::Passed),
     ];
     assert_eq!(expected_events, events);
 }
@@ -178,29 +149,23 @@ async fn launch_and_test_echo_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_parallel_execution() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/concurrency-test.cm";
-    let events = run_test(
-        test_url,
-        TestRunOptions {
-            disabled_tests: DisabledTestHandling::Exclude,
-            parallel: Some(5),
-            arguments: vec![],
-        },
-    )
-    .await
-    .unwrap()
-    .into_iter()
-    .group_by_test_case_unordered();
+    let mut run_options = default_options();
+    run_options.parallel = Some(5);
+    let (events, _logs) = run_test(test_url, run_options).await.unwrap();
+    let events = events.into_iter().group_by_test_case_unordered();
 
     let mut expected_events = vec![];
 
     for i in 1..=5 {
         let s = format!("EchoTest.TestEcho{}", i);
         expected_events.extend(vec![
-            TestEvent::test_case_started(&s),
-            TestEvent::test_case_finished(&s, TestResult::Passed),
+            RunEvent::case_found(&s),
+            RunEvent::case_started(&s),
+            RunEvent::case_stopped(&s, CaseStatus::Passed),
+            RunEvent::case_finished(&s),
         ])
     }
-    expected_events.push(TestEvent::test_finished());
+    expected_events.push(RunEvent::suite_finished(SuiteStatus::Passed));
     let expected_events = expected_events.into_iter().group_by_test_case_unordered();
     assert_events_eq(&expected_events, &events);
 }

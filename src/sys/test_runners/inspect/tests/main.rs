@@ -6,22 +6,25 @@ use {
     anyhow::{Context as _, Error},
     diagnostics_data::{hierarchy, Data, DiagnosticsHierarchy, Property},
     fake_archive_accessor::FakeArchiveAccessor,
-    fidl_fuchsia_test_manager::HarnessMarker,
+    fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_test_manager as ftest_manager,
+    ftest_manager::{CaseStatus, RunOptions, SuiteStatus},
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::builder::{
         Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint,
     },
-    futures::{channel::mpsc, prelude::*},
+    futures::prelude::*,
     paste::paste,
     pretty_assertions::assert_eq,
     serde_json,
     std::collections::BTreeSet,
-    test_executor::{DisabledTestHandling, GroupByTestCase, TestEvent, TestResult},
+    test_executor::{GroupRunEventByTestCase, RunEvent},
 };
 
 #[derive(Debug)]
-struct IntegrationTestResult {
-    events: Vec<TestEvent>,
+struct IntegrationCaseStatus {
+    events: Vec<RunEvent>,
     selectors_requested: Vec<BTreeSet<String>>,
 }
 
@@ -29,7 +32,7 @@ async fn run_test(
     test_url: &str,
     fake_archive_output: Vec<String>,
     archive_service_name: &'static str,
-) -> Result<IntegrationTestResult, Error> {
+) -> Result<IntegrationCaseStatus, Error> {
     let mut builder = RealmBuilder::new().await.expect("create realm builder");
 
     let fake = FakeArchiveAccessor::new(&fake_archive_output, None);
@@ -93,46 +96,37 @@ async fn run_test(
             targets: vec![RouteEndpoint::component("test_manager")],
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.test.manager.Harness"),
+            capability: Capability::protocol(ftest_manager::RunBuilderMarker::DEBUG_NAME),
             source: RouteEndpoint::component("test_manager"),
             targets: vec![RouteEndpoint::above_root()],
         })?;
 
     let instance = builder.build().create().await?;
 
-    let harness = instance.root.connect_to_protocol_at_exposed_dir::<HarnessMarker>()?;
-    let suite_instance = test_executor::SuiteInstance::new(test_executor::SuiteInstanceOpts {
-        harness: &harness,
-        test_url,
-        force_log_protocol: None,
-    })
-    .await?;
+    let run_builder =
+        instance.root.connect_to_protocol_at_exposed_dir::<ftest_manager::RunBuilderMarker>()?;
+    let run_builder = test_executor::TestBuilder::new(run_builder);
+    let suite_instance = run_builder
+        .add_suite(
+            test_url,
+            RunOptions { run_disabled_tests: Some(false), parallel: Some(1), ..RunOptions::EMPTY },
+        )
+        .await
+        .context("Cannot create suite instance")?;
+    let builder_run = fasync::Task::spawn(async move { run_builder.run().await });
+    let (events, _logs) = test_runners_test_lib::process_events(suite_instance, false).await?;
+    builder_run.await.context("builder execution failed")?;
 
-    let (sender, recv) = mpsc::channel(1);
-
-    let run_options = test_executor::TestRunOptions {
-        disabled_tests: DisabledTestHandling::Exclude,
-        parallel: Some(1),
-        arguments: vec![],
-    };
-
-    let (events, ()) = futures::future::try_join(
-        recv.collect::<Vec<_>>().map(Ok),
-        suite_instance.run_and_collect_results(sender, None, run_options),
-    )
-    .await
-    .context("running test")?;
-
-    Ok(IntegrationTestResult {
-        events: test_runners_test_lib::process_events(events, true),
+    Ok(IntegrationCaseStatus {
+        events: events,
         selectors_requested: fake.get_selectors_requested(),
     })
 }
 
-fn filter_out_println(event: TestEvent) -> Option<TestEvent> {
+fn filter_out_println(event: RunEvent) -> Option<RunEvent> {
     match event {
-        TestEvent::StdoutMessage { test_case_name, msg } => {
-            println!("Test stdout [{}]: {}", test_case_name, msg);
+        RunEvent::CaseStdout { name, stdout_message } => {
+            println!("Test stdout [{}]: {}", name, stdout_message);
             None
         }
         e => Some(e),
@@ -202,7 +196,7 @@ async fn launch_and_test_sample_test() {
     .collect::<Result<Vec<_>, _>>()
     .expect("format fake data");
 
-    let IntegrationTestResult { events, selectors_requested } =
+    let IntegrationCaseStatus { events, selectors_requested } =
         run_test(test_url, fake_data, "fuchsia.diagnostics.ArchiveAccessor").await.unwrap();
 
     assert_eq!(
@@ -218,18 +212,18 @@ async fn launch_and_test_sample_test() {
             .collect::<Vec<Vec<String>>>()
     );
 
-    let expected_events: Vec<TestEvent> = vec![
+    let expected_events: Vec<RunEvent> = vec![
             "bootstrap/archivist:root",
             "bootstrap/archivist:root/event_stats/recent_events/*:event WHERE [a] Count(Filter(Fn([b], b == 'START'), a)) > 0",
             "bootstrap/archivist:root/event_stats:components_seen_running WHERE [a] a > 1"
     ]
     .into_iter()
     .map(|case_name| vec![
-        TestEvent::test_case_started(case_name.clone()),
-        TestEvent::test_case_finished(case_name, TestResult::Passed)
+         RunEvent::case_found(case_name),RunEvent::case_started(case_name),
+         RunEvent::case_stopped(case_name, CaseStatus::Passed),RunEvent::case_finished(case_name)
     ])
     .flatten()
-    .chain(vec![TestEvent::Finish].into_iter()).collect::<_>();
+    .chain(vec![RunEvent::suite_finished(SuiteStatus::Passed)].into_iter()).collect::<_>();
 
     // Compare events, ignoring stdout messages.
     assert_eq!(
@@ -282,7 +276,7 @@ async fn example_test_success(test_url: &'static str, accessor_service: &'static
     .collect::<Result<Vec<_>, _>>()
     .expect("format fake data");
 
-    let IntegrationTestResult { events, selectors_requested } =
+    let IntegrationCaseStatus { events, selectors_requested } =
         run_test(test_url, fake_data, accessor_service).await.unwrap();
 
     assert_eq!(
@@ -293,17 +287,19 @@ async fn example_test_success(test_url: &'static str, accessor_service: &'static
             .collect::<Vec<Vec<String>>>()
     );
 
-    let expected_events: Vec<TestEvent> =
+    let expected_events: Vec<RunEvent> =
         vec!["example:root:value WHERE [a] And(a >= 5, a < 10)", "example:root:version"]
             .into_iter()
             .map(|case_name| {
                 vec![
-                    TestEvent::test_case_started(case_name.clone()),
-                    TestEvent::test_case_finished(case_name, TestResult::Passed),
+                    RunEvent::case_found(case_name),
+                    RunEvent::case_started(case_name),
+                    RunEvent::case_stopped(case_name, CaseStatus::Passed),
+                    RunEvent::case_finished(case_name),
                 ]
             })
             .flatten()
-            .chain(vec![TestEvent::Finish].into_iter())
+            .chain(vec![RunEvent::suite_finished(SuiteStatus::Passed)].into_iter())
             .collect::<_>();
 
     // Compare events, ignoring stdout messages.
@@ -335,23 +331,23 @@ async fn example_test_failure(
     let (fake_data, expected_results) = match failure_mode {
         FailureMode::NoValueFailure => (
             vec![create_example_data(ExampleDataOpts { version: Some("1.0"), value: Some(5) })],
-            vec![TestResult::Failed, TestResult::Failed],
+            vec![CaseStatus::Failed, CaseStatus::Failed],
         ),
         FailureMode::ValueTooSmall => (
             vec![create_example_data(ExampleDataOpts { version: Some("1.0"), value: Some(4) })],
-            vec![TestResult::Failed, TestResult::Passed],
+            vec![CaseStatus::Failed, CaseStatus::Passed],
         ),
         FailureMode::ValueTooLarge => (
             vec![create_example_data(ExampleDataOpts { version: Some("1.0"), value: Some(10) })],
-            vec![TestResult::Failed, TestResult::Passed],
+            vec![CaseStatus::Failed, CaseStatus::Passed],
         ),
         FailureMode::MissingValue => (
             vec![create_example_data(ExampleDataOpts { version: Some("1.0"), value: None })],
-            vec![TestResult::Failed, TestResult::Passed],
+            vec![CaseStatus::Failed, CaseStatus::Passed],
         ),
         FailureMode::MissingVersion => (
             vec![create_example_data(ExampleDataOpts { version: None, value: Some(5) })],
-            vec![TestResult::Passed, TestResult::Failed],
+            vec![CaseStatus::Passed, CaseStatus::Failed],
         ),
     };
 
@@ -363,7 +359,7 @@ async fn example_test_failure(
         .collect::<Result<Vec<_>, _>>()
         .expect("format fake data");
 
-    let IntegrationTestResult { events, selectors_requested } =
+    let IntegrationCaseStatus { events, selectors_requested } =
         run_test(test_url, fake_data, accessor_service).await.unwrap();
 
     let selectors_requested = selectors_requested.into_iter().flatten().collect::<BTreeSet<_>>();
@@ -380,18 +376,20 @@ async fn example_test_failure(
         );
     }
 
-    let expected_events: Vec<TestEvent> =
+    let expected_events: Vec<RunEvent> =
         vec!["example:root:value WHERE [a] And(a >= 5, a < 10)", "example:root:version"]
             .into_iter()
             .zip(expected_results.into_iter())
             .map(|(case_name, result)| {
                 vec![
-                    TestEvent::test_case_started(case_name.clone()),
-                    TestEvent::test_case_finished(case_name, result),
+                    RunEvent::case_found(case_name),
+                    RunEvent::case_started(case_name),
+                    RunEvent::case_stopped(case_name, result),
+                    RunEvent::case_finished(case_name),
                 ]
             })
             .flatten()
-            .chain(vec![TestEvent::Finish].into_iter())
+            .chain(vec![RunEvent::suite_finished(SuiteStatus::Failed)].into_iter())
             .collect::<_>();
 
     // Compare events, ignoring stdout messages.

@@ -12,6 +12,7 @@ mod noop;
 pub use line::{AnsiFilterWriter, MultiplexedWriter, WriteLine};
 
 use directory::DirectoryReporter;
+use fidl_fuchsia_test_manager as ftest_manager;
 use noop::NoopReporter;
 
 type DynReporter = dyn 'static + Reporter + Send + Sync;
@@ -169,13 +170,17 @@ pub enum ReportedOutcome {
     Skipped,
 }
 
-impl From<test_executor::TestResult> for ReportedOutcome {
-    fn from(result: test_executor::TestResult) -> Self {
-        match result {
-            test_executor::TestResult::Error => Self::Error,
-            test_executor::TestResult::Failed => Self::Failed,
-            test_executor::TestResult::Passed => Self::Passed,
-            test_executor::TestResult::Skipped => Self::Skipped,
+impl From<ftest_manager::CaseStatus> for ReportedOutcome {
+    fn from(status: ftest_manager::CaseStatus) -> Self {
+        match status {
+            ftest_manager::CaseStatus::Passed => Self::Passed,
+            ftest_manager::CaseStatus::Failed => Self::Failed,
+            ftest_manager::CaseStatus::TimedOut => Self::Timedout,
+            ftest_manager::CaseStatus::Skipped => Self::Skipped,
+            ftest_manager::CaseStatus::Error => Self::Error,
+            ftest_manager::CaseStatusUnknown!() => {
+                panic!("unrecognized case status");
+            }
         }
     }
 }

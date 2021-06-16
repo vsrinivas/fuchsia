@@ -599,13 +599,20 @@
         },
         {
             protocol: [
+                "fuchsia.test.manager.Harness",
+                "fuchsia.test.manager.RunBuilder",
+            ],
+            from: "#test_manager",
+            to: "#remote-control",
+        },
+        {
+            protocol: [
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.overnet.Overnet",
                 "fuchsia.overnet.ServicePublisher",
                 "fuchsia.sys.Launcher",
-                "fuchsia.test.manager.Harness",
             ],
             from: "#appmgr",
             to: "#remote-control",
@@ -676,6 +683,11 @@
         },
         {
             protocol: "fuchsia.test.manager.Harness",
+            from: "#test_manager",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: "fuchsia.test.manager.RunBuilder",
             from: "#test_manager",
             to: [ "#appmgr" ],
         },

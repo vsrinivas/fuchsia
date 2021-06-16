@@ -11,6 +11,7 @@ rustc_test("tests_bin") {
   name = "go_runner_integration_test"
 
   deps = [
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/test_executor/rust:test_executor",
     "//src/sys/test_runners:test_lib",

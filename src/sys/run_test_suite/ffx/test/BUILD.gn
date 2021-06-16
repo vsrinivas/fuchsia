@@ -14,6 +14,7 @@ ffx_plugin("ffx_test") {
     "//src/lib/fuchsia-async",
     "//src/sys/run_test_suite:lib",
     "//src/sys/run_test_suite/directory",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:serde_json",
   ]

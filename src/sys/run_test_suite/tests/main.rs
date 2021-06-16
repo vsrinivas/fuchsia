@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use async_trait::async_trait;
 use diagnostics_data::Severity;
-use fidl_fuchsia_test_manager::{HarnessMarker, HarnessProxy};
+use fidl_fuchsia_test_manager::{HarnessMarker, HarnessProxy, RunBuilderMarker, RunBuilderProxy};
 use futures::prelude::*;
 use regex::Regex;
-use run_test_suite_lib::{diagnostics, output, Outcome, RunResult, TestParams};
+use run_test_suite_lib::{diagnostics, output, Outcome, SuiteRunResult, TestParams};
 use std::io::Write;
 use std::str::from_utf8;
 use test_output_directory::{
@@ -50,11 +51,27 @@ fn sanitize_log_for_comparison(log: impl AsRef<str>) -> String {
     let log_timestamp_re = Regex::new(r"^\[\d+.\d+\]\[\d+\]\[\d+\]").unwrap();
     log_timestamp_re.replace_all(log.as_ref(), "[TIMESTAMP][PID][TID]").to_string()
 }
+struct RunBuilderConnector {}
+
+#[async_trait]
+impl run_test_suite_lib::BuilderConnector for RunBuilderConnector {
+    async fn connect(&self) -> RunBuilderProxy {
+        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+            .expect("connecting to RunBuilderProxy")
+    }
+}
+
+impl RunBuilderConnector {
+    fn new() -> Box<Self> {
+        Box::new(Self {})
+    }
+}
 
 fn new_test_params(test_url: &str, harness: HarnessProxy) -> TestParams {
     TestParams {
         test_url: test_url.to_string(),
-        harness: harness,
+        harness,
+        builder_connector: RunBuilderConnector::new(),
         timeout: None,
         test_filter: None,
         also_run_disabled_tests: false,
@@ -63,28 +80,21 @@ fn new_test_params(test_url: &str, harness: HarnessProxy) -> TestParams {
     }
 }
 
-#[derive(Debug)]
-struct RunTestResult {
-    test_result: RunResult,
-    log_collection_outcome: diagnostics::LogCollectionOutcome,
-}
-
 /// run specified test once.
 async fn run_test_once<W: Write + Send>(
     test_params: TestParams,
     log_opts: diagnostics::LogCollectionOptions,
     writer: &mut W,
-) -> Result<RunTestResult, anyhow::Error> {
-    let (log_stream, test_result) = {
+) -> Result<SuiteRunResult, anyhow::Error> {
+    let test_result = {
         let mut reporter = output::RunReporter::new_noop();
-        let streams = run_test_suite_lib::run_test(test_params, 1, writer, &mut reporter).await?;
-        let mut results = streams.results.collect::<Vec<_>>().await;
+        let streams =
+            run_test_suite_lib::run_test(test_params, 1, log_opts, writer, &mut reporter).await?;
+        let mut results = streams.collect::<Vec<_>>().await;
         assert_eq!(results.len(), 1, "{:?}", results);
-        (streams.logs, results.pop().unwrap())
+        results.pop().unwrap()
     };
-    let test_result = test_result?;
-    let log_collection_outcome = diagnostics::collect_logs(log_stream, writer, log_opts).await?;
-    Ok(RunTestResult { test_result, log_collection_outcome })
+    test_result
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -92,6 +102,7 @@ async fn launch_and_test_no_clean_exit() {
     let mut output: Vec<u8> = vec![];
     let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
+
     let run_result = run_test_once(
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm",
@@ -120,13 +131,13 @@ log3 for Example.Test3
 ";
     assert_output!(output, expected_output);
 
-    assert_eq!(run_result.test_result.outcome, Outcome::Passed);
-    assert_eq!(run_result.test_result.executed, run_result.test_result.passed);
+    assert_eq!(run_result.outcome, Outcome::Inconclusive);
+    assert_eq!(run_result.executed, run_result.passed);
 
     let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
 
-    assert_eq!(run_result.test_result.executed, expected);
-    assert!(!run_result.test_result.successful_completion);
+    assert_eq!(run_result.executed, expected);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -163,13 +174,13 @@ log3 for Example.Test3
 ";
     assert_output!(output, expected_output);
 
-    assert_eq!(run_result.test_result.outcome, Outcome::Passed);
-    assert_eq!(run_result.test_result.executed, run_result.test_result.passed);
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert_eq!(run_result.executed, run_result.passed);
 
     let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
 
-    assert_eq!(run_result.test_result.executed, expected);
-    assert!(run_result.test_result.successful_completion);
+    assert_eq!(run_result.executed, expected);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -178,16 +189,15 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
     let mut reporter = output::RunReporter::new_noop();
     let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
-
     let streams = run_test_suite_lib::run_test(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
                 harness),
-            10, &mut output,
+            10, diagnostics::LogCollectionOptions::default(),&mut output,
             &mut reporter
         )
     .await.expect("run test");
-    let run_results = streams.results.collect::<Vec<_>>().await;
+    let run_results = streams.collect::<Vec<_>>().await;
 
     assert_eq!(run_results.len(), 10);
     for run_result in run_results {
@@ -207,6 +217,7 @@ async fn launch_and_test_with_filter() {
     let mut output: Vec<u8> = vec![];
     let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
+
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
         harness,
@@ -226,13 +237,13 @@ log3 for Example.Test3
 ";
     assert_output!(output, expected_output);
 
-    assert_eq!(run_result.test_result.outcome, Outcome::Passed);
-    assert_eq!(run_result.test_result.executed, run_result.test_result.passed);
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert_eq!(run_result.executed, run_result.passed);
 
     let expected = vec!["Example.Test3"];
 
-    assert_eq!(run_result.test_result.executed, expected);
-    assert!(run_result.test_result.successful_completion);
+    assert_eq!(run_result.executed, expected);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -252,9 +263,9 @@ async fn launch_and_test_empty_test() {
     .await
     .expect("Running test should not fail");
 
-    assert_eq!(run_result.test_result.executed.len(), 0);
-    assert_eq!(run_result.test_result.passed.len(), 0);
-    assert!(run_result.test_result.successful_completion);
+    assert_eq!(run_result.executed.len(), 0);
+    assert_eq!(run_result.passed.len(), 0);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -274,9 +285,9 @@ async fn launch_and_test_huge_test() {
     .await
     .expect("Running test should not fail");
 
-    assert_eq!(run_result.test_result.executed.len(), 1_000);
-    assert_eq!(run_result.test_result.passed.len(), 1_000);
-    assert!(run_result.test_result.successful_completion);
+    assert_eq!(run_result.executed.len(), 1_000);
+    assert_eq!(run_result.passed.len(), 1_000);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -288,7 +299,7 @@ async fn launch_and_test_disabled_test_exclude_disabled() {
     let run_result = run_test_once(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
-                harness,
+                harness
             ),
             diagnostics::LogCollectionOptions::default(),
             &mut output,
@@ -308,16 +319,16 @@ log3 for Example.Test1
 ";
     assert_output!(output, expected_output);
 
-    assert_eq!(run_result.test_result.outcome, Outcome::Passed);
+    assert_eq!(run_result.outcome, Outcome::Passed);
 
     // "skipped" is a form of "executed"
     let expected_executed = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
     let expected_passed = vec!["Example.Test1"];
 
-    assert_eq!(run_result.test_result.executed, expected_executed);
-    assert_eq!(run_result.test_result.passed, expected_passed);
+    assert_eq!(run_result.executed, expected_executed);
+    assert_eq!(run_result.passed, expected_passed);
 
-    assert!(run_result.test_result.successful_completion);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -325,6 +336,7 @@ async fn launch_and_test_disabled_test_include_disabled() {
     let mut output: Vec<u8> = vec![];
     let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
+
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
         harness,
@@ -353,16 +365,16 @@ log3 for Example.Test3
 ";
     assert_output!(output, expected_output);
 
-    assert_eq!(run_result.test_result.outcome, Outcome::Failed);
+    assert_eq!(run_result.outcome, Outcome::Failed);
 
     // "skipped" is a form of "executed"
     let expected_executed = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
     let expected_passed = vec!["Example.Test1", "Example.Test2"];
 
-    assert_eq!(run_result.test_result.executed, expected_executed);
-    assert_eq!(run_result.test_result.passed, expected_passed);
+    assert_eq!(run_result.executed, expected_executed);
+    assert_eq!(run_result.passed, expected_passed);
 
-    assert!(run_result.test_result.successful_completion);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -374,7 +386,7 @@ async fn launch_and_test_failing_test() {
     let run_result = run_test_once(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
-                harness,
+                harness
             ),
             diagnostics::LogCollectionOptions::default(),
             &mut output,
@@ -401,14 +413,11 @@ log3 for Example.Test3
 
     assert_output!(output, expected_output);
 
-    assert_eq!(run_result.test_result.outcome, Outcome::Failed);
+    assert_eq!(run_result.outcome, Outcome::Failed);
 
-    assert_eq!(
-        run_result.test_result.executed,
-        vec!["Example.Test1", "Example.Test2", "Example.Test3"]
-    );
-    assert_eq!(run_result.test_result.passed, vec!["Example.Test1", "Example.Test3"]);
-    assert!(run_result.test_result.successful_completion);
+    assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
+    assert_eq!(run_result.passed, vec!["Example.Test1", "Example.Test3"]);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -422,10 +431,10 @@ async fn launch_and_test_failing_v2_test_multiple_times() {
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
                 harness),
-            10, &mut output, &mut reporter
+            10, diagnostics::LogCollectionOptions::default(),&mut output, &mut reporter
         )
     .await.expect("run test");
-    let run_results = streams.results.collect::<Vec<_>>().await;
+    let run_results = streams.collect::<Vec<_>>().await;
 
     assert_eq!(run_results.len(), 10);
     for run_result in run_results {
@@ -446,7 +455,7 @@ async fn launch_and_test_incomplete_test() {
     let run_result = run_test_once(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm",
-                harness,
+                harness
             ),
             diagnostics::LogCollectionOptions::default(),
             &mut output,
@@ -475,14 +484,11 @@ Example.Test3
 
     assert_output!(output, expected_output);
 
-    assert_eq!(run_result.test_result.outcome, Outcome::Inconclusive);
+    assert_eq!(run_result.outcome, Outcome::Inconclusive);
 
-    assert_eq!(
-        run_result.test_result.executed,
-        vec!["Example.Test1", "Example.Test2", "Example.Test3"]
-    );
-    assert_eq!(run_result.test_result.passed, vec!["Example.Test2"]);
-    assert!(run_result.test_result.successful_completion);
+    assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
+    assert_eq!(run_result.passed, vec!["Example.Test2"]);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -494,7 +500,7 @@ async fn launch_and_test_invalid_test() {
     let run_result = run_test_once(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm",
-                harness,
+                harness
             ),
             diagnostics::LogCollectionOptions::default(),
             &mut output,
@@ -506,7 +512,6 @@ async fn launch_and_test_invalid_test() {
 log1 for Example.Test1
 log2 for Example.Test1
 log3 for Example.Test1
-[ERROR]	Example.Test1
 [RUNNING]	Example.Test2
 log1 for Example.Test2
 log2 for Example.Test2
@@ -516,18 +521,18 @@ log3 for Example.Test2
 log1 for Example.Test3
 log2 for Example.Test3
 log3 for Example.Test3
-[ERROR]	Example.Test3
+
+The following test(s) never completed:
+Example.Test1
+Example.Test3
 ";
     assert_output!(output, expected_output);
 
-    assert_eq!(run_result.test_result.outcome, Outcome::Error);
+    assert_eq!(run_result.outcome, Outcome::Inconclusive);
 
-    assert_eq!(
-        run_result.test_result.executed,
-        vec!["Example.Test1", "Example.Test2", "Example.Test3"]
-    );
-    assert_eq!(run_result.test_result.passed, vec!["Example.Test2"]);
-    assert!(run_result.test_result.successful_completion);
+    assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
+    assert_eq!(run_result.passed, vec!["Example.Test2"]);
+    assert!(run_result.successful_completion);
 }
 
 // This test also acts an example on how to right a v2 test.
@@ -555,11 +560,11 @@ async fn launch_and_run_echo_test() {
 ";
     assert_output!(output, expected_output);
 
-    assert_eq!(run_result.test_result.outcome, Outcome::Passed);
+    assert_eq!(run_result.outcome, Outcome::Passed);
 
-    assert_eq!(run_result.test_result.executed, vec!["EchoTest"]);
-    assert_eq!(run_result.test_result.passed, vec!["EchoTest"]);
-    assert!(run_result.test_result.successful_completion);
+    assert_eq!(run_result.executed, vec!["EchoTest"]);
+    assert_eq!(run_result.passed, vec!["EchoTest"]);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -577,11 +582,14 @@ async fn test_timeout() {
         run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
             .await
             .expect("Running test should not fail");
+    let expected_output = "[RUNNING]	LongRunningTest.LongRunning
+[TIMED_OUT]	LongRunningTest.LongRunning
+";
+    assert_output!(output, expected_output);
+    assert_eq!(run_result.outcome, Outcome::Timedout);
 
-    assert_eq!(run_result.test_result.outcome, Outcome::Timedout);
-
-    assert_eq!(run_result.test_result.passed, Vec::<String>::new());
-    assert!(!run_result.test_result.successful_completion);
+    assert_eq!(run_result.passed, Vec::<String>::new());
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -597,16 +605,27 @@ async fn test_timeout_multiple_times() {
         harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(1);
-    let streams = run_test_suite_lib::run_test(test_params, 10, &mut output, &mut reporter)
-        .await
-        .expect("run test");
-    let mut run_results = streams.results.collect::<Vec<_>>().await;
+    let streams = run_test_suite_lib::run_test(
+        test_params,
+        10,
+        diagnostics::LogCollectionOptions::default(),
+        &mut output,
+        &mut reporter,
+    )
+    .await
+    .expect("run test");
+    let mut run_results = streams.collect::<Vec<_>>().await;
     assert_eq!(run_results.len(), 1);
     let run_result = run_results.pop().unwrap().unwrap();
     assert_eq!(run_result.outcome, Outcome::Timedout);
 
+    let expected_output = "[RUNNING]	LongRunningTest.LongRunning
+[TIMED_OUT]	LongRunningTest.LongRunning
+";
+    assert_output!(output, expected_output);
+
     assert_eq!(run_result.passed, Vec::<String>::new());
-    assert!(!run_result.successful_completion);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -630,11 +649,11 @@ async fn test_passes_with_large_timeout() {
 ";
     assert_output!(output, expected_output);
 
-    assert_eq!(run_result.test_result.outcome, Outcome::Passed);
+    assert_eq!(run_result.outcome, Outcome::Passed);
 
-    assert_eq!(run_result.test_result.executed, vec!["EchoTest"]);
-    assert_eq!(run_result.test_result.passed, vec!["EchoTest"]);
-    assert!(run_result.test_result.successful_completion);
+    assert_eq!(run_result.executed, vec!["EchoTest"]);
+    assert_eq!(run_result.passed, vec!["EchoTest"]);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -660,8 +679,8 @@ async fn test_logging_component() {
 [PASSED]	log_and_exit
 ";
     assert_output!(output, expected_output);
-    assert_eq!(run_result.test_result.outcome, Outcome::Passed);
-    assert!(run_result.test_result.successful_completion);
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -689,8 +708,8 @@ async fn test_logging_component_min_severity() {
 [PASSED]	log_and_exit
 ";
     assert_output!(output, expected_output);
-    assert_eq!(run_result.test_result.outcome, Outcome::Passed);
-    assert!(run_result.test_result.successful_completion);
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -717,8 +736,8 @@ async fn test_stdout_ansi() {
 [PASSED]	stdout_ansi_test
 ";
     assert_output!(output, expected_output);
-    assert_eq!(run_result.test_result.outcome, Outcome::Passed);
-    assert!(run_result.test_result.successful_completion);
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -739,15 +758,15 @@ async fn test_stdout_filter_ansi() {
         ..diagnostics::LogCollectionOptions::default()
     };
 
-    let (log_stream, test_result) = {
-        let streams = run_test_suite_lib::run_test(test_params, 1, &mut ansi_filter, &mut reporter)
-            .await
-            .unwrap();
-        let mut results = streams.results.collect::<Vec<_>>().await;
+    let test_result = {
+        let streams =
+            run_test_suite_lib::run_test(test_params, 1, log_opts, &mut ansi_filter, &mut reporter)
+                .await
+                .unwrap();
+        let mut results = streams.collect::<Vec<_>>().await;
         assert_eq!(results.len(), 1, "{:?}", results);
-        (streams.logs, results.pop().unwrap().unwrap())
+        results.pop().unwrap().unwrap()
     };
-    let _ = diagnostics::collect_logs(log_stream, &mut ansi_filter, log_opts).await.unwrap();
 
     let expected_output = "[RUNNING]	stdout_ansi_test
 red stdout
@@ -799,16 +818,14 @@ async fn test_max_severity(max_severity: Severity) {
 ";
 
     assert_output!(output, expected_output);
-    assert_eq!(run_result.test_result.outcome, Outcome::Passed);
-    assert!(run_result.test_result.successful_completion);
+    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert!(run_result.successful_completion);
 
     match max_severity {
         Severity::Info => {
-            let restricted_logs = match run_result.log_collection_outcome {
-                diagnostics::LogCollectionOutcome::Error { restricted_logs } => restricted_logs,
-                _ => panic!("expected logs to fail the test"),
-            };
-            let logs = restricted_logs
+            assert!(run_result.restricted_logs.len() > 0, "expected logs to fail the test");
+            let logs = run_result
+                .restricted_logs
                 .into_iter()
                 .filter(|log| !is_debug_data_warning(log))
                 .map(sanitize_log_for_comparison)
@@ -822,22 +839,16 @@ async fn test_max_severity(max_severity: Severity) {
             );
         }
         Severity::Warn => {
-            let restricted_logs = match run_result.log_collection_outcome {
-                diagnostics::LogCollectionOutcome::Error { restricted_logs } => restricted_logs,
-                _ => panic!("expected logs to fail the test"),
-            };
+            assert!(run_result.restricted_logs.len() > 0, "expected logs to fail the test");
             assert_eq!(
-                restricted_logs.into_iter().map(sanitize_log_for_comparison).collect::<Vec<_>>(),
+                run_result.restricted_logs.into_iter().map(sanitize_log_for_comparison).collect::<Vec<_>>(),
                 vec![
                     "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message ".to_owned(),
                 ]
             );
         }
         Severity::Error => {
-            assert_eq!(
-                run_result.log_collection_outcome,
-                diagnostics::LogCollectionOutcome::Passed
-            );
+            assert_eq!(run_result.restricted_logs.len(), 0);
         }
         _ => unreachable!("Not used"),
     }
@@ -866,12 +877,12 @@ async fn test_stdout_to_directory() {
 
     assert_eq!(outcome, Outcome::Passed);
 
-    let expected_test_run =
-        ExpectedTestRun::new(directory::Outcome::Passed).with_artifact("syslog.txt", "");
+    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
     let expected_test_suites = vec![ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
         directory::Outcome::Passed,
     )
+    .with_artifact("syslog.txt", "")
     .with_case(
         ExpectedTestCase::new("stdout_ansi_test", directory::Outcome::Passed)
             .with_artifact("stdout.txt", "\u{1b}[31mred stdout\u{1b}[0m\n"),
@@ -919,15 +930,18 @@ async fn test_syslog_to_directory() {
 [TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] WARN: my warn message \n\
 [TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message \n\
 ";
-    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Failed)
-        .with_matching_artifact("syslog.txt", |actual| {
-            assert_output!(actual.as_bytes(), EXPECTED_SYSLOG);
-        });
+    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Failed);
     let expected_test_suites = vec![ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
         directory::Outcome::Passed,
     )
-    .with_case(ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed))];
+    .with_case(
+        ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed)
+            .with_artifact("stdout.txt", ""),
+    )
+    .with_matching_artifact("syslog.txt", |actual| {
+        assert_output!(actual.as_bytes(), EXPECTED_SYSLOG);
+    })];
 
     let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
 

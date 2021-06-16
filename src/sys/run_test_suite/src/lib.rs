@@ -10,27 +10,33 @@
 #![recursion_limit = "512"]
 
 use {
-    fidl_fuchsia_test::Invocation,
-    fidl_fuchsia_test_manager::HarnessProxy,
+    async_trait::async_trait,
+    fidl_fuchsia_test_manager::{
+        self as ftest_manager, CaseArtifact, CaseFinished, CaseFound, CaseStarted, CaseStopped,
+        HarnessProxy, RunBuilderProxy, SuiteArtifact, SuiteFinished,
+    },
     fuchsia_async as fasync,
     futures::{channel::mpsc, join, prelude::*, stream::LocalBoxStream},
     log::error,
     std::collections::{HashMap, HashSet},
+    std::convert::TryInto,
     std::fmt,
     std::io,
     std::path::PathBuf,
-    test_executor::{LogStream, TestEvent, TestRunOptions},
+    std::time::Duration,
 };
 
+mod artifact;
 pub mod diagnostics;
 pub mod output;
 
-pub use test_executor::DisabledTestHandling;
-
-use output::{
-    AnsiFilterWriter, ArtifactType, CaseReporter, MultiplexedWriter, RunReporter, SuiteReporter,
-    WriteLine,
+use {
+    artifact::{Artifact, ArtifactSender},
+    output::{AnsiFilterWriter, ArtifactType, RunReporter, SuiteReporter, WriteLine},
 };
+
+/// Duration after which to emit an excessive duration log.
+const EXCESSIVE_DURATION: Duration = Duration::from_secs(60);
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Outcome {
@@ -54,7 +60,7 @@ impl fmt::Display for Outcome {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct RunResult {
+pub struct SuiteRunResult {
     /// Test outcome.
     pub outcome: Outcome,
 
@@ -69,6 +75,14 @@ pub struct RunResult {
 
     /// Suite protocol completed without error.
     pub successful_completion: bool,
+
+    /// restricted logs produced by this suite run which exceed expected log level.
+    pub restricted_logs: Vec<String>,
+}
+
+#[async_trait]
+pub trait BuilderConnector {
+    async fn connect(&self) -> RunBuilderProxy;
 }
 
 // Parameters for test.
@@ -93,166 +107,324 @@ pub struct TestParams {
 
     /// HarnessProxy that manages running the tests.
     pub harness: HarnessProxy,
+
+    /// RunBuilderProxy connector that manages running the tests.
+    pub builder_connector: Box<dyn BuilderConnector>,
 }
 
-impl TestParams {
-    fn disabled_tests(&self) -> DisabledTestHandling {
-        return match self.also_run_disabled_tests {
-            true => DisabledTestHandling::Include,
-            false => DisabledTestHandling::Exclude,
-        };
-    }
-}
-
-async fn run_test_for_invocations<W: WriteLine>(
-    suite_instance: &test_executor::SuiteInstance,
-    invocations: Vec<Invocation>,
-    run_options: TestRunOptions,
-    timeout: Option<std::num::NonZeroU32>,
-    writer: &mut W,
-    suite_reporter: SuiteReporter<'_>,
-) -> Result<RunResult, anyhow::Error> {
-    let mut timeout = match timeout {
-        Some(timeout) => futures::future::Either::Left(
-            fasync::Timer::new(std::time::Duration::from_secs(timeout.get().into()))
-                .map(|()| Err(())),
-        ),
-        None => futures::future::Either::Right(futures::future::ready(Ok(()))),
-    }
-    .fuse();
-
-    let (sender, mut recv) = mpsc::channel(1);
-    let mut outcome = Outcome::Passed;
-
-    struct TestCaseAndStdout<'a> {
-        case_reporter: CaseReporter<'a>,
-        stdout: Option<Box<dyn 'static + WriteLine + Send + Sync>>,
-    }
-
-    let mut test_cases_in_progress = HashSet::new();
+async fn collect_results_for_suite(
+    suite_controller: ftest_manager::SuiteControllerProxy,
+    mut artifact_sender: ArtifactSender,
+    suite_reporter: &SuiteReporter<'_>,
+    log_opts: diagnostics::LogCollectionOptions,
+) -> Result<SuiteRunResult, anyhow::Error> {
+    let mut test_cases = HashMap::new();
+    let mut test_cases_in_progress = HashMap::new();
     let mut test_cases_executed = HashMap::new();
+    let mut test_cases_stdout = HashMap::new();
+    let mut suite_log_tasks = vec![];
+    let mut outcome = Outcome::Passed;
     let mut test_cases_passed = HashSet::new();
     let mut test_cases_failed = HashSet::new();
+    let mut restricted_logs = vec![];
     let mut successful_completion = false;
 
-    let test_fut = suite_instance
-        .run_and_collect_results_for_invocations(sender, invocations, run_options)
-        .fuse();
-    futures::pin_mut!(test_fut);
-
     loop {
-        futures::select! {
-            timeout_res = timeout => {
-                match timeout_res {
-                    Ok(()) => {}, // No timeout specified.
-                    Err(()) => {
-                        outcome = Outcome::Timedout;
-                        break
-                    },
+        match suite_controller.get_events().await? {
+            Err(e) => {
+                suite_reporter.outcome(&Outcome::Error.into())?;
+                let err = match e {
+                    ftest_manager::LaunchError::CaseEnumeration => "Cannot enumerate test. This may mean `fuchsia.test.Suite` was not \
+                    configured correctly. Refer to: \
+                    https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test",
+                    ftest_manager::LaunchError::ResourceUnavailable => "Resource unavailable",
+                    ftest_manager::LaunchError::InstanceCannotResolve => "Cannot resolve test.",
+                    ftest_manager::LaunchError::InvalidArgs => {
+                        "Invalid args passed to builder while adding suite. Please file bug"
+                    }
+                    ftest_manager::LaunchError::FailedToConnectToTestSuite => {
+                        "Cannot communicate with the tests. This may mean `fuchsia.test.Suite` was not \
+                        configured correctly. Refer to: \
+                        https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test"
+                    }
+                    ftest_manager::LaunchError::InternalError => "Internal error, please file bug",
+                };
+                return Err(anyhow::anyhow!(err));
+            }
+            Ok(events) => {
+                if events.len() == 0 {
+                    break;
                 }
-            },
-            test_res = test_fut => {
-                let () = test_res?;
-            },
-            test_event = recv.next() => {
-                if let Some(test_event) = test_event {
-                    match test_event {
-                        TestEvent::TestCaseStarted { test_case_name } => {
-                            if test_cases_executed.contains_key(&test_case_name) {
-                                return Err(anyhow::anyhow!("test case: '{}' started twice", test_case_name));
-                            }
-                            writer.write_line(&format!("[RUNNING]\t{}", test_case_name))
-                                .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
-                            test_cases_in_progress.insert(
-                                test_case_name.clone()
-                            );
-                            let case_reporter = suite_reporter.new_case(&test_case_name)?;
-                            test_cases_executed.insert(
-                                test_case_name,
-                                TestCaseAndStdout {
-                                    case_reporter,
-                                    stdout: None
-                                }
-                            );
+                for event in events {
+                    // use this timestamp eventually
+                    let _timestamp = event.timestamp;
+                    match event.payload.expect("event cannot be None") {
+                        ftest_manager::SuiteEventPayload::CaseFound(CaseFound {
+                            test_case_name,
+                            identifier,
+                        }) => {
+                            test_cases.insert(identifier, test_case_name);
                         }
-                        TestEvent::TestCaseFinished { test_case_name, result } => {
-                            if !test_cases_in_progress.remove(&test_case_name) {
+                        ftest_manager::SuiteEventPayload::CaseStarted(CaseStarted {
+                            identifier,
+                        }) => {
+                            let test_case_name = test_cases
+                                .get(&identifier)
+                                .ok_or(anyhow::anyhow!(
+                                    "test case with identifier {} not found",
+                                    identifier
+                                ))?
+                                .clone();
+                            if test_cases_executed.contains_key(&identifier) {
                                 return Err(anyhow::anyhow!(
-                                    "test case: '{}' was never started, still got a finish event",
+                                    "test case: '{}' started twice",
+                                    test_case_name
+                                ));
+                            };
+                            artifact_sender
+                                .send_test_stdout_msg(format!("[RUNNING]\t{}", test_case_name))
+                                .await
+                                .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
+
+                            let case_reporter = suite_reporter.new_case(&test_case_name)?;
+                            let mut sender_clone = artifact_sender.clone();
+                            test_cases_executed.insert(identifier, case_reporter);
+                            let excessive_time_task = fasync::Task::spawn(async move {
+                                fasync::Timer::new(EXCESSIVE_DURATION).await;
+                                sender_clone
+                                    .send_test_stdout_msg(format!(
+                                        "[duration - {}]:\tStill running after {:?} seconds",
+                                        test_case_name,
+                                        EXCESSIVE_DURATION.as_secs()
+                                    ))
+                                    .await
+                                    .unwrap_or_else(|e| {
+                                        error!("Failed to send excessive duration event: {}", e)
+                                    });
+                            });
+                            test_cases_in_progress.insert(identifier, excessive_time_task);
+                        }
+                        ftest_manager::SuiteEventPayload::CaseArtifact(CaseArtifact {
+                            identifier,
+                            artifact,
+                        }) => match artifact {
+                            ftest_manager::Artifact::Stdout(socket) => {
+                                let test_case_name = test_cases
+                                    .get(&identifier)
+                                    .ok_or(anyhow::anyhow!(
+                                        "test case with identifier {} not found",
+                                        identifier
+                                    ))?
+                                    .clone();
+                                let (sender, mut recv) = mpsc::channel(1024);
+                                let t = fuchsia_async::Task::local(
+                                    test_executor::collect_and_send_stdout(socket, sender),
+                                );
+                                let mut writer_clone = artifact_sender.clone();
+                                let reporter = test_cases_executed.get_mut(&identifier).unwrap();
+                                let mut stdout = reporter.new_artifact(&ArtifactType::Stdout)?;
+                                let stdout_task = fuchsia_async::Task::local(async move {
+                                    while let Some(mut msg) = recv.next().await {
+                                        if msg.ends_with("\n") {
+                                            msg.truncate(msg.len() - 1)
+                                        }
+                                        writer_clone
+                                            .send_test_stdout_msg(format!(
+                                                "[output - {}]:\n{}",
+                                                test_case_name, msg
+                                            ))
+                                            .await
+                                            .unwrap_or_else(|e| {
+                                                error!(
+                                                    "Cannot write stdout for {}: {:?}",
+                                                    test_case_name, e
+                                                )
+                                            });
+                                        stdout.write_line(&msg)?;
+                                    }
+                                    t.await?;
+                                    Result::Ok::<(), anyhow::Error>(())
+                                });
+                                test_cases_stdout.insert(identifier, stdout_task);
+                            }
+                            ftest_manager::Artifact::Stderr(_) => {
+                                artifact_sender
+                                    .send_test_stdout_msg(
+                                        "WARN: per test case stderr not supported yet",
+                                    )
+                                    .await
+                                    .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
+                            }
+                            ftest_manager::Artifact::Log(_) => {
+                                artifact_sender
+                                    .send_test_stdout_msg(
+                                        "WARN: per test case logs not supported yet",
+                                    )
+                                    .await
+                                    .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
+                            }
+                            ftest_manager::ArtifactUnknown!() => {
+                                panic!("unknown artifact")
+                            }
+                        },
+                        ftest_manager::SuiteEventPayload::CaseStopped(CaseStopped {
+                            identifier,
+                            status,
+                        }) => {
+                            let test_case_name =
+                                test_cases.get(&identifier).ok_or(anyhow::anyhow!(
+                                    "test case with identifier {} not found",
+                                    identifier
+                                ))?;
+
+                            if let Some(t) = test_cases_stdout.remove(&identifier) {
+                                if status == ftest_manager::CaseStatus::TimedOut {
+                                    if let Some(Err(e)) = t.now_or_never() {
+                                        error!(
+                                            "Cannot write stdout for {}: {:?}",
+                                            test_case_name, e
+                                        );
+                                    }
+                                } else if let Err(e) = t.await {
+                                    error!("Cannot write stdout for {}: {:?}", test_case_name, e)
+                                }
+                            }
+                            // the test did not finish.
+                            if status == ftest_manager::CaseStatus::Error {
+                                continue;
+                            }
+                            if let Some(excessive_timer_task) =
+                                test_cases_in_progress.remove(&identifier)
+                            {
+                                excessive_timer_task.cancel().await;
+                            } else {
+                                return Err(anyhow::anyhow!(
+                                    "test case: '{}' was never started, still got a stop event",
                                     test_case_name
                                 ));
                             }
-                            let result_str = match result {
-                                test_executor::TestResult::Passed => {
+
+                            let result_str = match status {
+                                ftest_manager::CaseStatus::Passed => {
                                     test_cases_passed.insert(test_case_name.clone());
                                     "PASSED"
                                 }
-                                test_executor::TestResult::Failed => {
-                                    if outcome == Outcome::Passed {
-                                        outcome = Outcome::Failed;
-                                    }
+                                ftest_manager::CaseStatus::Failed => {
                                     test_cases_failed.insert(test_case_name.clone());
                                     "FAILED"
                                 }
-                                test_executor::TestResult::Skipped => "SKIPPED",
-                                test_executor::TestResult::Error => {
-                                    outcome = Outcome::Error;
+                                ftest_manager::CaseStatus::TimedOut => {
                                     test_cases_failed.insert(test_case_name.clone());
-                                    "ERROR"
+                                    "TIMED_OUT"
+                                }
+                                ftest_manager::CaseStatus::Skipped => "SKIPPED",
+                                e => {
+                                    return Err(anyhow::anyhow!(
+                                        "test status '{:?}' not supported",
+                                        e
+                                    ));
                                 }
                             };
-                            let reporter = match test_cases_executed.get_mut(&test_case_name) {
-                                Some(reporter) => reporter,
-                                None => return Err(anyhow::anyhow!(
-                                    "test case: '{}' was never started, still got a finish event"))
-                            };
-                            writer.write_line(&format!("[{}]\t{}", result_str, test_case_name))
+                            let reporter = test_cases_executed.get_mut(&identifier).unwrap();
+                            artifact_sender
+                                .send_test_stdout_msg(format!(
+                                    "[{}]\t{}",
+                                    result_str, test_case_name
+                                ))
+                                .await
                                 .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
-                            reporter.case_reporter.outcome(&result.into())?;
+                            reporter.outcome(&status.into())?;
                         }
-                        TestEvent::ExcessiveDuration { test_case_name, duration } => {
-                            writer.write_line(&format!("[duration - {}]:\tStill running after {:?} seconds",
-                                test_case_name, duration.as_secs()))
-                                .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
+                        ftest_manager::SuiteEventPayload::CaseFinished(CaseFinished {
+                            identifier: _,
+                        }) => {
+                            // right now we don't have any thing to do. In future we may have artifacts to process.
                         }
-                        TestEvent::StdoutMessage { test_case_name, mut msg } => {
-                            let mut test_case = match test_cases_executed.get_mut(&test_case_name) {
-                                Some(case) => case,
-                                None => return Err(anyhow::anyhow!(
-                                    "test case: '{}' was never started, still got a log",
-                                    test_case_name
-                                )),
-                            };
-                            // check if last byte is newline and remove it as we are already
-                            // printing a newline.
-                            if msg.ends_with("\n") {
-                                msg.truncate(msg.len()-1)
+                        ftest_manager::SuiteEventPayload::SuiteArtifact(SuiteArtifact {
+                            artifact,
+                        }) => match artifact {
+                            ftest_manager::Artifact::Stdout(_) => {
+                                artifact_sender
+                                    .send_test_stdout_msg(
+                                        "WARN: suite level stdout not supported yet",
+                                    )
+                                    .await
+                                    .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
                             }
-                            writer.write_line(&format!("[output - {}]:\n{}", test_case_name, msg))
-                                .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
-                            match test_case.stdout.as_mut() {
-                                None => {
-                                    let mut stdout = test_case.case_reporter.new_artifact(&ArtifactType::Stdout)?;
-                                    stdout.write_line(&msg)?;
-                                    test_case.stdout = Some(stdout);
-                                }
-                                Some(stdout) => {
-                                    stdout.write_line(&msg)?;
+                            ftest_manager::Artifact::Stderr(_) => {
+                                artifact_sender
+                                    .send_test_stdout_msg(
+                                        "WARN: suite level stderr not supported yet",
+                                    )
+                                    .await
+                                    .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
+                            }
+                            ftest_manager::Artifact::Log(syslog) => {
+                                match test_executor::LogStream::from_syslog(syslog) {
+                                    Ok(log_stream) => {
+                                        suite_log_tasks.push(fuchsia_async::Task::spawn(
+                                            diagnostics::collect_logs(
+                                                log_stream,
+                                                artifact_sender.clone(),
+                                                log_opts.clone(),
+                                            ),
+                                        ));
+                                    }
+                                    Err(e) => {
+                                        artifact_sender
+                                            .send_test_stdout_msg(format!("WARN: Got invalid log iterator. Cannot collect logs: {:?}", e))
+                                            .await
+                                            .unwrap_or_else(|e| {
+                                                error!("Cannot write logs: {:?}", e)
+                                            });
+                                    }
                                 }
                             }
-                        }
-                        TestEvent::Finish => {
+                            ftest_manager::ArtifactUnknown!() => {
+                                panic!("unknown artifact")
+                            }
+                        },
+                        ftest_manager::SuiteEventPayload::SuiteFinished(SuiteFinished {
+                            status,
+                        }) => {
                             successful_completion = true;
-                            break;
+                            outcome = match status {
+                                ftest_manager::SuiteStatus::Passed => Outcome::Passed,
+                                ftest_manager::SuiteStatus::Failed => Outcome::Failed,
+                                ftest_manager::SuiteStatus::DidNotFinish => Outcome::Inconclusive,
+                                ftest_manager::SuiteStatus::TimedOut => Outcome::Timedout,
+                                ftest_manager::SuiteStatus::Stopped => Outcome::Failed,
+                                ftest_manager::SuiteStatus::InternalError => Outcome::Error,
+                                e => {
+                                    return Err(anyhow::anyhow!("outcome '{:?}' not supported", e));
+                                }
+                            };
                         }
                     }
                 }
-            },
-            complete => break,
+            }
         }
     }
 
-    let mut test_cases_in_progress: Vec<String> = test_cases_in_progress.into_iter().collect();
+    // collect all logs
+    for t in suite_log_tasks {
+        match t.await {
+            Ok(r) => match r {
+                diagnostics::LogCollectionOutcome::Error { restricted_logs: mut logs } => {
+                    restricted_logs.append(&mut logs)
+                }
+                diagnostics::LogCollectionOutcome::Passed => {}
+            },
+            Err(e) => {
+                println!("Failed to collect logs: {:?}", e);
+            }
+        }
+    }
+
+    let mut test_cases_in_progress = test_cases_in_progress
+        .into_iter()
+        .map(|(i, _t)| test_cases.get(&i).unwrap())
+        .collect::<Vec<_>>();
     test_cases_in_progress.sort();
 
     if test_cases_in_progress.len() != 0 {
@@ -262,18 +434,22 @@ async fn run_test_for_invocations<W: WriteLine>(
             }
             _ => {}
         }
-        writer
-            .write_line("\nThe following test(s) never completed:")
+        artifact_sender
+            .send_test_stdout_msg("\nThe following test(s) never completed:")
+            .await
             .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
         for t in test_cases_in_progress {
-            writer
-                .write_line(&format!("{}", t))
+            artifact_sender
+                .send_test_stdout_msg(format!("{}", t))
+                .await
                 .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
         }
     }
 
-    let mut test_cases_executed: Vec<String> =
-        test_cases_executed.into_iter().map(|(case_name, _)| case_name).collect();
+    let mut test_cases_executed = test_cases_executed
+        .into_iter()
+        .map(|(i, _)| test_cases.get(&i).unwrap().clone())
+        .collect::<Vec<_>>();
     let mut test_cases_passed: Vec<String> = test_cases_passed.into_iter().collect();
     let mut test_cases_failed: Vec<String> = test_cases_failed.into_iter().collect();
 
@@ -282,124 +458,144 @@ async fn run_test_for_invocations<W: WriteLine>(
     test_cases_failed.sort();
 
     suite_reporter.outcome(&outcome.into())?;
-    suite_reporter.record()?;
 
-    Ok(RunResult {
+    Ok(SuiteRunResult {
         outcome,
         executed: test_cases_executed,
         passed: test_cases_passed,
         failed: test_cases_failed,
         successful_completion,
+        restricted_logs,
     })
 }
 
-pub struct TestStreams<'a> {
-    pub results: LocalBoxStream<'a, Result<RunResult, anyhow::Error>>,
-    pub logs: LogStream,
-}
-
-impl<'a> TestStreams<'a> {
-    pub fn into_log_and_result(
-        self,
-    ) -> (LogStream, LocalBoxStream<'a, Result<RunResult, anyhow::Error>>) {
-        let Self { results, logs } = self;
-        (logs, results)
-    }
-}
+type SuiteResults<'a> = LocalBoxStream<'a, Result<SuiteRunResult, anyhow::Error>>;
 
 /// Runs the test `count` number of times, and writes logs to writer.
 pub async fn run_test<'a, W: output::WriteLine>(
     test_params: TestParams,
     count: u16,
+    log_opts: diagnostics::LogCollectionOptions,
     writer: &'a mut W,
     run_reporter: &'a mut RunReporter,
-) -> Result<TestStreams<'a>, anyhow::Error> {
-    let run_options = TestRunOptions {
-        disabled_tests: test_params.disabled_tests(),
+) -> Result<SuiteResults<'a>, anyhow::Error> {
+    let timeout: Option<i64> = match test_params.timeout {
+        Some(t) => Some(std::time::Duration::from_secs(t.get().into()).as_nanos().try_into()?),
+        None => None,
+    };
+    let run_options = SuiteRunOptions {
         parallel: test_params.parallel,
-        arguments: test_params.test_args.clone(),
+        arguments: Some(test_params.test_args.clone()),
+        run_disabled_tests: Some(test_params.also_run_disabled_tests),
+        timeout: timeout,
+        test_filters: test_params.test_filter.map(|s| vec![s]),
+        log_iterator: Some(diagnostics::get_type()),
     };
 
     struct FoldArgs<'a, W: output::WriteLine> {
         current_count: u16,
         count: u16,
-        suite_instance: test_executor::SuiteInstance,
-        invocations: Option<Vec<fidl_fuchsia_test::Invocation>>,
-        test_params: TestParams,
-        run_options: TestRunOptions,
+        builder: Box<dyn BuilderConnector>,
+        run_options: SuiteRunOptions,
+        test_url: String,
         writer: &'a mut W,
         run_reporter: &'a mut RunReporter,
+        log_opts: diagnostics::LogCollectionOptions,
     }
-
-    let mut suite_instance = test_executor::SuiteInstance::new(test_executor::SuiteInstanceOpts {
-        harness: &test_params.harness,
-        test_url: &test_params.test_url,
-        force_log_protocol: None,
-    })
-    .await?;
-    let log_stream = suite_instance.take_log_stream().unwrap();
 
     let args = FoldArgs {
         current_count: 0,
         count,
-        suite_instance,
-        invocations: None,
-        test_params,
+        builder: test_params.builder_connector,
         run_options,
         writer,
         run_reporter,
+        test_url: test_params.test_url,
+        log_opts,
     };
 
     let results = stream::try_unfold(args, move |mut args| async move {
         if args.current_count >= args.count {
-            args.suite_instance.kill()?;
             return Ok(None);
         }
+        let (suite_controller, suite_server_end) = fidl::endpoints::create_proxy()?;
+        let (run_controller, run_server_end) = fidl::endpoints::create_proxy()?;
+        let builder_proxy = args.builder.connect().await;
+        builder_proxy.add_suite(
+            &args.test_url,
+            args.run_options.clone().into(),
+            suite_server_end,
+        )?;
 
-        let invocations = match args.invocations {
-            Some(ref i) => i.clone(),
-            None => args
-                .suite_instance
-                .enumerate_tests(&args.test_params.test_filter.as_ref().map(String::as_str))
-                .await
-                .or_else(|err| {
-                    args.suite_instance.kill()?;
-                    Err(err)
-                })?,
+        builder_proxy.build(run_server_end)?;
+        let mut next_count = args.current_count + 1;
+        let (sender, mut recv) = mpsc::channel(1024);
+        let reporter = args.run_reporter.new_suite(&args.test_url)?;
+        let writer = args.writer;
+        let fut1 = collect_results_for_suite(
+            suite_controller,
+            sender.into(),
+            &reporter,
+            args.log_opts.clone(),
+        );
+        let fut2 = async {
+            let mut syslog_writer = match reporter.new_artifact(&ArtifactType::Syslog) {
+                Ok(reporter_syslog) => reporter_syslog,
+                Err(e) => {
+                    return Err(anyhow::anyhow!("cannot collect logs: {:?}", e));
+                }
+            };
+            while let Some(artifact) = recv.next().await {
+                match artifact {
+                    Artifact::SuiteStdoutMessage(msg) => {
+                        writer
+                            .write_line(&msg)
+                            .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
+                    }
+                    Artifact::SuiteLogMessage(log) => {
+                        writer
+                            .write_line(&log)
+                            .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
+                        syslog_writer
+                            .write_line(&log)
+                            .unwrap_or_else(|e| error!("Cannot write logs to reporter: {:?}", e));
+                    }
+                }
+            }
+            Ok(())
         };
 
-        let mut next_count = args.current_count + 1;
-        let result = run_test_for_invocations(
-            &args.suite_instance,
-            invocations.clone(),
-            args.run_options.clone(),
-            args.test_params.timeout,
-            args.writer,
-            args.run_reporter.new_suite(&args.test_params.test_url)?,
-        )
-        .await
-        .or_else(|err| {
-            args.suite_instance.kill()?;
-            Err(err)
-        })?;
+        let (result, _) = join!(fut1, fut2);
+        reporter.record()?;
+        let result = result?;
+
+        args.writer = writer;
+
+        loop {
+            let events = run_controller.get_events().await?;
+            if events.len() == 0 {
+                break;
+            }
+            println!("WARN: Discarding run events: {:?}", events);
+        }
+
         if result.outcome == Outcome::Timedout || result.outcome == Outcome::Error {
             // don't run test again
             next_count = args.count;
         }
 
-        args.invocations = Some(invocations);
         args.current_count = next_count;
         Ok(Some((result, args)))
     })
     .boxed_local();
 
-    Ok(TestStreams { logs: log_stream, results })
+    Ok(results)
 }
 
 async fn collect_results(
     test_url: &str,
     count: std::num::NonZeroU16,
-    mut stream: LocalBoxStream<'_, Result<RunResult, anyhow::Error>>,
+    mut stream: SuiteResults<'_>,
 ) -> Outcome {
     let mut i: u16 = 1;
     let mut final_outcome = Outcome::Passed;
@@ -410,7 +606,14 @@ async fn collect_results(
                 println!("Test suite encountered error trying to run tests: {:?}", e);
                 return Outcome::Error;
             }
-            Ok(Some(RunResult { outcome, executed, passed, failed, successful_completion })) => {
+            Ok(Some(SuiteRunResult {
+                mut outcome,
+                executed,
+                passed,
+                failed,
+                successful_completion,
+                restricted_logs,
+            })) => {
                 if count.get() > 1 {
                     println!("\nTest run count {}/{}", i, count);
                 }
@@ -420,10 +623,22 @@ async fn collect_results(
                 }
                 println!("{} out of {} tests passed...", passed.len(), executed.len());
                 println!("{} completed with result: {}", &test_url, outcome);
-
                 if !successful_completion {
                     println!("{} did not complete successfully.", &test_url);
                 }
+                if restricted_logs.len() > 0 {
+                    if outcome == Outcome::Passed {
+                        outcome = Outcome::Failed;
+                    }
+                    println!("\nTest {} produced unexpected high-severity logs:", &test_url);
+                    println!("----------------xxxxx----------------");
+                    for log in restricted_logs {
+                        println!("{}", log);
+                    }
+                    println!("----------------xxxxx----------------");
+                    println!("Failing this test. See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity\n");
+                }
+
                 i = i + 1;
                 if count.get() > 1 {
                     if outcome != Outcome::Passed {
@@ -457,6 +672,7 @@ pub async fn run_tests_and_get_outcome(
         true => Box::new(AnsiFilterWriter::new(io::stdout())),
         false => Box::new(io::stdout()),
     };
+
     let reporter_res = match (filter_ansi, record_directory) {
         (true, Some(dir)) => RunReporter::new_ansi_filtered(dir),
         (false, Some(dir)) => RunReporter::new(dir),
@@ -469,51 +685,25 @@ pub async fn run_tests_and_get_outcome(
             return Outcome::Error;
         }
     };
-    let mut syslog_writer = match reporter.new_artifact(&ArtifactType::Syslog) {
-        Ok(reporter_syslog) => MultiplexedWriter::new(reporter_syslog, io::stdout()),
-        Err(e) => {
-            println!("Test suite encountered error trying to run tests: {:?}", e);
-            return Outcome::Error;
-        }
-    };
 
-    let streams =
-        match run_test(test_params, count.get(), &mut stdout_for_results, &mut reporter).await {
+    let result_stream =
+        match run_test(test_params, count.get(), log_opts, &mut stdout_for_results, &mut reporter)
+            .await
+        {
             Ok(s) => s,
             Err(e) => {
-                println!("Test suite encountered error trying to run tests: {:?}", e);
+                println!(
+                    "Test suite '{}' encountered error trying to run tests: {:?}",
+                    test_url, e
+                );
                 return Outcome::Error;
             }
         };
 
-    let (log_stream, result_stream) = streams.into_log_and_result();
-    let log_collection_fut = diagnostics::collect_logs(log_stream, &mut syslog_writer, log_opts);
-    let results_collection_fut = collect_results(&test_url, count, result_stream);
-
-    let (log_collection_result, mut test_outcome) =
-        join!(log_collection_fut, results_collection_fut);
+    let test_outcome = collect_results(&test_url, count, result_stream).await;
 
     if count.get() > 1 && test_outcome != Outcome::Passed {
         println!("One or more test runs failed.");
-    }
-
-    match log_collection_result {
-        Err(e) => {
-            println!("Failed to collect logs: {:?}", e);
-        }
-        Ok(outcome) => match outcome {
-            diagnostics::LogCollectionOutcome::Passed => {}
-            diagnostics::LogCollectionOutcome::Error { restricted_logs } => {
-                test_outcome = Outcome::Failed;
-                println!("Test {} produced unexpected high-severity logs:", test_url);
-                println!("----------------xxxxx----------------");
-                for log in restricted_logs {
-                    println!("{}", log);
-                }
-                println!("----------------xxxxx----------------");
-                println!("Failing this test. See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity");
-            }
-        },
     }
 
     let report_result = match reporter.outcome(&test_outcome.into()) {
@@ -525,4 +715,43 @@ pub async fn run_tests_and_get_outcome(
     }
 
     test_outcome
+}
+
+/// Options that apply when executing a test suite.
+///
+/// For the FIDL equivalent, see [`fidl_fuchsia_test::RunOptions`].
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
+pub struct SuiteRunOptions {
+    /// How to handle tests that were marked disabled/ignored by the developer.
+    pub run_disabled_tests: Option<bool>,
+
+    /// Number of test cases to run in parallel.
+    pub parallel: Option<u16>,
+
+    /// Arguments passed to tests.
+    pub arguments: Option<Vec<String>>,
+
+    /// suite timeout
+    pub timeout: Option<i64>,
+
+    /// Test cases to filter and run.
+    pub test_filters: Option<Vec<String>>,
+
+    /// Type of log iterator
+    pub log_iterator: Option<ftest_manager::LogsIteratorOption>,
+}
+
+impl From<SuiteRunOptions> for fidl_fuchsia_test_manager::RunOptions {
+    fn from(test_run_options: SuiteRunOptions) -> Self {
+        // Note: This will *not* break if new members are added to the FIDL table.
+        fidl_fuchsia_test_manager::RunOptions {
+            parallel: test_run_options.parallel,
+            arguments: test_run_options.arguments,
+            run_disabled_tests: test_run_options.run_disabled_tests,
+            timeout: test_run_options.timeout,
+            case_filters_to_run: test_run_options.test_filters,
+            log_iterator: test_run_options.log_iterator,
+            ..fidl_fuchsia_test_manager::RunOptions::EMPTY
+        }
+    }
 }

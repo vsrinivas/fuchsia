@@ -6,28 +6,28 @@ mod lib;
 
 use {
     crate::lib::run_test,
-    test_executor::{DisabledTestHandling, GroupByTestCase as _, TestEvent, TestResult},
+    fidl_fuchsia_test_manager::{CaseStatus, SuiteStatus},
+    test_executor::{GroupRunEventByTestCase as _, RunEvent},
 };
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_hugetest() {
     let test_url = "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/huge_rust_tests.cm";
-    let events = run_test(test_url, DisabledTestHandling::Exclude, Some(100), vec![])
-        .await
-        .unwrap()
-        .into_iter()
-        .group_by_test_case_unordered();
+    let (events, _logs) = run_test(test_url, false, Some(100), vec![]).await.unwrap();
+    let events = events.into_iter().group_by_test_case_unordered();
 
     let mut expected_events = vec![];
 
     for i in 1..=1000 {
         let s = format!("test_{}", i);
         expected_events.extend(vec![
-            TestEvent::test_case_started(&s),
-            TestEvent::test_case_finished(&s, TestResult::Passed),
+            RunEvent::case_found(&s),
+            RunEvent::case_started(&s),
+            RunEvent::case_stopped(&s, CaseStatus::Passed),
+            RunEvent::case_finished(s),
         ])
     }
-    expected_events.push(TestEvent::test_finished());
+    expected_events.push(RunEvent::suite_finished(SuiteStatus::Passed));
     let expected_events = expected_events.into_iter().group_by_test_case_unordered();
     assert_eq!(expected_events, events);
 }

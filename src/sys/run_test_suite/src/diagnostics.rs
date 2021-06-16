@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::output,
+    crate::artifact,
     anyhow::Error,
+    artifact::ArtifactSender,
     diagnostics_data::{LogsData, Severity},
+    fidl_fuchsia_test_manager::LogsIteratorOption,
     futures::{Stream, TryStreamExt},
     log::error,
 };
@@ -47,13 +49,12 @@ impl From<Vec<String>> for LogCollectionOutcome {
     }
 }
 
-pub async fn collect_logs<S, W>(
+pub async fn collect_logs<S>(
     mut stream: S,
-    writer: &mut W,
+    mut artifact_sender: ArtifactSender,
     options: LogCollectionOptions,
 ) -> Result<LogCollectionOutcome, Error>
 where
-    W: output::WriteLine,
     S: Stream<Item = Result<LogsData, Error>> + Unpin,
 {
     let mut restricted_logs = vec![];
@@ -72,7 +73,10 @@ where
         let log_repr = format!("{}", log);
 
         if should_display {
-            writer.write_line(&log_repr).unwrap_or_else(|e| error!("Failed to write log: {:?}", e));
+            artifact_sender
+                .send_suite_log_msg(&log_repr)
+                .await
+                .unwrap_or_else(|e| error!("Failed to write log: {:?}", e));
         }
 
         if is_restricted {
@@ -80,4 +84,14 @@ where
         }
     }
     Ok(restricted_logs.into())
+}
+
+#[cfg(target_os = "fuchsia")]
+pub fn get_type() -> LogsIteratorOption {
+    LogsIteratorOption::BatchIterator
+}
+
+#[cfg(not(target_os = "fuchsia"))]
+pub fn get_type() -> LogsIteratorOption {
+    LogsIteratorOption::ArchiveIterator
 }

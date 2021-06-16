@@ -91,6 +91,7 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::ui::scenic::Scenic::Name_,
     fuchsia::vulkan::loader::Loader::Name_,
     fuchsia::test::manager::Harness::Name_,
+    fuchsia::test::manager::RunBuilder::Name_,
 };
 // [END allowed_system_services]
 

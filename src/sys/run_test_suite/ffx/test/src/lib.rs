@@ -6,12 +6,16 @@ mod output_directory;
 
 use {
     anyhow::{anyhow, format_err, Context, Result},
+    async_trait::async_trait,
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_test_args::{ListCommand, ResultCommand, RunCommand, TestCommand, TestSubcommand},
     fidl::endpoints::create_proxy,
+    fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_developer_remotecontrol as fremotecontrol,
     fidl_fuchsia_test::CaseIteratorMarker,
     fidl_fuchsia_test_manager as ftest_manager,
+    ftest_manager::{RunBuilderMarker, RunBuilderProxy},
     output_directory::DirectoryManager,
     run_test_suite_lib::diagnostics,
     std::fs::File,
@@ -19,15 +23,55 @@ use {
     std::path::PathBuf,
 };
 
+const RUN_BUILDER_SELECTOR: &str = "core/test_manager:expose:fuchsia.test.manager.RunBuilder";
+
+struct RunBuilderConnector {
+    remote_control: fremotecontrol::RemoteControlProxy,
+}
+
+#[async_trait]
+impl run_test_suite_lib::BuilderConnector for RunBuilderConnector {
+    async fn connect(&self) -> RunBuilderProxy {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<RunBuilderMarker>()
+            .expect(&format!("failed to create proxy to {}", RunBuilderMarker::DEBUG_NAME));
+        self.remote_control
+            .connect(
+                selectors::parse_selector(RUN_BUILDER_SELECTOR)
+                    .expect("cannot parse run builder selector"),
+                server_end.into_channel(),
+            )
+            .await
+            .expect("Failed to send connect request")
+            .expect(&format!(
+                "failed to connect to {} as {}",
+                RunBuilderMarker::DEBUG_NAME,
+                RUN_BUILDER_SELECTOR
+            ));
+        proxy
+    }
+}
+
+impl RunBuilderConnector {
+    fn new(remote_control: fremotecontrol::RemoteControlProxy) -> Box<Self> {
+        Box::new(Self { remote_control })
+    }
+}
+
 #[ffx_plugin(
     "cmd-test.experimental",
-    ftest_manager::HarnessProxy = "core/appmgr:out:fuchsia.test.manager.Harness"
+    ftest_manager::HarnessProxy = "core/test_manager:expose:fuchsia.test.manager.Harness"
 )]
-pub async fn test(harness_proxy: ftest_manager::HarnessProxy, cmd: TestCommand) -> Result<()> {
+pub async fn test(
+    harness_proxy: ftest_manager::HarnessProxy,
+    remote_control: fremotecontrol::RemoteControlProxy,
+    cmd: TestCommand,
+) -> Result<()> {
     let writer = Box::new(stdout());
 
     match cmd.subcommand {
-        TestSubcommand::Run(run) => run_test(harness_proxy, run).await,
+        TestSubcommand::Run(run) => {
+            run_test(harness_proxy, RunBuilderConnector::new(remote_control), run).await
+        }
         TestSubcommand::List(list) => get_tests(harness_proxy, writer, list).await,
         TestSubcommand::Result(result) => result_command(result, writer).await,
     }
@@ -45,7 +89,11 @@ async fn get_directory_manager() -> Result<DirectoryManager> {
     DirectoryManager::new(output_path_config, save_count_config)
 }
 
-async fn run_test(harness_proxy: ftest_manager::HarnessProxy, cmd: RunCommand) -> Result<()> {
+async fn run_test(
+    harness_proxy: ftest_manager::HarnessProxy,
+    builder_connector: Box<RunBuilderConnector>,
+    cmd: RunCommand,
+) -> Result<()> {
     let count = cmd.count.unwrap_or(1);
     let count = std::num::NonZeroU16::new(count)
         .ok_or_else(|| anyhow!("--count should be greater than zero."))?;
@@ -69,6 +117,7 @@ async fn run_test(harness_proxy: ftest_manager::HarnessProxy, cmd: RunCommand) -
             parallel: cmd.parallel,
             test_args: vec![],
             harness: harness_proxy,
+            builder_connector: builder_connector,
         },
         diagnostics::LogCollectionOptions {
             min_severity: cmd.min_severity_logs,

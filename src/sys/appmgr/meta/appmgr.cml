@@ -18,7 +18,10 @@
             path: "/appmgr_svc/fuchsia.appmgr.Startup",
         },
         {
-            protocol: [ "fuchsia.test.manager.Harness" ],
+            protocol: [
+                "fuchsia.test.manager.Harness",
+                "fuchsia.test.manager.RunBuilder",
+            ],
         },
         {
             directory: "hub",
@@ -452,6 +455,12 @@
             path: "/svc_for_sys/fuchsia.test.manager.Harness",
         },
 
+        // From test_manager
+        {
+            protocol: "fuchsia.test.manager.RunBuilder",
+            path: "/svc_for_sys/fuchsia.test.manager.RunBuilder",
+        },
+
         // These services are used by appmgr directly
         {
             protocol: [
@@ -500,6 +509,7 @@
                 "fuchsia.sys.Loader",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.test.manager.Harness",
+                "fuchsia.test.manager.RunBuilder",
                 "fuchsia.tracing.controller.Controller",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",

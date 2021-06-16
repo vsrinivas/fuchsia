@@ -21,7 +21,7 @@ use {
     fuchsia_async as fasync,
     futures::{
         channel::mpsc,
-        future::{join_all, try_join},
+        future::{join_all, try_join3},
         io::{self, AsyncRead},
         lock::Mutex,
         prelude::*,
@@ -62,49 +62,6 @@ pub struct TestRunOptions {
 
     /// Arguments passed to tests.
     pub arguments: Vec<String>,
-}
-
-/// How to handle tests that were marked disabled/ignored by the developer.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum DisabledTestHandling {
-    /// Skip tests that were marked disabled/ignored by the developer.
-    Exclude,
-    /// Explicitly include tests that were marked disabled/ignored by the developer.
-    Include,
-}
-
-impl Default for DisabledTestHandling {
-    fn default() -> Self {
-        DisabledTestHandling::Exclude
-    }
-}
-
-impl From<TestRunOptions> for fidl_fuchsia_test::RunOptions {
-    fn from(test_run_options: TestRunOptions) -> Self {
-        // Note: This will *not* break if new members are added to the FIDL table.
-        fidl_fuchsia_test::RunOptions {
-            parallel: test_run_options.parallel,
-            arguments: Some(test_run_options.arguments),
-            include_disabled_tests: Some(matches!(
-                test_run_options.disabled_tests,
-                DisabledTestHandling::Include
-            )),
-            ..fidl_fuchsia_test::RunOptions::EMPTY
-        }
-    }
-}
-
-/// Defines the result of a test case run.
-#[derive(PartialEq, Debug, Eq, Hash, Ord, PartialOrd, Copy, Clone)]
-pub enum TestResult {
-    /// Test case passed.
-    Passed,
-    /// Test case failed.
-    Failed,
-    /// Test case skipped.
-    Skipped,
-    /// Test case did not communicate the result.
-    Error,
 }
 
 /// Event to send to caller of `run_test_component`
@@ -218,6 +175,49 @@ pub trait GroupByTestCase: Iterator<Item = TestEvent> + Sized {
 
 impl<T> GroupByTestCase for T where T: Iterator<Item = TestEvent> + Sized {}
 
+/// How to handle tests that were marked disabled/ignored by the developer.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum DisabledTestHandling {
+    /// Skip tests that were marked disabled/ignored by the developer.
+    Exclude,
+    /// Explicitly include tests that were marked disabled/ignored by the developer.
+    Include,
+}
+
+impl Default for DisabledTestHandling {
+    fn default() -> Self {
+        DisabledTestHandling::Exclude
+    }
+}
+
+impl From<TestRunOptions> for fidl_fuchsia_test::RunOptions {
+    fn from(test_run_options: TestRunOptions) -> Self {
+        // Note: This will *not* break if new members are added to the FIDL table.
+        fidl_fuchsia_test::RunOptions {
+            parallel: test_run_options.parallel,
+            arguments: Some(test_run_options.arguments),
+            include_disabled_tests: Some(matches!(
+                test_run_options.disabled_tests,
+                DisabledTestHandling::Include
+            )),
+            ..fidl_fuchsia_test::RunOptions::EMPTY
+        }
+    }
+}
+
+/// Defines the result of a test case run.
+#[derive(PartialEq, Debug, Eq, Hash, Ord, PartialOrd, Copy, Clone)]
+pub enum TestResult {
+    /// Test case passed.
+    Passed,
+    /// Test case failed.
+    Failed,
+    /// Test case skipped.
+    Skipped,
+    /// Test case did not communicate the result.
+    Error,
+}
+
 #[must_use = "futures/streams"]
 pub struct StdoutStream {
     socket: fidl::AsyncSocket,
@@ -279,12 +279,10 @@ impl From<mpsc::Sender<SuiteEvent>> for LogEventSender {
 }
 
 struct LogOpt {
-    /// Name of the test.
-    name: String,
     /// Socket of which test serves stdout.
     stdout_socket: fidl::Socket,
     /// Send Log Event over this channel.
-    sender: LogEventSender,
+    sender: mpsc::Sender<String>,
     /// Duration to buffer the logs before flushing them.
     buffering_duration: std::time::Duration,
     /// MAx buffer size before logs are flushed.
@@ -304,13 +302,19 @@ impl TestCaseProcessor {
         stdout_socket: fidl::Socket,
         mut sender: mpsc::Sender<TestEvent>,
     ) -> Self {
-        let stdout_fut = collect_and_send_stdout(LogOpt {
-            name: test_case_name.to_string(),
-            stdout_socket,
-            sender: LogEventSender::TestEvent(sender.clone()),
-            buffering_duration: LOG_BUFFERING_DURATION,
-            buffer_size: LOG_BUFFER_SIZE,
-        });
+        let (s, mut stdout_recv) = mpsc::channel(1024);
+        let stdout_fut = collect_and_send_stdout(stdout_socket, s);
+        let mut s_clone = sender.clone();
+        let test_case_name_clone = test_case_name.clone();
+        let stdout_collector = async move {
+            while let Some(msg) = stdout_recv.next().await {
+                s_clone
+                    .send(TestEvent::stdout_message(&test_case_name_clone, &msg))
+                    .await
+                    .context("Error sending stdout msg")?;
+            }
+            Ok(())
+        };
         let test_complete_fut = Self::listen_for_completion(listener);
 
         let fut = async move {
@@ -323,7 +327,8 @@ impl TestCaseProcessor {
                     .await
                     .context("Failed to send excessive duration event")
             });
-            let ((), result) = try_join(stdout_fut, test_complete_fut).await?;
+            let ((), (), result) =
+                try_join3(stdout_fut, stdout_collector, test_complete_fut).await?;
             excessive_time_task.cancel().await.unwrap_or(Ok(()))?;
             if let Some(result) = result {
                 sender
@@ -367,10 +372,22 @@ impl TestCaseProcessor {
     }
 }
 
+pub async fn collect_and_send_stdout(
+    socket: fidl::Socket,
+    sender: mpsc::Sender<String>,
+) -> Result<(), anyhow::Error> {
+    collect_and_send_stdout_internal(LogOpt {
+        stdout_socket: socket,
+        sender,
+        buffering_duration: LOG_BUFFERING_DURATION,
+        buffer_size: LOG_BUFFER_SIZE,
+    })
+    .await
+}
 /// Internal method that put a listener on `stdout_socket`, process and send test stdout logs
 /// asynchronously in the background. Returns immediately if the provided socket is an invalid
 /// handle.
-async fn collect_and_send_stdout(log_opt: LogOpt) -> Result<(), anyhow::Error> {
+async fn collect_and_send_stdout_internal(log_opt: LogOpt) -> Result<(), anyhow::Error> {
     if log_opt.stdout_socket.as_handle_ref().is_invalid() {
         return Ok(());
     }
@@ -382,12 +399,8 @@ async fn collect_and_send_stdout(log_opt: LogOpt) -> Result<(), anyhow::Error> {
         }
         Ok(stream) => stream,
     };
-    let mut log_buffer = LogBuffer::new(
-        log_opt.name,
-        log_opt.buffering_duration,
-        log_opt.sender,
-        log_opt.buffer_size,
-    );
+    let mut log_buffer =
+        StdoutBuffer::new(log_opt.buffering_duration, log_opt.sender, log_opt.buffer_size);
 
     while let Some(log) = stream.try_next().await.context("Error reading stdout log msg")? {
         log_buffer.send_log(&log).await?;
@@ -400,24 +413,23 @@ async fn collect_and_send_stdout(log_opt: LogOpt) -> Result<(), anyhow::Error> {
 /// subsequent logs instantly.
 /// Clients may call done() to obtain any errors. If not called, done() will be called when the
 /// buffer is dropped and any errors will be suppressed.
-struct LogBuffer {
-    inner: Arc<Mutex<LogBufferInner>>,
+struct StdoutBuffer {
+    inner: Arc<Mutex<StdoutBufferInner>>,
     timer: fuchsia_async::Task<()>,
 }
 
-impl LogBuffer {
-    /// Crates new LogBuffer and starts the timer on log buffering.
+impl StdoutBuffer {
+    /// Crates new StdoutBuffer and starts the timer on log buffering.
     /// `duration`: Buffers log for this duration or till done() is called.
     /// `sender`: Channel to send logs on.
     /// `max_capacity`: Flush log if buffer size exceeds this value. This will not cancel the timer
     /// and all the logs would be flushed once timer expires.
     pub fn new(
-        test_name: String,
         duration: std::time::Duration,
-        sender: LogEventSender,
+        sender: mpsc::Sender<String>,
         max_capacity: usize,
     ) -> Self {
-        let inner = LogBufferInner::new(test_name, sender, max_capacity);
+        let inner = StdoutBufferInner::new(sender, max_capacity);
         let timer = fuchsia_async::Timer::new(duration);
         let log_buffer = Arc::downgrade(&inner);
         let f = async move {
@@ -458,22 +470,20 @@ impl LogBuffer {
     }
 }
 
-struct LogBufferInner {
-    test_name: String,
+struct StdoutBufferInner {
     logs: String,
-    sender: LogEventSender,
+    sender: mpsc::Sender<String>,
     /// Whether to buffer logs or not.
     buffer: bool,
     error: Option<anyhow::Error>,
     max_capacity: usize,
 }
 
-impl LogBufferInner {
-    fn new(test_name: String, sender: LogEventSender, max_capacity: usize) -> Arc<Mutex<Self>> {
-        Arc::new(Mutex::new(LogBufferInner {
-            test_name,
+impl StdoutBufferInner {
+    fn new(sender: mpsc::Sender<String>, max_capacity: usize) -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(StdoutBufferInner {
             logs: String::with_capacity(max_capacity),
-            sender: sender.into(),
+            sender: sender,
             buffer: true,
             error: None,
             max_capacity,
@@ -491,7 +501,7 @@ impl LogBufferInner {
 
     async fn flush(&mut self) -> Result<(), anyhow::Error> {
         if !self.logs.is_empty() {
-            let ret = LogBufferInner::send(&mut self.sender, &self.test_name, &self.logs).await;
+            let ret = Self::send(&mut self.sender, &self.logs).await;
             self.logs.truncate(0);
             return ret;
         }
@@ -499,21 +509,8 @@ impl LogBufferInner {
         Ok(())
     }
 
-    async fn send(
-        sender: &mut LogEventSender,
-        test_name: &str,
-        message: &str,
-    ) -> Result<(), anyhow::Error> {
-        match sender {
-            LogEventSender::TestEvent(sender) => sender
-                .send(TestEvent::stdout_message(test_name, message))
-                .await
-                .context("Error sending stdout msg"),
-            LogEventSender::SuiteEvent(sender) => sender
-                .send(SuiteEvent::case_stdout(None, test_name.to_string(), message.into()))
-                .await
-                .context("Error sending stdout msg"),
-        }
+    async fn send(sender: &mut mpsc::Sender<String>, message: &str) -> Result<(), anyhow::Error> {
+        sender.send(message.into()).await.context("Error sending stdout msg")
     }
 
     async fn send_log(&mut self, message: &str) -> Result<(), anyhow::Error> {
@@ -524,19 +521,18 @@ impl LogBufferInner {
             }
             return Ok(());
         }
-        LogBufferInner::send(&mut self.sender, &self.test_name, message).await
+        Self::send(&mut self.sender, message).await
     }
 }
 
-impl Drop for LogBufferInner {
+impl Drop for StdoutBufferInner {
     fn drop(&mut self) {
         if !self.logs.is_empty() {
             let message = self.logs.clone();
             let mut sender = self.sender.clone();
-            let test_name = self.test_name.clone();
             fuchsia_async::Task::spawn(async move {
-                if let Err(e) = LogBufferInner::send(&mut sender, &test_name, &message).await {
-                    warn!("Error sending logs for {}: {}", test_name, e);
+                if let Err(e) = StdoutBufferInner::send(&mut sender, &message).await {
+                    warn!("Error sending logs for {}", e);
                 }
             })
             .detach();
@@ -829,10 +825,17 @@ impl SuiteEvent {
         SuiteEvent { timestamp, payload: SuiteEventPayload::RunEvent(RunEvent::case_started(name)) }
     }
 
-    pub fn case_stdout(timestamp: Option<i64>, name: String, stdout_message: String) -> Self {
+    pub fn case_stdout<N, L>(timestamp: Option<i64>, name: N, stdout_message: L) -> Self
+    where
+        N: Into<String>,
+        L: Into<String>,
+    {
         SuiteEvent {
             timestamp,
-            payload: SuiteEventPayload::RunEvent(RunEvent::case_stdout(name, stdout_message)),
+            payload: SuiteEventPayload::RunEvent(RunEvent::case_stdout(
+                name.into(),
+                stdout_message.into(),
+            )),
         }
     }
 
@@ -1046,19 +1049,26 @@ impl FidlSuiteEventProcessor {
                 let name = self.get_test_case_name(ca.identifier);
                 match ca.artifact {
                     ftest_manager::Artifact::Stdout(stdout) => {
-                        let t = fasync::Task::spawn(collect_and_send_stdout(LogOpt {
-                            name: name.clone(),
-                            stdout_socket: stdout,
-                            sender: sender.clone().into(),
-                            buffering_duration: LOG_BUFFERING_DURATION,
-                            buffer_size: LOG_BUFFER_SIZE,
-                        }));
+                        let (s, mut r) = mpsc::channel(1024);
+                        let stdout_task = fasync::Task::spawn(collect_and_send_stdout(stdout, s));
+                        let mut sender_clone = sender.clone();
+                        let send_stdout_task = fasync::Task::spawn(async move {
+                            while let Some(msg) = r.next().await {
+                                sender_clone
+                                    .send(SuiteEvent::case_stdout(None, &name, msg))
+                                    .await
+                                    .context(format!("cannot send logs for {}", name))?;
+                            }
+                            Ok(())
+                        });
                         match self.stdout_map.get_mut(&ca.identifier) {
                             Some(v) => {
-                                v.push(t);
+                                v.push(stdout_task);
+                                v.push(send_stdout_task);
                             }
                             None => {
-                                self.stdout_map.insert(ca.identifier, vec![t]);
+                                self.stdout_map
+                                    .insert(ca.identifier, vec![stdout_task, send_stdout_task]);
                             }
                         }
                         None
@@ -1185,15 +1195,10 @@ impl SuiteRunInstance {
     }
 }
 
-/// The full test coverage of this library lives at //src/testing/sl4f/tests/test_framework
-/// They test that this library is able to handle various kind of tests launches and able to collect
-/// and pass back results.
-/// TODO(anmittal): move some of those tests here as unit tests.
 #[cfg(test)]
 mod tests {
     use super::*;
     use fidl::HandleBased;
-
     use futures::StreamExt;
     use maplit::hashmap;
     use pretty_assertions::assert_eq;
@@ -1203,12 +1208,9 @@ mod tests {
         let (sock_server, sock_client) =
             fidl::Socket::create(fidl::SocketOpts::STREAM).expect("Failed while creating socket");
 
-        let name = "test_name";
-
         let (sender, mut recv) = mpsc::channel(1);
 
-        let fut = fuchsia_async::Task::spawn(collect_and_send_stdout(LogOpt {
-            name: name.to_string(),
+        let fut = fuchsia_async::Task::spawn(collect_and_send_stdout_internal(LogOpt {
             stdout_socket: sock_client,
             sender: sender.into(),
             buffering_duration: std::time::Duration::from_millis(1),
@@ -1221,16 +1223,13 @@ mod tests {
 
         let mut msg = recv.next().await;
 
-        assert_eq!(
-            msg,
-            Some(TestEvent::stdout_message(&name, "test message 1test message 2test message 3"))
-        );
+        assert_eq!(msg, Some("test message 1test message 2test message 3".into()));
 
         // can receive messages multiple times
         sock_server.write(b"test message 4").expect("Can't write msg to socket");
         msg = recv.next().await;
 
-        assert_eq!(msg, Some(TestEvent::stdout_message(&name, "test message 4")));
+        assert_eq!(msg, Some("test message 4".into()));
 
         // messages can be read after socket server is closed.
         sock_server.write(b"test message 5").expect("Can't write msg to socket");
@@ -1239,7 +1238,7 @@ mod tests {
 
         msg = recv.next().await;
 
-        assert_eq!(msg, Some(TestEvent::stdout_message(&name, "test message 5")));
+        assert_eq!(msg, Some("test message 5".into()));
 
         // socket was closed, this should return None
         msg = recv.next().await;
@@ -1262,7 +1261,7 @@ mod tests {
 
         fn send_msg(
             executor: &mut fuchsia_async::TestExecutor,
-            log_buffer: &mut LogBuffer,
+            log_buffer: &mut StdoutBuffer,
             msg: &str,
         ) {
             let f = async {
@@ -1285,12 +1284,8 @@ mod tests {
         fn log_buffer_without_timeout() {
             let mut executor = TestExecutor::new_with_fake_time().unwrap();
             let (sender, mut recv) = mpsc::channel(1);
-            let mut log_buffer = LogBuffer::new(
-                "my_test".into(),
-                std::time::Duration::from_secs(5),
-                sender.into(),
-                100,
-            );
+            let mut log_buffer =
+                StdoutBuffer::new(std::time::Duration::from_secs(5), sender.into(), 100);
             let msg1 = "message1".to_owned();
             let msg2 = "message2".to_owned();
 
@@ -1306,22 +1301,15 @@ mod tests {
             assert_eq!(executor.run_until_stalled(&mut f), Poll::Ready(()));
             let mut expected_msg = msg1;
             expected_msg.push_str(&msg2);
-            assert_eq!(
-                recv_msg(&mut executor, &mut recv),
-                Poll::Ready(Some(TestEvent::stdout_message("my_test", &expected_msg)))
-            );
+            assert_eq!(recv_msg(&mut executor, &mut recv), Poll::Ready(Some(expected_msg)));
         }
 
         #[test]
         fn log_buffer_with_timeout() {
             let mut executor = TestExecutor::new_with_fake_time().unwrap();
             let (sender, mut recv) = mpsc::channel(1);
-            let mut log_buffer = LogBuffer::new(
-                "my_test".into(),
-                std::time::Duration::from_secs(5),
-                sender.into(),
-                100,
-            );
+            let mut log_buffer =
+                StdoutBuffer::new(std::time::Duration::from_secs(5), sender.into(), 100);
             let msg1 = "message1".to_owned();
             let msg2 = "message2".to_owned();
 
@@ -1334,23 +1322,14 @@ mod tests {
             executor.wake_next_timer();
             let mut expected_msg = msg1.clone();
             expected_msg.push_str(&msg2);
-            assert_eq!(
-                recv_msg(&mut executor, &mut recv),
-                Poll::Ready(Some(TestEvent::stdout_message("my_test", &expected_msg)))
-            );
+            assert_eq!(recv_msg(&mut executor, &mut recv), Poll::Ready(Some(expected_msg)));
 
             // timer fired, no more buffering should happen.
             send_msg(&mut executor, &mut log_buffer, &msg1);
-            assert_eq!(
-                recv_msg(&mut executor, &mut recv),
-                Poll::Ready(Some(TestEvent::stdout_message("my_test", &msg1)))
-            );
+            assert_eq!(recv_msg(&mut executor, &mut recv), Poll::Ready(Some(msg1)));
 
             send_msg(&mut executor, &mut log_buffer, &msg2);
-            assert_eq!(
-                recv_msg(&mut executor, &mut recv),
-                Poll::Ready(Some(TestEvent::stdout_message("my_test", &msg2)))
-            );
+            assert_eq!(recv_msg(&mut executor, &mut recv), Poll::Ready(Some(msg2)));
 
             let f = async {
                 log_buffer.done().await.unwrap();
@@ -1363,12 +1342,8 @@ mod tests {
         fn log_buffer_capacity_reached() {
             let mut executor = TestExecutor::new_with_fake_time().unwrap();
             let (sender, mut recv) = mpsc::channel(1);
-            let mut log_buffer = LogBuffer::new(
-                "my_test".into(),
-                std::time::Duration::from_secs(5),
-                sender.into(),
-                10,
-            );
+            let mut log_buffer =
+                StdoutBuffer::new(std::time::Duration::from_secs(5), sender.into(), 10);
             let msg1 = "message1".to_owned();
             let msg2 = "message2".to_owned();
 
@@ -1377,10 +1352,7 @@ mod tests {
             send_msg(&mut executor, &mut log_buffer, &msg2);
             let mut expected_msg = msg1.clone();
             expected_msg.push_str(&msg2);
-            assert_eq!(
-                recv_msg(&mut executor, &mut recv),
-                Poll::Ready(Some(TestEvent::stdout_message("my_test", &expected_msg)))
-            );
+            assert_eq!(recv_msg(&mut executor, &mut recv), Poll::Ready(Some(expected_msg)));
 
             // capacity was reached but buffering is still on, so next msg should buffer
             send_msg(&mut executor, &mut log_buffer, &msg1);
@@ -1391,10 +1363,7 @@ mod tests {
             };
             pin_mut!(f);
             assert_eq!(executor.run_until_stalled(&mut f), Poll::Ready(()));
-            assert_eq!(
-                recv_msg(&mut executor, &mut recv),
-                Poll::Ready(Some(TestEvent::stdout_message("my_test", &msg1)))
-            );
+            assert_eq!(recv_msg(&mut executor, &mut recv), Poll::Ready(Some(msg1)));
         }
 
         #[test]
@@ -1403,11 +1372,8 @@ mod tests {
             let (sock_server, sock_client) = fidl::Socket::create(fidl::SocketOpts::STREAM)
                 .expect("Failed while creating socket");
 
-            let name = "test_name";
-
             let (sender, mut recv) = mpsc::channel(1);
-            let mut fut = collect_and_send_stdout(LogOpt {
-                name: name.to_string(),
+            let mut fut = collect_and_send_stdout_internal(LogOpt {
                 stdout_socket: sock_client,
                 sender: sender.into(),
                 buffering_duration: std::time::Duration::from_secs(10),
@@ -1424,10 +1390,7 @@ mod tests {
             assert_matches!(executor.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
             assert_eq!(
                 recv_msg(&mut executor, &mut recv),
-                Poll::Ready(Some(TestEvent::stdout_message(
-                    &name,
-                    "test message 1test message 2test message 3"
-                )))
+                Poll::Ready(Some("test message 1test message 2test message 3".into()))
             );
         }
 

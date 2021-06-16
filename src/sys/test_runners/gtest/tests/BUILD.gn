@@ -11,6 +11,7 @@ rustc_test("tests_bin") {
   name = "gtest_runner_integration_test"
 
   deps = [
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/test_executor/rust:test_executor",
     "//src/sys/test_runners:test_lib",
@@ -26,7 +27,7 @@ rustc_test("tests_bin") {
     "tests.rs",
   ]
 
-  inputs = [ "../test_data/sample_tests_golden_events_legacy.rsf" ]
+  inputs = [ "../test_data/sample_tests_golden_events.rsf" ]
 }
 
 fuchsia_component("gtest_runner_integration_test") {
@@ -41,6 +42,7 @@ rustc_test("stress_tests_bin") {
   name = "gtest_runner_stress_test"
 
   deps = [
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/test_executor/rust:test_executor",
     "//src/sys/test_runners:test_lib",

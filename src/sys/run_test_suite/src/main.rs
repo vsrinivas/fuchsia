@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, diagnostics_data::Severity, fidl_fuchsia_test_manager::HarnessMarker};
+use {
+    argh::FromArgs,
+    async_trait::async_trait,
+    diagnostics_data::Severity,
+    fidl_fuchsia_test_manager::{HarnessMarker, RunBuilderMarker, RunBuilderProxy},
+};
 
 #[derive(FromArgs, Default, PartialEq, Eq, Debug)]
 /// Entry point for executing tests.
@@ -50,6 +55,22 @@ struct Args {
     test_args: Vec<String>,
 }
 
+struct RunBuilderConnector {}
+
+#[async_trait]
+impl run_test_suite_lib::BuilderConnector for RunBuilderConnector {
+    async fn connect(&self) -> RunBuilderProxy {
+        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+            .expect("connecting to RunBuilderProxy")
+    }
+}
+
+impl RunBuilderConnector {
+    fn new() -> Box<Self> {
+        Box::new(Self {})
+    }
+}
+
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
     fuchsia_syslog::init().expect("initializing syslog");
@@ -94,6 +115,7 @@ async fn main() {
             parallel,
             test_args: test_args,
             harness,
+            builder_connector: RunBuilderConnector::new(),
         },
         log_opts,
         std::num::NonZeroU16::new(count).unwrap(),

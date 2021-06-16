@@ -81,10 +81,10 @@ protocol RunBuilder {
     /// controller is also used to control the execution of the test suite.
     AddSuite(fuchsia.url.Url test_url, RunOptions options, request<SuiteController> controller);
 
-    // Build and schedule the run.
-    //
-    // This runs all suites added with their respective filters and closes the
-    // channel once it is done.
+    /// Build and schedule the run.
+    ///
+    /// This runs all suites added with their respective filters and closes the
+    /// channel once it is done.
     Build(request<RunController> controller);
 };
 
@@ -103,7 +103,7 @@ table RunOptions {
     /// Test runners will decide how to pass these arguments to tests.
     3: vector<string:MAX>:MAX arguments;
 
-    /// Timeout for the entire suite.
+    /// Timeout in seconds for the entire suite.
     4: zx.duration timeout;
 
     /// glob case filter. This filter will match based on glob pattern

@@ -4,18 +4,57 @@
 
 use {
     anyhow::{anyhow, format_err, Context, Error},
+    async_trait::async_trait,
     ffx_component_test_args::TestCommand,
     ffx_core::ffx_plugin,
     fidl::endpoints::create_proxy,
+    fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_developer_remotecontrol as fremotecontrol,
     fidl_fuchsia_test::CaseIteratorMarker,
     fidl_fuchsia_test_manager as ftest_manager,
+    ftest_manager::{RunBuilderMarker, RunBuilderProxy},
     run_test_suite_lib::diagnostics,
     std::io::{stdout, Write},
 };
 
-#[ffx_plugin(ftest_manager::HarnessProxy = "core/appmgr:out:fuchsia.test.manager.Harness")]
+const RUN_BUILDER_SELECTOR: &str = "core/test_manager:expose:fuchsia.test.manager.RunBuilder";
+
+struct RunBuilderConnector {
+    remote_control: fremotecontrol::RemoteControlProxy,
+}
+
+#[async_trait]
+impl run_test_suite_lib::BuilderConnector for RunBuilderConnector {
+    async fn connect(&self) -> RunBuilderProxy {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<RunBuilderMarker>()
+            .expect(&format!("failed to create proxy to {}", RunBuilderMarker::DEBUG_NAME));
+        self.remote_control
+            .connect(
+                selectors::parse_selector(RUN_BUILDER_SELECTOR)
+                    .expect("cannot parse run builder selector"),
+                server_end.into_channel(),
+            )
+            .await
+            .expect("Failed to send connect request")
+            .expect(&format!(
+                "failed to connect to {} as {}",
+                RunBuilderMarker::DEBUG_NAME,
+                RUN_BUILDER_SELECTOR
+            ));
+        proxy
+    }
+}
+
+impl RunBuilderConnector {
+    fn new(remote_control: fremotecontrol::RemoteControlProxy) -> Box<Self> {
+        Box::new(Self { remote_control })
+    }
+}
+
+#[ffx_plugin(ftest_manager::HarnessProxy = "core/test_manager:expose:fuchsia.test.manager.Harness")]
 pub async fn test(
     harness_proxy: ftest_manager::HarnessProxy,
+    remote_control: fremotecontrol::RemoteControlProxy,
     cmd: TestCommand,
 ) -> Result<(), Error> {
     let writer = Box::new(stdout());
@@ -35,6 +74,7 @@ pub async fn test(
                 parallel: cmd.parallel,
                 test_args: vec![],
                 harness: harness_proxy,
+                builder_connector: RunBuilderConnector::new(remote_control),
             },
             diagnostics::LogCollectionOptions {
                 min_severity: cmd.min_severity_logs,

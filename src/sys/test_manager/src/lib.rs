@@ -32,12 +32,13 @@ use {
     futures::{
         channel::{mpsc, oneshot},
         future::join_all,
+        lock,
         prelude::*,
         StreamExt,
     },
     lazy_static::lazy_static,
     regex::Regex,
-    std::collections::HashMap,
+    std::collections::{HashMap, HashSet},
     std::sync::{
         atomic::{AtomicU32, Ordering},
         Arc, Mutex, Weak,
@@ -313,6 +314,7 @@ async fn run_suite(
     mut stop_recv: oneshot::Receiver<()>,
 ) {
     debug!("running test suite {}", test_url);
+
     let fut = async {
         let patterns = match get_glob_patterns(&options.case_filters_to_run) {
             Ok(p) => p,
@@ -339,24 +341,44 @@ async fn run_suite(
 
         let mut suite_status = SuiteStatus::Passed;
         let mut invocations_iter = invocations.into_iter();
-        let run_options = get_invocation_options(options);
         let counter = AtomicU32::new(0);
+        let timeout_time = match options.timeout {
+            Some(t) => zx::Time::after(zx::Duration::from_nanos(t)),
+            None => zx::Time::INFINITE,
+        };
+        let timeout_fut = fasync::Timer::new(timeout_time).shared();
+
+        let run_options = get_invocation_options(options);
+
         loop {
             const INVOCATIONS_CHUNK: usize = 50;
             let chunk = invocations_iter.by_ref().take(INVOCATIONS_CHUNK).collect::<Vec<_>>();
             if chunk.is_empty() {
                 break;
             }
-            let res =
-                match run_invocations(&suite, chunk, run_options.clone(), &counter, &mut sender)
+            let res = match run_invocations(
+                &suite,
+                chunk,
+                run_options.clone(),
+                &counter,
+                &mut sender,
+                timeout_fut.clone(),
+            )
+            .await
+            .context("Error running test cases")
+            {
+                Ok(success) => success,
+                Err(e) => {
+                    return Err(e);
+                }
+            };
+            if res == SuiteStatus::TimedOut {
+                sender
+                    .send(Ok(SuiteEvents::suite_finished(SuiteStatus::TimedOut).into()))
                     .await
-                    .context("Error running test cases")
-                {
-                    Ok(success) => success,
-                    Err(e) => {
-                        return Err(e);
-                    }
-                };
+                    .unwrap();
+                return Ok(());
+            }
             suite_status = concat_suite_status(suite_status, res);
             if let Ok(Some(_)) = stop_recv.try_recv() {
                 sender
@@ -517,50 +539,103 @@ async fn run_invocations(
     run_options: fidl_fuchsia_test::RunOptions,
     counter: &AtomicU32,
     sender: &mut mpsc::Sender<Result<FidlSuiteEvent, LaunchError>>,
+    timeout_fut: futures::future::Shared<fasync::Timer>,
 ) -> Result<SuiteStatus, anyhow::Error> {
     let (run_listener_client, mut run_listener) =
         fidl::endpoints::create_request_stream().expect("cannot create request stream");
     suite.run(&mut invocations.into_iter().map(|i| i.into()), run_options, run_listener_client)?;
 
-    let mut initial_suite_status = SuiteStatus::DidNotFinish;
-    let mut tasks = vec![];
-
-    while let Some(result_event) =
-        run_listener.try_next().await.context("error waiting for listener")?
-    {
-        match result_event {
-            ftest::RunListenerRequest::OnTestCaseStarted {
-                invocation,
-                primary_log,
-                listener,
-                control_handle: _,
-            } => {
-                let name = invocation.name.ok_or(format_err!("cannot find name in invocation"))?;
-                let identifier = counter.fetch_add(1, Ordering::Relaxed);
-                let events = vec![
-                    Ok(SuiteEvents::case_found(identifier, name).into()),
-                    Ok(SuiteEvents::case_started(identifier).into()),
-                    Ok(SuiteEvents::case_stdout(identifier, primary_log).into()),
-                ];
-                for event in events {
-                    sender.send(event).await.unwrap();
+    let tasks = Arc::new(lock::Mutex::new(vec![]));
+    let running_test_cases = Arc::new(lock::Mutex::new(HashSet::new()));
+    let tasks_clone = tasks.clone();
+    let initial_suite_status: SuiteStatus;
+    let mut sender_clone = sender.clone();
+    let test_fut = async {
+        let mut initial_suite_status = SuiteStatus::DidNotFinish;
+        while let Some(result_event) =
+            run_listener.try_next().await.context("error waiting for listener")?
+        {
+            match result_event {
+                ftest::RunListenerRequest::OnTestCaseStarted {
+                    invocation,
+                    primary_log,
+                    listener,
+                    control_handle: _,
+                } => {
+                    let name =
+                        invocation.name.ok_or(format_err!("cannot find name in invocation"))?;
+                    let identifier = counter.fetch_add(1, Ordering::Relaxed);
+                    let events = vec![
+                        Ok(SuiteEvents::case_found(identifier, name).into()),
+                        Ok(SuiteEvents::case_started(identifier).into()),
+                        Ok(SuiteEvents::case_stdout(identifier, primary_log).into()),
+                    ];
+                    for event in events {
+                        sender_clone.send(event).await.unwrap();
+                    }
+                    let listener =
+                        listener.into_stream().context("Cannot convert listener to stream")?;
+                    running_test_cases.lock().await.insert(identifier);
+                    let running_test_cases = running_test_cases.clone();
+                    let sender = sender_clone.clone();
+                    let task = fasync::Task::spawn(async move {
+                        let status = listen_for_completion(listener, identifier, sender).await;
+                        running_test_cases.lock().await.remove(&identifier);
+                        status
+                    });
+                    tasks_clone.lock().await.push(task);
                 }
-                let task = fasync::Task::spawn(listen_for_completion(
-                    listener.into_stream().context("Cannot convert listener to stream")?,
-                    identifier,
-                    sender.clone(),
-                ));
-                tasks.push(task);
+                ftest::RunListenerRequest::OnFinished { .. } => {
+                    initial_suite_status = SuiteStatus::Passed;
+                    break;
+                }
             }
-            ftest::RunListenerRequest::OnFinished { .. } => {
-                initial_suite_status = SuiteStatus::Passed;
-                break;
+        }
+        Ok(initial_suite_status)
+    }
+    .fuse();
+
+    futures::pin_mut!(test_fut);
+    let timeout_fut = timeout_fut.fuse();
+    futures::pin_mut!(timeout_fut);
+
+    futures::select! {
+        () = timeout_fut => {
+                let mut all_tasks = vec![];
+                let mut tasks = tasks.lock().await;
+                all_tasks.append(&mut tasks);
+                drop(tasks);
+                for t in all_tasks {
+                    t.cancel().await;
+                }
+                let running_test_cases = running_test_cases.lock().await;
+                for i in &*running_test_cases {
+                    sender
+                        .send(Ok(SuiteEvents::case_stopped(*i, CaseStatus::TimedOut).into()))
+                        .await
+                        .unwrap();
+                    sender
+                        .send(Ok(SuiteEvents::case_finished(*i).into()))
+                        .await
+                        .unwrap();
+                }
+                return Ok(SuiteStatus::TimedOut);
             }
+        r = test_fut => {
+            initial_suite_status = match r {
+                Err(e) => {
+                    return Err(e);
+                }
+                Ok(s) => s,
+            };
         }
     }
 
+    let mut tasks = tasks.lock().await;
+    let mut all_tasks = vec![];
+    all_tasks.append(&mut tasks);
     // await for all invocations to complete for which test case never completed.
-    let suite_status = join_all(tasks)
+    let suite_status = join_all(all_tasks)
         .await
         .into_iter()
         .fold(initial_suite_status, get_suite_status_from_case_status);
@@ -621,6 +696,10 @@ async fn listen_for_completion(
     status
 }
 
+// max events to send so that we don't cross fidl limits.
+// TODO(anmittal): Use tape measure to calculate limit.
+const EVENTS_THRESHOLD: usize = 50;
+
 impl Suite {
     async fn run_controller(
         mut controller: SuiteControllerRequestStream,
@@ -646,17 +725,25 @@ impl Suite {
                 }
                 SuiteControllerRequest::GetEvents { responder } => {
                     let mut events = vec![];
+
                     // wait for first event
                     let mut e = event_recv.next().await;
+
                     while let Some(event) = e {
                         match event {
-                            Ok(event) => events.push(event),
+                            Ok(event) => {
+                                events.push(event);
+                            }
                             Err(err) => {
                                 responder
                                     .send(&mut Err(err))
                                     .map_err(TestManagerError::Response)?;
                                 break 'controller_loop;
                             }
+                        }
+                        if events.len() >= EVENTS_THRESHOLD {
+                            responder.send(&mut Ok(events)).map_err(TestManagerError::Response)?;
+                            continue 'controller_loop;
                         }
                         e = match event_recv.next().now_or_never() {
                             Some(e) => e,

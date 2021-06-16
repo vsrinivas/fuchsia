@@ -16,17 +16,18 @@ use {
         RunListenerRequest::{OnFinished, OnTestCaseStarted},
         RunListenerRequestStream,
     },
-    fidl_fuchsia_test_manager as ftest_manager,
+    fidl_fuchsia_test_manager as ftest_manager, fuchsia_async as fasync,
     fuchsia_component::client::{self, connect_to_protocol_at_dir_root},
     fuchsia_runtime::job_default,
     fuchsia_zircon as zx,
+    futures::channel::mpsc,
     futures::prelude::*,
     runner::component::ComponentNamespace,
     runner::component::ComponentNamespaceError,
     std::collections::HashMap,
     std::convert::TryFrom,
     std::sync::Arc,
-    test_executor::TestEvent,
+    test_executor::RunEvent,
     test_runners_lib::elf::{BuilderArgs, Component},
 };
 
@@ -168,23 +169,30 @@ pub fn names_to_invocation(names: Vec<&str>) -> Vec<Invocation> {
         .collect()
 }
 
-// process events by parsing and normalizing logs
-pub fn process_events(events: Vec<TestEvent>, exclude_empty_logs: bool) -> Vec<TestEvent> {
-    let mut test_events = vec![];
-    // map to buffer incomplete logs(that did not end in newline) by test case.
+// process events by parsing and normalizing logs. Returns `RunEvents` and collected logs.
+pub async fn process_events(
+    suite_instance: test_executor::SuiteRunInstance,
+    exclude_empty_logs: bool,
+) -> Result<(Vec<RunEvent>, Vec<String>), Error> {
+    let (sender, mut recv) = mpsc::channel(1);
+    let execution_task =
+        fasync::Task::spawn(async move { suite_instance.collect_events(sender).await });
+    let mut events = vec![];
+    let mut log_tasks = vec![];
     let mut buffered_logs = HashMap::new();
-    // break logs as they can be grouped in any way.
-    for event in events {
-        match event {
-            TestEvent::StdoutMessage { test_case_name, msg } => {
-                let logs = msg.split("\n");
+    while let Some(event) = recv.next().await {
+        match event.payload {
+            test_executor::SuiteEventPayload::RunEvent(RunEvent::CaseStdout {
+                name,
+                stdout_message,
+            }) => {
+                let logs = stdout_message.split("\n");
                 let mut logs = logs.collect::<Vec<&str>>();
                 // discard last empty log(if it ended in newline, or  store im-complete line)
                 let mut last_incomplete_line = logs.pop();
-                if msg.as_bytes().last() == Some(&b'\n') {
+                if stdout_message.as_bytes().last() == Some(&b'\n') {
                     last_incomplete_line = None;
                 }
-
                 for log in logs {
                     if exclude_empty_logs && log.len() == 0 {
                         continue;
@@ -192,37 +200,49 @@ pub fn process_events(events: Vec<TestEvent>, exclude_empty_logs: bool) -> Vec<T
                     let mut msg = log.to_owned();
                     // This is only executed for first log line and used to concat previous
                     // buffered line.
-                    if let Some(prev_log) = buffered_logs.remove(&test_case_name) {
+                    if let Some(prev_log) = buffered_logs.remove(&name) {
                         msg = format!("{}{}", prev_log, msg);
                     }
-                    test_events.push(TestEvent::StdoutMessage {
-                        test_case_name: test_case_name.clone(),
-                        msg: msg,
-                    });
-                }
-                if let Some(log) = last_incomplete_line {
-                    let mut log = log.to_owned();
-                    if let Some(prev_log) = buffered_logs.remove(&test_case_name) {
-                        log = format!("{}{}", prev_log, log);
+                    events.push(RunEvent::case_stdout(name.clone(), msg));
+                    if let Some(log) = last_incomplete_line {
+                        let mut log = log.to_owned();
+                        if let Some(prev_log) = buffered_logs.remove(&name) {
+                            log = format!("{}{}", prev_log, log);
+                        }
+                        buffered_logs.insert(name.clone(), log);
                     }
-                    buffered_logs.insert(test_case_name.clone(), log);
                 }
             }
-            event => {
-                test_events.push(event);
+            test_executor::SuiteEventPayload::RunEvent(e) => events.push(e),
+            test_executor::SuiteEventPayload::SuiteLog { log_stream } => {
+                let t = fasync::Task::spawn(log_stream.collect::<Vec<_>>());
+                log_tasks.push(t);
             }
-        };
+            test_executor::SuiteEventPayload::TestCaseLog { .. } => {
+                panic!("not supported yet!")
+            }
+        }
+    }
+    execution_task.await.context("test execution failed")?;
+
+    for (name, log) in buffered_logs {
+        events.push(RunEvent::case_stdout(name, log));
     }
 
-    for (test_case_name, log) in buffered_logs {
-        test_events.push(TestEvent::StdoutMessage { test_case_name: test_case_name, msg: log });
+    let mut collected_logs = vec![];
+    for t in log_tasks {
+        let logs = t.await;
+        for log_result in logs {
+            let log = log_result?;
+            collected_logs.push(log.msg().unwrap().to_string());
+        }
     }
 
-    test_events
+    Ok((events, collected_logs))
 }
 
-/// Binds to test manager component and returns the test suite service.
-pub async fn connect_to_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
+// Binds to test manager component and returns run builder service.
+pub async fn connect_to_test_manager() -> Result<ftest_manager::RunBuilderProxy, Error> {
     let realm = client::connect_to_protocol::<fsys::RealmMarker>()
         .context("could not connect to Realm service")?;
 
@@ -234,7 +254,7 @@ pub async fn connect_to_test_manager() -> Result<ftest_manager::HarnessProxy, Er
         .context("bind_child fidl call failed for test manager")?
         .map_err(|e| format_err!("failed to create test manager: {:?}", e))?;
 
-    connect_to_protocol_at_dir_root::<ftest_manager::HarnessMarker>(&dir)
+    connect_to_protocol_at_dir_root::<ftest_manager::RunBuilderMarker>(&dir)
         .context("failed to open test suite service")
 }
 

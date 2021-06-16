@@ -77,6 +77,7 @@ rustc_library("test_lib") {
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
     "//src/lib/test_executor/rust:test_executor",
