@@ -53,6 +53,7 @@ renamed_binary("vsh-bin") {
   dest = "bin/vsh"
   source = "$root_out_dir/guest"
   source_deps = [ ":bin" ]
+  keep_original = true
 }
 
 fuchsia_shell_package("guest") {
