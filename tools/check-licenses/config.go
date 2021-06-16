@@ -50,7 +50,9 @@ type Config struct {
 	MaxReadSize int    `json:"maxReadSize"`
 	BaseDir     string `json:"baseDir"`
 	OutDir      string `json:"outDir"`
+	BuildDir    string `json:"buildDir"`
 	Target      string `json:"target"`
+	GnPath      string `json:"gnPath"`
 }
 
 // NewConfig returns a config file representing the values found in the json file.
@@ -83,6 +85,9 @@ func NewConfigJson(configJson string) (*Config, error) {
 	}
 	if c.OutDir == "" {
 		c.OutDir = "."
+	}
+	if c.BuildDir == "" {
+		c.BuildDir = "out/default"
 	}
 
 	// Ensure we aren't skipping any directories in the CustomProjectLicenses map.
@@ -121,18 +126,6 @@ func (c *Config) Merge(other *Config) {
 	c.FlutterLicenses = append(c.FlutterLicenses, other.FlutterLicenses...)
 	c.NoticeTxtFiles = append(c.NoticeTxtFiles, other.NoticeTxtFiles...)
 	c.NoticeFiles = append(c.NoticeFiles, other.NoticeFiles...)
-	if c.BaseDir == "" {
-		c.BaseDir = other.BaseDir
-	}
-	if c.OutDir == "" {
-		c.OutDir = other.OutDir
-	}
-	if c.Target == "" {
-		c.Target = other.Target
-	}
-	if c.LogLevel == "" {
-		c.LogLevel = other.LogLevel
-	}
 
 	if c.LicenseAllowList == nil {
 		c.LicenseAllowList = make(map[string][]string)
@@ -160,7 +153,13 @@ func (c *Config) Merge(other *Config) {
 	if c.OutDir == "" {
 		c.OutDir = other.OutDir
 	}
+	if c.BuildDir == "" {
+		c.BuildDir = other.BuildDir
+	}
 	if c.Target == "" {
 		c.Target = other.Target
+	}
+	if c.GnPath == "" {
+		c.GnPath = other.GnPath
 	}
 }

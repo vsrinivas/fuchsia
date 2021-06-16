@@ -110,6 +110,7 @@ func (l *License) Search(data []byte, file string) (bool, *Match) {
 			l.matches[key] = match
 		} else {
 			l.matches[key].merge(match)
+			match = l.matches[key]
 		}
 		l.Unlock()
 		return true, match

@@ -17,6 +17,7 @@ type Match struct {
 	Projects              []string
 	Files                 []string
 	LicenseAppliesToFiles []string
+	Used                  bool
 
 	sync.RWMutex
 }
@@ -42,7 +43,8 @@ func NewMatch(data [][]byte, file string, pattern *regexp.Regexp) *Match {
 		Copyrights:            map[string]bool{string(regexMap["copyright"]): true},
 		Text:                  string(regexMap["text"]),
 		Files:                 []string{file},
-		LicenseAppliesToFiles: []string{file},
+		LicenseAppliesToFiles: []string{},
+		Used:                  false,
 	}
 	return m
 }
@@ -56,5 +58,6 @@ func (m *Match) merge(other *Match) {
 	m.Projects = append(m.Projects, other.Projects...)
 	m.Files = append(m.Files, other.Files...)
 	m.LicenseAppliesToFiles = append(m.LicenseAppliesToFiles, other.LicenseAppliesToFiles...)
+	m.Used = m.Used || other.Used
 	m.Unlock()
 }

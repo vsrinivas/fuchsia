@@ -41,6 +41,8 @@ var (
 	outDir            = flag.String("out_dir", "", "Directory to write outputs to.")
 	outputLicenseFile = flag.Bool("output_license_file", true, "If true, outputs a license file with all the licenses for the project.")
 	target            = flag.String("target", "", "Analyze the dependency tree of a specific GN build target.")
+	buildDir          = flag.String("build_dir", "out/default", "Location of GN build directory.")
+	gnPath            = flag.String("gn_path", "", "Path to GN executable. Required when target is specified.")
 )
 
 func mainImpl() error {
@@ -163,23 +165,50 @@ func mainImpl() error {
 	}
 
 	if *baseDir != "" {
-		if info, err := os.Stat(*baseDir); os.IsNotExist(err) && info.IsDir() {
+		info, err := os.Stat(*baseDir)
+		if os.IsNotExist(err) {
 			return fmt.Errorf("base directory path %q does not exist!", *baseDir)
+		}
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("base directory path %q is not a directory!", *baseDir)
 		}
 		config.BaseDir = *baseDir
 	}
 
 	if *outDir != "" {
-		if info, err := os.Stat(*outDir); os.IsNotExist(err) && info.IsDir() {
-			return fmt.Errorf("out directory path %q does not exist!", *baseDir)
+		info, err := os.Stat(*outDir)
+		if os.IsNotExist(err) {
+			return fmt.Errorf("out directory path %q does not exist!", *outDir)
+		}
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("out directory path %q is not a directory!", *outDir)
 		}
 		config.OutDir = *outDir
 	}
 
+	config.BuildDir = *buildDir
+	if *gnPath != "" {
+		_, err := os.Stat(*gnPath)
+		if os.IsNotExist(err) {
+			return fmt.Errorf("GN path %q does not exist!", *gnPath)
+		}
+		if err != nil {
+			return err
+		}
+		config.GnPath = *gnPath
+	}
+
 	if *target != "" {
-		log.Printf("WARNING: Flag \"target\" was set to \"%v\", but that flag is currently unsupported. check-licenses will parse the full directory tree.\n", *target)
-		//TODO: enable target-based dependency traversal
-		//config.Target = *target
+		if config.GnPath == "" {
+			return fmt.Errorf("A target was specified but no path to GN was given")
+		}
+		config.Target = *target
 	}
 
 	if err := checklicenses.Run(context.Background(), config); err != nil {

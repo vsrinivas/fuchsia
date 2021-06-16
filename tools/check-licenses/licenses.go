@@ -63,6 +63,9 @@ func (l *Licenses) GetFilesWithProhibitedLicenses() []string {
 			continue
 		}
 		for _, match := range license.matches {
+			if !match.Used {
+				continue
+			}
 			for _, path := range match.Files {
 				if !contains(license.AllowedDirs, path) {
 					log.Printf("Prohibited: %q in %q\n", license.Category, path)
@@ -101,6 +104,16 @@ func (l *Licenses) GetFilesWithBadLicenseUsage() []string {
 func (l *Licenses) MatchSingleLicenseFile(data []byte, path string, metrics *Metrics, ft *FileTree) {
 	for _, license := range l.licenses {
 		if ok, match := license.Search(data, path); ok {
+
+			// Mark all single licenses file matches as used. Some of these files are used in the project
+			// directories that are skipped when traversing the file tree, so the files use the license
+			// won't be processed and marked as Used. This means that these files will be included in the
+			// output when analysing a GN target even if there is no dependency on the license but it is
+			// better to have false positives and not false negatives.
+			match.Lock()
+			match.Used = true
+			match.Unlock()
+
 			metrics.increment("num_single_license_file_match")
 			ft.Lock()
 			ft.SingleLicenseFiles[path] = append(ft.SingleLicenseFiles[path], license)
