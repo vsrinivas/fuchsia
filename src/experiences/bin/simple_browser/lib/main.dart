@@ -82,11 +82,11 @@ void main() {
   runApp(App(appModel));
 
   // This call is used only when flutter driver is enabled.
-  // TODO(fxr/66663): Remove it once simple browser has a tappable UI element
-  // that triggers URL navigation.
-  _handler.setMockMethodCallHandler((call) async {
-    final url = call.method;
-    tabsBloc.currentTab!.request.add(NavigateToAction(url: url));
-    log.info('Navigate to $url...');
-  });
+  if (TestDefaultBinaryMessengerBinding.instance != null) {
+    _handler.setMockMethodCallHandler((call) async {
+      final url = call.method;
+      tabsBloc.currentTab!.request.add(NavigateToAction(url: url));
+      log.info('Navigate to $url...');
+    });
+  }
 }
