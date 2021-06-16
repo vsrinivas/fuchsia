@@ -235,12 +235,14 @@ async fn get_package_already_present_on_fs() {
         Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
     );
 
-    // `GetMissingBlobs()` will fail with cached epitaph, since channel was closed by server.
+    // The remote end sends the epitaph, and then at some point later, closes the channel.
+    // We check for both here to account for the channel not yet being closed when the
+    // `GetMissingBlobs` call occurs.
     let (_blob_iterator, blob_iterator_server_end) =
         fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
     assert_matches!(
         needed_blobs.get_missing_blobs(blob_iterator_server_end),
-        Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
+        Ok(()) | Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
     );
 
     let () = get_fut.await.unwrap().unwrap();
