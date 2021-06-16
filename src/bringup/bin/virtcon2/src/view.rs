@@ -115,6 +115,7 @@ pub struct VirtualConsoleViewAssistant {
     active_terminal_id: u32,
     virtcon_mode: VirtconMode,
     desired_virtcon_mode: VirtconMode,
+    owns_display: bool,
 }
 
 const LOGO: &'static str = "/pkg/data/logo.riv";
@@ -151,6 +152,7 @@ impl VirtualConsoleViewAssistant {
         } else {
             (None, VirtconMode::Fallback)
         };
+        let owns_display = true;
 
         Ok(Box::new(VirtualConsoleViewAssistant {
             app_context: app_context.clone(),
@@ -165,6 +167,7 @@ impl VirtualConsoleViewAssistant {
             active_terminal_id,
             virtcon_mode,
             desired_virtcon_mode,
+            owns_display,
         }))
     }
 
@@ -285,6 +288,89 @@ impl VirtualConsoleViewAssistant {
         self.scene_details = None;
         self.app_context.request_render(self.view_key);
     }
+
+    fn handle_device_control_keyboard_event(
+        &mut self,
+        context: &mut ViewAssistantContext,
+        keyboard_event: &input::keyboard::Event,
+    ) -> Result<bool, Error> {
+        if keyboard_event.phase == input::keyboard::Phase::Pressed {
+            if keyboard_event.code_point.is_none() {
+                const HID_USAGE_KEY_ESC: u32 = 0x29;
+
+                match keyboard_event.hid_usage {
+                    HID_USAGE_KEY_ESC if keyboard_event.modifiers.alt == true => {
+                        self.cancel_animation();
+                        self.desired_virtcon_mode =
+                            if self.desired_virtcon_mode == VirtconMode::Fallback {
+                                VirtconMode::Forced
+                            } else {
+                                VirtconMode::Fallback
+                            };
+                        self.set_desired_virtcon_mode(context)?;
+                        return Ok(true);
+                    }
+                    // TODO: Implement other interactions.
+                    _ => {}
+                }
+            }
+        }
+
+        Ok(false)
+    }
+
+    fn handle_control_keyboard_event(
+        &mut self,
+        _context: &mut ViewAssistantContext,
+        keyboard_event: &input::keyboard::Event,
+    ) -> Result<bool, Error> {
+        if keyboard_event.phase == input::keyboard::Phase::Pressed {
+            match keyboard_event.code_point {
+                None => {
+                    const HID_USAGE_KEY_ESC: u32 = 0x29;
+                    const HID_USAGE_KEY_F1: u32 = 0x3a;
+                    const HID_USAGE_KEY_F10: u32 = 0x43;
+
+                    match keyboard_event.hid_usage {
+                        HID_USAGE_KEY_ESC => {
+                            self.cancel_animation();
+                            return Ok(true);
+                        }
+                        HID_USAGE_KEY_F1..=HID_USAGE_KEY_F10
+                            if keyboard_event.modifiers.alt == true =>
+                        {
+                            let id = keyboard_event.hid_usage - HID_USAGE_KEY_F1;
+                            self.set_active_terminal(id);
+                            return Ok(true);
+                        }
+                        // TODO: Implement other interactions.
+                        _ => {}
+                    }
+                }
+                Some(code_point) => {
+                    const PLUS: u32 = 43;
+                    const MINUS: u32 = 45;
+
+                    match code_point {
+                        PLUS if keyboard_event.modifiers.alt == true => {
+                            let new_font_size = (self.font_size + 15.0).min(MAX_FONT_SIZE);
+                            self.set_font_size(new_font_size);
+                            return Ok(true);
+                        }
+                        MINUS if keyboard_event.modifiers.alt == true => {
+                            let new_font_size = (self.font_size - 15.0).max(MIN_FONT_SIZE);
+                            self.set_font_size(new_font_size);
+                            return Ok(true);
+                        }
+                        // TODO: Implement other interactions.
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        Ok(false)
+    }
 }
 
 impl ViewAssistant for VirtualConsoleViewAssistant {
@@ -388,60 +474,16 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
         _event: &input::Event,
         keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {
-        if keyboard_event.phase == input::keyboard::Phase::Pressed {
-            match keyboard_event.code_point {
-                None => {
-                    const HID_USAGE_KEY_ESC: u32 = 0x29;
-                    const HID_USAGE_KEY_F1: u32 = 0x3a;
-                    const HID_USAGE_KEY_F10: u32 = 0x43;
+        if self.handle_device_control_keyboard_event(context, keyboard_event)? {
+            return Ok(());
+        }
 
-                    match keyboard_event.hid_usage {
-                        HID_USAGE_KEY_ESC if keyboard_event.modifiers.alt == true => {
-                            self.cancel_animation();
-                            self.desired_virtcon_mode =
-                                if self.desired_virtcon_mode == VirtconMode::Fallback {
-                                    VirtconMode::Forced
-                                } else {
-                                    VirtconMode::Fallback
-                                };
-                            self.set_desired_virtcon_mode(context)?;
-                            return Ok(());
-                        }
-                        HID_USAGE_KEY_ESC => {
-                            self.cancel_animation();
-                            return Ok(());
-                        }
-                        HID_USAGE_KEY_F1..=HID_USAGE_KEY_F10
-                            if keyboard_event.modifiers.alt == true =>
-                        {
-                            let id = keyboard_event.hid_usage - HID_USAGE_KEY_F1;
-                            self.set_active_terminal(id);
-                            return Ok(());
-                        }
-                        // TODO: Implement other interactions.
-                        _ => {}
-                    }
-                }
-                Some(code_point) => {
-                    const PLUS: u32 = 43;
-                    const MINUS: u32 = 45;
+        if !self.owns_display {
+            return Ok(());
+        }
 
-                    match code_point {
-                        PLUS if keyboard_event.modifiers.alt == true => {
-                            let new_font_size = (self.font_size + 15.0).min(MAX_FONT_SIZE);
-                            self.set_font_size(new_font_size);
-                            return Ok(());
-                        }
-                        MINUS if keyboard_event.modifiers.alt == true => {
-                            let new_font_size = (self.font_size - 15.0).max(MIN_FONT_SIZE);
-                            self.set_font_size(new_font_size);
-                            return Ok(());
-                        }
-                        // TODO: Implement other interactions.
-                        _ => {}
-                    }
-                }
-            }
+        if self.handle_control_keyboard_event(context, keyboard_event)? {
+            return Ok(());
         }
 
         // Get input sequence and write it to the active terminal.
@@ -452,6 +494,7 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                     .unwrap_or_else(|e| println!("failed to write to terminal: {}", e));
             }
         }
+
         Ok(())
     }
 
@@ -483,6 +526,11 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 }
             }
         }
+    }
+
+    fn ownership_changed(&mut self, owned: bool) -> Result<(), Error> {
+        self.owns_display = owned;
+        Ok(())
     }
 }
 
