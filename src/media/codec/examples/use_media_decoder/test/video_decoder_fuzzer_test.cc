@@ -164,7 +164,7 @@ int video_fuzzer_test(std::string input_file_path, UseVideoDecoderFunction use_v
   for (uint32_t i = 0; i < iteration_count; i++) {
     int random_instance = instance_dist(gen);
     int random_location = offset_dist(gen);
-    uint8_t random_value = value_dis(gen);
+    uint8_t random_value = static_cast<uint8_t>(value_dis(gen));
     if (i < start_iteration)
       continue;
 

@@ -210,7 +210,7 @@ void EncoderClient::OnInputBuffersReady(
   for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
     std::unique_ptr<CodecBuffer> local_buffer = CodecBuffer::CreateFromVmo(
         i, std::move(buffer_collection_info.buffers[i].vmo),
-        buffer_collection_info.buffers[i].vmo_usable_start,
+        static_cast<uint32_t>(buffer_collection_info.buffers[i].vmo_usable_start),
         buffer_collection_info.settings.buffer_settings.size_bytes, false,
         buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
     if (!local_buffer) {
@@ -237,7 +237,8 @@ void EncoderClient::QueueInputPacket(uint32_t buffer_index, zx::eventpair releas
   packet.mutable_header()->set_buffer_lifetime_ordinal(kInputBufferLifetimeOrdinal);
   packet.mutable_header()->set_packet_index(buffer_index);
   packet.set_start_offset(0);
-  packet.set_valid_length_bytes(all_input_buffers_[buffer_index]->size_bytes());
+  packet.set_valid_length_bytes(
+      static_cast<uint32_t>(all_input_buffers_[buffer_index]->size_bytes()));
   packet.set_buffer_index(buffer_index);
 
   input_packets_queued_.insert({buffer_index, std::move(release_fence)});
@@ -286,7 +287,8 @@ void EncoderClient::ConfigurePortBufferCollection(
           callback(fit::error(allocate_status));
           return;
         }
-        callback(fit::ok(std::pair(std::move(buffer_collection_info), buffer_collection_info.buffer_count)));
+        callback(fit::ok(
+            std::pair(std::move(buffer_collection_info), buffer_collection_info.buffer_count)));
       });
 }
 
@@ -338,7 +340,7 @@ void EncoderClient::OnOutputBuffersReady(
   for (uint32_t i = 0; i < output_packet_count_; i++) {
     std::unique_ptr<CodecBuffer> buffer = CodecBuffer::CreateFromVmo(
         i, std::move(buffer_collection_info.buffers[i].vmo),
-        buffer_collection_info.buffers[i].vmo_usable_start,
+        static_cast<uint32_t>(buffer_collection_info.buffers[i].vmo_usable_start),
         buffer_collection_info.settings.buffer_settings.size_bytes, false,
         buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
     if (!buffer) {
