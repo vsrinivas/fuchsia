@@ -10,31 +10,52 @@ import("//build/testing/host_test_data.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":cargo_gnaw_golden_integration_test($host_toolchain)" ]
+  deps = [ ":cargo_gnaw_golden_integration_host_test($host_toolchain)" ]
 }
 
 if (is_host) {
-  rustc_test("cargo_gnaw_golden_integration_test") {
-    edition = "2018"
-    source_root = "golden.rs"
-    deps = [
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:pretty_assertions",
-      "//third_party/rust_crates:tempfile",
-      "//third_party/rust_crates:walkdir",
-      "//tools/cargo-gnaw:cargo-gnaw-lib",
+  host_test("cargo_gnaw_golden_integration_host_test") {
+    binary_path = "$root_out_dir/cargo_gnaw_golden_integration_test"
+
+    args = [
+      "--test-base-dir",
+      rebase_path(".", root_build_dir),
+      "--rustc-binary-path",
+      rebase_path("//prebuilt/third_party/rust/${host_platform}/bin/rustc",
+                  root_build_dir),
+      "--gn-binary-path",
+      rebase_path("//prebuilt/third_party/gn/${host_platform}/gn",
+                  root_build_dir),
+      "--cargo-binary-path",
+      rebase_path("//prebuilt/third_party/rust/${host_platform}/bin/cargo",
+                  root_build_dir),
+      "--lib-path",
+      rebase_path("//prebuilt/third_party/rust/${host_platform}/lib",
+                  root_build_dir),
     ]
 
     # Host tests are tested on different workers from those the artifacts were
     # built on.  This means, if we want to use binaries from the source tree,
     # we need to add them to test dependencies explicitly.
-    non_rust_deps = [
-      ":cargo_gnaw_gn",
-      ":cargo_gnaw_rust",
+    deps = [
+      ":cargo_gnaw_golden_integration_test",
+      ":cargo_gnaw_prebuilt_bin_libs",
       ":cargo_gnaw_tests",
     ]
+  }
 
+  rustc_binary("cargo_gnaw_golden_integration_test") {
+    edition = "2018"
+    source_root = "golden.rs"
     sources = [ "golden.rs" ]
+    deps = [
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:pretty_assertions",
+      "//third_party/rust_crates:tempfile",
+      "//third_party/rust_crates:walkdir",
+      "//tools/cargo-gnaw:cargo-gnaw-lib",
+    ]
   }
 
   visibility = [ ":*" ]
@@ -125,34 +146,14 @@ if (is_host) {
       "simple_deps/vendor/anyhow/tests/ui/no-impl.rs",
       "simple_deps/vendor/anyhow/tests/ui/no-impl.stderr",
     ]
-    outputs = [ "$root_out_dir/test_data/tools/cargo-gnaw/tests/{{source_target_relative}}" ]
   }
 
-  cargo_gnaw_rust_out_dir =
-      "${root_out_dir}/test_data/tools/cargo-gnaw/runfiles/rust"
-  copy_tree("cargo_gnaw_rust_copy") {
-    src_dir = "//prebuilt/third_party/rust/${host_platform}"
-    dest_dir = cargo_gnaw_rust_out_dir
-    inputs = [ "${src_dir}/.versions/rust.cipd_version" ]
-  }
-
-  # Make the copied directory available at test runtime.
-  host_test_data("cargo_gnaw_rust") {
-    sources = [ cargo_gnaw_rust_out_dir ]
-    deps = [ ":cargo_gnaw_rust_copy" ]
-  }
-
-  cargo_gnaw_gn_out_dir =
-      "${root_out_dir}/test_data/tools/cargo-gnaw/runfiles/gn"
-  copy_tree("cargo_gnaw_gn_copy") {
-    src_dir = "//prebuilt/third_party/gn/${host_platform}"
-    dest_dir = cargo_gnaw_gn_out_dir
-    inputs = [ "${src_dir}/.versions/gn.cipd_version" ]
-  }
-
-  # Make the copied directory available at test runtime.
-  host_test_data("cargo_gnaw_gn") {
-    sources = [ cargo_gnaw_gn_out_dir ]
-    deps = [ ":cargo_gnaw_gn_copy" ]
+  host_test_data("cargo_gnaw_prebuilt_bin_libs") {
+    sources = [
+      "//prebuilt/third_party/gn/${host_platform}/gn",
+      "//prebuilt/third_party/rust/${host_platform}/bin/cargo",
+      "//prebuilt/third_party/rust/${host_platform}/bin/rustc",
+      "//prebuilt/third_party/rust/${host_platform}/lib",
+    ]
   }
 }

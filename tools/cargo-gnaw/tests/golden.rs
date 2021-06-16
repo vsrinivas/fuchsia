@@ -7,122 +7,56 @@
 
 use {
     anyhow::Context,
+    argh::FromArgs,
     // Without this, the test diffs are impractical to debug.
     pretty_assertions::assert_eq,
     std::path::{Path, PathBuf},
     tempfile,
 };
 
-/// All the paths to runfiles and tools which are used in this test.
+#[derive(FromArgs, Debug)]
+/// Paths to use in test. All paths are relative to where this test is executed.
 ///
-/// All paths are absolute, and are resolved based on knowing that they are all
-/// beneath the directory in which this test binary is stored.  See the `BUILD.gn`
-/// file for this test target and the corresponding `host_test_data` targets.
-///
-/// Note that it is not possible to refer to paths inside the source tree, because
-/// the source infra runners only have access to the output artifacts (i.e. contents
-/// of the "out" directory).
-#[derive(Debug)]
+/// These paths have to be relative when passed to this test on infra bots, so they are mapped
+/// correctly, otherwise they won't be available at test runtime. It is safe to convert these to
+/// absolute paths later in the test.
 struct Paths {
-    /// `.../host_x64`
-    test_root_dir: PathBuf,
-
-    /// `.../host_x64/test_data`, this is the root of the runfilfes tree, a
-    /// path //foo/bar will be copied at `.../host_x64/test_data/foo/bar` for
-    /// this test.
-    test_data_dir: PathBuf,
-
-    /// `.../host_x64/test_data/tools/cargo-gnaw/tests`: this is the directory
-    /// where golden tests are placed. Corresponds to `//tools/cargo-gnaw/tests`.
-    test_base_dir: PathBuf,
-
-    /// `.../host_x64/test_data/tools/cargo-gnaw/runfiles`: this is the directory
-    /// where the binary runfiles live.
-    runfiles_dir: PathBuf,
-
-    /// `.../runfiles/rust/bin/rustc`: the path to the rustc binary.  rustc is
-    /// used by cargo.
-    rustc_binary_path: PathBuf,
-
-    /// `.../runfiles/gn`: the absolute path to the gn binary. gn is used for
-    /// formatting.
-    gn_binary_path: PathBuf,
-
-    /// `.../runfiles/gn`: the absolute path to the cargo binary.
-    cargo_binary_path: PathBuf,
-
-    /// `.../runfiles/rust/lib`: the absolute path to the directory where the
-    /// shared libraries are stored.
-    lib_path: PathBuf,
+    /// path to the directory where golden tests are placed.
+    #[argh(option)]
+    test_base_dir: String,
+    /// path to `rustc` binary to use in test.
+    #[argh(option)]
+    rustc_binary_path: String,
+    /// path to `gn` binary to use in test.
+    #[argh(option)]
+    gn_binary_path: String,
+    /// path to `cargo` binary to use in test.
+    #[argh(option)]
+    cargo_binary_path: String,
+    /// path to shared libraries directory to use in test.
+    #[argh(option)]
+    lib_path: String,
 }
 
-/// Gets the hermetic test paths for the runfiles and tools used in this test.
-///
-/// The hermetic test paths are computed based on the parent directory of this
-/// binary.
-fn get_paths() -> Paths {
-    let args: Vec<String> = std::env::args().collect();
-    eprintln!("test args: {:?}", &args);
-
-    let test_binary_path =
-        std::fs::canonicalize([&args[0]].iter().collect::<PathBuf>()).expect("existing path");
-
-    let test_root_dir = test_binary_path.parent().unwrap();
-
-    let test_data_dir: PathBuf = [test_root_dir.to_str().unwrap(), "test_data"].iter().collect();
-
-    let test_base_dir: PathBuf =
-        [test_data_dir.to_str().unwrap(), "tools", "cargo-gnaw", "tests"].iter().collect();
-
-    let runfiles_dir: PathBuf =
-        [test_root_dir.to_str().unwrap(), "test_data", "tools", "cargo-gnaw", "runfiles"]
-            .iter()
-            .collect();
-
-    // Cargo needs rustc under the hoods, provide it.
-    let rustc_binary_path: PathBuf =
-        [runfiles_dir.to_str().unwrap(), "rust", "bin", "rustc"].iter().collect();
-
-    let gn_binary_path: PathBuf = [runfiles_dir.to_str().unwrap(), "gn", "gn"].iter().collect();
-
-    let cargo_binary_path: PathBuf =
-        [runfiles_dir.to_str().unwrap(), "rust", "bin", "cargo"].iter().collect();
-
-    // Set the shared library path to use for loading libraries that rustc needs.
-    let lib_path: PathBuf = [runfiles_dir.to_str().unwrap(), "rust", "lib"].iter().collect();
-    eprintln!("lib_path: {:?}", &lib_path);
-
-    Paths {
-        test_root_dir: test_root_dir.to_path_buf(),
-        test_data_dir,
-        test_base_dir,
-        runfiles_dir,
-        rustc_binary_path,
-        gn_binary_path,
-        cargo_binary_path,
-        lib_path,
-    }
-}
-
-#[test]
-fn build_file_generation_test() {
-    let paths = get_paths();
+fn main() {
+    let paths: Paths = argh::from_env();
     eprintln!("paths: {:?}", &paths);
 
     // Shared library setup for Linux and Mac.  Systems will ignore the settings
     // that don't apply to them.
-    std::env::set_var("LD_LIBRARY_PATH", &paths.lib_path);
-    std::env::set_var("DYLD_LIBRARY_PATH", &paths.lib_path);
+    //
+    // These values need to be absolute so they work regardless of the current working directory.
+    std::env::set_var("LD_LIBRARY_PATH", Path::new(&paths.lib_path).canonicalize().unwrap());
+    std::env::set_var("DYLD_LIBRARY_PATH", Path::new(&paths.lib_path).canonicalize().unwrap());
 
     // Cargo internally invokes rustc; but we must tell it to use the one from
     // our sandbox, and this is configured using the env variable "RUSTC".
+    //
+    // This value needs to be absolute so it works regardless of the current working directory.
+    //
     // See:
     // https://doc.rust-lang.org/cargo/reference/environment-variables.html
-    std::env::set_var("RUSTC", &paths.rustc_binary_path);
-
-    // Test are executing from the test base directory.
-    std::env::set_current_dir(&paths.test_base_dir).unwrap();
-    eprintln!("current dir: {:?}", std::env::current_dir());
+    std::env::set_var("RUSTC", Path::new(&paths.rustc_binary_path).canonicalize().unwrap());
 
     #[derive(Debug)]
     struct TestCase {
@@ -164,15 +98,18 @@ fn build_file_generation_test() {
 
     for test in tests {
         let test_dir = tempfile::TempDir::new().unwrap();
-        let mut manifest_path: PathBuf = test_dir.path().to_owned();
-        manifest_path.extend(&test.manifest_path);
+        let manifest_path: PathBuf =
+            test_dir.path().join(test.manifest_path.iter().collect::<PathBuf>());
         let output = test_dir.path().join("BUILD.gn");
 
         // we need the emitted file to be under the same path as the gn targets it references
-        copy_contents(&paths.test_base_dir, test_dir.path());
+        let test_base_dir = PathBuf::from(&paths.test_base_dir);
+        copy_contents(&test_base_dir, test_dir.path());
 
         let project_root = test_dir.path().to_str().unwrap().to_owned();
         // Note: argh does not support "--flag=value" or "--bool-flag false".
+        let absolute_cargo_binary_path =
+            Path::new(&paths.cargo_binary_path).canonicalize().unwrap();
         let mut args: Vec<&str> = vec![
             // args[0] is not used in arg parsing, so this can be any string.
             "fake_binary_name",
@@ -183,9 +120,11 @@ fn build_file_generation_test() {
             "--output",
             output.to_str().unwrap(),
             "--gn-bin",
-            paths.gn_binary_path.to_str().unwrap(),
+            &paths.gn_binary_path,
             "--cargo",
-            paths.cargo_binary_path.to_str().unwrap(),
+            // Cargo is not executed in another working directory by gnaw_lib, so an absolute path
+            // is necessary here.
+            absolute_cargo_binary_path.to_str().unwrap(),
         ];
         if test.skip_root {
             args.push("--skip-root");
@@ -197,7 +136,8 @@ fn build_file_generation_test() {
             .with_context(|| format!("while reading tempfile: {}", output.display()))
             .expect("tempfile read success");
 
-        let expected_path: PathBuf = test.golden_expected_filename.iter().collect();
+        let expected_path: PathBuf =
+            test_base_dir.join(test.golden_expected_filename.iter().collect::<PathBuf>());
         let expected = std::fs::read_to_string(expected_path.to_string_lossy().to_string())
             .with_context(|| {
                 format!("while reading expected: {:?}", &test.golden_expected_filename)
