@@ -31,10 +31,14 @@ rustc_library("hci-emulator-client") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_unittest_package("tests") {
-  package_name = "hci-emulator-client-tests"
+fuchsia_unittest_package("hci-emulator-client-tests") {
+  deps = [ ":hci-emulator-client_test" ]
+}
+
+group("tests") {
+  testonly = true
   deps = [
-    ":hci-emulator-client_test",
+    ":hci-emulator-client-tests",
     "//src/connectivity/bluetooth/hci/emulator",
   ]
 }

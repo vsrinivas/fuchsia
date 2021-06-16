@@ -27,8 +27,9 @@ fn watch_timeout() -> zx::Duration {
 
 pub mod types;
 
-const EMULATOR_DRIVER_PATH: &str = "/system/driver/bt-hci-emulator.so";
-const EMULATOR_DEVICE_DIR: &str = "/dev/class/bt-emulator";
+pub const EMULATOR_DRIVER_PATH: &str = "/system/driver/bt-hci-emulator.so";
+pub const EMULATOR_DEVICE_DIR: &str = "/dev/class/bt-emulator";
+pub const HCI_DEVICE_DIR: &str = "/dev/class/bt-hci";
 
 /// Represents a bt-hci device emulator. Instances of this type can be used manage the
 /// bt-hci-emulator driver within the test device hierarchy. The associated driver instance gets
@@ -209,7 +210,7 @@ impl TestDevice {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::constants::HCI_DEVICE_DIR, fidl_fuchsia_bluetooth_test::EmulatorError};
+    use {super::*, fidl_fuchsia_bluetooth_test::EmulatorError};
 
     fn default_settings() -> EmulatorSettings {
         EmulatorSettings {

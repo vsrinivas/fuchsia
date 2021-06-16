@@ -69,6 +69,7 @@ group("tests") {
     "profiles/bt-rfcomm:tests",
     "profiles/tests:tests",
     "testing/bt-profile-test-server:tests",
+    "testing/hci-emulator-client:tests",
     "testing/test-harness-tests:test-harness-crate-tests",
     "tests",
     "tools:tests",
