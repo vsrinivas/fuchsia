@@ -5,7 +5,7 @@
     "program": {
         "args": [
             "--test.timeout",
-            "2m"
+            "4m"
         ],
         "binary": "test/netstack_test"
     }
