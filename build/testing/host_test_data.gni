@@ -54,16 +54,6 @@ template("host_test_data") {
     test_data = get_target_outputs(":$main_target_name")
   } else {
     metadata_target_name = main_target_name
-
-    # In this case, all provided sources should lie within the build
-    # directory.
-    foreach(source, invoker.sources) {
-      in_build_dir =
-          get_path_info(rebase_path(source, root_build_dir), "dir") != ".."
-      assert(
-          in_build_dir,
-          "$source must be within the build directory to be declared as test data")
-    }
     test_data = invoker.sources
   }
 
