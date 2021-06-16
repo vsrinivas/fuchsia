@@ -32,6 +32,10 @@ node_config("base") {
   source = "base_node_config.json"
 }
 
+node_config("chromebook") {
+  source = "chromebook_node_config.json"
+}
+
 node_config("luis") {
   source = "luis_node_config.json"
 }
@@ -53,6 +57,7 @@ config_data("test_config_data") {
   sources = [
     "astro_node_config.json",
     "base_node_config.json",
+    "chromebook_node_config.json",
     "luis_node_config.json",
     "nelson_node_config.json",
     "sherlock_node_config.json",

@@ -39,11 +39,13 @@ rustc_binary("bin") {
 
   deps = [
     ":power_manager_metrics_rustlib",
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl-rustc",
+    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input-rustc",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -59,6 +61,7 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/syslog/rust",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",
@@ -84,6 +87,7 @@ rustc_binary("bin") {
     "src/dev_control_handler.rs",
     "src/driver_manager_handler.rs",
     "src/error.rs",
+    "src/lid_shutdown.rs",
     "src/main.rs",
     "src/message.rs",
     "src/node.rs",
@@ -114,11 +118,13 @@ rustc_test("bin_test") {
   deps = [
     ":power_manager_metrics_rustlib",
     "rkf45:lib",
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl-rustc",
+    "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input-rustc",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -134,6 +140,7 @@ rustc_test("bin_test") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/syslog/rust",
     "//src/lib/test_util",
@@ -162,6 +169,7 @@ rustc_test("bin_test") {
     "src/dev_control_handler.rs",
     "src/driver_manager_handler.rs",
     "src/error.rs",
+    "src/lid_shutdown.rs",
     "src/main.rs",
     "src/message.rs",
     "src/node.rs",
@@ -222,6 +230,10 @@ group("astro_config") {
 
 group("base_config") {
   deps = [ "node_config:base" ]
+}
+
+group("chromebook_config") {
+  deps = [ "node_config:chromebook" ]
 }
 
 group("luis_config") {

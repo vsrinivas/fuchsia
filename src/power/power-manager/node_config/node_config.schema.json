@@ -416,6 +416,34 @@
           "config",
           "dependencies"
         ]
+      },
+      {
+        "properties": {
+          "type": {
+            "pattern": "LidShutdown"
+          },
+          "name": {
+            "type": "string"
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "system_shutdown_node": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "system_shutdown_node"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "dependencies"
+        ]
       }
     ]
   }

@@ -30,6 +30,9 @@ board_recovery_bootfs_labels += _common_bootfs_deps
 # we permit multiple GPT devices.
 board_bootfs_labels += [ "//src/storage/fshost:gpt_all" ]
 
+board_bootfs_labels -= [ "//src/power/power-manager:base_config" ]
+board_bootfs_labels += [ "//src/power/power-manager:chromebook_config" ]
+
 board_package_labels += [
   "//src/ui/scenic:frame-scheduler-min-predicted-frame-duration-in-us--15000",
 ]
