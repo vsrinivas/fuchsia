@@ -5,7 +5,7 @@
 # Creating an RFC
 
 Once you are familiarized with the
-[RFC (request for comments) process](README.md) and criterias, you may
+[RFC (request for comments) process](README.md) and criteria, you may
 want to create a proposal for the [Fuchsia Eng Council][eng-council] to review.
 
 To create an RFC, you need to create a Gerrit change that contains at least the
@@ -97,8 +97,8 @@ To identify your RFC, you need to edit the
               Define a list of the areas that your RFC affects.
             </p>
             <ul>
-              <li>For a single area, use this format ['area'].</li>
-              <li>For multiple areass, use this format ['area1', ...]</li>
+              <li>For a single area, use this format `['area']`.</li>
+              <li>For multiple areas, use this format `['area1', ...]`.</li>
             </ul>
             <devsite-expandable>
               <p>Valid areas</p>
@@ -355,7 +355,7 @@ After you receive a final status from the Eng Council, do the following:
 
 1. Once approved, submit your RFC.
 
-You have succesfully submitted an RFC proposal.
+You have successfully submitted an RFC proposal.
 
 [rfc-overview]: /docs/contribute/governance/rfcs/README.md
 [contribute changes]: /docs/development/source_code/contribute_changes.md
