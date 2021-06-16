@@ -449,7 +449,6 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sherlock-i2s-audio-out",
       "ft5726-touch",
       "tee/optee",
-      "sys/platform/00:00:f/fallback-rtc",
       "spi-0/aml-spi-0/spi/spi-0-0",
       "sherlock-buttons/hid-buttons",
       "nrf52840-radio",

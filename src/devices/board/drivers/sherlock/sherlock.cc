@@ -28,15 +28,6 @@
 
 namespace sherlock {
 
-static pbus_dev_t rtc_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "rtc";
-  dev.vid = PDEV_VID_GENERIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_RTC_FALLBACK;
-  return dev;
-}();
-
 zx_status_t Sherlock::Create(void* ctx, zx_device_t* parent) {
   pbus_protocol_t pbus;
   iommu_protocol_t iommu;
@@ -222,12 +213,6 @@ int Sherlock::Thread() {
 
   if (ThermistorInit() != ZX_OK) {
     zxlogf(ERROR, "ThermistorInit failed");
-  }
-
-  zx_status_t status = pbus_.DeviceAdd(&rtc_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d", __func__, status);
-    return -1;
   }
 
   return 0;
