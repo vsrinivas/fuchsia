@@ -89,8 +89,7 @@ class Gain {
       : min_gain_db_(std::max(limits.min_gain_db.value_or(kMinGainDb), kMinGainDb)),
         max_gain_db_(std::min(limits.max_gain_db.value_or(kMaxGainDb), kMaxGainDb)),
         min_gain_scale_(DbToScale(min_gain_db_)),
-        max_gain_scale_(DbToScale(max_gain_db_)),
-        combined_gain_scale_(std::clamp(kUnityScale, min_gain_scale_, max_gain_scale_)) {}
+        max_gain_scale_(DbToScale(max_gain_db_)) {}
 
   // The Gain object specifies the volume scaling to be performed for a given
   // Mix operation, when mixing a single stream into some combined resultant
@@ -138,8 +137,7 @@ class Gain {
   }
 
   bool IsUnity() {
-    return !IsMute() && !IsRamping() && (target_source_gain_db_ + target_dest_gain_db_ == 0.0f) &&
-           (min_gain_db_ <= kUnityGainDb) && (max_gain_db_ >= kUnityGainDb);
+    return !IsMute() && !IsRamping() && (target_source_gain_db_ + target_dest_gain_db_ == 0.0f);
   }
 
   bool IsRamping() {
