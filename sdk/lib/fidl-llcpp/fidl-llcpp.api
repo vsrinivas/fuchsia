@@ -2,7 +2,7 @@
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/array.h": "18cbb3c671a4aed5d980282e511d7ea2",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/async_binding.h": "d366ba25a894f1c620eb98ea1860905a",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/async_transaction.h": "06d97bc5024aaced73c75cd4d9de3503",
-  "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/client.h": "f23c8936e934c45971500113841294ae",
+  "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/client.h": "0ba52f10cf5de7de62d0c0319920d196",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/client_base.h": "2ffdb7a158bf0508c2e86261eb9c670c",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/client_end.h": "50c789ca550bd110f2450390e9b3ec81",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/coding.h": "28bbdbcc938986ed3894d50aa589b662",

@@ -33,10 +33,9 @@ fidl::internal::AnyTeardownObserver ShareUntilTeardown(std::shared_ptr<T> object
   return fidl::internal::AnyTeardownObserver::ByOwning(object);
 }
 
-// A client for sending and receiving wire messages. It provides methods for
-// binding a channel's client end to a dispatcher, unbinding the channel, and
-// recovering the channel. Generated FIDL APIs are accessed by 'dereferencing'
-// the |Client|:
+// A client for sending and receiving wire messages.
+//
+// Generated FIDL APIs are accessed by 'dereferencing' the |Client|:
 //
 //     // Creates a client that speaks over |client_end|, on the |my_dispatcher| dispatcher.
 //     fidl::Client client(std::move(client_end), my_dispatcher);
@@ -47,35 +46,40 @@ fidl::internal::AnyTeardownObserver ShareUntilTeardown(std::shared_ptr<T> object
 //
 // ## Lifecycle
 //
-// A client must be **bound** to an endpoint before it could be used. Binding a
-// client to an endpoint starts the monitoring of incoming messages on that
-// endpoint. Those messages are appropriately dispatched: to response callbacks,
+// A client must be **bound** to an endpoint before it could be used.
+// This association between the endpoint and the client is called a "binding".
+// Binding a client to an endpoint starts the monitoring of incoming messages.
+// Those messages are appropriately dispatched: to response callbacks,
 // to event handlers, etc. FIDL methods (asyncrhonous or synchronous) may only
 // be invoked on a bound client.
 //
-// A client may be default-constructed first then bound to an endpoint later via
-// |Bind|, or constructed with a |ClientEnd|. When a client is constructed with
-// a |ClientEnd|, it is as if that client had been default-constructed then
-// later bound to that endpoint via |Bind|.
+// Internally, a client is a lightweight reference to the binding, performing
+// its duties indirectly through that object, as illustrated by the simplified
+// diagram below:
 //
-// To stop the monitoring of incoming messages, one may **teardown** the client.
-// When teardown is initiated, the client will not monitor new messages on the
-// endpoint. Ongoing callbacks will be allowed to run to completion. When
+//                 references               makes
+//       client  ------------->  binding  -------->  FIDL call
+//
+// This means that the client _object_ and the binding have overlapping but
+// slightly different lifetimes. For example, the binding may terminate in
+// response to fatal communication errors, leaving the client object alive
+// but unable to make any calls.
+//
+// To stop the monitoring of incoming messages, one may **teardown** the
+// binding. When teardown is initiated, the client will not monitor new messages
+// on the endpoint. Ongoing callbacks will be allowed to run to completion. When
 // teardown is complete, further calls on the same client will fail.
-// Un-fulfilled response callbacks will be dropped.
+// Unfulfilled response callbacks will be dropped.
 //
 // Destruction of a client object will initiate teardown.
-//
-// A |Client| may be |Clone|d, with the clone referencing the same endpoint.
-// Automatic teardown occurs when the last |Client| bound to the endpoint is
-// destructed.
 //
 // |Unbind| may be called on a |Client| to explicitly initiate teardown.
 //
 // |WaitForChannel| unbinds the endpoint from the client, allowing the endpoint
-// to be recovered as the return value. Care must be taken when using this
-// function, as it will be waiting for any synchronous calls to finish, and will
-// forget about any in-progress asynchronous calls.
+// to be recovered as the return value. As part of this process, it will
+// initiate teardown. Care must be taken when using this function, as it will be
+// waiting for any synchronous calls to finish, and will forget about any
+// in-progress asynchronous calls.
 //
 // TODO(fxbug.dev/68742): We may want to also wait for asynchronous calls, or
 // panic when there are in-flight asynchronous calls.
@@ -98,13 +102,15 @@ class Client final {
 
  public:
   // Create an initialized Client which manages the binding of the client end of
-  // a channel to a dispatcher.
+  // a channel to a dispatcher, as if that client had been default-constructed
+  // then later bound to that endpoint via |Bind|.
   //
   // It is a logic error to use a dispatcher that is shutting down or already
   // shut down. Doing so will result in a panic.
   //
-  // If any other error occurs during initialization, the |event_handler->Unbound|
-  // handler will be invoked asynchronously with the reason, if specified.
+  // If any other error occurs during initialization, the
+  // |event_handler->on_fidl_error| handler will be invoked asynchronously with
+  // the reason, if specified.
   //
   // TODO(fxbug.dev/75485): Take a raw pointer to the event handler.
   template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
@@ -113,7 +119,8 @@ class Client final {
     Bind(std::move(client_end), dispatcher, std::move(event_handler));
   }
 
-  // Create an uninitialized Client.
+  // Create an uninitialized Client. The client may then be bound to an endpoint
+  // later via |Bind|.
   //
   // Prefer using the constructor overload that binds the client to a channel
   // atomically during construction. Use this default constructor only when the
@@ -154,7 +161,7 @@ class Client final {
   // It is a logic error to invoke |Bind| on a dispatcher that is shutting down
   // or already shut down. Doing so will result in a panic.
   //
-  // When other errors occur during binding, the |event_handler->Unbound|
+  // When other errors occur during binding, the |event_handler->on_fidl_error|
   // handler will be asynchronously invoked with the reason, if specified.
   //
   // Re-binding a |Client| to a different channel is equivalent to replacing
@@ -229,6 +236,131 @@ template <typename Protocol>
 Client(fidl::ClientEnd<Protocol>, async_dispatcher_t*) -> Client<Protocol>;
 
 // TODO(fxbug.dev/75485): This class is not yet ready for general use.
+//
+// |WireSharedClient| is a client for sending and receiving wire messages. It is
+// suitable for systems with less defined threading guarantees, by providing the
+// building blocks to implement a two-phase asynchronous shutdown pattern.
+//
+// During teardown, |WireSharedClient| exposes a synchronization point beyond
+// which it will not make any more upcalls to user code. The user may then
+// arrange any objects that are the recipient of client callbacks to be
+// destroyed after the synchronization point. As a result, when destroying an
+// entire subsystem, the teardown of the client may be requested from an
+// arbitrary thread, in parallel with any callbacks to user code, while
+// avoiding use-after-free of user objects.
+//
+// In addition, |WireSharedClient| supports cloning multiple instances sharing
+// the same underlying endpoint.
+//
+// ## Lifecycle
+//
+// See lifecycle notes on |fidl::Client| for general lifecycle information.
+// Here we note the additional subtleties and two-phase shutdown features
+// exclusive to |WireSharedClient|.
+//
+// Teardown of the binding is an asynchronous process, to account for the
+// possibility of in-progress calls to user code. For example, the bindings
+// runtime could be invoking a response callback from a dispatcher thread, while
+// the user initiates teardown from an unrelated thread.
+//
+// There are a number of ways to monitor the completion of teardown:
+//
+// ### Owned event handler
+//
+// Transfer the ownership of an event handler to the bindings as an
+// implementation of |std::unique_ptr<fidl::WireAsyncEventHandler<Protocol>>|
+// when binding the client. After teardown is complete, the event handler will
+// be destroyed. It is safe to destroy the user objects referenced by any client
+// callbacks from within the event handler destructor.
+//
+// Here is an example for this pattern:
+//
+//     // A |DatabaseClient| makes requests using a FIDL client. It may be
+//     // called from multiple threads.
+//     class DatabaseClient {
+//      public:
+//       // Creates a database client that is owned by the FIDL bindings.
+//       // Call |Teardown| to schedule the destruction of the client.
+//       static DatabaseClient* Create() { return new DatabaseClient(); }
+//
+//       void Teardown() { client_.AsyncTeardown(); }
+//
+//      private:
+//       DatabaseClient() {
+//         // Pass in a |TeardownObserver| (see below) to listen for the
+//         // completion of FIDL client teardown.
+//         client_.Bind(client_end, dispatcher, std::make_unique<TeardownObserver>(this));
+//       }
+//       fidl::WireSharedClient<DbProtocol> client_;
+//     };
+//
+//     class TeardownObserver : public fidl::WireAsyncEventHandler<DbProtocol> {
+//      public:
+//       ~TeardownObserver() override {
+//         // Delete the client that was allocated in |DatabaseClient::Create|.
+//         delete database_client_;
+//       }
+//      private:
+//       DatabaseClient* database_client_;
+//     };
+//
+// ### Custom teardown observer
+//
+// Provide an instance of |fidl::internal::AnyTeardownObserver| to the bindings.
+// The observer will be notified when teardown is complete. There are several
+// ways to create a teardown observer:
+//
+// |fidl::ObserveTeardown| takes an arbitrary callable and wraps it in a
+// teardown observer:
+//
+//     fidl::WireSharedClient<DbProtocol> client;
+//
+//     // Let's say |db_client| is constructed on the heap;
+//     DatabaseClient* db_client = CreateDatabaseClient();
+//     // ... and needs to be freed by |DestroyDatabaseClient|.
+//     auto observer = fidl::ObserveTeardown([] { DestroyDatabaseClient(); });
+//
+//     // |db_client| may implement |fidl::WireAsyncEventHandler<DbProtocol>|.
+//     // |observer| will be notified and destroy |db_client| after teardown.
+//     client.Bind(client_end, dispatcher, db_client, std::move(observer));
+//
+// |fidl::ShareUntilTeardown| takes a |std::shared_ptr<T>|, and arranges the
+// binding to destroy its shared reference after teardown:
+//
+//     // Let's say |db_client| is always managed by a shared pointer.
+//     std::shared_ptr<DatabaseClient> db_client = CreateDatabaseClient();
+//
+//     // |db_client| will be kept alive as long as the binding continues
+//     // to exist. After teardown completes, |db_client| will be destroyed
+//     // only if there are no other shared references (such as from other
+//     // related user objects).
+//     auto observer = fidl::ShareUntilTeardown(db_client);
+//     client.Bind(client_end, dispatcher, *db_client, std::move(observer));
+//
+// A |WireSharedClient| may be |Clone|d, with the clone referencing the same
+// endpoint. Automatic teardown occurs when the last clone bound to the
+// endpoint is destructed.
+//
+// |AsyncTeardown| may be called on a |WireSharedClient| to explicitly initiate
+// teardown.
+//
+// ## Thread safety
+//
+// FIDL method calls on this class are thread-safe. |AsyncTeardown|, |Clone|, and
+// |WaitForChannel| are also thread-safe, and may be invoked in parallel with
+// FIDL method calls. However, those operations must be synchronized with
+// operations that consume or mutate the |WireSharedClient| itself:
+//
+// - Binding the client to a new endpoint.
+// - Assigning a new value to the |WireSharedClient| variable.
+// - Moving the |WireSharedClient| to a different location.
+// - Destroying the |WireSharedClient| variable.
+//
+// When teardown completes, the binding will notify the user from a |dispatcher|
+// thread, unless the user shuts down the |dispatcher| while there are active
+// clients associated with it. In that case, those clients will be synchronously
+// torn down, and the notification (e.g. destroying the event handler) will
+// happen on the thread invoking dispatcher shutdown.
 template <typename Protocol>
 class WireSharedClient final {
   using ClientImpl = fidl::internal::WireClientImpl<Protocol>;
@@ -281,7 +413,7 @@ class WireSharedClient final {
     Bind(std::move(client_end), dispatcher, nullptr, std::move(teardown_observer));
   }
 
-  // Create an uninitialized |WireSharedClient|.
+  // Creates an uninitialized |WireSharedClient|.
   //
   // Prefer using the constructor overload that binds the client to a channel
   // atomically during construction. Use this default constructor only when the
@@ -293,19 +425,17 @@ class WireSharedClient final {
   bool is_valid() const { return controller_.is_valid(); }
   explicit operator bool() const { return is_valid(); }
 
-  // If the current |WireSharedClient| is the last instance controlling the current
-  // connection, the destructor of this |WireSharedClient| will trigger unbinding, which
-  // will cause any strong references to the |ClientBase| to be released.
+  // If the current |WireSharedClient| is the last instance controlling the
+  // current connection, the destructor of this |WireSharedClient| will trigger
+  // teardown.
   //
   // When the last |WireSharedClient| destructs:
   // - The channel will be closed.
   // - Pointers obtained via |get| will be invalidated.
-  // - Unbinding will happen, implying:
-  //   * In-progress calls will be forgotten. Async callbacks will be dropped.
-  //   * The |Unbound| callback in the |event_handler| will be invoked, if one
-  //     was specified when creating the client, on a dispatcher thread.
+  // - Teardown will be initiated. See the **Lifecycle** section from the
+  //   class documentation of |fidl::Client|.
   //
-  // See also: |Unbind|.
+  // See also: |AsyncTeardown|.
   ~WireSharedClient() = default;
 
   // |fidl::WireSharedClient|s can be safely moved without affecting any in-progress
@@ -364,25 +494,21 @@ class WireSharedClient final {
     Bind(client_end.TakeChannel(), dispatcher, nullptr, std::move(teardown_observer));
   }
 
-  // Begins to unbind the channel from the dispatcher. May be called from any
-  // thread. If provided, the |fidl::WireAsyncEventHandler<Protocol>::Unbound|
-  // is invoked asynchronously on a dispatcher thread.
+  // Initiates asynchronous teardown of the bindings. See the **Lifecycle**
+  // section from the class documentation.
   //
-  // NOTE: |Bind| must have been called before this.
+  // |Bind| must have been called before this.
   //
-  // WARNING: While it is safe to invoke |Unbind| from any thread, it is unsafe
-  // to wait on the |fidl::WireAsyncEventHandler<Protocol>::Unbound| from a
-  // dispatcher thread, as that will likely deadlock.
-  //
-  // Unbinding can happen automatically via RAII. |WireSharedClient|s will release
-  // resources automatically when they are destructed. See also: |~WireSharedClient|.
-  void Unbind() { controller_.Unbind(); }
+  // While it is safe to invoke |AsyncTeardown| from any thread, it is unsafe to
+  // wait for teardown to complete from a dispatcher thread, as that will likely
+  // deadlock.
+  void AsyncTeardown() { controller_.Unbind(); }
 
   // Returns another |WireSharedClient| instance sharing the same channel.
   //
   // Prefer to |Clone| only when necessary e.g. extending the lifetime of a
-  // |WireSharedClient| to a different scope. Any living clone will prevent the cleanup of
-  // the channel, unless one explicitly call |WaitForChannel|.
+  // |WireSharedClient| to a different scope. Any living clone will prevent the
+  // cleanup of the channel, unless one explicitly call |WaitForChannel|.
   WireSharedClient Clone() { return WireSharedClient(*this); }
 
   // Returns the interface for making outgoing FIDL calls. If the client has
