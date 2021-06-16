@@ -1,16 +1,16 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.scenic.allocation") {
+fidl("fuchsia.ui.composition") {
   sdk_category = "partner"
 
-  # TODO(fxbug.dev/68950): 10% rollout of API summary generation.
-  experimental_api_summary = true
-
-  sources = [ "allocator.fidl" ]
+  sources = [
+    "allocator.fidl",
+    "prediction_info.fidl",
+  ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.sysmem",

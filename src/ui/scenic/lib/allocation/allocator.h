@@ -5,8 +5,8 @@
 #ifndef SRC_UI_SCENIC_LIB_ALLOCATION_ALLOCATOR_H_
 #define SRC_UI_SCENIC_LIB_ALLOCATION_ALLOCATOR_H_
 
-#include <fuchsia/scenic/allocation/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -21,7 +21,7 @@ namespace allocation {
 
 // This class implements Allocator service which allows allocation of BufferCollections which can be
 // used in multiple Flatland/Gfx sessions simultaneously.
-class Allocator : public fuchsia::scenic::allocation::Allocator {
+class Allocator : public fuchsia::ui::composition::Allocator {
  public:
   Allocator(sys::ComponentContext* app_context,
             const std::vector<std::shared_ptr<BufferCollectionImporter>>&
@@ -31,8 +31,8 @@ class Allocator : public fuchsia::scenic::allocation::Allocator {
             fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
   ~Allocator() override;
 
-  // |fuchsia::scenic::allocation::Allocator|
-  void RegisterBufferCollection(fuchsia::scenic::allocation::RegisterBufferCollectionArgs args,
+  // |fuchsia::ui::composition::Allocator|
+  void RegisterBufferCollection(fuchsia::ui::composition::RegisterBufferCollectionArgs args,
                                 RegisterBufferCollectionCallback callback) override;
 
  private:
@@ -43,7 +43,7 @@ class Allocator : public fuchsia::scenic::allocation::Allocator {
 
   // The FIDL bindings for this Allocator instance, which reference |this| as the implementation and
   // run on |dispatcher_|.
-  fidl::BindingSet<fuchsia::scenic::allocation::Allocator> bindings_;
+  fidl::BindingSet<fuchsia::ui::composition::Allocator> bindings_;
 
   // Used to import Flatland buffer collections and images to external services that Flatland does
   // not have knowledge of. Each importer is used for a different service.
@@ -57,7 +57,7 @@ class Allocator : public fuchsia::scenic::allocation::Allocator {
 
   // Keep track of buffer collection Ids for garbage collection.
   std::unordered_map<GlobalBufferCollectionId,
-                     fuchsia::scenic::allocation::RegisterBufferCollectionUsage>
+                     fuchsia::ui::composition::RegisterBufferCollectionUsage>
       buffer_collections_;
 
   // Should be last.

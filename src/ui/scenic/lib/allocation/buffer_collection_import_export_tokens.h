@@ -5,13 +5,13 @@
 #ifndef SRC_UI_SCENIC_LIB_ALLOCATION_BUFFER_COLLECTION_IMPORT_EXPORT_TOKENS_H_
 #define SRC_UI_SCENIC_LIB_ALLOCATION_BUFFER_COLLECTION_IMPORT_EXPORT_TOKENS_H_
 
-#include <fuchsia/scenic/allocation/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/zx/eventpair.h>
 
 namespace allocation {
 
-using fuchsia::scenic::allocation::BufferCollectionExportToken;
-using fuchsia::scenic::allocation::BufferCollectionImportToken;
+using fuchsia::ui::composition::BufferCollectionExportToken;
+using fuchsia::ui::composition::BufferCollectionImportToken;
 
 // Convenience function which allows clients to easily create a valid |BufferCollectionExportToken|
 // / |BufferCollectionImportToken| pair for use between Allocator and Flatland.

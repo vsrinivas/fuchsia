@@ -14,12 +14,12 @@
             "fuchsia.kernel.IrqResource",
             "fuchsia.kernel.MmioResource",
             "fuchsia.kernel.VmexResource",
-            "fuchsia.scenic.allocation.Allocator",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.composition.Allocator",
             "fuchsia.virtualization.GuestConfigProvider"
         ]
     }

@@ -42,7 +42,7 @@ using fuchsia::ui::views::ViewRef;
 static constexpr fuchsia::ui::gfx::ViewProperties k5x5x1 = {.bounding_box = {.max = {5, 5, 1}}};
 
 const std::map<std::string, std::string> LocalServices() {
-  return {{"fuchsia.scenic.allocation.Allocator",
+  return {{"fuchsia.ui.composition.Allocator",
            "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},
           {"fuchsia.ui.scenic.Scenic",
            "fuchsia-pkg://fuchsia.com/gfx_integration_tests#meta/scenic.cmx"},

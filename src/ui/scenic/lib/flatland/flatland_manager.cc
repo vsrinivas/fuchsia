@@ -185,7 +185,7 @@ void FlatlandManager::OnCpuWorkDone() {
           Flatland::FuturePresentationInfos presentation_infos_copy(presentation_infos.size());
           for (size_t i = 0; i < presentation_infos.size(); ++i) {
             auto& info = presentation_infos[i];
-            fuchsia::scenic::scheduling::PresentationInfo info_copy;
+            fuchsia::ui::composition::PresentationInfo info_copy;
             info_copy.set_latch_point(info.latch_point.get());
             info_copy.set_presentation_time(info.presentation_time.get());
             presentation_infos_copy[i] = std::move(info_copy);

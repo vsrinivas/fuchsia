@@ -98,7 +98,7 @@ class Memory : public VirtioWl::Vfd {
 
   // Create a memory instance with Scenic import token.
   static std::unique_ptr<Memory> CreateWithImportToken(
-      zx::vmo vmo, fuchsia::scenic::allocation::BufferCollectionImportToken import_token,
+      zx::vmo vmo, fuchsia::ui::composition::BufferCollectionImportToken import_token,
       zx::vmar* vmar, uint32_t map_flags) {
     TRACE_DURATION("machina", "Memory::CreateWithImportToken");
 
@@ -276,7 +276,7 @@ VirtioWl::VirtioWl(sys::ComponentContext* context) : DeviceBase(context) {}
 void VirtioWl::Start(fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
                      fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatcher,
                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_allocator,
-                     fidl::InterfaceHandle<fuchsia::scenic::allocation::Allocator> scenic_allocator,
+                     fidl::InterfaceHandle<fuchsia::ui::composition::Allocator> scenic_allocator,
                      StartCallback callback) {
   auto deferred = fit::defer(std::move(callback));
   PrepStart(std::move(start_info));
@@ -760,8 +760,8 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  fuchsia::scenic::allocation::BufferCollectionExportToken export_token;
-  fuchsia::scenic::allocation::BufferCollectionImportToken import_token;
+  fuchsia::ui::composition::BufferCollectionExportToken export_token;
+  fuchsia::ui::composition::BufferCollectionImportToken import_token;
   status = zx::eventpair::create(0, &export_token.value, &import_token.value);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create event pair: " << status;
@@ -769,12 +769,12 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
-  fuchsia::scenic::allocation::RegisterBufferCollectionArgs args;
+  fuchsia::ui::composition::RegisterBufferCollectionArgs args;
   args.set_export_token(std::move(export_token));
   args.set_buffer_collection_token(std::move(scenic_token));
   scenic_allocator_->RegisterBufferCollection(
       std::move(args),
-      [](fuchsia::scenic::allocation::Allocator_RegisterBufferCollection_Result result) {
+      [](fuchsia::ui::composition::Allocator_RegisterBufferCollection_Result result) {
         if (result.is_err()) {
           FX_LOGS(ERROR) << "RegisterBufferCollection failed";
         }

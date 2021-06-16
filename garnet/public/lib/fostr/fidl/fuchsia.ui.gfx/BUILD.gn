@@ -18,7 +18,7 @@ fostr_fidl("fuchsia.ui.gfx") {
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
-    "//garnet/public/lib/fostr/fidl/fuchsia.scenic.allocation",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.composition",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.views",
   ]
 }

@@ -538,16 +538,16 @@ TEST_F(FlatlandManagerTest, OnFramePresentedEvent) {
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1 = CreateFlatland();
   const scheduling::SessionId id1 = uber_struct_system_->GetLatestInstanceId();
 
-  std::optional<fuchsia::scenic::scheduling::FramePresentedInfo> info1;
+  std::optional<fuchsia::ui::composition::FramePresentedInfo> info1;
   flatland1.events().OnFramePresented =
-      [&info1](fuchsia::scenic::scheduling::FramePresentedInfo info) { info1 = std::move(info); };
+      [&info1](fuchsia::ui::composition::FramePresentedInfo info) { info1 = std::move(info); };
 
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2 = CreateFlatland();
   const scheduling::SessionId id2 = uber_struct_system_->GetLatestInstanceId();
 
-  std::optional<fuchsia::scenic::scheduling::FramePresentedInfo> info2;
+  std::optional<fuchsia::ui::composition::FramePresentedInfo> info2;
   flatland2.events().OnFramePresented =
-      [&info2](fuchsia::scenic::scheduling::FramePresentedInfo info) { info2 = std::move(info); };
+      [&info2](fuchsia::ui::composition::FramePresentedInfo info) { info2 = std::move(info); };
 
   // Present both instances twice, but don't update sessions.
   PRESENT(flatland1, id1, true);

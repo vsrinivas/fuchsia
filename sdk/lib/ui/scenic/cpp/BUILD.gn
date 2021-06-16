@@ -58,7 +58,7 @@ compiled_action("gen_command_sizing") {
         root_build_dir),
     "--json",
     rebase_path(
-        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.scenic.allocation/fuchsia.scenic.allocation.fidl.json",
+        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.ui.composition/fuchsia.ui.composition.fidl.json",
         root_build_dir),
     "--json",
     rebase_path(
@@ -92,7 +92,7 @@ compiled_action("gen_command_sizing") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.images",
-    "//sdk/fidl/fuchsia.scenic.allocation",
+    "//sdk/fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",

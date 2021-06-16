@@ -6,7 +6,7 @@ library fuchsia.ui.scenic;
 
 using zx;
 using fuchsia.images;
-using fuchsia.scenic.scheduling;
+using fuchsia.ui.composition;
 using fuchsia.sysmem;
 
 /// Arguments passed into Present2(). Note that every argument is mandatory.
@@ -189,11 +189,11 @@ protocol Session {
     /// See `Present2Args` documentation above for more detailed information on
     /// what arguments are passed in and their role.
     Present2(Present2Args args)
-        -> (fuchsia.scenic.scheduling.FuturePresentationTimes request_presentation_times_info);
+        -> (fuchsia.ui.composition.FuturePresentationTimes request_presentation_times_info);
 
     /// This event is fired whenever a set of one or more Present2s are
     /// presented simultaenously, and are therefore no longer in flight.
-    -> OnFramePresented(fuchsia.scenic.scheduling.FramePresentedInfo frame_presented_info);
+    -> OnFramePresented(fuchsia.ui.composition.FramePresentedInfo frame_presented_info);
 
     /// Returns information about future presentation times, and their
     /// respective latch points. Clients can use the returned information to
@@ -206,7 +206,7 @@ protocol Session {
     ///
     /// A value of 0 is guaranteed to give at least one future presentation info.
     RequestPresentationTimes(zx.duration requested_prediction_span)
-        -> (fuchsia.scenic.scheduling.FuturePresentationTimes request_presentation_times_info);
+        -> (fuchsia.ui.composition.FuturePresentationTimes request_presentation_times_info);
 
     /// Registers BufferCollection referenced by the `token` and sets contraints on it.
     /// It does not block on the buffers being allocated until content backed by one of the

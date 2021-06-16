@@ -101,7 +101,7 @@ TEST_F(GfxSystemTest, RequestPresentationTimes) {
   // Call RequestPresentationTimes() and expect the maximum amount of presents in flight since we
   // never called Present2().
   session->RequestPresentationTimes(
-      0, [](fuchsia::scenic::scheduling::FuturePresentationTimes future_times) {
+      0, [](fuchsia::ui::composition::FuturePresentationTimes future_times) {
         EXPECT_EQ(future_times.remaining_presents_in_flight_allowed,
                   scheduling::FrameScheduler::kMaxPresentsInFlight);
       });
@@ -138,18 +138,18 @@ TEST_F(GfxSystemTest, RequestPresentationTimesResponse_ShouldMatchPresent2Callba
   RunLoopUntilIdle();
   EXPECT_EQ(1U, scenic()->num_sessions());
 
-  fuchsia::scenic::scheduling::FuturePresentationTimes present2_response = {};
-  fuchsia::scenic::scheduling::FuturePresentationTimes rpt_response = {};
+  fuchsia::ui::composition::FuturePresentationTimes present2_response = {};
+  fuchsia::ui::composition::FuturePresentationTimes rpt_response = {};
 
   session->Present2(
       utils::CreatePresent2Args(0, {}, {}, 0),
-      [&present2_response](fuchsia::scenic::scheduling::FuturePresentationTimes future_times) {
+      [&present2_response](fuchsia::ui::composition::FuturePresentationTimes future_times) {
         present2_response = std::move(future_times);
       });
   EXPECT_TRUE(RunLoopUntilIdle());
 
   session->RequestPresentationTimes(
-      0, [&rpt_response](fuchsia::scenic::scheduling::FuturePresentationTimes future_times) {
+      0, [&rpt_response](fuchsia::ui::composition::FuturePresentationTimes future_times) {
         rpt_response = std::move(future_times);
       });
   EXPECT_TRUE(RunLoopUntilIdle());

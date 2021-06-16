@@ -13,9 +13,9 @@ use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_images::{
     ImageInfo, ImagePipe2Marker, MemoryType, PixelFormat, PresentationInfo, Tiling,
 };
-use fidl_fuchsia_scenic_allocation::BufferCollectionImportToken;
-use fidl_fuchsia_scenic_scheduling::FuturePresentationTimes;
 use fidl_fuchsia_sysmem::BufferCollectionTokenMarker;
+use fidl_fuchsia_ui_composition::BufferCollectionImportToken;
+use fidl_fuchsia_ui_composition::FuturePresentationTimes;
 use fidl_fuchsia_ui_gfx::{
     AmbientLightArgs, CameraArgs, CircleArgs, ColorRgb, ColorRgba, DirectionalLightArgs,
     DisplayCompositorArgs, EntityNodeArgs, ImageArgs, ImageArgs2, ImageArgs3, ImagePipe2Args,

@@ -12,7 +12,6 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/posix/socket/cpp/fidl.h>
-#include <fuchsia/scenic/allocation/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sys/internal/cpp/fidl.h>
 #include <fuchsia/sys/test/cpp/fidl.h>
@@ -22,6 +21,7 @@
 #include <fuchsia/time/cpp/fidl.h>
 #include <fuchsia/tracing/kernel/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 
 #include <filesystem>
@@ -78,7 +78,7 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::media::AudioCore::Name_,
     fuchsia::media::AudioDeviceEnumerator::Name_,
     fuchsia::media::ProfileProvider::Name_,
-    fuchsia::scenic::allocation::Allocator::Name_,
+    fuchsia::ui::composition::Allocator::Name_,
     fuchsia::scheduler::ProfileProvider::Name_,
     fuchsia::sys::internal::CrashIntrospect::Name_,
     fuchsia::sys::test::CacheControl::Name_,

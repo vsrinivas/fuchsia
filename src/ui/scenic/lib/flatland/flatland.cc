@@ -62,7 +62,7 @@ Flatland::Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
       session_id_(session_id),
       destroy_instance_function_(std::move(destroy_instance_function)),
       peer_closed_waiter_(binding_.channel().get(), ZX_CHANNEL_PEER_CLOSED),
-      present2_helper_([this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
+      present2_helper_([this](fuchsia::ui::composition::FramePresentedInfo info) {
         if (binding_.is_bound()) {
           binding_.events().OnFramePresented(std::move(info));
         }
@@ -576,7 +576,7 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
 }
 
 void Flatland::CreateImage(ContentId image_id,
-                           fuchsia::scenic::allocation::BufferCollectionImportToken import_token,
+                           fuchsia::ui::composition::BufferCollectionImportToken import_token,
                            uint32_t vmo_index, ImageProperties properties) {
   if (image_id.value == kInvalidId) {
     error_reporter_->ERROR() << "CreateImage called with image_id 0";

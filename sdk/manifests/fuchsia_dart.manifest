@@ -31,11 +31,11 @@ sdk://fidl/fuchsia.modular
 sdk://fidl/fuchsia.modular.session
 sdk://fidl/fuchsia.modular.testing
 sdk://fidl/fuchsia.net.http
-sdk://fidl/fuchsia.scenic.allocation
 sdk://fidl/fuchsia.settings
 sdk://fidl/fuchsia.sys
 sdk://fidl/fuchsia.sysmem
 sdk://fidl/fuchsia.ui.app
+sdk://fidl/fuchsia.ui.composition
 sdk://fidl/fuchsia.ui.gfx
 sdk://fidl/fuchsia.ui.input
 sdk://fidl/fuchsia.ui.input3

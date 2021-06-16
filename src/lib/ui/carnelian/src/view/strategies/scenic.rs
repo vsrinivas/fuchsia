@@ -561,7 +561,7 @@ impl ViewStrategy for ScenicViewStrategy {
         &mut self,
         _view_details: &ViewDetails,
         _view_assistant: &mut ViewAssistantPtr,
-        info: fidl_fuchsia_scenic_scheduling::FuturePresentationTimes,
+        info: fidl_fuchsia_ui_composition::FuturePresentationTimes,
     ) {
         let present_intervals = info.future_presentations.len();
         if present_intervals > 0 {
@@ -590,7 +590,7 @@ impl ViewStrategy for ScenicViewStrategy {
         &mut self,
         _view_details: &ViewDetails,
         _view_assistant: &mut ViewAssistantPtr,
-        info: fidl_fuchsia_scenic_scheduling::FramePresentedInfo,
+        info: fidl_fuchsia_ui_composition::FramePresentedInfo,
     ) {
         let num_presents_handled = info.presentation_infos.len();
         assert!(self.pending_present_count >= num_presents_handled);

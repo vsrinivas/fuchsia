@@ -15,7 +15,7 @@ source_set("allocation") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.scenic.allocation",
+    "//sdk/fidl/fuchsia.ui.composition",
     "//src/lib/fxl",
   ]
 

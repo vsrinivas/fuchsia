@@ -11,8 +11,8 @@
             "vulkan"
         ],
         "services": [
-            "fuchsia.scenic.allocation.Allocator",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.composition.Allocator"
         ]
     }
 }

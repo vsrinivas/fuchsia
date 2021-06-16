@@ -5,7 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_SCHEDULING_PRESENT2_HELPER_H_
 #define SRC_UI_SCENIC_LIB_SCHEDULING_PRESENT2_HELPER_H_
 
-#include <fuchsia/scenic/scheduling/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
@@ -17,8 +17,8 @@ namespace scheduling {
 // want to have the same semantics.
 class Present2Helper {
  public:
-  Present2Helper(fit::function<void(fuchsia::scenic::scheduling::FramePresentedInfo info)>
-                     on_frame_presented_event);
+  explicit Present2Helper(fit::function<void(fuchsia::ui::composition::FramePresentedInfo info)>
+                              on_frame_presented_event);
   ~Present2Helper() = default;
 
   void RegisterPresent(PresentId present_id, zx::time present_received_time);
@@ -27,8 +27,7 @@ class Present2Helper {
                    PresentTimestamps present_times, uint64_t num_presents_allowed);
 
  private:
-  const fit::function<void(fuchsia::scenic::scheduling::FramePresentedInfo info)>
-      on_frame_presented_;
+  const fit::function<void(fuchsia::ui::composition::FramePresentedInfo info)> on_frame_presented_;
 
   std::map<PresentId, /*present_received_time*/ zx::time> presents_received_;
 };

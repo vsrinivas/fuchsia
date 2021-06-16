@@ -5,7 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_H_
 
-#include <fuchsia/scenic/allocation/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
@@ -51,7 +51,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
  public:
   using BufferCollectionId = uint64_t;
   using ContentId = fuchsia::ui::scenic::internal::ContentId;
-  using FuturePresentationInfos = std::vector<fuchsia::scenic::scheduling::PresentationInfo>;
+  using FuturePresentationInfos = std::vector<fuchsia::ui::composition::PresentationInfo>;
   using TransformId = fuchsia::ui::scenic::internal::TransformId;
 
   // Binds this Flatland object to serve |request| on |dispatcher|. The |destroy_instance_function|
@@ -111,7 +111,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void CreateImage(ContentId image_id,
-                   fuchsia::scenic::allocation::BufferCollectionImportToken import_token,
+                   fuchsia::ui::composition::BufferCollectionImportToken import_token,
                    uint32_t vmo_index,
                    fuchsia::ui::scenic::internal::ImageProperties properties) override;
   // |fuchsia::ui::scenic::internal::Flatland|

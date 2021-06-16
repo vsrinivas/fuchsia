@@ -9,7 +9,7 @@ using fuchsia.ui.gfx;
 using fuchsia.ui.input;
 using fuchsia.virtualization;
 using fuchsia.hardware.ethernet;
-using fuchsia.scenic.allocation;
+using fuchsia.ui.composition;
 using fuchsia.sysmem;
 using zx;
 
@@ -192,7 +192,7 @@ protocol VirtioWayland {
           zx.handle:VMAR vmar,
           fuchsia.virtualization.WaylandDispatcher dispatcher,
           fuchsia.sysmem.Allocator sysmem_allocator,
-          fuchsia.scenic.allocation.Allocator scenic_allocator) -> ();
+          fuchsia.ui.composition.Allocator scenic_allocator) -> ();
 
     // Get the VMO importer for this wayland device.
     GetImporter(request<VirtioWaylandImporter> importer);
