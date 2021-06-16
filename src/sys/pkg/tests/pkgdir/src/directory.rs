@@ -696,3 +696,86 @@ async fn assert_read_dirents_no_overflow(dir: &DirectoryProxy, expected_dirents:
         expected_dirents.into_iter().sorted().collect::<Vec<_>>()
     );
 }
+
+#[fuchsia::test]
+async fn rewind() {
+    for dir in dirs_to_test().await {
+        rewind_per_package_source(dir).await
+    }
+}
+
+async fn rewind_per_package_source(root_dir: DirectoryProxy) {
+    // Handle overflow cases.
+    for path in [".", "meta", "dir_overflow_readdirents", "meta/dir_overflow_readdirents"] {
+        let dir = io_util::directory::open_directory(&root_dir, path, 0).await.unwrap();
+        assert_rewind_overflow_when_seek_offset_at_end(&dir).await;
+        assert_rewind_overflow_when_seek_offset_in_middle(&dir).await;
+    }
+
+    // Handle non-overflow cases.
+    for path in ["dir", "dir/dir", "dir/dir/dir", "meta/dir", "meta/dir/dir", "meta/dir/dir/dir"] {
+        assert_rewind_no_overflow(
+            &io_util::directory::open_directory(&root_dir, path, 0).await.unwrap(),
+        )
+        .await;
+    }
+}
+
+async fn assert_rewind_overflow_when_seek_offset_at_end(dir: &DirectoryProxy) {
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(!buf.is_empty(), "first read_dirents call should yield non-empty buffer");
+
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(!buf.is_empty(), "second read_dirents call should yield non-empty buffer");
+
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert_eq!(buf, []);
+
+    let status = dir.rewind().await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(!buf.is_empty(), "read_dirents call after rewind should yield non-empty buffer");
+}
+
+async fn assert_rewind_overflow_when_seek_offset_in_middle(dir: &DirectoryProxy) {
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(!buf.is_empty(), "first read_dirents call should yield non-empty buffer");
+
+    let status = dir.rewind().await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(!buf.is_empty(), "first read_dirents call after rewind should yield non-empty buffer");
+
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(!buf.is_empty(), "second read_dirents call after rewind should yield non-empty buffer");
+
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert_eq!(buf, []);
+}
+
+async fn assert_rewind_no_overflow(dir: &DirectoryProxy) {
+    let (status, buf0) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(!buf0.is_empty(), "first read_dirents call should yield non-empty buffer");
+
+    let status = dir.rewind().await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+
+    let (status, buf1) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(!buf1.is_empty(), "first read_dirents call after rewind should yield non-empty buffer");
+
+    // We can't guarantee ordering will be the same, so the next best thing is to verify the
+    // returned buffers are the same length.
+    assert_eq!(buf0.len(), buf1.len());
+}
