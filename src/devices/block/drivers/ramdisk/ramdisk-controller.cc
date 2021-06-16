@@ -97,7 +97,8 @@ zx::status<std::string> RamdiskController::CreateFromVmoWithBlockSizeInternal(zx
 
 void RamdiskController::CreateFromVmo(CreateFromVmoRequestView request,
                                       CreateFromVmoCompleter::Sync& completer) {
-  auto name_or = CreateFromVmoWithBlockSizeInternal(std::move(request->vmo), PAGE_SIZE);
+  auto name_or =
+      CreateFromVmoWithBlockSizeInternal(std::move(request->vmo), zx_system_get_page_size());
   if (name_or.is_error()) {
     completer.Reply(name_or.status_value(), fidl::StringView());
     return;

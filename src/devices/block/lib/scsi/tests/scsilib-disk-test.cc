@@ -316,7 +316,7 @@ TEST_F(ScsilibDiskTest, TestCreateReadDestroy) {
   read.rw.length = 1;      // Read one block
   read.rw.offset_dev = 1;  // Read logical block 1
   read.rw.offset_vmo = 0;
-  EXPECT_OK(zx_vmo_create(PAGE_SIZE, 0, &read.rw.vmo));
+  EXPECT_OK(zx_vmo_create(zx_system_get_page_size(), 0, &read.rw.vmo));
   controller_.AsyncIoInit();
   {
     fbl::AutoLock lock(&iowait_.lock_);

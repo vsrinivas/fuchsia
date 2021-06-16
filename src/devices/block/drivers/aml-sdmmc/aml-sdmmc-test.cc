@@ -103,7 +103,7 @@ class AmlSdmmcTest : public zxtest::Test {
     mmio_ = ddk::MmioBuffer(mmio_buffer);
 
     memset(bti_paddrs_, 0, sizeof(bti_paddrs_));
-    bti_paddrs_[0] = PAGE_SIZE;  // This is passed to AmlSdmmc::Init().
+    bti_paddrs_[0] = zx_system_get_page_size();  // This is passed to AmlSdmmc::Init().
 
     zx::bti bti;
     ASSERT_OK(fake_bti_create_with_paddrs(bti_paddrs_, countof(bti_paddrs_),
@@ -156,20 +156,20 @@ class AmlSdmmcTest : public zxtest::Test {
   void InitializeContiguousPaddrs(const size_t vmos) {
     // Start at 1 because one paddr has already been read to create the DMA descriptor buffer.
     for (size_t i = 0; i < vmos; i++) {
-      bti_paddrs_[i + 1] = (i << 24) | PAGE_SIZE;
+      bti_paddrs_[i + 1] = (i << 24) | zx_system_get_page_size();
     }
   }
 
   void InitializeSingleVmoPaddrs(const size_t pages) {
     // Start at 1 because one paddr has already been read to create the DMA descriptor buffer.
     for (size_t i = 0; i < pages; i++) {
-      bti_paddrs_[i + 1] = PAGE_SIZE * (i + 1);
+      bti_paddrs_[i + 1] = zx_system_get_page_size() * (i + 1);
     }
   }
 
   void InitializeNonContiguousPaddrs(const size_t vmos) {
     for (size_t i = 0; i < vmos; i++) {
-      bti_paddrs_[i + 1] = PAGE_SIZE * (i + 1) * 2;
+      bti_paddrs_[i + 1] = zx_system_get_page_size() * (i + 1) * 2;
     }
   }
 
@@ -610,7 +610,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
   zx::vmo vmos[10] = {};
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < countof(vmos); i++) {
-    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmos[i]));
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmos[i]));
     buffers[i] = {
         .buffer =
             {
@@ -651,7 +651,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
 
   EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
-  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].data_addr, zx_system_get_page_size());
   EXPECT_EQ(descs[0].resp_addr, 0);
 
   for (uint32_t i = 1; i < countof(vmos); i++) {
@@ -661,7 +661,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
     }
     EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
     EXPECT_EQ(descs[i].cmd_arg, 0);
-    EXPECT_EQ(descs[i].data_addr, (i << 24) | (PAGE_SIZE + (i * 16)));
+    EXPECT_EQ(descs[i].data_addr, (i << 24) | (zx_system_get_page_size() + (i * 16)));
     EXPECT_EQ(descs[i].resp_addr, 0);
   }
 }
@@ -674,7 +674,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosNotBlockSizeMultiple) {
   zx::vmo vmos[10] = {};
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < countof(vmos); i++) {
-    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmos[i]));
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmos[i]));
     buffers[i] = {
         .buffer =
             {
@@ -710,7 +710,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosByteMode) {
   zx::vmo vmos[10] = {};
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < countof(vmos); i++) {
-    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmos[i]));
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmos[i]));
     buffers[i] = {
         .buffer =
             {
@@ -750,7 +750,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosByteMode) {
 
   EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
-  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].data_addr, zx_system_get_page_size());
   EXPECT_EQ(descs[0].resp_addr, 0);
 
   for (uint32_t i = 1; i < countof(vmos); i++) {
@@ -760,7 +760,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosByteMode) {
     }
     EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
     EXPECT_EQ(descs[i].cmd_arg, 0);
-    EXPECT_EQ(descs[i].data_addr, (i << 24) | (PAGE_SIZE + (i * 4)));
+    EXPECT_EQ(descs[i].data_addr, (i << 24) | (zx_system_get_page_size() + (i * 4)));
     EXPECT_EQ(descs[i].resp_addr, 0);
   }
 }
@@ -769,7 +769,7 @@ TEST_F(AmlSdmmcTest, UnownedVmoByteModeMultiBlock) {
   ASSERT_OK(dut_->Init());
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   InitializeContiguousPaddrs(1);
 
   sdmmc_buffer_region_t buffer = {
@@ -810,7 +810,7 @@ TEST_F(AmlSdmmcTest, UnownedVmoByteModeMultiBlock) {
 
   EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
-  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].data_addr, zx_system_get_page_size());
   EXPECT_EQ(descs[0].resp_addr, 0);
 
   for (uint32_t i = 1; i < 4; i++) {
@@ -820,7 +820,7 @@ TEST_F(AmlSdmmcTest, UnownedVmoByteModeMultiBlock) {
     }
     EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
     EXPECT_EQ(descs[i].cmd_arg, 0);
-    EXPECT_EQ(descs[i].data_addr, PAGE_SIZE + (i * 100));
+    EXPECT_EQ(descs[i].data_addr, zx_system_get_page_size() + (i * 100));
     EXPECT_EQ(descs[i].resp_addr, 0);
   }
 }
@@ -829,7 +829,7 @@ TEST_F(AmlSdmmcTest, UnownedVmoOffsetNotAligned) {
   ASSERT_OK(dut_->Init());
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   InitializeContiguousPaddrs(1);
 
   sdmmc_buffer_region_t buffer = {
@@ -861,8 +861,8 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferMultipleDescriptors) {
   ASSERT_OK(dut_->Init());
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
-  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
   InitializeSingleVmoPaddrs(pages);
 
   sdmmc_buffer_region_t buffer = {
@@ -904,7 +904,7 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferMultipleDescriptors) {
 
   EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
-  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE + 16);
+  EXPECT_EQ(descs[0].data_addr, zx_system_get_page_size() + 16);
   EXPECT_EQ(descs[0].resp_addr, 0);
 
   expected_desc_cfg.set_len(2)
@@ -916,7 +916,7 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferMultipleDescriptors) {
 
   EXPECT_EQ(descs[1].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[1].cmd_arg, 0);
-  EXPECT_EQ(descs[1].data_addr, PAGE_SIZE + (511 * 32) + 16);
+  EXPECT_EQ(descs[1].data_addr, zx_system_get_page_size() + (511 * 32) + 16);
   EXPECT_EQ(descs[1].resp_addr, 0);
 }
 
@@ -924,8 +924,8 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferNotPageAligned) {
   ASSERT_OK(dut_->Init());
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
-  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
   InitializeNonContiguousPaddrs(pages);
 
   sdmmc_buffer_region_t buffer = {
@@ -957,8 +957,8 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferPageAligned) {
   ASSERT_OK(dut_->Init());
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
-  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
   InitializeNonContiguousPaddrs(pages);
 
   sdmmc_buffer_region_t buffer = {
@@ -1000,7 +1000,7 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferPageAligned) {
 
   EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
-  EXPECT_EQ(descs[0].data_addr, (PAGE_SIZE * 2) + 32);
+  EXPECT_EQ(descs[0].data_addr, (zx_system_get_page_size() * 2) + 32);
   EXPECT_EQ(descs[0].resp_addr, 0);
 
   for (uint32_t i = 1; i < 5; i++) {
@@ -1011,7 +1011,7 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferPageAligned) {
 
     EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
     EXPECT_EQ(descs[i].cmd_arg, 0);
-    EXPECT_EQ(descs[i].data_addr, PAGE_SIZE * (i + 1) * 2);
+    EXPECT_EQ(descs[i].data_addr, zx_system_get_page_size() * (i + 1) * 2);
     EXPECT_EQ(descs[i].resp_addr, 0);
   }
 }
@@ -1024,7 +1024,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < countof(buffers); i++) {
     zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
     EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, SDMMC_VMO_RIGHT_WRITE));
     buffers[i] = {
         .buffer =
@@ -1069,7 +1069,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
 
   EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
-  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].data_addr, zx_system_get_page_size());
   EXPECT_EQ(descs[0].resp_addr, 0);
 
   for (uint32_t i = 1; i < countof(buffers); i++) {
@@ -1079,7 +1079,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
     }
     EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
     EXPECT_EQ(descs[i].cmd_arg, 0);
-    EXPECT_EQ(descs[i].data_addr, (i << 24) | (PAGE_SIZE + (i * 80)));
+    EXPECT_EQ(descs[i].data_addr, (i << 24) | (zx_system_get_page_size() + (i * 80)));
     EXPECT_EQ(descs[i].resp_addr, 0);
   }
 
@@ -1101,7 +1101,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosNotBlockSizeMultiple) {
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < countof(buffers); i++) {
     zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
     EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, SDMMC_VMO_RIGHT_WRITE));
     buffers[i] = {
         .buffer =
@@ -1138,7 +1138,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < countof(buffers); i++) {
     zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
     EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, SDMMC_VMO_RIGHT_WRITE));
     buffers[i] = {
         .buffer =
@@ -1179,7 +1179,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
 
   EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
-  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].data_addr, zx_system_get_page_size());
   EXPECT_EQ(descs[0].resp_addr, 0);
 
   for (uint32_t i = 1; i < countof(buffers); i++) {
@@ -1189,7 +1189,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
     }
     EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
     EXPECT_EQ(descs[i].cmd_arg, 0);
-    EXPECT_EQ(descs[i].data_addr, (i << 24) | (PAGE_SIZE + (i * 68)));
+    EXPECT_EQ(descs[i].data_addr, (i << 24) | (zx_system_get_page_size() + (i * 68)));
     EXPECT_EQ(descs[i].resp_addr, 0);
   }
 }
@@ -1198,7 +1198,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoByteModeMultiBlock) {
   ASSERT_OK(dut_->Init());
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   InitializeContiguousPaddrs(1);
   EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, 512, SDMMC_VMO_RIGHT_WRITE));
 
@@ -1240,7 +1240,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoByteModeMultiBlock) {
 
   EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
-  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].data_addr, zx_system_get_page_size());
   EXPECT_EQ(descs[0].resp_addr, 0);
 
   for (uint32_t i = 1; i < 4; i++) {
@@ -1250,7 +1250,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoByteModeMultiBlock) {
     }
     EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
     EXPECT_EQ(descs[i].cmd_arg, 0);
-    EXPECT_EQ(descs[i].data_addr, PAGE_SIZE + (i * 100));
+    EXPECT_EQ(descs[i].data_addr, zx_system_get_page_size() + (i * 100));
     EXPECT_EQ(descs[i].resp_addr, 0);
   }
 }
@@ -1259,7 +1259,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoOffsetNotAligned) {
   ASSERT_OK(dut_->Init());
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   InitializeContiguousPaddrs(1);
   EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 2, 512, SDMMC_VMO_RIGHT_WRITE));
 
@@ -1292,10 +1292,10 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferMultipleDescriptors) {
   ASSERT_OK(dut_->Init());
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
-  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
   InitializeSingleVmoPaddrs(pages);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, (pages * PAGE_SIZE) - 8,
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, (pages * zx_system_get_page_size()) - 8,
                                    SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
@@ -1337,7 +1337,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferMultipleDescriptors) {
 
   EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
-  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE + 16);
+  EXPECT_EQ(descs[0].data_addr, zx_system_get_page_size() + 16);
   EXPECT_EQ(descs[0].resp_addr, 0);
 
   expected_desc_cfg.set_len(1)
@@ -1350,7 +1350,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferMultipleDescriptors) {
 
   EXPECT_EQ(descs[1].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[1].cmd_arg, 0);
-  EXPECT_EQ(descs[1].data_addr, PAGE_SIZE + (511 * 32) + 16);
+  EXPECT_EQ(descs[1].data_addr, zx_system_get_page_size() + (511 * 32) + 16);
   EXPECT_EQ(descs[1].resp_addr, 0);
 }
 
@@ -1358,10 +1358,10 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferNotPageAligned) {
   ASSERT_OK(dut_->Init());
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
-  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
   InitializeNonContiguousPaddrs(pages);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, (pages * PAGE_SIZE) - 8,
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, (pages * zx_system_get_page_size()) - 8,
                                    SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
@@ -1393,11 +1393,11 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferPageAligned) {
   ASSERT_OK(dut_->Init());
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
-  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
   InitializeNonContiguousPaddrs(pages);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 16, (pages * PAGE_SIZE) - 16,
-                                   SDMMC_VMO_RIGHT_WRITE));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(
+      1, 0, std::move(vmo), 16, (pages * zx_system_get_page_size()) - 16, SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1438,7 +1438,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferPageAligned) {
 
   EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
-  EXPECT_EQ(descs[0].data_addr, (PAGE_SIZE * 2) + 32);
+  EXPECT_EQ(descs[0].data_addr, (zx_system_get_page_size() * 2) + 32);
   EXPECT_EQ(descs[0].resp_addr, 0);
 
   for (uint32_t i = 1; i < 5; i++) {
@@ -1449,7 +1449,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferPageAligned) {
 
     EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
     EXPECT_EQ(descs[i].cmd_arg, 0);
-    EXPECT_EQ(descs[i].data_addr, PAGE_SIZE * (i + 1) * 2);
+    EXPECT_EQ(descs[i].data_addr, zx_system_get_page_size() * (i + 1) * 2);
     EXPECT_EQ(descs[i].resp_addr, 0);
   }
 }
@@ -1458,8 +1458,8 @@ TEST_F(AmlSdmmcTest, OwnedVmoWritePastEnd) {
   ASSERT_OK(dut_->Init());
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
-  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
   InitializeNonContiguousPaddrs(pages);
   EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 32, 32 * 384, SDMMC_VMO_RIGHT_WRITE));
 
@@ -1502,7 +1502,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoWritePastEnd) {
 
   EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
-  EXPECT_EQ(descs[0].data_addr, (PAGE_SIZE * 2) + 64);
+  EXPECT_EQ(descs[0].data_addr, (zx_system_get_page_size() * 2) + 64);
   EXPECT_EQ(descs[0].resp_addr, 0);
 
   for (uint32_t i = 1; i < 4; i++) {
@@ -1513,7 +1513,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoWritePastEnd) {
 
     EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
     EXPECT_EQ(descs[i].cmd_arg, 0);
-    EXPECT_EQ(descs[i].data_addr, PAGE_SIZE * (i + 1) * 2);
+    EXPECT_EQ(descs[i].data_addr, zx_system_get_page_size() * (i + 1) * 2);
     EXPECT_EQ(descs[i].resp_addr, 0);
   }
 
@@ -1525,26 +1525,31 @@ TEST_F(AmlSdmmcTest, SeparateClientVmoSpaces) {
   ASSERT_OK(dut_->Init());
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   const zx_koid_t vmo1_koid = GetVmoKoid(vmo);
   EXPECT_NE(vmo1_koid, ZX_KOID_INVALID);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, PAGE_SIZE, SDMMC_VMO_RIGHT_WRITE));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, zx_system_get_page_size(),
+                                   SDMMC_VMO_RIGHT_WRITE));
 
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   const zx_koid_t vmo2_koid = GetVmoKoid(vmo);
   EXPECT_NE(vmo2_koid, ZX_KOID_INVALID);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(2, 0, std::move(vmo), 0, PAGE_SIZE, SDMMC_VMO_RIGHT_WRITE));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(2, 0, std::move(vmo), 0, zx_system_get_page_size(),
+                                   SDMMC_VMO_RIGHT_WRITE));
 
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
-  EXPECT_NOT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, PAGE_SIZE, SDMMC_VMO_RIGHT_WRITE));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+  EXPECT_NOT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, zx_system_get_page_size(),
+                                       SDMMC_VMO_RIGHT_WRITE));
 
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
-  EXPECT_NOT_OK(dut_->SdmmcRegisterVmo(1, 8, std::move(vmo), 0, PAGE_SIZE, SDMMC_VMO_RIGHT_WRITE));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+  EXPECT_NOT_OK(dut_->SdmmcRegisterVmo(1, 8, std::move(vmo), 0, zx_system_get_page_size(),
+                                       SDMMC_VMO_RIGHT_WRITE));
 
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   const zx_koid_t vmo3_koid = GetVmoKoid(vmo);
   EXPECT_NE(vmo3_koid, ZX_KOID_INVALID);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 1, std::move(vmo), 0, PAGE_SIZE, SDMMC_VMO_RIGHT_WRITE));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 1, std::move(vmo), 0, zx_system_get_page_size(),
+                                   SDMMC_VMO_RIGHT_WRITE));
 
   EXPECT_OK(dut_->SdmmcUnregisterVmo(1, 0, &vmo));
   EXPECT_EQ(GetVmoKoid(vmo), vmo1_koid);
@@ -1569,8 +1574,8 @@ TEST_F(AmlSdmmcTest, RequestWithOwnedAndUnownedVmos) {
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < 5; i++) {
     zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
-    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmos[i]));
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmos[i]));
 
     EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, SDMMC_VMO_RIGHT_WRITE));
     buffers[i * 2] = {
@@ -1625,58 +1630,58 @@ TEST_F(AmlSdmmcTest, RequestWithOwnedAndUnownedVmos) {
 
   EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
-  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].data_addr, zx_system_get_page_size());
   EXPECT_EQ(descs[0].resp_addr, 0);
 
   expected_desc_cfg.set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
   EXPECT_EQ(descs[1].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[1].cmd_arg, 0);
-  EXPECT_EQ(descs[1].data_addr, (5 << 24) | PAGE_SIZE);
+  EXPECT_EQ(descs[1].data_addr, (5 << 24) | zx_system_get_page_size());
   EXPECT_EQ(descs[1].resp_addr, 0);
 
   expected_desc_cfg.set_len(3);
   EXPECT_EQ(descs[2].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[2].cmd_arg, 0);
-  EXPECT_EQ(descs[2].data_addr, (1 << 24) | (PAGE_SIZE + 64 + 16));
+  EXPECT_EQ(descs[2].data_addr, (1 << 24) | (zx_system_get_page_size() + 64 + 16));
   EXPECT_EQ(descs[2].resp_addr, 0);
 
   EXPECT_EQ(descs[3].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[3].cmd_arg, 0);
-  EXPECT_EQ(descs[3].data_addr, (6 << 24) | (PAGE_SIZE + 16));
+  EXPECT_EQ(descs[3].data_addr, (6 << 24) | (zx_system_get_page_size() + 16));
   EXPECT_EQ(descs[3].resp_addr, 0);
 
   expected_desc_cfg.set_len(4);
   EXPECT_EQ(descs[4].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[4].cmd_arg, 0);
-  EXPECT_EQ(descs[4].data_addr, (2 << 24) | (PAGE_SIZE + 128 + 32));
+  EXPECT_EQ(descs[4].data_addr, (2 << 24) | (zx_system_get_page_size() + 128 + 32));
   EXPECT_EQ(descs[4].resp_addr, 0);
 
   EXPECT_EQ(descs[5].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[5].cmd_arg, 0);
-  EXPECT_EQ(descs[5].data_addr, (7 << 24) | (PAGE_SIZE + 32));
+  EXPECT_EQ(descs[5].data_addr, (7 << 24) | (zx_system_get_page_size() + 32));
   EXPECT_EQ(descs[5].resp_addr, 0);
 
   expected_desc_cfg.set_len(5);
   EXPECT_EQ(descs[6].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[6].cmd_arg, 0);
-  EXPECT_EQ(descs[6].data_addr, (3 << 24) | (PAGE_SIZE + 192 + 48));
+  EXPECT_EQ(descs[6].data_addr, (3 << 24) | (zx_system_get_page_size() + 192 + 48));
   EXPECT_EQ(descs[6].resp_addr, 0);
 
   EXPECT_EQ(descs[7].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[7].cmd_arg, 0);
-  EXPECT_EQ(descs[7].data_addr, (8 << 24) | (PAGE_SIZE + 48));
+  EXPECT_EQ(descs[7].data_addr, (8 << 24) | (zx_system_get_page_size() + 48));
   EXPECT_EQ(descs[7].resp_addr, 0);
 
   expected_desc_cfg.set_len(6);
   EXPECT_EQ(descs[8].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[8].cmd_arg, 0);
-  EXPECT_EQ(descs[8].data_addr, (4 << 24) | (PAGE_SIZE + 256 + 64));
+  EXPECT_EQ(descs[8].data_addr, (4 << 24) | (zx_system_get_page_size() + 256 + 64));
   EXPECT_EQ(descs[8].resp_addr, 0);
 
   expected_desc_cfg.set_end_of_chain(1);
   EXPECT_EQ(descs[9].cmd_info, expected_desc_cfg.reg_value());
   EXPECT_EQ(descs[9].cmd_arg, 0);
-  EXPECT_EQ(descs[9].data_addr, (9 << 24) | (PAGE_SIZE + 64));
+  EXPECT_EQ(descs[9].data_addr, (9 << 24) | (zx_system_get_page_size() + 64));
   EXPECT_EQ(descs[9].resp_addr, 0);
 }
 
@@ -1693,8 +1698,9 @@ TEST_F(AmlSdmmcTest, ResetCmdInfoBits) {
   dut_->descs()[2].cmd_info = 0xffff'ffff;
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE * 3, 0, &vmo));
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 2, std::move(vmo), 0, PAGE_SIZE * 3, SDMMC_VMO_RIGHT_WRITE));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size() * 3, 0, &vmo));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 2, std::move(vmo), 0, zx_system_get_page_size() * 3,
+                                   SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
       .buffer = {.vmo_id = 1},
@@ -1756,7 +1762,7 @@ TEST_F(AmlSdmmcTest, WriteToReadOnlyVmo) {
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < countof(buffers); i++) {
     zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
     const uint32_t vmo_rights = SDMMC_VMO_RIGHT_READ | (i == 5 ? 0 : SDMMC_VMO_RIGHT_WRITE);
     EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, vmo_rights));
     buffers[i] = {
@@ -1792,7 +1798,7 @@ TEST_F(AmlSdmmcTest, ReadFromWriteOnlyVmo) {
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < countof(buffers); i++) {
     zx::vmo vmo;
-    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
     const uint32_t vmo_rights = SDMMC_VMO_RIGHT_WRITE | (i == 5 ? 0 : SDMMC_VMO_RIGHT_READ);
     EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, vmo_rights));
     buffers[i] = {

@@ -45,7 +45,6 @@
 #define AML_SDMMC_TRACE(fmt, ...) zxlogf(DEBUG, "%s: " fmt, __func__, ##__VA_ARGS__)
 #define AML_SDMMC_INFO(fmt, ...) zxlogf(INFO, "%s: " fmt, __func__, ##__VA_ARGS__)
 #define AML_SDMMC_ERROR(fmt, ...) zxlogf(ERROR, "%s: " fmt, __func__, ##__VA_ARGS__)
-#define PAGE_MASK (PAGE_SIZE - 1ull)
 
 namespace {
 
@@ -54,6 +53,11 @@ uint32_t log2_ceil(uint32_t blk_sz) {
     return 0;
   }
   return 32 - (__builtin_clz(blk_sz - 1));
+}
+
+zx_paddr_t PageMask() {
+  static uintptr_t page_size = zx_system_get_page_size();
+  return page_size - 1;
 }
 
 }  // namespace
@@ -508,7 +512,8 @@ zx_status_t AmlSdmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sdmmc_desc_t* cur_
                                         aml_sdmmc_desc_t** last_desc) {
   uint64_t req_len = req->blockcount * req->blocksize;
   bool is_read = req->cmd_flags & SDMMC_CMD_READ;
-  uint64_t pagecount = ((req->buf_offset & PAGE_MASK) + req_len + PAGE_MASK) / PAGE_SIZE;
+  uint64_t pagecount =
+      ((req->buf_offset & PageMask()) + req_len + PageMask()) / zx_system_get_page_size();
   if (pagecount > SDMMC_PAGES_COUNT) {
     AML_SDMMC_ERROR("too many pages %" PRIu64 " vs %" PRIu64, pagecount, SDMMC_PAGES_COUNT);
     return ZX_ERR_INVALID_ARGS;
@@ -519,8 +524,8 @@ zx_status_t AmlSdmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sdmmc_desc_t* cur_
   // offset_vmo is converted to bytes by the sdmmc layer
   uint32_t options = is_read ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
 
-  zx_status_t st = zx_bti_pin(bti_.get(), options, req->dma_vmo, req->buf_offset & ~PAGE_MASK,
-                              pagecount * PAGE_SIZE, phys, pagecount, &req->pmt);
+  zx_status_t st = zx_bti_pin(bti_.get(), options, req->dma_vmo, req->buf_offset & ~PageMask(),
+                              pagecount * zx_system_get_page_size(), phys, pagecount, &req->pmt);
   if (st != ZX_OK) {
     AML_SDMMC_ERROR("bti-pin failed with error %d", st);
     return st;
@@ -545,7 +550,7 @@ zx_status_t AmlSdmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sdmmc_desc_t* cur_
   buf.vmo_offset = req->buf_offset;
 
   phys_iter_t iter;
-  phys_iter_init(&iter, &buf, PAGE_SIZE);
+  phys_iter_init(&iter, &buf, zx_system_get_page_size());
 
   int count = 0;
   size_t length;
@@ -564,7 +569,7 @@ zx_status_t AmlSdmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sdmmc_desc_t* cur_
       AML_SDMMC_ERROR("empty descriptor list!");
       return ZX_ERR_NOT_SUPPORTED;
     }
-    if (length > PAGE_SIZE) {
+    if (length > zx_system_get_page_size()) {
       AML_SDMMC_ERROR("chunk size > %zu is unsupported", length);
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -783,14 +788,15 @@ zx::status<std::pair<aml_sdmmc_desc_t*, fzl::PinnedVmo>> AmlSdmmc::SetupUnownedV
     const sdmmc_req_new_t& req, const sdmmc_buffer_region_t& buffer,
     aml_sdmmc_desc_t* const cur_desc) {
   const bool is_read = req.cmd_flags & SDMMC_CMD_READ;
-  const uint64_t pagecount = ((buffer.offset & PAGE_MASK) + buffer.size + PAGE_MASK) / PAGE_SIZE;
+  const uint64_t pagecount =
+      ((buffer.offset & PageMask()) + buffer.size + PageMask()) / zx_system_get_page_size();
 
   const zx::unowned_vmo vmo(buffer.buffer.vmo);
   const uint32_t options = is_read ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
 
   fzl::PinnedVmo pinned_vmo;
-  zx_status_t status =
-      pinned_vmo.PinRange(buffer.offset & ~PAGE_MASK, pagecount * PAGE_SIZE, *vmo, bti_, options);
+  zx_status_t status = pinned_vmo.PinRange(
+      buffer.offset & ~PageMask(), pagecount * zx_system_get_page_size(), *vmo, bti_, options);
   if (status != ZX_OK) {
     AML_SDMMC_ERROR("bti-pin failed with error %d", status);
     return zx::error(status);
@@ -800,11 +806,12 @@ zx::status<std::pair<aml_sdmmc_desc_t*, fzl::PinnedVmo>> AmlSdmmc::SetupUnownedV
   for (uint32_t i = 0; i < pinned_vmo.region_count(); i++) {
     fzl::PinnedVmo::Region region = pinned_vmo.region(i);
     if (i == 0) {
-      region.phys_addr += buffer.offset & PAGE_MASK;
-      region.size -= buffer.offset & PAGE_MASK;
+      region.phys_addr += buffer.offset & PageMask();
+      region.size -= buffer.offset & PageMask();
     }
     if (i == pinned_vmo.region_count() - 1) {
-      const size_t end_offset = (pagecount * PAGE_SIZE) - buffer.size - (buffer.offset & PAGE_MASK);
+      const size_t end_offset =
+          (pagecount * zx_system_get_page_size()) - buffer.size - (buffer.offset & PageMask());
       region.size -= end_offset;
     }
 
@@ -1318,7 +1325,7 @@ zx_status_t AmlSdmmc::Init() {
       AML_SDMMC_ERROR("Failed to allocate dma descriptors");
       return status;
     }
-    dev_info_.max_transfer_size = AML_DMA_DESC_MAX_COUNT * PAGE_SIZE;
+    dev_info_.max_transfer_size = AML_DMA_DESC_MAX_COUNT * zx_system_get_page_size();
   } else {
     dev_info_.max_transfer_size = AML_SDMMC_MAX_PIO_DATA_SIZE;
   }

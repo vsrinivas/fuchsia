@@ -19,7 +19,7 @@
 
 namespace {
 
-constexpr zx_paddr_t kPageMask = PAGE_SIZE - 1;
+zx_paddr_t PageMask() { return static_cast<uintptr_t>(zx_system_get_page_size()) - 1; }
 
 }  // namespace
 
@@ -666,14 +666,14 @@ TEST_F(SdhciTest, DmaRequest64Bit) {
   EXPECT_OK(dut_->Init());
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE * 4, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size() * 4, 0, &vmo));
 
   sdmmc_req_t request = {
       .cmd_idx = SDMMC_WRITE_MULTIPLE_BLOCK,
       .cmd_flags = SDMMC_WRITE_MULTIPLE_BLOCK_FLAGS,
       .arg = 0,
       .blockcount = 4,
-      .blocksize = PAGE_SIZE,
+      .blocksize = static_cast<uint16_t>(zx_system_get_page_size()),
       .use_dma = true,
       .dma_vmo = vmo.get(),
       .virt_buffer = nullptr,
@@ -686,7 +686,7 @@ TEST_F(SdhciTest, DmaRequest64Bit) {
   };
   EXPECT_OK(dut_->SdmmcRequest(&request));
 
-  EXPECT_EQ(AdmaSystemAddress::Get(0).ReadFrom(&mmio_).reg_value(), PAGE_SIZE);
+  EXPECT_EQ(AdmaSystemAddress::Get(0).ReadFrom(&mmio_).reg_value(), zx_system_get_page_size());
   EXPECT_EQ(AdmaSystemAddress::Get(1).ReadFrom(&mmio_).reg_value(), 0);
 
   const Sdhci::AdmaDescriptor96* const descriptors =
@@ -695,21 +695,21 @@ TEST_F(SdhciTest, DmaRequest64Bit) {
   uint64_t address;
   memcpy(&address, &descriptors[0].address, sizeof(address));
   EXPECT_EQ(descriptors[0].attr, 0b100'001);
-  EXPECT_EQ(address, PAGE_SIZE);
-  EXPECT_EQ(descriptors[0].length, PAGE_SIZE);
+  EXPECT_EQ(address, zx_system_get_page_size());
+  EXPECT_EQ(descriptors[0].length, zx_system_get_page_size());
 
   EXPECT_EQ(descriptors[1].attr, 0b100'001);
-  EXPECT_EQ(descriptors[1].address, PAGE_SIZE);
-  EXPECT_EQ(descriptors[1].length, PAGE_SIZE);
+  EXPECT_EQ(descriptors[1].address, zx_system_get_page_size());
+  EXPECT_EQ(descriptors[1].length, zx_system_get_page_size());
 
   memcpy(&address, &descriptors[2].address, sizeof(address));
   EXPECT_EQ(descriptors[2].attr, 0b100'001);
-  EXPECT_EQ(address, PAGE_SIZE);
-  EXPECT_EQ(descriptors[2].length, PAGE_SIZE);
+  EXPECT_EQ(address, zx_system_get_page_size());
+  EXPECT_EQ(descriptors[2].length, zx_system_get_page_size());
 
   EXPECT_EQ(descriptors[3].attr, 0b100'011);
-  EXPECT_EQ(descriptors[3].address, PAGE_SIZE);
-  EXPECT_EQ(descriptors[3].length, PAGE_SIZE);
+  EXPECT_EQ(descriptors[3].address, zx_system_get_page_size());
+  EXPECT_EQ(descriptors[3].length, zx_system_get_page_size());
 
   dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }
@@ -726,14 +726,14 @@ TEST_F(SdhciTest, DmaRequest32Bit) {
   EXPECT_OK(dut_->Init());
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(PAGE_SIZE * 4, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size() * 4, 0, &vmo));
 
   sdmmc_req_t request = {
       .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
       .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
       .arg = 0,
       .blockcount = 4,
-      .blocksize = PAGE_SIZE,
+      .blocksize = static_cast<uint16_t>(zx_system_get_page_size()),
       .use_dma = true,
       .dma_vmo = vmo.get(),
       .virt_buffer = nullptr,
@@ -746,27 +746,27 @@ TEST_F(SdhciTest, DmaRequest32Bit) {
   };
   EXPECT_OK(dut_->SdmmcRequest(&request));
 
-  EXPECT_EQ(AdmaSystemAddress::Get(0).ReadFrom(&mmio_).reg_value(), PAGE_SIZE);
+  EXPECT_EQ(AdmaSystemAddress::Get(0).ReadFrom(&mmio_).reg_value(), zx_system_get_page_size());
   EXPECT_EQ(AdmaSystemAddress::Get(1).ReadFrom(&mmio_).reg_value(), 0);
 
   const Sdhci::AdmaDescriptor64* const descriptors =
       reinterpret_cast<Sdhci::AdmaDescriptor64*>(dut_->iobuf_virt());
 
   EXPECT_EQ(descriptors[0].attr, 0b100'001);
-  EXPECT_EQ(descriptors[0].address, PAGE_SIZE);
-  EXPECT_EQ(descriptors[0].length, PAGE_SIZE);
+  EXPECT_EQ(descriptors[0].address, zx_system_get_page_size());
+  EXPECT_EQ(descriptors[0].length, zx_system_get_page_size());
 
   EXPECT_EQ(descriptors[1].attr, 0b100'001);
-  EXPECT_EQ(descriptors[1].address, PAGE_SIZE);
-  EXPECT_EQ(descriptors[1].length, PAGE_SIZE);
+  EXPECT_EQ(descriptors[1].address, zx_system_get_page_size());
+  EXPECT_EQ(descriptors[1].length, zx_system_get_page_size());
 
   EXPECT_EQ(descriptors[2].attr, 0b100'001);
-  EXPECT_EQ(descriptors[2].address, PAGE_SIZE);
-  EXPECT_EQ(descriptors[2].length, PAGE_SIZE);
+  EXPECT_EQ(descriptors[2].address, zx_system_get_page_size());
+  EXPECT_EQ(descriptors[2].length, zx_system_get_page_size());
 
   EXPECT_EQ(descriptors[3].attr, 0b100'011);
-  EXPECT_EQ(descriptors[3].address, PAGE_SIZE);
-  EXPECT_EQ(descriptors[3].length, PAGE_SIZE);
+  EXPECT_EQ(descriptors[3].address, zx_system_get_page_size());
+  EXPECT_EQ(descriptors[3].length, zx_system_get_page_size());
 
   dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }
@@ -808,12 +808,12 @@ TEST_F(SdhciTest, DmaSplitOneBoundary) {
       .WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
 
-  constexpr zx_paddr_t kStartAddress = 0xa7ff'ffff & ~kPageMask;
+  const zx_paddr_t kStartAddress = 0xa7ff'ffff & ~PageMask();
 
   dut_->set_dma_paddrs(std::vector<zx_paddr_t>{
       kStartAddress,
-      kStartAddress + PAGE_SIZE,
-      kStartAddress + (PAGE_SIZE * 2),
+      kStartAddress + zx_system_get_page_size(),
+      kStartAddress + (zx_system_get_page_size() * 2),
       0xb000'0000,
   });
 
@@ -821,13 +821,15 @@ TEST_F(SdhciTest, DmaSplitOneBoundary) {
       .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
       .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
       .arg = 0,
-      .blockcount = (PAGE_SIZE / 8) + 16,  // Two pages plus 256 bytes.
+      .blockcount =
+          static_cast<uint16_t>((zx_system_get_page_size() / 8) + 16),  // Two pages plus 256 bytes.
       .blocksize = 16,
       .use_dma = true,
       .dma_vmo = ZX_HANDLE_INVALID,
       .virt_buffer = nullptr,
       .virt_size = 0,
-      .buf_offset = PAGE_SIZE - 4,  // The first buffer should be split across the 128M boundary.
+      .buf_offset = zx_system_get_page_size() -
+                    4,  // The first buffer should be split across the 128M boundary.
       .pmt = ZX_HANDLE_INVALID,
       .probe_tuning_cmd = 0,
       .response = {},
@@ -835,7 +837,7 @@ TEST_F(SdhciTest, DmaSplitOneBoundary) {
   };
   EXPECT_OK(dut_->SdmmcRequest(&request));
 
-  EXPECT_EQ(AdmaSystemAddress::Get(0).ReadFrom(&mmio_).reg_value(), PAGE_SIZE);
+  EXPECT_EQ(AdmaSystemAddress::Get(0).ReadFrom(&mmio_).reg_value(), zx_system_get_page_size());
   EXPECT_EQ(AdmaSystemAddress::Get(1).ReadFrom(&mmio_).reg_value(), 0);
 
   const Sdhci::AdmaDescriptor64* const descriptors =
@@ -847,7 +849,7 @@ TEST_F(SdhciTest, DmaSplitOneBoundary) {
 
   EXPECT_EQ(descriptors[1].attr, 0b100'001);
   EXPECT_EQ(descriptors[1].address, 0xa800'0000);
-  EXPECT_EQ(descriptors[1].length, PAGE_SIZE * 2);
+  EXPECT_EQ(descriptors[1].length, zx_system_get_page_size() * 2);
 
   EXPECT_EQ(descriptors[2].attr, 0b100'011);
   EXPECT_EQ(descriptors[2].address, 0xb000'0000);
@@ -887,7 +889,7 @@ TEST_F(SdhciTest, DmaSplitManyBoundaries) {
   };
   EXPECT_OK(dut_->SdmmcRequest(&request));
 
-  EXPECT_EQ(AdmaSystemAddress::Get(0).ReadFrom(&mmio_).reg_value(), PAGE_SIZE);
+  EXPECT_EQ(AdmaSystemAddress::Get(0).ReadFrom(&mmio_).reg_value(), zx_system_get_page_size());
   EXPECT_EQ(AdmaSystemAddress::Get(1).ReadFrom(&mmio_).reg_value(), 0);
 
   const Sdhci::AdmaDescriptor64* const descriptors =
@@ -927,12 +929,12 @@ TEST_F(SdhciTest, DmaNoBoundaries) {
       .WriteTo(&mmio_);
   EXPECT_OK(dut_->Init());
 
-  constexpr zx_paddr_t kStartAddress = 0xa7ff'ffff & ~kPageMask;
+  const zx_paddr_t kStartAddress = 0xa7ff'ffff & ~PageMask();
 
   dut_->set_dma_paddrs(std::vector<zx_paddr_t>{
       kStartAddress,
-      kStartAddress + PAGE_SIZE,
-      kStartAddress + (PAGE_SIZE * 2),
+      kStartAddress + zx_system_get_page_size(),
+      kStartAddress + (zx_system_get_page_size() * 2),
       0xb000'0000,
   });
 
@@ -940,13 +942,13 @@ TEST_F(SdhciTest, DmaNoBoundaries) {
       .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
       .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
       .arg = 0,
-      .blockcount = (PAGE_SIZE / 8) + 16,
+      .blockcount = static_cast<uint16_t>((zx_system_get_page_size() / 8) + 16),
       .blocksize = 16,
       .use_dma = true,
       .dma_vmo = ZX_HANDLE_INVALID,
       .virt_buffer = nullptr,
       .virt_size = 0,
-      .buf_offset = PAGE_SIZE - 4,
+      .buf_offset = zx_system_get_page_size() - 4,
       .pmt = ZX_HANDLE_INVALID,
       .probe_tuning_cmd = 0,
       .response = {},
@@ -954,7 +956,7 @@ TEST_F(SdhciTest, DmaNoBoundaries) {
   };
   EXPECT_OK(dut_->SdmmcRequest(&request));
 
-  EXPECT_EQ(AdmaSystemAddress::Get(0).ReadFrom(&mmio_).reg_value(), PAGE_SIZE);
+  EXPECT_EQ(AdmaSystemAddress::Get(0).ReadFrom(&mmio_).reg_value(), zx_system_get_page_size());
   EXPECT_EQ(AdmaSystemAddress::Get(1).ReadFrom(&mmio_).reg_value(), 0);
 
   const Sdhci::AdmaDescriptor64* const descriptors =
@@ -962,7 +964,7 @@ TEST_F(SdhciTest, DmaNoBoundaries) {
 
   EXPECT_EQ(descriptors[0].attr, 0b100'001);
   EXPECT_EQ(descriptors[0].address, 0xa7ff'fffc);
-  EXPECT_EQ(descriptors[0].length, (PAGE_SIZE * 2) + 4);
+  EXPECT_EQ(descriptors[0].length, (zx_system_get_page_size() * 2) + 4);
 
   EXPECT_EQ(descriptors[1].attr, 0b100'011);
   EXPECT_EQ(descriptors[1].address, 0xb000'0000);

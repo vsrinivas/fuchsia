@@ -124,7 +124,7 @@ TEST_F(BlockDeviceTest, CheckQuery) {
   InitDevice();
   ASSERT_EQ(info_.block_size, kBlkSize);
   ASSERT_EQ(info_.block_count, kCapacity);
-  ASSERT_GE(info_.max_transfer_size, PAGE_SIZE);
+  ASSERT_GE(info_.max_transfer_size, zx_system_get_page_size());
   ASSERT_GT(operation_size_, sizeof(block_op_t));
   RemoveDevice();
 }

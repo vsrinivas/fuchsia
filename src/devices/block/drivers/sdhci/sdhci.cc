@@ -31,8 +31,6 @@ constexpr uint32_t kSdFreqSetupHz = 400'000;
 
 constexpr int kMaxTuningCount = 40;
 
-constexpr size_t kPageMask = PAGE_SIZE - 1;
-
 constexpr uint32_t Hi32(zx_paddr_t val) { return static_cast<uint32_t>((val >> 32) & 0xffffffff); }
 constexpr uint32_t Lo32(zx_paddr_t val) { return val & 0xffffffff; }
 
@@ -52,6 +50,8 @@ constexpr zx::duration kWaitYieldTime = zx::usec(1);
 constexpr bool SdmmcCmdRspBusy(uint32_t cmd_flags) { return cmd_flags & SDMMC_RESP_LEN_48B; }
 
 constexpr bool SdmmcCmdHasData(uint32_t cmd_flags) { return cmd_flags & SDMMC_RESP_DATA_PRESENT; }
+
+zx_paddr_t PageMask() { return static_cast<uintptr_t>(zx_system_get_page_size()) - 1; }
 
 uint16_t GetClockDividerValue(const uint32_t base_clock, const uint32_t target_rate) {
   if (target_rate >= base_clock) {
@@ -348,8 +348,8 @@ zx_status_t Sdhci::PinRequestPages(sdmmc_req_t* req, zx_paddr_t* phys, size_t pa
   zx::pmt pmt;
   // offset_vmo is converted to bytes by the sdmmc layer
   const uint32_t options = is_read ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
-  zx_status_t st = bti_.pin(options, *dma_vmo, req->buf_offset & ~kPageMask, pagecount * PAGE_SIZE,
-                            phys, pagecount, &pmt);
+  zx_status_t st = bti_.pin(options, *dma_vmo, req->buf_offset & ~PageMask(),
+                            pagecount * zx_system_get_page_size(), phys, pagecount, &pmt);
   if (st != ZX_OK) {
     zxlogf(ERROR, "sdhci: error %d bti_pin", st);
     return st;
@@ -375,7 +375,8 @@ zx_status_t Sdhci::BuildDmaDescriptor(sdmmc_req_t* req, DescriptorType* descs) {
       sizeof(descs->address) == sizeof(uint32_t) ? 0x0000'0000'ffff'ffff : 0xffff'ffff'ffff'ffff;
 
   const uint64_t req_len = req->blockcount * req->blocksize;
-  const size_t pagecount = ((req->buf_offset & kPageMask) + req_len + kPageMask) / PAGE_SIZE;
+  const size_t pagecount =
+      ((req->buf_offset & PageMask()) + req_len + PageMask()) / zx_system_get_page_size();
   if (pagecount > SDMMC_PAGES_COUNT) {
     zxlogf(ERROR, "sdhci: too many pages %lu vs %lu", pagecount, SDMMC_PAGES_COUNT);
     return ZX_ERR_INVALID_ARGS;
@@ -983,7 +984,7 @@ zx_status_t Sdhci::Init() {
       zxlogf(ERROR, "sdhci: error allocating DMA descriptors");
       return status;
     }
-    info_.max_transfer_size = kDmaDescCount * PAGE_SIZE;
+    info_.max_transfer_size = kDmaDescCount * zx_system_get_page_size();
 
     host_control1.WriteTo(&regs_mmio_buffer_);
   } else {

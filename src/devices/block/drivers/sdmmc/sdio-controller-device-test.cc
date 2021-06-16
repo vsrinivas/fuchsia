@@ -72,14 +72,18 @@ class SdioScatterGatherTest : public zxtest::Test {
     sdmmc_.requests().clear();
 
     zx::vmo vmo1, vmo3;
-    ASSERT_OK(mapper1_.CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo1));
-    ASSERT_OK(
-        mapper2_.CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo2_));
-    ASSERT_OK(mapper3_.CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo3));
+    ASSERT_OK(mapper1_.CreateAndMap(zx_system_get_page_size(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                    nullptr, &vmo1));
+    ASSERT_OK(mapper2_.CreateAndMap(zx_system_get_page_size(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                    nullptr, &vmo2_));
+    ASSERT_OK(mapper3_.CreateAndMap(zx_system_get_page_size(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                    nullptr, &vmo3));
 
     const uint32_t vmo_rights = SDMMC_VMO_RIGHT_READ | SDMMC_VMO_RIGHT_WRITE;
-    EXPECT_OK(dut_.SdioRegisterVmo(function, 1, std::move(vmo1), 0, PAGE_SIZE, vmo_rights));
-    EXPECT_OK(dut_.SdioRegisterVmo(function, 3, std::move(vmo3), 8, PAGE_SIZE - 8, vmo_rights));
+    EXPECT_OK(dut_.SdioRegisterVmo(function, 1, std::move(vmo1), 0, zx_system_get_page_size(),
+                                   vmo_rights));
+    EXPECT_OK(dut_.SdioRegisterVmo(function, 3, std::move(vmo3), 8, zx_system_get_page_size() - 8,
+                                   vmo_rights));
   }
 
  protected:
@@ -613,7 +617,8 @@ TEST_F(SdioControllerDeviceTest, SmallHostTransferSize) {
   };
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(fbl::round_up<size_t, size_t>(sizeof(kTestData), PAGE_SIZE), 0, &vmo));
+  ASSERT_OK(zx::vmo::create(
+      fbl::round_up<size_t, size_t>(sizeof(kTestData), zx_system_get_page_size()), 0, &vmo));
   ASSERT_OK(vmo.write(kTestData, 0, sizeof(kTestData)));
 
   uint8_t buffer[sizeof(kTestData)];

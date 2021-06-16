@@ -127,8 +127,8 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
 
       if (length > 0) {
         OperationContext* const ctx = (*out_op)->private_storage();
-        const size_t vmo_size =
-            fbl::round_up<size_t, size_t>(length * FakeSdmmcDevice::kBlockSize, PAGE_SIZE);
+        const size_t vmo_size = fbl::round_up<size_t, size_t>(length * FakeSdmmcDevice::kBlockSize,
+                                                              zx_system_get_page_size());
         ASSERT_OK(ctx->mapper.CreateAndMap(vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
                                            &ctx->vmo));
         ctx->completed = false;

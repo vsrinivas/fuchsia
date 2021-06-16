@@ -276,7 +276,8 @@ zx_status_t BlockDevice::DoIo(void* buf, size_t buf_len, zx_off_t off, bool writ
     return ZX_ERR_INVALID_ARGS;
   }
   if (!io_vmo_) {
-    if (zx::vmo::create(std::max(max_xfer, static_cast<size_t>(PAGE_SIZE)), 0, &io_vmo_) != ZX_OK) {
+    if (zx::vmo::create(std::max(max_xfer, static_cast<size_t>(zx_system_get_page_size())), 0,
+                        &io_vmo_) != ZX_OK) {
       return ZX_ERR_INTERNAL;
     }
   }

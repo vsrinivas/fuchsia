@@ -722,7 +722,7 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_bad_vmo) {
 
   // Create a vmo of one block.
   //
-  // The underlying VMO may be rounded up to the nearest PAGE_SIZE.
+  // The underlying VMO may be rounded up to the nearest zx_system_get_page_size().
   test_vmo_object_t obj;
   obj.vmo_size = kBlockSize;
   ASSERT_EQ(zx::vmo::create(obj.vmo_size, 0, &obj.vmo), ZX_OK, "Failed to create vmo");
@@ -740,7 +740,8 @@ TEST(BlkdevTests, blkdev_test_fifo_bad_client_bad_vmo) {
   // Send a request to write to write multiple blocks -- enough that
   // the request is larger than the VMO.
   const uint64_t length =
-      1 + (fbl::round_up(obj.vmo_size, static_cast<uint64_t>(PAGE_SIZE)) / kBlockSize);
+      1 +
+      (fbl::round_up(obj.vmo_size, static_cast<uint64_t>(zx_system_get_page_size())) / kBlockSize);
   block_fifo_request_t request;
   request.group = group;
   request.vmoid = static_cast<vmoid_t>(obj.vmoid.id);

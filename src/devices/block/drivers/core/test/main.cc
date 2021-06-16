@@ -80,15 +80,15 @@ TEST(ManagerTest, CloseVMO) {
 }
 
 zx_status_t FillVMO(zx::unowned_vmo vmo, size_t size) {
-  uint8_t buf[PAGE_SIZE];
-  memset(buf, 0x44, PAGE_SIZE);
+  std::vector<uint8_t> buf(zx_system_get_page_size());
+  memset(buf.data(), 0x44, zx_system_get_page_size());
   zx_status_t status;
-  for (size_t i = 0; i < size; i += PAGE_SIZE) {
+  for (size_t i = 0; i < size; i += zx_system_get_page_size()) {
     size_t remain = size - i;
-    if (remain > PAGE_SIZE) {
-      remain = PAGE_SIZE;
+    if (remain > zx_system_get_page_size()) {
+      remain = zx_system_get_page_size();
     }
-    if ((status = vmo->write(buf, i, remain)) != ZX_OK) {
+    if ((status = vmo->write(buf.data(), i, remain)) != ZX_OK) {
       return status;
     }
   }

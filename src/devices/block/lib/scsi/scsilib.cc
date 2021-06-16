@@ -143,7 +143,8 @@ void Disk::BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_c
   zx_vaddr_t mapped_addr = reinterpret_cast<zx_vaddr_t>(nullptr);
   void* data = nullptr;  // Quiet compiler.
   zx_status_t status;
-  if ((length > 0) && ((length % PAGE_SIZE) == 0) && ((vmo_offset % PAGE_SIZE) == 0)) {
+  if ((length > 0) && ((length % zx_system_get_page_size()) == 0) &&
+      ((vmo_offset % zx_system_get_page_size()) == 0)) {
     status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, op->rw.vmo,
                          vmo_offset, length, &mapped_addr);
     if (status != ZX_OK) {

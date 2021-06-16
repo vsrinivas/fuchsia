@@ -249,7 +249,7 @@ void UsbMassStorageDevice::DdkInit(ddk::InitTxn txn) {
     txn.Reply(status);
     return;
   }
-  status = usb_request_alloc(&data_req_, PAGE_SIZE, bulk_in_addr, usb_request_size);
+  status = usb_request_alloc(&data_req_, zx_system_get_page_size(), bulk_in_addr, usb_request_size);
   if (status != ZX_OK) {
     txn.Reply(status);
     return;
