@@ -172,7 +172,6 @@ service X {
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
-// TODO(fxbug.dev/77063): update this test
 TEST(ConverterTests, AttributesSingletonsUnofficial) {
   std::string old_version = R"FIDL(
 [NoDoc2]
@@ -319,6 +318,8 @@ protocol P1 {
 /// For P2
 [ForDeprecatedCBindings]
 protocol P2 {
+  /// Compose P1
+[OnCompose] compose P1;
   /// For M2
 [Selector = "Bar"] M2();
 };
@@ -380,6 +381,8 @@ protocol P1 {
 /// For P2
 @for_deprecated_c_bindings
 protocol P2 {
+  /// Compose P1
+@on_compose compose P1;
   /// For M2
 @selector("Bar") M2();
 };
@@ -1060,6 +1063,37 @@ library example;
 
 protocol Foo {
   DoFoo(struct { a string; b int32; });
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, ProtocolCompose) {
+  std::string old_version = R"FIDL(
+library example;
+
+protocol Foo {
+  DoFoo(string a, int32 b);
+};
+
+protocol Bar {
+  /// Bar
+  compose Foo;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+protocol Foo {
+  DoFoo(struct { a string; b int32; });
+};
+
+protocol Bar {
+  /// Bar
+  compose Foo;
 };
 )FIDL";
 

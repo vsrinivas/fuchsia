@@ -34,7 +34,6 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   //   the moment it serves as a useful list of TreeVisitor methods that are
   //   intended to be left unmodified by the ConvertingTreeVisitor.
   // void OnBinaryOperatorConstant(std::unique_ptr<BinaryOperatorConstant> const&) override;
-  // void OnProtocolCompose(std::unique_ptr<raw::ProtocolCompose> const&) override;
   // void OnCompoundIdentifier(std::unique_ptr<CompoundIdentifier> const&) override;
   // void OnConstant(std::unique_ptr<Constant> const&) override;
   // void OnEnumMember(std::unique_ptr<raw::EnumMember> const&) override;
@@ -126,6 +125,7 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // Methods.
   void OnParameter(std::unique_ptr<raw::Parameter> const& element) override;
   void OnParameterListOld(std::unique_ptr<raw::ParameterListOld> const& element) override;
+  void OnProtocolCompose(std::unique_ptr<raw::ProtocolCompose> const& element) override;
   void OnProtocolMethod(std::unique_ptr<raw::ProtocolMethod> const& element) override;
 
   // Resource Property.

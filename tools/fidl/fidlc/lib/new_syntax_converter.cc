@@ -318,6 +318,14 @@ void ConvertingTreeVisitor::OnParameterListOld(
   }
 }
 
+void ConvertingTreeVisitor::OnProtocolCompose(
+    const std::unique_ptr<raw::ProtocolCompose>& element) {
+  if (raw::IsAttributeListDefined(element->attributes)) {
+    OnAttributeList(element->attributes);
+  }
+  TreeVisitor::OnProtocolCompose(element);
+}
+
 void ConvertingTreeVisitor::OnProtocolMethod(const std::unique_ptr<raw::ProtocolMethod>& element) {
   // This code should be functionally identical to that found in the original
   // TreeVisitor->OnProtocolMethod, except that it sets in_response_with_error_

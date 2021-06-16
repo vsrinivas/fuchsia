@@ -177,8 +177,7 @@ protocol Child {
 };
 
 )FIDL");
-  // TODO(fxbug.dev/77063, fxbug.dev/77064): convert and compile this test
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto child_protocol = library.LookupProtocol("Child");
   ASSERT_NOT_NULL(child_protocol);

@@ -1119,13 +1119,15 @@ void Parser::ParseProtocolMember(
         // since the compose clause started, the previous_end of its raw AST node will point to the
         // correct position.
         if (Peek().kind() != Token::Kind::kLeftParen) {
-          add(composed_protocols, [&] { return ParseProtocolCompose(std::move(attributes), scope); });
+          add(composed_protocols,
+              [&] { return ParseProtocolCompose(std::move(attributes), scope); });
           return;
         }
 
         // Looks like this is a `compose(...);` method after all, so coerce the composed token into
         // an Identifier source element.
-        method_name = std::make_unique<raw::Identifier>(raw::SourceElement(compose_token.value(), compose_token.value()));
+        method_name = std::make_unique<raw::Identifier>(
+            raw::SourceElement(compose_token.value(), compose_token.value()));
       } else {
         method_name = ParseIdentifier();
         if (!Ok()) {
