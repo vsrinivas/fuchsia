@@ -26,6 +26,8 @@ enum WalkDirection {
 // or a mock ACPI implementation (in tests).
 class Acpi {
  public:
+  static constexpr uint32_t kMaxNamespaceDepth = 100;
+
   virtual ~Acpi() = default;
   // A utility function which can be used to invoke the ACPICA library's
   // AcpiWalkNamespace function, but with an arbitrary Callable instead of needing
@@ -47,6 +49,15 @@ class Acpi {
   virtual acpi::status<acpi::UniquePtr<ACPI_OBJECT>> EvaluateObject(
       ACPI_HANDLE object, const char* pathname, std::optional<std::vector<ACPI_OBJECT>> args) = 0;
 
+  // Get the ACPI_DEVICE_INFO for the given object.
+  virtual acpi::status<acpi::UniquePtr<ACPI_DEVICE_INFO>> GetObjectInfo(ACPI_HANDLE obj) = 0;
+
+  // Get the parent of the given child.
+  virtual acpi::status<ACPI_HANDLE> GetParent(ACPI_HANDLE child) = 0;
+
+  // Get the handle retrieved by resolving the given pathname from |parent|.
+  virtual acpi::status<ACPI_HANDLE> GetHandle(ACPI_HANDLE parent, const char* pathname) = 0;
+
   acpi::status<uint8_t> CallBbn(ACPI_HANDLE obj);
   acpi::status<uint16_t> CallSeg(ACPI_HANDLE obj);
 };
@@ -65,6 +76,11 @@ class RealAcpi : public Acpi {
   acpi::status<acpi::UniquePtr<ACPI_OBJECT>> EvaluateObject(
       ACPI_HANDLE object, const char* pathname,
       std::optional<std::vector<ACPI_OBJECT>> args) override;
+
+  acpi::status<acpi::UniquePtr<ACPI_DEVICE_INFO>> GetObjectInfo(ACPI_HANDLE obj) override;
+
+  acpi::status<ACPI_HANDLE> GetParent(ACPI_HANDLE child) override;
+  acpi::status<ACPI_HANDLE> GetHandle(ACPI_HANDLE parent, const char* pathname) override;
 };
 }  // namespace acpi
 

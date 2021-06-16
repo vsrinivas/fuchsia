@@ -26,6 +26,7 @@
 #include "acpi-private.h"
 #include "acpi.h"
 #include "acpi/device.h"
+#include "acpi/manager.h"
 #include "acpi/status.h"
 #include "dev.h"
 #include "errors.h"
@@ -373,6 +374,7 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
 
   // Now walk the ACPI namespace looking for devices we understand, and publish
   // them.  For now, publish only the first PCI bus we encounter.
+  // TODO(fxbug.dev/78349): remove this when all drivers are removed from the x86 board driver.
   bool published_pci_bus = false;
   acpi_status = acpi->WalkNamespace(
       ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
@@ -438,6 +440,17 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
         }
         return acpi::ok();
       });
+
+  acpi::Manager manager(acpi, acpi_root);
+  auto result = manager.DiscoverDevices();
+  if (result.is_error()) {
+    zxlogf(INFO, "discover devices failed");
+  }
+  result = manager.ConfigureDiscoveredDevices();
+  if (result.is_error()) {
+    zxlogf(INFO, "configure failed");
+  }
+  result = manager.PublishDevices(platform_bus);
 
   if (acpi_status.is_error()) {
     return ZX_ERR_BAD_STATE;

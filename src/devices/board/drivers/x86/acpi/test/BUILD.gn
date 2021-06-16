@@ -1,0 +1,19 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+source_set("mock-acpi") {
+  testonly = true
+  sources = [
+    "device.cc",
+    "mock-acpi.cc",
+  ]
+  deps = [
+    "//src/devices/testing/fake_ddk",
+    "//third_party/acpica",
+    "//zircon/system/ulib/zxc",
+  ]
+}

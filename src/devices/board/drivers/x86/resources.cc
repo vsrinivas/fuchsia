@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "resources.h"
+#include "src/devices/board/drivers/x86/include/resources.h"
 
 bool resource_is_memory(ACPI_RESOURCE* res) {
   return res->Type == ACPI_RESOURCE_TYPE_MEMORY24 || res->Type == ACPI_RESOURCE_TYPE_MEMORY32 ||

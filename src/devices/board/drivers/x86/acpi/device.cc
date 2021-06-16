@@ -10,10 +10,9 @@
 
 #include <fbl/auto_lock.h>
 
-#include "acpi-private.h"
-#include "errors.h"
+#include "src/devices/board/drivers/x86/include/errors.h"
+#include "src/devices/board/drivers/x86/include/sysmem.h"
 #include "src/devices/lib/iommu/iommu.h"
-#include "sysmem.h"
 
 namespace acpi {
 ACPI_STATUS Device::AddResource(ACPI_RESOURCE* res) {

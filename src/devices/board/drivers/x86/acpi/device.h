@@ -11,7 +11,7 @@
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
-#include "resources.h"
+#include "src/devices/board/drivers/x86/include/resources.h"
 
 namespace acpi {
 

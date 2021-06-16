@@ -89,4 +89,36 @@ acpi::status<acpi::UniquePtr<ACPI_OBJECT>> RealAcpi::EvaluateObject(
   }
   return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(static_cast<ACPI_OBJECT*>(out.Pointer)));
 }
+
+acpi::status<acpi::UniquePtr<ACPI_DEVICE_INFO>> RealAcpi::GetObjectInfo(ACPI_HANDLE obj) {
+  ACPI_DEVICE_INFO* raw = nullptr;
+  ACPI_STATUS acpi_status = AcpiGetObjectInfo(obj, &raw);
+  UniquePtr<ACPI_DEVICE_INFO> ret{raw};
+
+  if (acpi_status == AE_OK) {
+    return acpi::ok(std::move(ret));
+  }
+
+  return acpi::error(acpi_status);
+}
+
+acpi::status<ACPI_HANDLE> RealAcpi::GetParent(ACPI_HANDLE child) {
+  ACPI_HANDLE out;
+  ACPI_STATUS status = AcpiGetParent(child, &out);
+  if (status != AE_OK) {
+    return acpi::error(status);
+  }
+  return acpi::ok(out);
+}
+
+acpi::status<ACPI_HANDLE> RealAcpi::GetHandle(ACPI_HANDLE parent, const char* pathname) {
+  ACPI_HANDLE out;
+  ACPI_STATUS status = AcpiGetHandle(parent, const_cast<char*>(pathname), &out);
+  if (status != AE_OK) {
+    return acpi::error(status);
+  }
+
+  return acpi::ok(out);
+}
+
 }  // namespace acpi
