@@ -183,8 +183,7 @@ template("cmc_validate_references") {
 include_paths = [
   "--includeroot",
   rebase_path("//", root_build_dir),
-  "--includepath",
 
-  # TODO(shayba): agree on a base include path for Fuchsia tree
-  rebase_path("//", root_build_dir),
+  # TODO(fxbug.dev/78686): set --includepath to meaningful values.
+  #"--includepath",
 ]
