@@ -33,6 +33,7 @@ rustc_library("step_lib") {
 rustc_binary("bin") {
   edition = "2018"
   source_root = "main.rs"
+  output_name = "step"
   testonly = true
 
   deps = [
