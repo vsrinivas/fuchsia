@@ -474,6 +474,14 @@ config("no_frame_pointers") {
   # force it for non-release.
 }
 
+config("suppress_iterator_warnings") {
+  defines = [ "_LIBCPP_DISABLE_DEPRECATION_WARNINGS" ]
+  visibility = [
+    "//third_party/flatbuffers/*",
+    "//third_party/grpc/*",
+  ]
+}
+
 config("default_warnings") {
   cflags = [
     "-Wall",
