@@ -167,7 +167,6 @@ fn parse_duration(value: &str) -> Result<Duration, String> {
         value.parse().map_err(|e| format!("value '{}' is not a number: {}", value, e))?,
     ))
 }
-
 #[cfg(test)]
 mod test {
     use super::*;

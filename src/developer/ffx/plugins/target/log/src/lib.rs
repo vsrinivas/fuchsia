@@ -8,21 +8,15 @@ use {
     blocking::Unblock,
     chrono::{DateTime, Local, TimeZone, Utc},
     diagnostics_data::{LogsData, Severity, Timestamp},
-    errors::{ffx_bail, ffx_error},
+    errors::ffx_bail,
     ffx_config::{get, get_sdk},
     ffx_core::ffx_plugin,
     ffx_log_args::{DumpCommand, LogCommand, LogSubCommand, TimeFormat, WatchCommand},
     ffx_log_data::{EventType, LogData, LogEntry},
-    ffx_log_utils::{
-        run_logging_pipeline, symbolizer::is_current_sdk_root_registered, OrderedBatchPipeline,
-    },
-    fidl::endpoints::{create_proxy, ServerEnd},
-    fidl_fuchsia_developer_bridge::{
-        DaemonDiagnosticsStreamParameters, DaemonProxy, DiagnosticsStreamError, StreamMode,
-    },
-    fidl_fuchsia_developer_remotecontrol::{
-        ArchiveIteratorError, ArchiveIteratorMarker, RemoteControlProxy,
-    },
+    ffx_log_frontend::{exec_log_cmd, LogCommandParameters, LogFormatter},
+    ffx_log_utils::symbolizer::is_current_sdk_root_registered,
+    fidl_fuchsia_developer_bridge::{DaemonProxy, StreamMode},
+    fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, RemoteControlProxy},
     fidl_fuchsia_diagnostics::ComponentSelector,
     fuchsia_async::futures::{AsyncWrite, AsyncWriteExt},
     fuchsia_async::Timer,
@@ -36,17 +30,10 @@ use {
 };
 
 type ArchiveIteratorResult = Result<LogEntry, ArchiveIteratorError>;
-const PIPELINE_SIZE: usize = 20;
 const COLOR_CONFIG_NAME: &str = "target_log.color";
 const SYMBOLIZE_ENABLED_CONFIG: &str = "proactive_log.symbolize.enabled";
-const NO_STREAM_ERROR: &str = "\
-The proactive logger isn't connected to this target.
-
-Verify that the target is up with `ffx target list` and retry \
-in a few seconds.";
 const NANOS_IN_SECOND: i64 = 1_000_000_000;
 const TIMESTAMP_FORMAT: &str = "%Y-%m-%d %H:%M:%S.%3f";
-const RETRY_TIMEOUT_MILLIS: u64 = 1000;
 
 fn get_timestamp() -> Result<Timestamp> {
     Ok(Timestamp::from(
@@ -168,12 +155,6 @@ impl From<&LogCommand> for LogFilterCriteria {
             cmd.exclude.clone(),
         )
     }
-}
-
-#[async_trait(?Send)]
-pub trait LogFormatter {
-    async fn push_log(&mut self, log_entry: ArchiveIteratorResult) -> Result<()>;
-    fn set_boot_timestamp(&mut self, boot_ts_nanos: i64);
 }
 
 struct DefaultLogFormatter<'a> {
@@ -418,24 +399,6 @@ pub async fn log(
     log_cmd(daemon_proxy, rcs_proxy, &mut formatter, cmd).await
 }
 
-async fn setup_daemon_stream(
-    daemon_proxy: &DaemonProxy,
-    target_str: &str,
-    server: ServerEnd<ArchiveIteratorMarker>,
-    stream_mode: StreamMode,
-    from_bound: Option<Duration>,
-) -> Result<Result<(), DiagnosticsStreamError>> {
-    let params = DaemonDiagnosticsStreamParameters {
-        stream_mode: Some(stream_mode),
-        min_target_timestamp_nanos: from_bound.map(|f| f.as_nanos() as u64),
-        ..DaemonDiagnosticsStreamParameters::EMPTY
-    };
-    daemon_proxy
-        .stream_diagnostics(Some(&target_str), params, server)
-        .await
-        .context("connecting to daemon")
-}
-
 pub async fn log_cmd(
     daemon_proxy: DaemonProxy,
     rcs: RemoteControlProxy,
@@ -489,104 +452,18 @@ pub async fn log_cmd(
         }
         _ => (None, None),
     };
-
-    let (mut proxy, server) =
-        create_proxy::<ArchiveIteratorMarker>().context("failed to create endpoints")?;
-    setup_daemon_stream(&daemon_proxy, &nodename, server, stream_mode, from_bound).await?.map_err(
-        |e| match e {
-            DiagnosticsStreamError::NoStreamForTarget => {
-                anyhow!(ffx_error!("{}", NO_STREAM_ERROR))
-            }
-            _ => anyhow!("failure setting up diagnostics stream: {:?}", e),
+    exec_log_cmd(
+        LogCommandParameters {
+            target_identifier: nodename,
+            session_timestamp: target_boot_time_nanos,
+            target_from_bound: from_bound,
+            target_to_bound: to_bound,
+            stream_mode,
         },
-    )?;
-
-    let mut requests = OrderedBatchPipeline::new(PIPELINE_SIZE);
-    'request_loop: loop {
-        let (get_next_results, terminal_err) = run_logging_pipeline(&mut requests, &proxy).await;
-
-        for result in get_next_results.into_iter() {
-            if let Err(e) = result {
-                log::warn!("got an error from the daemon {:?}", e);
-                log_formatter.push_log(Err(e)).await?;
-                continue;
-            }
-
-            let entries = result.unwrap().into_iter().filter_map(|e| e.data);
-
-            for entry in entries {
-                let parsed: LogEntry = serde_json::from_str(&entry)?;
-
-                match (&parsed.data, to_bound) {
-                    (LogData::TargetLog(log_data), Some(t)) => {
-                        let ts: i64 = log_data.metadata.timestamp.into();
-                        if ts as u128 > t.as_nanos() {
-                            return Ok(());
-                        }
-                    }
-                    (LogData::FfxEvent(EventType::TargetDisconnected), _) => {
-                        log_formatter.push_log(Ok(parsed)).await?;
-                        loop {
-                            let (new_proxy, server) = create_proxy::<ArchiveIteratorMarker>()
-                                .context("failed to create endpoints")?;
-                            match setup_daemon_stream(
-                                &daemon_proxy,
-                                &nodename,
-                                server,
-                                stream_mode,
-                                from_bound,
-                            )
-                            .await?
-                            {
-                                Ok(()) => {
-                                    proxy = new_proxy;
-                                    continue 'request_loop;
-                                }
-                                Err(e) => {
-                                    match e {
-                                        DiagnosticsStreamError::NoMatchingTargets => {
-                                            println!(
-                                                "{}",
-                                                format_ffx_event(
-                                                    &format!("{} isn't up. Retrying...", &nodename),
-                                                    None
-                                                )
-                                            );
-                                        }
-                                        DiagnosticsStreamError::NoStreamForTarget => {
-                                            println!("{}" , format_ffx_event(&format!("{} is up, but the logger hasn't started yet. Retrying...", &nodename), None));
-                                        }
-                                        _ => {
-                                            println!(
-                                                "{}",
-                                                format_ffx_event(
-                                                    &format!(
-                                                        "Retry failed ({:?}). Trying again...",
-                                                        e
-                                                    ),
-                                                    None
-                                                )
-                                            );
-                                        }
-                                    }
-                                    Timer::new(Duration::from_millis(RETRY_TIMEOUT_MILLIS)).await;
-                                    continue;
-                                }
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-
-                log_formatter.push_log(Ok(parsed)).await?;
-            }
-        }
-
-        if let Some(err) = terminal_err {
-            log::info!("log command got a terminal error: {}", err);
-            return Ok(());
-        }
-    }
+        daemon_proxy,
+        log_formatter,
+    )
+    .await
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -599,7 +476,7 @@ mod test {
         diagnostics_data::Timestamp,
         errors::ResultExt as _,
         ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
-        fidl_fuchsia_developer_bridge::DaemonRequest,
+        fidl_fuchsia_developer_bridge::{DaemonDiagnosticsStreamParameters, DaemonRequest},
         fidl_fuchsia_developer_remotecontrol::{
             ArchiveIteratorError, IdentifyHostResponse, RemoteControlRequest,
         },

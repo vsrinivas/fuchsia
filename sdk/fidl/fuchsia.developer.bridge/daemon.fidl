@@ -123,6 +123,10 @@ protocol Daemon {
     /// 3) The parameters surface is currently different (SNAPSHOT_RECENT_THEN_SUBSCRIBE has no meaning
     ///    in the diagnostics bridge) and have different evolution paths - for example, the daemon may
     ///    eventually support multi-target log streaming.
+    ///
+    /// If the target field is a nodename or log session identifier (e.g. "ffx_daemon"),
+    /// then cached logs will be returned for that target even if the target is
+    /// currently offline.
     StreamDiagnostics(
         string:fuchsia.device.DEVICE_NAME_MAX? target,
         DaemonDiagnosticsStreamParameters parameters,

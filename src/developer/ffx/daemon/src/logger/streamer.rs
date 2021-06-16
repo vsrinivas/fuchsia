@@ -19,14 +19,10 @@ use {
     futures_lite::io::{BufReader, Lines},
     futures_lite::stream::{Stream, StreamExt},
     futures_lite::{AsyncBufReadExt, AsyncWriteExt},
-    std::convert::TryInto,
-    std::fmt,
-    std::io::ErrorKind,
-    std::iter::Iterator,
-    std::path::PathBuf,
-    std::pin::Pin,
-    std::sync::Arc,
-    std::task::Poll,
+    std::{
+        collections::HashMap, convert::TryInto, fmt, io::ErrorKind, iter::Iterator, path::PathBuf,
+        pin::Pin, sync::Arc, task::Poll, time::Duration,
+    },
 };
 
 const CACHE_DIRECTORY_CONFIG: &str = "proactive_log.cache_directory";
@@ -183,20 +179,54 @@ impl fmt::Display for &LogFile {
 #[derive(Clone, Debug)]
 pub struct TargetLogDirectory {
     root: PathBuf,
+    target_identifier: String,
 }
 
 impl TargetLogDirectory {
-    async fn new(nodename: String) -> Result<Self> {
+    pub async fn new(target_identifier: String) -> Result<Self> {
         let mut root: PathBuf = get(CACHE_DIRECTORY_CONFIG).await?;
-        root.push(nodename);
-        Ok(Self { root })
+        root.push(target_identifier.clone());
+        Ok(Self { target_identifier, root })
     }
 
     #[cfg(test)]
-    fn new_with_root(root_dir: PathBuf, nodename: String) -> Self {
+    fn new_with_root(root_dir: PathBuf, target_identifier: String) -> Self {
         let mut root = root_dir.clone();
-        root.push(nodename);
-        Self { root }
+        root.push(target_identifier.clone());
+        Self { root, target_identifier }
+    }
+
+    pub fn target_identifier(&self) -> String {
+        self.target_identifier.clone()
+    }
+
+    pub fn exists(&self) -> bool {
+        self.root.exists()
+    }
+
+    pub async fn all_targets() -> Result<Vec<Self>> {
+        let root: PathBuf = get(CACHE_DIRECTORY_CONFIG).await?;
+        let mut iterator = read_dir(root).await?;
+        let mut result = vec![];
+        while let Some(entry) = iterator.try_next().await? {
+            result.push(Self {
+                root: entry.path(),
+                target_identifier: entry.file_name().to_string_lossy().to_string(),
+            });
+        }
+
+        Ok(result)
+    }
+
+    pub async fn list_sessions(&self) -> Result<Vec<TargetSessionDirectory>> {
+        Ok(sort_directory(&self.root)
+            .await?
+            .into_iter()
+            .filter_map(|p| {
+                p.file_name().map(|n| n.to_str().map(|s| s.parse().ok())).flatten().flatten()
+            })
+            .map(|t| self.with_session(t))
+            .collect())
     }
 
     fn with_session(&self, timestamp_millis: usize) -> TargetSessionDirectory {
@@ -259,9 +289,10 @@ impl TargetLogDirectory {
 }
 
 #[derive(Clone, Debug)]
-struct TargetSessionDirectory {
+pub struct TargetSessionDirectory {
     target_root: TargetLogDirectory,
     full_path: PathBuf,
+    timestamp_millis: usize,
 }
 
 impl TargetSessionDirectory {
@@ -269,7 +300,7 @@ impl TargetSessionDirectory {
         let mut pb = target_root.to_path_buf();
         pb.push(timestamp_millis.to_string());
 
-        Self { target_root, full_path: pb }
+        Self { target_root, full_path: pb, timestamp_millis }
     }
 
     async fn sort_entries(&self) -> Result<Vec<LogFile>> {
@@ -294,6 +325,10 @@ impl TargetSessionDirectory {
 
     fn to_path_buf(&self) -> PathBuf {
         self.full_path.clone()
+    }
+
+    pub fn timestamp_nanos(&self) -> i64 {
+        Duration::from_millis(self.timestamp_millis as u64).as_nanos() as i64
     }
 }
 
@@ -581,12 +616,51 @@ impl Default for DiagnosticsStreamer<'_> {
     }
 }
 
+impl DiagnosticsStreamer<'_> {
+    pub async fn session_timestamp_nanos(&self) -> Option<i64> {
+        let inner = self.inner.read().await;
+        inner.output_dir.as_ref().map(|d| d.timestamp_nanos())
+    }
+
+    pub async fn list_sessions(
+        target_identifier: Option<String>,
+    ) -> Result<HashMap<String, Vec<DiagnosticsStreamer<'static>>>> {
+        let targets = match target_identifier {
+            Some(s) => {
+                let target_dir = TargetLogDirectory::new(s.to_string()).await?;
+                if !target_dir.exists() {
+                    return Ok(HashMap::default());
+                }
+                vec![target_dir]
+            }
+            None => TargetLogDirectory::all_targets().await?,
+        };
+
+        let mut result = HashMap::new();
+        for target_dir in targets.iter() {
+            let sessions = target_dir.list_sessions().await?;
+            let mut target_results = vec![];
+            for session in sessions.iter() {
+                let streamer = DiagnosticsStreamer::default();
+                streamer
+                    .setup_stream(target_dir.target_identifier(), session.timestamp_nanos())
+                    .await?;
+                target_results.push(streamer)
+            }
+
+            result.insert(target_dir.target_identifier(), target_results);
+        }
+
+        Ok(result)
+    }
+}
+
 #[async_trait(?Send)]
 pub trait GenericDiagnosticsStreamer {
     async fn setup_stream(
         &self,
         target_nodename: String,
-        target_boot_time_nanos: i64,
+        session_timestamp_nanos: i64,
     ) -> Result<()>;
 
     async fn append_logs(&self, entries: Vec<LogEntry>) -> Result<()>;
@@ -609,11 +683,11 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
     async fn setup_stream(
         &self,
         target_nodename: String,
-        target_boot_time_nanos: i64,
+        session_timestamp_nanos: i64,
     ) -> Result<()> {
         self.setup_stream_with_config(
             TargetLogDirectory::new(target_nodename).await?,
-            target_boot_time_nanos,
+            session_timestamp_nanos,
             get(MAX_LOG_SIZE_CONFIG).await?,
             get(MAX_SESSION_SIZE_CONFIG).await?,
             get(MAX_SESSIONS_CONFIG).await?,
@@ -782,13 +856,13 @@ impl DiagnosticsStreamer<'_> {
     pub(crate) async fn setup_stream_with_config(
         &self,
         target_root_dir: TargetLogDirectory,
-        target_boot_time_nanos: i64,
+        session_timestamp_nanos: i64,
         max_file_size_bytes: usize,
         max_session_size_bytes: usize,
         max_num_sessions: usize,
     ) -> Result<()> {
         // The ticks=>time conversion isn't accurate enough to use units smaller than milliseconds here.
-        let t = target_boot_time_nanos / 1_000_000;
+        let t = session_timestamp_nanos / 1_000_000;
 
         let session_dir = target_root_dir.with_session(t as usize);
 

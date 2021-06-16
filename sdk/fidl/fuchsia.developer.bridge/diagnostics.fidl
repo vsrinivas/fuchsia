@@ -26,6 +26,9 @@ enum DiagnosticsStreamError : uint32 {
     // Indicates that we have not successfully setup a logging stream
     // for the specified target.
     NO_STREAM_FOR_TARGET = 5;
+    // Indicates there are no log streams for the provided target specifier,
+    // either in the target cache or on disk.
+    NO_MATCHING_OFFLINE_TARGETS = 6;
 };
 
 table DaemonDiagnosticsStreamParameters {

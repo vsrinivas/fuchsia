@@ -6,7 +6,7 @@ use {
     crate::constants::{get_socket, CURRENT_EXE_HASH},
     crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
     crate::fastboot::{spawn_fastboot_discovery, Fastboot},
-    crate::logger::streamer::GenericDiagnosticsStreamer,
+    crate::logger::streamer::{DiagnosticsStreamer, GenericDiagnosticsStreamer},
     crate::manual_targets,
     crate::target::{
         target_addr_info_to_socketaddr, ConnectionState, RcsConnection, Target, TargetAddrEntry,
@@ -25,7 +25,7 @@ use {
     fidl::endpoints::{ClientEnd, DiscoverableService, Proxy, RequestStream, ServiceMarker},
     fidl_fuchsia_developer_bridge::{
         self as bridge, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
-        DiagnosticsStreamError, RepositoriesMarker,
+        DiagnosticsStreamError, RepositoriesMarker, StreamMode,
     },
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, RemoteControlMarker,
@@ -39,6 +39,7 @@ use {
     std::cell::Cell,
     std::net::SocketAddr,
     std::rc::{Rc, Weak},
+    std::sync::Arc,
     std::time::{Duration, Instant},
 };
 
@@ -732,33 +733,88 @@ impl Daemon {
                     }
                 }
             }
-            DaemonRequest::StreamDiagnostics { target, parameters, iterator, responder } => {
+            DaemonRequest::StreamDiagnostics {
+                target: target_str,
+                parameters,
+                iterator,
+                responder,
+            } => {
+                if parameters.stream_mode.is_none() {
+                    log::info!("StreamDiagnostics failed: stream mode is required");
+                    return responder
+                        .send(&mut Err(DiagnosticsStreamError::MissingParameter))
+                        .context("sending missing parameter response");
+                }
+
+                let mut err = None;
                 let target = match self
-                    .get_target(target.clone())
+                    .get_target(target_str.clone())
                     .on_timeout(Duration::from_secs(3), || Err(DaemonError::Timeout))
                     .await
                 {
-                    Ok(t) => t,
+                    Ok(t) => Some(t),
                     Err(DaemonError::Timeout) => {
-                        responder
-                            .send(&mut Err(DiagnosticsStreamError::NoMatchingTargets))
-                            .context("sending error response")?;
-                        return Ok(());
+                        err.replace(DiagnosticsStreamError::NoMatchingTargets);
+                        None
                     }
                     Err(e) => {
                         log::warn!(
                             "got error fetching target with filter '{}': {:?}",
-                            target.as_ref().unwrap_or(&String::default()),
+                            target_str.as_ref().unwrap_or(&String::default()),
                             e
                         );
-                        responder
-                            .send(&mut Err(DiagnosticsStreamError::TargetMatchFailed))
-                            .context("sending error response")?;
-                        return Ok(());
+                        err.replace(DiagnosticsStreamError::TargetMatchFailed);
+                        None
                     }
                 };
 
-                let stream = target.stream_info();
+                let stream = match target {
+                    Some(t) => t.stream_info(),
+                    None => {
+                        if target.is_none()
+                            && target_str.is_some()
+                            && (parameters.stream_mode.unwrap() == StreamMode::SnapshotAll)
+                        {
+                            let mut streams =
+                                DiagnosticsStreamer::list_sessions(target_str.clone()).await?;
+                            if streams.is_empty() {
+                                responder.send(&mut Err(
+                                    DiagnosticsStreamError::NoMatchingOfflineTargets,
+                                ))?;
+                                return Ok(());
+                            }
+
+                            let streams = streams
+                                .remove(&target_str.unwrap())
+                                .context("getting stream by target name. should be infallible")?;
+
+                            if streams.is_empty() {
+                                responder.send(&mut Err(
+                                    DiagnosticsStreamError::NoMatchingOfflineTargets,
+                                ))?;
+                                return Ok(());
+                            }
+                            let mut sorted = vec![];
+                            for stream in streams.into_iter() {
+                                sorted.push((stream.session_timestamp_nanos().await, stream));
+                            }
+
+                            let mut sorted = sorted
+                                .into_iter()
+                                .filter_map(
+                                    |t| if let Some(ts) = t.0 { Some((ts, t.1)) } else { None },
+                                )
+                                .collect::<Vec<_>>();
+
+                            sorted.sort_by_key(|t| t.0);
+                            Arc::new(sorted.into_iter().map(|t| t.1).last().unwrap())
+                        } else {
+                            responder.send(&mut Err(err.unwrap()))?;
+                            return Ok(());
+                        }
+                    }
+                };
+
                 match stream
                     .wait_for_setup()
                     .map(|_| Ok(()))
@@ -773,13 +829,6 @@ impl Daemon {
                         // stream modes that don't involve subscription.
                         return responder.send(&mut Err(e)).context("sending error response");
                     }
-                }
-
-                if parameters.stream_mode.is_none() {
-                    log::info!("StreamDiagnostics failed: stream mode is required");
-                    return responder
-                        .send(&mut Err(DiagnosticsStreamError::MissingParameter))
-                        .context("sending missing parameter response");
                 }
 
                 let mut log_iterator = stream
