@@ -765,6 +765,8 @@ group("tool_paths.metadata") {
 group("tool_paths.llvm-tools") {
   visibility = [ ":tool_paths" ]
   _llvm_tools = [
+    "clang",
+    "clang++",
     "clang-doc",
     "clang-format",
     "clang-include-fixer",
@@ -777,6 +779,7 @@ group("tool_paths.llvm-tools") {
     "llvm-objcopy",
     "llvm-profdata",
     "llvm-readelf",
+    "llvm-size",
     "llvm-strip",
     "llvm-symbolizer",
     "llvm-xray",
