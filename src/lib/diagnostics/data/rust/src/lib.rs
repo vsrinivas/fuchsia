@@ -346,27 +346,27 @@ pub struct LogsMetadata {
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum Severity {
     /// Trace records include detailed information about program execution.
-    #[serde(rename = "TRACE")]
+    #[serde(rename = "TRACE", alias = "Trace")]
     Trace,
 
     /// Debug records include development-facing information about program execution.
-    #[serde(rename = "DEBUG")]
+    #[serde(rename = "DEBUG", alias = "Debug")]
     Debug,
 
     /// Info records include general information about program execution. (default)
-    #[serde(rename = "INFO")]
+    #[serde(rename = "INFO", alias = "Info")]
     Info,
 
     /// Warning records include information about potentially problematic operations.
-    #[serde(rename = "WARN")]
+    #[serde(rename = "WARN", alias = "Warn")]
     Warn,
 
     /// Error records include information about failed operations.
-    #[serde(rename = "ERROR")]
+    #[serde(rename = "ERROR", alias = "Error")]
     Error,
 
     /// Fatal records convey information about operations which cause a program's termination.
-    #[serde(rename = "FATAL")]
+    #[serde(rename = "FATAL", alias = "Fatal")]
     Fatal,
 }
 
