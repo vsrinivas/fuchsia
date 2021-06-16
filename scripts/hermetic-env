@@ -53,7 +53,7 @@ export FUCHSIA_DIR="${fuchsia_dir}"
 declare -r prebuilt_sh="${fuchsia_dir}/tools/devshell/lib/prebuilt.sh"
 source "${prebuilt_sh}" || exit $?
 
-if [[ "${PATH#${PREBUILT_ALL_PATHS}" == "${PATH}" ]]; then
+if [[ "${PATH#${PREBUILT_ALL_PATHS}}" == "${PATH}" ]]; then
   # Prebuilts have not been added to the path
   if [[ x"${FUCHSIA_HERMETIC_TOOLS}" == xy ]]; then
     readonly newpath="${PREBUILT_ALL_PATHS}:${FUCHSIA_DIR}/tools/system"
