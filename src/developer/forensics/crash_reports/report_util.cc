@@ -112,14 +112,6 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
     annotations->Set(kIsFatalKey, report.is_fatal());
   }
 
-  // Generic-specific annotations.
-  if (report.has_specific_report() && report.specific_report().is_generic()) {
-    const auto& generic_report = report.specific_report().generic();
-    if (generic_report.has_crash_signature()) {
-      annotations->Set(kCrashSignatureKey, generic_report.crash_signature());
-    }
-  }
-
   // Dart-specific annotations.
   if (report.has_specific_report() && report.specific_report().is_dart()) {
     annotations->Set(kDartTypeKey, kDartTypeValue);

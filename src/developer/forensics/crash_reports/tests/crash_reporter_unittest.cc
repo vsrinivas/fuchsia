@@ -52,7 +52,6 @@ namespace {
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::CrashReport;
-using fuchsia::feedback::GenericCrashReport;
 using fuchsia::feedback::NativeCrashReport;
 using fuchsia::feedback::RuntimeCrashReport;
 using fuchsia::feedback::SpecificCrashReport;
@@ -305,24 +304,6 @@ class CrashReporterTest : public UnitTestFixture {
     attachments.emplace_back(BuildAttachment(kSingleAttachmentKey, attachment));
     return FileOneCrashReport(/*annotations=*/{},
                               /*attachments=*/std::move(attachments));
-  }
-
-  // Files one generic crash report.
-  ::fit::result<void, zx_status_t> FileOneGenericCrashReport(
-      const std::optional<std::string>& crash_signature) {
-    GenericCrashReport generic_report;
-    if (crash_signature.has_value()) {
-      generic_report.set_crash_signature(crash_signature.value());
-    }
-
-    SpecificCrashReport specific_report;
-    specific_report.set_generic(std::move(generic_report));
-
-    CrashReport report;
-    report.set_program_name("crashing_program_generic");
-    report.set_specific_report(std::move(specific_report));
-
-    return FileOneCrashReport(std::move(report));
   }
 
   // Files one native crash report.
@@ -627,40 +608,6 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithProgramUptime) {
   ASSERT_TRUE(FileOneCrashReport(std::move(report)).is_ok());
   CheckAnnotationsOnServer({
       {"ptime", std::to_string(uptime.to_msecs())},
-  });
-  CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
-}
-
-TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReport) {
-  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(
-      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
-          .current = kDefaultChannel,
-          .target = std::nullopt,
-      }));
-  SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
-
-  ASSERT_TRUE(FileOneGenericCrashReport(std::nullopt).is_ok());
-  CheckAnnotationsOnServer(kDefaultAnnotations);
-  CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
-}
-
-TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReportWithSignature) {
-  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(
-      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
-          .current = kDefaultChannel,
-          .target = std::nullopt,
-      }));
-  SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
-
-  ASSERT_TRUE(FileOneGenericCrashReport("some-signature").is_ok());
-  CheckAnnotationsOnServer({
-      {"signature", "some-signature"},
   });
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
