@@ -5,23 +5,42 @@
 import("//build/components.gni")
 import("//build/testing/environments.gni")
 
+# This is copied from "//zircon/kernel/lib/instrumentation/asan" to
+# detect if we are running an ASAN build.
+#
+# Note that the `is_asan` check below comes first so that we do not get
+# an error that this variable is unused.
+_asan_config = [ "//build/config/sanitizers:asan" ]
+_toolchain_configs = toolchain_variant.configs
+is_asan = _toolchain_configs + _asan_config - _asan_config != _toolchain_configs
+
 # This directory contains tests for diagnostic data presence in "core".
+#
+# Diagnostics data presence tests touch multiple components on the system
+# and are non-hermetic.
+#
+# We disable these tests in debug, coverage, and ASAN
+# builds. Coverage/ASAN will not provide meaningful results for these
+# tests, since the tests themselves are only configuration, and the reduced
+# performance of such builds makes these tests flaky.
 group("tests") {
   testonly = true
-  deps = [
-    ":appmgr-cpu-stats-tests",
-    ":archivist-feedback-health-tests",
-    ":archivist-pipeline-metrics-tests",
+  if (!is_asan && !is_debug && !is_coverage) {
+    deps = [
+      ":appmgr-cpu-stats-tests",
+      ":archivist-feedback-health-tests",
+      ":archivist-pipeline-metrics-tests",
 
-    # TODO(fxbug.dev/75733): Reenable
-    # ":component-manager-cpu-stats-tests",
-    ":component-manager-status-tests",
+      # TODO(fxbug.dev/75733): Reenable
+      # ":component-manager-cpu-stats-tests",
+      ":component-manager-status-tests",
 
-    # TODO(fxbug.dev/75733): Reenable
-    # ":fshost-stats-tests",
-    ":legacy-metrics-tests",
-    ":log-stats-inspect-tests",
-  ]
+      # TODO(fxbug.dev/75733): Reenable
+      # ":fshost-stats-tests",
+      ":legacy-metrics-tests",
+      ":log-stats-inspect-tests",
+    ]
+  }
 }
 
 fuchsia_unittest_package("appmgr-cpu-stats-tests") {
