@@ -75,6 +75,7 @@ async fn test_logs_lifecycle() {
         .unwrap();
 
     let mut child_ref = ChildRef { name: "log_and_exit".to_string(), collection: None };
+    reader.retry_if_empty(true);
     for i in 1..100 {
         // launch our child and wait for it to exit before asserting on its logs
         let (_client_end, server_end) =
@@ -94,8 +95,8 @@ async fn test_logs_lifecycle() {
 
         check_message(&moniker, subscription.next().await.unwrap());
 
+        reader.with_minimum_schema_count(i);
         let all_messages = reader.snapshot::<Logs>().await.unwrap();
-        assert_eq!(all_messages.len(), i, "must have 1 message per launch");
 
         for message in all_messages {
             check_message(&moniker, message);
