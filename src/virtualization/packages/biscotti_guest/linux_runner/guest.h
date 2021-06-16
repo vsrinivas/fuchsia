@@ -70,6 +70,7 @@ class Guest : public vm_tools::StartupListener::Service,
   void ConfigureNetwork();
   void StartTermina();
   void LaunchContainerShell();
+  void AddMagmaDeviceToContainer();
   void CreateContainer();
   void StartContainer();
   void SetupUser();

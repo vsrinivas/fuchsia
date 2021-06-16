@@ -361,6 +361,41 @@ void Guest::LaunchContainerShell() {
   }
 }
 
+void Guest::AddMagmaDeviceToContainer() {
+  FX_CHECK(maitred_) << "Called AddMagma without a maitre'd connection";
+  FX_LOGS(INFO) << "Adding magma device to container...";
+
+  grpc::ClientContext context;
+  vm_tools::LaunchProcessRequest request;
+  vm_tools::LaunchProcessResponse response;
+
+  request.add_argv()->assign("/usr/bin/lxc");
+  request.add_argv()->assign("config");
+  request.add_argv()->assign("device");
+  request.add_argv()->assign("add");
+  request.add_argv()->assign(kContainerName);
+  request.add_argv()->assign("magma0");
+  request.add_argv()->assign("unix-char");
+  request.add_argv()->assign("source=/dev/magma0");
+  request.add_argv()->assign("mode=0666");
+
+  request.set_respawn(false);
+  request.set_use_console(false);
+  request.set_wait_for_exit(true);
+  {
+    auto env = request.mutable_env();
+    env->insert({"LXD_DIR", "/mnt/stateful/lxd"});
+    env->insert({"LXD_CONF", "/mnt/stateful/lxd_conf"});
+    env->insert({"LXD_UNPRIVILEGED_ONLY", "true"});
+  }
+
+  {
+    TRACE_DURATION("linux_runner", "LaunchProcessRPC");
+    auto status = maitred_->LaunchProcess(&context, request, &response);
+    FX_CHECK(status.ok()) << "Failed to add magma device to container: " << status.error_message();
+  }
+}
+
 void Guest::CreateContainer() {
   TRACE_DURATION("linux_runner", "Guest::CreateContainer");
   FX_CHECK(tremplin_) << "CreateContainer called without a Tremplin connection";
@@ -457,6 +492,7 @@ void Guest::SetupUser() {
     case vm_tools::tremplin::SetUpUserResponse::SUCCESS:
       FX_LOGS(INFO) << "User created.";
       LaunchContainerShell();
+      AddMagmaDeviceToContainer();
       break;
     case vm_tools::tremplin::SetUpUserResponse::FAILED:
       FX_LOGS(ERROR) << "Failed to create user: " << response.failure_reason();
