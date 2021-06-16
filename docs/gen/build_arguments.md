@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1596
+From //build/config/BUILDCONFIG.gn:1602
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -554,7 +554,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:573
+From //build/config/BUILDCONFIG.gn:579
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -628,7 +628,7 @@ and compare the outputs' contents for reproducibility.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:577
+From //build/config/BUILDCONFIG.gn:583
 
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
@@ -1070,7 +1070,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1353
+From //build/config/BUILDCONFIG.gn:1359
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1454,6 +1454,13 @@ attributing code generation bugs.
 **Current value (from the default):** `true`
 
 From //src/graphics/lib/compute/gn/glsl_shader_rules.gni:38
+
+### hangcheck_timeout_ms
+Set this to accommodate long running tests
+
+**Current value (from the default):** `0`
+
+From //src/graphics/drivers/msd-intel-gen/src/BUILD.gn:9
 
 ### have_libvulkan_arm_mali
 Driver developers can set this to true if they are manually including a Mali package. This will
@@ -1851,7 +1858,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1204
+From //build/config/BUILDCONFIG.gn:1210
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3181,7 +3188,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1586
+From //build/config/BUILDCONFIG.gn:1592
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3190,7 +3197,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1591
+From //build/config/BUILDCONFIG.gn:1597
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3234,7 +3241,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1399
+From //build/config/BUILDCONFIG.gn:1405
 
 ### size_checker_input
 The input to the size checker.
@@ -3520,7 +3527,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1383
+From //build/config/BUILDCONFIG.gn:1389
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
