@@ -491,11 +491,12 @@ impl Target {
         use itertools::Itertools;
         // Order e1 & e2 by most recent timestamp
         let recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| e2.timestamp.cmp(&e1.timestamp);
+        // TODO(fxb/76325) `.find(|t| t.netsvc)` doesn't work for some reason, using next()
         self.addrs
             .borrow()
             .iter()
             .sorted_by(|e1, e2| recency(e1, e2))
-            .find(|addr_entry| addr_entry.netsvc)
+            .next()
             .map(|addr_entry| addr_entry.addr.clone())
     }
 
