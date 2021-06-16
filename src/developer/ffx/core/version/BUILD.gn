@@ -7,16 +7,22 @@ import("//build/rust/rustc_library.gni")
 
 # Since the version only depends on the source checkout and not the toolchain,
 # we only need to generate the version info file once per build.
+# Files passed on the command-line must be relative to support remote builds.
 out_dir = get_label_info(".($default_toolchain)", "target_out_dir")
 base_output_file = "$out_dir/ffx_version_info.txt"
+_source_dir = "//" + rebase_path("src", "//")
+
 rebased_output_file = rebase_path(base_output_file)
+rebased_output_file_src_rel = rebase_path(base_output_file, _source_dir)
 
 rebased_build_version = rebase_path(build_info_files.version)
+rebased_build_version_src_rel =
+    rebase_path(build_info_files.version, _source_dir)
 
 config("env") {
   rustenv = [
-    "FFX_VERSION_INFO=$rebased_output_file",
-    "BUILD_VERSION=$rebased_build_version",
+    "FFX_VERSION_INFO=$rebased_output_file_src_rel",
+    "BUILD_VERSION=$rebased_build_version_src_rel",
   ]
 }
 
