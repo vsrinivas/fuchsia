@@ -86,6 +86,8 @@ foreach(testpkg, go_test_packages) {
       "//sdk/lib/fdio",
       "//zircon/system/ulib/ramdevice-client",
     ]
+    include_dirs =
+        [ rebase_path("//zircon/system/ulib/ramdevice-client/include") ]
   }
 
   test_component_target = "${test_target}_component"

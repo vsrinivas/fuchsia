@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
@@ -51,8 +52,6 @@ import (
 
 /*
 #cgo CFLAGS: -D_GNU_SOURCE
-#cgo CFLAGS: -I${SRCDIR}/../../../../zircon/system/ulib/zxs/include
-#cgo CFLAGS: -I${SRCDIR}/../../../../zircon/third_party/ulib/musl/include
 #include <errno.h>
 #include <fcntl.h>
 #include <net/if.h>

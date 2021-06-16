@@ -47,6 +47,12 @@ declare_args() {
 #   non_go_deps (optional)
 #     List of labels this target depends on that are not Go libraries.
 #
+#   include_dirs (optional)
+#     List of directories this target depends on being in the C compiler include path.
+#
+#   lib_dirs (optional)
+#     List of directories this target depends on being in the C compiler library path.
+#
 #   skip_vet (optional)
 #     Whether to skip running go vet for this target. This flag should _only_
 #     be used for packages in the Go source tree itself that otherwise match
@@ -182,8 +188,6 @@ template("go_build") {
       output_name,
       "--output-path",
       rebase_path(output_path, root_build_dir),
-      "--lib-dir",
-      rebase_path(get_label_info(":any($shlib_toolchain)", "root_out_dir")),
       "--go-cache",
       gocache_dir,
       "--cc",
@@ -200,8 +204,59 @@ template("go_build") {
       rebase_path("//third_party/golibs"),
     ]
 
+    include_dirs = []
+    if (defined(invoker.include_dirs)) {
+      include_dirs = invoker.include_dirs
+    }
+    lib_dirs = []
+    if (defined(invoker.lib_dirs)) {
+      lib_dirs = invoker.lib_dirs
+    }
+    lib_dirs += [ rebase_path(
+            get_label_info(":any($shlib_toolchain)", "root_out_dir")) ]
+
     if (!(defined(invoker.cgo) && !invoker.cgo)) {
       args += [ "--cgo" ]
+
+      if (is_fuchsia) {
+        # Inject a dependency to libfdio.so. Note that as a special case,
+        # when building fuzzing binaries, this library should be built in
+        # a non-fuzzing variant (because the fuzzing runtime depends on it).
+        # So compute the correct toolchain for it directly here.
+        _fdio_toolchain =
+            string_replace(current_toolchain, "-fuzzer", "") + "-shared"
+        _fdio_label_with_toolchain = "//sdk/lib/fdio($_fdio_toolchain)"
+
+        deps += [
+          "//zircon/public/sysroot:go_binary_deps",
+          _fdio_label_with_toolchain,
+        ]
+
+        if (_fdio_toolchain != current_toolchain + "-shared") {
+          lib_dirs += [ rebase_path(
+                  get_label_info(_fdio_label_with_toolchain, "root_out_dir")) ]
+        }
+
+        include_dirs += [ rebase_path("//sdk/lib/fdio/include") ]
+
+        # See //build/config/fuchsia:fdio_config.
+        lib_dirs +=
+            [ rebase_path(get_label_info("//build/config/fuchsia:fdio_config",
+                                         "target_gen_dir")) ]
+      }
+    }
+
+    foreach(include_dir, include_dirs) {
+      args += [
+        "--include-dir",
+        include_dir,
+      ]
+    }
+    foreach(lib_dir, lib_dirs) {
+      args += [
+        "--lib-dir",
+        lib_dir,
+      ]
     }
 
     if (use_strip) {
@@ -265,60 +320,12 @@ template("go_build") {
     }
 
     if (is_fuchsia) {
-      # Inject a dependency to libfdio.so. Note that as a special case,
-      # when building fuzzing binaries, this library should be built in
-      # a non-fuzzing variant (because the fuzzing runtime depends on it).
-      # So compute the correct toolchain for it directly here.
-      _fdio_toolchain =
-          string_replace(current_toolchain, "-fuzzer", "") + "-shared"
-      _fdio_label_with_toolchain = "//sdk/lib/fdio($_fdio_toolchain)"
-
-      deps += [
-        "//zircon/public/sysroot:go_binary_deps",
-        _fdio_label_with_toolchain,
-      ]
-
-      if (_fdio_toolchain != current_toolchain + "-shared") {
-        args += [
-          "--lib-dir",
-          rebase_path(
-              get_label_info(_fdio_label_with_toolchain, "root_out_dir")),
-        ]
-      }
-
       if (!carchive && output_breakpad_syms && host_os != "mac") {
         args += [
           "--dump-syms",
           breakpad_dump_syms,
         ]
       }
-
-      args += [
-        # GN provides no way to propagate include paths like this, so, this
-        # is brittle.
-        "--include-dir",
-        rebase_path("//sdk/lib/fdio/include"),
-        "--include-dir",
-        rebase_path("//zircon/third_party/ulib/musl/include"),
-        "--include-dir",
-        rebase_path("//zircon/system/public"),
-      ]
-      args += [
-        # For src/sys/pkg/bin/pkgfs/ramdisk
-        "--include-dir",
-        rebase_path("//zircon/system/ulib/ramdevice-client/include"),
-        "--lib-dir",
-        rebase_path("gen/zircon/system/ulib/ramdevice-client",
-                    "",
-                    root_build_dir),
-      ]
-
-      # See //build/config/fuchsia:fdio_config.
-      args += [
-        "--lib-dir",
-        rebase_path(get_label_info("//build/config/fuchsia:fdio_config",
-                                   "target_gen_dir")),
-      ]
     }
 
     use_prebuilt_go = !is_fuchsia

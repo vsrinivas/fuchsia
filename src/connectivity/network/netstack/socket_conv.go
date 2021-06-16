@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
@@ -32,7 +33,6 @@ import (
 // C structs from the wire.
 
 // #cgo CFLAGS: -D_GNU_SOURCE
-// #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/third_party/ulib/musl/include/
 // #include <netinet/in.h>
 // #include <netinet/tcp.h>
 // #include <netinet/udp.h>
