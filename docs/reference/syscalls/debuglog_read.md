@@ -34,7 +34,8 @@ The returned record will have the following format:
 
 ```c
 typedef struct zx_log_record {
-  uint32_t sequence;
+  uint64_t sequence;
+  uint32_t unused;
   uint16_t datalen;
   uint8_t severity;
   uint8_t flags;

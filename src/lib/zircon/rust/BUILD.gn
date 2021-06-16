@@ -98,7 +98,7 @@ rustc_library("fuchsia-zircon-types") {
   version = "0.1.0"
   edition = "2018"
   source_root = "fuchsia-zircon-types/src/lib.rs"
-
+  deps = [ "//third_party/rust_crates:static_assertions" ]
   sources = [ "fuchsia-zircon-types/src/lib.rs" ]
 }
 
@@ -106,6 +106,7 @@ rustc_test("fuchsia-zircon-types-tests") {
   name = "fuchsia_zircon_types_tests"
   edition = "2018"
   source_root = "fuchsia-zircon-types/src/lib.rs"
+  deps = [ "//third_party/rust_crates:static_assertions" ]
   sources = [ "fuchsia-zircon-types/src/lib.rs" ]
 }
 

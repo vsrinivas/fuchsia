@@ -13,11 +13,9 @@ __BEGIN_CDECLS
 typedef struct zx_log_record {
   // Each log record is assigned a sequence number at the time it enters the
   // debuglog. A record's sequence number is exactly one greater than the record
-  // that preceeded it. The value will wrap after UINT32_MAX.
-  //
-  // TODO(fxbug.dev/70316): Change sequence to a 64-bit value so that we don't
-  // have to worry about wrapping.
-  uint32_t sequence;
+  // that preceded it.
+  uint64_t sequence;
+  uint8_t padding1[4];
   uint16_t datalen;
   uint8_t severity;
   uint8_t flags;

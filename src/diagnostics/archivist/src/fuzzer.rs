@@ -21,7 +21,8 @@ fn convert_debuglog_to_log_message_fuzzer(record: RandomLogRecord) -> Option<Mes
 
 impl Arbitrary for RandomLogRecord {
     fn arbitrary(u: &mut Unstructured<'_>) -> Result<Self> {
-        let sequence = u32::arbitrary(u)?;
+        let sequence = u64::arbitrary(u)?;
+        let padding1: [zx::sys::PadByte; 4] = Default::default();
         let datalen = u16::arbitrary(u)?;
         let severity = u8::arbitrary(u)?;
         let flags = u8::arbitrary(u)?;
@@ -36,6 +37,7 @@ impl Arbitrary for RandomLogRecord {
 
         Ok(RandomLogRecord(zx::sys::zx_log_record_t {
             sequence,
+            padding1,
             datalen,
             severity,
             flags,

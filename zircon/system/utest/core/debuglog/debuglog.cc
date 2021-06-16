@@ -63,6 +63,7 @@ TEST(DebugLogTest, MaxMessageSize) {
   zx_log_record_t* const record = reinterpret_cast<zx_log_record_t*>(buf);
 
   // Read until we find our message.
+  size_t size;
   do {
     zx_status_t status_or_size = zx_debuglog_read(log_handle, 0, buf, sizeof(buf));
     if (status_or_size < 0) {
@@ -70,10 +71,14 @@ TEST(DebugLogTest, MaxMessageSize) {
       continue;
     }
     ASSERT_GT(status_or_size, 0);
-    const size_t size = status_or_size;
+    size = status_or_size;
     ASSERT_LE(size, ZX_LOG_RECORD_MAX);
     ASSERT_LE(record->datalen, ZX_LOG_RECORD_DATA_MAX);
   } while (memcmp(record->data, msg, record->datalen) != 0);
+
+  // See that the message was truncated to exactly the maximum size.
+  ASSERT_EQ(size, ZX_LOG_RECORD_MAX);
+  ASSERT_EQ(record->datalen, ZX_LOG_RECORD_DATA_MAX);
 
   ASSERT_OK(zx_handle_close(log_handle));
 }

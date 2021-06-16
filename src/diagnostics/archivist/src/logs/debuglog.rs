@@ -228,13 +228,13 @@ mod tests {
                     component_url: KERNEL_IDENTITY.url.clone(),
                     moniker: KERNEL_IDENTITY.to_string(),
                     severity: Severity::Info,
-                    size_bytes: METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32,
+                    size_bytes: METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_DATA_MAX,
                 })
                 .set_pid(klog.record.pid)
                 .set_tid(klog.record.tid)
                 .add_tag("klog")
                 .set_message(
-                    String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32]).unwrap()
+                    String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_DATA_MAX]).unwrap()
                 )
                 .build()
             )

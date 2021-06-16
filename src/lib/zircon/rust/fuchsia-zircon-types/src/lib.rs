@@ -4,6 +4,7 @@
 
 #![allow(non_camel_case_types)]
 
+use static_assertions::const_assert_eq;
 use std::fmt::{self, Debug};
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::AtomicI32;
@@ -1222,13 +1223,14 @@ multiconst!(zx_guest_trap_t, [
 ]);
 
 pub const ZX_LOG_RECORD_MAX: usize = 256;
-pub const ZX_LOG_RECORD_DATA_MAX: usize = 224;
+pub const ZX_LOG_RECORD_DATA_MAX: usize = 216;
 
 struct_decl_macro! {
     #[repr(C)]
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     pub struct <zx_log_record_t> {
-        pub sequence: u32,
+        pub sequence: u64,
+        pub padding1: [PadByte; 4],
         pub datalen: u16,
         pub severity: u8,
         pub flags: u8,
@@ -1238,6 +1240,7 @@ struct_decl_macro! {
         pub data: [u8; ZX_LOG_RECORD_DATA_MAX],
     }
 }
+const_assert_eq!(std::mem::size_of::<zx_log_record_t>(), ZX_LOG_RECORD_MAX);
 
 zx_log_record_t!(zx_log_record_t);
 
@@ -1245,6 +1248,7 @@ impl Default for zx_log_record_t {
     fn default() -> zx_log_record_t {
         zx_log_record_t {
             sequence: 0,
+            padding1: [PadByte(0); 4],
             datalen: 0,
             severity: 0,
             flags: 0,
