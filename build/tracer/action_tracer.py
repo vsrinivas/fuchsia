@@ -887,6 +887,10 @@ def main():
         # at GN gen time, so write them to `__untraced_dart_kernel__` and ignore
         # accesses to them.
         "__untraced_dart_kernel__",
+        # Flutter dart components collects flutter assets in an output directory
+        # which cannot be determined at GN gen time, so write them to
+        # `__untraced_flutter_assets__` and ignore accesses to them.
+        "__untraced_flutter_assets__",
     }
     # TODO(fangism): for suffixes that we always ignore for writing, such as
     # safe or intended side-effect byproducts, make sure no declared inputs ever

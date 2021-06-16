@@ -50,10 +50,6 @@ template("_flutter_asset_manifest") {
     _flutter_asset_tools_snapshot =
         "$_flutter_asset_tools_target_gen_dir/fuchsia_asset_builder.snapshot"
 
-    _asset_manifest =
-        "$target_gen_dir/build/${invoker.component_name}_pkgassets"
-
-    hermetic_deps = false
     script = "//build/flutter/internal/gen_asset_manifest.py"
 
     inputs = [
@@ -62,6 +58,9 @@ template("_flutter_asset_manifest") {
       _flutter_asset_tools_snapshot,
     ]
 
+    _asset_manifest =
+        "$target_gen_dir/build/${invoker.component_name}_pkgassets"
+    depfile = "${_asset_manifest}.d"
     outputs = [ _asset_manifest ]
 
     args = [
@@ -70,7 +69,8 @@ template("_flutter_asset_manifest") {
       "--flutter-tools",
       rebase_path(_flutter_asset_tools_bin, root_build_dir),
       "--asset-dir",
-      rebase_path("$target_gen_dir/build", root_build_dir),
+      rebase_path("$target_gen_dir/build/__untraced_flutter_assets__",
+                  root_build_dir),
       "--packages",
       rebase_path(invoker.package_config, root_build_dir),
       "--output",
@@ -79,6 +79,8 @@ template("_flutter_asset_manifest") {
       invoker.component_name,
       "--manifest",
       rebase_path(invoker.pubspec, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
     ]
 
     if (!defined(deps)) {
