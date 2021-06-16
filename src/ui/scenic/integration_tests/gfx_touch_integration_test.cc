@@ -312,7 +312,8 @@ TEST_F(GfxTouchIntegrationTest, InjectorChannel_ShouldClose_WhenSceneBreaks) {
   // Break the scene graph relation that the pointerinjector relies on. Observe the channel close.
   view.DetachChild(holder_2);
   BlockingPresent(*root_session_->session);
-  EXPECT_TRUE(injector_channel_closed_);
+  // TODO(fxbug.dev/50348): Uncomment when this behavior is rolled forward again.
+  // EXPECT_TRUE(injector_channel_closed_);
 }
 
 // In this test we set up the context and the target. We apply a scale, rotation and translation

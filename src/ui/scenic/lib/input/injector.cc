@@ -106,14 +106,18 @@ void ChattyLog(const fuchsia::ui::pointerinjector::Event& event) {
 
 Injector::Injector(inspect::Node inspect_node, InjectorSettings settings, Viewport viewport,
                    fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
+                   fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
+                       is_descendant_and_connected,
                    fit::function<void(const InternalPointerEvent&, StreamId)> inject,
                    fit::function<void()> on_channel_closed)
     : inspector_(std::move(inspect_node)),
       binding_(this, std::move(device)),
       settings_(std::move(settings)),
       viewport_(std::move(viewport)),
+      is_descendant_and_connected_(std::move(is_descendant_and_connected)),
       inject_(std::move(inject)),
       on_channel_closed_(std::move(on_channel_closed)) {
+  FX_DCHECK(is_descendant_and_connected_);
   FX_DCHECK(inject_);
   FX_LOGS(INFO) << "Injector : Registered new injector with "
                 << " Device Id: " << settings_.device_id
@@ -133,6 +137,16 @@ Injector::Injector(inspect::Node inspect_node, InjectorSettings settings, Viewpo
 void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
                       InjectCallback callback) {
   TRACE_DURATION("input", "Injector::Inject");
+  // TODO(fxbug.dev/50348): Find a way to make to listen for scene graph events instead of checking
+  // connectivity per injected event.
+  if (!is_descendant_and_connected_(settings_.target_koid, settings_.context_koid)) {
+    FX_LOGS(ERROR) << "Inject() called with Context (koid: " << settings_.context_koid
+                   << ") and Target (koid: " << settings_.target_koid
+                   << ") making an invalid hierarchy.";
+    CloseChannel(ZX_ERR_BAD_STATE);
+    return;
+  }
+
   if (events.empty()) {
     FX_LOGS(ERROR) << "Inject() called without any events";
     CloseChannel(ZX_ERR_INVALID_ARGS);

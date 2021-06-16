@@ -126,10 +126,13 @@ void PointerinjectorRegistry::Register(
           utils::ColumnMajorMat3VectorToMat4(config.viewport().viewport_to_context_transform()),
   };
 
-  const auto [_, success] = injectors_.try_emplace(
-      id, context_koid, target_koid,
-      inspect_node_.CreateChild(inspect_node_.UniqueName("injector-")), std::move(settings),
+  const auto [it, success] = injectors_.try_emplace(
+      id, inspect_node_.CreateChild(inspect_node_.UniqueName("injector-")), std::move(settings),
       std::move(viewport), std::move(injector),
+      /*is_descendant_and_connected*/
+      [this](zx_koid_t descendant, zx_koid_t ancestor) {
+        return view_tree_snapshot_->IsDescendant(descendant, ancestor);
+      },
       /*inject*/
       [&inject_func = inject_funcs_.at({settings.device_type, settings.dispatch_policy})](
           const InternalPointerEvent& event, StreamId stream_id) { inject_func(event, stream_id); },
@@ -138,25 +141,6 @@ void PointerinjectorRegistry::Register(
   FX_CHECK(success) << "Injector already exists.";
 
   callback();
-}
-
-void PointerinjectorRegistry::OnNewViewTreeSnapshot(
-    std::shared_ptr<const view_tree::Snapshot> snapshot) {
-  view_tree_snapshot_ = std::move(snapshot);
-
-  std::vector<InjectorId> injectors_to_close;
-  for (const auto& [id, injector_struct] : injectors_) {
-    const auto& [context, target, _] = injector_struct;
-    if (!view_tree_snapshot_->IsDescendant(target, context)) {
-      FX_LOGS(ERROR) << "Injector's Context (koid: " << context << ") and Target (koid: " << target
-                     << ") became an invalid hierarchy.";
-      injectors_to_close.emplace_back(id);
-    }
-  }
-
-  for (const auto id : injectors_to_close) {
-    injectors_.at(id).injector.CloseChannel(ZX_ERR_BAD_STATE);
-  }
 }
 
 }  // namespace scenic_impl::input

@@ -76,9 +76,12 @@ TEST(InjectorTest, InjectedEvents_ShouldTriggerTheInjectLambda) {
   bool error_callback_fired = false;
   injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
 
+  bool connectivity_is_good = true;
   uint32_t num_injections = 0;
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/
+      [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
       /*inject=*/[&num_injections](auto...) { ++num_injections; },
       /*on_channel_closed=*/[] {});
 
@@ -143,6 +146,8 @@ TEST(InjectorTest, InjectionWithNoEvent_ShouldCloseChannel) {
 
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/
+      [](auto...) { return true; },
       /*inject=*/
       [](auto...) {},
       /*on_channel_closed=*/[] {});
@@ -170,6 +175,8 @@ TEST(InjectorTest, ClientClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
   std::vector<uint32_t> cancelled_streams;
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/
+      [](auto...) { return true; },
       /*inject=*/
       [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
         if (event.phase == scenic_impl::input::Phase::kCancel)
@@ -234,6 +241,8 @@ TEST(InjectorTest, ServerClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
   std::vector<uint32_t> cancelled_streams;
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/
+      [](auto...) { return true; },
       /*inject=*/
       [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
         if (event.phase == scenic_impl::input::Phase::kCancel)
@@ -298,6 +307,8 @@ TEST(InjectorTest, InjectionOfEmptyEvent_ShouldCloseChannel) {
   bool injection_lambda_fired = false;
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/
+      [](zx_koid_t, zx_koid_t) { return true; },
       /*inject=*/
       [&injection_lambda_fired](auto...) { injection_lambda_fired = true; },
       /*on_channel_closed=*/[] {});
@@ -330,6 +341,7 @@ TEST(InjectorTest, ClientClosingChannel_ShouldTriggerOnChannelClosedLambda) {
   bool on_channel_closed_callback_fired = false;
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/[](auto...) { return true; },
       /*inject=*/[](auto...) {},
       /*on_channel_closed=*/
       [&on_channel_closed_callback_fired] { on_channel_closed_callback_fired = true; });
@@ -357,6 +369,7 @@ TEST(InjectorTest, ServerClosingChannel_ShouldTriggerOnChannelClosedLambda) {
   bool on_channel_closed_callback_fired = false;
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/[](auto...) { return true; },
       /*inject=*/[](auto...) {},
       /*on_channel_closed=*/
       [&on_channel_closed_callback_fired] { on_channel_closed_callback_fired = true; });
@@ -371,6 +384,70 @@ TEST(InjectorTest, ServerClosingChannel_ShouldTriggerOnChannelClosedLambda) {
 
   EXPECT_TRUE(client_error_callback_fired);
   EXPECT_TRUE(on_channel_closed_callback_fired);
+}
+
+// Test for lazy connectivity detection.
+// TODO(fxbug.dev/50348): Remove when instant connectivity breakage detection is added.
+TEST(InjectorTest, InjectionWithBadConnectivity_ShouldCloseChannel) {
+  // Test loop to be able to control dispatch without having to create an entire test class
+  // subclassing TestLoopFixture.
+  async::TestLoop test_loop;
+
+  // Set up an isolated Injector.
+  DevicePtr injector;
+
+  bool error_callback_fired = false;
+  zx_status_t error = ZX_OK;
+  injector.set_error_handler([&error_callback_fired, &error](zx_status_t status) {
+    error_callback_fired = true;
+    error = status;
+  });
+
+  bool connectivity_is_good = true;
+  uint32_t num_cancel_events = 0;
+  scenic_impl::input::Injector injector_impl(
+      inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/
+      [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
+      /*inject=*/
+      [&num_cancel_events](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
+        num_cancel_events += event.phase == scenic_impl::input::Phase::kCancel ? 1 : 0;
+      },
+      /*on_channel_closed=*/[] {});
+
+  // Start event stream while connectivity is good.
+  {
+    InjectionEvent event = InjectionEventTemplate();
+    event.mutable_data()->pointer_sample().set_phase(Phase::ADD);
+    event.mutable_data()->pointer_sample().set_pointer_id(1);
+    std::vector<InjectionEvent> events;
+    events.emplace_back(std::move(event));
+    injector->Inject({std::move(events)}, [] {});
+    test_loop.RunUntilIdle();
+  }
+
+  // Connectivity was good. No problems.
+  EXPECT_FALSE(error_callback_fired);
+
+  // Inject with bad connectivity.
+  connectivity_is_good = false;
+  {
+    bool injection_callback_fired = false;
+    InjectionEvent event = InjectionEventTemplate();
+    event.mutable_data()->pointer_sample().set_phase(Phase::CHANGE);
+    std::vector<InjectionEvent> events;
+    events.emplace_back(std::move(event));
+    injector->Inject({std::move(events)},
+                     [&injection_callback_fired] { injection_callback_fired = true; });
+    test_loop.RunUntilIdle();
+    EXPECT_FALSE(injection_callback_fired);
+  }
+
+  // Connectivity was bad, so channel should be closed and an extra CANCEL event should have been
+  // injected for each ongoing stream.
+  EXPECT_EQ(num_cancel_events, 1u);
+  EXPECT_TRUE(error_callback_fired);
+  EXPECT_EQ(error, ZX_ERR_BAD_STATE);
 }
 
 // Class for testing parameterized injection of invalid events.
@@ -408,6 +485,8 @@ TEST_P(InjectorInvalidEventsTest, InjectEventWithMissingField_ShouldCloseChannel
 
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/
+      [](auto...) { return true; },
       /*inject=*/
       [](auto...) {},
       /*on_channel_closed=*/[] {});
@@ -462,6 +541,8 @@ TEST_P(InjectorGoodEventStreamTest,
 
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/
+      [](auto...) { return true; },  // Always true.
       /*inject=*/
       [](auto...) {},
       /*on_channel_closed=*/[] {});
@@ -494,6 +575,8 @@ TEST_P(InjectorGoodEventStreamTest,
 
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/
+      [](auto...) { return true; },  // Always true.
       /*inject=*/
       [](auto...) {},
       /*on_channel_closed=*/[] {});
@@ -557,6 +640,7 @@ TEST_P(InjectorBadEventStreamTest, InjectionWithBadEventStream_ShouldCloseChanne
 
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/[](auto...) { return true; },
       /*inject=*/[](auto...) {},
       /*on_channel_closed=*/[] {});
 
@@ -591,6 +675,7 @@ TEST_P(InjectorBadEventStreamTest, InjectionWithBadEventStream_ShouldCloseChanne
 
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/[](auto...) { return true; },
       /*inject=*/[](auto...) {},
       /*on_channel_closed=*/[] {});
 
@@ -621,6 +706,7 @@ TEST(InjectorTest, InjectedViewport_ShouldNotTriggerInjectLambda) {
   bool inject_lambda_fired = false;
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/[](zx_koid_t, zx_koid_t) { return true; },
       /*inject=*/[&inject_lambda_fired](auto...) { inject_lambda_fired = true; },
       /*on_channel_closed=*/[] {});
 
@@ -755,6 +841,7 @@ TEST_P(InjectorBadViewportTest, InjectBadViewport_ShouldCloseChannel) {
   bool inject_lambda_fired = false;
   scenic_impl::input::Injector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/[](zx_koid_t, zx_koid_t) { return true; },
       /*inject=*/[&inject_lambda_fired](auto...) { inject_lambda_fired = true; },
       /*on_channel_closed=*/[] {});
 
@@ -808,10 +895,13 @@ TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {
   bool error_callback_fired = false;
   injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
 
+  bool connectivity_is_good = true;
   uint32_t num_injections = 0;
   scenic_impl::input::Injector injector_impl(
       inspector_.GetRoot().CreateChild("injector"), InjectorSettingsTemplate(), ViewportTemplate(),
       injector.NewRequest(),
+      /*is_descendant_and_connected=*/
+      [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
       /*inject=*/[&num_injections](auto...) { ++num_injections; },
       /*on_channel_closed=*/[] {});
 
