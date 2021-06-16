@@ -11,6 +11,7 @@
 #include <string>
 
 #include <fbl/unique_fd.h>
+#include <src/lib/digest/merkle-tree.h>
 
 #include "src/lib/chunked-compression/chunked-compressor.h"
 #include "src/lib/chunked-compression/status.h"
@@ -27,7 +28,6 @@ const auto kCliOptions = std::set<std::string>({
     "source_file",
     "compressed_file",
     "disable_size_alignment",
-    "use_compact_merkle_tree",
     "help",
     "verbose",
 });
@@ -42,7 +42,9 @@ void usage(const char* fname) {
   fprintf(stderr, "--%s=/path/to/file\n    %s\n", "source_file",
           "(required) the file to be compressed.");
   fprintf(stderr, "--%s=/path/to/file\n    %s\n", "compressed_file",
-          "(optional) the compressed file output path (override if existing).");
+          "(optional) the compressed file output path (override if existing). This file contains "
+          "compressed bytes and additional 0x00 padding bytes at the end of the output file to "
+          "ensure compressed file size matches the size in stdout.");
   fprintf(stderr, "--%s\n    %s\n", "disable_size_alignment",
           "not align the final compressed output size with block size.");
   fprintf(stderr, "--%s\n    %s\n", "help", "print this usage message.");
@@ -149,8 +151,11 @@ int main(int argc, char** argv) {
   uint8_t* dest_write_buf = nullptr;
   CompressionParams params = blobfs::GetDefaultChunkedCompressionParams(src_size);
   if (!options.compressed_file.empty()) {
+    const size_t dest_buffer_size =
+        params.ComputeOutputSizeLimit(src_size) +
+        digest::CalculateMerkleTreeSize(src_size, digest::kDefaultNodeSize, false);
     error_code = MapFileForWriting(options.compressed_file_fd, options.compressed_file.c_str(),
-                                   params.ComputeOutputSizeLimit(src_size), &dest_write_buf);
+                                   dest_buffer_size, &dest_write_buf);
     if (error_code) {
       return error_code;
     }

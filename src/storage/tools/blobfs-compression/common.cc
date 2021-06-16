@@ -120,6 +120,9 @@ zx_status_t BlobfsCompress(const uint8_t* src, const size_t src_sz, uint8_t* des
                     bytes_written);
   });
 
+  // Using non-compact merkle tree size by default because it's bigger than compact merkle tree.
+  const size_t merkle_tree_size =
+      digest::CalculateMerkleTreeSize(src_sz, digest::kDefaultNodeSize, false);
   size_t compressed_size;
   size_t output_limit = params.ComputeOutputSizeLimit(src_sz);
   std::vector<uint8_t> output_buffer;
@@ -127,7 +130,7 @@ zx_status_t BlobfsCompress(const uint8_t* src, const size_t src_sz, uint8_t* des
   // The caller does not need the compressed data. However, the compressor
   // still requires a write buffer to store the compressed output.
   if (dest_write_buf == nullptr) {
-    output_buffer.resize(output_limit);
+    output_buffer.resize(fbl::round_up(output_limit + merkle_tree_size, blobfs::kBlobfsBlockSize));
     dest_write_buf = output_buffer.data();
   }
 
@@ -137,13 +140,9 @@ zx_status_t BlobfsCompress(const uint8_t* src, const size_t src_sz, uint8_t* des
     return ToZxStatus(compression_status);
   }
 
-  // Include merkle tree size in the compressed size.
-  const size_t merkle_tree_size =
-      digest::CalculateMerkleTreeSize(src_sz, digest::kDefaultNodeSize, false);
-  compressed_size += merkle_tree_size;
-
   // Final size output should be aligned with block size unless disabled explicitly.
-  size_t aligned_source_size = src_sz, aligned_compressed_size = compressed_size;
+  size_t aligned_source_size = src_sz;
+  size_t aligned_compressed_size = compressed_size + merkle_tree_size;
   if (!cli_options.disable_size_alignment) {
     aligned_source_size = fbl::round_up(aligned_source_size, blobfs::kBlobfsBlockSize);
     aligned_compressed_size = fbl::round_up(aligned_compressed_size, blobfs::kBlobfsBlockSize);
@@ -159,6 +158,7 @@ zx_status_t BlobfsCompress(const uint8_t* src, const size_t src_sz, uint8_t* des
   progress.Final("Wrote %lu bytes (%.2f%% space saved).\n", aligned_compressed_size,
                  saving_ratio * 100);
 
+  // By default, filling 0x00 at the end of compressed buffer to match |aligned_compressed_size|.
   *out_compressed_size = aligned_compressed_size;
   return ZX_OK;
 }
