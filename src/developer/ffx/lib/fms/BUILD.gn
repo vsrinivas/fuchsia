@@ -6,12 +6,31 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/test_spec.gni")
 
+schemas = [
+  "//build/sdk/meta/common.json",
+  "//build/sdk/meta/hardware.json",
+  "//build/sdk/meta/physical_device.json",
+  "//build/sdk/meta/product_bundle.json",
+]
+
+source_set("schemas") {
+  inputs = schemas
+}
+
 rustc_library("lib") {
   name = "fms"
   edition = "2018"
   with_unit_tests = true
 
-  deps = [ "//third_party/rust_crates:anyhow" ]
+  deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+  ]
+
+  non_rust_deps = [ ":schemas" ]
+
+  inputs = schemas
 
   sources = [ "src/lib.rs" ]
 }

@@ -4,39 +4,95 @@
 
 //! Encapsulates the software distribution to host systems.
 //!
-//! Uses a unique identifier (FMS Name) to refer to SDK Modules which allows
-//! users of FMS lib to not be concerned about where modules are being
-//! downloaded from (be it CIPD, MOS-TUF, GCS, or something else).
+//! Uses a unique identifier (FMS Name) to lookup SDK Module metadata.
 
 use {
-    anyhow::{bail, Result},
-    std::path::{Path, PathBuf},
+    anyhow::{bail, format_err, Result},
+    serde::Deserialize,
+    serde_json::{from_reader, from_value, Value},
+    std::{collections::HashMap, io},
 };
+
+/// Description of a physical (rather than virtual) hardware device.
+#[derive(Debug, Deserialize, PartialEq, Clone)]
+pub struct PhysicalDeviceSpec {
+    /// A unique name identifying this FMS entry.
+    pub name: String,
+
+    /// Always "physical_device" for a PhysicalDeviceSpec. This is valuable for
+    /// debugging or when writing this record to a json string.
+    #[serde(rename = "type")]
+    pub data_type: String,
+}
+
+/// Description of the data needed to set up (flash) a device.
+#[derive(Debug, Deserialize, PartialEq, Clone)]
+pub struct ProductBundle {
+    /// A unique name identifying this FMS entry.
+    pub name: String,
+
+    /// Always "product_bundle" for a ProductBundle. This is valuable for
+    /// debugging or when writing this record to a json string.
+    #[serde(rename = "type")]
+    pub data_type: String,
+}
+
+// A metadata record about a physical/virtual device, product bundle, etc.
+#[derive(Debug, PartialEq, Clone)]
+pub enum Entry {
+    Physical(PhysicalDeviceSpec),
+    Product(ProductBundle),
+}
 
 /// Manager for finding available SDK Modules for download or ensuring that an
 /// SDK Module (artifact) is downloaded.
-struct Modules {
-    sdk_path: PathBuf,
-    // Contents TBD.
+pub struct Entries {
+    /// A collection of FMS Entries that have been added.
+    data: HashMap<String, Entry>,
 }
 
-impl Modules {
-    pub fn new<P: AsRef<Path>>(sdk_path: P) -> Self {
-        Self { sdk_path: sdk_path.as_ref().to_path_buf() }
+impl Entries {
+    pub fn new() -> Self {
+        Self { data: HashMap::new() }
     }
 
-    /// Make a module available for use.
+    /// Add metadata from json text to the store of FMS entries.
     ///
-    /// If the module identified by 'module_name' is already downloaded and up
-    /// to date the path to the module will be returned immediately.
-    /// If module is missing, it will be downloaded made ready before returning
-    /// the path.
-    pub fn ensure(&self, module_name: &str) -> Result<PathBuf> {
-        // Temporary while API is fleshed out.
-        if module_name == "not-an-sdk-module" {
-            bail!("Error TBD");
-        }
-        Ok(self.sdk_path.join("fake").join("path"))
+    /// If the an entry exists with a given name already exists, the entry will
+    /// be overwritten with the new metadata.
+    pub fn add_json<R>(&mut self, reader: &mut R) -> Result<()>
+    where
+        R: io::Read,
+    {
+        let input: Value = from_reader(reader)?;
+
+        // Which schema should this follow.
+        let schema_id: &str =
+            input["version"].as_str().ok_or(format_err!("Missing version string"))?;
+
+        // Create a new FMS Entry.
+        let entry: Entry = match schema_id {
+            "http://fuchsia.com/schemas/sdk/physical_device.json" => {
+                Entry::Physical(from_value::<PhysicalDeviceSpec>(input["data"].to_owned())?)
+            }
+            "http://fuchsia.com/schemas/sdk/product_bundle-02.json" => {
+                Entry::Product(from_value::<ProductBundle>(input["data"].to_owned())?)
+            }
+            _ => bail!("No matching struct for: {:?}", input["version"]),
+        };
+
+        // Store the new Entry using the entry's name as a key.
+        let key = input["data"]["name"].as_str().expect("need name for FMS Entry");
+        self.data.insert(key.to_string(), entry);
+        Ok(())
+    }
+
+    /// Get metadata for a named entry.
+    ///
+    /// Returns None if no entry with 'name' is found.
+    #[allow(unused)]
+    pub fn entry(&self, name: &str) -> Option<&Entry> {
+        self.data.get(name)
     }
 }
 
@@ -45,29 +101,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_lib() {
-        let sdk_dir = Path::new("~/fuchsia-sdk");
-        let modules = Modules::new(&sdk_dir);
-        assert_eq!(modules.sdk_path, sdk_dir);
-        let modules = Modules::new(sdk_dir.to_path_buf());
-        assert_eq!(modules.sdk_path, sdk_dir);
-    }
-
-    #[test]
-    fn test_ensure() {
-        let sdk_dir = Path::new("~/fuchsia-sdk");
-        let modules = Modules::new(&sdk_dir);
-        let path = modules.ensure("fake-sdk-module").unwrap();
-        assert_eq!(path, sdk_dir.join("fake").join("path"));
-    }
-
-    #[test]
-    fn test_ensure_not_found() {
-        let sdk_dir = Path::new("~/fuchsia-sdk");
-        let modules = Modules::new(&sdk_dir);
-        match modules.ensure("not-an-sdk-module") {
-            Err(e) => assert_eq!(e.to_string(), "Error TBD"),
-            Ok(_) => assert!(false),
-        }
+    fn test_entries() {
+        use std::io::BufReader;
+        let mut entries = Entries::new();
+        let mut reader = BufReader::new(
+            r#"
+            {
+                "data": {
+                    "description": "A generic arm64 device",
+                    "hardware": {
+                        "cpu": {
+                            "arch": "arm64"
+                        }
+                    },
+                    "name": "generic-arm64",
+                    "type": "physical_device"
+                },
+                "version": "http://fuchsia.com/schemas/sdk/physical_device.json"
+            }
+            "#
+            .as_bytes(),
+        );
+        // Not present until the json metadata is added.
+        assert_eq!(entries.entry("generic-arm64"), None);
+        entries.add_json(&mut reader).expect("add fms metadata");
+        // Now it is present.
+        assert_ne!(entries.entry("generic-arm64"), None);
+        // This isn't just returning non-None for everything.
+        assert_eq!(entries.entry("unfound"), None);
     }
 }
