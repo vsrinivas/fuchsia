@@ -6,6 +6,11 @@
 #define LIB_FIDL_LLCPP_INTERNAL_CLIENT_DETAILS_H_
 
 #include <lib/fidl/llcpp/result.h>
+#include <lib/fit/function.h>
+#include <lib/stdcompat/variant.h>
+
+#include <memory>
+#include <type_traits>
 
 namespace fidl {
 namespace internal {
@@ -48,10 +53,57 @@ class AsyncEventHandler {
   // shuts down the async dispatcher while there are active client bindings
   // associated with it. In that case, |on_fidl_error| will be synchronously
   // invoked on the thread calling dispatcher shutdown.
-  //
-  // TODO(fxbug.dev/75485): Remove the `final` qualification such that users
-  // may listen for errors.
-  virtual void on_fidl_error(::fidl::UnbindInfo error) final {}
+  virtual void on_fidl_error(::fidl::UnbindInfo error) {}
+};
+
+// A type-erasing object to inform the user the completion of bindings teardown.
+//
+// Teardown observers are constructed by public helper functions such as
+// |fidl::ObserveTeardown|. Adding this layer of indirection allows extending
+// teardown observation to custom user types (for example, by defining another
+// helper function) without changing this class.
+class AnyTeardownObserver final {
+ public:
+  // Creates an observer that notifies teardown completion by destroying
+  // |object|.
+  template <typename T>
+  static AnyTeardownObserver ByOwning(T object) {
+    return AnyTeardownObserver([object = std::move(object)] {});
+  }
+
+  // Creates an observer that notifies teardown completion by invoking
+  // |callback|, then destroying |callback|.
+  template <typename Callable>
+  static AnyTeardownObserver ByCallback(Callable&& callback) {
+    return AnyTeardownObserver(fit::closure(std::forward<Callable>(callback)));
+  }
+
+  // Creates an observer that does nothing on teardown completion.
+  static AnyTeardownObserver Noop() {
+    return AnyTeardownObserver([] {});
+  }
+
+  // Notify teardown completion. This consumes the observer.
+  void Notify() && { callback_(); }
+
+  AnyTeardownObserver(const AnyTeardownObserver& other) noexcept = delete;
+  AnyTeardownObserver& operator=(const AnyTeardownObserver& other) noexcept = delete;
+  AnyTeardownObserver(AnyTeardownObserver&& other) noexcept = default;
+  AnyTeardownObserver& operator=(AnyTeardownObserver&& other) noexcept = default;
+
+  ~AnyTeardownObserver() {
+    // |callback_| must be expended by the bindings runtime.
+    ZX_DEBUG_ASSERT(callback_ == nullptr);
+  }
+
+ private:
+  using Closure = fit::callback<void()>;
+
+  explicit AnyTeardownObserver(Closure&& callback) : callback_(std::move(callback)) {
+    ZX_DEBUG_ASSERT(callback_ != nullptr);
+  }
+
+  Closure callback_;
 };
 
 }  // namespace internal

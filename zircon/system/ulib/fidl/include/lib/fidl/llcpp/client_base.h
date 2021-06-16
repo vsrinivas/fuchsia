@@ -164,10 +164,12 @@ class ClientBase {
   ClientBase(ClientBase&& other) = delete;
   ClientBase& operator=(ClientBase&& other) = delete;
 
-  // Bind the channel to the dispatcher. Invoke on_unbound on error or unbinding.
-  // NOTE: This is not thread-safe and must be called exactly once, before any other APIs.
+  // Bind the channel to the dispatcher. Notifies |teardown_observer| on binding
+  // teardown. NOTE: This is not thread-safe and must be called exactly once,
+  // before any other APIs.
   void Bind(std::shared_ptr<ClientBase> client, zx::channel channel, async_dispatcher_t* dispatcher,
-            std::shared_ptr<AsyncEventHandler>&& event_handler);
+            AsyncEventHandler* event_handler,
+            fidl::internal::AnyTeardownObserver&& teardown_observer);
 
   // Asynchronously unbind the client from the dispatcher. on_unbound will be invoked on a
   // dispatcher thread if provided.
@@ -299,7 +301,8 @@ class ClientController {
   // Binds the client implementation to the |dispatcher| and |client_end|.
   // Takes ownership of |client_impl| and starts managing its lifetime.
   void Bind(std::shared_ptr<ClientBase>&& client_impl, zx::channel client_end,
-            async_dispatcher_t* dispatcher, std::shared_ptr<AsyncEventHandler>&& event_handler);
+            async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
+            fidl::internal::AnyTeardownObserver&& teardown_observer);
 
   // Begins to unbind the channel from the dispatcher. In particular, it
   // triggers the asynchronous destruction of the bound |ClientImpl|. May be

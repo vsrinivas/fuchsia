@@ -301,9 +301,11 @@ class AsyncServerBinding final : public AnyAsyncServerBinding {
 // calls, using shared pointers.
 class AsyncClientBinding final : public AsyncBinding {
  public:
-  static std::shared_ptr<AsyncClientBinding> Create(
-      async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
-      std::shared_ptr<ClientBase> client, std::shared_ptr<AsyncEventHandler>&& event_handler);
+  static std::shared_ptr<AsyncClientBinding> Create(async_dispatcher_t* dispatcher,
+                                                    std::shared_ptr<ChannelRef> channel,
+                                                    std::shared_ptr<ClientBase> client,
+                                                    AsyncEventHandler* event_handler,
+                                                    AnyTeardownObserver&& teardown_observer);
 
   virtual ~AsyncClientBinding() = default;
 
@@ -311,8 +313,8 @@ class AsyncClientBinding final : public AsyncBinding {
 
  private:
   AsyncClientBinding(async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
-                     std::shared_ptr<ClientBase> client,
-                     std::shared_ptr<AsyncEventHandler>&& event_handler);
+                     std::shared_ptr<ClientBase> client, AsyncEventHandler* event_handler,
+                     AnyTeardownObserver&& teardown_observer);
 
   std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg, bool* binding_released) override;
 
@@ -320,7 +322,8 @@ class AsyncClientBinding final : public AsyncBinding {
 
   std::shared_ptr<ChannelRef> channel_ = nullptr;  // Strong reference to the channel.
   std::shared_ptr<ClientBase> client_;
-  std::shared_ptr<AsyncEventHandler> event_handler_;
+  AsyncEventHandler* event_handler_;
+  AnyTeardownObserver teardown_observer_;
 };
 
 }  // namespace internal

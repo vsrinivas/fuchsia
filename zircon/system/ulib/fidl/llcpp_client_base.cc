@@ -15,13 +15,13 @@ namespace internal {
 constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
 
 void ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
-                      async_dispatcher_t* dispatcher,
-                      std::shared_ptr<AsyncEventHandler>&& event_handler) {
+                      async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
+                      AnyTeardownObserver&& teardown_observer) {
   ZX_DEBUG_ASSERT(!binding_.lock());
   ZX_DEBUG_ASSERT(client.get() == this);
   channel_tracker_.Init(std::move(channel));
   auto binding = AsyncClientBinding::Create(dispatcher, channel_tracker_.Get(), std::move(client),
-                                            std::move(event_handler));
+                                            event_handler, std::move(teardown_observer));
   binding_ = binding;
   binding->BeginWait();
 }
@@ -132,8 +132,8 @@ zx::channel ChannelRefTracker::WaitForChannel() {
 }
 
 void ClientController::Bind(std::shared_ptr<ClientBase>&& client_impl, zx::channel client_end,
-                            async_dispatcher_t* dispatcher,
-                            std::shared_ptr<AsyncEventHandler>&& event_handler) {
+                            async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
+                            AnyTeardownObserver&& teardown_observer) {
   if (client_impl_) {
     // This way, the current |Client| will effectively start from a clean slate.
     // If this |Client| were the only instance for that particular channel,
@@ -143,7 +143,8 @@ void ClientController::Bind(std::shared_ptr<ClientBase>&& client_impl, zx::chann
   }
 
   client_impl_ = std::move(client_impl);
-  client_impl_->Bind(client_impl_, std::move(client_end), dispatcher, std::move(event_handler));
+  client_impl_->Bind(client_impl_, std::move(client_end), dispatcher, event_handler,
+                     std::move(teardown_observer));
   control_ = std::make_shared<ControlBlock>(client_impl_);
 }
 

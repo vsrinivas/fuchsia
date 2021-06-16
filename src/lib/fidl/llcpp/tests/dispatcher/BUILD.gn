@@ -23,6 +23,7 @@ test("fidl_llcpp_dispatcher_tests_bin") {
     "client_test.cc",
     "server_test.cc",
     "shared_client_test.cc",
+    "teardown_observer_test.cc",
     "transaction_tests.cc",
   ]
   deps = [

@@ -203,9 +203,11 @@ std::optional<UnbindInfo> AnyAsyncServerBinding::Dispatch(fidl::IncomingMessage&
 
 std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(
     async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
-    std::shared_ptr<ClientBase> client, std::shared_ptr<AsyncEventHandler>&& event_handler) {
-  auto ret = std::shared_ptr<AsyncClientBinding>(new AsyncClientBinding(
-      dispatcher, std::move(channel), std::move(client), std::move(event_handler)));
+    std::shared_ptr<ClientBase> client, AsyncEventHandler* event_handler,
+    AnyTeardownObserver&& teardown_observer) {
+  auto ret = std::shared_ptr<AsyncClientBinding>(
+      new AsyncClientBinding(dispatcher, std::move(channel), std::move(client), event_handler,
+                             std::move(teardown_observer)));
   ret->keep_alive_ = ret;  // Keep the binding alive until an unbind operation or channel error.
   return ret;
 }
@@ -213,14 +215,16 @@ std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(
 AsyncClientBinding::AsyncClientBinding(async_dispatcher_t* dispatcher,
                                        std::shared_ptr<ChannelRef> channel,
                                        std::shared_ptr<ClientBase> client,
-                                       std::shared_ptr<AsyncEventHandler>&& event_handler)
+                                       AsyncEventHandler* event_handler,
+                                       AnyTeardownObserver&& teardown_observer)
     : AsyncBinding(dispatcher, zx::unowned_channel(channel->handle())),
       channel_(std::move(channel)),
       client_(std::move(client)),
-      event_handler_(std::move(event_handler)) {}
+      event_handler_(event_handler),
+      teardown_observer_(std::move(teardown_observer)) {}
 
 std::optional<UnbindInfo> AsyncClientBinding::Dispatch(fidl::IncomingMessage& msg, bool*) {
-  return client_->Dispatch(msg, event_handler_.get());
+  return client_->Dispatch(msg, event_handler_);
 }
 
 void AsyncClientBinding::FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_ref,
@@ -229,7 +233,8 @@ void AsyncClientBinding::FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_re
   std::shared_ptr<AsyncBinding> binding = std::move(calling_ref);
 
   // Stash state required after deleting the binding.
-  std::shared_ptr<AsyncEventHandler> event_handler = std::move(event_handler_);
+  AnyTeardownObserver teardown_observer = std::move(teardown_observer_);
+  AsyncEventHandler* event_handler = event_handler_;
   std::shared_ptr<ClientBase> client = std::move(client_);
 
   // Delete the calling reference. Transient references don't access the channel, so don't wait.
@@ -247,8 +252,12 @@ void AsyncClientBinding::FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_re
   }
 
   // Execute the unbound hook if specified.
+  // TODO(fxbug.dev/75485): Remove the unbound hook.
   if (event_handler != nullptr)
     event_handler->Unbound(info);
+
+  // Notify teardown.
+  std::move(teardown_observer).Notify();
 }
 
 }  // namespace internal
