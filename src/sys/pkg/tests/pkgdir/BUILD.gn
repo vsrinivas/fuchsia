@@ -26,9 +26,9 @@ rustc_test("driver") {
   ]
 
   sources = [
+    "src/directory.rs",
+    "src/file.rs",
     "src/lib.rs",
-    "src/open.rs",
-    "src/read.rs",
   ]
 }
 
