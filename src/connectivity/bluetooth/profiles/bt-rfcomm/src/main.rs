@@ -10,15 +10,17 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect_derive::Inspect,
-    futures::{self, channel::mpsc, future, sink::SinkExt, stream::StreamExt},
+    futures::{self, channel::mpsc, future, pin_mut},
     log::warn,
 };
 
+mod fidl_service;
 mod profile;
 mod profile_registrar;
 mod rfcomm;
 mod types;
 
+use crate::fidl_service::run_services;
 use crate::profile_registrar::ProfileRegistrar;
 
 #[fasync::run_singlethreaded]
@@ -28,8 +30,7 @@ pub async fn main() -> Result<(), Error> {
     let profile_svc = fuchsia_component::client::connect_to_protocol::<ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;
 
-    let (sender, receiver) = mpsc::channel(0);
-    let mut clients = Vec::new();
+    let (service_sender, service_receiver) = mpsc::channel(1);
 
     let mut fs = ServiceFs::new();
 
@@ -37,24 +38,23 @@ pub async fn main() -> Result<(), Error> {
     if let Err(e) = inspect_runtime::serve(&inspect, &mut fs) {
         warn!("Could not serve inspect: {}", e);
     }
-
-    fs.dir("svc").add_fidl_service(move |stream| {
-        let mut stream_sender = sender.clone();
-        let task = fasync::Task::spawn(async move {
-            let _ = stream_sender.send(stream).await;
-        });
-        clients.push(task);
-    });
-    fs.take_and_serve_directory_handle()?;
-    let mut drive_service_fs = fs.collect::<()>();
+    let services = run_services(fs, service_sender)?;
+    pin_mut!(services);
 
     let mut profile_registrar = ProfileRegistrar::new(profile_svc);
     if let Err(e) = profile_registrar.iattach(inspect.root(), "rfcomm_server") {
         warn!("Failed to attach to inspect: {}", e);
     }
-    let mut profile_registrar_fut = profile_registrar.start(receiver);
+    let profile_registrar_fut = profile_registrar.start(service_receiver);
 
-    let _ = future::select(&mut profile_registrar_fut, &mut drive_service_fs).await;
+    match future::select(services, profile_registrar_fut).await {
+        future::Either::Left(((), _)) => {
+            log::warn!("Service FS directory handle closed. Exiting.");
+        }
+        future::Either::Right(((), _)) => {
+            log::warn!("All Profile related connections have terminated. Exiting.");
+        }
+    }
 
     Ok(())
 }

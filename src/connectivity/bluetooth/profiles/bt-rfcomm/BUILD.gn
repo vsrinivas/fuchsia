@@ -12,6 +12,7 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.rfcomm.test:fuchsia.bluetooth.rfcomm.test-rustc",
     "//src/connectivity/bluetooth/lib/bt-rfcomm",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/lib/packet-encoding",
@@ -21,6 +22,7 @@ rustc_binary("bin") {
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
@@ -39,6 +41,7 @@ rustc_binary("bin") {
   ]
 
   sources = [
+    "src/fidl_service.rs",
     "src/main.rs",
     "src/profile.rs",
     "src/profile_registrar.rs",

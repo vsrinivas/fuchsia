@@ -9,6 +9,7 @@ use {
     fidl::endpoints::{DiscoverableService, Proxy},
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileProxy},
     fidl_fuchsia_bluetooth_gatt as fbgatt, fidl_fuchsia_bluetooth_le as fble,
+    fidl_fuchsia_bluetooth_rfcomm_test::{RfcommTestMarker, RfcommTestProxy},
     fidl_fuchsia_bluetooth_snoop::{SnoopMarker, SnoopRequestStream},
     fidl_fuchsia_bluetooth_sys::{AccessMarker, AccessProxy, HostWatcherMarker, HostWatcherProxy},
     fidl_fuchsia_device::{NameProviderMarker, NameProviderRequestStream},
@@ -42,6 +43,7 @@ enum Event {
     LePeripheral(Option<fble::PeripheralProxy>),
     Access(Option<AccessProxy>),
     HostWatcher(Option<HostWatcherProxy>),
+    RfcommTest(Option<RfcommTestProxy>),
     Snoop(Option<SnoopRequestStream>),
     NameProvider(Option<NameProviderRequestStream>),
     // bt-init will not start up without a working SecureStore, so instead of just notifying the
@@ -90,6 +92,13 @@ async fn mock_client(mut sender: mpsc::Sender<Event>, handles: MockHandles) -> R
         .send(Event::HostWatcher(Some(host_watcher_svc)))
         .await
         .expect("failed sending ack to test");
+
+    let rfcomm_test_svc = handles.connect_to_service::<RfcommTestMarker>()?;
+    sender
+        .send(Event::RfcommTest(Some(rfcomm_test_svc)))
+        .await
+        .expect("failed sending ack to test");
+
     Ok(())
 }
 
@@ -189,6 +198,7 @@ async fn bt_init_component_topology() {
     route_from_bt_init_to_mock_client::<fble::PeripheralMarker>(&mut builder);
     route_from_bt_init_to_mock_client::<AccessMarker>(&mut builder);
     route_from_bt_init_to_mock_client::<HostWatcherMarker>(&mut builder);
+    route_from_bt_init_to_mock_client::<RfcommTestMarker>(&mut builder);
 
     builder
         // Add proxy route between secure store and mock provider
@@ -234,15 +244,15 @@ async fn bt_init_component_topology() {
     let _test_topology = builder.build().create().await.unwrap();
 
     // If the routing is correctly configured, we expect one of each of the Event enum to be
-    // sent (so, in total, 9 events)
+    // sent (so, in total, 10 events)
     let mut events = Vec::new();
-    for i in 0u32..9u32 {
+    for i in 0u32..10u32 {
         let msg = format!("Unexpected error waiting for {:?} event", i);
         let event = receiver.next().await.expect(&msg);
         info!("Got event with discriminant: {:?}", std::mem::discriminant(&event));
         events.push(event);
     }
-    assert_eq!(events.len(), 9);
+    assert_eq!(events.len(), 10);
     let discriminants: Vec<_> = events.iter().map(std::mem::discriminant).collect();
     for event in vec![
         Event::Profile(None),
@@ -251,6 +261,7 @@ async fn bt_init_component_topology() {
         Event::LePeripheral(None),
         Event::Access(None),
         Event::HostWatcher(None),
+        Event::RfcommTest(None),
         Event::Snoop(None),
         Event::NameProvider(None),
         Event::SecureStore,

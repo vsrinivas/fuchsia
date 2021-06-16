@@ -83,6 +83,10 @@
             from: "#bt-gap",
         },
         {
+            protocol: [ "fuchsia.bluetooth.rfcomm.test.RfcommTest" ],
+            from: "#bt-rfcomm",
+        },
+        {
             protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
             from: "self",
         },

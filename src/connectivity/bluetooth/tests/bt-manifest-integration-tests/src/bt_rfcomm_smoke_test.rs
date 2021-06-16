@@ -6,6 +6,7 @@ use {
     anyhow::Error,
     bt_manifest_integration_lib::add_fidl_service_handler,
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileProxy, ProfileRequestStream},
+    fidl_fuchsia_bluetooth_rfcomm_test::{RfcommTestMarker, RfcommTestProxy},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
@@ -23,12 +24,13 @@ const RFCOMM_URL: &str = "fuchsia-pkg://fuchsia.com/bt-rfcomm-smoke-test#meta/bt
 /// Note: In order to prevent the component under test from terminating, any FIDL channel or
 /// request is kept alive.
 enum Event {
-    /// The fake RFCOMM client connecting to the Profile service and making a search request -
-    /// the proxy and the search results stream are kept alive.
+    /// A fake RFCOMM client connecting to the Profile service.
     Client(Option<ProfileProxy>),
     /// A BR/EDR Profile service connection request was received - request was
     /// made by the RFCOMM component.
     Profile(Option<ProfileRequestStream>),
+    /// A fake RFCOMM client connecting to the RfcommTest service.
+    Test(Option<RfcommTestProxy>),
 }
 
 impl From<ProfileRequestStream> for Event {
@@ -44,6 +46,9 @@ async fn mock_rfcomm_client(
 ) -> Result<(), Error> {
     let profile_svc = handles.connect_to_service::<ProfileMarker>()?;
     sender.send(Event::Client(Some(profile_svc))).await.expect("failed sending ack to test");
+
+    let test_svc = handles.connect_to_service::<RfcommTestMarker>()?;
+    sender.send(Event::Test(Some(test_svc))).await.expect("failed sending ack to test");
     Ok(())
 }
 
@@ -115,6 +120,11 @@ async fn rfcomm_v2_component_topology() {
             vec![RouteEndpoint::component("fake-rfcomm-client")],
         )
         .expect("Failed adding route for RFCOMM profile service")
+        .add_protocol_route::<RfcommTestMarker>(
+            RouteEndpoint::component("rfcomm"),
+            vec![RouteEndpoint::component("fake-rfcomm-client")],
+        )
+        .expect("Failed adding route for RFCOMM profile service")
         .add_protocol_route::<fidl_fuchsia_logger::LogSinkMarker>(
             RouteEndpoint::AboveRoot,
             vec![
@@ -129,8 +139,9 @@ async fn rfcomm_v2_component_topology() {
     // If the routing is correctly configured, we expect two events (in arbitrary order):
     //   1. `bt-rfcomm` connecting to the Profile service provided by `fake-profile`.
     //   2. `fake-rfcomm-client` connecting to the Profile service provided by `bt-rfcomm`.
+    //   3. `fake-rfcomm-client` connecting to the RfcommTest service provided by `bt-rfcomm`.
     let mut events = Vec::new();
-    let expected_number_of_events = 2;
+    let expected_number_of_events = 3;
     for i in 0..expected_number_of_events {
         let msg = format!("Unexpected error waiting for {:?} event", i);
         events.push(receiver.next().await.expect(&msg));
@@ -143,6 +154,10 @@ async fn rfcomm_v2_component_topology() {
     let _rfcomm_component_event = events
         .iter()
         .find(|&p| std::mem::discriminant(p) == std::mem::discriminant(&Event::Profile(None)))
+        .expect("Should receive component event");
+    let _rfcomm_test_event = events
+        .iter()
+        .find(|&p| std::mem::discriminant(p) == std::mem::discriminant(&Event::Test(None)))
         .expect("Should receive component event");
 
     info!("Finished RFCOMM smoke test");

@@ -15,6 +15,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.rfcomm.test:fuchsia.bluetooth.rfcomm.test-rustc",
     "//sdk/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",

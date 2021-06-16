@@ -14,7 +14,10 @@
     },
     capabilities: [
         {
-            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            protocol: [
+                "fuchsia.bluetooth.bredr.Profile",
+                "fuchsia.bluetooth.rfcomm.test.RfcommTest",
+            ],
         },
     ],
     use: [
@@ -25,7 +28,10 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            protocol: [
+                "fuchsia.bluetooth.bredr.Profile",
+                "fuchsia.bluetooth.rfcomm.test.RfcommTest",
+            ],
             from: "self",
         },
     ],

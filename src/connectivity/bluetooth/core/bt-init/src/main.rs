@@ -8,6 +8,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
+    fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestMarker,
     fidl_fuchsia_bluetooth_snoop::SnoopMarker,
     fidl_fuchsia_bluetooth_sys::{
         AccessMarker, BootstrapMarker, ConfigurationMarker, HostWatcherMarker,
@@ -105,6 +106,10 @@ fn handle_service_req<T: AppAdapter>(
             info!("Passing {} handle to bt-rfcomm", service_name);
             bt_rfcomm.pass_channel_to_named_service(service_name, server_channel)
         }
+        (RfcommTestMarker::SERVICE_NAME, Some(bt_rfcomm)) => {
+            info!("Passing {} handle to bt-rfcomm", service_name);
+            bt_rfcomm.pass_channel_to_named_service(service_name, server_channel)
+        }
         _ => {
             info!("Passing {} handle to bt-gap", service_name);
             bt_gap.pass_channel_to_named_service(service_name, server_channel)
@@ -170,7 +175,8 @@ fn main() -> Result<(), Error> {
             .add_service_at(HostWatcherMarker::NAME, |chan| Some((HostWatcherMarker::NAME, chan)))
             .add_service_at(PeripheralMarker::NAME, |chan| Some((PeripheralMarker::NAME, chan)))
             .add_service_at(ProfileMarker::NAME, |chan| Some((ProfileMarker::NAME, chan)))
-            .add_service_at(Server_Marker::NAME, |chan| Some((Server_Marker::NAME, chan)));
+            .add_service_at(Server_Marker::NAME, |chan| Some((Server_Marker::NAME, chan)))
+            .add_service_at(RfcommTestMarker::NAME, |chan| Some((RfcommTestMarker::NAME, chan)));
         fs.take_and_serve_directory_handle()?;
 
         info!("Initialization complete, begin serving FIDL protocols");
