@@ -54,15 +54,15 @@ async fn check_nested(
     realm_path: Option<Vec<String>>,
     expected_results: usize,
 ) -> Result<(), Error> {
-    let mut fetcher = ArchiveReader::new();
+    let mut reader = ArchiveReader::new();
     if expected_results == 0 {
-        fetcher = fetcher.with_timeout(Duration::from_seconds(5));
+        reader.with_timeout(Duration::from_seconds(5));
     }
     if let Some(mut moniker) = realm_path {
         moniker.push(TEST_COMPONENT.clone());
-        fetcher = fetcher.add_selector(ComponentSelector::new(moniker));
+        reader.add_selector(ComponentSelector::new(moniker));
     }
-    let results = fetcher.snapshot::<Inspect>().await?.into_iter().collect::<Vec<_>>();
+    let results = reader.snapshot::<Inspect>().await?.into_iter().collect::<Vec<_>>();
     assert_eq!(results.len(), expected_results);
     for result in results {
         assert_data_tree!(result.payload.as_ref().unwrap(), root: contains {

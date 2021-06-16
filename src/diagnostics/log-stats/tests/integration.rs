@@ -30,7 +30,8 @@ async fn log_attribution() {
         },
     });
 
-    let reader = ArchiveReader::new().add_selector("log-stats:root");
+    let mut reader = ArchiveReader::new();
+    reader.add_selector("log-stats:root");
     loop {
         let hierarchy = reader
             .snapshot::<Inspect>()

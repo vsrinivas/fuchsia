@@ -142,7 +142,7 @@ impl ArchiveReader {
         }
     }
 
-    pub fn with_archive(self, archive: ArchiveAccessorProxy) -> Self {
+    pub fn with_archive(&mut self, archive: ArchiveAccessorProxy) -> &mut Self {
         {
             let mut arc = self.archive.lock();
             *arc = Some(archive);
@@ -151,51 +151,50 @@ impl ArchiveReader {
     }
 
     /// Requests a single component tree (or sub-tree).
-    pub fn add_selector(mut self, selector: impl ToSelectorArguments) -> Self {
+    pub fn add_selector(&mut self, selector: impl ToSelectorArguments) -> &mut Self {
         self.selectors.extend(selector.to_selector_arguments().into_iter());
         self
     }
 
     /// Requests to retry when an empty result is received.
-    pub fn retry_if_empty(mut self, retry: bool) -> Self {
+    pub fn retry_if_empty(&mut self, retry: bool) -> &mut Self {
         self.should_retry = retry;
         self
     }
 
-    pub fn add_selectors<T, S>(self, selectors: T) -> Self
+    pub fn add_selectors<T, S>(&mut self, selectors: T) -> &mut Self
     where
         T: Iterator<Item = S>,
         S: ToSelectorArguments,
     {
-        let mut this = self;
         for selector in selectors {
-            this = this.add_selector(selector);
+            self.add_selector(selector);
         }
-        this
+        self
     }
 
     /// Sets the maximum time to wait for a response from the Archive.
     /// Do not use in tests unless timeout is the expected behavior.
-    pub fn with_timeout(mut self, duration: Duration) -> Self {
+    pub fn with_timeout(&mut self, duration: Duration) -> &mut Self {
         self.timeout = Some(duration);
         self
     }
 
-    pub fn with_aggregated_result_bytes_limit(mut self, limit_bytes: u64) -> Self {
+    pub fn with_aggregated_result_bytes_limit(&mut self, limit_bytes: u64) -> &mut Self {
         self.max_aggregated_content_size_bytes = Some(limit_bytes);
         self
     }
 
     /// Set the maximum time to wait for a wait for a single component
     /// to have its diagnostics data "pumped".
-    pub fn with_batch_retrieval_timeout_seconds(mut self, timeout: i64) -> Self {
+    pub fn with_batch_retrieval_timeout_seconds(&mut self, timeout: i64) -> &mut Self {
         self.batch_retrieval_timeout_seconds = Some(timeout);
         self
     }
 
     /// Sets the minumum number of schemas expected in a result in order for the
     /// result to be considered a success.
-    pub fn with_minimum_schema_count(mut self, minimum_schema_count: usize) -> Self {
+    pub fn with_minimum_schema_count(&mut self, minimum_schema_count: usize) -> &mut Self {
         self.minimum_schema_count = minimum_schema_count;
         self
     }
@@ -535,11 +534,11 @@ mod tests {
             }
         });
 
-        let response = ArchiveReader::new()
+        let mut reader = ArchiveReader::new();
+        reader
             .add_selector(format!("{}:root:int", moniker))
-            .add_selector(format!("{}:root/lazy-node:a", moniker))
-            .snapshot::<Inspect>()
-            .await?;
+            .add_selector(format!("{}:root/lazy-node:a", moniker));
+        let response = reader.snapshot::<Inspect>().await?;
 
         assert_eq!(response.len(), 1);
 
@@ -560,14 +559,14 @@ mod tests {
     async fn timeout() -> Result<(), anyhow::Error> {
         let instance = start_component().await?;
 
-        let result = ArchiveReader::new()
+        let mut reader = ArchiveReader::new();
+        reader
             .add_selector(format!(
                 "fuchsia_component_test_collection\\:{}/test_component:root",
                 instance.root.child_name()
             ))
-            .with_timeout(0.nanos())
-            .snapshot::<Inspect>()
-            .await;
+            .with_timeout(0.nanos());
+        let result = reader.snapshot::<Inspect>().await;
         assert!(result.unwrap().is_empty());
         Ok(())
     }

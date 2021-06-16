@@ -41,11 +41,13 @@ impl DiagnosticsProvider for ArchiveAccessorProvider {
     {
         let archive = connect_to_archive_accessor(accessor_path).await?;
         let selectors = selectors.iter().map(|s| s.as_ref());
-        let reader = ArchiveReader::new()
+        ArchiveReader::new()
             .with_archive(archive)
             .retry_if_empty(false)
-            .add_selectors(selectors);
-        reader.snapshot::<D>().await.map_err(|e| Error::Fetch(e))
+            .add_selectors(selectors)
+            .snapshot::<D>()
+            .await
+            .map_err(|e| Error::Fetch(e))
     }
 
     async fn get_accessor_paths(&self, paths: &Vec<String>) -> Result<Vec<String>, Error> {

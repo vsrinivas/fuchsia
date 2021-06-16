@@ -10,7 +10,8 @@ use {
 
 #[fuchsia::test]
 async fn verify_proxy_reuse() -> Result<(), Error> {
-    let archive_reader = ArchiveReader::new().add_selector(
+    let mut archive_reader = ArchiveReader::new();
+    archive_reader.add_selector(
         "archivist:root/all_archive_accessor:archive_accessor_connections_opened".to_string(),
     );
     let results = archive_reader.snapshot::<Inspect>().await?;
@@ -33,11 +34,12 @@ async fn verify_proxy_reuse() -> Result<(), Error> {
         }
     });
 
-    let archive_reader = ArchiveReader::new().add_selector(
-        "archivist:root/all_archive_accessor:archive_accessor_connections_opened".to_string(),
-    );
-
-    let results = archive_reader.snapshot::<Inspect>().await?;
+    let results = ArchiveReader::new()
+        .add_selector(
+            "archivist:root/all_archive_accessor:archive_accessor_connections_opened".to_string(),
+        )
+        .snapshot::<Inspect>()
+        .await?;
 
     assert_eq!(results.len(), 1);
 

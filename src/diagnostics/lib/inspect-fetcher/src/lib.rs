@@ -42,8 +42,9 @@ impl InspectFetcher {
             Ok(proxy) => proxy,
             Err(e) => bail!("Failed to connect to Inspect reader: {}", e),
         };
-        let reader = ArchiveReader::new().with_archive(proxy);
-        let reader = reader
+        let mut reader = ArchiveReader::new();
+        reader
+            .with_archive(proxy)
             .retry_if_empty(false)
             .add_selectors(Self::process_selectors(selectors)?.into_iter());
         Ok(InspectFetcher { reader: Some(reader) })

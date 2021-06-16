@@ -23,7 +23,8 @@ async fn logs_from_crashing_component() {
 
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
-    let reader = ArchiveReader::new().with_archive(accessor);
+    let mut reader = ArchiveReader::new();
+    reader.with_archive(accessor);
     let (mut logs, mut errors) = reader.snapshot_then_subscribe::<Logs>().unwrap().split_streams();
     let _errors = Task::spawn(async move {
         while let Some(e) = errors.next().await {

@@ -72,14 +72,11 @@ impl TaskCancellation {
 
         let mondo_selectors_set = project_map.keys().cloned();
 
-        let reboot_snapshot_reader =
-            ArchiveReader::new().retry_if_empty(false).add_selectors(mondo_selectors_set);
+        let mut reader = ArchiveReader::new();
+        reader.retry_if_empty(false).add_selectors(mondo_selectors_set);
 
-        let mut reboot_processor = RebootSnapshotProcessor {
-            reader: reboot_snapshot_reader,
-            project_samplers,
-            project_map,
-        };
+        let mut reboot_processor =
+            RebootSnapshotProcessor { reader, project_samplers, project_map };
         // Log errors encountered in final snapshot, but always swallow errors so we can gracefully
         // notify RebootMethodsWatcherRegister that we yield our remaining time.
         reboot_processor
@@ -412,10 +409,12 @@ impl ProjectSampler {
             None
         };
 
+        let mut archive_reader = ArchiveReader::new();
+        archive_reader
+            .retry_if_empty(false)
+            .add_selectors(metric_transformation_map.keys().cloned());
         Ok(ProjectSampler {
-            archive_reader: ArchiveReader::new()
-                .retry_if_empty(false)
-                .add_selectors(metric_transformation_map.keys().cloned()),
+            archive_reader,
             metric_transformation_map,
             metric_cache: HashMap::new(),
             cobalt_logger,
@@ -573,7 +572,8 @@ impl ProjectSampler {
                     if !self.metric_transformation_map.is_empty() {
                         // Update archive reader since we've removed
                         // a selector.
-                        self.archive_reader = ArchiveReader::new()
+                        self.archive_reader = ArchiveReader::new();
+                        self.archive_reader
                             .retry_if_empty(false)
                             .add_selectors(self.metric_transformation_map.keys().cloned());
                     }

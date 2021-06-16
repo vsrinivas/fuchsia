@@ -47,7 +47,8 @@ async fn test_logs_lifecycle() {
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
 
-    let reader = ArchiveReader::new()
+    let mut reader = ArchiveReader::new();
+    reader
         .with_archive(accessor)
         .with_minimum_schema_count(0) // we want this to return even when no log messages
         .retry_if_empty(false);

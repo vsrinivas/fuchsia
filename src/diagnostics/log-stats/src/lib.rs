@@ -104,7 +104,8 @@ async fn maintain(
     archive: ArchiveAccessorProxy,
     mut metric_logger: Option<MetricLogger>,
 ) {
-    let reader = ArchiveReader::new().with_archive(archive);
+    let mut reader = ArchiveReader::new();
+    reader.with_archive(archive);
 
     let (mut logs, mut errors) = reader.snapshot_then_subscribe::<Logs>().unwrap().split_streams();
     let _errors = fasync::Task::spawn(async move {

@@ -58,10 +58,12 @@ impl RedactionTest {
         let log_sink = instance.root.connect_to_protocol_at_exposed_dir::<LogSinkMarker>().unwrap();
         log_sink.connect(rcv).unwrap();
 
-        let all_reader = ArchiveReader::new().with_archive(
+        let mut all_reader = ArchiveReader::new();
+        all_reader.with_archive(
             instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap(),
         );
-        let feedback_reader = ArchiveReader::new().with_archive(
+        let mut feedback_reader = ArchiveReader::new();
+        feedback_reader.with_archive(
             instance
                 .root
                 .connect_to_named_protocol_at_exposed_dir::<ArchiveAccessorMarker>(

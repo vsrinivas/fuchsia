@@ -41,8 +41,8 @@ pub struct BlobFrequencies {
 impl BlobFrequencies {
     pub async fn collect() -> BlobFrequencies {
         let mut blobs = vec![];
-        let reader =
-            ArchiveReader::new().add_selector("bootstrap/fshost:root/page_in_frequency_stats");
+        let mut reader = ArchiveReader::new();
+        reader.add_selector("bootstrap/fshost:root/page_in_frequency_stats");
         let result = get_blobfs_tree(reader).await;
 
         if let Some(hierarchy) = result {

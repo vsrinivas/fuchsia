@@ -111,12 +111,14 @@ impl PuppetEnv {
         let messages_allowed_in_cache = config.logs.max_cached_original_bytes / TEST_PACKET_LEN;
 
         let archive = || _archivist.connect_to_protocol::<ArchiveAccessorMarker>().unwrap();
-        let inspect_reader = ArchiveReader::new()
+        let mut inspect_reader = ArchiveReader::new();
+        inspect_reader
             .with_archive(archive())
             .with_minimum_schema_count(1) // we only request inspect from our archivist
             .add_selector("archivist-with-small-caches.cmx:root/logs_buffer")
             .add_selector("archivist-with-small-caches.cmx:root/sources");
-        let log_reader = ArchiveReader::new()
+        let mut log_reader = ArchiveReader::new();
+        log_reader
             .with_archive(archive())
             .with_minimum_schema_count(0) // we want this to return even when no log messages
             .retry_if_empty(false);

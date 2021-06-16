@@ -196,13 +196,12 @@ impl AppReader {
         let mut moniker = realms.iter().map(ToString::to_string).collect::<Vec<_>>();
         moniker.push(manifest.to_string());
 
-        Self {
-            reader: ArchiveReader::new()
-                .with_archive(archive)
-                .with_minimum_schema_count(1)
-                .add_selector(ComponentSelector::new(moniker)),
-            _logs_tasks: Vec::new(),
-        }
+        let mut reader = ArchiveReader::new();
+        reader
+            .with_archive(archive)
+            .with_minimum_schema_count(1)
+            .add_selector(ComponentSelector::new(moniker));
+        Self { reader, _logs_tasks: Vec::new() }
     }
 
     /// Returns a snapshot of the requested data for this component.
