@@ -19,6 +19,10 @@ constexpr size_t kNumBuffers = 2;
 constexpr size_t kSrcBuffer = 0;
 constexpr size_t kDstBuffer = 1;
 constexpr uint8_t kSrcValue = 0xaa;
+constexpr uint32_t kMB = 1024 * 1024;
+constexpr uint32_t kTimestamps = 2;
+constexpr uint32_t kTimestampBegin = 0;
+constexpr uint32_t kTimestampEnd = 1;
 
 }  // namespace
 
@@ -30,12 +34,14 @@ class VkCopyTest {
   bool Initialize();
   bool Exec();
   bool Validate();
+  void Elapsed(uint32_t kBufferSize, uint32_t kIterations);
 
  private:
   bool InitBuffers(uint32_t buffer_size);
 
   bool is_initialized_ = false;
   uint32_t buffer_size_;
+
   std::unique_ptr<VulkanContext> ctx_;
 
   struct Buffer {
@@ -46,6 +52,23 @@ class VkCopyTest {
   std::array<Buffer, kNumBuffers> buffers_;
   vk::UniqueCommandPool command_pool_;
   std::vector<vk::CommandBuffer> command_buffers_;
+
+  bool is_timestamp_supported_ = false;
+  float timestamp_period_;
+  vk::UniqueQueryPool query_pool_;
+
+  struct {
+    struct {
+      std::chrono::duration<double> min_ = std::chrono::duration<double>::max();
+      std::chrono::duration<double> max_ = std::chrono::duration<double>::zero();
+      std::chrono::duration<double> sum_ = std::chrono::duration<double>::zero();
+    } host;
+    struct {
+      uint64_t min_ = UINT64_MAX;
+      uint64_t max_ = 0UL;
+      uint64_t sum_ = 0UL;
+    } device;
+  } elapsed;
 };
 
 VkCopyTest::~VkCopyTest() {
@@ -79,6 +102,30 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
   vk::Result rv;
   const auto &device = ctx_->device();
 
+  //
+  // If timestamps are supported, create query pool
+  //
+  vk::PhysicalDeviceProperties props;
+  ctx_->physical_device().getProperties(&props);
+
+  if (props.limits.timestampComputeAndGraphics == VK_TRUE) {
+    is_timestamp_supported_ = true;
+    timestamp_period_ = props.limits.timestampPeriod;
+
+    vk::QueryPoolCreateInfo query_pool_info;
+    query_pool_info.setQueryType(vk::QueryType::eTimestamp);
+    query_pool_info.setQueryCount(kTimestamps);
+
+    auto rvt_query_pool = device->createQueryPoolUnique(query_pool_info);
+    if (vk::Result::eSuccess != rvt_query_pool.result) {
+      RTN_MSG(false, "VK Error: 0x%x - Create query pool.\n", rvt_query_pool.result);
+    }
+    query_pool_ = std::move(rvt_query_pool.value);
+  }
+
+  //
+  // Allocate buffers
+  //
   vk::PhysicalDeviceMemoryProperties memory_props;
   ctx_->physical_device().getMemoryProperties(&memory_props);
   uint32_t memory_type = 0;
@@ -94,6 +141,7 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
 
   buffers_[kSrcBuffer].usage = vk::BufferUsageFlagBits::eTransferSrc;
   buffers_[kDstBuffer].usage = vk::BufferUsageFlagBits::eTransferDst;
+
   for (auto &buffer : buffers_) {
     vk::BufferCreateInfo buffer_info;
     buffer_info.size = buffer_size;
@@ -164,9 +212,19 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
     RTN_MSG(false, "VK Error: 0x%x - Begin command buffer.\n", rv_begin);
   }
 
+  if (is_timestamp_supported_) {
+    command_buffer.resetQueryPool(query_pool_.get(), 0, kTimestamps);
+
+    command_buffer.writeTimestamp(vk::PipelineStageFlagBits::eTopOfPipe, query_pool_.get(), 0);
+  }
+
   vk::BufferCopy copy_region(0 /* srcOffset */, 0 /* dstOffset */, buffer_size);
   command_buffer.copyBuffer(*(buffers_[kSrcBuffer].buffer), *(buffers_[kDstBuffer].buffer),
                             1 /* regionCount */, &copy_region);
+
+  if (is_timestamp_supported_) {
+    command_buffer.writeTimestamp(vk::PipelineStageFlagBits::eTransfer, query_pool_.get(), 1);
+  }
 
   auto rv_end = command_buffer.end();
   if (vk::Result::eSuccess != rv_end) {
@@ -182,12 +240,43 @@ bool VkCopyTest::Exec() {
   submit_info.commandBufferCount = static_cast<uint32_t>(command_buffers_.size());
   submit_info.pCommandBuffers = command_buffers_.data();
 
+  auto host_start = std::chrono::high_resolution_clock::now();
+
   auto rv = ctx_->queue().submit(1 /* submitCt */, &submit_info, nullptr /* fence */);
   if (rv != vk::Result::eSuccess) {
     RTN_MSG(false, "VK Error: 0x%x - vk::Queue submit failed.\n", rv);
   }
 
   ctx_->queue().waitIdle();
+
+  std::chrono::duration<double> const t = std::chrono::high_resolution_clock::now() - host_start;
+
+  elapsed.host.min_ = t < elapsed.host.min_ ? t : elapsed.host.min_;
+  elapsed.host.max_ = t > elapsed.host.max_ ? t : elapsed.host.max_;
+  elapsed.host.sum_ += t;
+
+  //
+  // Device
+  //
+  if (is_timestamp_supported_) {
+    uint64_t timestamps[kTimestamps];
+
+    const auto &device = ctx_->device();
+
+    device->getQueryPoolResults(query_pool_.get(),      //
+                                0,                      //
+                                kTimestamps,            //
+                                sizeof(timestamps),     //
+                                timestamps,             //
+                                sizeof(timestamps[0]),  //
+                                vk::QueryResultFlagBits::e64 | vk::QueryResultFlagBits::eWait);
+
+    uint64_t const t = timestamps[kTimestampEnd] - timestamps[kTimestampBegin];
+
+    elapsed.device.min_ = t < elapsed.device.min_ ? t : elapsed.device.min_;
+    elapsed.device.max_ = t > elapsed.device.max_ ? t : elapsed.device.max_;
+    elapsed.device.sum_ += t;
+  }
 
   return true;
 }
@@ -215,36 +304,74 @@ bool VkCopyTest::Validate() {
   return true;
 }
 
+void VkCopyTest::Elapsed(uint32_t kBufferSize, uint32_t kIterations) {
+  printf("Copy rates\n");
+
+  double const sum_mbs = static_cast<double>(kBufferSize) * kIterations / kMB;
+  double const buf_mbs = static_cast<double>(kBufferSize) / kMB;
+
+  printf("Wall Clock AVG : %9.2f MB/s ( %7.3f msecs )\n",  //
+         sum_mbs / elapsed.host.sum_.count(),              //
+         elapsed.host.sum_.count() * 1000.0 / kIterations);
+
+  printf("           MIN : %9.2f MB/s ( %7.3f msecs )\n",  //
+         buf_mbs / elapsed.host.max_.count(),              //
+         elapsed.host.max_.count() * 1000.0);
+
+  printf("           MAX : %9.2f MB/s ( %7.3f msecs )\n",  //
+         buf_mbs / elapsed.host.min_.count(),              //
+         elapsed.host.min_.count() * 1000.0);
+
+  if (is_timestamp_supported_) {
+    double const elapsed_ns_sum = static_cast<double>(elapsed.device.sum_) * timestamp_period_;
+    double const elapsed_ns_min = static_cast<double>(elapsed.device.min_) * timestamp_period_;
+    double const elapsed_ns_max = static_cast<double>(elapsed.device.max_) * timestamp_period_;
+
+    printf("Timestamps AVG : %9.2f MB/s ( %7.3f msecs )\n",  //
+           sum_mbs * 1e9 / elapsed_ns_sum,                   //
+           elapsed_ns_sum / (1e6 * kIterations));
+
+    printf("           MIN : %9.2f MB/s ( %7.3f msecs )\n",  //
+           buf_mbs * 1e9 / elapsed_ns_max,                   //
+           elapsed_ns_max / 1e6);
+
+    printf("           MAX : %9.2f MB/s ( %7.3f msecs )\n",  //
+           buf_mbs * 1e9 / elapsed_ns_min,                   //
+           elapsed_ns_min / 1e6);
+  }
+
+  fflush(stdout);
+}
+
 int main() {
-  constexpr uint32_t kBufferSize = 60 * 1024 * 1024;
+  constexpr uint32_t kBufferSize = 60 * kMB;
   constexpr uint32_t kIterations = 1000;
 
   VkCopyTest app(kBufferSize);
 
   if (!app.Initialize()) {
-    RTN_MSG(-1, "Could not initialize app.\n");
+    RTN_MSG(EXIT_FAILURE, "Could not initialize app.\n");
   }
 
-  printf("Copying buffer size: %u  Iterations: %u...\n", kBufferSize, kIterations);
+  printf(
+      "Copying    : %.2f MB\n"
+      "Iterations : %u\n"
+      "...\n",
+      static_cast<double>(kBufferSize) / kMB,  //
+      kIterations);
   fflush(stdout);
-
-  auto start = std::chrono::high_resolution_clock::now();
 
   for (uint32_t iter = 0; iter < kIterations; iter++) {
     if (!app.Exec()) {
-      RTN_MSG(-1, "Exec failed.\n");
+      RTN_MSG(EXIT_FAILURE, "Exec failed.\n");
     }
   }
 
-  std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
   if (!app.Validate()) {
-    RTN_MSG(-1, "Validate failed.\n");
+    RTN_MSG(EXIT_FAILURE, "Validate failed.\n");
   }
 
-  const uint32_t kMB = 1024 * 1024;
-  printf("Copy rate %g MB/s\n",
-         static_cast<double>(kBufferSize) * kIterations / kMB / elapsed.count());
-  fflush(stdout);
+  app.Elapsed(kBufferSize, kIterations);
 
-  return 0;
+  return EXIT_SUCCESS;
 }
