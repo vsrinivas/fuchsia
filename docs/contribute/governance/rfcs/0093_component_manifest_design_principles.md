@@ -25,9 +25,9 @@ Most of the decisions described below were made in the years 2018-2019.
     format for component manifests.
 -   `.cm` is the common filename extension for files that contain a
     [ComponentDecl] in the [FIDL envelope][fidl-envelope] binary format.
--   `[cmc]` is a command line host tool for generating `.cm` files from `.cml`
-    files. It is built in the Fuchsia source tree and distributed as a prebuilt
-    executable through the [Fuchsia SDK][sdk].
+-   [`cmc`][cmc] is a command line host tool for generating `.cm` files from
+    `.cml` files. It is built in the Fuchsia source tree and distributed as a
+    prebuilt executable through the [Fuchsia SDK][sdk].
 
 ## #1: Component manifests have a frontend and backend {#frontend-backend}
 
