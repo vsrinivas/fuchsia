@@ -56,8 +56,8 @@ represent components and may be provided to components at runtime.
 
 The component framework doesn't dictate a particular format for programs, but
 instead requires components to specify which runtime they need by specifying a
-[runner][doc-runners]. The component framework provides a built-in [ELF runner](elf_runner.md),
-while other runtimes are implemented as components
+[runner][doc-runners]. The component framework provides a built-in
+[ELF runner](elf_runner.md), while other runtimes are implemented as components
 within the framework. A component can specify any runner available in its
 [environment][doc-environments].
 
@@ -78,7 +78,8 @@ See also: [ELF Runner](elf_runner.md), [Component Runners][doc-runners]
 
 Component manifests provide a syntax for routing capabilities between
 components. For a detailed walkthrough about what happens during capability
-routing, see [_Life of a protocol open_](capabilities/life_of_a_protocol_open.md)
+routing, see
+[_Life of a protocol open_](capabilities/life_of_a_protocol_open.md)
 
 #### Capability types {#capability-types}
 
@@ -92,8 +93,8 @@ The following capabilities can be routed:
 -   `runner`: A capability that allows a component to use a particular
     [runner][doc-runners].
 -   `resolver`: A capability that, when registered in an
-    [environment](#environments), causes a component with a particular URL scheme
-    to be resolved with that [resolver][doc-resolvers].
+    [environment](#environments), causes a component with a particular URL
+    scheme to be resolved with that [resolver][doc-resolvers].
 
 `protocol`, `directory` and `storage` capabilities are routed to components that
 `use` them. `runner` capabilities are routed to [environments](#environments)
@@ -396,8 +397,8 @@ The `environments` section declares environments as described in
 properties:
 
 -   `name`: The name of the environment, which is a string of one or more of the
-    following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
-    identifies this environment when used in a [reference](#references).
+    following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name identifies this
+    environment when used in a [reference](#references).
 -   `extend`: How the environment should extend this realm's environment.
     -   `realm`: Inherit all properties from this compenent's environment.
     -   `none`: Start with an empty environment, do not inherit anything.
@@ -451,8 +452,8 @@ environments: [
 ### capabilities {#capabilities}
 
 The `capabilities` section defines capabilities that are provided by this
-component. Capabilities that are offered or exposed from `self` must be
-declared here.
+component. Capabilities that are offered or exposed from `self` must be declared
+here.
 
 `capabilities` is an array of objects of any of the following types:
 
@@ -499,18 +500,17 @@ A definition of a [storage capability][doc-storage].
         instance.
 -   `backing_dir`: The [name](#capability-names) of the directory backing the
     storage.
--   `subdir`: The subdirectory within `backing_dir` where per-component
-    isolated storage directories are created.
+-   `subdir`: The subdirectory within `backing_dir` where per-component isolated
+    storage directories are created.
 -   `storage_id`: The identifier used to isolated storage for a component, one
     of:
     -   `static_instance_id`: The instance ID in the component ID index is used
-        as the key for a component's storage. Components which are not listed
-        in the component ID index will not be able to use this storage
-        capability.
-    -   `static_instance_id_or_moniker`:  If the component is listed in the
-        component ID index, the instance ID is used as the key for a
-        component's storage. Otherwise, the component's relative moniker from
-        the storage capability is used.
+        as the key for a component's storage. Components which are not listed in
+        the component ID index will not be able to use this storage capability.
+    -   `static_instance_id_or_moniker`: If the component is listed in the
+        component ID index, the instance ID is used as the key for a component's
+        storage. Otherwise, the component's relative moniker from the storage
+        capability is used.
 
 #### runner {#capability-runner}
 
@@ -574,12 +574,12 @@ explained in [Routing terminology](#routing-terminology).
 
 `expose` is an array of objects with the following properties:
 
--   A capability declaration, one of:
-    -   `protocol`: The [name](#capability-names) of a protocol capability, or
-        an array of names to protocol capabilities.
-    -   `directory`: The [name](#capability-names) of a directory capability.
-    -   `runner`: The [name](#capability-names) of a runner capability.
-    -   `resolver`: The [name](#capability-names) of a resolver capability.
+-   A [capability name](#capability-names) or array of names, keyed to one of
+    the following typenames:
+    -   `protocol`
+    -   `directory`
+    -   `runner`
+    -   `resolver`
 -   `from`: The source of the capability, one of:
     -   `self`: This component. Requires a corresponding
         [`capability`](#capabilities) declaration.
@@ -589,7 +589,8 @@ explained in [Routing terminology](#routing-terminology).
     Defaults to `parent`.
 -   `as` _(optional)_: The [name](#capability-names) for the capability as it
     will be known by the target. If omitted, defaults to the original name. This
-    property cannot be used when `protocol` is an array of multiple items.
+    property cannot be used when `protocol` is an array of multiple items. `as`
+    cannot be used when an array of multiple names is provided.
 
 Example:
 
@@ -630,13 +631,13 @@ explained in [Routing terminology](#routing-terminology).
 
 `offer` is an array of objects with the following properties:
 
--   A capability declaration, one of:
-    -   `protocol`: The [name](#capability-names) of a protocol capability, or
-        an array of names of protocol capabilities.
-    -   `directory`: The [name](#capability-names) of a directory capability.
-    -   `storage`: The [name](#capability-names) of a storage capability.
-    -   `runner`: The [name](#capability-names) of a runner capability.
-    -   `resolver`: The [name](#capability-names) of a resolver capability.
+-   A [capability name](#capability-names) or array of names, keyed to one of
+    the following typenames:
+    -   `protocol`
+    -   `directory`
+    -   `storage`
+    -   `runner`
+    -   `resolver`
 -   `from`: The source of the capability, one of:
     -   `parent`: The component's parent. This source can be used for all
         capability types.
@@ -650,7 +651,7 @@ explained in [Routing terminology](#routing-terminology).
     is being offered, of the form `#<target-name>`.
 -   `as` _(optional)_: An explicit [name](#capability-names) for the capability
     as it will be known by the target. If omitted, defaults to the original
-    name. `as` cannot be used when `protocol` is an array of multiple items.
+    name. `as` cannot be used when an array of multiple names is provided.
 -   `dependency` _(optional)_: The type of dependency between the source and
     targets, one of:
     -   `strong`: a strong dependency, which is used to determine shutdown
