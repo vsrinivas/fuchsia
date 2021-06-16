@@ -141,6 +141,16 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     TreeVisitor::OnParameterListOld(element);
   }
 
+  void OnProtocolCompose(std::unique_ptr<ProtocolCompose> const& element) override {
+    protocol_method_alignment_ = true;
+    protocol_method_alignment_size_ = -1;
+    next_nonws_char_is_checkpoint_ = false;
+    OnBlankLineRespectingNode();
+    ScopedBool before(blank_space_before_colon_, false);
+    ScopedBool mem(is_member_decl_);
+    TreeVisitor::OnProtocolCompose(element);
+  }
+
   void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) override {
     protocol_method_alignment_ = true;
     protocol_method_alignment_size_ = -1;
@@ -159,11 +169,6 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     OnBlankLineRequiringNode();
     ScopedBool mem(is_enum_or_bits_or_resource_decl_, true);
     TreeVisitor::OnResourceDeclaration(element);
-  }
-
-  void OnProtocolCompose(std::unique_ptr<ProtocolCompose> const& element) override {
-    OnBlankLineRespectingNode();
-    TreeVisitor::OnProtocolCompose(element);
   }
 
   void OnServiceDeclaration(std::unique_ptr<ServiceDeclaration> const& element) override {

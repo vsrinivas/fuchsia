@@ -275,6 +275,9 @@ void ProtocolMethod::Accept(TreeVisitor* visitor) const {
 
 void ProtocolCompose::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
+  if (IsAttributeListDefined(attributes)) {
+    visitor->OnAttributeList(attributes);
+  }
   visitor->OnCompoundIdentifier(protocol_name);
 }
 

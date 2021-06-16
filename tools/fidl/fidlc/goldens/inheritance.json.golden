@@ -101,9 +101,42 @@
       "composed_protocols": [
         {
           "name": "fidl.test.inheritance/super",
+          "maybe_attributes": [
+            {
+              "name": "doc",
+              "value": " doc comment on compose\n",
+              "arguments": [
+                {
+                  "name": "value",
+                  "value": {
+                    "kind": "literal",
+                    "value": " doc comment on compose\n",
+                    "expression": "/// doc comment on compose",
+                    "literal": {
+                      "kind": "string",
+                      "value": " doc comment on compose\n",
+                      "expression": "/// doc comment on compose"
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
+                    "line": 8,
+                    "column": 5,
+                    "length": 26
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
+                "line": 8,
+                "column": 5,
+                "length": 26
+              }
+            }
+          ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-            "line": 8,
+            "line": 9,
             "column": 13,
             "length": 5
           }

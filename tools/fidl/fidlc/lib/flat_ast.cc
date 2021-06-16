@@ -5238,6 +5238,10 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
   // this one, or they will not have generated_ordinal64s on their methods, and
   // will fail the scope check.
   for (const auto& composed_protocol : protocol_declaration->composed_protocols) {
+    if (!CompileAttributeList(composed_protocol.attributes.get())) {
+      return false;
+    }
+
     auto decl = LookupDeclByName(composed_protocol.name);
     if (!decl) {
       return Fail(ErrUnknownType, composed_protocol.name, composed_protocol.name);

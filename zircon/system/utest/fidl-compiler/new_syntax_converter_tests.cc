@@ -252,7 +252,7 @@ protocol P1 {
 
 @for_deprecated_c_bindings2
 protocol P2 {
-  [OnCompose] compose P1;
+  @on_compose compose P1;
   @selector2("Bar") M2();
 };
 

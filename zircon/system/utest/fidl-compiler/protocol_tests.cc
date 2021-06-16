@@ -192,6 +192,8 @@ protocol Child {
   EXPECT_EQ(child_protocol->composed_protocols.back().attributes->attributes.front()->name, "Doc");
   EXPECT_EQ(child_protocol->composed_protocols.back().attributes->attributes.front()->span().data(),
             "/// This is also allowed.");
+  ASSERT_EQ(child_protocol->composed_protocols.back().attributes->attributes.front()->args.size(), 1);
+  EXPECT_TRUE(child_protocol->composed_protocols.back().attributes->attributes.front()->args.front()->value->IsResolved());
 }
 
 TEST(ProtocolTests, BadCannotComposeYourselfOld) {

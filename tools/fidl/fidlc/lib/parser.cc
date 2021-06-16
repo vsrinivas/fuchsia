@@ -1101,21 +1101,46 @@ void Parser::ParseProtocolMember(
       break;
     }
     case CASE_TOKEN(Token::Kind::kIdentifier): {
-      bool is_composed = Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kCompose);
-      auto identifier = ParseIdentifier();
-      if (!Ok())
-        break;
+      std::unique_ptr<raw::Identifier> method_name;
+      if (Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kCompose)) {
+        // There are two possibilities here: we are looking at the first token in a compose
+        // statement like `compose a.b;`, or we are looking at the identifier of a method that has
+        // unfortunately been named `compose(...);`.  Because we want the previous_end of the
+        // CompoundIdentifier to correctly point to the previous raw AST node, instead of calling
+        // ParseIdentifier here, we merely consume the token for now.
+        const auto compose_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kCompose));
+        if (!Ok()) {
+          Fail();
+          break;
+        }
 
-      if (Peek().kind() == Token::Kind::kLeftParen) {
-        add(methods, [&] {
-          return ParseProtocolMethod(std::move(attributes), scope, std::move(identifier));
-        });
-      } else if (is_composed) {
-        add(composed_protocols, [&] { return ParseProtocolCompose(std::move(attributes), scope); });
+        // If the `compose` identifier is not immediately followed by a left paren we assume that we
+        // are looking at a compose clause.  Because we only we haven't built any raw AST nodes
+        // since the compose clause started, the previous_end of its raw AST node will point to the
+        // correct position.
+        if (Peek().kind() != Token::Kind::kLeftParen) {
+          add(composed_protocols, [&] { return ParseProtocolCompose(std::move(attributes), scope); });
+          return;
+        }
+
+        // Looks like this is a `compose(...);` method after all, so coerce the composed token into
+        // an Identifier source element.
+        method_name = std::make_unique<raw::Identifier>(raw::SourceElement(compose_token.value(), compose_token.value()));
       } else {
-        Fail(ErrUnrecognizedProtocolMember);
-        return;
+        method_name = ParseIdentifier();
+        if (!Ok()) {
+          Fail();
+          return;
+        }
+        if (Peek().kind() != Token::Kind::kLeftParen) {
+          Fail(ErrUnrecognizedProtocolMember);
+          return;
+        }
       }
+
+      add(methods, [&] {
+        return ParseProtocolMethod(std::move(attributes), scope, std::move(method_name));
+      });
       break;
     }
     default:
