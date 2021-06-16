@@ -43,9 +43,6 @@ sdk_source_set("cpp") {
   ]
 
   non_sdk_deps = [ ":gen_command_sizing" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 compiled_action("gen_command_sizing") {

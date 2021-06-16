@@ -8,6 +8,7 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <algorithm>
+#include <limits>
 
 namespace scenic {
 namespace {
@@ -91,7 +92,8 @@ Image::Image(const Memory& memory, off_t memory_offset, fuchsia::images::ImageIn
 Image::Image(Session* session, uint32_t memory_id, off_t memory_offset,
              fuchsia::images::ImageInfo info)
     : Resource(session), memory_offset_(memory_offset), info_(info) {
-  session->Enqueue(NewCreateImageCmd(id(), memory_id, memory_offset_, info));
+  ZX_DEBUG_ASSERT(memory_offset_ <= std::numeric_limits<uint32_t>::max());
+  session->Enqueue(NewCreateImageCmd(id(), memory_id, static_cast<uint32_t>(memory_offset_), info));
 }
 
 Image::Image(Image&& moved) noexcept
@@ -108,7 +110,10 @@ Buffer::Buffer(const Memory& memory, off_t memory_offset, size_t num_bytes)
 
 Buffer::Buffer(Session* session, uint32_t memory_id, off_t memory_offset, size_t num_bytes)
     : Resource(session) {
-  session->Enqueue(NewCreateBufferCmd(id(), memory_id, memory_offset, num_bytes));
+  ZX_DEBUG_ASSERT(memory_offset <= std::numeric_limits<uint32_t>::max());
+  ZX_DEBUG_ASSERT(num_bytes <= std::numeric_limits<uint32_t>::max());
+  session->Enqueue(NewCreateBufferCmd(id(), memory_id, static_cast<uint32_t>(memory_offset),
+                                      static_cast<uint32_t>(num_bytes)));
 }
 
 Buffer::Buffer(Buffer&& moved) noexcept : Resource(std::move(moved)) {}
