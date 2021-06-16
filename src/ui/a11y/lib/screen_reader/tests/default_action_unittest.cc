@@ -12,17 +12,12 @@
 #include <memory>
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
-#include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
-#include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"
-#include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_screen_reader_context.h"
+#include "src/ui/a11y/lib/screen_reader/tests/screen_reader_action_test_fixture.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
-#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_event_manager.h"
-#include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"
-#include "src/ui/a11y/lib/view/tests/mocks/mock_view_injector_factory.h"
-#include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_source.h"
 
 namespace accessibility_test {
 namespace {
@@ -31,105 +26,72 @@ using fuchsia::accessibility::semantics::Attributes;
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::Role;
 
-class DefaultActionTest : public gtest::TestLoopFixture {
+class DefaultActionTest : public ScreenReaderActionTest {
  public:
-  DefaultActionTest()
-      : view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                      std::make_unique<MockViewSemanticsFactory>(),
-                      std::make_unique<MockAnnotationViewFactory>(),
-                      std::make_unique<MockViewInjectorFactory>(),
-                      std::make_unique<MockSemanticsEventManager>(),
-                      std::make_unique<MockAccessibilityView>(), context_provider_.context(),
-                      context_provider_.context()->outgoing()->debug_dir()),
-        semantic_provider_(&view_manager_) {
-    action_context_.semantics_source = &view_manager_;
+  DefaultActionTest() = default;
+  ~DefaultActionTest() = default;
 
-    screen_reader_context_ = std::make_unique<MockScreenReaderContext>();
-    a11y_focus_manager_ptr_ = screen_reader_context_->mock_a11y_focus_manager_ptr();
-    view_manager_.SetSemanticsEnabled(true);
+  void SetUp() override {
+    ScreenReaderActionTest::SetUp();
+
+    // Update focused node.
+    mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), 0u,
+                                            [](bool result) { EXPECT_TRUE(result); });
   }
-
-  vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
-
-  sys::testing::ComponentContextProvider context_provider_;
-  a11y::ViewManager view_manager_;
-  a11y::ScreenReaderAction::ActionContext action_context_;
-  std::unique_ptr<MockScreenReaderContext> screen_reader_context_;
-  MockA11yFocusManager* a11y_focus_manager_ptr_;
-  accessibility_test::MockSemanticProvider semantic_provider_;
 };
 
 // Tests the case when Hit testing results a valid node and OnAccessibilityActionRequested is
 // called.
 TEST_F(DefaultActionTest, OnAccessibilitActionRequestedCalled) {
   // Creating test node to update.
-  std::vector<Node> update_nodes;
   uint32_t node_id = 0;
   Node node = CreateTestNode(node_id, "Label A");
-  update_nodes.push_back(std::move(node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node));
 
-  // Update the node created above.
-  semantic_provider_.UpdateSemanticNodes(std::move(update_nodes));
-  RunLoopUntilIdle();
-
-  // Commit nodes.
-  semantic_provider_.CommitUpdates();
-  RunLoopUntilIdle();
-  a11y::ScreenReaderContext* context = screen_reader_context_.get();
-  a11y::DefaultAction default_action(&action_context_, context);
+  a11y::ScreenReaderContext* context = mock_screen_reader_context();
+  a11y::DefaultAction default_action(action_context(), context);
   a11y::GestureContext gesture_context;
-  gesture_context.view_ref_koid = semantic_provider_.koid();
-
-  semantic_provider_.SetRequestedAction(fuchsia::accessibility::semantics::Action::SET_FOCUS);
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
 
   // Update focused node.
-  a11y_focus_manager_ptr_->SetA11yFocus(semantic_provider_.koid(), node_id,
-                                        [](bool result) { EXPECT_TRUE(result); });
+  mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), node_id,
+                                          [](bool result) { EXPECT_TRUE(result); });
 
   // Call DefaultAction Run()
   default_action.Run(gesture_context);
   RunLoopUntilIdle();
 
-  ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
-  ASSERT_EQ(fuchsia::accessibility::semantics::Action::DEFAULT,
-            semantic_provider_.GetRequestedAction());
-  EXPECT_EQ(node_id, semantic_provider_.GetRequestedActionNodeId());
+  ASSERT_TRUE(mock_a11y_focus_manager()->IsGetA11yFocusCalled());
+  const auto& requested_actions =
+      mock_semantics_source()->GetRequestedActionsForView(mock_semantic_provider()->koid());
+  EXPECT_EQ(requested_actions.size(), 1u);
+  EXPECT_EQ(requested_actions[0].first, node_id);
+  EXPECT_EQ(requested_actions[0].second, fuchsia::accessibility::semantics::Action::DEFAULT);
 }
 
 // Tests the case when Hit testing doesn't returns a valid node and OnAccessibilityActionRequested
 // is not called.
 TEST_F(DefaultActionTest, OnAccessibilitActionRequestedNotCalled) {
   // Creating test node to update.
-  std::vector<Node> update_nodes;
   uint32_t node_id = 0;
   Node node = CreateTestNode(node_id, "Label A");
-  update_nodes.push_back(std::move(node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node));
 
-  // Update the node created above.
-  semantic_provider_.UpdateSemanticNodes(std::move(update_nodes));
-  RunLoopUntilIdle();
-
-  // Commit nodes.
-  semantic_provider_.CommitUpdates();
-  RunLoopUntilIdle();
-
-  a11y::ScreenReaderContext* context = screen_reader_context_.get();
-  a11y::DefaultAction default_action(&action_context_, context);
+  a11y::ScreenReaderContext* context = mock_screen_reader_context();
+  a11y::DefaultAction default_action(action_context(), context);
   a11y::GestureContext gesture_context;
 
   // Update focused node.
-  a11y_focus_manager_ptr_->SetA11yFocus(ZX_KOID_INVALID, node_id, [](bool result) {});
-
-  semantic_provider_.SetRequestedAction(fuchsia::accessibility::semantics::Action::SET_VALUE);
+  mock_a11y_focus_manager()->SetA11yFocus(ZX_KOID_INVALID, node_id, [](bool result) {});
 
   // Call DefaultAction Run()
   default_action.Run(gesture_context);
   RunLoopUntilIdle();
 
-  ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
-  ASSERT_EQ(fuchsia::accessibility::semantics::Action::SET_VALUE,
-            semantic_provider_.GetRequestedAction());
-  EXPECT_NE(node_id, semantic_provider_.GetRequestedActionNodeId());
+  ASSERT_TRUE(mock_a11y_focus_manager()->IsGetA11yFocusCalled());
+  const auto& requested_actions =
+      mock_semantics_source()->GetRequestedActionsForView(mock_semantic_provider()->koid());
+  EXPECT_TRUE(requested_actions.empty());
 }
 
 }  // namespace
