@@ -12,12 +12,14 @@
 #include <zircon/types.h>
 
 #include <functional>
+#include <mutex>
 
 #include "src/lib/fxl/fxl_export.h"
 #include "src/lib/fxl/macros.h"
 
 namespace fsl {
 
+// Instances of FDWaiter are thread-safe.
 class FXL_EXPORT FDWaiter {
  public:
   FDWaiter(async_dispatcher_t* dispatcher = async_get_default_dispatcher());
@@ -54,15 +56,17 @@ class FXL_EXPORT FDWaiter {
 
  private:
   // Release the fdio_t*
-  void Release();
+  void ReleaseLocked() __TA_REQUIRES(mutex_);
 
   void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                const zx_packet_signal_t* signal);
 
   async_dispatcher_t* const dispatcher_;
-  fdio_t* io_;
-  async::WaitMethod<FDWaiter, &FDWaiter::Handler> wait_{this};
-  Callback callback_;
+
+  std::mutex mutex_;
+  fdio_t* io_ __TA_GUARDED(mutex_);
+  async::WaitMethod<FDWaiter, &FDWaiter::Handler> wait_ __TA_GUARDED(mutex_){this};
+  Callback callback_ __TA_GUARDED(mutex_);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FDWaiter);
 };

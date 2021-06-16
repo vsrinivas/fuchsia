@@ -23,6 +23,7 @@ FDWaiter::~FDWaiter() {
 }
 
 bool FDWaiter::Wait(Callback callback, int fd, uint32_t events) {
+  std::lock_guard<std::mutex> guard(mutex_);
   FX_DCHECK(!io_);
 
   io_ = fdio_unsafe_fd_to_io(fd);
@@ -35,53 +36,56 @@ bool FDWaiter::Wait(Callback callback, int fd, uint32_t events) {
   fdio_unsafe_wait_begin(io_, events, &handle, &signals);
 
   if (handle == ZX_HANDLE_INVALID) {
-    Release();
+    ReleaseLocked();
     return false;
   }
 
   wait_.set_object(handle);
   wait_.set_trigger(signals);
   zx_status_t status = wait_.Begin(dispatcher_);
-
   if (status != ZX_OK) {
-    Release();
+    ReleaseLocked();
     return false;
   }
 
-  // Last to prevent re-entrancy from the move constructor of the callback.
   callback_ = std::move(callback);
   return true;
 }
 
-void FDWaiter::Release() {
+void FDWaiter::ReleaseLocked() {
   FX_DCHECK(io_);
   fdio_unsafe_release(io_);
   io_ = nullptr;
 }
 
 void FDWaiter::Cancel() {
+  // Callback's destructor may ultimately call back into this object (e.g. to Cancel()) so take care
+  // to avoid destroying any Callbacks while holding the lock.
+  Callback to_be_destroyed;
+  std::lock_guard<std::mutex> guard(mutex_);
   if (io_) {
     wait_.Cancel();
-    Release();
-
-    // Last to prevent re-entrancy from the destructor of the callback.
-    callback_ = Callback();
+    ReleaseLocked();
+    to_be_destroyed = std::move(callback_);
   }
 }
 
 void FDWaiter::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal) {
-  FX_DCHECK(io_);
-
+  Callback callback;
   uint32_t events = 0;
-  if (status == ZX_OK) {
-    fdio_unsafe_wait_end(io_, signal->observed, &events);
+  {
+    std::lock_guard<std::mutex> guard(mutex_);
+    FX_DCHECK(io_);
+
+    if (status == ZX_OK) {
+      fdio_unsafe_wait_end(io_, signal->observed, &events);
+    }
+
+    callback = std::move(callback_);
+    ReleaseLocked();
   }
 
-  Callback callback = std::move(callback_);
-  Release();
-
-  // Last to prevent re-entrancy from the callback.
   callback(status, events);
 }
 
