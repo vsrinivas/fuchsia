@@ -60,6 +60,7 @@ template("forensics_package") {
     deps = [
       ":crash_reports",
       ":exceptions",
+      ":feedback",
       ":feedback_data",
       ":last_reboot",
     ]
@@ -112,6 +113,12 @@ fuchsia_component("exceptions") {
   ]
 }
 
+fuchsia_component("feedback") {
+  manifest = "feedback/meta/feedback.cmx"
+
+  deps = [ ":feedback_exe" ]
+}
+
 fuchsia_component("feedback_data") {
   manifest = "feedback_data/meta/feedback_data.cmx"
 
@@ -142,6 +149,7 @@ template("forensics_unified_binary") {
       "crash_reports:main",
       "exceptions:main",
       "exceptions/handler:main",
+      "feedback:main",
       "feedback_data:main",
       "feedback_data/system_log_recorder:main",
       "last_reboot:main",
@@ -160,6 +168,10 @@ forensics_unified_binary("exceptions_exe") {
 
 forensics_unified_binary("exception_handler_exe") {
   output_name = "exception_handler"
+}
+
+forensics_unified_binary("feedback_exe") {
+  output_name = "feedback"
 }
 
 forensics_unified_binary("feedback_data_exe") {

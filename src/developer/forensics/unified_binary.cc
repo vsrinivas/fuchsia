@@ -9,6 +9,7 @@
 #include "src/developer/forensics/crash_reports/main.h"
 #include "src/developer/forensics/exceptions/handler/main.h"
 #include "src/developer/forensics/exceptions/main.h"
+#include "src/developer/forensics/feedback/main.h"
 #include "src/developer/forensics/feedback_data/main.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/main.h"
 #include "src/developer/forensics/last_reboot/main.h"
@@ -27,6 +28,9 @@ int main(int argc, const char** argv) {
   }
   if (argv0.rfind("exception_handler_") == 0) {
     return ::forensics::exceptions::handler::main(argv0);
+  }
+  if (argv0 == "/pkg/bin/feedback") {
+    return ::forensics::feedback::main();
   }
   if (argv0 == "/pkg/bin/feedback_data") {
     return ::forensics::feedback_data::main();
