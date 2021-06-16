@@ -30,12 +30,14 @@ if (current_toolchain == default_toolchain) {
   action("gen_version_info") {
     script = "//src/developer/ffx/core/version/build/gn_write_version_info.sh"
 
+    # NOTE: Using a depfile instead of explicit sources is intentional
+    # See https://fxbug.dev/77607 for context.
+    depfile = "$target_gen_dir/$target_name.d"
     args = [
-      rebase_path(rebased_output_file),
-      rebase_path("//integration/.git"),
+      rebase_path(rebased_output_file, root_build_dir),
+      rebase_path("//integration/.git", root_build_dir),
+      rebase_path(depfile, root_build_dir),
     ]
-
-    sources = [ "//integration/.git/HEAD" ]
 
     inputs =
         [ "//src/developer/ffx/core/version/build/gn_write_version_info.sh" ]

@@ -16,24 +16,16 @@ if (current_toolchain == default_toolchain) {
   }
 
   action("latest-commit-date") {
-    # The script at tools/gen-latest-commit-date.sh script runs the following
-    # command to compute the latest commit date:
-    #
-    #   GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --git-dir="$INTEGRATION"/.git log --date=iso-strict-local --format=%cd -n 1 > "$OUTPUT"
-    #
-    # That command uses the following files, which means we need to depend on them
-    # in order to ensure that this GN target will be considered dirty if the
-    # output of that command would change.
-    sources = [
-      "//integration/.git/HEAD",
-      "//integration/.git/index",
-    ]
+    # NOTE: Using a depfile instead of explicit sources is intentional
+    # See https://fxbug.dev/77607 for context.
     outputs = [
       build_info_files.latest_commit_date,
       build_info_files.minimum_utc_stamp,
     ]
+    depfile = "$target_gen_dir/$target_name.d"
     script = "gen-latest-commit-date.sh"
-    args = rebase_path([ "//integration/" ] + outputs, root_build_dir)
+    args = rebase_path([ "//integration/" ] + outputs + [ depfile ],
+                       root_build_dir)
   }
 } else {
   group("latest-commit-date") {

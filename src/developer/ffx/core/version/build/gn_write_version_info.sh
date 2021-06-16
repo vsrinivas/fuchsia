@@ -6,6 +6,7 @@
 set -e
 OUTFILE="$1"
 GIT_DIR="$2"
+DEP_FILE="$3"
 
 if [ ! -d "$GIT_DIR" ]; then
   echo >&2 "Invalid GIT_DIR provided: $GIT_DIR"
@@ -21,4 +22,9 @@ fi
 # Update the existing file only if it's changed.
 if [ ! -r "$OUTFILE" ] || [ "$(<"$OUTFILE")" != "$VERSION_INFO" ]; then
   echo "$VERSION_INFO" > "$OUTFILE"
+fi
+
+if [ -n "$DEP_FILE" ]; then
+  mkdir -p "$(dirname "${DEP_FILE}")"
+  echo "${OUTFILE}: ${GIT_DIR%/}/HEAD" > "${DEP_FILE}"
 fi
