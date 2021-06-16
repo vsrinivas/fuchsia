@@ -166,6 +166,7 @@ files = {
   # Intermediates used by base package creation.
   gen_base_static_packages = "${gendir}/data/static_packages"
   gen_base_cache_packages = "${gendir}/data/cache_packages"
+  gen_base_meta_package = "${gendir}/system_image/meta/package"
 
   # The base package output.
   base_pkg = "${target_out_dir}/base.far"
@@ -183,6 +184,9 @@ files = {
 
   # The vbmeta (if created)
   vbmeta = "${target_out_dir}/fuchsia.vbmeta"
+
+  # Intermediates used by update package creation.
+  gen_update_meta_package = "${gendir}/update/meta/package"
 
   # The update package output
   update_pkg = "${target_out_dir}/update.far"
@@ -894,6 +898,8 @@ ffx_action("images") {
       # intermediate outputs that are in gendir:
       files.gen_base_static_packages,
       files.gen_base_cache_packages,
+      files.gen_base_meta_package,
+      files.gen_update_meta_package,
     ]
   }
 

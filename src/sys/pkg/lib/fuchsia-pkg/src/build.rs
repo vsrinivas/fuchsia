@@ -3,18 +3,20 @@
 // found in the LICENSE file.
 
 use crate::errors::BuildError;
-use crate::{CreationManifest, MetaContents, MetaPackage, Package, PackageManifest};
+use crate::{
+    CreationManifest, MetaContents, MetaPackage, MetaPackageError, Package, PackageManifest,
+};
 use fuchsia_merkle::{Hash, MerkleTree};
 use std::collections::{btree_map, BTreeMap};
+use std::io::BufReader;
 use std::path::PathBuf;
 use std::{fs, io};
 
 pub fn build(
     creation_manifest: &CreationManifest,
-    meta_package: &MetaPackage,
     meta_far_writer: impl io::Write,
 ) -> Result<PackageManifest, BuildError> {
-    build_with_file_system(creation_manifest, meta_package, meta_far_writer, &ActualFileSystem {})
+    build_with_file_system(creation_manifest, meta_far_writer, &ActualFileSystem {})
 }
 
 // Used to mock out native filesystem for testing
@@ -42,14 +44,19 @@ impl FileSystem<'_> for ActualFileSystem {
 
 pub(crate) fn build_with_file_system<'a>(
     creation_manifest: &CreationManifest,
-    meta_package: &MetaPackage,
     meta_far_writer: impl io::Write,
     file_system: &'a impl FileSystem<'a>,
 ) -> Result<PackageManifest, BuildError> {
+    let meta_package = match creation_manifest.far_contents().get("meta/package") {
+        Some(source_path) => {
+            let meta_package = file_system.open(source_path)?;
+            MetaPackage::deserialize(BufReader::new(meta_package))?
+        }
+        None => return Err(BuildError::MetaPackage(MetaPackageError::MetaPackageMissing)),
+    };
     let mut package_builder = Package::builder(meta_package.name(), meta_package.variant())?;
     let external_content_infos =
         get_external_content_infos(creation_manifest.external_contents(), file_system)?;
-
     for (path, info) in external_content_infos.iter() {
         package_builder.add_entry(
             path.to_string(),
@@ -58,16 +65,11 @@ pub(crate) fn build_with_file_system<'a>(
             info.size,
         );
     }
-
     let meta_contents = MetaContents::from_map(
         external_content_infos.iter().map(|(path, info)| (path.clone(), info.hash)).collect(),
     )?;
     let mut meta_contents_bytes = Vec::new();
     meta_contents.serialize(&mut meta_contents_bytes)?;
-
-    let mut meta_package_bytes = Vec::new();
-    meta_package.serialize(&mut meta_package_bytes)?;
-
     let mut far_contents: BTreeMap<&str, Vec<u8>> = BTreeMap::new();
     for (resource_path, source_path) in creation_manifest.far_contents() {
         far_contents.insert(
@@ -75,7 +77,6 @@ pub(crate) fn build_with_file_system<'a>(
             file_system.read(source_path).map_err(|e| (e, source_path.to_string()))?,
         );
     }
-
     let insert_generated_file =
         |resource_path: &'static str, content, far_contents: &mut BTreeMap<_, _>| match far_contents
             .entry(resource_path)
@@ -89,15 +90,11 @@ pub(crate) fn build_with_file_system<'a>(
             }),
         };
     insert_generated_file("meta/contents", meta_contents_bytes, &mut far_contents)?;
-    insert_generated_file("meta/package", meta_package_bytes, &mut far_contents)?;
-
     let mut meta_entries: BTreeMap<&str, (u64, Box<dyn io::Read>)> = BTreeMap::new();
     for (resource_path, content) in &far_contents {
         meta_entries.insert(resource_path, (content.len() as u64, Box::new(content.as_slice())));
     }
-
     fuchsia_archive::write(meta_far_writer, meta_entries)?;
-
     let package = package_builder.build()?;
     let package_manifest = PackageManifest::from_package(package)?;
     Ok(package_manifest)
@@ -154,14 +151,23 @@ mod test_build_with_file_system {
             rng: &mut impl rand::Rng,
         ) -> FakeFileSystem {
             let mut content_map = HashMap::new();
-            for (_, host_path) in
+            for (resource_path, host_path) in
                 creation_manifest.far_contents().iter().chain(creation_manifest.external_contents())
             {
-                let file_size = rng.gen_range(0, 6000);
-                content_map.insert(
-                    host_path.to_string(),
-                    rng.sample_iter(&rand::distributions::Standard).take(file_size).collect(),
-                );
+                if resource_path.to_string() == "meta/package".to_string() {
+                    let mut v = vec![];
+                    let meta_package =
+                        MetaPackage::from_name_and_variant("my-package-name", "my-package-variant")
+                            .unwrap();
+                    meta_package.serialize(&mut v).unwrap();
+                    content_map.insert(host_path.to_string(), v);
+                } else {
+                    let file_size = rng.gen_range(0, 6000);
+                    content_map.insert(
+                        host_path.to_string(),
+                        rng.sample_iter(&rand::distributions::Standard).take(file_size).collect(),
+                    );
+                }
             }
             Self { content_map }
         }
@@ -187,86 +193,71 @@ mod test_build_with_file_system {
                 "lib/mylib.so".to_string() => "host/mylib.so".to_string()
             },
             btreemap! {
-                "meta/my_component.cmx".to_string() => "host/my_component.cmx".to_string()
+                "meta/my_component.cmx".to_string() => "host/my_component.cmx".to_string(),
+                "meta/package".to_string() => "host/meta/package".to_string()
             },
         )
         .unwrap();
-        let meta_package =
-            MetaPackage::from_name_and_variant("my-package-name", "my-package-variant").unwrap();
         let mut meta_far_writer = Vec::new();
         let component_manifest_contents = "my_component.cmx contents";
+        let mut v = vec![];
+        let meta_package =
+            MetaPackage::from_name_and_variant("my-package-name", "my-package-variant").unwrap();
+        meta_package.serialize(&mut v).unwrap();
         let file_system = FakeFileSystem {
             content_map: hashmap! {
                 "host/mylib.so".to_string() => "mylib.so contents".as_bytes().to_vec(),
-                "host/my_component.cmx".to_string() => component_manifest_contents.as_bytes().to_vec()
+                "host/my_component.cmx".to_string() => component_manifest_contents.as_bytes().to_vec(),
+                "host/meta/package".to_string() => v.clone()
             },
         };
-
-        build_with_file_system(
-            &creation_manifest,
-            &meta_package,
-            &mut meta_far_writer,
-            &file_system,
-        )
-        .unwrap();
-
+        build_with_file_system(&creation_manifest, &mut meta_far_writer, &file_system).unwrap();
         let mut cursor = io::Cursor::new(meta_far_writer);
         let mut reader = fuchsia_archive::Reader::new(&mut cursor).unwrap();
-
         let actual_meta_package_bytes = reader.read_file("meta/package").unwrap();
-        let expected_meta_package_bytes =
-            br#"{"name":"my-package-name","version":"my-package-variant"}"#;
+        let expected_meta_package_bytes = v.as_slice();
         assert_eq!(actual_meta_package_bytes.as_slice(), &expected_meta_package_bytes[..]);
-
         let actual_meta_contents_bytes = reader.read_file("meta/contents").unwrap();
         let expected_meta_contents_bytes =
             b"lib/mylib.so=4a886105646222c10428e5793868b13f536752d4b87e6497cdf9caed37e67410\n";
         assert_eq!(actual_meta_contents_bytes.as_slice(), &expected_meta_contents_bytes[..]);
-
         let actual_meta_component_bytes = reader.read_file("meta/my_component.cmx").unwrap();
         assert_eq!(actual_meta_component_bytes.as_slice(), component_manifest_contents.as_bytes());
     }
 
     #[test]
     fn test_reject_conflict_with_generated_file() {
-        for generated_file in &GENERATED_FAR_CONTENTS {
-            let creation_manifest = CreationManifest::from_external_and_far_contents(
-                BTreeMap::new(),
-                btreemap! {
-                    generated_file.to_string() => "some-host-path".to_string()
-                },
-            )
-            .unwrap();
-            let meta_package =
-                MetaPackage::from_name_and_variant("my-package-name", "my-package-variant")
-                    .unwrap();
-            let mut meta_far_writer = Vec::new();
-            let file_system = FakeFileSystem {
-                content_map: hashmap! {
-                    "some-host-path".to_string() => Vec::new(),
-                },
-            };
-
-            let result = build_with_file_system(
-                &creation_manifest,
-                &meta_package,
-                &mut meta_far_writer,
-                &file_system,
-            );
-            assert_matches!(
-                result,
-                Err(BuildError::ConflictingResource {
-                    conflicting_resource_path: path
-                }) if path == generated_file.to_string()
-            );
-        }
+        let creation_manifest = CreationManifest::from_external_and_far_contents(
+            BTreeMap::new(),
+            btreemap! {
+                "meta/contents".to_string() => "some-host-path".to_string(),
+                "meta/package".to_string() => "host/meta/package".to_string()
+            },
+        )
+        .unwrap();
+        let mut meta_far_writer = Vec::new();
+        let mut v = vec![];
+        let meta_package =
+            MetaPackage::from_name_and_variant("my-package-name", "my-package-variant").unwrap();
+        meta_package.serialize(&mut v).unwrap();
+        let file_system = FakeFileSystem {
+            content_map: hashmap! {
+                "some-host-path".to_string() => Vec::new(),
+                "host/meta/package".to_string() => v
+            },
+        };
+        let result = build_with_file_system(&creation_manifest, &mut meta_far_writer, &file_system);
+        assert_matches!(
+            result,
+            Err(BuildError::ConflictingResource {
+                conflicting_resource_path: path
+            }) if path == "meta/contents".to_string()
+        );
     }
-
     proptest! {
         #[test]
         fn test_meta_far_directory_names_are_exactly_generated_files_and_creation_manifest_far_contents(
             creation_manifest in random_creation_manifest(),
-            meta_package: MetaPackage,
             seed: u64)
         {
             let mut private_key_bytes = [0u8; 32];
@@ -275,15 +266,12 @@ mod test_build_with_file_system {
             let mut meta_far_writer = Vec::new();
             let file_system = FakeFileSystem::from_creation_manifest_with_random_contents(
                 &creation_manifest, &mut prng);
-
             build_with_file_system(
                 &creation_manifest,
-                &meta_package,
                 &mut meta_far_writer,
                 &file_system,
             )
                 .unwrap();
-
             let mut cursor = io::Cursor::new(meta_far_writer);
             let reader = fuchsia_archive::Reader::new(&mut cursor).unwrap();
             let expected_far_directory_names = {
@@ -303,7 +291,6 @@ mod test_build_with_file_system {
         #[test]
         fn test_meta_far_contains_creation_manifest_far_contents(
             creation_manifest in random_creation_manifest(),
-            meta_package: MetaPackage,
             seed: u64)
         {
             let mut private_key_bytes = [0u8; 32];
@@ -312,15 +299,12 @@ mod test_build_with_file_system {
             let mut meta_far_writer = Vec::new();
             let file_system = FakeFileSystem::from_creation_manifest_with_random_contents(
                 &creation_manifest, &mut prng);
-
             build_with_file_system(
                 &creation_manifest,
-                &meta_package,
                 &mut meta_far_writer,
                 &file_system,
             )
                 .unwrap();
-
             let mut cursor = io::Cursor::new(meta_far_writer);
             let mut reader = fuchsia_archive::Reader::new(&mut cursor).unwrap();
             for (resource_path, host_path) in creation_manifest.far_contents().iter() {
@@ -333,7 +317,6 @@ mod test_build_with_file_system {
         #[test]
         fn test_meta_far_meta_contents_lists_creation_manifest_external_contents(
             creation_manifest in random_creation_manifest(),
-            meta_package: MetaPackage,
             seed: u64)
         {
             let mut private_key_bytes = [0u8; 32];
@@ -342,15 +325,12 @@ mod test_build_with_file_system {
             let mut meta_far_writer: Vec<u8> = Vec::new();
             let file_system = FakeFileSystem::from_creation_manifest_with_random_contents(
                 &creation_manifest, &mut prng);
-
             build_with_file_system(
                 &creation_manifest,
-                &meta_package,
                 &mut meta_far_writer,
                 &file_system,
             )
                 .unwrap();
-
             let mut cursor = io::Cursor::new(meta_far_writer);
             let mut reader = fuchsia_archive::Reader::new(&mut cursor).unwrap();
             let meta_contents =
@@ -381,6 +361,7 @@ mod test_build {
     use rand::SeedableRng;
     use std::fs;
     use std::io::{self, Write};
+    use std::path::PathBuf;
     use tempfile::TempDir;
 
     // Creates a temporary directory, then for each host path in the `CreationManifest`'s
@@ -393,7 +374,6 @@ mod test_build {
     ) -> (CreationManifest, TempDir) {
         let temp_dir = TempDir::new().unwrap();
         let temp_dir_path = temp_dir.path();
-
         fn populate_filesystem_and_make_new_map(
             path_prefix: &std::path::Path,
             resource_to_host_path: &BTreeMap<String, String>,
@@ -401,21 +381,31 @@ mod test_build {
         ) -> BTreeMap<String, String> {
             let mut new_map = BTreeMap::new();
             for (resource_path, host_path) in resource_to_host_path {
-                let new_host_path = path_prefix.join(host_path).to_str().unwrap().to_string();
+                let new_host_path = PathBuf::from(path_prefix.join(host_path).to_str().unwrap());
+                fs::create_dir_all(new_host_path.parent().unwrap()).unwrap();
                 let mut f = fs::File::create(&new_host_path).unwrap();
-                let file_size = rng.gen_range(0, 6000);
-                f.write_all(
-                    rng.sample_iter(&rand::distributions::Standard)
-                        .take(file_size)
-                        .collect::<Vec<u8>>()
-                        .as_slice(),
-                )
-                .unwrap();
-                new_map.insert(resource_path.to_string(), new_host_path);
+                if resource_path.to_string() == "meta/package".to_string() {
+                    let meta_package =
+                        MetaPackage::from_name_and_variant("my-package-name", "my-package-variant")
+                            .unwrap();
+                    meta_package.serialize(f).unwrap();
+                } else {
+                    let file_size = rng.gen_range(0, 6000);
+                    f.write_all(
+                        rng.sample_iter(&rand::distributions::Standard)
+                            .take(file_size)
+                            .collect::<Vec<u8>>()
+                            .as_slice(),
+                    )
+                    .unwrap();
+                }
+                new_map.insert(
+                    resource_path.to_string(),
+                    new_host_path.into_os_string().into_string().unwrap(),
+                );
             }
             new_map
         }
-
         let new_far_contents = populate_filesystem_and_make_new_map(
             temp_dir_path,
             creation_manifest.far_contents(),
@@ -431,7 +421,6 @@ mod test_build {
             new_far_contents,
         )
         .unwrap();
-
         (new_creation_manifest, temp_dir)
     }
 
@@ -439,7 +428,6 @@ mod test_build {
         #[test]
         fn test_meta_far_contains_creation_manifest_far_contents(
             creation_manifest in random_creation_manifest(),
-            meta_package: MetaPackage,
             seed: u64)
         {
             let mut prng = rand::rngs::StdRng::seed_from_u64(seed);
@@ -447,14 +435,11 @@ mod test_build {
             let mut private_key_bytes = [0u8; 32];
             prng.fill(&mut private_key_bytes);
             let mut meta_far_writer = Vec::new();
-
             build(
                 &creation_manifest,
-                &meta_package,
                 &mut meta_far_writer,
             )
                 .unwrap();
-
             let mut cursor = io::Cursor::new(meta_far_writer);
             let mut reader = fuchsia_archive::Reader::new(&mut cursor).unwrap();
             for (resource_path, host_path) in creation_manifest.far_contents().iter() {

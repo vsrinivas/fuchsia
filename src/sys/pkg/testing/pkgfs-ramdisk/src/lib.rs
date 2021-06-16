@@ -215,7 +215,7 @@ fn kill_pkgfs(process: Scoped<fuchsia_zircon::Process>) -> Result<(), Error> {
 mod tests {
     use {
         super::*,
-        fuchsia_pkg::{CreationManifest, MetaPackage},
+        fuchsia_pkg::CreationManifest,
         maplit::{btreemap, hashset},
         matches::assert_matches,
         std::{
@@ -273,6 +273,9 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn start_with_system_image_exposes_base_package() {
+        let blobfs = BlobfsRamdisk::start().unwrap();
+        let blobfs_root = blobfs.root_dir().unwrap();
+
         let (pkg_meta_far, pkg_blobs) = make_test_package();
         let package_merkle = fuchsia_merkle::MerkleTree::from_reader(pkg_meta_far.as_slice())
             .unwrap()
@@ -281,8 +284,6 @@ mod tests {
         let (system_image_far, system_image_blobs) =
             make_system_image_package(format!("pkgfs-ramdisk-tests/0={}", package_merkle));
 
-        let blobfs = BlobfsRamdisk::start().unwrap();
-        let blobfs_root = blobfs.root_dir().unwrap();
         write_blob(&blobfs_root, ".", pkg_meta_far.as_slice());
         for blob in pkg_blobs {
             write_blob(&blobfs_root, ".", blob.as_slice());
@@ -325,6 +326,14 @@ mod tests {
     /// Makes a test package, producing a tuple of the meta far bytes and a vec of content blob
     /// bytes.
     fn make_test_package() -> (Vec<u8>, Vec<Vec<u8>>) {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut v = vec![];
+        let meta_package =
+            fuchsia_pkg::MetaPackage::from_name_and_variant("pkgfs-ramdisk-tests", "0").unwrap();
+        meta_package.serialize(&mut v).unwrap();
+
+        std::fs::write(tmp.path().join("package"), &v.as_slice()).unwrap();
+
         let mut meta_far = vec![];
         fuchsia_pkg::build(
             &CreationManifest::from_external_and_far_contents(
@@ -335,10 +344,10 @@ mod tests {
                 btreemap! {
                     "meta/pkgfs-ramdisk-lib-test.cmx".to_string() =>
                         "/pkg/meta/pkgfs-ramdisk-lib-test.cmx".to_string(),
+                    "meta/package".to_string() => tmp.path().join("package").into_os_string().into_string().unwrap(),
                 },
             )
             .unwrap(),
-            &MetaPackage::from_name_and_variant("pkgfs-ramdisk-tests", "0").unwrap(),
             &mut meta_far,
         )
         .unwrap();
@@ -352,6 +361,13 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         std::fs::write(tmp.path().join("static_index"), static_index.as_bytes()).unwrap();
 
+        let mut v = vec![];
+        let meta_package =
+            fuchsia_pkg::MetaPackage::from_name_and_variant("pkgfs-ramdisk-tests", "0").unwrap();
+        meta_package.serialize(&mut v).unwrap();
+
+        std::fs::write(tmp.path().join("package"), &v.as_slice()).unwrap();
+
         let mut meta_far = vec![];
         fuchsia_pkg::build(
             &CreationManifest::from_external_and_far_contents(
@@ -359,10 +375,11 @@ mod tests {
                     "data/static_packages".to_string() =>
                         tmp.path().join("static_index").into_os_string().into_string().unwrap(),
                 },
-                btreemap! {},
+                btreemap! {
+                    "meta/package".to_string() => tmp.path().join("package").into_os_string().into_string().unwrap(),
+                },
             )
             .unwrap(),
-            &MetaPackage::from_name_and_variant("system_image", "0").unwrap(),
             &mut meta_far,
         )
         .unwrap();

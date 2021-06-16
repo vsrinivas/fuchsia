@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use anyhow::{bail, Context, Result};
+use assembly_util::create_meta_package_file;
 use fuchsia_hash::Hash;
-use fuchsia_pkg::{CreationManifest, MetaPackage, PackageManifest, PackagePath};
+use fuchsia_pkg::{CreationManifest, PackageManifest, PackagePath};
 use fuchsia_url::pkg_url::PkgUrl;
 use serde::{Deserialize, Serialize};
 use serde_json::ser;
@@ -67,15 +68,16 @@ impl UpdatePackageBuilder {
         ser::to_writer(packages, &self.packages)?;
         self.add_file(&packages_path, "packages.json")?;
 
-        // The update package does not have any files inside the meta.far.
-        let far_contents = BTreeMap::new();
+        let mut far_contents = BTreeMap::new();
+
+        far_contents
+            .insert("meta/package".to_string(), create_meta_package_file(gendir, "update", "0")?);
 
         // Build the update package.
         let update_contents = self.contents.clone();
         let creation_manifest =
             CreationManifest::from_external_and_far_contents(self.contents, far_contents)?;
-        let meta_package = MetaPackage::from_name_and_variant("update", "0")?;
-        fuchsia_pkg::build(&creation_manifest, &meta_package, out)?;
+        fuchsia_pkg::build(&creation_manifest, out)?;
 
         Ok(update_contents)
     }

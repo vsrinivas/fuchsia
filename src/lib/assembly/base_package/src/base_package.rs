@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Result};
+use assembly_util::create_meta_package_file;
 use fuchsia_hash::Hash;
-use fuchsia_pkg::{CreationManifest, MetaPackage, PackageManifest};
+use fuchsia_pkg::{CreationManifest, PackageManifest};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;
@@ -73,16 +74,20 @@ impl BasePackageBuilder {
             external_contents.insert(destination.clone(), source.clone());
         }
 
-        // The base package does not have any files inside the meta.far.
-        let far_contents = BTreeMap::new();
+        let mut far_contents = BTreeMap::new();
+
+        far_contents.insert(
+            "meta/package".to_string(),
+            create_meta_package_file(gendir, "system_image", "0")?,
+        );
 
         // Build the base packages.
         let creation_manifest = CreationManifest::from_external_and_far_contents(
             external_contents.clone(),
             far_contents,
         )?;
-        let meta_package = MetaPackage::from_name_and_variant("system_image", "0")?;
-        fuchsia_pkg::build(&creation_manifest, &meta_package, out)?;
+
+        fuchsia_pkg::build(&creation_manifest, out)?;
 
         Ok(BasePackageBuildResults {
             contents: external_contents,

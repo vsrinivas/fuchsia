@@ -136,6 +136,9 @@ pub enum MetaPackageError {
 
     #[error("attempted to deserialize meta/package from malformed json: {}", _0)]
     Json(#[from] serde_json::Error),
+
+    #[error("meta/package file not found")]
+    MetaPackageMissing,
 }
 
 #[derive(Debug, Error)]

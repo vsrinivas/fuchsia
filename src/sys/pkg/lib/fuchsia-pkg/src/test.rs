@@ -156,10 +156,11 @@ prop_compose! {
     pub(crate) fn random_creation_manifest()
         (external_content in prop::collection::btree_map(
             random_external_resource_path(), random_host_path(1, 2), 1..4),
-         far_content in prop::collection::btree_map(
+         mut far_content in prop::collection::btree_map(
              random_far_resource_path(), random_host_path(1, 2), 1..4),)
          -> CreationManifest
     {
+        far_content.insert("meta/package".to_string(), "meta/package".to_string());
         CreationManifest::from_external_and_far_contents(
             external_content, far_content)
             .unwrap()

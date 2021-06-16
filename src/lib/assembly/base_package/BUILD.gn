@@ -11,6 +11,7 @@ if (is_host) {
     version = "0.1.0"
     with_unit_tests = true
     deps = [
+      "//src/lib/assembly/util",
       "//src/sys/pkg/lib/fuchsia-hash",
       "//src/sys/pkg/lib/fuchsia-pkg",
       "//third_party/rust_crates:anyhow",

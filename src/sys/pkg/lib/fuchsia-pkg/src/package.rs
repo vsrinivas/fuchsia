@@ -179,28 +179,26 @@ mod test_package {
                 "lib/mylib.so".to_string() => "host/mylib.so".to_string()
             },
             btreemap! {
-                "meta/my_component.cmx".to_string() => "host/my_component.cmx".to_string()
+                "meta/my_component.cmx".to_string() => "host/my_component.cmx".to_string(),
+                "meta/package".to_string() => "host/meta/package".to_string()
             },
         )
         .unwrap();
-        let meta_package =
-            MetaPackage::from_name_and_variant("my-package-name", "my-package-variant").unwrap();
         let mut meta_far_writer = Vec::new();
         let component_manifest_contents = "my_component.cmx contents";
+        let mut v = vec![];
+        let meta_package =
+            MetaPackage::from_name_and_variant("my-package-name", "my-package-variant").unwrap();
+        meta_package.serialize(&mut v).unwrap();
         let file_system = FakeFileSystem {
             content_map: hashmap! {
                 "host/mylib.so".to_string() => "mylib.so contents".as_bytes().to_vec(),
-                "host/my_component.cmx".to_string() => component_manifest_contents.as_bytes().to_vec()
+                "host/my_component.cmx".to_string() => component_manifest_contents.as_bytes().to_vec(),
+                "host/meta/package".to_string() => v
             },
         };
 
-        build_with_file_system(
-            &creation_manifest,
-            &meta_package,
-            &mut meta_far_writer,
-            &file_system,
-        )
-        .unwrap();
+        build_with_file_system(&creation_manifest, &mut meta_far_writer, &file_system).unwrap();
 
         let mut cursor = io::Cursor::new(meta_far_writer);
         let blob_entry = BlobEntry { path: PathBuf::from("src/bin/my_prog"), size: 1 };
