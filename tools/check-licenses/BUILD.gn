@@ -34,7 +34,6 @@ go_library("templates") {
 
   sources = [
     "html.tmpl.go",
-    "json.tmpl.go",
     "txt.tmpl.go",
   ]
 }

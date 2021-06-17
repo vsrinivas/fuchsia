@@ -7,6 +7,7 @@ package checklicenses
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"sort"
@@ -22,11 +23,9 @@ import (
 func saveToOutputFile(path string, licenses *Licenses, config *Config) error {
 	// Sort the licenses in alphabetical order for consistency.
 	sort.Slice(licenses.licenses, func(i, j int) bool { return licenses.licenses[i].Category < licenses.licenses[j].Category })
-	data := struct {
-		Used   []*License
-		Unused []*License
-	}{}
 
+	var used []*License
+	var unused []*License
 	for _, l := range licenses.licenses {
 		isUsed := false
 		for _, m := range l.matches {
@@ -36,32 +35,28 @@ func saveToOutputFile(path string, licenses *Licenses, config *Config) error {
 			}
 		}
 		if isUsed {
-			data.Used = append(data.Used, l)
+			used = append(used, l)
 		} else {
-			data.Unused = append(data.Unused, l)
+			unused = append(unused, l)
 		}
 	}
 	for _, n := range licenses.notices {
-		data.Used = append(data.Used, n)
+		used = append(used, n)
 	}
 
-	templateStr := ""
+	var output []byte
+	var err error
 	switch {
 	case strings.HasSuffix(path, ".txt") || strings.HasSuffix(path, ".txt.gz"):
-		templateStr = templates.TemplateTxt
+		output, err = createTextOutput(used, unused, config)
 	case strings.HasSuffix(path, ".html") || strings.HasSuffix(path, ".html.gz"):
-		// TODO(omerlevran): Use html/template instead of text/template.
-		// text/template is inherently unsafe to generate HTML.
-		templateStr = templates.TemplateHtml
+		output, err = createHtmlOutput(used, unused, config)
 	case strings.HasSuffix(path, ".json") || strings.HasSuffix(path, ".json.gz"):
-		// TODO(omerlevran): Use encoding/json instead of hand-rolling out json.
-		templateStr = templates.TemplateJson
+		output, err = createJsonOutput(used, unused, config)
 	default:
-		return fmt.Errorf("no template found for %s", path)
+		err = fmt.Errorf("invalid output suffix %s", path)
 	}
-	buf := bytes.Buffer{}
-	tmpl := template.Must(template.New("name").Funcs(getFuncMap(config)).Parse(templateStr))
-	if err := tmpl.Execute(&buf, data); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -69,17 +64,109 @@ func saveToOutputFile(path string, licenses *Licenses, config *Config) error {
 	const gz = ".gz"
 	if strings.HasSuffix(path, gz) {
 		// First write uncompressed, then compressed.
-		if err := ioutil.WriteFile(path[:len(path)-len(gz)], buf.Bytes(), 0666); err != nil {
+		if err := ioutil.WriteFile(path[:len(path)-len(gz)], output, 0666); err != nil {
 			return err
 		}
-		d, err := compressGZ(buf.Bytes())
+		d, err := compressGZ(output)
 		if err != nil {
 			return err
 		}
 		return ioutil.WriteFile(path, d, 0666)
 	}
 
-	return ioutil.WriteFile(path, buf.Bytes(), 0666)
+	return ioutil.WriteFile(path, output, 0666)
+}
+
+// The following structs are used to serialize data to JSON.
+type Output struct {
+	Unused UnusedLicenses `json:"unused"`
+	Used   []UsedLicense  `json:"used"`
+}
+
+type UnusedLicenses struct {
+	Categories []string `json:"categories"`
+}
+
+type UsedLicense struct {
+	Copyrights []string `json:"copyrights"`
+	Category   string   `json:"category"`
+	Files      string   `json:"files"`
+	Text       string   `json:"text"`
+}
+
+func createJsonOutput(usedLicenses []*License, unusedLicenses []*License, config *Config) ([]byte, error) {
+	output := Output{}
+	for _, l := range unusedLicenses {
+		category := getCategory(l)
+		output.Unused.Categories = append(output.Unused.Categories, category)
+	}
+
+	for _, l := range usedLicenses {
+		category := getCategory(l)
+		for _, match := range l.matches {
+			if !match.Used {
+				continue
+			}
+
+			copyrights := []string{}
+			for c := range match.Copyrights {
+				trim := strings.TrimSpace(c)
+				if trim != "" {
+					copyrights = append(copyrights, trim)
+				}
+			}
+			sort.Strings(copyrights)
+
+			files := ""
+			if config.PrintFiles {
+				files = getFilesFromMatch(match)
+			}
+			text := match.Text
+			licenseOutput := UsedLicense{
+				Copyrights: copyrights,
+				Category:   category,
+				Files:      files,
+				Text:       text,
+			}
+			output.Used = append(output.Used, licenseOutput)
+		}
+	}
+
+	return json.Marshal(output)
+}
+
+func createTextOutput(usedLicenses []*License, unusedLicenses []*License, config *Config) ([]byte, error) {
+	data := struct {
+		Used   []*License
+		Unused []*License
+	}{}
+	data.Used = usedLicenses
+	data.Unused = unusedLicenses
+
+	buf := bytes.Buffer{}
+	tmpl := template.Must(template.New("name").Funcs(getFuncMap(config)).Parse(templates.TemplateTxt))
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// TODO(omerlevran): Use html/template instead of text/template.
+// text/template is inherently unsafe to generate HTML.
+func createHtmlOutput(usedLicenses []*License, unusedLicenses []*License, config *Config) ([]byte, error) {
+	data := struct {
+		Used   []*License
+		Unused []*License
+	}{}
+	data.Used = usedLicenses
+	data.Unused = unusedLicenses
+
+	buf := bytes.Buffer{}
+	tmpl := template.Must(template.New("name").Funcs(getFuncMap(config)).Parse(templates.TemplateHtml))
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 // compressGZ returns the compressed buffer with gzip format.
@@ -95,6 +182,91 @@ func compressGZ(d []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func getCategory(l *License) string {
+	return strings.TrimSuffix(l.Category, ".lic")
+}
+
+func getAuthors(l *License) []string {
+	var authors []string
+	for author := range l.matches {
+		authors = append(authors, author)
+	}
+	sort.Strings(authors)
+	return authors
+}
+
+func getHTMLText(m *Match) string {
+	txt := m.Text
+	txt = strings.ReplaceAll(txt, "<", "&lt;")
+	txt = strings.ReplaceAll(txt, ">", "&gt;")
+	txt = strings.Replace(txt, "\n", "<br />", -1)
+	return txt
+}
+
+func getMatches(l *License) []*Match {
+	sortedList := []*Match{}
+	for _, m := range l.matches {
+		sortedList = append(sortedList, m)
+	}
+	sort.Sort(matchByText(sortedList))
+
+	return sortedList
+}
+
+func getFilesFromMatch(m *Match) string {
+	result := ""
+	if len(m.Files) > 0 {
+		result += "Files:\n"
+		sort.Strings(m.Files)
+		for _, s := range m.Files {
+			result += " -> " + s + "\n"
+		}
+	}
+	return result
+}
+
+func getProjectsFromMatch(m *Match) string {
+	result := ""
+	if len(m.Projects) > 0 {
+		result += "Projects:\n"
+		sort.Strings(m.Projects)
+		for _, s := range m.Projects {
+			result += " -> " + s + "\n"
+		}
+	}
+	return result
+}
+
+func getFiles(l *License, author string) []string {
+	var files []string
+	for _, file := range l.matches[author].Files {
+		files = append(files, file)
+	}
+	sort.Strings(files)
+	return files
+}
+
+func getEscapedText(l *License, author string) string {
+	return strings.Replace(l.matches[author].Text, "\"", "\\\"", -1)
+}
+
+func getCopyrights(m *Match) string {
+	sortedList := []string{}
+	for c := range m.Copyrights {
+		trim := strings.TrimSpace(c)
+		if trim != "" {
+			sortedList = append(sortedList, trim)
+		}
+	}
+	sort.Strings(sortedList)
+
+	result := ""
+	for _, s := range sortedList {
+		result += s + "\n"
+	}
+	return result
+}
+
 func getFuncMap(config *Config) template.FuncMap {
 	return template.FuncMap{
 		"getPattern": func(l *License) string {
@@ -103,81 +275,26 @@ func getFuncMap(config *Config) template.FuncMap {
 		"getText": func(l *License, author string) string {
 			return l.matches[author].Text
 		},
-		"getEscapedText": func(l *License, author string) string {
-			return strings.Replace(l.matches[author].Text, "\"", "\\\"", -1)
-		},
-		"getCategory": func(l *License) string {
-			return strings.TrimSuffix(l.Category, ".lic")
-		},
-		"getFiles": func(l *License, author string) []string {
-			var files []string
-			for _, file := range l.matches[author].Files {
-				files = append(files, file)
+		"getEscapedText": getEscapedText,
+		"getCategory":    getCategory,
+		"getFiles":       getFiles,
+		"getAuthors":     getAuthors,
+		"getHTMLText":    getHTMLText,
+		"getMatches":     getMatches,
+		"getFilesFromMatch": func(m *Match) string {
+			files := ""
+			if config.PrintFiles {
+				files = getFilesFromMatch(m)
 			}
-			sort.Strings(files)
 			return files
 		},
-		"getAuthors": func(l *License) []string {
-			var authors []string
-			for author := range l.matches {
-				authors = append(authors, author)
-			}
-			sort.Strings(authors)
-			return authors
-		},
-		"getHTMLText": func(m *Match) string {
-			txt := m.Text
-			txt = strings.ReplaceAll(txt, "<", "&lt;")
-			txt = strings.ReplaceAll(txt, ">", "&gt;")
-			txt = strings.Replace(txt, "\n", "<br />", -1)
-			return txt
-		},
-		"getMatches": func(l *License) []*Match {
-			sortedList := []*Match{}
-			for _, m := range l.matches {
-				sortedList = append(sortedList, m)
-			}
-			sort.Sort(matchByText(sortedList))
-
-			return sortedList
-		},
-		"getFilesFromMatch": func(m *Match) string {
-			result := ""
-			if config.PrintFiles && len(m.Files) > 0 {
-				result += "Files:\n"
-				sort.Strings(m.Files)
-				for _, s := range m.Files {
-					result += " -> " + s + "\n"
-				}
-			}
-			return result
-		},
 		"getProjectsFromMatch": func(m *Match) string {
-			result := ""
-			if config.PrintProjects && len(m.Projects) > 0 {
-				result += "Projects:\n"
-				sort.Strings(m.Projects)
-				for _, s := range m.Projects {
-					result += " -> " + s + "\n"
-				}
+			projects := ""
+			if config.PrintProjects {
+				projects = getProjectsFromMatch(m)
 			}
-			return result
+			return projects
 		},
-		"getCopyrights": func(m *Match) string {
-			sortedList := []string{}
-			for c := range m.Copyrights {
-				trim := strings.TrimSpace(c)
-				if trim != "" {
-					sortedList = append(sortedList, trim)
-				}
-			}
-			sort.Strings(sortedList)
-
-			result := ""
-			for _, s := range sortedList {
-				result += s + "\n"
-			}
-			return result
-		},
+		"getCopyrights": getCopyrights,
 	}
 }
