@@ -5,12 +5,29 @@
 
 #### CATEGORY=Diagnostic
 ### invoke mem tool on target device
-
-## usage: fx mem <arguments to mem>
 ##
-## Example usage:
+## Usage: mem [options]
+##  Prints system-wide task and memory
 ##
-##   fx mem --digest --output --repeat=10
+##  Memory numbers are triplets P,S,T
+##  P: Private bytes
+##  S: Total bytes scaled by 1/# processes sharing each byte
+##  T: Total bytes
+##     S and T are inclusive of P
+##
+## Options:
+## [default]  Human readable representation of process and vmo groups
+## --trace    Enable tracing support
+## --print    Machine readable representation of proccess and vmos
+## --output   CSV of process memory
+##            --repeat=N Runs forever, outputing every N seconds
+##            --pid=N    Output vmo groups of process pid instead
+## --digest   Prints a bucketized digest of memory usage
+## --signal=L Signal userspace clients with memory pressure level L
+##            where L can be CRITICAL, WARNING or NORMAL. Clients can
+##            use this command to test their response to memory pressure.
+##            Does not affect the real memory pressure level on the system,
+##            or trigger any kernel memory reclamation tasks.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
