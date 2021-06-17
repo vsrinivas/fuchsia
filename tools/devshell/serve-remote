@@ -244,6 +244,9 @@ if "${serve}"; then
   ssh "${host}" "${ssh_base_args[@]}" "${ssh_serve_args[@]}"
 else
   echo "Press Ctrl-C to stop tunneling."
-  # Wait for user Ctrl-C. Then script exit will trigger trap_exit to close the ssh connection.
-  read -r -d '' _ </dev/tty
+  # Wait for user Ctrl-C. Then script exit will trigger trap_exit to close the
+  # ssh connection. Use a command on the remote side over ssh with a -tt
+  # parameter to create a pseudo tty on the remote host. That way, the Ctrl-C
+  # hup will go to the remote host which will close the remote ssh connections.
+  ssh "${host}" "${ssh_base_args[@]}" -tt sleep infinity
 fi
