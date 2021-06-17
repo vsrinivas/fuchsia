@@ -354,7 +354,7 @@ config("optimize_default") {
 }
 
 config("optimize_size") {
-  configs = [ "//build/config:optimized_size" ]
+  configs = [ "//build/config:optimize_size" ]
 }
 
 # NOTE: //build/config:optimize_speed is slightly different.
