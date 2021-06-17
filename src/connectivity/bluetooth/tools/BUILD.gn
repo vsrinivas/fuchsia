@@ -28,6 +28,10 @@ group("hci") {
   ]
 }
 
+group("audio") {
+  deps = [ "dai-info" ]
+}
+
 group("fct") {
   deps = [
     "bt-fct-hci",
@@ -38,6 +42,7 @@ group("fct") {
 
 group("tools") {
   deps = [
+    ":audio",
     ":core",
     ":fct",
     ":hci",
