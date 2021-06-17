@@ -228,9 +228,10 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // Fetch tx descriptors from the FIFO and queue them in the parent `DeviceInterface`'s TxQueue.
   zx_status_t FetchTx()
       __TA_EXCLUDES(parent_->control_lock(), parent_->rx_lock(), parent_->tx_lock());
-  buffer_descriptor_t* descriptor(uint16_t index);
-
-  const buffer_descriptor_t* descriptor(uint16_t index) const;
+  buffer_descriptor_t* checked_descriptor(uint16_t index);
+  const buffer_descriptor_t* checked_descriptor(uint16_t index) const;
+  buffer_descriptor_t& descriptor(uint16_t index);
+  const buffer_descriptor_t& descriptor(uint16_t index) const;
   fbl::Span<uint8_t> data_at(uint64_t offset, uint64_t len) const;
   // Loads a completed rx buffer information back into the descriptor with the provided index.
   zx_status_t LoadRxInfo(const RxFrameInfo& info) __TA_REQUIRES(parent_->rx_lock());

@@ -185,12 +185,16 @@ class NetworkDeviceTest : public ::testing::Test {
   zx_status_t OpenSession(TestSession* session,
                           netdev::wire::SessionFlags flags = netdev::wire::SessionFlags::kPrimary,
                           uint16_t num_descriptors = kDefaultDescriptorCount,
-                          uint64_t buffer_size = kDefaultBufferLength) {
+                          uint64_t buffer_size = kDefaultBufferLength,
+                          const char* session_name = nullptr) {
     // automatically increment to test_session_(a, b, c, etc...)
-    char session_name[] = "test_session_a";
-    session_name[strlen(session_name) - 1] =
-        static_cast<char>('a' + (session_counter_ % ('z' - 'a')));
-    session_counter_++;
+    char session_name_storage[] = "test_session_a";
+    if (session_name == nullptr) {
+      session_name_storage[strlen(session_name_storage) - 1] =
+          static_cast<char>('a' + (session_counter_ % ('z' - 'a')));
+      session_counter_++;
+      session_name = session_name_storage;
+    }
 
     fidl::WireSyncClient connection = OpenConnection();
     return session->Open(connection, session_name, flags, num_descriptors, buffer_size);
@@ -2098,6 +2102,142 @@ TEST_F(NetworkDeviceTest, PortWatcherEnforcesQueueLimit) {
   ASSERT_OK(status.status_value());
   ASSERT_STATUS(status.value(), ZX_ERR_CANCELED);
 }
+
+enum class DescriptorSource {
+  PrimarySessionRx,
+  SecondarySessionRx,
+  ListenSessionRx,
+  Tx,
+  TxChain,
+};
+
+class BadDescriptorTest : public NetworkDeviceTest,
+                          public ::testing::WithParamInterface<DescriptorSource> {};
+
+const std::string badDescriptorTestToString(
+    const ::testing::TestParamInfo<DescriptorSource>& info) {
+  switch (info.param) {
+    case DescriptorSource::PrimarySessionRx:
+      return "PrimarySessionRx";
+    case DescriptorSource::SecondarySessionRx:
+      return "SecondarySessionRx";
+    case DescriptorSource::ListenSessionRx:
+      return "ListenSessionRx";
+    case DescriptorSource::Tx:
+      return "Tx";
+    case DescriptorSource::TxChain:
+      return "TxChain";
+  }
+}
+
+TEST_P(BadDescriptorTest, SessionIsKilledOnBadDescriptor) {
+  impl_.set_immediate_return_tx(true);
+  ASSERT_OK(CreateDeviceWithPort0());
+  TestSession primary;
+  TestSession secondary;
+  TestSession listen;
+
+  constexpr uint16_t kDescriptorCount = 8;
+  constexpr uint16_t kInitialRxDescriptors = kDescriptorCount / 2;
+  constexpr uint16_t kGoodTxDescriptor = kDescriptorCount - 1;
+  const struct {
+    TestSession& session;
+    const char* name;
+    netdev::wire::SessionFlags flags;
+    bool send_bad_rx_descriptor;
+  } kSessions[] = {
+      {
+          .session = primary,
+          .name = "primary",
+          .flags = netdev::wire::SessionFlags::kPrimary,
+          .send_bad_rx_descriptor = GetParam() == DescriptorSource::PrimarySessionRx,
+      },
+      {
+          .session = secondary,
+          .name = "secondary",
+          .send_bad_rx_descriptor = GetParam() == DescriptorSource::SecondarySessionRx,
+      },
+      {
+          .session = listen,
+          .name = "listen",
+          .flags = netdev::wire::SessionFlags::kListenTx,
+          .send_bad_rx_descriptor = GetParam() == DescriptorSource::ListenSessionRx,
+      },
+  };
+  for (auto& s : kSessions) {
+    SCOPED_TRACE(s.name);
+    ASSERT_OK(OpenSession(&s.session, s.flags, kDescriptorCount, kDefaultBufferLength, s.name));
+    ASSERT_OK(s.session.AttachPort(port0_));
+    uint16_t rx_descriptors[kInitialRxDescriptors];
+    const uint16_t descriptor_offset = s.send_bad_rx_descriptor ? kDescriptorCount : 0;
+    for (uint16_t i = 0; i < kInitialRxDescriptors; i++) {
+      s.session.ResetDescriptor(i);
+      rx_descriptors[i] = i + descriptor_offset;
+    }
+    size_t actual;
+    ASSERT_OK(s.session.SendRx(rx_descriptors, std::size(rx_descriptors), &actual));
+    ASSERT_EQ(actual, std::size(rx_descriptors));
+  }
+
+  switch (GetParam()) {
+    case DescriptorSource::PrimarySessionRx:
+      break;
+    case DescriptorSource::SecondarySessionRx: {
+      ASSERT_OK(WaitRxAvailable());
+      RxReturnTransaction txn(&impl_);
+      std::unique_ptr rx_buffer = impl_.PopRxBuffer();
+      rx_buffer->SetReturnLength(1);
+      txn.Enqueue(std::move(rx_buffer));
+      txn.Commit();
+    } break;
+    case DescriptorSource::ListenSessionRx:
+      primary.ResetDescriptor(kGoodTxDescriptor);
+      ASSERT_OK(primary.SendTx(kGoodTxDescriptor));
+      break;
+    case DescriptorSource::Tx:
+      ASSERT_OK(primary.SendTx(kDescriptorCount));
+      break;
+    case DescriptorSource::TxChain: {
+      buffer_descriptor_t* desc = primary.ResetDescriptor(kGoodTxDescriptor);
+      desc->chain_length = 1;
+      desc->nxt = kDescriptorCount;
+      ASSERT_OK(primary.SendTx(kGoodTxDescriptor));
+    } break;
+  }
+
+  TestSession& killed_session = [&primary, &secondary, &listen]() -> TestSession& {
+    switch (GetParam()) {
+      case DescriptorSource::PrimarySessionRx:
+      case DescriptorSource::Tx:
+      case DescriptorSource::TxChain:
+        return primary;
+      case DescriptorSource::SecondarySessionRx:
+        return secondary;
+      case DescriptorSource::ListenSessionRx:
+        return listen;
+    }
+  }();
+
+  for (auto& s : kSessions) {
+    SCOPED_TRACE(s.name);
+    if (&s.session == &killed_session) {
+      ASSERT_OK(s.session.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, TEST_DEADLINE, nullptr));
+    } else {
+      zx_signals_t pending = 0;
+      ASSERT_STATUS(s.session.channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                 zx::deadline_after(zx::msec(10)), &pending),
+                    ZX_ERR_TIMED_OUT)
+          << pending;
+    }
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, BadDescriptorTest,
+                         ::testing::Values(DescriptorSource::PrimarySessionRx,
+                                           DescriptorSource::SecondarySessionRx,
+                                           DescriptorSource::ListenSessionRx, DescriptorSource::Tx,
+                                           DescriptorSource::TxChain),
+                         badDescriptorTestToString);
 
 INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, RxTxBufferReturnTest,
                          ::testing::Combine(::testing::Values(RxTxSwitch::Rx, RxTxSwitch::Tx),
