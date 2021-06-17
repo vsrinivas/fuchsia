@@ -10,6 +10,7 @@
 import("//build/compiled_action.gni")
 import("//build/components/fuchsia_system_package.gni")
 import("//build/dist/resource.gni")
+import("//build/images/vboot/vboot.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
 import("//build/security.gni")
@@ -79,7 +80,6 @@ dep_labels = {
   kernel_image = "//zircon/kernel"
   kernel_cmdline_args = "//build/input:bootfs"
   bootfs_entries = "//build/input:bootfs"
-  vboot_multiboot = "//zircon/kernel/target/pc/multiboot:multiboot"
 
   ####
   # External labels whose outputs are compared against for validity (temporary)
@@ -190,14 +190,6 @@ files = {
 
   # The update package output
   update_pkg = "${target_out_dir}/update.far"
-
-  # vboot script and inputs
-  vboot_script = "//build/images/vboot/vboot_sign.py"
-  vboot_host_tool = "//prebuilt/tools/futility/${host_platform}/futility"
-  vboot_keyblock = "//third_party/vboot_reference/tests/devkeys/kernel.keyblock"
-  vboot_privkeyblock =
-      "//third_party/vboot_reference/tests/devkeys/kernel_data_key.vbprivk"
-  multiboot = "${root_build_dir}/multiboot.bin"
 
   # The BlobFS output
   blobfs = "${target_out_dir}/blob.blk"
@@ -324,13 +316,8 @@ file_args = {
 
   update_pkg = rebase_path(files.update_pkg, root_build_dir)
 
-  # vboot script and inputs
+  # vboot input
   zbi_unsigned = rebase_path(files.zbi_unsigned, root_build_dir)
-  vboot_script = rebase_path(files.vboot_script, root_build_dir)
-  vboot_host_tool = rebase_path(files.vboot_host_tool, root_build_dir)
-  vboot_keyblock = rebase_path(files.vboot_keyblock, root_build_dir)
-  vboot_privkeyblock = rebase_path(files.vboot_privkeyblock, root_build_dir)
-  multiboot = rebase_path(files.multiboot, root_build_dir)
 
   #####
   # Files used for validation against external label outputs (temporary)
@@ -647,19 +634,11 @@ generated_file(labels.board_config) {
       compression = zbi_compression
 
       if (use_vboot) {
-        # Set up the vboot script and its arguments
+        # Set up the vboot script and its arguments.
+        # Assembly always passes the -z and -o switches too.
         signing_script = {
-          tool = file_args.vboot_script
-          extra_arguments = [
-            "--host-tool",
-            file_args.vboot_host_tool,
-            "--kernel-keyblock",
-            file_args.vboot_keyblock,
-            "--private-keyblock",
-            file_args.vboot_privkeyblock,
-            "--multiboot",
-            file_args.multiboot,
-          ]
+          tool = rebase_path(vboot_action.script, root_build_dir)
+          extra_arguments = vboot_action.args
         }
       }
     }
@@ -818,28 +797,25 @@ generated_file(labels.board_config) {
         # processed for booting by the board's bootloaders.
         if (custom_signing_script != "") {
           name = "zedboot.signed"
-          zbi = rebase_path("${root_build_dir}/zedboot.zbi.signed",
-                            root_build_dir)
+          zbi = "zedboot.zbi.signed"
         } else if (use_vboot) {
           name = "zedboot.signed"
-          zbi = rebase_path("${root_build_dir}/zedboot.vboot", root_build_dir)
+          zbi = "zedboot.vboot"
         } else {
-          zbi = rebase_path("${root_build_dir}/zedboot.zbi", root_build_dir)
+          zbi = "zedboot.zbi"
         }
 
         if (use_vbmeta) {
-          vbmeta =
-              rebase_path("${root_build_dir}/zedboot.vbmeta", root_build_dir)
+          vbmeta = "zedboot.vbmeta"
         }
       } else {
         # All recovery options result in a "recovery.zbi", not the default of
         # "${name}.zbi", and need to be named "recovery" in the update package.
         name = "recovery"
-        zbi = rebase_path("${root_build_dir}/recovery.zbi", root_build_dir)
+        zbi = "recovery.zbi"
 
         if (use_vbmeta) {
-          vbmeta =
-              rebase_path("${root_build_dir}/recovery.vbmeta", root_build_dir)
+          vbmeta = "recovery.vbmeta"
         }
       }
     }
@@ -915,15 +891,10 @@ ffx_action("images") {
     outputs += [ files.vbmeta ]
   }
 
-  # These are from custom signing of the zbi.
+  # These are from custom signing of the ZBI.
   if (use_vboot) {
-    deps += [ dep_labels.vboot_multiboot ]
-    inputs += [
-      files.vboot_script,
-      files.vboot_host_tool,
-      files.vboot_keyblock,
-      files.vboot_privkeyblock,
-    ]
+    deps += vboot_action.deps
+    inputs += vboot_action.inputs
     outputs += [ files.zbi_unsigned ]
   }
 }

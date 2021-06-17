@@ -5,6 +5,88 @@
 import("//build/compiled_action.gni")
 import("//build/config/clang/clang.gni")
 
+declare_args() {
+  # If true, vboot() image builds print out the exact "futility" command line.
+  vboot_verbose = false
+}
+
+_vboot_dir = "//third_party/vboot_reference"
+_kernel_keyblock = "$_vboot_dir/tests/devkeys/kernel.keyblock"
+_private_keyblock = "$_vboot_dir/tests/devkeys/kernel_data_key.vbprivk"
+_futility_tool = "//prebuilt/tools/futility/${host_platform}/futility"
+
+# These are details specific to the exact boot shim being used.  Different
+# switches to vbutil_kernel would be used here for a different boot shim.
+_vboot_shim = {
+  # Label for the shim, to be used in deps.
+  label = "//zircon/kernel/target/pc/multiboot"
+
+  # GN path to the shim binary, to be used in inputs.
+  path = "$root_build_dir/multiboot.bin"
+
+  # Arguments to vbutil_kernel to point to the shim.
+  #
+  # The boot shim is the "kernel" (`--vmlinuz` switch).  The CrOS bootloader
+  # supports Multiboot (with `--flags 0x2` below).
+  args = [
+    "--vmlinuz",
+    rebase_path(path, root_build_dir),
+    "--version",
+    "1",
+    "--flags",
+    "0x2",
+  ]
+}
+
+# This provides the details of the action to run to do vboot signing.
+# The vboot() template uses these details, and they can be used to
+# form an external command line to do the signing outside the build.
+vboot_action = {
+  # The action has these additional implicit file inputs (GN paths).
+  inputs = [
+    _futility_tool,
+    _vboot_shim.path,
+    _kernel_keyblock,
+    _private_keyblock,
+  ]
+
+  # The action needs these additional GN deps corresponding to inputs.
+  deps = [ _vboot_shim.label ]
+
+  # GN path of the script to invoke.
+  script = "//build/images/vboot/vboot_sign.py"
+
+  # Arguments to pass to that script.  The action will also add the -z (--zbi)
+  # and -o (--output) switches for the main input and output files.
+  args = [ "--tool=" + rebase_path(_futility_tool, root_build_dir) ]
+
+  if (vboot_verbose) {
+    args += [ "--verbose" ]
+  }
+
+  # The remaining arguments are piped through vboot_sign.py to futility.
+
+  # These args should come first.
+  foreach(arg,
+          [
+                "vbutil_kernel",
+                "--keyblock",
+                rebase_path(_kernel_keyblock, root_build_dir),
+                "--signprivate",
+                rebase_path(_private_keyblock, root_build_dir),
+              ] + _vboot_shim.args) {
+    args += [ "--args=$arg" ]
+  }
+
+  # These args should precede the input file name in the argument list.
+  # The ZBI file (RAM disk) argument will come after this.
+  args += [ "--input-args=--bootloader" ]
+
+  # These args should precede the output file name in the argument list.
+  # The output image file argument will come after this.
+  args += [ "--output-args=--pack" ]
+}
+
 # Build a "kernel partition" target for ChromeOS targets.
 #
 # Parameters
@@ -17,6 +99,8 @@ import("//build/config/clang/clang.gni")
 #     [string] Determines the file name, in `root_out_dir`.
 #
 template("vboot") {
+  assert(current_cpu == "x64")
+
   if (defined(invoker.output_name)) {
     output_file = invoker.output_name
   } else {
@@ -34,59 +118,30 @@ template("vboot") {
   action(target_name) {
     forward_variables_from(invoker,
                            [
-                             "deps",
                              "metadata",
                              "testonly",
                              "visibility",
                            ])
-    script = "//prebuilt/tools/futility/${host_platform}/futility"
+
+    script = vboot_action.script
+    args = vboot_action.args
+    inputs = vboot_action.inputs
+    deps = vboot_action.deps
+
     outputs = [ output_file ]
+    args += [ "--output=" + rebase_path(output_file, root_build_dir) ]
 
-    vboot_dir = "//third_party/vboot_reference"
-    kernel_keyblock = "$vboot_dir/tests/devkeys/kernel.keyblock"
-    private_keyblock = "$vboot_dir/tests/devkeys/kernel_data_key.vbprivk"
-    inputs = [
-      kernel_keyblock,
-      private_keyblock,
-    ]
-
-    assert(defined(deps), "vboot() requires deps")
+    assert(defined(invoker.deps), "vboot() requires deps")
+    deps += invoker.deps
     zbi = []
-    foreach(label, deps) {
+    foreach(label, invoker.deps) {
       zbi_outputs = get_target_outputs(label)
       zbi += [ zbi_outputs[0] ]
     }
-    inputs += zbi
     assert(zbi == [ zbi[0] ], "vboot() requires exactly one zbi() in deps")
 
-    # The CrOS bootloader supports Multiboot (with `--flags 0x2` below).
-    # The Multiboot trampoline is the "kernel" (`--vmlinuz` switch) and the
-    # ZBI is the RAM disk (`--bootloader` switch).
-    assert(current_cpu == "x64")
-    if (!defined(deps)) {
-      deps = []
-    }
-    deps += [ "//zircon/kernel/target/pc/multiboot:multiboot" ]
-    kernel = "$root_build_dir/multiboot.bin"
-    inputs += [ kernel ]
-
-    args = [
-      "vbutil_kernel",
-      "--pack",
-      rebase_path(output_file),
-      "--keyblock",
-      rebase_path(kernel_keyblock),
-      "--signprivate",
-      rebase_path(private_keyblock),
-      "--bootloader",
-      rebase_path(zbi[0]),
-      "--vmlinuz",
-      rebase_path(kernel),
-      "--version",
-      "1",
-      "--flags",
-      "0x2",
-    ]
+    inputs += zbi
+    args += [ "--zbi=" + rebase_path(zbi[0], root_build_dir) ]
   }
 }
 
