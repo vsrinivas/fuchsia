@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    bt_rfcomm::{RfcommError, DLCI},
+    bt_rfcomm::{frame::mux_commands::RlsError, RfcommError, DLCI},
+    fidl_fuchsia_bluetooth_rfcomm_test::Status,
     futures::future::BoxFuture,
     thiserror::Error,
 };
@@ -30,6 +31,16 @@ pub enum Error {
 impl From<RfcommError> for Error {
     fn from(src: RfcommError) -> Self {
         Self::Rfcomm(src)
+    }
+}
+
+/// Converts the `RfcommTest.Status` to the appropriate RlsError or None if there is no error.
+pub fn status_to_rls_error(status: Status) -> Option<RlsError> {
+    match status {
+        Status::Ok => None,
+        Status::OverrunError => Some(RlsError::Overrun),
+        Status::ParityError => Some(RlsError::Parity),
+        Status::FramingError => Some(RlsError::Framing),
     }
 }
 

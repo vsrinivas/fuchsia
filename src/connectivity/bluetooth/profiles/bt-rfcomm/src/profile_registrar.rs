@@ -19,7 +19,7 @@ use {
         self, channel::mpsc, future::BoxFuture, select, sink::SinkExt, stream::StreamExt, Future,
         FutureExt,
     },
-    log::{error, info, trace},
+    log::{info, trace, warn},
     std::{
         collections::HashSet,
         convert::{TryFrom, TryInto},
@@ -190,7 +190,7 @@ impl ProfileRegistrar {
                     return Err(e);
                 }
                 Err(e) => {
-                    error!("Couldn't establish L2CAP connection with {:?}: {:?}", peer_id, e);
+                    warn!("Couldn't establish L2CAP connection with {:?}: {:?}", peer_id, e);
                     return Err(ErrorCode::Failed);
                 }
             };
@@ -416,7 +416,7 @@ impl ProfileRegistrar {
                         .add_managed_advertisement(services_local, parameters, receiver, responder)
                         .await
                     {
-                        Err(e) => error!("Error handling advertise request: {:?}", e),
+                        Err(e) => warn!("Error handling advertise request: {:?}", e),
                         Ok(evt_stream) => return Some(AdvertiseResult::EventStream(evt_stream)),
                     }
                 } else {
@@ -430,7 +430,7 @@ impl ProfileRegistrar {
                 if let Err(e) =
                     self.handle_outgoing_connection(peer_id.into(), connection, responder).await
                 {
-                    error!("Error establishing outgoing connection {:?}", e);
+                    warn!("Error establishing outgoing connection {:?}", e);
                 }
             }
             bredr::ProfileRequest::Search { service_uuid, attr_ids, results, .. } => {
@@ -513,7 +513,7 @@ impl ProfileRegistrar {
                 connection_request = connection_receiver.select_next_some() => {
                     // Incoming connection request from the upstream Profile server.
                     if let Err(e) = self.handle_connection_request(connection_request).await {
-                        error!("Error processing incoming l2cap connection request: {:?}", e);
+                        warn!("Error processing incoming l2cap connection request: {:?}", e);
                     }
                 }
                 service_event = client_event_streams.next() => {
@@ -522,13 +522,15 @@ impl ProfileRegistrar {
                         // Unregister the service from the ProfileRegistrar.
                         info!("Client {:?} unregistered service advertisement", service_id);
                         if let Err(e) = self.unregister_service(service_id).await {
-                            error!("Error unregistering service {:?}: {:?}", service_id, e);
+                            warn!("Error unregistering service {:?}: {:?}", service_id, e);
                         }
                     }
                 }
                 request = test_requests.select_next_some() => {
-                    // TODO(fxbug.dev/61306): Add handler for test requests.
-                    info!("Received RFCOMM Test request: {:?}", request);
+                    match request {
+                        Ok(req) => self.rfcomm_server.handle_test_request(req).await,
+                        Err(e) => warn!("RfcommTest request is error: {:?}", e),
+                    }
                 }
                 complete => break,
             }

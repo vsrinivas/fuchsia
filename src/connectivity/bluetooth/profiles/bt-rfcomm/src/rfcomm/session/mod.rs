@@ -442,6 +442,47 @@ impl SessionInner {
         Ok(())
     }
 
+    /// Attempts to close the established RFCOMM Session with the remote peer by sending
+    /// the Disconnect command.
+    async fn close(&mut self) -> Result<(), Error> {
+        // There's nothing to close if the Session Multiplexer has not been started.
+        if !self.multiplexer().started() {
+            return Err(Error::MultiplexerNotStarted);
+        }
+
+        // Send the disconnect command to the peer. The session will shut down when we receive
+        // the acknowledgement from the peer (either UA or DM response).
+        self.send_disc_command(DLCI::MUX_CONTROL_DLCI).await;
+        Ok(())
+    }
+
+    /// Attempts to send a Remote Line `status` update to the remote peer. The status is associated
+    /// with the established RFCOMM channel identified by the provided `server_channel` number.
+    ///
+    /// Returns Error if the multiplexer hasn't started or if there is no such established channel.
+    async fn send_remote_line_status(
+        &mut self,
+        server_channel: ServerChannel,
+        status: Option<RlsError>,
+    ) -> Result<(), Error> {
+        // It's invalid to report the line status if the multiplexer has not started.
+        if !self.multiplexer().started() {
+            return Err(Error::MultiplexerNotStarted);
+        }
+
+        // The RLS command refers to the status of a local channel. Therefore, the DLCI is formed
+        // by taking the channel number and _our_ role.
+        let dlci = server_channel.to_dlci(self.role())?;
+
+        // Updating the line status is only valid if the DLCI has been established.
+        if !self.multiplexer().dlci_established(&dlci) {
+            return Err(Error::ChannelNotEstablished(dlci));
+        }
+
+        self.send_remote_line_status_command(dlci, status).await;
+        Ok(())
+    }
+
     /// Handles an SABM command over the given `dlci` and sends a response frame to the remote peer.
     ///
     /// There are two important cases:
@@ -519,7 +560,8 @@ impl SessionInner {
                                 .await?;
                             Ok(())
                         }
-                        MuxCommandParams::ModemStatus(_) => Ok(()),
+                        MuxCommandParams::ModemStatus(_)
+                        | MuxCommandParams::RemoteLineStatus(_) => Ok(()),
                         _ => {
                             // TODO(fxbug.dev/59585): We currently don't send any other mux commands,
                             // add other handlers here when implemented.
@@ -624,9 +666,10 @@ impl SessionInner {
     }
 
     /// Handles an UnnumberedAcknowledgement response over the provided `dlci`.
-    async fn handle_ua_response(&mut self, dlci: DLCI) {
-        // TODO(fxbug.dev/63104): Handle UA response for Disconnect commands when we wire
-        // up the SessionChannel frame sender to SessionInner.
+    /// Returns a flag indicating session termination.
+    async fn handle_ua_response(&mut self, dlci: DLCI) -> bool {
+        // TODO(fxbug.dev/63104): Handle UA responses for Disconnect frames sent via
+        // an individual SessionChannel.
         match self.outstanding_frames.remove_frame(&dlci).map(|frame| frame.data) {
             Some(FrameData::SetAsynchronousBalancedMode) if dlci.is_mux_control() => {
                 // If we are not negotiating anymore, mux startup was either canceled
@@ -636,7 +679,7 @@ impl SessionInner {
                         "Received response when mux startup was either canceled or completed: {:?}",
                         self.role()
                     );
-                    return;
+                    return false;
                 }
                 // Otherwise, assume the initiator role and complete startup. Starting should never
                 // fail because we are guaranteed to be in the Negotiating role.
@@ -652,15 +695,21 @@ impl SessionInner {
                     self.send_modem_status_command(dlci).await;
                 }
             }
+            Some(FrameData::Disconnect) if dlci.is_mux_control() => {
+                info!("Received UA response to Disconnect of RFCOMM Session. Shutting down...");
+                return true;
+            }
             Some(_) | None => warn!("Received unexpected UA response over DLCI: {:?}", dlci),
         }
+        false
     }
 
     /// Handles a DisconnectedMode response over the provided `dlci`.
-    async fn handle_dm_response(&mut self, dlci: DLCI) {
+    /// Returns a flag indicating session termination.
+    async fn handle_dm_response(&mut self, dlci: DLCI) -> bool {
         // See GSM 7.10 Section 5.5.3 for the usage of the DM response.
-        // TODO(fxbug.dev/63104): Handle DM response for Disconnect commands when we wire
-        // up the SessionChannel frame sender to SessionInner.
+        // TODO(fxbug.dev/63104): Handle DM responses for Disconnect frames sent via
+        // an individual SessionChannel.
         match self.outstanding_frames.remove_frame(&dlci).map(|frame| frame.data) {
             Some(FrameData::SetAsynchronousBalancedMode) if dlci.is_mux_control() => {
                 // Peer rejected our request to start the Session multiplexer - reset and
@@ -676,6 +725,13 @@ impl SessionInner {
                     Err(ErrorCode::Canceled),
                 );
             }
+            Some(FrameData::Disconnect) if dlci.is_mux_control() => {
+                // A negative response to a Disconnect command typically means the peer is in
+                // a different logical state than us. This is fatal, and we should shut down
+                // the RFCOMM session.
+                info!("Received DM response to Disconnect of RFCOMM Session. Shutting down...");
+                return true;
+            }
             Some(frame_data) => warn!("Unexpected DM for {:?}", frame_data),
             None => {
                 let pn_identifier =
@@ -687,6 +743,7 @@ impl SessionInner {
                 }
             }
         }
+        false
     }
 
     /// Handles an incoming Frame received from the peer. Returns a flag indicating whether
@@ -698,10 +755,10 @@ impl SessionInner {
                 self.handle_sabm_command(dlci).await;
             }
             FrameData::UnnumberedAcknowledgement => {
-                self.handle_ua_response(dlci).await;
+                return Ok(self.handle_ua_response(dlci).await);
             }
             FrameData::DisconnectedMode => {
-                self.handle_dm_response(dlci).await;
+                return Ok(self.handle_dm_response(dlci).await);
             }
             FrameData::Disconnect => return Ok(self.handle_disconnect_command(dlci).await),
             FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(data)) => {
@@ -738,6 +795,15 @@ impl SessionInner {
         }
     }
 
+    /// Sends a RLS command for the provided `dlci`.
+    async fn send_remote_line_status_command(&mut self, dlci: DLCI, status: Option<RlsError>) {
+        let mux_command = MuxCommand {
+            params: MuxCommandParams::RemoteLineStatus(RemoteLineStatusParams::new(dlci, status)),
+            command_response: CommandResponse::Command,
+        };
+        self.send_frame(Frame::make_mux_command(self.role(), mux_command)).await;
+    }
+
     /// Sends a Modem Status command for the provided `dlci`.
     async fn send_modem_status_command(&mut self, dlci: DLCI) {
         let mux_command = MuxCommand {
@@ -760,6 +826,11 @@ impl SessionInner {
     /// Sends a DM response over the provided `dlci`.
     async fn send_dm_response(&mut self, dlci: DLCI) {
         self.send_frame(Frame::make_dm_response(self.role(), dlci)).await
+    }
+
+    /// Sends a Disc command over the provided `dlci`.
+    async fn send_disc_command(&mut self, dlci: DLCI) {
+        self.send_frame(Frame::make_disc_command(self.role(), dlci)).await
     }
 
     /// Sends the `frame` to the remote peer using the `outgoing_frame_sender`.
@@ -941,6 +1012,16 @@ impl Session {
         }
     }
 
+    /// A test-only hook to initiate multiplexer startup without needing to request
+    /// to open a specific RFCOMM channel.
+    #[cfg(test)]
+    async fn initiate_multiplexer_startup(&self) {
+        let mut w_inner = self.inner.lock().await;
+        if let Err(e) = w_inner.start_multiplexer().await {
+            warn!("Couldn't start session multiplexer: {:?}", e);
+        }
+    }
+
     /// Requests to open a new RFCOMM channel for the provided `server_channel`.
     pub async fn open_rfcomm_channel(
         &self,
@@ -950,6 +1031,26 @@ impl Session {
         let mut w_inner = self.inner.lock().await;
         if let Err(e) = w_inner.open_remote_channel(server_channel, channel_opened_cb).await {
             warn!("Couldn't open RFCOMM channel: {:?}", e);
+        }
+    }
+
+    /// Request to close the RFCOMM session.
+    pub async fn close(&self) {
+        let mut w_inner = self.inner.lock().await;
+        if let Err(e) = w_inner.close().await {
+            warn!("Couldn't close RFCOMM session: {:?}", e);
+        }
+    }
+
+    /// Request to send an RLS frame to the remote peer.
+    pub async fn send_remote_line_status(
+        &self,
+        server_channel: ServerChannel,
+        status: Option<RlsError>,
+    ) {
+        let mut w_inner = self.inner.lock().await;
+        if let Err(e) = w_inner.send_remote_line_status(server_channel, status).await {
+            warn!("Couldn't close RFCOMM session: {:?}", e);
         }
     }
 }
@@ -1993,6 +2094,69 @@ mod tests {
         expect_channel_error(&mut exec, &mut outbound_channels, ErrorCode::Canceled);
     }
 
+    #[fuchsia::test]
+    fn session_close_request_before_mux_startup_is_no_op() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let (local, remote) = Channel::create();
+        let (channel_open_fn, _inbound_channels) = create_inbound_relay();
+        let session = Session::create(PeerId(52), local, channel_open_fn);
+
+        // Some local client (via the RfcommTest API) requests to close the RFCOMM session.
+        {
+            let mut close_fut = Box::pin(session.close());
+            assert!(exec.run_until_stalled(&mut close_fut).is_ready());
+        }
+
+        // Because the RFCOMM session hasn't been established yet, the close request is a
+        // no-op. The underlying L2CAP channel should still be open.
+        let mut channel_closed_fut = Box::pin(remote.closed());
+        assert!(exec.run_until_stalled(&mut channel_closed_fut).is_pending());
+    }
+
+    #[fuchsia::test]
+    fn session_close_request_results_in_disconnect_frame_to_peer() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let (local, mut remote) = Channel::create();
+        let (channel_open_fn, _inbound_channels) = create_inbound_relay();
+        let session = Session::create(PeerId(52), local, channel_open_fn);
+
+        // Manually start the multiplexer.
+        {
+            let mut start_fut = Box::pin(session.initiate_multiplexer_startup());
+            assert!(exec.run_until_stalled(&mut start_fut).is_ready());
+        }
+
+        // Expect outgoing SABM and simulate peer positive response.
+        expect_frame_received_by_peer(&mut exec, &mut remote);
+        let ua = Frame::make_ua_response(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
+        send_peer_frame(remote.as_ref(), ua);
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+
+        // Some client (presumably via the RfcommTest API) requests to close the RFCOMM session.
+        {
+            let mut close_fut = Box::pin(session.close());
+            assert!(exec.run_until_stalled(&mut close_fut).is_ready());
+        }
+
+        // Remote should receive an RFCOMM frame to Disconnect.
+        expect_frame_received_by_peer(&mut exec, &mut remote);
+        {
+            // The session (and therefore L2CAP channel) should only close after the
+            // peer acknowledges.
+            let mut channel_closed_fut = Box::pin(remote.closed());
+            assert!(exec.run_until_stalled(&mut channel_closed_fut).is_pending());
+        }
+        // Remote responds positively.
+        let ua = Frame::make_ua_response(Role::Unassigned, DLCI::MUX_CONTROL_DLCI);
+        send_peer_frame(remote.as_ref(), ua);
+
+        // At this point, the L2CAP channel should be closed.
+        let mut channel_closed_fut = Box::pin(remote.closed());
+        assert!(exec.run_until_stalled(&mut channel_closed_fut).is_ready());
+    }
+
     #[test]
     fn test_open_multiple_channels_establishes_channels_after_acknowledgement() {
         let mut exec = fasync::TestExecutor::new().unwrap();
@@ -2145,5 +2309,105 @@ mod tests {
         expect_channel_error(&mut exec, &mut outbound_channels2, ErrorCode::Failed);
         // First request should still be alive - nothing relayed.
         poll_stream(&mut exec, &mut outbound_channels1).expect_pending("nothing relayed")
+    }
+
+    #[fuchsia::test]
+    fn send_rls_before_mux_startup_returns_error() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let (mut session, _outgoing_frames, _inbound_channels) = setup_session();
+
+        // Initiate an RLS update command.
+        let server_channel = ServerChannel::try_from(3).unwrap();
+        let mut rls_fut = Box::pin(session.send_remote_line_status(server_channel, None));
+        match exec.run_until_stalled(&mut rls_fut) {
+            Poll::Ready(Err(Error::MultiplexerNotStarted)) => {}
+            x => panic!("Expected ready with error but got: {:?}", x),
+        }
+    }
+
+    #[fuchsia::test]
+    fn send_rls_before_channel_establishment_returns_error() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let our_role = Role::Responder;
+        let (mut session, _outgoing_frames, _inbound_channels) = setup_session();
+        assert!(session.multiplexer().start(our_role).is_ok());
+
+        // Initiate an RLS update for some channel that has not been established.
+        let server_channel = ServerChannel::try_from(3).expect("should be valid server channel");
+        let expected_dlci = server_channel.to_dlci(our_role).expect("should be valid dlci");
+
+        let mut rls_fut = Box::pin(session.send_remote_line_status(server_channel, None));
+        match exec.run_until_stalled(&mut rls_fut) {
+            Poll::Ready(Err(Error::ChannelNotEstablished(dlci))) => {
+                assert_eq!(dlci, expected_dlci);
+            }
+            x => panic!("Expected ready with error but got: {:?}", x),
+        }
+    }
+
+    #[fuchsia::test]
+    fn rls_command_received_by_peer() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let our_role = Role::Responder;
+        let remote_peer_role = our_role.opposite_role();
+        let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session();
+        assert!(session.multiplexer().start(our_role).is_ok());
+
+        // Remote peer wants to open an RFCOMM channel for some service provided by this device.
+        let server_channel_number =
+            ServerChannel::try_from(2).expect("valid server channel number");
+        let expected_dlci = server_channel_number.to_dlci(our_role).expect("valid DLCI");
+
+        let user_sabm = Frame::make_sabm_command(remote_peer_role, expected_dlci);
+        let _rfcomm_channel = {
+            let mut handle_fut = Box::pin(session.handle_frame(user_sabm));
+            assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
+            // We expect a channel to be delivered to the local client (e.g to the `channel_receiver`).
+            let _c = expect_channel(&mut exec, &mut channel_receiver);
+            // After successfully delivering the channel to a local client, we expect to notify the peer with
+            // a positive UA response.
+            assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
+            expect_frame(
+                &mut exec,
+                &mut outgoing_frames,
+                FrameData::UnnumberedAcknowledgement,
+                Some(expected_dlci),
+            );
+
+            // After positively responding, we expect to send our current Modem Signals to indicate
+            // readiness.
+            assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
+            expect_mux_command(&mut exec, &mut outgoing_frames, MuxCommandMarker::ModemStatus);
+            assert_matches!(exec.run_until_stalled(&mut handle_fut), Poll::Ready(Ok(false)));
+            _c
+        };
+
+        // An RFCOMM channel at `expected_dlci` has been established. Sending an RLS update to the peer
+        // should succeed.
+        let error_status = Some(RlsError::Overrun);
+        {
+            let mut rls_fut =
+                Box::pin(session.send_remote_line_status(server_channel_number, error_status));
+            assert!(exec.run_until_stalled(&mut rls_fut).is_pending());
+            expect_mux_command(&mut exec, &mut outgoing_frames, MuxCommandMarker::RemoteLineStatus);
+            assert_matches!(exec.run_until_stalled(&mut rls_fut), Poll::Ready(Ok(_)));
+        }
+
+        // Peer would typically respond by echoing the RLS - nothing to be done thereafter.
+        let mux_command = MuxCommand {
+            params: MuxCommandParams::RemoteLineStatus(RemoteLineStatusParams::new(
+                expected_dlci,
+                error_status,
+            )),
+            command_response: CommandResponse::Response,
+        };
+        let peer_rls = Frame::make_mux_command(remote_peer_role, mux_command);
+        {
+            let mut handle_fut = Box::pin(session.handle_frame(peer_rls));
+            assert_matches!(exec.run_until_stalled(&mut handle_fut), Poll::Ready(Ok(false)));
+        }
     }
 }

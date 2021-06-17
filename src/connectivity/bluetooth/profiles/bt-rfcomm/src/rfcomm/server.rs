@@ -6,7 +6,9 @@ use {
     anyhow::{format_err, Error},
     bt_rfcomm::{profile::build_rfcomm_protocol, ServerChannel},
     fidl_fuchsia_bluetooth::ErrorCode,
-    fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
+    fidl_fuchsia_bluetooth_bredr as bredr,
+    fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestRequest,
+    fuchsia_async as fasync,
     fuchsia_bluetooth::{
         detachable_map::DetachableMap,
         types::{Channel, PeerId},
@@ -14,7 +16,7 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{lock::Mutex, FutureExt},
-    log::{info, trace},
+    log::{info, trace, warn},
     std::{
         collections::{HashMap, HashSet},
         convert::TryFrom,
@@ -22,7 +24,10 @@ use {
     },
 };
 
-use crate::rfcomm::{session::Session, types::SignaledTask};
+use crate::rfcomm::{
+    session::Session,
+    types::{status_to_rls_error, SignaledTask},
+};
 
 /// Manages the current clients of the RFCOMM server. Provides an API for
 /// registering, unregistering, and relaying RFCOMM channels to clients.
@@ -218,6 +223,38 @@ impl RfcommServer {
         .detach();
 
         Ok(())
+    }
+
+    /// Handles a RfcommTest FIDL request.
+    pub async fn handle_test_request(&mut self, request: RfcommTestRequest) {
+        info!("Received RFCOMM Test request: {:?}", request);
+        // Note: The test request is a no-op if there is no connected session with the peer.
+        match request {
+            RfcommTestRequest::Disconnect { id, .. } => {
+                let id = id.into();
+                if let Some(session) = self.sessions.get(&id).and_then(|s| s.upgrade()) {
+                    session.close().await;
+                }
+            }
+            RfcommTestRequest::RemoteLineStatus { id, channel_number, status, .. } => {
+                let id = id.into();
+                let server_channel_number = match ServerChannel::try_from(channel_number) {
+                    Ok(sc) => sc,
+                    Err(e) => {
+                        warn!(
+                            "RemoteLineStatus FIDL request with invalid ServerChannel number: {:?}",
+                            e
+                        );
+                        return;
+                    }
+                };
+                if let Some(session) = self.sessions.get(&id).and_then(|s| s.upgrade()) {
+                    session
+                        .send_remote_line_status(server_channel_number, status_to_rls_error(status))
+                        .await;
+                }
+            }
+        }
     }
 }
 
