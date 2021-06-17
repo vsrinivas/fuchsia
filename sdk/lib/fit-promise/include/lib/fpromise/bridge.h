@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_H_
-#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_BRIDGE_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_BRIDGE_H_
 
 #include "bridge_internal.h"
 
-namespace fit {
+namespace fpromise {
 
 // A bridge is a building block for asynchronous control flow that is formed
 // by the association of two distinct participants: a completer and a consumer.
 //
 // - The completer is responsible for reporting completion of an asynchronous
-//   task and providing its result.  See |completer| and |fit::completer|.
+//   task and providing its result.  See |completer| and |fpromise::completer|.
 // - The consumer is responsible for consuming the result of the asynchronous
-//   task.  See |consumer| and |fit::consumer|.
+//   task.  See |consumer| and |fpromise::consumer|.
 //
-// This class is often used for binding a |fit::promise| to a callback,
+// This class is often used for binding a |fpromise::promise| to a callback,
 // facilitating interoperation of promises with functions that asynchronously
 // report their result via a callback function.  It can also be used more
 // generally anytime it is necessary to decouple completion of an asynchronous
@@ -29,28 +29,28 @@ namespace fit {
 // result can be consumed at most once.  This property is enforced by
 // a single-ownership model for completers and consumers.
 //
-// The completion capability has a single owner represented by |fit::completer|.
+// The completion capability has a single owner represented by |fpromise::completer|.
 // Its owner may exercise the capability to complete the task (provide its result),
 // it may transfer the capability by moving it to another completer instance,
 // or it may cause the asynchronous task to be "abandoned" by discarding the
 // capability, implying that the task can never produce a result.  When this
-// occurs, the associated consumer's |fit::consumer::was_abandoned()| method
+// occurs, the associated consumer's |fpromise::consumer::was_abandoned()| method
 // will return true and the consumer will not obtain any result from the task.
-// See |fit::consumer::promise()| and |fit::consumer::promise_or()| for
+// See |fpromise::consumer::promise()| and |fpromise::consumer::promise_or()| for
 // details on how abandonment of the task can be handled by the consumer.
 //
-// The consumption capability has a single owner represented by |fit::consumer|.
+// The consumption capability has a single owner represented by |fpromise::consumer|.
 // Its owner may exercise the capability to consume the task's result (as a
 // promise), it may transfer the capability by moving it to another consumer
 // instance, or it may cause the asynchronous task to be "canceled" by
 // discarding the capability, implying that the task's result can never be
 // consumed.  When this occurs, the associated completer's
-// |fit::completer::was_canceled()| method will return true and the task's
+// |fpromise::completer::was_canceled()| method will return true and the task's
 // eventual result (if any) will be silently discarded.
 //
 // DECOUPLING
 //
-// See |fit::schedule_for_consumer| for a helper which uses a bridge to
+// See |fpromise::schedule_for_consumer| for a helper which uses a bridge to
 // decouple completion and consumption of a task's result so they can be
 // performed on different executors.
 //
@@ -59,7 +59,7 @@ namespace fit {
 // |V| is the type of value produced when the task completes successfully.
 // Use |std::tuple<Args...>| if the task produces multiple values, such as
 // when you intend to bind the task's completer to a callback with multiple
-// arguments using |fit::completer::bind_tuple()|.
+// arguments using |fpromise::completer::bind_tuple()|.
 // Defaults to |void|.
 //
 // |E| is the type of error produced when the task completes with an error.
@@ -75,19 +75,19 @@ namespace fit {
 //     void read_async(size_t num_bytes, uint8_t* buffer, read_callback cb);
 //
 // Here's how we can adapt the library's "read_async" function to a
-// |fit::promise| by binding its callback to a bridge:
+// |fpromise::promise| by binding its callback to a bridge:
 //
-//     fit::promise<size_t> promise_read(uint8_t* buffer, size_t num_bytes) {
-//         fit::bridge<size_t> bridge;
+//     fpromise::promise<size_t> promise_read(uint8_t* buffer, size_t num_bytes) {
+//         fpromise::bridge<size_t> bridge;
 //         read_async(num_bytes, buffer, bridge.completer.bind());
-//         return bridge.consumer.promise_or(::fit::error());
+//         return bridge.consumer.promise_or(::fpromise::error());
 //     }
 //
 // Finally we can chain additional asynchronous tasks to be performed upon
 // completion of the promised read:
 //
 //     uint8_t buffer[4096];
-//     void my_program(fit::executor* executor) {
+//     void my_program(fpromise::executor* executor) {
 //         auto promise = promise_read(buffer, sizeof(buffer))
 //             .and_then([] (const size_t& bytes_read) {
 //                 // consume contents of buffer
@@ -100,14 +100,14 @@ namespace fit {
 //
 // Similarly, suppose the File I/O library offers a callback-based asynchronous
 // writing function that can return a variety of errors encoded as negative
-// sizes.  Here's how we might decode those errors uniformly into |fit::result|
+// sizes.  Here's how we might decode those errors uniformly into |fpromise::result|
 // allowing them to be handled using combinators such as |or_else|.
 //
 //     using write_callback = fit::function<void(size_t bytes_written, int error)>;
 //     void write_async(size_t num_bytes, uint8_t* buffer, write_callback cb);
 //
-//     fit::promise<size_t, int> promise_write(uint8_t* buffer, size_t num_bytes) {
-//         fit::bridge<size_t, int> bridge;
+//     fpromise::promise<size_t, int> promise_write(uint8_t* buffer, size_t num_bytes) {
+//         fpromise::bridge<size_t, int> bridge;
 //         write_async(num_bytes, buffer,
 //             [completer = std::move(bridge.completer)](size_t bytes_written, int error) {
 //             if (bytes_written == 0) {
@@ -116,11 +116,11 @@ namespace fit {
 //             }
 //             completer.complete_ok(bytes_written);
 //         });
-//         return bridge.consumer.promise_or(::fit::error(ERR_ABANDONED));
+//         return bridge.consumer.promise_or(::fpromise::error(ERR_ABANDONED));
 //     }
 //
 //     uint8_t buffer[4096];
-//     void my_program(fit::executor* executor) {
+//     void my_program(fpromise::executor* executor) {
 //         auto promise = promise_write(buffer, sizeof(buffer))
 //             .and_then([] (const size_t& bytes_written) {
 //                 // consume contents of buffer
@@ -131,20 +131,20 @@ namespace fit {
 //         executor->schedule_task(std::move(promise));
 //     }
 //
-// See documentation of |fit::promise| for more information.
+// See documentation of |fpromise::promise| for more information.
 template <typename V, typename E>
 class bridge final {
  public:
   using value_type = V;
   using error_type = E;
-  using result_type = result<value_type, error_type>;
-  using completer_type = ::fit::completer<V, E>;
-  using consumer_type = ::fit::consumer<V, E>;
+  using result_type = ::fpromise::result<value_type, error_type>;
+  using completer_type = ::fpromise::completer<V, E>;
+  using consumer_type = ::fpromise::consumer<V, E>;
 
   // Creates a bridge representing a new asynchronous task formed by the
   // association of a completer and consumer.
   bridge() {
-    ::fit::internal::bridge_state<V, E>::create(&completer.completion_ref_,
+    ::fpromise::internal::bridge_state<V, E>::create(&completer.completion_ref_,
                                                 &consumer.consumption_ref_);
   }
   bridge(bridge&& other) = default;
@@ -168,28 +168,28 @@ class bridge final {
 // Ownership of the capability is implicitly transferred away when the
 // completer is abandoned, completed, or bound to a callback.
 //
-// See also |fit::bridge|.
-// See documentation of |fit::promise| for more information.
+// See also |fpromise::bridge|.
+// See documentation of |fpromise::promise| for more information.
 //
 // SYNOPSIS
 //
 // |V| is the type of value produced when the task completes successfully.
 // Use |std::tuple<Args...>| if the task produces multiple values, such as
 // when you intend to bind the task's completer to a callback with multiple
-// arguments using |fit::completer::bind_tuple()|.
+// arguments using |fpromise::completer::bind_tuple()|.
 // Defaults to |void|.
 //
 // |E| is the type of error produced when the task completes with an error.
 // Defaults to |void|.
 template <typename V, typename E>
 class completer final {
-  using bridge_state = ::fit::internal::bridge_state<V, E>;
+  using bridge_state = ::fpromise::internal::bridge_state<V, E>;
   using completion_ref = typename bridge_state::completion_ref;
 
  public:
   using value_type = V;
   using error_type = E;
-  using result_type = ::fit::result<V, E>;
+  using result_type = ::fpromise::result<V, E>;
 
   completer() = default;
   completer(completer&& other) = default;
@@ -210,7 +210,7 @@ class completer final {
   }
 
   // Explicitly abandons the task, meaning that it will never be completed.
-  // See |fit::bridge| for details about abandonment.
+  // See |fpromise::bridge| for details about abandonment.
   void abandon() {
     assert(completion_ref_);
     completion_ref_ = completion_ref();
@@ -223,14 +223,14 @@ class completer final {
   void complete_ok() {
     assert(completion_ref_);
     bridge_state* state = completion_ref_.get();
-    state->complete_or_abandon(std::move(completion_ref_), ::fit::ok());
+    state->complete_or_abandon(std::move(completion_ref_), ::fpromise::ok());
   }
   template <typename VV = value_type, typename = std::enable_if_t<!std::is_void<VV>::value>>
   void complete_ok(VV value) {
     assert(completion_ref_);
     bridge_state* state = completion_ref_.get();
     state->complete_or_abandon(std::move(completion_ref_),
-                               ::fit::ok<value_type>(std::forward<VV>(value)));
+                               ::fpromise::ok<value_type>(std::forward<VV>(value)));
   }
 
   // Reports that the task has completed with an error.
@@ -240,23 +240,23 @@ class completer final {
   void complete_error() {
     assert(completion_ref_);
     bridge_state* state = completion_ref_.get();
-    state->complete_or_abandon(std::move(completion_ref_), ::fit::error());
+    state->complete_or_abandon(std::move(completion_ref_), ::fpromise::error());
   }
   template <typename EE = error_type, typename = std::enable_if_t<!std::is_void<EE>::value>>
   void complete_error(EE error) {
     assert(completion_ref_);
     bridge_state* state = completion_ref_.get();
     state->complete_or_abandon(std::move(completion_ref_),
-                               ::fit::error<error_type>(std::forward<EE>(error)));
+                               ::fpromise::error<error_type>(std::forward<EE>(error)));
   }
 
   // Reports that the task has completed or been abandoned.
-  // See |fit::bridge| for details about abandonment.
+  // See |fpromise::bridge| for details about abandonment.
   //
   // The result state determines the task's final disposition.
-  // - |fit::result_state::ok|: The task completed successfully.
-  // - |fit::result_state::error|: The task completed with an error.
-  // - |fit::result_state::pending|: The task was abandoned.
+  // - |fpromise::result_state::ok|: The task completed successfully.
+  // - |fpromise::result_state::error|: The task completed with an error.
+  // - |fpromise::result_state::pending|: The task was abandoned.
   void complete_or_abandon(result_type result) {
     assert(completion_ref_);
     bridge_state* state = completion_ref_.get();
@@ -271,9 +271,9 @@ class completer final {
   // Otherwise, the returned callback's signature is: void(value_type).
   //
   // The returned callback is thread-safe and move-only.
-  ::fit::internal::bridge_bind_callback<V, E> bind() {
+  ::fpromise::internal::bridge_bind_callback<V, E> bind() {
     assert(completion_ref_);
-    return ::fit::internal::bridge_bind_callback<V, E>(std::move(completion_ref_));
+    return ::fpromise::internal::bridge_bind_callback<V, E>(std::move(completion_ref_));
   }
 
   // A variant of |bind()| that can be used to bind a completion of a task
@@ -286,9 +286,9 @@ class completer final {
   // unpacked as individual arguments of the callback.
   //
   // The returned callback is thread-safe and move-only.
-  ::fit::internal::bridge_bind_tuple_callback<V, E> bind_tuple() {
+  ::fpromise::internal::bridge_bind_tuple_callback<V, E> bind_tuple() {
     assert(completion_ref_);
-    return ::fit::internal::bridge_bind_tuple_callback<V, E>(std::move(completion_ref_));
+    return ::fpromise::internal::bridge_bind_tuple_callback<V, E>(std::move(completion_ref_));
   }
 
   completer(const completer& other) = delete;
@@ -307,28 +307,28 @@ class completer final {
 // Ownership of the capability is implicitly transferred away when the
 // task is canceled or converted to a promise.
 //
-// See also |fit::bridge|.
-// See documentation of |fit::promise| for more information.
+// See also |fpromise::bridge|.
+// See documentation of |fpromise::promise| for more information.
 //
 // SYNOPSIS
 //
 // |V| is the type of value produced when the task completes successfully.
 // Use |std::tuple<Args...>| if the task produces multiple values, such as
 // when you intend to bind the task's completer to a callback with multiple
-// arguments using |fit::completer::bind_tuple()|.
+// arguments using |fpromise::completer::bind_tuple()|.
 // Defaults to |void|.
 //
 // |E| is the type of error produced when the task completes with an error.
 // Defaults to |void|.
 template <typename V, typename E>
 class consumer final {
-  using bridge_state = ::fit::internal::bridge_state<V, E>;
+  using bridge_state = ::fpromise::internal::bridge_state<V, E>;
   using consumption_ref = typename bridge_state::consumption_ref;
 
  public:
   using value_type = V;
   using error_type = E;
-  using result_type = ::fit::result<V, E>;
+  using result_type = ::fpromise::result<V, E>;
 
   consumer() = default;
   consumer(consumer&& other) = default;
@@ -341,7 +341,7 @@ class consumer final {
   explicit operator bool() const { return !!consumption_ref_; }
 
   // Explicitly cancels the task, meaning that its result will never be consumed.
-  // See |fit::bridge| for details about cancellation.
+  // See |fpromise::bridge| for details about cancellation.
   void cancel() {
     assert(consumption_ref_);
     consumption_ref_ = consumption_ref();
@@ -374,9 +374,9 @@ class consumer final {
   // The state of |result_if_abandoned| determines the promise's behavior
   // in case of abandonment.
   //
-  // - |fit::result_state::ok|: Reports a successful result.
-  // - |fit::result_state::error|: Reports a failure result.
-  // - |fit::result_state::pending|: Does not report a result, thereby
+  // - |fpromise::result_state::ok|: Reports a successful result.
+  // - |fpromise::result_state::error|: Reports a failure result.
+  // - |fpromise::result_state::pending|: Does not report a result, thereby
   //   causing subsequent tasks associated with the promise to also be
   //   abandoned and eventually destroyed if they cannot make progress
   //   without the promised result.
@@ -418,38 +418,38 @@ class consumer final {
 //     // manages its own executor.
 //     class model {
 //     public:
-//         fit::consumer<int> perform_calculation(int parameter) {
-//             return fit::schedule_for_consumer(&executor_,
-//                 fit::make_promise([parameter] {
+//         fpromise::consumer<int> perform_calculation(int parameter) {
+//             return fpromise::schedule_for_consumer(&executor_,
+//                 fpromise::make_promise([parameter] {
 //                     // In reality, this would likely be a much more
 //                     // complex expression.
-//                     return fit::ok(parameter * parameter);
+//                     return fpromise::ok(parameter * parameter);
 //                 });
 //         }
 //
 //     private:
 //         // The model is responsible for initializing and running its own
 //         // executor (perhaps on its own thread).
-//         fit::single_threaded_executor executor_;
+//         fpromise::single_threaded_executor executor_;
 //     };
 //
 //     // Asks the model to perform a calculation, awaits a result on the
 //     // provided executor (which is different from the one internally used
 //     // by the model), then prints the result.
-//     void print_output(fit::executor* executor, model* m) {
+//     void print_output(fpromise::executor* executor, model* m) {
 //         executor->schedule_task(
 //             m->perform_calculation(16)
-//                 .promise_or(fit::error())
+//                 .promise_or(fpromise::error())
 //                 .and_then([] (const int& result) { printf("done: %d\n", result); })
 //                 .or_else([] { puts("failed or abandoned"); }));
 //     }
 //
 template <typename Promise>
 inline consumer<typename Promise::value_type, typename Promise::error_type> schedule_for_consumer(
-    fit::executor* executor, Promise promise) {
+    fpromise::executor* executor, Promise promise) {
   assert(executor);
   assert(promise);
-  fit::bridge<typename Promise::value_type, typename Promise::error_type> bridge;
+  fpromise::bridge<typename Promise::value_type, typename Promise::error_type> bridge;
   executor->schedule_task(promise.then(
       [completer = std::move(bridge.completer)](typename Promise::result_type& result) mutable {
         completer.complete_or_abandon(std::move(result));
@@ -457,6 +457,6 @@ inline consumer<typename Promise::value_type, typename Promise::error_type> sche
   return std::move(bridge.consumer);
 }
 
-}  // namespace fit
+}  // namespace fpromise
 
-#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_BRIDGE_H_

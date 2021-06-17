@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_IN_PLACE_INTERNAL_H_
-#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_IN_PLACE_INTERNAL_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_IN_PLACE_INTERNAL_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_IN_PLACE_INTERNAL_H_
 
 #include <cstddef>
 
-namespace fit {
+namespace fpromise {
 
 // Tag for requesting in-place initialization.
 struct in_place_t {
@@ -78,6 +78,6 @@ static constexpr const in_place_index_t<Index>& in_place_index =
 
 #endif  // __cpp_inline_variables
 
-}  // namespace fit
+}  // namespace fpromise
 
-#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_IN_PLACE_INTERNAL_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_IN_PLACE_INTERNAL_H_

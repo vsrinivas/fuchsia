@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_INTERNAL_H_
-#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_INTERNAL_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_BRIDGE_INTERNAL_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_BRIDGE_INTERNAL_H_
 
 #include <lib/fit/thread_safety.h>
 
@@ -16,7 +16,7 @@
 #include "promise.h"
 #include "result.h"
 
-namespace fit {
+namespace fpromise {
 namespace internal {
 
 // State shared between one completer and one consumer.
@@ -66,7 +66,7 @@ class bridge_state final {
   void drop_consumption_ref(bool was_consumed);
   void drop_ref_and_maybe_delete_self();
   void set_result_if_abandoned(result_type result_if_abandoned);
-  result_type await_result(consumption_ref* ref, ::fit::context& context);
+  result_type await_result(consumption_ref* ref, ::fpromise::context& context);
 
   mutable std::mutex mutex_;
 
@@ -184,7 +184,7 @@ class bridge_state<V, E>::promise_continuation final {
     ref_.get()->set_result_if_abandoned(std::move(result_if_abandoned));
   }
 
-  result_type operator()(::fit::context& context) {
+  result_type operator()(::fpromise::context& context) {
     return ref_.get()->await_result(&ref_, context);
   }
 
@@ -204,13 +204,13 @@ class bridge_bind_callback final {
   template <typename VV = V, typename = std::enable_if_t<std::is_void<VV>::value>>
   void operator()() {
     callback_bridge_state* state = ref_.get();
-    state->complete_or_abandon(std::move(ref_), ::fit::ok());
+    state->complete_or_abandon(std::move(ref_), ::fpromise::ok());
   }
 
   template <typename VV = V, typename = std::enable_if_t<!std::is_void<VV>::value>>
   void operator()(VV value) {
     callback_bridge_state* state = ref_.get();
-    state->complete_or_abandon(std::move(ref_), ::fit::ok<V>(std::forward<VV>(value)));
+    state->complete_or_abandon(std::move(ref_), ::fpromise::ok<V>(std::forward<VV>(value)));
   }
 
  private:
@@ -230,8 +230,8 @@ class bridge_bind_tuple_callback<std::tuple<Args...>, E> final {
 
   void operator()(Args... args) {
     tuple_callback_bridge_state* state = ref_.get();
-    state->complete_or_abandon(std::move(ref_),
-                               ::fit::ok(std::make_tuple<Args...>(std::forward<Args>(args)...)));
+    state->complete_or_abandon(
+        std::move(ref_), ::fpromise::ok(std::make_tuple<Args...>(std::forward<Args>(args)...)));
   }
 
  private:
@@ -361,8 +361,8 @@ void bridge_state<V, E>::set_result_if_abandoned(result_type result_if_abandoned
 }
 
 template <typename V, typename E>
-typename bridge_state<V, E>::result_type bridge_state<V, E>::await_result(consumption_ref* ref,
-                                                                          ::fit::context& context) {
+typename bridge_state<V, E>::result_type bridge_state<V, E>::await_result(
+    consumption_ref* ref, ::fpromise::context& context) {
   assert(ref->get() == this);
   suspended_task task_to_drop;
   result_type result;
@@ -373,7 +373,7 @@ typename bridge_state<V, E>::result_type bridge_state<V, E>::await_result(consum
     if (disposition_ == disposition::pending) {
       task_to_drop.swap(task_);
       task_ = context.suspend_task();  // assuming this isn't re-entrant
-      return ::fit::pending();
+      return ::fpromise::pending();
     }
     disposition_ = disposition::returned;
     result = std::move(result_);
@@ -393,6 +393,6 @@ class completer;
 template <typename V = void, typename E = void>
 class consumer;
 
-}  // namespace fit
+}  // namespace fpromise
 
-#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_INTERNAL_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_BRIDGE_INTERNAL_H_

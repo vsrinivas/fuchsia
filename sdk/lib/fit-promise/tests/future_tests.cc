@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include <zxtest/zxtest.h>
 
@@ -10,18 +10,18 @@
 
 namespace {
 
-class fake_context : public fit::context {
+class fake_context : public fpromise::context {
  public:
-  fit::executor* executor() const override { ASSERT_CRITICAL(false); }
-  fit::suspended_task suspend_task() override { ASSERT_CRITICAL(false); }
+  fpromise::executor* executor() const override { ASSERT_CRITICAL(false); }
+  fpromise::suspended_task suspend_task() override { ASSERT_CRITICAL(false); }
 };
 
 TEST(FutureTests, empty_future) {
   fake_context context;
 
   {
-    fit::future<> nihil;
-    EXPECT_EQ(fit::future_state::empty, nihil.state());
+    fpromise::future<> nihil;
+    EXPECT_EQ(fpromise::future_state::empty, nihil.state());
     EXPECT_FALSE(nihil);
     EXPECT_TRUE(nihil.is_empty());
     EXPECT_FALSE(nihil.is_pending());
@@ -37,8 +37,8 @@ TEST(FutureTests, empty_future) {
   }
 
   {
-    fit::future<> nihil(nullptr);
-    EXPECT_EQ(fit::future_state::empty, nihil.state());
+    fpromise::future<> nihil(nullptr);
+    EXPECT_EQ(fpromise::future_state::empty, nihil.state());
     EXPECT_FALSE(nihil);
     EXPECT_TRUE(nihil.is_empty());
     EXPECT_FALSE(nihil.is_pending());
@@ -49,8 +49,8 @@ TEST(FutureTests, empty_future) {
   }
 
   {
-    fit::future<> nihil(fit::promise<>(nullptr));
-    EXPECT_EQ(fit::future_state::empty, nihil.state());
+    fpromise::future<> nihil(fpromise::promise<>(nullptr));
+    EXPECT_EQ(fpromise::future_state::empty, nihil.state());
     EXPECT_FALSE(nihil);
     EXPECT_TRUE(nihil.is_empty());
     EXPECT_FALSE(nihil.is_pending());
@@ -61,8 +61,8 @@ TEST(FutureTests, empty_future) {
   }
 
   {
-    fit::future<> nihil(fit::pending());
-    EXPECT_EQ(fit::future_state::empty, nihil.state());
+    fpromise::future<> nihil(fpromise::pending());
+    EXPECT_EQ(fpromise::future_state::empty, nihil.state());
     EXPECT_FALSE(nihil);
     EXPECT_TRUE(nihil.is_empty());
     EXPECT_FALSE(nihil.is_pending());
@@ -77,12 +77,13 @@ TEST(FutureTests, pending_future) {
   fake_context context;
 
   uint64_t run_count = 0;
-  fit::future<int, int> fut(fit::make_promise([&](fit::context& context) -> fit::result<int, int> {
-    if (++run_count == 3)
-      return fit::ok(42);
-    return fit::pending();
-  }));
-  EXPECT_EQ(fit::future_state::pending, fut.state());
+  fpromise::future<int, int> fut(
+      fpromise::make_promise([&](fpromise::context& context) -> fpromise::result<int, int> {
+        if (++run_count == 3)
+          return fpromise::ok(42);
+        return fpromise::pending();
+      }));
+  EXPECT_EQ(fpromise::future_state::pending, fut.state());
   EXPECT_TRUE(fut);
   EXPECT_FALSE(fut.is_empty());
   EXPECT_TRUE(fut.is_pending());
@@ -104,31 +105,31 @@ TEST(FutureTests, pending_future) {
   EXPECT_EQ(3, run_count);
 
   // check the result
-  EXPECT_EQ(fit::future_state::ok, fut.state());
-  EXPECT_EQ(fit::result_state::ok, fut.result().state());
+  EXPECT_EQ(fpromise::future_state::ok, fut.state());
+  EXPECT_EQ(fpromise::result_state::ok, fut.result().state());
   EXPECT_EQ(42, fut.result().value());
 
   // do something similar but this time produce an error to ensure
   // that this state change works as expected too
-  fut = fit::make_promise([&](fit::context& context) -> fit::result<int, int> {
+  fut = fpromise::make_promise([&](fpromise::context& context) -> fpromise::result<int, int> {
     if (++run_count == 5)
-      return fit::error(42);
-    return fit::pending();
+      return fpromise::error(42);
+    return fpromise::pending();
   });
-  EXPECT_EQ(fit::future_state::pending, fut.state());
+  EXPECT_EQ(fpromise::future_state::pending, fut.state());
   EXPECT_FALSE(fut(context));
   EXPECT_EQ(4, run_count);
   EXPECT_TRUE(fut(context));
   EXPECT_EQ(5, run_count);
-  EXPECT_EQ(fit::future_state::error, fut.state());
-  EXPECT_EQ(fit::result_state::error, fut.result().state());
+  EXPECT_EQ(fpromise::future_state::error, fut.state());
+  EXPECT_EQ(fpromise::result_state::error, fut.result().state());
   EXPECT_EQ(42, fut.result().error());
 }
 
 TEST(FutureTests, ok_future) {
   fake_context context;
-  fit::future<int> fut(fit::ok(42));
-  EXPECT_EQ(fit::future_state::ok, fut.state());
+  fpromise::future<int> fut(fpromise::ok(42));
+  EXPECT_EQ(fpromise::future_state::ok, fut.state());
   EXPECT_TRUE(fut);
   EXPECT_FALSE(fut.is_empty());
   EXPECT_FALSE(fut.is_pending());
@@ -143,31 +144,31 @@ TEST(FutureTests, ok_future) {
   EXPECT_TRUE(nullptr != fut);
 
   // non-destructive access
-  EXPECT_EQ(fit::result_state::ok, fut.result().state());
+  EXPECT_EQ(fpromise::result_state::ok, fut.result().state());
   EXPECT_EQ(42, fut.result().value());
   EXPECT_EQ(42, fut.value());
 
   // destructive access
-  fut = fit::ok(43);
-  EXPECT_EQ(fit::future_state::ok, fut.state());
+  fut = fpromise::ok(43);
+  EXPECT_EQ(fpromise::future_state::ok, fut.state());
   EXPECT_EQ(43, fut.take_result().value());
-  EXPECT_EQ(fit::future_state::empty, fut.state());
+  EXPECT_EQ(fpromise::future_state::empty, fut.state());
 
-  fut = fit::ok(44);
-  EXPECT_EQ(fit::future_state::ok, fut.state());
+  fut = fpromise::ok(44);
+  EXPECT_EQ(fpromise::future_state::ok, fut.state());
   EXPECT_EQ(44, fut.take_value());
-  EXPECT_EQ(fit::future_state::empty, fut.state());
+  EXPECT_EQ(fpromise::future_state::empty, fut.state());
 
-  fut = fit::ok(45);
-  EXPECT_EQ(fit::future_state::ok, fut.state());
+  fut = fpromise::ok(45);
+  EXPECT_EQ(fpromise::future_state::ok, fut.state());
   EXPECT_EQ(45, fut.take_ok_result().value);
-  EXPECT_EQ(fit::future_state::empty, fut.state());
+  EXPECT_EQ(fpromise::future_state::empty, fut.state());
 }
 
 TEST(FutureTests, error_future) {
   fake_context context;
-  fit::future<void, int> fut(fit::error(42));
-  EXPECT_EQ(fit::future_state::error, fut.state());
+  fpromise::future<void, int> fut(fpromise::error(42));
+  EXPECT_EQ(fpromise::future_state::error, fut.state());
   EXPECT_TRUE(fut);
   EXPECT_FALSE(fut.is_empty());
   EXPECT_FALSE(fut.is_pending());
@@ -182,75 +183,75 @@ TEST(FutureTests, error_future) {
   EXPECT_TRUE(nullptr != fut);
 
   // non-destructive access
-  EXPECT_EQ(fit::result_state::error, fut.result().state());
+  EXPECT_EQ(fpromise::result_state::error, fut.result().state());
   EXPECT_EQ(42, fut.result().error());
   EXPECT_EQ(42, fut.error());
 
   // destructive access
-  fut = fit::error(43);
-  EXPECT_EQ(fit::future_state::error, fut.state());
+  fut = fpromise::error(43);
+  EXPECT_EQ(fpromise::future_state::error, fut.state());
   EXPECT_EQ(43, fut.take_result().error());
-  EXPECT_EQ(fit::future_state::empty, fut.state());
+  EXPECT_EQ(fpromise::future_state::empty, fut.state());
 
-  fut = fit::error(44);
-  EXPECT_EQ(fit::future_state::error, fut.state());
+  fut = fpromise::error(44);
+  EXPECT_EQ(fpromise::future_state::error, fut.state());
   EXPECT_EQ(44, fut.take_error());
-  EXPECT_EQ(fit::future_state::empty, fut.state());
+  EXPECT_EQ(fpromise::future_state::empty, fut.state());
 
-  fut = fit::error(45);
-  EXPECT_EQ(fit::future_state::error, fut.state());
+  fut = fpromise::error(45);
+  EXPECT_EQ(fpromise::future_state::error, fut.state());
   EXPECT_EQ(45, fut.take_error_result().error);
-  EXPECT_EQ(fit::future_state::empty, fut.state());
+  EXPECT_EQ(fpromise::future_state::empty, fut.state());
 }
 
 TEST(FutureTests, assignment_and_swap) {
-  fit::future<> x;
-  EXPECT_EQ(fit::future_state::empty, x.state());
+  fpromise::future<> x;
+  EXPECT_EQ(fpromise::future_state::empty, x.state());
 
-  x = fit::ok();
-  EXPECT_EQ(fit::future_state::ok, x.state());
+  x = fpromise::ok();
+  EXPECT_EQ(fpromise::future_state::ok, x.state());
 
-  x = fit::error();
-  EXPECT_EQ(fit::future_state::error, x.state());
+  x = fpromise::error();
+  EXPECT_EQ(fpromise::future_state::error, x.state());
 
-  x = fit::pending();
-  EXPECT_EQ(fit::future_state::empty, x.state());
+  x = fpromise::pending();
+  EXPECT_EQ(fpromise::future_state::empty, x.state());
 
   x = nullptr;
-  EXPECT_EQ(fit::future_state::empty, x.state());
+  EXPECT_EQ(fpromise::future_state::empty, x.state());
 
-  x = fit::promise<>();
-  EXPECT_EQ(fit::future_state::empty, x.state());
+  x = fpromise::promise<>();
+  EXPECT_EQ(fpromise::future_state::empty, x.state());
 
-  x = fit::make_promise([] {});
-  EXPECT_EQ(fit::future_state::pending, x.state());
+  x = fpromise::make_promise([] {});
+  EXPECT_EQ(fpromise::future_state::pending, x.state());
 
-  fit::future<> y(std::move(x));
-  EXPECT_EQ(fit::future_state::pending, y.state());
-  EXPECT_EQ(fit::future_state::empty, x.state());
+  fpromise::future<> y(std::move(x));
+  EXPECT_EQ(fpromise::future_state::pending, y.state());
+  EXPECT_EQ(fpromise::future_state::empty, x.state());
 
   x.swap(y);
-  EXPECT_EQ(fit::future_state::pending, x.state());
-  EXPECT_EQ(fit::future_state::empty, y.state());
+  EXPECT_EQ(fpromise::future_state::pending, x.state());
+  EXPECT_EQ(fpromise::future_state::empty, y.state());
 
   x.swap(x);
-  EXPECT_EQ(fit::future_state::pending, x.state());
+  EXPECT_EQ(fpromise::future_state::pending, x.state());
 }
 
 TEST(FutureTests, make_future) {
   fake_context context;
   uint64_t run_count = 0;
-  auto fut = fit::make_future(fit::make_promise([&] {
+  auto fut = fpromise::make_future(fpromise::make_promise([&] {
     run_count++;
-    return fit::ok(42);
+    return fpromise::ok(42);
   }));
   EXPECT_TRUE(fut(context));
   EXPECT_EQ(42, fut.value());
 }
 
-// Ensure that fit::future is considered nullable so that there is
+// Ensure that fpromise::future is considered nullable so that there is
 // consistency with the fact that it can be initialized and assigned from
 // nullptr similar to fit::function.
-static_assert(fit::is_nullable<fit::future<>>::value, "");
+static_assert(fit::is_nullable<fpromise::future<>>::value, "");
 
 }  // namespace

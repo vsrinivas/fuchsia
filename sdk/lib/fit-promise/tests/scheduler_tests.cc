@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/scheduler.h>
+#include <lib/fpromise/scheduler.h>
 
 #include <zxtest/zxtest.h>
 
@@ -10,26 +10,26 @@
 
 namespace {
 
-class fake_context : public fit::context {
+class fake_context : public fpromise::context {
  public:
-  fit::executor* executor() const override { ASSERT_CRITICAL(false); }
-  fit::suspended_task suspend_task() override { ASSERT_CRITICAL(false); }
+  fpromise::executor* executor() const override { ASSERT_CRITICAL(false); }
+  fpromise::suspended_task suspend_task() override { ASSERT_CRITICAL(false); }
 };
 
-fit::pending_task make_pending_task(uint64_t* counter) {
-  return fit::make_promise([counter] { (*counter)++; });
+fpromise::pending_task make_pending_task(uint64_t* counter) {
+  return fpromise::make_promise([counter] { (*counter)++; });
 }
 
 TEST(SchedulerTests, initial_state) {
-  fit::subtle::scheduler scheduler;
+  fpromise::subtle::scheduler scheduler;
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_FALSE(scheduler.has_outstanding_tickets());
 }
 
 TEST(SchedulerTests, schedule_task) {
-  fit::subtle::scheduler scheduler;
-  fit::subtle::scheduler::task_queue tasks;
+  fpromise::subtle::scheduler scheduler;
+  fpromise::subtle::scheduler::task_queue tasks;
   fake_context context;
   uint64_t run_count[3] = {};
 
@@ -79,14 +79,14 @@ TEST(SchedulerTests, schedule_task) {
 }
 
 TEST(SchedulerTests, ticket_obtain_finalize_without_task) {
-  fit::subtle::scheduler scheduler;
+  fpromise::subtle::scheduler scheduler;
 
-  fit::suspended_task::ticket t = scheduler.obtain_ticket();
+  fpromise::suspended_task::ticket t = scheduler.obtain_ticket();
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_TRUE(scheduler.has_outstanding_tickets());
 
-  fit::pending_task task;
+  fpromise::pending_task task;
   scheduler.finalize_ticket(t, &task);
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_FALSE(scheduler.has_suspended_tasks());
@@ -94,15 +94,15 @@ TEST(SchedulerTests, ticket_obtain_finalize_without_task) {
 }
 
 TEST(SchedulerTests, ticket_obtain_finalize_with_task) {
-  fit::subtle::scheduler scheduler;
+  fpromise::subtle::scheduler scheduler;
 
-  fit::suspended_task::ticket t = scheduler.obtain_ticket();
+  fpromise::suspended_task::ticket t = scheduler.obtain_ticket();
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_TRUE(scheduler.has_outstanding_tickets());
 
   uint64_t run_count = 0;
-  fit::pending_task p = make_pending_task(&run_count);
+  fpromise::pending_task p = make_pending_task(&run_count);
   scheduler.finalize_ticket(t, &p);
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_FALSE(scheduler.has_suspended_tasks());
@@ -111,16 +111,16 @@ TEST(SchedulerTests, ticket_obtain_finalize_with_task) {
 }
 
 TEST(SchedulerTests, ticket_obtain2_duplicate_finalize_release) {
-  fit::subtle::scheduler scheduler;
+  fpromise::subtle::scheduler scheduler;
 
-  fit::suspended_task::ticket t = scheduler.obtain_ticket(2 /*initial_refs*/);
+  fpromise::suspended_task::ticket t = scheduler.obtain_ticket(2 /*initial_refs*/);
   scheduler.duplicate_ticket(t);
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_TRUE(scheduler.has_outstanding_tickets());
 
   uint64_t run_count = 0;
-  fit::pending_task p = make_pending_task(&run_count);
+  fpromise::pending_task p = make_pending_task(&run_count);
   scheduler.finalize_ticket(t, &p);
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_TRUE(scheduler.has_suspended_tasks());
@@ -141,16 +141,16 @@ TEST(SchedulerTests, ticket_obtain2_duplicate_finalize_release) {
 }
 
 TEST(SchedulerTests, ticket_obtain2_duplicate_finalize_resume) {
-  fit::subtle::scheduler scheduler;
+  fpromise::subtle::scheduler scheduler;
 
-  fit::suspended_task::ticket t = scheduler.obtain_ticket(2 /*initial_refs*/);
+  fpromise::suspended_task::ticket t = scheduler.obtain_ticket(2 /*initial_refs*/);
   scheduler.duplicate_ticket(t);
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_TRUE(scheduler.has_outstanding_tickets());
 
   uint64_t run_count = 0;
-  fit::pending_task p = make_pending_task(&run_count);
+  fpromise::pending_task p = make_pending_task(&run_count);
   scheduler.finalize_ticket(t, &p);
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_TRUE(scheduler.has_suspended_tasks());
@@ -168,7 +168,7 @@ TEST(SchedulerTests, ticket_obtain2_duplicate_finalize_resume) {
   EXPECT_FALSE(scheduler.has_outstanding_tickets());
   EXPECT_FALSE(p);  // ticket was already resumed, nothing to return
 
-  fit::subtle::scheduler::task_queue tasks;
+  fpromise::subtle::scheduler::task_queue tasks;
   scheduler.take_runnable_tasks(&tasks);
   EXPECT_EQ(1, tasks.size());
 
@@ -178,14 +178,14 @@ TEST(SchedulerTests, ticket_obtain2_duplicate_finalize_resume) {
 }
 
 TEST(SchedulerTests, ticket_obtain2_release_finalize) {
-  fit::subtle::scheduler scheduler;
+  fpromise::subtle::scheduler scheduler;
 
-  fit::suspended_task::ticket t = scheduler.obtain_ticket(2 /*initial_refs*/);
+  fpromise::suspended_task::ticket t = scheduler.obtain_ticket(2 /*initial_refs*/);
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_TRUE(scheduler.has_outstanding_tickets());
 
-  fit::pending_task p = scheduler.release_ticket(t);
+  fpromise::pending_task p = scheduler.release_ticket(t);
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_TRUE(scheduler.has_outstanding_tickets());
@@ -201,9 +201,9 @@ TEST(SchedulerTests, ticket_obtain2_release_finalize) {
 }
 
 TEST(SchedulerTests, ticket_obtain2_resume_finalize) {
-  fit::subtle::scheduler scheduler;
+  fpromise::subtle::scheduler scheduler;
 
-  fit::suspended_task::ticket t = scheduler.obtain_ticket(2 /*initial_refs*/);
+  fpromise::suspended_task::ticket t = scheduler.obtain_ticket(2 /*initial_refs*/);
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_TRUE(scheduler.has_outstanding_tickets());
@@ -214,14 +214,14 @@ TEST(SchedulerTests, ticket_obtain2_resume_finalize) {
   EXPECT_TRUE(scheduler.has_outstanding_tickets());
 
   uint64_t run_count = 0;
-  fit::pending_task p = make_pending_task(&run_count);
+  fpromise::pending_task p = make_pending_task(&run_count);
   scheduler.finalize_ticket(t, &p);
   EXPECT_TRUE(scheduler.has_runnable_tasks());
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_FALSE(scheduler.has_outstanding_tickets());
   EXPECT_FALSE(p);  // took ownership since task already resumed
 
-  fit::subtle::scheduler::task_queue tasks;
+  fpromise::subtle::scheduler::task_queue tasks;
   scheduler.take_runnable_tasks(&tasks);
   EXPECT_EQ(1, tasks.size());
 
@@ -231,8 +231,8 @@ TEST(SchedulerTests, ticket_obtain2_resume_finalize) {
 }
 
 TEST(SchedulerTests, take_all_tasks) {
-  fit::subtle::scheduler scheduler;
-  fit::subtle::scheduler::task_queue tasks;
+  fpromise::subtle::scheduler scheduler;
+  fpromise::subtle::scheduler::task_queue tasks;
   fake_context context;
   uint64_t run_count[6] = {};
 
@@ -246,23 +246,23 @@ TEST(SchedulerTests, take_all_tasks) {
 
   // Suspend a task and finalize it without resumption.
   // This does not leave an outstanding ticket.
-  fit::suspended_task::ticket t1 = scheduler.obtain_ticket();
-  fit::pending_task p1 = make_pending_task(&run_count[1]);
+  fpromise::suspended_task::ticket t1 = scheduler.obtain_ticket();
+  fpromise::pending_task p1 = make_pending_task(&run_count[1]);
   scheduler.finalize_ticket(t1, &p1);
   EXPECT_TRUE(p1);  // took ownership
 
   // Suspend a task and duplicate its ticket.
   // This leaves an outstanding ticket with an associated task.
-  fit::suspended_task::ticket t2 = scheduler.obtain_ticket();
-  fit::pending_task p2 = make_pending_task(&run_count[2]);
+  fpromise::suspended_task::ticket t2 = scheduler.obtain_ticket();
+  fpromise::pending_task p2 = make_pending_task(&run_count[2]);
   scheduler.duplicate_ticket(t2);
   scheduler.finalize_ticket(t2, &p2);
   EXPECT_FALSE(p2);  // didn't take ownership
 
   // Suspend a task, duplicate its ticket, then release it.
   // This does not leave an outstanding ticket.
-  fit::suspended_task::ticket t3 = scheduler.obtain_ticket();
-  fit::pending_task p3 = make_pending_task(&run_count[3]);
+  fpromise::suspended_task::ticket t3 = scheduler.obtain_ticket();
+  fpromise::pending_task p3 = make_pending_task(&run_count[3]);
   scheduler.duplicate_ticket(t3);
   scheduler.finalize_ticket(t3, &p3);
   EXPECT_FALSE(p3);  // didn't take ownership
@@ -271,8 +271,8 @@ TEST(SchedulerTests, take_all_tasks) {
 
   // Suspend a task, duplicate its ticket, then resume it.
   // This adds a runnable task but does not leave an outstanding ticket.
-  fit::suspended_task::ticket t4 = scheduler.obtain_ticket();
-  fit::pending_task p4 = make_pending_task(&run_count[4]);
+  fpromise::suspended_task::ticket t4 = scheduler.obtain_ticket();
+  fpromise::pending_task p4 = make_pending_task(&run_count[4]);
   scheduler.duplicate_ticket(t4);
   scheduler.finalize_ticket(t4, &p4);
   EXPECT_FALSE(p4);  // didn't take ownership
@@ -281,8 +281,8 @@ TEST(SchedulerTests, take_all_tasks) {
   // Suspend a task, duplicate its ticket twice, then resume it.
   // This adds a runnable task and leaves an outstanding ticket without an
   // associated task.
-  fit::suspended_task::ticket t5 = scheduler.obtain_ticket();
-  fit::pending_task p5 = make_pending_task(&run_count[5]);
+  fpromise::suspended_task::ticket t5 = scheduler.obtain_ticket();
+  fpromise::pending_task p5 = make_pending_task(&run_count[5]);
   scheduler.duplicate_ticket(t5);
   scheduler.duplicate_ticket(t5);
   scheduler.finalize_ticket(t5, &p5);

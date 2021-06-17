@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_PROMISE_H_
-#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_PROMISE_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_PROMISE_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_PROMISE_H_
 
 #include <assert.h>
 #include <lib/fit/function.h>
@@ -16,22 +16,22 @@
 #include "promise_internal.h"
 #include "result.h"
 
-namespace fit {
+namespace fpromise {
 
-// A |fit::promise| is a building block for asynchronous control flow that
+// A |fpromise::promise| is a building block for asynchronous control flow that
 // wraps an asynchronous task in the form of a "continuation" that is
 // repeatedly invoked by an executor until it produces a result.
 //
 // Additional asynchronous tasks can be chained onto the promise using
 // a variety of combinators such as |then()|.
 //
-// Use |fit::make_promise()| to create a promise.
-// Use |fit::make_ok_promise()| to create a promise that immediately returns a value.
-// Use |fit::make_error_promise()| to create a promise that immediately returns an error.
-// Use |fit::make_result_promise()| to create a promise that immediately returns a result.
-// Use |fit::future| to more conveniently hold a promise or its result.
-// Use |fit::pending_task| to wrap a promise as a pending task for execution.
-// Use |fit::executor| to execute a pending task.
+// Use |fpromise::make_promise()| to create a promise.
+// Use |fpromise::make_ok_promise()| to create a promise that immediately returns a value.
+// Use |fpromise::make_error_promise()| to create a promise that immediately returns an error.
+// Use |fpromise::make_result_promise()| to create a promise that immediately returns a result.
+// Use |fpromise::future| to more conveniently hold a promise or its result.
+// Use |fpromise::pending_task| to wrap a promise as a pending task for execution.
+// Use |fpromise::executor| to execute a pending task.
 // See examples below.
 //
 // Always look to the future; never look back.
@@ -44,7 +44,7 @@ namespace fit {
 // |E| is the type of error produced when the completes with an error.
 // Defaults to |void|.
 //
-// Class members are documented in |fit::promise_impl|.
+// Class members are documented in |fpromise::promise_impl|.
 //
 // CHAINING PROMISES USING COMBINATORS
 //
@@ -63,13 +63,13 @@ namespace fit {
 //    |or_else()|: run a handler when prior promise completes with an error
 //    |inspect()|: examine result of prior promise
 //    |discard_result()|: discard result and unconditionally return
-//                        fit::result<> when prior promise completes
+//                        fpromise::result<> when prior promise completes
 //    |wrap_with()|: applies a wrapper to the promise
 //    |box()|: wraps the promise's continuation into a |fit::function|
-//    |fit::join_promises()|: await multiple promises in an argument list,
+//    |fpromise::join_promises()|: await multiple promises in an argument list,
 //                            once they all complete return a tuple of
 //                            their results
-//    |fit::join_promise_vector()|: await multiple promises in a vector,
+//    |fpromise::join_promise_vector()|: await multiple promises in a vector,
 //                                  once they all complete return a vector
 //                                  of their results
 //
@@ -78,7 +78,7 @@ namespace fit {
 //
 // CONTINUATIONS AND HANDLERS
 //
-// Internally, |fit::promise| wraps a continuation (a kind of callable
+// Internally, |fpromise::promise| wraps a continuation (a kind of callable
 // object) that holds the state of the asynchronous task and provides a
 // means for making progress through repeated invocation.
 //
@@ -89,7 +89,7 @@ namespace fit {
 // computations.
 //
 // Continuations have a very regular interface: they always accept a
-// |fit::context&| argument and return a |fit::result|.  Conversely, handlers
+// |fpromise::context&| argument and return a |fpromise::result|.  Conversely, handlers
 // have a very flexible interface: clients can provide them in many forms
 // all of which are documented by the individual functions which consume them.
 // It's pretty easy to use: the library takes care of wrapping client-supplied
@@ -101,13 +101,13 @@ namespace fit {
 // actions taken by its owner.  The state of the promise never changes
 // spontaneously or concurrently.
 //
-// Typically, a promise is executed by wrapping it into a |fit::pending_task|
-// and scheduling it for execution using |fit::executor::schedule_task()|.
-// A promise's |operator(fit::context&)| can also be invoked directly by its owner
+// Typically, a promise is executed by wrapping it into a |fpromise::pending_task|
+// and scheduling it for execution using |fpromise::executor::schedule_task()|.
+// A promise's |operator(fpromise::context&)| can also be invoked directly by its owner
 // from within the scope of another task (this is used to implement combinators
 // and futures) though the principle is the same.
 //
-// |fit::executor| is an abstract class that encapsulates a strategy for
+// |fpromise::executor| is an abstract class that encapsulates a strategy for
 // executing tasks.  The executor is responsible for invoking each tasks's
 // continuation until the task returns a non-pending result, indicating that
 // the task has been completed.
@@ -119,37 +119,37 @@ namespace fit {
 // executor implementations for their programs.
 //
 // During each invocation, the executor passes the continuation an execution
-// context object represented by a subclass of |fit::context|.  The continuation
-// attempts to make progress then returns a value of type |fit::result| to
-// indicate whether it completed successfully (signaled by |fit::ok()|),
-// failed with an error (signaled by |fit::error()|, or was unable to complete
-// the task during that invocation (signaled by |fit::pending()|).
+// context object represented by a subclass of |fpromise::context|.  The continuation
+// attempts to make progress then returns a value of type |fpromise::result| to
+// indicate whether it completed successfully (signaled by |fpromise::ok()|),
+// failed with an error (signaled by |fpromise::error()|, or was unable to complete
+// the task during that invocation (signaled by |fpromise::pending()|).
 // For example, a continuation may be unable to complete the task if it must
 // asynchronously await completion of an I/O or IPC operation before it
 // can proceed any further.
 //
 // If the continuation was unable to complete the task during its invocation,
-// it may to call |fit::context::suspend_task()| to acquire a
-// |fit::suspended_task| object.  The continuation then arranges for the
-// task to be resumed asynchronously (with |fit::suspended_task::resume_task()|)
+// it may to call |fpromise::context::suspend_task()| to acquire a
+// |fpromise::suspended_task| object.  The continuation then arranges for the
+// task to be resumed asynchronously (with |fpromise::suspended_task::resume_task()|)
 // once it becomes possible for the promise to make forward progress again.
-// Finally, the continuation returns returns |fit::pending()| to indicate to
+// Finally, the continuation returns returns |fpromise::pending()| to indicate to
 // the executor that it was unable to complete the task during that invocation.
 //
 // When the executor receives a pending result from a task's continuation,
 // it moves the task into a table of suspended tasks.  A suspended task
 // is considered abandoned if has not been resume and all remaining
-// |fit::suspended_task| handles representing it have been dropped.
+// |fpromise::suspended_task| handles representing it have been dropped.
 // When a task is abandoned, the executor removes it from its table of
 // suspended tasks and destroys the task because it is not possible for the task
 // to be resumed or to make progress from that state.
 //
-// See also |fit::single_threaded_executor| for a simple executor implementation.
+// See also |fpromise::single_threaded_executor| for a simple executor implementation.
 //
 // BOXED AND UNBOXED PROMISES
 //
 // To make combination and execution as efficient as possible, the promises
-// returned by |fit::make_promise| and by combinators are parameterized by
+// returned by |fpromise::make_promise| and by combinators are parameterized by
 // complicated continuation types that are hard to describe, often consisting of
 // nested templates and lambdas.  These are referred to as "unboxed"
 // promises.  In contrast, "boxed" promises are parameterized by a
@@ -159,10 +159,10 @@ namespace fit {
 // You can recognize boxed and unboxed promises by their types.
 // Here are two examples:
 //
-// - A boxed promise type: `fit::promise<void, void>` which is an alias for
-//  `fit::promise_impl<void, void, std::function<fit::result<void, void>>`.
-// - An unboxed promise type: `fit::promise_impl<void, void,
-//   fit::internal::then_continuation<...something unintelligible...>>`
+// - A boxed promise type: `fpromise::promise<void, void>` which is an alias for
+//  `fpromise::promise_impl<void, void, std::function<fpromise::result<void, void>>`.
+// - An unboxed promise type: `fpromise::promise_impl<void, void,
+//   fpromise::internal::then_continuation<...something unintelligible...>>`
 //
 // Although boxed promises are easier to manipulate, they may cause the
 // continuation to be allocated on the heap.  Chaining boxed promises can
@@ -174,29 +174,29 @@ namespace fit {
 // object that is easier to optimize.
 //
 // Unboxed promises can be boxed by assigning them to a boxed promise
-// type (such as |fit::promise<>|) or using the |box()| combinator.
+// type (such as |fpromise::promise<>|) or using the |box()| combinator.
 //
 // As a rule of thumb, always defer boxing of promises until it is necessary
 // to transport them using a simpler type.
 //
 // Do this: (chaining as a single expression performs at most one heap allocation)
 //
-//     fit::promise<> f = fit::make_promise([] { ... });
-//         .then([](fit::result<>& result) { ... });
+//     fpromise::promise<> f = fpromise::make_promise([] { ... });
+//         .then([](fpromise::result<>& result) { ... });
 //         .and_then([] { ... });
 //
 // Or this: (still only performs at most one heap allocation)
 //
-//     auto f = fit::make_promise([] { ... });
-//     auto g = f.then([](fit::result<>& result) { ... });
+//     auto f = fpromise::make_promise([] { ... });
+//     auto g = f.then([](fpromise::result<>& result) { ... });
 //     auto h = g.and_then([] { ... });
-//     fit::promise<> boxed_h = h;
+//     fpromise::promise<> boxed_h = h;
 //
 // But don't do this: (incurs up to three heap allocations due to eager boxing)
 //
-//     fit::promise<> f = fit::make_promise([] { ... });
-//     fit::promise<> g = f.then([](fit::result<>& result) { ... });
-//     fit::promise<> h = g.and_then([] { ... });
+//     fpromise::promise<> f = fpromise::make_promise([] { ... });
+//     fpromise::promise<> g = f.then([](fpromise::result<>& result) { ... });
+//     fpromise::promise<> h = g.and_then([] { ... });
 //
 // SINGLE OWNERSHIP MODEL
 //
@@ -241,7 +241,7 @@ namespace fit {
 // object itself.  It is entirely the caller's responsibility to decide how to
 // consume or retain the result if need be.
 //
-// For example, the caller can move the promise into a |fit::future| to
+// For example, the caller can move the promise into a |fpromise::future| to
 // more conveniently hold either the promise or its result upon completion.
 //
 // CLARIFICATION OF NOMENCLATURE
@@ -269,16 +269,16 @@ namespace fit {
 // controlled by the C++ standard library and offers limited control
 // to developers.
 //
-// |fit::promise| and |fit::future| provide a mechanism for running asynchronous
+// |fpromise::promise| and |fpromise::future| provide a mechanism for running asynchronous
 // tasks, chaining additional tasks using combinators, and awaiting their
 // results.  An executor is responsible for suspending tasks awaiting
 // results of other tasks and is at liberty to run other tasks on the
 // same thread rather than blocking.  In addition, developers can create custom
 // executors to implement their own policies for running tasks.
 //
-// Decoupling awaiting from blocking makes |fit::promise| quite versatile.
-// |fit::promise| can also interoperate with other task dispatching mechanisms
-// (including |std::future|) using adapters such as |fit::bridge|.
+// Decoupling awaiting from blocking makes |fpromise::promise| quite versatile.
+// |fpromise::promise| can also interoperate with other task dispatching mechanisms
+// (including |std::future|) using adapters such as |fpromise::bridge|.
 //
 // EXAMPLE
 //
@@ -288,26 +288,26 @@ namespace fit {
 // https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/utest/fit/examples/promise_example2.cc
 //
 template <typename V = void, typename E = void>
-using promise = promise_impl<function<result<V, E>(fit::context&)>>;
+using promise = promise_impl<::fit::function<result<V, E>(fpromise::context&)>>;
 
 // Promise implementation details.
-// See |fit::promise| documentation for more information.
+// See |fpromise::promise| documentation for more information.
 template <typename Continuation>
 class promise_impl final {
-  static_assert(::fit::internal::is_continuation<Continuation>::value,
+  static_assert(::fpromise::internal::is_continuation<Continuation>::value,
                 "Continuation type is invalid.  A continuation is a callable object "
-                "with this signature: fit::result<V, E>(fit::context&).");
+                "with this signature: fpromise::result<V, E>(fpromise::context&).");
 
-  using state_type = nullable<Continuation>;
+  using state_type = ::fit::nullable<Continuation>;
 
  public:
   // The type of callable object held by the promise.
-  // Its signature is: result_type(fit::context&).
+  // Its signature is: result_type(fpromise::context&).
   using continuation_type = Continuation;
 
   // The promise's result type.
-  // Equivalent to fit::result<value_type, error_type>.
-  using result_type = typename ::fit::internal::continuation_traits<Continuation>::result_type;
+  // Equivalent to fpromise::result<value_type, error_type>.
+  using result_type = typename ::fpromise::internal::continuation_traits<Continuation>::result_type;
 
   // The type of value produced when the promise completes successfully.
   // May be void.
@@ -348,15 +348,15 @@ class promise_impl final {
   //
   // This is typically used to create a promise with a boxed continuation
   // type (such as |fit::function|) from an unboxed promise produced by
-  // |fit::make_promise| or by combinators.
+  // |fpromise::make_promise| or by combinators.
   //
   // EXAMPLE
   //
   //     // f is a promise_impl with a complicated unboxed type
-  //     auto f = fit::make_promise([] { ... });
+  //     auto f = fpromise::make_promise([] { ... });
   //
   //     // g wraps f's continuation
-  //     fit::promise<> g = std::move(f);
+  //     fpromise::promise<> g = std::move(f);
   //
   template <
       typename OtherContinuation,
@@ -423,8 +423,8 @@ class promise_impl final {
   // passing its result.
   //
   // The received result's state is guaranteed to be either
-  // |fit::result_state::ok| or |fit::result_state::error|, never
-  // |fit::result_state::pending|.
+  // |fpromise::result_state::ok| or |fpromise::result_state::error|, never
+  // |fpromise::result_state::pending|.
   //
   // |handler| is a callable object (such as a lambda) which consumes the
   // result of this promise and returns a new result with any value type
@@ -432,54 +432,55 @@ class promise_impl final {
   //
   // The handler must return one of the following types:
   // - void
-  // - fit::result<new_value_type, new_error_type>
-  // - fit::ok<new_value_type>
-  // - fit::error<new_error_type>
-  // - fit::pending
-  // - fit::promise<new_value_type, new_error_type>
+  // - fpromise::result<new_value_type, new_error_type>
+  // - fpromise::ok<new_value_type>
+  // - fpromise::error<new_error_type>
+  // - fpromise::pending
+  // - fpromise::promise<new_value_type, new_error_type>
   // - any callable or unboxed promise with the following signature:
-  //   fit::result<new_value_type, new_error_type>(fit::context&)
+  //   fpromise::result<new_value_type, new_error_type>(fpromise::context&)
   //
   // The handler must accept one of the following argument lists:
   // - (result_type&)
   // - (const result_type&)
-  // - (fit::context&, result_type&)
-  // - (fit::context&, const result_type&)
+  // - (fpromise::context&, result_type&)
+  // - (fpromise::context&, const result_type&)
   //
   // Asserts that the promise is non-empty.
   // This method consumes the promise's continuation, leaving it empty.
   //
   // EXAMPLE
   //
-  //     auto f = fit::make_promise(...)
-  //         .then([] (fit::result<int, std::string>& result)
-  //                   -> fit::result<std::string, void> {
+  //     auto f = fpromise::make_promise(...)
+  //         .then([] (fpromise::result<int, std::string>& result)
+  //                   -> fpromise::result<std::string, void> {
   //             if (result.is_ok()) {
   //                 printf("received value: %d\n", result.value());
   //                 if (result.value() % 15 == 0)
-  //                     return ::fit::ok("fizzbuzz");
+  //                     return ::fpromise::ok("fizzbuzz");
   //                 if (result.value() % 3 == 0)
-  //                     return ::fit::ok("fizz");
+  //                     return ::fpromise::ok("fizz");
   //                 if (result.value() % 5 == 0)
-  //                     return ::fit::ok("buzz");
-  //                 return ::fit::ok(std::to_string(result.value()));
+  //                     return ::fpromise::ok("buzz");
+  //                 return ::fpromise::ok(std::to_string(result.value()));
   //             } else {
   //                 printf("received error: %s\n", result.error().c_str());
-  //                 return ::fit::error();
+  //                 return ::fpromise::error();
   //             }
   //         })
   //         .then(...);
   //
   template <typename ResultHandler>
-  promise_impl<::fit::internal::then_continuation<promise_impl, ResultHandler>> then(
+  promise_impl<::fpromise::internal::then_continuation<promise_impl, ResultHandler>> then(
       ResultHandler handler) {
-    static_assert(is_callable<ResultHandler>::value, "ResultHandler must be a callable object.");
+    static_assert(::fit::is_callable<ResultHandler>::value,
+                  "ResultHandler must be a callable object.");
 
-    assert(!is_null(handler));
+    assert(!fit::is_null(handler));
     assert(state_.has_value());
     return make_promise_with_continuation(
-        ::fit::internal::then_continuation<promise_impl, ResultHandler>(std::move(*this),
-                                                                        std::move(handler)));
+        ::fpromise::internal::then_continuation<promise_impl, ResultHandler>(std::move(*this),
+                                                                             std::move(handler)));
   }
 
   // Returns an unboxed promise which invokes the specified handler
@@ -492,48 +493,49 @@ class promise_impl final {
   //
   // The handler must return one of the following types:
   // - void
-  // - fit::result<new_value_type, error_type>
-  // - fit::ok<new_value_type>
-  // - fit::error<error_type>
-  // - fit::pending
-  // - fit::promise<new_value_type, error_type>
+  // - fpromise::result<new_value_type, error_type>
+  // - fpromise::ok<new_value_type>
+  // - fpromise::error<error_type>
+  // - fpromise::pending
+  // - fpromise::promise<new_value_type, error_type>
   // - any callable or unboxed promise with the following signature:
-  //   fit::result<new_value_type, error_type>(fit::context&)
+  //   fpromise::result<new_value_type, error_type>(fpromise::context&)
   //
   // The handler must accept one of the following argument lists:
   // - (value_type&)
   // - (const value_type&)
-  // - (fit::context&, value_type&)
-  // - (fit::context&, const value_type&)
+  // - (fpromise::context&, value_type&)
+  // - (fpromise::context&, const value_type&)
   //
   // Asserts that the promise is non-empty.
   // This method consumes the promise's continuation, leaving it empty.
   //
   // EXAMPLE
   //
-  //     auto f = fit::make_promise(...)
+  //     auto f = fpromise::make_promise(...)
   //         .and_then([] (const int& value) {
   //             printf("received value: %d\n", value);
   //             if (value % 15 == 0)
-  //                 return ::fit::ok("fizzbuzz");
+  //                 return ::fpromise::ok("fizzbuzz");
   //             if (value % 3 == 0)
-  //                 return ::fit::ok("fizz");
+  //                 return ::fpromise::ok("fizz");
   //             if (value % 5 == 0)
-  //                 return ::fit::ok("buzz");
-  //             return ::fit::ok(std::to_string(value));
+  //                 return ::fpromise::ok("buzz");
+  //             return ::fpromise::ok(std::to_string(value));
   //         })
   //         .then(...);
   //
   template <typename ValueHandler>
-  promise_impl<::fit::internal::and_then_continuation<promise_impl, ValueHandler>> and_then(
+  promise_impl<::fpromise::internal::and_then_continuation<promise_impl, ValueHandler>> and_then(
       ValueHandler handler) {
-    static_assert(is_callable<ValueHandler>::value, "ValueHandler must be a callable object.");
+    static_assert(::fit::is_callable<ValueHandler>::value,
+                  "ValueHandler must be a callable object.");
 
-    assert(!is_null(handler));
+    assert(!fit::is_null(handler));
     assert(state_.has_value());
     return make_promise_with_continuation(
-        ::fit::internal::and_then_continuation<promise_impl, ValueHandler>(std::move(*this),
-                                                                           std::move(handler)));
+        ::fpromise::internal::and_then_continuation<promise_impl, ValueHandler>(
+            std::move(*this), std::move(handler)));
   }
 
   // Returns an unboxed promise which invokes the specified handler
@@ -546,42 +548,43 @@ class promise_impl final {
   //
   // The handler must return one of the following types:
   // - void
-  // - fit::result<value_type, new_error_type>
-  // - fit::ok<value_type>
-  // - fit::error<new_error_type>
-  // - fit::pending
-  // - fit::promise<value_type, new_error_type>
+  // - fpromise::result<value_type, new_error_type>
+  // - fpromise::ok<value_type>
+  // - fpromise::error<new_error_type>
+  // - fpromise::pending
+  // - fpromise::promise<value_type, new_error_type>
   // - any callable or unboxed promise with the following signature:
-  //   fit::result<value_type, new_error_type>(fit::context&)
+  //   fpromise::result<value_type, new_error_type>(fpromise::context&)
   //
   // The handler must accept one of the following argument lists:
   // - (error_type&)
   // - (const error_type&)
-  // - (fit::context&, error_type&)
-  // - (fit::context&, const error_type&)
+  // - (fpromise::context&, error_type&)
+  // - (fpromise::context&, const error_type&)
   //
   // Asserts that the promise is non-empty.
   // This method consumes the promise's continuation, leaving it empty.
   //
   // EXAMPLE
   //
-  //     auto f = fit::make_promise(...)
+  //     auto f = fpromise::make_promise(...)
   //         .or_else([] (const std::string& error) {
   //             printf("received error: %s\n", error.c_str());
-  //             return ::fit::error();
+  //             return ::fpromise::error();
   //         })
   //         .then(...);
   //
   template <typename ErrorHandler>
-  promise_impl<::fit::internal::or_else_continuation<promise_impl, ErrorHandler>> or_else(
+  promise_impl<::fpromise::internal::or_else_continuation<promise_impl, ErrorHandler>> or_else(
       ErrorHandler handler) {
-    static_assert(is_callable<ErrorHandler>::value, "ErrorHandler must be a callable object.");
+    static_assert(::fit::is_callable<ErrorHandler>::value,
+                  "ErrorHandler must be a callable object.");
 
-    assert(!is_null(handler));
+    assert(!fit::is_null(handler));
     assert(state_.has_value());
     return make_promise_with_continuation(
-        ::fit::internal::or_else_continuation<promise_impl, ErrorHandler>(std::move(*this),
-                                                                          std::move(handler)));
+        ::fpromise::internal::or_else_continuation<promise_impl, ErrorHandler>(std::move(*this),
+                                                                               std::move(handler)));
   }
 
   // Returns an unboxed promise which invokes the specified handler
@@ -609,16 +612,16 @@ class promise_impl final {
   // The handler must accept one of the following argument lists:
   // - (result_type&)
   // - (const result_type&)
-  // - (fit::context&, result_type&)
-  // - (fit::context&, const result_type&)
+  // - (fpromise::context&, result_type&)
+  // - (fpromise::context&, const result_type&)
   //
   // Asserts that the promise is non-empty.
   // This method consumes the promise's continuation, leaving it empty.
   //
   // EXAMPLE
   //
-  //     auto f = fit::make_promise(...)
-  //         .inspect([] (const fit::result<int, std::string>& result) {
+  //     auto f = fpromise::make_promise(...)
+  //         .inspect([] (const fpromise::result<int, std::string>& result) {
   //             if (result.is_ok())
   //                 printf("received value: %d\n", result.value());
   //             else
@@ -627,22 +630,23 @@ class promise_impl final {
   //         .then(...);
   //
   template <typename InspectHandler>
-  promise_impl<::fit::internal::inspect_continuation<promise_impl, InspectHandler>> inspect(
+  promise_impl<::fpromise::internal::inspect_continuation<promise_impl, InspectHandler>> inspect(
       InspectHandler handler) {
-    static_assert(is_callable<InspectHandler>::value, "InspectHandler must be a callable object.");
-    static_assert(std::is_void<typename callable_traits<InspectHandler>::return_type>::value,
+    static_assert(::fit::is_callable<InspectHandler>::value,
+                  "InspectHandler must be a callable object.");
+    static_assert(std::is_void<typename ::fit::callable_traits<InspectHandler>::return_type>::value,
                   "InspectHandler must return void.");
 
-    assert(!is_null(handler));
+    assert(!fit::is_null(handler));
     assert(state_.has_value());
     return make_promise_with_continuation(
-        ::fit::internal::inspect_continuation<promise_impl, InspectHandler>(std::move(*this),
-                                                                            std::move(handler)));
+        ::fpromise::internal::inspect_continuation<promise_impl, InspectHandler>(
+            std::move(*this), std::move(handler)));
   }
 
   // Returns an unboxed promise which discards the result of this promise
   // once it completes, thereby always producing a successful result of
-  // type fit::result<void, void> regardless of whether this promise
+  // type fpromise::result<void, void> regardless of whether this promise
   // succeeded or failed.
   //
   // Asserts that the promise is non-empty.
@@ -650,14 +654,14 @@ class promise_impl final {
   //
   // EXAMPLE
   //
-  //     auto f = fit::make_promise(...)
+  //     auto f = fpromise::make_promise(...)
   //         .discard_result()
   //         .then(...);
   //
-  promise_impl<::fit::internal::discard_result_continuation<promise_impl>> discard_result() {
+  promise_impl<::fpromise::internal::discard_result_continuation<promise_impl>> discard_result() {
     assert(state_.has_value());
     return make_promise_with_continuation(
-        ::fit::internal::discard_result_continuation<promise_impl>(std::move(*this)));
+        ::fpromise::internal::discard_result_continuation<promise_impl>(std::move(*this)));
   }
 
   // Applies a |wrapper| to the promise.  Invokes the wrapper's |wrap()|
@@ -674,33 +678,33 @@ class promise_impl final {
   //
   // EXAMPLE
   //
-  // In this example, |fit::sequencer| is a wrapper type that imposes
+  // In this example, |fpromise::sequencer| is a wrapper type that imposes
   // FIFO execution order onto a sequence of wrapped promises.
   //
   //     // This wrapper type is intended to be applied to
   //     // a sequence of promises so we store it in a variable.
-  //     fit::sequencer seq;
+  //     fpromise::sequencer seq;
   //
   //     // This task consists of some amount of work that must be
   //     // completed sequentially followed by other work that can
   //     // happen in any order.  We use |wrap_with()| to wrap the
   //     // sequential work with the sequencer.
-  //     fit::promise<> perform_complex_task() {
-  //         return fit::make_promise([] { /* do sequential work */ })
-  //             .then([] (fit::result<> result) { /* this will also be wrapped */ })
+  //     fpromise::promise<> perform_complex_task() {
+  //         return fpromise::make_promise([] { /* do sequential work */ })
+  //             .then([] (fpromise::result<> result) { /* this will also be wrapped */ })
   //             .wrap_with(seq)
-  //             .then([] (fit::result<> result) { /* do more work */ });
+  //             .then([] (fpromise::result<> result) { /* do more work */ });
   //     }
   //
   // This example can also be written without using |wrap_with()|.
   // The behavior is equivalent but the syntax may seem more awkward.
   //
-  //     fit::sequencer seq;
+  //     fpromise::sequencer seq;
   //
   //     promise<> perform_complex_task() {
   //         return seq.wrap(
-  //                 fit::make_promise([] { /* sequential work */ })
-  //             ).then([] (fit::result<> result) { /* more work */ });
+  //                 fpromise::make_promise([] { /* sequential work */ })
+  //             ).then([] (fpromise::result<> result) { /* more work */ });
   //     }
   //
   template <typename Wrapper, typename... Args>
@@ -712,7 +716,7 @@ class promise_impl final {
   // Wraps the promise's continuation into a |fit::function|.
   //
   // A boxed promise is easier to store and pass around than the unboxed
-  // promises produced by |fit::make_promise()| and combinators, though boxing
+  // promises produced by |fpromise::make_promise()| and combinators, though boxing
   // may incur a heap allocation.
   //
   // It is a good idea to defer boxing the promise until after all
@@ -724,19 +728,19 @@ class promise_impl final {
   //
   // EXAMPLE
   //
-  //     // f's is a fit::promise_impl<> whose continuation contains an
+  //     // f's is a fpromise::promise_impl<> whose continuation contains an
   //     // anonymous type (the lambda)
-  //     auto f = fit::make_promise([] {});
+  //     auto f = fpromise::make_promise([] {});
   //
-  //     // g's type will be fit::promise<> due to boxing
+  //     // g's type will be fpromise::promise<> due to boxing
   //     auto boxed_f = f.box();
   //
   //     // alternately, we can get exactly the same effect by assigning
   //     // the unboxed promise to a variable of a named type instead of
   //     // calling box()
-  //     fit::promise<> boxed_f = std::move(f);
+  //     fpromise::promise<> boxed_f = std::move(f);
   //
-  promise_impl<function<result_type(context&)>> box() { return std::move(*this); }
+  promise_impl<::fit::function<result_type(context&)>> box() { return std::move(*this); }
 
  private:
   template <typename>
@@ -771,11 +775,11 @@ bool operator!=(decltype(nullptr), const promise_impl<Continuation>& f) {
 //
 // This function is used for making a promises given a callable object
 // that represents a valid continuation type.  In contrast,
-// |fit::make_promise()| supports a wider range of types and should be
+// |fpromise::make_promise()| supports a wider range of types and should be
 // preferred in most situations.
 //
 // |Continuation| is a callable object with the signature
-// fit::result<V, E>(fit::context&).
+// fpromise::result<V, E>(fpromise::context&).
 template <typename Continuation>
 inline promise_impl<Continuation> make_promise_with_continuation(Continuation continuation) {
   return promise_impl<Continuation>(std::move(continuation));
@@ -788,19 +792,19 @@ inline promise_impl<Continuation> make_promise_with_continuation(Continuation co
 //
 // The handler must return one of the following types:
 // - void
-// - fit::result<value_type, error_type>
-// - fit::ok<value_type>
-// - fit::error<error_type>
-// - fit::pending
-// - fit::promise<value_type, error_type>
+// - fpromise::result<value_type, error_type>
+// - fpromise::ok<value_type>
+// - fpromise::error<error_type>
+// - fpromise::pending
+// - fpromise::promise<value_type, error_type>
 // - any callable or unboxed promise with the following signature:
-//   fit::result<value_type, error_type>(fit::context&)
+//   fpromise::result<value_type, error_type>(fpromise::context&)
 //
 // The handler must accept one of the following argument lists:
 // - ()
-// - (fit::context&)
+// - (fpromise::context&)
 //
-// See documentation of |fit::promise| for more information.
+// See documentation of |fpromise::promise| for more information.
 //
 // SYNOPSIS
 //
@@ -812,22 +816,22 @@ inline promise_impl<Continuation> make_promise_with_continuation(Continuation co
 //     enum class weather_type { sunny, glorious, cloudy, eerie, ... };
 //
 //     weather_type look_outside() { ... }
-//     void wait_for_tomorrow(fit::suspended_task task) {
+//     void wait_for_tomorrow(fpromise::suspended_task task) {
 //         ... arrange to call task.resume_task() tomorrow ...
 //     }
 //
-//     fit::promise<weather_type, std::string> wait_for_good_weather(int max_days) {
-//         return fit::make_promise([days_left = max_days] (fit::context& context) mutable
-//                             -> fit::result<int, std::string> {
+//     fpromise::promise<weather_type, std::string> wait_for_good_weather(int max_days) {
+//         return fpromise::make_promise([days_left = max_days] (fpromise::context& context) mutable
+//                             -> fpromise::result<int, std::string> {
 //             weather_type weather = look_outside();
 //             if (weather == weather_type::sunny || weather == weather_type::glorious)
-//                 return fit::ok(weather);
+//                 return fpromise::ok(weather);
 //             if (days_left > 0) {
 //                 wait_for_tomorrow(context.suspend_task());
-//                 return fit::pending();
+//                 return fpromise::pending();
 //             }
 //             days_left--;
-//             return fit::error("nothing but grey skies");
+//             return fpromise::error("nothing but grey skies");
 //         });
 //     }
 //
@@ -836,13 +840,14 @@ inline promise_impl<Continuation> make_promise_with_continuation(Continuation co
 //         .or_else([] (const std::string& error) { ... });
 //
 template <typename PromiseHandler>
-inline promise_impl<::fit::internal::context_handler_invoker<PromiseHandler>> make_promise(
+inline promise_impl<::fpromise::internal::context_handler_invoker<PromiseHandler>> make_promise(
     PromiseHandler handler) {
-  static_assert(is_callable<PromiseHandler>::value, "PromiseHandler must be a callable object.");
+  static_assert(::fit::is_callable<PromiseHandler>::value,
+                "PromiseHandler must be a callable object.");
 
-  assert(!is_null(handler));
+  assert(!fit::is_null(handler));
   return make_promise_with_continuation(
-      ::fit::internal::promise_continuation<PromiseHandler>(std::move(handler)));
+      ::fpromise::internal::promise_continuation<PromiseHandler>(std::move(handler)));
 }
 
 // Returns an unboxed promise that immediately returns the specified result when invoked.
@@ -852,30 +857,30 @@ inline promise_impl<::fit::internal::context_handler_invoker<PromiseHandler>> ma
 //
 // |result| is the result for the promise to return.
 //
-// See documentation of |fit::promise| for more information.
+// See documentation of |fpromise::promise| for more information.
 template <typename V = void, typename E = void>
-inline promise_impl<::fit::internal::result_continuation<V, E>> make_result_promise(
-    fit::result<V, E> result) {
+inline promise_impl<::fpromise::internal::result_continuation<V, E>> make_result_promise(
+    fpromise::result<V, E> result) {
   return make_promise_with_continuation(
-      ::fit::internal::result_continuation<V, E>(std::move(result)));
+      ::fpromise::internal::result_continuation<V, E>(std::move(result)));
 }
 template <typename V = void, typename E = void>
-inline promise_impl<::fit::internal::result_continuation<V, E>> make_result_promise(
-    fit::ok_result<V> result) {
+inline promise_impl<::fpromise::internal::result_continuation<V, E>> make_result_promise(
+    fpromise::ok_result<V> result) {
   return make_promise_with_continuation(
-      ::fit::internal::result_continuation<V, E>(std::move(result)));
+      ::fpromise::internal::result_continuation<V, E>(std::move(result)));
 }
 template <typename V = void, typename E = void>
-inline promise_impl<::fit::internal::result_continuation<V, E>> make_result_promise(
-    fit::error_result<E> result) {
+inline promise_impl<::fpromise::internal::result_continuation<V, E>> make_result_promise(
+    fpromise::error_result<E> result) {
   return make_promise_with_continuation(
-      ::fit::internal::result_continuation<V, E>(std::move(result)));
+      ::fpromise::internal::result_continuation<V, E>(std::move(result)));
 }
 template <typename V = void, typename E = void>
-inline promise_impl<::fit::internal::result_continuation<V, E>> make_result_promise(
-    fit::pending_result result) {
+inline promise_impl<::fpromise::internal::result_continuation<V, E>> make_result_promise(
+    fpromise::pending_result result) {
   return make_promise_with_continuation(
-      ::fit::internal::result_continuation<V, E>(std::move(result)));
+      ::fpromise::internal::result_continuation<V, E>(std::move(result)));
 }
 
 // Returns an unboxed promise that immediately returns the specified value when invoked.
@@ -885,15 +890,15 @@ inline promise_impl<::fit::internal::result_continuation<V, E>> make_result_prom
 //
 // |value| is the value for the promise to return.
 //
-// See documentation of |fit::promise| for more information.
+// See documentation of |fpromise::promise| for more information.
 template <typename V>
-inline promise_impl<::fit::internal::result_continuation<V, void>> make_ok_promise(V value) {
-  return make_result_promise(fit::ok(std::move(value)));
+inline promise_impl<::fpromise::internal::result_continuation<V, void>> make_ok_promise(V value) {
+  return make_result_promise(fpromise::ok(std::move(value)));
 }
 
 // Overload of |make_ok_promise()| used when the value type is void.
-inline promise_impl<::fit::internal::result_continuation<void, void>> make_ok_promise() {
-  return make_result_promise(fit::ok());
+inline promise_impl<::fpromise::internal::result_continuation<void, void>> make_ok_promise() {
+  return make_result_promise(fpromise::ok());
 }
 
 // Returns an unboxed promise that immediately returns the specified error when invoked.
@@ -903,15 +908,16 @@ inline promise_impl<::fit::internal::result_continuation<void, void>> make_ok_pr
 //
 // |error| is the error for the promise to return.
 //
-// See documentation of |fit::promise| for more information.
+// See documentation of |fpromise::promise| for more information.
 template <typename E>
-inline promise_impl<::fit::internal::result_continuation<void, E>> make_error_promise(E error) {
-  return make_result_promise(fit::error(std::move(error)));
+inline promise_impl<::fpromise::internal::result_continuation<void, E>> make_error_promise(
+    E error) {
+  return make_result_promise(fpromise::error(std::move(error)));
 }
 
 // Overload of |make_error_promise()| used when the error type is void.
-inline promise_impl<::fit::internal::result_continuation<void, void>> make_error_promise() {
-  return make_result_promise(fit::error());
+inline promise_impl<::fpromise::internal::result_continuation<void, void>> make_error_promise() {
+  return make_result_promise(fpromise::error());
 }
 
 // Jointly evaluates zero or more promises.
@@ -921,23 +927,23 @@ inline promise_impl<::fit::internal::result_continuation<void, void>> make_error
 // EXAMPLE
 //
 //     auto get_random_number() {
-//         return fit::make_promise([] { return rand() % 10 });
+//         return fpromise::make_promise([] { return rand() % 10 });
 //     }
 //
 //     auto get_random_product() {
 //         auto f = get_random_number();
 //         auto g = get_random_number();
-//         return fit::join_promises(std::move(f), std::move(g))
-//             .and_then([] (std::tuple<fit::result<int>, fit::result<int>>& results) {
-//                 return fit::ok(results.get<0>.value() + results.get<1>.value());
+//         return fpromise::join_promises(std::move(f), std::move(g))
+//             .and_then([] (std::tuple<fpromise::result<int>, fpromise::result<int>>& results) {
+//                 return fpromise::ok(results.get<0>.value() + results.get<1>.value());
 //             });
 //     }
 //
 template <typename... Promises>
-inline promise_impl<::fit::internal::join_continuation<Promises...>> join_promises(
+inline promise_impl<::fpromise::internal::join_continuation<Promises...>> join_promises(
     Promises... promises) {
   return make_promise_with_continuation(
-      ::fit::internal::join_continuation<Promises...>(std::move(promises)...));
+      ::fpromise::internal::join_continuation<Promises...>(std::move(promises)...));
 }
 
 // Jointly evaluates zero or more homogenous promises (same result and error
@@ -947,24 +953,24 @@ inline promise_impl<::fit::internal::join_continuation<Promises...>> join_promis
 // EXAMPLE
 //
 //     auto get_random_number() {
-//         return fit::make_promise([] { return rand() % 10 });
+//         return fpromise::make_promise([] { return rand() % 10 });
 //     }
 //
 //     auto get_random_product() {
-//         std::vector<fit::promise<int>> promises;
+//         std::vector<fpromise::promise<int>> promises;
 //         promises.push_back(get_random_number());
 //         promises.push_back(get_random_number());
-//         return fit::join_promise_vector(std::move(promises))
-//             .and_then([] (std::vector<fit::result<int>>& results) {
-//                 return fit::ok(results[0].value() + results[1].value());
+//         return fpromise::join_promise_vector(std::move(promises))
+//             .and_then([] (std::vector<fpromise::result<int>>& results) {
+//                 return fpromise::ok(results[0].value() + results[1].value());
 //             });
 //     }
 //
 template <typename V, typename E>
-inline promise_impl<::fit::internal::join_vector_continuation<fit::promise<V, E>>>
-join_promise_vector(std::vector<fit::promise<V, E>> promises) {
+inline promise_impl<::fpromise::internal::join_vector_continuation<fpromise::promise<V, E>>>
+join_promise_vector(std::vector<fpromise::promise<V, E>> promises) {
   return make_promise_with_continuation(
-      ::fit::internal::join_vector_continuation<fit::promise<V, E>>(std::move(promises)));
+      ::fpromise::internal::join_vector_continuation<fpromise::promise<V, E>>(std::move(promises)));
 }
 
 // Describes the status of a future.
@@ -982,8 +988,8 @@ enum class future_state {
   error
 };
 
-// A |fit::future| holds onto a |fit::promise| until it has completed then
-// provides access to its |fit::result|.
+// A |fpromise::future| holds onto a |fpromise::promise| until it has completed then
+// provides access to its |fpromise::result|.
 //
 // SYNOPSIS
 //
@@ -996,7 +1002,7 @@ enum class future_state {
 // THEORY OF OPERATION
 //
 // A future has a single owner who is responsible for setting its promise
-// or result and driving its execution.  Unlike |fit::promise|, a future retains
+// or result and driving its execution.  Unlike |fpromise::promise|, a future retains
 // the result produced by completion of its asynchronous task.  Result retention
 // eases the implementation of combined tasks that need to await the results
 // of other tasks before proceeding.
@@ -1004,34 +1010,34 @@ enum class future_state {
 // See the example for details.
 //
 // A future can be in one of four states, depending on whether it holds...
-// - a successful result: |fit::future_state::ok|
-// - an error result: |fit::future_state::error|
-// - a promise that may eventually produce a result: |fit::future_state::pending|
-// - neither: |fit::future_state_empty|
+// - a successful result: |fpromise::future_state::ok|
+// - an error result: |fpromise::future_state::error|
+// - a promise that may eventually produce a result: |fpromise::future_state::pending|
+// - neither: |fpromise::future_state_empty|
 //
 // On its own, a future is "inert"; it only makes progress in response to
 // actions taken by its owner.  The state of the future never changes
 // spontaneously or concurrently.
 //
-// When the future's state is |fit::future_state::empty|, its owner is
+// When the future's state is |fpromise::future_state::empty|, its owner is
 // responsible for setting the future's promise or result thereby moving the
 // future into the pending or ready state.
 //
-// When the future's state is |fit::future_state::pending|, its owner is
+// When the future's state is |fpromise::future_state::pending|, its owner is
 // responsible for calling the future's |operator()| to invoke the promise.
 // If the promise completes and returns a result, the future will transition
 // to the ok or error state according to the result.  The promise itself will
 // then be destroyed since it has fulfilled its purpose.
 //
-// When the future's state is |fit::future_state::ok|, its owner is responsible
+// When the future's state is |fpromise::future_state::ok|, its owner is responsible
 // for consuming the stored value using |value()|, |take_value()|,
 // |result()|, |take_result()|, or |take_ok_result()|.
 //
-// When the future's state is |fit::future_state::error|, its owner is
+// When the future's state is |fpromise::future_state::error|, its owner is
 // responsible for consuming the stored error using |error()|, |take_error()|,
 // |result()|, |take_result()|, or |take_error_result()|.
 //
-// See also |fit::promise| for more information about promises and their
+// See also |fpromise::promise| for more information about promises and their
 // execution.
 //
 // EXAMPLE
@@ -1042,7 +1048,7 @@ template <typename V = void, typename E = void>
 using future = future_impl<promise<V, E>>;
 
 // Future implementation details.
-// See |fit::future| documentation for more information.
+// See |fpromise::future| documentation for more information.
 template <typename Promise>
 class future_impl final {
  public:
@@ -1050,7 +1056,7 @@ class future_impl final {
   using promise_type = Promise;
 
   // The promise's result type.
-  // Equivalent to fit::result<value_type, error_type>.
+  // Equivalent to fpromise::result<value_type, error_type>.
   using result_type = typename Promise::result_type;
 
   // The type of value produced when the promise completes successfully.
@@ -1104,32 +1110,32 @@ class future_impl final {
     __builtin_unreachable();
   }
 
-  // Returns true if the future's state is not |fit::future_state::empty|:
+  // Returns true if the future's state is not |fpromise::future_state::empty|:
   // it either holds a result or holds a promise that can be invoked to make
   // progress towards obtaining a result.
   explicit operator bool() const { return !is_empty(); }
 
-  // Returns true if the future's state is |fit::future_state::empty|:
+  // Returns true if the future's state is |fpromise::future_state::empty|:
   // it does not hold a result or a promise so it cannot make progress.
-  bool is_empty() const { return state() == fit::future_state::empty; }
+  bool is_empty() const { return state() == fpromise::future_state::empty; }
 
-  // Returns true if the future's state is |fit::future_state::pending|:
+  // Returns true if the future's state is |fpromise::future_state::pending|:
   // it does not hold a result yet but it does hold a promise that can be invoked
   // to make progress towards obtaining a result.
-  bool is_pending() const { return state() == fit::future_state::pending; }
+  bool is_pending() const { return state() == fpromise::future_state::pending; }
 
-  // Returns true if the future's state is |fit::future_state::ok|:
+  // Returns true if the future's state is |fpromise::future_state::ok|:
   // it holds a value that can be retrieved using |value()|, |take_value()|,
   // |result()|, |take_result()|, or |take_ok_result()|.
-  bool is_ok() const { return state() == fit::future_state::ok; }
+  bool is_ok() const { return state() == fpromise::future_state::ok; }
 
-  // Returns true if the future's state is |fit::future_state::error|:
+  // Returns true if the future's state is |fpromise::future_state::error|:
   // it holds an error that can be retrieved using |error()|, |take_error()|,
   // |result()|, |take_result()|, or |take_error_result()|.
-  bool is_error() const { return state() == fit::future_state::error; }
+  bool is_error() const { return state() == fpromise::future_state::error; }
 
-  // Returns true if the future's state is either |fit::future_state::ok| or
-  // |fit::future_state::error|.
+  // Returns true if the future's state is either |fpromise::future_state::ok| or
+  // |fpromise::future_state::error|.
   bool is_ready() const { return state_.index() == 2; }
 
   // Evaluates the future and returns true if its result is ready.
@@ -1138,7 +1144,7 @@ class future_impl final {
   // If the promise completes and returns a result, the future will transition
   // to the ok or error state according to the result.  The promise itself will
   // then be destroyed since it has fulfilled its purpose.
-  bool operator()(fit::context& context) {
+  bool operator()(fpromise::context& context) {
     switch (state_.index()) {
       case 0:
         return false;
@@ -1156,14 +1162,14 @@ class future_impl final {
   }
 
   // Gets a reference to the future's promise.
-  // Asserts that the future's state is |fit::future_state::pending|.
+  // Asserts that the future's state is |fpromise::future_state::pending|.
   const promise_type& promise() const {
     assert(is_pending());
     return cpp17::get<1>(state_);
   }
 
   // Takes the future's promise, leaving it in an empty state.
-  // Asserts that the future's state is |fit::future_state::pending|.
+  // Asserts that the future's state is |fpromise::future_state::pending|.
   promise_type take_promise() {
     assert(is_pending());
     auto promise = std::move(cpp17::get<1>(state_));
@@ -1172,8 +1178,8 @@ class future_impl final {
   }
 
   // Gets a reference to the future's result.
-  // Asserts that the future's state is |fit::future_state::ok| or
-  // |fit::future_state::error|.
+  // Asserts that the future's state is |fpromise::future_state::ok| or
+  // |fpromise::future_state::error|.
   result_type& result() {
     assert(is_ready());
     return cpp17::get<2>(state_);
@@ -1184,8 +1190,8 @@ class future_impl final {
   }
 
   // Takes the future's result, leaving it in an empty state.
-  // Asserts that the future's state is |fit::future_state::ok| or
-  // |fit::future_state::error|.
+  // Asserts that the future's state is |fpromise::future_state::ok| or
+  // |fpromise::future_state::error|.
   result_type take_result() {
     assert(is_ready());
     auto result = std::move(cpp17::get<2>(state_));
@@ -1194,7 +1200,7 @@ class future_impl final {
   }
 
   // Gets a reference to the future's value.
-  // Asserts that the future's state is |fit::future_state::ok|.
+  // Asserts that the future's state is |fpromise::future_state::ok|.
   template <typename R = value_type, typename = std::enable_if_t<!std::is_void<R>::value>>
   R& value() {
     assert(is_ok());
@@ -1207,7 +1213,7 @@ class future_impl final {
   }
 
   // Takes the future's value, leaving it in an empty state.
-  // Asserts that the future's state is |fit::future_state::ok|.
+  // Asserts that the future's state is |fpromise::future_state::ok|.
   template <typename R = value_type, typename = std::enable_if_t<!std::is_void<R>::value>>
   R take_value() {
     assert(is_ok());
@@ -1223,7 +1229,7 @@ class future_impl final {
   }
 
   // Gets a reference to the future's error.
-  // Asserts that the future's state is |fit::future_state::error|.
+  // Asserts that the future's state is |fpromise::future_state::error|.
   template <typename R = error_type, typename = std::enable_if_t<!std::is_void<R>::value>>
   R& error() {
     assert(is_error());
@@ -1236,7 +1242,7 @@ class future_impl final {
   }
 
   // Takes the future's error, leaving it in an empty state.
-  // Asserts that the future's state is |fit::future_state::error|.
+  // Asserts that the future's state is |fpromise::future_state::error|.
   template <typename R = error_type, typename = std::enable_if_t<!std::is_void<R>::value>>
   R take_error() {
     assert(is_error());
@@ -1325,16 +1331,16 @@ future_impl<Promise> make_future(Promise promise) {
   return future_impl<Promise>(std::move(promise));
 }
 
-// A pending task holds a |fit::promise| that can be scheduled to run on
-// a |fit::executor| using |fit::executor::schedule_task()|.
+// A pending task holds a |fpromise::promise| that can be scheduled to run on
+// a |fpromise::executor| using |fpromise::executor::schedule_task()|.
 //
 // An executor repeatedly invokes a pending task until it returns true,
 // indicating completion.  Note that the promise's resulting value or error
 // is discarded since it is not meaningful to the executor.  If you need
-// to consume the result, use a combinator such as |fit::pending::then()|
+// to consume the result, use a combinator such as |fpromise::pending::then()|
 // to capture it prior to wrapping the promise into a pending task.
 //
-// See documentation of |fit::promise| for more information.
+// See documentation of |fpromise::promise| for more information.
 class pending_task final {
  public:
   // The type of promise held by this task.
@@ -1344,7 +1350,7 @@ class pending_task final {
   pending_task() = default;
 
   // Creates a pending task that wraps an already boxed promise that returns
-  // |fit::result<void, void>|.
+  // |fpromise::result<void, void>|.
   pending_task(promise_type promise) : promise_(std::move(promise)) {}
 
   // Creates a pending task that wraps any kind of promise, boxed or unboxed,
@@ -1368,7 +1374,7 @@ class pending_task final {
   // to an empty state (because the promise it holds has reverted to an empty
   // state) and returns true.
   // It is an error to invoke this method if the pending task is empty.
-  bool operator()(fit::context& context) { return !promise_(context).is_pending(); }
+  bool operator()(fpromise::context& context) { return !promise_(context).is_pending(); }
 
   // Extracts the pending task's promise.
   promise_type take_promise() { return std::move(promise_); }
@@ -1380,13 +1386,13 @@ class pending_task final {
   promise_type promise_;
 };
 
-// Execution context for an asynchronous task, such as a |fit::promise|,
-// |fit::future|, or |fit::pending_task|.
+// Execution context for an asynchronous task, such as a |fpromise::promise|,
+// |fpromise::future|, or |fpromise::pending_task|.
 //
-// When a |fit::executor| executes a task, it provides the task with an
+// When a |fpromise::executor| executes a task, it provides the task with an
 // execution context which enables the task to communicate with the
 // executor and manage its own lifecycle.  Specialized executors may subclass
-// |fit::context| and offer additional methods beyond those which are
+// |fpromise::context| and offer additional methods beyond those which are
 // defined here, such as to provide access to platform-specific features
 // supported by the executor.
 //
@@ -1394,7 +1400,7 @@ class pending_task final {
 // invocation; the task must not retain a reference to the context across
 // invocations.
 //
-// See documentation of |fit::promise| for more information.
+// See documentation of |fpromise::promise| for more information.
 class context {
  public:
   // Gets the executor that is running the task, never null.
@@ -1403,8 +1409,8 @@ class context {
   // Obtains a handle that can be used to resume the task after it has been
   // suspended.
   //
-  // Clients should call this method before returning |fit::pending()| from
-  // the task.  See documentation on |fit::executor|.
+  // Clients should call this method before returning |fpromise::pending()| from
+  // the task.  See documentation on |fpromise::executor|.
   virtual suspended_task suspend_task() = 0;
 
   // Converts this context to a derived context type.
@@ -1420,7 +1426,7 @@ class context {
 };
 
 // An abstract interface for executing asynchronous tasks, such as promises,
-// represented by |fit::pending_task|.
+// represented by |fpromise::pending_task|.
 //
 // EXECUTING TASKS
 //
@@ -1433,16 +1439,16 @@ class context {
 //
 // If the task returns false, then the task is deemed to have voluntarily
 // suspended itself pending some event that it is awaiting.  Prior to
-// returning, the task should acquire at least one |fit::suspended_task|
-// handle from its execution context using |fit::context::suspend_task()|
+// returning, the task should acquire at least one |fpromise::suspended_task|
+// handle from its execution context using |fpromise::context::suspend_task()|
 // to provide a means for the task to be resumed once it can make forward
 // progress again.
 //
-// Once the suspended task is resumed with |fit::suspended_task::resume()|, it
+// Once the suspended task is resumed with |fpromise::suspended_task::resume()|, it
 // is moved back to the ready queue and it will be invoked again during a later
 // iteration of the executor's loop.
 //
-// If all |fit::suspended_task| handles for a given task are destroyed without
+// If all |fpromise::suspended_task| handles for a given task are destroyed without
 // the task ever being resumed then the task is also destroyed since there
 // would be no way for the task to be resumed from suspension.  We say that
 // such a task has been "abandoned".
@@ -1451,7 +1457,7 @@ class context {
 // When the executor is destroyed, all of its remaining tasks are also
 // destroyed.
 //
-// Please read |fit::promise| for a more detailed explanation of the
+// Please read |fpromise::promise| for a more detailed explanation of the
 // responsibilities of tasks and executors.
 //
 // NOTES FOR IMPLEMENTORS
@@ -1461,7 +1467,7 @@ class context {
 // a single thread whereas another might dispatch them on an event-driven
 // message loop or use a thread pool.
 //
-// See also |fit::single_threaded_executor| for a concrete implementation.
+// See also |fpromise::single_threaded_executor| for a concrete implementation.
 class executor {
  public:
   // Destroys the executor along with all of its remaining scheduled tasks
@@ -1481,7 +1487,7 @@ class executor {
 // by the executor since it is no longer possible for the task to make
 // progress.  The task is said have been "abandoned".
 //
-// See documentation of |fit::executor| for more information.
+// See documentation of |fpromise::executor| for more information.
 class suspended_task final {
  public:
   // A handle that grants the capability to resume a suspended task.
@@ -1516,7 +1522,7 @@ class suspended_task final {
   // Resuming a task that has already been resumed has no effect.
   // Conversely, a task is considered "abandoned" if all of its tickets
   // have been resolved without it ever being resumed.  See documentation
-  // of |fit::promise| for more information.
+  // of |fpromise::promise| for more information.
   //
   // The methods of this class are safe to call from any thread, including
   // threads that may not be managed by the task's executor.
@@ -1557,7 +1563,7 @@ class suspended_task final {
   //
   // Clients should call this method when it is possible for the task to
   // make progress; for example, because some event the task was
-  // awaiting has occurred.  See documentation on |fit::executor|.
+  // awaiting has occurred.  See documentation on |fpromise::executor|.
   //
   // Does nothing if this object does not hold a ticket.
   void resume_task() { resolve(true); }
@@ -1582,6 +1588,6 @@ class suspended_task final {
 
 inline void swap(suspended_task& a, suspended_task& b) { a.swap(b); }
 
-}  // namespace fit
+}  // namespace fpromise
 
-#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_PROMISE_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_PROMISE_H_

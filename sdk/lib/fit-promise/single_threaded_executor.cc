@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/single_threaded_executor.h>
 #include <lib/fit/thread_safety.h>
+#include <lib/fpromise/single_threaded_executor.h>
 
 #include <condition_variable>
 #include <mutex>
 
-namespace fit {
+namespace fpromise {
 
 // The dispatcher runs tasks and provides the suspended task resolver.
 //
@@ -37,7 +37,7 @@ class single_threaded_executor::dispatcher_impl final : public suspended_task::r
  private:
   ~dispatcher_impl() override;
 
-  void wait_for_runnable_tasks(fit::subtle::scheduler::task_queue* out_tasks);
+  void wait_for_runnable_tasks(fpromise::subtle::scheduler::task_queue* out_tasks);
   void run_task(pending_task* task, context& context);
 
   suspended_task::ticket current_task_ticket_ = 0;
@@ -48,7 +48,7 @@ class single_threaded_executor::dispatcher_impl final : public suspended_task::r
     std::mutex mutex_;
     bool was_shutdown_ FIT_GUARDED(mutex_) = false;
     bool need_wake_ FIT_GUARDED(mutex_) = false;
-    fit::subtle::scheduler scheduler_ FIT_GUARDED(mutex_);
+    fpromise::subtle::scheduler scheduler_ FIT_GUARDED(mutex_);
   } guarded_;
 };
 
@@ -88,7 +88,7 @@ single_threaded_executor::dispatcher_impl::~dispatcher_impl() {
 }
 
 void single_threaded_executor::dispatcher_impl::shutdown() {
-  fit::subtle::scheduler::task_queue tasks;  // drop outside of the lock
+  fpromise::subtle::scheduler::task_queue tasks;  // drop outside of the lock
   {
     std::lock_guard<std::mutex> lock(guarded_.mutex_);
     assert(!guarded_.was_shutdown_);
@@ -119,7 +119,7 @@ void single_threaded_executor::dispatcher_impl::schedule_task(pending_task task)
 }
 
 void single_threaded_executor::dispatcher_impl::run(context_impl& context) {
-  fit::subtle::scheduler::task_queue tasks;
+  fpromise::subtle::scheduler::task_queue tasks;
   for (;;) {
     wait_for_runnable_tasks(&tasks);
     if (tasks.empty()) {
@@ -149,7 +149,7 @@ suspended_task single_threaded_executor::dispatcher_impl::suspend_current_task()
 
 // Unfortunately std::unique_lock does not support thread-safety annotations
 void single_threaded_executor::dispatcher_impl::wait_for_runnable_tasks(
-    fit::subtle::scheduler::task_queue* out_tasks) FIT_NO_THREAD_SAFETY_ANALYSIS {
+    fpromise::subtle::scheduler::task_queue* out_tasks) FIT_NO_THREAD_SAFETY_ANALYSIS {
   std::unique_lock<std::mutex> lock(guarded_.mutex_);
   for (;;) {
     assert(!guarded_.was_shutdown_);
@@ -221,4 +221,4 @@ void single_threaded_executor::dispatcher_impl::resolve_ticket(suspended_task::t
   }
 }
 
-}  // namespace fit
+}  // namespace fpromise

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SINGLE_THREADED_EXECUTOR_H_
-#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SINGLE_THREADED_EXECUTOR_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_SINGLE_THREADED_EXECUTOR_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_SINGLE_THREADED_EXECUTOR_H_
 
 #include <utility>
 
 #include "promise.h"
 #include "scheduler.h"
 
-namespace fit {
+namespace fpromise {
 
 // A simple platform-independent single-threaded asynchronous task executor.
 //
@@ -18,7 +18,7 @@ namespace fit {
 // platform-independent applications.  It may be less efficient or provide
 // fewer features than more specialized or platform-dependent executors.
 //
-// See documentation of |fit::promise| for more information.
+// See documentation of |fpromise::promise| for more information.
 class single_threaded_executor final : public executor {
  public:
   single_threaded_executor();
@@ -64,7 +64,7 @@ class single_threaded_executor final : public executor {
   dispatcher_impl* const dispatcher_;
 };
 
-// Creates a new |fit::single_threaded_executor|, schedules a promise as a task,
+// Creates a new |fpromise::single_threaded_executor|, schedules a promise as a task,
 // runs all of the executor's scheduled tasks until none remain, then returns
 // the promise's result.
 template <typename Continuation>
@@ -79,6 +79,6 @@ static typename promise_impl<Continuation>::result_type run_single_threaded(
   return saved_result;
 }
 
-}  // namespace fit
+}  // namespace fpromise
 
-#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SINGLE_THREADED_EXECUTOR_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_SINGLE_THREADED_EXECUTOR_H_

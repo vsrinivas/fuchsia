@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_RESULT_H_
-#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_RESULT_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_RESULT_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_RESULT_H_
 
 #include <assert.h>
 #include <lib/stdcompat/variant.h>
@@ -14,7 +14,7 @@
 
 #include "in_place_internal.h"
 
-namespace fit {
+namespace fpromise {
 
 // Represents the intermediate state of a result that has not yet completed.
 struct pending_result final {};
@@ -77,7 +77,7 @@ enum class result_state {
 // Represents the result of a task which may have succeeded, failed,
 // or still be in progress.
 //
-// Use |fit::pending()|, |fit::ok<T>()|, or |fit::error<T>| to initialize
+// Use |fpromise::pending()|, |fpromise::ok<T>()|, or |fpromise::error<T>| to initialize
 // the result.
 //
 // |V| is the type of value produced when the completes successfully.
@@ -88,10 +88,10 @@ enum class result_state {
 //
 // EXAMPLE:
 //
-// fit::result<int, std::string> divide(int dividend, int divisor) {
+// fpromise::result<int, std::string> divide(int dividend, int divisor) {
 //     if (divisor == 0)
-//         return fit::error<std::string>("divide by zero");
-//     return fit::ok(dividend / divisor);
+//         return fpromise::error<std::string>("divide by zero");
+//     return fpromise::ok(dividend / divisor);
 // }
 //
 // int try_divide(int dividend, int divisor) {
@@ -106,14 +106,14 @@ enum class result_state {
 //
 // EXAMPLE WITH VOID RESULT VALUE AND ERROR:
 //
-// fit::result<> open(std::string secret) {
+// fpromise::result<> open(std::string secret) {
 //     printf("guessing \"%s\"\n", secret.c_str());
 //     if (secret == "sesame") {
-//         return fit::ok();
+//         return fpromise::ok();
 //         puts("yes!");
 //     }
 //     puts("no.");
-//     return fit::error();
+//     return fpromise::error();
 // }
 //
 // bool guess_combination() {
@@ -133,13 +133,13 @@ class result final {
   constexpr result(ok_result<V> result) : state_(cpp17::in_place_index<1>, std::move(result)) {}
   template <typename OtherV, typename = std::enable_if_t<std::is_constructible<V, OtherV>::value>>
   constexpr result(ok_result<OtherV> other)
-      : state_(cpp17::in_place_index<1>, fit::ok<V>(std::move(other.value))) {}
+      : state_(cpp17::in_place_index<1>, fpromise::ok<V>(std::move(other.value))) {}
 
   // Creates an error result.
   constexpr result(error_result<E> result) : state_(cpp17::in_place_index<2>, std::move(result)) {}
   template <typename OtherE, typename = std::enable_if_t<std::is_constructible<E, OtherE>::value>>
   constexpr result(error_result<OtherE> other)
-      : state_(cpp17::in_place_index<2>, fit::error<E>(std::move(other.error))) {}
+      : state_(cpp17::in_place_index<2>, fpromise::error<E>(std::move(other.error))) {}
 
   // Copies another result (if copyable).
   result(const result& other) = default;
@@ -165,7 +165,7 @@ class result final {
   constexpr bool is_error() const { return state() == result_state::error; }
 
   // Gets the result's value.
-  // Asserts that the result's state is |fit::result_state::ok|.
+  // Asserts that the result's state is |fpromise::result_state::ok|.
   template <typename R = V, typename = std::enable_if_t<!std::is_void<R>::value>>
   constexpr R& value() {
     return cpp17::get<1>(state_).value;
@@ -176,7 +176,7 @@ class result final {
   }
 
   // Takes the result's value, leaving it in a pending state.
-  // Asserts that the result's state is |fit::result_state::ok|.
+  // Asserts that the result's state is |fpromise::result_state::ok|.
   template <typename R = V, typename = std::enable_if_t<!std::is_void<R>::value>>
   R take_value() {
     auto value = std::move(cpp17::get<1>(state_).value);
@@ -190,7 +190,7 @@ class result final {
   }
 
   // Gets a reference to the result's error.
-  // Asserts that the result's state is |fit::result_state::error|.
+  // Asserts that the result's state is |fpromise::result_state::error|.
   template <typename R = E, typename = std::enable_if_t<!std::is_void<R>::value>>
   constexpr R& error() {
     return cpp17::get<2>(state_).error;
@@ -201,7 +201,7 @@ class result final {
   }
 
   // Takes the result's error, leaving it in a pending state.
-  // Asserts that the result's state is |fit::result_state::error|.
+  // Asserts that the result's state is |fpromise::result_state::error|.
   template <typename R = E, typename = std::enable_if_t<!std::is_void<R>::value>>
   R take_error() {
     auto error = std::move(cpp17::get<2>(state_).error);
@@ -238,6 +238,6 @@ void swap(result<V, E>& a, result<V, E>& b) {
   a.swap(b);
 }
 
-}  // namespace fit
+}  // namespace fpromise
 
-#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_RESULT_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_RESULT_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SCOPE_H_
-#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SCOPE_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_SCOPE_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_SCOPE_H_
 
 #include <assert.h>
 #include <lib/fit/thread_safety.h>
@@ -13,7 +13,7 @@
 
 #include "promise.h"
 
-namespace fit {
+namespace fpromise {
 
 // Provides a mechanism for binding promises to the lifetime of another object
 // such that they are destroyed before that object goes out of scope.  It is
@@ -25,7 +25,7 @@ namespace fit {
 //
 // EXAMPLE
 //
-// Define a |fit::scope| as a member of the object to whose lifetime the
+// Define a |fpromise::scope| as a member of the object to whose lifetime the
 // promises should be bound.
 //
 //     // We mark this class final because its destructor has side-effects
@@ -38,7 +38,7 @@ namespace fit {
 //         accumulator() = default;
 //         ~accumulator() = default;
 //
-//         fit::promise<int> accumulate(int value);
+//         fpromise::promise<int> accumulate(int value);
 //
 //     private:
 //         int prior_total_ = 0;
@@ -46,17 +46,17 @@ namespace fit {
 //         // This member is last so that the scope is exited before all
 //         // other members of the object are destroyed.  Alternately, we
 //         // could enforce this ordering by explicitly invoking
-//         // |fit::scope::exit()| where appropriate.
-//         fit::scope scope_;
+//         // |fpromise::scope::exit()| where appropriate.
+//         fpromise::scope scope_;
 //     };
 //
-// Use |fit::promise::wrap_with()| to wrap up promises that capture pointers
+// Use |fpromise::promise::wrap_with()| to wrap up promises that capture pointers
 // to the object.  In this example, the captured pointer is "this".
 //
-//     fit::promise<int> accumulator::accumulate(int value) {
-//         return fit::make_promise([this, value] {
+//     fpromise::promise<int> accumulator::accumulate(int value) {
+//         return fpromise::make_promise([this, value] {
 //             prior_total_ += value;
-//             return fit::ok(prior_total_);
+//             return fpromise::ok(prior_total_);
 //         }).wrap_with(scope_); /* binding to scope happens here */
 //     }
 //
@@ -100,7 +100,7 @@ class scope final {
   template <typename Promise>
   decltype(auto) wrap(Promise promise) {
     assert(promise);
-    return fit::make_promise_with_continuation(scoped_continuation<Promise>(
+    return fpromise::make_promise_with_continuation(scoped_continuation<Promise>(
         state_->adopt_promise(new promise_holder<Promise>(std::move(promise)))));
   }
 
@@ -266,6 +266,6 @@ class scope final {
   state* const state_;
 };
 
-}  // namespace fit
+}  // namespace fpromise
 
-#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SCOPE_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_SCOPE_H_

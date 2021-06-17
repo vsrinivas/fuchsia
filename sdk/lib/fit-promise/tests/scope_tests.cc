@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
-#include <lib/fit/scope.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/scope.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <unistd.h>
 
 #include <thread>
@@ -16,10 +16,10 @@
 
 namespace {
 
-class fake_context : public fit::context {
+class fake_context : public fpromise::context {
  public:
-  fit::executor* executor() const override { ASSERT_CRITICAL(false); }
-  fit::suspended_task suspend_task() override { ASSERT_CRITICAL(false); }
+  fpromise::executor* executor() const override { ASSERT_CRITICAL(false); }
+  fpromise::suspended_task suspend_task() override { ASSERT_CRITICAL(false); }
 };
 
 // Asynchronously accumulates a sum.
@@ -30,15 +30,16 @@ class accumulator {
  public:
   // Adds a value to the counter then returns it.
   // Takes time proportional to the value being added.
-  fit::promise<uint32_t> add(uint32_t value) {
-    return fit::make_promise(
-               [this, cycles = value](fit::context& context) mutable -> fit::result<uint32_t> {
+  fpromise::promise<uint32_t> add(uint32_t value) {
+    return fpromise::make_promise(
+               [this,
+                cycles = value](fpromise::context& context) mutable -> fpromise::result<uint32_t> {
                  if (cycles == 0)
-                   return fit::ok(counter_);
+                   return fpromise::ok(counter_);
                  counter_++;
                  cycles--;
                  context.suspend_task().resume_task();
-                 return fit::pending();
+                 return fpromise::pending();
                })
         .wrap_with(scope_);
   }
@@ -47,13 +48,13 @@ class accumulator {
   uint32_t count() const { return counter_; }
 
  private:
-  fit::scope scope_;
+  fpromise::scope scope_;
   uint32_t counter_ = 0;
 };
 
 TEST(ScopeTests, scoping_tasks) {
   auto acc = std::make_unique<accumulator>();
-  fit::single_threaded_executor executor;
+  fpromise::single_threaded_executor executor;
   uint32_t sums[4] = {};
 
   // Schedule some tasks which accumulate values asynchronously.
@@ -67,7 +68,7 @@ TEST(ScopeTests, scoping_tasks) {
   executor.schedule_task(acc->add(3).and_then([&](const uint32_t& value) {
     sums[3] = value;
     // Schedule destruction in another task to avoid re-entrance.
-    executor.schedule_task(fit::make_promise([&] {
+    executor.schedule_task(fpromise::make_promise([&] {
       last_count = acc->count();
       acc.reset();
     }));
@@ -87,23 +88,23 @@ TEST(ScopeTests, scoping_tasks) {
 }
 
 TEST(ScopeTests, exit_destroys_wrapped_promises) {
-  fit::scope scope;
+  fpromise::scope scope;
   EXPECT_FALSE(scope.exited());
 
   // Set up three wrapped promises.
   bool destroyed[4] = {};
-  auto p0 = scope.wrap(
-      fit::make_promise([d = fit::defer([&] { destroyed[0] = true; })] { return fit::ok(); }));
-  auto p1 = scope.wrap(
-      fit::make_promise([d = fit::defer([&] { destroyed[1] = true; })] { return fit::ok(); }));
-  auto p2 = scope.wrap(
-      fit::make_promise([d = fit::defer([&] { destroyed[2] = true; })] { return fit::ok(); }));
+  auto p0 = scope.wrap(fpromise::make_promise(
+      [d = fit::defer([&] { destroyed[0] = true; })] { return fpromise::ok(); }));
+  auto p1 = scope.wrap(fpromise::make_promise(
+      [d = fit::defer([&] { destroyed[1] = true; })] { return fpromise::ok(); }));
+  auto p2 = scope.wrap(fpromise::make_promise(
+      [d = fit::defer([&] { destroyed[2] = true; })] { return fpromise::ok(); }));
   EXPECT_FALSE(destroyed[0]);
   EXPECT_FALSE(destroyed[1]);
   EXPECT_FALSE(destroyed[2]);
 
   // Execute one of them to completion, causing it to be destroyed.
-  EXPECT_TRUE(fit::run_single_threaded(std::move(p1)).is_ok());
+  EXPECT_TRUE(fpromise::run_single_threaded(std::move(p1)).is_ok());
   EXPECT_FALSE(destroyed[0]);
   EXPECT_TRUE(destroyed[1]);
   EXPECT_FALSE(destroyed[2]);
@@ -118,14 +119,14 @@ TEST(ScopeTests, exit_destroys_wrapped_promises) {
 
   // Wrapping another promise causes the wrapped promise to be immediately
   // destroyed.
-  auto p3 = scope.wrap(
-      fit::make_promise([d = fit::defer([&] { destroyed[3] = true; })] { return fit::ok(); }));
+  auto p3 = scope.wrap(fpromise::make_promise(
+      [d = fit::defer([&] { destroyed[3] = true; })] { return fpromise::ok(); }));
   EXPECT_TRUE(destroyed[3]);
 
   // Executing the wrapped promises returns pending.
-  EXPECT_TRUE(fit::run_single_threaded(std::move(p0)).is_pending());
-  EXPECT_TRUE(fit::run_single_threaded(std::move(p2)).is_pending());
-  EXPECT_TRUE(fit::run_single_threaded(std::move(p3)).is_pending());
+  EXPECT_TRUE(fpromise::run_single_threaded(std::move(p0)).is_pending());
+  EXPECT_TRUE(fpromise::run_single_threaded(std::move(p2)).is_pending());
+  EXPECT_TRUE(fpromise::run_single_threaded(std::move(p3)).is_pending());
 
   // Exiting again has no effect.
   scope.exit();
@@ -133,7 +134,7 @@ TEST(ScopeTests, exit_destroys_wrapped_promises) {
 }
 
 TEST(ScopeTests, double_wrap) {
-  fit::scope scope;
+  fpromise::scope scope;
   fake_context context;
 
   // Here we wrap a task that's already been wrapped to see what happens
@@ -142,16 +143,16 @@ TEST(ScopeTests, double_wrap) {
   // another wrapped promise and could uncover re-entrance issues.
   uint32_t run_count = 0;
   bool destroyed = false;
-  auto promise =
-      fit::make_promise([&, d = fit::defer([&] { destroyed = true; })](fit::context& context) {
-        run_count++;
-        return fit::pending();
-      })
-          .wrap_with(scope)
-          .wrap_with(scope);  // wrap again!
+  auto promise = fpromise::make_promise(
+                     [&, d = fit::defer([&] { destroyed = true; })](fpromise::context& context) {
+                       run_count++;
+                       return fpromise::pending();
+                     })
+                     .wrap_with(scope)
+                     .wrap_with(scope);  // wrap again!
 
   // Run the promise once to show that we can.
-  EXPECT_EQ(fit::result_state::pending, promise(context).state());
+  EXPECT_EQ(fpromise::result_state::pending, promise(context).state());
   EXPECT_EQ(1, run_count);
   EXPECT_FALSE(destroyed);
 
@@ -161,14 +162,14 @@ TEST(ScopeTests, double_wrap) {
   EXPECT_TRUE(destroyed);
 
   // Running the promise again should do nothing.
-  EXPECT_EQ(fit::result_state::pending, promise(context).state());
+  EXPECT_EQ(fpromise::result_state::pending, promise(context).state());
   EXPECT_EQ(1, run_count);
   EXPECT_TRUE(destroyed);
 }
 
 TEST(ScopeTests, thread_safety) {
-  fit::scope scope;
-  fit::single_threaded_executor executor;
+  fpromise::scope scope;
+  fpromise::single_threaded_executor executor;
   uint64_t run_count = 0;
 
   // Schedule work from a few threads, just to show that we can.
@@ -178,14 +179,14 @@ TEST(ScopeTests, thread_safety) {
   constexpr int exit_threshold = 75;
   std::thread threads[num_threads];
   for (int i = 0; i < num_threads; i++) {
-    fit::bridge bridge;
+    fpromise::bridge bridge;
     threads[i] = std::thread([&, completer = std::move(bridge.completer)]() mutable {
       for (int j = 0; j < num_tasks_per_thread; j++) {
         if (j == exit_threshold) {
-          executor.schedule_task(fit::make_promise([&] { scope.exit(); }));
+          executor.schedule_task(fpromise::make_promise([&] { scope.exit(); }));
         }
 
-        executor.schedule_task(fit::make_promise([&] { run_count++; }).wrap_with(scope));
+        executor.schedule_task(fpromise::make_promise([&] { run_count++; }).wrap_with(scope));
       }
       completer.complete_ok();
     });

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SCHEDULER_H_
-#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SCHEDULER_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_SCHEDULER_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_SCHEDULER_H_
 
 #include <map>
 #include <queue>
@@ -11,12 +11,12 @@
 
 #include "promise.h"
 
-namespace fit {
+namespace fpromise {
 namespace subtle {
 
 // Keeps track of runnable and suspended tasks.
 // This is a low-level building block for implementing executors.
-// For a concrete implementation, see |fit::single_threaded_executor|.
+// For a concrete implementation, see |fpromise::single_threaded_executor|.
 //
 // Instances of this object are not thread-safe.  Its client is responsible
 // for providing all necessary synchronization.
@@ -148,6 +148,6 @@ class scheduler final {
 };
 
 }  // namespace subtle
-}  // namespace fit
+}  // namespace fpromise
 
-#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SCHEDULER_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FPROMISE_SCHEDULER_H_

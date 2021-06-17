@@ -3,7 +3,7 @@
 This was formerly part of the `lib/fit` library.
 Further migrations and renamings are expected.
 
-## fit::promise, fit::future, fit::executor, etc.
+## fpromise::promise, fpromise::future, fpromise::executor, etc.
 
 - When writing asynchronous event-driven programs, it's convenient to be able
   to stage a sequence of asynchronous tasks.  This tends to be challenging

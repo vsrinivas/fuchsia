@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/scheduler.h>
+#include <lib/fpromise/scheduler.h>
 
 #include <map>
 #include <queue>
 #include <utility>
 
-namespace fit {
+namespace fpromise {
 namespace subtle {
 
 scheduler::scheduler() = default;
@@ -119,4 +119,4 @@ void scheduler::take_all_tasks(task_queue* tasks) {
 }
 
 }  // namespace subtle
-}  // namespace fit
+}  // namespace fpromise

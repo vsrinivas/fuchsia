@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
-namespace fit {
+namespace fpromise {
 
 suspended_task::suspended_task(const suspended_task& other)
     : resolver_(other.resolver_),
@@ -55,4 +55,4 @@ void suspended_task::swap(suspended_task& other) {
   }
 }
 
-}  // namespace fit
+}  // namespace fpromise

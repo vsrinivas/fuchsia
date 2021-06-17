@@ -6,7 +6,6 @@
 
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/promise.h>
-#include <lib/fit/promise_internal.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>

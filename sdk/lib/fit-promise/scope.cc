@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/scope.h>
+#include <lib/fpromise/scope.h>
 
-namespace fit {
+namespace fpromise {
 
 scope::scope() : state_(new state()) {}
 
@@ -39,7 +39,7 @@ void scope::state::exit(bool scope_was_destroyed) {
     uint64_t prior_count =
         acquired_promise_count_.exchange(scope_exited, std::memory_order_relaxed);
     if (!(prior_count & scope_exited)) {
-      // Cannot exit fit::scope while any of its promises are running!
+      // Cannot exit fpromise::scope while any of its promises are running!
       assert(prior_count == 0);
 
       // Take the promises so they can be deleted outside of the lock.
@@ -140,4 +140,4 @@ void scope::state::release_promise(promise_handle promise_handle) {
   promise_handle.state_->acquired_promise_count_.fetch_sub(1u, std::memory_order_relaxed);
 }
 
-}  // namespace fit
+}  // namespace fpromise

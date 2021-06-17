@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include <map>
 
@@ -14,30 +14,31 @@ namespace {
 
 enum class disposition { pending, resumed, released };
 
-class fake_resolver : public fit::suspended_task::resolver {
+class fake_resolver : public fpromise::suspended_task::resolver {
  public:
   uint64_t num_tickets_issued() const { return next_ticket_ - 1; }
 
-  fit::suspended_task::ticket obtain_ticket() {
-    fit::suspended_task::ticket ticket = next_ticket_++;
+  fpromise::suspended_task::ticket obtain_ticket() {
+    fpromise::suspended_task::ticket ticket = next_ticket_++;
     tickets_.emplace(ticket, disposition::pending);
     return ticket;
   }
 
-  disposition get_disposition(fit::suspended_task::ticket ticket) {
+  disposition get_disposition(fpromise::suspended_task::ticket ticket) {
     auto it = tickets_.find(ticket);
     ASSERT_CRITICAL(it != tickets_.end());
     return it->second;
   }
 
-  fit::suspended_task::ticket duplicate_ticket(fit::suspended_task::ticket ticket) override {
+  fpromise::suspended_task::ticket duplicate_ticket(
+      fpromise::suspended_task::ticket ticket) override {
     auto it = tickets_.find(ticket);
     ASSERT_CRITICAL(it != tickets_.end());
     ASSERT_CRITICAL(it->second == disposition::pending);
     return obtain_ticket();
   }
 
-  void resolve_ticket(fit::suspended_task::ticket ticket, bool resume_task) override {
+  void resolve_ticket(fpromise::suspended_task::ticket ticket, bool resume_task) override {
     auto it = tickets_.find(ticket);
     ASSERT_CRITICAL(it != tickets_.end());
     ASSERT_CRITICAL(it->second == disposition::pending);
@@ -45,47 +46,47 @@ class fake_resolver : public fit::suspended_task::resolver {
   }
 
  private:
-  fit::suspended_task::ticket next_ticket_ = 1;
-  std::map<fit::suspended_task::ticket, disposition> tickets_;
+  fpromise::suspended_task::ticket next_ticket_ = 1;
+  std::map<fpromise::suspended_task::ticket, disposition> tickets_;
 };
 
 TEST(SuspendedTaskTests, test) {
   fake_resolver resolver;
   {
-    fit::suspended_task empty1;
+    fpromise::suspended_task empty1;
     EXPECT_FALSE(empty1);
 
-    fit::suspended_task empty2(nullptr, 42);
+    fpromise::suspended_task empty2(nullptr, 42);
     EXPECT_FALSE(empty2);
 
-    fit::suspended_task empty_copy(empty1);
+    fpromise::suspended_task empty_copy(empty1);
     EXPECT_FALSE(empty_copy);
     EXPECT_FALSE(empty1);
 
-    fit::suspended_task empty_move(std::move(empty2));
+    fpromise::suspended_task empty_move(std::move(empty2));
     EXPECT_FALSE(empty_move);
     EXPECT_FALSE(empty2);
 
-    fit::suspended_task task(&resolver, resolver.obtain_ticket());
+    fpromise::suspended_task task(&resolver, resolver.obtain_ticket());
     EXPECT_TRUE(task);
     EXPECT_EQ(1, resolver.num_tickets_issued());
     EXPECT_EQ(disposition::pending, resolver.get_disposition(1));
 
-    fit::suspended_task task_copy(task);
+    fpromise::suspended_task task_copy(task);
     EXPECT_TRUE(task_copy);
     EXPECT_TRUE(task);
     EXPECT_EQ(2, resolver.num_tickets_issued());
     EXPECT_EQ(disposition::pending, resolver.get_disposition(1));
     EXPECT_EQ(disposition::pending, resolver.get_disposition(2));
 
-    fit::suspended_task task_move(std::move(task));
+    fpromise::suspended_task task_move(std::move(task));
     EXPECT_TRUE(task_move);
     EXPECT_FALSE(task);
     EXPECT_EQ(2, resolver.num_tickets_issued());
     EXPECT_EQ(disposition::pending, resolver.get_disposition(1));
     EXPECT_EQ(disposition::pending, resolver.get_disposition(2));
 
-    fit::suspended_task x;
+    fpromise::suspended_task x;
     x = empty1;
     EXPECT_FALSE(x);
 
@@ -143,9 +144,9 @@ TEST(SuspendedTaskTests, test) {
 TEST(SuspendedTaskTests, swapping) {
   fake_resolver resolver;
   {
-    fit::suspended_task a(&resolver, resolver.obtain_ticket());
-    fit::suspended_task b(&resolver, resolver.obtain_ticket());
-    fit::suspended_task c;
+    fpromise::suspended_task a(&resolver, resolver.obtain_ticket());
+    fpromise::suspended_task b(&resolver, resolver.obtain_ticket());
+    fpromise::suspended_task c;
     EXPECT_EQ(2, resolver.num_tickets_issued());
     EXPECT_EQ(disposition::pending, resolver.get_disposition(1));
     EXPECT_EQ(disposition::pending, resolver.get_disposition(2));

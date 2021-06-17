@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/barrier.h>
-#include <lib/fit/sequencer.h>
-#include <lib/fit/single_threaded_executor.h>
+#include <lib/fpromise/barrier.h>
+#include <lib/fpromise/sequencer.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <unistd.h>
 
 #include <string>
@@ -17,17 +17,17 @@ namespace {
 // Wrapping tasks with a barrier should still allow them to complete, even without a sync.
 TEST(BarrierTests, wrapping_tasks_no_sync) {
   bool array[3] = {};
-  auto a = fit::make_promise([&] { array[0] = true; });
-  auto b = fit::make_promise([&] { array[1] = true; });
-  auto c = fit::make_promise([&] { array[2] = true; });
+  auto a = fpromise::make_promise([&] { array[0] = true; });
+  auto b = fpromise::make_promise([&] { array[1] = true; });
+  auto c = fpromise::make_promise([&] { array[2] = true; });
 
   for (size_t i = 0; i < std::size(array); i++) {
     EXPECT_FALSE(array[i]);
   }
 
-  fit::barrier barrier;
+  fpromise::barrier barrier;
 
-  fit::single_threaded_executor executor;
+  fpromise::single_threaded_executor executor;
   executor.schedule_task(a.wrap_with(barrier));
   executor.schedule_task(b.wrap_with(barrier));
   executor.schedule_task(c.wrap_with(barrier));
@@ -41,17 +41,17 @@ TEST(BarrierTests, wrapping_tasks_no_sync) {
 // Syncing tasks with should still allow them to complete, even without pending work.
 TEST(BarrierTests, sync_no_wrapped_tasks) {
   bool array[3] = {};
-  auto a = fit::make_promise([&] { array[0] = true; });
-  auto b = fit::make_promise([&] { array[1] = true; });
-  auto c = fit::make_promise([&] { array[2] = true; });
+  auto a = fpromise::make_promise([&] { array[0] = true; });
+  auto b = fpromise::make_promise([&] { array[1] = true; });
+  auto c = fpromise::make_promise([&] { array[2] = true; });
 
   for (size_t i = 0; i < std::size(array); i++) {
     EXPECT_FALSE(array[i]);
   }
 
-  fit::barrier barrier;
+  fpromise::barrier barrier;
 
-  fit::single_threaded_executor executor;
+  fpromise::single_threaded_executor executor;
   executor.schedule_task(barrier.sync().and_then(std::move(a)));
   executor.schedule_task(barrier.sync().and_then(std::move(b)));
   executor.schedule_task(barrier.sync().and_then(std::move(c)));
@@ -66,12 +66,12 @@ TEST(BarrierTests, sync_no_wrapped_tasks) {
 // Observe that the wrapped work completes before the sync.
 TEST(BarrierTests, wrap_then_sync) {
   bool array[3] = {};
-  auto a = fit::make_promise([&] { array[0] = true; });
-  auto b = fit::make_promise([&] { array[1] = true; });
-  auto c = fit::make_promise([&] { array[2] = true; });
+  auto a = fpromise::make_promise([&] { array[0] = true; });
+  auto b = fpromise::make_promise([&] { array[1] = true; });
+  auto c = fpromise::make_promise([&] { array[2] = true; });
 
   bool sync_complete = false;
-  auto sync_promise = fit::make_promise([&] {
+  auto sync_promise = fpromise::make_promise([&] {
     for (size_t i = 0; i < std::size(array); i++) {
       EXPECT_TRUE(array[i]);
     }
@@ -82,7 +82,7 @@ TEST(BarrierTests, wrap_then_sync) {
     EXPECT_FALSE(array[i]);
   }
 
-  fit::barrier barrier;
+  fpromise::barrier barrier;
   auto a_tracked = a.wrap_with(barrier);
   auto b_tracked = b.wrap_with(barrier);
   auto c_tracked = c.wrap_with(barrier);
@@ -90,7 +90,7 @@ TEST(BarrierTests, wrap_then_sync) {
   // Note that we schedule the "sync" task first, even though we expect
   // it to actually be executed last. This is just a little extra nudge to ensure
   // our executor isn't implicitly supplying this order for us.
-  fit::single_threaded_executor executor;
+  fpromise::single_threaded_executor executor;
   executor.schedule_task(barrier.sync().and_then(std::move(sync_promise)));
   executor.schedule_task(std::move(a_tracked));
   executor.schedule_task(std::move(b_tracked));
@@ -110,24 +110,24 @@ TEST(BarrierTests, wrap_preserves_initial_order) {
   //
   // Observe that by wrapping them, the sequence order is still preserved.
   bool array[3] = {};
-  auto a = fit::make_promise([&] {
+  auto a = fpromise::make_promise([&] {
     array[0] = true;
     assert(!array[1]);
     assert(!array[2]);
   });
-  auto b = fit::make_promise([&] {
+  auto b = fpromise::make_promise([&] {
     assert(array[0]);
     array[1] = true;
     assert(!array[2]);
   });
-  auto c = fit::make_promise([&] {
+  auto c = fpromise::make_promise([&] {
     assert(array[0]);
     assert(array[1]);
     array[2] = true;
   });
 
   bool sync_complete = false;
-  auto sync_promise = fit::make_promise([&] {
+  auto sync_promise = fpromise::make_promise([&] {
     for (size_t i = 0; i < std::size(array); i++) {
       EXPECT_TRUE(array[i]);
     }
@@ -138,17 +138,17 @@ TEST(BarrierTests, wrap_preserves_initial_order) {
     EXPECT_FALSE(array[i]);
   }
 
-  fit::sequencer seq;
+  fpromise::sequencer seq;
   auto a_sequenced = a.wrap_with(seq);
   auto b_sequenced = b.wrap_with(seq);
   auto c_sequenced = c.wrap_with(seq);
 
-  fit::barrier barrier;
+  fpromise::barrier barrier;
   auto c_tracked = c_sequenced.wrap_with(barrier);
   auto b_tracked = b_sequenced.wrap_with(barrier);
   auto a_tracked = a_sequenced.wrap_with(barrier);
 
-  fit::single_threaded_executor executor;
+  fpromise::single_threaded_executor executor;
   executor.schedule_task(barrier.sync().and_then(std::move(sync_promise)));
   executor.schedule_task(std::move(a_tracked));
   executor.schedule_task(std::move(b_tracked));
@@ -161,28 +161,29 @@ TEST(BarrierTests, wrap_preserves_initial_order) {
 // Observe that promises chained after the "wrap" request do not block the sync.
 TEST(BarrierTests, work_after_wrap_non_blocking) {
   bool work_complete = false;
-  auto work = fit::make_promise([&] { work_complete = true; });
+  auto work = fpromise::make_promise([&] { work_complete = true; });
 
   bool sync_complete = false;
-  auto sync_promise = fit::make_promise([&] {
+  auto sync_promise = fpromise::make_promise([&] {
     assert(work_complete);
     sync_complete = true;
   });
 
-  fit::barrier barrier;
-  auto work_wrapped = barrier.wrap(std::move(work))
-                          .then([&](fit::context& context, fit::result<>&) -> fit::result<> {
-                            // If the full chain of execution after "work" was required to complete
-                            // before sync, then "sync_complete" will remain false forever, and this
-                            // task will never be completed.
-                            if (!sync_complete) {
-                              context.suspend_task().resume_task();
-                              return fit::pending();
-                            }
-                            return fit::ok();
-                          });
+  fpromise::barrier barrier;
+  auto work_wrapped =
+      barrier.wrap(std::move(work))
+          .then([&](fpromise::context& context, fpromise::result<>&) -> fpromise::result<> {
+            // If the full chain of execution after "work" was required to complete
+            // before sync, then "sync_complete" will remain false forever, and this
+            // task will never be completed.
+            if (!sync_complete) {
+              context.suspend_task().resume_task();
+              return fpromise::pending();
+            }
+            return fpromise::ok();
+          });
 
-  fit::single_threaded_executor executor;
+  fpromise::single_threaded_executor executor;
   executor.schedule_task(std::move(work_wrapped));
   executor.schedule_task(barrier.sync().and_then(std::move(sync_promise)));
   executor.run();
@@ -195,26 +196,26 @@ TEST(BarrierTests, work_after_wrap_non_blocking) {
 // skip ahead of previously wrapped work.
 TEST(BarrierTests, multiple_syncs_after_work_are_ordered) {
   bool work_complete = false;
-  auto work = fit::make_promise([&] { work_complete = true; });
+  auto work = fpromise::make_promise([&] { work_complete = true; });
 
   bool syncs_complete[] = {false, false};
-  fit::promise<void, void> sync_promises[] = {
-      fit::make_promise([&] {
+  fpromise::promise<void, void> sync_promises[] = {
+      fpromise::make_promise([&] {
         assert(work_complete);
         assert(!syncs_complete[1]);
         syncs_complete[0] = true;
       }),
-      fit::make_promise([&] {
+      fpromise::make_promise([&] {
         assert(work_complete);
         assert(syncs_complete[0]);
         syncs_complete[1] = true;
       }),
   };
 
-  fit::barrier barrier;
+  fpromise::barrier barrier;
   auto work_wrapped = work.wrap_with(barrier);
 
-  fit::single_threaded_executor executor;
+  fpromise::single_threaded_executor executor;
   executor.schedule_task(barrier.sync().and_then(std::move(sync_promises[0])));
   executor.schedule_task(barrier.sync().and_then(std::move(sync_promises[1])));
   executor.schedule_task(std::move(work_wrapped));
@@ -227,13 +228,13 @@ TEST(BarrierTests, multiple_syncs_after_work_are_ordered) {
 
 // Abandoning promises should still allow sync to complete.
 TEST(BarrierTests, abandoned_promises_are_ordered_by_sync) {
-  auto work = fit::make_promise([&] { assert(false); });
+  auto work = fpromise::make_promise([&] { assert(false); });
 
   bool sync_complete = false;
-  auto sync_promise = fit::make_promise([&] { sync_complete = true; });
+  auto sync_promise = fpromise::make_promise([&] { sync_complete = true; });
 
-  fit::barrier barrier;
-  fit::single_threaded_executor executor;
+  fpromise::barrier barrier;
+  fpromise::single_threaded_executor executor;
   {
     auto work_wrapped = work.wrap_with(barrier);
     executor.schedule_task(barrier.sync().and_then(std::move(sync_promise)));

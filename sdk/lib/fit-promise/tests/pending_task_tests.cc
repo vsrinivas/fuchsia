@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fit/promise.h>
+#include <lib/fpromise/promise.h>
 
 #include <zxtest/zxtest.h>
 
@@ -10,29 +10,29 @@
 
 namespace {
 
-class fake_context : public fit::context {
+class fake_context : public fpromise::context {
  public:
-  fit::executor* executor() const override { ASSERT_CRITICAL(false); }
-  fit::suspended_task suspend_task() override { ASSERT_CRITICAL(false); }
+  fpromise::executor* executor() const override { ASSERT_CRITICAL(false); }
+  fpromise::suspended_task suspend_task() override { ASSERT_CRITICAL(false); }
 };
 
 TEST(PendingTaskTests, empty_task) {
   fake_context context;
 
   {
-    fit::pending_task empty;
+    fpromise::pending_task empty;
     EXPECT_FALSE(empty);
     EXPECT_FALSE(empty.take_promise());
   }
 
   {
-    fit::pending_task empty(fit::promise<>(nullptr));
+    fpromise::pending_task empty(fpromise::promise<>(nullptr));
     EXPECT_FALSE(empty);
     EXPECT_FALSE(empty.take_promise());
   }
 
   {
-    fit::pending_task empty(fit::promise<double, int>(nullptr));
+    fpromise::pending_task empty(fpromise::promise<double, int>(nullptr));
     EXPECT_FALSE(empty);
     EXPECT_FALSE(empty.take_promise());
   }
@@ -43,10 +43,10 @@ TEST(PendingTaskTests, non_empty_task) {
 
   {
     uint64_t run_count = 0;
-    fit::pending_task task(fit::make_promise([&]() -> fit::result<> {
+    fpromise::pending_task task(fpromise::make_promise([&]() -> fpromise::result<> {
       if (++run_count == 3)
-        return fit::ok();
-      return fit::pending();
+        return fpromise::ok();
+      return fpromise::pending();
     }));
     EXPECT_TRUE(task);
 
@@ -66,28 +66,28 @@ TEST(PendingTaskTests, non_empty_task) {
 
   {
     uint64_t run_count = 0;
-    fit::pending_task task(fit::make_promise([&]() -> fit::result<int> {
+    fpromise::pending_task task(fpromise::make_promise([&]() -> fpromise::result<int> {
       if (++run_count == 2)
-        return fit::ok(0);
-      return fit::pending();
+        return fpromise::ok(0);
+      return fpromise::pending();
     }));
     EXPECT_TRUE(task);
 
-    fit::pending_task task_move(std::move(task));
+    fpromise::pending_task task_move(std::move(task));
     EXPECT_TRUE(task_move);
     EXPECT_FALSE(task);
 
-    fit::pending_task task_movemove;
+    fpromise::pending_task task_movemove;
     task_movemove = std::move(task_move);
     EXPECT_TRUE(task_movemove);
     EXPECT_FALSE(task_move);
 
-    fit::promise<> promise = task_movemove.take_promise();
+    fpromise::promise<> promise = task_movemove.take_promise();
     EXPECT_TRUE(promise);
-    EXPECT_EQ(fit::result_state::pending, promise(context).state());
+    EXPECT_EQ(fpromise::result_state::pending, promise(context).state());
     EXPECT_EQ(1, run_count);
 
-    EXPECT_EQ(fit::result_state::ok, promise(context).state());
+    EXPECT_EQ(fpromise::result_state::ok, promise(context).state());
     EXPECT_EQ(2, run_count);
     EXPECT_FALSE(promise);
   }

@@ -4,6 +4,11 @@
 
 import("//build/unification/zx_library.gni")
 
+declare_args() {
+  # Enable backwards compatible fit namespace and include path.
+  fit_promise_compat = true
+}
+
 # TODO(fxbug.dev/57348): populate me. (do-not-include.h is just to keep the SDK
 # machinery - which does not like empty libraries - happy in the meantime.)
 zx_library("fit-promise") {
@@ -15,18 +20,31 @@ zx_library("fit-promise") {
   sdk_migrated = true
 
   sdk_headers = [
-    "lib/fit/barrier.h",
-    "lib/fit/bridge.h",
-    "lib/fit/bridge_internal.h",
-    "lib/fit/in_place_internal.h",
-    "lib/fit/promise.h",
-    "lib/fit/promise_internal.h",
-    "lib/fit/result.h",
-    "lib/fit/scheduler.h",
-    "lib/fit/scope.h",
-    "lib/fit/sequencer.h",
-    "lib/fit/single_threaded_executor.h",
+    "lib/fpromise/barrier.h",
+    "lib/fpromise/bridge.h",
+    "lib/fpromise/bridge_internal.h",
+    "lib/fpromise/in_place_internal.h",
+    "lib/fpromise/promise.h",
+    "lib/fpromise/promise_internal.h",
+    "lib/fpromise/result.h",
+    "lib/fpromise/scheduler.h",
+    "lib/fpromise/scope.h",
+    "lib/fpromise/sequencer.h",
+    "lib/fpromise/single_threaded_executor.h",
   ]
+
+  if (fit_promise_compat) {
+    sdk_headers += [
+      "lib/fit/barrier.h",
+      "lib/fit/bridge.h",
+      "lib/fit/promise.h",
+      "lib/fit/result.h",
+      "lib/fit/scheduler.h",
+      "lib/fit/scope.h",
+      "lib/fit/sequencer.h",
+      "lib/fit/single_threaded_executor.h",
+    ]
+  }
 
   sources = [
     "barrier.cc",

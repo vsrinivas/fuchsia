@@ -6,17 +6,17 @@
 
 // These includes are only needed for simulating the passage of time
 // in a portable manner for the purpose of writing these examples.
-// You do not need to include these headers just to use |fit::promise|
-// or |fit::future|.
+// You do not need to include these headers just to use |fpromise::promise|
+// or |fpromise::future|.
 #include <chrono>
 #include <thread>
 
 namespace utils {
 
-fit::promise<> sleep_for_a_little_while() {
+fpromise::promise<> sleep_for_a_little_while() {
   // This is a rather inefficient way to wait for time to pass but it
   // is sufficient for our examples.
-  return fit::make_promise([waited = false](fit::context& context) mutable {
+  return fpromise::make_promise([waited = false](fpromise::context& context) mutable {
     if (waited)
       return;
     waited = true;
@@ -24,7 +24,7 @@ fit::promise<> sleep_for_a_little_while() {
   });
 }
 
-void resume_in_a_little_while(fit::suspended_task task) {
+void resume_in_a_little_while(fpromise::suspended_task task) {
   std::thread([task]() mutable {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     task.resume_task();
