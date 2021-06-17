@@ -29,6 +29,7 @@ source_set("src") {
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
     "//src/lib/ddktl",
+    "//zircon/system/public",
     "//zircon/system/ulib/fbl",
   ]
 }

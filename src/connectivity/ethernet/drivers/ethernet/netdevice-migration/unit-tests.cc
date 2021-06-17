@@ -9,20 +9,21 @@
 
 namespace {
 
-TEST(NetdeviceMigrationTest, LifetimeTest) {
-  ethernet_testing::EthernetTester tester;
-  auto device = std::make_unique<netdevice_migration::NetdeviceMigration>(fake_ddk::kFakeParent);
-  ASSERT_OK(device->Init());
-  device->DdkAsyncRemove();
-  EXPECT_TRUE(tester.ddk().Ok());
-  device->DdkRelease();
-  auto __UNUSED temp_ref = device.release();
-}
+class NetdeviceMigrationTest : public zxtest::Test {
+ protected:
+  void SetUp() override {
+    device_ = std::make_unique<netdevice_migration::NetdeviceMigration>(fake_ddk::kFakeParent);
+    ASSERT_OK(device_->NetworkDeviceImplInit(&fake_network_device_ifc_protocol_));
+  }
 
-TEST(NetdeviceMigrationTest, NetworkDeviceImplInit) {
-  ethernet_testing::EthernetTester tester;
-  auto device = std::make_unique<netdevice_migration::NetdeviceMigration>(fake_ddk::kFakeParent);
-  network_device_ifc_protocol_ops_t fakeNetworkDeviceIfcOps = {
+  void TearDown() override {
+    device_->DdkRelease();
+    auto __UNUSED temp_ref = device_.release();
+  }
+
+  ethernet_testing::EthernetTester tester_;
+  std::unique_ptr<netdevice_migration::NetdeviceMigration> device_;
+  network_device_ifc_protocol_ops_t fake_network_device_ifc_ops_ = {
       .port_status_changed =
           [](void* ctx, uint8_t id, const port_status_t* new_status) {
             ADD_FAILURE("fake PortStatusChanged() called");
@@ -37,14 +38,48 @@ TEST(NetdeviceMigrationTest, NetworkDeviceImplInit) {
       .snoop = [](void* ctx, const rx_buffer_t* rx_list,
                   size_t rx_count) { ADD_FAILURE("fake Snoop() called"); },
   };
-  network_device_ifc_protocol_t fakeNetworkDeviceIfcProtocol = {
-      .ops = &fakeNetworkDeviceIfcOps,
-      .ctx = nullptr,
+  const network_device_ifc_protocol_t fake_network_device_ifc_protocol_ = {
+      .ops = &fake_network_device_ifc_ops_,
+      .ctx = this,
   };
-  ASSERT_OK(device->NetworkDeviceImplInit(&fakeNetworkDeviceIfcProtocol));
-  ASSERT_STATUS(device->NetworkDeviceImplInit(&fakeNetworkDeviceIfcProtocol), ZX_ERR_ALREADY_BOUND);
-  device->DdkRelease();
-  auto __UNUSED temp_ref = device.release();
+};
+
+TEST_F(NetdeviceMigrationTest, LifetimeTest) {
+  ASSERT_OK(device_->Init());
+  device_->DdkAsyncRemove();
+  EXPECT_TRUE(tester_.ddk().Ok());
 }
 
+TEST_F(NetdeviceMigrationTest, NetworkDeviceImplInit) {
+  ASSERT_STATUS(device_->NetworkDeviceImplInit(&fake_network_device_ifc_protocol_),
+                ZX_ERR_ALREADY_BOUND);
+}
+
+TEST_F(NetdeviceMigrationTest, NetworkDeviceImplStartStop) {
+  auto callback = [](void* ctx) {
+    auto* callback_called = static_cast<bool*>(ctx);
+    *callback_called = true;
+  };
+
+  bool callback_called = false;
+  device_->NetworkDeviceImplStart(callback, &callback_called);
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(tester_.ethmac().StartCalled(), 1);
+  EXPECT_EQ(tester_.ethmac().StopCalled(), 0);
+  EXPECT_TRUE(device_->IsStarted());
+
+  callback_called = false;
+  device_->NetworkDeviceImplStart(callback, &callback_called);
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(tester_.ethmac().StartCalled(), 1);
+  EXPECT_EQ(tester_.ethmac().StopCalled(), 0);
+  EXPECT_TRUE(device_->IsStarted());
+
+  callback_called = false;
+  device_->NetworkDeviceImplStop(callback, &callback_called);
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(tester_.ethmac().StartCalled(), 1);
+  EXPECT_EQ(tester_.ethmac().StopCalled(), 1);
+  EXPECT_FALSE(device_->IsStarted());
+}
 }  // namespace

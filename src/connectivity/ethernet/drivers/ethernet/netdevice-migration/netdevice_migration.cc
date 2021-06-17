@@ -5,8 +5,10 @@
 #include "netdevice_migration.h"
 
 #include <lib/ddk/debug.h>
+#include <zircon/system/public/zircon/assert.h>
 
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 
 #include "src/connectivity/ethernet/drivers/ethernet/netdevice-migration/netdevice_migration_bind.h"
 
@@ -68,10 +70,35 @@ zx_status_t NetdeviceMigration::NetworkDeviceImplInit(const network_device_ifc_p
 }
 
 void NetdeviceMigration::NetworkDeviceImplStart(network_device_impl_start_callback callback,
-                                                void* cookie) {}
+                                                void* cookie) {
+  {
+    fbl::AutoLock lock(&lock_);
+    if (started_) {
+      zxlogf(WARNING, "netdevice-migration: device already started\n");
+      callback(cookie);
+      return;
+    }
+  }
+  zx_status_t status = ethernet_.Start(this, &ethernet_ifc_protocol_ops_);
+  // TODO(https://fxbug.dev/78873): Return error status once NetworkDeviceImplStart is fallible.
+  ZX_ASSERT_MSG(status == ZX_OK, "netdevice-migration: failed to start device: %s\n",
+                zx_status_get_string(status));
+  {
+    fbl::AutoLock lock(&lock_);
+    started_ = true;
+  }
+  callback(cookie);
+}
 
 void NetdeviceMigration::NetworkDeviceImplStop(network_device_impl_stop_callback callback,
-                                               void* cookie) {}
+                                               void* cookie) {
+  ethernet_.Stop();
+  {
+    fbl::AutoLock lock(&lock_);
+    started_ = false;
+  }
+  callback(cookie);
+}
 
 void NetdeviceMigration::NetworkDeviceImplGetInfo(device_info_t* out_info) {}
 
@@ -86,6 +113,11 @@ void NetdeviceMigration::NetworkDeviceImplPrepareVmo(uint8_t id, zx::vmo vmo) {}
 void NetdeviceMigration::NetworkDeviceImplReleaseVmo(uint8_t id) {}
 
 void NetdeviceMigration::NetworkDeviceImplSetSnoop(bool snoop) {}
+
+bool NetdeviceMigration::IsStarted() {
+  fbl::AutoLock lock(&lock_);
+  return started_;
+}
 
 static zx_driver_ops_t netdevice_migration_driver_ops = []() -> zx_driver_ops_t {
   return {

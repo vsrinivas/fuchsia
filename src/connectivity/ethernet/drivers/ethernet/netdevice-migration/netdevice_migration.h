@@ -7,8 +7,10 @@
 
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
+#include <zircon/system/public/zircon/compiler.h>
 
 #include <ddktl/device.h>
+#include <fbl/mutex.h>
 
 namespace netdevice_migration {
 
@@ -47,11 +49,16 @@ class NetdeviceMigration : public DeviceType,
   void NetworkDeviceImplReleaseVmo(uint8_t id);
   void NetworkDeviceImplSetSnoop(bool snoop);
 
+  // Returns true iff the driver is ready to send and receive frames.
+  bool IsStarted() __TA_EXCLUDES(lock_);
+
  private:
   ddk::EthernetImplProtocolClient ethernet_;
   ddk::NetworkDeviceIfcProtocolClient netdevice_;
   ethernet_info_t eth_info_;
   zx::bti eth_bti_;
+  bool started_ __TA_GUARDED(lock_) = false;
+  fbl::Mutex lock_;
 };
 
 }  // namespace netdevice_migration
