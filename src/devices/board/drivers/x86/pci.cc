@@ -412,7 +412,7 @@ zx_status_t pci_root_host_init(acpi::Acpi* acpi) {
 
   zx_status_t st = read_mcfg_table(&RootHost->mcfgs());
   if (st != ZX_OK) {
-    return st;
+    zxlogf(WARNING, "Couldn't read MCFG table, PCI config MMIO will be unavailable: %s", zx_status_get_string(st));
   }
 
   st = scan_acpi_tree_for_resources(acpi, get_root_resource());
@@ -429,7 +429,8 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
                      acpi::Acpi* acpi) {
   zx_status_t status = pci_root_host_init(acpi);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Error initializing PCI root host, attempting to boot regardless: %d", status);
+    zxlogf(ERROR, "Error initializing PCI root host: %s", zx_status_get_string(status));
+    return status;
   }
 
   // Build up a context structure for the PCI Root / Host Bridge we've found.
