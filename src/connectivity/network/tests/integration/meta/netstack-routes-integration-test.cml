@@ -10,10 +10,4 @@
     program: {
         binary: "bin/netstack_routes_integration_test",
     },
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
-        },
-    ],
 }
