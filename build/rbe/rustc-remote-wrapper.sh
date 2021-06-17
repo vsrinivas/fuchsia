@@ -107,6 +107,24 @@ link_sysroot=()
 # input files referenced in environment variables
 envvar_files=()
 
+debug_var() {
+  # With --verbose, prints variable values to stdout.
+  # $1 is name of variable to display.
+  # The rest are array values.
+  test "$verbose" = 0 || {
+    if test "$#" -le 2
+    then
+      echo "$1: $2"
+    else
+      echo "$1:"
+      shift
+      for f in "$@"
+      do echo "  $f"
+      done
+    fi
+  }
+}
+
 # Examine the rustc compile command
 prev_opt=
 for opt in "${rustc_command[@]}"
@@ -164,20 +182,30 @@ do
       ;;
 
     # Detect custom linker, preserve symlinks
-    -Clinker=*) linker=("$(realpath -s --relative-to="$project_root" "$optarg")") ;;
+    -Clinker=*)
+        linker=("$(realpath -s --relative-to="$project_root" "$optarg")")
+        debug_var "[from -Clinker]" "${linker[@]}"
+        ;;
+
+    # sysroot is a directory with system libraries
+    -Clink-arg=--sysroot=*)
+        sysroot="$(expr "X$optarg" : '[^=]*=\(.*\)')"
+        sysroot_relative="$(realpath --relative-to="$project_root" "$sysroot")"
+        debug_var "[from -Clink-arg=--sysroot]" "$sysroot_relative"
+        link_sysroot=("$sysroot_relative")
+        ;;
 
     # Link arguments that reference .o or .a files need to be uploaded.
     -Clink-arg=*.o | -Clink-arg=*.a | -Clink-arg=*.so | -Clink-arg=*.so.debug)
-        link_arg_files+=("$(realpath --relative-to="$project_root" "$optarg")")
-        ;;
-
-    -Clink-arg=--sysroot=*)
-        sysroot="$(expr "X$optarg" : '[^=]*=\(.*\)')"
-        link_sysroot=("$(realpath --relative-to="$project_root" "$sysroot")")
+        link_arg="$(realpath --relative-to="$project_root" "$optarg")"
+        debug_var "[from -Clink-arg]" "$link_arg"
+        link_arg_files+=("$link_arg")
         ;;
 
     -Lnative=* )
-        link_arg_files+=("$(realpath --relative-to="$project_root" "$optarg")")
+        link_arg="$(realpath --relative-to="$project_root" "$optarg")"
+        debug_var "[from -Lnative]" "$link_arg"
+        link_arg_files+=("$link_arg")
         ;;
 
     --*=* ) ;;  # forward
@@ -215,7 +243,6 @@ test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; e
 
 # Specify the rustc binary to be uploaded.
 rustc_relative="$(realpath --relative-to="$project_root" "$rustc")"
-test "$verbose" = 0 || echo "rustc binary: $rustc_relative"
 
 # TODO(fangism): if possible, determine these shlibs statically to avoid `ldd`-ing.
 # TODO(fangism): for host-independence, use llvm-otool and `llvm-readelf -d`,
@@ -231,12 +258,6 @@ function nonsystem_shlibs() {
 # Exclude system libraries in /usr/lib and /lib.
 # convert to paths relative to $project_root for rewrapper.
 mapfile -t rustc_shlibs < <(nonsystem_shlibs "$rustc")
-test "$verbose" = 0 || {
-  echo "rustc shlibs:"
-  for f in "${rustc_shlibs[@]}"
-  do echo "  $f"
-  done
-}
 
 # At this time, the linker we pass is known to be statically linked itself
 # and doesn't need to be accompanied by any shlibs.
@@ -245,43 +266,15 @@ test "$verbose" = 0 || {
 # This source file is likely to appear as the first input in the depfile.
 test -n "$top_source" || top_source="$first_source"
 top_source="$(realpath --relative-to="$project_root" "$top_source")"
-test "$verbose" = 0 || echo "source root: $top_source"
-
-test "$verbose" = 0 || test "${#linker[@]}" = 0 || echo "linker: ${linker[@]}"
-
-test "$verbose" = 0 || test "${#link_arg_files[@]}" = 0 || {
-  echo "link args:"
-  for f in "${link_arg_files[@]}"
-  do echo "  $f"
-  done
-}
-
-test "$verbose" = 0 || test "${#link_sysroot[@]}" = 0 || echo "link sysroot: ${link_sysroot[@]}"
-
-test "$verbose" = 0 || test "${#envvar_files[@]}" = 0 || {
-  echo "env var files:"
-  for f in "${envvar_files[@]}"
-  do echo "  $f"
-  done
-}
-
-test "$verbose" = 0 || echo "depfile: $depfile"
 
 # Locally generate a depfile only and read it as list of files to upload.
 # These inputs appear relative to the build/output directory, but need to be
 # relative to the $project_root for rewrapper.
-test "$verbose" = 0 || echo "[$script: dep-info]" "${dep_only_command[@]}"
 "${dep_only_command[@]}"
 mapfile -t depfile_inputs < <(grep ':$' "$depfile.nolink" | cut -d: -f1 | \
   xargs -n 1 realpath --relative-to="$project_root")
 # Done with temporary depfile, remove it.
 rm -f "$depfile.nolink"
-test "$verbose" = 0 || {
-  echo "depfile inputs: "
-  for f in "${depfile_inputs[@]}"
-  do echo "  $f"
-  done
-}
 
 # Inputs to upload include (all relative to $project_root):
 #   * rust tool(s) [$rustc_relative]
@@ -300,8 +293,7 @@ test "$verbose" = 0 || {
 # This is expected to cover the custom linker referenced by -Clinker=.
 tools_dir=()
 test "${#linker[@]}" = 0 || {
-  tools_dir="$(dirname "$(dirname "${linker[0]}")")"
-  test "$verbose" = 0 || echo "tools_dir: $tools_dir"
+  tools_dir=("$(dirname "$(dirname "${linker[0]}")")")
 }
 
 remote_inputs=(
@@ -322,12 +314,23 @@ test -z "$depfile" || outputs+=("$(realpath --relative-to="$project_root" "$depf
 # Removing outputs these avoids any unintended reuse of them.
 rm -f "${outputs[@]}"
 outputs_joined="$(IFS=, ; echo "${outputs[*]}")"
-test "$verbose" = 0 || {
-  echo "outputs:"
-  for f in "${outputs[@]}"
-  do echo "  $f"
-  done
+
+dump_vars() {
+  debug_var "outputs" "${outputs[@]}"
+  debug_var "rustc binary" "$rustc_relative"
+  debug_var "rustc shlibs" "${rustc_shlibs[@]}"
+  debug_var "source root" "$top_source"
+  debug_var "linker" "${linker[@]}"
+  debug_var "link args" "${link_arg_files[@]}"
+  debug_var "link sysroot" "${link_sysroot[@]}"
+  debug_var "env var files" "${envvar_files[@]}"
+  debug_var "depfile" "$depfile"
+  debug_var "[$script: dep-info]" "${dep_only_command[@]}"
+  debug_var "depfile inputs" "${depfile_inputs[@]}"
+  debug_var "tools dir" "${tools_dir[@]}"
 }
+
+dump_vars
 
 # Assemble the remote execution command.
 # During development, if you need to test a pre-release at top-of-tree,
@@ -341,10 +344,37 @@ remote_rustc_command=("$script_dir"/fuchsia-rbe-action.sh \
   --output_files="$outputs_joined" -- \
   "${rustc_command[@]}")
 
+# Execute the remote command.
 if test "$dry_run" = 1
 then
   echo "[$script: skipped]:" "${remote_rustc_command[@]}"
+  dump_vars
 else
-  test "$verbose" = 0 || echo "[$script: remote]" "${remote_rustc_command[@]}"
-  exec "${remote_rustc_command[@]}"
+  # Execute the rust command remotely.
+  debug_var "[$script: remote]" "${remote_rustc_command[@]}"
+  "${remote_rustc_command[@]}"
+  status="$?"
+  test "$status" = 0 || {
+    # On any failure, dump debug info, even if it is not related to RBE.
+    verbose=1
+    cat <<EOF
+======== Remote Rust build action FAILED ========
+This could either be a failure with the original command, or something
+wrong with the remote version of the command.
+Try the command locally first, without RBE, and make sure that works.
+Once it passes locally, re-enable RBE.
+If the remote version still fails, file a bug, and CC the Fuchsia Build Team
+with the following info below:
+
+EOF
+    # Identify which target failed by its command, useful in parallel build.
+    debug_var "[$script: FAIL]" "${remote_rustc_command[@]}"
+    dump_vars
+
+    echo
+    reproxy_errors=/tmp/reproxy.ERROR
+    echo "The last lines of $reproxy_errors might explain a remote failure:"
+    if test -r "$reproxy_errors" ; then tail "$reproxy_errors" ; fi
+  }
+  exit "$status"
 fi
