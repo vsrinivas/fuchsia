@@ -1353,3 +1353,16 @@
   reviewers: ['ampearce@google.com', 'shayba@google.com', 'surajmalhotra@google.com', 'geb@google.com', 'jamesr@google.com']
   submitted: '2021-05-20'
   reviewed: '2021-06-14'
+
+- name: 'RFC-0105'
+  title: 'Regular expression libraries'
+  short_description: 'Restrict the set of regular expression libraries that may be used in Fuchsia.'
+  authors: ['tombergan@google.com']
+  file: '0105_regular_expression_libraries.md'
+  area: ['General']
+  issue: ['77811']
+  gerrit_change_id: ['521301']
+  status: 'Accepted'
+  reviewers: ['cpu@google.com', 'shayba@google.com', 'phosek@google.com', 'vbelliard@google.com', 'brettw@google.com', 'maruel@google.com', 'pascallouis@google.com']
+  submitted: '2021-04-26'
+  reviewed: '2021-06-16'

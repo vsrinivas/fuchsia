@@ -221,3 +221,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0103_software_delivery_rfc_criteria.md
 - title: "RFC-0104: Relative URLs"
   path: /docs/contribute/governance/rfcs/0104_relative_urls.md
+- title: "RFC-0105: Regular expression libraries"
+  path: /docs/contribute/governance/rfcs/0105_regular_expression_libraries.md
