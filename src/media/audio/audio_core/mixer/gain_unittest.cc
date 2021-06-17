@@ -1078,6 +1078,58 @@ TEST(GainLimitsTest, PreserveSourceMute) {
   EXPECT_FLOAT_EQ(gain.GetGainScale(), Gain::kMuteScale);
 }
 
+// A gain-limit range that includes unity gain should allow this, whether by default ctor or by
+// combination of source and dest gain values that may individually exceed gain limits.
+TEST(GainLimitsTest, PreserveIsUnity) {
+  Gain gain({
+      .min_gain_db = -4.0f,
+      .max_gain_db = 1.0f,
+  });
+
+  EXPECT_FLOAT_EQ(gain.GetGainScale(), Gain::kUnityScale);
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), Gain::kUnityGainDb);
+  EXPECT_TRUE(gain.IsUnity());
+
+  // source below the limit, dest above the limit
+  gain.SetSourceGain(-6.0f);
+  gain.SetDestGain(6.0f);
+
+  EXPECT_FLOAT_EQ(gain.GetGainScale(), Gain::kUnityScale);
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), Gain::kUnityGainDb);
+  EXPECT_TRUE(gain.IsUnity());
+
+  // source above the limit, dest below the limit
+  gain.SetSourceGain(12.0f);
+  gain.SetDestGain(-12.0f);
+
+  EXPECT_FLOAT_EQ(gain.GetGainScale(), Gain::kUnityScale);
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), Gain::kUnityGainDb);
+  EXPECT_TRUE(gain.IsUnity());
+}
+
+// A gain-limit range that excludes unity gain should never return kUnityGainDb or kUnityScale,
+// whether by default ctor or combination of source and dest values.
+TEST(GainLimitsTest, PreventIsUnity) {
+  Gain gain({
+      .max_gain_db = -5.0f,
+  });
+
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), -5.0f);
+  EXPECT_FALSE(gain.IsUnity());
+
+  gain.SetSourceGain(Gain::kUnityGainDb);
+  gain.SetDestGain(Gain::kUnityGainDb);
+
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), -5.0f);
+  EXPECT_FALSE(gain.IsUnity());
+
+  gain.SetSourceGain(Gain::kUnityGainDb + 1.0f);
+  gain.SetDestGain(Gain::kUnityGainDb - 1.0f);
+
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), -5.0f);
+  EXPECT_FALSE(gain.IsUnity());
+}
+
 TEST(GainLimitsTest, SourceRampUp) {
   Gain::AScale scale_arr[6];
   // Without limits, this is:  {0.1, 0.28, 0.46, 0.64, 0.82, 1.0};
