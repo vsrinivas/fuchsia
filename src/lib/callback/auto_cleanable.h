@@ -11,6 +11,7 @@
 
 #include <functional>
 #include <map>
+#include <type_traits>
 #include <unordered_set>
 #include <utility>
 
@@ -37,8 +38,15 @@ class AutoCleanableSet {
   };
 
   using Set_ = typename std::unordered_set<V, ReferenceHash, ReferenceEquality>;
-  class iterator : public std::iterator<std::forward_iterator_tag, V> {
+  class iterator {
    public:
+    // iterator traits.
+    using difference_type = ptrdiff_t;
+    using value_type = V;
+    using pointer = V*;
+    using reference = V&;
+    using iterator_category = std::forward_iterator_tag;
+
     explicit iterator(typename Set_::iterator base) : base_(base) {}
 
     iterator& operator++() {
@@ -63,6 +71,7 @@ class AutoCleanableSet {
    private:
     typename Set_::iterator base_;
   };
+  static_assert(!std::is_void_v<typename std::iterator_traits<iterator>::value_type>);
 
   AutoCleanableSet(async_dispatcher_t* dispatcher) : task_runner_(dispatcher) {}
   AutoCleanableSet(const AutoCleanableSet<V>& other) = delete;

@@ -9,6 +9,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <string>
+#include <type_traits>
 
 namespace files {
 
@@ -27,8 +28,15 @@ class Glob {
   };
 
   // Iterator over globbed files.
-  class iterator : public std::iterator<std::input_iterator_tag, const char*, ptrdiff_t> {
+  class iterator {
    public:
+    // iterator traits.
+    using difference_type = ptrdiff_t;
+    using value_type = const char*;
+    using pointer = const char**;
+    using reference = const char*&;
+    using iterator_category = std::input_iterator_tag;
+
     iterator(const Glob* glob, size_t offset = 0) : glob_(glob), offset_(offset) {}
 
     operator bool() const { return offset_ < glob_->glob_buf_.gl_pathc; }
@@ -49,6 +57,7 @@ class Glob {
     const Glob* glob_;
     size_t offset_;
   };
+  static_assert(!std::is_void_v<std::iterator_traits<iterator>::value_type>);
 
   // Construct a new glob for a given path.
   Glob(const std::string& path, const Options& options = {});
