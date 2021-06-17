@@ -15,14 +15,17 @@ dart_library("lib") {
   ]
   deps = [
     "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_webview_flutter",
+    "//src/experiences/lib/ermine_localhost:ermine_localhost",
     "//src/experiences/session_shells/ermine/internationalization",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/webview_flutter",
   ]
 }
 
 resource("license-text") {
-  sources = [ "assets/license.json" ]
-  outputs = [ "data/license.json" ]
+  sources = [ "assets/license.html" ]
+  outputs = [ "data/license.html" ]
 }
 
 flutter_component("component") {

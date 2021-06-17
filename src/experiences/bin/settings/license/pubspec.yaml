@@ -5,4 +5,4 @@
 name: license_settings
 flutter:
   assets:
-    - assets/license.json
+    - assets/license.html
