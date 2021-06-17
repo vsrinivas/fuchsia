@@ -188,8 +188,7 @@ async fn main() {
     // As mentioned above, this uses the import token corresponding to the export token that was
     // used to register the BufferCollectionToken with the Scenic Allocator.
     let image_props = fland::ImageProperties {
-        width: Some(IMAGE_WIDTH),
-        height: Some(IMAGE_HEIGHT),
+        size: Some(fmath::SizeU { width: IMAGE_WIDTH, height: IMAGE_HEIGHT }),
         ..fland::ImageProperties::EMPTY
     };
     // TODO(fxbug.dev/76640): generated FIDL methods currently expect "&mut" args.  fxbug.dev/65845

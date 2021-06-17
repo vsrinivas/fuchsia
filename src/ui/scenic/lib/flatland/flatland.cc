@@ -599,13 +599,19 @@ void Flatland::CreateImage(ContentId image_id,
     return;
   }
 
-  if (!properties.has_width()) {
+  if (!properties.has_size()) {
+    error_reporter_->ERROR() << "CreateImage failed, ImageProperties did not specify size";
+    ReportBadOperationError();
+    return;
+  }
+
+  if (!properties.size().width) {
     error_reporter_->ERROR() << "CreateImage failed, ImageProperties did not specify a width";
     ReportBadOperationError();
     return;
   }
 
-  if (!properties.has_height()) {
+  if (!properties.size().height) {
     error_reporter_->ERROR() << "CreateImage failed, ImageProperties did not specify a height";
     ReportBadOperationError();
     return;
@@ -615,8 +621,8 @@ void Flatland::CreateImage(ContentId image_id,
   metadata.identifier = allocation::GenerateUniqueImageId();
   metadata.collection_id = global_collection_id;
   metadata.vmo_index = vmo_index;
-  metadata.width = properties.width();
-  metadata.height = properties.height();
+  metadata.width = properties.size().width;
+  metadata.height = properties.size().height;
   metadata.is_opaque = false;
 
   for (uint32_t i = 0; i < buffer_collection_importers_.size(); i++) {

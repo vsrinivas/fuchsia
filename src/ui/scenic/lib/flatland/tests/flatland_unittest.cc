@@ -480,8 +480,9 @@ class FlatlandTest : public gtest::TestLoopFixture {
     REGISTER_BUFFER_COLLECTION(allocator, buffer_collection_import_export_tokens.export_token,
                                CreateToken(), true);
 
-    FX_DCHECK(properties.has_width());
-    FX_DCHECK(properties.has_height());
+    FX_DCHECK(properties.has_size());
+    FX_DCHECK(properties.size().width);
+    FX_DCHECK(properties.size().height);
 
     allocation::GlobalImageId global_image_id;
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
@@ -2591,8 +2592,7 @@ TEST_F(FlatlandTest, ReleaseLinkErrorCases) {
     BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
 
     ImageProperties properties;
-    properties.set_width(100);
-    properties.set_height(200);
+    properties.set_size({100, 200});
 
     CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
                 std::move(properties));
@@ -2941,11 +2941,8 @@ TEST_F(FlatlandTest, CreateImageValidCase) {
   // Setup a valid image.
   const ContentId kImageId = {1};
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
-  const uint32_t kWidth = 100;
-  const uint32_t kHeight = 200;
   ImageProperties properties;
-  properties.set_width(kWidth);
-  properties.set_height(kHeight);
+  properties.set_size({100, 200});
 
   CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
               std::move(properties));
@@ -3024,8 +3021,7 @@ TEST_F(FlatlandTest, SetOpacityTestCases) {
     const ContentId kImageId = {5};
     BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
     ImageProperties properties;
-    properties.set_width(150);
-    properties.set_height(175);
+    properties.set_size({150, 175});
     std::shared_ptr<Allocator> allocator = CreateAllocator();
     CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
                 std::move(properties));
@@ -3091,14 +3087,41 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     PRESENT(flatland, false);
   }
 
+  // Size must be set.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->CreateImage({1}, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
+                          ImageProperties());
+    PRESENT(flatland, false);
+  }
+
+  // Width cannot be 0.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    ImageProperties properties;
+    properties.set_size({0, 1});
+    flatland->CreateImage({1}, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
+                          std::move(properties));
+    PRESENT(flatland, false);
+  }
+
+  // Height cannot be 0.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    ImageProperties properties;
+    properties.set_size({1, 0});
+    flatland->CreateImage({1}, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
+                          std::move(properties));
+    PRESENT(flatland, false);
+  }
+
   // Check to make sure that if the BufferCollectionImporter returns false, then the call
   // to Flatland::CreateImage() also returns false.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
     const ContentId kId = {100};
     ImageProperties properties;
-    properties.set_width(kDefaultWidth);
-    properties.set_height(kDefaultHeight);
+    properties.set_size({kDefaultWidth, kDefaultHeight});
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(false));
     flatland->CreateImage(kId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
                           std::move(properties));
@@ -3111,8 +3134,7 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
     {
       ImageProperties properties;
-      properties.set_width(kDefaultWidth);
-      properties.set_height(kDefaultHeight);
+      properties.set_size({kDefaultWidth, kDefaultHeight});
 
       // This is the first call in these series of test components that makes it down to
       // the BufferCollectionImporter. We have to make sure it returns true here so that
@@ -3126,8 +3148,7 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
 
     {
       ImageProperties properties;
-      properties.set_width(kDefaultWidth);
-      properties.set_height(kDefaultHeight);
+      properties.set_size({kDefaultWidth, kDefaultHeight});
 
       // We shouldn't even make it to the BufferCollectionImporter here due to the duplicate
       // ID causing CreateImage() to return early.
@@ -3154,8 +3175,7 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     PRESENT(flatland, true);
 
     ImageProperties image_properties;
-    image_properties.set_width(kDefaultWidth);
-    image_properties.set_height(kDefaultHeight);
+    image_properties.set_size({kDefaultWidth, kDefaultHeight});
 
     flatland->CreateImage(kLinkId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
                           std::move(image_properties));
@@ -3177,8 +3197,7 @@ TEST_F(FlatlandTest, CreateImageWithDuplicatedImportTokens) {
 
   for (uint64_t i = 0; i < kNumImages; ++i) {
     ImageProperties properties;
-    properties.set_width(150);
-    properties.set_height(175);
+    properties.set_size({150, 175});
     flatland->CreateImage(/*image_id*/ {i + 1}, ref_pair.DuplicateImportToken(), /*vmo_idx*/ i,
                           std::move(properties));
     PRESENT(flatland, true);
@@ -3197,16 +3216,14 @@ TEST_F(FlatlandTest, CreateImageInMultipleFlatlands) {
   {
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
     ImageProperties properties;
-    properties.set_width(150);
-    properties.set_height(175);
+    properties.set_size({150, 175});
     flatland1->CreateImage({1}, ref_pair.DuplicateImportToken(), 0, std::move(properties));
     PRESENT(flatland1, true);
   }
   {
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
     ImageProperties properties;
-    properties.set_width(150);
-    properties.set_height(175);
+    properties.set_size({150, 175});
     flatland2->CreateImage({1}, ref_pair.DuplicateImportToken(), 0, std::move(properties));
     PRESENT(flatland2, true);
   }
@@ -3230,8 +3247,7 @@ TEST_F(FlatlandTest, SetContentErrorCases) {
   const uint32_t kHeight = 200;
 
   ImageProperties properties;
-  properties.set_width(kWidth);
-  properties.set_height(kHeight);
+  properties.set_size({kWidth, kHeight});
 
   CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
               std::move(properties));
@@ -3273,8 +3289,7 @@ TEST_F(FlatlandTest, ClearContentOnTransform) {
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
 
   ImageProperties properties;
-  properties.set_width(100);
-  properties.set_height(200);
+  properties.set_size({100, 200});
 
   auto import_token_dup = ref_pair.DuplicateImportToken();
   auto global_collection_id = CreateImage(flatland.get(), allocator.get(), kImageId,
@@ -3321,8 +3336,7 @@ TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
   BufferCollectionImportExportTokens ref_pair_1 = BufferCollectionImportExportTokens::New();
 
   ImageProperties properties1;
-  properties1.set_width(100);
-  properties1.set_height(200);
+  properties1.set_size({100, 200});
 
   CreateImage(flatland.get(), allocator.get(), kImageId1, std::move(ref_pair_1),
               std::move(properties1));
@@ -3335,8 +3349,7 @@ TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
   BufferCollectionImportExportTokens ref_pair_2 = BufferCollectionImportExportTokens::New();
 
   ImageProperties properties2;
-  properties2.set_width(300);
-  properties2.set_height(400);
+  properties2.set_size({300, 400});
 
   CreateImage(flatland.get(), allocator.get(), kImageId2, std::move(ref_pair_2),
               std::move(properties2));
@@ -3409,8 +3422,7 @@ TEST_F(FlatlandTest, ReleaseBufferCollectionHappensAfterCreateImage) {
 
   const ContentId kImageId = {1};
   ImageProperties properties;
-  properties.set_width(100);
-  properties.set_height(200);
+  properties.set_size({100, 200});
 
   // Send our only import token to CreateImage(). Buffer collection should be released only after
   // Image creation.
@@ -3432,8 +3444,7 @@ TEST_F(FlatlandTest, ReleaseBufferCollectionCompletesAfterFlatlandDestruction) {
     const ContentId kImageId = {3};
     BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
     ImageProperties properties;
-    properties.set_width(200);
-    properties.set_height(200);
+    properties.set_size({200, 200});
     auto import_token_dup = ref_pair.DuplicateImportToken();
     auto global_id_pair = CreateImage(flatland.get(), allocator.get(), kImageId,
                                       std::move(ref_pair), std::move(properties));
@@ -3483,8 +3494,7 @@ TEST_F(FlatlandTest, ReleaseImageWaitsForReleaseFence) {
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
 
   ImageProperties properties;
-  properties.set_width(100);
-  properties.set_height(200);
+  properties.set_size({100, 200});
 
   auto import_token_dup = ref_pair.DuplicateImportToken();
   const auto global_id_pair = CreateImage(flatland.get(), allocator.get(), kImageId,
@@ -3594,8 +3604,7 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
   REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
 
   ImageProperties properties;
-  properties.set_width(100);
-  properties.set_height(200);
+  properties.set_size({100, 200});
 
   // We have the first importer return true, signifying a successful import, and the second one
   // returning false. This should trigger the first importer to call ReleaseBufferImage().
@@ -3616,16 +3625,15 @@ TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
   REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
 
   // Create a proper properties struct.
-  ImageProperties properties;
-  properties.set_width(150);
-  properties.set_height(175);
+  ImageProperties properties1;
+  properties1.set_size({150, 175});
 
   EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
 
   // We've imported a proper image and we have the importer returning true, so
   // PRESENT should return true.
   flatland->CreateImage(/*image_id*/ {1}, ref_pair.DuplicateImportToken(), /*vmo_idx*/ 0,
-                        std::move(properties));
+                        std::move(properties1));
   PRESENT(flatland, true);
 
   // We're using the same buffer collection so we don't need to validate, only import.
@@ -3633,10 +3641,10 @@ TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
 
   // Import again, but this time have the importer return false. Flatland should catch
   // this and PRESENT should return false.
-  properties.set_width(150);
-  properties.set_height(175);
+  ImageProperties properties2;
+  properties2.set_size({150, 175});
   flatland->CreateImage(/*image_id*/ {2}, ref_pair.DuplicateImportToken(), /*vmo_idx*/ 0,
-                        std::move(properties));
+                        std::move(properties2));
   PRESENT(flatland, false);
 }
 
@@ -3651,8 +3659,7 @@ TEST_F(FlatlandTest, BufferImporterImageReleaseTest) {
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
 
   ImageProperties properties1;
-  properties1.set_width(100);
-  properties1.set_height(200);
+  properties1.set_size({100, 200});
 
   const allocation::GlobalBufferCollectionId global_collection_id1 =
       CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
@@ -3692,8 +3699,7 @@ TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
 
   ImageProperties properties1;
-  properties1.set_width(100);
-  properties1.set_height(200);
+  properties1.set_size({100, 200});
 
   const allocation::GlobalBufferCollectionId global_collection_id =
       CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
@@ -3754,8 +3760,7 @@ TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
   BufferCollectionImportExportTokens ref_pair_1 = BufferCollectionImportExportTokens::New();
 
   ImageProperties properties1;
-  properties1.set_width(100);
-  properties1.set_height(200);
+  properties1.set_size({100, 200});
 
   const allocation::GlobalBufferCollectionId global_collection_id1 =
       CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair_1),
@@ -3779,8 +3784,7 @@ TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
   // transform so that both images show up in the global image vector.
   BufferCollectionImportExportTokens ref_pair_2 = BufferCollectionImportExportTokens::New();
   ImageProperties properties2;
-  properties2.set_width(300);
-  properties2.set_height(400);
+  properties2.set_size({300, 400});
 
   const allocation::GlobalBufferCollectionId global_collection_id2 =
       CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair_2),
@@ -3821,8 +3825,7 @@ TEST_F(FlatlandTest, ReleasedImagePersistsOutsideGlobalTopology) {
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
 
   ImageProperties properties1;
-  properties1.set_width(100);
-  properties1.set_height(200);
+  properties1.set_size({100, 200});
 
   const allocation::GlobalBufferCollectionId global_collection_id1 =
       CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
@@ -3873,8 +3876,7 @@ TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
   BufferCollectionImportExportTokens ref_pair_1 = BufferCollectionImportExportTokens::New();
 
   ImageProperties properties1;
-  properties1.set_width(100);
-  properties1.set_height(200);
+  properties1.set_size({100, 200});
 
   auto import_token_dup = ref_pair_1.DuplicateImportToken();
   const allocation::GlobalBufferCollectionId global_collection_id1 =
@@ -3902,8 +3904,7 @@ TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
   // The Image ID should be available for re-use.
   BufferCollectionImportExportTokens ref_pair_2 = BufferCollectionImportExportTokens::New();
   ImageProperties properties2;
-  properties2.set_width(400);
-  properties2.set_height(800);
+  properties2.set_size({400, 800});
 
   const allocation::GlobalBufferCollectionId global_collection_id2 =
       CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair_2),

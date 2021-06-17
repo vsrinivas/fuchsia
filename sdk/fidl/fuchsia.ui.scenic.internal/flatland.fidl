@@ -130,10 +130,8 @@ table LinkProperties {
 /// The properties of an Image as defined by the client. These properties determine how an Image
 /// uses the backing BufferCollection. See CreateImage() for more information.
 table ImageProperties {
-    /// The width of the Image in pixels.
-    1: uint32 width;
-    /// The height of the Image in pixels.
-    2: uint32 height;
+    /// The size of the Image in pixels.
+    1: fuchsia.math.SizeU size;
 };
 
 /// A user-defined identifier for a particular transform. See CreateTransform() and
@@ -423,7 +421,7 @@ protocol Flatland {
     ///
     /// The Image must reference a valid VMO index and must have ImageProperties that fall within
     /// the constraints specified by the backing BufferCollection (i.e. width and height within a
-    /// valid range, accepted pixel format, etc.)
+    /// valid range, etc.)
     ///
     /// Zero is not a valid Image id. All other values are valid, assuming they are not already in
     /// use for another piece of Content (see ReleaseImage() for more details).
