@@ -5,6 +5,7 @@
 group("lib") {
   testonly = true
   deps = [
+    "cobalt_logger",
     "fake_camera",
     "fake_legacy_stream",
     "fake_logical_buffer_collection",

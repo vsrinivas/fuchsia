@@ -3,10 +3,10 @@
 
 #include "src/camera/bin/device/metrics_reporter.h"
 
+#include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 
 namespace camera {
-
 namespace {
 
 std::mutex factory_mutex;
@@ -103,6 +103,37 @@ std::string ConvertResolutionToString(size_t width, size_t height, size_t bpr) {
   return output;
 }
 
+cobalt::StreamType GetStreamType(uint32_t config_index, uint32_t stream_index) {
+  switch (config_index) {
+    case 0:
+      switch (stream_index) {
+        case 0:
+          return cobalt::StreamType::kStream0;
+        case 1:
+          return cobalt::StreamType::kStream1;
+        case 2:
+          return cobalt::StreamType::kStream2;
+        default:
+          return cobalt::StreamType::kStreamUnknown;
+      }
+      break;
+
+    case 1:
+      switch (stream_index) {
+        case 0:
+          return cobalt::StreamType::kStream3;
+        case 1:
+          return cobalt::StreamType::kStream4;
+        default:
+          return cobalt::StreamType::kStreamUnknown;
+      }
+      break;
+
+    default:
+      return cobalt::StreamType::kStreamUnknown;
+  }
+}
+
 }  // anonymous namespace
 
 // MetricsReporter implementation
@@ -120,22 +151,24 @@ MetricsReporter& MetricsReporter::Get() {
   }
 }
 
-void MetricsReporter::Initialize(sys::ComponentContext& context) {
+void MetricsReporter::Initialize(sys::ComponentContext& context, bool enable_cobalt) {
   std::lock_guard<std::mutex> lock(factory_mutex);
   if (metrics_reporter) {
     FX_LOGS(DEBUG) << "MetricsReporter is initialized already.";
     return;
   }
 
-  metrics_reporter = new MetricsReporter(context);
-  FX_LOGS(INFO) << "MetricsReporter is initialized.";
+  metrics_reporter = new MetricsReporter(context, enable_cobalt);
+  FX_LOGS(INFO) << "MetricsReporter is initialized, enable_cobalt = " << enable_cobalt;
 }
 
-MetricsReporter::MetricsReporter(sys::ComponentContext& context)
+MetricsReporter::MetricsReporter(sys::ComponentContext& context, bool enable_cobalt)
     : impl_(std::make_unique<Impl>(context)) {
-  std::lock_guard<std::mutex> lock(mutex_);
   InitInspector();
-  // TODO(fxbug.dev/75535): Initializes the Cobalt logger.
+  if (enable_cobalt) {
+    impl_->logger_ =
+        std::make_unique<cobalt::Logger>(async_get_default_dispatcher(), impl_->context_.svc());
+  }
 }
 
 void MetricsReporter::InitInspector() {
@@ -146,8 +179,6 @@ void MetricsReporter::InitInspector() {
 
 MetricsReporter::Impl::Impl(sys::ComponentContext& context) : context_(context) {}
 
-MetricsReporter::Impl::~Impl() {}
-
 MetricsReporter::ConfigurationRecord::ConfigurationRecord(MetricsReporter::Impl& impl,
                                                           uint32_t index, size_t num_streams)
     : node_(impl.node_.CreateChild(std::to_string(index))),
@@ -155,25 +186,27 @@ MetricsReporter::ConfigurationRecord::ConfigurationRecord(MetricsReporter::Impl&
       stream_node_(node_.CreateChild(kStreamInspectorNodeName)) {
   // Creates the number of the stream records.
   for (size_t i = 0; i < num_streams; ++i) {
-    stream_records_.emplace_back(impl, stream_node_, i);
+    stream_records_.emplace_back(impl, stream_node_, index, i);
   }
 }
 
-std::unique_ptr<MetricsReporter::ConfigurationRecord>
-MetricsReporter::CreateConfigurationRecord(uint32_t index, size_t num_streams) {
+std::unique_ptr<MetricsReporter::ConfigurationRecord> MetricsReporter::CreateConfigurationRecord(
+    uint32_t index, size_t num_streams) {
   std::lock_guard<std::mutex> lock(mutex_);
   return std::make_unique<ConfigurationRecord>(*impl_, index, num_streams);
 }
 
 MetricsReporter::StreamRecord::StreamRecord(MetricsReporter::Impl& impl, inspect::Node& parent,
-                                            uint32_t stream_index)
-    : node_(parent.CreateChild(std::to_string(stream_index))),
+                                            uint32_t config_index, uint32_t stream_index)
+    : impl_(impl),
+      node_(parent.CreateChild(std::to_string(stream_index))),
       frame_rate_(node_.CreateString(kStreamInspectorFrameratePropertyName, "")),
       supports_crop_region_(node_.CreateBool(kStreamInspectorCropPropertyName, false)),
       supported_resolutions_node_(node_.CreateChild(kStreamInspectorResolutionNodeName)),
       format_record_(node_),
       frames_received_(node_.CreateUint(kStreamInspectorFramesReceivedPropertyName, 0)),
-      frames_dropped_(node_.CreateUint(kStreamInspectorFramesDroppedPropertyName, 0)) {}
+      frames_dropped_(node_.CreateUint(kStreamInspectorFramesDroppedPropertyName, 0)),
+      type_(GetStreamType(config_index, stream_index)) {}
 
 void MetricsReporter::StreamRecord::SetProperties(
     const fuchsia::camera3::StreamProperties2& props) {
@@ -191,10 +224,15 @@ void MetricsReporter::StreamRecord::SetProperties(
 
 void MetricsReporter::StreamRecord::FrameReceived() { frames_received_.Add(1); }
 
-void MetricsReporter::StreamRecord::FrameDropped() {
+void MetricsReporter::StreamRecord::FrameDropped(cobalt::FrameDropReason why) {
   frames_dropped_.Add(1);
 
-  // TODO(fxbug.dev/75535): Reports a frame drop to the Cobalt logger.
+  if (!impl_.logger_) {
+    return;
+  }
+
+  impl_.logger_->LogOccurrence(kCameraFrameDropCountsPerStreamMetricId,
+                               cobalt::Logger::BuildDimension(type_, why));
 }
 
 MetricsReporter::ImageFormatRecord::ImageFormatRecord(inspect::Node& parent)

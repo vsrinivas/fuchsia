@@ -105,6 +105,11 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
 
   if (info.frame_status != fuchsia::camera2::FrameStatus::OK) {
     FX_LOGS(WARNING) << "Driver reported a bad frame. This will not be reported to clients.";
+    auto reason = cobalt::FrameDropReason::kInvalidFrame;
+    if (info.frame_status == fuchsia::camera2::FrameStatus::ERROR_BUFFER_FULL) {
+      reason = cobalt::FrameDropReason::kNoMemory;
+    }
+    record_.FrameDropped(reason);
     legacy_stream_->AcknowledgeFrameError();
     return;
   }
@@ -112,6 +117,7 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   if (frame_waiters_.find(info.buffer_id) != frame_waiters_.end()) {
     FX_LOGS(WARNING) << "Driver sent a frame that was already in use (ID = " << info.buffer_id
                      << "). This frame will not be sent to clients.";
+    record_.FrameDropped(cobalt::FrameDropReason::kFrameIdInUse);
     legacy_stream_->ReleaseFrame(info.buffer_id);
     return;
   }
@@ -119,6 +125,7 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   if (!info.metadata.has_timestamp()) {
     FX_LOGS(WARNING)
         << "Driver sent a frame without a timestamp. This frame will not be sent to clients.";
+    record_.FrameDropped(cobalt::FrameDropReason::kInvalidTimestamp);
     legacy_stream_->ReleaseFrame(info.buffer_id);
     return;
   }
@@ -132,6 +139,7 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
 
   // Discard any spurious frames received while muted.
   if (mute_state_.muted()) {
+    record_.FrameDropped(cobalt::FrameDropReason::kMuted);
     legacy_stream_->ReleaseFrame(info.buffer_id);
     return;
   }
@@ -142,7 +150,7 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   // Discard the frame if there are too many frames outstanding.
   // TODO(fxbug.dev/64801): Recycle LRU frames.
   if (frame_waiters_.size() == max_camping_buffers_) {
-    record_.FrameDropped();
+    record_.FrameDropped(cobalt::FrameDropReason::kTooManyFramesInFlight);
     legacy_stream_->ReleaseFrame(info.buffer_id);
     return;
   }
@@ -168,6 +176,7 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
 
   // No participating clients exist. Release the frame immediately.
   if (fences.empty()) {
+    record_.FrameDropped(cobalt::FrameDropReason::kNoClient);
     legacy_stream_->ReleaseFrame(info.buffer_id);
     return;
   }

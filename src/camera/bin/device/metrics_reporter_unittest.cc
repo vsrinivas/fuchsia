@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/camera/lib/cobalt_logger/metrics.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace camera {
@@ -29,7 +30,7 @@ using ::testing::IsSupersetOf;
 class MetricsReporterTest : public ::gtest::TestLoopFixture {
  public:
   MetricsReporterTest() {
-    MetricsReporter::Initialize(*component_context_provider_.context());
+    MetricsReporter::Initialize(*component_context_provider_.context(), false);
   }
 
   inspect::Hierarchy GetHierarchy() {
@@ -104,7 +105,7 @@ TEST_F(MetricsReporterTest, StreamFrameMetrics) {
   config->GetStreamRecord(1).FrameReceived();
   config->GetStreamRecord(1).FrameReceived();
   config->GetStreamRecord(1).FrameReceived();
-  config->GetStreamRecord(1).FrameDropped();
+  config->GetStreamRecord(1).FrameDropped(cobalt::FrameDropReason::kGeneral);
 
   EXPECT_THAT(
       GetHierarchy(),

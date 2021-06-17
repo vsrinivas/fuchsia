@@ -78,7 +78,7 @@ class DeviceImplTest : public gtest::RealLoopFixture {
     fuchsia::ui::policy::DeviceListenerRegistryHandle registry;
     fake_listener_registry_.GetHandler()(registry.NewRequest());
 
-    MetricsReporter::Initialize(*context_);
+    MetricsReporter::Initialize(*context_, false);
 
     zx::event bad_state_event;
     ASSERT_EQ(zx::event::create(0, &bad_state_event), ZX_OK);

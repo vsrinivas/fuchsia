@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
   ZX_ASSERT(wait.Begin(loop.dispatcher()) == ZX_OK);
 
   // Create our metrics reporter.
-  camera::MetricsReporter::Initialize(*context);
+  camera::MetricsReporter::Initialize(*context, /* enable_cobalt = */ true);
 
   // Create the device and publish its service.
   auto result =
