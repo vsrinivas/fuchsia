@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime/pprof"
 	"runtime/trace"
 	"strings"
@@ -41,7 +42,7 @@ var (
 	outDir            = flag.String("out_dir", "", "Directory to write outputs to.")
 	outputLicenseFile = flag.Bool("output_license_file", true, "If true, outputs a license file with all the licenses for the project.")
 	target            = flag.String("target", "", "Analyze the dependency tree of a specific GN build target.")
-	buildDir          = flag.String("build_dir", "out/default", "Location of GN build directory.")
+	buildDir          = flag.String("build_dir", os.Getenv("FUCHSIA_BUILD_DIR"), "Location of GN build directory.")
 	gnPath            = flag.String("gn_path", "", "Path to GN executable. Required when target is specified.")
 )
 
@@ -202,6 +203,12 @@ func mainImpl() error {
 			return err
 		}
 		config.GnPath = *gnPath
+	} else {
+		prebuilt := os.Getenv("PREBUILT_3P_DIR")
+		hostPlatform := os.Getenv("HOST_PLATFORM")
+		if prebuilt != "" && hostPlatform != "" {
+			config.GnPath = filepath.Join(prebuilt, "gn", hostPlatform, "gn")
+		}
 	}
 
 	if *target != "" {
