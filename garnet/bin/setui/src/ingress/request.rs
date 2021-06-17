@@ -51,7 +51,6 @@ where
 impl<R: From<Response> + Send + Sync + 'static, T: Responder<R> + Send + Sync + 'static>
     Work<R, T>
 {
-    #[cfg(test)]
     pub(crate) fn new(setting_type: SettingType, request: Request, responder: T) -> Self {
         Self { setting_type, request, responder, _data: PhantomData }
     }

@@ -125,6 +125,17 @@ pub mod work {
         }
     }
 
+    impl std::fmt::Debug for Load {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Load::Sequential(_, _) => f.debug_tuple("Sequential"),
+                Load::Independent(_) => f.debug_tuple("Independent"),
+            }
+            .field(&"..")
+            .finish()
+        }
+    }
+
     #[async_trait]
     pub trait Sequential {
         /// Called when the [Job](super::Job) processing is ready for the encapsulated
@@ -153,7 +164,6 @@ impl Signature {
     /// Constructs a new [Signature]. The key provided will group the associated [Job] with other
     /// [Jobs](Job) of the same key. The association is scoped to other [Jobs](Job) in the same
     /// parent source.
-    #[cfg(test)]
     pub(crate) fn new(key: usize) -> Self {
         Self { key }
     }
@@ -161,6 +171,7 @@ impl Signature {
 
 /// A [Job] is a simple data container that associates a [Workload] with an [execution::Type]
 /// along with metadata, such as the creation time.
+#[derive(Debug)]
 pub struct Job {
     /// The [Workload] to be run.
     pub workload: work::Load,

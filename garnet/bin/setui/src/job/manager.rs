@@ -186,18 +186,31 @@ impl Manager {
         job: Option<Result<Job, Error>>,
         source_stream: PinStream<JobStreamItem>,
     ) {
-        if let Some(Ok(job)) = job {
-            // When the stream produces a job, associate with the appropriate source. Then try see
-            // if any job is available to run.
-            self.sources.get_mut(&source).expect("source should be present").add_pending_job(job);
-            self.job_futures.push(source_stream.into_future());
-            self.process_next_job().await;
-        } else {
-            // In the case of an error or the end of the stream has been reached (None), clean up
-            // the source.
-            self.complete_source(&source);
+        match job {
+            Some(Ok(job)) => {
+                // When the stream produces a job, associate with the appropriate source. Then try see
+                // if any job is available to run.
+                self.sources
+                    .get_mut(&source)
+                    .expect("source should be present")
+                    .add_pending_job(job);
+                self.job_futures.push(source_stream.into_future());
+                self.process_next_job().await;
+            }
+            Some(Err(Error::InvalidInput)) => {
+                // When the stream failed to produce a job due to bad input, just skip to the next
+                // job in the queue. The client should have use its responder (if any) to notify the
+                // client of the error.
+                self.job_futures.push(source_stream.into_future());
+                self.process_next_job().await;
+            }
+            _ => {
+                // In the case of an error or the end of the stream has been reached (None), clean up
+                // the source.
+                self.complete_source(&source);
 
-            // TODO(fxbug.dev/73414): Cancel in-flight jobs for the source.
+                // TODO(fxbug.dev/73414): Cancel in-flight jobs for the source.
+            }
         }
     }
 
@@ -232,6 +245,7 @@ mod tests {
     use matches::assert_matches;
     use std::sync::Arc;
 
+    // Validates that multiple messages can be handled from a single source
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_manager_job_processing_multiple_jobs_one_source() {
         // Create delegate for communication between components.
@@ -283,6 +297,60 @@ mod tests {
         }
     }
 
+    // Validates that a request that failed to convert to a job does not block the remaining jobs
+    // from running.
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_manager_job_processing_handles_errored_conversions() {
+        // Create delegate for communication between components.
+        let message_hub_delegate = message::create_hub();
+
+        const RESULT: i64 = 1;
+
+        // Create a top-level receptor to receive job results from.
+        let mut receptor = message_hub_delegate
+            .create(MessengerType::Unbound)
+            .await
+            .expect("should create receptor")
+            .1;
+
+        let manager_signature = Manager::spawn(&message_hub_delegate).await;
+
+        // Create a messenger to send job sources to the manager.
+        let messenger = message_hub_delegate
+            .create(MessengerType::Unbound)
+            .await
+            .expect("should create messenger")
+            .0;
+
+        let (requests_tx, requests_rx) = mpsc::unbounded();
+
+        // Send an error (conversion failed) before a valid job.
+        requests_tx
+            .unbounded_send(Err(Error::InvalidInput))
+            .expect("Should be able to queue requests");
+
+        // Now send a valid job, which should be processed after the error.
+        let signature = receptor.get_signature();
+        requests_tx
+            .unbounded_send(Ok(Job::new(job::work::Load::Independent(Workload::new(
+                test::Payload::Integer(RESULT),
+                signature,
+            )))))
+            .expect("Should be able to queue requests");
+
+        messenger
+            .message(
+                Payload::Source(Arc::new(Mutex::new(Some(requests_rx.boxed())))).into(),
+                Audience::Messenger(manager_signature),
+            )
+            .send()
+            .ack();
+
+        // Confirm received value matches the value sent from the second job.
+        assert_matches!(receptor.next_of::<test::Payload>().await.expect("should have payload").0,
+            test::Payload::Integer(value) if value == RESULT);
+    }
+
     struct WaitingWorkload {
         rx: Receiver<()>,
         execute_tx: Sender<()>,
@@ -304,6 +372,8 @@ mod tests {
         }
     }
 
+    // Validates that a hanging get on one source does not block jobs from being processed on
+    // another source.
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_manager_job_processing_multiple_sources() {
         // Create delegate for communication between components.

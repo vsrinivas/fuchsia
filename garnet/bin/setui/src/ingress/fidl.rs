@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::base::{Dependency, Entity, SettingType};
+use crate::handler::base::Error;
 use crate::ingress::registration::{self, Registrant, Registrar};
 use crate::job::source::Seeder;
 use crate::service::message::Delegate;
@@ -12,6 +13,16 @@ use fidl_fuchsia_settings::{
     LightRequestStream, NightModeRequestStream, PrivacyRequestStream, SetupRequestStream,
 };
 use fuchsia_component::server::{ServiceFsDir, ServiceObj};
+use fuchsia_zircon;
+
+impl From<Error> for fuchsia_zircon::Status {
+    fn from(error: Error) -> fuchsia_zircon::Status {
+        match error {
+            Error::UnhandledType(_) => fuchsia_zircon::Status::UNAVAILABLE,
+            _ => fuchsia_zircon::Status::INTERNAL,
+        }
+    }
+}
 
 // TODO(fxbug.dev/76287): Remove this conversion. It is only in place while configurations still
 // reference SettingTypes instead of interfaces to declare services. Configurations should define
@@ -149,7 +160,7 @@ impl From<Interface> for Register {
     fn from(interface: Interface) -> Self {
         Box::new(
             move |delegate: &Delegate,
-                  _seeder: &Seeder,
+                  seeder: &Seeder,
                   service_dir: &mut ServiceFsDir<'_, ServiceObj<'_, ()>>| {
                 let delegate = delegate.clone();
                 match interface {
@@ -179,8 +190,9 @@ impl From<Interface> for Register {
                         });
                     }
                     Interface::FactoryReset => {
+                        let seeder = seeder.clone();
                         service_dir.add_fidl_service(move |stream: FactoryResetRequestStream| {
-                            crate::factory_reset::fidl_io::spawn(delegate.clone(), stream);
+                            seeder.seed(stream);
                         });
                     }
                     Interface::Input => {

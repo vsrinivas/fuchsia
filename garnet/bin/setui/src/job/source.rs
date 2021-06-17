@@ -26,6 +26,7 @@ use futures::lock::Mutex;
 use futures::Stream;
 use futures::StreamExt;
 use std::collections::{HashMap, VecDeque};
+use std::convert::{Infallible, TryFrom};
 use std::sync::Arc;
 use thiserror::Error as ThisError;
 
@@ -40,8 +41,6 @@ pub struct Seeder {
 }
 
 impl Seeder {
-    // TODO(fxbug.dev/70534): Use Manager to handle FIDL requests.
-    #[allow(dead_code)]
     pub(crate) async fn new(delegate: &Delegate, manager_signature: Signature) -> Self {
         Self {
             messenger: delegate
@@ -53,19 +52,27 @@ impl Seeder {
         }
     }
 
-    // TODO(fxbug.dev/70534): Use Manager to handle FIDL requests.
-    #[allow(dead_code)]
-    pub(crate) fn seed<
-        J: Into<Job>,
-        E: Into<Error>,
-        T: 'static + Stream<Item = Result<J, E>> + Send,
-    >(
-        &self,
-        source: T,
-    ) {
+    // TODO(fxbug.dev/78962) Ensure we also track a control_handle in case we need
+    // to send an epitaph back across the stream without a responder.
+    pub(crate) fn seed<J, E, E2, T>(&self, source: T)
+    where
+        Job: TryFrom<J, Error = E2>,
+        Error: From<E> + From<E2>,
+        T: Stream<Item = Result<J, E>> + Send + 'static,
+    {
         // Convert the incoming stream into the expected types for a Job source.
-        let mapped_stream: Pin<Box<dyn Stream<Item = Result<Job, Error>> + Send>> =
-            source.map(|result| result.map(Into::into).map_err(Into::into)).boxed();
+        let mapped_stream: Pin<Box<dyn Stream<Item = Result<Job, Error>> + Send>> = source
+            .map(|result| {
+                result
+                    // First convert the error type from the result so we can be compatible
+                    // with conversions done with try_from below.
+                    .map_err(Error::from)
+                    // Then map the job. Ideally try_from will return `Error` directly, but we
+                    // also need to handle the `Infallible` type. It should compile to a no-op,
+                    // but the types still need to align.
+                    .and_then(|j| Job::try_from(j).map_err(Error::from))
+            })
+            .boxed();
 
         // Send the source stream to the manager.
         self.messenger
@@ -84,6 +91,25 @@ impl Seeder {
 pub enum Error {
     #[error("Unknown error")]
     Unknown,
+    #[error("Invalid input")]
+    InvalidInput,
+    #[error("Unsupported API call")]
+    Unsupported,
+}
+
+// This implementation is necessary when converting into a Job is infallible. This can happen if an
+// input to a job has no possible way to fail, or in tests when the streams a populated with Jobs
+// directly. This is used by the Seeder::seed fn above.
+impl From<Infallible> for Error {
+    fn from(_: Infallible) -> Self {
+        unreachable!()
+    }
+}
+
+impl From<fidl::Error> for Error {
+    fn from(_item: fidl::Error) -> Self {
+        Error::Unknown
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

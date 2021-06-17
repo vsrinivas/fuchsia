@@ -27,6 +27,7 @@ use crate::job::Signature;
 use crate::message::base::Audience;
 use crate::service::{message, Address};
 use async_trait::async_trait;
+use fuchsia_syslog::fx_log_warn;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
@@ -63,8 +64,7 @@ impl<
         T: Responder<R, E> + Send + Sync + 'static,
     > Work<R, E, T>
 {
-    #[cfg(test)]
-    pub(super) fn new(setting_type: SettingType, signature: Signature, responder: T) -> Self {
+    pub(crate) fn new(setting_type: SettingType, signature: Signature, responder: T) -> Self {
         Self {
             setting_type,
             signature,
@@ -97,7 +97,17 @@ impl<
                 return_val
             }
             Ok(Payload::Response(Err(error))) => Some(Err(error)),
-            Err(_) => Some(Err(crate::handler::base::Error::CommunicationError)),
+            Err(error) => {
+                fx_log_warn!(
+                    "An error occurred while watching {:?}:{:?}",
+                    self.setting_type,
+                    error
+                );
+                Some(Err(match error.root_cause().downcast_ref::<Error>() {
+                    Some(error) => error.clone(),
+                    _ => crate::handler::base::Error::CommunicationError,
+                }))
+            }
             _ => {
                 panic!("invalid variant {:?}", response);
             }
