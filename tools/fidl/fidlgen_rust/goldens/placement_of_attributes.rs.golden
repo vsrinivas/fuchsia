@@ -17,8 +17,8 @@ use {
     fidl::{
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
-        fidl_bits, fidl_empty_struct, fidl_flexible_enum, fidl_strict_enum, fidl_struct,
-        fidl_struct_copy, fidl_table, fidl_xunion, wrap_handle_metadata,
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion, wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
     futures::future::{self, MaybeDone, TryFutureExt},
@@ -58,12 +58,39 @@ pub const EXAMPLE_CONST: u32 = 0;
 pub enum ExampleEnum {
     Member = 1,
 }
-fidl_strict_enum! {
+
+impl ExampleEnum {
+    #[inline]
+    pub fn from_primitive(prim: u32) -> Option<Self> {
+        match prim {
+            1 => Some(Self::Member),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn into_primitive(self) -> u32 {
+        self as u32
+    }
+
+    #[deprecated = "Strict enums should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, u32> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict enums should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_enum! {
     name: ExampleEnum,
     prim_ty: u32,
-    members: [
-        Member { value: 1, },
-    ],
+    strict: true,
+    min_member: Member,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

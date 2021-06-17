@@ -17,8 +17,8 @@ use {
     fidl::{
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
-        fidl_bits, fidl_empty_struct, fidl_flexible_enum, fidl_strict_enum, fidl_struct,
-        fidl_struct_copy, fidl_table, fidl_xunion, wrap_handle_metadata,
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion, wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
     futures::future::{self, MaybeDone, TryFutureExt},
@@ -58,13 +58,40 @@ pub enum ObjType {
     None = 0,
     Socket = 14,
 }
-fidl_strict_enum! {
+
+impl ObjType {
+    #[inline]
+    pub fn from_primitive(prim: u32) -> Option<Self> {
+        match prim {
+            0 => Some(Self::None),
+            14 => Some(Self::Socket),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn into_primitive(self) -> u32 {
+        self as u32
+    }
+
+    #[deprecated = "Strict enums should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, u32> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict enums should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_enum! {
     name: ObjType,
     prim_ty: u32,
-    members: [
-        None { value: 0, },
-        Socket { value: 14, },
-    ],
+    strict: true,
+    min_member: None,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -73,13 +100,40 @@ pub enum ErrorEnum {
     ErrFoo = 1,
     ErrBar = 2,
 }
-fidl_strict_enum! {
+
+impl ErrorEnum {
+    #[inline]
+    pub fn from_primitive(prim: u32) -> Option<Self> {
+        match prim {
+            1 => Some(Self::ErrFoo),
+            2 => Some(Self::ErrBar),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn into_primitive(self) -> u32 {
+        self as u32
+    }
+
+    #[deprecated = "Strict enums should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, u32> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict enums should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_enum! {
     name: ErrorEnum,
     prim_ty: u32,
-    members: [
-        ErrFoo { value: 1, },
-        ErrBar { value: 2, },
-    ],
+    strict: true,
+    min_member: ErrFoo,
 }
 
 pub type WithErrorSyntaxResponseAsStructResult = std::result::Result<(i64, i64, i64), u32>;

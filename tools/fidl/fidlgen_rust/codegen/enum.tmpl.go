@@ -37,33 +37,93 @@ macro_rules! {{ .Name }}Unknown {
 }
 {{- end }}
 
-{{- if .IsStrict }}
-fidl_strict_enum! {
-	name: {{ .Name }},
-	prim_ty: {{ .Type }},
-	members: [
-		{{- range .Members }}
-		{{ .Name }} { value: {{ .Value }}, },
-		{{- end }}
-	],
-}
+impl {{ .Name }} {
+	#[inline]
+	pub fn from_primitive(prim: {{ .Type }}) -> Option<Self> {
+		match prim {
+			{{- range .Members }}
+			{{ .Value }} => Some(Self::{{ .Name }}),
+			{{- end }}
+			_ => None,
+		}
+	}
+
+{{ if .IsStrict }}
+	#[inline]
+	pub fn into_primitive(self) -> {{ .Type }} {
+		self as {{ .Type }}
+	}
+
+	#[deprecated = "Strict enums should not use validate()"]
+	#[inline]
+	pub fn validate(self) -> std::result::Result<Self, {{ .Type }}> {
+		Ok(self)
+	}
+
+	#[deprecated = "Strict enums should not use is_unknown()"]
+	#[inline]
+	pub fn is_unknown(&self) -> bool {
+		false
+	}
 {{- else }}
-fidl_flexible_enum! {
+	#[inline]
+	pub fn from_primitive_allow_unknown(prim: {{ .Type }}) -> Self {
+		match prim {
+			{{- range .Members }}
+			{{ .Value }} => Self::{{ .Name }},
+			{{- end }}
+			#[allow(deprecated)]
+			x => Self::__Unknown(x),
+		}
+	}
+
+	#[inline]
+	pub fn unknown() -> Self {
+		#[allow(deprecated)]
+		Self::__Unknown({{ .UnknownValueForTmpl | printf "%#x" }})
+	}
+
+	#[inline]
+	pub fn into_primitive(self) -> {{ .Type }} {
+		match self {
+			{{- range .Members }}
+			Self::{{ .Name }} => {{ .Value }},
+			{{- end }}
+			#[allow(deprecated)]
+			Self::__Unknown(x) => x,
+		}
+	}
+
+	#[inline]
+	pub fn validate(self) -> std::result::Result<Self, {{ .Type }}> {
+		match self {
+			{{- range .Members }}
+			{{- if .IsUnknown }}
+			Self::{{ .Name }} => Err(self.into_primitive()),
+			{{- end }}
+			{{- end }}
+			#[allow(deprecated)]
+			Self::__Unknown(x) => Err(x),
+			_ => Ok(self),
+		}
+	}
+
+	#[inline]
+	pub fn is_unknown(&self) -> bool {
+		self.validate().is_err()
+	}
+{{- end }}
+}
+
+fidl_enum! {
 	name: {{ .Name }},
 	prim_ty: {{ .Type }},
-	members: [
-		{{- range .Members }}
-		{{ .Name }} { value: {{ .Value }}, },
-		{{- end }}
-	],
-	{{- range .Members }}
-	{{- if .IsUnknown }}
-	custom_unknown_member: {{ .Name }},
+	{{- if .IsStrict }}
+	strict: true,
+	min_member: {{ .MinMember }},
+	{{- else }}
+	flexible: true,
 	{{- end }}
-	{{- end }}
-	unknown_member: __Unknown,
-	default_unknown_value: {{ .UnknownValueForTmpl | printf "%#x" }},
 }
-{{- end }}
-{{- end }}
+{{ end }}
 `

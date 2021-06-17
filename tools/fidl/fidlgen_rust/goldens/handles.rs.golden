@@ -17,8 +17,8 @@ use {
     fidl::{
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
-        fidl_bits, fidl_empty_struct, fidl_flexible_enum, fidl_strict_enum, fidl_struct,
-        fidl_struct_copy, fidl_table, fidl_xunion, wrap_handle_metadata,
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion, wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
     futures::future::{self, MaybeDone, TryFutureExt},
@@ -60,41 +60,68 @@ pub enum ObjType {
     MsiAllocation = 32,
     MsiInterrupt = 33,
 }
-fidl_strict_enum! {
+
+impl ObjType {
+    #[inline]
+    pub fn from_primitive(prim: u32) -> Option<Self> {
+        match prim {
+            0 => Some(Self::None),
+            1 => Some(Self::Process),
+            2 => Some(Self::Thread),
+            3 => Some(Self::Vmo),
+            4 => Some(Self::Channel),
+            5 => Some(Self::Event),
+            6 => Some(Self::Port),
+            9 => Some(Self::Interrupt),
+            11 => Some(Self::PciDevice),
+            12 => Some(Self::Log),
+            14 => Some(Self::Socket),
+            15 => Some(Self::Resource),
+            16 => Some(Self::Eventpair),
+            17 => Some(Self::Job),
+            18 => Some(Self::Vmar),
+            19 => Some(Self::Fifo),
+            20 => Some(Self::Guest),
+            21 => Some(Self::Vcpu),
+            22 => Some(Self::Timer),
+            23 => Some(Self::Iommu),
+            24 => Some(Self::Bti),
+            25 => Some(Self::Profile),
+            26 => Some(Self::Pmt),
+            27 => Some(Self::SuspendToken),
+            28 => Some(Self::Pager),
+            29 => Some(Self::Exception),
+            30 => Some(Self::Clock),
+            31 => Some(Self::Stream),
+            32 => Some(Self::MsiAllocation),
+            33 => Some(Self::MsiInterrupt),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn into_primitive(self) -> u32 {
+        self as u32
+    }
+
+    #[deprecated = "Strict enums should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, u32> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict enums should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_enum! {
     name: ObjType,
     prim_ty: u32,
-    members: [
-        None { value: 0, },
-        Process { value: 1, },
-        Thread { value: 2, },
-        Vmo { value: 3, },
-        Channel { value: 4, },
-        Event { value: 5, },
-        Port { value: 6, },
-        Interrupt { value: 9, },
-        PciDevice { value: 11, },
-        Log { value: 12, },
-        Socket { value: 14, },
-        Resource { value: 15, },
-        Eventpair { value: 16, },
-        Job { value: 17, },
-        Vmar { value: 18, },
-        Fifo { value: 19, },
-        Guest { value: 20, },
-        Vcpu { value: 21, },
-        Timer { value: 22, },
-        Iommu { value: 23, },
-        Bti { value: 24, },
-        Profile { value: 25, },
-        Pmt { value: 26, },
-        SuspendToken { value: 27, },
-        Pager { value: 28, },
-        Exception { value: 29, },
-        Clock { value: 30, },
-        Stream { value: 31, },
-        MsiAllocation { value: 32, },
-        MsiInterrupt { value: 33, },
-    ],
+    strict: true,
+    min_member: None,
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]

@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fidl_rust_test_external::{FlexibleButtons, StrictButtons};
+//! This file tests the public APIs of FIDL data types.
+
+use fidl_fidl_rust_test_external::{FlexibleAnimal, FlexibleButtons, StrictAnimal, StrictButtons};
 
 #[test]
 fn strict_bits() {
@@ -54,4 +56,43 @@ fn flexible_bits() {
         !!FlexibleButtons::from_bits_allow_unknown(0b101000101),
         FlexibleButtons::Play | FlexibleButtons::Stop
     );
+}
+
+#[test]
+fn strict_enum() {
+    assert_eq!(StrictAnimal::from_primitive(0), Some(StrictAnimal::Dog));
+    assert_eq!(StrictAnimal::from_primitive(3), None);
+    assert_eq!(StrictAnimal::Cat.into_primitive(), 1);
+
+    // You can use the flexible methods on strict types, but it produces a
+    // deprecation warning.
+    #[allow(deprecated)]
+    let is_unknown = StrictAnimal::Cat.is_unknown();
+    assert_eq!(is_unknown, false);
+    #[allow(deprecated)]
+    let validate = StrictAnimal::Cat.validate();
+    assert_eq!(validate, Ok(StrictAnimal::Cat));
+}
+
+#[test]
+fn flexible_enum() {
+    assert_eq!(FlexibleAnimal::from_primitive(0), Some(FlexibleAnimal::Dog));
+    assert_eq!(FlexibleAnimal::from_primitive(3), None);
+    assert_eq!(FlexibleAnimal::from_primitive_allow_unknown(0), FlexibleAnimal::Dog);
+
+    #[allow(deprecated)] // allow referencing __Unknown
+    let unknown3 = FlexibleAnimal::__Unknown(3);
+    assert_eq!(FlexibleAnimal::from_primitive_allow_unknown(3), unknown3);
+
+    assert_eq!(FlexibleAnimal::Cat.into_primitive(), 1);
+    assert_eq!(FlexibleAnimal::from_primitive_allow_unknown(3).into_primitive(), 3);
+    assert_eq!(FlexibleAnimal::unknown().into_primitive(), i32::MAX);
+
+    assert_eq!(FlexibleAnimal::Cat.is_unknown(), false);
+    assert_eq!(FlexibleAnimal::from_primitive_allow_unknown(3).is_unknown(), true);
+    assert_eq!(FlexibleAnimal::unknown().is_unknown(), true);
+
+    assert_eq!(FlexibleAnimal::Cat.validate(), Ok(FlexibleAnimal::Cat));
+    assert_eq!(FlexibleAnimal::from_primitive_allow_unknown(3).validate(), Err(3));
+    assert_eq!(FlexibleAnimal::unknown().validate(), Err(i32::MAX));
 }

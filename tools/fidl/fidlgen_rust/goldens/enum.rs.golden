@@ -17,8 +17,8 @@ use {
     fidl::{
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
-        fidl_bits, fidl_empty_struct, fidl_flexible_enum, fidl_strict_enum, fidl_struct,
-        fidl_struct_copy, fidl_table, fidl_xunion, wrap_handle_metadata,
+        fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
+        fidl_xunion, wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
     futures::future::{self, MaybeDone, TryFutureExt},
@@ -30,13 +30,40 @@ pub enum MyStrictEnum {
     Foo = 1,
     Bar = 2,
 }
-fidl_strict_enum! {
+
+impl MyStrictEnum {
+    #[inline]
+    pub fn from_primitive(prim: u32) -> Option<Self> {
+        match prim {
+            1 => Some(Self::Foo),
+            2 => Some(Self::Bar),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn into_primitive(self) -> u32 {
+        self as u32
+    }
+
+    #[deprecated = "Strict enums should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, u32> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict enums should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_enum! {
     name: MyStrictEnum,
     prim_ty: u32,
-    members: [
-        Foo { value: 1, },
-        Bar { value: 2, },
-    ],
+    strict: true,
+    min_member: Foo,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -55,15 +82,62 @@ macro_rules! MyFlexibleEnumUnknown {
         _
     };
 }
-fidl_flexible_enum! {
+
+impl MyFlexibleEnum {
+    #[inline]
+    pub fn from_primitive(prim: u32) -> Option<Self> {
+        match prim {
+            1 => Some(Self::Foo),
+            2 => Some(Self::Bar),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn from_primitive_allow_unknown(prim: u32) -> Self {
+        match prim {
+            1 => Self::Foo,
+            2 => Self::Bar,
+            #[allow(deprecated)]
+            x => Self::__Unknown(x),
+        }
+    }
+
+    #[inline]
+    pub fn unknown() -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown(0xffffffff)
+    }
+
+    #[inline]
+    pub fn into_primitive(self) -> u32 {
+        match self {
+            Self::Foo => 1,
+            Self::Bar => 2,
+            #[allow(deprecated)]
+            Self::__Unknown(x) => x,
+        }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, u32> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown(x) => Err(x),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        self.validate().is_err()
+    }
+}
+
+fidl_enum! {
     name: MyFlexibleEnum,
     prim_ty: u32,
-    members: [
-        Foo { value: 1, },
-        Bar { value: 2, },
-    ],
-    unknown_member: __Unknown,
-    default_unknown_value: 0xffffffff,
+    flexible: true,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -83,15 +157,64 @@ macro_rules! MyFlexibleEnumWithCustomUnknownUnknown {
         _
     };
 }
-fidl_flexible_enum! {
+
+impl MyFlexibleEnumWithCustomUnknown {
+    #[inline]
+    pub fn from_primitive(prim: u32) -> Option<Self> {
+        match prim {
+            1 => Some(Self::Foo),
+            2 => Some(Self::Bar),
+            3 => Some(Self::CustomUnknown),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn from_primitive_allow_unknown(prim: u32) -> Self {
+        match prim {
+            1 => Self::Foo,
+            2 => Self::Bar,
+            3 => Self::CustomUnknown,
+            #[allow(deprecated)]
+            x => Self::__Unknown(x),
+        }
+    }
+
+    #[inline]
+    pub fn unknown() -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown(0x3)
+    }
+
+    #[inline]
+    pub fn into_primitive(self) -> u32 {
+        match self {
+            Self::Foo => 1,
+            Self::Bar => 2,
+            Self::CustomUnknown => 3,
+            #[allow(deprecated)]
+            Self::__Unknown(x) => x,
+        }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, u32> {
+        match self {
+            Self::CustomUnknown => Err(self.into_primitive()),
+            #[allow(deprecated)]
+            Self::__Unknown(x) => Err(x),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        self.validate().is_err()
+    }
+}
+
+fidl_enum! {
     name: MyFlexibleEnumWithCustomUnknown,
     prim_ty: u32,
-    members: [
-        Foo { value: 1, },
-        Bar { value: 2, },
-        CustomUnknown { value: 3, },
-    ],
-    custom_unknown_member: CustomUnknown,
-    unknown_member: __Unknown,
-    default_unknown_value: 0x3,
+    flexible: true,
 }

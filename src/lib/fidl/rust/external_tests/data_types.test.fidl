@@ -15,3 +15,15 @@ flexible bits FlexibleButtons : uint32 {
     PAUSE = 0b010;
     STOP = 0b100;
 };
+
+strict enum StrictAnimal : int32 {
+    DOG = 0;
+    CAT = 1;
+    FROG = 2;
+};
+
+flexible enum FlexibleAnimal : int32 {
+    DOG = 0;
+    CAT = 1;
+    FROG = 2;
+};

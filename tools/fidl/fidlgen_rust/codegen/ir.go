@@ -8,7 +8,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
@@ -41,6 +43,9 @@ type Enum struct {
 	Name    string
 	Type    string
 	Members []EnumMember
+	// Member name with the minimum value, used as an arbitrary default value
+	// in Decodable::new_empty for strict enums.
+	MinMember string
 }
 
 type EnumMember struct {
@@ -779,7 +784,38 @@ func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
 			}),
 		})
 	}
+	e.MinMember = findMinEnumMember(val.Type, e.Members).Name
 	return e
+}
+
+func findMinEnumMember(typ fidlgen.PrimitiveSubtype, members []EnumMember) EnumMember {
+	var res EnumMember
+	if typ.IsSigned() {
+		min := int64(math.MaxInt64)
+		for _, m := range members {
+			v, err := strconv.ParseInt(m.Value, 10, 64)
+			if err != nil {
+				panic(fmt.Sprintf("invalid enum member value: %s", err))
+			}
+			if v < min {
+				min = v
+				res = m
+			}
+		}
+	} else {
+		min := uint64(math.MaxUint64)
+		for _, m := range members {
+			v, err := strconv.ParseUint(m.Value, 10, 64)
+			if err != nil {
+				panic(fmt.Sprintf("invalid enum member value: %s", err))
+			}
+			if v < min {
+				min = v
+				res = m
+			}
+		}
+	}
+	return res
 }
 
 func (c *compiler) compileHandleMetadataWrapper(val *fidlgen.Type) (string, bool) {

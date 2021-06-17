@@ -1756,187 +1756,19 @@ macro_rules! fidl_bits {
 }
 
 /// Implements the FIDL `Encodable` and `Decodable` traits for an enum
-/// representing a FIDL strict enum. Also generates the following methods:
-///
-/// ```rust
-/// pub fn from_primitive(prim: $prim_ty) -> Option<Self>;
-/// pub fn into_primitive(self) -> $prim_ty;
-/// ```
-///
-/// For ease of transition to/from flexible enums, it also generates the
-/// following methods, but with deprecation notices:
-///
-/// ```rust
-/// pub fn validate(self) -> Result<Self, $prim_ty>;
-/// pub fn is_unknown(&self) -> bool;
-/// ```
+/// representing a FIDL strict enum.
 #[macro_export]
-macro_rules! fidl_strict_enum {
+macro_rules! fidl_enum {
     (
         name: $name:ident,
         prim_ty: $prim_ty:ty,
-        members: [$(
-            $member_name:ident { value: $member_value:expr, },
-        )*],
-    ) => {
-        impl $name {
-            #[inline]
-            pub fn from_primitive(prim: $prim_ty) -> Option<Self> {
-                match prim {
-                    $(
-                        $member_value => Some($name::$member_name),
-                    )*
-                    _ => None,
-                }
-            }
-
-            #[inline]
-            pub fn into_primitive(self) -> $prim_ty {
-                self as $prim_ty
-            }
-
-            #[deprecated = "Strict enums should not use validate()"]
-            #[inline]
-            pub fn validate(self) -> std::result::Result<Self, $prim_ty> {
-                Ok(self)
-            }
-
-            #[deprecated = "Strict enums should not use is_unknown()"]
-            #[inline]
-            pub fn is_unknown(&self) -> bool {
-                false
-            }
-        }
-
-        impl $crate::encoding::Layout for $name {
-            #[inline(always)]
-            fn inline_align(context: &$crate::encoding::Context) -> usize {
-                <$prim_ty as $crate::encoding::Layout>::inline_align(context)
-            }
-
-            #[inline(always)]
-            fn inline_size(context: &$crate::encoding::Context) -> usize {
-                <$prim_ty as $crate::encoding::Layout>::inline_size(context)
-            }
-        }
-
-        impl $crate::encoding::Encodable for $name {
-            #[inline]
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize)
-                -> std::result::Result<(), $crate::Error>
-            {
-                encoder.debug_check_bounds::<Self>(offset);
-                (*self as $prim_ty).encode(encoder, offset, recursion_depth)
-            }
-        }
-
-        impl $crate::encoding::Decodable for $name {
-            #[inline(always)]
-            fn new_empty() -> Self {
-                // Returns the first declared variant
-                #![allow(unreachable_code)]
-                $(
-                    return $name::$member_name;
-                )*
-                panic!("new_empty called on enum with no variants")
-            }
-
-            #[inline]
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize)
-                -> std::result::Result<(), $crate::Error>
-            {
-                decoder.debug_check_bounds::<Self>(offset);
-                let mut prim = <$prim_ty>::new_empty();
-                prim.decode(decoder, offset)?;
-                *self = Self::from_primitive(prim).ok_or($crate::Error::InvalidEnumValue)?;
-                Ok(())
-            }
-        }
-    }
-}
-
-/// Implements the FIDL `Encodable` and `Decodable` traits for an enum
-/// representing a FIDL flexible enum. Also generates the following methods:
-///
-/// ```rust
-/// pub fn from_primitive(prim: $prim_ty) -> Option<Self>;
-/// pub fn from_primitive_allow_unknown(prim: $prim_ty) -> Self;
-/// pub fn unknown() -> Self;
-/// pub fn into_primitive(self) -> $prim_ty;
-/// pub fn validate(self) -> Result<Self, $prim_ty>;
-/// pub fn is_unknown(&self) -> bool;
-/// ```
-#[macro_export]
-macro_rules! fidl_flexible_enum {
-    (
-        name: $name:ident,
-        prim_ty: $prim_ty:ty,
-        members: [$(
-            $member_name:ident { value: $member_value:expr, },
-        )*],
+        // Provide `strict: true` or `flexible: true`, not both.
         $(
-            custom_unknown_member: $custom_unknown_member:ident,
+            strict: $strict:expr,
+            min_member: $min_member:ident,
         )?
-        unknown_member: $unknown_member:ident,
-        default_unknown_value: $default_unknown_value:expr,
+        $(flexible: $flexible:expr,)?
     ) => {
-        impl $name {
-            #[inline]
-            pub fn from_primitive(prim: $prim_ty) -> Option<Self> {
-                match prim {
-                    $(
-                        $member_value => Some($name::$member_name),
-                    )*
-                    _ => None,
-                }
-            }
-
-            #[inline]
-            pub fn from_primitive_allow_unknown(prim: $prim_ty) -> Self {
-                match prim {
-                    $(
-                        $member_value => $name::$member_name,
-                    )*
-                    #[allow(deprecated)]
-                    x => $name::$unknown_member(x),
-                }
-            }
-
-            #[inline]
-            pub fn unknown() -> Self {
-                #[allow(deprecated)]
-                $name::$unknown_member($default_unknown_value)
-            }
-
-            #[inline]
-            pub fn into_primitive(self) -> $prim_ty {
-                match self {
-                    $(
-                        $name::$member_name => $member_value,
-                    )*
-                    #[allow(deprecated)]
-                    $name::$unknown_member(x) => x,
-                }
-            }
-
-            #[inline]
-            pub fn validate(self) -> std::result::Result<Self, $prim_ty> {
-                match self {
-                    $(
-                        $name::$custom_unknown_member => Err(self.into_primitive()),
-                    )?
-                    #[allow(deprecated)]
-                    $name::$unknown_member(x) => Err(x),
-                    _ => Ok(self),
-                }
-            }
-
-            #[inline]
-            pub fn is_unknown(&self) -> bool {
-                self.validate().is_err()
-            }
-        }
-
         impl $crate::encoding::Layout for $name {
             #[inline(always)]
             fn inline_align(context: &$crate::encoding::Context) -> usize {
@@ -1950,6 +1782,7 @@ macro_rules! fidl_flexible_enum {
         }
 
         impl $crate::encoding::Encodable for $name {
+            #[inline]
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize)
                 -> std::result::Result<(), $crate::Error>
             {
@@ -1961,16 +1794,31 @@ macro_rules! fidl_flexible_enum {
         impl $crate::encoding::Decodable for $name {
             #[inline(always)]
             fn new_empty() -> Self {
-                $name::unknown()
+                $(
+                    $strict; // placeholder use for expansion
+                    return Self::$min_member;
+                )?
+                $(
+                    $flexible; // placeholder use for expansion
+                    Self::unknown()
+                )?
             }
 
+            #[inline]
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize)
                 -> std::result::Result<(), $crate::Error>
             {
                 decoder.debug_check_bounds::<Self>(offset);
                 let mut prim = <$prim_ty>::new_empty();
                 prim.decode(decoder, offset)?;
-                *self = Self::from_primitive_allow_unknown(prim);
+                $(
+                    $strict; // placeholder use for expansion
+                    *self = Self::from_primitive(prim).ok_or($crate::Error::InvalidEnumValue)?;
+                )?
+                $(
+                    $flexible; // placeholder use for expansion
+                    *self = Self::from_primitive_allow_unknown(prim);
+                )?
                 Ok(())
             }
         }
@@ -4398,95 +4246,6 @@ mod test {
             assert_identity_slice(ctx, &[0.0f64]);
             assert_identity_slice(ctx, &[1.0f64, 2.0, 3.0, 4.0, 5.0, f64::MIN, f64::MAX]);
         }
-    }
-
-    #[test]
-    fn encode_decode_strict_enum() {
-        #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-        #[repr(i32)]
-        enum Animal {
-            Dog = 0,
-            Cat = 1,
-            Frog = 2,
-        }
-        fidl_strict_enum! {
-            name: Animal,
-            prim_ty: i32,
-            members: [
-                Dog { value: 0, },
-                Cat { value: 1, },
-                Frog { value: 2, },
-            ],
-        };
-
-        assert_eq!(Animal::from_primitive(0), Some(Animal::Dog));
-        assert_eq!(Animal::from_primitive(3), None);
-        assert_eq!(Animal::Cat.into_primitive(), 1);
-
-        // You can use the flexible methods on strict types, but it produces a
-        // deprecation warning.
-        #[allow(deprecated)]
-        let is_unknown = Animal::Cat.is_unknown();
-        assert_eq!(is_unknown, false);
-        #[allow(deprecated)]
-        let validate = Animal::Cat.validate();
-        assert_eq!(validate, Ok(Animal::Cat));
-
-        identities![
-            Animal::Dog,
-            Animal::Cat,
-            Animal::Frog,
-            Animal::from_primitive(0).expect("should be dog"),
-            Animal::from_primitive(Animal::Cat.into_primitive()).expect("should be cat"),
-        ];
-    }
-
-    #[test]
-    fn encode_decode_flexible_enum() {
-        #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-        enum Animal {
-            Dog,
-            Cat,
-            Frog,
-            __Unknown(i32),
-        }
-        fidl_flexible_enum! {
-            name: Animal,
-            prim_ty: i32,
-            members: [
-                Dog { value: 0, },
-                Cat { value: 1, },
-                Frog { value: 2, },
-            ],
-            unknown_member: __Unknown,
-            default_unknown_value: i32::MAX,
-        }
-
-        assert_eq!(Animal::from_primitive(0), Some(Animal::Dog));
-        assert_eq!(Animal::from_primitive(3), None);
-        assert_eq!(Animal::from_primitive_allow_unknown(0), Animal::Dog);
-        assert_eq!(Animal::from_primitive_allow_unknown(3), Animal::__Unknown(3));
-        assert_eq!(Animal::Cat.into_primitive(), 1);
-        assert_eq!(Animal::__Unknown(3).into_primitive(), 3);
-        assert_eq!(Animal::unknown().into_primitive(), i32::MAX);
-
-        assert_eq!(Animal::Cat.is_unknown(), false);
-        assert_eq!(Animal::__Unknown(3).is_unknown(), true);
-        assert_eq!(Animal::unknown().is_unknown(), true);
-
-        assert_eq!(Animal::Cat.validate(), Ok(Animal::Cat));
-        assert_eq!(Animal::__Unknown(3).validate(), Err(3));
-        assert_eq!(Animal::unknown().validate(), Err(i32::MAX));
-
-        identities![
-            Animal::Dog,
-            Animal::Cat,
-            Animal::Frog,
-            Animal::from_primitive(0).expect("should be dog"),
-            Animal::from_primitive(Animal::Cat.into_primitive()).expect("should be cat"),
-            Animal::from_primitive_allow_unknown(123),
-            Animal::unknown(),
-        ];
     }
 
     #[test]
