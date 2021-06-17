@@ -298,8 +298,11 @@ test "$verbose" = 0 || {
 # Need more than the bin/ directory, but its parent dir which contains tool
 # libraries, and system libraries needed for linking.
 # This is expected to cover the custom linker referenced by -Clinker=.
-tools_dir="$(dirname "$(dirname "${linker[0]}")")"
-test "$verbose" = 0 || echo "tools_dir: $tools_dir"
+tools_dir=()
+test "${#linker[@]}" = 0 || {
+  tools_dir="$(dirname "$(dirname "${linker[0]}")")"
+  test "$verbose" = 0 || echo "tools_dir: $tools_dir"
+}
 
 remote_inputs=(
   "$rustc_relative"
@@ -307,7 +310,7 @@ remote_inputs=(
   "$top_source"
   "${depfile_inputs[@]}"
   "${envvar_files[@]}"
-  "$tools_dir"
+  "${tools_dir[@]}"
   "${link_arg_files[@]}"
   "${link_sysroot[@]}"
 )
