@@ -11,15 +11,14 @@ use fidl_fuchsia_logger;
 use fidl_fuchsia_net_ext::{IntoExt as _, NetTypesIpAddressExt};
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn as _};
-use fidl_fuchsia_netemul_environment as netemul_environment;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 
 use anyhow::Context as _;
 use fidl::endpoints::create_endpoints;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet, std_ip, std_ip_v4, std_ip_v6, std_socket_addr};
-use netemul::EnvironmentUdpSocket as _;
-use netstack_testing_common::environments::{Netstack, Netstack2, TestSandboxExt as _};
+use netemul::RealmUdpSocket as _;
+use netstack_testing_common::realms::{Netstack, Netstack2, TestSandboxExt as _};
 use netstack_testing_common::{
     wait_for_interface_up_and_address, EthertapName as _, Result,
     ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
@@ -44,7 +43,7 @@ use test_case::test_case;
 async fn set_interface_status_unknown_interface() -> Result {
     let name = "set_interface_status";
     let sandbox = netemul::TestSandbox::new()?;
-    let (_env, netstack) =
+    let (_realm, netstack) =
         sandbox.new_netstack::<Netstack2, fidl_fuchsia_netstack::NetstackMarker, _>(name)?;
 
     let interfaces = netstack.get_interfaces().await.context("failed to call get_interfaces")?;
@@ -68,7 +67,7 @@ async fn set_interface_status_unknown_interface() -> Result {
 async fn add_ethernet_device() -> Result {
     let name = "add_ethernet_device";
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (_env, netstack, device) = sandbox
+    let (_realm, netstack, device) = sandbox
         .new_netstack_and_device::<Netstack2, netemul::Ethernet, fidl_fuchsia_netstack::NetstackMarker, _>(
             name,
         )
@@ -118,12 +117,12 @@ async fn add_ethernet_device() -> Result {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_no_duplicate_interface_names() -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (env, stack) = sandbox
+    let (realm, stack) = sandbox
         .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(
             "no_duplicate_interface_names",
         )
-        .context("failed to create environment")?;
-    let netstack = env
+        .context("failed to create realm")?;
+    let netstack = realm
         .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
         .context("failed to connect to netstack")?;
     // Create one endpoint of each type so we can use all the APIs that add an
@@ -198,7 +197,7 @@ async fn test_no_duplicate_interface_names() -> Result {
 #[variants_test]
 async fn add_ethernet_interface<N: Netstack>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new()?;
-    let (_env, stack, device) = sandbox
+    let (_realm, stack, device) = sandbox
         .new_netstack_and_device::<N, netemul::Ethernet, fidl_fuchsia_net_stack::StackMarker, _>(
             name,
         )
@@ -226,9 +225,9 @@ async fn add_del_interface_address() -> Result {
     let name = "add_del_interface_address";
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (_env, stack) = sandbox
+    let (_realm, stack) = sandbox
         .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .context("failed to create environment")?;
+        .context("failed to create realm")?;
 
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let loopback = interfaces
@@ -287,10 +286,10 @@ async fn add_remove_interface_address_errors() -> Result {
     let name = "add_remove_interface_address_errors";
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (env, stack) = sandbox
+    let (realm, stack) = sandbox
         .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .context("failed to create environment")?;
-    let netstack = env
+        .context("failed to create realm")?;
+    let netstack = realm
         .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
         .context("failed to connect to netstack")?;
 
@@ -355,20 +354,20 @@ async fn add_remove_interface_address_errors() -> Result {
 async fn test_log_packets() -> Result {
     let name = "test_log_packets";
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (env, stack_log) = sandbox
+    let (realm, stack_log) = sandbox
         .new_netstack::<Netstack2, fidl_fuchsia_net_stack::LogMarker, _>(name)
-        .context("failed to create environment")?;
-    let log = env
-        .connect_to_service::<fidl_fuchsia_logger::LogMarker>()
+        .context("failed to create realm")?;
+    let log = fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_logger::LogMarker>()
         .context("failed to connect to log")?;
     let (client_end, server_end) = create_endpoints::<fidl_fuchsia_logger::LogListenerSafeMarker>()
         .context("failed to create log listener endpoints")?;
 
     stack_log.set_log_packets(true).await.context("failed to enable packet logging")?;
 
-    let sock = fuchsia_async::net::UdpSocket::bind_in_env(&env, std_socket_addr!("127.0.0.1:0"))
-        .await
-        .context("failed to create socket")?;
+    let sock =
+        fuchsia_async::net::UdpSocket::bind_in_realm(&realm, std_socket_addr!("127.0.0.1:0"))
+            .await
+            .context("failed to create socket")?;
 
     let addr = sock.local_addr().context("failed to get bound socket address")?;
 
@@ -423,9 +422,9 @@ async fn test_log_packets() -> Result {
 #[variants_test]
 async fn get_interface_info_not_found<N: Netstack>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (_env, stack) = sandbox
+    let (_realm, stack) = sandbox
         .new_netstack::<N, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .context("failed to create environment")?;
+        .context("failed to create realm")?;
 
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
@@ -440,9 +439,9 @@ async fn disable_interface_loopback() -> Result {
     let name = "disable_interface_loopback";
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (_env, stack) = sandbox
+    let (_realm, stack) = sandbox
         .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .context("failed to create environment")?;
+        .context("failed to create realm")?;
 
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let localhost = interfaces
@@ -471,10 +470,10 @@ async fn disable_interface_loopback() -> Result {
 #[variants_test]
 async fn test_remove_interface<E: netemul::Endpoint>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (_env, stack, device) = sandbox
+    let (_realm, stack, device) = sandbox
         .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(name)
         .await
-        .context("failed to create netstack environment")?;
+        .context("failed to create netstack realm")?;
 
     let id = device.add_to_stack(&stack).await.context("failed to add device")?;
 
@@ -495,14 +494,14 @@ async fn test_remove_interface<E: netemul::Endpoint>(name: &str) -> Result {
 #[variants_test]
 async fn test_add_interface_causes_interfaces_changed<E: netemul::Endpoint>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (env, stack, device) = sandbox
+    let (realm, stack, device) = sandbox
         .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(
             name.ethertap_compatible_name(),
         )
         .await
-        .context("failed to create netstack environment")?;
+        .context("failed to create netstack realm")?;
 
-    let netstack = env
+    let netstack = realm
         .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
         .context("failed to connect to netstack")?;
 
@@ -514,7 +513,7 @@ async fn test_add_interface_causes_interfaces_changed<E: netemul::Endpoint>(name
     let id = device.add_to_stack(&stack).await.context("failed to add device")?;
 
     // Wait for interfaces changed event with the new ID.
-    let interface_state = env
+    let interface_state = realm
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
@@ -533,14 +532,14 @@ async fn test_add_interface_causes_interfaces_changed<E: netemul::Endpoint>(name
 /// if `enabled` is `true`, enables the interface before closing the device.
 async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (env, stack, device) = sandbox
+    let (realm, stack, device) = sandbox
         .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(
             name.ethertap_compatible_name(),
         )
         .await
-        .context("failed to create netstack environment")?;
+        .context("failed to create netstack realm")?;
 
-    let netstack = env
+    let netstack = realm
         .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
         .context("failed to connect to netstack")?;
 
@@ -558,7 +557,7 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -
             .context("failed to enable interface")?;
     }
 
-    let interface_state = env
+    let interface_state = realm
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
     let (watcher, watcher_server) =
@@ -610,10 +609,10 @@ async fn test_close_enabled_interface<E: netemul::Endpoint>(name: &str) -> Resul
 #[variants_test]
 async fn test_down_close_race<E: netemul::Endpoint>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let env = sandbox
-        .create_netstack_environment::<Netstack2, _>(name)
-        .context("failed to create netstack environment")?;
-    let interface_state = env
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>(name)
+        .context("failed to create netstack realm")?;
+    let interface_state = realm
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
     let (watcher, watcher_server) =
@@ -628,7 +627,7 @@ async fn test_down_close_race<E: netemul::Endpoint>(name: &str) -> Result {
             .create_endpoint::<E, _>("ep")
             .await
             .context("failed to create endpoint")?
-            .into_interface_in_environment(&env)
+            .into_interface_in_realm(&realm)
             .await
             .context("failed to add endpoint to Netstack")?;
 
@@ -681,9 +680,9 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let net = sandbox.create_network("net").await.context("failed to create network")?;
     let fake_ep = net.create_fake_endpoint().context("failed to create fake endpoint")?;
-    let env = sandbox
-        .create_netstack_environment::<Netstack2, _>(name)
-        .context("failed to create netstack environment")?;
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>(name)
+        .context("failed to create netstack realm")?;
 
     // NOTE: We only run this test with IPv4 sockets since we only care about
     // exciting the tx path, the domain is irrelevant.
@@ -692,7 +691,7 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
     // skip ARP resolution.
     const MCAST_ADDR: std::net::IpAddr = std_ip!("224.0.0.1");
 
-    let interface_state = env
+    let interface_state = realm
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
     let (watcher, watcher_server) =
@@ -706,7 +705,7 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
             .create_endpoint::<E, _>("ep")
             .await
             .context("failed to create endpoint")?
-            .into_interface_in_environment(&env)
+            .into_interface_in_realm(&realm)
             .await
             .context("failed to add endpoint to Netstack")?;
 
@@ -730,8 +729,8 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
         .context("failed to observe interface online")?;
         // Create a socket and start sending data on it nonstop.
         let fidl_fuchsia_net_ext::IpAddress(bind_addr) = DEVICE_ADDRESS.addr.into();
-        let sock = fuchsia_async::net::UdpSocket::bind_in_env(
-            &env,
+        let sock = fuchsia_async::net::UdpSocket::bind_in_realm(
+            &realm,
             std::net::SocketAddr::new(bind_addr, 0),
         )
         .await
@@ -803,10 +802,10 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_interfaces_watcher_race() -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let env = sandbox
-        .create_netstack_environment::<Netstack2, _>("interfaces_watcher_race")
-        .context("failed to create netstack environment")?;
-    let interface_state = env
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>("interfaces_watcher_race")
+        .context("failed to create netstack realm")?;
+    let interface_state = realm
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("failed to connect to fuchsia.net.interfaces/State")?;
     for _ in 0..100 {
@@ -822,9 +821,9 @@ async fn test_interfaces_watcher_race() -> Result {
             .create_endpoint::<netemul::NetworkDevice, _>("ep")
             .await
             .context("failed to create fixed ep")?
-            .into_interface_in_environment(&env)
+            .into_interface_in_realm(&realm)
             .await
-            .context("failed to install in environment")?;
+            .context("failed to install in realm")?;
 
         const ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
 
@@ -925,10 +924,10 @@ async fn test_interfaces_watcher_race() -> Result {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_interfaces_watcher() -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (env, stack) = sandbox
+    let (realm, stack) = sandbox
         .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>("interfaces_watcher")?;
 
-    let interface_state = env
+    let interface_state = realm
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("failed to connect to fuchsia.net.interfaces/State")?;
 
@@ -995,7 +994,7 @@ async fn test_interfaces_watcher() -> Result {
         .create_endpoint::<netemul::NetworkDevice, _>("ep")
         .await
         .context("failed to create endpoint")?
-        .into_interface_in_environment(&env)
+        .into_interface_in_realm(&realm)
         .await
         .context("failed to add endpoint to Netstack")?;
     let () = dev.set_link_up(true).await.context("failed to bring device up")?;
@@ -1432,13 +1431,10 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let sandbox = &sandbox;
-    let environment = sandbox
-        .create_netstack_environment_with::<Netstack2, _, _>(
-            name,
-            std::iter::empty::<netemul_environment::LaunchService>(),
-        )
-        .expect("failed to create netstack environment");
-    let environment = &environment;
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>(name)
+        .expect("failed to create netstack realm");
+    let realm = &realm;
 
     let net_ep_iface = |net_num: u8, addr: fidl_fuchsia_net::Subnet| async move {
         let net = sandbox
@@ -1446,7 +1442,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
             .await
             .expect("failed to create network");
         let fake_ep = net.create_fake_endpoint().expect("failed to create fake endpoint");
-        let iface = environment
+        let iface = realm
             .join_network::<E, _>(
                 &net,
                 format!("iface{}", net_num).as_str().ethertap_compatible_name(),
@@ -1461,7 +1457,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
     let (_net1, fake_ep1, iface1) = net_ep_iface(1, iface1_addr).await;
     let (_net2, fake_ep2, iface2) = net_ep_iface(2, iface2_addr).await;
 
-    let interface_state = environment
+    let interface_state = realm
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("failed to connect to fuchsia.net.interfaces/State");
 
@@ -1472,7 +1468,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
     .await;
 
     if let Some(config) = forwarding_config {
-        let stack = environment
+        let stack = realm
             .connect_to_service::<net_stack::StackMarker>()
             .expect("error connecting to stack");
 
@@ -1500,7 +1496,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
         }
     }
 
-    let neighbor_controller = environment
+    let neighbor_controller = realm
         .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .expect("failed to connect to Controller");
     let dst_ip_fidl: <I::Addr as NetTypesIpAddressExt>::Fidl = dst_ip.into_ext();

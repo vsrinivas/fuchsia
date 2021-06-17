@@ -1,0 +1,27 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/netstack3",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.net.stack.Stack",
+                "fuchsia.posix.socket.Provider",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.net.stack.Stack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "self",
+        },
+    ],
+}

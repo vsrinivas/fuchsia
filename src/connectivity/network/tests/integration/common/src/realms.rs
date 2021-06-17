@@ -35,7 +35,7 @@ impl NetstackVersion {
                 "fuchsia-pkg://fuchsia.com/netstack-integration-tests-v2#meta/netstack-debug.cm"
             }
             NetstackVersion::Netstack3 => {
-                todo!("specify a CFv2 component manifest for a debug netstack3")
+                "fuchsia-pkg://fuchsia.com/netstack-integration-tests-v2#meta/netstack3.cm"
             }
         }
     }

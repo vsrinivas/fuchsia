@@ -26,7 +26,6 @@ group("compile") {
 tests = [
   "dhcp",
   "dns",
-  "fidl",
   "filter",
   "ipv4",
   "ipv6",
@@ -91,6 +90,7 @@ fuchsia_test_package("netstack-integration-tests") {
 }
 
 tests_v2 = [
+  "fidl",
   "inspect",
   "routes",
 ]
@@ -115,6 +115,9 @@ fuchsia_test_package("netstack-integration-tests-v2") {
 
     # netstack is under test.
     "//src/connectivity/network/netstack:component-debug-v2",
+
+    # netstack3 is under test.
+    "//src/connectivity/network/netstack3:component-v2",
 
     # sampler config is tested as part of inspect integration tests.
     ":sampler-config",
