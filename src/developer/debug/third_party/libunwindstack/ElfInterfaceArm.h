@@ -33,8 +33,15 @@ class ElfInterfaceArm : public ElfInterface32 {
   ElfInterfaceArm(Memory* memory) : ElfInterface32(memory) {}
   virtual ~ElfInterfaceArm() = default;
 
-  class iterator : public std::iterator<std::bidirectional_iterator_tag, uint32_t> {
+  class iterator {
    public:
+    // iterator traits.
+    using difference_type = ptrdiff_t;
+    using value_type = uint32_t;
+    using pointer = uint32_t*;
+    using reference = uint32_t&;
+    using iterator_category = std::bidirectional_iterator_tag;
+
     iterator(ElfInterfaceArm* interface, size_t index) : interface_(interface), index_(index) { }
 
     iterator& operator++() { index_++; return *this; }
@@ -60,6 +67,7 @@ class ElfInterfaceArm : public ElfInterface32 {
     ElfInterfaceArm* interface_ = nullptr;
     size_t index_ = 0;
   };
+  static_assert(!std::is_void_v<std::iterator_traits<iterator>::value_type>);
 
   iterator begin() { return iterator(this, 0); }
   iterator end() { return iterator(this, total_entries_); }

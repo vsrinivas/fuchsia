@@ -41,8 +41,15 @@ class DwarfSection {
   DwarfSection(Memory* memory);
   virtual ~DwarfSection() = default;
 
-  class iterator : public std::iterator<std::bidirectional_iterator_tag, DwarfFde*> {
+  class iterator {
    public:
+    // iterator traits.
+    using difference_type = ptrdiff_t;
+    using value_type = DwarfFde*;
+    using pointer = DwarfFde**;
+    using reference = DwarfFde*&;
+    using iterator_category = std::bidirectional_iterator_tag;
+
     iterator(DwarfSection* section, size_t index) : index_(index) {
       section->GetFdes(&fdes_);
       if (index_ == static_cast<size_t>(-1)) {
@@ -79,6 +86,7 @@ class DwarfSection {
     std::vector<const DwarfFde*> fdes_;
     size_t index_ = 0;
   };
+  static_assert(!std::is_void_v<std::iterator_traits<iterator>::value_type>);
 
   iterator begin() { return iterator(this, 0); }
   iterator end() { return iterator(this, static_cast<size_t>(-1)); }
