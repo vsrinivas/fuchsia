@@ -60,6 +60,7 @@ TEST_fx_flash_ssh() {
   cat >"${fastboot_mock}.mock_side_effects" <<INPUT
 if [[ "\$1" == "devices" ]]; then
   echo "97300YCABZZ5AA	fastboot"
+  echo " "
 fi
 INPUT
   BT_EXPECT ${fx} --enable=legacy_fastboot flash --no-build
@@ -71,6 +72,7 @@ TEST_fx_flash_ssh_with_ffx() {
   cat >"${fastboot_mock}.mock_side_effects" <<INPUT
 if [[ "\$1" == "devices" ]]; then
   echo "97300YCABZZ5AA	fastboot"
+  echo " "
 fi
 INPUT
   BT_EXPECT ${fx} flash --no-build
