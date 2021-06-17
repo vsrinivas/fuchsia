@@ -30,9 +30,11 @@ example:
 options:
   --cfg FILE: reclient config for reproxy
   --bindir DIR: location of reproxy tools
+  All other flags before -- are forwarded to the reproxy bootstrap.
 EOF
 }
 
+bootstrap_options=()
 # Extract script options before --
 for opt
 do
@@ -56,6 +58,8 @@ do
     --bindir) prev_opt=reclient_bindir ;;
     # stop option processing
     --) shift; break ;;
+    # Forward all other options to reproxy
+    *) bootstrap_options+=("$opt") ;;
   esac
   shift
 done
@@ -67,7 +71,7 @@ bootstrap="$reclient_bindir"/bootstrap
 reproxy="$reclient_bindir"/reproxy
 
 # Use the same config for bootstrap as for reproxy
-"$bootstrap" --re_proxy="$reproxy" --cfg="$reproxy_cfg"
+"$bootstrap" --re_proxy="$reproxy" --cfg="$reproxy_cfg" "${bootstrap_options[@]}"
 # b/188923283 -- added --cfg to shut down properly
 shutdown() {
   "$bootstrap" --shutdown --cfg="$reproxy_cfg"

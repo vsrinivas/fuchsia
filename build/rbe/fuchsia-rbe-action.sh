@@ -67,7 +67,7 @@ do
     # stop option processing
     --) shift; break ;;
     # Forward all other options to rewrapper
-    *) rewrapper_options=("${rewrapper_options[@]}" "$opt")
+    *) rewrapper_options+=("$opt") ;;
   esac
   shift
 done
