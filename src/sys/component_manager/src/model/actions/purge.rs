@@ -50,6 +50,10 @@ async fn do_purge(component: &Arc<ComponentInstance>) -> Result<(), ModelError> 
         );
     }
 
+    // Require the component to be discovered before purging it so a Purged event is always
+    // preceded by a Discovered.
+    ActionSet::register(component.clone(), DiscoverAction::new()).await?;
+
     let nfs = {
         match *component.lock_state().await {
             InstanceState::Resolved(ref s) => {
@@ -97,7 +101,6 @@ async fn do_purge(component: &Arc<ComponentInstance>) -> Result<(), ModelError> 
     let nfs = {
         let actions = component.lock_actions().await;
         vec![
-            wait(actions.wait(DiscoverAction::new())),
             wait(actions.wait(ResolveAction::new())),
             wait(actions.wait(StartAction::new(BindReason::Unsupported))),
         ]
@@ -134,8 +137,9 @@ pub mod tests {
         },
         cm_rust::EventMode,
         cm_rust_testing::ComponentDeclBuilder,
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{join, FutureExt},
+        matches::assert_matches,
         moniker::{AbsoluteMoniker, ChildMoniker, PartialChildMoniker},
         std::sync::atomic::Ordering,
         std::sync::Weak,
@@ -158,7 +162,7 @@ pub mod tests {
             .expect("could not bind to a");
         assert!(is_executing(&component_a).await);
 
-        // Register shutdown first because DeleteChild requires the component to be shut down.
+        // Register shutdown first because PurgeChild requires the component to be shut down.
         ActionSet::register(component_a.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
@@ -166,7 +170,7 @@ pub mod tests {
         ActionSet::register(component_root.clone(), PurgeChildAction::new("a:0".into()))
             .await
             .expect("purge failed");
-        // DeleteChild should not mark the instance non-live. That's done by Destroyed which we
+        // PurgeChild should not mark the instance non-live. That's done by Destroy which we
         // don't call here.
         assert!(!is_destroyed(&component_root, &"a:0".into()).await);
         assert!(is_child_deleted(&component_root, &component_a).await);
@@ -298,13 +302,21 @@ pub mod tests {
         }
     }
 
-    async fn setup_purge_blocks_test(event_type: EventType) -> (ActionsTest, EventStream) {
+    async fn setup_purge_blocks_test(event_types: Vec<EventType>) -> (ActionsTest, EventStream) {
         let components = vec![
             ("root", ComponentDeclBuilder::new().add_lazy_child("a").build()),
             ("a", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let events = vec![event_type.into()];
+        let event_stream = setup_purge_blocks_test_event_stream(&test, event_types).await;
+        (test, event_stream)
+    }
+
+    async fn setup_purge_blocks_test_event_stream(
+        test: &ActionsTest,
+        event_types: Vec<EventType>,
+    ) -> EventStream {
+        let events: Vec<_> = event_types.into_iter().map(|e| e.into()).collect();
         let mut event_source = test
             .builtin_environment
             .lock()
@@ -327,7 +339,7 @@ pub mod tests {
         }
         let model = test.model.clone();
         fasync::Task::spawn(async move { model.start().await }).detach();
-        (test, event_stream)
+        event_stream
     }
 
     async fn run_purge_blocks_test<A>(
@@ -390,7 +402,7 @@ pub mod tests {
 
     #[fuchsia::test]
     async fn purge_blocks_on_discover() {
-        let (test, mut event_stream) = setup_purge_blocks_test(EventType::Discovered).await;
+        let (test, mut event_stream) = setup_purge_blocks_test(vec![EventType::Discovered]).await;
         run_purge_blocks_test(
             &test,
             &mut event_stream,
@@ -406,8 +418,75 @@ pub mod tests {
     }
 
     #[fuchsia::test]
+    async fn purge_registers_discover() {
+        let components = vec![("root", ComponentDeclBuilder::new().build())];
+        let test = ActionsTest::new("root", components, None).await;
+        let component_root = test.look_up(vec![].into()).await;
+        // This setup circumvents the registration of the Discover action on component_a.
+        {
+            let mut resolved_state = component_root.lock_resolved_state().await.unwrap();
+            let child = cm_rust::ChildDecl {
+                name: format!("a"),
+                url: format!("test:///a"),
+                startup: fsys::StartupMode::Lazy,
+                environment: None,
+            };
+            resolved_state
+                .add_child_for_test(
+                    &component_root,
+                    &child,
+                    None,
+                    false, /* !register_discover */
+                )
+                .await
+                .unwrap()
+                .await
+                .unwrap();
+        }
+        let mut event_stream = setup_purge_blocks_test_event_stream(
+            &test,
+            vec![EventType::Discovered, EventType::Purged],
+        )
+        .await;
+
+        // Shut down component so we can purge it.
+        let component_root = test.look_up(vec![].into()).await;
+        let component_a = match *component_root.lock_state().await {
+            InstanceState::Resolved(ref s) => {
+                s.get_live_child(&PartialChildMoniker::from("a")).expect("child a not found")
+            }
+            _ => panic!("not resolved"),
+        };
+        ActionSet::register(component_a.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+
+        // Confirm component is still in New state.
+        {
+            let state = &*component_a.lock_state().await;
+            assert_matches!(state, InstanceState::New);
+        };
+
+        // Register PurgeChild.
+        let nf = {
+            let mut actions = component_root.lock_actions().await;
+            actions.register_no_wait(&component_root, PurgeChildAction::new("a:0".into()))
+        };
+
+        // Wait for Discover action, which should be registered by Purge, followed by
+        // Purged.
+        let event =
+            event_stream.wait_until(EventType::Discovered, vec!["a:0"].into()).await.unwrap();
+        event.resume();
+        let event = event_stream.wait_until(EventType::Purged, vec!["a:0"].into()).await.unwrap();
+        event.resume();
+        nf.await.unwrap();
+        assert!(is_child_deleted(&component_root, &component_a).await);
+    }
+
+    #[fuchsia::test]
     async fn purge_blocks_on_resolve() {
-        let (test, mut event_stream) = setup_purge_blocks_test(EventType::Resolved).await;
+        let (test, mut event_stream) = setup_purge_blocks_test(vec![EventType::Resolved]).await;
         let event = event_stream.wait_until(EventType::Resolved, vec![].into()).await.unwrap();
         event.resume();
         // Cause `a` to resolve.
@@ -433,7 +512,7 @@ pub mod tests {
 
     #[fuchsia::test]
     async fn purge_blocks_on_start() {
-        let (test, mut event_stream) = setup_purge_blocks_test(EventType::Started).await;
+        let (test, mut event_stream) = setup_purge_blocks_test(vec![EventType::Started]).await;
         let event = event_stream.wait_until(EventType::Started, vec![].into()).await.unwrap();
         event.resume();
         // Cause `a` to start.
@@ -481,7 +560,7 @@ pub mod tests {
             _ => panic!("not resolved"),
         };
 
-        // Register delete action on "a", and wait for it.
+        // Register purge action on "a", and wait for it.
         ActionSet::register(component_a.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");

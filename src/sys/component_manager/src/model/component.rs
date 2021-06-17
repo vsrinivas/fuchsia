@@ -8,8 +8,8 @@ use {
         channel,
         model::{
             actions::{
-                Action, ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction,
-                ResolveAction, StopAction,
+                ActionSet, DestroyChildAction, DiscoverAction, PurgeChildAction, ResolveAction,
+                StopAction,
             },
             binding,
             component_controller::ComponentController,
@@ -1025,7 +1025,30 @@ impl ResolvedInstanceState {
         component: &Arc<ComponentInstance>,
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
-    ) -> Option<impl Future<Output = <DiscoverAction as Action>::Output>> {
+    ) -> Option<BoxFuture<'static, Result<(), ModelError>>> {
+        self.add_child_internal(component, child, collection, true).await
+    }
+
+    #[cfg(test)]
+    #[must_use]
+    pub async fn add_child_for_test(
+        &mut self,
+        component: &Arc<ComponentInstance>,
+        child: &ChildDecl,
+        collection: Option<&CollectionDecl>,
+        register_discover: bool,
+    ) -> Option<BoxFuture<'static, Result<(), ModelError>>> {
+        self.add_child_internal(component, child, collection, register_discover).await
+    }
+
+    #[must_use]
+    async fn add_child_internal(
+        &mut self,
+        component: &Arc<ComponentInstance>,
+        child: &ChildDecl,
+        collection: Option<&CollectionDecl>,
+        register_discover: bool,
+    ) -> Option<BoxFuture<'static, Result<(), ModelError>>> {
         let instance_id = match collection {
             Some(_) => {
                 let id = self.next_dynamic_instance_id;
@@ -1051,9 +1074,11 @@ impl ResolvedInstanceState {
             self.live_children.insert(partial_moniker, (instance_id, child.clone()));
             // We can dispatch a Discovered event for the component now that it's installed in the
             // tree, which means any Discovered hooks will capture it.
-            let nf = {
+            let nf = if register_discover {
                 let mut actions = child.lock_actions().await;
-                actions.register_no_wait(&child, DiscoverAction::new())
+                actions.register_no_wait(&child, DiscoverAction::new()).boxed()
+            } else {
+                async { Ok(()) }.boxed()
             };
             Some(nf)
         } else {
