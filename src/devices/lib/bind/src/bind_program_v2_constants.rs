@@ -16,6 +16,9 @@ pub const SYMB_MAGIC_NUM: u32 = 0x53594E42;
 // Magic number for INST.
 pub const INSTRUCTION_MAGIC_NUM: u32 = 0x494E5354;
 
+// Magic number for COMP.
+pub const COMPOSITE_MAGIC_NUM: u32 = 0x434F4D50;
+
 pub const BYTECODE_VERSION: u32 = 2;
 
 pub const MAX_STRING_LENGTH: usize = 255;
@@ -41,4 +44,9 @@ pub enum RawValueType {
     StringValue,
     BoolValue,
     EnumValue,
+}
+
+pub enum RawNodeType {
+    Primary = 0x50,
+    Additional = 0x51,
 }

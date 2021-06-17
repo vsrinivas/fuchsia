@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::bind_program_v2_constants::*;
-use crate::compiler::{BindProgram, BindProgramEncodeError};
+use crate::compiler::{BindProgram, BindProgramEncodeError, CompositeBindRules};
 use crate::instruction_encoder::encode_instructions;
 use crate::symbol_table_encoder::SymbolTableEncoder;
 
@@ -45,6 +45,53 @@ pub fn encode_to_string_v2(
     ))
 }
 
+pub fn encode_composite_to_bytecode(
+    bind_rules: CompositeBindRules,
+) -> Result<Vec<u8>, BindProgramEncodeError> {
+    let mut symbol_table_encoder = SymbolTableEncoder::new();
+    if bind_rules.device_name.is_empty() {
+        return Err(BindProgramEncodeError::MissingCompositeDeviceName);
+    }
+
+    // Instruction bytecode begins with the device name ID.
+    let device_name_id = symbol_table_encoder.get_key(bind_rules.device_name)?;
+    let mut inst_bytecode = device_name_id.to_le_bytes().to_vec();
+
+    // Add instructions from the primary node.
+    let mut primary_node_bytecode =
+        encode_instructions(bind_rules.primary_node_instructions, &mut symbol_table_encoder)?;
+    inst_bytecode.push(RawNodeType::Primary as u8);
+    inst_bytecode.extend_from_slice(&(primary_node_bytecode.len() as u32).to_le_bytes());
+    inst_bytecode.append(&mut primary_node_bytecode);
+
+    // Add instructions from additional nodes.
+    for node_insts in bind_rules.additional_node_instructions.into_iter() {
+        let mut node_bytecode = encode_instructions(node_insts, &mut symbol_table_encoder)?;
+        inst_bytecode.push(RawNodeType::Additional as u8);
+        inst_bytecode.extend_from_slice(&(node_bytecode.len() as u32).to_le_bytes());
+        inst_bytecode.append(&mut node_bytecode);
+    }
+
+    // Put all of the sections together.
+    let mut bytecode: Vec<u8> = vec![];
+
+    // Encode the header.
+    bytecode.extend_from_slice(&BIND_MAGIC_NUM.to_be_bytes());
+    bytecode.extend_from_slice(&BYTECODE_VERSION.to_le_bytes());
+
+    // Encode the symbol table.
+    bytecode.extend_from_slice(&SYMB_MAGIC_NUM.to_be_bytes());
+    bytecode.extend_from_slice(&(symbol_table_encoder.bytecode.len() as u32).to_le_bytes());
+    bytecode.append(&mut symbol_table_encoder.bytecode);
+
+    // Encode the instruction section.
+    bytecode.extend_from_slice(&COMPOSITE_MAGIC_NUM.to_be_bytes());
+    bytecode.extend_from_slice(&(inst_bytecode.len() as u32).to_le_bytes());
+    bytecode.append(&mut inst_bytecode);
+
+    Ok(bytecode)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -56,6 +103,9 @@ mod test {
     const OP_BYTES: u32 = 1;
     const VALUE_BYTES: u32 = 5;
     const OFFSET_BYTES: u32 = 4;
+
+    const NODE_HEADER_BYTES: u32 = 5;
+    const COMPOSITE_NAME_ID_BYTES: u32 = 4;
 
     // Constants representing the number of bytes in each instruction.
     const UNCOND_ABORT_BYTES: u32 = OP_BYTES;
@@ -98,6 +148,11 @@ mod test {
             }
         }
 
+        fn verify_node_type(&mut self, node_type: RawNodeType, num_of_bytes: u32) {
+            self.verify_next_u8(node_type as u8);
+            self.verify_next_u32(num_of_bytes);
+        }
+
         // Verify that the next bytes matches the string and advance
         // the iterator.
         pub fn verify_string(&mut self, expected: String) {
@@ -123,6 +178,25 @@ mod test {
         pub fn verify_instructions_header(&mut self, num_of_bytes: u32) {
             self.verify_magic_num(INSTRUCTION_MAGIC_NUM);
             self.verify_next_u32(num_of_bytes);
+        }
+
+        pub fn verify_composite_header(&mut self, num_of_bytes: u32) {
+            self.verify_magic_num(COMPOSITE_MAGIC_NUM);
+            self.verify_next_u32(num_of_bytes);
+
+            // The device name ID is the first one in the symbol table.
+            // This isn't required in the bytecode specs, it's just how it's
+            // implemented in encode_composite_to_bytecode().
+            self.verify_next_u32(1);
+        }
+
+        pub fn verify_symbol_table(&mut self, expected_symbols: &[&str]) {
+            let mut unique_id = 1;
+            expected_symbols.iter().for_each(|value| {
+                self.verify_next_u32(unique_id);
+                self.verify_string(value.to_string());
+                unique_id += 1;
+            });
         }
 
         pub fn verify_unconditional_abort(&mut self) {
@@ -227,13 +301,13 @@ mod test {
         checker.verify_bind_program_header();
         checker.verify_sym_table_header(67);
 
-        let mut unique_id = 1;
-        let expected_symbols = ["shoveler", "canvasback", "bufflehead", "pintail", "mallard"];
-        expected_symbols.iter().for_each(|value| {
-            checker.verify_next_u32(unique_id);
-            checker.verify_string(value.to_string());
-            unique_id += 1;
-        });
+        checker.verify_symbol_table(&[
+            "shoveler",
+            "canvasback",
+            "bufflehead",
+            "pintail",
+            "mallard",
+        ]);
 
         checker.verify_instructions_header((COND_ABORT_BYTES * 5) + COND_JMP_BYTES + JMP_PAD_BYTES);
         checker.verify_abort_not_equal(
@@ -321,13 +395,7 @@ mod test {
         checker.verify_bind_program_header();
         checker.verify_sym_table_header(41);
 
-        let mut unique_id = 1;
-        let expected_symbols = ["puffleg", "sunangel", "mountaingem"];
-        expected_symbols.iter().for_each(|value| {
-            checker.verify_next_u32(unique_id);
-            checker.verify_string(value.to_string());
-            unique_id += 1;
-        });
+        checker.verify_symbol_table(&["puffleg", "sunangel", "mountaingem"]);
 
         checker.verify_instructions_header(COND_ABORT_BYTES * 6);
         checker.verify_abort_not_equal(
@@ -896,6 +964,299 @@ mod test {
         assert_eq!(
             Err(BindProgramEncodeError::MatchNotSupported),
             encode_to_bytecode_v2(bind_program)
+        );
+    }
+
+    #[test]
+    fn test_composite() {
+        let primary_node = vec![
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::DeprecatedKey(1),
+                rhs: Symbol::BoolValue(false),
+            },
+            SymbolicInstruction::UnconditionalAbort,
+        ];
+
+        let additional_node_instructions = vec![
+            SymbolicInstruction::JumpIfEqual {
+                lhs: Symbol::DeprecatedKey(15),
+                rhs: Symbol::StringValue("ruff".to_string()),
+                label: 1,
+            },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::Key("plover".to_string(), ValueType::Number),
+                rhs: Symbol::NumberValue(1),
+            },
+            SymbolicInstruction::Label(1),
+            SymbolicInstruction::UnconditionalAbort,
+        ];
+
+        let bind_rules = CompositeBindRules {
+            symbol_table: HashMap::new(),
+            device_name: "wader".to_string(),
+            primary_node_instructions: to_symbolic_inst_info(primary_node),
+            additional_node_instructions: vec![to_symbolic_inst_info(additional_node_instructions)],
+        };
+
+        let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
+        checker.verify_bind_program_header();
+        checker.verify_sym_table_header(30);
+
+        checker.verify_symbol_table(&["wader", "ruff", "plover"]);
+
+        let primary_node_bytes = COND_ABORT_BYTES + UNCOND_ABORT_BYTES;
+        let additional_node_bytes =
+            COND_JMP_BYTES + COND_ABORT_BYTES + JMP_PAD_BYTES + UNCOND_ABORT_BYTES;
+        checker.verify_composite_header(
+            (NODE_HEADER_BYTES * 2)
+                + COMPOSITE_NAME_ID_BYTES
+                + primary_node_bytes
+                + additional_node_bytes,
+        );
+
+        // Verify primary node.
+        checker.verify_node_type(RawNodeType::Primary, primary_node_bytes);
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+            EncodedValue { value_type: RawValueType::BoolValue, value: 0 },
+        );
+        checker.verify_unconditional_abort();
+
+        // Verify additional node.
+        checker.verify_node_type(RawNodeType::Additional, additional_node_bytes);
+        checker.verify_jmp_if_equal(
+            COND_ABORT_BYTES,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 15 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 2 },
+        );
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::Key, value: 3 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+        );
+        checker.verify_jmp_pad();
+        checker.verify_unconditional_abort();
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_composite_sharing_symbols() {
+        let primary_node = vec![SymbolicInstruction::AbortIfEqual {
+            lhs: Symbol::Key("trembler".to_string(), ValueType::Str),
+            rhs: Symbol::StringValue("thrasher".to_string()),
+        }];
+
+        let additional_node_instructions = vec![
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::Key("thrasher".to_string(), ValueType::Str),
+                rhs: Symbol::StringValue("catbird".to_string()),
+            },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::Key("catbird".to_string(), ValueType::Number),
+                rhs: Symbol::NumberValue(1),
+            },
+        ];
+
+        let bind_rules = CompositeBindRules {
+            device_name: "mimid".to_string(),
+            symbol_table: HashMap::new(),
+            primary_node_instructions: to_symbolic_inst_info(primary_node),
+            additional_node_instructions: vec![to_symbolic_inst_info(additional_node_instructions)],
+        };
+
+        let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
+        checker.verify_bind_program_header();
+
+        checker.verify_sym_table_header(48);
+        checker.verify_symbol_table(&["mimid", "trembler", "thrasher", "catbird"]);
+
+        let primary_node_bytes = COND_ABORT_BYTES;
+        let additional_node_bytes = COND_ABORT_BYTES * 2;
+        checker.verify_composite_header(
+            (NODE_HEADER_BYTES * 2)
+                + COMPOSITE_NAME_ID_BYTES
+                + primary_node_bytes
+                + additional_node_bytes,
+        );
+
+        checker.verify_node_type(RawNodeType::Primary, primary_node_bytes);
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::Key, value: 2 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 3 },
+        );
+
+        checker.verify_node_type(RawNodeType::Additional, additional_node_bytes);
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::Key, value: 3 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 4 },
+        );
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::Key, value: 4 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+        );
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_composite_same_label_id() {
+        let primary_node = vec![
+            SymbolicInstruction::JumpIfEqual {
+                lhs: Symbol::DeprecatedKey(15),
+                rhs: Symbol::NumberValue(5),
+                label: 1,
+            },
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::Label(1),
+        ];
+
+        let additional_node_instructions = vec![
+            SymbolicInstruction::JumpIfEqual {
+                lhs: Symbol::DeprecatedKey(10),
+                rhs: Symbol::NumberValue(2),
+                label: 1,
+            },
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::Label(1),
+        ];
+
+        let bind_rules = CompositeBindRules {
+            device_name: "currawong".to_string(),
+            symbol_table: HashMap::new(),
+            primary_node_instructions: to_symbolic_inst_info(primary_node),
+            additional_node_instructions: vec![to_symbolic_inst_info(additional_node_instructions)],
+        };
+
+        let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
+        checker.verify_bind_program_header();
+
+        checker.verify_sym_table_header(14);
+        checker.verify_symbol_table(&["currawong"]);
+
+        let primary_node_bytes = COND_JMP_BYTES + UNCOND_ABORT_BYTES + JMP_PAD_BYTES;
+        let additional_node_bytes = COND_JMP_BYTES + UNCOND_ABORT_BYTES + JMP_PAD_BYTES;
+        checker.verify_composite_header(
+            (NODE_HEADER_BYTES * 2)
+                + COMPOSITE_NAME_ID_BYTES
+                + primary_node_bytes
+                + additional_node_bytes,
+        );
+
+        checker.verify_node_type(RawNodeType::Primary, primary_node_bytes);
+        checker.verify_jmp_if_equal(
+            UNCOND_ABORT_BYTES,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 15 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 5 },
+        );
+        checker.verify_unconditional_abort();
+        checker.verify_jmp_pad();
+
+        checker.verify_node_type(RawNodeType::Additional, additional_node_bytes);
+        checker.verify_jmp_if_equal(
+            UNCOND_ABORT_BYTES,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 10 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 2 },
+        );
+        checker.verify_unconditional_abort();
+        checker.verify_jmp_pad();
+
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_composite_invalid_label() {
+        let primary_node = vec![
+            SymbolicInstruction::JumpIfEqual {
+                lhs: Symbol::DeprecatedKey(15),
+                rhs: Symbol::NumberValue(5),
+                label: 1,
+            },
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::Label(1),
+        ];
+
+        let additional_node_instructions = vec![
+            SymbolicInstruction::JumpIfEqual {
+                lhs: Symbol::DeprecatedKey(10),
+                rhs: Symbol::NumberValue(2),
+                label: 1,
+            },
+            SymbolicInstruction::UnconditionalAbort,
+            SymbolicInstruction::Label(2),
+        ];
+
+        let bind_rules = CompositeBindRules {
+            device_name: "currawong".to_string(),
+            symbol_table: HashMap::new(),
+            primary_node_instructions: to_symbolic_inst_info(primary_node),
+            additional_node_instructions: vec![to_symbolic_inst_info(additional_node_instructions)],
+        };
+
+        assert_eq!(
+            Err(BindProgramEncodeError::MissingLabel(1)),
+            encode_composite_to_bytecode(bind_rules)
+        );
+    }
+
+    #[test]
+    fn test_composite_primary_node_only() {
+        let primary_node = vec![SymbolicInstruction::UnconditionalAbort];
+
+        let bind_rules = CompositeBindRules {
+            device_name: "treehunter".to_string(),
+            symbol_table: HashMap::new(),
+            primary_node_instructions: to_symbolic_inst_info(primary_node),
+            additional_node_instructions: vec![],
+        };
+
+        let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
+        checker.verify_bind_program_header();
+
+        checker.verify_sym_table_header(15);
+        checker.verify_symbol_table(&["treehunter"]);
+
+        let primary_node_bytes = UNCOND_ABORT_BYTES;
+        checker.verify_composite_header(
+            NODE_HEADER_BYTES + COMPOSITE_NAME_ID_BYTES + primary_node_bytes,
+        );
+
+        checker.verify_node_type(RawNodeType::Primary, primary_node_bytes);
+        checker.verify_unconditional_abort();
+
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_composite_empty_node_instructions() {
+        let bind_rules = CompositeBindRules {
+            device_name: "spiderhunter".to_string(),
+            symbol_table: HashMap::new(),
+            primary_node_instructions: vec![],
+            additional_node_instructions: vec![],
+        };
+
+        let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
+        checker.verify_bind_program_header();
+
+        checker.verify_sym_table_header(17);
+        checker.verify_symbol_table(&["spiderhunter"]);
+
+        checker.verify_composite_header(NODE_HEADER_BYTES + COMPOSITE_NAME_ID_BYTES);
+        checker.verify_node_type(RawNodeType::Primary, 0);
+
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_composite_missing_device_name() {
+        let bind_rules = CompositeBindRules {
+            device_name: "".to_string(),
+            symbol_table: HashMap::new(),
+            primary_node_instructions: vec![],
+            additional_node_instructions: vec![],
+        };
+
+        assert_eq!(
+            Err(BindProgramEncodeError::MissingCompositeDeviceName),
+            encode_composite_to_bytecode(bind_rules)
         );
     }
 }

@@ -448,6 +448,9 @@ impl From<BindProgramEncodeError> for UserError {
                 None,
                 true,
             ),
+            BindProgramEncodeError::MissingCompositeDeviceName => {
+                UserError::new("E610", "Composite bind rules missing a device name", None, true)
+            }
         }
     }
 }

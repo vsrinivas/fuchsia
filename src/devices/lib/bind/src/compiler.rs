@@ -55,6 +55,7 @@ pub enum BindProgramEncodeError {
     InvalidGotoLocation(u32),
     JumpOffsetOutOfRange(u32),
     MatchNotSupported,
+    MissingCompositeDeviceName,
 }
 
 impl fmt::Display for BindProgramEncodeError {
@@ -89,6 +90,15 @@ impl<'a> BindProgram<'a> {
 
         encode_to_bytecode_v1(self)
     }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, PartialEq)]
+pub struct CompositeBindRules<'a> {
+    pub device_name: String,
+    pub symbol_table: SymbolTable,
+    pub primary_node_instructions: Vec<SymbolicInstructionInfo<'a>>,
+    pub additional_node_instructions: Vec<Vec<SymbolicInstructionInfo<'a>>>,
 }
 
 pub type SymbolTable = HashMap<CompoundIdentifier, Symbol>;
@@ -144,7 +154,6 @@ fn resolve_dependencies<'a>(
     .map_err(CompilerError::DependencyError)
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Symbol {
     DeprecatedKey(u32),
