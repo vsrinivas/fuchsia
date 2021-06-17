@@ -42,7 +42,17 @@ group("interpreter") {
   testonly = true
   deps = [
     ":exe",
+    ":interpreter-mig",
     ":lib",
+  ]
+}
+
+# TODO(jayzhuang): Remove all targets above and rename this to "interpreter"
+# when usages of python_exe_path out of fuchsia.git move to python_exe_src.
+host_test_data("interpreter-mig") {
+  sources = [
+    "//prebuilt/third_party/python3/${host_platform}/lib",
+    python_exe_src,
   ]
 }
 

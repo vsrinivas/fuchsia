@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python.gni")
 import("//build/python/python_binary.gni")
 import("//build/testing/host_test.gni")
 import("//build/testing/host_test_data.gni")
@@ -99,7 +98,7 @@ template("python_host_test") {
   host_test(target_name) {
     forward_variables_from(invoker, [ "visibility" ])
 
-    binary_path = python_exe_path
+    binary_path = python_exe_src
     args =
         [ rebase_path("${_test_dir}/${_python_binary_name}", root_build_dir) ]
     if (defined(invoker.extra_args)) {

@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test.gni")
 import("//build/testing/host_test_data.gni")
@@ -16,11 +15,11 @@ if (host_os == "win") {
 }
 
 host_test("verify_build_test") {
-  binary_path = python_exe_path
+  binary_path = python_exe_src
   args = [
-    rebase_path("${target_out_dir}/test_wrapper.py", root_build_dir),
-    rebase_path("${python_exe_path}", root_build_dir),
-    rebase_path("${target_out_dir}/verify_build_test.py", root_build_dir),
+    rebase_path("test_wrapper.py", root_build_dir),
+    rebase_path(python_exe_src, root_build_dir),
+    rebase_path("verify_build_test.py", root_build_dir),
     rebase_path(scrutiny_tool, root_build_dir),
     rebase_path(zbi_tool, root_build_dir),
   ]
@@ -39,7 +38,6 @@ host_test_data("verify_build_test_data") {
     "verify_build.py",
     "verify_build_test.py",
   ]
-  outputs = [ "${target_out_dir}/{{source_file_part}}" ]
 }
 
 host_test_data("tools") {
