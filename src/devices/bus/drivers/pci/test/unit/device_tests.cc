@@ -329,6 +329,8 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
         CheckProperty(node->node(), Device::kInspectIrqMode,
                       inspect::StringPropertyValue(Device::kInspectIrqModes[mode])));
   }
+
+#ifdef ENABLE_MSIX
   {
     pci_irq_mode_t mode = PCI_IRQ_MODE_MSI_X;
     ASSERT_OK(dev.SetIrqMode(mode, 1));
@@ -338,6 +340,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
         CheckProperty(node->node(), Device::kInspectIrqMode,
                       inspect::StringPropertyValue(Device::kInspectIrqModes[mode])));
   }
+#endif
 }
 
 TEST_F(PciDeviceTests, InspectLegacyNoPin) {
@@ -389,6 +392,7 @@ TEST_F(PciDeviceTests, InspectLegacy) {
   }
 }
 
+#ifdef ENABLE_MSIX
 TEST_F(PciDeviceTests, InspectMSI) {
   uint32_t irq_cnt = 4;
   auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
@@ -407,5 +411,6 @@ TEST_F(PciDeviceTests, InspectMSI) {
   ASSERT_NO_FATAL_FAILURES(
       CheckProperty(node, Device::kInspectMsiAllocated, inspect::UintPropertyValue(irq_cnt)));
 }
+#endif
 
 }  // namespace pci

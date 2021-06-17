@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//src/devices/bus/drivers/pci/pci.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 # The output of the test code below is made up of several binaries
@@ -24,6 +25,11 @@ test("pci-unit") {
     "unit/fake_pciroot_tests.cc",
     "unit/main.cc",
   ]
+
+  if (userspace_pci_enable_msi_x) {
+    defines = [ "ENABLE_MSIX" ]
+  }
+
   deps = [
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/bus/drivers/pci:user_pci",
@@ -97,6 +103,11 @@ driver_module("pci_protocol_test_driver") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
+
+  if (userspace_pci_enable_msi_x) {
+    defines = [ "ENABLE_MSIX" ]
+  }
+
   sources = [ "driver/protocol_test_driver.cc" ]
   deps = [
     "driver:pci_protocol_test_driver_bind",

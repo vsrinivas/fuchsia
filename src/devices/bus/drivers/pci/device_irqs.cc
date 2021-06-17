@@ -33,11 +33,13 @@ zx::status<uint32_t> Device::QueryIrqMode(pci_irq_mode_t mode) {
         return zx::ok(caps_.msi->vectors_avail());
       }
       break;
+#ifdef ENABLE_MSIX
     case PCI_IRQ_MODE_MSI_X:
       if (caps_.msix) {
         return zx::ok(caps_.msix->table_size());
       }
       break;
+#endif
     case PCI_IRQ_MODE_DISABLED:
     default:
       return zx::error(ZX_ERR_INVALID_ARGS);
@@ -79,11 +81,13 @@ zx_status_t Device::SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) {
         return EnableMsi(irq_cnt);
       }
       break;
+#ifdef ENABLE_MSIX
     case PCI_IRQ_MODE_MSI_X:
       if (caps_.msix) {
         return EnableMsix(irq_cnt);
       }
       break;
+#endif
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -100,9 +104,11 @@ zx_status_t Device::DisableInterrupts() {
     case PCI_IRQ_MODE_MSI:
       st = DisableMsi();
       break;
+#ifdef ENABLE_MSIX
     case PCI_IRQ_MODE_MSI_X:
       st = DisableMsix();
       break;
+#endif
   }
 
   if (st == ZX_OK) {
@@ -144,6 +150,7 @@ zx::status<zx::interrupt> Device::MapInterrupt(uint32_t which_irq) {
                                view_res->get_offset() + caps_.msi->base(), &interrupt);
       break;
     }
+#ifdef ENABLE_MSIX
     case PCI_IRQ_MODE_MSI_X: {
       auto& msix = caps_.msix;
       status = zx::msi::create(irqs_.msi_allocation, ZX_MSI_MODE_MSI_X, which_irq,
@@ -156,6 +163,7 @@ zx::status<zx::interrupt> Device::MapInterrupt(uint32_t which_irq) {
       }
       break;
     }
+#endif
     default:
       return zx::error(ZX_ERR_BAD_STATE);
   }

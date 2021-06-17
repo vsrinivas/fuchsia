@@ -98,6 +98,11 @@ if (platform_enable_user_pci) {
     if (is_fuchsia) {
       configs += [ "//build/unification/config:zircon-migrated" ]
     }
+
+    if (userspace_pci_enable_msi_x) {
+      defines = [ "ENABLE_MSIX" ]
+    }
+
     sources = [
       # The driver needs bind glue, unlike tests.
       "bind.cc",

@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//src/devices/bus/drivers/pci/pci.gni")
 
 bind_rules("fragment-bind") {
   output = "fragment-bind.h"
@@ -80,6 +81,11 @@ driver_module("fragment.proxy") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
+
+  if (platform_enable_user_pci) {
+    defines = [ "ENABLE_USER_PCI" ]
+  }
+
   sources = [
     "fragment-proxy-pci.cc",
     "fragment-proxy.cc",

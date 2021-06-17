@@ -8,4 +8,5 @@
 # not built.
 declare_args() {
   platform_enable_user_pci = false
+  userspace_pci_enable_msi_x = false
 }
