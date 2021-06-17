@@ -529,6 +529,11 @@ static const struct {
         .type_guid = GUID_VBMETA_R_VALUE,
     },
     {
+        .legacy_name = GUID_FVM_NAME,
+        .name = GPT_FVM_NAME,
+        .type_guid = GUID_FVM_VALUE,
+    },
+    {
         .legacy_name = GUID_EFI_NAME,
         // No bootloader_{a,b,r} support, just use standard "bootloader".
         .name = "bootloader",

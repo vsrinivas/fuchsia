@@ -1250,19 +1250,23 @@ generate_fvm("fvm.blob.sparse.blk") {
 }
 default_image_deps += [ ":fvm.blob.sparse.blk" ]
 
-if (fvm_partition != "") {
-  # If |fvm_partition| is specified, generate a fastboot fvm format suitable for
-  # fastboot flashing. The image will be used for emu/qemu as well.
+# If |fvm_partition| is specified, generate a FVM format suitable for fastboot
+# flashing. The image will be used for emu/qemu as well.
+#
+# FVM isn't used for bootfs_only (bringup) builds, and we need to explicitly
+# omit it to avoid transitively pulling in conflicting fuchsia.zbi targets
+# (fxbug.dev/46415).
+supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
+if (supports_fastboot_fvm) {
   fvm_generation_args = []
   fvm_partitions = []
   fvm_inputs = []
   fvm_deps = []
+  fvm_compression = fvm_fastboot_compression
   if (fvm_emmc_partition_size != false) {
     # If "fvm_emmc_partition_size" is specified, generate for emmc devices.
     fvm_generation_args = fvm_create_args
     fvm_generation_args += [
-      "--compress",
-      "lz4",
       "--length",
       "$fvm_emmc_partition_size",
       "--resize-image-file-to-fit",
@@ -1271,6 +1275,11 @@ if (fvm_partition != "") {
       fvm_blob_partition,
       fvm_data_partition,
     ]
+
+    # eMMC FVM images use LZ4 compression by default.
+    if (fvm_compression == "default") {
+      fvm_compression = "lz4"
+    }
   } else if (fvm_ftl_nand_page_size != false) {
     # For raw NAND devices that support flashing via fastboot, generate the NAND
     # FVM image as well which contains the necessary OOB bytes to initialize the
@@ -1302,10 +1311,22 @@ if (fvm_partition != "") {
     ]
     fvm_inputs = [ fvm_blob_sparse_blk_path ]
     fvm_deps = [ ":fvm.blob.sparse.blk" ]
+
+    # NAND FVM images use no compression by default.
+    if (fvm_compression == "default") {
+      fvm_compression = "none"
+    }
   } else {
     assert(
         false,
         "|fvm_partition| is specified. But failed to determine the target format.")
+  }
+
+  if (fvm_compression != "none") {
+    fvm_generation_args += [
+      "--compress",
+      fvm_compression,
+    ]
   }
 
   generate_fvm("fvm.fastboot.blk") {
@@ -1751,7 +1772,7 @@ action("flash_script") {
     ]
   }
 
-  if (fvm_partition != "") {
+  if (supports_fastboot_fvm) {
     image_path = get_target_outputs(":fvm.fastboot.blk")
     args += [
       "--fvm-image=" + rebase_path(image_path[0], root_build_dir),
@@ -1933,7 +1954,7 @@ foreach(info, firmware_info) {
   ]
 }
 
-if (fvm_partition != "") {
+if (supports_fastboot_fvm) {
   archive_deps += [ ":fvm.fastboot.blk" ]
   image_path = get_target_outputs(":fvm.fastboot.blk")
   archive_args += [

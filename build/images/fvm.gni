@@ -114,6 +114,13 @@ declare_args() {
   fvm_ftl_nand_oob_size = false
   fvm_ftl_nand_pages_per_block = false
   fvm_ftl_nand_block_count = false
+
+  # How to compress the FVM image used for fastboot flashing.
+  # Possible values:
+  #   * "none": no compression
+  #   * "default": no compression on NAND, lz4 compression on eMMC.
+  #   * any other value is passed as the FVM "--compress" arg
+  fvm_fastboot_compression = "default"
 }
 
 # Build an FVM partition
