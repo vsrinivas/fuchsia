@@ -180,15 +180,12 @@ Fuchsia:
    </td>
   </tr>
   <tr>
-<<<<<<< HEAD
-=======
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/session-framework-dev">session-framework-dev</a>
    </td>
    <td>For conversation about {{ widgets.glossary_simple ('Session framework') }}.
    </td>
   </tr>
   <tr>
->>>>>>> 77423c8d475 ([docs] Revamping glossary)
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/storage-dev">storage-dev</a>
    </td>
    <td>For conversation about filesystems and other storage concerns on Fuchsia.
