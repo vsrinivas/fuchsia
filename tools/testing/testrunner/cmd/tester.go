@@ -346,18 +346,6 @@ func (t *fuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command [
 	return cmdErr
 }
 
-// Return this error when the test is skipped.
-type TestSkippedError struct{}
-
-func (e *TestSkippedError) Error() string {
-	return "test skipped"
-}
-
-func isTestSkippedErr(err error) bool {
-	_, ok := err.(*TestSkippedError)
-	return ok
-}
-
 // Test runs a test over SSH.
 func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, _ string) (runtests.DataSinkReference, error) {
 	sinks := runtests.DataSinkReference{}
