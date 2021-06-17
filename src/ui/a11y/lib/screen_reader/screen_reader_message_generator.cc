@@ -23,7 +23,7 @@ using fuchsia::intl::l10n::MessageIds;
 static constexpr zx::duration kDefaultDelay = zx::msec(40);
 static constexpr zx::duration kLongDelay = zx::msec(100);
 
-// Returns a message that describes the label and range value of a slider.
+// Returns a message that describes the label and range value attributes.
 std::string GetSliderLabelAndRangeMessage(const fuchsia::accessibility::semantics::Node* node) {
   std::string message;
   if (node->has_attributes() && node->attributes().has_label()) {
@@ -110,15 +110,14 @@ std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
 ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
   std::vector<UtteranceAndContext> description;
   {
-    // If this node is a radio button, slider, or toggle switch, the label is part of the whole
-    // message that describes it.
+    // If this node is a radio button, slider-like object, or toggle switch, the label is part of
+    // the whole message that describes it.
     if (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::RADIO_BUTTON) {
       description.emplace_back(DescribeRadioButton(node));
     } else if (node->has_role() &&
                node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH) {
       description.emplace_back(DescribeToggleSwitch(node));
-    } else if (node->has_role() &&
-               node->role() == fuchsia::accessibility::semantics::Role::SLIDER) {
+    } else if (node->has_states() && node->states().has_range_value()) {
       Utterance utterance;
       utterance.set_message(GetSliderLabelAndRangeMessage(node));
       description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});

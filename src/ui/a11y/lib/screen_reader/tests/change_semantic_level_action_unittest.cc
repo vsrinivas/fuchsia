@@ -52,7 +52,7 @@ class ChangeSemanticLevelAction : public gtest::TestLoopFixture {
     view_manager_.SetSemanticsEnabled(true);
     fuchsia::accessibility::semantics::Node node;
     node.set_node_id(0);
-    node.set_role(fuchsia::accessibility::semantics::Role::SLIDER);
+    node.mutable_states()->set_range_value(42.0);
     std::vector<decltype(node)> update_nodes;
     update_nodes.push_back(std::move(node));
     semantic_provider_.UpdateSemanticNodes(std::move(update_nodes));

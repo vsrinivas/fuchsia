@@ -89,11 +89,6 @@ fit::promise<> ScreenReaderAction::BuildSpeechTaskForRangeValuePromise(zx_koid_t
       return fit::make_error_promise();
     }
 
-    if (!node->has_role() || (node->role() != fuchsia::accessibility::semantics::Role::SLIDER)) {
-      FX_LOGS(INFO) << "ScreenReaderAction: Node is not slider. Nothing to send to TTS.";
-      return fit::make_error_promise();
-    }
-
     if (!node->has_states() || !node->states().has_range_value()) {
       FX_LOGS(INFO)
           << "ScreenReaderAction: Slider node is missing |range_value|. Nothing to send to TTS.";
