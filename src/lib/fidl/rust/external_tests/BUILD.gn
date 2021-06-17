@@ -8,7 +8,10 @@ import("//build/rust/rustc_test.gni")
 
 fidl("fidl.rust.test.external") {
   testonly = true
-  sources = [ "handle_rights.test.fidl" ]
+  sources = [
+    "data_types.test.fidl",
+    "handle_rights.test.fidl",
+  ]
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
@@ -24,6 +27,7 @@ rustc_test("fidl_rust_external_tests_bin") {
     "//src/testing/fidl:placeholders-rustc",
   ]
   sources = [
+    "src/data_types.rs",
     "src/handle_rights.rs",
     "src/lib.rs",
     "src/server_sender.rs",

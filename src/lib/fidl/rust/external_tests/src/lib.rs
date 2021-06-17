@@ -4,6 +4,7 @@
 
 #![cfg(test)]
 
+mod data_types;
 mod handle_rights;
 mod server_sender;
 mod stream_handler_test;

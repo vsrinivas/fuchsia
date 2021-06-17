@@ -17,9 +17,8 @@ use {
     fidl::{
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
-        fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
-        fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-        wrap_handle_metadata,
+        fidl_bits, fidl_empty_struct, fidl_flexible_enum, fidl_strict_enum, fidl_struct,
+        fidl_struct_copy, fidl_table, fidl_xunion, wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
     futures::future::{self, MaybeDone, TryFutureExt},
@@ -32,9 +31,25 @@ bitflags! {
         const Duplicate = 2;
     }
 }
-fidl_strict_bits! {
+
+impl Rights {
+    #[deprecated = "Strict bits should not use has_unknown_bits()"]
+    #[inline(always)]
+    pub fn has_unknown_bits(&self) -> bool {
+        false
+    }
+
+    #[deprecated = "Strict bits should not use get_unknown_bits()"]
+    #[inline(always)]
+    pub fn get_unknown_bits(&self) -> u32 {
+        0
+    }
+}
+
+fidl_bits! {
     name: Rights,
     prim_ty: u32,
+    strict: true,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]

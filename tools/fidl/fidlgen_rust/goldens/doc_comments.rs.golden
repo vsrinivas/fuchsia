@@ -17,9 +17,8 @@ use {
     fidl::{
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
-        fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
-        fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
-        wrap_handle_metadata,
+        fidl_bits, fidl_empty_struct, fidl_flexible_enum, fidl_strict_enum, fidl_struct,
+        fidl_struct_copy, fidl_table, fidl_xunion, wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
     futures::future::{self, MaybeDone, TryFutureExt},
@@ -41,9 +40,25 @@ bitflags! {
         const MyOtherBit = 2;
     }
 }
-fidl_strict_bits! {
+
+impl MyStrictBits {
+    #[deprecated = "Strict bits should not use has_unknown_bits()"]
+    #[inline(always)]
+    pub fn has_unknown_bits(&self) -> bool {
+        false
+    }
+
+    #[deprecated = "Strict bits should not use get_unknown_bits()"]
+    #[inline(always)]
+    pub fn get_unknown_bits(&self) -> u32 {
+        0
+    }
+}
+
+fidl_bits! {
     name: MyStrictBits,
     prim_ty: u32,
+    strict: true,
 }
 
 bitflags! {
@@ -61,9 +76,28 @@ bitflags! {
         const MyOtherBit = 2;
     }
 }
-fidl_flexible_bits! {
+
+impl MyFlexibleBits {
+    #[inline(always)]
+    pub fn from_bits_allow_unknown(bits: u32) -> Self {
+        unsafe { Self::from_bits_unchecked(bits) }
+    }
+
+    #[inline(always)]
+    pub fn has_unknown_bits(&self) -> bool {
+        self.get_unknown_bits() != 0
+    }
+
+    #[inline(always)]
+    pub fn get_unknown_bits(&self) -> u32 {
+        self.bits & !Self::all().bits
+    }
+}
+
+fidl_bits! {
     name: MyFlexibleBits,
     prim_ty: u32,
+    flexible: true,
 }
 
 /// const comment #1
