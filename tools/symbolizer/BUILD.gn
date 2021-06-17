@@ -83,24 +83,10 @@ if (is_host) {
       "test_cases/userboot.in",
       "test_cases/userboot.out",
     ]
-    outputs =
-        [ "$root_out_dir/test_data/symbolizer/test_cases/{{source_file_part}}" ]
   }
 
-  # Manually copy the symbol directory since host_test_data does not support
-  # copying directory any more (fxbug.dev/73250). It's not a big issue for us
-  # since the symbol directory seldom changes, and when it changes, we usually
-  # only add new files to it which will change the directory's mtime.
-  e2e_test_symbols_out_dir = "$root_out_dir/test_data/symbolizer/symbols"
-  copy_tree("e2e_test_symbols_copy") {
-    src_dir = "//prebuilt/test_data/symbolizer/symbols"
-    dest_dir = e2e_test_symbols_out_dir
-  }
-
-  # Make the copied directory available at test runtime.
   host_test_data("e2e_test_symbols") {
-    sources = [ e2e_test_symbols_out_dir ]
-    deps = [ ":e2e_test_symbols_copy" ]
+    sources = [ "//prebuilt/test_data/symbolizer/symbols" ]
   }
 
   test("symbolizer_e2e_tests") {

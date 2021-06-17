@@ -16,9 +16,11 @@
 namespace {
 
 const std::filesystem::path kSelfPath = zxdb::GetSelfPath();
-const std::filesystem::path kTestDataDir = kSelfPath.parent_path() / "test_data" / "symbolizer";
-const std::filesystem::path kSymbolsDir = kTestDataDir / "symbols";
-const std::filesystem::path kTestCasesDir = kTestDataDir / "test_cases";
+const std::filesystem::path kFuchsiaSrcDir =
+    kSelfPath.parent_path().parent_path().parent_path().parent_path();
+const std::filesystem::path kSymbolsDir =
+    kFuchsiaSrcDir / "prebuilt" / "test_data" / "symbolizer" / "symbols";
+const std::filesystem::path kTestCasesDir = kFuchsiaSrcDir / "tools" / "symbolizer" / "test_cases";
 
 class TestCase : public testing::Test {
  public:
