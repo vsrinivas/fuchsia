@@ -5,6 +5,7 @@
 package e2e
 
 import (
+	"context"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/fvdl/e2e/e2etest"
@@ -12,8 +13,13 @@ import (
 
 func TestStartFVDLInTree_GrpcWebProxy(t *testing.T) {
 	setUp(t, true)
-	vdlOut := runVDLWithArgs(t, []string{"start", "--nointeractive", "-V",
-		"--nopackageserver", "--grpcwebproxy", "0", "--image-size", "10G"},
+	vdlOut := runVDLWithArgs(
+		context.Background(),
+		t,
+		[]string{
+			"start", "--nointeractive", "-V",
+			"--nopackageserver", "--grpcwebproxy", "0", "--image-size", "10G",
+		},
 		true, // intree
 	)
 	pid := e2etest.GetProcessPID("Emulator", vdlOut)
@@ -32,8 +38,13 @@ func TestStartFVDLInTree_GrpcWebProxy(t *testing.T) {
 
 func TestStartFVDLInTree_Headless_ServePackages_Tuntap(t *testing.T) {
 	setUp(t, true)
-	vdlOut := runVDLWithArgs(t, []string{"start", "--nointeractive", "-V",
-		"--headless", "-N", "--image-size", "10G"},
+	vdlOut := runVDLWithArgs(
+		context.Background(),
+		t,
+		[]string{
+			"start", "--nointeractive", "-V",
+			"--headless", "-N", "--image-size", "10G",
+		},
 		true, // intree
 	)
 	pid := e2etest.GetProcessPID("Emulator", vdlOut)

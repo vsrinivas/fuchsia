@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/copy_tree.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
@@ -44,46 +43,23 @@ group("tests") {
 }
 
 if (is_linux) {
-  _device_launcher_in = "//prebuilt/vdl"
-  _device_launcher_out = "${target_gen_dir}/fvdl_test_runtime_deps/vdl"
-
-  _aemu_in = "//prebuilt/third_party/aemu/${host_platform}"
-  _aemu_out = "${target_gen_dir}/fvdl_test_runtime_deps/aemu"
-
-  _grpcwebproxy_in = "//prebuilt/third_party/grpcwebproxy/${host_platform}"
-  _grpcwebproxy_out = "${target_gen_dir}/fvdl_test_runtime_deps/grpcwebproxy"
+  _aemu_dir = "//prebuilt/third_party/aemu/${host_platform}"
+  _device_launcher_dir = "//prebuilt/vdl"
+  _grpcwebproxy_dir = "//prebuilt/third_party/grpcwebproxy/${host_platform}"
 
   _build_out = "${target_gen_dir}/fvdl_test_runtime_deps/images"
   _tools_out = "${target_gen_dir}/fvdl_test_runtime_deps/host_tools"
 
-  copy_tree("copy_aemu_tree") {
-    src_dir = _aemu_in
-    dest_dir = _aemu_out
+  host_test_data("prebuilt_aemu") {
+    sources = [ _aemu_dir ]
   }
 
-  host_test_data("copy_aemu") {
-    sources = [ _aemu_out ]
-    deps = [ ":copy_aemu_tree" ]
+  host_test_data("prebuilt_grpcwebproxy") {
+    sources = [ _grpcwebproxy_dir ]
   }
 
-  copy_tree("copy_grpcwebproxy_tree") {
-    src_dir = _grpcwebproxy_in
-    dest_dir = _grpcwebproxy_out
-  }
-
-  host_test_data("copy_grpcwebproxy") {
-    sources = [ _grpcwebproxy_out ]
-    deps = [ ":copy_grpcwebproxy_tree" ]
-  }
-
-  copy_tree("copy_device_launcher_tree") {
-    src_dir = _device_launcher_in
-    dest_dir = _device_launcher_out
-  }
-
-  host_test_data("copy_device_launcher") {
-    sources = [ _device_launcher_out ]
-    deps = [ ":copy_device_launcher_tree" ]
+  host_test_data("prebuilt_device_launcher") {
+    sources = [ _device_launcher_dir ]
   }
 
   host_test_data("copy_host_tools") {
@@ -129,11 +105,19 @@ if (is_linux) {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
     deps = [ ":intree_lib" ]
     non_go_deps = [
-      ":copy_aemu",
-      ":copy_device_launcher",
-      ":copy_grpcwebproxy",
       ":copy_host_tools",
       ":copy_images",
+      ":prebuilt_aemu",
+      ":prebuilt_device_launcher",
+      ":prebuilt_grpcwebproxy",
+    ]
+    args = [
+      "--aemu_dir",
+      rebase_path(_aemu_dir, root_build_dir),
+      "--grpcwebproxy_dir",
+      rebase_path(_grpcwebproxy_dir, root_build_dir),
+      "--device_launcher_dir",
+      rebase_path(_device_launcher_dir, root_build_dir),
     ]
   }
 
@@ -142,10 +126,18 @@ if (is_linux) {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
     deps = [ ":sdk_lib" ]
     non_go_deps = [
-      ":copy_aemu",
-      ":copy_device_launcher",
-      ":copy_grpcwebproxy",
       ":copy_host_tools",
+      ":prebuilt_aemu",
+      ":prebuilt_device_launcher",
+      ":prebuilt_grpcwebproxy",
+    ]
+    args = [
+      "--aemu_dir",
+      rebase_path(_aemu_dir, root_build_dir),
+      "--grpcwebproxy_dir",
+      rebase_path(_grpcwebproxy_dir, root_build_dir),
+      "--device_launcher_dir",
+      rebase_path(_device_launcher_dir, root_build_dir),
     ]
   }
 

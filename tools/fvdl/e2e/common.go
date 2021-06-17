@@ -5,7 +5,9 @@
 package e2e
 
 import (
+	"context"
 	"errors"
+	"flag"
 	"log"
 	"os"
 	"os/exec"
@@ -14,6 +16,12 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/fvdl/e2e/e2etest"
+)
+
+var (
+	aemuDir           = flag.String("aemu_dir", "", "Path to AEMU directory")
+	grpcWebProxyDir   = flag.String("grpcwebproxy_dir", "", "Path to grpcwebproxy directory")
+	deviceLauncherDir = flag.String("device_launcher_dir", "", "Path to device launcher directory")
 )
 
 var (
@@ -32,6 +40,19 @@ var (
 
 func setUp(t *testing.T, intree bool) {
 	setupOnce.Do(func() {
+		var err error
+
+		deviceLauncher = *deviceLauncherDir
+		if _, err := os.Stat(deviceLauncher); os.IsNotExist(err) {
+			t.Fatalf("Invalid vdl path %q err: %s", deviceLauncher, err)
+		}
+		if emulatorPath = e2etest.FindFileFromDir(*aemuDir, "emulator"); emulatorPath == "" {
+			t.Fatalf("Cannot find emulator binary from %q", runtimeDir)
+		}
+		if grpcwebproxyPath = e2etest.FindFileFromDir(*grpcWebProxyDir, "grpcwebproxy"); grpcwebproxyPath == "" {
+			t.Fatalf("Cannot find grpcwebproxy binary from %q", runtimeDir)
+		}
+
 		ex, err := os.Executable()
 		if err != nil {
 			t.Fatal(err)
@@ -44,19 +65,9 @@ func setUp(t *testing.T, intree bool) {
 		}
 		t.Logf("[test info] fuchsia_build_dir %s", exDir)
 		t.Logf("[test info] fvdl_test_runtime_deps %s", runtimeDir)
-		deviceLauncher = filepath.Join(runtimeDir, "vdl")
-		if _, err := os.Stat(deviceLauncher); os.IsNotExist(err) {
-			t.Fatalf("Invalid vdl path %q err: %s", deviceLauncher, err)
-		}
 		hostToolsDir = filepath.Join(runtimeDir, "host_tools")
 		if _, err := os.Stat(hostToolsDir); os.IsNotExist(err) {
 			t.Fatalf("Invalid host tools dir %q err: %s", hostToolsDir, err)
-		}
-		if emulatorPath = e2etest.FindFileFromDir(filepath.Join(runtimeDir, "aemu"), "emulator"); emulatorPath == "" {
-			t.Fatalf("Cannot find emulator binary from %q", runtimeDir)
-		}
-		if grpcwebproxyPath = e2etest.FindFileFromDir(filepath.Join(runtimeDir, "grpcwebproxy"), "grpcwebproxy"); grpcwebproxyPath == "" {
-			t.Fatalf("Cannot find grpcwebproxy binary from %q", runtimeDir)
 		}
 		fvdl = filepath.Join(hostToolsDir, "fvdl")
 		if _, err := os.Stat(fvdl); os.IsNotExist(err) {
@@ -113,7 +124,7 @@ func launchEmuWithRetry(attempts int, cmd *exec.Cmd) error {
 
 // runVDLWithArgs runs fvdl, if intree, use environment variables to set tools and image path.
 // if not intree, images will be downloaded from GCS.
-func runVDLWithArgs(t *testing.T, args []string, intree bool) string {
+func runVDLWithArgs(ctx context.Context, t *testing.T, args []string, intree bool) string {
 	testOut, ok := os.LookupEnv("FUCHSIA_TEST_OUTDIR")
 	if !ok {
 		testOut = t.TempDir()
@@ -124,37 +135,41 @@ func runVDLWithArgs(t *testing.T, args []string, intree bool) string {
 	vdlOut := filepath.Join(testOut, t.Name(), "vdl_out")
 	t.Logf("[test info] writing vdl output to %s", vdlOut)
 	td := t.TempDir()
-	cmd := exec.Command(fvdl, append(args, []string{
-		"--vdl-output", vdlOut,
-		"--emulator-log", filepath.Join(testOut, t.Name(), "emu_log"),
-		"--amber-unpack-root", filepath.Join(td, "packages"),
-	}...)...)
+	cmd := exec.CommandContext(
+		ctx,
+		fvdl,
+		append(
+			args,
+			"--vdl-output", vdlOut,
+			"--emulator-log", filepath.Join(testOut, t.Name(), "emu_log"),
+			"--amber-unpack-root", filepath.Join(td, "packages"),
+		)...,
+	)
 	if intree {
-		cmd.Env = append(os.Environ(),
+		cmd.Env = append(
+			os.Environ(),
 			"FUCHSIA_BUILD_DIR="+fuchsiaBuildDir,
 			"FUCHSIA_ZBI_COMPRESSION=zstd",
 			"HOST_OUT_DIR="+hostToolsDir,
 			"IMAGE_FVM_RAW="+fvm,
 			"IMAGE_QEMU_KERNEL_RAW="+kernel,
 			"IMAGE_ZIRCONA_ZBI="+zbi,
-			"PREBUILT_AEMU_DIR="+emulatorPath,
-			"PREBUILT_GRPCWEBPROXY_DIR="+grpcwebproxyPath,
-			"PREBUILT_VDL_DIR="+deviceLauncher,
+			"PREBUILT_AEMU_DIR="+mustAbs(t, emulatorPath),
+			"PREBUILT_GRPCWEBPROXY_DIR="+mustAbs(t, grpcwebproxyPath),
+			"PREBUILT_VDL_DIR="+mustAbs(t, deviceLauncher),
 		)
 	} else {
 		t.Logf("[test info] setting HOME to: %s", runtimeDir)
 		// Set $HOME to runtimeDir so that fvdl can find the ssh key files, which are
 		// expected in $HOME/.ssh/...
-		cmd.Env = append(os.Environ(),
-			"HOME="+runtimeDir,
-		)
+		cmd.Env = append(os.Environ(), "HOME="+runtimeDir)
 	}
 	cmd.Dir = td
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	t.Cleanup(func() {
-		killEmu(t, intree, vdlOut)
+		killEmu(ctx, t, intree, vdlOut)
 	})
 
 	if err := launchEmuWithRetry(2, cmd); err != nil {
@@ -163,27 +178,44 @@ func runVDLWithArgs(t *testing.T, args []string, intree bool) string {
 	return vdlOut
 }
 
+func mustAbs(t *testing.T, p string) string {
+	t.Helper()
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		t.Fatalf("Failed to convert %q to absolute path: %v", p, err)
+	}
+	return abs
+}
+
 // killEmu shuts down fvdl with action kill command
-func killEmu(t *testing.T, intree bool, vdlOut string) {
+func killEmu(ctx context.Context, t *testing.T, intree bool, vdlOut string) {
 	t.Logf("[test info] killing fvdl using proto: %s", vdlOut)
 	var cmd *exec.Cmd
 	if intree {
-		cmd = exec.Command(fvdl, []string{
-			"kill", "--launched-proto", vdlOut}...)
-		cmd.Env = append(os.Environ(),
+		cmd = exec.CommandContext(ctx, fvdl, "kill", "--launched-proto", vdlOut)
+		cmd.Env = append(
+			os.Environ(),
 			"FUCHSIA_BUILD_DIR="+fuchsiaBuildDir,
 			"FUCHSIA_ZBI_COMPRESSION=zstd",
 			"HOST_OUT_DIR="+hostToolsDir,
 			"IMAGE_FVM_RAW="+fvm,
 			"IMAGE_QEMU_KERNEL_RAW="+kernel,
 			"IMAGE_ZIRCONA_ZBI="+zbi,
-			"PREBUILT_AEMU_DIR="+emulatorPath,
-			"PREBUILT_GRPCWEBPROXY_DIR="+grpcwebproxyPath,
-			"PREBUILT_VDL_DIR="+deviceLauncher,
+			"PREBUILT_AEMU_DIR="+mustAbs(t, emulatorPath),
+			"PREBUILT_GRPCWEBPROXY_DIR="+mustAbs(t, grpcwebproxyPath),
+			"PREBUILT_VDL_DIR="+mustAbs(t, deviceLauncher),
 		)
 	} else {
-		cmd = exec.Command(fvdl, []string{
-			"--sdk", "kill", "--launched-proto", vdlOut, "-d", filepath.Join(deviceLauncher, "device_launcher")}...)
+		cmd = exec.CommandContext(
+			ctx,
+			fvdl,
+			"--sdk",
+			"kill",
+			"--launched-proto",
+			vdlOut,
+			"-d",
+			mustAbs(t, filepath.Join(deviceLauncher, "device_launcher")),
+		)
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

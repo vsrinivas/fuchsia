@@ -15,8 +15,7 @@ import (
 )
 
 // readLatestVersion reads the F*_LINUX file from GCS which contains the released SDK version for F* branch.
-func readLatestVersion(t *testing.T) string {
-	ctx := context.Background()
+func readLatestVersion(ctx context.Context, t *testing.T) string {
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		t.Fatalf("Cannot create cloud storage client: err %s", err)
@@ -37,15 +36,20 @@ func readLatestVersion(t *testing.T) string {
 // TestStartFVDLSDK tests starting FEMU using fvdl using images downloaded from GCS.
 func TestStartFVDLSDK(t *testing.T) {
 	setUp(t, false)
-	vdlOut := runVDLWithArgs(t, []string{
-		"--sdk", "start", "--nointeractive", "--headless", "-V",
-		// Specify aemu and device_launcher path to prevent fvdl from downloading them from CIPD
-		"-e", filepath.Join(emulatorPath, "emulator"),
-		"-d", filepath.Join(deviceLauncher, "device_launcher"),
-		"--sdk-version", readLatestVersion(t),
-		"--gcs-bucket", "fuchsia",
-		"--image-name", "qemu-x64",
-		"--image-size", "10G"},
+	ctx := context.Background()
+	vdlOut := runVDLWithArgs(
+		ctx,
+		t,
+		[]string{
+			"--sdk", "start", "--nointeractive", "--headless", "-V",
+			// Specify aemu and device_launcher path to prevent fvdl from downloading them from CIPD
+			"-e", mustAbs(t, filepath.Join(emulatorPath, "emulator")),
+			"-d", mustAbs(t, filepath.Join(deviceLauncher, "device_launcher")),
+			"--sdk-version", readLatestVersion(ctx, t),
+			"--gcs-bucket", "fuchsia",
+			"--image-name", "qemu-x64",
+			"--image-size", "10G",
+		},
 		false, // intree
 	)
 	pid := e2etest.GetProcessPID("Emulator", vdlOut)
