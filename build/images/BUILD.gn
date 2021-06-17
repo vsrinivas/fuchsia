@@ -388,20 +388,39 @@ blob_image_path = "$target_out_dir/blob.blk"
 rebased_blob_path = rebase_path(blob_image_path, root_build_dir)
 blob_size_list = "$root_build_dir/blobs.json"
 
+blobfs_tool = "//zircon/tools/blobfs(${host_toolchain})"
+blobfs_tool_dir = get_label_info(blobfs_tool, "root_out_dir")
+blobfs_binary = "$blobfs_tool_dir/blobfs"
+
 # Pack up all the blobs!
-compiled_action("blob.blk") {
+action("blob.blk") {
   visibility = [ "//build/images/*" ]
 
   testonly = true
-  deps = [ ":blob.manifest" ]
+  deps = [
+    ":blob.manifest",
+    blobfs_tool,
+  ]
   outputs = [
     blob_image_path,
     blob_size_list,
   ]
   depfile = blob_image_path + ".d"
-  inputs = [ blob_manifest ]
-  tool = "//zircon/tools/blobfs"
-  args = [
+  inputs = [
+    blob_manifest,
+    blobfs_binary,
+  ]
+  script = "mkblobfs.sh"
+
+  # tell the wrapper script where to find blobfs, and the image file
+  args = rebase_path([
+                       blobfs_binary,
+                       blob_image_path,
+                     ],
+                     root_build_dir)
+
+  # args for the blobfs tool itself
+  args += [
     "--depfile",
     "--json-output",
     rebase_path(blob_size_list, root_build_dir),

@@ -48,6 +48,14 @@ impl BlobFSBuilder {
 
     /// Build blobfs, and write it to `output`, while placing intermediate files in `gendir`.
     pub fn build(&self, gendir: impl AsRef<Path>, output: impl AsRef<Path>) -> Result<()> {
+        // Delete the output file if it exists.
+        if output.as_ref().exists() {
+            std::fs::remove_file(&output).context(format!(
+                "Failed to delete previous blobfs file: {}",
+                output.as_ref().display()
+            ))?;
+        }
+
         // Write the blob manifest.
         let blob_manifest_path = gendir.as_ref().join("blob.manifest");
         self.manifest.write(&blob_manifest_path).context("Failed to write to blob.manifest")?;
