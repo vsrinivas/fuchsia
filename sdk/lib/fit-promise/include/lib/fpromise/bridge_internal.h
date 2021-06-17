@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(78633): Remove.
-
 #ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_INTERNAL_H_
 #define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_INTERNAL_H_
 
