@@ -18,6 +18,10 @@ type Gn struct {
 	outDir string
 }
 
+// NewGn returns a GN object that is used to interface with the external GN tool. It can be used to
+// discover the dependendcies of a GN target. The path to the external binary is taken from the
+// config argument (config.GnPath.) NewGn will return an error if config.GnPath is not a valid
+// executable, or if config.BuildDir does not exist.
 func NewGn(ctx context.Context, config *Config) (*Gn, error) {
 	gn := &Gn{}
 
@@ -36,6 +40,10 @@ func NewGn(ctx context.Context, config *Config) (*Gn, error) {
 	return gn, nil
 }
 
+// Return the dependencies of the given GN target. Calls out to the external GN executable.
+// Dependencies are returned as an array of GN label strings, e.g. //root/dir:target_name(toolchain)
+// Both the target name and toolchain are optional. See
+// https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#labels for more information.
 func (gn *Gn) Dependencies(ctx context.Context, target string) ([]string, error) {
 	args := []string{
 		"desc",
@@ -59,6 +67,8 @@ func (gn *Gn) Dependencies(ctx context.Context, target string) ([]string, error)
 	return strings.Split(result, "\n"), nil
 }
 
+// Converts a GN label string (such as those returned by Dependencies) and strips any target names
+// and toolchains, thereby returning the directory of the label.
 func LabelToDirectory(label string) (string, error) {
 	if !strings.HasPrefix(label, "//") {
 		return "", fmt.Errorf("Label missing leading `//`: %s", label)
