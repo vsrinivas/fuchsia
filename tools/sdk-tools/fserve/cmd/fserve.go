@@ -61,7 +61,6 @@ type sdkProvider interface {
 	GetSDKDataPath() string
 	GetToolsDir() (string, error)
 	GetAvailableImages(version string, bucket string) ([]sdkcommon.GCSImage, error)
-	GetAddressByName(deviceName string) (string, error)
 	RunSSHCommand(targetAddress string, sshConfig string, privateKey string, sshPort string,
 		verbose bool, sshArgs []string) (string, error)
 }
@@ -109,54 +108,38 @@ func main() {
 		os.Exit(0)
 	}
 
+	deviceConfig, err := sdk.ResolveTargetAddress(*deviceIPFlag, *deviceNameFlag)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	log.Debugf("Using target address: %v", deviceConfig.DeviceIP)
+
 	// Set the defaults from the SDK if not present.
 	if *repoFlag == "" {
-		repoDir, err := sdk.GetFuchsiaProperty(*deviceNameFlag, sdkcommon.PackageRepoKey)
-		if err != nil {
-			log.Fatalf("Could not determine default package directory: %v\n", err)
-		}
-		flag.Set("repo-dir", repoDir)
+		flag.Set("repo-dir", deviceConfig.PackageRepo)
 	}
 
 	if *bucketFlag == "" {
-		bucket, err := sdk.GetFuchsiaProperty(*deviceNameFlag, sdkcommon.BucketKey)
-		if err != nil {
-			log.Fatalf("Could not determine default GCS bucket: %v\n", err)
-		}
-		flag.Set("bucket", bucket)
+		flag.Set("bucket", deviceConfig.Bucket)
 	}
 
 	if *imageFlag == "" {
-		image, err := sdk.GetFuchsiaProperty(*deviceNameFlag, sdkcommon.ImageKey)
-		if err != nil {
-			log.Fatalf("Could not determine default GCS image: %v\n", err)
-		}
-		flag.Set("image", image)
+		flag.Set("image", deviceConfig.Image)
 	}
 
 	if *repoPortFlag == "" {
-		image, err := sdk.GetFuchsiaProperty(*deviceNameFlag, sdkcommon.PackagePortKey)
-		if err != nil {
-			log.Fatalf("Could not determine default package server port: %v\n", err)
-		}
-		flag.Set("server-port", image)
+		flag.Set("server-port", deviceConfig.PackagePort)
 	}
 	if *versionFlag == "" {
 		flag.Set("version", sdk.GetSDKVersion())
 	}
-
-	targetAddress, err := sdk.ResolveTargetAddress(*deviceIPFlag, *deviceNameFlag)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
-	log.Debugf("Using target address: %v", targetAddress)
 
 	// if no deviceIPFlag was given, then get the SSH Port from the configuration.
 	// We can't look at the configuration if the ip address was passed in since we don't have the
 	// device name which is needed to look up the property.
 	sshPort := ""
 	if *deviceIPFlag == "" {
-		sshPort, err = sdk.GetFuchsiaProperty(*deviceNameFlag, sdkcommon.SSHPortKey)
+		sshPort := deviceConfig.SSHPort
 		if err != nil {
 			log.Fatalf("Error reading SSH port configuration: %v", err)
 		}
@@ -168,11 +151,6 @@ func main() {
 
 	if *versionFlag == "" {
 		log.Fatalf("SDK version not known. Use --version to specify it manually.\n")
-	}
-
-	if *imageFlag == "" {
-		log.Errorf("Image not specified. Use --image to specify it manually.\n")
-		// Don't exit here, prepare will print a list of valid image names for the user.
 	}
 
 	// Kill any server on the same port
@@ -204,7 +182,7 @@ func main() {
 	}
 
 	// connect the device to the package server
-	if err := setPackageSource(ctx, sdk, *repoPortFlag, *nameFlag, targetAddress, *sshConfigFlag, *privateKeyFlag, sshPort); err != nil {
+	if err := setPackageSource(ctx, sdk, *repoPortFlag, *nameFlag, deviceConfig.DeviceIP, *sshConfigFlag, *privateKeyFlag, sshPort); err != nil {
 		log.Fatalf("Could set package server source on device: %v\n", err)
 	}
 

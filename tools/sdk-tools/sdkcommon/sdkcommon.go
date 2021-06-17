@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
@@ -39,8 +40,15 @@ type FuchsiaDevice struct {
 	Name string
 }
 
-// Default GCS bucket for prebuilt images and packages.
-const defaultGCSbucket string = "fuchsia"
+// deviceInfo represents targets that the ffx daemon currently has in memory.
+type deviceInfo struct {
+	Nodename    string   `json:"nodename"`
+	RCSState    string   `json:"rcs_state"`
+	Serial      string   `json:"serial"`
+	TargetType  string   `json:"target_type"`
+	TargetState string   `json:"target_state"`
+	Addresses   []string `json:"addresses"`
+}
 
 // GCSImage is used to return the bucket, name and version of a prebuilt.
 type GCSImage struct {
@@ -68,6 +76,7 @@ const (
 	defaultBucketName  string = "fuchsia"
 	defaultSSHPort     string = "22"
 	defaultPackagePort string = "8083"
+	helpfulTipMsg      string = `Try running 'ffx target list --format s' and then 'fconfig set-device <device_name> --image <image_name> --default'.`
 )
 
 var validPropertyNames = [...]string{
@@ -82,16 +91,17 @@ var validPropertyNames = [...]string{
 }
 
 // DeviceConfig holds all the properties that are configured
-// for a given devce.
+// for a given device.
 type DeviceConfig struct {
-	DeviceName  string `json:"device-name"`
-	Bucket      string `json:"bucket"`
-	Image       string `json:"image"`
-	DeviceIP    string `json:"device-ip"`
-	SSHPort     string `json:"ssh-port"`
-	PackageRepo string `json:"package-repo"`
-	PackagePort string `json:"package-port"`
-	IsDefault   bool   `json:"default"`
+	DeviceName   string `json:"device-name"`
+	Bucket       string `json:"bucket"`
+	Image        string `json:"image"`
+	DeviceIP     string `json:"device-ip"`
+	SSHPort      string `json:"ssh-port"`
+	PackageRepo  string `json:"package-repo"`
+	PackagePort  string `json:"package-port"`
+	IsDefault    bool   `json:"default"`
+	Discoverable bool   `json:"discoverable"`
 }
 
 // SDKProperties holds the common data for SDK tools.
@@ -128,7 +138,7 @@ func getDeviceDataKey(segments []string) string {
 	return strings.Join(append(fullKey, segments...), ".")
 }
 
-// DefaultGetUserHomeDir is the default implmentation of GetUserHomeDir()
+// DefaultGetUserHomeDir is the default implementation of GetUserHomeDir()
 // to allow mocking of user.Current()
 func DefaultGetUserHomeDir() (string, error) {
 	usr, err := user.Current()
@@ -138,7 +148,7 @@ func DefaultGetUserHomeDir() (string, error) {
 	return usr.HomeDir, nil
 }
 
-// DefaultGetUsername is the default implmentation of GetUsername()
+// DefaultGetUsername is the default implementation of GetUsername()
 // to allow mocking of user.Current()
 func DefaultGetUsername() (string, error) {
 	usr, err := user.Current()
@@ -148,7 +158,7 @@ func DefaultGetUsername() (string, error) {
 	return usr.Username, nil
 }
 
-// DefaultGetHostname is the default implmentation of GetHostname()
+// DefaultGetHostname is the default implementation of GetHostname()
 // to allow mocking of user.Current()
 func DefaultGetHostname() (string, error) {
 	return os.Hostname()
@@ -203,14 +213,14 @@ func New() (SDKProperties, error) {
 }
 
 // GetSDKVersion returns the version of the SDK or empty if not set.
-// Use sdkcommon.New() to create an initalized SDKProperties struct.
+// Use sdkcommon.New() to create an initialized SDKProperties struct.
 func (sdk SDKProperties) GetSDKVersion() string {
 	return sdk.version
 }
 
 // GetSDKDataPath returns the path to the directory for storing SDK related data,
 //  or empty if not set.
-// Use sdkcommon.New() to create an initalized SDKProperties struct.
+// Use sdkcommon.New() to create an initialized SDKProperties struct.
 func (sdk SDKProperties) GetSDKDataPath() string {
 	return sdk.dataPath
 }
@@ -253,7 +263,9 @@ func (sdk SDKProperties) getDefaultPackageRepoDir(deviceName string) string {
 	return filepath.Join(sdk.GetSDKDataPath(), "packages", "amber-files")
 }
 
-// GetDefaultDeviceName returns the name of the target device to use by default.
+// GetDefaultDeviceName returns the default fconfig device name if exists.
+// If it doesn't exist, it will try to get the default ffx device.
+// TODO(fxbug.dev/69008): Unexport this method once consumers don't use it.
 func (sdk SDKProperties) GetDefaultDeviceName() (string, error) {
 	dataKey := getDeviceDataKey([]string{defaultDeviceKey})
 	data, err := getDeviceConfigurationData(sdk, dataKey)
@@ -261,9 +273,16 @@ func (sdk SDKProperties) GetDefaultDeviceName() (string, error) {
 		return "", err
 	}
 	if name, ok := data[dataKey].(string); ok {
+		if name == "" {
+			return sdk.getDefaultFFXDevice()
+		}
+		ffxDefaultDevice, _ := sdk.getDefaultFFXDevice()
+		if ffxDefaultDevice != "" && ffxDefaultDevice != name {
+			log.Warningf("Unexpected behavior may occur, ffx and fconfig have different default devices. ffx: %v, fconfig: %v", ffxDefaultDevice, name)
+		}
 		return name, nil
 	} else if len(data) == 0 {
-		return "", nil
+		return sdk.getDefaultFFXDevice()
 	}
 	return "", fmt.Errorf("Cannot parse default device from %v", data)
 }
@@ -278,7 +297,7 @@ func (sdk SDKProperties) GetToolsDir() (string, error) {
 	}
 	dir, err := filepath.Abs(filepath.Dir(exePath))
 	if err != nil {
-		return "", fmt.Errorf("could not get directory of currently running file: %s", err)
+		return "", fmt.Errorf("Could not get directory of currently running file: %s", err)
 	}
 
 	// This could be a symlink in a directory, so look for another common
@@ -300,10 +319,10 @@ func (sdk SDKProperties) GetAvailableImages(version string, bucket string) ([]GC
 	var buckets []string
 	var images []GCSImage
 
-	if bucket == "" || bucket == defaultGCSbucket {
-		buckets = []string{defaultGCSbucket}
+	if bucket == "" || bucket == defaultBucketName {
+		buckets = []string{defaultBucketName}
 	} else {
-		buckets = []string{bucket, defaultGCSbucket}
+		buckets = []string{bucket, defaultBucketName}
 	}
 
 	for _, b := range buckets {
@@ -339,41 +358,13 @@ func (sdk SDKProperties) RunFFXDoctor() (string, error) {
 }
 
 // GetAddressByName returns the IPv6 address of the device.
+// TODO(fxbug.dev/78804): Deprecated. Remove once other tools no longer use it.
 func (sdk SDKProperties) GetAddressByName(deviceName string) (string, error) {
-	// Uses ffx disovery workflow by default. The legacy device-finder
-	// workflow can be enabled by setting the environment variable FUCHSIA_DISABLED_ffx_discovery=1.
-	FUCHSIA_DISABLED_FFX_DISCOVERY := os.Getenv("FUCHSIA_DISABLED_ffx_discovery")
-
-	if FUCHSIA_DISABLED_FFX_DISCOVERY == "1" {
-		toolsDir, err := sdk.GetToolsDir()
-		if err != nil {
-			return "", fmt.Errorf("Could not determine tools directory %v", err)
-		}
-		cmd := filepath.Join(toolsDir, "device-finder")
-		args := []string{"resolve", "-device-limit", "1", "-ipv4=false", deviceName}
-		output, err := ExecCommand(cmd, args...).Output()
-		if err != nil {
-			var exitError *exec.ExitError
-			if errors.As(err, &exitError) {
-				return "", fmt.Errorf("%v: %v", string(exitError.Stderr), exitError)
-			} else {
-				return "", err
-			}
-		}
-		return strings.TrimSpace(string(output)), nil
-	}
-	// TODO(fxb/69008): use ffx json output.
-	args := []string{"target", "list", "--format", "a", deviceName}
-	output, err := sdk.RunFFX(args, false)
+	device, err := sdk.FindDeviceByName(deviceName)
 	if err != nil {
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
-			return "", fmt.Errorf("%v: %v", string(exitError.Stderr), exitError)
-		} else {
-			return "", err
-		}
+		return "", err
 	}
-	return strings.TrimSpace(output), nil
+	return strings.TrimSpace(device.IpAddr), nil
 }
 
 func (f *FuchsiaDevice) String() string {
@@ -391,7 +382,7 @@ func (sdk SDKProperties) FindDeviceByName(deviceName string) (*FuchsiaDevice, er
 			return device, nil
 		}
 	}
-	return nil, fmt.Errorf("no device with device name %s found", deviceName)
+	return nil, fmt.Errorf("No device with device name %s found", deviceName)
 }
 
 // FindDeviceByIP returns a fuchsia device matching a specific ip address.
@@ -405,57 +396,79 @@ func (sdk SDKProperties) FindDeviceByIP(ipAddr string) (*FuchsiaDevice, error) {
 			return device, nil
 		}
 	}
-	return nil, fmt.Errorf("no device with IP address %s found", ipAddr)
+	return nil, fmt.Errorf("No device with IP address %s found", ipAddr)
 }
 
 // ListDevices returns all available fuchsia devices.
 func (sdk SDKProperties) ListDevices() ([]*FuchsiaDevice, error) {
+	args := []string{"target", "list", "--format", "json"}
+	output, err := sdk.RunFFX(args, false)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to list devices, please try running 'ffx doctor': %v", err)
+	}
 	var devices []*FuchsiaDevice
-	var err error
-	var output string
-	// Uses ffx disovery workflow by default. The legacy device-finder
-	// workflow can be enabled by setting the environment variable FUCHSIA_DISABLED_ffx_discovery=1.
-	FUCHSIA_DISABLED_FFX_DISCOVERY := os.Getenv("FUCHSIA_DISABLED_ffx_discovery")
-	if FUCHSIA_DISABLED_FFX_DISCOVERY == "1" {
-		toolsDir, err := sdk.GetToolsDir()
-		if err != nil {
-			return nil, fmt.Errorf("Could not determine tools directory %v", err)
-		}
-		cmd := filepath.Join(toolsDir, "device-finder")
-
-		args := []string{"list", "--full", "-ipv4=false"}
-
-		outputAsBytes, err := ExecCommand(cmd, args...).Output()
-		if err != nil {
-			var exitError *exec.ExitError
-			if errors.As(err, &exitError) {
-				return nil, fmt.Errorf("%v: %v", string(exitError.Stderr), exitError)
-			}
-			return nil, err
-		}
-		output = string(outputAsBytes)
-	} else {
-		args := []string{"target", "list", "--format", "s"}
-		output, err = sdk.RunFFX(args, false)
-		if err != nil {
-			return nil, err
-		}
+	if len(output) == 0 {
+		return devices, nil
 	}
 
-	for _, line := range strings.Split(output, "\n") {
-		parts := strings.Split(line, " ")
-		if len(parts) == 2 {
+	var discoveredDevices []*deviceInfo
+	if err := json.Unmarshal([]byte(output), &discoveredDevices); err != nil {
+		return nil, fmt.Errorf("Unable to unmarshal device info from ffx, please try running 'ffx doctor': %v", err)
+	}
+
+	for _, currentDevice := range discoveredDevices {
+		if len(currentDevice.Addresses) == 0 {
+			continue
+		} else if len(currentDevice.Addresses) == 1 {
 			devices = append(devices, &FuchsiaDevice{
-				IpAddr: strings.TrimSpace(parts[0]),
-				Name:   strings.TrimSpace(parts[1]),
+				IpAddr: strings.TrimSpace(currentDevice.Addresses[0]),
+				Name:   strings.TrimSpace(currentDevice.Nodename),
+			})
+		} else {
+			ipAddr, err := sdk.getDeviceSSHAddress(currentDevice)
+			// If we are unable to get the device ssh address, skip the device.
+			if err != nil {
+				log.Debugf("Failed to getDeviceSSHAddress for %v: %v", currentDevice.Nodename, err)
+				ipAddr = ""
+			}
+			devices = append(devices, &FuchsiaDevice{
+				IpAddr: strings.TrimSpace(ipAddr),
+				Name:   strings.TrimSpace(currentDevice.Nodename),
 			})
 		}
 	}
-
-	if len(devices) < 1 {
-		return nil, fmt.Errorf("no devices found")
-	}
 	return devices, nil
+}
+
+func (sdk SDKProperties) getDefaultFFXDevice() (string, error) {
+	args := []string{"target", "default", "get"}
+	output, err := sdk.RunFFX(args, false)
+	if err != nil {
+		return "", fmt.Errorf("Unable to get ffx default device, please try running 'ffx doctor': %v", err)
+	}
+	log.Debugf("FFX default device is: %v", output)
+	return strings.TrimSpace(output), nil
+}
+
+func (sdk SDKProperties) getDeviceSSHAddress(device *deviceInfo) (string, error) {
+	args := []string{"--target", device.Nodename, "target", "get-ssh-address"}
+	output, err := sdk.RunFFX(args, false)
+	if err != nil {
+		return "", fmt.Errorf("Unable to get ssh address: %v", err)
+	}
+	fullAddr := strings.TrimSpace(output)
+	// TODO(fxbug.dev/74863): Migrate f* to use get-ssh-address.
+	// ffx target get-ssh-address returns the full IPv6 address with port.
+	// f* does some manipulation for sshPort, just want the host address.
+	if strings.Contains(fullAddr, "[") && strings.Contains(fullAddr, "]") {
+		re := regexp.MustCompile(`\[(.*?)\]`)
+		match := re.FindStringSubmatch(fullAddr)
+		if len(match) < 2 {
+			return "", fmt.Errorf("Unable to find matching IP address, output from get-ssh-address: %v", fullAddr)
+		}
+		return match[1], nil
+	}
+	return fullAddr, nil
 }
 
 func getCommonSSHArgs(sdk SDKProperties, customSSHConfig string, privateKey string,
@@ -478,12 +491,12 @@ func getCommonSSHArgs(sdk SDKProperties, customSSHConfig string, privateKey stri
 }
 
 // RunSFTPCommand runs sftp (one of SSH's file copy tools).
-// Setting to_target to true will copy file SRC from host to DST on the target.
+// Setting toTarget to true will copy file SRC from host to DST on the target.
 // Otherwise it will copy file from SRC from target to DST on the host.
 // sshPort if non-empty will use this port to connect to the device.
 // The return value is the error if any.
 func (sdk SDKProperties) RunSFTPCommand(targetAddress string, customSSHConfig string, privateKey string,
-	sshPort string, to_target bool, src string, dst string) error {
+	sshPort string, toTarget bool, src string, dst string) error {
 
 	commonArgs := []string{"-q", "-b", "-"}
 	if customSSHConfig == "" || privateKey == "" {
@@ -506,7 +519,7 @@ func (sdk SDKProperties) RunSFTPCommand(targetAddress string, customSSHConfig st
 
 	stdin := ""
 
-	if to_target {
+	if toTarget {
 		stdin = fmt.Sprintf("put %v %v", src, dst)
 	} else {
 		stdin = fmt.Sprintf("get %v %v", src, dst)
@@ -679,9 +692,8 @@ func generateSSHKey(keyFile string, username string, hostname string) error {
 		var exitError *exec.ExitError
 		if errors.As(err, &exitError) {
 			return fmt.Errorf("%v: %v", string(exitError.Stderr), exitError)
-		} else {
-			return err
 		}
+		return err
 	}
 	return nil
 }
@@ -701,9 +713,8 @@ func generatePublicSSHKeyfile(keyFile string, authFile string) error {
 		var exitError *exec.ExitError
 		if errors.As(err, &exitError) {
 			return fmt.Errorf("%v: %v", string(exitError.Stderr), exitError)
-		} else {
-			return err
 		}
+		return err
 	}
 
 	if err := os.MkdirAll(filepath.Dir(authFile), 0755); err != nil {
@@ -828,21 +839,23 @@ func (sdk SDKProperties) IsValidProperty(property string) bool {
 }
 
 // GetFuchsiaProperty returns the value for the given property for the given device.
-// If the device name is empty, the default device is used via GetDefaultDeviceName().
+// If the device name is empty, the default device is used via GetDefaultDevice().
 // It is an error if the property cannot be found.
 func (sdk SDKProperties) GetFuchsiaProperty(device string, property string) (string, error) {
 	var err error
-	deviceName := device
-	if deviceName == "" {
-		if deviceName, err = sdk.GetDefaultDeviceName(); err != nil {
-			return "", err
-		}
+	var deviceConfig DeviceConfig
+	// If we already know the device name to use, simply use it.
+	if device != "" {
+		deviceConfig, err = sdk.GetDeviceConfiguration(device)
+	} else {
+		deviceConfig, err = sdk.GetDefaultDevice(device)
 	}
-	deviceConfig, err := sdk.GetDeviceConfiguration(deviceName)
 	if err != nil {
-		return "", fmt.Errorf("Could not read configuration data for %v : %v", deviceName, err)
+		return "", fmt.Errorf("Could not read configuration data for %v : %v", device, err)
 	}
-
+	if deviceConfig.DeviceName != "" {
+		device = deviceConfig.DeviceName
+	}
 	switch property {
 	case BucketKey:
 		return deviceConfig.Bucket, nil
@@ -859,7 +872,58 @@ func (sdk SDKProperties) GetFuchsiaProperty(device string, property string) (str
 	case SSHPortKey:
 		return deviceConfig.SSHPort, nil
 	}
-	return "", fmt.Errorf("Could not find property %v.%v", deviceName, property)
+	return "", fmt.Errorf("Could not find property %v.%v", device, property)
+}
+
+func (sdk SDKProperties) updateConfigIfDeviceIsDiscoverable(deviceConfig *DeviceConfig, discoverableDevices []*FuchsiaDevice) DeviceConfig {
+	for _, discoverableDevice := range discoverableDevices {
+		if deviceConfig.DeviceName == discoverableDevice.Name {
+			deviceConfig.Discoverable = true
+			deviceConfig.DeviceIP = discoverableDevice.IpAddr
+			return *deviceConfig
+		}
+	}
+	deviceConfig.Discoverable = false
+	return *deviceConfig
+}
+
+func (sdk SDKProperties) mergeDeviceConfigsWithDiscoverableDevices(configs []DeviceConfig) []DeviceConfig {
+	visitedDevices := map[string]bool{}
+	var finalConfigs []DeviceConfig
+	// Get the devices that are discoverable.
+	discoverableDevices, err := sdk.ListDevices()
+
+	if err != nil {
+		log.Debugf("Got an error when listing devices: %v", err)
+		return configs
+	}
+	if len(discoverableDevices) == 0 {
+		return configs
+	}
+
+	for _, config := range configs {
+		if visitedDevices[config.DeviceName] {
+			continue
+		}
+		visitedDevices[config.DeviceName] = true
+		sdk.updateConfigIfDeviceIsDiscoverable(&config, discoverableDevices)
+		sdk.setDeviceDefaults(&config)
+		finalConfigs = append(finalConfigs, config)
+	}
+	for _, discoverableDevice := range discoverableDevices {
+		if visitedDevices[discoverableDevice.Name] {
+			continue
+		}
+		visitedDevices[discoverableDevice.Name] = true
+		newConfig := DeviceConfig{
+			DeviceName:   discoverableDevice.Name,
+			DeviceIP:     discoverableDevice.IpAddr,
+			Discoverable: true,
+		}
+		sdk.setDeviceDefaults(&newConfig)
+		finalConfigs = append(finalConfigs, newConfig)
+	}
+	return finalConfigs
 }
 
 // GetDeviceConfigurations returns a list of all device configurations.
@@ -871,28 +935,38 @@ func (sdk SDKProperties) GetDeviceConfigurations() ([]DeviceConfig, error) {
 	if err != nil {
 		return configs, fmt.Errorf("Could not read configuration data : %v", err)
 	}
-	if len(configData) == 0 {
-		return configs, nil
-	}
 
 	defaultDeviceName, err := sdk.GetDefaultDeviceName()
 	if err != nil {
 		return configs, err
 	}
 
+	// If the default device name is "", we don't need to check if we visited it.
+	visitedDefaultDevice := defaultDeviceName == ""
+
 	if deviceConfigMap, ok := configData[deviceConfigurationKey].(map[string]interface{}); ok {
 		for k, v := range deviceConfigMap {
 			if !isReservedProperty(k) {
 				if device, ok := mapToDeviceConfig(v); ok {
-					device.IsDefault = defaultDeviceName == device.DeviceName
+					if defaultDeviceName == device.DeviceName {
+						device.IsDefault = true
+						visitedDefaultDevice = true
+					}
+					sdk.setDeviceDefaults(&device)
 					configs = append(configs, device)
 				}
 			}
 		}
-		return configs, nil
-
 	}
-	return configs, fmt.Errorf("Could not read configuration data: %v", configData)
+	if !visitedDefaultDevice {
+		newConfig := DeviceConfig{
+			DeviceName: defaultDeviceName,
+			IsDefault:  true,
+		}
+		sdk.setDeviceDefaults(&newConfig)
+		configs = append(configs, newConfig)
+	}
+	return sdk.mergeDeviceConfigsWithDiscoverableDevices(configs), nil
 }
 
 // GetDeviceConfiguration returns the configuration for the device with the given name.
@@ -935,12 +1009,12 @@ func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
 	if err != nil {
 		return err
 	}
-	var defaultConfig = DeviceConfig{}
+	defaultConfig := DeviceConfig{}
 	sdk.setDeviceDefaults(&defaultConfig)
 
 	dataMap := make(map[string]string)
 	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, DeviceNameKey})] = newConfig.DeviceName
-	// if the value changed from the orginal, write it out.
+	// if the value changed from the original, write it out.
 	if origConfig.Bucket != newConfig.Bucket {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, BucketKey})] = newConfig.Bucket
 	} else if defaultConfig.Bucket == newConfig.Bucket {
@@ -1008,51 +1082,83 @@ func (sdk SDKProperties) RemoveDeviceConfiguration(deviceName string) error {
 	return nil
 }
 
-// ResolveTargetAddress evaulates the deviceIP and deviceName  passed in
+// ResolveTargetAddress evaluates the deviceIP and deviceName passed in
 // to determine the target IP address. This include consulting the configuration
 // information set via `fconfig`.
-func (sdk SDKProperties) ResolveTargetAddress(deviceIP string, deviceName string) (string, error) {
+func (sdk SDKProperties) ResolveTargetAddress(deviceIP string, deviceName string) (DeviceConfig, error) {
 	var (
 		targetAddress string
 		err           error
 	)
 
-	helpfulTipMsg := `Try running "ffx target list --format s" and then "fconfig set-device <device_name> --image <image_name> --default".`
-
-	// If  there is a deviceIP address, use it.
+	// If there is a deviceIP address, use it.
 	if deviceIP != "" {
-		targetAddress = deviceIP
-	} else {
-		// No explicit address, use the name
-		if deviceName == "" {
-			// No name passed in, use the default name.
-			if deviceName, err = sdk.GetDefaultDeviceName(); err != nil {
-				return "", fmt.Errorf("could not determine default device name.\n%v %v", helpfulTipMsg, err)
-			}
+		defaultConfig := DeviceConfig{
+			DeviceIP: deviceIP,
 		}
-		if deviceName == "" {
-			// No address specified, no device name specified, and no device configured as the default.
-			return "", fmt.Errorf("invalid arguments. Need to specify --device-ip or --device-name or use fconfig to configure a default device.\n%v", helpfulTipMsg)
-		}
+		sdk.setDeviceDefaults(&defaultConfig)
+		return defaultConfig, nil
+	}
 
-		// look up a configured address by devicename
-		targetAddress, err = sdk.GetFuchsiaProperty(deviceName, DeviceIPKey)
-		if err != nil {
-			return "", fmt.Errorf("could not read configuration information for %v.\n%v %v", deviceName, helpfulTipMsg, err)
-		}
-		// if still nothing, resolve the device address by name
-		if targetAddress == "" {
-			if targetAddress, err = sdk.GetAddressByName(deviceName); err != nil {
-				return "", fmt.Errorf(`cannot get target address for %v.
-Try running "ffx target list --format s" and verify the name matches in "fconfig get-all". %v`, deviceName, err)
+	config, err := sdk.GetDefaultDevice(deviceName)
+	if err != nil {
+		return DeviceConfig{}, err
+	}
+
+	targetAddress = config.DeviceIP
+	if config.DeviceName != "" {
+		deviceName = config.DeviceName
+	}
+
+	if deviceName == "" && targetAddress == "" {
+		return DeviceConfig{}, fmt.Errorf("No devices found. %v", helpfulTipMsg)
+	}
+
+	if targetAddress == "" {
+		return DeviceConfig{}, fmt.Errorf(`Cannot get target address for %v.
+Try running 'ffx target list --format s' and verify the name matches in 'fconfig get-all'.`, deviceName)
+	}
+
+	return config, nil
+}
+
+// GetDefaultDevice gets the default device to use by default.
+func (sdk SDKProperties) GetDefaultDevice(deviceName string) (DeviceConfig, error) {
+	configs, err := sdk.GetDeviceConfigurations()
+	if err != nil {
+		return DeviceConfig{}, err
+	}
+
+	if deviceName != "" {
+		for _, config := range configs {
+			if config.DeviceName == deviceName {
+				return config, nil
 			}
 		}
+		return DeviceConfig{}, nil
 	}
-	if targetAddress == "" {
-		return "", fmt.Errorf(`could not get target device IP address for %v.
-Try running "ffx target list --format s" and verify the name matches in "fconfig get-all".`, deviceName)
+
+	var discoverableDevicesConfigs []DeviceConfig
+	// Check if there is a default device configured, if there is use it.
+	for _, config := range configs {
+		if config.IsDefault {
+			return config, nil
+		}
+		if config.Discoverable {
+			discoverableDevicesConfigs = append(discoverableDevicesConfigs, config)
+		}
 	}
-	return targetAddress, nil
+
+	if len(discoverableDevicesConfigs) == 0 {
+		defaultConfig := DeviceConfig{}
+		sdk.setDeviceDefaults(&defaultConfig)
+		return defaultConfig, nil
+	}
+
+	if len(discoverableDevicesConfigs) > 1 {
+		return DeviceConfig{}, fmt.Errorf("Multiple devices found. %v", helpfulTipMsg)
+	}
+	return discoverableDevicesConfigs[0], nil
 }
 
 func initFFXGlobalConfig(sdk SDKProperties) error {
@@ -1106,9 +1212,8 @@ func initFFXGlobalConfig(sdk SDKProperties) error {
 			var exitError *exec.ExitError
 			if errors.As(err, &exitError) {
 				return fmt.Errorf("Error initializing global properties environment: %v %v: %v", args, string(exitError.Stderr), exitError)
-			} else {
-				return fmt.Errorf("Error initializing global properties environment: %v %v", args, err)
 			}
+			return fmt.Errorf("Error initializing global properties environment: %v %v", args, err)
 		}
 	}
 	return nil
@@ -1177,7 +1282,7 @@ func (sdk SDKProperties) RunFFX(args []string, interactive bool) (string, error)
 	return string(output), err
 }
 
-// isReservedProperty used to differenciate between properties used
+// isReservedProperty used to differentiate between properties used
 // internally and device names.
 func isReservedProperty(property string) bool {
 	switch property {

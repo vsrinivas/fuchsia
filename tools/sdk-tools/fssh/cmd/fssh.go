@@ -62,18 +62,18 @@ func main() {
 		os.Exit(0)
 	}
 
-	targetAddress, err := sdk.ResolveTargetAddress(*deviceIPFlag, *deviceNameFlag)
+	deviceConfig, err := sdk.ResolveTargetAddress(*deviceIPFlag, *deviceNameFlag)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	log.Debugf("Using target address: %v", targetAddress)
+	log.Debugf("Using target address: %v", deviceConfig.DeviceIP)
 
 	// if no deviceIPFlag was given, then get the SSH Port from the configuration.
 	// We can't look at the configuration if the ip address was passed in since we don't have the
 	// device name which is needed to look up the property.
 	sshPort := ""
 	if *deviceIPFlag == "" {
-		sshPort, err = sdk.GetFuchsiaProperty(*deviceNameFlag, sdkcommon.SSHPortKey)
+		sshPort := deviceConfig.SSHPort
 		if err != nil {
 			log.Fatalf("Error reading SSH port configuration: %v", err)
 		}
@@ -83,9 +83,9 @@ func main() {
 		}
 	}
 
-	log.Debugf("Running SSH with %v %v %v %v %v %v ", targetAddress, *sshConfigFlag,
+	log.Debugf("Running SSH with %v %v %v %v %v %v ", deviceConfig.DeviceIP, *sshConfigFlag,
 		*privateKeyFlag, sshPort, *verboseFlag, flag.Args())
-	if err := ssh(sdk, *verboseFlag, targetAddress, *sshConfigFlag, *privateKeyFlag, sshPort, flag.Args()); err != nil {
+	if err := ssh(sdk, *verboseFlag, deviceConfig.DeviceIP, *sshConfigFlag, *privateKeyFlag, sshPort, flag.Args()); err != nil {
 		var exitError *exec.ExitError
 		if errors.As(err, &exitError) {
 			os.Exit(exitError.ExitCode())

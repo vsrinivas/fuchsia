@@ -51,9 +51,6 @@ func (testSDK testSDKProperties) GetSDKDataPath() string {
 func (testSDK testSDKProperties) GetAvailableImages(version string, bucket string) ([]sdkcommon.GCSImage, error) {
 	return []sdkcommon.GCSImage{}, nil
 }
-func (testSDK testSDKProperties) GetAddressByName(deviceName string) (string, error) {
-	return "::1", nil
-}
 func (testSDK testSDKProperties) GetDefaultPackageRepoDir() (string, error) {
 	return filepath.Join(testSDK.dataPath, "default-target-name", "packages", "amber-files"), nil
 }

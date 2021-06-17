@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -23,6 +24,7 @@ type SDKProvider interface {
 	SaveDeviceConfiguration(newConfig sdkcommon.DeviceConfig) error
 	IsValidProperty(property string) bool
 	GetDeviceConfigurations() ([]sdkcommon.DeviceConfig, error)
+	GetDefaultDevice(deviceName string) (sdkcommon.DeviceConfig, error)
 }
 
 // Allow capturing output in testing.
@@ -96,11 +98,6 @@ func main() {
 		// otherwise use the default device name
 		if len(flag.Args()) > 1 {
 			device = flag.Args()[1]
-		} else {
-			device, err = sdk.GetDefaultDeviceName()
-			if err != nil {
-				log.Fatal(err)
-			}
 		}
 		handleGetAll(sdk, device)
 
@@ -129,17 +126,24 @@ func main() {
 }
 
 func handleGetAll(sdk SDKProvider, deviceName string) {
-	// if there is no default, and no name given, print an empty config.
-	deviceConfig := sdkcommon.DeviceConfig{}
-	var err error
-	if deviceName != "" {
-		deviceConfig, err = sdk.GetDeviceConfiguration(deviceName)
-		if err != nil {
-			log.Fatal(err)
-		}
+	deviceConfig, err := sdk.GetDefaultDevice(deviceName)
+	if err != nil {
+		log.Fatalf("Unable to get default device: %v", err)
 	}
-	data, _ := json.MarshalIndent(deviceConfig, "", "")
-	stdoutPrintln(string(data))
+	printJson(deviceConfig)
+}
+
+// printJson() is a custom json encoder. This is needed because <unknown>
+// will be escaped if using json.MarshalIndent().
+func printJson(config sdkcommon.DeviceConfig) {
+	buf := new(bytes.Buffer)
+	enc := json.NewEncoder(buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", " ")
+	if err := enc.Encode(config); err != nil {
+		log.Println(err)
+	}
+	stdoutPrintln(strings.TrimSpace(buf.String()))
 }
 
 const usageText = `
@@ -235,8 +239,7 @@ func doList(sdk SDKProvider) error {
 		return nil
 	}
 	for _, config := range configList {
-		data, _ := json.MarshalIndent(config, "", "")
-		stdoutPrintln(string(data))
+		printJson(config)
 	}
 	return nil
 }

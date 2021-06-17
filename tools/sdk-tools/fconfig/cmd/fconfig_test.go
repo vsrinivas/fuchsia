@@ -4,7 +4,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 
@@ -28,12 +27,18 @@ func (sdk testSDKProperties) GetDeviceConfiguration(name string) (sdkcommon.Devi
 	return sdkcommon.DeviceConfig{}, nil
 }
 
-func (sdk testSDKProperties) GetDefaultDeviceName() (string, error) {
-	if sdk.defaultDeviceName != "error" {
-		return sdk.defaultDeviceName, nil
+func (sdk testSDKProperties) GetDefaultDevice(deviceName string) (sdkcommon.DeviceConfig, error) {
+	for _, config := range sdk.currentConfigs {
+		if config.DeviceName == deviceName {
+			return config, nil
+		}
+		if deviceName == "" && config.IsDefault {
+			return config, nil
+		}
 	}
-	return "", errors.New("Test error returned by mock")
+	return sdkcommon.DeviceConfig{}, fmt.Errorf("No devices found.")
 }
+
 func (sdk testSDKProperties) GetFuchsiaProperty(deviceName string, property string) (string, error) {
 
 	device := deviceName
@@ -232,18 +237,28 @@ func TestGetAll(t *testing.T) {
 		expected   []string
 	}{
 		{
-			sdk:        testSDKProperties{},
+			sdk: testSDKProperties{currentConfigs: []sdkcommon.DeviceConfig{
+				{
+					DeviceName: "device1",
+				},
+				{
+					DeviceName: "device2",
+					IsDefault:  true,
+				},
+			},
+			},
 			deviceName: "",
 			expected: []string{
 				`{
-"device-name": "",
-"bucket": "",
-"image": "",
-"device-ip": "",
-"ssh-port": "",
-"package-repo": "",
-"package-port": "",
-"default": false
+ "device-name": "device2",
+ "bucket": "",
+ "image": "",
+ "device-ip": "",
+ "ssh-port": "",
+ "package-repo": "",
+ "package-port": "",
+ "default": true,
+ "discoverable": false
 }
 `,
 			},
@@ -253,41 +268,47 @@ func TestGetAll(t *testing.T) {
 				{
 					DeviceName: "device1",
 				},
-			}},
-			deviceName: "",
-			expected: []string{
-				`{
-"device-name": "",
-"bucket": "",
-"image": "",
-"device-ip": "",
-"ssh-port": "",
-"package-repo": "",
-"package-port": "",
-"default": false
-}
-`,
-			},
-		},
-		{
-			sdk: testSDKProperties{currentConfigs: []sdkcommon.DeviceConfig{
 				{
-					DeviceName: "device1",
+					DeviceName: "device2",
+					IsDefault:  true,
 				},
 			},
-				defaultDeviceName: "device1",
 			},
 			deviceName: "device1",
 			expected: []string{
 				`{
-"device-name": "device1",
-"bucket": "",
-"image": "",
-"device-ip": "",
-"ssh-port": "",
-"package-repo": "",
-"package-port": "",
-"default": false
+ "device-name": "device1",
+ "bucket": "",
+ "image": "",
+ "device-ip": "",
+ "ssh-port": "",
+ "package-repo": "",
+ "package-port": "",
+ "default": false,
+ "discoverable": false
+}
+`,
+			},
+		},
+		{
+			sdk: testSDKProperties{currentConfigs: []sdkcommon.DeviceConfig{
+				{
+					DeviceName: "<unknown>",
+					IsDefault:  true,
+				},
+			},
+			},
+			expected: []string{
+				`{
+ "device-name": "<unknown>",
+ "bucket": "",
+ "image": "",
+ "device-ip": "",
+ "ssh-port": "",
+ "package-repo": "",
+ "package-port": "",
+ "default": true,
+ "discoverable": false
 }
 `,
 			},
@@ -297,11 +318,11 @@ func TestGetAll(t *testing.T) {
 		output = []string{}
 		handleGetAll(test.sdk, test.deviceName)
 		if len(output) != len(test.expected) {
-			t.Fatalf("Output length mismatch %v does not match expected %v", output, test.expected)
+			t.Errorf("Output length mismatch %v does not match expected %v", output, test.expected)
 		}
 		for i, line := range output {
 			if line != test.expected[i] {
-				t.Fatalf("Output %q does not match expected %q", output, test.expected)
+				t.Errorf("Output %q does not match expected %q", output, test.expected)
 			}
 		}
 	}
