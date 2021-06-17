@@ -85,7 +85,6 @@ protocol ScanResultWatcher {
     ///
     /// - response `updated` Peers that were added or updated since the last
     ///   call to Watch().
-    [Transitional = "Not yet implemented"]
     Watch() -> (vector<Peer>:MAX updated);
 };
 
@@ -117,7 +116,6 @@ protocol Central {
     ///   `ScanOptions` documentation.
     /// * error `INTERNAL`: An internal error occurred and a scan could not be
     ///   started.
-    [Transitional = "Not yet implemented"]
     Scan(ScanOptions options, request<ScanResultWatcher> result_watcher) -> ();
 
     /// Connect to the peer with the given identifier.
