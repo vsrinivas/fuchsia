@@ -12,7 +12,7 @@ Currently, we require a x86_64 host Linux system to run starnix.
 In order to run starnix, we need to build `//src/proc`:
 
 ```sh
-$ fx set core.x64 --with //src/proc,//src/proc:tests
+$ fx set core.x64 --with //src/proc,//src/proc:tests,//src/proc/tests/hello_starnix:hello-starnix
 $ fx build
 ```
 
