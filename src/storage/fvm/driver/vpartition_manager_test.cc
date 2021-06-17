@@ -98,7 +98,7 @@ TEST(VPartitionManager, TrivialLifetime) {
 
 // Initializes a block device containing an FVM header with one partition with the given oldest
 // revision.
-template <uint64_t oldest_revision>
+template <uint64_t oldest_minor_version>
 class VPartitionManagerTestAtRevision : public zxtest::Test {
  public:
   void SetUp() override {
@@ -108,7 +108,7 @@ class VPartitionManagerTestAtRevision : public zxtest::Test {
     // Generate the FVM partition information for the initial device state. This contains no
     // partitions or allocated slices.
     Header header = Header::FromDiskSize(kMaxUsablePartitions, kDiskSize, kFvmSliceSize);
-    header.oldest_revision = oldest_revision;
+    header.oldest_minor_version = oldest_minor_version;
     auto metadata_or = Metadata::Synthesize(header, nullptr, 0u, nullptr, 0u);
     ASSERT_TRUE(metadata_or.is_ok());
 
@@ -172,7 +172,7 @@ class VPartitionManagerTestAtRevision : public zxtest::Test {
   size_t block_op_size_ = 0;
 };
 
-using VPartitionManagerTest = VPartitionManagerTestAtRevision<kCurrentRevision>;
+using VPartitionManagerTest = VPartitionManagerTestAtRevision<kCurrentMinorVersion>;
 
 // Verifies that simple TRIM commands are forwarded to the underlying device.
 TEST_F(VPartitionManagerTest, QueueTrimOneSlice) {
@@ -242,10 +242,11 @@ TEST_F(VPartitionManagerTest, InspectVmoPopulatedWithInitialState) {
   ASSERT_TRUE(hierarchy.is_ok());
   const inspect::Hierarchy* mount_time = hierarchy.value().GetByPath({"fvm", "mount_time"});
   ASSERT_NE(mount_time, nullptr);
-  EXPECT_EQ(mount_time->node().get_property<inspect::UintPropertyValue>("format_version")->value(),
-            kCurrentFormatVersion);
-  EXPECT_EQ(mount_time->node().get_property<inspect::UintPropertyValue>("oldest_revision")->value(),
-            kCurrentRevision);
+  EXPECT_EQ(mount_time->node().get_property<inspect::UintPropertyValue>("major_version")->value(),
+            kCurrentMajorVersion);
+  EXPECT_EQ(
+      mount_time->node().get_property<inspect::UintPropertyValue>("oldest_minor_version")->value(),
+      kCurrentMinorVersion);
 }
 
 TEST_F(VPartitionManagerTest, InspectVmoTracksSliceAllocations) {
@@ -285,7 +286,7 @@ TEST_F(VPartitionManagerTest, InspectVmoTracksSliceAllocations) {
 
 // Tests that opening a device at a newer "oldest revision" updates the device's oldest revision to
 // the current revision value.
-constexpr uint64_t kNextRevision = kCurrentRevision + 1;
+constexpr uint64_t kNextRevision = kCurrentMinorVersion + 1;
 using VPartitionManagerTestAtNextRevision = VPartitionManagerTestAtRevision<kNextRevision>;
 TEST_F(VPartitionManagerTestAtNextRevision, UpdateOldestRevision) {
   auto first_metadata_or = GetMetadata();
@@ -295,7 +296,7 @@ TEST_F(VPartitionManagerTestAtNextRevision, UpdateOldestRevision) {
 
   // No operations have been performed, the FVM header will be unchanged from initialization and
   // will reference the next revision.
-  EXPECT_EQ(first_metadata_or.value().GetHeader().oldest_revision, kNextRevision);
+  EXPECT_EQ(first_metadata_or.value().GetHeader().oldest_minor_version, kNextRevision);
 
   // Trigger a write operation. This allocated a new partition but could be any operation that
   // forces a write to the FVM metadata.
@@ -310,11 +311,11 @@ TEST_F(VPartitionManagerTestAtNextRevision, UpdateOldestRevision) {
   EXPECT_NE(first_metadata_type, second_metadata_type);
 
   // The newly active header should have the oldest revision downgraded to the current one.
-  EXPECT_EQ(second_metadata_or.value().GetHeader().oldest_revision, kCurrentRevision);
+  EXPECT_EQ(second_metadata_or.value().GetHeader().oldest_minor_version, kCurrentMinorVersion);
 }
 
 // Tests that opening a device at a older "oldest revision" doesn't change the oldest revision.
-constexpr uint64_t kPreviousRevision = kCurrentRevision - 1;
+constexpr uint64_t kPreviousRevision = kCurrentMinorVersion - 1;
 using VPartitionManagerTestAtPreviousRevision = VPartitionManagerTestAtRevision<kPreviousRevision>;
 TEST_F(VPartitionManagerTestAtPreviousRevision, DontUpdateOldestRevision) {
   auto first_metadata_or = GetMetadata();
@@ -324,7 +325,7 @@ TEST_F(VPartitionManagerTestAtPreviousRevision, DontUpdateOldestRevision) {
 
   // No operations have been performed, the FVM header will be unchanged from initialization and
   // will reference the next revision.
-  EXPECT_EQ(first_metadata_or.value().GetHeader().oldest_revision, kPreviousRevision);
+  EXPECT_EQ(first_metadata_or.value().GetHeader().oldest_minor_version, kPreviousRevision);
 
   // Trigger a write operation. This allocated a new partition but could be any operation that
   // forces a write to the FVM metadata.
@@ -340,7 +341,7 @@ TEST_F(VPartitionManagerTestAtPreviousRevision, DontUpdateOldestRevision) {
 
   // The newly active header should still have the oldest revision unchanged rather than the current
   // one.
-  EXPECT_EQ(second_metadata_or.value().GetHeader().oldest_revision, kPreviousRevision);
+  EXPECT_EQ(second_metadata_or.value().GetHeader().oldest_minor_version, kPreviousRevision);
 }
 
 }  // namespace fvm

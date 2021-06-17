@@ -109,14 +109,14 @@ Header Header::FromGrowableSliceCount(size_t usable_partitions, size_t initial_u
   ZX_ASSERT(usable_partitions == kMaxUsablePartitions);
   Header result{
       .magic = kMagic,
-      .format_version = kCurrentFormatVersion,
+      .major_version = kCurrentMajorVersion,
       .pslice_count = 0,  // Will be set properly below.
       .slice_size = slice_size,
       .fvm_partition_size = kBlockSize,  // Will be set properly below.
       .vpartition_table_size = PartitionTableByteSizeForUsablePartitionCount(usable_partitions),
       .allocation_table_size = AllocTableByteSizeForUsableSliceCount(max_usable_slices),
       .generation = 0,
-      .oldest_revision = kCurrentRevision,
+      .oldest_minor_version = kCurrentMinorVersion,
   };
 
   // Set the pslice_count and fvm_partition_size now that we know the metadata size.
@@ -133,9 +133,10 @@ bool Header::IsValid(uint64_t disk_size, uint64_t disk_block_size, std::string& 
   }
 
   // Check version.
-  if (format_version > kCurrentFormatVersion) {
-    out_err = "Header format version does not match fvm driver (=" +
-              std::to_string(kCurrentFormatVersion) + ")\n" + ToString();
+  if (major_version > kCurrentMajorVersion) {
+    out_err =
+        "Header major version does not match fvm driver (=" + std::to_string(kCurrentMajorVersion) +
+        ")\n" + ToString();
     return false;
   }
 
@@ -230,14 +231,14 @@ std::string Header::ToString() const {
   std::stringstream ss;
   ss << "FVM Header" << std::endl;
   ss << "  magic: " << magic << std::endl;
-  ss << "  format_version: " << format_version << std::endl;
+  ss << "  major_version: " << major_version << std::endl;
   ss << "  pslice_count: " << pslice_count << std::endl;
   ss << "  slice_size: " << slice_size << std::endl;
   ss << "  fvm_partition_size: " << fvm_partition_size << std::endl;
   ss << "  vpartition_table_size: " << vpartition_table_size << std::endl;
   ss << "  allocation_table_size: " << allocation_table_size << std::endl;
   ss << "  generation: " << generation << std::endl;
-  ss << "  oldest_revision: " << oldest_revision << std::endl;
+  ss << "  oldest_minor_version: " << oldest_minor_version << std::endl;
   return ss.str();
 }
 

@@ -38,14 +38,14 @@ constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
 
 // Current version of the format. The major version determines backwards-compatibility. The minor
 // version can be freely incremented at any time and does not impact backwards-compatibility; the
-// more often it is updated, the more granularly we can find out what the oldest revision of the
-// driver is that has touched a filesystem instance.
+// more often it is updated, the more granularly we can find out what the oldest driver that has
+// touched a filesystem instance.
 //
 // Minimally, the minor version should be incremented whenever a (backwards-compatible) format
 // change is made, but it can also be incremented when major logic changes are made in case there is
 // chance of bugs being introduced and we would like to be able to detect if the filesystem has been
-// touched by a potentially buggy driver. The revision is used to updated the oldest_minor_version
-// field in the header.
+// touched by a potentially buggy driver. The kBlobfsCurrentMinorVersion is used to updated the
+// oldest_minor_version field in the header when it is opened.
 //
 // See //src/storage/docs/versioning.md for more.
 //

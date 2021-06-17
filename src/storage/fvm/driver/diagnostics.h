@@ -29,10 +29,10 @@ class Diagnostics {
   Diagnostics& operator=(const Diagnostics& o) = delete;
 
   struct OnMountArgs {
-    // Version of the fileystem
-    uint64_t format_version = 0;
-    // Oldest revision driver which has touched of the fileystem
-    uint64_t oldest_revision = 0;
+    // Version of the filesystem
+    uint64_t major_version = 0;
+    // Oldest revision driver which has touched of the filesystem
+    uint64_t oldest_minor_version = 0;
     // Slice size (bytes)
     uint64_t slice_size = 0;
     // Number of slices
@@ -80,8 +80,8 @@ class Diagnostics {
   // Metrics collected once at mount time.
   inspect::Node mount_time_;
 
-  inspect::UintProperty mount_time_format_version_;
-  inspect::UintProperty mount_time_oldest_revision_;
+  inspect::UintProperty mount_time_major_version_;
+  inspect::UintProperty mount_time_oldest_minor_version_;
   // The version combo property is constructed at mount time instead of being passed in. It is of
   // the format <format-version>/<oldest-revision>.
   inspect::StringProperty mount_time_version_combo_;

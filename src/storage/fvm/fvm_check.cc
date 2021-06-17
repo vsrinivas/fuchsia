@@ -246,8 +246,8 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
   auto invalid_superblock = reinterpret_cast<const fvm::Header*>(info.invalid_metadata);
 
   logger_.Log("[  FVM Info  ]\n");
-  logger_.Log("Format version: %" PRIu64 "\n", superblock->format_version);
-  logger_.Log("Oldest revision: %" PRIu64 "\n", superblock->oldest_revision);
+  logger_.Log("Major version: %" PRIu64 "\n", superblock->major_version);
+  logger_.Log("Oldest minor version: %" PRIu64 "\n", superblock->oldest_minor_version);
   logger_.Log("Generation number: %" PRIu64 "\n", superblock->generation);
   logger_.Log("Generation number: %" PRIu64 " (invalid copy)\n", invalid_superblock->generation);
   logger_.Log("\n");

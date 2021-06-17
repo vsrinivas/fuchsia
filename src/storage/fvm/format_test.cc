@@ -161,9 +161,9 @@ TEST(FvmFormat, IsValid) {
 
   // Version too new.
   header = valid_header;
-  header.format_version = kCurrentFormatVersion + 1;
+  header.major_version = kCurrentMajorVersion + 1;
   EXPECT_FALSE(header.IsValid(kMaxDiskSize, kBlockSize, error_message));
-  EXPECT_TRUE(StringBeginsWith(error_message, "Header format version does not match fvm driver"));
+  EXPECT_TRUE(StringBeginsWith(error_message, "Header major version does not match fvm driver"));
 
   // Slice count overflow.
   header = valid_header;
@@ -208,14 +208,14 @@ TEST(FvmFormat, HasValidTableSizes) {
       "Bad vpartition table size.\n"
       "FVM Header\n"
       "  magic: 6075990659671348806\n"
-      "  format_version: 1\n"
+      "  major_version: 1\n"
       "  pslice_count: 0\n"
       "  slice_size: 0\n"
       "  fvm_partition_size: 0\n"
       "  vpartition_table_size: 0\n"
       "  allocation_table_size: 0\n"
       "  generation: 0\n"
-      "  oldest_revision: 1\n",
+      "  oldest_minor_version: 1\n",
       error_message);
 
   // Normal valid header.

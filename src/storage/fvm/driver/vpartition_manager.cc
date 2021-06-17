@@ -388,8 +388,8 @@ zx_status_t VPartitionManager::Load() {
   }
 
   diagnostics().OnMount({
-      .format_version = header->format_version,
-      .oldest_revision = header->oldest_revision,
+      .major_version = header->major_version,
+      .oldest_minor_version = header->oldest_minor_version,
       .slice_size = header->slice_size,
       .num_slices = header->pslice_count,
       .partition_table_entries = header->GetPartitionTableEntryCount(),
@@ -411,9 +411,9 @@ zx_status_t VPartitionManager::WriteFvmLocked() {
   fvm::Header* header = GetFvmLocked();
   header->generation++;
 
-  // Track the oldest revision of the driver that has written to this FVM metadata.
-  if (header->oldest_revision > fvm::kCurrentRevision)
-    header->oldest_revision = fvm::kCurrentRevision;
+  // Track the oldest minor version of the driver that has written to this FVM metadata.
+  if (header->oldest_minor_version > fvm::kCurrentMinorVersion)
+    header->oldest_minor_version = fvm::kCurrentMinorVersion;
 
   metadata_.UpdateHash();
 
