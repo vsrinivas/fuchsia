@@ -1,0 +1,44 @@
+{
+    "program": {
+        "data": "data/next"
+    },
+    "sandbox": {
+        "features": [
+            "config-data",
+            "isolated-persistent-storage"
+        ],
+        "pkgfs": [
+            "packages"
+        ],
+        "services": [
+            "fuchsia.accessibility.semantics.SemanticsManager",
+            "fuchsia.bluetooth.control.Control",
+            "fuchsia.buildinfo.Provider",
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.device.manager.Administrator",
+            "fuchsia.feedback.CrashReporter",
+            "fuchsia.fonts.Provider",
+            "fuchsia.intl.PropertyProvider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.media.Audio",
+            "fuchsia.media.AudioCore",
+            "fuchsia.memory.Monitor",
+            "fuchsia.power.BatteryManager",
+            "fuchsia.session.ElementManager",
+            "fuchsia.settings.Intl",
+            "fuchsia.settings.Privacy",
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.brightness.Control",
+            "fuchsia.ui.focus.FocusChainListenerRegistry",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input.InputDeviceRegistry",
+            "fuchsia.ui.input.PointerCaptureListenerRegistry",
+            "fuchsia.ui.input3.Keyboard",
+            "fuchsia.ui.policy.Presentation",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.shortcut.Registry",
+            "fuchsia.update.channelcontrol.ChannelControl"
+        ]
+    }
+}

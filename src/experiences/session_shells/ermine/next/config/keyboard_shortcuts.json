@@ -1,0 +1,75 @@
+{
+    "cancel": [
+        {
+            "char": "escape",
+            "chord": "Escape",
+            "description": "Dismiss system overlays"
+        }
+    ],
+    "close": [
+        {
+            "char": "w",
+            "chord": "Shift + Ctrl + w",
+            "description": "Close top view",
+            "exclusive": true,
+            "modifier": "shift + control"
+        }
+    ],
+    "launcher": [
+        {
+            "char": "leftMeta",
+            "chord": "Meta",
+            "description": "Show Launcher",
+            "exclusive": true
+        },
+        {
+            "char": "rightMeta",
+            "chord": "Meta",
+            "description": "Show Launcher",
+            "exclusive": true
+        },
+        {
+            "char": "space",
+            "chord": "Alt + Space",
+            "description": "Show Launcher",
+            "exclusive": true,
+            "modifier": "alt"
+        }
+    ],
+    "settings": [
+        {
+            "char": "s",
+            "chord": "Alt + Shift + s",
+            "description": "Show Quick Settings",
+            "exclusive": true,
+            "modifier": "alt + shift"
+        }
+    ],
+    "shortcuts": [
+        {
+            "char": "slash",
+            "chord": "Ctrl + Alt + /",
+            "description": "Show keyboard shortcuts",
+            "exclusive": true,
+            "modifier": "control + alt"
+        }
+    ],
+    "switchNext": [
+        {
+            "char": "tab",
+            "chord": "Alt + tab",
+            "description": "Switch to next app",
+            "exclusive": true,
+            "modifier": "alt"
+        }
+    ],
+    "switchPrev": [
+        {
+            "char": "tab",
+            "chord": "Shift + Alt + tab",
+            "description": "Switch to previous app",
+            "exclusive": true,
+            "modifier": "shift + alt"
+        }
+    ]
+}

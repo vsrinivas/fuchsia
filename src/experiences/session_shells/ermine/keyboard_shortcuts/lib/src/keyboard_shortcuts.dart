@@ -63,20 +63,24 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
   Future<bool> onShortcut(int id) async {
     Shortcut shortcut = shortcuts.firstWhere((shortcut) => shortcut.id == id);
     shortcut.onKey?.call();
-    return shortcut.exclusive ?? false;
+    return shortcut.usePriority == true;
+  }
+
+  Map<String, Set<String>> bindingDescription() {
+    final result = <String, Set<String>>{};
+    for (final binding in shortcuts) {
+      if (result.containsKey(binding.description)) {
+        result[binding.description]!.add(binding.chord!);
+      } else {
+        result[binding.description] = {binding.chord!};
+      }
+    }
+    return result;
   }
 
   /// Returns keyboard binding help text.
   String helpText() {
-    final result = <String, List<String>>{};
-    for (final binding in shortcuts) {
-      if (result.containsKey(binding.description) &&
-          !result[binding.description]!.contains(binding.chord)) {
-        result[binding.description]?.add(binding.chord!);
-      } else {
-        result[binding.description] = [binding.chord!];
-      }
-    }
+    final result = bindingDescription();
     final buf = StringBuffer();
     for (final description in result.keys) {
       buf.writeln(description);
@@ -134,7 +138,6 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
 class Shortcut extends ui_shortcut.Shortcut {
   static int lastId = 0;
 
-  bool? exclusive = true;
   String? action;
   String? chord;
   String description;
@@ -145,7 +148,6 @@ class Shortcut extends ui_shortcut.Shortcut {
     List<Key>? keysRequired,
     ui_shortcut.Trigger? trigger,
     bool usePriority = true,
-    this.exclusive,
     this.onKey,
     this.action,
     this.chord,
@@ -169,7 +171,7 @@ class Shortcut extends ui_shortcut.Shortcut {
               trigger: object['char'] == null && object['modifier'] != null
                   ? ui_shortcut.Trigger.keyPressedAndReleased
                   : null,
-              exclusive: object['exclusive'] ?? true,
+              usePriority: object['exclusive'] == true,
               onKey: onKey,
               action: action,
               chord: object['chord'],
@@ -206,23 +208,24 @@ class Shortcut extends ui_shortcut.Shortcut {
         s.split('+').map((x) => x.trim()).map(_keyVariantsFromString);
     // Convert list of modifier variants to a list of combinations.
     for (var modifierVariant in modifiers) {
-      r = r.expand((i) => modifierVariant.map((j) => i + [j!])).toList();
+      r = r.expand((i) => modifierVariant.map((j) => i + [j])).toList();
     }
     return r;
   }
 
-  static List<Key?> _keyVariantsFromString(String s) {
+  static List<Key> _keyVariantsFromString(String s) {
     switch (s) {
       case 'shift':
         return [Key.leftShift, Key.rightShift];
       case 'control':
+      case 'ctrl':
         return [Key.leftCtrl, Key.rightCtrl];
       case 'alt':
         return [Key.leftAlt, Key.rightAlt];
       case 'meta':
         return [Key.leftMeta, Key.rightMeta];
       default:
-        return [Key.$valueOf(s)];
+        throw Exception('Unsupported modifier encountered: $s');
     }
   }
 }

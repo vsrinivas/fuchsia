@@ -37,6 +37,18 @@ class Strings {
         desc: 'The label for saying we are done with a command',
       );
 
+  static String get selected => Intl.message(
+        'Selected',
+        name: 'selected',
+        desc: 'The label for saying an option is currently selected',
+      );
+
+  static String get darkMode => Intl.message(
+        'Dark Mode',
+        name: 'dark mode',
+        desc: 'The label for dark mode toggle switch',
+      );
+
   static String get sleep => Intl.message(
         'Sleep',
         name: 'sleep',
@@ -216,6 +228,12 @@ class Strings {
         'Wireless',
         name: 'wireless',
         desc: 'The short name for the "Wireless network" label',
+      );
+
+  static String get wifi => Intl.message(
+        'Wi-Fi',
+        name: 'wi-fi',
+        desc: 'The short name for the "Wi-Fi network" label',
       );
 
   static String get signalStrong => Intl.message(
@@ -659,5 +677,10 @@ class Strings {
         'License',
         name: 'license',
         desc: 'The label for the "license" text field.',
+      );
+  static String get shortcuts => Intl.message(
+        'Shortcuts',
+        name: 'shortcuts',
+        desc: 'The button label for displaying keyboard shortcuts',
       );
 }

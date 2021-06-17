@@ -1,0 +1,210 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/dart/dart_library.gni")
+import("//build/dart/fidl_move.gni")
+import("//build/fidl/fidl.gni")
+import("//build/flutter/flutter_component.gni")
+import("//build/flutter/test.gni")
+import("//build/testing/flutter_driver.gni")
+import("//src/lib/icu/tools/static_icu_data.gni")
+
+group("shell") {
+  public_deps = [
+    ":images",
+    ":next",
+  ]
+}
+
+dart_library("lib") {
+  package_name = "next"
+  null_safe = true
+
+  services = [
+    "src/services/focus_service.dart",
+    "src/services/launch_service.dart",
+    "src/services/pointer_events_service.dart",
+    "src/services/preferences_service.dart",
+    "src/services/presenter_service.dart",
+    "src/services/shortcuts_service.dart",
+    "src/services/startup_service.dart",
+    "src/services/settings/datetime_service.dart",
+    "src/services/settings/task_service.dart",
+    "src/services/settings/timezone_service.dart",
+  ]
+
+  states = [
+    "src/states/app_state.dart",
+    "src/states/app_state_impl.dart",
+    "src/states/settings_state.dart",
+    "src/states/settings_state_impl.dart",
+    "src/states/view_state.dart",
+    "src/states/view_state_impl.dart",
+  ]
+
+  utils = [
+    "src/utils/crash.dart",
+    "src/utils/fuchsia_keyboard.dart",
+    "src/utils/mobx_disposable.dart",
+    "src/utils/mobx_extensions.dart",
+    "src/utils/themes.dart",
+    "src/utils/view_handle.dart",
+    "src/utils/widget_factory.dart",
+  ]
+
+  widgets = [
+    "src/widgets/app.dart",
+    "src/widgets/app_bar.dart",
+    "src/widgets/app_launcher.dart",
+    "src/widgets/app_view.dart",
+    "src/widgets/launch_button.dart",
+    "src/widgets/overlays.dart",
+    "src/widgets/quick_settings.dart",
+    "src/widgets/scrim.dart",
+    "src/widgets/settings/setting_details.dart",
+    "src/widgets/settings/shortcut_settings.dart",
+    "src/widgets/settings/timezone_settings.dart",
+    "src/widgets/side_bar.dart",
+  ]
+
+  sources = [
+              "main.dart",
+              "test_main.dart",
+            ] + services + states + utils + widgets
+
+  deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_inspect",
+    "//sdk/dart/fuchsia_internationalization_flutter",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_scenic",
+    "//sdk/dart/fuchsia_scenic_flutter",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
+    "//sdk/fidl/fuchsia.bluetooth.control",
+    "//sdk/fidl/fuchsia.buildinfo",
+    "//sdk/fidl/fuchsia.device.manager",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.memory",
+    "//sdk/fidl/fuchsia.power",
+    "//sdk/fidl/fuchsia.session",
+    "//sdk/fidl/fuchsia.settings",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.focus",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.remotewidgets",
+    "//sdk/fidl/fuchsia.ui.shortcut",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//src/experiences/session_shells/ermine/internationalization",
+    "//src/experiences/session_shells/ermine/keyboard_shortcuts",
+    "//src/experiences/session_shells/ermine/settings",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+    "//third_party/dart-pkg/pub/async",
+    "//third_party/dart-pkg/pub/flutter_mobx",
+    "//third_party/dart-pkg/pub/intl",
+    "//third_party/dart-pkg/pub/meta",
+    "//third_party/dart-pkg/pub/mobx",
+    "//third_party/dart-pkg/pub/uuid",
+    "//third_party/dart-pkg/pub/vector_math",
+  ]
+}
+
+flutter_component("component") {
+  if (flutter_driver_enabled) {
+    main_dart = "test_main.dart"
+  } else {
+    main_dart = "main.dart"
+  }
+  component_name = "next"
+  manifest = "meta/next.cmx"
+  deps = [
+    ":lib",
+    ":resources",
+    ":time_zone_list",
+  ]
+}
+
+fuchsia_package("next") {
+  deps = [ ":component" ]
+}
+
+tz_ids_path = "${target_gen_dir}/tz_ids.txt"
+
+static_icu_data("time_zone_list") {
+  command = "tz-ids"
+  output = tz_ids_path
+
+  # Put these time zones at the top for the convenience of Fuchsia developers.
+  fixed_order_ids = [
+    "America/Los_Angeles",
+    "America/New_York",
+    "Europe/Paris",
+    "Australia/Sydney",
+  ]
+  fixed_order = string_join(",", fixed_order_ids)
+  command_args = [ "--fixed-order=${fixed_order}" ]
+}
+
+resource("resources") {
+  sources = [
+    "config/keyboard_shortcuts.json",
+    rebase_path(tz_ids_path),
+    rebase_path(
+        "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf"),
+  ]
+
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+config_data("shell_config") {
+  for_pkg = "workstation_session"
+
+  sources = [ "config/shell" ]
+
+  outputs = [ "shell" ]
+}
+
+config_data("images") {
+  for_pkg = "next"
+
+  sources = rebase_path([
+                          "images/Fuchsia-logo-dark-2x.png",
+                          "images/Fuchsia-logo-light-2x.png",
+                          "images/Chromium-icon-2x.png",
+                          "images/Settings-icon-2x.png",
+                          "images/SimpleBrowser-icon-2x.png",
+                          "images/SpinningSquareView-icon-2x.png",
+                          "images/Terminal-icon-2x.png",
+                        ])
+
+  outputs = [ "{{source_file_part}}" ]
+}
+
+flutter_test("next_unittests") {
+  null_safe = true
+  sources = [ "app_widget_test.dart" ]
+
+  deps = [
+    ":lib",
+    "//sdk/dart/fuchsia_logger",
+    "//src/experiences/session_shells/ermine/internationalization",
+    "//src/experiences/session_shells/ermine/keyboard_shortcuts",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+    "//third_party/dart-pkg/pub/http",
+    "//third_party/dart-pkg/pub/intl",
+    "//third_party/dart-pkg/pub/mobx",
+    "//third_party/dart-pkg/pub/mockito",
+    "//third_party/dart-pkg/pub/test",
+  ]
+}

@@ -4,6 +4,7 @@
 
 group("ermine") {
   public_deps = [
+    "next:shell",
     "session:workstation_routing",
     "session:workstation_session",
     "shell",
