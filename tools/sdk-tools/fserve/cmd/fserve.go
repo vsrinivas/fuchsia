@@ -17,7 +17,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -269,18 +268,15 @@ func killServers(ctx context.Context, portNum string) error {
 			if string(exitError.Stderr) != "" {
 				err = errors.New(string(exitError.Stderr))
 			}
-			// Special case for mac compared to Linux. If there are no
-			// processes found on Linux, the exit code is 0, but on mac
-			// it is 1 with no text on either stdout or stderr.
-			// In this case we want to treat it as a non-error. However,
-			// if there is an error message or if the exit code is not 1,
-			// return an error.
-			if runtime.GOOS == "darwin" && exitError.ExitCode() == 1 && len(exitError.Stderr) == 0 {
+			// Special case for some environments which if pgrep does not match
+			// the exit code  can be non-zero. In this case check to see if any output
+			// was generated and if not, then treat it as if there are no matching processes.
+			if exitError.ExitCode() == 1 && len(exitError.Stderr) == 0 && len(output) == 0 {
 				return nil
 			}
 			return fmt.Errorf("Error running pgrep: %v", err)
 		}
-		return err
+		return fmt.Errorf("Non exitError encountered: %v", err)
 	}
 
 	if len(output) == 0 {

@@ -178,11 +178,20 @@ func TestKillServers(t *testing.T) {
 
 	// Test no existing servers
 	os.Setenv("FSERVE_TEST_NO_SERVERS", "1")
+	os.Setenv("FSERVE_TEST_NO_SERVERS_IS_ERROR", "0")
+	if err := killServers(ctx, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	// Test no existing servers
+	os.Setenv("FSERVE_TEST_NO_SERVERS", "1")
+	os.Setenv("FSERVE_TEST_NO_SERVERS_IS_ERROR", "1")
 	if err := killServers(ctx, ""); err != nil {
 		t.Fatal(err)
 	}
 	// Test existing servers
 	os.Setenv("FSERVE_TEST_NO_SERVERS", "0")
+	os.Setenv("FSERVE_TEST_NO_SERVERS_IS_ERROR", "0")
 	if err := killServers(ctx, ""); err != nil {
 		t.Fatal(err)
 	}
@@ -581,7 +590,7 @@ func fakePgrep(args []string) {
 	if args[0] == "pm" {
 		if os.Getenv("FSERVE_TEST_NO_SERVERS") == "1" {
 			// mac exits with 1
-			if runtime.GOOS == "darwin" {
+			if runtime.GOOS == "darwin" || os.Getenv("FSERVE_TEST_NO_SERVERS_IS_ERROR") == "1" {
 				os.Exit(1)
 			}
 			os.Exit(0)
