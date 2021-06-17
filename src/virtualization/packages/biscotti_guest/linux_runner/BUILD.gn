@@ -26,7 +26,7 @@ declare_args() {
 
   # If `true`, adds additional testonly content to extras.img, which will be
   # built and mounted inside the container at /mnt/chromeos.
-  linux_runner_extras_tests = false
+  linux_runner_extras_tests = true
 
   # If `true`, all block devices that would normally load as READ_WRITE will
   # be loaded as VOLATILE_WRITE. This is useful when working on changes to
@@ -131,12 +131,10 @@ romfs_image("extras") {
 
     deps += [
       "//src/graphics/examples:vkcube-on-wayland(${linux_exe_toolchain})",
-      "//src/graphics/lib/gbm",
       "//src/graphics/lib/magma/tests/integration:virtmagma_abi_conformance_tests(${linux_exe_toolchain})",
       "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_image_tests(${linux_exe_toolchain})",
       "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests_linux(${linux_exe_toolchain})",
       "//src/graphics/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(${linux_exe_toolchain})",
-      "//src/graphics/tests/vkgbm(${linux_exe_toolchain})",
       "//src/lib/vulkan:vulkaninfo(${linux_exe_toolchain})",
     ]
 
@@ -147,9 +145,19 @@ romfs_image("extras") {
       "${linux_exe_path}/cube-wayland",
       "${linux_exe_path}/vulkaninfo",
       "${linux_exe_path}/virtmagma_image_tests",
-      "${linux_exe_path}/vkgbm",
-      "${gbm_lib_path}",
     ]
+
+    if (current_cpu == "x64") {
+      deps += [
+        "//src/graphics/lib/gbm",
+        "//src/graphics/tests/vkgbm(${linux_exe_toolchain})",
+      ]
+
+      inputs += [
+        "${linux_exe_path}/vkgbm",
+        "${gbm_lib_path}",
+      ]
+    }
 
     inputs += linux_runner_user_extras
   }
