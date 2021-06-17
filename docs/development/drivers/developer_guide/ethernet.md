@@ -54,6 +54,8 @@ and consists of the following files:
 <dd>Contains the manifest constants for all of the control registers.
 <dt>`ie.h`
 <dd>Common definitions (such as the device context block)
+<dt>`intel_ethernet.bind`
+<dd>Conditions for binding the driver
 </dl>
 
 This driver not only handles the `ethmac` protocol, but also:
@@ -65,87 +67,59 @@ This driver not only handles the `ethmac` protocol, but also:
 
 ## Binding
 
-The file `ethernet.c` contains the binding information, implemented by the standard
-binding macros introduced in the [Simple Drivers](simple.md) chapter:
+## Binding
 
-```c
-ZIRCON_DRIVER_BEGIN(intel_ethernet, intel_ethernet_driver_ops, "zircon", "0.1", 11)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x100E), // Qemu
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15A3), // Broadwell
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1570), // Skylake
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1533), // I210 standalone
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1539), // I211-AT
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x156f), // I219-LM (Dawson Canyon NUC)
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15b7), // Skull Canyon NUC
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15b8), // I219-V
-    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15d8), // Kaby Lake NUC
-ZIRCON_DRIVER_END(intel_ethernet)
+The `intel_ethernet.bind` file contains the binding information, which describes
+the bind rules for binding the driver. More information about driver binding is
+found [here](/docs/concepts/drivers/device_driver_model/driver-binding.md).
+
+```
+using fuchsia.pci;
+
+fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PCI_VID == 0x8086;
+accept fuchsia.BIND_PCI_DID {
+  0x100E,  // Qemu
+  0x15A3,  // Broadwell
+  0x1570,  // Skylake
+  0x1533,  // I210 standalone
+  0x1539,  // I211-AT
+  0x156f,  // I219-LM (Dawson Canyon NUC)
+  0x15b7,  // Skull Canyon NUC
+  0x15b8,  // I219-V
+  0x15d8,  // Kaby Lake NUC
+}
 ```
 
-This ends up binding to ethernet cards that are identified by vendor ID `0x8086` (Intel),
-and have any of the listed device IDs (the `BIND_PCI_DID` lines indicate the allowed
-hexadecimal device IDs).
-It also requires the `ZX_PROTOCOL_PCI` protocol.
+This ends up binding to ethernet cards that are identified by vendor ID 0x8086
+(Intel), and have any of the listed device IDs in the accept block. It also
+requires the `fuchsia.pci.BIND_PROTOCOL.DEVICE` protocol. The bind rules are
+evaluated in sequence. If a rule is evaluated to false, the evaluation
+terminates and results in false.
 
-Note the sense of the logic here &mdash; the vendor ID is tested with a
-"`BI_ABORT_IF(NE`" construct (meaning, "**ABORT IF** the values are **N**ot **E**qual"),
-whereas the device IDs are tested with "`BI_MATCH_IF(EQ`" constructs (meaning "**MATCH
-IF** the values are **EQ**ual").
+The bind rules in intel_ethernet.bind are included in `ethernet.c` through the
+generated header file `intel_ethernet_bind.h`, which is generated through the
+`BUILD` target:
 
-Intuitively, you might think that the vendor ID could be tested with a "`BI_MATCH_IF(EQ`"
-as well, (looking for vendor `0x8086`), but this would have two major problems.
-First, evaluation stops as soon as a condition is true, so that means that **any** device
-that had the Intel vendor ID would be considered a "match."
-Second, even if the device wasn't an Intel vendor ID, it would open the possibility
-of allowing matches to other vendors' devices that had the same device ID as listed.
-
-> The individual tests are evaluated in sequence.
-> The first one that's true terminates evaluation, and performs
-> the given action (i.e., `ABORT` or `MATCH`).
-
-## More about binding
-
-From the command line, `dm drivers` will display this information.
-Here's the relevant portion for the Intel ethernet driver:
-
-```sh
-$ dm drivers
-<snip>
-    Name    : intel_ethernet
-    Driver  : /boot/driver/intel-ethernet.so
-    Flags   : 0x00000000
-    Binding : 11 instructions (88 bytes)
-    [1/11]: if (Protocol != 0x70504349) return no-match;
-    [2/11]: if (PCI.VID != 0x00008086) return no-match;
-    [3/11]: if (PCI.DID == 0x0000100e) return match;
-    [4/11]: if (PCI.DID == 0x000015a3) return match;
-    [5/11]: if (PCI.DID == 0x00001570) return match;
-    [6/11]: if (PCI.DID == 0x00001533) return match;
-    [7/11]: if (PCI.DID == 0x00001539) return match;
-    [8/11]: if (PCI.DID == 0x0000156f) return match;
-    [9/11]: if (PCI.DID == 0x000015b7) return match;
-    [10/11]: if (PCI.DID == 0x000015b8) return match;
-    [11/11]: if (PCI.DID == 0x000015d8) return match;
+```
+bind_rules("intel_ethernet_bind") {
+  rules = “intel_ethernet.bind”
+  output = “intel_ethernet_bind.h”
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
 ```
 
-The `Name` field indicates the name of the driver, given as the first argument to the
-`ZIRCON_DRIVER_BEGIN` and `ZIRCON_DRIVER_END` macros.
-The `Driver` field indicates the location of the shared object that contains the driver code.
+The header defines a macro which is included at the bottom of `ethernet.c`:
 
-The last section, the binding instructions, corresponds with the `BI_ABORT_IF` and `BI_MATCH_IF`
-macro directives.
-Note that the first binding instruction compares the field `Protocol` against the hexadecimal
-number `0x70504349` &mdash; that "number" is simply the ASCII encoding of the string "`pPCI`",
-indicating the PCI protocol (you can see all of the encodings in
-`//src/lib/ddk/include/ddk/protodefs.h`)
+```
+ZIRCON_DRIVER(Driver, Ops, VendorName, Version);
+```
 
-From the `ZIRCON_DRIVER_BEGIN` macro, the `intel_ethernet_driver_ops`
-structure contains the driver operations, in this case just the binding function
-**eth_bind()**.
+ - `Driver` is the name of the driver.
+ - `Ops` is a `zx_driver_ops`, which are the driver operation hooks
+ - `VendorName` is a string representing the name of the driver vendor.
+ - `Version` is a string representing the version of the driver.
 
-Let's turn our attention to the binding function itself.
 
 ## PCI interface
 
