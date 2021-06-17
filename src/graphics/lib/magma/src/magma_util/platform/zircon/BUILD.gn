@@ -62,7 +62,25 @@ source_set("performance_counter_device") {
   ]
 }
 
+source_set("dependency_injection_device") {
+  sources = [
+    "magma_dependency_injection_device.cc",
+    "magma_dependency_injection_device.h",
+  ]
+  public_deps = [
+    "$magma_build_root/src/magma_util:macros",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+    "//src/devices/lib/driver",
+    "//src/graphics/lib/magma/include:msd_abi",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
+}
+
 entry_deps = [
+  ":dependency_injection_device",
   ":performance_counter_device",
   "..:logger",
   "..:trace",

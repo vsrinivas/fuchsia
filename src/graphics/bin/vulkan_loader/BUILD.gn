@@ -24,6 +24,8 @@ source_set("app") {
     "icd_runner.h",
     "loader.cc",
     "loader.h",
+    "magma_dependency_injection.cc",
+    "magma_dependency_injection.h",
     "magma_device.cc",
     "magma_device.h",
   ]

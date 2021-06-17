@@ -78,6 +78,10 @@ void MagmaSystemDevice::Shutdown() {
   (void)elapsed;
 }
 
+void MagmaSystemDevice::SetMemoryPressureLevel(MagmaMemoryPressureLevel level) {
+  msd_device_set_memory_pressure_level(msd_dev(), level);
+}
+
 magma::Status MagmaSystemDevice::Query(uint64_t id, uint64_t* value_out) {
   switch (id) {
     case MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS:

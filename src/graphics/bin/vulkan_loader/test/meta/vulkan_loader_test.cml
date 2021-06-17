@@ -61,6 +61,11 @@
             from: "#test_lib_provider",
             to: [ "#vulkan_loader" ],
         },
+        {
+            directory: "dev-gpu-dependency-injection",
+            from: "#test_lib_provider",
+            to: [ "#vulkan_loader" ],
+        },
     ],
     expose: [
         {

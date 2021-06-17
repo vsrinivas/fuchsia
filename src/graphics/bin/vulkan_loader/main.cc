@@ -23,6 +23,7 @@
 #include "src/graphics/bin/vulkan_loader/app.h"
 #include "src/graphics/bin/vulkan_loader/icd_runner.h"
 #include "src/graphics/bin/vulkan_loader/loader.h"
+#include "src/graphics/bin/vulkan_loader/magma_dependency_injection.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 
@@ -68,6 +69,13 @@ int main(int argc, const char* const* argv) {
 
   if (status != ZX_OK) {
     FX_LOGS(INFO) << "Failed to initialize device fs " << status;
+    return -1;
+  }
+
+  MagmaDependencyInjection manager(context.get());
+  status = manager.Initialize();
+  if (status != ZX_OK) {
+    FX_LOGS(INFO) << "Failed to initialize gpu manager " << status;
     return -1;
   }
 

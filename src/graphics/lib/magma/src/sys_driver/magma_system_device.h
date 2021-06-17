@@ -70,6 +70,8 @@ class MagmaSystemDevice {
 
   magma_status_t GetIcdList(std::vector<msd_icd_info_t>* icd_list_out);
 
+  void SetMemoryPressureLevel(MagmaMemoryPressureLevel level);
+
   void set_perf_count_access_token_id(uint64_t id) { perf_count_access_token_id_ = id; }
   uint64_t perf_count_access_token_id() const { return perf_count_access_token_id_; }
 

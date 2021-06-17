@@ -30,6 +30,11 @@
             path: "/dev/class/gpu",
         },
         {
+            directory: "dev-gpu-dependency-injection",
+            rights: [ "rw*" ],
+            path: "/dev/class/gpu-dependency-injection",
+        },
+        {
             directory: "dev-goldfish-pipe",
             rights: [ "rw*" ],
             path: "/dev/class/goldfish-pipe",
@@ -52,6 +57,10 @@
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
+        },
+        {
+            protocol: "fuchsia.memorypressure.Provider",
+            from: "parent",
         },
     ],
     offer: [

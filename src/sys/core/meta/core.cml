@@ -966,6 +966,13 @@
         {
             directory: "dev",
             from: "parent",
+            as: "dev-gpu-dependency-injection",
+            to: [ "#vulkan_loader" ],
+            subdir: "class/gpu-dependency-injection",
+        },
+        {
+            directory: "dev",
+            from: "parent",
             as: "dev-goldfish-pipe",
             to: [ "#vulkan_loader" ],
             subdir: "class/goldfish-pipe",
@@ -998,6 +1005,12 @@
             ],
             from: "#appmgr",
             to: [ "#test_manager" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.memorypressure.Provider",
+            from: "#appmgr",
+            to: [ "#vulkan_loader" ],
             dependency: "weak_for_migration",
         },
     ],

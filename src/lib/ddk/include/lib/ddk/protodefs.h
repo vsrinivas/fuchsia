@@ -173,5 +173,6 @@ DDK_PROTOCOL_DEF(GOLDFISH_SYNC,           154, "goldfish-sync", 0)
 DDK_PROTOCOL_DEF(RADAR,                   155, "radar", 0)
 DDK_PROTOCOL_DEF(ARM_MALI,                156, "arm-mali", PF_NOPUB)
 DDK_PROTOCOL_DEF(HDMI,                    157, "hdmi", PF_NOPUB)
+DDK_PROTOCOL_DEF(GPU_DEPENDENCY_INJECTION, 158, "gpu-dependency-injection", 0)
 #undef DDK_PROTOCOL_DEF
 #endif

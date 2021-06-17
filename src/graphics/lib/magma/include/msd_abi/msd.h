@@ -31,6 +31,9 @@ struct msd_device_t* msd_driver_create_device(struct msd_driver_t* drv, void* de
 // Destroys a device at system shutdown.
 void msd_device_destroy(struct msd_device_t* dev);
 
+// Signals the current memory pressure level for the system. May be called on any thread.
+void msd_device_set_memory_pressure_level(struct msd_device_t* dev, MagmaMemoryPressureLevel level);
+
 // Returns a value associated with the given id.
 magma_status_t msd_device_query(struct msd_device_t* device, uint64_t id, uint64_t* value_out);
 

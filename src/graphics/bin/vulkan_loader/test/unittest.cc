@@ -5,22 +5,32 @@
 #include <fuchsia/gpu/magma/cpp/fidl_test_base.h>
 #include <fuchsia/hardware/goldfish/cpp/fidl_test_base.h>
 #include <fuchsia/io/cpp/fidl.h>
+#include <fuchsia/memorypressure/cpp/fidl_test_base.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/zx/vmo.h>
 
 #include <gtest/gtest.h>
 
+#include "lib/fidl/cpp/interface_handle.h"
 #include "src/graphics/bin/vulkan_loader/app.h"
 #include "src/graphics/bin/vulkan_loader/goldfish_device.h"
 #include "src/graphics/bin/vulkan_loader/icd_component.h"
+#include "src/graphics/bin/vulkan_loader/magma_dependency_injection.h"
 #include "src/graphics/bin/vulkan_loader/magma_device.h"
 #include "src/lib/json_parser/json_parser.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 class LoaderUnittest : public gtest::RealLoopFixture {};
@@ -171,4 +181,91 @@ TEST(Icd, BadManifest) {
 })",
                                          "tests4");
   EXPECT_FALSE(IcdComponent::ValidateMetadataJson("d", bad_doc3));
+}
+
+class FakeMemoryPressureProvider : public fuchsia::memorypressure::testing::Provider_TestBase {
+ public:
+  void NotImplemented_(const std::string& name) override { EXPECT_TRUE(false) << name; }
+  void RegisterWatcher(
+      ::fidl::InterfaceHandle<::fuchsia::memorypressure::Watcher> watcher) override {
+    fuchsia::memorypressure::WatcherSyncPtr watcher_sync;
+    watcher_sync.Bind(std::move(watcher));
+    watcher_sync->OnLevelChanged(fuchsia::memorypressure::Level::CRITICAL);
+  }
+  fidl::InterfaceRequestHandler<fuchsia::memorypressure::Provider> GetHandler() {
+    return bindings_.GetHandler(this);
+  }
+
+  void CloseAll() { bindings_.CloseAll(); }
+
+ private:
+  fidl::BindingSet<fuchsia::memorypressure::Provider> bindings_;
+};
+
+class FakeMagmaDependencyInjection
+    : public fuchsia::gpu::magma::testing::DependencyInjection_TestBase {
+ public:
+  void NotImplemented_(const std::string& name) override { EXPECT_TRUE(false) << name; }
+
+  void SetMemoryPressureProvider(
+      fidl::InterfaceHandle<fuchsia::memorypressure::Provider> provider) override {
+    if (provider.is_valid()) {
+      std::lock_guard lock(mutex_);
+      got_memory_pressure_provider_ = true;
+      condition_.notify_one();
+    }
+  }
+  void WaitForMemoryPressureProvider() {
+    std::unique_lock lock(mutex_);
+    condition_.wait(lock, [this]() { return got_memory_pressure_provider_; });
+  }
+  fidl::InterfaceRequestHandler<fuchsia::gpu::magma::DependencyInjection> GetHandler() {
+    return bindings_.GetHandler(this);
+  }
+
+  void CloseAll() { bindings_.CloseAll(); }
+
+ private:
+  fidl::BindingSet<fuchsia::gpu::magma::DependencyInjection> bindings_;
+  std::condition_variable condition_;
+  std::mutex mutex_;
+  bool got_memory_pressure_provider_ = false;
+};
+
+TEST_F(LoaderUnittest, MagmaDependencyInjection) {
+  async::Loop server_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  server_loop.StartThread("context-server-loop");
+  sys::testing::ComponentContextProvider context_provider(server_loop.dispatcher());
+  FakeMemoryPressureProvider provider;
+  context_provider.service_directory_provider()->AddService(provider.GetHandler());
+
+  fs::SynchronousVfs vfs(server_loop.dispatcher());
+  auto root = fbl::MakeRefCounted<fs::PseudoDir>();
+
+  FakeMagmaDependencyInjection magma_dependency_injection;
+  root->AddEntry(
+      "000", fbl::MakeRefCounted<fs::Service>([&magma_dependency_injection](zx::channel channel) {
+        magma_dependency_injection.GetHandler()(
+            fidl::InterfaceRequest<fuchsia::gpu::magma::DependencyInjection>(std::move(channel)));
+        return ZX_OK;
+      }));
+  fidl::InterfaceHandle<fuchsia::io::Directory> gpu_dir;
+  auto options = fs::VnodeConnectionOptions::ReadWrite();
+  EXPECT_EQ(ZX_OK,
+            vfs.Serve(root, fidl::ServerEnd<fuchsia_io::Node>(gpu_dir.NewRequest().TakeChannel()),
+                      options));
+
+  fdio_ns_t* ns;
+  EXPECT_EQ(ZX_OK, fdio_ns_get_installed(&ns));
+  const char* kDependencyInjectionPath = "/dev/class/gpu-dependency-injection";
+  EXPECT_EQ(ZX_OK, fdio_ns_bind(ns, kDependencyInjectionPath, gpu_dir.TakeChannel().release()));
+  auto defer_unbind = fit::defer([&]() { fdio_ns_unbind(ns, kDependencyInjectionPath); });
+
+  MagmaDependencyInjection dependency_injection(context_provider.context());
+  EXPECT_EQ(ZX_OK, dependency_injection.Initialize());
+
+  // Wait for the GPU dependency injection code to detect the device and call the method on it.
+  RunLoopUntilIdle();
+  magma_dependency_injection.WaitForMemoryPressureProvider();
+  server_loop.Shutdown();
 }

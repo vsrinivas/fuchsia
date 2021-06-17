@@ -27,10 +27,14 @@ executable("unit_tests") {
     ":magma_system_tests",
     ":magma_util_tests",
     "$magma_build_root/tests/helper:logger_init_helper",
-    "//src/devices/testing/no_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
+  if (is_fuchsia) {
+    deps += [ ":magma_ddk_tests" ]
+  } else {
+    deps += [ "//src/devices/testing/no_ddk" ]
+  }
 }
 
 source_set("magma_system_tests") {
@@ -54,6 +58,23 @@ source_set("magma_system_tests") {
     "//sdk/lib/fit",
     "//third_party/googletest:gtest",
   ]
+}
+
+if (is_fuchsia) {
+  source_set("magma_ddk_tests") {
+    testonly = true
+    sources = [ "test_magma_dependency_injection.cc" ]
+    deps = [
+      "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+      "//sdk/fidl/fuchsia.memorypressure",
+      "//src/devices/testing/fake_ddk",
+      "//src/graphics/lib/magma/src/magma_util/platform/zircon:dependency_injection_device",
+      "//third_party/googletest:gtest",
+      "//zircon/system/ulib/async:async-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/sync",
+    ]
+  }
 }
 
 source_set("magma_util_tests") {

@@ -19,6 +19,7 @@
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
 
+#include "magma_dependency_injection_device.h"
 #include "magma_performance_counter_device.h"
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
@@ -42,6 +43,7 @@ using DdkDeviceType =
     ddk::Device<GpuDevice, ddk::MessageableManual, ddk::Unbindable, ddk::Initializable>;
 
 class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
+                  public magma::MagmaDependencyInjectionDevice::Owner,
                   public DdkDeviceType,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_GPU> {
  public:
@@ -228,6 +230,14 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
 #endif
   }
 
+  // magma::MagmaDependencyInjection::Owner implementation.
+  void SetMemoryPressureLevel(MagmaMemoryPressureLevel level) override {
+    std::lock_guard lock(magma_mutex_);
+    last_memory_pressure_level_ = level;
+    if (magma_system_device_)
+      magma_system_device_->SetMemoryPressureLevel(level);
+  }
+
   void DdkInit(ddk::InitTxn txn);
   void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
   void DdkUnbind(ddk::UnbindTxn txn);
@@ -246,6 +256,7 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
   zx_status_t unit_test_status_ = ZX_ERR_NOT_SUPPORTED;
 #endif
   zx_koid_t perf_counter_koid_ = 0;
+  std::optional<MagmaMemoryPressureLevel> last_memory_pressure_level_ MAGMA_GUARDED(magma_mutex_);
 };
 
 zx_status_t GpuDevice::MagmaStart() {
@@ -253,6 +264,9 @@ zx_status_t GpuDevice::MagmaStart() {
   if (!magma_system_device_)
     return DRET_MSG(ZX_ERR_NO_RESOURCES, "Failed to create device");
   magma_system_device_->set_perf_count_access_token_id(perf_counter_koid_);
+  if (last_memory_pressure_level_) {
+    magma_system_device_->SetMemoryPressureLevel(*last_memory_pressure_level_);
+  }
   return ZX_OK;
 }
 
@@ -270,6 +284,15 @@ void GpuDevice::DdkInit(ddk::InitTxn txn) {
   }
 
   magma_system_device_->set_perf_count_access_token_id(perf_counter_koid_);
+
+  auto dependency_injection_device =
+      std::make_unique<magma::MagmaDependencyInjectionDevice>(zxdev(), this);
+  if (magma::MagmaDependencyInjectionDevice::Bind(std::move(dependency_injection_device)) !=
+      ZX_OK) {
+    txn.Reply(ZX_ERR_INTERNAL);
+    return;
+  }
+
   txn.Reply(ZX_OK);
 }
 

@@ -6,6 +6,7 @@ library fuchsia.gpu.magma;
 
 using fuchsia.url;
 using zx;
+using fuchsia.memorypressure;
 
 enum QueryId {
     VENDOR_ID = 0;
@@ -271,4 +272,12 @@ protocol PerformanceCounterEvents {
     /// when the reads are completed.
     -> OnPerformanceCounterReadCompleted(uint32 trigger_id, zx.koid buffer_id, uint32 buffer_offset,
                                          zx.time timestamp, ResultFlags flags);
+};
+
+/// This protocol is implemented by ZX_PROTOCOL_GPU_DEPENDENCY_INJECTION devices. It's used
+/// to inject dependencies on other services into the MSD. It can be used
+/// only by a privileged process.
+protocol DependencyInjection {
+    /// Provides a `fuchsia.memorypressure.Provider` implementation to the MSD.
+    SetMemoryPressureProvider(fuchsia.memorypressure.Provider provider);
 };

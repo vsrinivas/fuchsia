@@ -54,5 +54,11 @@
             as: "dev-goldfish-sync",
             rights: [ "rw*" ],
         },
+        {
+            directory: "dev",
+            from: "self",
+            as: "dev-gpu-dependency-injection",
+            rights: [ "rw*" ],
+        },
     ],
 }

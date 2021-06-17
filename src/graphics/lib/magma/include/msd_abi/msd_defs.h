@@ -88,6 +88,12 @@ typedef struct msd_icd_info_t {
 typedef void (*msd_connection_notification_callback_t)(void* token,
                                                        struct msd_notification_t* notification);
 
+enum MagmaMemoryPressureLevel {
+  MAGMA_MEMORY_PRESSURE_LEVEL_NORMAL = 1,
+  MAGMA_MEMORY_PRESSURE_LEVEL_WARNING = 2,
+  MAGMA_MEMORY_PRESSURE_LEVEL_CRITICAL = 3,
+};
+
 #if defined(__cplusplus)
 }
 #endif
