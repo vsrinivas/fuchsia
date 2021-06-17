@@ -1872,7 +1872,7 @@ From //src/modular/build/modular_config/modular_config.gni:12
 If `true`, adds additional testonly content to extras.img, which will be
 built and mounted inside the container at /mnt/chromeos.
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:29
 
