@@ -20,6 +20,7 @@ ffx_plugin("ffx_target") {
     "show:ffx_target_show",
     "snapshot:ffx_snapshot",
     "update:ffx_update",
+    "wait:ffx_wait",
   ]
 
   sources = [ "src/args.rs" ]
