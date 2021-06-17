@@ -1,7 +1,8 @@
 # Migrating system components
 
 This document provides instructions for migrating a system component from
-[Components v1][glossary-components-v1] to [Components v2][glossary-components-v2].
+[Components v1][glossary.components-v1] to
+[Components v2][glossary.components-v2].
 A *system component* is a component that exists to provide services to other
 components in the system.
 Typically, in Components v1 the mapping of service to component is registered
@@ -36,8 +37,8 @@ You should familiarize yourself with the following topics:
 
 ## Migrate the component manifest {#create-component-manifest}
 
-Create a minimal [CML file][glossary-component-manifest] and configure it
-with GN so that it gets compiled and installed in your package.
+Create a minimal CML [CML file][glossary.component-manifest]
+and configure it with GN so that it gets compiled and installed in your package.
 
 Note: Unlike CMX, CML is JSON5, which allows comments and trailing commas.
 Take advantage of this when writing your CML file!
@@ -94,7 +95,7 @@ You are ready to start writing your v2 component manifest.
 Add the [`program`][manifests-program] section of your CML file along with the
 appropriate runner declaration.
 
-Note: The [runner][glossary-runner] declaration is necessary even if your
+Note: The [runner][glossary.runner] declaration is necessary even if your
 component is launched using the ELF runner. This is the default in CMX but must
 be explicitly specified in CML.
 
@@ -173,10 +174,10 @@ corresponding service `protocol`.
 
 ### Exposing available services {#available-services}
 
-In [Components v1][glossary-components-v2], you typically declare information
+In [Components v1][glossary.components-v1], you typically declare information
 about services exposed by a component in a [sysmgr configuration file][sysmgr-config].
 These files are referenced by `config_data` targets in the build, and specify
-mappings of services to components in the `sys` [environment][glossary-environment].
+mappings of services to components in the `sys` [environment][glossary.environment].
 
 Note: The most common location of this service mapping is
 [`services.config`][example-services-config], which defines service mappings
@@ -1191,7 +1192,7 @@ include any services required by shell binaries.
 Note: If your component requires `shell-commands` directory access to invoke
 shell binaries, see [directory features](#directory-features) for more details.
 
-Shell binaries are run in the `sys` [environment][glossary-environment],
+Shell binaries are run in the `sys` [environment][glossary.environment],
 and have access to all the capabilities provided there.
 Capabilities are not defined by the CMX manifest file unless shell binaries are
 invoked as a component using the `run` command.
@@ -1787,6 +1788,11 @@ is to use the `build-info` directory capability. To use this directory,
 follow the instructions for [migrating directory features](#directory-features),
 using the directory capability `build-info` and path `/config/build-info`.
 
+[glossary.component-manifest]: /docs/glossary/README.md#component-manifest
+[glossary.components-v1]: /docs/glossary/README.md#components-v1
+[glossary.components-v2]: /docs/glossary/README.md#components-v2
+[glossary.environment]: /docs/glossary/README.md#environment
+[glossary.runner]: /docs/glossary/README.md#runner
 [archive-cpp]: /sdk/lib/inspect/contrib/cpp
 [archive-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ArchiveAccessor
 [archive-rust]: /src/lib/diagnostics/reader/rust
@@ -1824,11 +1830,6 @@ using the directory capability `build-info` and path `/config/build-info`.
 [trf-test-suite]: /docs/concepts/testing/v2/test_runner_framework.md#test-suite-protocol
 [fuchsia-test-facets]: /docs/concepts/testing/v1_test_component.md
 [fx-scrutiny]: https://fuchsia.dev/reference/tools/fx/cmd/scrutiny
-[glossary-component-manifest]: /docs/glossary.md#component-manifest
-[glossary-components-v1]: /docs/glossary.md#components-v1
-[glossary-components-v2]: /docs/glossary.md#components-v2
-[glossary-environment]: /docs/glossary.md#environment
-[glossary-runner]: /docs/glossary.md#runner
 [hub-v1]: /docs/concepts/components/v1/hub.md
 [hub-v2]: /docs/concepts/components/v2/hub.md
 [inspect]: /docs/development/diagnostics/inspect/README.md

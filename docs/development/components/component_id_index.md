@@ -2,10 +2,13 @@
 
 <!-- TODO(fxbug,dev/77043): Update this guide for modern components -->
 
+Note: This guide uses the [components v1](/docs/glossary/README.md#components-v1)
+architecture.
+
 ## Terminology
 
-- [Component Moniker](/docs/glossary.md#moniker)
-- [Component Instance ID](/docs/glossary.md#component-instance-id)
+[Moniker](/docs/glossary?style=box#moniker)
+[Component instance identifier](/docs/glossary?style=box#component-instance-identifier)
 
 ## Scope
 
@@ -30,7 +33,7 @@ index. The following class of components should not be included in the
 index:
 
 * Test components
-* Components whose storage is not managed by appmgr.
+* Components whose storage is not managed by `appmgr`.
 
 ## Define a new index
 

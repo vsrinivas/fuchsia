@@ -8,7 +8,7 @@ along with links to more detailed documents on specific topics.
 ## Components and the component framework
 
 A component is a unit of software that is sandboxed and interacts with other
-components through [capabilities][glossary-capability].
+components through a [capability][glossary.capability].
 
 The component framework is a [framework][wiki-software-framework] for developing
 [component-based software][wiki-component-based-software] for Fuchsia.
@@ -67,7 +67,7 @@ A component is a **unit of software**.
 A component is an **isolated** unit of software.
 
 -   Each [instance][doc-instances] of a component runs in its own sandbox with
-    its own lifecycle, state, and [capabilities][glossary-capability].
+    its own lifecycle, state, and [capability][glossary.capability].
 -   It cannot access capabilities other than those it has been granted.
 -   Its capabilities cannot be accessed by other components unless they are
     explicitly granted.
@@ -121,6 +121,7 @@ There are only a few exceptions, notably:
 -   [Component lifecycle][doc-lifecycle]
 -   [Design principles][doc-design-principles]
 
+[glossary.capability]: /docs/glossary/README.md#capability
 [doc-capability-routing]: /docs/concepts/components/v2/topology.md#capability-routing
 [doc-component-manager]: /docs/concepts/components/v2/component_manager.md
 [doc-declarations]: /docs/concepts/components/v2/declarations.md
@@ -130,8 +131,6 @@ There are only a few exceptions, notably:
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-topology]: /docs/concepts/components/v2/topology.md
 [doc-component-urls]: /docs/concepts/components/component_urls.md
-[glossary-capability]: /docs/glossary.md#capability
-[glossary-components-v2]: /docs/glossary.md#components-v2
 [wiki-component-based-software]: https://en.wikipedia.org/wiki/Component-based_software_engineering
 [wiki-separation-of-concerns]: https://en.wikipedia.org/wiki/Separation_of_concerns
 [wiki-software-framework]: https://en.wikipedia.org/wiki/Software_framework

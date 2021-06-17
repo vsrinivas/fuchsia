@@ -96,7 +96,7 @@ The `binary` property describes where in the package namespace to find the
 binary to run the component, and the optional `args` property contains the
 string arguments to be provided to the process. The optional `env_vars`
 property specifies environment variables to provide to the binary where
-each element in the array uses the format `"VAR=VALUE"`, for example 
+each element in the array uses the format `"VAR=VALUE"`, for example
 `"RUST_BACKTRACE=1"`.
 
 If [`runner`](#runner) is present, `program` is a freeform string-string JSON
@@ -220,7 +220,7 @@ component may access. A typical component will require a number services from
 component will have the ability to launch other components and access network
 services. A component may declare any list of services in its `services`,
 but it will only be able to access services present in its
-[environment](/docs/glossary.md#environment). This property should be defined by
+[environment](/docs/glossary/README.md#environment). This property should be defined by
 all new components, and soon a migration will take place to convert all
 components to define `services`.
 

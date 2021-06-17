@@ -80,7 +80,7 @@ Fahrenheit for temperature" in a locale ID.
 ## Accessing i18n preferences {#access}
 
 To send i18n preferences between Fuchsia
-[components](/docs/glossary.md#component), use the
+[components](/docs/glossary/README.md#component), use the
 [`fuchsia.intl.Profile`](https://fuchsia.dev/reference/fidl/fuchsia.intl#Profile)
 FIDL table:
 

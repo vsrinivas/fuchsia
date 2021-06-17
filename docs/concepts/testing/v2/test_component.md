@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Test components are [components][glossary-component] that implement a test.
+Test components are [components][glossary.component] that implement a test.
 Tests run in a given environment, and then report whether they passed or failed.
 Typically tests are written using various testing frameworks, and may report
 more detailed results such as whether individual test cases within a test suite
@@ -76,7 +76,7 @@ For more information, see [Run Fuchsia tests][executing-tests].
   system.
 
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
-[glossary-component]: /docs/glossary.md#component
+[glossary.component]: /docs/glossary/README.md#component
 [executing-tests]: /docs/development/testing/run_fuchsia_tests.md
 [integration-testing]: integration_testing.md
 [test-packages]: /docs/development/components/build.md#test-packages

@@ -73,6 +73,7 @@ Example:
 https://en.wikipedia.org/wiki/Hippos
 ```
 
+[glossary.components v2]: /docs/glossary/README.md#components-v2
 [doc-manifests]: v2/component_manifests.md
 [doc-manifests-children]: v2/component_manifests.md#children
 [doc-manifests-declaration]: v2/component_manifests.md#component-declaration

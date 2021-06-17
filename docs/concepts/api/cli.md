@@ -690,7 +690,7 @@ For interactive tools (e.g. `zxdb`) prompting the user for input is expected.
 
 When sending output to the user on stdout use proper spelling, grammar, and
 avoid unusual abbreviations. If an unusual abbreviation is used, be sure it has
-an entry in the [glossary.md](/docs/glossary.md).
+an entry in the [glossary](/docs/glossary/README.md).
 
 Try to check for output to terminal, i.e. see if a user is there or whether the
 receiver is a program.

@@ -15,11 +15,12 @@ components through the registered input handlers.
 
 ## Input pipeline {#input-pipeline}
 
-An input pipeline manages [`InputDeviceBinding`s] and [`InputHandler`s].
+An input pipeline manages [InputDeviceBindings][glossary.InputDeviceBinding]
+and [InputHandlers][glossary.InputHandler].
 
 * An `InputDeviceBinding` represents a connection to a physical input device
   (e.g. mouse, keyboard).
-* An `InputHandler` represents a client of [`InputEvent`s].
+* An `InputHandler` represents a client of [InputEvents][glossary.InputEvent].
 
 ![Input Pipeline](images/input-pipeline.png)
 
@@ -37,8 +38,8 @@ how can be found in [input_pipeline.rs].
 
 An `InputDeviceBinding` does the following:
 
-1. Connects to an [`InputReport`] file located at `/dev/class/input-report/XXX`.
-2. Generates `InputEvent`s from the [`DeviceDescriptor`] and incoming
+1. Connects to an [InputReport][glossary.InputReport] file located at `/dev/class/input-report/XXX`.
+2. Generates `InputEvent`s from the [InputDeviceDescriptor][glossary.InputDeviceDescriptor] and incoming
    `InputReport`s.
 
 The input pipeline creates and owns `InputDeviceBinding`s as new input
@@ -58,10 +59,10 @@ their implementation details can vary.
 The developer guide includes an
 [example implementation of an `InputHandler`][example-input-handler].
 
-[`DeviceDescriptor`]: /docs/glossary.md#input-pipeline-device-descriptor
-[`InputDeviceBinding`s]: /docs/glossary.md#input-pipeline-input-device-binding
-[`InputEvent`s]: /docs/glossary.md#input-pipeline-input-event
-[`InputHandler`s]: /docs/glossary.md#input-pipeline-input-handler
-[`InputReport`]: /docs/glossary.md#input-report
+[glossary.InputDeviceBinding]: /docs/glossary/README.md#InputDeviceBinding
+[glossary.InputHandler]: /docs/glossary/README.md#InputHandler
+[glossary.InputEvent]: /docs/glossary/README.md#InputEvent
+[glossary.InputReport]: /docs/glossary/README.md#InputReport
+[glossary.InputDeviceDescriptor]: /docs/glossary/README.md#InputDeviceDescriptor
 [input_pipeline.rs]: /src/ui/lib/input_pipeline/src/input_pipeline.rs
 [example-input-handler]: /docs/development/sessions/roles-and-responsibilities.md#handling-input

@@ -101,8 +101,9 @@ other product configurations.
 1. Ensure `fx serve` is running in a separate tab and connected to an instance of
    Fuchsia (e.g. running in QEMU using `fx qemu`), then run the server:
 
-   Note: The component should be referenced by its [URL][glossary-url], which
-   is determined with the [`fuchsia-pkg://` scheme][glossary-scheme]. The
+   Note: The component should be referenced by its
+   [URL][glossary.component url], which
+   is determined with the `[fuchsia-pkg://][glossary.fuchsia-pkg URL]` scheme. The
    package name in the URL matches the `package_name` field in the `fuchsia_package`
    declaration, and the manifest path in `meta/` matches the target name of the
    `fuchsia_component`.
@@ -290,11 +291,11 @@ keeps waiting for incoming requests. The next step will be to write a client for
 the server.
 
 <!-- xrefs -->
+[glossary.component URL]: /docs/glossary/README.md#component-url
+[glossary.fuchsia-pkg URL]: /docs/glossary/README.md#fuchsia-pkg-url
 [fidl-intro]: /docs/development/languages/fidl/tutorials/hlcpp/basics/using-fidl.md
 [products]: /docs/concepts/build_system/boards_and_products.md
 [getting-started]: /docs/get-started/index.md
-[glossary-url]: /docs/glossary.md#component-url
-[glossary-scheme]: /docs/glossary.md#fuchsia-pkg-url
 [declaring-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [depending-fidl]: /docs/development/languages/fidl/tutorials/hlcpp/basics/using-fidl.md
 [component-manager]: /docs/concepts/components/v2/component_manager.md

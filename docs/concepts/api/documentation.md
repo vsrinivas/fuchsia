@@ -229,7 +229,7 @@ above.
   on Fuchsia.dev.
 * Avoid jargon that may not be obvious to the reader (think: "if I am
   interested in this API, will I definitely know what this word means?"). If
-  jargon is Fuchsia-specific and not defined, add it to the [glossary](/docs/glossary.md).
+  jargon is Fuchsia-specific and not defined, add it to the [glossary](/docs/glossary/README.md).
 * Avoid abbreviations and acronyms. When you need to use them, explain them.
   If the abbreviation is widely used in the industry (e.g., "Transmission
   Control Protocol / Internet Protocol" (TCP/IP)), you do not need to explain

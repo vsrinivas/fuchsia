@@ -69,7 +69,7 @@ include the following:
   content of your document. For example, the conceptual document for the [Fuchsia emulator](/docs/concepts/emulator/index.md)
   links to relevant guides and getting started documents about the Fuchsia emulator.
 - Use consistent terminology: If you're writing about a specific concept in Fuchsia, verify that you are
-  using consistent terminology. Use the [glossary](/docs/glossary.md) to verify terminology.
+  using consistent terminology. Use the [glossary](/docs/glossary/README.md) to verify terminology.
 
 ## Documentation file formats and file names
 
@@ -126,7 +126,7 @@ contains a command with an underscore, then you can include the underscore.
 - **Define jargon and avoid highly technical words.** Fuchsia documentation should be accessible
   to all levels of developers. Avoid overcomplicating documentation with uncommon or highly
   technical words. If you're using Fuchsia-specific jargon, define it in
-  the [glossary](/docs/glossary.md).
+  the [glossary](/docs/glossary/README.md).
 
 - **Avoid colloquial phrases or regional idioms** Keep in mind that a lot of users are non-native
   English speakers interested in Fuchsia. Avoid difficult to translate idioms, like

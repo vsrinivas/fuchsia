@@ -1,10 +1,10 @@
-# Test Components (Components v1)
+# Test components (Components v1)
 
 <<../components/_v1_banner.md>>
 
 ## Introduction
 
-Test components are [components][glossary-component] that implement a test.
+Test components are [components][glossary.component] that implement a test.
 Tests run in a given environment, and then report whether they passed or failed.
 Typically tests are written using various testing frameworks, and may report
 more detailed results such as whether individual test cases within a test suite
@@ -191,9 +191,9 @@ allowlisted as shown below:
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/bin/run_test_component/test_metadata.cc" region_tag="allowed_system_services" adjust_indentation="auto" %}
 ```
 
+[glossary.component]: /docs/glossary/README.md#component
 [component-manifest]: /docs/concepts/components/v1/component_manifests.md
 [executing-tests]: /docs/development/testing/run_fuchsia_tests.md
-[glossary-component]: /docs/glossary.md#component
 [run-test-component]: /docs/development/testing/run_fuchsia_tests.md
 [test-packages]: /docs/development/components/build.md#test-packages
 [unit-tests]: /docs/development/components/build.md#unit-tests

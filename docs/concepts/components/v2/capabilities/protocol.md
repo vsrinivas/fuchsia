@@ -2,14 +2,14 @@
 
 <<../../_v2_banner.md>>
 
-[Protocol capabilities][glossary-protocol] allow components to
-connect to [FIDL protocols][glossary-fidl-protocol] provided either by other
-components or by the component framework itself.
+A [protocol capability][glossary.protocol capability] allows
+components to connect to FIDL [protocols][glossary.protocol]
+provided either by other components or the component framework itself.
 
 Note: _Protocol_ and _service_ capabilities are distinct types of
 capabilities. A protocol represents a single instance of a
-[FIDL protocol][glossary-fidl-protocol], while a service represents zero or
-more instances of a [FIDL service][glossary-fidl-service].
+FIDL [protocols][glossary.protocol], while a service represents zero or
+more instances of a FIDL [service][glossary.service].
 See the documentation on [service capabilities][service-capability]
 for more details.
 
@@ -17,7 +17,7 @@ for more details.
 
 To provide a protocol capability, a component must define the capability and
 [route](#routing-protocol-capabilities) it from `self`. The component hosts the
-protocol capability in its [outgoing directory][glossary-outgoing].
+protocol capability in its FIDL [outgoing directory][glossary.outgoing directory].
 
 To define the capability, add a `capabilities` declaration for it:
 
@@ -90,7 +90,7 @@ This is done through an [`offer`][offer] declaration.
 
 When a component [uses][use] a protocol capability that has been [offered][offer]
 to it, that protocol is made available through the component's
-[namespace][glossary-namespace].
+[namespace][glossary.namespace].
 
 Consider a component with the following manifest declaration:
 
@@ -148,15 +148,14 @@ For a list of these protocols and what they can be used for, see
 }
 ```
 
+[glossary.protocol]: /docs/glossary/README.md#protocol
+[glossary.service]: /docs/glossary/README.md#service
+[glossary.namespace]: /docs/glossary/README.md#namespace
+[glossary.outgoing directory]: /docs/glossary/README.md#outgoing-directory
+[glossary.protocol]: /docs/glossary/README.md#protocol-capability
 [capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
 [expose]: /docs/concepts/components/v2/component_manifests.md#expose
 [framework-protocols]: /docs/concepts/components/v2/component_manifests.md#framework-protocols
-[glossary-fidl]: /docs/glossary.md#fidl
-[glossary-fidl-protocol]: /docs/glossary.md#protocol
-[glossary-fidl-service]: /docs/glossary.md#service
-[glossary-namespace]: /docs/glossary.md#namespace
-[glossary-outgoing]: /docs/glossary.md#outgoing-directory
-[glossary-protocol]: /docs/glossary.md#protocol-capability
 [life-of-a-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
 [offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [routing-example]: /examples/components/routing

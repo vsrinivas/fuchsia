@@ -11,7 +11,7 @@
 The [Component Framework][cf-intro] (CF) system provides the foundations for
 running software on Fuchsia. With the exception of a few early-boot processes,
 all software spanning from low-level system services to UI-driven front end
-apps, are [components][glossary-component] and operate in the context of the
+apps, are [components][glossary.component] and operate in the context of the
 Component Runtime.
 
 For this reason, changes to the Component Framework can have a broad impact on
@@ -171,7 +171,7 @@ internal CTP process.
 * [FIDL RFC criteria and process][fidl-criteria]
 
 [cf-intro]: /docs/concepts/components/v2/introduction.md
-[glossary-component]: /docs/glossary.md#component
+[glossary.component]: /docs/glossary/README.md#component
 [rfc-process]: /docs/contribute/governance/rfcs/0001_rfc_process.md
 [fidl-criteria]: 0049_fidl_tuning_process_evolution.md#criteria
 [zircon-criteria]: 0006_addendum_to_rfc_process_for_zircon.md

@@ -4,7 +4,7 @@ This `README.md` document is a top-level entry point to the Fuchsia
 documentation.
 
  - [Code of conduct](/CODE_OF_CONDUCT.md)
- - [Glossary](glossary.md) - definitions of commonly used terms
+ - [Glossary](glossary/README.md) - definitions of commonly used terms
  - [Getting started](/docs/get-started/README.md) - everything you need to get started with Fuchsia
  - [Development](development/README.md) - instructions for building, running and
    testing Fuchsia and software that runs on Fuchsia

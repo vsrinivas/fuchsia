@@ -1,3 +1,4 @@
+{% import 'docs/_common/_doc_widgets.md' as widgets %}
 # Get involved with Fuchsia
 
 This document describes the different ways you can get involved
@@ -105,10 +106,8 @@ Fuchsia:
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/component-framework-dev">component-framework-dev</a>
    </td>
    <td>For conversation about <a href="/docs/glossary.md#component-framework">Component Framework</a>,
-     <a href="/docs/glossary.md#session-framework">Session Framework</a>, and
+     <a href="/docs/glossary/README.md#session-framework">Session Framework</a>, and
      <a href="/docs/concepts/modular/overview.md">Modular</a>.
-   </td>
-  </tr>
    </td>
   </tr>
   <tr>
@@ -129,13 +128,13 @@ Fuchsia:
   <tr>
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/drivers-dev">drivers-dev</a>
    </td>
-   <td>For conversation about <a href="/docs/glossary.md#driver">Drivers</a>.
+   <td>For conversation about {{ widgets.glossary_simple ('driver') }}s.
    </td>
   </tr>
   <tr>
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/fidl-dev">fidl-dev</a>
    </td>
-   <td>For conversation about <a href="/docs/glossary.md#fidl">FIDL</a>.
+   <td>For conversation about {{ widgets.glossary_simple ('FIDL') }}.
    </td>
   </tr>
   <tr>
@@ -159,19 +158,19 @@ Fuchsia:
   <tr>
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/pkg-dev">pkg-dev</a>
    </td>
-   <td>For conversation about <a href="/docs/glossary.md#fuchsia-package">Fuchsia Packages</a>.
+   <td>For conversation about {{ widgets.glossary_simple ('package') }}.
    </td>
   </tr>
   <tr>
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/process-runtime-dev">process-runtime-dev</a>
    </td>
-   <td>Working group for low-level runtime work shared between the <a href="/docs/glossary.md#zircon">Zircon</a>, Core Platform, and Toolchain teams.
+   <td>Working group for low-level runtime work shared between the {{ widgets.glossary_simple ('Zircon') }}, Core Platform, and Toolchain teams.
    </td>
   </tr>
   <tr>
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/sdk-dev">sdk-dev</a>
    </td>
-   <td>For conversation about the <a href="/docs/glossary.md#fuchsia-idk">Fuchsia Integrator Development Kit (IDK)</a>, formerly called the Fuchsia SDK.
+   <td>For conversation about the {{ widgets.glossary_simple ('Fuchsia IDK') }}, formerly called the Fuchsia SDK.
    </td>
   </tr>
   <tr>
@@ -181,6 +180,15 @@ Fuchsia:
    </td>
   </tr>
   <tr>
+<<<<<<< HEAD
+=======
+   <td><a href="https://groups.google.com/a/fuchsia.dev/g/session-framework-dev">session-framework-dev</a>
+   </td>
+   <td>For conversation about {{ widgets.glossary_simple ('Session framework') }}.
+   </td>
+  </tr>
+  <tr>
+>>>>>>> 77423c8d475 ([docs] Revamping glossary)
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/storage-dev">storage-dev</a>
    </td>
    <td>For conversation about filesystems and other storage concerns on Fuchsia.
@@ -207,7 +215,7 @@ Fuchsia:
   <tr>
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/zircon-dev">zircon-dev</a>
    </td>
-   <td>For conversation about <a href="/docs/glossary.md#zircon">Zircon</a>.
+   <td>For conversation about {{ widgets.glossary_simple ('Zircon') }}.
    </td>
   </tr>
 </table>

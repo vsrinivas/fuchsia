@@ -140,8 +140,8 @@ Collections support two modes of *durability*:
     destroyed when the instance containing the collection is stopped.
 -   *Persistent*: The instances in a *persistent* collection exist until they
     are explicitly destroyed or the entire collection is removed.
-    [meta storage][glossary-storage] must be offered to the component for this
-    option to be available.
+    [storage capability][glossary.storage capability] must be offered to
+    the component for this option to be available.
 
 For more information about component execution and persistence, see
 [lifecycle][lifecycle].
@@ -192,6 +192,7 @@ APIs for a component instance to manage the children in its realm, such as
 binding to children and creating dynamic children. See the linked FIDL
 definitions for full documentation.
 
+[glossary.storage capability]: /docs/glossary/README.md#storage-capability
 [children]: ./component_manifests.md#children
 [collections]: ./component_manifests.md#collections
 [component-manifest-examples]: ./component_manifests.md#examples
@@ -201,7 +202,6 @@ definitions for full documentation.
 [expose]: ./component_manifests.md#expose
 [offer]: ./component_manifests.md#offer
 [framework-protocols]: ./component_manifests.md#framework-protocols
-[glossary-storage]: /docs/glossary.md#storage-capability
 [monikers]: ./monikers.md
 [offer]: ./component_manifests.md#offer
 [realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm

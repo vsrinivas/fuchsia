@@ -2,8 +2,8 @@
 
 <<../_v2_banner.md>>
 
-A service provides a set of [FIDL][FIDL] [protocols][protocol] over a
-[channel].
+A service provides a set of [FIDL][glossary.fidl] [protocols][glossary.protocol]
+over a [channel][glossary.channel].
 
 ## Instances
 
@@ -18,7 +18,7 @@ at the path `/svc/fuchsia.sys.Launcher/default`.
 
 ## Protocols
 
-A service is a grouping of named FIDL [protocols][protocol].
+A service is a grouping of named FIDL [protocols][glossary.protocol].
 Logically-related protocols can be aggregated into a service and routed as a
 single unit.
 
@@ -44,8 +44,7 @@ to open the protocol directly with zero round-trips.
 Services are routed to other Components through
 [service capabilities][service-capability].
 
-[channel]: /docs/glossary.md#channel
-[FIDL]: /docs/glossary.md#fidl
-[namespace]: /docs/glossary.md#namespace
-[protocol]: /docs/glossary.md#protocol
+[glossary.fidl]: /docs/glossary/README.md#fidl
+[glossary.protocol]: /docs/glossary/README.md#protocol
+[glossary.channel]: /docs/glossary/README.md#channel
 [service-capability]: /docs/concepts/components/v2/capabilities/service.md

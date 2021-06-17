@@ -235,7 +235,7 @@ To see the difference between assests and firmware images, see the [`paver.rs`][
 
 Then, the `system-updater` instructs the paver to write the bootloader and
 firmware. The final location of these images does not depend on whether
-the device supports [ABR](/docs/glossary.md#ABR). To prevent flash wear,
+the device supports [ABR][glossary.ABR]. To prevent flash wear,
 the image is only written to a partition if the image is different from the
 image that already exists on the block device.
 
@@ -244,8 +244,8 @@ see [`fuchsia.paver`][fuchsia-paver-firmware].
 
 Then, the `system-updater` instructs the paver to write the Fuchsia ZBI and its
 vbmeta. The final location of these images depends on whether the device
-supports [ABR](/docs/glossary.md#ABR). If the device supports
-[ABR](/docs/glossary.md#ABR), the paver writes the Fuchsia ZBI and
+supports [ABR][glossary.ABR]. If the device supports
+[ABR][glossary.ABR], the paver writes the Fuchsia ZBI and
 its vbmeta to the slot that’s not currently booted (the alternate slot).
 Otherwise, the paver writes them to both the A and B partitions (if a B
 partition exists).
@@ -255,7 +255,7 @@ see [`fuchsia.paver`][fuchsia-paver-assets].
 
 Finally, the `system-updater` instructs the paver to write the recovery
 ZBI and its vbmeta. Like the bootloader and firmware, the final
-location does not depend on if the device supports [ABR](/docs/glossary.md#ABR).
+location does not depend on if the device supports [ABR][glossary.ABR].
 
 ![Figure: Write images to block device](images/write-images.png)
 
@@ -391,7 +391,9 @@ After this, the update is considered committed. This means:
 * Subsequent system updates are now allowed. When the update checker
   discovers a new update, the whole update process starts again.
 
-[configured]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/pkg/bin/system-update-checker/BUILD.gn;l=114;drc=50245a9ce68f3b877e165b004175e2a4fc12eaef
+
+[glossary.ABR]: /docs/glossary/README.md#ABR
+[configured]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/pkg/bin/system-update-checker/BUILD.gn;l=114;drc=50245a9ce68f3b877e165b004175e2a4fc12eaef
 [paver API]: https://fuchsia.dev/reference/fidl/fuchsia.paver#DataSink
 [update package]: /docs/concepts/packages/update_pkg.md
 [recovery-mode-code]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/pkg/bin/system-updater/src/update.rs;l=429;drc=202c37fa01f75c431f61ca824b4d2f7c2ec82178

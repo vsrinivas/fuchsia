@@ -2,14 +2,14 @@
 
 <<../../_v2_banner.md>>
 
-[Directory capabilities][glossary-directory] allow components to connect to
-directories provided by other components.
+[Directory capabilities][glossary.directory capability] allows components
+to connect to directories provided by other components.
 
 ## Providing directory capabilities
 
 To provide a directory capability, a component must define the capability and
 [route](#routing-directory-capabilities) it from `self`. The component hosts the
-directory capability in its [outgoing directory][glossary-outgoing].
+directory capability in its [outgoing directory][glossary.outgoing directory].
 
 To define the capability, add a `capabilities` declaration for it:
 
@@ -38,7 +38,8 @@ Components route directory capabilities by either:
 
 When a component wants to make one of its directories available to other
 components, it specifies the path of that directory in its
-[outgoing directory][glossary-outgoing] in one of the following ways:
+[outgoing directory][glossary.outgoing directory] in one of the
+following ways:
 
 ### Exposing {#routing-directory-capability-expose}
 
@@ -106,7 +107,7 @@ directory:
 
 When a component wants to make use of a directory from its parent, it does so by
 [using][use] the directory. This will make the directory accessible from the
-component's [namespace][glossary-namespace].
+component's [namespace][glossary.namespace].
 
 This example shows a directory named `data` that is included in the component's
 namespace. If the component instance accesses this directory during its
@@ -221,13 +222,11 @@ framework. When a component wants to use one of these directories, it does so by
 }
 ```
 
+[glossary.directory capability]: /docs/glossary/README.md#directorty-capability
+[glossary.outgoing directory]: /docs/glossary/README.md#outgoing-directory
 [capability-routing]: ../component_manifests.md#capability-routing
 [directory-rights]: ../component_manifests.md#directory-rights
 [expose]: ../component_manifests.md#expose
-[glossary-directory]: /docs/glossary.md#directory-capability
-[glossary-fidl]: /docs/glossary.md#fidl
-[glossary-namespace]: /docs/glossary.md#namespace
-[glossary-outgoing]: /docs/glossary.md#outgoing-directory
 [offer]: ../component_manifests.md#offer
 [routing-example]: /examples/components/routing
 [use]: ../component_manifests.md#use

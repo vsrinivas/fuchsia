@@ -180,7 +180,7 @@ You can use the `component select` command to
 * search for components that expose a service.
 
 For example, the following command will display all services offered by
-[v1 components](/docs/glossary.md#components-v1):
+[components v1](/docs/glossary/README.md#components-v1):
 
 ```sh
 $ fx ffx component select moniker 'core/appmgr:out:*'`

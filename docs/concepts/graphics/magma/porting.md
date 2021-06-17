@@ -82,7 +82,8 @@ code, but will be compiled as independent drivers.
 
 PCI GPUs often include display controller hardware. The display controller
 driver should ideally be implemented separately from the GPU hardware,
-because then it can be stored in [bootfs][bootfs] and can provide a boot
+because then it can be stored in
+[bootfs][glossary.bootfs] and can provide a boot
 console before disk access is possible. The display controller should expose
 a hardware-specific [banjo][banjo] interface and the MSD can bind to the
 display driver.
@@ -296,11 +297,11 @@ The MSD and ICD must be updated with new code drops from the hardware vendor.
 Ideally the code is upstreamed and the GPU vendor will supply and maintain
 the system driver using the Zircon DDK.
 
+[glossary.bootfs]: /docs/glossary/README.md#bootfs
 [paving]: /docs/development/build/fx.md#what-is-paving
 [boarddriver]: /docs/concepts/drivers/device_driver_model/platform-bus.md
 [icdabi]: /docs/concepts/system/abi/system.md#vulkan-icd
 [banjo]: /docs/concepts/drivers/device_driver_model/banjo.md
-[bootfs]: /docs/glossary.md#bootfs
 [sysmem]: /docs/concepts/graphics/sysmem/sysmem.md
 [vkreadback]: /src/graphics/tests/vkreadback
 [hardwareunit]: /src/graphics/drivers/msd-arm-mali/tests/integration/run_unit_tests.cc

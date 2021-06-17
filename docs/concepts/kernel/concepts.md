@@ -6,7 +6,7 @@ The kernel manages a number of different types of Objects. Those that are
 accessible directly via system calls are C++ classes that implement the
 Dispatcher interface. These are implemented in
 [kernel/object](/zircon/kernel/object). Many are self-contained higher-level Objects.
-Some wrap lower-level [lk](/docs/glossary.md#lk) primitives.
+Some wrap lower-level [lk][glossary.lk] primitives.
 
 ## [System Calls](/docs/reference/syscalls/README.md)
 
@@ -229,3 +229,6 @@ mutexes, condition variables, etc, implemented in terms of Futexes.
 See: [`zx_futex_wait()`](/docs/reference/syscalls/futex_wait.md),
 [`zx_futex_wake()`](/docs/reference/syscalls/futex_wake.md),
 and [`zx_futex_requeue()`](/docs/reference/syscalls/futex_requeue.md).
+
+
+[glossary.lk]: /docs/glossary/README.md#lk

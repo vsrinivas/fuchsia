@@ -268,9 +268,9 @@ dispatched, and for managing input devices.
 The input pipeline algorithm is composed of:
 
 * A bind phase that transforms a stream of raw InputReports (which contain no
-  system state) into a stream of [InputEvents][input-event] (which may contain
+  system state) into a stream of [InputEvents][glossary.InputEvent] (which may contain
   system state) to be passed through the pipeline.
-* A series of [InputHandler][input-handler]s that may modify and/or consume
+* A series of [InputHandlers][glossary.InputHandler] that may modify and/or consume
   these InputEvents, possibly by dispatching them to other components.
 * (optionally) A fallback phase that processes unhandled InputEvents.
 
@@ -304,7 +304,8 @@ of customization will likely be extended in the future. (See [Input pipeline
 customization](#input-pipeline-customization) below.)
 
 #### Input handlers {#input-handlers}
-[Input Handlers][input-handler] represent a series of stages for input
+
+[Input Handlers][glossary.InputHandler] represent a series of stages for input
 processing. Input handlers are the primary mechanism that allows product owners
 to customize input handling related to product state. We also sometimes refer to
 this as product policy for input events. Input handlers may
@@ -746,8 +747,8 @@ future but was deemed too heavyweight for the current use-cases.
 [input-pipeline]: /docs/concepts/session/input.md#input-pipeline
 [drivers]: /docs/concepts/drivers/driver_architectures/input_drivers/input.md
 [input-report]: https://fuchsia.dev/reference/fidl/fuchsia.input.report
-[input-event]: /docs/glossary.md#input-pipeline-input-event
-[input-handler]: /docs/glossary.md#input-pipeline-input-handler
+[glossary.InputEvent]: /docs/glossary/README.md#inputevent
+[glossary.InputHandler]: /docs/glossary/README.md#inputhandler
 [session-framework]: /docs/concepts/session/introduction.md
 [output-report]: https://fuchsia.dev/reference/fidl/fuchsia.input.report#fuchsia.input.report/InputDevice.SendOutputReport
 [input-roadmap]: /docs/contribute/roadmap/2020/overview.md#implementing_accessibility_and_input_improvements

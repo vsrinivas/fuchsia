@@ -2,7 +2,7 @@
 
 <<../../_v2_banner.md>>
 
-A component resolver is a protocol-backed [capability][glossary-capability] responsible for
+A component resolver is a protocol-backed [capability][glossary.capability] responsible for
 resolving a URL to a component manifest.
 
 Component resolver capabilities are registered with an [`environment`][environment] for a
@@ -100,11 +100,11 @@ registered to the `fuchsia-boot` scheme in component manager's built-in environm
 This resolver can be routed, and the built-in environment can be extended.
 See [`environments`][environment].
 
+[glossary.capability]: /docs/glossary/README.md#capability
 [environment]: ../environments.md
 [`fuchsia.sys2.ComponentResolver`]: /sdk/fidl/fuchsia.sys2/runtime/component_resolver.fidl
 [`ComponentDecl`]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
 [component-manifest]: ../component_manifests.md
 [`fuchsia.io.Directory`]: /sdk/fidl/fuchsia.io/io.fidl
 [`protocol`]: protocol.md
-[glossary-capability]: /docs/glossary.md#capability
 [routing]: ../component_manifests.md#capability-routing

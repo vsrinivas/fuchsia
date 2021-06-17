@@ -17,26 +17,26 @@ practices for defining packages, components, and their tests.
 
 You should understand the following concepts before building a component:
 
-**[Packages][glossary-package]** are the unit of software distribution on
+**[Packages][glossary.package]** are the unit of software distribution on
 Fuchsia. Packages are a collection of files with associated paths that are
 relative to the base of the package. For instance, a package might contain an
 ELF binary under the path `bin/hello_world`, and a JSON file under the path
 `data/config.json`. Grouping files into a package is required in order to push
 these files to the device.
 
-**[Components][glossary-component]** are the unit of software execution on
+**[Components][glossary.component]** are the unit of software execution on
 Fuchsia. All software on Fuchsia except for the kernel image and usermode
 bootstrap program is defined as a component.
 
 A component is defined by a
-**[component manifest][glossary-component-manifest]**. Components typically
+**[component manifest][glossary.component-manifest]**. Components typically
 include additional files, such as executables and data assets that they need at
 runtime.
 
 Developers must define their software in terms of packages and components,
 whether for building production software or for writing their tests.
 
-At runtime, **[Component instances][glossary-component-instance]** see the
+At runtime, **[Component instances][glossary.component-instance]** see the
 contents of their package as read-only files under the path `/pkg`. Defining two
 or more components in the same package doesn't grant each component access to
 the other's capabilities. However it can guarantee to one component that the
@@ -45,9 +45,9 @@ another component, such as in an integration test, it can be beneficial to
 package both components together.
 
 Components are instantiated in a few ways, all of which somehow specify their
-[URL][glossary-component-url]. Typically components are launched by specifying
+[URL][glossary.component-url]. Typically components are launched by specifying
 their package names and path to their component manifest in the package, using
-the **[`fuchsia-pkg://` scheme][glossary-fuchsia-pkg-url]**.
+the **[`fuchsia-pkg://` scheme][glossary.fuchsia-pkg-url]**.
 
 ## Component manifests {#component-manifests}
 
@@ -237,7 +237,7 @@ SDK library for fonts.
 
 ## Component package GN templates {#component-package}
 
-[GN][glossary-gn] is the meta-build system used by Fuchsia. Fuchsia extends GN
+[GN][glossary.gn] is the meta-build system used by Fuchsia. Fuchsia extends GN
 by defining templates. Templates provide a way to add to GN's built-in target
 types.
 
@@ -1004,6 +1004,381 @@ the test component would work the same.
 
 ### Example: using `resource_group()`
 
+## Component manifest includes {#component-manifest-includes}
+
+As shown above, component declarations have an associated [component
+manifest][glossary.component-manifest]. The component manifest supports
+"include" syntax, which allows referencing one or more files where additional
+contents for the component manifest may be merged from. This is conceptually
+similar for instance to `#include` directives in the C programming language.
+These included files are also known as component manifest shards.
+
+Some dependencies, such as libraries, assume that dependent components have
+certain capabilities available to them at runtime.
+Practically this could mean that the code in question assumes that its
+dependents include a certain file in their component manifests. For instance,
+the [C++ Syslog library][cpp-syslog] makes such an assumption.
+
+Target owners can declare that dependent components must include one or more
+files in their component manifest. For example we have the hypothetical file
+`//sdk/lib/fonts/BUILD.gn` below:
+
+```gn
+import("//tools/cmc/build/expect_includes.gni")
+
+# Client library for components that want to use fonts
+source_set("font_provider_client") {
+  sources = [
+    "font_provider_client.cc",
+    ...
+  ]
+  deps = [
+    ":font_provider_client_includes",
+    ...
+  ]
+}
+
+expect_includes("font_provider_client_includes") {
+  includes = [
+    "client.shard.cmx",
+    "client.shard.cml",
+  ]
+}
+```
+
+It is possible (and recommended) to provide both `.cmx` and `.cml` includes.
+Dependent manifests are required to include the expected files with the
+matching extension.
+
+   * {.cmx}
+
+   ```json
+   {
+       "include": [
+           "sdk/lib/fonts/client.shard.cmx"
+       ]
+       ...
+   }
+   ```
+
+   * {.cml}
+
+   ```json5
+   {
+       include: [
+           "sdk/lib/fonts/client.shard.cml",
+       ]
+       ...
+   }
+   ```
+
+Include paths are resolved relative to the source root.
+Transitive includes (includes of includes) are allowed.
+Cycles are not allowed.
+
+By convention, component manifest shard files are named with the suffix
+`.shard.cmx` or `.shard.cml`.
+
+When naming your shards, don't repeat yourself in relation to the full path.
+In the example above it would have been repetitive to name the shard
+`fonts.shard.cml` because then the full path would have been
+`sdk/lib/fonts/fonts.shard.cml`, which is repetitive. Instead the file is
+named `client.shard.cml`, to indicate that it is to be used by clients of the
+SDK library for fonts.
+
+## Troubleshooting {#troubleshooting}
+
+### Listing the contents of a package {#listing-the-contents-of-a-package}
+
+Packages are described by a package manifest, which is a text file where every
+line follows this structure:
+
+```
+<packaged-path>=<source-file-path>
+```
+
+To find the package manifest for a `fuchsia_package()` or
+`fuchsia_test_package()` target, use the following command:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx gn outputs out/default <var>package target</var>_manifest</code>
+</pre>
+
+The package target is a fully-qualified target name, i.e. in the form
+`//path/to/your:target`.
+
+Combine this with another command to print the package manifest:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">cat out/default/$(fx gn outputs out/default <var>package target</var>_manifest)</code>
+</pre>
+
+See also:
+
+*   [Working with packages][working-with-packages]
+*   [pm]
+
+### Finding paths for built executables {#finding-paths-for-built-executables}
+
+Executable programs can be built with various language-specific templates such
+as `executable()`, `rustc_binary()`, `go_binary()` etc'. These templates are
+responsible for specifying where in a package their output binaries should be
+included. The details vary by runtime and toolchain configuration.
+
+*   Typically the path is `bin/` followed by the target's name.
+*   Typically if an `output_name` or `name` is specified, it overrides the
+    target name.
+
+Some rudimentary examples are given below:
+
+   * {C++}
+
+   ```gn
+   # Binary is packaged as `bin/rot13_encode`
+   executable("rot13_encode") {
+     sources = [ "main.cc" ]
+   }
+   ```
+
+   * {Rust}
+
+   ```gn
+   # Binary is packaged as `bin/rot13_encode`
+   rustc_binary("rot13_encode") {}
+   ```
+
+   * {Go}
+
+   ```gn
+   # Binary is packaged as `bin/rot13_encode`
+   go_binary("rot13_encode") {}
+   ```
+
+In order to reference an executable in a component manifest, the author needs
+to know its packaged path.
+
+One way to find the packaged path for an executable is to make sure that the
+target that builds the executable is in a package's `deps`, then follow
+[listing the contents of a package](#listing-the-contents-of-a-package).
+The executable is listed among the contents of the package.
+
+### Finding a component's launch URL
+
+Component URLs follow this pattern:
+
+```none
+fuchsia-pkg://fuchsia.com/<package-name>#meta/<component-name>.<extension>
+```
+
+*   `<package-name>`: specified as `package_name` on the package target, which
+    defaults to the target name.
+*   `<component-name>`: specified as `component_name` on the component target,
+    which defaults to the target name.
+*   `<extension>`: based on the [component
+    manifest][glossary.component-manifest] - `cmx` for cmx files, `cm` for cml
+    files.
+
+## Migrating from legacy build rules {#legacy-package-migration}
+
+The examples below demonstrate migration scenarios from the legacy
+[`package()`] template to the new
+[`fuchsia_package()`](/build/components/fuchsia_package.gni) and friends.
+
+### Simple `package()` example
+
+This example is adapted from
+[`//src/sys/component_index/BUILD.gn`](/src/sys/component_index/BUILD.gn).
+
+* {Pre-migration}
+
+  ```gn
+  import("//build/config.gni")
+  import("//build/package.gni")                              # <1>
+  import("//build/rust/rustc_binary.gni")
+  import("//build/test/test_package.gni")                    # <1>
+
+  rustc_binary("component_index_bin") {                      # <2>
+    name = "component_index"
+    # Generate a ":bin_test" target for unit tests
+    with_unit_tests = true
+    edition = "2018"
+    deps = [ ... ]
+  }
+
+  package("component_index") {                               # <3>
+    deps = [ ":component_index_bin" ]
+
+    binaries = [
+      {
+        name = "component_index"
+      },
+    ]
+
+    meta = [
+      {
+        path = rebase_path("meta/component_index.cmx")       # <4>
+        dest = "component_index.cmx"                         # <4>
+      },
+    ]
+
+    resources = [ ... ]
+  }
+
+  test_package("component_index_tests") {                    # <5>
+    deps = [ ":component_index_bin_test" ]
+
+    tests = [
+      {
+        name = "component_index_bin_test"                    # <5>
+        dest = "component_index_tests"                       # <5>
+      },
+    ]
+  }
+  ```
+
+* {Post-migration}
+
+  ```gn
+  import("//build/config.gni")
+  import("//build/rust/rustc_binary.gni")
+  import("//src/sys/build/components.gni")                   # <1>
+
+  rustc_binary("component_index_bin") {                      # <2>
+    name = "component_index"
+    # Generate a ":bin_test" target for unit tests
+    with_unit_tests = true
+    edition = "2018"
+    deps = [ ... ]
+  }
+
+  fuchsia_package_with_single_component("component_index") { # <3>
+    manifest = "meta/component_index.cmx"                    # <4>
+    deps = [ ":component_index_bin" ]
+  }
+
+  fuchsia_unittest_package("component_index_tests") {        # <5>
+    deps = [ ":component_index_bin_test" ]
+  }
+  ```
+
+The following key elements are called out in the code example above:
+
+> 1.  Necessary imports are replaced by `//src/sys/build/components.gni`.
+> 2.  Targets that generate executables or data files are not expected to change
+>     in a migration.
+> 3.  The original `package()` declaration contains a single component manifest
+>     (listed under `meta`). The `fuchsia_package_with_single_component()`
+>     template can replace this, referencing the same manifest file.
+> 4.  Under `package()`, the manifest is given a specific destination
+>     (`"component_index.cmx"`) to place it in the final package. With the new
+>     templates, the manifest is renamed according to the **target name**.
+>     As a result, the launch URL for the component remains the same.
+> 5.  For a simple test package that does not contain multiple test components,
+>     the `fuchsia_unittest_package()` template replaces `test_package()`. A
+>     basic test component manifest is automatically generated and
+>     `meta/component_index_tests.cmx` is no longer needed.
+
+### Complex `package()` example
+
+This example is adapted from
+[`//src/fonts/BUILD.gn`](/src/fonts/BUILD.gn).
+
+* {Pre-migration}
+
+  ```gn
+  import("//build/package.gni")                            # <1>
+  import("//build/rust/rustc_binary.gni")
+  import("//build/test/test_package.gni")                  # <1>
+  import("//src/fonts/build/fonts.gni")
+
+  rustc_binary("font_provider") {                          # <2>
+    name = "font_provider"
+    # Generate a ":bin_test" target for unit tests
+    with_unit_tests = true
+    edition = "2018"
+
+    deps = [ ... ]
+    sources = [ ... ]
+  }
+
+  package("pkg") {
+    package_name = "fonts"
+
+    deps = [ ":font_provider" ]
+
+    binaries = [
+      {
+        name = "font_provider"
+      },
+    ]
+    meta = [                                               # <3>
+      {
+        path = rebase_path("meta/fonts.cmx")               # <3>
+        dest = "fonts.cmx"                                 # <4>
+      },
+      {
+        path = rebase_path("meta/fonts.cml")               # <3>
+        dest = "fonts.cm"                                  # <4>
+      },
+    ]
+  }
+
+  test_package("font_provider_unit_tests") {
+    deps = [ ":font_provider_test" ]
+
+    v2_tests = [
+      {
+        name = "font_provider_bin_test"                    # <4>
+      },
+    ]
+  }
+  ```
+
+* {Post-migration}
+
+  ```gn
+  import("//build/rust/rustc_binary.gni")
+  import("//src/fonts/build/fonts.gni")
+  import("//src/sys/build/components.gni")                 # <1>
+
+  rustc_binary("font_provider") {                          # <2>
+    name = "font_provider"
+    # Generate a ":bin_test" target for unit tests
+    with_unit_tests = true
+    edition = "2018"
+
+    deps = [ ... ]
+    sources = [ ... ]
+  }
+
+  fuchsia_component("font_provider_cm") {                  # <3>
+    manifest = "meta/fonts.cml"
+    component_name = "fonts"                               # <4>
+    deps = [ ":font_provider" ]
+  }
+
+  fuchsia_component("font_provider_cmx") {                 # <3>
+    manifest = "meta/fonts.cmx"
+    component_name = "fonts"                               # <4>
+    deps = [ ":font_provider" ]
+  }
+
+  fuchsia_package("pkg") {
+    package_name = "fonts"
+    deps = [
+      ":font_provider_cm",                                 # <3>
+      ":font_provider_cmx",                                # <3>
+    ]
+  }
+
+  fuchsia_component("font_provider_unit_tests_cmp") {
+    testonly = true
+    manifest = "meta/font_provider_bin_test.cml"
+    component_name = "font_provider_bin_test"              # <4>
+    deps = [ ":font_provider_test" ]
+  }
+
+
 In the examples above all the paths conformed to a certain structure such that
 we could specify a single output pattern for multiple files and even leverage
 [GN source expansion placeholders][source-expansion-placeholders]. In this next
@@ -1044,8 +1419,8 @@ You are free to choose whichever one you prefer.
 
 When a new component manifest feature is under active development, the
 Component Framework team may wish to experiment with the API or implementation
-before committing to supporting the new feature. The CML compiler (`cmc`) 
-controls access to these unstable features through an opt-in property in your 
+before committing to supporting the new feature. The CML compiler (`cmc`)
+controls access to these unstable features through an opt-in property in your
 component build rule.
 
 In order to use an unstable feature, add the `unstable_features` property:
@@ -1069,13 +1444,13 @@ You must add your component to the allowlist for the feature in
 [executable]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_executable
 [fx-test]: https://www.fuchsia.dev/reference/tools/fx/cmd/test.md
 [fxb-55739]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=55739
-[glossary-component]: /docs/glossary.md#component
-[glossary-component-instance]: /docs/glossary.md#component-instance
-[glossary-component-manifest]: /docs/glossary.md#component-manifest
-[glossary-component-url]: /docs/glossary.md#component-url
-[glossary-fuchsia-pkg-url]: /docs/glossary.md#fuchsia-pkg-url
-[glossary-gn]: /docs/glossary.md#gn
-[glossary-package]: /docs/glossary.md#fuchsia-package
+[glossary.component]: /docs/glossary/README.md#component
+[glossary.component-instance]: /docs/glossary/README.md#component-instance
+[glossary.component-manifest]: /docs/glossary/README.md#component-manifest
+[glossary.component-url]: /docs/glossary/README.md#component-url
+[glossary.fuchsia-pkg-url]: /docs/glossary/README.md#fuchsia-pkg-url
+[glossary.gn]: /docs/glossary#gn
+[glossary.package]: /docs/glossary#fuchsia-package
 [gn-get-target-outputs]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_get_target_outputs
 [rustc-binary]: /build/rust/rustc_binary.gni
 [rustc-test]: /build/rust/rustc_test.gni

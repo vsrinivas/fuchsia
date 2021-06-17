@@ -98,7 +98,7 @@ such as the kernel. It may be difficult to ensure that objects are being
 accessed appropriately because there is no chain of evidence to describe
 how the object names were transmitted.
 
-In contrast, with [capability][glossary-capability]-based security, a program
+In contrast, with [capability][glossary.capability]-based security, a program
 must possess a capability object to obtain access to an object. Capabilities
 can be transferred but cannot be forged, enabling delegation of access to
 occur safely without ambient authorities.
@@ -122,9 +122,9 @@ interest.
   services of all components within that realm. The hub capability is only
   granted to authorized components such as developer tools.
 
+[glossary.capability]: /docs/glossary/README.md#capability
 [doc-hub]: hub.md
 [doc-storage]: capabilities/storage.md
 [doc-topology]: topology.md
-[glossary-capability]: /docs/glossary.md#capability
 [wiki-infosec]: https://en.wikipedia.org/wiki/Information_security
 [wiki-least-privilege]: https://en.wikipedia.org/wiki/Principle_of_least_privilege

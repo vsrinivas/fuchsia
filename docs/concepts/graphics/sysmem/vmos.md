@@ -62,7 +62,8 @@ region. Then it can suballocate from this pool of protected memory.
 
 ### tee_secure
 tee_secure is for another type of protected memory that stores a different
-type of data. The firmware allocates this region, and the [ZBI][zbi] must tell
+type of data. The firmware allocates this region, and the
+[ZBI][glossary.zircon boot image] must tell
 zircon not to allocate from the memory and never to touch it. Another driver
 can retrieve information on the memory and where it's located from the
 firmware, and then tells sysmem. Sysmem can suballocate from this heap as
@@ -276,6 +277,7 @@ clients still have references to VMOs.
 - Have component framework pass an unforgeable identifier to sysmem instead
 of having the client pass a forgeable debug name.
 
+[glossary.zircon boot image]: /docs/glossary/README.md#zircon-boot-image
 [vmo]: /docs/reference/kernel_objects/vm_object.md
 [pmt]: /docs/reference/kernel_objects/pinned_memory_token.md
 [vmo_create_child]: /docs/reference/syscalls/vmo_create_child.md
@@ -286,7 +288,6 @@ of having the client pass a forgeable debug name.
 [inspect]: /docs/development/diagnostics/inspect
 [FEMU]: /docs/concepts/emulator/index.md
 [DRM]: https://en.wikipedia.org/wiki/Digital_rights_management
-[zbi]: /docs/glossary.md#zircon-boot-image
 [memoryusage]: /docs/development/kernel/memory/memory.md
 [guest]: https://en.wikipedia.org/wiki/Virtualization
 [virtualmemory]: https://en.wikipedia.org/wiki/Virtual_memory

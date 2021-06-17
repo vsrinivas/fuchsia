@@ -2,9 +2,9 @@
 
 ## FIDL
 
-The [Fuchsia Interface Definition Language (FIDL)](/docs/glossary.md#fidl) is a
+The [Fuchsia Interface Definition Language (FIDL)](/docs/glossary/README.md#fidl) is a
 language for defining protocols that are typically used over
-[channels](/docs/glossary.md#channel).
+[channels](/docs/glossary/README.md#channel).
 
 The FIDL team is actively exploring the following projects:
 
@@ -46,14 +46,14 @@ improve network performance.
 
 ## Components v2
 
-[Components v2](/docs/glossary.md#components-v2) is Fuchsia's component
-architecture that replaces [Components v1](/docs/glossary.md#components-v1).
+[Components v2](/docs/glossary/README.md#components-v2) is Fuchsia's component
+architecture that replaces [Components v1](/docs/glossary/README.md#components-v1).
 
 The following projects are currently underway:
 
 ### Continuing migration to Components v2
 
-The goal of the [Component Framework](/docs/glossary.md#component-framework) is
+The goal of the [Component Framework](/docs/glossary/README.md#component-framework) is
 to define Fuchsia's units of software execution as components, which are
 singular abstractions throughout the Fuchsia system.
 
@@ -64,7 +64,7 @@ following areas:
     the package cache and package resolver.
 -   The Netstack2 components, including migration of Netemul and associated
     tests to Test Runner Framework.
--   A subset of components under [sysmgr](/docs/glossary.md#sysmgr) that are
+-   A subset of components under `[sysmgr](/docs/glossary/README.md#sysmgr)` that are
     straightforward to migrate.
 
 For more information, see

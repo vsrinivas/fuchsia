@@ -149,7 +149,7 @@ Because the component framework itself is the provider of the directory, any
 component may `use` it without an explicit `offer`. Fuchsia supports the
 following framework directories:
 
--   [`hub`][glossary-hub]: Allows a component to perform runtime introspection
+-   [hub][glossary.hub]: Allows a component to perform runtime introspection
     of itself and its children.
 
 #### Capability names {#capability-names}
@@ -721,12 +721,10 @@ expect their facets to adhere to a particular schema.
 
 This section may be omitted.
 
-[doc-children]: realms.md#child_component_instances
+[glossary.hub]: /docs/glossary/README.md#hub
+[doc-children]: realms.md#child-component-instances
 [doc-collections]: realms.md#collections
 [doc-environments]: environments.md
-[glossary-appmgr]: /docs/glossary.md#appmgr
-[glossary-hub]: /docs/glossary.md#hub
-[glossary-components-v2]: /docs/glossary.md#components-v2
 [doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
 [doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
 [doc-eager]: lifecycle.md#eager_binding

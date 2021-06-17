@@ -411,7 +411,7 @@ target that builds the executable is in a package's `deps`, then follow
 [listing the contents of a package](#listing-the-contents-of-a-package).
 The executable is listed among the contents of the package.
 
-### Finding a [component's launch URL][glossary-component-url]
+### Finding a component's launch URL
 
 Component URLs follow this pattern:
 
@@ -423,7 +423,7 @@ fuchsia-pkg://fuchsia.com/<package-name>#meta/<component-name>.<extension>
     defaults to the target name.
 *   `<component-name>`: specified as `component_name` on the component target,
     which defaults to the target name.
-*   `<extension>`: based on the [component manifest][glossary-component-manifest];
+*   `<extension>`: based on the [component manifest][glossary.component-manifest];
     `cmx` for CMX files, `cm` for CML files.
 
 ## Legacy features
@@ -718,8 +718,8 @@ templates. These unsupported features include:
 
 [build-components]: /docs/development/components/build.md
 [component-index]: /src/sys/component_index/component_index.gni
-[glossary-component-manifest]: /docs/glossary.md#component-manifest
-[glossary-component-url]: /docs/glossary.md#component-url
+[glossary.component-manifest]: /docs/glossary/README.md#component-manifest
+[glossary.component-url]: /docs/glossary/README.md#component-url
 [pm]: /src/sys/pkg/bin/pm/README.md
 [resource-data]: /docs/development/components/data.md
 [restrict-log-severity]: /docs/concepts/testing/logs.md#restricting_log_severity

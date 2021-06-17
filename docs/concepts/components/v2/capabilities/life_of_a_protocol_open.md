@@ -3,9 +3,9 @@
 This document describes the steps that occur when a component attempts to
 connect to a protocol in its namespace.
 
-These steps apply to the [Components v2][glossary-components-v2] model as run
+These steps apply to the [Components v2][glossary.components-v2] model as run
 under component manager.
-Portions of it also apply to the [Components v1][glossary-components-v1] model
+Portions of it also apply to the [Components v1][glossary.components-v1] model
 as run under appmgr.
 
 At a high level these steps are:
@@ -273,8 +273,8 @@ with `use` declarations; it must use `BindChild()`.
 [channel]: /docs/reference/kernel_objects/channel.md
 [component-manifests]: /docs/concepts/components/v2/component_manifests.md
 [fuchsia.io]: /sdk/fidl/fuchsia.io/io.fidl
-[glossary-components-v1]: /docs/glossary.md#components-v1
-[glossary-components-v2]: /docs/glossary.md#components-v2
+[glossary.components-v1]: /docs/glossary/README.md#components-v1
+[glossary.components-v2]: /docs/glossary/README.md#components-v2
 [handle]: /docs/concepts/kernel/handles.md
 [namespaces]: /docs/concepts/process/namespaces.md
 [ns-construction]: #constructing-a-components-namespace

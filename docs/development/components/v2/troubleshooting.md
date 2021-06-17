@@ -10,7 +10,7 @@ when using the [component framework][doc-intro]:
 
 Sometimes, when connecting to a capability such as a [protocol][doc-protocol],
 [service][doc-service], or [directory][doc-directory] in your
-[namespace][glossary-namespace], the channel returns an error when you try to
+[namespace][glossary.namespace], the channel returns an error when you try to
 use it. For example, consider the following snippet:
 
 ```rust
@@ -328,6 +328,7 @@ offer: [
 ],
 ```
 
+[glossary.namespace]: /docs/glossary/README.md#namespace
 [doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
 [doc-epitaphs]: /docs/reference/fidl/language/wire-format/README.md#epitaphs
 [doc-trf-driver]: /docs/concepts/testing/v2/test_runner_framework.md#test-roles
@@ -345,5 +346,3 @@ offer: [
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-service]: /docs/concepts/components/v2/capabilities/service.md
 [example-routing-failed]: /examples/components/routing_failed/README.md
-[glossary-components-v2]: /docs/glossary.md#components-v2
-[glossary-namespace]: /docs/glossary.md#namespace

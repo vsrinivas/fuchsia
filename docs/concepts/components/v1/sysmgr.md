@@ -3,8 +3,8 @@
 <<../_v1_banner.md>>
 
 sysmgr is one of the two major pieces of Components v1 (appmgr being the other).
-It is responsible for hosting the 'sys' [realm](/docs/glossary.md#realm) that
-contains 'global' system services. (The term 'realm' is used throughout this,
+It is responsible for hosting the `sys` [realm](/docs/glossary/README.md#realm) that
+contains `global` system services. (The term `realm` is used throughout this,
 but note that in v1 it is a synonym for 'environment'.)
 
 Most v1 components on Fuchsia today still run directly in the 'sys' realm,

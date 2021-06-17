@@ -28,7 +28,7 @@ runs amounts to configuring the process's namespace.
 
 ## Package namespace
 
-A [component](/docs/glossary.md#component) run from a package is given access to
+A [component][glossary.component] run from a package is given access to
 `/pkg`, which is a read-only view of the package containing the component. To
 access these resources at runtime, a process can use the `/pkg` namespace. For
 example, the `root_presenter` can access `cursor32.png` using the absolute path
@@ -36,10 +36,13 @@ example, the `root_presenter` can access `cursor32.png` using the absolute path
 
 ## Services
 
-Processes that are [components](/docs/glossary.md#component) receive an `/svc`
-directory in their namespace. The contents of `/svc` are populated differently
-depending on whether the component is [v1](/docs/glossary.md#components-v1) or
-[v2](/docs/glossary.md#components-v2).
+
+Processes that are [components][glossary.component] receive an `/svc`
+directory in their namespace. The services available through `/svc` are a
+subset of the services provided by the component's
+[environment][glossary.environment]. This subset is determined by the
+[`sandbox.services`](/docs/concepts/components/v1/component_manifests.md#sandbox) allowlist in the
+component's [manifest file](/docs/concepts/components/v1/component_manifests.md).
 
 A typical component will interact with a number of services from `/svc` in order
 to play some useful role in the system. For example, the service
@@ -52,7 +55,7 @@ receive whatever `/svc` their creator provided to them.
 
 In Components v1, the services available through `/svc` are a subset of the
 services provided by the component's
-[environment](/docs/glossary.md#environment). This subset is determined by the
+[environment](/docs/glossary/README.md#environment). This subset is determined by the
 [`sandbox.services`](/docs/concepts/components/v1/component_manifests.md#sandbox)
 allowlist in the component's
 [manifest file](/docs/concepts/components/v1/component_manifests.md).
@@ -79,3 +82,6 @@ the following `dev` array in your `sandbox`:
     "dev": [ "class/input" ]
 }
 ```
+
+[glossary.component]: /docs/glossary/README.md#component
+[glossary.environment]: /docs/glossary/README.md#environment

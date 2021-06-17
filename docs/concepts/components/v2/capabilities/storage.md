@@ -2,22 +2,23 @@
 
 <<../../_v2_banner.md>>
 
-[Storage capabilities][glossary-storage] are a way for components to receive
-_isolated_ access to a private storage directory. When a storage capability is
+A [storage capability][glossary.storage capability] is a way for components
+to receive _isolated_ access to a private storage directory. When a storage capability is
 declared in a [component manifest][manifests-storage] it must reference a
-backing [directory capability][directory-capabilities]. Each component that then
-[uses][use] this storage capability receives a unique and non-overlapping
-subdirectory within the backing directory. This prevents [component
-instances][component-instance] from accessing files belonging to other component
+backing [directory capability][glossary.directory capability]. Each component that then
+[uses][glossary.use] this storage capability receives a unique and non-overlapping
+subdirectory within the backing directory. This prevents
+[component instances][glossary.component instance] from accessing files belonging to other component
 instances (including their own children).
 
 ## Directory vs storage capabilities
 
 As an example, if component instance `a` receives a
-[_directory_ capability][directory-capabilities] from
-its [realm][realm] and both [uses][use] it and [offers][offer] it to `b`, which
-also uses the directory, both component instances can see and interact with the
-same directory.
+[directory capability][glossary.directory capability] from its
+[realm][glossary.realm] and both [uses][glossary.use] it and
+[offers][glossary.offer] it to `b`, which also uses the directory,
+both component instances can see and interact with the same directory.
+
 
 ```
 <a's realm>
@@ -159,14 +160,14 @@ by its location in the component topology. This means that if a component
 instance is renamed in its parent manifest or moved to a different parent then
 it will receive a different subdirectory than it did before the change.
 
-[component-instance]: /docs/glossary.md#component-instance
-[directory-capabilities]: /docs/glossary.md#directory-capability
-[glossary-storage]: /docs/glossary.md#storage-capability
+[glossary.storage capability]: /docs/glossary/README.md#storage-instance
+[glossary.component instance]: /docs/glossary/README.md#component-instance
+[glossary.directory capability]: /docs/glossary/README.md#directory-capability
+[glossary.use]: /docs/glossary/README.md#use
+[glossary.realm]: /docs/glossary/README.md#realm
+[glossary.offer]: /docs/glossary/README.md#offer
 [manifests]: /docs/concepts/components/v2/component_manifests.md
 [manifests-storage]: /docs/concepts/components/v2/component_manifests.md#capability-storage
-[offer]: /docs/glossary.md#offer
 [outgoing-directory]: /docs/concepts/system/abi/system.md#outgoing_directory
-[realm]: /docs/glossary.md#realm
 [storage-syntax]: /docs/concepts/components/v2/component_manifests.md#storage
 [use-syntax]: /docs/concepts/components/v2/component_manifests.md#use
-[use]: /docs/glossary.md#use

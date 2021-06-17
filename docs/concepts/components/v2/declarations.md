@@ -7,7 +7,7 @@ it uses and exposes, its children, and other information needed to run the
 component.
 
 Every component has a declaration. For components that are distributed in
-[packages][glossary-package], the declaration typically takes the form of
+[packages][glossary.package], the declaration typically takes the form of
 a [component manifest file][doc-component-manifests] that is located using a
 [component URL][doc-component-urls].
 
@@ -28,6 +28,7 @@ following information:
   allow other components to access the calculator's accumulator register
   using inter-process communication.
 
+[glossary.package]: /docs/glossary/README.md#package
 [doc-component-urls]: /docs/concepts/components/component_urls.md
 [doc-component-manifests]: /docs/concepts/components/v2/component_manifests.md
 [doc-component-manifests-program]: /docs/concepts/components/v2/component_manifests.md#program
@@ -36,4 +37,3 @@ following information:
 [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-storage-capability]: /docs/concepts/components/v2/capabilities/storage.md
-[glossary-package]: /docs/glossary.md#package

@@ -78,10 +78,10 @@ Runners are made available to components through
 [environments][environments-runners]. A runner must be registered in a
 component's environment for the component to `use` it.
 
-Runners are a type of [capability][glossary-capability], which can be
-[routed][routing]. Note that unlike other capabilities like protocols, runners
-aren't routed to the components that `use` them, but to the environment that
-registers them. Examples:
+Runners are a type of [capability][glossary.capability], which
+can be [routed][routing]. Note that unlike other capabilities like protocols,
+runners aren't routed to the components that `use` them, but to the
+environment that registers them. Examples:
 
 ```json5
 offer: [
@@ -185,11 +185,11 @@ For a runner to be routable, the runner component's manifest must declare the
 See [Making a runner available](#available) for further instructions on how to
 route the runner capability so that it is available to launch other components.
 
+[glossary.capability]: /docs/glossary/README.md#capability
 [elf-runner]: ../elf_runner.md
 [environments-runners]: ../environments.md#runners
 [routing]: ../component_manifests.md#capability-routing
 [expose]: ../component_manifests.md#expose
-[glossary-capability]: /docs/glossary.md#capability
 [hub]: ../hub.md
 [intro]: ../introduction.md#a_component_is_a_hermetic_composable_isolated_unit_of_software
 [offer]: ../component_manifests.md#offer

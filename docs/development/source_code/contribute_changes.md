@@ -256,7 +256,7 @@ project.
 ## Contribute a change to the API
 
 To contribute to the
-[Fuchsia API Surface](/docs/glossary.md#fuchsia-api-surface), do the following:
+[Fuchsia API Surface](/docs/glossary/README.md#fuchsia-api-surface), do the following:
 
 * Evaluate whether your change is large or small.
 

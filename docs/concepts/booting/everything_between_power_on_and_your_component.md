@@ -14,7 +14,8 @@ Outline:
 ## Kernel {#kernel}
 
 The process for loading the Fuchsia kernel (zircon) onto the system varies by
-platform. At a high level the kernel is stored in the [ZBI][ZBI], which holds
+platform. At a high level the kernel is stored in the
+[ZBI][glossary.zircon boot image], which holds
 everything needed to bootstrap Fuchsia.
 
 [Once the kernel (zircon) is running on the system][bootloader-and-kernel] its
@@ -34,11 +35,12 @@ started.
 
 Userboot’s job is really straightforward, to find and start the next process.
 The kernel gives userboot a handle to the ZBI, inside of which is the
-[bootfs][bootfs] image. Userboot reads through the ZBI to find the bootfs image,
-decompresses it if necessary, and copies it to a fresh [VMO][vmo]. The bootfs
+[bootfs][glossary.bootfs] image. Userboot reads through the ZBI to find the bootfs image,
+decompresses it if necessary, and copies it to a fresh
+[vmo][glossary.virtual memory object]. The bootfs
 image contains a read-only filesystem, which userboot then accesses to find an
 executable and its libraries. With these it starts the next process, which is
-[bootsvc][bootsvc].
+[bootsvc][glossary.bootsvc].
 
 Userboot may exit at this point, unless the userboot.shutdown option was given
 on the [kernel command line][kernel-command-line].
@@ -72,7 +74,7 @@ manager](images/userboot-bootsvc-cm.png)
 [Component manager][component-manager] is the program that drives the v2
 component framework. This framework controls how and when programs are run and
 which capabilities these programs can access from other programs. A program run
-by this framework is referred to as a [component][component].
+by this framework is referred to as a [component][glossary.component].
 
 The components that component manager runs are organized into a tree. There is a
 root component, and it has two children named bootstrap and core. Bootstrap's
@@ -97,11 +99,11 @@ appmgr, which then starts up all the user-facing software.
 
 #### driver manager
 
-[Driver manager][driver-manager] is the component responsible for finding
+[Driver manager][glossary.driver manager] is the component responsible for finding
 hardware, running drivers to service the hardware, and exposing a handle for
 [devfs][devfs] to Fuchsia.
 
-Drivers are run by [driver hosts][driver-host], which are child processes that
+Drivers are run by [driver hosts][glossary.driver host], which are child processes that
 driver manager starts. Each driver is a dynamic library stored in either bootfs
 or a package, and when a driver is to be run it is dynamically linked into a
 driver host and then executed.
@@ -123,10 +125,10 @@ namespace. This capability is
 
 As fshost finds block devices, it
 [reads headers from each device][fshost-magic-headers] to detect the filesystem
-type. It will initially find the [fvm][fvm] block, which contains partitions for
-other block devices. Fshost will use devfs to cause driver manager to run the
-fvm driver for this block device, which causes other block devices to appear for
-fshost to inspect. It does a similar thing when it discovers a
+type. It will initially find the [fvm][glossary.fvm] block, which contains
+partitions for other block devices. Fshost will use devfs to cause driver manager
+to run the fvm driver for this block device, which causes other block devices to
+appear for fshost to inspect. It does a similar thing when it discovers a
 [zxcrypt][zxcrypt] partition, as the disk will need to be decrypted to be
 usable. Once fvm and zxcrypt are loaded, fshost will find the appropriate block
 devices and start the [minfs][minfs] and [blobfs][blobfs] filesystems, which are
@@ -147,7 +149,7 @@ load components that are stored in packages.
 
 #### appmgr
 
-[Appmgr][appmgr] runs the v1 component framework, which coexists with the v2
+[Appmgr][glossary.appmgr] runs the v1 component framework, which coexists with the v2
 component framework. Appmgr is [stored in a package][appmgr-pkg], unlike fshost
 and driver manager, which are stored in bootfs, so component manager uses the
 /pkgfs-delayed handle from fshost to load appmgr.
@@ -184,7 +186,8 @@ and then appmgr successfully starting.](images/boot-sequence-diagram.png)
 ## Initial v1 components {#v1-components}
 
 When appmgr is started it creates a top-level realm called the "app"
-[realm][v1-realm]. Into this realm it launches the first v1 component,
+[realm][glossary.realm]. Into this realm
+it launches the first v1 component,
 [sysmgr][sysmgr]. Sysmgr’s job is to manage the "sys" realm, which is created
 under the "app" realm.
 
@@ -208,29 +211,31 @@ to be launched through accessing FIDL services and by directly launching them
 with services provided by appmgr. It is at this point that the remaining set of
 components on the system can be run.
 
-[ZBI]: /docs/glossary.md#zircon-boot-image
+[glossary.bootfs]: /docs/glossary#README.md#bootfs
+[glossary.virtual memory object]: /docs/glossary#README.md#virtual-memory-object
+[glossary.zircon boot image]: /docs/glossary#README.md#zircon-boot-image
+[glossary.bootsvc]: /docs/glossary#README.md#bootsvc
+[glossary.component]: /docs/glossary#README.md#component
+[glossary.driver manager]: /docs/glossary#README.md#driver-manager
+[glossary.driver host]: /docs/glossary#README.md#driver-host
+[glossary.fvm]: /docs/glossary#README.md#fuchsia-volume-manager
+[glossary.appmgr]: /docs/glossary#README.md#appmgr
+[glossary.realm]: /docs/glossary#README.md#realm
 [appmgr-exposes]: https://fuchsia.googlesource.com/fuchsia/+/7cf46e0c7a8e5e4c78dba846f867ab96bcce5c5b/src/sys/appmgr/meta/appmgr.cml#168
 [appmgr-is-eager]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/root/meta/root.cml#14
 [appmgr-pkg]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/appmgr/BUILD.gn#159
 [appmgr-uses]: https://fuchsia.googlesource.com/fuchsia/+/7cf46e0c7a8e5e4c78dba846f867ab96bcce5c5b/src/sys/appmgr/meta/appmgr.cml#40
-[appmgr]: /docs/glossary.md#appmgr
 [blobfs]: /docs/concepts/filesystems/blobfs.md
-[bootfs]: /docs/glossary.md#bootfs
 [bootloader-and-kernel]: /docs/concepts/booting/userboot.md#boot_loader_and_kernel_startup
-[bootsvc]: /docs/glossary.md#bootsvc
 [component-manager]: /docs/concepts/components/v2/introduction.md#component-manager
-[component]: /docs/glossary.md#component
 [critical-processes]: /docs/reference/syscalls/job_set_critical.md
 [devfs]: /docs/concepts/drivers/device_driver_model/device-model.md
-[driver-host]: /docs/glossary.md#devhost
 [driver-manager-exposes]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/root/meta/driver_manager.cml#91
-[driver-manager]: /docs/glossary.md#devmgr
 [dynamic-linking]: https://en.wikipedia.org/wiki/Dynamic_linker
 [fs-mount]: /docs/concepts/filesystems/filesystems.md#mounting
 [fshost-exposes]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/root/meta/fshost.cml#17
 [fshost-magic-headers]: https://fuchsia.googlesource.com/fuchsia/+/514f9474502cf6cafcd1d5edadfc7164566d4453/zircon/system/ulib/fs-management/mount.cc#155
 [fuchsia-io2]: https://fuchsia.dev/reference/fidl/fuchsia.io2
-[fvm]: /docs/glossary.md#fuchsia-volume-manager
 [job]: /docs/reference/kernel_objects/job.md
 [kernel-command-line]: /docs/reference/kernel/kernel_cmdline.md
 [memfs]: /docs/concepts/filesystems/filesystems.md#memfs_an_in-memory_filesystem
@@ -244,7 +249,5 @@ components on the system can be run.
 [userboot-loading]: /docs/concepts/booting/userboot.md#kernel_loads_userboot
 [userboot]: /docs/concepts/booting/userboot.md
 [userspace]: https://en.wikipedia.org/wiki/User_space
-[v1-realm]: /docs/glossary.md#realm
-[vmo]: /docs/glossary.md#virtual-memory-object
 [wait-for-system]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/devices/driver_manager/system-instance.cc#726
 [zxcrypt]: /docs/concepts/filesystems/zxcrypt.md

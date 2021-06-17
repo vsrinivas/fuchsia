@@ -26,8 +26,8 @@ are v2 components.
 ### Components v1 vs. v2
 
 Presently there are two revisions of the Component Framework that exist on
-Fuchsia, which are referred to as [Components v1][cfv1] and
-[Components v2][cfv2].
+Fuchsia, which are referred to as [Components v1][glossary.components-v1] and
+[Components v2][glossary.components-v2].
 
 Components v1 is largely comprised of:
 
@@ -35,7 +35,7 @@ Components v1 is largely comprised of:
     components. `appmgr` implements the root of the v1 components tree, as well
     as some foundational services such as the Components v1 ELF runner and
     Loader service.
-*   [`sysmgr`][sysmgr], a component that manages the so-called `"sys"` realm.
+*   [`sysmgr`][glossary.sysmgr], a component that manages the so-called `"sys"` realm.
     `sysmgr` is launched by `appmgr`.
 *   The [`.cmx`][cmx] file format for v1 component manifests.
 *   The [`fuchsia.sys.*`][fuchsia-sys] FIDL library.
@@ -104,7 +104,7 @@ currently additional focus on:
 -   The Netstack2 components, including migration of Netemul and associated
     tests to Test Runner Framework.
 -   The Bluetooth components and associated tests.
--   Components under [sysmgr](/docs/glossary.md#sysmgr) that are critical to
+-   Components under [sysmgr][glossary.sysmgr] that are critical to
     system functionality but each have a smaller footprint than the ones above,
     tracked [here][label-cf-v2-migration].
 -   Scaling migrations by creating and expanding a
@@ -150,8 +150,8 @@ Reach out for questions or for status updates:
 *   <component-framework-dev@fuchsia.dev>
 
 [appmgr]: /src/sys/appmgr
-[cfv1]: /docs/glossary.md#components-v1
-[cfv2]: /docs/glossary.md#components-v2
+[glossary.components-v1]: /docs/glossary/README.md#components-v1
+[glossary.components-v2]: /docs/glossary/README.md#components-v2
 [cmc]: /tools/cmc/
 [cml]: /docs/concepts/components/v2/component_manifests.md
 [cmx]: /docs/concepts/components/v1/component_manifests.md
@@ -164,5 +164,5 @@ Reach out for questions or for status updates:
 [migrating-sys-components]: /docs/development/components/v2/migration.md
 [session-framework]: /docs/concepts/session/introduction.md
 [sfw]: /docs/concepts/session/introduction.md
-[sysmgr]: /docs/glossary.md#sysmgr
+[glossary.sysmgr]: /docs/glossary/README.md#sysmgr
 [unit-tests-generated]: /docs/development/components/build.md#unit-tests

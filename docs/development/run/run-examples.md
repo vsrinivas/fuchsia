@@ -4,7 +4,8 @@ This guide shows you how to build Fuchsia to include an example package
 from Fuchsia's source [`//examples`](/examples/)
 directory and run that component on your Fuchsia device.
 
-Note: This guide is specific to [components v1](/docs/glossary.md#components-v1) and uses
+Note: This guide is specific to
+[components v1](/docs/glossary/README.md#components-v1) and uses
 [component manifests](/docs/concepts/components/v1/component_manifests.md).
 
 ## Exploring the example Fuchsia package {#exploring-the-example-fuchsia-package}
@@ -45,9 +46,9 @@ To learn more about how GN defines Fuchsia packages, see:
 ### Component manifest {#component-manifest}
 
 A `.cmx` file, known as a
-[component manifest](/docs/glossary.md#component-manifest), describes how to run
-an application on Fuchsia as a [component](/docs/glossary.md#component). In
-other words, a component manifest creates a [Fuchsia package](/docs/glossary.md#fuchsia-package).
+[component manifest](/docs/glossary/README.md#component-manifest) describes how to run
+an application on Fuchsia as a [component](/docs/glossary/README.md#component). In
+other words, a component manifest creates a [Fuchsia package](/docs/glossary/README.md#package).
 
 ### Fuchsia package {#fuchsia-package}
 
@@ -108,7 +109,7 @@ You now have a build that includes the example package in Universe.
 ## Run the example component {#run-the-example-component}
 
 To run a Fuchsia component, use its
-[Fuchsia package URL](/docs/glossary.md#fuchsia-pkg-url) as an argument
+[Fuchsia package URL](/docs/glossary/README.md#fuchsia-pkg-url) as an argument
 to the `fx shell run` command:
 
 1.  Open a terminal and run `fx serve-updates`:
@@ -138,7 +139,7 @@ rebuilding your Fuchsia image to include this package and repaving it to the dev
 
 ### Explore your product configuration {#explore-your-product-configuration}
 
-You can explore the contents of your product configuration using the 
+You can explore the contents of your product configuration using the
 `list-packages` command.
 
 List all:

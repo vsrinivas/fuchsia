@@ -12,7 +12,7 @@ toc:
   - title: "Overview"
     path: /docs
   - title: "Glossary"
-    path: /docs/glossary.md
+    path: /docs/glossary/README.md
 - name: "Concepts"
   contents:
   - include: /docs/concepts/_toc.yaml

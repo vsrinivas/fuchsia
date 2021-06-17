@@ -3,7 +3,7 @@
 The Fuchsia build system uses a number of "manifest" files that indicate how to
 install files into containers, for instance copying them into [Fuchsia package
 archives][fuchsia-package-archive], or into the boot filesystem image
-of a [ZBI file][zbi-file].
+of a [ZBI file][glossary.zircon boot image].
 
 This page documents these file formats which are used within the build, but
 should not be exposed outside of it.
@@ -327,6 +327,6 @@ during the GN generation pass.
 
 [windows-ini]: https://en.wikipedia.org/wiki/INI_file
 [fuchsia-package-archive]: /docs/concepts/packages/package.md#structure-of-a-package
-[zbi-file]: /docs/glossary.md#zircon-boot-image
+[glossary.zircon boot image]: /docs//glossary/README.md#zircon-boot-image
 [pm-tool]: /docs/reference/tools/sdk/pm.md
 [zbi-tool]: /docs/reference/tools/sdk/zbi.md
