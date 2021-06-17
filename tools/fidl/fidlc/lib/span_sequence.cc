@@ -164,10 +164,22 @@ void CompositeSpanSequence::CloseChildren() {
       if (!child->IsClosed())
         child->Close();
 
-      if (child->IsComment()) {
-        has_comments_ = true;
-      } else {
-        has_tokens_ = true;
+      switch (child->GetKind()) {
+        case SpanSequence::Kind::kToken: {
+          has_tokens_= true;
+          break;
+        }
+        case SpanSequence::Kind::kInlineComment:
+        case SpanSequence::Kind::kStandaloneComment: {
+          has_comments_ = true;
+          break;
+        }
+        default: {
+          if (child->HasComments())
+            has_comments_= true;
+          if (child->HasTokens())
+            has_tokens_= true;
+        }
       }
     }
   }
@@ -211,19 +223,9 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
         last_printed_kind = child->Print(max_col_width, last_printed_kind, indentation, wrapped,
                                          next_token_is_indented, out);
 
-        // In certain weird circumstances (ie, comments placed in unexpected areas), a child
-        // AtomicSpanSequence may start with an inline comment.  If this is the case, make sure to
-        // wrap the rest of this SpanSequence.
-        auto as_composite = static_cast<CompositeSpanSequence*>(child.get());
-        auto starts_with_inline = false;
-        if (!as_composite->IsEmpty()) {
-          const auto& inner_children = as_composite->GetChildren();
-          starts_with_inline = inner_children[0]->GetKind() == SpanSequence::Kind::kInlineComment;
-        }
-
         // If the child AtomicSpanSequence had comments, we know that it forces a wrapping, so
         // all future printing for this AtomicSpanSequence must be wrapped as well.
-        if (!wrapped && child->HasComments() && (child->HasTokens() || starts_with_inline)) {
+        if (!wrapped && child->HasComments() && child->HasTokens()) {
           wrapped = true;
           wrapped_indentation += kWrappedIndentation;
         }
@@ -237,13 +239,12 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
       case SpanSequence::Kind::kInlineComment: {
         // An inline comment must always have a leading space, to properly separate it from the
         // preceding token.
-        if (!out->empty() && !isspace(out->back()))
-          *out += " ";
         last_printed_kind = child->Print(max_col_width, last_printed_kind, indentation, wrapped,
                                          next_token_is_indented, out);
 
-        // A comment always forces the rest of the AtomicSpanSequence content to be wrapped.
-        if (!wrapped && i < last.value_or(0)) {
+        // A comment always forces the rest of the AtomicSpanSequence content to be wrapped if its
+        // between non-comment children.
+        if (!wrapped && i >= first.value_or(children.size()) && i < last.value_or(0)) {
           wrapped = true;
           wrapped_indentation += kWrappedIndentation;
         }
@@ -462,6 +463,12 @@ void CommentSpanSequence::Close() {
 std::optional<SpanSequence::Kind> InlineCommentSpanSequence::Print(
     const size_t max_col_width, std::optional<SpanSequence::Kind> last_printed_kind,
     size_t indentation, bool wrapped, bool is_next_sibling_indented, std::string* out) const {
+  // Remove all whitespace before the inline comment, then add exactly one space back.
+  while (!out->empty() && (out->back() == ' ' || out->back() == '\n'))
+    out->pop_back();
+  if (!out->empty())
+    *out += " ";
+
   *out += std::string(comment_) + "\n";
   return SpanSequence::Kind::kInlineComment;
 }

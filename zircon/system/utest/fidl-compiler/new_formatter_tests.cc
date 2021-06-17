@@ -287,6 +287,32 @@ library foo.bar;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+TEST(NewFormatterTests, AttributesWeird) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+protocol MyProtocol {
+    /// Foo
+@transitional // Bar
+        MyMethod();
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+protocol MyProtocol {
+    /// Foo
+    @transitional // Bar
+    MyMethod();
+};
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Ensure that an already properly formatted bits declaration is not modified by another run
 // through the formatter.
 TEST(NewFormatterTests, BitsFormatted) {
@@ -4187,7 +4213,7 @@ library foo.
 using // C6
         baz;
 using qux // C7
-        ;
+;
 
 type // C8
         MyStruct = struct
@@ -4196,7 +4222,7 @@ type // C8
 
         {
     my_field // C10
-            bool;
+    bool;
 
 // C11
 
@@ -4336,6 +4362,572 @@ protocol MyProtocol { // C24
 service MyService { // C32
     /// C31a
     /// C31b
+    my_protocol client_end:MyProtocol; // C34
+}; // C35
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, DocCommentsThenComments) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+/// C1a
+// C1b
+library foo.bar;  // C2
+
+/// C3a
+// C3b
+using baz.qux;  // C4
+
+/// C5a
+// C5b
+resource_definition thing : uint8 {  // C6
+    properties {  // C8
+/// C9a
+// C9b
+        stuff rights;  // C10
+    };
+};
+
+/// C11a
+// C11b
+const MY_CONST string = "abc";  // C12
+
+/// C13a
+// C13b
+type MyEnum = enum {  // C14
+/// C15a
+// C17b
+    MY_VALUE = 1;  // C16
+};
+
+/// C17a
+// C17b
+type MyTable = resource table {  // C18
+/// C19a
+// C19b
+    1: field thing;  // C20
+};
+
+/// C21a
+// C21b
+alias MyAlias = MyStruct;  // C22
+
+/// C23a
+// C23b
+protocol MyProtocol {  // C24
+/// C25a
+// C25b
+    MyMethod(resource struct {  // C26
+/// C27a
+// C27b
+        data MyTable;  // C28
+    }) -> () error MyEnum;  // C29
+};  // 30
+
+/// C29a
+// C29b
+service MyService {  // C32
+/// C31a
+// C31b
+    my_protocol client_end:MyProtocol;  // C34
+};  // C35
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+/// C1a
+// C1b
+library foo.bar; // C2
+
+/// C3a
+// C3b
+using baz.qux; // C4
+
+/// C5a
+// C5b
+resource_definition thing : uint8 { // C6
+    properties { // C8
+        /// C9a
+        // C9b
+        stuff rights; // C10
+    };
+};
+
+/// C11a
+// C11b
+const MY_CONST string = "abc"; // C12
+
+/// C13a
+// C13b
+type MyEnum = enum { // C14
+    /// C15a
+    // C17b
+    MY_VALUE = 1; // C16
+};
+
+/// C17a
+// C17b
+type MyTable = resource table { // C18
+    /// C19a
+    // C19b
+    1: field thing; // C20
+};
+
+/// C21a
+// C21b
+alias MyAlias = MyStruct; // C22
+
+/// C23a
+// C23b
+protocol MyProtocol { // C24
+    /// C25a
+    // C25b
+    MyMethod(resource struct { // C26
+        /// C27a
+        // C27b
+        data MyTable; // C28
+    }) -> () error MyEnum; // C29
+}; // 30
+
+/// C29a
+// C29b
+service MyService { // C32
+    /// C31a
+    // C31b
+    my_protocol client_end:MyProtocol; // C34
+}; // C35
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, DocCommentsThenAttributes) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+/// C1a
+@attr1
+library foo.bar;  // C2
+
+/// C3a
+@attr3
+using baz.qux;  // C4
+
+/// C5a
+@attr5
+resource_definition thing : uint8 {  // C6
+    properties {  // C8
+/// C9a
+@attr9
+stuff rights; // C10
+    };
+};
+
+/// C11a
+@attr11
+const MY_CONST string = "abc";  // C12
+
+/// C13a
+@attr13
+type MyEnum = enum {  // C14
+/// C15a
+@attr17
+    MY_VALUE = 1;  // C16
+};
+
+/// C17a
+@attr17
+type MyTable = resource table {  // C18
+/// C19a
+@attr19
+    1: field thing;  // C20
+};
+
+/// C21a
+@attr21
+alias MyAlias = MyStruct;  // C22
+
+/// C23a
+@attr23
+protocol MyProtocol {  // C24
+/// C25a
+@attr25
+    MyMethod(resource struct {  // C26
+/// C27a
+@attr27
+        data MyTable;  // C28
+    }) -> () error MyEnum;  // C29
+};  // 30
+
+/// C29a
+@attr29
+service MyService {  // C32
+/// C31a
+@attr31
+    my_protocol client_end:MyProtocol;  // C34
+};  // C35
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+/// C1a
+@attr1
+library foo.bar; // C2
+
+/// C3a
+@attr3
+using baz.qux; // C4
+
+/// C5a
+@attr5
+resource_definition thing : uint8 { // C6
+    properties { // C8
+        /// C9a
+        @attr9
+        stuff rights; // C10
+    };
+};
+
+/// C11a
+@attr11
+const MY_CONST string = "abc"; // C12
+
+/// C13a
+@attr13
+type MyEnum = enum { // C14
+    /// C15a
+    @attr17
+    MY_VALUE = 1; // C16
+};
+
+/// C17a
+@attr17
+type MyTable = resource table { // C18
+    /// C19a
+    @attr19
+    1: field thing; // C20
+};
+
+/// C21a
+@attr21
+alias MyAlias = MyStruct; // C22
+
+/// C23a
+@attr23
+protocol MyProtocol { // C24
+    /// C25a
+    @attr25
+    MyMethod(resource struct { // C26
+        /// C27a
+        @attr27
+        data MyTable; // C28
+    }) -> () error MyEnum; // C29
+}; // 30
+
+/// C29a
+@attr29
+service MyService { // C32
+    /// C31a
+    @attr31
+    my_protocol client_end:MyProtocol; // C34
+}; // C35
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, DocCommentsThenAttributesThenInlineComments) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+/// C1a
+@attr1  // C1b
+library foo.bar;  // C2
+
+/// C3a
+@attr3  // C3b
+using baz.qux;  // C4
+
+/// C5a
+@attr5  // C5b
+resource_definition thing : uint8 {  // C6
+    properties {  // C8
+/// C9a
+@attr9  // C9b
+        stuff rights;  // C10
+    };
+};
+
+/// C11a
+@attr11  // C11b
+const MY_CONST string = "abc";  // C12
+
+/// C13a
+@attr13  // C13b
+type MyEnum = enum {  // C14
+/// C15a
+@attr17  // C17b
+    MY_VALUE = 1;  // C16
+};
+
+/// C17a
+@attr17  // C17b
+type MyTable = resource table {  // C18
+/// C19a
+@attr19  // C19b
+    1: field thing;  // C20
+};
+
+/// C21a
+@attr21  // C21b
+alias MyAlias = MyStruct;  // C22
+
+/// C23a
+@attr23  // C23b
+protocol MyProtocol {  // C24
+/// C25a
+@attr25  // C25b
+    MyMethod(resource struct {  // C26
+/// C27a
+@attr27  // C27b
+        data MyTable;  // C28
+    }) -> () error MyEnum;  // C29
+};  // 30
+
+/// C29a
+@attr29  // C29b
+service MyService {  // C32
+/// C31a
+@attr31  // C31b
+    my_protocol client_end:MyProtocol;  // C34
+};  // C35
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+/// C1a
+@attr1 // C1b
+library foo.bar; // C2
+
+/// C3a
+@attr3 // C3b
+using baz.qux; // C4
+
+/// C5a
+@attr5 // C5b
+resource_definition thing : uint8 { // C6
+    properties { // C8
+        /// C9a
+        @attr9 // C9b
+        stuff rights; // C10
+    };
+};
+
+/// C11a
+@attr11 // C11b
+const MY_CONST string = "abc"; // C12
+
+/// C13a
+@attr13 // C13b
+type MyEnum = enum { // C14
+    /// C15a
+    @attr17 // C17b
+    MY_VALUE = 1; // C16
+};
+
+/// C17a
+@attr17 // C17b
+type MyTable = resource table { // C18
+    /// C19a
+    @attr19 // C19b
+    1: field thing; // C20
+};
+
+/// C21a
+@attr21 // C21b
+alias MyAlias = MyStruct; // C22
+
+/// C23a
+@attr23 // C23b
+protocol MyProtocol { // C24
+    /// C25a
+    @attr25 // C25b
+    MyMethod(resource struct { // C26
+        /// C27a
+        @attr27 // C27b
+        data MyTable; // C28
+    }) -> () error MyEnum; // C29
+}; // 30
+
+/// C29a
+@attr29 // C29b
+service MyService { // C32
+    /// C31a
+    @attr31 // C31b
+    my_protocol client_end:MyProtocol; // C34
+}; // C35
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, DocCommentsThenAttributesThenStandaloneComments) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+/// C1a
+@attr1
+// C1b
+library foo.bar;  // C2
+
+/// C3a
+@attr3
+// C3b
+using baz.qux;  // C4
+
+/// C5a
+@attr5
+// C5b
+resource_definition thing : uint8 {  // C6
+    properties {  // C8
+/// C9a
+@attr9
+// C9b
+        stuff rights;  // C10
+    };
+};
+
+/// C11a
+@attr11
+// C11b
+const MY_CONST string = "abc";  // C12
+
+/// C13a
+@attr13
+// C13b
+type MyEnum = enum {  // C14
+/// C15a
+@attr17
+// C17b
+    MY_VALUE = 1;  // C16
+};
+
+/// C17a
+@attr17
+// C17b
+type MyTable = resource table {  // C18
+/// C19a
+@attr19
+// C19b
+    1: field thing;  // C20
+};
+
+/// C21a
+@attr21
+// C21b
+alias MyAlias = MyStruct;  // C22
+
+/// C23a
+@attr23
+// C23b
+protocol MyProtocol {  // C24
+/// C25a
+@attr25
+// C25b
+    MyMethod(resource struct {  // C26
+/// C27a
+@attr27
+// C27b
+        data MyTable;  // C28
+    }) -> () error MyEnum;  // C29
+};  // 30
+
+/// C29a
+@attr29
+// C29b
+service MyService {  // C32
+/// C31a
+@attr31
+// C31b
+    my_protocol client_end:MyProtocol;  // C34
+};  // C35
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+/// C1a
+@attr1
+// C1b
+library foo.bar; // C2
+
+/// C3a
+@attr3
+// C3b
+using baz.qux; // C4
+
+/// C5a
+@attr5
+// C5b
+resource_definition thing : uint8 { // C6
+    properties { // C8
+        /// C9a
+        @attr9
+        // C9b
+        stuff rights; // C10
+    };
+};
+
+/// C11a
+@attr11
+// C11b
+const MY_CONST string = "abc"; // C12
+
+/// C13a
+@attr13
+// C13b
+type MyEnum = enum { // C14
+    /// C15a
+    @attr17
+    // C17b
+    MY_VALUE = 1; // C16
+};
+
+/// C17a
+@attr17
+// C17b
+type MyTable = resource table { // C18
+    /// C19a
+    @attr19
+    // C19b
+    1: field thing; // C20
+};
+
+/// C21a
+@attr21
+// C21b
+alias MyAlias = MyStruct; // C22
+
+/// C23a
+@attr23
+// C23b
+protocol MyProtocol { // C24
+    /// C25a
+    @attr25
+    // C25b
+    MyMethod(resource struct { // C26
+        /// C27a
+        @attr27
+        // C27b
+        data MyTable; // C28
+    }) -> () error MyEnum; // C29
+}; // 30
+
+/// C29a
+@attr29
+// C29b
+service MyService { // C32
+    /// C31a
+    @attr31
+    // C31b
     my_protocol client_end:MyProtocol; // C34
 }; // C35
 )FIDL";
