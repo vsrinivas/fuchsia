@@ -43,9 +43,6 @@ source_set("frame_scheduler") {
     "//third_party/cobalt/src/lib/client/cpp:buckets_config",
     "//zircon/system/ulib/trace",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("frame_scheduler_interface") {

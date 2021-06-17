@@ -201,7 +201,7 @@ zx::duration FrameStats::CalculateMeanDuration(
   // Time the sorted durations to only calculate the desired percentile.
   double trim_index =
       static_cast<double>(num_frames) * static_cast<double>((100 - percentile)) / 100.;
-  size_t trim = ceil(trim_index);
+  const size_t trim = static_cast<size_t>(ceil(trim_index));
   FX_DCHECK(trim <= num_frames);
   for (size_t i = 0; i < trim; i++) {
     durations.pop_back();
@@ -225,9 +225,15 @@ void FrameStats::ReportStats(inspect::Inspector* insp) const {
 
   FX_DCHECK(dropped_frame_count_ <= frame_count_);
   FX_DCHECK(delayed_frame_count_ <= frame_count_);
-  double dropped_percentage = frame_count_ > 0 ? dropped_frame_count_ * 100.0 / frame_count_ : 0.0;
+  const double dropped_percentage =
+      frame_count_ > 0
+          ? 100.0 * static_cast<double>(dropped_frame_count_) / static_cast<double>(frame_count_)
+          : 0.0;
   FX_DCHECK(delayed_frame_count_ <= frame_count_);
-  double delayed_percentage = frame_count_ > 0 ? delayed_frame_count_ * 100.0 / frame_count_ : 0.0;
+  const double delayed_percentage =
+      frame_count_ > 0
+          ? 100.0 * static_cast<double>(delayed_frame_count_) / static_cast<double>(frame_count_)
+          : 0.0;
 
   // Stats for the entire history.
   {
@@ -254,22 +260,16 @@ void FrameStats::ReportStats(inspect::Inspector* insp) const {
   {
     inspect::Node node = insp->GetRoot().CreateChild("1 - Recent Frame Stats (times in ms)");
 
-    constexpr double kUSecsToMSecs = 0.001;
-
     node.CreateUint("Count", frame_times_.size(), insp);
 
-    node.CreateDouble(
-        "Mean Prediction Accuracy (95 percentile)",
-        kUSecsToMSecs * CalculateMeanDuration(frame_times_, prediction_accuracy, 95).to_usecs(),
-        insp);
+    node.CreateUint("Mean Prediction Accuracy (95 percentile)",
+                    CalculateMeanDuration(frame_times_, prediction_accuracy, 95).to_msecs(), insp);
 
-    node.CreateDouble(
-        "Mean Total Frame Time (95 percentile)",
-        kUSecsToMSecs * CalculateMeanDuration(frame_times_, total_frame_time, 95).to_usecs(), insp);
+    node.CreateUint("Mean Total Frame Time (95 percentile)",
+                    CalculateMeanDuration(frame_times_, total_frame_time, 95).to_msecs(), insp);
 
-    node.CreateDouble("Mean Total Frame Latency (95 percentile)",
-                      kUSecsToMSecs * CalculateMeanDuration(frame_times_, latency, 95).to_usecs(),
-                      insp);
+    node.CreateUint("Mean Total Frame Latency (95 percentile)",
+                    CalculateMeanDuration(frame_times_, latency, 95).to_msecs(), insp);
 
     insp->emplace(std::move(node));
   }
@@ -281,21 +281,15 @@ void FrameStats::ReportStats(inspect::Inspector* insp) const {
 
     node.CreateUint("Count", delayed_frames_.size(), insp);
 
-    constexpr double kUSecsToMSecs = 0.001;
+    node.CreateUint("Mean Prediction Accuracy (95 percentile)",
+                    CalculateMeanDuration(delayed_frames_, prediction_accuracy, 95).to_msecs(),
+                    insp);
 
-    node.CreateDouble(
-        "Mean Prediction Accuracy (95 percentile)",
-        kUSecsToMSecs * CalculateMeanDuration(delayed_frames_, prediction_accuracy, 95).to_usecs(),
-        insp);
+    node.CreateUint("Mean Total Frame Time (95 percentile)",
+                    CalculateMeanDuration(delayed_frames_, total_frame_time, 95).to_msecs(), insp);
 
-    node.CreateDouble(
-        "Mean Total Frame Time (95 percentile)",
-        kUSecsToMSecs * CalculateMeanDuration(delayed_frames_, total_frame_time, 95).to_usecs(),
-        insp);
-
-    node.CreateDouble(
-        "Mean Total Frame Latency (95 percentile)",
-        kUSecsToMSecs * CalculateMeanDuration(delayed_frames_, latency, 95).to_usecs(), insp);
+    node.CreateUint("Mean Total Frame Latency (95 percentile)",
+                    CalculateMeanDuration(delayed_frames_, latency, 95).to_msecs(), insp);
 
     insp->emplace(std::move(node));
   }
