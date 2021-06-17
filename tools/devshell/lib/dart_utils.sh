@@ -36,11 +36,14 @@ function run-dart-tool {
   fi
 
   "${executable}" "$@"
-  if [[ $? == 253 ]]; then
+  local status=$?
+  if [[ "${status}" == 253 ]]; then
     # This error typically occurs when files that the executable depends on
     # have been updated, but the executable itself has not. Rebuilding the
     # command.
     _build "${tool_build_target}" "${executable}"
     "${executable}" "$@"
+    status=$?
   fi
+  exit "${status}"
 }
