@@ -11,6 +11,8 @@
 
 #include "sdk/lib/zxio/private.h"
 
+namespace fio = fuchsia_io;
+
 namespace {
 
 // A zxio_handle_holder is a zxio object instance that holds on to a handle and
@@ -53,6 +55,28 @@ void zxio_handle_holder_init(zxio_storage_t* storage, zx::handle handle) {
   zxio_init(&holder->io, &zxio_handle_holder_ops);
 }
 
+class ZxioCreateOnOpenEventHandler final : public fidl::WireSyncEventHandler<fio::Node> {
+ public:
+  ZxioCreateOnOpenEventHandler(fidl::ClientEnd<fio::Node> node, zxio_storage_t* storage,
+                               zx_status_t& status)
+      : node_(std::move(node)), storage_(storage), status_(status) {}
+
+ protected:
+  void OnOpen(fidl::WireResponse<fio::Node::OnOpen>* event) final {
+    status_ = event->s;
+    if (event->s != ZX_OK)
+      return;
+    status_ = zxio_create_with_nodeinfo(std::move(node_), event->info, storage_);
+  }
+
+  zx_status_t Unknown() final { return ZX_ERR_IO; }
+
+ private:
+  fidl::ClientEnd<fio::Node> node_;
+  zxio_storage_t* storage_;
+  zx_status_t& status_;
+};
+
 }  // namespace
 
 zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_basic_t* handle_info,
@@ -62,6 +86,16 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
     return ZX_ERR_INVALID_ARGS;
   }
   switch (handle_info->type) {
+    case ZX_OBJ_TYPE_CHANNEL: {
+      fidl::ClientEnd<fio::Node> node(zx::channel(std::move(handle)));
+      fidl::WireResult result = fidl::WireCall(node).Describe();
+      zx_status_t status = result.status();
+      if (status != ZX_OK) {
+        return status;
+      }
+      auto node_info = result.value().info;
+      return zxio_create_with_nodeinfo(std::move(node), node_info, storage);
+    }
     case ZX_OBJ_TYPE_LOG: {
       zxio_debuglog_init(storage, zx::debuglog(std::move(handle)));
       return ZX_OK;
@@ -115,7 +149,20 @@ zx_status_t zxio_create(zx_handle_t raw_handle, zxio_storage_t* storage) {
   return zxio_create_with_info(handle.release(), &info, storage);
 }
 
-namespace fio = fuchsia_io;
+zx_status_t zxio_create_with_on_open(zx_handle_t raw_handle, zxio_storage_t* storage) {
+  auto node = fidl::ClientEnd<fio::Node>(zx::channel(raw_handle));
+  if (!node.is_valid() || storage == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  fidl::UnownedClientEnd unowned_node = node.borrow();
+  zx_status_t handler_status;
+  ZxioCreateOnOpenEventHandler handler(std::move(node), storage, handler_status);
+  zx_status_t status = handler.HandleOneEvent(unowned_node).status();
+  if (status != ZX_OK) {
+    return status;
+  }
+  return handler_status;
+}
 
 zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo& info,
                                       zxio_storage_t* storage) {

@@ -32,6 +32,7 @@ test("zxio") {
     "rights-const-test.cc",
     "test_directory_server_base.h",
     "test_file_server_base.h",
+    "test_node_server.h",
     "vmo-test.cc",
     "vmofile-test.cc",
     "zxio-test.cc",

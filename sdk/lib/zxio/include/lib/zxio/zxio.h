@@ -51,12 +51,15 @@ __BEGIN_CDECLS
 // May block to communicate with the server about the state of the object.
 zx_status_t zxio_create(zx_handle_t handle, zxio_storage_t* storage);
 
+// Like zxio_create for channel objects expecting an incoming
+// fuchsia.io.Node/OnOpen event such as from zxio_open_async.
+//
+// Always consumes |handle|. |handle| must refer to a channel object.
+zx_status_t zxio_create_with_on_open(zx_handle_t handle, zxio_storage_t* storage);
+
 // Like zxio_create but the caller provides information about the handle.
 zx_status_t zxio_create_with_info(zx_handle_t handle, const zx_info_handle_basic_t* chandle_info,
                                   zxio_storage_t* storage);
-
-// TODO(https://fxbug.dev/43267): Add zxio_create_...() variant for a channel
-// expecting an incoming OnOpen / Describe message.
 
 // Attempt to close |io|.
 //

@@ -14,6 +14,7 @@
 
 #include "sdk/lib/zxio/tests/test_directory_server_base.h"
 #include "sdk/lib/zxio/tests/test_file_server_base.h"
+#include "sdk/lib/zxio/tests/test_node_server.h"
 
 TEST(CreateWithAllocator, ErrorAllocator) {
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
@@ -126,20 +127,6 @@ TEST(CreateWithInfo, Unsupported) {
   ASSERT_OK(zxio_close(zxio));
 }
 
-class TestDeviceNodeServer : public fuchsia_io::testing::Node_TestBase {
- public:
-  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
-    completer.Reply(ZX_OK);
-    // After the reply, we should close the connection.
-    completer.Close(ZX_OK);
-  }
-};
-
 TEST(CreateWithInfo, Device) {
   auto node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(node_ends.status_value());
@@ -162,7 +149,7 @@ TEST(CreateWithInfo, Device) {
   };
 
   async::Loop device_control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  TestDeviceNodeServer server;
+  zxio_tests::CloseOnlyNodeServer server;
   fidl::BindServer(device_control_loop.dispatcher(), std::move(node_server), &server);
   device_control_loop.StartThread("device_control_thread");
 
@@ -233,18 +220,6 @@ TEST(CreateWithInfo, Directory) {
   dir_control_loop.Shutdown();
 }
 
-class TestFileServer final : public zxio_tests::TestFileServerBase {
- public:
-  void Read(ReadRequestView request, ReadCompleter::Sync& completer) final {
-    fidl::FidlAllocator fidl_allocator;
-    fidl::VectorView<uint8_t> read_data(fidl_allocator, sizeof(kTestData));
-    memcpy(read_data.mutable_data(), kTestData, sizeof(kTestData));
-    completer.Reply(ZX_OK, read_data);
-  }
-
-  static constexpr char kTestData[] = "abcdef";
-};
-
 TEST(CreateWithInfo, File) {
   auto file_ends = fidl::CreateEndpoints<fuchsia_io::File>();
   ASSERT_OK(file_ends.status_value());
@@ -267,7 +242,7 @@ TEST(CreateWithInfo, File) {
   };
 
   async::Loop file_control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  TestFileServer server;
+  zxio_tests::TestReadFileServer server;
   fidl::BindServer(file_control_loop.dispatcher(), std::move(file_server), &server);
   file_control_loop.StartThread("file_control_thread");
 
@@ -283,13 +258,13 @@ TEST(CreateWithInfo, File) {
   zxio_t* zxio = &(storage->io);
 
   // Sanity check the zxio by reading some test data from the server.
-  char buffer[sizeof(TestFileServer::kTestData)];
+  char buffer[sizeof(zxio_tests::TestReadFileServer::kTestData)];
   size_t actual = 0u;
 
   ASSERT_OK(zxio_read(zxio, buffer, sizeof(buffer), 0u, &actual));
 
   EXPECT_EQ(sizeof(buffer), actual);
-  EXPECT_BYTES_EQ(buffer, TestFileServer::kTestData, sizeof(buffer));
+  EXPECT_BYTES_EQ(buffer, zxio_tests::TestReadFileServer::kTestData, sizeof(buffer));
 
   ASSERT_OK(zxio_close(zxio));
 
@@ -453,26 +428,6 @@ TEST(CreateWithInfo, Tty) {
   tty_control_loop.Shutdown();
 }
 
-class TestVmofileServer : public zxio_tests::TestFileServerBase {
- public:
-  explicit TestVmofileServer(uint64_t seek_start_offset) : seek_start_offset_(seek_start_offset) {}
-
- private:
-  // Constructing a Vmofile instance requires a server responding to a seek call
-  // over the fuchsia.io.File protocol. This is a test implementation smart enough
-  // to respond to this call.
-  void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final {
-    if (request->start != fuchsia_io::wire::SeekOrigin::kStart || request->offset != 0) {
-      ADD_FAILURE("unsupported Seek received start %d offset %ld", request->start, request->offset);
-      completer.Close(ZX_ERR_NOT_SUPPORTED);
-      return;
-    }
-    completer.Reply(ZX_OK, seek_start_offset_);
-  }
-
-  const uint64_t seek_start_offset_;
-};
-
 TEST(CreateWithInfo, Vmofile) {
   auto file_ends = fidl::CreateEndpoints<fuchsia_io::File>();
   ASSERT_OK(file_ends.status_value());
@@ -505,7 +460,8 @@ TEST(CreateWithInfo, Vmofile) {
   const uint64_t offset_within_file = 234;
 
   async::Loop vmofile_control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  TestVmofileServer server(offset_within_file);
+  zxio_tests::TestVmofileServer server;
+  server.set_seek_offset(offset_within_file);
   fidl::BindServer(vmofile_control_loop.dispatcher(), std::move(file_server), &server);
   vmofile_control_loop.StartThread("vmofile_control_thread");
 
