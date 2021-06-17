@@ -27,4 +27,8 @@ pub struct SnapshotCommand {
     /// valid directory where the snapshot will be stored.
     #[argh(option, long = "dir", short = 'd')]
     pub output_file: Option<String>,
+
+    #[argh(switch, long = "dump-annotations")]
+    /// print annotations
+    pub dump_annotations: bool,
 }

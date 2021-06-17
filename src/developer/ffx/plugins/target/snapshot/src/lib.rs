@@ -7,11 +7,13 @@ use {
     chrono::{Datelike, Timelike, Utc},
     ffx_core::ffx_plugin,
     ffx_snapshot_args::SnapshotCommand,
-    fidl_fuchsia_feedback::{DataProviderProxy, GetSnapshotParameters},
+    fidl_fuchsia_feedback::{
+        Annotation, DataProviderProxy, GetAnnotationsParameters, GetSnapshotParameters,
+    },
     fidl_fuchsia_io::{FileMarker, MAX_BUF},
     std::convert::TryFrom,
     std::fs,
-    std::io::prelude::*,
+    std::io::Write,
     std::path::{Path, PathBuf},
     std::time::Duration,
 };
@@ -48,6 +50,77 @@ pub async fn read_data(file: &fidl_fuchsia_io::FileProxy) -> Result<Vec<u8>> {
     Ok(out)
 }
 
+// Build a multi-line string that represets the current annotation.
+fn format_annotation(previous_key: &String, new_key: &String, new_value: &String) -> String {
+    let mut output = String::from("");
+    let old_key_vec: Vec<_> = previous_key.split(".").collect();
+    let new_key_vec: Vec<_> = new_key.split(".").collect();
+
+    let mut common_root = true;
+    for idx in 0..new_key_vec.len() {
+        // ignore shared key segments.
+        if common_root && idx < old_key_vec.len() {
+            if old_key_vec[idx] == new_key_vec[idx] {
+                continue;
+            }
+        }
+        common_root = false;
+
+        // Build the formatted line from the key segment and append it to the output.
+        let indentation: String = (0..idx).map(|_| "    ").collect();
+        let end_of_key = new_key_vec.len() - 1 == idx;
+        let line = match end_of_key {
+            false => format!("{}{}\n", indentation, &new_key_vec[idx]),
+            true => format!("{}{}: {}\n", indentation, &new_key_vec[idx], new_value),
+        };
+        output.push_str(&line);
+    }
+
+    output
+}
+
+fn format_annotations(mut annotations: Vec<Annotation>) -> String {
+    let mut output = String::from("");
+
+    // make sure annotations are sorted.
+    annotations.sort_by(|a, b| a.key.cmp(&b.key));
+
+    let mut previous_key = String::from("");
+    for annotation in annotations {
+        let segment = format_annotation(&previous_key, &annotation.key, &annotation.value);
+        output.push_str(&segment);
+        previous_key = annotation.key;
+    }
+
+    output
+}
+
+pub async fn dump_annotations<W: Write>(
+    mut write: W,
+    data_provider_proxy: DataProviderProxy,
+) -> Result<()> {
+    // Build parameters
+    let params = GetAnnotationsParameters {
+        collection_timeout_per_annotation: Some(
+            i64::try_from(Duration::from_secs(5 * 60).as_nanos()).map_err(|e| anyhow!(e))?,
+        ),
+        ..GetAnnotationsParameters::EMPTY
+    };
+
+    // Request annotations.
+    let annotations = data_provider_proxy
+        .get_annotations(params)
+        .await
+        .map_err(|e| anyhow!("Could not get the annotations from the target: {:?}", e))?
+        .annotations
+        .ok_or(anyhow!("Received empty annotations."))?;
+
+    let writer = &mut write;
+    writeln!(writer, "{}", format_annotations(annotations))?;
+
+    Ok(())
+}
+
 #[ffx_plugin(DataProviderProxy = "core/appmgr:out:fuchsia.feedback.DataProvider")]
 pub async fn snapshot(data_provider_proxy: DataProviderProxy, cmd: SnapshotCommand) -> Result<()> {
     // Parse CLI args.
@@ -66,33 +139,39 @@ pub async fn snapshot(data_provider_proxy: DataProviderProxy, cmd: SnapshotComma
         }
     };
 
-    // Make file proxy and channel for snapshot
-    let (file_proxy, file_server_end) = fidl::endpoints::create_proxy::<FileMarker>()?;
+    if cmd.dump_annotations {
+        let writer = Box::new(std::io::stdout());
+        dump_annotations(writer.as_ref(), data_provider_proxy).await?;
+    } else {
+        // Make file proxy and channel for snapshot
+        let (file_proxy, file_server_end) = fidl::endpoints::create_proxy::<FileMarker>()?;
 
-    // Build parameters
-    let params = GetSnapshotParameters {
-        collection_timeout_per_data: Some(
-            i64::try_from(Duration::from_secs(5 * 60).as_nanos()).map_err(|e| anyhow!(e))?,
-        ),
-        response_channel: Some(file_server_end.into_channel()),
-        ..GetSnapshotParameters::EMPTY
-    };
+        // Build parameters
+        let params = GetSnapshotParameters {
+            collection_timeout_per_data: Some(
+                i64::try_from(Duration::from_secs(5 * 60).as_nanos()).map_err(|e| anyhow!(e))?,
+            ),
+            response_channel: Some(file_server_end.into_channel()),
+            ..GetSnapshotParameters::EMPTY
+        };
 
-    // Request snapshot & send channel.
-    let _snapshot = data_provider_proxy
-        .get_snapshot(params)
-        .await
-        .map_err(|e| anyhow!("Error: Could not get the snapshot from the target: {:?}", e))?;
+        // Request snapshot & send channel.
+        let _snapshot = data_provider_proxy
+            .get_snapshot(params)
+            .await
+            .map_err(|e| anyhow!("Error: Could not get the snapshot from the target: {:?}", e))?;
 
-    // Read archive
-    let data = read_data(&file_proxy).await?;
+        // Read archive
+        let data = read_data(&file_proxy).await?;
 
-    // Write archive to file.
-    let file_path = output_dir.join("snapshot.zip");
-    let mut file = fs::File::create(&file_path)?;
-    file.write_all(&data)?;
+        // Write archive to file.
+        let file_path = output_dir.join("snapshot.zip");
+        let mut file = fs::File::create(&file_path)?;
+        file.write_all(&data)?;
 
-    println!("Exported {}", file_path.to_string_lossy());
+        println!("Exported {}", file_path.to_string_lossy());
+    }
+
     Ok(())
 }
 
@@ -118,9 +197,10 @@ mod test {
     use {
         super::*,
         fidl::endpoints::ServerEnd,
-        fidl_fuchsia_feedback::{DataProviderRequest, Snapshot},
+        fidl_fuchsia_feedback::{Annotations, DataProviderRequest, Snapshot},
         fidl_fuchsia_io::{FileRequest, NodeAttributes},
         futures::TryStreamExt,
+        std::io::BufWriter,
     };
 
     fn serve_fake_file(server: ServerEnd<FileMarker>) {
@@ -161,7 +241,13 @@ mod test {
         .detach();
     }
 
-    fn setup_fake_data_provider_server() -> DataProviderProxy {
+    macro_rules! annotation {
+        ($val_1:expr, $val_2:expr) => {
+            Annotation { key: $val_1.to_string(), value: $val_2.to_string() }
+        };
+    }
+
+    fn setup_fake_data_provider_server(annotations: Annotations) -> DataProviderProxy {
         setup_fake_data_provider_proxy(move |req| match req {
             DataProviderRequest::GetSnapshot { params, responder } => {
                 let channel = params.response_channel.unwrap();
@@ -172,12 +258,17 @@ mod test {
                 let snapshot = Snapshot { ..Snapshot::EMPTY };
                 responder.send(snapshot).unwrap();
             }
+            DataProviderRequest::GetAnnotations { params, responder } => {
+                let _ignore = params;
+                responder.send(annotations.clone()).unwrap();
+            }
             _ => assert!(false),
         })
     }
 
     async fn run_snapshot_test(cmd: SnapshotCommand) {
-        let data_provider_proxy = setup_fake_data_provider_server();
+        let annotations = Annotations { ..Annotations::EMPTY };
+        let data_provider_proxy = setup_fake_data_provider_server(annotations);
 
         let result = snapshot(data_provider_proxy, cmd).await.unwrap();
         assert_eq!(result, ());
@@ -185,7 +276,33 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_error() -> Result<()> {
-        run_snapshot_test(SnapshotCommand { output_file: None }).await;
+        run_snapshot_test(SnapshotCommand { output_file: None, dump_annotations: false }).await;
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_annotations() -> Result<()> {
+        let annotation_vec: Vec<Annotation> = vec![
+            annotation!("build.board", "x64"),
+            annotation!("hardware.board.name", "default-board"),
+            annotation!("build.is_debug", "false"),
+        ];
+        let annotations = Annotations { annotations: Some(annotation_vec), ..Annotations::EMPTY };
+        let data_provider_proxy = setup_fake_data_provider_server(annotations);
+
+        let mut output = String::new();
+        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        dump_annotations(writer, data_provider_proxy).await?;
+
+        assert_eq!(
+            output,
+            "build\n\
+        \x20   board: x64\n\
+        \x20   is_debug: false\n\
+        hardware\n\
+        \x20   board\n\
+        \x20       name: default-board\n\n"
+        );
         Ok(())
     }
 }
