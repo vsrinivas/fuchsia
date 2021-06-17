@@ -401,6 +401,12 @@ zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent, device
 }
 
 __EXPORT
+zx_status_t device_add_composite(zx_device_t* dev, const char* name,
+                                 const composite_device_desc_t* comp_desc) {
+  return ZX_OK;
+}
+
+__EXPORT
 void device_async_remove(zx_device_t* device) {
   if (!fake_ddk::Bind::Instance()) {
     return;
