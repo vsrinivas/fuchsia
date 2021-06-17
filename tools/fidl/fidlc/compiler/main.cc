@@ -26,6 +26,7 @@
 #include <fidl/json_schema.h>
 #include <fidl/lexer.h>
 #include <fidl/names.h>
+#include <fidl/new_formatter.h>
 #include <fidl/new_syntax_converter.h>
 #include <fidl/ordinals.h>
 #include <fidl/parser.h>
@@ -547,11 +548,12 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
         fidl::flat::Libraries all_converted_libraries;
         const fidl::flat::Library* converted_final_library = nullptr;
         auto typespace = fidl::flat::Typespace::RootTypes(reporter);
-        auto flags = experimental_flags;
-        if (!(flags.IsFlagEnabled(fidl::ExperimentalFlags::Flag::kAllowNewSyntax) ||
-              flags.IsFlagEnabled(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly))) {
-          flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
-        }
+        // we can use a new set of experimental flags, because currently the only
+        // experimental flags defined are ones related to the syntax migration (i.e.
+        // we don't need to carry over any separate flags)
+        fidl::ExperimentalFlags flags;
+        flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+
         // this is mostly copy and pasted from above, to best replicate how it will be
         // after conversion. we convert and recompile everything, but only write out
         // the files for the last library.
@@ -566,23 +568,31 @@ int compile(fidl::Reporter* reporter, fidl::flat::Typespace* typespace, std::str
                                                     fidl::ordinals::GetGeneratedOrdinal64, flags);
           for (const auto& source_file : source_manager.sources()) {
             auto ast = ParseIntoRaw(*source_file, reporter, experimental_flags);
+            auto out_path = std::string(source_file->filename()) + ".new";
 
             fidl::conv::ConvertingTreeVisitor visitor =
                 fidl::conv::ConvertingTreeVisitor(fidl::utils::Syntax::kNew, compiled_libraries[i]);
             visitor.OnFile(ast);
-            std::ostringstream o;
-            o << visitor.converted_output();
-            auto converted_sf = std::make_unique<fidl::SourceFile>(
-                std::string(source_file->filename()) + ".new", o.str());
-            // TODO(azaslavsky): also format and lint the converted file.
-            converted_source_managers->back().AddSourceFile(std::move(converted_sf));
+            std::ostringstream converted_stream;
+            converted_stream << visitor.converted_output();
+            auto converted_sf = std::make_unique<fidl::SourceFile>(out_path, converted_stream.str());
+            auto formatter = fidl::fmt::NewFormatter(100, reporter);
+            std::optional<std::string> formatted = formatter.Format(*converted_sf, flags);
+            if (!formatted.has_value()) {
+              std::cout << converted_sf->data() << std::endl;
+              return 1;
+            }
+            auto formatted_converted_sf =
+                std::make_unique<fidl::SourceFile>(out_path, formatted.value());
+            converted_source_managers->back().AddSourceFile(std::move(formatted_converted_sf));
 
             if (i == source_managers.size() - 1) {
               size_t filename_start = source_file->filename().find_last_of('/');
               if (filename_start == std::string::npos)
                 filename_start = 0;
               auto filename = std::string(source_file->filename().substr(filename_start));
-              Write(o, file_path + filename + ".new");
+              std::ostringstream formatted_stream(formatted.value());
+              Write(formatted_stream, file_path + filename + ".new");
             }
             if (!Parse(*converted_source_managers->back().sources().back(), reporter, library.get(),
                        flags)) {

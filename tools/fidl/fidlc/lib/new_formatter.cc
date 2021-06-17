@@ -26,7 +26,7 @@ std::unique_ptr<raw::File> NewFormatter::Parse(
   return parser.Parse();
 }
 
-std::string NewFormatter::Print(std::unique_ptr<raw::File> const& ast,
+std::string NewFormatter::Print(const std::unique_ptr<raw::File>& ast,
                                 size_t original_file_size) const {
   std::string out;
   auto visitor = SpanSequenceTreeVisitor(ast->span().source_file().data());
