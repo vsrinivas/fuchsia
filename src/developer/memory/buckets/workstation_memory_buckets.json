@@ -1,0 +1,134 @@
+[
+    {
+        "event_code": 1,
+        "name": "ZBI Buffer",
+        "process": "",
+        "vmo": "uncompressed-bootfs"
+    },
+    {
+        "event_code": 2,
+        "name": "Graphics",
+        "process": "",
+        "vmo": "magma_create_buffer|Mali .*|Magma.*|ImagePipe2Surface.*|GFXBufferCollection.*|ScenicImageMemory|Display.*|CompactImage.*|GFX Device Memory.*|FlatlandImageMemory.*"
+    },
+    {
+        "event_code": 26,
+        "name": "ContiguousPoolUnallocated",
+        "process": "driver_host:sys",
+        "vmo": "SysmemContiguousPool"
+    },
+    {
+        "event_code": 21,
+        "name": "Fshost",
+        "process": "fshost\\.cm",
+        "vmo": ""
+    },
+    {
+        "event_code": 4,
+        "name": "Minfs",
+        "process": "/pkg/bin/minfs",
+        "vmo": ""
+    },
+    {
+        "event_code": 29,
+        "name": "BlobfsInactive",
+        "process": "/pkg/bin/blobfs",
+        "vmo": "inactive-blob-.*"
+    },
+    {
+        "event_code": 5,
+        "name": "Blobfs",
+        "process": "/pkg/bin/blobfs",
+        "vmo": ""
+    },
+    {
+        "event_code": 28,
+        "name": "FlutterApps",
+        "process": "io\\.flutter\\..*",
+        "vmo": "dart.*"
+    },
+    {
+        "event_code": 20,
+        "name": "Flutter",
+        "process": "io\\.flutter\\..*",
+        "vmo": ""
+    },
+    {
+        "event_code": 7,
+        "name": "Web",
+        "process": "web_engine_exe:.*",
+        "vmo": ""
+    },
+    {
+        "event_code": 9,
+        "name": "Scenic",
+        "process": "scenic\\.cmx",
+        "vmo": ""
+    },
+    {
+        "event_code": 11,
+        "name": "Netstack",
+        "process": "netstack\\.cmx",
+        "vmo": ""
+    },
+    {
+        "event_code": 13,
+        "name": "Pkgfs",
+        "process": "pkgfs",
+        "vmo": ""
+    },
+    {
+        "event_code": 22,
+        "name": "Archivist",
+        "process": "archivist\\.cm",
+        "vmo": ""
+    },
+    {
+        "event_code": 23,
+        "name": "Cobalt",
+        "process": "cobalt\\.cmx",
+        "vmo": ""
+    },
+    {
+        "event_code": 24,
+        "name": "Audio",
+        "process": "audio_core\\.cmx",
+        "vmo": ""
+    },
+    {
+        "event_code": 39,
+        "name": "AppManager",
+        "process": "appmgr\\.cm",
+        "vmo": ""
+    },
+    {
+        "event_code": 40,
+        "name": "ComponentManager",
+        "process": "bin/component_manager",
+        "vmo": ""
+    },
+    {
+        "event_code": 42,
+        "name": "Resolvers",
+        "process": ".*-resolver\\.cm.*",
+        "vmo": ""
+    },
+    {
+        "event_code": 46,
+        "name": "Feedback",
+        "process": "feedback_data\\.cmx",
+        "vmo": ""
+    },
+    {
+        "event_code": 47,
+        "name": "CompositeDrivers",
+        "process": "driver_host:composite-device",
+        "vmo": ""
+    },
+    {
+        "event_code": 48,
+        "name": "OtherDrivers",
+        "process": "driver_host:.*",
+        "vmo": ""
+    }
+]
