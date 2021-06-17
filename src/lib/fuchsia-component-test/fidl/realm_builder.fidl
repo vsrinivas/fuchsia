@@ -59,6 +59,18 @@ enum RealmBuilderError : uint32 {
 
     /// There is no component in this realm with the given moniker.
     MONIKER_NOT_FOUND = 13;
+
+    /// The package directory has already been set for this connection.
+    PKG_DIR_ALREADY_SET = 14;
+
+    /// Unable to load component from package, the package dir is not set.
+    PKG_DIR_NOT_SET = 15;
+
+    /// Failed to load component from package due to IO error.
+    PKG_DIR_IO_ERROR = 16;
+
+    /// Failed to load the component decl.
+    FAILED_TO_LOAD_COMPONENT_DECL = 17;
 };
 
 const uint32 MAX_MOCK_ID_LENGTH = 1000;
@@ -136,6 +148,15 @@ struct AboveRoot {
 /// to produce a URL which can be used to create the component.
 [Discoverable]
 protocol FrameworkIntermediary {
+    /// Initializes this connection to the framework intermediary. This function
+    /// should be called at the stat of every new FrameworkIntermediary
+    /// connection, with the `pkg_dir_handle` argument providing a connection
+    /// to the test's package with rx* permissions. Components that are added
+    /// with a relative URL are loaded from this directory handle. If this call
+    /// is not made, any call to SetComponent with a relative URL will return an
+    /// error.
+    Init(fuchsia.io.Directory pkg_dir_handle) -> () error RealmBuilderError;
+
     /// Sets the component to the provided component source. If the source is
     /// a `Component::decl` then a new node is added to the internal tree
     /// structure maintained for this connection. If the source is a

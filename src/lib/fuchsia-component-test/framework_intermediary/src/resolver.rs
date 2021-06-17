@@ -4,7 +4,9 @@
 
 use {
     anyhow::{Context, Error},
-    cm_fidl_validator, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
+    cm_fidl_validator,
+    fidl::endpoints::{create_endpoints, ServerEnd},
+    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync,
     futures::{lock::Mutex, TryStreamExt},
     log::*,
@@ -13,9 +15,14 @@ use {
 
 const RESOLVER_SCHEME: &'static str = "realm-builder";
 
+struct ResolveableComponent {
+    decl: fsys::ComponentDecl,
+    package_dir: Option<fio::DirectoryProxy>,
+}
+
 pub struct Registry {
     next_unique_component_id: Mutex<u64>,
-    component_decls: Mutex<HashMap<String, fsys::ComponentDecl>>,
+    component_decls: Mutex<HashMap<String, ResolveableComponent>>,
 }
 
 impl Registry {
@@ -29,6 +36,7 @@ impl Registry {
     pub async fn validate_and_register(
         self: &Arc<Self>,
         decl: fsys::ComponentDecl,
+        package_dir: Option<fio::DirectoryProxy>,
     ) -> Result<String, cm_fidl_validator::ErrorList> {
         cm_fidl_validator::validate(&decl)?;
 
@@ -37,7 +45,7 @@ impl Registry {
 
         let url = format!("{}://{}", RESOLVER_SCHEME, *next_unique_component_id_guard);
         *next_unique_component_id_guard += 1;
-        component_decls_guard.insert(url.clone(), decl);
+        component_decls_guard.insert(url.clone(), ResolveableComponent { decl, package_dir });
         Ok(url)
     }
 
@@ -58,11 +66,28 @@ impl Registry {
         while let Some(req) = stream.try_next().await? {
             match req {
                 fsys::ComponentResolverRequest::Resolve { component_url, responder } => {
-                    if let Some(decl) = self.component_decls.lock().await.get(&component_url) {
+                    if let Some(ResolveableComponent { decl, package_dir }) =
+                        self.component_decls.lock().await.get(&component_url)
+                    {
+                        let package = if let Some(p) = package_dir {
+                            let (client_end, server_end) =
+                                create_endpoints::<fio::DirectoryMarker>()?;
+                            p.clone(
+                                fio::CLONE_FLAG_SAME_RIGHTS,
+                                ServerEnd::new(server_end.into_channel()),
+                            )?;
+                            Some(fsys::Package {
+                                package_url: Some(component_url.clone()),
+                                package_dir: Some(client_end),
+                                ..fsys::Package::EMPTY
+                            })
+                        } else {
+                            None
+                        };
                         responder.send(&mut Ok(fsys::Component {
                             resolved_url: Some(component_url),
                             decl: Some(encode(decl.clone())?),
-                            package: None,
+                            package,
                             ..fsys::Component::EMPTY
                         }))?;
                     } else {

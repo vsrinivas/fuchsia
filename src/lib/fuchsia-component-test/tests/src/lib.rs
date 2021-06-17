@@ -4,25 +4,26 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
+    fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_data as fdata, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
-    fuchsia_component_test::{builder::*, mock},
+    fuchsia_component_test::{builder::*, mock, Moniker},
     futures::{channel::oneshot, lock::Mutex, StreamExt, TryStreamExt},
-    log::*,
     std::sync::Arc,
 };
 
 const V1_ECHO_CLIENT_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/echo_client.cmx";
-const V2_ECHO_CLIENT_URL: &'static str =
+const V2_ECHO_CLIENT_ABSOLUTE_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/echo_client.cm";
+const V2_ECHO_CLIENT_RELATIVE_URL: &'static str = "#meta/echo_client.cm";
 
 const V1_ECHO_SERVER_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/echo_server.cmx";
-const V2_ECHO_SERVER_URL: &'static str =
+const V2_ECHO_SERVER_ABSOLUTE_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/echo_server.cm";
+const V2_ECHO_SERVER_RELATIVE_URL: &'static str = "#meta/echo_server.cm";
 
-const ECHO_STR: &'static str = "Hippos rule!";
+const DEFAULT_ECHO_STR: &'static str = "Hippos rule!";
 
 #[fasync::run_singlethreaded(test)]
 async fn protocol_with_uncle_test() -> Result<(), Error> {
@@ -33,12 +34,15 @@ async fn protocol_with_uncle_test() -> Result<(), Error> {
     builder
         .add_component(
             "echo-server",
-            ComponentSource::Mock(mock::Mock::new(move |mock_handles: mock::MockHandles| {
-                Box::pin(echo_server_mock(sender.clone(), mock_handles))
-            })),
+            ComponentSource::mock(move |mock_handles: mock::MockHandles| {
+                Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), mock_handles))
+            }),
         )
         .await?
-        .add_eager_component("parent/echo-client", ComponentSource::url(V2_ECHO_CLIENT_URL))
+        .add_eager_component(
+            "parent/echo-client",
+            ComponentSource::url(V2_ECHO_CLIENT_ABSOLUTE_URL),
+        )
         .await?
         .add_route(CapabilityRoute {
             capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
@@ -55,7 +59,7 @@ async fn protocol_with_uncle_test() -> Result<(), Error> {
         })?;
     let _child_instance = builder.build().create().await?;
 
-    receive_echo_server_called.await??;
+    receive_echo_server_called.await?;
     Ok(())
 }
 
@@ -66,13 +70,13 @@ async fn protocol_with_siblings_test() -> Result<(), Error> {
 
     let mut builder = RealmBuilder::new().await?;
     builder
-        .add_eager_component("echo-client", ComponentSource::url(V2_ECHO_CLIENT_URL))
+        .add_eager_component("echo-client", ComponentSource::url(V2_ECHO_CLIENT_ABSOLUTE_URL))
         .await?
         .add_component(
             "echo-server",
-            ComponentSource::Mock(mock::Mock::new(move |mock_handles: mock::MockHandles| {
-                Box::pin(echo_server_mock(sender.clone(), mock_handles))
-            })),
+            ComponentSource::mock(move |mock_handles: mock::MockHandles| {
+                Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), mock_handles))
+            }),
         )
         .await?
         .add_route(CapabilityRoute {
@@ -90,7 +94,7 @@ async fn protocol_with_siblings_test() -> Result<(), Error> {
         })?;
     let _child_instance = builder.build().create().await?;
 
-    receive_echo_server_called.await??;
+    receive_echo_server_called.await?;
     Ok(())
 }
 
@@ -99,15 +103,18 @@ async fn protocol_with_cousins_test() -> Result<(), Error> {
     let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
     let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
 
-    let mut builder = RealmBuilder::new().await.unwrap();
+    let mut builder = RealmBuilder::new().await?;
     builder
-        .add_eager_component("parent-1/echo-client", ComponentSource::url(V2_ECHO_CLIENT_URL))
+        .add_eager_component(
+            "parent-1/echo-client",
+            ComponentSource::url(V2_ECHO_CLIENT_ABSOLUTE_URL),
+        )
         .await?
         .add_component(
             "parent-2/echo-server",
-            ComponentSource::Mock(mock::Mock::new(move |mock_handles: mock::MockHandles| {
-                Box::pin(echo_server_mock(sender.clone(), mock_handles))
-            })),
+            ComponentSource::mock(move |mock_handles: mock::MockHandles| {
+                Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), mock_handles))
+            }),
         )
         .await?
         .add_route(CapabilityRoute {
@@ -123,9 +130,9 @@ async fn protocol_with_cousins_test() -> Result<(), Error> {
                 RouteEndpoint::component("parent-2/echo-server"),
             ],
         })?;
-    let _child_instance = builder.build().create().await.unwrap();
+    let _child_instance = builder.build().create().await?;
 
-    receive_echo_server_called.await.unwrap().unwrap();
+    receive_echo_server_called.await?;
     Ok(())
 }
 
@@ -138,12 +145,15 @@ async fn mock_component_with_a_child() -> Result<(), Error> {
     builder
         .add_component(
             "echo-server",
-            ComponentSource::Mock(mock::Mock::new(move |mock_handles: mock::MockHandles| {
-                Box::pin(echo_server_mock(sender.clone(), mock_handles))
-            })),
+            ComponentSource::mock(move |mock_handles: mock::MockHandles| {
+                Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), mock_handles))
+            }),
         )
         .await?
-        .add_eager_component("echo-server/echo-client", ComponentSource::url(V2_ECHO_CLIENT_URL))
+        .add_eager_component(
+            "echo-server/echo-client",
+            ComponentSource::url(V2_ECHO_CLIENT_ABSOLUTE_URL),
+        )
         .await?
         .add_route(CapabilityRoute {
             capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
@@ -160,7 +170,72 @@ async fn mock_component_with_a_child() -> Result<(), Error> {
         })?;
     let _child_instance = builder.build().create().await?;
 
-    receive_echo_server_called.await??;
+    receive_echo_server_called.await?;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn relative_echo_realm() -> Result<(), Error> {
+    let mut builder = RealmBuilder::new().await?;
+    builder
+        .add_component(Moniker::root(), ComponentSource::url("#meta/echo_realm.cm"))
+        .await?
+        // This route will result in the imported echo_realm exposing this protocol, whereas before
+        // it only offered it to echo_client
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+            source: RouteEndpoint::component("echo_server"),
+            targets: vec![RouteEndpoint::above_root()],
+        })?;
+    let realm_instance = builder.build().create().await?;
+
+    let echo_proxy =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fecho::EchoMarker>()?;
+    assert_eq!(Some("hello".to_string()), echo_proxy.echo_string(Some("hello")).await?);
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn altered_echo_client_args() -> Result<(), Error> {
+    let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
+    let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
+
+    let mut builder = RealmBuilder::new().await?;
+    builder
+        .add_component(Moniker::root(), ComponentSource::url("#meta/echo_realm.cm"))
+        .await?
+        .override_component(
+            "echo_server",
+            ComponentSource::mock(move |mock_handles: mock::MockHandles| {
+                Box::pin(echo_server_mock("Whales rule!", sender.clone(), mock_handles))
+            }),
+        )
+        .await?
+        // echo_realm already has the offer we need, but we still need to add this route so that
+        // the proper exposes are added to our mock component
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+            source: RouteEndpoint::component("echo_server"),
+            targets: vec![RouteEndpoint::component("echo_client")],
+        })?;
+
+    // Change the program.args section of the manifest, to alter the string it will try to echo
+    let mut realm = builder.build();
+    let mut echo_client_decl = realm.get_decl(&"echo_client".into()).await?;
+    for entry in echo_client_decl.program.as_mut().unwrap().info.entries.as_mut().unwrap() {
+        if entry.key.as_str() == "args" {
+            entry.value = Some(Box::new(fdata::DictionaryValue::StrVec(vec![
+                "Whales".to_string(),
+                "rule!".to_string(),
+            ])));
+        }
+    }
+    realm.set_component(&"echo_client".into(), echo_client_decl).await?;
+    let _realm_instance = realm.create().await?;
+
+    receive_echo_server_called.await?;
+
     Ok(())
 }
 
@@ -173,7 +248,8 @@ async fn echo_clients() -> Result<(), Error> {
     let sender = Arc::new(Mutex::new(Some(send_echo_client_results)));
     let client_sources = vec![
         ComponentSource::legacy_url(V1_ECHO_CLIENT_URL),
-        ComponentSource::url(V2_ECHO_CLIENT_URL),
+        ComponentSource::url(V2_ECHO_CLIENT_ABSOLUTE_URL),
+        ComponentSource::url(V2_ECHO_CLIENT_RELATIVE_URL),
         ComponentSource::mock(move |h| Box::pin(echo_client_mock(sender.clone(), h))),
     ];
 
@@ -185,7 +261,9 @@ async fn echo_clients() -> Result<(), Error> {
         builder
             .add_component(
                 "echo-server",
-                ComponentSource::mock(move |h| Box::pin(echo_server_mock(sender.clone(), h))),
+                ComponentSource::mock(move |h| {
+                    Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), h))
+                }),
             )
             .await?
             .add_eager_component("echo-client", client_source)
@@ -206,10 +284,10 @@ async fn echo_clients() -> Result<(), Error> {
 
         let _child_instance = builder.build().create().await?;
 
-        receive_echo_server_called.await??;
+        receive_echo_server_called.await?;
     }
 
-    receive_echo_client_results.await??;
+    receive_echo_client_results.await?;
     Ok(())
 }
 
@@ -223,12 +301,14 @@ async fn echo_servers() -> Result<(), Error> {
 
     let server_sources = vec![
         ComponentSource::legacy_url(V1_ECHO_SERVER_URL),
-        ComponentSource::url(V2_ECHO_SERVER_URL),
-        ComponentSource::mock(move |h| Box::pin(echo_server_mock(sender.clone(), h))),
+        ComponentSource::url(V2_ECHO_SERVER_ABSOLUTE_URL),
+        ComponentSource::url(V2_ECHO_SERVER_RELATIVE_URL),
+        ComponentSource::mock(move |h| {
+            Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), h))
+        }),
     ];
 
     for server_source in server_sources {
-        info!("running test for server {:?}", server_source);
         let (send_echo_client_results, receive_echo_client_results) = oneshot::channel();
         let sender = Arc::new(Mutex::new(Some(send_echo_client_results)));
 
@@ -257,19 +337,19 @@ async fn echo_servers() -> Result<(), Error> {
 
         let _child_instance = builder.build().create().await?;
 
-        receive_echo_client_results.await??;
-        info!("success!");
+        receive_echo_client_results.await?;
     }
 
-    receive_echo_server_called.await??;
+    receive_echo_server_called.await?;
     Ok(())
 }
 
 // A mock echo server implementation, that will crash if it doesn't receive anything other than the
-// contents of `ECHO_STR`. It takes and sends a message over `send_echo_server_called` once it
-// receives one echo request.
+// contents of `expected_echo_str`. It takes and sends a message over `send_echo_server_called`
+// once it receives one echo request.
 async fn echo_server_mock(
-    send_echo_server_called: Arc<Mutex<Option<oneshot::Sender<Result<(), Error>>>>>,
+    expected_echo_string: &'static str,
+    send_echo_server_called: Arc<Mutex<Option<oneshot::Sender<()>>>>,
     mock_handles: mock::MockHandles,
 ) -> Result<(), Error> {
     let mut fs = fserver::ServiceFs::new();
@@ -280,14 +360,14 @@ async fn echo_server_mock(
             while let Some(fecho::EchoRequest::EchoString { value, responder }) =
                 stream.try_next().await.expect("failed to serve echo service")
             {
-                assert_eq!(Some(ECHO_STR.to_string()), value);
+                assert_eq!(Some(expected_echo_string.to_string()), value);
                 responder.send(value.as_ref().map(|s| &**s)).expect("failed to send echo response");
                 send_echo_server_called
                     .lock()
                     .await
                     .take()
                     .unwrap()
-                    .send(Ok(()))
+                    .send(())
                     .expect("failed to send results");
             }
         }));
@@ -298,19 +378,13 @@ async fn echo_server_mock(
 }
 
 async fn echo_client_mock(
-    send_echo_client_results: Arc<Mutex<Option<oneshot::Sender<Result<(), Error>>>>>,
+    send_echo_client_results: Arc<Mutex<Option<oneshot::Sender<()>>>>,
     mock_handles: mock::MockHandles,
 ) -> Result<(), Error> {
     let echo = mock_handles.connect_to_service::<fecho::EchoMarker>()?;
-    let out = echo.echo_string(Some(ECHO_STR)).await?;
-    send_echo_client_results
-        .lock()
-        .await
-        .take()
-        .unwrap()
-        .send(Ok(()))
-        .expect("failed to send results");
-    if Some(ECHO_STR.to_string()) != out {
+    let out = echo.echo_string(Some(DEFAULT_ECHO_STR)).await?;
+    send_echo_client_results.lock().await.take().unwrap().send(()).expect("failed to send results");
+    if Some(DEFAULT_ECHO_STR.to_string()) != out {
         return Err(format_err!("unexpected echo result: {:?}", out));
     }
     Ok(())

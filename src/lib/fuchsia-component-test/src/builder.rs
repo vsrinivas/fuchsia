@@ -322,6 +322,35 @@ impl RealmBuilder {
         Ok(self)
     }
 
+    /// Identical to `add_component`, but overrides an existing component instead of adding a new
+    /// one.
+    pub async fn override_component<M>(
+        &mut self,
+        moniker: M,
+        source: ComponentSource,
+    ) -> Result<&mut Self, Error>
+    where
+        M: Into<Moniker>,
+    {
+        let moniker = moniker.into();
+        if !self.realm.contains(&moniker).await? {
+            return Err(BuilderError::ComponentDoesNotExists(moniker).into());
+        }
+
+        match source {
+            ComponentSource::Url(url) => {
+                self.realm.set_component_url(&moniker, url).await?;
+            }
+            ComponentSource::LegacyUrl(url) => {
+                self.realm.set_component_legacy_url(&moniker, url).await?;
+            }
+            ComponentSource::Mock(mock) => {
+                self.realm.add_mocked_component(moniker, mock).await?;
+            }
+        }
+        Ok(self)
+    }
+
     /// Adds a protocol capability route between the `source` endpoint and
     /// the provided `targets`.
     pub fn add_protocol_route<S: DiscoverableService>(

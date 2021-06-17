@@ -6,7 +6,7 @@ use {
     crate::error::*,
     anyhow::{format_err, Context as _},
     cm_rust::{self, FidlIntoNative, NativeIntoFidl},
-    fidl::endpoints::{self, DiscoverableService, ServerEnd},
+    fidl::endpoints::{self, ClientEnd, DiscoverableService, Proxy, ServerEnd},
     fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_realm_builder as ffrb,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client as fclient,
@@ -178,6 +178,16 @@ impl Realm {
             ffrb::FrameworkIntermediaryMarker,
         >(&exposed_dir_proxy)
         .map_err(RealmError::ConnectToFrameworkIntermediaryService)?;
+
+        let pkg_dir_proxy = io_util::open_directory_in_namespace(
+            "/pkg",
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
+        )
+        .map_err(Error::FailedToOpenPkgDir)?;
+        framework_intermediary_proxy
+            .init(ClientEnd::from(pkg_dir_proxy.into_channel().unwrap().into_zx_channel()))
+            .await?
+            .map_err(Error::FailedToSetPkgDir)?;
 
         Realm::new_with_framework_intermediary_proxy(framework_intermediary_proxy)
     }

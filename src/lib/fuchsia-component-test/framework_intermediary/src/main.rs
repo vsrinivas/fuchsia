@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 
 use {
+    anyhow,
     cm_rust::{FidlIntoNative, NativeIntoFidl},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_realm_builder as ffrb, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync,
+    fidl_fuchsia_data as fdata,
+    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_realm_builder as ffrb, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_syslog as syslog,
     futures::{future::BoxFuture, FutureExt, StreamExt, TryStreamExt},
+    io_util,
     log::*,
     std::{
         collections::HashMap,
@@ -18,6 +21,7 @@ use {
         sync::Arc,
     },
     thiserror::{self, Error},
+    url::Url,
 };
 
 mod resolver;
@@ -60,10 +64,24 @@ async fn handle_framework_intermediary_stream(
     runner: Arc<runner::Runner>,
 ) -> Result<(), anyhow::Error> {
     let mut realm_tree = RealmNode::default();
+    let mut test_pkg_dir = None;
     while let Some(req) = stream.try_next().await? {
         match req {
+            ffrb::FrameworkIntermediaryRequest::Init { pkg_dir_handle, responder } => {
+                if test_pkg_dir.is_some() {
+                    responder.send(&mut Err(Error::PkgDirAlreadySet.log_and_convert()))?;
+                } else {
+                    test_pkg_dir = Some(
+                        pkg_dir_handle.into_proxy().expect("failed to convert ClientEnd to proxy"),
+                    );
+                    responder.send(&mut Ok(()))?;
+                }
+            }
             ffrb::FrameworkIntermediaryRequest::SetComponent { moniker, component, responder } => {
-                match realm_tree.set_component(moniker.clone().into(), component.clone()) {
+                match realm_tree
+                    .set_component(moniker.clone().into(), component.clone(), &test_pkg_dir)
+                    .await
+                {
                     Ok(()) => responder.send(&mut Ok(()))?,
                     Err(e) => {
                         warn!(
@@ -105,7 +123,11 @@ async fn handle_framework_intermediary_stream(
                 responder.send(realm_tree.contains(moniker.clone().into()))?;
             }
             ffrb::FrameworkIntermediaryRequest::Commit { responder } => {
-                match realm_tree.clone().commit(registry.clone(), vec![]).await {
+                match realm_tree
+                    .clone()
+                    .commit(registry.clone(), vec![], test_pkg_dir.clone())
+                    .await
+                {
                     Ok(url) => responder.send(&mut Ok(url))?,
                     Err(e) => {
                         warn!("error occurred when committing");
@@ -165,6 +187,18 @@ enum Error {
 
     #[error("component with moniker {0} does not exist")]
     MonikerNotFound(Moniker),
+
+    #[error("the package directory has already been set for this connection")]
+    PkgDirAlreadySet,
+
+    #[error("unable to load component from package, the package dir is not set")]
+    PkgDirNotSet,
+
+    #[error("failed to load component from package due to IO error")]
+    PkgDirIoError(io_util::node::OpenError),
+
+    #[error("failed to load component decl")]
+    FailedToLoadComponentDecl(anyhow::Error),
 }
 
 impl Error {
@@ -187,14 +221,21 @@ impl Error {
             Error::UnableToExpose(_) => ffrb::RealmBuilderError::UnableToExpose,
             Error::StorageSourceInvalid => ffrb::RealmBuilderError::StorageSourceInvalid,
             Error::MonikerNotFound(_) => ffrb::RealmBuilderError::MonikerNotFound,
+            Error::PkgDirAlreadySet => ffrb::RealmBuilderError::PkgDirAlreadySet,
+            Error::PkgDirNotSet => ffrb::RealmBuilderError::PkgDirNotSet,
+            Error::PkgDirIoError(_) => ffrb::RealmBuilderError::PkgDirIoError,
+            Error::FailedToLoadComponentDecl(_) => {
+                ffrb::RealmBuilderError::FailedToLoadComponentDecl
+            }
         }
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 struct RealmNode {
     decl: cm_rust::ComponentDecl,
     eager: bool,
+    environment: Option<String>,
 
     /// Children stored in this HashMap can be mutated. Children stored in `decl.children` can not.
     /// Any children stored in `mutable_children` do NOT have a corresponding `ChildDecl` stored in
@@ -214,6 +255,13 @@ enum GetBehavior {
 impl RealmNode {
     fn child<'a>(&'a mut self, child_name: &String) -> Result<&'a mut Self, Error> {
         self.mutable_children.get_mut(child_name).ok_or(Error::NoSuchChild(child_name.clone()))
+    }
+
+    fn child_create_if_missing<'a>(&'a mut self, child_name: &String) -> &'a mut Self {
+        if !self.mutable_children.contains_key(child_name) {
+            self.mutable_children.insert(child_name.clone(), RealmNode::default());
+        }
+        self.child(child_name).unwrap()
     }
 
     /// Calls `cm_fidl_validator` on this node's decl, filtering out any errors caused by
@@ -247,18 +295,24 @@ impl RealmNode {
             if current_node.decl.children.iter().any(|c| c.name == part.to_string()) {
                 return Err(Error::NodeBehindChildDecl(moniker.clone()));
             }
-            if !current_node.mutable_children.contains_key(part)
-                && behavior == GetBehavior::CreateIfMissing
-            {
-                current_node.mutable_children.insert(part.clone(), RealmNode::default());
+            current_node = match behavior {
+                GetBehavior::CreateIfMissing => current_node.child_create_if_missing(part),
+                GetBehavior::ErrorIfMissing => current_node.child(part)?,
             }
-            current_node = current_node.child(part)?;
         }
         Ok(current_node)
     }
 
     /// Returns true if the component exists in this realm.
     fn contains(&mut self, moniker: Moniker) -> bool {
+        // The root node is an edge case. If the client hasn't set or modified the root
+        // component in any way it should expect the intermediary to state that the root
+        // component doesn't exist yet, but in this implementation the root node _always_
+        // exists. If we're checking for the root component and we're equal to the default
+        // RealmNode (aka there are no children and our decl is empty), then we return false.
+        if moniker.is_root() && self == &mut RealmNode::default() {
+            return false;
+        }
         if let Ok(_) = self.get_node_mut(&moniker, GetBehavior::ErrorIfMissing) {
             return true;
         }
@@ -287,7 +341,12 @@ impl RealmNode {
     /// moniker. If any parents for the component do not exist then they are
     /// added. If a different component already exists under this moniker,
     /// then it is replaced.
-    fn set_component(&mut self, moniker: Moniker, component: ffrb::Component) -> Result<(), Error> {
+    async fn set_component(
+        &mut self,
+        moniker: Moniker,
+        component: ffrb::Component,
+        test_pkg_dir: &Option<DirectoryProxy>,
+    ) -> Result<(), Error> {
         match component {
             ffrb::Component::Decl(decl) => {
                 if let Some(parent_moniker) = moniker.parent() {
@@ -307,6 +366,15 @@ impl RealmNode {
                 node.validate(&moniker)?;
             }
             ffrb::Component::Url(url) => {
+                if is_relative_url(&url) {
+                    return self
+                        .load_decl_from_pkg(
+                            moniker,
+                            url,
+                            test_pkg_dir.as_ref().cloned().ok_or(Error::PkgDirNotSet)?,
+                        )
+                        .await;
+                }
                 if moniker.is_root() {
                     return Err(Error::RootCannotBeSetToUrl);
                 }
@@ -358,6 +426,66 @@ impl RealmNode {
                 node.validate(&moniker)?;
             }
             _ => return Err(Error::BadFidl),
+        }
+        Ok(())
+    }
+
+    /// Loads the file referenced by the relative url `url` from `test_pkg_dir`, and sets it as the
+    /// decl for the component referred to by `moniker`. Also loads in the declarations for any
+    /// additional relative URLs in the new decl in the same manner, and so forth until all
+    /// relative URLs have been processed.
+    async fn load_decl_from_pkg(
+        &mut self,
+        moniker: Moniker,
+        url: String,
+        test_pkg_dir: DirectoryProxy,
+    ) -> Result<(), Error> {
+        // This can't be written recursively, because we need async here and the resulting
+        // BoxFuture would have to hold on to `&mut self`, which isn't possible because the
+        // reference is not `'static`.
+        //
+        // This is also written somewhat inefficiently, because holding a reference to the current
+        // working node in the stack would result to multiple mutable references from `&mut self`
+        // being held at the same time, which is disallowed. As a result, this re-fetches the
+        // current working node from the root of the tree on each iteration.
+        let mut relative_urls_to_process = vec![(moniker, url)];
+        while let Some((current_moniker, relative_url)) = relative_urls_to_process.pop() {
+            let current_node = self.get_node_mut(&current_moniker, GetBehavior::CreateIfMissing)?;
+
+            // Load the decl and validate it
+            let path = relative_url.trim_start_matches('#');
+            let file_proxy =
+                io_util::directory::open_file(&test_pkg_dir, &path, io_util::OPEN_RIGHT_READABLE)
+                    .await
+                    .map_err(Error::PkgDirIoError)?;
+            let fidl_decl = io_util::read_file_fidl::<fsys::ComponentDecl>(&file_proxy)
+                .await
+                .map_err(Error::FailedToLoadComponentDecl)?;
+            current_node.decl = fidl_decl.fidl_into_native();
+            current_node.validate(&current_moniker)?;
+
+            // Look through the new decl's children. If there are any relative URLs, we need to
+            // handle those too.
+            let mut child_decls_to_keep = vec![];
+            let mut child_decls_to_load = vec![];
+            for child in current_node.decl.children.drain(..) {
+                if is_relative_url(&child.url) {
+                    child_decls_to_load.push(child);
+                } else {
+                    child_decls_to_keep.push(child);
+                }
+            }
+            current_node.decl.children = child_decls_to_keep;
+
+            for child in child_decls_to_load {
+                let child_node = current_node.child_create_if_missing(&child.name);
+                let child_moniker = current_moniker.child(child.name.clone());
+                if child.startup == fsys::StartupMode::Eager {
+                    child_node.eager = true;
+                }
+                child_node.environment = child.environment;
+                relative_urls_to_process.push((child_moniker, child.url));
+            }
         }
         Ok(())
     }
@@ -510,7 +638,7 @@ impl RealmNode {
         }
 
         if let Ok(target_node) = self.get_node_mut(&target_moniker, GetBehavior::ErrorIfMissing) {
-            target_node.decl.uses.push(Self::new_use_decl(&capability)?);
+            Self::add_use_for_capability(&mut target_node.decl.uses, &capability)?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //target_node.validate(&target_moniker)?;
         } else {
@@ -528,7 +656,7 @@ impl RealmNode {
         target_moniker: Moniker,
     ) -> Result<(), Error> {
         if let Ok(target_node) = self.get_node_mut(&target_moniker, GetBehavior::ErrorIfMissing) {
-            target_node.decl.uses.push(Self::new_use_decl(&capability)?);
+            Self::add_use_for_capability(&mut target_node.decl.uses, &capability)?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //target_node.validate(&target_moniker)?;
         } else {
@@ -639,6 +767,7 @@ impl RealmNode {
         mut self,
         registry: Arc<resolver::Registry>,
         walked_path: Vec<String>,
+        package_dir: Option<DirectoryProxy>,
     ) -> BoxFuture<'static, Result<String, Error>> {
         // This function is much cleaner written recursively, but we can't construct recursive
         // futures as the size isn't knowable to rustc at compile time. Put the recursive call
@@ -652,18 +781,14 @@ impl RealmNode {
 
                 let startup =
                     if node.eager { fsys::StartupMode::Eager } else { fsys::StartupMode::Lazy };
-                let url = node.commit(registry.clone(), new_path).await?;
-                self.decl.children.push(cm_rust::ChildDecl {
-                    name,
-                    url,
-                    startup,
-                    environment: None,
-                });
+                let environment = node.environment.clone();
+                let url = node.commit(registry.clone(), new_path, package_dir.clone()).await?;
+                self.decl.children.push(cm_rust::ChildDecl { name, url, startup, environment });
             }
 
             let decl = self.decl.native_into_fidl();
             registry
-                .validate_and_register(decl)
+                .validate_and_register(decl, package_dir.clone())
                 .await
                 .map_err(|e| Error::ValidationError(walked_path.into(), e))
         }
@@ -753,10 +878,13 @@ impl RealmNode {
         Ok(())
     }
 
-    fn new_use_decl(capability: &ffrb::Capability) -> Result<cm_rust::UseDecl, Error> {
-        match capability {
+    fn add_use_for_capability(
+        uses: &mut Vec<cm_rust::UseDecl>,
+        capability: &ffrb::Capability,
+    ) -> Result<(), Error> {
+        let use_decl = match capability {
             ffrb::Capability::Protocol(ffrb::ProtocolCapability { name, .. }) => {
-                Ok(cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+                cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
                     source: cm_rust::UseSource::Parent,
                     source_name: name.as_ref().unwrap().clone().try_into().unwrap(),
                     target_path: format!("/svc/{}", name.as_ref().unwrap())
@@ -764,26 +892,30 @@ impl RealmNode {
                         .try_into()
                         .unwrap(),
                     dependency_type: cm_rust::DependencyType::Strong,
-                }))
+                })
             }
             ffrb::Capability::Directory(ffrb::DirectoryCapability {
                 name, path, rights, ..
-            }) => Ok(cm_rust::UseDecl::Directory(cm_rust::UseDirectoryDecl {
+            }) => cm_rust::UseDecl::Directory(cm_rust::UseDirectoryDecl {
                 source: cm_rust::UseSource::Parent,
                 source_name: name.as_ref().unwrap().as_str().try_into().unwrap(),
                 target_path: path.as_ref().unwrap().as_str().try_into().unwrap(),
                 rights: rights.as_ref().unwrap().clone(),
                 subdir: None,
                 dependency_type: cm_rust::DependencyType::Strong,
-            })),
+            }),
             ffrb::Capability::Storage(ffrb::StorageCapability { name, path, .. }) => {
-                Ok(cm_rust::UseDecl::Storage(cm_rust::UseStorageDecl {
+                cm_rust::UseDecl::Storage(cm_rust::UseStorageDecl {
                     source_name: name.as_ref().unwrap().as_str().try_into().unwrap(),
                     target_path: path.as_ref().unwrap().as_str().try_into().unwrap(),
-                }))
+                })
             }
-            _ => Err(Error::BadFidl),
+            _ => return Err(Error::BadFidl),
+        };
+        if !uses.contains(&use_decl) {
+            uses.push(use_decl);
         }
+        Ok(())
     }
 
     fn add_offer_for_capability(
@@ -984,13 +1116,23 @@ impl Moniker {
     }
 }
 
+fn is_relative_url(url: &str) -> bool {
+    if url.len() == 0 || url.chars().nth(0) != Some('#') {
+        return false;
+    }
+    if Url::parse(url) != Err(url::ParseError::RelativeUrlWithoutBase) {
+        return false;
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use fidl_fuchsia_io2 as fio2;
 
-    #[test]
-    fn set_component() {
+    #[fasync::run_singlethreaded(test)]
+    async fn set_component() {
         let mut realm = RealmNode::default();
 
         let root_decl = cm_rust::ComponentDecl {
@@ -1018,13 +1160,21 @@ mod tests {
             .set_component(
                 Moniker::default(),
                 ffrb::Component::Decl(root_decl.clone().native_into_fidl()),
+                &None,
             )
+            .await
             .unwrap();
         realm
-            .set_component("a".into(), ffrb::Component::Decl(a_decl.clone().native_into_fidl()))
+            .set_component(
+                "a".into(),
+                ffrb::Component::Decl(a_decl.clone().native_into_fidl()),
+                &None,
+            )
+            .await
             .unwrap();
         realm
-            .set_component("a/b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()))
+            .set_component("a/b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()), &None)
+            .await
             .unwrap();
 
         a_decl.children.push(cm_rust::ChildDecl {
@@ -1044,8 +1194,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn contains_component() {
+    #[fasync::run_singlethreaded(test)]
+    async fn contains_component() {
         let mut realm = RealmNode::default();
 
         let root_decl = cm_rust::ComponentDecl {
@@ -1079,10 +1229,17 @@ mod tests {
             .set_component(
                 Moniker::default(),
                 ffrb::Component::Decl(root_decl.clone().native_into_fidl()),
+                &None,
             )
+            .await
             .unwrap();
         realm
-            .set_component("a".into(), ffrb::Component::Decl(a_decl.clone().native_into_fidl()))
+            .set_component(
+                "a".into(),
+                ffrb::Component::Decl(a_decl.clone().native_into_fidl()),
+                &None,
+            )
+            .await
             .unwrap();
 
         assert_eq!(true, realm.contains(Moniker::default()));
@@ -1092,8 +1249,8 @@ mod tests {
         assert_eq!(false, realm.contains("b".into()));
     }
 
-    #[test]
-    fn mark_as_eager() {
+    #[fasync::run_singlethreaded(test)]
+    async fn mark_as_eager() {
         let mut realm = RealmNode::default();
 
         let root_decl = cm_rust::ComponentDecl {
@@ -1137,13 +1294,25 @@ mod tests {
             .set_component(
                 Moniker::default(),
                 ffrb::Component::Decl(root_decl.clone().native_into_fidl()),
+                &None,
             )
+            .await
             .unwrap();
         realm
-            .set_component("a".into(), ffrb::Component::Decl(a_decl.clone().native_into_fidl()))
+            .set_component(
+                "a".into(),
+                ffrb::Component::Decl(a_decl.clone().native_into_fidl()),
+                &None,
+            )
+            .await
             .unwrap();
         realm
-            .set_component("a/b".into(), ffrb::Component::Decl(b_decl.clone().native_into_fidl()))
+            .set_component(
+                "a/b".into(),
+                ffrb::Component::Decl(b_decl.clone().native_into_fidl()),
+                &None,
+            )
+            .await
             .unwrap();
 
         realm.mark_as_eager("a/b/c".into()).unwrap();
@@ -1181,11 +1350,12 @@ mod tests {
         }
     }
 
-    #[test]
-    fn missing_route_source_error() {
+    #[fasync::run_singlethreaded(test)]
+    async fn missing_route_source_error() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()))
+            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .await
             .unwrap();
         let res = realm.route_capability(ffrb::CapabilityRoute {
             capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
@@ -1204,11 +1374,12 @@ mod tests {
         }
     }
 
-    #[test]
-    fn empty_route_targets() {
+    #[fasync::run_singlethreaded(test)]
+    async fn empty_route_targets() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()))
+            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .await
             .unwrap();
         let res = realm.route_capability(ffrb::CapabilityRoute {
             capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
@@ -1232,17 +1403,32 @@ mod tests {
         }
     }
 
-    #[test]
-    fn multiple_offer_same_source() {
+    #[fasync::run_singlethreaded(test)]
+    async fn multiple_offer_same_source() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("1/src".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()))
+            .set_component(
+                "1/src".into(),
+                ffrb::Component::Url("fuchsia-pkg://a".to_string()),
+                &None,
+            )
+            .await
             .unwrap();
         realm
-            .set_component("2/target_1".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()))
+            .set_component(
+                "2/target_1".into(),
+                ffrb::Component::Url("fuchsia-pkg://b".to_string()),
+                &None,
+            )
+            .await
             .unwrap();
         realm
-            .set_component("2/target_2".into(), ffrb::Component::Url("fuchsia-pkg://c".to_string()))
+            .set_component(
+                "2/target_2".into(),
+                ffrb::Component::Url("fuchsia-pkg://c".to_string()),
+                &None,
+            )
+            .await
             .unwrap();
         realm
             .route_capability(ffrb::CapabilityRoute {
@@ -1260,21 +1446,41 @@ mod tests {
             .unwrap();
     }
 
-    #[test]
-    fn same_capability_from_different_sources_in_same_node_error() {
+    #[fasync::run_singlethreaded(test)]
+    async fn same_capability_from_different_sources_in_same_node_error() {
         {
             let mut realm = RealmNode::default();
             realm
-                .set_component("1/a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()))
+                .set_component(
+                    "1/a".into(),
+                    ffrb::Component::Url("fuchsia-pkg://a".to_string()),
+                    &None,
+                )
+                .await
                 .unwrap();
             realm
-                .set_component("1/b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()))
+                .set_component(
+                    "1/b".into(),
+                    ffrb::Component::Url("fuchsia-pkg://b".to_string()),
+                    &None,
+                )
+                .await
                 .unwrap();
             realm
-                .set_component("2/c".into(), ffrb::Component::Url("fuchsia-pkg://c".to_string()))
+                .set_component(
+                    "2/c".into(),
+                    ffrb::Component::Url("fuchsia-pkg://c".to_string()),
+                    &None,
+                )
+                .await
                 .unwrap();
             realm
-                .set_component("2/d".into(), ffrb::Component::Url("fuchsia-pkg://d".to_string()))
+                .set_component(
+                    "2/d".into(),
+                    ffrb::Component::Url("fuchsia-pkg://d".to_string()),
+                    &None,
+                )
+                .await
                 .unwrap();
             realm
                 .route_capability(ffrb::CapabilityRoute {
@@ -1300,7 +1506,7 @@ mod tests {
                 .unwrap();
             // get and set this component, to confirm that `set_component` runs `validate`
             let decl = realm.get_component_decl("1".into()).unwrap().native_into_fidl();
-            let res = realm.set_component("1".into(), ffrb::Component::Decl(decl));
+            let res = realm.set_component("1".into(), ffrb::Component::Decl(decl), &None).await;
 
             match res {
                 Err(Error::ValidationError(_, e)) => {
@@ -1325,16 +1531,36 @@ mod tests {
         {
             let mut realm = RealmNode::default();
             realm
-                .set_component("1/a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()))
+                .set_component(
+                    "1/a".into(),
+                    ffrb::Component::Url("fuchsia-pkg://a".to_string()),
+                    &None,
+                )
+                .await
                 .unwrap();
             realm
-                .set_component("1/b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()))
+                .set_component(
+                    "1/b".into(),
+                    ffrb::Component::Url("fuchsia-pkg://b".to_string()),
+                    &None,
+                )
+                .await
                 .unwrap();
             realm
-                .set_component("2/c".into(), ffrb::Component::Url("fuchsia-pkg://c".to_string()))
+                .set_component(
+                    "2/c".into(),
+                    ffrb::Component::Url("fuchsia-pkg://c".to_string()),
+                    &None,
+                )
+                .await
                 .unwrap();
             realm
-                .set_component("2/d".into(), ffrb::Component::Url("fuchsia-pkg://d".to_string()))
+                .set_component(
+                    "2/d".into(),
+                    ffrb::Component::Url("fuchsia-pkg://d".to_string()),
+                    &None,
+                )
+                .await
                 .unwrap();
             realm
                 .route_capability(ffrb::CapabilityRoute {
@@ -1361,11 +1587,12 @@ mod tests {
         }
     }
 
-    #[test]
-    fn missing_route_target_error() {
+    #[fasync::run_singlethreaded(test)]
+    async fn missing_route_target_error() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()))
+            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .await
             .unwrap();
         let res = realm.route_capability(ffrb::CapabilityRoute {
             capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
@@ -1408,11 +1635,12 @@ mod tests {
         }
     }
 
-    #[test]
-    fn expose_storage_from_child_error() {
+    #[fasync::run_singlethreaded(test)]
+    async fn expose_storage_from_child_error() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()))
+            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .await
             .unwrap();
         let res = realm.route_capability(ffrb::CapabilityRoute {
             capability: Some(ffrb::Capability::Storage(ffrb::StorageCapability {
@@ -1432,14 +1660,16 @@ mod tests {
         }
     }
 
-    #[test]
-    fn offer_storage_from_child_error() {
+    #[fasync::run_singlethreaded(test)]
+    async fn offer_storage_from_child_error() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()))
+            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .await
             .unwrap();
         realm
-            .set_component("b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()))
+            .set_component("b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()), &None)
+            .await
             .unwrap();
         let res = realm.route_capability(ffrb::CapabilityRoute {
             capability: Some(ffrb::Capability::Storage(ffrb::StorageCapability {
@@ -1459,14 +1689,16 @@ mod tests {
         }
     }
 
-    #[test]
-    fn verify_storage_routing() {
+    #[fasync::run_singlethreaded(test)]
+    async fn verify_storage_routing() {
         let mut realm = RealmNode::default();
         realm
             .set_component(
                 "a".into(),
                 ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                &None,
             )
+            .await
             .unwrap();
         realm
             .route_capability(ffrb::CapabilityRoute {
@@ -1515,14 +1747,16 @@ mod tests {
         );
     }
 
-    #[test]
-    fn two_sibling_realm_no_mocks() {
+    #[fasync::run_singlethreaded(test)]
+    async fn two_sibling_realm_no_mocks() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()))
+            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .await
             .unwrap();
         realm
-            .set_component("b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()))
+            .set_component("b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()), &None)
+            .await
             .unwrap();
         realm.mark_as_eager("b".into()).unwrap();
         realm
@@ -1569,20 +1803,24 @@ mod tests {
         );
     }
 
-    #[test]
-    fn two_sibling_realm_both_mocks() {
+    #[fasync::run_singlethreaded(test)]
+    async fn two_sibling_realm_both_mocks() {
         let mut realm = RealmNode::default();
         realm
             .set_component(
                 "a".into(),
                 ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                &None,
             )
+            .await
             .unwrap();
         realm
             .set_component(
                 "b".into(),
                 ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                &None,
             )
+            .await
             .unwrap();
         realm
             .route_capability(ffrb::CapabilityRoute {
@@ -1653,17 +1891,20 @@ mod tests {
         );
     }
 
-    #[test]
-    fn mock_with_child() {
+    #[fasync::run_singlethreaded(test)]
+    async fn mock_with_child() {
         let mut realm = RealmNode::default();
         realm
             .set_component(
                 "a".into(),
                 ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                &None,
             )
+            .await
             .unwrap();
         realm
-            .set_component("a/b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()))
+            .set_component("a/b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()), &None)
+            .await
             .unwrap();
         realm
             .route_capability(ffrb::CapabilityRoute {
@@ -1722,20 +1963,24 @@ mod tests {
         );
     }
 
-    #[test]
-    fn three_sibling_realm_one_mock() {
+    #[fasync::run_singlethreaded(test)]
+    async fn three_sibling_realm_one_mock() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()))
+            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .await
             .unwrap();
         realm
             .set_component(
                 "b".into(),
                 ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                &None,
             )
+            .await
             .unwrap();
         realm
-            .set_component("c".into(), ffrb::Component::Url("fuchsia-pkg://c".to_string()))
+            .set_component("c".into(), ffrb::Component::Url("fuchsia-pkg://c".to_string()), &None)
+            .await
             .unwrap();
         realm.mark_as_eager("c".into()).unwrap();
         realm
@@ -1840,17 +2085,20 @@ mod tests {
         );
     }
 
-    #[test]
-    fn three_siblings_two_targets() {
+    #[fasync::run_singlethreaded(test)]
+    async fn three_siblings_two_targets() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()))
+            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .await
             .unwrap();
         realm
-            .set_component("b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()))
+            .set_component("b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()), &None)
+            .await
             .unwrap();
         realm
-            .set_component("c".into(), ffrb::Component::Url("fuchsia-pkg://c".to_string()))
+            .set_component("c".into(), ffrb::Component::Url("fuchsia-pkg://c".to_string()), &None)
+            .await
             .unwrap();
         realm.mark_as_eager("a".into()).unwrap();
         realm.mark_as_eager("c".into()).unwrap();
@@ -1950,17 +2198,24 @@ mod tests {
         );
     }
 
-    #[test]
-    fn two_cousins_realm_one_mock() {
+    #[fasync::run_singlethreaded(test)]
+    async fn two_cousins_realm_one_mock() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a/b".into(), ffrb::Component::Url("fuchsia-pkg://a-b".to_string()))
+            .set_component(
+                "a/b".into(),
+                ffrb::Component::Url("fuchsia-pkg://a-b".to_string()),
+                &None,
+            )
+            .await
             .unwrap();
         realm
             .set_component(
                 "c/d".into(),
                 ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                &None,
             )
+            .await
             .unwrap();
         realm
             .route_capability(ffrb::CapabilityRoute {

@@ -17,6 +17,7 @@ rustc_test("fuchsia_component_test_tests_bin") {
   deps = [
     "..:fuchsia-component-test",
     "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -121,6 +122,7 @@ fuchsia_test_package("fuchsia-component-test-tests") {
     ":fuchsia_component_test_tests_component",
     ":realm_component",
     ":realm_with_wait_component",
+    "//examples/components/routing:echo_realm",
     "//examples/components/routing/echo_client:echo_client_component",
     "//examples/components/routing/echo_server:echo_server_component",
   ]

@@ -36,12 +36,21 @@ pub enum Error {
 
     #[error("failed to route capability: {0:?}")]
     FailedToRoute(ffrb::RealmBuilderError),
+
+    #[error("failed to open \"/pkg\": {0:?}")]
+    FailedToOpenPkgDir(anyhow::Error),
+
+    #[error("failed to set package directory: {0:?}")]
+    FailedToSetPkgDir(ffrb::RealmBuilderError),
 }
 
 #[derive(Debug, Error)]
 pub enum BuilderError {
     #[error("can't add {} to the realm as a component with that name already exists", _0)]
     ComponentAlreadyExists(Moniker),
+
+    #[error("can't override {} in the realm because that component doesn't exist", _0)]
+    ComponentDoesNotExists(Moniker),
 }
 
 #[derive(Debug, Error)]
