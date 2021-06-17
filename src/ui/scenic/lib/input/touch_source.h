@@ -116,6 +116,10 @@ class TouchSource : public GestureContender, public fuchsia::ui::pointer::TouchS
   // haven't either "been won and has ended", or "haven't been lost".
   std::unordered_map<StreamId, StreamData> ongoing_streams_;
 
+  // Tracks all the devices that have previously been seen, to determine when we need to provide
+  // a TouchInteractionId value.
+  std::unordered_set<uint32_t> seen_devices_;
+
   // Streams can be declared as won before the first UpdateStream() call concerning the stream,
   // this set tracks those streams. This set should never contain a stream that also exists in
   // |ongoing_streams_|.

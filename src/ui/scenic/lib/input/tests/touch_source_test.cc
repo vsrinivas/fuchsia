@@ -12,8 +12,7 @@
 
 #include "lib/gtest/test_loop_fixture.h"
 
-namespace lib_ui_input_tests {
-namespace {
+namespace input::test {
 
 using fup_EventPhase = fuchsia::ui::pointer::EventPhase;
 using fuchsia::ui::pointer::TouchResponseType;
@@ -736,5 +735,49 @@ TEST_F(TouchSourceTest, ReentryOnDestruction_ShouldNotCauseUseAfterFreeErrors) {
   EXPECT_TRUE(respond_called);
 }
 
-}  // namespace
-}  // namespace lib_ui_input_tests
+TEST_F(TouchSourceTest, TouchDeviceInfo_ShouldBeSent_OncePerDevice) {
+  const uint32_t kDeviceId1 = 11111, kDeviceId2 = 22222;
+
+  // Start three separate streams, two with the kDeviceId1 and one with kDeviceId2.
+  {
+    InternalPointerEvent event = IPEventTemplate(Phase::kAdd);
+    event.device_id = kDeviceId1;
+    touch_source_->UpdateStream(/*stream_id*/ 1, event, kStreamOngoing, kEmptyBoundingBox);
+  }
+  {
+    InternalPointerEvent event = IPEventTemplate(Phase::kAdd);
+    event.device_id = kDeviceId1;
+    touch_source_->UpdateStream(/*stream_id*/ 2, event, kStreamOngoing, kEmptyBoundingBox);
+  }
+  {
+    InternalPointerEvent event = IPEventTemplate(Phase::kAdd);
+    event.device_id = kDeviceId2;
+    touch_source_->UpdateStream(/*stream_id*/ 3, event, kStreamOngoing, kEmptyBoundingBox);
+  }
+  RunLoopUntilIdle();
+
+  {  // Only the first instance of each device_id should generate a device_info parameter.
+    std::vector<fuchsia::ui::pointer::TouchEvent> received_events;
+    client_ptr_->Watch({},
+                       [&received_events](auto events) { received_events = std::move(events); });
+    RunLoopUntilIdle();
+
+    ASSERT_EQ(received_events.size(), 3u);
+
+    ASSERT_TRUE(received_events[0].has_device_info());
+    EXPECT_EQ(received_events[0].device_info().id(), kDeviceId1);
+    ASSERT_TRUE(received_events[0].has_pointer_sample());
+    EXPECT_EQ(received_events[0].pointer_sample().interaction().device_id, kDeviceId1);
+
+    ASSERT_FALSE(received_events[1].has_device_info());
+    ASSERT_TRUE(received_events[1].has_pointer_sample());
+    EXPECT_EQ(received_events[1].pointer_sample().interaction().device_id, kDeviceId1);
+
+    ASSERT_TRUE(received_events[2].has_device_info());
+    EXPECT_EQ(received_events[2].device_info().id(), kDeviceId2);
+    ASSERT_TRUE(received_events[2].has_pointer_sample());
+    EXPECT_EQ(received_events[2].pointer_sample().interaction().device_id, kDeviceId2);
+  }
+}
+
+}  // namespace input::test

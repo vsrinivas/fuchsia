@@ -168,6 +168,8 @@ void TouchSource::UpdateStream(StreamId stream_id, const InternalPointerEvent& e
         stream_id, StreamData{.device_id = event.device_id, .pointer_id = event.pointer_id});
   }
   auto& stream = ongoing_streams_.at(stream_id);
+  FX_DCHECK(stream.device_id == event.device_id);
+  FX_DCHECK(stream.pointer_id == event.pointer_id);
 
   // Filter legacy events.
   // TODO(fxbug.dev/53316): Remove when we no longer need to filter events.
@@ -179,32 +181,50 @@ void TouchSource::UpdateStream(StreamId stream_id, const InternalPointerEvent& e
     return;
   }
 
-  auto out_event = NewTouchEvent(stream_id, event, is_end_of_stream);
+  {  // Build the event.
+    auto out_event = NewTouchEvent(stream_id, event, is_end_of_stream);
 
-  FX_DCHECK(!(won_streams_awaiting_first_message_.count(stream_id) != 0 && !is_new_stream))
-      << "Can't have a pre-decided win for an ongoing stream.";
-  if (is_new_stream) {
-    fuchsia::ui::pointer::TouchDeviceInfo device_info;
-    device_info.set_id(event.device_id);
-    out_event.set_device_info(std::move(device_info));
+    FX_DCHECK(!(won_streams_awaiting_first_message_.count(stream_id) != 0 && !is_new_stream))
+        << "Can't have a pre-decided win for an ongoing stream.";
+    if (is_new_stream) {
+      // First time we see a device we need to add DeviceInfo to the message.
+      if (seen_devices_.count(event.device_id) == 0) {
+        fuchsia::ui::pointer::TouchDeviceInfo device_info;
+        device_info.set_id(event.device_id);
+        out_event.set_device_info(std::move(device_info));
 
-    if (won_streams_awaiting_first_message_.count(stream_id) != 0) {
-      AddInteractionResultsToEvent(out_event, stream_id, event.device_id, event.pointer_id, true);
-      won_streams_awaiting_first_message_.erase(stream_id);
+        seen_devices_.emplace(event.device_id);
+      }
+
+      // If the stream was won before the first message arrived, attach the "win" to the first
+      // message.
+      if (won_streams_awaiting_first_message_.count(stream_id) != 0) {
+        AddInteractionResultsToEvent(out_event, stream_id, event.device_id, event.pointer_id, true);
+        won_streams_awaiting_first_message_.erase(stream_id);
+      }
     }
+
+    // Add ViewParameters to the message if the viewport or view bounds have changed (which is
+    // always true for the first message).
+    if (current_viewport_ != event.viewport || current_view_bounds_ != view_bounds ||
+        is_first_event_) {
+      is_first_event_ = false;
+      current_viewport_ = event.viewport;
+      current_view_bounds_ = view_bounds;
+      AddViewParametersToEvent(out_event, current_viewport_, current_view_bounds_);
+    }
+
+    pending_events_.push({.stream_id = stream_id, .event = std::move(out_event)});
   }
 
   stream.stream_has_ended = is_end_of_stream;
-  if (current_viewport_ != event.viewport || current_view_bounds_ != view_bounds ||
-      is_first_event_) {
-    is_first_event_ = false;
-    current_viewport_ = event.viewport;
-    current_view_bounds_ = view_bounds;
-    AddViewParametersToEvent(out_event, current_viewport_, current_view_bounds_);
-  }
-
-  pending_events_.push({.stream_id = stream_id, .event = std::move(out_event)});
   SendPendingIfWaiting();
+
+  // Cleanup complete stream.
+  if (is_end_of_stream && stream.was_won) {
+    ongoing_streams_.erase(stream_id);
+    FX_DCHECK(won_streams_awaiting_first_message_.count(stream_id) == 0);
+  }
 }
 
 void TouchSource::EndContest(StreamId stream_id, bool awarded_win) {
