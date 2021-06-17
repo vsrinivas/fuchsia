@@ -4,7 +4,10 @@
 import("//sdk/cts/build/cts.gni")
 
 group("tests") {
-  deps = [ "fuchsia.element:tests" ]
+  deps = [
+    "fuchsia.element:tests",
+    "fuchsia.hwinfo:tests",
+  ]
   testonly = true
 }
 

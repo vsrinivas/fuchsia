@@ -1,0 +1,24 @@
+{
+    "include": [
+        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.hwinfo.Board": "fuchsia-pkg://fuchsia.com/hwinfo#meta/hwinfo.cmx",
+                "fuchsia.hwinfo.Device": "fuchsia-pkg://fuchsia.com/hwinfo#meta/hwinfo.cmx",
+                "fuchsia.hwinfo.Product": "fuchsia-pkg://fuchsia.com/hwinfo#meta/hwinfo.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "bin/hwinfo-test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.hwinfo.Board",
+            "fuchsia.hwinfo.Device",
+            "fuchsia.hwinfo.Product"
+        ]
+    }
+}
