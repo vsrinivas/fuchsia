@@ -8,10 +8,7 @@ import("//build/rust/rustc_library.gni")
 if (is_host) {
   rustc_library("test_keys") {
     version = "0.1.0"
-    testonly = true
-
     sources = [ "src/lib.rs" ]
-
     inputs = [ "//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem" ]
   }
 }

@@ -9,7 +9,7 @@ use std::io::Read;
 use std::path::PathBuf;
 
 /// The set of information that defines a fuchsia product.
-#[derive(Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct ProductConfig {
     /// The path to a file indicating the version of the product.
     pub version_file: Option<PathBuf>,
@@ -133,7 +133,7 @@ pub struct BootloaderEntry {
 }
 
 /// The information required to construct a ZBI.
-#[derive(Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct ZbiConfig {
     /// The partition name to flash the ZBI.
     pub partition: String,

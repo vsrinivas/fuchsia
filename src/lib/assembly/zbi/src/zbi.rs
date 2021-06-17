@@ -82,12 +82,16 @@ impl ZbiBuilder {
         // Run the zbi tool to construct the ZBI.
         let zbi_args = self.build_zbi_args(&bootfs_manifest_path, None::<PathBuf>, output)?;
 
-        let status = Command::new("host_x64/zbi")
+        let output = Command::new("host_x64/zbi")
             .args(&zbi_args)
-            .status()
+            .output()
             .context("Failed to run the zbi tool")?;
-        if !status.success() {
-            anyhow::bail!("zbi exited with status: {}", status);
+        if !output.status.success() {
+            anyhow::bail!(
+                "zbi exited with status: {}\n{}",
+                output.status,
+                String::from_utf8_lossy(output.stderr.as_slice())
+            );
         }
 
         Ok(())

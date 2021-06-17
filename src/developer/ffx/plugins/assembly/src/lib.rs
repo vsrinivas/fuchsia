@@ -4,9 +4,16 @@
 
 use {anyhow::Result, ffx_assembly_args::*, ffx_core::ffx_plugin};
 
+mod base_package;
+mod blobfs;
 mod config;
 mod extra_hash_descriptor;
+mod fvm;
 mod operations;
+mod update_package;
+mod util;
+mod zbi;
+
 pub mod vbmeta;
 pub mod vfs;
 
