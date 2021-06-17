@@ -32,8 +32,8 @@
             "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.SHERLOCK",
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE"
         },
-        "expected": "abort",
-        "name": "WrongPid"
+        "expected": "match",
+        "name": "SuccessSherlock"
     },
     {
         "device": {

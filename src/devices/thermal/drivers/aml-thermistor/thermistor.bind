@@ -8,6 +8,7 @@ using fuchsia.google.platform;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
 accept fuchsia.BIND_PLATFORM_DEV_PID {
   fuchsia.google.platform.BIND_PLATFORM_DEV_PID.ASTRO,
+  fuchsia.google.platform.BIND_PLATFORM_DEV_PID.SHERLOCK,
   fuchsia.google.platform.BIND_PLATFORM_DEV_PID.LUIS,
   fuchsia.google.platform.BIND_PLATFORM_DEV_PID.NELSON,
 }

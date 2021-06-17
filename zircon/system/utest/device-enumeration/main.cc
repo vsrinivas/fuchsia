@@ -469,6 +469,14 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/05:04:28",
       "class/thermal/000",
       "class/thermal/001",
+
+      "class/adc/000",
+      "class/adc/001",
+      "class/adc/002",
+      "class/adc/003",
+      "class/temperature/000",
+      "class/temperature/001",
+      "class/temperature/002",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

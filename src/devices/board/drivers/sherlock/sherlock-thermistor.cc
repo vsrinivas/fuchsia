@@ -4,11 +4,11 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/thermal/ntc.h>
 #include <limits.h>
 
-#include <lib/ddk/metadata.h>
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"
@@ -34,10 +34,6 @@ static const pbus_irq_t saradc_irqs[] = {
 };
 
 zx_status_t Sherlock::ThermistorInit() {
-  if (pid_ != PDEV_PID_LUIS) {
-    return ZX_OK;
-  }
-
   thermal::NtcInfo ntc_info[] = {
       {.part = "ncpXXwf104",
        .profile =
@@ -79,41 +75,71 @@ zx_status_t Sherlock::ThermistorInit() {
            }},
   };
 
-  thermal::NtcChannel ntc_channels[] = {
-      {.adc_channel = 1, .pullup_ohms = 47000, .profile_idx = 0, .name = "therm-mic"},
-      {.adc_channel = 2, .pullup_ohms = 47000, .profile_idx = 0, .name = "therm-amp"},
-      {.adc_channel = 3, .pullup_ohms = 47000, .profile_idx = 0, .name = "therm-ambient"},
-  };
-
-  pbus_metadata_t therm_metadata[] = {
-      {
-          .type = NTC_CHANNELS_METADATA_PRIVATE,
-          .data_buffer = reinterpret_cast<uint8_t*>(&ntc_channels),
-          .data_size = sizeof(ntc_channels),
-      },
-      {
-          .type = NTC_PROFILE_METADATA_PRIVATE,
-          .data_buffer = reinterpret_cast<uint8_t*>(&ntc_info),
-          .data_size = sizeof(ntc_info),
-      },
-  };
-
   pbus_dev_t thermistor = {};
   thermistor.name = "thermistor";
   thermistor.vid = PDEV_VID_GOOGLE;
-  thermistor.pid = PDEV_PID_LUIS;
   thermistor.did = PDEV_DID_AMLOGIC_THERMISTOR;
   thermistor.mmio_list = saradc_mmios;
   thermistor.mmio_count = countof(saradc_mmios);
   thermistor.irq_list = saradc_irqs;
   thermistor.irq_count = countof(saradc_irqs);
-  thermistor.metadata_list = therm_metadata;
-  thermistor.metadata_count = countof(therm_metadata);
 
-  zx_status_t status = pbus_.DeviceAdd(&thermistor);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
-    return status;
+  if (pid_ == PDEV_PID_LUIS) {
+    thermal::NtcChannel ntc_channels_luis[] = {
+        {.adc_channel = 1, .pullup_ohms = 47000, .profile_idx = 0, .name = "therm-mic"},
+        {.adc_channel = 2, .pullup_ohms = 47000, .profile_idx = 0, .name = "therm-amp"},
+        {.adc_channel = 3, .pullup_ohms = 47000, .profile_idx = 0, .name = "therm-ambient"},
+    };
+
+    pbus_metadata_t therm_metadata_luis[] = {
+        {
+            .type = NTC_CHANNELS_METADATA_PRIVATE,
+            .data_buffer = reinterpret_cast<uint8_t*>(&ntc_channels_luis),
+            .data_size = sizeof(ntc_channels_luis),
+        },
+        {
+            .type = NTC_PROFILE_METADATA_PRIVATE,
+            .data_buffer = reinterpret_cast<uint8_t*>(&ntc_info),
+            .data_size = sizeof(ntc_info),
+        },
+    };
+
+    thermistor.pid = PDEV_PID_LUIS;
+    thermistor.metadata_list = therm_metadata_luis;
+    thermistor.metadata_count = countof(therm_metadata_luis);
+    zx_status_t status = pbus_.DeviceAdd(&thermistor);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "DeviceAdd for Luis failed: %s", zx_status_get_string(status));
+      return status;
+    }
+  } else {
+    thermal::NtcChannel ntc_channels_sherlock[] = {
+        {.adc_channel = 1, .pullup_ohms = 47000, .profile_idx = 0, .name = "therm-base"},
+        {.adc_channel = 2, .pullup_ohms = 47000, .profile_idx = 0, .name = "therm-audio"},
+        {.adc_channel = 3, .pullup_ohms = 47000, .profile_idx = 0, .name = "therm-ambient"},
+    };
+
+    pbus_metadata_t therm_metadata_sherlock[] = {
+        {
+            .type = NTC_CHANNELS_METADATA_PRIVATE,
+            .data_buffer = reinterpret_cast<uint8_t*>(&ntc_channels_sherlock),
+            .data_size = sizeof(ntc_channels_sherlock),
+        },
+        {
+            .type = NTC_PROFILE_METADATA_PRIVATE,
+            .data_buffer = reinterpret_cast<uint8_t*>(&ntc_info),
+            .data_size = sizeof(ntc_info),
+        },
+    };
+
+    thermistor.pid = PDEV_PID_SHERLOCK;
+    thermistor.metadata_list = therm_metadata_sherlock;
+    thermistor.metadata_count = countof(therm_metadata_sherlock);
+    zx_status_t status = pbus_.DeviceAdd(&thermistor);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "DeviceAdd for Sherlock failed: %s", zx_status_get_string(status));
+      return status;
+    }
   }
 
   return ZX_OK;
