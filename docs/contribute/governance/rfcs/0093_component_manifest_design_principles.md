@@ -151,7 +151,7 @@ Following the URLs between manifests yields a
 comprehensive description of the software that constitutes a Fuchsia image. This
 makes it possible to perform security auditing with confidence over a given
 system image, such as with `[fx
-scrutiny](https://fuchsia.dev/reference/tools/fx/cmd/scrutiny?hl=en)`.
+scrutiny](https://fuchsia.dev/reference/tools/fx/cmd/scrutiny)`.
 
 ## #3: Component manifests are declarative {#declarative}
 
@@ -224,7 +224,7 @@ of non-declarative configuration.
 [component-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
 [ComponentDecl]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
 [DSL]: https://en.wikipedia.org/wiki/Domain-specific_language
-[elf]: /docs/concepts/booting/program_loading.md?hl=en#elf_and_the_system_abi
+[elf]: /docs/concepts/booting/program_loading.md#elf_and_the_system_abi
 [elf-runner]: /docs/concepts/components/v2/elf_runner.md
 [FIDL]: /docs/development/languages/fidl/README.md
 [fidl-envelope]: /docs/reference/fidl/language/wire-format/README.md#envelopes
@@ -239,7 +239,7 @@ of non-declarative configuration.
 [GCL]: https://storage.googleapis.com/pub-tools-public-publication-data/pdf/43438.pdf
 [package]: /docs/concepts/packages/package.md
 [package-url]: /docs/concepts/packages/package_url.md
-[resolver]: https://fuchsia.dev/reference/fidl/fuchsia.sys2?hl=en#ComponentResolver
+[resolver]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#ComponentResolver
 [rfc-0057]: /docs/contribute/governance/rfcs/0057_default_no_handles.md
 [sdk]: /docs/reference/tools/sdk/README.md
 [Starlark]: https://github.com/bazelbuild/starlark
