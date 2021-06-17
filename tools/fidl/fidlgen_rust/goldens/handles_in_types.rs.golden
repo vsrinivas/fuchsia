@@ -18,7 +18,7 @@ use {
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
         fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
-        fidl_xunion, wrap_handle_metadata,
+        fidl_union, wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
     futures::future::{self, MaybeDone, TryFutureExt},
@@ -83,7 +83,34 @@ macro_rules! UnionWithHandleUnknown {
         _
     };
 }
-fidl_xunion! {
+
+impl UnionWithHandle {
+    #[inline]
+    pub fn unknown(ordinal: u64, data: fidl::UnknownData) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, data }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, fidl::UnknownData)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, data } => Err((ordinal, data)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+fidl_union! {
     name: UnionWithHandle,
     members: [
         H {

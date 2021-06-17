@@ -18,7 +18,7 @@ use {
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
         fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
-        fidl_xunion, wrap_handle_metadata,
+        fidl_union, wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
     futures::future::{self, MaybeDone, TryFutureExt},
@@ -28,7 +28,22 @@ use {
 pub enum UnionSize8Alignment4 {
     Variant(u32),
 }
-fidl_xunion! {
+
+impl UnionSize8Alignment4 {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: UnionSize8Alignment4,
     members: [
         Variant {
@@ -36,14 +51,28 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum UnionSize12Alignment4 {
     Variant([u8; 6]),
 }
-fidl_xunion! {
+
+impl UnionSize12Alignment4 {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: UnionSize12Alignment4,
     members: [
         Variant {
@@ -51,14 +80,28 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum UnionSize24Alignment8 {
     Variant(StructSize16Alignment8),
 }
-fidl_xunion! {
+
+impl UnionSize24Alignment8 {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: UnionSize24Alignment8,
     members: [
         Variant {
@@ -66,14 +109,28 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum UnionSize36Alignment4 {
     Variant([u8; 32]),
 }
-fidl_xunion! {
+
+impl UnionSize36Alignment4 {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: UnionSize36Alignment4,
     members: [
         Variant {
@@ -81,7 +138,6 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

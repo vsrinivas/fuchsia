@@ -18,7 +18,7 @@ use {
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
         fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
-        fidl_xunion, wrap_handle_metadata,
+        fidl_union, wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
     futures::future::{self, MaybeDone, TryFutureExt},
@@ -97,7 +97,22 @@ fidl_enum! {
 pub enum ExampleUnion {
     Variant(u32),
 }
-fidl_xunion! {
+
+impl ExampleUnion {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: ExampleUnion,
     members: [
         Variant {
@@ -105,7 +120,6 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -125,7 +139,34 @@ macro_rules! ExampleXUnionUnknown {
         _
     };
 }
-fidl_xunion! {
+
+impl ExampleXUnion {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+fidl_union! {
     name: ExampleXUnion,
     members: [
         Variant {

@@ -27,3 +27,23 @@ flexible enum FlexibleAnimal : int32 {
     CAT = 1;
     FROG = 2;
 };
+
+strict union StrictValueThing {
+    1: uint32 number;
+    2: string name;
+};
+
+flexible union FlexibleValueThing {
+    1: uint32 number;
+    2: string name;
+};
+
+strict resource union StrictResourceThing {
+    1: uint32 number;
+    2: string name;
+};
+
+flexible resource union FlexibleResourceThing {
+    1: uint32 number;
+    2: string name;
+};

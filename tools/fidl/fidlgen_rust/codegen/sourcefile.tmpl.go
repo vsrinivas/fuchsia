@@ -32,7 +32,7 @@ use {
 		fidl_struct_copy,
 		fidl_struct,
 		fidl_table,
-		fidl_xunion,
+		fidl_union,
 		wrap_handle_metadata,
 		encoding::{Encodable as _, Decodable as _},
 		client::{

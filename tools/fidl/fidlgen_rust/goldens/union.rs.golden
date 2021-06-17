@@ -18,7 +18,7 @@ use {
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
         fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
-        fidl_xunion, wrap_handle_metadata,
+        fidl_union, wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
     futures::future::{self, MaybeDone, TryFutureExt},
@@ -31,7 +31,22 @@ pub enum PizzaOrPasta {
     Pizza(Pizza),
     Pasta(Pasta),
 }
-fidl_xunion! {
+
+impl PizzaOrPasta {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: PizzaOrPasta,
     members: [
         Pizza {
@@ -43,7 +58,6 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -51,7 +65,22 @@ pub enum ExplicitPizzaOrPasta {
     Pizza(Pizza),
     Pasta(Pasta),
 }
-fidl_xunion! {
+
+impl ExplicitPizzaOrPasta {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: ExplicitPizzaOrPasta,
     members: [
         Pizza {
@@ -63,7 +92,6 @@ fidl_xunion! {
             ordinal: 4,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -84,7 +112,34 @@ macro_rules! FlexiblePizzaOrPastaUnknown {
         _
     };
 }
-fidl_xunion! {
+
+impl FlexiblePizzaOrPasta {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+fidl_union! {
     name: FlexiblePizzaOrPasta,
     members: [
         Pizza {
@@ -104,7 +159,22 @@ pub enum StrictPizzaOrPasta {
     Pizza(Pizza),
     Pasta(Pasta),
 }
-fidl_xunion! {
+
+impl StrictPizzaOrPasta {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: StrictPizzaOrPasta,
     members: [
         Pizza {
@@ -116,7 +186,6 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -125,7 +194,22 @@ pub enum Union {
     StringNeedsConstructor(String),
     VectorStringAlsoNeedsConstructor(Vec<String>),
 }
-fidl_xunion! {
+
+impl Union {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: Union,
     members: [
         Primitive {
@@ -141,7 +225,6 @@ fidl_xunion! {
             ordinal: 3,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -163,7 +246,34 @@ macro_rules! FlexibleUnionUnknown {
         _
     };
 }
-fidl_xunion! {
+
+impl FlexibleUnion {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+fidl_union! {
     name: FlexibleUnion,
     members: [
         Primitive {
@@ -188,7 +298,22 @@ pub enum StrictUnion {
     StringNeedsConstructor(String),
     VectorStringAlsoNeedsConstructor(Vec<String>),
 }
-fidl_xunion! {
+
+impl StrictUnion {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: StrictUnion,
     members: [
         Primitive {
@@ -204,14 +329,28 @@ fidl_xunion! {
             ordinal: 3,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum FieldCollision {
     FieldCollisionTag(i32),
 }
-fidl_xunion! {
+
+impl FieldCollision {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: FieldCollision,
     members: [
         FieldCollisionTag {
@@ -219,7 +358,6 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -227,7 +365,22 @@ pub enum ExplicitUnion {
     Primitive(i32),
     StringNeedsConstructor(String),
 }
-fidl_xunion! {
+
+impl ExplicitUnion {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: ExplicitUnion,
     members: [
         Primitive {
@@ -239,7 +392,6 @@ fidl_xunion! {
             ordinal: 3,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -247,7 +399,22 @@ pub enum ReverseOrdinalUnion {
     Second(u32),
     First(u32),
 }
-fidl_xunion! {
+
+impl ReverseOrdinalUnion {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: ReverseOrdinalUnion,
     members: [
         Second {
@@ -259,7 +426,6 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -280,7 +446,34 @@ macro_rules! FlexibleFooUnknown {
         _
     };
 }
-fidl_xunion! {
+
+impl FlexibleFoo {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+fidl_union! {
     name: FlexibleFoo,
     members: [
         S {
@@ -300,7 +493,22 @@ pub enum StrictFoo {
     S(String),
     I(i32),
 }
-fidl_xunion! {
+
+impl StrictFoo {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: StrictFoo,
     members: [
         S {
@@ -312,7 +520,6 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -333,7 +540,34 @@ macro_rules! ExplicitFooUnknown {
         _
     };
 }
-fidl_xunion! {
+
+impl ExplicitFoo {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+fidl_union! {
     name: ExplicitFoo,
     members: [
         S {
@@ -353,7 +587,22 @@ pub enum ExplicitStrictFoo {
     S(String),
     I(i32),
 }
-fidl_xunion! {
+
+impl ExplicitStrictFoo {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: ExplicitStrictFoo,
     members: [
         S {
@@ -365,7 +614,6 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -386,7 +634,34 @@ macro_rules! OlderSimpleUnionUnknown {
         _
     };
 }
-fidl_xunion! {
+
+impl OlderSimpleUnion {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+fidl_union! {
     name: OlderSimpleUnion,
     members: [
         I {
@@ -420,7 +695,34 @@ macro_rules! NewerSimpleUnionUnknown {
         _
     };
 }
-fidl_xunion! {
+
+impl NewerSimpleUnion {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+fidl_union! {
     name: NewerSimpleUnion,
     members: [
         I {
@@ -445,7 +747,22 @@ pub enum StrictSimpleXUnion {
     F(f32),
     S(String),
 }
-fidl_xunion! {
+
+impl StrictSimpleXUnion {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: StrictSimpleXUnion,
     members: [
         I {
@@ -461,7 +778,6 @@ fidl_xunion! {
             ordinal: 3,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -481,7 +797,34 @@ macro_rules! XUnionContainingEmptyStructUnknown {
         _
     };
 }
-fidl_xunion! {
+
+impl XUnionContainingEmptyStruct {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+fidl_union! {
     name: XUnionContainingEmptyStruct,
     members: [
         Empty {
@@ -496,7 +839,22 @@ fidl_xunion! {
 pub enum StrictBoundedXUnion {
     V(Vec<u8>),
 }
-fidl_xunion! {
+
+impl StrictBoundedXUnion {
+    #[deprecated = "Strict unions should not use validate()"]
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        Ok(self)
+    }
+
+    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        false
+    }
+}
+
+fidl_union! {
     name: StrictBoundedXUnion,
     members: [
         V {
@@ -504,7 +862,6 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -525,7 +882,34 @@ macro_rules! ExplicitXUnionUnknown {
         _
     };
 }
-fidl_xunion! {
+
+impl ExplicitXUnion {
+    #[inline]
+    pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+        #[allow(deprecated)]
+        Self::__Unknown { ordinal, bytes }
+    }
+
+    #[inline]
+    pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { ordinal, bytes } => Err((ordinal, bytes)),
+            _ => Ok(self),
+        }
+    }
+
+    #[inline]
+    pub fn is_unknown(&self) -> bool {
+        match self {
+            #[allow(deprecated)]
+            Self::__Unknown { .. } => true,
+            _ => false,
+        }
+    }
+}
+
+fidl_union! {
     name: ExplicitXUnion,
     members: [
         I {

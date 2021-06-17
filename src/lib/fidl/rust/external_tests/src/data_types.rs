@@ -4,7 +4,10 @@
 
 //! This file tests the public APIs of FIDL data types.
 
-use fidl_fidl_rust_test_external::{FlexibleAnimal, FlexibleButtons, StrictAnimal, StrictButtons};
+use fidl_fidl_rust_test_external::{
+    FlexibleAnimal, FlexibleButtons, FlexibleResourceThing, FlexibleValueThing, StrictAnimal,
+    StrictButtons, StrictResourceThing, StrictValueThing,
+};
 
 #[test]
 fn strict_bits() {
@@ -95,4 +98,62 @@ fn flexible_enum() {
     assert_eq!(FlexibleAnimal::Cat.validate(), Ok(FlexibleAnimal::Cat));
     assert_eq!(FlexibleAnimal::from_primitive_allow_unknown(3).validate(), Err(3));
     assert_eq!(FlexibleAnimal::unknown().validate(), Err(i32::MAX));
+}
+
+#[test]
+fn strict_value_union() {
+    // You can use the flexible methods on strict types, but it produces a
+    // deprecation warning.
+    #[allow(deprecated)]
+    let is_unknown = StrictValueThing::Number(42).is_unknown();
+    assert_eq!(is_unknown, false);
+    #[allow(deprecated)]
+    let validate = StrictValueThing::Name("hello".to_owned()).validate();
+    assert_eq!(validate, Ok(StrictValueThing::Name("hello".to_owned())));
+}
+
+#[test]
+fn flexible_value_union() {
+    assert_eq!(FlexibleValueThing::Number(42).is_unknown(), false);
+    assert_eq!(FlexibleValueThing::Name("hello".to_owned()).is_unknown(), false);
+    assert_eq!(FlexibleValueThing::Number(42).validate(), Ok(FlexibleValueThing::Number(42)));
+    assert_eq!(
+        FlexibleValueThing::Name("hello".to_owned()).validate(),
+        Ok(FlexibleValueThing::Name("hello".to_owned()))
+    );
+    assert_eq!(FlexibleValueThing::unknown(0, vec![]).is_unknown(), true);
+    assert_eq!(FlexibleValueThing::unknown(0, vec![]).validate(), Err((0, vec![])));
+}
+
+#[test]
+fn strict_resource_union() {
+    // You can use the flexible methods on strict types, but it produces a
+    // deprecation warning.
+    #[allow(deprecated)]
+    let is_unknown = StrictResourceThing::Number(42).is_unknown();
+    assert_eq!(is_unknown, false);
+    #[allow(deprecated)]
+    let validate = StrictResourceThing::Name("hello".to_owned()).validate();
+    assert_eq!(validate, Ok(StrictResourceThing::Name("hello".to_owned())));
+}
+
+#[test]
+fn flexible_resource_union() {
+    assert_eq!(FlexibleResourceThing::Number(42).is_unknown(), false);
+    assert_eq!(FlexibleResourceThing::Name("hello".to_owned()).is_unknown(), false);
+    assert_eq!(FlexibleResourceThing::Number(42).validate(), Ok(FlexibleResourceThing::Number(42)));
+    assert_eq!(
+        FlexibleResourceThing::Name("hello".to_owned()).validate(),
+        Ok(FlexibleResourceThing::Name("hello".to_owned()))
+    );
+    assert_eq!(
+        FlexibleResourceThing::unknown(0, fidl::UnknownData { bytes: vec![], handles: vec![] })
+            .is_unknown(),
+        true
+    );
+    assert_eq!(
+        FlexibleResourceThing::unknown(0, fidl::UnknownData { bytes: vec![], handles: vec![] })
+            .validate(),
+        Err((0, fidl::UnknownData { bytes: vec![], handles: vec![] }))
+    );
 }

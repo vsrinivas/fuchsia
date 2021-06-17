@@ -18,7 +18,7 @@ use {
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
         fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
-        fidl_xunion, wrap_handle_metadata,
+        fidl_union, wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
     futures::future::{self, MaybeDone, TryFutureExt},
