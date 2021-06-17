@@ -113,8 +113,16 @@ class intrusive_list {
  private:
   // Base iterator type definition.
   template <typename U, bool kIsForwardIterator = true>
-  class iterator_t : public std::iterator<std::bidirectional_iterator_tag, U> {
+  class iterator_t {
    public:
+    // iterator traits.
+    using difference_type = ptrdiff_t;
+    using value_type = U;
+    using pointer = U*;
+    using reference = U&;
+    using iterator_category = std::bidirectional_iterator_tag;
+    static_assert(!std::is_void_v<typename std::iterator_traits<iterator_t>::value_type>);
+
     iterator_t() = default;
     iterator_t(const iterator_t& other) : link_(other.link_) {}
     iterator_t(iterator_t&& other) { swap(*this, other); }
