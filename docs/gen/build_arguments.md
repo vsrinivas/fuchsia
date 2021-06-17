@@ -1282,6 +1282,17 @@ suitable for flashing through fastboot for eMMC devices.
 
 From //build/images/fvm.gni:34
 
+### fvm_fastboot_compression
+How to compress the FVM image used for fastboot flashing.
+Possible values:
+  * "none": no compression
+  * "default": no compression on NAND, lz4 compression on eMMC.
+  * any other value is passed as the FVM "--compress" arg
+
+**Current value (from the default):** `"default"`
+
+From //build/images/fvm.gni:123
+
 ### fvm_ftl_nand_block_count
 
 **Current value (from the default):** `false`
@@ -3737,6 +3748,12 @@ Use vboot images
 **Current value (from the default):** `false`
 
 From //build/images/args.gni:10
+
+### userspace_pci_enable_msi_x
+
+**Current value (from the default):** `false`
+
+From //src/devices/bus/drivers/pci/pci.gni:11
 
 ### using_fuchsia_sdk
 Only set in buildroots where targets configure themselves for use with the
