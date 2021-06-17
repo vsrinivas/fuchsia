@@ -57,21 +57,13 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_component("netemul-sandbox-component") {
+fuchsia_component("netemul-sandbox") {
   testonly = true
   component_name = "netemul-sandbox-v2"
   manifest = "meta/netemul-sandbox-v2.cml"
-  deps = [ ":bin" ]
-}
-
-# TODO(https://fxbug.dev/67854): once relative package URLs exist, remove this
-# package and embed the netemul sandbox component in test packages directly.
-fuchsia_package("netemul-sandbox") {
-  testonly = true
-  package_name = "netemul-sandbox-v2"
   deps = [
+    ":bin",
     ":netemul-devmgr",
-    ":netemul-sandbox-component",
     "//src/connectivity/network/testing/netemul-v2/network-context",
     "//src/connectivity/network/tun/network-tun:component-v2",
   ]
@@ -79,7 +71,8 @@ fuchsia_package("netemul-sandbox") {
 
 isolated_devmgr_v2_component("netemul-devmgr") {
   deps = [
-    ":network-drivers",
+    "//src/connectivity/ethernet/drivers/ethernet",
+    "//src/connectivity/ethernet/drivers/ethertap",
     "//src/devices/tests/sysdev:renamed_sys_binary",
   ]
 }
@@ -94,25 +87,10 @@ fuchsia_test_component("netemul-sandbox-v2-tests") {
   deps = [ ":bin_test" ]
 }
 
-group("network-drivers") {
-  testonly = true
-  deps = [
-    "//src/connectivity/ethernet/drivers/ethernet",
-    "//src/connectivity/ethernet/drivers/ethertap",
-  ]
-}
-
-isolated_devmgr_v2_component("netemul-devmgr-test") {
-  deps = [
-    ":network-drivers",
-    "//src/devices/tests/sysdev:renamed_sys_binary",
-  ]
-}
-
 fuchsia_test_package("netemul-v2-tests") {
   test_components = [ ":netemul-sandbox-v2-tests" ]
   deps = [
-    ":netemul-devmgr-test",
+    ":netemul-devmgr",
     "//src/connectivity/network/testing/netemul-v2/network-context",
     "//src/connectivity/network/testing/netemul-v2/test-support:counter",
     "//src/connectivity/network/tun/network-tun:component-v2",

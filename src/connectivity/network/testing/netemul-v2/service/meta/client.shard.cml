@@ -5,11 +5,7 @@
     children: [
         {
             name: "sandbox",
-
-            // TODO(https://fxbug.dev/67854): once we have relative package
-            // URLs, change this to a relative URL so that the sandbox component
-            // can be embedded.
-            url: "fuchsia-pkg://fuchsia.com/netemul-sandbox-v2#meta/netemul-sandbox-v2.cm",
+            url: "#meta/netemul-sandbox-v2.cm",
         },
     ],
     use: [

@@ -499,7 +499,8 @@ struct Package {
     name: String,
 }
 
-// TODO(https://fxbug.dev/67854): remove once we have relative package URLs.
+// TODO(https://fxbug.dev/78313): remove once RealmBuilder supports relative
+// package URLs.
 const PACKAGE_IDENTITY_FILE: &str = "/pkg/meta/package";
 
 async fn get_this_package_name() -> Result<String> {
