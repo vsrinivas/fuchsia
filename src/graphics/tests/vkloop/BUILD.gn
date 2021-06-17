@@ -46,7 +46,6 @@ fuchsia_component("vkloop_cmp") {
   deps = [
     ":shaders",
     ":vkloop_bin",
-    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
     "//src/lib/vulkan/validation_layers",
   ]
 

@@ -20,7 +20,6 @@ fuchsia_component("vkvalidation_cmp") {
   component_name = "vkvalidation"
   deps = [
     ":vkvalidation_bin",
-    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
     "//src/lib/vulkan/validation_layers",
   ]
   manifest = "meta/vkvalidation.cmx"

@@ -55,7 +55,6 @@ fuchsia_component("vkext_unprotected_cmp") {
   component_name = "vkext_unprotected"
   deps = [
     ":vkext_bin",
-    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
     "//src/lib/vulkan/validation_layers",
   ]
   manifest = "meta/vkext_unprotected.cmx"
@@ -86,7 +85,6 @@ fuchsia_component("vkext_protected_cmp") {
   component_name = "vkext_protected"
   deps = [
     ":vkext_bin",
-    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
     "//src/lib/vulkan/validation_layers",
   ]
   manifest = "meta/vkext_protected.cmx"

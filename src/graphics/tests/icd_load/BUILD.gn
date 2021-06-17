@@ -31,7 +31,6 @@ fuchsia_component("icd_load_cmp") {
   component_name = "icd_load"
   deps = [
     ":icd_load_bin",
-    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
     "//src/lib/vulkan/validation_layers",
   ]
 
@@ -45,7 +44,6 @@ fuchsia_component("icd_load_v2_cmp") {
   component_name = "icd_load_v2"
   deps = [
     ":icd_load_bin",
-    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
     "//src/lib/vulkan/validation_layers",
   ]
 

@@ -63,7 +63,6 @@ fuchsia_component("libvulkan_test_driver") {
   deps = [
     ":icd-json",
     ":libvulkan_test_bin",
-    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
     "//src/lib/vulkan/validation_layers",
   ]
 
@@ -78,7 +77,6 @@ fuchsia_component("libvulkan_test_driver_manifest_fs") {
   deps = [
     ":icd-json",
     ":libvulkan_test_bin",
-    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
     "//src/lib/vulkan/validation_layers",
   ]
 

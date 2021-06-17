@@ -41,7 +41,6 @@ fuchsia_component("vkreadback_cmp") {
   component_name = "vkreadback"
   deps = [
     ":vkreadback_bin",
-    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
     "//src/lib/vulkan/validation_layers",
   ]
 

@@ -32,7 +32,6 @@ fuchsia_component("vk_timer_query_cmp") {
   component_name = "vk_timer_query"
   deps = [
     ":vk_timer_query_bin",
-    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
     "//src/lib/vulkan/validation_layers",
   ]
 
