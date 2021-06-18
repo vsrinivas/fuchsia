@@ -14,6 +14,8 @@ pub async fn get_ssh_address(daemon_proxy: DaemonProxy, cmd: WaitCommand) -> Res
 
 async fn wait_for_device(daemon_proxy: DaemonProxy, cmd: WaitCommand) -> Result<()> {
     let mut elapsed_seconds = 0;
+    let ffx: ffx_lib_args::Ffx = argh::from_env();
+    let is_default_target = ffx.target.is_none();
 
     // TODO(fxbug.dev/78946) Remove the loop when we can get the target's address even if we run
     // get_ssh_address() before the target is initialized or connected.
@@ -29,7 +31,11 @@ async fn wait_for_device(daemon_proxy: DaemonProxy, cmd: WaitCommand) -> Result<
                 if elapsed_seconds + 1 < cmd.timeout {
                     elapsed_seconds += 1;
                 } else {
-                    result.map_err(|e| FfxError::DaemonError { err: e, target: target })?;
+                    result.map_err(|e| FfxError::DaemonError {
+                        err: e,
+                        target: target,
+                        is_default_target,
+                    })?;
                 }
             }
         };

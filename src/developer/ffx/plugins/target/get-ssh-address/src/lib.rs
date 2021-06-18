@@ -30,11 +30,13 @@ async fn get_ssh_address_impl<W: Write>(
     mut writer: W,
 ) -> Result<()> {
     let timeout = Duration::from_nanos((cmd.timeout().await? * 1000000000.0) as u64);
+    let ffx: ffx_lib_args::Ffx = argh::from_env();
+    let is_default_target = ffx.target.is_none();
     let target: Option<String> = ffx_config::get("target.default").await?;
     let res = daemon_proxy
         .get_ssh_address(target.as_deref(), timeout.as_nanos() as i64)
         .await?
-        .map_err(|e| FfxError::DaemonError { err: e, target: target })?;
+        .map_err(|e| FfxError::DaemonError { err: e, target: target, is_default_target })?;
 
     let (ip, scope, port) = match res {
         TargetAddrInfo::Ip(info) => {

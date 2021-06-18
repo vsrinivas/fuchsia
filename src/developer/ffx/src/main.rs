@@ -57,7 +57,11 @@ impl Injection {
             .await?;
 
         result
-            .map_err(|err| FfxError::DaemonError { err, target })
+            .map_err(|err| FfxError::DaemonError {
+                err,
+                target,
+                is_default_target: app.target.is_none(),
+            })
             .map(|_| remote_proxy)
             .context("init_remote_proxy")
     }
@@ -84,8 +88,10 @@ impl Injector for Injection {
 
         result
             .map_err(|err| match err {
-                DaemonError::TargetNotFound => FfxError::FastbootError { target },
-                _ => FfxError::DaemonError { err, target },
+                DaemonError::TargetNotFound => {
+                    FfxError::FastbootError { target, is_default_target: app.target.is_none() }
+                }
+                _ => FfxError::DaemonError { err, target, is_default_target: app.target.is_none() },
             })
             .map(|_| fastboot_proxy)
             .context("fastboot_factory")
@@ -102,7 +108,11 @@ impl Injector for Injection {
             .await?;
 
         result
-            .map_err(|err| FfxError::DaemonError { err, target })
+            .map_err(|err| FfxError::DaemonError {
+                err,
+                target,
+                is_default_target: app.target.is_none(),
+            })
             .map(|_| target_proxy)
             .context("target_factory")
     }

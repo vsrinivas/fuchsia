@@ -16,30 +16,36 @@ pub enum FfxError {
     Error(#[source] anyhow::Error, i32 /* Error status code */),
 
     #[error("{}", match .err {
-        DaemonError::TargetCacheError => format!("Target {} could not be looked up in the cache due to an unspecified error. Retry your request, and if that fails run `ffx doctor`.", target_string(.target)),
-        DaemonError::TargetStateError => format!("Target {} is not in a state capable of the requested operation. Inspect `ffx target list` to determine if it is in the expected state.", target_string(.target)),
-        DaemonError::RcsConnectionError => format!("Target {} was not reachable. Run `ffx doctor` for diagnostic information.", target_string(.target)),
-        DaemonError::Timeout => format!("Timeout attempting to reach target {}", target_string(.target)),
+        DaemonError::TargetCacheError => format!("Target {} could not be looked up in the cache due to an unspecified error. Retry your request, and if that fails run `ffx doctor`.", target_string(.target, .is_default_target)),
+        DaemonError::TargetStateError => format!("Target {} is not in a state capable of the requested operation. Inspect `ffx target list` to determine if it is in the expected state.", target_string(.target, .is_default_target)),
+        DaemonError::RcsConnectionError => format!("Target {} was not reachable. Run `ffx doctor` for diagnostic information.", target_string(.target, .is_default_target)),
+        DaemonError::Timeout => format!("Timeout attempting to reach target {}", target_string(.target, .is_default_target)),
         DaemonError::TargetCacheEmpty => format!("No devices found."),
-        DaemonError::TargetAmbiguous => format!("Target specification {} matched multiple targets. Use `ffx target list` to list known targets, and use a more specific matcher.", target_string(.target)),
-        DaemonError::TargetNotFound => format!("Target {} was not found.", target_string(.target)),
-        DaemonError::TargetInFastboot => format!("Target {} was found in Fastboot. Reboot or flash the target to continue.", target_string(.target)),
-        DaemonError::NonFastbootDevice => format!("Target {} was found, but is not in Fastboot, please boot the target into Fastboot to continue.", target_string(.target)),
+        DaemonError::TargetAmbiguous => format!("Target specification {} matched multiple targets. Use `ffx target list` to list known targets, and use a more specific matcher.", target_string(.target, .is_default_target)),
+        DaemonError::TargetNotFound => format!("Target {} was not found.", target_string(.target, .is_default_target)),
+        DaemonError::TargetInFastboot => format!("Target {} was found in Fastboot. Reboot or flash the target to continue.", target_string(.target, .is_default_target)),
+        DaemonError::NonFastbootDevice => format!("Target {} was found, but is not in Fastboot, please boot the target into Fastboot to continue.", target_string(.target, .is_default_target)),
         DaemonError::ServiceNotFound => "The requested ffx service was not found. Run `ffx doctor --restart-daemon`.".to_string(),
         DaemonError::ServiceOpenError => "The requested ffx service failed to open. Run `ffx doctor --restart-daemon`.".to_string(),
         DaemonError::BadServiceRegisterState => "The requested service could not be registered. Run `ffx doctor --restart-daemon`.".to_string(),
-        DaemonError::TargetInZedboot => format!("Target {} was found in Zedboot. Reboot the target to continue.", target_string(.target)),
+        DaemonError::TargetInZedboot => format!("Target {} was found in Zedboot. Reboot the target to continue.", target_string(.target, .is_default_target)),
     })]
-    DaemonError { err: DaemonError, target: Option<String> },
+    DaemonError { err: DaemonError, target: Option<String>, is_default_target: bool },
 
-    #[error("{}", format!("No target with matcher {} was found.\n\n* Use `ffx target list` to verify the state of connected devices.\n* Use the SERIAL matcher with the --target (-t) parameter to explicity match a device.", target_string(.target)))]
-    FastbootError { target: Option<String> },
+    #[error("{}", format!("No target with matcher {} was found.\n\n* Use `ffx target list` to verify the state of connected devices.\n* Use the SERIAL matcher with the --target (-t) parameter to explicity match a device.", target_string(.target, .is_default_target)))]
+    FastbootError { target: Option<String>, is_default_target: bool },
 }
 
-fn target_string(matcher: &Option<String>) -> String {
+fn target_string(matcher: &Option<String>, is_default: &bool) -> String {
+    let non_empty_matcher = matcher.as_ref().filter(|s| !s.is_empty());
     format!(
-        "\"{}\"",
-        matcher.as_ref().filter(|s| !s.is_empty()).unwrap_or(&"unspecified".to_string())
+        "\"{}{}\"",
+        non_empty_matcher.unwrap_or(&"unspecified".to_string()),
+        if *is_default && !non_empty_matcher.is_none() {
+            " (default)".to_string()
+        } else {
+            "".to_string()
+        },
     )
 }
 
@@ -211,8 +217,11 @@ mod test {
     fn test_daemon_error_strings_containing_target_name() {
         fn assert_contains_target_name(err: DaemonError) {
             let name: Option<String> = Some("fuchsia-f00d".to_string());
-            assert!(format!("{}", FfxError::DaemonError { err, target: name.clone() })
-                .contains(name.as_ref().unwrap()));
+            assert!(format!(
+                "{}",
+                FfxError::DaemonError { err, target: name.clone(), is_default_target: false }
+            )
+            .contains(name.as_ref().unwrap()));
         }
         assert_contains_target_name(DaemonError::TargetCacheError);
         assert_contains_target_name(DaemonError::TargetStateError);
@@ -227,8 +236,9 @@ mod test {
 
     #[test]
     fn test_target_string() {
-        assert_eq!(target_string(&None), "\"unspecified\"");
-        assert_eq!(target_string(&Some("".to_string())), "\"unspecified\"");
-        assert_eq!(target_string(&Some("kittens".to_string())), "\"kittens\"");
+        assert_eq!(target_string(&None, &false), "\"unspecified\"");
+        assert_eq!(target_string(&Some("".to_string()), &false), "\"unspecified\"");
+        assert_eq!(target_string(&Some("kittens".to_string()), &false), "\"kittens\"");
+        assert_eq!(target_string(&Some("kittens".to_string()), &true), "\"kittens (default)\"");
     }
 }
