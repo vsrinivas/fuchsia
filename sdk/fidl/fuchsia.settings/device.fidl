@@ -8,7 +8,7 @@ library fuchsia.settings;
 ///
 /// Supported SettingsEpitaph enums:
 /// FILE_READ_ERROR, INTERNAL_SERVICE_ERROR
-[Discoverable]
+[Deprecated = "Use fuchsia.buildinfo.Provider instead", Discoverable]
 protocol Device {
     /// Notifies of a change in information about the device.
     ///
@@ -18,6 +18,7 @@ protocol Device {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
+    [Deprecated = "Use fuchsia.buildinfo.Provider.GetBuildInfo() instead"]
     Watch() -> (DeviceSettings device_settings);
 };
 
