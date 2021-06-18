@@ -423,33 +423,52 @@ fuchsia::media::AudioDeviceEnumeratorPtr HermeticAudioTest::TakeOwnershipOfAudio
 }
 
 void HermeticAudioTest::ExpectNoOverflowsOrUnderflows() {
+  ExpectNoOutputUnderflows();
+  ExpectNoPipelineUnderflows();
+  ExpectNoRendererUnderflows();
+  ExpectNoCapturerOverflows();
+}
+
+// Fail if data was lost because we awoke too late to provide data.
+void HermeticAudioTest::ExpectNoOutputUnderflows() {
   for (auto& [_, device] : devices_) {
     if (device.output) {
       ExpectInspectMetrics(device.output.get(),
-                           {
-                               .children =
-                                   {
-                                       {"device underflows", {.uints = {{"count", 0}}}},
-                                       {"pipeline underflows", {.uints = {{"count", 0}}}},
-                                   },
-                           });
+                           {.children = {
+                                {"device underflows", {.uints = {{"count", 0}}}},
+                            }});
     }
   }
-  for (auto& r : renderers_) {
-    ExpectInspectMetrics(r.get(), {
-                                      .children =
-                                          {
-                                              {"underflows", {.uints = {{"count", 0}}}},
-                                          },
-                                  });
+}
+
+// Fail if pipeline processing took longer than expected (for now this includes cases where the
+// time overrun did not necessarily result in data loss).
+void HermeticAudioTest::ExpectNoPipelineUnderflows() {
+  for (auto& [_, device] : devices_) {
+    if (device.output) {
+      ExpectInspectMetrics(device.output.get(),
+                           {.children = {
+                                {"pipeline underflows", {.uints = {{"count", 0}}}},
+                            }});
+    }
   }
+}
+
+// Fail if data was lost because a renderer client provided it to us too late.
+void HermeticAudioTest::ExpectNoRendererUnderflows() {
+  for (auto& r : renderers_) {
+    ExpectInspectMetrics(r.get(), {.children = {
+                                       {"underflows", {.uints = {{"count", 0}}}},
+                                   }});
+  }
+}
+
+// Fail if data was lost because we had no available buffer from a capturer-client.
+void HermeticAudioTest::ExpectNoCapturerOverflows() {
   for (auto& c : capturers_) {
-    ExpectInspectMetrics(c.get(), {
-                                      .children =
-                                          {
-                                              {"overflows", {.uints = {{"count", 0}}}},
-                                          },
-                                  });
+    ExpectInspectMetrics(c.get(), {.children = {
+                                       {"overflows", {.uints = {{"count", 0}}}},
+                                   }});
   }
 }
 

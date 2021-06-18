@@ -94,8 +94,17 @@ class HermeticAudioTest : public TestFixture {
   void ExpectInspectMetrics(RendererShimImpl* renderer, const ExpectedInspectProperties& props);
   void ExpectInspectMetrics(CapturerShimImpl* capturer, const ExpectedInspectProperties& props);
 
-  // Fail the test if there are any overflow or underflows.
+  // Fail the test if any overflow or underflow is reported. This includes the below four subcases:
+  // * Output underflow: data was lost because we awoke too late to provide data.
+  // * Pipeline underflow: pipeline processing took longer than expected (for now, this includes
+  //   cases where the time overrun did not necessarily result in data loss).
+  // * Renderer underflow: data was lost because a renderer client provided it to us too late.
+  // * Capturer overflow: data was lost because we had no available buffer from a capturer-client.
   void ExpectNoOverflowsOrUnderflows();
+  void ExpectNoOutputUnderflows();
+  void ExpectNoPipelineUnderflows();
+  void ExpectNoRendererUnderflows();
+  void ExpectNoCapturerOverflows();
 
   // Unbind and forget about the given object.
   void Unbind(VirtualOutputImpl* device);
