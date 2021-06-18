@@ -6,7 +6,8 @@ use crate::{constants::*, test_topology};
 use component_events::{events::*, matcher::*};
 use diagnostics_reader::{assert_data_tree, ArchiveReader, Logs, Severity};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
-use fidl_fuchsia_sys2::EventSourceMarker;
+use fidl_fuchsia_io::DirectoryMarker;
+use fidl_fuchsia_sys2::{ChildRef, EventSourceMarker, RealmMarker};
 use fuchsia_async::Task;
 use fuchsia_component::client;
 use futures::prelude::*;
@@ -19,7 +20,10 @@ async fn logs_from_crashing_component() {
     test_topology::add_component(&mut builder, "log_and_crash", LOG_AND_CRASH_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
-    let instance = builder.build().create().await.expect("create instance");
+
+    let mut realm = builder.build();
+    test_topology::expose_test_realm_protocol(&mut realm).await;
+    let instance = realm.create().await.expect("create instance");
 
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
@@ -38,6 +42,14 @@ async fn logs_from_crashing_component() {
         .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
         .await
         .unwrap();
+
+    let mut child_ref = ChildRef { name: "log_and_crash".to_string(), collection: None };
+    reader.retry_if_empty(true);
+    // launch our child and wait for it to exit before asserting on its logs
+    let (_client_end, server_end) = fidl::endpoints::create_endpoints::<DirectoryMarker>().unwrap();
+    let realm = instance.root.connect_to_protocol_at_exposed_dir::<RealmMarker>().unwrap();
+    realm.bind_child(&mut child_ref, server_end).await.unwrap().unwrap();
+
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::AnyCrash))
         .moniker(format!(

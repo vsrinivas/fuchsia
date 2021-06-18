@@ -13,10 +13,10 @@ async fn read_components_recursive_glob() {
     let mut builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_component(&mut builder, "child_a", COMPONENT_WITH_CHILDREN_URL)
+    test_topology::add_eager_component(&mut builder, "child_a", COMPONENT_WITH_CHILDREN_URL)
         .await
         .expect("add child a");
-    test_topology::add_component(&mut builder, "child_b", COMPONENT_WITH_CHILDREN_URL)
+    test_topology::add_eager_component(&mut builder, "child_b", COMPONENT_WITH_CHILDREN_URL)
         .await
         .expect("add child b");
     let instance = builder.build().create().await.expect("create instance");
@@ -57,10 +57,10 @@ async fn read_components_subtree_with_recursive_glob() {
     let mut builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_component(&mut builder, "child_a", COMPONENT_WITH_CHILDREN_URL)
+    test_topology::add_eager_component(&mut builder, "child_a", COMPONENT_WITH_CHILDREN_URL)
         .await
         .expect("add child a");
-    test_topology::add_component(&mut builder, "child_b", COMPONENT_WITH_CHILDREN_URL)
+    test_topology::add_eager_component(&mut builder, "child_b", COMPONENT_WITH_CHILDREN_URL)
         .await
         .expect("add child b");
     let instance = builder.build().create().await.expect("create instance");

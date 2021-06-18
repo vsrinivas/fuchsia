@@ -11,20 +11,22 @@ async fn accessor_truncation_test() {
     let mut builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_component(&mut builder, "child_a", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_component(&mut builder, "child_a", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
-    test_topology::add_component(&mut builder, "child_b", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_component(&mut builder, "child_b", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child b");
 
     let instance = builder.build().create().await.expect("create instance");
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
-    let data = ArchiveReader::new()
-        .with_archive(accessor)
+    let mut reader = ArchiveReader::new();
+    reader.with_archive(accessor);
+    let data = reader
         .with_aggregated_result_bytes_limit(1)
         .add_selector("child_a:root")
+        .with_minimum_schema_count(3)
         .snapshot::<Inspect>()
         .await
         .expect("got inspect data");
@@ -33,12 +35,10 @@ async fn accessor_truncation_test() {
 
     assert_eq!(count_dropped_schemas_per_moniker(&data, "child_a"), 3);
 
-    let accessor =
-        instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
-    let data = ArchiveReader::new()
-        .with_archive(accessor)
+    let data = reader
         .with_aggregated_result_bytes_limit(3000)
         .add_selector("child_a:root")
+        .with_minimum_schema_count(3)
         .snapshot::<Inspect>()
         .await
         .expect("got inspect data");
@@ -47,12 +47,10 @@ async fn accessor_truncation_test() {
 
     assert_eq!(count_dropped_schemas_per_moniker(&data, "child_a"), 2);
 
-    let accessor =
-        instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
-    let data = ArchiveReader::new()
-        .with_archive(accessor)
+    let data = reader
         .with_aggregated_result_bytes_limit(10000)
         .add_selector("child_a:root")
+        .with_minimum_schema_count(3)
         .snapshot::<Inspect>()
         .await
         .expect("got inspect data");
@@ -61,12 +59,10 @@ async fn accessor_truncation_test() {
 
     assert_eq!(count_dropped_schemas_per_moniker(&data, "child_a"), 1);
 
-    let accessor =
-        instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
-    let data = ArchiveReader::new()
-        .with_archive(accessor)
+    let data = reader
         .with_aggregated_result_bytes_limit(16000)
         .add_selector("child_a:root")
+        .with_minimum_schema_count(3)
         .snapshot::<Inspect>()
         .await
         .expect("got inspect data");
@@ -75,13 +71,11 @@ async fn accessor_truncation_test() {
 
     assert_eq!(count_dropped_schemas_per_moniker(&data, "child_a"), 0);
 
-    let accessor =
-        instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
-    let data = ArchiveReader::new()
-        .with_archive(accessor)
+    let data = reader
         .with_aggregated_result_bytes_limit(1)
         .add_selector("child_b:root")
         .add_selector("child_a:root")
+        .with_minimum_schema_count(6)
         .snapshot::<Inspect>()
         .await
         .expect("got inspect data");
@@ -90,13 +84,11 @@ async fn accessor_truncation_test() {
     assert_eq!(count_dropped_schemas_per_moniker(&data, "child_a"), 3);
     assert_eq!(count_dropped_schemas_per_moniker(&data, "child_b"), 3);
 
-    let accessor =
-        instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
-    let data = ArchiveReader::new()
-        .with_archive(accessor)
+    let data = reader
         .with_aggregated_result_bytes_limit(10000)
         .add_selector("child_b:root")
         .add_selector("child_a:root")
+        .with_minimum_schema_count(6)
         .snapshot::<Inspect>()
         .await
         .expect("got inspect data");

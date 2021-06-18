@@ -37,7 +37,7 @@ async fn read_components_inspect() {
     let mut builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_component(&mut builder, "child", STUB_INSPECT_COMPONENT_URL)
+    test_topology::add_eager_component(&mut builder, "child", STUB_INSPECT_COMPONENT_URL)
         .await
         .expect("add child");
 
@@ -67,10 +67,10 @@ async fn read_components_single_selector() {
     let mut builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_component(&mut builder, "child_a", STUB_INSPECT_COMPONENT_URL)
+    test_topology::add_eager_component(&mut builder, "child_a", STUB_INSPECT_COMPONENT_URL)
         .await
         .expect("add child a");
-    test_topology::add_component(&mut builder, "child_b", STUB_INSPECT_COMPONENT_URL)
+    test_topology::add_eager_component(&mut builder, "child_b", STUB_INSPECT_COMPONENT_URL)
         .await
         .expect("add child b");
     let instance = builder.build().create().await.expect("create instance");
@@ -100,7 +100,7 @@ async fn unified_reader() -> Result<(), Error> {
     let mut builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_component(&mut builder, "test_component", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_component(&mut builder, "test_component", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
 
@@ -151,7 +151,7 @@ async fn feedback_canonical_reader_test() -> Result<(), Error> {
     })
     .await
     .expect("create base topology");
-    test_topology::add_component(&mut builder, "test_component", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_component(&mut builder, "test_component", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
 
@@ -200,7 +200,7 @@ async fn feedback_disabled_pipeline() -> Result<(), Error> {
     })
     .await
     .expect("create base topology");
-    test_topology::add_component(&mut builder, "test_component", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_component(&mut builder, "test_component", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
 
@@ -215,7 +215,7 @@ async fn feedback_pipeline_missing_selectors() -> Result<(), Error> {
     let mut builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_component(&mut builder, "test_component", IQUERY_TEST_COMPONENT_URL)
+    test_topology::add_eager_component(&mut builder, "test_component", IQUERY_TEST_COMPONENT_URL)
         .await
         .expect("add child a");
 

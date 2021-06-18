@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::{constants::*, test_topology};
-use cm_rust::{ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget};
 use component_events::{events::*, matcher::*};
 use diagnostics_reader::{assert_data_tree, ArchiveReader, Data, Logs};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
@@ -11,7 +10,6 @@ use fidl_fuchsia_io::DirectoryMarker;
 use fidl_fuchsia_sys2::{ChildRef, EventSourceMarker, RealmMarker};
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use fuchsia_component_test::Moniker;
 use futures::StreamExt;
 
 #[fuchsia::test]
@@ -26,22 +24,7 @@ async fn test_logs_lifecycle() {
     // Currently RealmBuilder doesn't support to expose a capability from framework, therefore we
     // manually update the decl that the builder creates.
     let mut realm = builder.build();
-    let mut test_decl = realm.get_decl(&"test".into()).await.unwrap();
-    test_decl.exposes.push(ExposeDecl::Protocol(ExposeProtocolDecl {
-        source: ExposeSource::Framework,
-        source_name: "fuchsia.sys2.Realm".into(),
-        target: ExposeTarget::Parent,
-        target_name: "fuchsia.sys2.Realm".into(),
-    }));
-    realm.set_component(&"test".into(), test_decl).await.unwrap();
-    let mut root_decl = realm.get_decl(&Moniker::root()).await.unwrap();
-    root_decl.exposes.push(ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
-        source: ExposeSource::Child("test".to_string()),
-        source_name: "fuchsia.sys2.Realm".into(),
-        target: ExposeTarget::Parent,
-        target_name: "fuchsia.sys2.Realm".into(),
-    }));
-    realm.set_component(&Moniker::root(), root_decl).await.unwrap();
+    test_topology::expose_test_realm_protocol(&mut realm).await;
 
     let instance = realm.create().await.expect("create instance");
     let accessor =
