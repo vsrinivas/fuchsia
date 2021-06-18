@@ -21,6 +21,8 @@ zx_host_tool_action("zx") {
   outputs = [ "$target_gen_dir/$target_name.fidl.json" ]
   inputs = []
   args = [
+    "--experimental",
+    "old_syntax_only",
     "--name",
     target_name,
     "--json",

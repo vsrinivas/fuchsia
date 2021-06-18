@@ -15,12 +15,6 @@ if (current_toolchain == default_toolchain) {
       "testdata/badformat.fidl.noformat",
       "testdata/goodformat.test.fidl",
     ]
-    foreach(info, fidl_testdata_info) {
-      # Only use the standalone libraries since they have predictable filenames.
-      if (get_label_info(info.target, "dir") == "//tools/fidl/fidlc/testdata") {
-        sources += [ "//tools/fidl/fidlc/testdata/${info.name}.test.fidl" ]
-      }
-    }
     args = rebase_path(outputs, root_build_dir) +
            rebase_path(sources, root_build_dir)
   }

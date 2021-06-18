@@ -111,6 +111,8 @@ zx_host_tool_action_foreach("test_files_fidl_to_json") {
   tool = "//tools/fidl/fidlc:fidlc"
 
   args = [
+    "--experimental",
+    "old_syntax_only",
     "--json",
     rebase_path("$target_gen_dir") + "/{{source_name_part}}.json",
     "--files",
@@ -153,6 +155,8 @@ zx_host_tool_action_foreach("test_files_fidl_to_json_zxio") {
   tool = "//tools/fidl/fidlc:fidlc"
 
   args = [
+    "--experimental",
+    "old_syntax_only",
     "--json",
     rebase_path("$target_gen_dir") + "/{{source_name_part}}.json",
     "--files",

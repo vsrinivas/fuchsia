@@ -64,7 +64,8 @@ def generate_fidlc_json(fidlc_binary, syscall_dir, output_fidlc_json_path):
                 fidl_files.append(os.path.join(syscall_dir, entry.name))
 
     subprocess.check_call(
-        [fidlc_binary, '--json', output_fidlc_json_path, '--files'] +
+        [fidlc_binary, '--experimental', 'old_syntax_only', '--json',
+            output_fidlc_json_path, '--files'] +
         sorted(fidl_files))
 
 

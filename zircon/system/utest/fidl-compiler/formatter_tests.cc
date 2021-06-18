@@ -37,6 +37,7 @@ TEST(FormatterTests, GoodIdempotenceTest) {
   InitializeContents();
 
   for (auto element : formatted_output_) {
+    printf("testing %s\n", element.first.c_str());
     TestLibrary library(element.first, element.second);
     std::unique_ptr<fidl::raw::File> ast;
     EXPECT_TRUE(library.Parse(&ast));
