@@ -19,10 +19,12 @@
 #include "el2_cpu_state_priv.h"
 
 namespace {
+
 DECLARE_SINGLETON_MUTEX(GuestMutex);
+size_t num_guests TA_GUARDED(GuestMutex::Get()) = 0;
+ktl::unique_ptr<El2CpuState> el2_cpu_state TA_GUARDED(GuestMutex::Get());
+
 }  // namespace
-static size_t num_guests TA_GUARDED(GuestMutex::Get()) = 0;
-static ktl::unique_ptr<El2CpuState> el2_cpu_state TA_GUARDED(GuestMutex::Get());
 
 zx_status_t El2TranslationTable::Init() {
   zx_status_t status = l0_page_.Alloc(0);
