@@ -101,10 +101,12 @@ pub async fn add_launch_event(args: Option<&str>) -> Result<()> {
 
 /// Records an error event in the app.
 /// Returns an error if init has not been called.
-pub async fn add_crash_event(err: &str) -> Result<()> {
+pub async fn add_crash_event(description: &str, fatal: Option<&bool>) -> Result<()> {
     let svc = METRICS_SERVICE.lock().await;
     match &svc.init_state {
-        MetricsServiceInitStatus::INITIALIZED => svc.inner_add_crash_event(err, None).await,
+        MetricsServiceInitStatus::INITIALIZED => {
+            svc.inner_add_crash_event(description, fatal, None).await
+        }
         MetricsServiceInitStatus::UNINITIALIZED => {
             log::error!("add_crash_event called on uninitialized METRICS_SERVICE");
             bail!(INIT_ERROR)

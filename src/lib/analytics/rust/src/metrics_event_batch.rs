@@ -56,12 +56,12 @@ impl MetricsEventBatch {
             .await
     }
 
-    pub async fn add_crash_event(&mut self, err: &str) -> Result<()> {
+    pub async fn add_crash_event(&mut self, description: &str, fatal: Option<&bool>) -> Result<()> {
         if self.full_batch() {
             bail!(MAX_ENTRIES_EXCEEDED);
         }
         let svc = METRICS_SERVICE.lock().await;
-        svc.inner_add_crash_event(err, Some(self)).await
+        svc.inner_add_crash_event(description, fatal, Some(self)).await
     }
 
     pub async fn send_events(&self) -> Result<()> {
@@ -116,7 +116,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn add_crash_event_count_over_limit_bails() -> Result<()> {
         let mut batch = MetricsEventBatch { events: vec!["_".to_string(); 20] };
-        let _r = batch.add_crash_event("Oops").await;
+        let _r = batch.add_crash_event("Oops", None).await;
         assert_too_many_events(_r)
     }
 

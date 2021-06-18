@@ -147,13 +147,43 @@ impl MetricsService {
     // )
     pub(crate) async fn inner_add_crash_event(
         &self,
-        _err: &str,
+        description: &str,
+        fatal: Option<&bool>,
         batch_collector: Option<&mut MetricsEventBatch>,
     ) -> Result<()> {
-        if let Some(bc) = batch_collector {
-            &mut bc.add_event_string("".to_string()); // TODO add crash_post_body
+        match self.state.status {
+            MetricsStatus::NewToTool | MetricsStatus::OptedIn => {
+                let body = make_crash_body_with_hash(
+                    &self.state.app_name,
+                    Some(&self.state.build_version),
+                    &self.state.ga_product_code,
+                    description,
+                    fatal,
+                    BTreeMap::new(),
+                    self.uuid_as_str(),
+                );
+                match batch_collector {
+                    None => {
+                        let client = new_https_client();
+                        let req = Request::builder()
+                            .method(Method::POST)
+                            .uri(GA_URL)
+                            .body(Body::from(body))?;
+                        let res = client.request(req).await;
+                        match res {
+                            Ok(res) => log::info!("Analytics response: {}", res.status()),
+                            Err(e) => log::debug!("Error posting analytics: {}", e),
+                        }
+                        Ok(())
+                    }
+                    Some(bc) => {
+                        &mut bc.add_event_string(body);
+                        Ok(())
+                    }
+                }
+            }
+            _ => Ok(()),
         }
-        Ok(())
     }
 
     /// Records a timing event from the app.

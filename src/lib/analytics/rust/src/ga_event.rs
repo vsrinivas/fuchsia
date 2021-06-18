@@ -29,6 +29,7 @@ const GA_TIMING_LABEL_KEY: &str = "utl";
 const GA_DATA_TYPE_KEY: &str = "t";
 const GA_DATA_TYPE_EVENT_KEY: &str = "event";
 const GA_DATA_TYPE_TIMING_KEY: &str = "timing";
+const GA_DATA_TYPE_EXCEPTION_KEY: &str = "exception";
 
 const GA_PROTOCOL_KEY: &str = "v";
 const GA_PROTOCOL_VAL: &str = "1";
@@ -38,6 +39,9 @@ const GA_APP_VERSION_KEY: &str = "av";
 const GA_APP_VERSION_DEFAULT: &str = "unknown";
 
 const GA_CUSTOM_DIMENSION_1_KEY: &str = "cd1";
+
+const GA_EXCEPTION_DESCRIPTION_KEY: &str = "exd";
+const GA_EXCEPTION_FATAL_KEY: &str = "exf";
 
 /// Produces http encoded parameter string to send to the analytics
 /// service.
@@ -166,6 +170,51 @@ fn to_kv_post_body(params: &BTreeMap<&str, &str>) -> String {
     serializer.finish()
 }
 
+pub fn make_crash_body_with_hash(
+    app_name: &str,
+    app_version: Option<&str>,
+    ga_property_id: &str,
+    description: &str,
+    fatal: Option<&bool>,
+    custom_dimensions: BTreeMap<&str, String>,
+    uuid: String,
+) -> String {
+    let uname = os_and_release_desc();
+
+    let mut params = BTreeMap::new();
+    params.insert(GA_PROTOCOL_KEY, GA_PROTOCOL_VAL);
+    params.insert(GA_PROPERTY_KEY, ga_property_id);
+    params.insert(GA_CLIENT_KEY, &uuid);
+    params.insert(GA_DATA_TYPE_KEY, GA_DATA_TYPE_EXCEPTION_KEY);
+    params.insert(GA_APP_NAME_KEY, app_name);
+    params.insert(
+        GA_APP_VERSION_KEY,
+        match app_version {
+            Some(ver) => ver,
+            None => GA_APP_VERSION_DEFAULT,
+        },
+    );
+
+    params.insert(GA_EXCEPTION_DESCRIPTION_KEY, &description);
+
+    params.insert(
+        GA_EXCEPTION_FATAL_KEY,
+        match fatal {
+            Some(true) => "1",
+            _ => "0",
+        },
+    );
+
+    for (&key, value) in custom_dimensions.iter() {
+        params.insert(key, value);
+    }
+    params.insert(GA_CUSTOM_DIMENSION_1_KEY, &uname);
+
+    let body = to_kv_post_body(&params);
+    //println!("body = {}", &body);
+    body
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -258,6 +307,31 @@ mod test {
         );
     }
 
+    #[test]
+    fn make_post_body_for_crash() {
+        let app_name = "ffx";
+        let app_version = "1";
+        let uname = os_and_release_desc().replace(" ", "+");
+        let cid = "test";
+        let description_encoded = "Exception+foo";
+        let fatal = false;
+        let expected = format!(
+            "an={}&av={}&cd1={}&cid={}&exd={}&exf={}&t=exception&tid={}&v=1",
+            &app_name, &app_version, &uname, &cid, &description_encoded, "0", GA_PROPERTY_ID
+        );
+        assert_eq!(
+            expected,
+            make_crash_body_with_hash(
+                app_name,
+                Some(app_version),
+                GA_PROPERTY_ID,
+                "Exception foo",
+                Some(&fatal),
+                BTreeMap::new(),
+                String::from("test")
+            )
+        );
+    }
     #[test]
     fn insert_if_present_some() {
         let mut map2 = BTreeMap::new();

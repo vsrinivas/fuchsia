@@ -320,12 +320,11 @@ async fn main() {
 
     // unwrap because if stderr is not writable, the program should try to exit right away.
     errors::write_result(&result, &mut std::io::stderr()).unwrap();
-
     // Report BUG errors as crash events
     if result.is_err() && result.ffx_error().is_none() {
         let err_msg = format!("{}", result.as_ref().unwrap_err());
         // TODO(66918): make configurable, and evaluate chosen time value.
-        if let Err(e) = add_crash_event(&err_msg)
+        if let Err(e) = add_crash_event(&err_msg, None)
             .on_timeout(Duration::from_secs(2), || {
                 log::error!("analytics timed out reporting crash event");
                 Ok(())
