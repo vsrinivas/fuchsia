@@ -4,32 +4,32 @@
 
 import 'dart:io';
 import 'package:sl4f/sl4f.dart' as sl4f;
+import 'package:src.tests.end_to_end.flash._flash_script_test_dart_library/utils.dart'
+    as utils;
 import 'package:test/test.dart';
-
-bool _isNullOrEmpty(String str) => str == null || str.isEmpty;
 
 void main() {
   test('test flashing', () async {
     // Get env info necessary to run test.
     String fbSernum = Platform.environment['FUCHSIA_FASTBOOT_SERNUM'];
-    if (_isNullOrEmpty(fbSernum)) {
+    if (utils.isNullOrEmpty(fbSernum)) {
       fail('FUCHSIA_FASTBOOT_SERNUM environment variable was empty.');
     }
     String nodename = Platform.environment['FUCHSIA_NODENAME'];
-    if (_isNullOrEmpty(nodename)) {
+    if (utils.isNullOrEmpty(nodename)) {
       fail('FUCHSIA_NODENAME environment variable was empty.');
     }
     String ipv4 = Platform.environment['FUCHSIA_DEVICE_ADDR'];
-    if (_isNullOrEmpty(ipv4)) {
+    if (utils.isNullOrEmpty(ipv4)) {
       fail('FUCHSIA_DEVICE_ADDR environment variable was empty');
     }
     String pkey = Platform.environment['FUCHSIA_SSH_KEY'];
-    if (_isNullOrEmpty(pkey)) {
+    if (utils.isNullOrEmpty(pkey)) {
       fail('FUCHSIA_SSH_KEY environment variable was empty');
     }
 
     // Generate a public key from the private key.
-    if (!await generatePublicKey(pkey, './pubkey')) {
+    if (!utils.generatePublicKey(pkey, './pubkey')) {
       fail('ssh-keygen failed to generate public key from private key');
     }
 
@@ -60,14 +60,4 @@ void main() {
     await client.stopServer();
     client.close();
   }, timeout: Timeout(Duration(minutes: 5)));
-}
-
-Future<bool> generatePublicKey(
-    final String pkeyPath, final String pubkeyPath) async {
-  var keyGenProcess = Process.runSync('ssh-keygen', ['-y', '-f', pkeyPath]);
-  if (keyGenProcess.exitCode != 0) {
-    return false;
-  }
-  await File(pubkeyPath).writeAsString(keyGenProcess.stdout);
-  return true;
 }
