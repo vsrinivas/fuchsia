@@ -9,14 +9,11 @@ import("//build/test.gni")
 group("test") {
   testonly = true
   deps = [
+    ":blobfs-unittest",
     ":blobfs_host($host_toolchain)",
     "integration:tests",
     "load_generator",
   ]
-  if (!is_coverage) {
-    # TODO(https://fxbug.dev/75686): Re-enable this test when we can avoid OOM.
-    deps += [ ":blobfs-unittest" ]
-  }
 }
 
 executable("test_binary") {

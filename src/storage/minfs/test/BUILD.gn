@@ -236,15 +236,9 @@ fuchsia_test_package("minfs-tests") {
     ":minfs-dirty-cache-integration-test",
     ":minfs-unit-test",
     ":minfs-micro-benchmark-test",
+    ":minfs-integration-test",
+    ":minfs-power-test",
   ]
-
-  if (!is_coverage) {
-    # TODO(https://fxbug.dev/75686): Re-enable this test when we can avoid OOM.
-    test_components += [
-      ":minfs-integration-test",
-      ":minfs-power-test",
-    ]
-  }
 
   deps = [ "//src/storage/bin/minfs" ]
 }

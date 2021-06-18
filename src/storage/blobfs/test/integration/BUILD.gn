@@ -8,11 +8,10 @@ import("//src/storage/testing/isolated_devmgr.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":blobfs-large-integration-package" ]
-  if (!is_coverage) {
-    # TODO(https://fxbug.dev/75686): Re-enable this test when we can avoid OOM.
-    deps += [ ":blobfs-integration-package" ]
-  }
+  deps = [
+    ":blobfs-integration-package",
+    ":blobfs-large-integration-package",
+  ]
 }
 
 static_library("blobfs_integration_fixtures") {
