@@ -102,7 +102,85 @@ pub struct ListCommand {
     note = "Inspect and manage the results from previous test runs"
 )]
 pub struct ResultCommand {
+    #[argh(subcommand)]
+    pub subcommand: ResultSubCommand,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand)]
+pub enum ResultSubCommand {
+    Show(ShowResultCommand),
+    List(ListResultCommand),
+    Delete(DeleteResultCommand),
+    Save(SaveResultCommand),
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(
+    subcommand,
+    name = "show",
+    description = "Display test results",
+    note = "Display the results of a previous test run.
+
+When no options are provided, displays the results of the most recent test run.
+"
+)]
+pub struct ShowResultCommand {
     /// when set, display the results of the specified directory.
     #[argh(option)]
     pub directory: Option<String>,
+    /// when set, display the results of a run with specified index.
+    #[argh(option)]
+    pub index: Option<u32>,
+    /// when set, display the results of a run with specified name.
+    #[argh(option)]
+    pub name: Option<String>,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(
+    subcommand,
+    name = "list",
+    description = "List test results",
+    note = "Display a list of previous test runs"
+)]
+pub struct ListResultCommand {}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(
+    subcommand,
+    name = "delete",
+    description = "Delete test results",
+    note = "Manually delete a previous test run result.
+
+Either --index or --name must be specified."
+)]
+pub struct DeleteResultCommand {
+    /// when set, display the results of a run with specified index.
+    #[argh(option)]
+    pub index: Option<u32>,
+    /// when set, display the results of a run with specified name.
+    #[argh(option)]
+    pub name: Option<String>,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(
+    subcommand,
+    name = "save",
+    description = "Save test results",
+    note = "Mark a test result so it is not garbage collected.
+
+By default, ffx test only retains the last 'n' test results, as configured
+with 'test.save_count'. A test result saved and given a name using the save
+command will be exempted from this cleanup and will not be counted towards the
+total number of saved test results."
+)]
+pub struct SaveResultCommand {
+    /// the index of the test result to save.
+    #[argh(option)]
+    pub index: u32,
+    /// the name to assign the saved test result.
+    #[argh(option)]
+    pub name: String,
 }

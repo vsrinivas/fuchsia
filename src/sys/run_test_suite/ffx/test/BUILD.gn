@@ -15,7 +15,9 @@ ffx_plugin("ffx_test") {
     "//src/sys/run_test_suite/directory",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
   ]
 
   test_deps = [ "//third_party/rust_crates:tempfile" ]

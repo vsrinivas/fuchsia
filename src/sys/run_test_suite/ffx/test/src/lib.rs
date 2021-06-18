@@ -9,13 +9,16 @@ use {
     async_trait::async_trait,
     errors::ffx_bail,
     ffx_core::ffx_plugin,
-    ffx_test_args::{ListCommand, ResultCommand, RunCommand, TestCommand, TestSubcommand},
+    ffx_test_args::{
+        DeleteResultCommand, ListCommand, ResultCommand, ResultSubCommand, RunCommand,
+        ShowResultCommand, TestCommand, TestSubcommand,
+    },
     fidl::endpoints::create_proxy,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_remotecontrol as fremotecontrol,
     fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{RunBuilderMarker, RunBuilderProxy},
-    output_directory::DirectoryManager,
+    output_directory::{DirectoryError, DirectoryId, DirectoryManager},
     run_test_suite_lib::diagnostics,
     std::fs::File,
     std::io::{stdout, Write},
@@ -83,7 +86,7 @@ async fn get_directory_manager() -> Result<DirectoryManager> {
         ),
     };
     let save_count_config: usize = ffx_config::get("test.save_count").await?;
-    DirectoryManager::new(output_path_config, save_count_config)
+    Ok(DirectoryManager::new(output_path_config, save_count_config)?)
 }
 
 async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) -> Result<()> {
@@ -164,19 +167,79 @@ async fn get_tests<W: Write>(
 }
 
 async fn result_command<W: Write>(
-    ResultCommand { directory }: ResultCommand,
+    ResultCommand { subcommand }: ResultCommand,
     mut writer: W,
 ) -> Result<()> {
-    match directory {
-        Some(specified_directory) => display_output_directory(specified_directory.into(), writer),
-        None => {
-            let directory_manager = get_directory_manager().await?;
-            match directory_manager.latest_directory()? {
-                Some(latest) => display_output_directory(latest, writer),
-                None => writeln!(writer, "Found no test results to display").map_err(Into::into),
+    match subcommand {
+        ResultSubCommand::Show(ShowResultCommand { directory, index, name }) => {
+            let directory_to_display = if let Some(directory_override) = directory {
+                Some(directory_override.into())
+            } else if let Some(specified_index) = index {
+                get_directory_manager().await?.get_by_id(DirectoryId::Index(specified_index))?
+            } else if let Some(specified_name) = name {
+                get_directory_manager().await?.get_by_id(DirectoryId::Name(specified_name))?
+            } else {
+                get_directory_manager().await?.latest_directory()?
+            };
+            match directory_to_display {
+                Some(dir) => display_output_directory(dir, writer),
+                None => {
+                    writeln!(writer, "Directory not found")?;
+                    Ok(())
+                }
+            }
+        }
+        ResultSubCommand::List(_) => result_list_command(writer).await,
+        ResultSubCommand::Delete(delete) => result_delete_command(delete, writer).await,
+        ResultSubCommand::Save(save) => {
+            get_directory_manager().await?.save_directory(save.index, save.name)?;
+            Ok(())
+        }
+    }
+}
+
+async fn result_list_command<W: Write>(mut writer: W) -> Result<()> {
+    let entries = get_directory_manager().await?.entries_ordered()?;
+    let unsaved_entries = entries
+        .iter()
+        .filter_map(|(id, entry)| match id {
+            DirectoryId::Index(index) => Some((index, entry.timestamp)),
+            DirectoryId::Name(_) => None,
+        })
+        .collect::<Vec<_>>();
+    if unsaved_entries.len() > 0 {
+        writeln!(writer, "Found run results:")?;
+        for (id, maybe_timestamp) in unsaved_entries {
+            match maybe_timestamp {
+                Some(timestamp) => {
+                    let local_time: chrono::DateTime<chrono::Local> = timestamp.into();
+                    writeln!(writer, "{}: {}", id, local_time.to_rfc2822())?
+                }
+                None => writeln!(writer, "{}", id)?,
             }
         }
     }
+
+    let saved_entries = entries
+        .iter()
+        .filter_map(|(id, entry)| match id {
+            DirectoryId::Index(_) => None,
+            DirectoryId::Name(name) => Some((name, entry.timestamp)),
+        })
+        .collect::<Vec<_>>();
+    if saved_entries.len() > 0 {
+        writeln!(writer, "Saved run results:")?;
+        for (name, maybe_timestamp) in saved_entries {
+            match maybe_timestamp {
+                Some(timestamp) => {
+                    let local_time: chrono::DateTime<chrono::Local> = timestamp.into();
+                    writeln!(writer, "{}: {}", name, local_time.to_rfc2822())?
+                }
+                None => writeln!(writer, "{}", name)?,
+            }
+        }
+    }
+    Ok(())
 }
 
 fn display_output_directory<W: Write>(path: PathBuf, mut writer: W) -> Result<()> {
@@ -230,4 +293,33 @@ fn display_output_directory<W: Write>(path: PathBuf, mut writer: W) -> Result<()
     }
 
     Ok(())
+}
+
+async fn result_delete_command<W: Write>(
+    DeleteResultCommand { index, name }: DeleteResultCommand,
+    mut writer: W,
+) -> Result<()> {
+    let id = match (index, name) {
+        (Some(_), Some(_)) => {
+            writeln!(writer, "Cannot specify both index and name.")?;
+            return Ok(());
+        }
+        (Some(index), None) => DirectoryId::Index(index),
+        (None, Some(name)) => DirectoryId::Name(name),
+        (None, None) => {
+            writeln!(writer, "No directory specified.")?;
+            return Ok(());
+        }
+    };
+    match get_directory_manager().await?.delete(id) {
+        Ok(()) => {
+            writeln!(writer, "Deleted a run result.")?;
+            Ok(())
+        }
+        Err(DirectoryError::IdNotFound(_)) => {
+            writeln!(writer, "Directory not found")?;
+            Ok(())
+        }
+        Err(e) => Err(e.into()),
+    }
 }
