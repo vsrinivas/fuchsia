@@ -1,3 +1,4 @@
+deprecated_syntax;
 library fidl.test.consts;
 
 const bool ENABLED_FLAG = true;

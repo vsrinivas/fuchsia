@@ -6,7 +6,7 @@
 ## **PROTOCOLS**
 
 ## sub {#sub}
-*Defined in [fidl.test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=7)*
+*Defined in [fidl.test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=8)*
 
 
 ### foo {#sub.foo}
@@ -34,7 +34,7 @@
         </tr></table>
 
 ## super {#super}
-*Defined in [fidl.test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=3)*
+*Defined in [fidl.test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=4)*
 
 
 ### foo {#super.foo}

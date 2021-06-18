@@ -1,6 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+deprecated_syntax;
 
 /// NandOperation's are submitted for processing via the queue() method of the
 /// Nand Protocol. Once submitted, the contents of the NandOperation may be modified

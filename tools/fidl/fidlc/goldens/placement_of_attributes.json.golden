@@ -17,7 +17,7 @@
       "name": "fidl.test.placementofattributes/ExampleBits",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-        "line": 7,
+        "line": 8,
         "column": 6,
         "length": 11
       },
@@ -28,7 +28,7 @@
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 6,
+            "line": 7,
             "column": 2,
             "length": 6
           }
@@ -44,7 +44,7 @@
           "name": "MEMBER",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 9,
+            "line": 10,
             "column": 5,
             "length": 6
           },
@@ -65,7 +65,7 @@
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-                "line": 8,
+                "line": 9,
                 "column": 6,
                 "length": 12
               }
@@ -81,7 +81,7 @@
       "name": "fidl.test.placementofattributes/EXAMPLE_CONST",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-        "line": 13,
+        "line": 14,
         "column": 14,
         "length": 13
       },
@@ -92,7 +92,7 @@
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 12,
+            "line": 13,
             "column": 2,
             "length": 7
           }
@@ -119,7 +119,7 @@
       "name": "fidl.test.placementofattributes/ExampleEnum",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-        "line": 16,
+        "line": 17,
         "column": 6,
         "length": 11
       },
@@ -130,7 +130,7 @@
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 15,
+            "line": 16,
             "column": 2,
             "length": 6
           }
@@ -142,7 +142,7 @@
           "name": "MEMBER",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 18,
+            "line": 19,
             "column": 5,
             "length": 6
           },
@@ -163,7 +163,7 @@
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-                "line": 17,
+                "line": 18,
                 "column": 6,
                 "length": 12
               }
@@ -180,7 +180,7 @@
       "name": "fidl.test.placementofattributes/ExampleProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-        "line": 22,
+        "line": 23,
         "column": 10,
         "length": 15
       },
@@ -191,7 +191,7 @@
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 21,
+            "line": 22,
             "column": 2,
             "length": 10
           }
@@ -204,7 +204,7 @@
           "name": "Method",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 24,
+            "line": 25,
             "column": 5,
             "length": 6
           },
@@ -216,7 +216,7 @@
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-                "line": 23,
+                "line": 24,
                 "column": 6,
                 "length": 8
               }
@@ -232,7 +232,7 @@
               "name": "arg",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-                "line": 24,
+                "line": 25,
                 "column": 31,
                 "length": 3
               },
@@ -264,7 +264,7 @@
       "name": "fidl.test.placementofattributes/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-        "line": 24,
+        "line": 25,
         "column": 11,
         "length": 24
       },
@@ -279,7 +279,7 @@
           "name": "arg",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 24,
+            "line": 25,
             "column": 31,
             "length": 3
           },
@@ -304,7 +304,7 @@
       "name": "fidl.test.placementofattributes/ExampleStruct",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-        "line": 28,
+        "line": 29,
         "column": 8,
         "length": 13
       },
@@ -316,7 +316,7 @@
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 27,
+            "line": 28,
             "column": 2,
             "length": 8
           }
@@ -331,7 +331,7 @@
           "name": "member",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 30,
+            "line": 31,
             "column": 12,
             "length": 6
           },
@@ -342,7 +342,7 @@
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-                "line": 29,
+                "line": 30,
                 "column": 6,
                 "length": 14
               }
@@ -371,7 +371,7 @@
       "name": "fidl.test.placementofattributes/ExampleTable",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-        "line": 34,
+        "line": 35,
         "column": 7,
         "length": 12
       },
@@ -382,7 +382,7 @@
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 33,
+            "line": 34,
             "column": 2,
             "length": 7
           }
@@ -399,7 +399,7 @@
           "name": "member",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 36,
+            "line": 37,
             "column": 15,
             "length": 6
           },
@@ -410,7 +410,7 @@
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-                "line": 35,
+                "line": 36,
                 "column": 6,
                 "length": 13
               }
@@ -436,7 +436,7 @@
       "name": "fidl.test.placementofattributes/ExampleUnion",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-        "line": 43,
+        "line": 44,
         "column": 7,
         "length": 12
       },
@@ -447,7 +447,7 @@
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 42,
+            "line": 43,
             "column": 2,
             "length": 7
           }
@@ -464,7 +464,7 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 45,
+            "line": 46,
             "column": 15,
             "length": 7
           },
@@ -475,7 +475,7 @@
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-                "line": 44,
+                "line": 45,
                 "column": 6,
                 "length": 13
               }
@@ -499,7 +499,7 @@
       "name": "fidl.test.placementofattributes/ExampleXUnion",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-        "line": 49,
+        "line": 50,
         "column": 16,
         "length": 13
       },
@@ -510,7 +510,7 @@
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 48,
+            "line": 49,
             "column": 2,
             "length": 8
           }
@@ -527,7 +527,7 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 51,
+            "line": 52,
             "column": 15,
             "length": 7
           },
@@ -538,7 +538,7 @@
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-                "line": 50,
+                "line": 51,
                 "column": 6,
                 "length": 14
               }
@@ -564,7 +564,7 @@
       "name": "fidl.test.placementofattributes/TypeAlias",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-        "line": 40,
+        "line": 41,
         "column": 7,
         "length": 9
       },
@@ -575,7 +575,7 @@
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
-            "line": 39,
+            "line": 40,
             "column": 2,
             "length": 11
           }

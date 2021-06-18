@@ -92,7 +92,7 @@
       "name": "fidl.test.nullable/SimpleProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-        "line": 17,
+        "line": 18,
         "column": 10,
         "length": 14
       },
@@ -103,7 +103,7 @@
           "name": "Add",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 18,
+            "line": 19,
             "column": 5,
             "length": 3
           },
@@ -117,7 +117,7 @@
               "name": "a",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-                "line": 18,
+                "line": 19,
                 "column": 15,
                 "length": 1
               },
@@ -134,7 +134,7 @@
               "name": "b",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-                "line": 18,
+                "line": 19,
                 "column": 24,
                 "length": 1
               },
@@ -164,7 +164,7 @@
               "name": "sum",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-                "line": 18,
+                "line": 19,
                 "column": 37,
                 "length": 3
               },
@@ -195,7 +195,7 @@
       "name": "fidl.test.nullable/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-        "line": 18,
+        "line": 19,
         "column": 8,
         "length": 18
       },
@@ -209,7 +209,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 18,
+            "line": 19,
             "column": 15,
             "length": 1
           },
@@ -226,7 +226,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 18,
+            "line": 19,
             "column": 24,
             "length": 1
           },
@@ -251,7 +251,7 @@
       "name": "fidl.test.nullable/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-        "line": 18,
+        "line": 19,
         "column": 30,
         "length": 11
       },
@@ -265,7 +265,7 @@
           "name": "sum",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 18,
+            "line": 19,
             "column": 37,
             "length": 3
           },
@@ -290,7 +290,7 @@
       "name": "fidl.test.nullable/StructWithNullableString",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-        "line": 5,
+        "line": 6,
         "column": 8,
         "length": 24
       },
@@ -304,7 +304,7 @@
           "name": "val",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 6,
+            "line": 7,
             "column": 13,
             "length": 3
           },
@@ -329,7 +329,7 @@
       "name": "fidl.test.nullable/StructWithNullableVector",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-        "line": 9,
+        "line": 10,
         "column": 8,
         "length": 24
       },
@@ -347,7 +347,7 @@
           "name": "val",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 10,
+            "line": 11,
             "column": 20,
             "length": 3
           },
@@ -372,7 +372,7 @@
       "name": "fidl.test.nullable/StructWithNullableHandle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-        "line": 13,
+        "line": 14,
         "column": 17,
         "length": 24
       },
@@ -389,7 +389,7 @@
           "name": "val",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 14,
+            "line": 15,
             "column": 20,
             "length": 3
           },
@@ -414,7 +414,7 @@
       "name": "fidl.test.nullable/StructWithNullableProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-        "line": 21,
+        "line": 22,
         "column": 17,
         "length": 26
       },
@@ -429,7 +429,7 @@
           "name": "val",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 22,
+            "line": 23,
             "column": 21,
             "length": 3
           },
@@ -454,7 +454,7 @@
       "name": "fidl.test.nullable/StructWithNullableRequest",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-        "line": 25,
+        "line": 26,
         "column": 17,
         "length": 25
       },
@@ -469,7 +469,7 @@
           "name": "val",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 26,
+            "line": 27,
             "column": 30,
             "length": 3
           },
@@ -494,7 +494,7 @@
       "name": "fidl.test.nullable/Int32Wrapper",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-        "line": 29,
+        "line": 30,
         "column": 8,
         "length": 12
       },
@@ -508,7 +508,7 @@
           "name": "val",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 30,
+            "line": 31,
             "column": 11,
             "length": 3
           },
@@ -533,7 +533,7 @@
       "name": "fidl.test.nullable/StructWithNullableStruct",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-        "line": 33,
+        "line": 34,
         "column": 8,
         "length": 24
       },
@@ -548,7 +548,7 @@
           "name": "val",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 34,
+            "line": 35,
             "column": 19,
             "length": 3
           },
@@ -573,7 +573,7 @@
       "name": "fidl.test.nullable/StructWithNullableUnion",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-        "line": 42,
+        "line": 43,
         "column": 8,
         "length": 23
       },
@@ -588,7 +588,7 @@
           "name": "val",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 43,
+            "line": 44,
             "column": 18,
             "length": 3
           },
@@ -616,7 +616,7 @@
       "name": "fidl.test.nullable/SimpleUnion",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-        "line": 37,
+        "line": 38,
         "column": 7,
         "length": 11
       },
@@ -631,7 +631,7 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 38,
+            "line": 39,
             "column": 14,
             "length": 1
           }
@@ -646,7 +646,7 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
-            "line": 39,
+            "line": 40,
             "column": 16,
             "length": 1
           }

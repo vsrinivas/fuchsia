@@ -9,6 +9,7 @@
 //
 // Since the FIDL compiler does not support splitting definitions per-transport
 // yet, we split definitions by file.
+deprecated_syntax;
 
 library zx;
 

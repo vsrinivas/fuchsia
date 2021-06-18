@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
+deprecated_syntax;
 library fuchsia.examples.docs;
 
 // [START wire-format-traversal-order]
@@ -54,8 +54,12 @@ union UnionValue {
 };
 // [END wire-format-unions]
 
-struct CreateResource {};
-struct ReleaseResource {};
+struct CreateResource {
+};
+
+struct ReleaseResource {
+};
+
 // [START command]
 union Command {
     1: CreateResource create_resource;

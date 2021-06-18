@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+deprecated_syntax;
 
 // [START library-overview]
 /// Library containing example FIDL used throughout the Fuchsia documentation.
@@ -28,7 +29,9 @@ struct Widget {
 };
 // [END good-docs]
 
-protocol Node {};
+protocol Node {
+};
+
 // [START good-docs-2]
 /// An abstract representation of a [`fuchsia.io/Node`] whose layout is flat.
 protocol File {
@@ -54,8 +57,8 @@ protocol File {
     /// * see [`fuchsia.mem/Buffer`]
     /// [`fuchsia.mem/Buffer`]:
     ///    https://fuchsia.googlesource.com/fuchsia/+/9853fad50ca70256f0e86201c0e20424f1c25ab5/zircon/system/fidl/fuchsia-io/io.fidl
-    GetBuffer(uint32 flags) ->
-        (fuchsia.mem.Buffer? buffer) error zx.status;
+    GetBuffer(uint32 flags)
+        -> (fuchsia.mem.Buffer? buffer) error zx.status;
 };
 // [END good-docs-2]
 

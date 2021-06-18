@@ -33,7 +33,7 @@
       "name": "fidl.test.foreigntypeinresponseusedthroughcompose/Top",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/top.test.fidl",
-        "line": 5,
+        "line": 6,
         "column": 10,
         "length": 3
       },
@@ -42,7 +42,7 @@
           "name": "middle/Middle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/top.test.fidl",
-            "line": 6,
+            "line": 7,
             "column": 20,
             "length": 6
           }
@@ -54,7 +54,7 @@
           "name": "GetFoo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
-            "line": 6,
+            "line": 7,
             "column": 5,
             "length": 6
           },
@@ -80,7 +80,7 @@
               "name": "foo",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
-                "line": 6,
+                "line": 7,
                 "column": 29,
                 "length": 3
               },
@@ -111,7 +111,7 @@
       "name": "middle/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
-        "line": 6,
+        "line": 7,
         "column": 17,
         "length": 16
       },
@@ -126,7 +126,7 @@
           "name": "foo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
-            "line": 6,
+            "line": 7,
             "column": 29,
             "length": 3
           },

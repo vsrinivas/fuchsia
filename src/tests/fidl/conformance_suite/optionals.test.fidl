@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+deprecated_syntax;
 
 // This is intended to ensure that the GIDL-generated test code produces the
 // correct syntax for C++ bindings, which needs to distinguish between e.g.

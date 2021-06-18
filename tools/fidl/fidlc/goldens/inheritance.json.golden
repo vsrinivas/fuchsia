@@ -11,7 +11,7 @@
       "name": "fidl.test.inheritance/super",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-        "line": 3,
+        "line": 4,
         "column": 10,
         "length": 5
       },
@@ -22,7 +22,7 @@
           "name": "foo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-            "line": 4,
+            "line": 5,
             "column": 5,
             "length": 3
           },
@@ -36,7 +36,7 @@
               "name": "s",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-                "line": 4,
+                "line": 5,
                 "column": 16,
                 "length": 1
               },
@@ -66,7 +66,7 @@
               "name": "y",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-                "line": 4,
+                "line": 5,
                 "column": 29,
                 "length": 1
               },
@@ -94,7 +94,7 @@
       "name": "fidl.test.inheritance/sub",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-        "line": 7,
+        "line": 8,
         "column": 10,
         "length": 3
       },
@@ -120,7 +120,7 @@
                   },
                   "location": {
                     "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-                    "line": 8,
+                    "line": 9,
                     "column": 5,
                     "length": 26
                   }
@@ -128,7 +128,7 @@
               ],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-                "line": 8,
+                "line": 9,
                 "column": 5,
                 "length": 26
               }
@@ -136,7 +136,7 @@
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-            "line": 9,
+            "line": 10,
             "column": 13,
             "length": 5
           }
@@ -148,7 +148,7 @@
           "name": "foo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-            "line": 4,
+            "line": 5,
             "column": 5,
             "length": 3
           },
@@ -162,7 +162,7 @@
               "name": "s",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-                "line": 4,
+                "line": 5,
                 "column": 16,
                 "length": 1
               },
@@ -192,7 +192,7 @@
               "name": "y",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-                "line": 4,
+                "line": 5,
                 "column": 29,
                 "length": 1
               },
@@ -223,7 +223,7 @@
       "name": "fidl.test.inheritance/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-        "line": 4,
+        "line": 5,
         "column": 8,
         "length": 10
       },
@@ -237,7 +237,7 @@
           "name": "s",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-            "line": 4,
+            "line": 5,
             "column": 16,
             "length": 1
           },
@@ -262,7 +262,7 @@
       "name": "fidl.test.inheritance/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-        "line": 4,
+        "line": 5,
         "column": 22,
         "length": 9
       },
@@ -276,7 +276,7 @@
           "name": "y",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-            "line": 4,
+            "line": 5,
             "column": 29,
             "length": 1
           },
@@ -301,7 +301,7 @@
       "name": "fidl.test.inheritance/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-        "line": 4,
+        "line": 5,
         "column": 8,
         "length": 10
       },
@@ -315,7 +315,7 @@
           "name": "s",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-            "line": 4,
+            "line": 5,
             "column": 16,
             "length": 1
           },
@@ -340,7 +340,7 @@
       "name": "fidl.test.inheritance/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-        "line": 4,
+        "line": 5,
         "column": 22,
         "length": 9
       },
@@ -354,7 +354,7 @@
           "name": "y",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
-            "line": 4,
+            "line": 5,
             "column": 29,
             "length": 1
           },

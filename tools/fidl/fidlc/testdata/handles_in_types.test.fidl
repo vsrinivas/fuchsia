@@ -1,3 +1,4 @@
+deprecated_syntax;
 library fidl.test.handlesintypes;
 
 // This is not a reference to library zx to avoid complexity in the test data.

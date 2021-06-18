@@ -23,7 +23,7 @@
       "name": "fidl.test.transitivedependencies/Baz",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
-        "line": 5,
+        "line": 6,
         "column": 8,
         "length": 3
       },
@@ -38,7 +38,7 @@
           "name": "g",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
-            "line": 6,
+            "line": 7,
             "column": 16,
             "length": 1
           },

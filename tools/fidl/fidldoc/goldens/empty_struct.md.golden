@@ -6,7 +6,7 @@
 ## **PROTOCOLS**
 
 ## EmptyProtocol {#EmptyProtocol}
-*Defined in [fidl.test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=6)*
+*Defined in [fidl.test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=7)*
 
 
 ### Receive {#EmptyProtocol.Receive}
@@ -68,7 +68,7 @@
 ## **STRUCTS**
 
 ### Empty {#Empty}
-*Defined in [fidl.test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=3)*
+*Defined in [fidl.test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=4)*
 
 
 

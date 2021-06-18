@@ -1,3 +1,4 @@
+deprecated_syntax;
 library fidl.test.bits;
 
 bits MyBits : uint32 {

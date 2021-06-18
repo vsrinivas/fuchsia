@@ -13,7 +13,7 @@
       "name": "fidl.test.struct/Simple",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
-        "line": 3,
+        "line": 4,
         "column": 8,
         "length": 6
       },
@@ -27,7 +27,7 @@
           "name": "f1",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
-            "line": 4,
+            "line": 5,
             "column": 11,
             "length": 2
           },
@@ -44,7 +44,7 @@
           "name": "f2",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
-            "line": 5,
+            "line": 6,
             "column": 10,
             "length": 2
           },
@@ -69,7 +69,7 @@
       "name": "fidl.test.struct/BasicStruct",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
-        "line": 8,
+        "line": 9,
         "column": 8,
         "length": 11
       },
@@ -83,7 +83,7 @@
           "name": "x",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
-            "line": 9,
+            "line": 10,
             "column": 12,
             "length": 1
           },
@@ -100,7 +100,7 @@
           "name": "y",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
-            "line": 10,
+            "line": 11,
             "column": 12,
             "length": 1
           },

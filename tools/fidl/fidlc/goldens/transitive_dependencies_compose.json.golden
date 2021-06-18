@@ -36,7 +36,7 @@
       "name": "fidl.test.transitivedependenciescompose/Top",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl",
-        "line": 5,
+        "line": 6,
         "column": 10,
         "length": 3
       },
@@ -45,7 +45,7 @@
           "name": "middle/Middle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl",
-            "line": 6,
+            "line": 7,
             "column": 20,
             "length": 6
           }
@@ -57,7 +57,7 @@
           "name": "GetFoo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
-            "line": 8,
+            "line": 9,
             "column": 5,
             "length": 6
           },
@@ -83,7 +83,7 @@
               "name": "foo",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
-                "line": 8,
+                "line": 9,
                 "column": 22,
                 "length": 3
               },
@@ -114,7 +114,7 @@
       "name": "bottom/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
-        "line": 8,
+        "line": 9,
         "column": 17,
         "length": 9
       },
@@ -129,7 +129,7 @@
           "name": "foo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
-            "line": 8,
+            "line": 9,
             "column": 22,
             "length": 3
           },

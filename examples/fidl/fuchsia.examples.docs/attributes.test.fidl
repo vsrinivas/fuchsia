@@ -1,30 +1,31 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
+deprecated_syntax;
 library fuchsia.examples.docs;
 
 // [START attribute-one]
 [MaxBytes = "64"]
 struct MyType {
-// [END attribute-one]
+    // [END attribute-one]
 };
 
 // [START attribute-many]
 [Discoverable, Transport = "Channel"]
 // [END attribute-many]
-protocol MyProtocol {};
+protocol MyProtocol {
+};
 
 // [START doc-with-slashes]
 /// Foo
 struct WithThreeSlashes {
-// [END doc-with-slashes]
+    // [END doc-with-slashes]
 };
 
 // [START doc-with-attributes]
 [Doc = "Foo"]
 struct WithAttribute {
-// [END doc-with-attributes]
+    // [END doc-with-attributes]
 };
 
 // [START layout-simple]

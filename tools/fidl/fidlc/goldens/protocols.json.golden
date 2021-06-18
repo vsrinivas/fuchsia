@@ -7,7 +7,7 @@
       "name": "fidl.test.protocols/rights",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 11,
+        "line": 12,
         "column": 6,
         "length": 6
       },
@@ -21,7 +21,7 @@
           "name": "TRANSFER",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 12,
+            "line": 13,
             "column": 5,
             "length": 8
           },
@@ -40,7 +40,7 @@
           "name": "DUPLICATE",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 13,
+            "line": 14,
             "column": 5,
             "length": 9
           },
@@ -65,7 +65,7 @@
       "name": "fidl.test.protocols/obj_type",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 6,
+        "line": 7,
         "column": 6,
         "length": 8
       },
@@ -75,7 +75,7 @@
           "name": "NONE",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 7,
+            "line": 8,
             "column": 5,
             "length": 4
           },
@@ -94,7 +94,7 @@
           "name": "SOCKET",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 8,
+            "line": 9,
             "column": 5,
             "length": 6
           },
@@ -116,7 +116,7 @@
       "name": "fidl.test.protocols/ErrorEnum",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 34,
+        "line": 35,
         "column": 6,
         "length": 9
       },
@@ -126,7 +126,7 @@
           "name": "ERR_FOO",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 35,
+            "line": 36,
             "column": 5,
             "length": 7
           },
@@ -145,7 +145,7 @@
           "name": "ERR_BAR",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 36,
+            "line": 37,
             "column": 5,
             "length": 7
           },
@@ -169,7 +169,7 @@
       "name": "fidl.test.protocols/handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 16,
+        "line": 17,
         "column": 21,
         "length": 6
       },
@@ -182,7 +182,7 @@
           "name": "subtype",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 18,
+            "line": 19,
             "column": 18,
             "length": 7
           },
@@ -196,7 +196,7 @@
           "name": "rights",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 19,
+            "line": 20,
             "column": 16,
             "length": 6
           },
@@ -214,7 +214,7 @@
       "name": "fidl.test.protocols/WithAndWithoutRequestResponse",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 23,
+        "line": 24,
         "column": 10,
         "length": 29
       },
@@ -225,7 +225,7 @@
           "name": "NoRequestNoResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 24,
+            "line": 25,
             "column": 5,
             "length": 19
           },
@@ -248,7 +248,7 @@
           "name": "NoRequestEmptyResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 25,
+            "line": 26,
             "column": 5,
             "length": 22
           },
@@ -281,7 +281,7 @@
           "name": "NoRequestWithResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 26,
+            "line": 27,
             "column": 5,
             "length": 21
           },
@@ -306,7 +306,7 @@
               "name": "ret",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 26,
+                "line": 27,
                 "column": 40,
                 "length": 3
               },
@@ -333,7 +333,7 @@
           "name": "WithRequestNoResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 27,
+            "line": 28,
             "column": 5,
             "length": 21
           },
@@ -347,7 +347,7 @@
               "name": "arg",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 27,
+                "line": 28,
                 "column": 34,
                 "length": 3
               },
@@ -375,7 +375,7 @@
           "name": "WithRequestEmptyResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 28,
+            "line": 29,
             "column": 5,
             "length": 24
           },
@@ -389,7 +389,7 @@
               "name": "arg",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 28,
+                "line": 29,
                 "column": 37,
                 "length": 3
               },
@@ -427,7 +427,7 @@
           "name": "WithRequestWithResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 29,
+            "line": 30,
             "column": 5,
             "length": 23
           },
@@ -441,7 +441,7 @@
               "name": "arg",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 29,
+                "line": 30,
                 "column": 36,
                 "length": 3
               },
@@ -471,7 +471,7 @@
               "name": "ret",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 29,
+                "line": 30,
                 "column": 52,
                 "length": 3
               },
@@ -498,7 +498,7 @@
           "name": "OnEmptyResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 30,
+            "line": 31,
             "column": 8,
             "length": 15
           },
@@ -521,7 +521,7 @@
           "name": "OnWithResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 31,
+            "line": 32,
             "column": 8,
             "length": 14
           },
@@ -536,7 +536,7 @@
               "name": "ret",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 31,
+                "line": 32,
                 "column": 30,
                 "length": 3
               },
@@ -564,7 +564,7 @@
       "name": "fidl.test.protocols/WithErrorSyntax",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 39,
+        "line": 40,
         "column": 10,
         "length": 15
       },
@@ -575,7 +575,7 @@
           "name": "ResponseAsStruct",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 40,
+            "line": 41,
             "column": 5,
             "length": 16
           },
@@ -628,7 +628,7 @@
           "name": "ErrorAsPrimitive",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 41,
+            "line": 42,
             "column": 5,
             "length": 16
           },
@@ -681,7 +681,7 @@
           "name": "ErrorAsEnum",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 42,
+            "line": 43,
             "column": 5,
             "length": 11
           },
@@ -734,7 +734,7 @@
           "name": "HandleInResult",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 43,
+            "line": 44,
             "column": 5,
             "length": 14
           },
@@ -788,7 +788,7 @@
       "name": "fidl.test.protocols/ChannelProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 47,
+        "line": 48,
         "column": 10,
         "length": 15
       },
@@ -811,7 +811,7 @@
               },
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 46,
+                "line": 47,
                 "column": 2,
                 "length": 21
               }
@@ -819,7 +819,7 @@
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 46,
+            "line": 47,
             "column": 2,
             "length": 21
           }
@@ -832,7 +832,7 @@
           "name": "MethodA",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 48,
+            "line": 49,
             "column": 5,
             "length": 7
           },
@@ -846,7 +846,7 @@
               "name": "a",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 48,
+                "line": 49,
                 "column": 19,
                 "length": 1
               },
@@ -863,7 +863,7 @@
               "name": "b",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 48,
+                "line": 49,
                 "column": 28,
                 "length": 1
               },
@@ -891,7 +891,7 @@
           "name": "EventA",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 49,
+            "line": 50,
             "column": 8,
             "length": 6
           },
@@ -906,7 +906,7 @@
               "name": "a",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 49,
+                "line": 50,
                 "column": 21,
                 "length": 1
               },
@@ -923,7 +923,7 @@
               "name": "b",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 49,
+                "line": 50,
                 "column": 30,
                 "length": 1
               },
@@ -950,7 +950,7 @@
           "name": "MethodB",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 50,
+            "line": 51,
             "column": 5,
             "length": 7
           },
@@ -964,7 +964,7 @@
               "name": "a",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 50,
+                "line": 51,
                 "column": 19,
                 "length": 1
               },
@@ -981,7 +981,7 @@
               "name": "b",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 50,
+                "line": 51,
                 "column": 28,
                 "length": 1
               },
@@ -1011,7 +1011,7 @@
               "name": "result",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 50,
+                "line": 51,
                 "column": 41,
                 "length": 6
               },
@@ -1038,7 +1038,7 @@
           "name": "TakeHandle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 51,
+            "line": 52,
             "column": 5,
             "length": 10
           },
@@ -1055,7 +1055,7 @@
               "name": "h",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 51,
+                "line": 52,
                 "column": 23,
                 "length": 1
               },
@@ -1093,7 +1093,7 @@
           "name": "MutateSocket",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 52,
+            "line": 53,
             "column": 5,
             "length": 12
           },
@@ -1110,7 +1110,7 @@
               "name": "a",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 52,
+                "line": 53,
                 "column": 32,
                 "length": 1
               },
@@ -1143,7 +1143,7 @@
               "name": "b",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 52,
+                "line": 53,
                 "column": 53,
                 "length": 1
               },
@@ -1171,7 +1171,7 @@
       "name": "fidl.test.protocols/SyscallProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 56,
+        "line": 57,
         "column": 10,
         "length": 15
       },
@@ -1194,7 +1194,7 @@
               },
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 55,
+                "line": 56,
                 "column": 2,
                 "length": 21
               }
@@ -1202,7 +1202,7 @@
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 55,
+            "line": 56,
             "column": 2,
             "length": 21
           }
@@ -1215,7 +1215,7 @@
           "name": "MethodA",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 57,
+            "line": 58,
             "column": 5,
             "length": 7
           },
@@ -1229,7 +1229,7 @@
               "name": "a",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 57,
+                "line": 58,
                 "column": 19,
                 "length": 1
               },
@@ -1246,7 +1246,7 @@
               "name": "b",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 57,
+                "line": 58,
                 "column": 28,
                 "length": 1
               },
@@ -1275,7 +1275,7 @@
       "name": "fidl.test.protocols/Transitional",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 60,
+        "line": 61,
         "column": 10,
         "length": 12
       },
@@ -1286,7 +1286,7 @@
           "name": "Request",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 62,
+            "line": 63,
             "column": 5,
             "length": 7
           },
@@ -1298,7 +1298,7 @@
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 61,
+                "line": 62,
                 "column": 6,
                 "length": 12
               }
@@ -1313,7 +1313,7 @@
               "name": "x",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 62,
+                "line": 63,
                 "column": 19,
                 "length": 1
               },
@@ -1343,7 +1343,7 @@
               "name": "y",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 62,
+                "line": 63,
                 "column": 32,
                 "length": 1
               },
@@ -1370,7 +1370,7 @@
           "name": "OneWay",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 65,
+            "line": 66,
             "column": 5,
             "length": 6
           },
@@ -1382,7 +1382,7 @@
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 64,
+                "line": 65,
                 "column": 6,
                 "length": 12
               }
@@ -1397,7 +1397,7 @@
               "name": "x",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 65,
+                "line": 66,
                 "column": 18,
                 "length": 1
               },
@@ -1425,7 +1425,7 @@
           "name": "Event",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 68,
+            "line": 69,
             "column": 8,
             "length": 5
           },
@@ -1437,7 +1437,7 @@
               "arguments": [],
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 67,
+                "line": 68,
                 "column": 6,
                 "length": 12
               }
@@ -1453,7 +1453,7 @@
               "name": "x",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 68,
+                "line": 69,
                 "column": 20,
                 "length": 1
               },
@@ -1481,7 +1481,7 @@
       "name": "fidl.test.protocols/DiscoverableProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 72,
+        "line": 73,
         "column": 10,
         "length": 20
       },
@@ -1492,7 +1492,7 @@
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 71,
+            "line": 72,
             "column": 2,
             "length": 12
           }
@@ -1505,7 +1505,7 @@
           "name": "Method",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 73,
+            "line": 74,
             "column": 5,
             "length": 6
           },
@@ -1529,7 +1529,7 @@
       "name": "fidl.test.protocols/HandleRightsProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 76,
+        "line": 77,
         "column": 10,
         "length": 20
       },
@@ -1540,7 +1540,7 @@
           "name": "NoResponseMethod",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 77,
+            "line": 78,
             "column": 5,
             "length": 16
           },
@@ -1557,7 +1557,7 @@
               "name": "h",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 77,
+                "line": 78,
                 "column": 74,
                 "length": 1
               },
@@ -1585,7 +1585,7 @@
           "name": "ResponseMethod",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 78,
+            "line": 79,
             "column": 5,
             "length": 14
           },
@@ -1602,7 +1602,7 @@
               "name": "h",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 78,
+                "line": 79,
                 "column": 72,
                 "length": 1
               },
@@ -1635,7 +1635,7 @@
               "name": "h",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 78,
+                "line": 79,
                 "column": 112,
                 "length": 1
               },
@@ -1662,7 +1662,7 @@
           "name": "AnEvent",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 79,
+            "line": 80,
             "column": 8,
             "length": 7
           },
@@ -1680,7 +1680,7 @@
               "name": "h",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-                "line": 79,
+                "line": 80,
                 "column": 68,
                 "length": 1
               },
@@ -1711,7 +1711,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 26,
+        "line": 27,
         "column": 32,
         "length": 12
       },
@@ -1725,7 +1725,7 @@
           "name": "ret",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 26,
+            "line": 27,
             "column": 40,
             "length": 3
           },
@@ -1750,7 +1750,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 27,
+        "line": 28,
         "column": 26,
         "length": 12
       },
@@ -1764,7 +1764,7 @@
           "name": "arg",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 27,
+            "line": 28,
             "column": 34,
             "length": 3
           },
@@ -1789,7 +1789,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix2",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 28,
+        "line": 29,
         "column": 29,
         "length": 12
       },
@@ -1803,7 +1803,7 @@
           "name": "arg",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 28,
+            "line": 29,
             "column": 37,
             "length": 3
           },
@@ -1828,7 +1828,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix3",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 29,
+        "line": 30,
         "column": 28,
         "length": 12
       },
@@ -1842,7 +1842,7 @@
           "name": "arg",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 29,
+            "line": 30,
             "column": 36,
             "length": 3
           },
@@ -1867,7 +1867,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix4",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 29,
+        "line": 30,
         "column": 44,
         "length": 12
       },
@@ -1881,7 +1881,7 @@
           "name": "ret",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 29,
+            "line": 30,
             "column": 52,
             "length": 3
           },
@@ -1906,7 +1906,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix5",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 31,
+        "line": 32,
         "column": 22,
         "length": 12
       },
@@ -1920,7 +1920,7 @@
           "name": "ret",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 31,
+            "line": 32,
             "column": 30,
             "length": 3
           },
@@ -1945,7 +1945,7 @@
       "name": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 40,
+        "line": 41,
         "column": 27,
         "length": 27
       },
@@ -1959,7 +1959,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 40,
+            "line": 41,
             "column": 34,
             "length": 1
           },
@@ -1976,7 +1976,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 40,
+            "line": 41,
             "column": 43,
             "length": 1
           },
@@ -1993,7 +1993,7 @@
           "name": "c",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 40,
+            "line": 41,
             "column": 52,
             "length": 1
           },
@@ -2018,7 +2018,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix6",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 40,
+        "line": 41,
         "column": 27,
         "length": 27
       },
@@ -2058,7 +2058,7 @@
       "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 41,
+        "line": 42,
         "column": 27,
         "length": 2
       },
@@ -2079,7 +2079,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix7",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 41,
+        "line": 42,
         "column": 27,
         "length": 2
       },
@@ -2119,7 +2119,7 @@
       "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 42,
+        "line": 43,
         "column": 22,
         "length": 2
       },
@@ -2140,7 +2140,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix8",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 42,
+        "line": 43,
         "column": 22,
         "length": 2
       },
@@ -2180,7 +2180,7 @@
       "name": "fidl.test.protocols/WithErrorSyntax_HandleInResult_Response",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 43,
+        "line": 44,
         "column": 25,
         "length": 10
       },
@@ -2197,7 +2197,7 @@
           "name": "h",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 43,
+            "line": 44,
             "column": 33,
             "length": 1
           },
@@ -2222,7 +2222,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix9",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 43,
+        "line": 44,
         "column": 25,
         "length": 10
       },
@@ -2262,7 +2262,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix10",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 48,
+        "line": 49,
         "column": 12,
         "length": 18
       },
@@ -2276,7 +2276,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 48,
+            "line": 49,
             "column": 19,
             "length": 1
           },
@@ -2293,7 +2293,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 48,
+            "line": 49,
             "column": 28,
             "length": 1
           },
@@ -2318,7 +2318,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix11",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 49,
+        "line": 50,
         "column": 14,
         "length": 18
       },
@@ -2332,7 +2332,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 49,
+            "line": 50,
             "column": 21,
             "length": 1
           },
@@ -2349,7 +2349,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 49,
+            "line": 50,
             "column": 30,
             "length": 1
           },
@@ -2374,7 +2374,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix12",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 50,
+        "line": 51,
         "column": 12,
         "length": 18
       },
@@ -2388,7 +2388,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 50,
+            "line": 51,
             "column": 19,
             "length": 1
           },
@@ -2405,7 +2405,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 50,
+            "line": 51,
             "column": 28,
             "length": 1
           },
@@ -2430,7 +2430,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix13",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 50,
+        "line": 51,
         "column": 34,
         "length": 14
       },
@@ -2444,7 +2444,7 @@
           "name": "result",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 50,
+            "line": 51,
             "column": 41,
             "length": 6
           },
@@ -2469,7 +2469,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix14",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 51,
+        "line": 52,
         "column": 15,
         "length": 10
       },
@@ -2486,7 +2486,7 @@
           "name": "h",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 51,
+            "line": 52,
             "column": 23,
             "length": 1
           },
@@ -2511,7 +2511,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix15",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 52,
+        "line": 53,
         "column": 17,
         "length": 17
       },
@@ -2528,7 +2528,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 52,
+            "line": 53,
             "column": 32,
             "length": 1
           },
@@ -2553,7 +2553,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix16",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 52,
+        "line": 53,
         "column": 38,
         "length": 17
       },
@@ -2570,7 +2570,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 52,
+            "line": 53,
             "column": 53,
             "length": 1
           },
@@ -2595,7 +2595,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix17",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 57,
+        "line": 58,
         "column": 12,
         "length": 18
       },
@@ -2609,7 +2609,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 57,
+            "line": 58,
             "column": 19,
             "length": 1
           },
@@ -2626,7 +2626,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 57,
+            "line": 58,
             "column": 28,
             "length": 1
           },
@@ -2651,7 +2651,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix18",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 62,
+        "line": 63,
         "column": 12,
         "length": 9
       },
@@ -2665,7 +2665,7 @@
           "name": "x",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 62,
+            "line": 63,
             "column": 19,
             "length": 1
           },
@@ -2690,7 +2690,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix19",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 62,
+        "line": 63,
         "column": 25,
         "length": 9
       },
@@ -2704,7 +2704,7 @@
           "name": "y",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 62,
+            "line": 63,
             "column": 32,
             "length": 1
           },
@@ -2729,7 +2729,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix20",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 65,
+        "line": 66,
         "column": 11,
         "length": 9
       },
@@ -2743,7 +2743,7 @@
           "name": "x",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 65,
+            "line": 66,
             "column": 18,
             "length": 1
           },
@@ -2768,7 +2768,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix21",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 68,
+        "line": 69,
         "column": 13,
         "length": 9
       },
@@ -2782,7 +2782,7 @@
           "name": "x",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 68,
+            "line": 69,
             "column": 20,
             "length": 1
           },
@@ -2807,7 +2807,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix22",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 77,
+        "line": 78,
         "column": 21,
         "length": 55
       },
@@ -2824,7 +2824,7 @@
           "name": "h",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 77,
+            "line": 78,
             "column": 74,
             "length": 1
           },
@@ -2849,7 +2849,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix23",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 78,
+        "line": 79,
         "column": 19,
         "length": 55
       },
@@ -2866,7 +2866,7 @@
           "name": "h",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 78,
+            "line": 79,
             "column": 72,
             "length": 1
           },
@@ -2891,7 +2891,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix24",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 78,
+        "line": 79,
         "column": 78,
         "length": 36
       },
@@ -2908,7 +2908,7 @@
           "name": "h",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 78,
+            "line": 79,
             "column": 112,
             "length": 1
           },
@@ -2933,7 +2933,7 @@
       "name": "fidl.test.protocols/SomeLongAnonymousPrefix25",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 79,
+        "line": 80,
         "column": 15,
         "length": 55
       },
@@ -2950,7 +2950,7 @@
           "name": "h",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-            "line": 79,
+            "line": 80,
             "column": 68,
             "length": 1
           },
@@ -2978,7 +2978,7 @@
       "name": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Result",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 40,
+        "line": 41,
         "column": 27,
         "length": 27
       },
@@ -3038,7 +3038,7 @@
       "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 41,
+        "line": 42,
         "column": 27,
         "length": 2
       },
@@ -3098,7 +3098,7 @@
       "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 42,
+        "line": 43,
         "column": 22,
         "length": 2
       },
@@ -3159,7 +3159,7 @@
       "name": "fidl.test.protocols/WithErrorSyntax_HandleInResult_Result",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
-        "line": 43,
+        "line": 44,
         "column": 25,
         "length": 10
       },

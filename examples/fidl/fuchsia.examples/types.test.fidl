@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+deprecated_syntax;
 
 // NOTE: This file contains the source for FIDL examples used in documentation.
 // Check that associated docs are kept in sync when modifying this file. You

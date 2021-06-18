@@ -1,3 +1,4 @@
+deprecated_syntax;
 library fidl.test.experimentalmaybefromtypealias;
 
 protocol MyProtocol {

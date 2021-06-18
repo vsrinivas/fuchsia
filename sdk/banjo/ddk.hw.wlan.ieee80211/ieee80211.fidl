@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+deprecated_syntax;
 
 /// This header contains structs and enums derived from the IEEE 802.11
 /// specification, in particular IEEE Std 802.11-2016. Accordingly:

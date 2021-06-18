@@ -13,7 +13,7 @@
       "name": "fidl.test.byteandbytes/ByteAndBytes",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
-        "line": 3,
+        "line": 4,
         "column": 8,
         "length": 12
       },
@@ -27,7 +27,7 @@
           "name": "single_byte",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
-            "line": 4,
+            "line": 5,
             "column": 10,
             "length": 11
           },
@@ -48,7 +48,7 @@
           "name": "many_bytes",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
-            "line": 5,
+            "line": 6,
             "column": 11,
             "length": 10
           },
@@ -70,7 +70,7 @@
           "name": "only_one_k_bytes",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
-            "line": 6,
+            "line": 7,
             "column": 16,
             "length": 16
           },
@@ -92,7 +92,7 @@
           "name": "opt_only_one_k_bytes",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
-            "line": 7,
+            "line": 8,
             "column": 17,
             "length": 20
           },

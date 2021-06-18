@@ -1,6 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+deprecated_syntax;
 
 /// Cobalt is the Fuchsia service used to log, collect and analyze metrics.
 /// The two main pillars of Cobalt are protecting user privacy and providing

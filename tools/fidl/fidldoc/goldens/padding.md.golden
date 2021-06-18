@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### Padding1ByteEnd {#Padding1ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=3)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=4)*
 
 
 
@@ -31,7 +31,7 @@
 </table>
 
 ### Padding1ByteMiddle {#Padding1ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=46)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=47)*
 
 
 
@@ -54,7 +54,7 @@
 </table>
 
 ### Padding2ByteAlignmentLength6 {#Padding2ByteAlignmentLength6}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=102)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=103)*
 
 
 
@@ -84,7 +84,7 @@
 </table>
 
 ### Padding2ByteEnd {#Padding2ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=9)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=10)*
 
 
 
@@ -107,7 +107,7 @@
 </table>
 
 ### Padding2ByteMiddle {#Padding2ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=52)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=53)*
 
 
 
@@ -130,7 +130,7 @@
 </table>
 
 ### Padding3ByteEnd {#Padding3ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=15)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=16)*
 
 
 
@@ -153,7 +153,7 @@
 </table>
 
 ### Padding3ByteMiddle {#Padding3ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=58)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=59)*
 
 
 
@@ -176,7 +176,7 @@
 </table>
 
 ### Padding4ByteAlignmentLength12 {#Padding4ByteAlignmentLength12}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=93)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=94)*
 
 
 
@@ -213,7 +213,7 @@
 </table>
 
 ### Padding4ByteEnd {#Padding4ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=21)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=22)*
 
 
 
@@ -236,7 +236,7 @@
 </table>
 
 ### Padding4ByteMiddle {#Padding4ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=64)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=65)*
 
 
 
@@ -259,7 +259,7 @@
 </table>
 
 ### Padding5ByteEnd {#Padding5ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=27)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=28)*
 
 
 
@@ -289,7 +289,7 @@
 </table>
 
 ### Padding5ByteMiddle {#Padding5ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=70)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=71)*
 
 
 
@@ -319,7 +319,7 @@
 </table>
 
 ### Padding6ByteEnd {#Padding6ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=34)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=35)*
 
 
 
@@ -342,7 +342,7 @@
 </table>
 
 ### Padding6ByteMiddle {#Padding6ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=77)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=78)*
 
 
 
@@ -365,7 +365,7 @@
 </table>
 
 ### Padding7ByteEnd {#Padding7ByteEnd}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=40)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=41)*
 
 
 
@@ -388,7 +388,7 @@
 </table>
 
 ### Padding7ByteMiddle {#Padding7ByteMiddle}
-*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=83)*
+*Defined in [fidl.test.padding/padding.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/padding.test.fidl;l=84)*
 
 
 

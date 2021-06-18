@@ -94,7 +94,7 @@
       "name": "fidl.test.encapsulatedstructs/Int8Int32",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-        "line": 5,
+        "line": 6,
         "column": 8,
         "length": 9
       },
@@ -108,7 +108,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 6,
+            "line": 7,
             "column": 10,
             "length": 1
           },
@@ -125,7 +125,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 8,
+            "line": 9,
             "column": 11,
             "length": 1
           },
@@ -150,7 +150,7 @@
       "name": "fidl.test.encapsulatedstructs/Int16Int8",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-        "line": 11,
+        "line": 12,
         "column": 8,
         "length": 9
       },
@@ -164,7 +164,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 12,
+            "line": 13,
             "column": 11,
             "length": 1
           },
@@ -181,7 +181,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 13,
+            "line": 14,
             "column": 10,
             "length": 1
           },
@@ -206,7 +206,7 @@
       "name": "fidl.test.encapsulatedstructs/ArrayInt16Int8",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-        "line": 17,
+        "line": 18,
         "column": 8,
         "length": 14
       },
@@ -225,7 +225,7 @@
           "name": "arr",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 18,
+            "line": 19,
             "column": 24,
             "length": 3
           },
@@ -250,7 +250,7 @@
       "name": "fidl.test.encapsulatedstructs/StructPaddingTestStruct",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-        "line": 22,
+        "line": 23,
         "column": 8,
         "length": 23
       },
@@ -265,7 +265,7 @@
           "name": "trailing",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 23,
+            "line": 24,
             "column": 15,
             "length": 8
           },
@@ -283,7 +283,7 @@
           "name": "inner",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 27,
+            "line": 28,
             "column": 15,
             "length": 5
           },
@@ -301,7 +301,7 @@
           "name": "array",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 28,
+            "line": 29,
             "column": 20,
             "length": 5
           },
@@ -326,7 +326,7 @@
       "name": "fidl.test.encapsulatedstructs/NonInlineStructTestStruct",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-        "line": 33,
+        "line": 34,
         "column": 17,
         "length": 25
       },
@@ -341,7 +341,7 @@
           "name": "element",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 34,
+            "line": 35,
             "column": 16,
             "length": 7
           },
@@ -361,7 +361,7 @@
           "name": "h",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 35,
+            "line": 36,
             "column": 15,
             "length": 1
           },
@@ -386,7 +386,7 @@
       "name": "fidl.test.encapsulatedstructs/TopLevelStruct",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-        "line": 39,
+        "line": 40,
         "column": 17,
         "length": 14
       },
@@ -401,7 +401,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 40,
+            "line": 41,
             "column": 29,
             "length": 1
           },
@@ -419,7 +419,7 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
-            "line": 41,
+            "line": 42,
             "column": 31,
             "length": 1
           },

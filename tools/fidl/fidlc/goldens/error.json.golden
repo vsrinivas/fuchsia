@@ -11,7 +11,7 @@
       "name": "fidl.test.error/Example",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
-        "line": 3,
+        "line": 4,
         "column": 10,
         "length": 7
       },
@@ -22,7 +22,7 @@
           "name": "foo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
-            "line": 4,
+            "line": 5,
             "column": 5,
             "length": 3
           },
@@ -36,7 +36,7 @@
               "name": "s",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
-                "line": 4,
+                "line": 5,
                 "column": 16,
                 "length": 1
               },
@@ -98,7 +98,7 @@
       "name": "fidl.test.error/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
-        "line": 4,
+        "line": 5,
         "column": 8,
         "length": 10
       },
@@ -112,7 +112,7 @@
           "name": "s",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
-            "line": 4,
+            "line": 5,
             "column": 16,
             "length": 1
           },
@@ -137,7 +137,7 @@
       "name": "fidl.test.error/Example_foo_Response",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
-        "line": 4,
+        "line": 5,
         "column": 22,
         "length": 9
       },
@@ -151,7 +151,7 @@
           "name": "y",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
-            "line": 4,
+            "line": 5,
             "column": 29,
             "length": 1
           },
@@ -176,7 +176,7 @@
       "name": "fidl.test.error/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
-        "line": 4,
+        "line": 5,
         "column": 22,
         "length": 9
       },
@@ -219,7 +219,7 @@
       "name": "fidl.test.error/Example_foo_Result",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
-        "line": 4,
+        "line": 5,
         "column": 22,
         "length": 9
       },

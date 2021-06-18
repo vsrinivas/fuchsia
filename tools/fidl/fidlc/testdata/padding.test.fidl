@@ -1,3 +1,4 @@
+deprecated_syntax;
 library fidl.test.padding;
 
 struct Padding1ByteEnd {

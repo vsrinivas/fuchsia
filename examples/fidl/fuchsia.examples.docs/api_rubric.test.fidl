@@ -1,14 +1,14 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
+deprecated_syntax;
 library fuchsia.examples.docs;
 
 using zx;
 
 // [START ordinals]
 protocol A {
-    [ Selector = "C" ]
+    [Selector = "C"]
     B(string s, bool b);
 };
 // [END ordinals]
@@ -19,11 +19,13 @@ struct Ipv4Address {
 };
 // [END semantics]
 
-struct SuccessValue {};
+struct SuccessValue {
+};
+
 // [START errors]
 // Only erroneous statuses are listed
 enum MyErrorCode {
-    MISSING_FOO = 1;  // avoid using 0
+    MISSING_FOO = 1; // avoid using 0
     NO_BAR = 2;
 };
 
@@ -34,8 +36,8 @@ protocol Frobinator {
 
 // [START optional-error]
 enum MyStatusCode {
-    OK = 0;               // The success value should be 0,
-    MISSING_FOO = 1;      // with erroneous status next.
+    OK = 0; // The success value should be 0,
+    MISSING_FOO = 1; // with erroneous status next.
     NO_BAR = 2;
 };
 
@@ -54,17 +56,17 @@ protocol Sender {
 
 // [START bits-hex]
 bits InfoFeaturesHex : uint32 {
-    WLAN = 0x00000001;      // If present, this device represents WLAN hardware
-    SYNTH = 0x00000002;     // If present, this device is synthetic (not backed by h/w)
-    LOOPBACK = 0x00000004;  // If present, this device receives all messages it sends
+    WLAN = 0x00000001; // If present, this device represents WLAN hardware
+    SYNTH = 0x00000002; // If present, this device is synthetic (not backed by h/w)
+    LOOPBACK = 0x00000004; // If present, this device receives all messages it sends
 };
 // [END bits-hex]
 
 // [START bits-binary]
 bits InfoFeaturesBits : uint32 {
-    WLAN =     0b00000001;  // If present, this device represents WLAN hardware
-    SYNTH =    0b00000010;  // If present, this device is synthetic (not backed by h/w)
-    LOOPBACK = 0b00000100;  // If present, this device receives all messages it sends
+    WLAN = 0b00000001; // If present, this device represents WLAN hardware
+    SYNTH = 0b00000010; // If present, this device is synthetic (not backed by h/w)
+    LOOPBACK = 0b00000100; // If present, this device receives all messages it sends
 };
 // [END bits-binary]
 
@@ -80,8 +82,12 @@ protocol BadFoo {
 };
 // [END pipelining-1]
 
-struct CodecParams {};
-protocol Codec {};
+struct CodecParams {
+};
+
+protocol Codec {
+};
+
 // [START pipelining-2]
 protocol CodecProvider {
     TryToCreateCodec(CodecParams params, request<Codec> codec) -> (bool succeed);
@@ -98,7 +104,9 @@ protocol CodecProvider2 {
 };
 // [END pipelining-3]
 
-struct Args {};
+struct Args {
+};
+
 // [START hanging-gets]
 protocol FooProvider {
     WatchFoo(Args args) -> (Foo foo);
@@ -125,7 +133,9 @@ protocol NetworkScanner {
 };
 // [END events-2]
 
-struct InputEvent {};
+struct InputEvent {
+};
+
 // [START ack-1]
 protocol View1 {
     -> OnInputEvent(InputEvent event);
@@ -133,7 +143,9 @@ protocol View1 {
 };
 // [END ack-1]
 
-struct FocusChangedEvent {};
+struct FocusChangedEvent {
+};
+
 // [START ack-2]
 protocol View2 {
     -> OnInputEvent(InputEvent event, uint64 seq);
@@ -142,7 +154,9 @@ protocol View2 {
 };
 // [END ack-2]
 
-struct Image {};
+struct Image {
+};
+
 // [START feed-forward]
 protocol Canvas {
     Flush() -> (zx.status code);
@@ -155,11 +169,18 @@ protocol Canvas {
 };
 // [END feed-forward]
 
-struct MyStatus {};
-// [START command-union]
-struct PokeCmd { int32 x; int32 y; };
+struct MyStatus {
+};
 
-struct ProdCmd { string:64 message; };
+// [START command-union]
+struct PokeCmd {
+    int32 x;
+    int32 y;
+};
+
+struct ProdCmd {
+    string:64 message;
+};
 
 union MyCommand {
     1: PokeCmd poke;
@@ -167,8 +188,8 @@ union MyCommand {
 };
 
 protocol HighVolumeSink {
-  Enqueue(vector<MyCommand> commands);
-  Commit() -> (MyStatus result);
+    Enqueue(vector<MyCommand> commands);
+    Commit() -> (MyStatus result);
 };
 // [END command-union]
 
@@ -208,7 +229,9 @@ protocol ChannelBasedGetter {
 };
 // [END paginate-read-2]
 
-struct Entry {};
+struct Entry {
+};
+
 // [START paginate-read-3]
 struct Token {
     array<uint8>:16 opaque;
@@ -233,10 +256,13 @@ protocol Importer {
 // [END eventpair]
 
 // [START empty]
-protocol FooController {};
+protocol FooController {
+};
 // [END empty]
 
-struct ColorCorrection {};
+struct ColorCorrection {
+};
+
 // [START settings]
 table Settings {
     1: bool magnification_enabled;
@@ -279,16 +305,20 @@ protocol ServiceHub {
 
 // [START service-hub-2]
 [Discoverable]
-protocol Foo {};
+protocol Foo {
+};
 
 [Discoverable]
-protocol Bar {};
+protocol Bar {
+};
 
 [Discoverable]
-protocol Baz {};
+protocol Baz {
+};
 
 [Discoverable]
-protocol Qux {};
+protocol Qux {
+};
 // [END service-hub-2]
 
 // [START boolean-enum]

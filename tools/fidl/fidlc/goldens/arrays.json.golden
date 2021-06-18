@@ -13,7 +13,7 @@
       "name": "fidl.test.arrays/StructSmallArray",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
-        "line": 3,
+        "line": 4,
         "column": 8,
         "length": 16
       },
@@ -31,7 +31,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
-            "line": 4,
+            "line": 5,
             "column": 21,
             "length": 1
           },
@@ -56,7 +56,7 @@
       "name": "fidl.test.arrays/StructLargeArray",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
-        "line": 7,
+        "line": 8,
         "column": 8,
         "length": 16
       },
@@ -74,7 +74,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
-            "line": 8,
+            "line": 9,
             "column": 23,
             "length": 1
           },
@@ -101,7 +101,7 @@
       "name": "fidl.test.arrays/TableSmallArray",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
-        "line": 11,
+        "line": 12,
         "column": 7,
         "length": 15
       },
@@ -120,7 +120,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
-            "line": 12,
+            "line": 13,
             "column": 24,
             "length": 1
           }
@@ -142,7 +142,7 @@
       "name": "fidl.test.arrays/TableLargeArray",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
-        "line": 15,
+        "line": 16,
         "column": 7,
         "length": 15
       },
@@ -161,7 +161,7 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
-            "line": 16,
+            "line": 17,
             "column": 26,
             "length": 1
           }
@@ -185,7 +185,7 @@
       "name": "fidl.test.arrays/UnionSmallArray",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
-        "line": 19,
+        "line": 20,
         "column": 7,
         "length": 15
       },
@@ -204,7 +204,7 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
-            "line": 20,
+            "line": 21,
             "column": 24,
             "length": 1
           }
@@ -226,7 +226,7 @@
       "name": "fidl.test.arrays/UnionLargeArray",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
-        "line": 23,
+        "line": 24,
         "column": 7,
         "length": 15
       },
@@ -245,7 +245,7 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
-            "line": 24,
+            "line": 25,
             "column": 26,
             "length": 1
           }

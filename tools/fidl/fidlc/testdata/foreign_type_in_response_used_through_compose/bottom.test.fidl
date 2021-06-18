@@ -1,3 +1,4 @@
+deprecated_syntax;
 library bottom;
 
 struct Foo {

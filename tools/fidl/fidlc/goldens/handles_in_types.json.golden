@@ -9,7 +9,7 @@
       "name": "fidl.test.handlesintypes/obj_type",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-        "line": 6,
+        "line": 7,
         "column": 6,
         "length": 8
       },
@@ -19,7 +19,7 @@
           "name": "NONE",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-            "line": 7,
+            "line": 8,
             "column": 5,
             "length": 4
           },
@@ -38,7 +38,7 @@
           "name": "VMO",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-            "line": 8,
+            "line": 9,
             "column": 5,
             "length": 3
           },
@@ -62,7 +62,7 @@
       "name": "fidl.test.handlesintypes/handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-        "line": 11,
+        "line": 12,
         "column": 21,
         "length": 6
       },
@@ -75,7 +75,7 @@
           "name": "subtype",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-            "line": 13,
+            "line": 14,
             "column": 18,
             "length": 7
           },
@@ -95,7 +95,7 @@
       "name": "fidl.test.handlesintypes/HandlesInTypes",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-        "line": 25,
+        "line": 26,
         "column": 17,
         "length": 14
       },
@@ -112,7 +112,7 @@
           "name": "normal_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-            "line": 26,
+            "line": 27,
             "column": 16,
             "length": 13
           },
@@ -136,7 +136,7 @@
           "name": "handle_in_vec",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-            "line": 28,
+            "line": 29,
             "column": 24,
             "length": 13
           },
@@ -160,7 +160,7 @@
           "name": "handle_in_array",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-            "line": 29,
+            "line": 30,
             "column": 25,
             "length": 15
           },
@@ -188,7 +188,7 @@
           "name": "handle_in_mixed_vec_array",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-            "line": 30,
+            "line": 31,
             "column": 33,
             "length": 25
           },
@@ -206,7 +206,7 @@
           "name": "table_with_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-            "line": 32,
+            "line": 33,
             "column": 21,
             "length": 17
           },
@@ -224,7 +224,7 @@
           "name": "union_with_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-            "line": 33,
+            "line": 34,
             "column": 21,
             "length": 17
           },
@@ -251,7 +251,7 @@
       "name": "fidl.test.handlesintypes/TableWithHandle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-        "line": 17,
+        "line": 18,
         "column": 16,
         "length": 15
       },
@@ -269,7 +269,7 @@
           "name": "h",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-            "line": 18,
+            "line": 19,
             "column": 19,
             "length": 1
           }
@@ -293,7 +293,7 @@
       "name": "fidl.test.handlesintypes/UnionWithHandle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-        "line": 21,
+        "line": 22,
         "column": 25,
         "length": 15
       },
@@ -311,7 +311,7 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
-            "line": 22,
+            "line": 23,
             "column": 19,
             "length": 1
           }

@@ -11,7 +11,7 @@
       "name": "fidl.test.protocolrequest/Child",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-        "line": 3,
+        "line": 4,
         "column": 10,
         "length": 5
       },
@@ -22,7 +22,7 @@
       "name": "fidl.test.protocolrequest/Parent",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-        "line": 6,
+        "line": 7,
         "column": 10,
         "length": 6
       },
@@ -33,7 +33,7 @@
           "name": "GetChild",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-            "line": 7,
+            "line": 8,
             "column": 5,
             "length": 8
           },
@@ -59,7 +59,7 @@
               "name": "c",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-                "line": 7,
+                "line": 8,
                 "column": 26,
                 "length": 1
               },
@@ -86,7 +86,7 @@
           "name": "GetChildRequest",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-            "line": 8,
+            "line": 9,
             "column": 5,
             "length": 15
           },
@@ -112,7 +112,7 @@
               "name": "r",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-                "line": 8,
+                "line": 9,
                 "column": 42,
                 "length": 1
               },
@@ -139,7 +139,7 @@
           "name": "TakeChild",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-            "line": 9,
+            "line": 10,
             "column": 5,
             "length": 9
           },
@@ -154,7 +154,7 @@
               "name": "c",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-                "line": 9,
+                "line": 10,
                 "column": 21,
                 "length": 1
               },
@@ -182,7 +182,7 @@
           "name": "TakeChildRequest",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-            "line": 10,
+            "line": 11,
             "column": 5,
             "length": 16
           },
@@ -197,7 +197,7 @@
               "name": "r",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-                "line": 10,
+                "line": 11,
                 "column": 37,
                 "length": 1
               },
@@ -229,7 +229,7 @@
       "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-        "line": 7,
+        "line": 8,
         "column": 19,
         "length": 9
       },
@@ -244,7 +244,7 @@
           "name": "c",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-            "line": 7,
+            "line": 8,
             "column": 26,
             "length": 1
           },
@@ -269,7 +269,7 @@
       "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-        "line": 8,
+        "line": 9,
         "column": 26,
         "length": 18
       },
@@ -284,7 +284,7 @@
           "name": "r",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-            "line": 8,
+            "line": 9,
             "column": 42,
             "length": 1
           },
@@ -309,7 +309,7 @@
       "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix2",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-        "line": 9,
+        "line": 10,
         "column": 14,
         "length": 9
       },
@@ -324,7 +324,7 @@
           "name": "c",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-            "line": 9,
+            "line": 10,
             "column": 21,
             "length": 1
           },
@@ -349,7 +349,7 @@
       "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix3",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-        "line": 10,
+        "line": 11,
         "column": 21,
         "length": 18
       },
@@ -364,7 +364,7 @@
           "name": "r",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
-            "line": 10,
+            "line": 11,
             "column": 37,
             "length": 1
           },

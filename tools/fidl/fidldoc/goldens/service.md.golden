@@ -6,7 +6,7 @@
 ## **PROTOCOLS**
 
 ## FirstProtocol {#FirstProtocol}
-*Defined in [fidl.test.service/service.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/service.test.fidl;l=10)*
+*Defined in [fidl.test.service/service.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/service.test.fidl;l=11)*
 
 
 ### MethodOnFirst {#FirstProtocol.MethodOnFirst}
@@ -20,7 +20,7 @@
 
 
 ## SecondProtocol {#SecondProtocol}
-*Defined in [fidl.test.service/service.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/service.test.fidl;l=18)*
+*Defined in [fidl.test.service/service.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/service.test.fidl;l=19)*
 
 
 ### MethodOnSecond {#SecondProtocol.MethodOnSecond}
