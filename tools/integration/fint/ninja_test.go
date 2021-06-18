@@ -407,20 +407,23 @@ func TestAffectedTestsNoWork(t *testing.T) {
 			}
 
 			targets := []string{"foo", "bar"}
-			affectedTests, noWork, err := affectedTestsNoWork(
-				context.Background(), r, mockTestManifest, affectedFilesAbs, targets)
+			result, err := affectedTestsNoWork(context.Background(), r, mockTestManifest, affectedFilesAbs, targets)
 			if err != nil {
 				t.Fatal(err)
+			}
+
+			if len(result.logs) == 0 {
+				t.Errorf("Expected logs to contain at least one log, but got none")
 			}
 
 			if len(subprocessRunner.commandsRun) != tc.expectedDryRuns {
 				t.Errorf("Expected %d dry run(s) but got %d", tc.expectedDryRuns, len(subprocessRunner.commandsRun))
 			}
-			if diff := cmp.Diff(tc.expectedAffectedTests, affectedTests); diff != "" {
+			if diff := cmp.Diff(tc.expectedAffectedTests, result.affectedTests); diff != "" {
 				t.Errorf("Unexpected affected tests diff (-want +got):\n%s", diff)
 			}
-			if tc.expectedNoWork != noWork {
-				t.Errorf("Wrong no work result, wanted %v, got %v", tc.expectedNoWork, noWork)
+			if tc.expectedNoWork != result.noWork {
+				t.Errorf("Wrong no work result, wanted %v, got %v", tc.expectedNoWork, result.noWork)
 			}
 		})
 	}

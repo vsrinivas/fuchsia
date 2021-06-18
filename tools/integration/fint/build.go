@@ -144,23 +144,33 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		return artifacts, err
 	}
 
+	// saveLogs writes the given set of logs to files in the artifact directory,
+	// and adds each path to the output artifacts.
+	saveLogs := func(logs map[string]string) error {
+		if contextSpec.ArtifactDir == "" {
+			return nil
+		}
+		for name, contents := range logs {
+			f, err := ioutil.TempFile(contextSpec.ArtifactDir, url.QueryEscape(name))
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			if _, err := f.WriteString(contents); err != nil {
+				return fmt.Errorf("failed to write log file %q: %w", name, err)
+			}
+			artifacts.LogFiles[name] = f.Name()
+		}
+		return nil
+	}
+
 	if !contextSpec.SkipNinjaNoopCheck {
 		noop, logs, err := checkNinjaNoop(ctx, runner, targets, hostplatform.IsMac())
 		if err != nil {
 			return nil, err
 		}
-		if contextSpec.ArtifactDir != "" {
-			for name, contents := range logs {
-				f, err := ioutil.TempFile(contextSpec.ArtifactDir, url.QueryEscape(name))
-				if err != nil {
-					return nil, err
-				}
-				defer f.Close()
-				if _, err := f.WriteString(contents); err != nil {
-					return nil, fmt.Errorf("failed to write log file %q: %w", name, err)
-				}
-				artifacts.LogFiles[name] = f.Name()
-			}
+		if err := saveLogs(logs); err != nil {
+			return nil, err
 		}
 		if !noop {
 			summaryLines := []string{
@@ -197,12 +207,15 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 			absPath := filepath.Join(contextSpec.CheckoutDir, f.Path)
 			affectedFiles = append(affectedFiles, absPath)
 		}
-		affectedTests, noWork, err := affectedTestsNoWork(ctx, runner, tests, affectedFiles, targets)
+		result, err := affectedTestsNoWork(ctx, runner, tests, affectedFiles, targets)
 		if err != nil {
 			return nil, err
 		}
-		artifacts.AffectedTests = affectedTests
-		artifacts.BuildNotAffected = noWork
+		if err := saveLogs(result.logs); err != nil {
+			return nil, err
+		}
+		artifacts.AffectedTests = result.affectedTests
+		artifacts.BuildNotAffected = result.noWork
 	}
 
 	return artifacts, nil

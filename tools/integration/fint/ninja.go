@@ -282,13 +282,35 @@ func touchFiles(ctx context.Context, paths []string) error {
 	return nil
 }
 
+// affectedTestsResult is the type emitted by `affectedTestsNoWork()`. It exists
+// solely to keep return statements in that function concise.
+type affectedTestsResult struct {
+	// Names of tests that are affected based on the paths of the changed files.
+	affectedTests []string
+
+	// Whether the build graph is unaffected by the changed files.
+	noWork bool
+
+	// Keep track of logs so the caller can choose to present them to the user
+	// for debugging purposes.
+	logs map[string]string
+}
+
+// affectedTestsNoWork touches affected files and then does a ninja dry run and
+// analyzes the output, to determine:
+// a) If the build graph is affected by the changed files.
+// b) If so, which tests are affected by the changed files.
 func affectedTestsNoWork(
 	ctx context.Context,
 	runner ninjaRunner,
 	allTests []build.Test,
 	affectedFiles []string,
 	targets []string,
-) ([]string, bool, error) {
+) (affectedTestsResult, error) {
+	result := affectedTestsResult{
+		logs: map[string]string{},
+	}
+
 	testsByStamp := map[string][]string{}
 	testsByPath := map[string]string{}
 
@@ -308,7 +330,7 @@ func affectedTestsNoWork(
 		// For Fuchsia tests we derive the stamp path from the GN label.
 		stamp, err := stampFileForTest(test.Label)
 		if err != nil {
-			return nil, false, err
+			return result, err
 		}
 		testsByStamp[stamp] = append(testsByStamp[stamp], test.Name)
 	}
@@ -325,7 +347,7 @@ func affectedTestsNoWork(
 			if os.IsNotExist(err) {
 				continue
 			}
-			return nil, false, err
+			return result, err
 		}
 		originalModTimes[path] = fi.ModTime()
 	}
@@ -345,11 +367,11 @@ func affectedTestsNoWork(
 	// modified and we touched them then the following dry run results are not
 	// useful for determining affected tests.
 	if err := touchFiles(ctx, nonGNFiles); err != nil {
-		return nil, false, err
+		return result, err
 	}
 	stdout, stderr, err := ninjaDryRun(ctx, runner, targets)
 	if err != nil {
-		return nil, false, err
+		return result, err
 	}
 	ninjaOutput := strings.Join([]string{stdout, stderr}, "\n\n")
 
@@ -385,18 +407,22 @@ func affectedTestsNoWork(
 	// the necessary output from the first ninja dry run, so we can skip doing
 	// the second dry run that includes GN files.
 	if len(gnFiles) > 0 {
+		result.logs["ninja dry run output (no GN files)"] = ninjaOutput
+
 		// Since we only did a Ninja dry run, the non-GN files will still be
 		// considered dirty, so we need only touch the GN files.
-		if err := touchFiles(ctx, gnFiles); err != nil {
-			return nil, false, err
+		if err = touchFiles(ctx, gnFiles); err != nil {
+			return result, err
 		}
-		stdout, stderr, err := ninjaDryRun(ctx, runner, targets)
+		var stdout, stderr string
+		stdout, stderr, err = ninjaDryRun(ctx, runner, targets)
 		if err != nil {
-			return nil, false, err
+			return result, err
 		}
 		ninjaOutput = strings.Join([]string{stdout, stderr}, "\n\n")
 	}
-	noWork := strings.Contains(ninjaOutput, noWorkString)
+	result.logs["ninja dry run output"] = ninjaOutput
+	result.noWork = strings.Contains(ninjaOutput, noWorkString)
 
 	// TODO(fxbug.dev/75371): Stop resetting the mtimes once we stop running
 	// affected_tests.py after fint.
@@ -406,13 +432,14 @@ func affectedTestsNoWork(
 			// If the file doesn't exist, it won't be present in `originalModTimes`.
 			continue
 		}
-		err := os.Chtimes(path, mtime, mtime)
-		if err != nil {
-			return nil, false, err
+		if err := os.Chtimes(path, mtime, mtime); err != nil {
+			return result, err
 		}
 	}
 
-	return removeDuplicates(affectedTests), noWork, nil
+	result.affectedTests = removeDuplicates(affectedTests)
+
+	return result, nil
 }
 
 func stampFileForTest(label string) (string, error) {
