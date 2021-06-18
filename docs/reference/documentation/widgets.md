@@ -293,7 +293,7 @@ Note: The parameters for markdown and Jinja2 are the same.
 
 <!-- xrefs -->
 
-[doc-widgets]: {{fuchsia_editor }}/docs/_common/_doc_widgets.md
+[doc-widgets]: {{fuchsia_editor }}docs/_common/_doc_widgets.md
 [glossary-yaml]: {{fuchsia_editor }}{{ glossary_file }}
 [jinja-macros]: https://jinja.palletsprojects.com/en/2.11.x/templates/#macros
 [glossary-add]: /docs/contribute/docs/glossary-entries.md

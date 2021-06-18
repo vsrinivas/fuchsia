@@ -5,7 +5,7 @@
 {% endset %}
 
 {% set fuchsia_editor = "https://ci.android.com/edit?repo=fuchsia/fuchsia/main&file=" %}
-{% set glossary_file = "/docs/glossary/_glossary.yaml" %}
+{% set glossary_file = "docs/glossary/_glossary.yaml" %}
 
 {% setvar pencil_edit %}
 <div class="pencil-edit">
