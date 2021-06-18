@@ -1,0 +1,40 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/devices/bus/drivers/pci/pci.gni")
+
+#import("//zircon/system/ulib/acpica/acpica.gni")
+
+config("acpica-config") {
+  include_dirs = [ "include" ]
+}
+
+source_set("acpica-fuchsia") {
+  deps = [
+    "//src/devices/pci/lib/pci",
+    "//src/lib/ddk",
+    "//third_party/acpica:headers",
+    "//zircon/system/ulib/bitmap",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zircon-internal",
+  ]
+
+  public_configs = [ ":acpica-config" ]
+
+  sources = [ "osfuchsia.cc" ]
+
+  defines = [ "_ALL_SOURCE" ]
+
+  # Will be removed after acpica no longer uses osfuchsia.cc directly.
+  defines += [ "NOT_IN_ACPICA" ]
+
+  if (platform_enable_user_pci) {
+    defines += [ "ENABLE_USER_PCI" ]
+  }
+
+  # Will be enabled after acpica_debug_output is no longer declared in acpica.
+  #if (acpica_debug_output) {
+  #  defines += [ "ACPI_DEBUG_OUTPUT" ]
+  #}
+}
