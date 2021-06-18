@@ -162,27 +162,38 @@ template("flutter_dart_component") {
     _component_name = target_name
   }
 
-  # merge the runner cmx into this one which allows us to switch runners based
-  # on compilation modes
-  _merged_target_name = "${target_name}_merged.cmx"
+  # Flutter and Dart components need to run inside the runner which matches how
+  # they were compiled, for example, a JIT component must run in the JIT runner.
+  # We need to be able to dynamically convert the manifest files to include the
+  # runner requirements so that we can switch based on build modes.
+  _manifest_extension = get_path_info(invoker.manifest, "extension")
+  if (_manifest_extension == "cmx") {
+    # This is a v1 component, merge with the runtime_meta
+    _merged_target_name = "${target_name}_merged.cmx"
 
-  cmc_merge(_merged_target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    sources = [
-      invoker.manifest,
-      rebase_path(build_cfg.runtime_meta, "."),
-    ]
+    cmc_merge(_merged_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      sources = [
+        invoker.manifest,
+        rebase_path(build_cfg.runtime_meta, "."),
+      ]
+    }
+
+    _merged_outputs = []
+    _merged_outputs += get_target_outputs(":$_merged_target_name")
+    _manifest = _merged_outputs[0]
+
+    _component_deps += [ ":$_merged_target_name" ]
+  } else {
+    # This is a v2 component.
+    # The v2 runners have not been implemented yet so we just leave the manifest
+    # as is to avoid breaking the build.
+    _manifest = invoker.manifest
   }
-
-  _merged_outputs = []
-  _merged_outputs += get_target_outputs(":$_merged_target_name")
-  _merged_manifest = _merged_outputs[0]
-
-  _component_deps += [ ":$_merged_target_name" ]
 
   _dart_package_config_target_name = "${target_name}_dart_package"
   dart_package_config(_dart_package_config_target_name) {
@@ -325,6 +336,6 @@ template("flutter_dart_component") {
                              "component_name",
                            ])
     deps = _component_deps
-    manifest = _merged_manifest
+    manifest = _manifest
   }
 }
