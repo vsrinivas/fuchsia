@@ -23,15 +23,18 @@ use {
         regulatory_manager::RegulatoryManager,
     },
     anyhow::{format_err, Context as _, Error},
+    fidl::{endpoints::RequestStream, handle::AsyncChannel},
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker,
+    fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
     fuchsia_async::DurationExt,
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::component,
+    fuchsia_runtime::{self as fruntime, HandleInfo, HandleType},
     fuchsia_syslog as syslog,
-    fuchsia_zircon::prelude::*,
+    fuchsia_zircon::{self as zx, prelude::*},
     futures::{
         self,
         channel::{mpsc, oneshot},
@@ -40,9 +43,9 @@ use {
         prelude::*,
         select, TryFutureExt,
     },
-    log::{error, info},
+    log::{error, info, warn},
     pin_utils::pin_mut,
-    std::sync::Arc,
+    std::{process, sync::Arc},
     void::Void,
     wlan_metrics_registry::{self as metrics},
 };
@@ -204,6 +207,41 @@ fn run_regulatory_manager(
     }
 }
 
+// This lifecycle handler is required to make use of the "main_process_critical" functionality
+// in Components V2. It ensures that our process exits cleanly when the system begins a shutdown.
+// If the process were to exit with a non-zero exit code, the system would abruptly reboot rather
+// than performing a clean shutdown.
+async fn run_lifecycle_handler() -> Result<(), Error> {
+    match fruntime::take_startup_handle(HandleInfo::new(HandleType::Lifecycle, 0)) {
+        Some(lifecycle_handle) => {
+            let x: zx::Channel = lifecycle_handle.into();
+            let async_x = AsyncChannel::from(
+                fasync::Channel::from_channel(x).expect("Async channel conversion failed."),
+            );
+            let mut req_stream = LifecycleRequestStream::from_channel(async_x);
+            while let Some(request) =
+                req_stream.try_next().await.expect("Failure receiving lifecycle FIDL message")
+            {
+                match request {
+                    LifecycleRequest::Stop { control_handle: _c } => {
+                        info!("Receive lifecycle request to stop.");
+                        process::exit(0);
+                    }
+                }
+            }
+
+            // We only arrive here if the lifecycle channel closed without
+            // first sending the shutdown event, which is unexpected.
+            error!("Lifecycle channel closed without first sending shutdown event");
+            process::abort();
+        }
+        None => {
+            warn!("No lifecycle channel received, likely running as a v1 component.");
+            Ok(())
+        }
+    }
+}
+
 async fn run_all_futures() -> Result<(), Error> {
     let wlan_svc = fuchsia_component::client::connect_to_protocol::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
@@ -275,6 +313,7 @@ async fn run_all_futures() -> Result<(), Error> {
 
     let metrics_fut = serve_metrics(saved_networks.clone(), cobalt_fut);
     let regulatory_fut = run_regulatory_manager(iface_manager.clone(), regulatory_sender);
+    let lifecycle_fut = run_lifecycle_handler();
 
     let _ = futures::try_join!(
         fidl_fut,
@@ -282,6 +321,7 @@ async fn run_all_futures() -> Result<(), Error> {
         iface_manager_service,
         metrics_fut,
         regulatory_fut,
+        lifecycle_fut,
     )?;
     Ok(())
 }
