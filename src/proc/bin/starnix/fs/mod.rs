@@ -8,7 +8,6 @@ mod file_system;
 mod fuchsia;
 pub mod pipe;
 pub mod syscalls;
-#[allow(dead_code)]
 mod tree;
 
 pub use self::fuchsia::*;

@@ -112,6 +112,7 @@ impl FsNode {
         Ok(node)
     }
 
+    #[cfg(test)]
     fn mkdir(self: &FsNodeHandle, name: FsString) -> Result<FsNodeHandle, Errno> {
         let node = self.get_or_create_empty_child(name);
         let exists = node.initialize(|name| self.ops().mkdir(name))?;
