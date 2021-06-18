@@ -23,6 +23,7 @@ source_set("hypervisor") {
     "//zircon/kernel/dev/psci",
     "//zircon/kernel/dev/timer/arm_generic",
     "//zircon/kernel/hypervisor:headers",
+    "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/ktrace",
     "//zircon/system/ulib/affine",
