@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:mobx/mobx.dart';
 
 import 'package:next/src/services/settings/datetime_service.dart';
+import 'package:next/src/services/settings/network_address_service.dart';
 import 'package:next/src/services/settings/task_service.dart';
 import 'package:next/src/services/settings/timezone_service.dart';
 import 'package:next/src/services/shortcuts_service.dart';
@@ -45,6 +46,9 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   final Observable<String> selectedTimezone;
 
+  @override
+  final networkAddresses = ObservableList<String>();
+
   final List<String> _timezones;
 
   @override
@@ -61,17 +65,26 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
 
   final DateTimeService dateTimeService;
   final TimezoneService timezoneService;
+  final NetworkAddressService networkService;
 
   SettingsStateImpl({
     required ShortcutsService shortcutsService,
     required this.timezoneService,
     required this.dateTimeService,
+    required this.networkService,
   })  : shortcutBindings = shortcutsService.keyboardBindings,
         _timezones = _loadTimezones(),
         selectedTimezone = timezoneService.timezone.asObservable() {
     dateTimeService.onChanged = updateDateTime;
     timezoneService.onChanged =
         (timezone) => runInAction(() => selectedTimezone.value = timezone);
+    networkService.onChanged = () => NetworkInterface.list().then((interfaces) {
+          runInAction(() => networkAddresses
+            ..clear()
+            ..addAll(interfaces
+                .expand((interface) => interface.addresses)
+                .map((address) => address.address)));
+        });
   }
 
   @override
@@ -79,6 +92,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     await Future.wait([
       dateTimeService.start(),
       timezoneService.start(),
+      networkService.start(),
     ]);
   }
 
@@ -87,6 +101,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     showAllSettings();
     await dateTimeService.stop();
     await timezoneService.stop();
+    await networkService.stop();
     _dateTimeNow = null;
   }
 

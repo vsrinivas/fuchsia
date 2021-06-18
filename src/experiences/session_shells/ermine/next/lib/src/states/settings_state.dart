@@ -5,6 +5,7 @@
 import 'package:mobx/mobx.dart';
 
 import 'package:next/src/services/settings/datetime_service.dart';
+import 'package:next/src/services/settings/network_address_service.dart';
 import 'package:next/src/services/settings/task_service.dart';
 import 'package:next/src/services/settings/timezone_service.dart';
 import 'package:next/src/services/shortcuts_service.dart';
@@ -37,6 +38,7 @@ abstract class SettingsState with Store implements TaskService {
   ObservableValue<BatteryCharge> get batteryCharge;
   ObservableValue<String> get dateTime;
   ObservableValue<String> get selectedTimezone;
+  ObservableList<String> get networkAddresses;
   Map<String, Set<String>> get shortcutBindings;
   List<String> get timezones;
 
@@ -45,6 +47,7 @@ abstract class SettingsState with Store implements TaskService {
       shortcutsService: shortcutsService,
       timezoneService: TimezoneService(),
       dateTimeService: DateTimeService(),
+      networkService: NetworkAddressService(),
     );
   }
 

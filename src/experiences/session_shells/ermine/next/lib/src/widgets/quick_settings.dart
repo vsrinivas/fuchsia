@@ -9,6 +9,7 @@ import 'package:internationalization/strings.dart';
 import 'package:next/src/states/app_state.dart';
 import 'package:next/src/widgets/settings/shortcut_settings.dart';
 import 'package:next/src/widgets/settings/timezone_settings.dart';
+import 'package:next/src/widgets/status.dart';
 
 /// Defines a widget to display status and update system settings.
 class QuickSettings extends StatelessWidget {
@@ -31,9 +32,7 @@ class QuickSettings extends StatelessWidget {
               ),
             ),
             padding: EdgeInsets.all(24),
-            child: Center(
-              child: Text(appState.buildVersion),
-            ),
+            child: Status(appState),
           ),
 
           // Quick Settings

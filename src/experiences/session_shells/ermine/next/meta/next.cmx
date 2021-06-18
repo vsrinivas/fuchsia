@@ -23,6 +23,7 @@
             "fuchsia.media.Audio",
             "fuchsia.media.AudioCore",
             "fuchsia.memory.Monitor",
+            "fuchsia.net.interfaces.State",
             "fuchsia.power.BatteryManager",
             "fuchsia.session.ElementManager",
             "fuchsia.settings.Intl",

@@ -31,6 +31,7 @@ dart_library("lib") {
     "src/services/shortcuts_service.dart",
     "src/services/startup_service.dart",
     "src/services/settings/datetime_service.dart",
+    "src/services/settings/network_address_service.dart",
     "src/services/settings/task_service.dart",
     "src/services/settings/timezone_service.dart",
   ]
@@ -67,6 +68,7 @@ dart_library("lib") {
     "src/widgets/settings/shortcut_settings.dart",
     "src/widgets/settings/timezone_settings.dart",
     "src/widgets/side_bar.dart",
+    "src/widgets/status.dart",
   ]
 
   sources = [
@@ -90,6 +92,7 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.memory",
+    "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.power",
     "//sdk/fidl/fuchsia.session",
     "//sdk/fidl/fuchsia.settings",
