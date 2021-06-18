@@ -5,8 +5,6 @@
 #include "src/ui/a11y/lib/screen_reader/change_semantic_level_action.h"
 
 #include <fuchsia/accessibility/cpp/fidl.h>
-#include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -14,17 +12,10 @@
 #include <gmock/gmock.h>
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
-#include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
-#include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"
-#include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
-#include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
-#include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_screen_reader_context.h"
+#include "src/ui/a11y/lib/screen_reader/tests/screen_reader_action_test_fixture.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
-#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_event_manager.h"
-#include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"
-#include "src/ui/a11y/lib/view/tests/mocks/mock_view_injector_factory.h"
-#include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_source.h"
 
 namespace accessibility_test {
 namespace {
@@ -33,63 +24,39 @@ using a11y::ScreenReaderContext;
 using fuchsia::intl::l10n::MessageIds;
 using testing::ElementsAre;
 
-class ChangeSemanticLevelAction : public gtest::TestLoopFixture {
+class ChangeSemanticLevelAction : public ScreenReaderActionTest {
  public:
-  ChangeSemanticLevelAction()
-      : view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                      std::make_unique<MockViewSemanticsFactory>(),
-                      std::make_unique<MockAnnotationViewFactory>(),
-                      std::make_unique<MockViewInjectorFactory>(),
-                      std::make_unique<MockSemanticsEventManager>(),
-                      std::make_unique<MockAccessibilityView>(), context_provider_.context(),
-                      context_provider_.context()->outgoing()->debug_dir()),
-        semantic_provider_(&view_manager_) {
-    action_context_.semantics_source = &view_manager_;
+  ChangeSemanticLevelAction() = default;
+  ~ChangeSemanticLevelAction() override = default;
 
-    screen_reader_context_ = std::make_unique<MockScreenReaderContext>();
-    a11y_focus_manager_ptr_ = screen_reader_context_->mock_a11y_focus_manager_ptr();
-    mock_speaker_ptr_ = screen_reader_context_->mock_speaker_ptr();
-    view_manager_.SetSemanticsEnabled(true);
-    fuchsia::accessibility::semantics::Node node;
-    node.set_node_id(0);
+  void SetUp() override {
+    ScreenReaderActionTest::SetUp();
+
+    fuchsia::accessibility::semantics::Node node = CreateTestNode(0u, "Label A");
     node.mutable_states()->set_range_value(42.0);
-    std::vector<decltype(node)> update_nodes;
-    update_nodes.push_back(std::move(node));
-    semantic_provider_.UpdateSemanticNodes(std::move(update_nodes));
-    RunLoopUntilIdle();
-    semantic_provider_.CommitUpdates();
-    RunLoopUntilIdle();
-    a11y_focus_manager_ptr_->SetA11yFocus(semantic_provider_.koid(), 0,
-                                          [](bool result) { EXPECT_TRUE(result); });
+    mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node));
+
+    mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), 0u,
+                                            [](bool result) { EXPECT_TRUE(result); });
   }
-
-  vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
-
-  sys::testing::ComponentContextProvider context_provider_;
-  a11y::ViewManager view_manager_;
-  a11y::ScreenReaderAction::ActionContext action_context_;
-  std::unique_ptr<MockScreenReaderContext> screen_reader_context_;
-  MockA11yFocusManager* a11y_focus_manager_ptr_;
-  MockScreenReaderContext::MockSpeaker* mock_speaker_ptr_;
-  MockSemanticProvider semantic_provider_;
 };
 
 TEST_F(ChangeSemanticLevelAction, NoChangeForNonSliderNode) {
   // The focus is not important when it is not a slider node.
-  a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(true);
+  mock_a11y_focus_manager()->set_should_get_a11y_focus_fail(true);
   a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kForward,
-                                         &action_context_, screen_reader_context_.get());
+                                         action_context(), mock_screen_reader_context());
   a11y::GestureContext gesture_context;
-  gesture_context.view_ref_koid = semantic_provider_.koid();
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
   action.Run(gesture_context);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(),
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
   action.Run(gesture_context);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(),
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
-  EXPECT_THAT(mock_speaker_ptr_->message_ids(),
+  EXPECT_THAT(mock_speaker()->message_ids(),
               ElementsAre(MessageIds::DEFAULT_NAVIGATION_GRANULARITY,
                           MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
 }
@@ -97,23 +64,24 @@ TEST_F(ChangeSemanticLevelAction, NoChangeForNonSliderNode) {
 // TODO(fxb/63293): Enable when word and character navigation exist.
 TEST_F(ChangeSemanticLevelAction, DISABLED_CyclesForwardThroughLevelsForNonSliderNode) {
   // The focus is not important when it is not a slider node.
-  a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(true);
+  mock_a11y_focus_manager()->set_should_get_a11y_focus_fail(true);
   a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kForward,
-                                         &action_context_, screen_reader_context_.get());
+                                         action_context(), mock_screen_reader_context());
   a11y::GestureContext gesture_context;
-  gesture_context.view_ref_koid = semantic_provider_.koid();
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
   action.Run(gesture_context);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(),
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
             ScreenReaderContext::SemanticLevel::kCharacter);
   action.Run(gesture_context);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(), ScreenReaderContext::SemanticLevel::kWord);
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
+            ScreenReaderContext::SemanticLevel::kWord);
   action.Run(gesture_context);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(),
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
-  EXPECT_THAT(mock_speaker_ptr_->message_ids(),
+  EXPECT_THAT(mock_speaker()->message_ids(),
               ElementsAre(MessageIds::CHARACTER_GRANULARITY, MessageIds::WORD_GRANULARITY,
                           MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
 }
@@ -121,77 +89,78 @@ TEST_F(ChangeSemanticLevelAction, DISABLED_CyclesForwardThroughLevelsForNonSlide
 // TODO(fxb/63293): Enable when word and character navigation exist.
 TEST_F(ChangeSemanticLevelAction, DISABLED_CyclesBackwardThroughLevelsForNonSliderNode) {
   // The focus is not important when it is not a slider node.
-  a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(true);
+  mock_a11y_focus_manager()->set_should_get_a11y_focus_fail(true);
   a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kBackward,
-                                         &action_context_, screen_reader_context_.get());
+                                         action_context(), mock_screen_reader_context());
   a11y::GestureContext gesture_context;
-  gesture_context.view_ref_koid = semantic_provider_.koid();
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
   action.Run(gesture_context);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(), ScreenReaderContext::SemanticLevel::kWord);
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
+            ScreenReaderContext::SemanticLevel::kWord);
   action.Run(gesture_context);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(),
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
             ScreenReaderContext::SemanticLevel::kCharacter);
   action.Run(gesture_context);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(),
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
-  EXPECT_THAT(mock_speaker_ptr_->message_ids(),
+  EXPECT_THAT(mock_speaker()->message_ids(),
               ElementsAre(MessageIds::WORD_GRANULARITY, MessageIds::CHARACTER_GRANULARITY,
                           MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
 }
 
 TEST_F(ChangeSemanticLevelAction, CyclesForwardThroughLevelsForSliderNode) {
   a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kForward,
-                                         &action_context_, screen_reader_context_.get());
+                                         action_context(), mock_screen_reader_context());
   a11y::GestureContext gesture_context;
-  gesture_context.view_ref_koid = semantic_provider_.koid();
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
   action.Run(gesture_context);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(),
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
             ScreenReaderContext::SemanticLevel::kAdjustValue);
   /* TODO(fxb/63293): Uncomment when word and character navigation exist.
   action.Run(action_data);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(),
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
             ScreenReaderContext::SemanticLevel::kCharacter);
   action.Run(action_data);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(), ScreenReaderContext::SemanticLevel::kWord);
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
+  ScreenReaderContext::SemanticLevel::kWord);
   */
   action.Run(gesture_context);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(),
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
-  EXPECT_THAT(mock_speaker_ptr_->message_ids(),
+  EXPECT_THAT(mock_speaker()->message_ids(),
               ElementsAre(MessageIds::ADJUST_VALUE_GRANULARITY,
                           MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
 }
 
 TEST_F(ChangeSemanticLevelAction, CyclesBackwardThroughLevelsForSliderNode) {
   a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kBackward,
-                                         &action_context_, screen_reader_context_.get());
+                                         action_context(), mock_screen_reader_context());
   a11y::GestureContext gesture_context;
-  gesture_context.view_ref_koid = semantic_provider_.koid();
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
   /* TODO(fxb/63293): Uncomment when word and character navigation exist.
-action.Run(action_data);
-RunLoopUntilIdle();
-EXPECT_EQ(screen_reader_context_->semantic_level(), ScreenReaderContext::SemanticLevel::kWord);
-action.Run(action_data);
-RunLoopUntilIdle();
-EXPECT_EQ(screen_reader_context_->semantic_level(),
-        ScreenReaderContext::SemanticLevel::kCharacter);
+  action.Run(action_data);
+  RunLoopUntilIdle();
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
+  ScreenReaderContext::SemanticLevel::kWord); action.Run(action_data); RunLoopUntilIdle();
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
+            ScreenReaderContext::SemanticLevel::kCharacter);
   */
   action.Run(gesture_context);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(),
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
             ScreenReaderContext::SemanticLevel::kAdjustValue);
   action.Run(gesture_context);
   RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(),
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
-  EXPECT_THAT(mock_speaker_ptr_->message_ids(),
+  EXPECT_THAT(mock_speaker()->message_ids(),
               ElementsAre(MessageIds::ADJUST_VALUE_GRANULARITY,
                           MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
 }

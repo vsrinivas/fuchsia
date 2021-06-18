@@ -167,6 +167,8 @@ TEST_F(FocusChainManagerTest, AccessibilityFocusChainRequesterViewDoesNotHaveSem
   // View is not providing semantics, so request is denied.
   auto* requester = manager_.get();
   bool success = true;  // expects false later.
+  // Set return value for ViewHasSemantics() to false.
+  mock_semantics_source_.set_view_has_semantics(false);
   requester->ChangeFocusToView(view_a_.koid(), [&success](bool result) { success = result; });
   RunLoopUntilIdle();
   EXPECT_FALSE(success);

@@ -9,6 +9,7 @@
 
 #include <map>
 #include <optional>
+#include <queue>
 
 #include "src/ui/a11y/lib/semantics/semantics_source.h"
 
@@ -23,6 +24,9 @@ class MockSemanticsSource : public a11y::SemanticsSource {
   // respond to this ViewRef accordingly.
   void AddViewRef(fuchsia::ui::views::ViewRef view_ref);
 
+  // Sets return value for ViewHasSemantics().
+  void set_view_has_semantics(bool view_has_semantics) { view_has_semantics_ = view_has_semantics; }
+
   // |SemanticsSource|
   bool ViewHasSemantics(zx_koid_t view_ref_koid) override;
 
@@ -33,6 +37,17 @@ class MockSemanticsSource : public a11y::SemanticsSource {
 
   // Sets if this provider has a visible virtual keyboard.
   void set_has_visible_keyboard(bool visible) { has_visible_keyboard_ = visible; }
+
+  // Sets perform accessibility action return value.
+  void set_perform_accessibility_action_callback_value(bool value) {
+    perform_accessibility_action_callback_value_ = value;
+  }
+
+  // Sets a callback to mock action handling. This callback will be invoked in
+  // PerformAccessibilityAction().
+  void set_custom_action_callback(fit::function<void()> callback) {
+    custom_action_callback_ = std::move(callback);
+  }
 
   // |SemanticsSource|
   std::optional<fuchsia::ui::views::ViewRef> ViewRefClone(zx_koid_t view_ref_koid) override;
@@ -52,7 +67,6 @@ class MockSemanticsSource : public a11y::SemanticsSource {
   // |SemanticsSource|
   const fuchsia::accessibility::semantics::Node* GetParentNode(zx_koid_t koid,
                                                                uint32_t node_id) const override;
-
   // |SemanticsSource|
   const fuchsia::accessibility::semantics::Node* GetPreviousNode(
       zx_koid_t koid, uint32_t node_id,
@@ -87,6 +101,16 @@ class MockSemanticsSource : public a11y::SemanticsSource {
   const std::vector<std::pair<uint32_t, fuchsia::accessibility::semantics::Action>>&
   GetRequestedActionsForView(zx_koid_t koid);
 
+  // Methods to mark GetNextNode(), GetParentNode(), and GetPreviousNode() for
+  // failure, respectively.
+  void set_get_next_node_should_fail(bool should_fail) { get_next_node_should_fail_ = should_fail; }
+  void set_get_parent_node_should_fail(bool should_fail) {
+    get_parent_node_should_fail_ = should_fail;
+  }
+  void set_get_previous_node_should_fail(bool should_fail) {
+    get_previous_node_should_fail_ = should_fail;
+  }
+
  private:
   fuchsia::ui::views::ViewRef view_ref_;
 
@@ -108,6 +132,23 @@ class MockSemanticsSource : public a11y::SemanticsSource {
 
   // Semantic transform to be returned by GetNodeToRootTransform().
   std::optional<a11y::SemanticTransform> transform_to_return_ = std::nullopt;
+
+  // Value that will be passed to the PerformAccessibilityAction callback.
+  // Default to true since we want this method to return "success" by default.
+  bool perform_accessibility_action_callback_value_ = true;
+
+  // Callback invoked in PerformAccessibilityAction. This callback allows users
+  // to supply a custom action handler.
+  fit::function<void()> custom_action_callback_ = {};
+
+  // Indicates whether the corresponding method should return null.
+  bool get_next_node_should_fail_ = false;
+  bool get_parent_node_should_fail_ = false;
+  bool get_previous_node_should_fail_ = false;
+
+  // Return value for ViewHasSemantics.
+  // Default to true since it's the more common testing use case.
+  bool view_has_semantics_ = true;
 };
 
 }  // namespace accessibility_test

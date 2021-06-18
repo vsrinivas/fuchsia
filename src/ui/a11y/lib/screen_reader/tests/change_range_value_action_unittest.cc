@@ -5,20 +5,16 @@
 #include "src/ui/a11y/lib/screen_reader/change_range_value_action.h"
 
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <cstdint>
 #include <utility>
 
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
-#include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_screen_reader_context.h"
+#include "src/ui/a11y/lib/screen_reader/tests/screen_reader_action_test_fixture.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
-#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_event_manager.h"
-#include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"
-#include "src/ui/a11y/lib/view/tests/mocks/mock_view_injector_factory.h"
-#include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_source.h"
 
 namespace accessibility_test {
 namespace {
@@ -35,53 +31,21 @@ constexpr uint32_t kRootNodeId = 0;
 constexpr uint32_t kSliderDelta = 10;
 constexpr uint32_t kSliderIntialRangeValue = 40;
 
-class ChangeRangeValueActionTest : public gtest::TestLoopFixture {
+class ChangeRangeValueActionTest : public ScreenReaderActionTest {
  public:
-  ChangeRangeValueActionTest()
-      : view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                      std::make_unique<MockViewSemanticsFactory>(),
-                      std::make_unique<MockAnnotationViewFactory>(),
-                      std::make_unique<MockViewInjectorFactory>(),
-                      std::make_unique<MockSemanticsEventManager>(),
-                      std::make_unique<MockAccessibilityView>(), context_provider_.context(),
-                      context_provider_.context()->outgoing()->debug_dir()),
-        semantic_provider_(&view_manager_) {
-    action_context_.semantics_source = &view_manager_;
-
-    screen_reader_context_ = std::make_unique<MockScreenReaderContext>();
-    a11y_focus_manager_ptr_ = screen_reader_context_->mock_a11y_focus_manager_ptr();
-    mock_speaker_ptr_ = screen_reader_context_->mock_speaker_ptr();
-    view_manager_.SetSemanticsEnabled(true);
-  }
+  ChangeRangeValueActionTest() = default;
+  ~ChangeRangeValueActionTest() = default;
 
   void SetUp() override {
-    Node node = CreateSliderNode(kRootNodeId, kRootNodeLabel);
-    std::vector<Node> update_nodes;
-    update_nodes.push_back(std::move(node));
+    ScreenReaderActionTest::SetUp();
 
-    // Update the node created above.
-    semantic_provider_.UpdateSemanticNodes(std::move(update_nodes));
-    RunLoopUntilIdle();
-
-    // Commit nodes.
-    semantic_provider_.CommitUpdates();
-    RunLoopUntilIdle();
-
-    semantic_provider_.SetRequestedAction(fuchsia::accessibility::semantics::Action::SET_FOCUS);
+    // Create test slider node
+    mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                                CreateSliderNode(kRootNodeId, kRootNodeLabel));
 
     // Update focused node.
-    a11y_focus_manager_ptr_->SetA11yFocus(semantic_provider_.koid(), kRootNodeId,
-                                          [](bool result) { EXPECT_TRUE(result); });
-
-    semantic_provider_.SetSliderDelta(kSliderDelta);
-
-    // Update slider node in semantic_provider_ which will be used to send slider update with new
-    // |range_value|.
-    {
-      Node node = CreateSliderNode(kRootNodeId, kRootNodeLabel);
-      // Update the node created above.
-      semantic_provider_.SetSliderNode(std::move(node));
-    }
+    mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), kRootNodeId,
+                                            [](bool result) { EXPECT_TRUE(result); });
   }
 
   static Node CreateSliderNode(uint32_t node_id, std::string label) {
@@ -93,121 +57,144 @@ class ChangeRangeValueActionTest : public gtest::TestLoopFixture {
     return node;
   }
 
-  sys::testing::ComponentContextProvider context_provider_;
-  a11y::ViewManager view_manager_;
-  a11y::ScreenReaderAction::ActionContext action_context_;
-  std::unique_ptr<MockScreenReaderContext> screen_reader_context_;
-  MockA11yFocusManager* a11y_focus_manager_ptr_;
-  MockScreenReaderContext::MockSpeaker* mock_speaker_ptr_;
-  accessibility_test::MockSemanticProvider semantic_provider_;
+  void SetSliderRangeValue(uint32_t value) {
+    // Update the slider node's range value so that we can verify that the new
+    // value is used to produce the utterance.
+    auto* node =
+        mock_semantics_source()->GetSemanticNode(mock_semantic_provider()->koid(), kRootNodeId);
+    fuchsia::accessibility::semantics::Node updated_node;
+    if (node) {
+      fidl::Clone(*node, &updated_node);
+    }
+
+    fuchsia::accessibility::semantics::States states;
+    states.set_range_value(value);
+    updated_node.set_states(std::move(states));
+    mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                                std::move(updated_node));
+  }
 };
 
 // Tests the scenario where no tree is in focus.
 TEST_F(ChangeRangeValueActionTest, NoTreeInFocus) {
-  a11y::ScreenReaderContext* context = screen_reader_context_.get();
-  a11y::ChangeRangeValueAction range_value_action(&action_context_, context,
+  a11y::ScreenReaderContext* context = mock_screen_reader_context();
+  a11y::ChangeRangeValueAction range_value_action(action_context(), context,
                                                   ChangeRangeValueActionType::kIncrementAction);
   a11y::GestureContext gesture_context;
-  gesture_context.view_ref_koid = semantic_provider_.koid();
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
 
   // Update A11y Focus Manager to return invalid a11y focus.
-  a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(true);
+  mock_a11y_focus_manager()->set_should_get_a11y_focus_fail(true);
 
   // Call ChangeRangeValueAction Run()
   range_value_action.Run(gesture_context);
   RunLoopUntilIdle();
 
-  ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
-  ASSERT_FALSE(semantic_provider_.OnAccessibilityActionRequestedCalled());
-  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_TRUE(mock_a11y_focus_manager()->IsGetA11yFocusCalled());
+  const auto& requested_actions =
+      mock_semantics_source()->GetRequestedActionsForView(mock_semantic_provider()->koid());
+  EXPECT_TRUE(requested_actions.empty());
+  EXPECT_FALSE(mock_speaker()->ReceivedSpeak());
 }
 
 // Tests the scenario where the A11y focused node is not found.
 TEST_F(ChangeRangeValueActionTest, FocusedNodeNotFound) {
-  a11y::ScreenReaderContext* context = screen_reader_context_.get();
-  a11y::ChangeRangeValueAction range_value_action(&action_context_, context,
+  a11y::ScreenReaderContext* context = mock_screen_reader_context();
+  a11y::ChangeRangeValueAction range_value_action(action_context(), context,
                                                   ChangeRangeValueActionType::kIncrementAction);
   a11y::GestureContext gesture_context;
-  gesture_context.view_ref_koid = semantic_provider_.koid();
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
 
   // Update focused node to an invalid node_id.
   uint32_t invalid_node_id = 100;
-  a11y_focus_manager_ptr_->SetA11yFocus(semantic_provider_.koid(), invalid_node_id,
-                                        [](bool result) { EXPECT_TRUE(result); });
+  mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), invalid_node_id,
+                                          [](bool result) { EXPECT_TRUE(result); });
 
   // Call ChangeRangeValueAction Run()
   range_value_action.Run(gesture_context);
   RunLoopUntilIdle();
 
-  ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
-  ASSERT_FALSE(semantic_provider_.OnAccessibilityActionRequestedCalled());
-  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_TRUE(mock_a11y_focus_manager()->IsGetA11yFocusCalled());
+  const auto& requested_actions =
+      mock_semantics_source()->GetRequestedActionsForView(mock_semantic_provider()->koid());
+  EXPECT_TRUE(requested_actions.empty());
+  EXPECT_FALSE(mock_speaker()->ReceivedSpeak());
 }
 
 // Tests the scenario when the call to OnAccessibilityActionRequested() fails.
 TEST_F(ChangeRangeValueActionTest, OnAccessibilityActionRequestedFailed) {
-  a11y::ScreenReaderContext* context = screen_reader_context_.get();
-  a11y::ChangeRangeValueAction range_value_action(&action_context_, context,
+  a11y::ScreenReaderContext* context = mock_screen_reader_context();
+  a11y::ChangeRangeValueAction range_value_action(action_context(), context,
                                                   ChangeRangeValueActionType::kIncrementAction);
   a11y::GestureContext gesture_context;
-  gesture_context.view_ref_koid = semantic_provider_.koid();
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
 
-  // Update semantic provider so that a call to OnAccessibilityActionRequested() results in failure.
-  semantic_provider_.SetOnAccessibilityActionCallbackStatus(false);
+  // Update semantics source so that a call to PerformAccessibilityAction() results in failure.
+  mock_semantics_source()->set_perform_accessibility_action_callback_value(false);
 
   // Call ChangeRangeValueAction Run()
   range_value_action.Run(gesture_context);
   RunLoopUntilIdle();
 
-  ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
-  ASSERT_TRUE(semantic_provider_.OnAccessibilityActionRequestedCalled());
-  ASSERT_EQ(Action::INCREMENT, semantic_provider_.GetRequestedAction());
-  EXPECT_EQ(kRootNodeId, semantic_provider_.GetRequestedActionNodeId());
-  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_TRUE(mock_a11y_focus_manager()->IsGetA11yFocusCalled());
+  const auto& requested_actions =
+      mock_semantics_source()->GetRequestedActionsForView(mock_semantic_provider()->koid());
+  EXPECT_EQ(requested_actions.size(), 1u);
+  EXPECT_EQ(requested_actions[0].first, kRootNodeId);
+  EXPECT_EQ(requested_actions[0].second, fuchsia::accessibility::semantics::Action::INCREMENT);
+  EXPECT_FALSE(mock_speaker()->ReceivedSpeak());
 }
 
 // Tests the scenario when the Range control is incremented.
 TEST_F(ChangeRangeValueActionTest, RangeControlIncremented) {
-  a11y::ScreenReaderContext* context = screen_reader_context_.get();
-  a11y::ChangeRangeValueAction range_value_action(&action_context_, context,
+  a11y::ScreenReaderContext* context = mock_screen_reader_context();
+  a11y::ChangeRangeValueAction range_value_action(action_context(), context,
                                                   ChangeRangeValueActionType::kIncrementAction);
   a11y::GestureContext gesture_context;
-  gesture_context.view_ref_koid = semantic_provider_.koid();
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+
+  mock_semantics_source()->set_custom_action_callback(
+      [this]() { SetSliderRangeValue(kSliderIntialRangeValue + kSliderDelta); });
 
   // Call ChangeRangeValueAction Run()
   range_value_action.Run(gesture_context);
   RunLoopUntilIdle();
 
-  ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
-  ASSERT_TRUE(semantic_provider_.OnAccessibilityActionRequestedCalled());
-  ASSERT_EQ(Action::INCREMENT, semantic_provider_.GetRequestedAction());
-  EXPECT_EQ(kRootNodeId, semantic_provider_.GetRequestedActionNodeId());
-  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
-  ASSERT_EQ(mock_speaker_ptr_->messages().size(), 1u);
-  EXPECT_EQ(mock_speaker_ptr_->messages()[0],
-            std::to_string(kSliderDelta + kSliderIntialRangeValue));
+  ASSERT_TRUE(mock_a11y_focus_manager()->IsGetA11yFocusCalled());
+  const auto& requested_actions =
+      mock_semantics_source()->GetRequestedActionsForView(mock_semantic_provider()->koid());
+  EXPECT_EQ(requested_actions.size(), 1u);
+  EXPECT_EQ(requested_actions[0].first, kRootNodeId);
+  EXPECT_EQ(requested_actions[0].second, fuchsia::accessibility::semantics::Action::INCREMENT);
+  EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker()->messages().size(), 1u);
+  EXPECT_EQ(mock_speaker()->messages()[0], std::to_string(kSliderDelta + kSliderIntialRangeValue));
 }
 
 // Tests the scenario when the Range control is decremented.
 TEST_F(ChangeRangeValueActionTest, RangeControlDecremented) {
-  a11y::ScreenReaderContext* context = screen_reader_context_.get();
-  a11y::ChangeRangeValueAction range_value_action(&action_context_, context,
+  a11y::ScreenReaderContext* context = mock_screen_reader_context();
+  a11y::ChangeRangeValueAction range_value_action(action_context(), context,
                                                   ChangeRangeValueActionType::kDecrementAction);
   a11y::GestureContext gesture_context;
-  gesture_context.view_ref_koid = semantic_provider_.koid();
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+
+  mock_semantics_source()->set_custom_action_callback(
+      [this]() { SetSliderRangeValue(kSliderIntialRangeValue - kSliderDelta); });
 
   // Call ChangeRangeValueAction Run()
   range_value_action.Run(gesture_context);
   RunLoopUntilIdle();
 
-  ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
-  ASSERT_TRUE(semantic_provider_.OnAccessibilityActionRequestedCalled());
-  ASSERT_EQ(Action::DECREMENT, semantic_provider_.GetRequestedAction());
-  EXPECT_EQ(kRootNodeId, semantic_provider_.GetRequestedActionNodeId());
-  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
-  ASSERT_EQ(mock_speaker_ptr_->messages().size(), 1u);
-  EXPECT_EQ(mock_speaker_ptr_->messages()[0],
-            std::to_string(kSliderDelta + kSliderIntialRangeValue));
+  ASSERT_TRUE(mock_a11y_focus_manager()->IsGetA11yFocusCalled());
+  const auto& requested_actions =
+      mock_semantics_source()->GetRequestedActionsForView(mock_semantic_provider()->koid());
+  EXPECT_EQ(requested_actions.size(), 1u);
+  EXPECT_EQ(requested_actions[0].first, kRootNodeId);
+  EXPECT_EQ(requested_actions[0].second, fuchsia::accessibility::semantics::Action::DECREMENT);
+  EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker()->messages().size(), 1u);
+  EXPECT_EQ(mock_speaker()->messages()[0], std::to_string(kSliderIntialRangeValue - kSliderDelta));
 }
 
 }  // namespace

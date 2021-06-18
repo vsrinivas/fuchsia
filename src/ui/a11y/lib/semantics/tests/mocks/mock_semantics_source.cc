@@ -12,9 +12,7 @@ void MockSemanticsSource::AddViewRef(fuchsia::ui::views::ViewRef view_ref) {
   view_ref_ = std::move(view_ref);
 }
 
-bool MockSemanticsSource::ViewHasSemantics(zx_koid_t view_ref_koid) {
-  return view_ref_koid == a11y::GetKoid(view_ref_);
-}
+bool MockSemanticsSource::ViewHasSemantics(zx_koid_t view_ref_koid) { return view_has_semantics_; }
 
 std::optional<fuchsia::ui::views::ViewRef> MockSemanticsSource::ViewRefClone(
     zx_koid_t view_ref_koid) {
@@ -45,6 +43,10 @@ const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetSemanticN
 
 const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetParentNode(
     zx_koid_t koid, uint32_t node_id) const {
+  if (get_parent_node_should_fail_) {
+    return nullptr;
+  }
+
   const auto it = nodes_.find(koid);
   if (it == nodes_.end()) {
     return nullptr;
@@ -70,6 +72,10 @@ const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetParentNod
 const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetNextNode(
     zx_koid_t koid, uint32_t node_id,
     fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {
+  if (get_next_node_should_fail_) {
+    return nullptr;
+  }
+
   if (nodes_.find(koid) == nodes_.end()) {
     return nullptr;
   }
@@ -93,6 +99,10 @@ const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetNextNode(
 const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetPreviousNode(
     zx_koid_t koid, uint32_t node_id,
     fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {
+  if (get_previous_node_should_fail_) {
+    return nullptr;
+  }
+
   if (nodes_.find(koid) == nodes_.end()) {
     return nullptr;
   }
@@ -137,7 +147,10 @@ void MockSemanticsSource::PerformAccessibilityAction(
     fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
         callback) {
   requested_actions_[koid].emplace_back(node_id, action);
-  callback(true);
+  if (custom_action_callback_) {
+    custom_action_callback_();
+  }
+  callback(perform_accessibility_action_callback_value_);
 }
 
 const std::vector<std::pair<uint32_t, fuchsia::accessibility::semantics::Action>>&
