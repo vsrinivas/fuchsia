@@ -20,7 +20,6 @@ use {
         object_store::{
             filesystem::{Filesystem, Mutations},
             journal::checksum_list::ChecksumList,
-            object_manager::ObjectFlush,
             transaction::{AllocatorMutation, AssocObj, Mutation, Options, Transaction},
             HandleOptions, ObjectStore,
         },
@@ -95,7 +94,7 @@ pub trait Allocator: Send + Sync {
     fn reserve_at_most(self: Arc<Self>, amount: u64) -> Reservation;
 
     /// Releases the reservation.
-    fn release_reservation(&self, reservation: &mut Reservation);
+    fn release_reservation(&self, amount: u64);
 
     /// Returns the number of allocated bytes.
     fn get_allocated_bytes(&self) -> u64;
@@ -111,52 +110,90 @@ pub trait Allocator: Send + Sync {
     ) -> Result<bool, Error>;
 }
 
+/// A reservation guarantees that when it comes time to actually allocate, it will not fail due to
+/// lack of space.  A hold can be placed on some of the reservation, which can later be committed.
 pub struct Reservation {
     allocator: Arc<dyn Allocator>,
-    amount: Mutex<u64>,
+    inner: Mutex<ReservationInner>,
+}
+
+#[derive(Debug, Default)]
+struct ReservationInner {
+    // Amount currently held by this reservation.
+    amount: u64,
+
+    // The amount within this reservation that is held for some purpose.
+    held: u64,
 }
 
 impl std::fmt::Debug for Reservation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Reservation").field("amount", &*self.amount.lock().unwrap()).finish()
+        self.inner.lock().unwrap().fmt(f)
     }
 }
 
 impl Reservation {
     pub fn new(allocator: Arc<dyn Allocator>, amount: u64) -> Self {
-        Self { allocator, amount: Mutex::new(amount) }
+        Self { allocator, inner: Mutex::new(ReservationInner { amount, held: 0 }) }
     }
 
+    /// Returns the total amount of the reservation, not accounting for anything that might be held.
     pub fn amount(&self) -> u64 {
-        *self.amount.lock().unwrap()
+        self.inner.lock().unwrap().amount
     }
 
+    /// Returns the amount available after accounting for space that is held.
+    pub fn avail(&self) -> u64 {
+        let inner = self.inner.lock().unwrap();
+        inner.amount - inner.held
+    }
+
+    /// Adds more to the reservation.
     pub fn add(&self, amount: u64) {
-        *self.amount.lock().unwrap() += amount;
+        self.inner.lock().unwrap().amount += amount;
     }
 
-    pub fn sub(&self, delta: u64) -> Result<(), Error> {
-        let mut amount = self.amount.lock().unwrap();
-        *amount = amount.checked_sub(delta).ok_or(FxfsError::NoSpace)?;
+    /// Places a hold an `amount` from the reservation.
+    pub fn hold(&self, amount: u64) -> Result<(), Error> {
+        let mut inner = self.inner.lock().unwrap();
+        if amount > inner.amount - inner.held {
+            bail!(FxfsError::NoSpace);
+        }
+        inner.held += amount;
         Ok(())
     }
 
-    pub fn take(&self) -> u64 {
-        std::mem::take(&mut self.amount.lock().unwrap())
+    /// Releases some previously held amount.
+    pub fn release(&self, amount: u64) {
+        self.inner.lock().unwrap().held -= amount;
     }
 
-    pub fn try_top_up(&self, target: u64) -> bool {
-        let mut amount = self.amount.lock().unwrap();
-        if *amount < target {
-            *amount += self.allocator.clone().reserve_at_most(target - *amount).take();
-        }
-        *amount >= target
+    /// Commits a previously held amount.
+    pub fn commit(&self, amount: u64) {
+        let mut inner = self.inner.lock().unwrap();
+        inner.amount -= amount;
+        inner.held -= amount;
+    }
+
+    /// Returns the entire amount of the reservation.  The caller is responsible for maintaining
+    /// consistency, i.e. updating counters, etc.
+    pub fn take(&self) -> u64 {
+        std::mem::take(&mut *self.inner.lock().unwrap()).amount
+    }
+
+    /// Returns some of the reservation back to the allocator.  Asserts that the amount with a hold
+    /// is still valid afterwards.
+    pub fn give_back(&self, amount: u64) {
+        self.allocator.release_reservation(amount);
+        let mut inner = self.inner.lock().unwrap();
+        inner.amount -= amount;
+        assert!(inner.held <= inner.amount);
     }
 }
 
 impl Drop for Reservation {
     fn drop(&mut self) {
-        self.allocator.clone().release_reservation(self);
+        self.allocator.release_reservation(self.inner.get_mut().unwrap().amount);
     }
 }
 
@@ -325,11 +362,13 @@ impl SimpleAllocator {
                 let serialized_info = handle.contents(MAX_ALLOCATOR_INFO_SERIALIZED_SIZE).await?;
                 let info: AllocatorInfo = deserialize_from(&serialized_info[..])?;
                 let mut handles = Vec::new();
+                let mut total_size = 0;
                 for object_id in &info.layers {
-                    handles.push(
+                    let handle =
                         ObjectStore::open_object(&root_store, *object_id, HandleOptions::default())
-                            .await?,
-                    );
+                            .await?;
+                    total_size += handle.get_size();
+                    handles.push(handle);
                 }
                 {
                     let mut inner = self.inner.lock().unwrap();
@@ -346,6 +385,11 @@ impl SimpleAllocator {
                     inner.info = info;
                 }
                 self.tree.append_layers(handles.into_boxed_slice()).await?;
+                self.filesystem
+                    .upgrade()
+                    .unwrap()
+                    .object_manager()
+                    .update_reservation(self.object_id, total_size);
             }
         }
 
@@ -380,7 +424,7 @@ impl Allocator for SimpleAllocator {
 
         if let Some(reservation) = transaction.allocator_reservation {
             ensure!(
-                reservation.amount() >= len,
+                reservation.avail() >= len,
                 anyhow!(FxfsError::NoSpace).context("Insufficient space in reservation")
             );
         }
@@ -411,6 +455,8 @@ impl Allocator for SimpleAllocator {
             let mut iter = merger.seek(Bound::Unbounded).await?;
             let mut last_offset = 0;
             loop {
+                // TODO(csuter): This is inconsistent; here we return no-space, but otherwise we
+                // return less than requested.
                 if last_offset + len >= self.device_size as u64 {
                     bail!(anyhow!(FxfsError::NoSpace).context("no space after search"));
                 }
@@ -443,7 +489,7 @@ impl Allocator for SimpleAllocator {
         if let Some(reservation) = &mut transaction.allocator_reservation {
             // This shouldn't fail because we checked the reservation had enough space at the
             // beginning of allocate, after we took the lock and the lock should still be held.
-            reservation.sub(device_range.length()).unwrap();
+            reservation.hold(device_range.length()).unwrap();
         } else {
             self.inner.lock().unwrap().reserved_bytes += device_range.length();
         }
@@ -614,8 +660,8 @@ impl Allocator for SimpleAllocator {
         Reservation::new(self, amount)
     }
 
-    fn release_reservation(&self, reservation: &mut Reservation) {
-        self.inner.lock().unwrap().reserved_bytes -= reservation.take();
+    fn release_reservation(&self, amount: u64) {
+        self.inner.lock().unwrap().reserved_bytes -= amount;
     }
 
     fn get_allocated_bytes(&self) -> u64 {
@@ -676,8 +722,11 @@ impl Mutations for SimpleAllocator {
                     }
                     let mut inner = self.inner.lock().unwrap();
                     inner.allocated_bytes = inner.allocated_bytes.saturating_add(len as i64);
-                    if transaction.is_some() {
+                    if let Some(transaction) = transaction {
                         inner.reserved_bytes -= len;
+                        if let Some(reservation) = transaction.allocator_reservation {
+                            reservation.commit(len);
+                        }
                     }
                 } else {
                     let mut inner = self.inner.lock().unwrap();
@@ -695,11 +744,7 @@ impl Mutations for SimpleAllocator {
                 let lower_bound = item.key.lower_bound_for_merge_into();
                 self.tree.merge_into(item, &lower_bound).await;
             }
-            // TODO(csuter): Since Seal and Compact are no longer being used for just trees, we
-            // should consider changing the names to something else, maybe FlushBegin and
-            // FlushCommit to match ObjectFlush, and maybe ObjectFlush::commit should be responsible
-            // for adding it to a transaction.
-            Mutation::TreeSeal => {
+            Mutation::BeginFlush => {
                 {
                     // After we seal the tree, we will start adding mutations to the new mutable
                     // layer, but we cannot safely do that whilst we are attempting to allocate
@@ -713,15 +758,25 @@ impl Mutations for SimpleAllocator {
                 let mut inner = self.inner.lock().unwrap();
                 inner.info.allocated_bytes = inner.allocated_bytes as u64;
             }
-            Mutation::TreeCompact => {
+            Mutation::EndFlush => {
                 if transaction.is_none() {
                     self.tree.reset_immutable_layers();
                     // AllocatorInfo is written in the same transaction and will contain the count
-                    // at the point TreeSeal was applied, so we need to adjust allocated_bytes so
+                    // at the point BeginFlush was applied, so we need to adjust allocated_bytes so
                     // that it just covers the delta from that point.  Later, when we properly open
                     // the allocator, we'll add this back.
                     let mut inner = self.inner.lock().unwrap();
                     inner.allocated_bytes -= inner.info.allocated_bytes as i64;
+                } else {
+                    let layers = self.tree.immutable_layer_set();
+                    self.filesystem.upgrade().unwrap().object_manager().update_reservation(
+                        self.object_id,
+                        layers
+                            .layers
+                            .iter()
+                            .map(|l| l.handle().map(|h| h.get_size()).unwrap_or(0))
+                            .sum(),
+                    );
                 }
             }
             _ => panic!("unexpected mutation! {:?}", mutation), // TODO(csuter): This can't panic
@@ -734,7 +789,7 @@ impl Mutations for SimpleAllocator {
                 if item.value.delta > 0 {
                     let mut inner = self.inner.lock().unwrap();
                     if let Some(reservation) = transaction.allocator_reservation {
-                        reservation.add(item.key.device_range.length());
+                        reservation.release(item.key.device_range.length());
                     } else {
                         inner.reserved_bytes -= item.key.device_range.length();
                     }
@@ -754,13 +809,13 @@ impl Mutations for SimpleAllocator {
             return Ok(());
         }
         let graveyard = object_manager.graveyard().ok_or(anyhow!("Missing graveyard!"))?;
-        let object_sync = ObjectFlush::new(object_manager, self.object_id());
         // TODO(csuter): This all needs to be atomic somehow. We'll need to use different
         // transactions for each stage, but we need make sure objects are cleaned up if there's a
         // failure.
-        let reservation = filesystem.flush_reservation();
+        let reservation = object_manager.metadata_reservation();
         let txn_options = Options {
             skip_journal_checks: true,
+            borrow_metadata_space: true,
             allocator_reservation: Some(reservation),
             ..Default::default()
         };
@@ -776,16 +831,12 @@ impl Mutations for SimpleAllocator {
         let object_id = layer_object_handle.object_id();
         graveyard.add(&mut transaction, root_store.store_object_id(), object_id);
         // It's important that this transaction does not include any allocations because we use
-        // TreeSeal as a snapshot point for mutations to the tree: other allocator mutations within
-        // this transaction might get applied before seal (which would be OK), but they could
+        // BeginFlush as a snapshot point for mutations to the tree: other allocator mutations
+        // within this transaction might get applied before seal (which would be OK), but they could
         // equally get applied afterwards (since Transaction makes no guarantees about the order in
         // which mutations are applied whilst committing), in which case they'd get lost on replay
         // because the journal will only send mutations that follow this transaction.
-        transaction.add_with_object(
-            self.object_id(),
-            Mutation::TreeSeal,
-            AssocObj::Borrowed(&object_sync),
-        );
+        transaction.add(self.object_id(), Mutation::BeginFlush);
         transaction.commit().await;
 
         let layer_set = self.tree.immutable_layer_set();
@@ -823,16 +874,14 @@ impl Mutations for SimpleAllocator {
         buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
         object_handle.txn_write(&mut transaction, 0u64, buf.as_ref()).await?;
 
-        // It's important that TreeCompact is in the same transaction that we write AllocatorInfo,
-        // because we use TreeCompact to make the required adjustments to allocated_bytes.
-        transaction.add(self.object_id(), Mutation::TreeCompact);
+        // It's important that EndFlush is in the same transaction that we write AllocatorInfo,
+        // because we use EndFlush to make the required adjustments to allocated_bytes.
+        transaction.add(self.object_id(), Mutation::EndFlush);
         graveyard.remove(&mut transaction, root_store.store_object_id(), object_id);
-        transaction.commit().await;
 
         // TODO(csuter): what if this fails.
         self.tree.set_layers(layers_from_handles(Box::new([layer_object_handle])).await?);
-
-        object_sync.commit();
+        transaction.commit().await;
 
         // Now close the layers and purge them.
         for layer in layer_set.layers {
@@ -1027,7 +1076,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_allocations() {
-        let device = DeviceHolder::new(FakeDevice::new(1024, 512));
+        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
@@ -1058,7 +1107,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_deallocations() {
-        let device = DeviceHolder::new(FakeDevice::new(1024, 512));
+        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
@@ -1081,7 +1130,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_mark_allocated() {
-        let device = DeviceHolder::new(FakeDevice::new(1024, 512));
+        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
@@ -1106,7 +1155,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_flush() {
-        let device = DeviceHolder::new(FakeDevice::new(1024, 512));
+        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
@@ -1147,7 +1196,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_dropped_transaction() {
-        let device = DeviceHolder::new(FakeDevice::new(1024, 512));
+        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
@@ -1176,7 +1225,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_allocated_bytes() {
-        const BLOCK_COUNT: u32 = 1024;
+        const BLOCK_COUNT: u32 = 4096;
         const BLOCK_SIZE: u32 = 512;
         let device = DeviceHolder::new(FakeDevice::new(BLOCK_COUNT.into(), BLOCK_SIZE));
         let fs = FakeFilesystem::new(device);

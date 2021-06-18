@@ -7,18 +7,18 @@ use {
         debug_assert_not_too_long,
         errors::FxfsError,
         object_store::{
-            allocator::{Allocator, Reservation},
+            allocator::Allocator,
             journal::{super_block::SuperBlock, Journal},
             object_manager::ObjectManager,
             trace_duration,
             transaction::{
-                AssocObj, LockKey, LockManager, Mutation, Options, ReadGuard, Transaction,
-                TransactionHandler, WriteGuard,
+                AssocObj, LockKey, LockManager, MetadataReservation, Mutation, Options, ReadGuard,
+                Transaction, TransactionHandler, WriteGuard,
             },
             ObjectStore,
         },
     },
-    anyhow::{bail, Error},
+    anyhow::Error,
     async_trait::async_trait,
     fuchsia_async as fasync,
     futures::channel::oneshot::{channel, Sender},
@@ -29,8 +29,6 @@ use {
     },
     storage_device::{Device, DeviceHolder},
 };
-
-const FLUSH_RESERVATION_SIZE: u64 = 524288;
 
 #[async_trait]
 pub trait Filesystem: TransactionHandler {
@@ -48,9 +46,6 @@ pub trait Filesystem: TransactionHandler {
 
     /// Flushes buffered data to the underlying device.
     async fn sync(&self, options: SyncOptions) -> Result<(), Error>;
-
-    /// Returns a reservation to be used for flushing in-memory data.
-    fn flush_reservation(&self) -> &Reservation;
 }
 
 #[async_trait]
@@ -125,7 +120,6 @@ pub struct FxFilesystem {
     lock_manager: LockManager,
     compaction_task: Mutex<Option<fasync::Task<()>>>,
     device_sender: OnceCell<Sender<DeviceHolder>>,
-    flush_reservation: OnceCell<Reservation>,
     closed: AtomicBool,
     read_only: bool,
 }
@@ -147,13 +141,11 @@ impl FxFilesystem {
             lock_manager: LockManager::new(),
             compaction_task: Mutex::new(None),
             device_sender: OnceCell::new(),
-            flush_reservation: OnceCell::new(),
             closed: AtomicBool::new(false),
             read_only: false,
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.init_empty(filesystem.clone()).await?;
-        let _ = filesystem.flush_reservation.set(filesystem.allocator().reserve(0).unwrap());
         Ok(filesystem.into())
     }
 
@@ -163,7 +155,6 @@ impl FxFilesystem {
     ) -> Result<OpenFxFilesystem, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
-        journal.set_trace(options.trace);
         let filesystem = Arc::new(FxFilesystem {
             device: OnceCell::new(),
             objects,
@@ -171,13 +162,11 @@ impl FxFilesystem {
             lock_manager: LockManager::new(),
             compaction_task: Mutex::new(None),
             device_sender: OnceCell::new(),
-            flush_reservation: OnceCell::new(),
             closed: AtomicBool::new(false),
             read_only: options.read_only,
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await?;
-        let _ = filesystem.flush_reservation.set(filesystem.allocator().reserve_at_most(0));
         if !options.read_only {
             if let Some(graveyard) = filesystem.objects.graveyard() {
                 // Purge the graveyard of old entries in a background task.
@@ -185,10 +174,6 @@ impl FxFilesystem {
             }
         }
         Ok(filesystem.into())
-    }
-
-    pub fn set_trace(&self, v: bool) {
-        self.journal.set_trace(v);
     }
 
     pub async fn open(device: DeviceHolder) -> Result<OpenFxFilesystem, Error> {
@@ -250,13 +235,6 @@ impl FxFilesystem {
     pub fn super_block(&self) -> SuperBlock {
         self.journal.super_block()
     }
-
-    // Returns the reservation, and a bool where true means the reservation is at its target size
-    // and false means it's not (i.e. we are in a low space condition).
-    fn update_flush_reservation(&self) -> (&Reservation, bool) {
-        let flush_reservation = self.flush_reservation.get().unwrap();
-        (flush_reservation, flush_reservation.try_top_up(FLUSH_RESERVATION_SIZE))
-    }
 }
 
 impl Drop for FxFilesystem {
@@ -289,10 +267,6 @@ impl Filesystem for FxFilesystem {
     async fn sync(&self, options: SyncOptions) -> Result<(), Error> {
         self.journal.sync(options).await
     }
-
-    fn flush_reservation(&self) -> &Reservation {
-        self.update_flush_reservation().0
-    }
 }
 
 #[async_trait]
@@ -307,13 +281,47 @@ impl TransactionHandler for FxFilesystem {
             // not committed.  In theory, if there are a large number of them, it would be possible
             // to run out of journal space.  We should probably have an in-flight limit.
             self.journal.check_journal_space().await;
-            if options.allocator_reservation.is_none() {
-                if !self.update_flush_reservation().1 && !options.skip_space_checks {
-                    bail!(FxfsError::NoSpace);
+        }
+
+        // This is the amount of space that we reserve for metadata.  A transaction should not take
+        // more than this.  At time of writing, this means that a single transaction must not take
+        // any more than 16 KiB of space when written to the journal (see
+        // object_manager::reserved_space_from_journal_usage).
+        const METADATA_RESERVATION_AMOUNT: u64 = 32_768;
+
+        // We support three options for metadata space reservation:
+        //
+        //   1. We can borrow from the filesystem's metadata reservation.  This should only be
+        //      be used on the understanding that eventually, potentially after a full compaction,
+        //      there should be no net increase in space used.  For example, unlinking an object
+        //      should eventually decrease the amount of space used and setting most attributes
+        //      should not result in any change.
+        //
+        //   2. A reservation is provided in which case we'll place a hold on some of it for
+        //      metadata.
+        //
+        //   3. No reservation is supplied, so we try and reserve space with the allocator now,
+        //      and will return NoSpace if that fails.
+        let metadata_reservation = if options.borrow_metadata_space {
+            MetadataReservation::Borrowed
+        } else {
+            match options.allocator_reservation {
+                Some(reservation) => {
+                    reservation.hold(METADATA_RESERVATION_AMOUNT)?;
+                    MetadataReservation::Hold(METADATA_RESERVATION_AMOUNT)
+                }
+                None => {
+                    let reservation = self
+                        .allocator()
+                        .reserve(METADATA_RESERVATION_AMOUNT)
+                        .ok_or(FxfsError::NoSpace)?;
+                    reservation.hold(METADATA_RESERVATION_AMOUNT).unwrap();
+                    MetadataReservation::Reservation(reservation)
                 }
             }
-        }
-        let mut transaction = Transaction::new(self, &[LockKey::Filesystem], locks).await;
+        };
+        let mut transaction =
+            Transaction::new(self, metadata_reservation, &[LockKey::Filesystem], locks).await;
         transaction.allocator_reservation = options.allocator_reservation;
         Ok(transaction)
     }
@@ -332,6 +340,11 @@ impl TransactionHandler for FxFilesystem {
     }
 
     fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
+        // If we placed a hold for metadata space, return it now.
+        if let MetadataReservation::Hold(hold_amount) = &mut transaction.metadata_reservation {
+            transaction.allocator_reservation.unwrap().release(*hold_amount);
+            *hold_amount = 0;
+        }
         self.objects.drop_transaction(transaction);
         self.lock_manager.drop_transaction(transaction);
     }

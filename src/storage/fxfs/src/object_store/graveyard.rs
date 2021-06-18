@@ -140,12 +140,16 @@ impl Graveyard {
             {
                 Options {
                     skip_journal_checks: true,
-                    skip_space_checks: true,
-                    allocator_reservation: Some(fs.flush_reservation()),
+                    borrow_metadata_space: true,
+                    allocator_reservation: Some(object_manager.metadata_reservation()),
                     ..Default::default()
                 }
             } else {
-                Options { skip_journal_checks: true, skip_space_checks: true, ..Default::default() }
+                Options {
+                    skip_journal_checks: true,
+                    borrow_metadata_space: true,
+                    ..Default::default()
+                }
             };
             store.tombstone(id, options).await.context("Failed to tombstone object")?;
         }

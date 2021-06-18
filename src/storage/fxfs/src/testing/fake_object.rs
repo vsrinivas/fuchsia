@@ -7,8 +7,8 @@ use {
         object_handle::{ObjectHandle, ObjectProperties},
         object_store::{
             transaction::{
-                LockKey, LockManager, Options, ReadGuard, Transaction, TransactionHandler,
-                WriteGuard,
+                LockKey, LockManager, MetadataReservation, Options, ReadGuard, Transaction,
+                TransactionHandler, WriteGuard,
             },
             Timestamp,
         },
@@ -67,7 +67,7 @@ impl TransactionHandler for FakeObject {
         locks: &[LockKey],
         _options: Options<'a>,
     ) -> Result<Transaction<'a>, Error> {
-        Ok(Transaction::new(self, &[], locks).await)
+        Ok(Transaction::new(self, MetadataReservation::Borrowed, &[], locks).await)
     }
 
     async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>) {
@@ -130,6 +130,10 @@ impl ObjectHandle for FakeObjectHandle {
         offset: u64,
         buf: BufferRef<'_>,
     ) -> Result<(), Error> {
+        self.object.write(offset, buf)
+    }
+
+    async fn overwrite(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
         self.object.write(offset, buf)
     }
 

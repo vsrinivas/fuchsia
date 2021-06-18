@@ -71,10 +71,6 @@ impl<OH: ObjectHandle> JournalReader<OH> {
         JournalCheckpoint::new(self.buf_file_offset, self.checksums[0])
     }
 
-    pub fn read_offset(&self) -> u64 {
-        self.read_offset
-    }
-
     pub fn last_read_checksum(&self) -> Checksum {
         *self.checksums.last().unwrap()
     }
@@ -88,10 +84,6 @@ impl<OH: ObjectHandle> JournalReader<OH> {
                 (self.block_size - block_offset) as usize - std::mem::size_of::<Checksum>(),
             );
         }
-    }
-
-    pub fn take_handle(self) -> OH {
-        self.handle
     }
 
     pub fn handle(&mut self) -> &mut OH {
@@ -285,7 +277,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_journal_file_checkpoint_and_take_handle() {
+    async fn test_journal_file_checkpoint() {
         let object = Arc::new(FakeObject::new());
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
@@ -306,28 +298,9 @@ mod tests {
         // If we take the checkpoint here and then create another reader, we should see the second
         // item.
         let checkpoint = reader.journal_file_checkpoint();
-        let mut reader = JournalReader::new(reader.take_handle(), TEST_BLOCK_SIZE, &checkpoint);
+        let mut reader =
+            JournalReader::new(FakeObjectHandle::new(object.clone()), TEST_BLOCK_SIZE, &checkpoint);
         assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(7u32));
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_read_offset() {
-        let object = Arc::new(FakeObject::new());
-        let mut reader = JournalReader::new(
-            FakeObjectHandle::new(object.clone()),
-            TEST_BLOCK_SIZE,
-            &JournalCheckpoint::default(),
-        );
-        assert_eq!(reader.read_offset(), 0);
-        // Make the journal file a minimum of two blocks since reading to EOF is an error.
-        let handle = FakeObjectHandle::new(object.clone());
-        let len = TEST_BLOCK_SIZE as usize * 2;
-        let mut buf = handle.allocate_buffer(len);
-        buf.as_mut_slice().fill(0u8);
-        handle.write(0, buf.as_ref()).await.expect("write failed");
-        write_items(FakeObjectHandle::new(object.clone()), &[4u32, 7u32]).await;
-        assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(4u32));
-        assert_eq!(reader.read_offset(), TEST_BLOCK_SIZE);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -444,7 +417,7 @@ mod tests {
         writer.flush_buffer(&handle).await.expect("flush_buffer failed");
 
         let mut reader = JournalReader::new(
-            reader.take_handle(),
+            FakeObjectHandle::new(object.clone()),
             TEST_BLOCK_SIZE,
             &JournalCheckpoint::default(),
         );
@@ -465,7 +438,8 @@ mod tests {
         );
 
         // Make sure a reader can start from the middle of a reset block.
-        let mut reader = JournalReader::new(reader.take_handle(), TEST_BLOCK_SIZE, &checkpoint);
+        let mut reader =
+            JournalReader::new(FakeObjectHandle::new(object.clone()), TEST_BLOCK_SIZE, &checkpoint);
         assert_eq!(
             reader.deserialize().await.expect("deserialize failed"),
             ReadResult::Some(78u32)
@@ -504,3 +478,7 @@ mod tests {
         }
     }
 }
+
+// TODO(csuter): Add test that checks that the file offset *after* writing an entry that lies
+// *exactly* at the end of a journal block matches the file offset *after* reading that same entry
+// i.e. it should be *after* the checksum.

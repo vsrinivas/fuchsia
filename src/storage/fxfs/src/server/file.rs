@@ -164,7 +164,10 @@ impl File for FxFile {
         // actually use any data on disk (either for data or metadata).
         let mut transaction = self
             .handle
-            .new_transaction_with_options(Options { skip_space_checks: true, ..Default::default() })
+            .new_transaction_with_options(Options {
+                borrow_metadata_space: true,
+                ..Default::default()
+            })
             .await
             .map_err(map_to_status)?;
         self.handle.truncate(&mut transaction, length).await.map_err(map_to_status)?;
@@ -221,7 +224,7 @@ impl File for FxFile {
             Some(
                 self.handle
                     .new_transaction_with_options(Options {
-                        skip_space_checks: true,
+                        borrow_metadata_space: true,
                         ..Default::default()
                     })
                     .await

@@ -90,15 +90,15 @@ impl Allocator for FakeAllocator {
 
     async fn did_flush_device(&self, _flush_log_offset: u64) {}
 
-    fn reserve(self: Arc<Self>, _amount: u64) -> Option<Reservation> {
-        panic!("Not supported");
+    fn reserve(self: Arc<Self>, amount: u64) -> Option<Reservation> {
+        Some(Reservation::new(self, amount))
     }
 
-    fn reserve_at_most(self: Arc<Self>, _amount: u64) -> Reservation {
-        panic!("Not supported");
+    fn reserve_at_most(self: Arc<Self>, amount: u64) -> Reservation {
+        Reservation::new(self, amount)
     }
 
-    fn release_reservation(&self, _reservation: &mut Reservation) {}
+    fn release_reservation(&self, _amount: u64) {}
 
     fn get_allocated_bytes(&self) -> u64 {
         let inner = self.0.lock().unwrap();

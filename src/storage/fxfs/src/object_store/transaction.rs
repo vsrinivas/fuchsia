@@ -37,12 +37,11 @@ pub struct Options<'a> {
     /// might alleviate journal space (i.e. compaction).
     pub skip_journal_checks: bool,
 
-    /// If false (the default), check for free space and fail creating the transaction with a
-    /// NoSpace error when low on space.  If skip_journal_checks is true, this setting is implied
-    /// (setting it to false will be ignored).  This setting should be set to true for any
-    /// transaction that will either not affect space usage after compaction (e.g. setting
-    /// attributes), or reduce space usage (e.g. unlinking).
-    pub skip_space_checks: bool,
+    /// If true, borrow metadata space from the metadata reservation.  This setting should be set to
+    /// true for any transaction that will either not affect space usage after compaction
+    /// (e.g. setting attributes), or reduce space usage (e.g. unlinking).  Otherwise, a transaction
+    /// might fail with an out-of-space error.
+    pub borrow_metadata_space: bool,
 
     /// If specified, a reservation to be used with the transaction.  If not set, any allocations
     /// that are part of this transaction will have to take their chances, and will fail if there is
@@ -96,10 +95,12 @@ pub enum Mutation {
     Allocator(AllocatorMutation),
     // Like an Allocator mutation, but without any change in allocated counts.
     AllocatorRef(AllocatorMutation),
-    // Seal the mutable layer and create a new one.
-    TreeSeal,
-    // Discards all non-mutable layers.
-    TreeCompact,
+    // Indicates the beginning of a flush.  This would typically involve sealing a tree.
+    BeginFlush,
+    // Indicates the end of a flush.  This would typically involve replacing the immutable layers
+    // with compacted ones.
+    EndFlush,
+    UpdateBorrowed(u64),
 }
 
 impl Mutation {
@@ -356,6 +357,18 @@ impl std::fmt::Debug for TxnMutation<'_> {
     }
 }
 
+pub enum MetadataReservation {
+    // Metadata space for this transaction is being borrowed from ObjectManager's metadata
+    // reservation.
+    Borrowed,
+
+    // A metadata reservation was made when the transaction was created.
+    Reservation(Reservation),
+
+    // The metadata space is being _held_ within `allocator_reservation`.
+    Hold(u64),
+}
+
 /// A transaction groups mutation records to be committed as a group.
 pub struct Transaction<'a> {
     handler: Arc<dyn TransactionHandler>,
@@ -371,6 +384,9 @@ pub struct Transaction<'a> {
 
     /// If set, an allocator reservation that should be used for allocations.
     pub allocator_reservation: Option<&'a Reservation>,
+
+    /// The reservation for the metadata for this transaction.
+    pub metadata_reservation: MetadataReservation,
 }
 
 impl<'a> Transaction<'a> {
@@ -379,6 +395,7 @@ impl<'a> Transaction<'a> {
     /// locks (see LockManager for the semantics of the different kinds of locks).
     pub async fn new<H: TransactionHandler + AsRef<LockManager> + 'static>(
         handler: Arc<H>,
+        metadata_reservation: MetadataReservation,
         read_locks: &[LockKey],
         txn_locks: &[LockKey],
     ) -> Transaction<'a> {
@@ -394,6 +411,7 @@ impl<'a> Transaction<'a> {
             txn_locks,
             read_locks,
             allocator_reservation: None,
+            metadata_reservation,
         }
     }
 
@@ -768,7 +786,7 @@ impl Drop for WriteGuard<'_> {
 mod tests {
     use {
         super::{LockKey, LockManager, LockState, Mutation, Options, TransactionHandler},
-        crate::object_store::testing::fake_filesystem::FakeFilesystem,
+        crate::object_store::filesystem::FxFilesystem,
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, future::FutureExt, join},
         std::{sync::Mutex, task::Poll, time::Duration},
@@ -777,21 +795,21 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_simple() {
-        let device = DeviceHolder::new(FakeDevice::new(1024, 1024));
-        let fs = FakeFilesystem::new(device);
+        let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let mut t = fs
             .clone()
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        t.add(1, Mutation::TreeSeal);
+        t.add(1, Mutation::BeginFlush);
         assert!(!t.is_empty());
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_locks() {
-        let device = DeviceHolder::new(FakeDevice::new(1024, 1024));
-        let fs = FakeFilesystem::new(device);
+        let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
         let (send3, recv3) = channel();
@@ -835,8 +853,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_lock_after_write_lock() {
-        let device = DeviceHolder::new(FakeDevice::new(1024, 1024));
-        let fs = FakeFilesystem::new(device);
+        let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
         let done = Mutex::new(false);
@@ -868,8 +886,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write_lock_after_read_lock() {
-        let device = DeviceHolder::new(FakeDevice::new(1024, 1024));
-        let fs = FakeFilesystem::new(device);
+        let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
         let done = Mutex::new(false);
@@ -901,8 +919,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_drop_uncommitted_transaction() {
-        let device = DeviceHolder::new(FakeDevice::new(1024, 1024));
-        let fs = FakeFilesystem::new(device);
+        let device = DeviceHolder::new(FakeDevice::new(4096, 1024));
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let key = LockKey::object(1, 1);
 
         // Dropping while there's a reader.

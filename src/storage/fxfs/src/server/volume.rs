@@ -108,7 +108,7 @@ impl FxVolume {
             }
         }
         self.store
-            .tombstone(object_id, Options { skip_space_checks: true, ..Default::default() })
+            .tombstone(object_id, Options { borrow_metadata_space: true, ..Default::default() })
             .await?;
         Ok(())
     }
@@ -142,6 +142,7 @@ impl FilesystemRename for FxVolume {
             .acquire_transaction_for_unlink(
                 &[LockKey::object(self.store.store_object_id(), src_dir.object_id())],
                 dst,
+                false,
             )
             .await
         {
@@ -153,9 +154,9 @@ impl FilesystemRename for FxVolume {
                             LockKey::object(self.store.store_object_id(), src_dir.object_id()),
                             LockKey::object(self.store.store_object_id(), dst_dir.object_id()),
                         ],
-                        // It's ok to skip space checks here since after compaction, it should be a
-                        // wash.
-                        Options { skip_space_checks: true, ..Default::default() },
+                        // It's ok to borrow metadata space here since after compaction, it should
+                        // be a wash.
+                        Options { borrow_metadata_space: true, ..Default::default() },
                     )
                     .await
                     .map_err(map_to_status)?;

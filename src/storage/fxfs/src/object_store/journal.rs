@@ -28,7 +28,7 @@ use {
         lsm_tree::LSMTree,
         object_handle::ObjectHandle,
         object_store::{
-            allocator::{Allocator, Reservation, SimpleAllocator},
+            allocator::{Allocator, SimpleAllocator},
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             directory::Directory,
             filesystem::{Filesystem, Mutations, SyncOptions},
@@ -41,7 +41,7 @@ use {
                 writer::JournalWriter,
             },
             merge::{self},
-            object_manager::{ObjectFlush, ObjectManager},
+            object_manager::ObjectManager,
             record::{ExtentKey, ObjectKey, DEFAULT_DATA_ATTRIBUTE_ID},
             round_down,
             transaction::{
@@ -61,12 +61,8 @@ use {
     serde::{Deserialize, Serialize},
     std::{
         clone::Clone,
-        iter::IntoIterator,
         ops::Bound,
-        sync::{
-            atomic::{self, AtomicBool},
-            Arc, Mutex,
-        },
+        sync::{Arc, Mutex},
         vec::Vec,
     },
 };
@@ -82,18 +78,14 @@ const CHUNK_SIZE: u64 = 131_072;
 // written to the journal.
 const RECLAIM_SIZE: u64 = 262_144;
 
+// Temporary space that should be reserved for the journal.  For example: space that is currently
+// used in the journal file but cannot be deallocated yet because we are flushing.
+pub const RESERVED_SPACE: u64 = 1_048_576;
+
 // After replaying the journal, it's possible that the stream doesn't end cleanly, in which case the
 // next journal block needs to indicate this.  This is done by pretending the previous block's
 // checksum is xored with this value, and using that as the seed for the next journal block.
 const RESET_XOR: u64 = 0xffffffffffffffff;
-
-// This size needs to be chosen carefully such that we cannot run out of journal space when we are
-// compacting.  New transactions that are unrelated to compaction are paused when its live data hits
-// RECLAIM_SIZE.  During compaction, more is written to the journal before a new super-block is
-// written.  When we write a new super-block, we only free up whatever the previous super-block
-// allows (because we only flush the device once), so this needs to be at least 2 * (RECLAIM_SIZE +
-// buffer).
-const RESERVATION_SIZE: u64 = 4 * RECLAIM_SIZE;
 
 type Checksum = u64;
 
@@ -141,15 +133,7 @@ pub enum JournalRecord {
 }
 
 pub(super) fn journal_handle_options() -> HandleOptions {
-    HandleOptions { overwrite: true, skip_journal_checks: true, ..Default::default() }
-}
-
-fn clone_mutations<'a>(transaction: &Transaction<'_>) -> Vec<(u64, Mutation)> {
-    transaction
-        .mutations
-        .iter()
-        .map(|TxnMutation { object_id, mutation, .. }| (*object_id, mutation.clone()))
-        .collect()
+    HandleOptions { skip_journal_checks: true, ..Default::default() }
 }
 
 /// The journal records a stream of mutations that are to be applied to other objects.  At mount
@@ -160,19 +144,12 @@ fn clone_mutations<'a>(transaction: &Transaction<'_>) -> Vec<(u64, Mutation)> {
 pub struct Journal {
     objects: Arc<ObjectManager>,
     writer: futures::lock::Mutex<JournalWriter>,
-    handle_and_reservation: OnceCell<(StoreObjectHandle<ObjectStore>, Reservation)>,
+    handle: OnceCell<StoreObjectHandle<ObjectStore>>,
     inner: Mutex<Inner>,
-    trace: AtomicBool,
 }
 
 struct Inner {
     needs_super_block: bool,
-
-    // This is a cached copy of the journal-file-offset which is held under a regular mutex rather
-    // than an async one, which allows computations to be made in non-async contexts, such as
-    // whether or not a compaction is required and whether we should be pausing new non-compaction
-    // related transactions.
-    journal_file_offset: u64,
 
     super_block: SuperBlock,
     super_block_to_write: SuperBlockCopy,
@@ -193,21 +170,15 @@ impl Journal {
                 BLOCK_SIZE as usize,
                 starting_checksum,
             )),
-            handle_and_reservation: OnceCell::new(),
+            handle: OnceCell::new(),
             inner: Mutex::new(Inner {
                 needs_super_block: true,
                 super_block: SuperBlock::default(),
                 super_block_to_write: SuperBlockCopy::A,
-                journal_file_offset: 0,
                 reclaim_event: None,
                 zero_offset: None,
             }),
-            trace: AtomicBool::new(false),
         }
-    }
-
-    pub fn set_trace(&self, v: bool) {
-        self.trace.store(v, atomic::Ordering::Relaxed);
     }
 
     pub fn journal_file_offset(&self) -> u64 {
@@ -289,6 +260,8 @@ impl Journal {
             false,
         ));
         self.objects.set_allocator(allocator.clone());
+        self.objects.set_borrowed_metadata_space(super_block.borrowed_metadata_space);
+        self.objects.set_last_end_offset(super_block.super_block_journal_file_offset);
         {
             let mut inner = self.inner.lock().unwrap();
             inner.needs_super_block = false;
@@ -330,7 +303,7 @@ impl Journal {
         let mut reader =
             JournalReader::new(handle, self.block_size(), &super_block.journal_checkpoint);
         let mut checksum_list = ChecksumList::new();
-        let mut mutations = Vec::new();
+        let mut transactions = Vec::new();
         let mut current_transaction = None;
         let mut end_block = false;
         loop {
@@ -339,7 +312,7 @@ impl Journal {
                 ReadResult::Reset => {
                     if current_transaction.is_some() {
                         current_transaction = None;
-                        mutations.pop();
+                        transactions.pop();
                     }
                 }
                 ReadResult::Some(record) => {
@@ -350,41 +323,44 @@ impl Journal {
                             end_block = true;
                         }
                         JournalRecord::Mutation { object_id, mutation } => {
-                            if current_transaction.is_none() {
-                                mutations.push((current_checkpoint, Vec::new()));
-                                current_transaction = mutations.last_mut();
+                            let current_transaction = match current_transaction.as_mut() {
+                                None => {
+                                    transactions.push((current_checkpoint, Vec::new(), 0));
+                                    current_transaction = transactions.last_mut();
+                                    current_transaction.as_mut().unwrap()
+                                }
+                                Some(transaction) => transaction,
+                            };
+                            if !self
+                                .objects
+                                .validate_mutation(
+                                    current_transaction.0.file_offset,
+                                    object_id,
+                                    &mutation,
+                                    &mut checksum_list,
+                                )
+                                .await?
+                            {
+                                log::debug!("Stopping replay at bad mutation: {:?}", mutation);
+                                break;
                             }
-                            current_transaction.as_mut().unwrap().1.push((object_id, mutation));
+                            // If this mutation doesn't need to be applied, don't bother adding it
+                            // to the transaction.
+                            if self.should_apply(object_id, &current_transaction.0) {
+                                current_transaction.1.push((object_id, mutation));
+                            }
                         }
                         JournalRecord::Commit => {
-                            if let Some((checkpoint, mutations)) = current_transaction.take() {
+                            if let Some((checkpoint, mutations, ref mut end_offset)) =
+                                current_transaction.take()
+                            {
                                 for (object_id, mutation) in mutations {
-                                    if !self.should_apply(*object_id, checkpoint) {
-                                        continue;
-                                    }
-                                    if !self
-                                        .objects
-                                        .validate_mutation(
-                                            checkpoint.file_offset,
-                                            *object_id,
-                                            &mutation,
-                                            &mut checksum_list,
-                                        )
-                                        .await?
-                                    {
-                                        if self.trace.load(atomic::Ordering::Relaxed) {
-                                            log::info!(
-                                                "Stopping replay at bad mutation: {:?}",
-                                                mutation
-                                            );
-                                        }
-                                        break;
-                                    }
-
                                     // Snoop the mutations for any that might apply to the journal
                                     // file so that we can pass them to the reader so that it can
                                     // read the journal file.
-                                    if *object_id == super_block.root_parent_store_object_id {
+                                    if *object_id == super_block.root_parent_store_object_id
+                                        && self.should_apply(*object_id, &checkpoint)
+                                    {
                                         if let Mutation::ObjectStore(ObjectStoreMutation {
                                             item,
                                             ..
@@ -396,6 +372,7 @@ impl Journal {
                                         }
                                     }
                                 }
+                                *end_offset = reader.journal_file_checkpoint().file_offset;
                             }
                         }
                         JournalRecord::Discard(offset) => {
@@ -406,11 +383,11 @@ impl Journal {
                                 }
                             }
                             current_transaction = None;
-                            while let Some(transaction) = mutations.last() {
+                            while let Some(transaction) = transactions.last() {
                                 if transaction.0.file_offset < offset {
                                     break;
                                 }
-                                mutations.pop();
+                                transactions.pop();
                             }
                         }
                     }
@@ -420,27 +397,26 @@ impl Journal {
             }
         }
 
+        // Discard any uncommitted transaction.
+        if current_transaction.is_some() {
+            transactions.pop();
+        }
+
         // Validate the checksums.
         let journal_offset = checksum_list
             .verify(device.as_ref(), reader.journal_file_checkpoint().file_offset)
             .await?;
 
         // Apply the mutations.
-        let mut last_checkpoint = if mutations.is_empty() {
+        let mut last_checkpoint = if transactions.is_empty() {
             super_block.journal_checkpoint.clone()
         } else {
             'outer: loop {
-                for (checkpoint, mutations) in mutations {
+                for (checkpoint, mutations, end_offset) in transactions {
                     if checkpoint.file_offset >= journal_offset {
                         break 'outer checkpoint;
                     }
-                    if self.trace.load(atomic::Ordering::Relaxed) {
-                        log::info!("REPLAY {}", checkpoint.file_offset);
-                    }
-                    for (object_id, mutation) in mutations {
-                        self.apply_mutation(object_id, &checkpoint, mutation, None, AssocObj::None)
-                            .await;
-                    }
+                    self.objects.replay_mutations(mutations, checkpoint, end_offset).await;
                 }
                 break reader.journal_file_checkpoint();
             }
@@ -462,19 +438,13 @@ impl Journal {
                 journal_handle_options(),
             )
             .await?;
-            let current_journal_size = handle.get_allocated_size().await.unwrap();
-            let allocator_reservation = allocator
-                .reserve(RESERVATION_SIZE.saturating_sub(current_journal_size))
-                .ok_or(FxfsError::NoSpace)
-                .context("unable to reserve space for the journal")?;
-            let _ = self.handle_and_reservation.set((handle, allocator_reservation));
+            let _ = self.handle.set(handle);
             let mut writer = self.writer.lock().await;
             // If the last entry wasn't an end_block, then we need to reset the stream.
             if !end_block {
                 last_checkpoint.checksum ^= RESET_XOR;
             }
             let offset = last_checkpoint.file_offset;
-            self.inner.lock().unwrap().journal_file_offset = offset;
             writer.seek_to_checkpoint(last_checkpoint);
             if offset < reader.journal_file_checkpoint().file_offset {
                 // TODO(csuter): We need to make sure that this is tested.  If a corruption test
@@ -539,7 +509,7 @@ impl Journal {
             &root_store,
             &mut transaction,
             SUPER_BLOCK_A_OBJECT_ID,
-            HandleOptions { overwrite: true, ..Default::default() },
+            HandleOptions::default(),
         )
         .await
         .context("create super block")?;
@@ -551,7 +521,7 @@ impl Journal {
             &root_store,
             &mut transaction,
             SUPER_BLOCK_B_OBJECT_ID,
-            HandleOptions { overwrite: true, ..Default::default() },
+            HandleOptions::default(),
         )
         .await
         .context("create super block")?;
@@ -596,15 +566,9 @@ impl Journal {
         }
 
         allocator.ensure_open().await?;
-        let allocator_reservation = allocator
-            .reserve(
-                RESERVATION_SIZE.saturating_sub(journal_handle.get_allocated_size().await.unwrap()),
-            )
-            .ok_or(FxfsError::NoSpace)
-            .context("unable to reserve space for the journal")?;
 
         // Initialize the journal writer.
-        let _ = self.handle_and_reservation.set((journal_handle, allocator_reservation));
+        let _ = self.handle.set(journal_handle);
 
         Ok(())
     }
@@ -618,14 +582,9 @@ impl Journal {
         // TODO(csuter): handle the case where we are unable to extend the journal file.
         self.maybe_extend_journal_file(&mut writer).await.unwrap();
         // TODO(csuter): writing to the journal here can be asynchronous.
-        let journal_file_checkpoint = writer.journal_file_checkpoint();
-        writer.write_mutations(
-            transaction
-                .mutations
-                .iter()
-                .map(|TxnMutation { object_id, mutation, .. }| (*object_id, mutation.clone())),
-        );
-        if let Some((handle, _)) = self.handle_and_reservation.get() {
+        self.write_and_apply_mutations(&mut *writer, transaction).await;
+
+        if let Some(handle) = self.handle.get() {
             // TODO(jfsulliv): We should separate writing to the journal buffer from flushing the
             // journal buffer (i.e. consider doing this in a background task). Flushing here is
             // prone to deadlock, since |flush_buffer| itself creates a transaction which locks the
@@ -637,15 +596,12 @@ impl Journal {
                 log::warn!("journal write failed: {}", e);
             }
         }
-        self.apply_mutations(transaction, journal_file_checkpoint).await;
-        self.inner.lock().unwrap().journal_file_offset =
-            writer.journal_file_checkpoint().file_offset;
     }
 
     async fn maybe_extend_journal_file(&self, writer: &mut JournalWriter) -> Result<(), Error> {
         // TODO(csuter): this currently assumes that a transaction can fit in CHUNK_SIZE.
         let file_offset = writer.journal_file_checkpoint().file_offset;
-        let (handle, reservation) = match self.handle_and_reservation.get() {
+        let handle = match self.handle.get() {
             None => return Ok(()),
             Some(x) => x,
         };
@@ -660,7 +616,8 @@ impl Journal {
         let mut transaction = handle
             .new_transaction_with_options(Options {
                 skip_journal_checks: true,
-                allocator_reservation: Some(reservation),
+                borrow_metadata_space: true,
+                allocator_reservation: Some(self.objects.metadata_reservation()),
                 ..Default::default()
             })
             .await?;
@@ -671,17 +628,7 @@ impl Journal {
             handle.zero(&mut transaction, 0..zero_offset).await?;
         }
 
-        let journal_file_checkpoint = writer.journal_file_checkpoint();
-
-        // We have to apply the mutations before writing them because we borrowed the writer for the
-        // transaction.  First we clone the mutations without the associated objects since that's
-        // where the handle is borrowed.
-        let cloned_mutations = clone_mutations(&transaction);
-
-        self.apply_mutations(&mut transaction, journal_file_checkpoint).await;
-
-        std::mem::drop(transaction);
-        writer.write_mutations(cloned_mutations);
+        self.write_and_apply_mutations(writer, &mut transaction).await;
 
         // We need to be sure that any journal records that arose from preallocation can fit in
         // within the old preallocated range.  If this situation arose (it shouldn't, so it would be
@@ -690,8 +637,7 @@ impl Journal {
         if needs_extending {
             assert!(writer.journal_file_checkpoint().file_offset <= size);
             let file_offset = writer.journal_file_checkpoint().file_offset;
-            let (handle, _) = self.handle_and_reservation.get().unwrap();
-            assert!(file_offset + self.chunk_size() <= handle.get_size());
+            assert!(file_offset + self.chunk_size() <= self.handle.get().unwrap().get_size());
         }
 
         let mut inner = self.inner.lock().unwrap();
@@ -700,30 +646,6 @@ impl Journal {
         }
 
         Ok(())
-    }
-
-    async fn apply_mutations(
-        &self,
-        transaction: &mut Transaction<'_>,
-        journal_file_checkpoint: JournalCheckpoint,
-    ) {
-        if self.trace.load(atomic::Ordering::Relaxed) {
-            log::info!("BEGIN TXN {}", journal_file_checkpoint.file_offset);
-        }
-        let mutations = std::mem::take(&mut transaction.mutations);
-        for TxnMutation { object_id, mutation, associated_object } in mutations {
-            self.apply_mutation(
-                object_id,
-                &journal_file_checkpoint,
-                mutation,
-                Some(transaction),
-                associated_object,
-            )
-            .await;
-        }
-        if self.trace.load(atomic::Ordering::Relaxed) {
-            log::info!("END TXN");
-        }
     }
 
     // Determines whether a mutation at the given checkpoint should be applied.  During replay, not
@@ -740,50 +662,22 @@ impl Journal {
         journal_file_checkpoint.file_offset >= offset
     }
 
-    async fn apply_mutation(
-        &self,
-        object_id: u64,
-        journal_file_checkpoint: &JournalCheckpoint,
-        mutation: Mutation,
-        transaction: Option<&Transaction<'_>>,
-        object: AssocObj<'_>,
-    ) {
-        if transaction.is_some() || self.should_apply(object_id, journal_file_checkpoint) {
-            if self.trace.load(atomic::Ordering::Relaxed) {
-                log::info!("applying mutation: {}: {:?}", object_id, mutation);
-            }
-            self.objects
-                .apply_mutation(object_id, mutation, transaction, journal_file_checkpoint, object)
-                .await;
-        } else {
-            if self.trace.load(atomic::Ordering::Relaxed) {
-                log::info!("ignoring mutation: {}, {:?}", object_id, mutation);
-            }
-        }
-    }
-
     pub async fn write_super_block(&self) -> Result<(), Error> {
         let root_parent_store = self.objects.root_parent_store();
 
         // First we must lock the root parent store so that no new entries are written to it.
-        let sync = ObjectFlush::new(self.objects.clone(), root_parent_store.store_object_id());
         let mutable_layer = root_parent_store.tree().mutable_layer();
         let _guard = mutable_layer.lock_writes();
 
         // After locking, we need to flush the journal because it might have records that a new
         // super-block would refer to.
-        let journal_file_checkpoint = {
+        let (journal_file_checkpoint, borrowed) = {
             let mut writer = self.writer.lock().await;
-
-            // We are holding the appropriate locks now (no new transaction can be applied whilst we
-            // are holding the writer lock, so we can call ObjectFlush::begin for the root parent
-            // object store.
-            sync.begin();
 
             serialize_into(&mut *writer, &JournalRecord::EndBlock)?;
             writer.pad_to_block()?;
-            writer.flush_buffer(&self.handle_and_reservation.get().unwrap().0).await?;
-            writer.journal_file_checkpoint()
+            writer.flush_buffer(self.handle.get().unwrap()).await?;
+            (writer.journal_file_checkpoint(), self.objects.borrowed_metadata_space())
         };
 
         // We need to flush previous writes to the device since the new super-block we are writing
@@ -807,6 +701,7 @@ impl Journal {
         new_super_block.super_block_journal_file_offset = journal_file_checkpoint.file_offset;
         new_super_block.journal_checkpoint = min_checkpoint.unwrap_or(journal_file_checkpoint);
         new_super_block.journal_file_offsets = journal_file_offsets;
+        new_super_block.borrowed_metadata_space = borrowed;
 
         // TODO(csuter); the super-block needs space reserved for it.
         new_super_block
@@ -832,8 +727,6 @@ impl Journal {
             }
         }
 
-        sync.commit();
-
         Ok(())
     }
 
@@ -848,7 +741,7 @@ impl Journal {
         let mut writer = self.writer.lock().await;
         serialize_into(&mut *writer, &JournalRecord::EndBlock)?;
         writer.pad_to_block()?;
-        writer.flush_buffer(&self.handle_and_reservation.get().unwrap().0).await?;
+        writer.flush_buffer(self.handle.get().unwrap()).await?;
         Ok(())
     }
 
@@ -863,8 +756,8 @@ impl Journal {
         // The / 2 is here because after compacting, we cannot reclaim the space until the
         // _next_ time we flush the device since the super-block is not guaranteed to persist
         // until then.
-        let inner = self.inner.lock().unwrap();
-        inner.journal_file_offset - inner.super_block.journal_checkpoint.file_offset
+        self.objects.last_end_offset()
+            - self.inner.lock().unwrap().super_block.journal_checkpoint.file_offset
             > RECLAIM_SIZE / 2
     }
 
@@ -873,7 +766,7 @@ impl Journal {
         loop {
             debug_assert_not_too_long!({
                 let mut inner = self.inner.lock().unwrap();
-                if inner.journal_file_offset - inner.super_block.journal_checkpoint.file_offset
+                if self.objects.last_end_offset() - inner.super_block.journal_checkpoint.file_offset
                     < RECLAIM_SIZE
                 {
                     break;
@@ -891,15 +784,35 @@ impl Journal {
     fn chunk_size(&self) -> u64 {
         CHUNK_SIZE
     }
+
+    async fn write_and_apply_mutations(
+        &self,
+        writer: &mut JournalWriter,
+        transaction: &mut Transaction<'_>,
+    ) {
+        let checkpoint = writer.journal_file_checkpoint();
+        writer.write_mutations(transaction);
+        if let Some(mutation) = self.objects.apply_transaction(transaction, &checkpoint).await {
+            writer.write_record(&JournalRecord::Mutation { object_id: 0, mutation });
+        }
+        writer.write_record(&JournalRecord::Commit);
+        self.objects.did_commit_transaction(
+            transaction,
+            &checkpoint,
+            writer.journal_file_checkpoint().file_offset,
+        );
+    }
 }
 
 impl JournalWriter {
-    // Extends JournalWriter to write a transaction.
-    fn write_mutations<'a>(&mut self, mutations: impl IntoIterator<Item = (u64, Mutation)>) {
-        for (object_id, mutation) in mutations {
-            self.write_record(&JournalRecord::Mutation { object_id, mutation });
+    // Extends JournalWriter to write mutations.
+    fn write_mutations<'a>(&mut self, transaction: &Transaction<'_>) {
+        for TxnMutation { object_id, mutation, .. } in &transaction.mutations {
+            self.write_record(&JournalRecord::Mutation {
+                object_id: *object_id,
+                mutation: mutation.clone(),
+            });
         }
-        self.write_record(&JournalRecord::Commit);
     }
 }
 

@@ -122,6 +122,10 @@ impl ObjectHandle for Handle {
         unreachable!();
     }
 
+    async fn overwrite(&self, _offset: u64, _buf: BufferRef<'_>) -> Result<(), Error> {
+        unreachable!();
+    }
+
     fn get_size(&self) -> u64 {
         self.size
     }

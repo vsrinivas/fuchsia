@@ -15,6 +15,7 @@ use {
                 JournalCheckpoint,
             },
             record::ObjectItem,
+            transaction::Options,
             ObjectStore,
         },
     },
@@ -117,6 +118,10 @@ pub struct SuperBlock {
 
     // object id -> journal file offset. Indicates where each object has been flushed to.
     pub journal_file_offsets: HashMap<u64, u64>,
+
+    // Records the amount of borrowed metadata space as applicable at
+    // `super_block_journal_file_offset`.
+    pub borrowed_metadata_space: u64,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -194,12 +199,21 @@ impl SuperBlock {
         let mut iter = merger.seek(Bound::Unbounded).await?;
 
         let mut next_extent_offset = MIN_SUPER_BLOCK_SIZE;
+        let object_manager = root_parent_store.filesystem().object_manager();
+        let reservation = object_manager.metadata_reservation();
 
         while let Some(item_ref) = iter.get() {
             if writer.journal_file_checkpoint().file_offset
                 >= next_extent_offset - SUPER_BLOCK_CHUNK_SIZE
             {
-                let mut transaction = handle.new_transaction().await?;
+                let mut transaction = handle
+                    .new_transaction_with_options(Options {
+                        skip_journal_checks: true,
+                        borrow_metadata_space: true,
+                        allocator_reservation: Some(reservation),
+                        ..Default::default()
+                    })
+                    .await?;
                 let allocated = handle
                     .preallocate_range(
                         &mut transaction,

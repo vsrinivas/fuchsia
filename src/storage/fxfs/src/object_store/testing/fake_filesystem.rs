@@ -4,19 +4,18 @@
 
 use {
     crate::object_store::{
-        allocator::{Allocator, Reservation},
+        allocator::Allocator,
         filesystem::{Filesystem, SyncOptions},
         journal::JournalCheckpoint,
         object_manager::ObjectManager,
         transaction::{
-            LockKey, LockManager, Options, ReadGuard, Transaction, TransactionHandler, TxnMutation,
-            WriteGuard,
+            LockKey, LockManager, MetadataReservation, Options, ReadGuard, Transaction,
+            TransactionHandler, WriteGuard,
         },
         ObjectStore,
     },
     anyhow::Error,
     async_trait::async_trait,
-    once_cell::sync::OnceCell,
     std::sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -29,7 +28,6 @@ pub struct FakeFilesystem {
     object_manager: Arc<ObjectManager>,
     lock_manager: LockManager,
     num_syncs: AtomicU64,
-    flush_reservation: OnceCell<Reservation>,
 }
 
 impl FakeFilesystem {
@@ -40,7 +38,6 @@ impl FakeFilesystem {
             object_manager,
             lock_manager: LockManager::new(),
             num_syncs: AtomicU64::new(0),
-            flush_reservation: OnceCell::new(),
         })
     }
 }
@@ -67,11 +64,6 @@ impl Filesystem for FakeFilesystem {
         self.num_syncs.fetch_add(1u64, Ordering::Relaxed);
         Ok(())
     }
-
-    fn flush_reservation(&self) -> &Reservation {
-        self.flush_reservation
-            .get_or_init(|| self.object_manager.allocator().reserve(262144).unwrap())
-    }
 }
 
 #[async_trait]
@@ -79,28 +71,21 @@ impl TransactionHandler for FakeFilesystem {
     async fn new_transaction<'a>(
         self: Arc<Self>,
         locks: &[LockKey],
-        _options: Options<'a>,
+        options: Options<'a>,
     ) -> Result<Transaction<'a>, Error> {
-        Ok(Transaction::new(self, &[], locks).await)
+        let reservation = if options.borrow_metadata_space {
+            MetadataReservation::Borrowed
+        } else {
+            MetadataReservation::Reservation(self.allocator().reserve_at_most(10000))
+        };
+        Ok(Transaction::new(self, reservation, &[], locks).await)
     }
 
     async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>) {
         let checkpoint =
             JournalCheckpoint { file_offset: self.num_syncs.load(Ordering::Relaxed), checksum: 0 };
         self.lock_manager.commit_prepare(transaction).await;
-        for TxnMutation { object_id, mutation, associated_object } in
-            std::mem::take(&mut transaction.mutations)
-        {
-            self.object_manager
-                .apply_mutation(
-                    object_id,
-                    mutation,
-                    Some(transaction),
-                    &checkpoint,
-                    associated_object,
-                )
-                .await;
-        }
+        self.object_manager.apply_transaction(transaction, &checkpoint).await;
     }
 
     fn drop_transaction(&self, transaction: &mut Transaction<'_>) {

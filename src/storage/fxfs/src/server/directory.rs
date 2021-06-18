@@ -107,6 +107,7 @@ impl FxDirectory {
         self: &Arc<Self>,
         extra_keys: &[LockKey],
         name: &str,
+        borrow_metadata_space: bool,
     ) -> Result<(Transaction<'a>, u64, ObjectDescriptor), Error> {
         // Since we don't know the child object ID until we've looked up the child, we need to loop
         // until we have acquired a lock on a child whose ID is the same as it was in the last
@@ -131,7 +132,7 @@ impl FxDirectory {
             let transaction = fs
                 .new_transaction(
                     &lock_keys,
-                    Options { skip_space_checks: true, ..Default::default() },
+                    Options { borrow_metadata_space, ..Default::default() },
                 )
                 .await?;
 
@@ -353,7 +354,7 @@ impl MutableDirectory for FxDirectory {
     async fn unlink(&self, name: &str, must_be_directory: bool) -> Result<(), Status> {
         let this = self.as_strong().await;
         let (mut transaction, _object_id, object_descriptor) =
-            this.acquire_transaction_for_unlink(&[], name).await.map_err(map_to_status)?;
+            this.acquire_transaction_for_unlink(&[], name, true).await.map_err(map_to_status)?;
         if let ObjectDescriptor::Directory = object_descriptor {
         } else if must_be_directory {
             return Err(Status::NOT_DIR);
@@ -404,7 +405,7 @@ impl MutableDirectory for FxDirectory {
             .clone()
             .new_transaction(
                 &[LockKey::object(self.store().store_object_id(), self.directory.object_id())],
-                Options { skip_space_checks: true, ..Default::default() },
+                Options { borrow_metadata_space: true, ..Default::default() },
             )
             .await
             .map_err(map_to_status)?;

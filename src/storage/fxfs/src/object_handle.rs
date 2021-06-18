@@ -59,6 +59,10 @@ pub trait ObjectHandle: Send + Sync + 'static {
         buf: BufferRef<'_>,
     ) -> Result<(), Error>;
 
+    /// Writes |buf| to the device at |offset|.  The ranges involved *must* already be allocated and
+    /// the buffer must be aligned whole blocks.
+    async fn overwrite(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error>;
+
     // Returns the size of the object.
     fn get_size(&self) -> u64;
 
