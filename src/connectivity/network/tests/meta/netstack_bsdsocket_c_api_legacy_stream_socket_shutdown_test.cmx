@@ -1,0 +1,25 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/dns-resolver.cmx",
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx"
+            }
+        }
+    },
+    "include": [
+        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/netstack_bsdsocket_c_api_test",
+        "env_vars": [
+            "LEGACY_STREAM_SOCKET_SHUTDOWN=1"
+        ]
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.NameLookup",
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}

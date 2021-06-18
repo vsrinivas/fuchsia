@@ -1245,6 +1245,37 @@ struct BaseSocket {
     return ZX_OK;
   }
 
+  zx_status_t shutdown(int how, int16_t* out_code) {
+    using fsocket::wire::ShutdownMode;
+    ShutdownMode mode;
+    switch (how) {
+      case SHUT_RD:
+        mode = ShutdownMode::kRead;
+        break;
+      case SHUT_WR:
+        mode = ShutdownMode::kWrite;
+        break;
+      case SHUT_RDWR:
+        mode = ShutdownMode::kRead | ShutdownMode::kWrite;
+        break;
+      default:
+        return ZX_ERR_INVALID_ARGS;
+    }
+    // TODO(https://fxbug.dev/78129): Use Shutdown instead of Shutdown2 after ABI transition.
+    auto response = client().Shutdown2(mode);
+    zx_status_t status = response.status();
+    if (status != ZX_OK) {
+      return status;
+    }
+    auto const& result = response.Unwrap()->result;
+    if (result.is_err()) {
+      *out_code = static_cast<int16_t>(result.err());
+      return ZX_OK;
+    }
+    *out_code = 0;
+    return ZX_OK;
+  }
+
  private:
   T& client_;
 };
@@ -1450,6 +1481,21 @@ bool use_legacy_sockopt_fidl() {
     legacy = []() {
       constexpr char kLegacySockoptFIDL[] = "LEGACY_SOCKOPT_FIDL";
       const char* const legacy_env = getenv(kLegacySockoptFIDL);
+      return legacy_env && strcmp(legacy_env, "1") == 0;
+    }();
+  });
+  return legacy;
+}
+
+// TODO(https://fxbug.dev/78129): Remove after ABI transition.
+bool use_legacy_stream_socket_shutdown() {
+  static std::once_flag once;
+  static bool legacy;
+
+  std::call_once(once, [&]() {
+    legacy = []() {
+      constexpr char kLegacyStreamSocketShutdown[] = "LEGACY_STREAM_SOCKET_SHUTDOWN";
+      const char* const legacy_env = getenv(kLegacyStreamSocketShutdown);
       return legacy_env && strcmp(legacy_env, "1") == 0;
     }();
   });
@@ -1707,33 +1753,7 @@ struct datagram_socket : public zxio {
   }
 
   zx_status_t shutdown(int how, int16_t* out_code) override {
-    using fsocket::wire::ShutdownMode;
-    ShutdownMode mode;
-    switch (how) {
-      case SHUT_RD:
-        mode = ShutdownMode::kRead;
-        break;
-      case SHUT_WR:
-        mode = ShutdownMode::kWrite;
-        break;
-      case SHUT_RDWR:
-        mode = ShutdownMode::kRead | ShutdownMode::kWrite;
-        break;
-      default:
-        return ZX_ERR_INVALID_ARGS;
-    }
-    auto response = zxio_datagram_socket().client.Shutdown(mode);
-    zx_status_t status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto const& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
-      return ZX_OK;
-    }
-    *out_code = 0;
-    return ZX_OK;
+    return BaseSocket(zxio_datagram_socket().client).shutdown(how, out_code);
   }
 
  protected:
@@ -2091,17 +2111,20 @@ struct stream_socket : public pipe {
   }
 
   zx_status_t shutdown(int how, int16_t* out_code) override {
-    *out_code = 0;
-    zx_signals_t observed;
-    zx_status_t status = zxio_stream_socket().pipe.socket.wait_one(
-        ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), &observed);
-    if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
-      if (observed & ZX_SOCKET_PEER_CLOSED) {
-        return ZX_ERR_NOT_CONNECTED;
+    if (use_legacy_stream_socket_shutdown()) {
+      *out_code = 0;
+      zx_signals_t observed;
+      zx_status_t status = zxio_stream_socket().pipe.socket.wait_one(
+          ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), &observed);
+      if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
+        if (observed & ZX_SOCKET_PEER_CLOSED) {
+          return ZX_ERR_NOT_CONNECTED;
+        }
+        return shutdown_inner(zxio_stream_socket().pipe.socket, how);
       }
-      return shutdown_inner(zxio_stream_socket().pipe.socket, how);
+      return status;
     }
-    return status;
+    return BaseSocket(zxio_stream_socket().client).shutdown(how, out_code);
   }
 
  private:

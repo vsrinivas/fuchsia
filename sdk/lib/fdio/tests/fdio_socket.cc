@@ -45,6 +45,16 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
     completer.Close(ZX_OK);
   }
 
+  void Shutdown2(Shutdown2RequestView request, Shutdown2Completer::Sync& completer) override {
+    auto response = fuchsia_posix_socket::wire::BaseSocketShutdown2Response();
+    auto result = fuchsia_posix_socket::wire::BaseSocketShutdown2Result::WithResponse(
+        fidl::ObjectView<fuchsia_posix_socket::wire::BaseSocketShutdown2Response>::FromExternal(
+            &response));
+
+    shutdown_count_++;
+    completer.Reply(result);
+  }
+
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     fuchsia_io::wire::StreamSocket stream_socket;
     zx_status_t status =
@@ -86,8 +96,11 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
     on_connect_ = std::move(cb);
   }
 
+  uint16_t ShutdownCount() const { return shutdown_count_.load(); }
+
  private:
   zx::socket peer_;
+  std::atomic<uint16_t> shutdown_count_ = 0;
 
   fit::function<void(zx::socket&, ConnectCompleter::Sync&)> on_connect_;
 };
@@ -103,7 +116,7 @@ class BaseTest : public zxtest::Test {
   void SetUp() override {
     zx::socket client_socket;
     ASSERT_OK(zx::socket::create(sock_type, &client_socket, &server_socket_));
-    server_ = Server(std::move(client_socket));
+    server_.emplace(std::move(client_socket));
 
     zx::status endpoints = fidl::CreateEndpoints<fuchsia_posix_socket::StreamSocket>();
     ASSERT_OK(endpoints.status_value());
@@ -431,6 +444,11 @@ TEST_F(TcpSocketTest, WaitBeginEndConnected) {
   }
 }
 
+TEST_F(TcpSocketTest, Shutdown) {
+  ASSERT_EQ(shutdown(client_fd().get(), SHUT_RD), 0, "%s", strerror(errno));
+  ASSERT_EQ(server().ShutdownCount(), 1);
+}
+
 using UdpSocketTest = BaseTest<ZX_SOCKET_DATAGRAM>;
 TEST_F(UdpSocketTest, DatagramSendMsg) {
   ASSERT_NO_FATAL_FAILURES(set_connected());
@@ -487,6 +505,11 @@ TEST_F(UdpSocketTest, DatagramSendMsg) {
   }
 
   EXPECT_SUCCESS(close(mutable_client_fd().release()));
+}
+
+TEST_F(UdpSocketTest, Shutdown) {
+  ASSERT_EQ(shutdown(client_fd().get(), SHUT_RD), 0, "%s", strerror(errno));
+  ASSERT_EQ(server().ShutdownCount(), 1);
 }
 
 class TcpSocketTimeoutTest : public TcpSocketTest {

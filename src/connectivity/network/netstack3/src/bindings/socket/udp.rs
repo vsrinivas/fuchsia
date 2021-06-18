@@ -457,6 +457,10 @@ where
                             responder,
                             &mut self.make_handler().await.shutdown(mode)
                         ),
+                        DatagramSocketRequest::Shutdown2 { mode, responder } => responder_send!(
+                            responder,
+                            &mut self.make_handler().await.shutdown(mode)
+                        ),
                         DatagramSocketRequest::RecvMsg {
                             want_addr,
                             data_len,

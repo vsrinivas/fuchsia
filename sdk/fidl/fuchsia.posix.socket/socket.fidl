@@ -21,6 +21,14 @@ const uint8 INTERFACE_NAME_LENGTH = 15;
 /// An interface name as a sequence of bytes.
 alias interface_name = string:INTERFACE_NAME_LENGTH;
 
+/// Socket shutdown mode.
+bits ShutdownMode : uint16 {
+    /// Shutdown socket read endpoint.
+    READ = 1;
+    /// Shutdown socket write endpoint.
+    WRITE = 2;
+};
+
 /// A network socket.
 ///
 /// Once a socket has been retrieved from a `Provider`, this interface is then used to further
@@ -45,6 +53,10 @@ protocol BaseSocket {
     GetSockName() -> (fuchsia.net.SocketAddress addr) error fuchsia.posix.Errno;
     /// Retrieves the remote socket address.
     GetPeerName() -> (fuchsia.net.SocketAddress addr) error fuchsia.posix.Errno;
+    /// Shuts down part of the socket.
+    // TODO(https://fxbug.dev/78129): This method is required during the ABI transition. Once
+    // BaseSocket provides the Shutdown method and that every client uses it, remove Shutdown2.
+    Shutdown2(ShutdownMode mode) -> () error fuchsia.posix.Errno;
 
     /// Sets the value of a socket option.
     // TODO(https://fxbug.dev/44347): Remove after ABI transition.
@@ -269,14 +281,6 @@ bits SendMsgFlags : uint16 {
     RESERVED = 0x8000;
 };
 
-/// Socket shutdown mode.
-bits ShutdownMode : uint16 {
-    /// Shutdown socket read endpoint.
-    READ = 1;
-    /// Shutdown socket write endpoint.
-    WRITE = 2;
-};
-
 /// A datagram socket.
 ///
 /// This type's [`fuchsia.io.Node/Describe`] method returns an eventpair which is used to signal
@@ -287,6 +291,8 @@ protocol DatagramSocket {
     compose BaseSocket;
 
     /// Shuts down part of the socket.
+    // TODO(https://fxbug.dev/78129): After ABI transition, move this method into BaseSocket.
+    [Deprecated = "Use Shutdown2 instead"]
     Shutdown(ShutdownMode mode) -> () error fuchsia.posix.Errno;
 
     /// Receives a message from the socket.
