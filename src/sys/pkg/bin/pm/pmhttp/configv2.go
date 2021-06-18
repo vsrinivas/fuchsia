@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
+	"strings"
 
 	tuf_data "github.com/theupdateframework/go-tuf/data"
 
@@ -44,7 +46,7 @@ func (c *ConfigServerV2) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (c *ConfigServerV2) parseConfig(repoUrl string) (repo.Config, error) {
 	cfg := repo.Config{
-		URL: repoUrl,
+		URL: buildRepoUrl(repoUrl),
 		Mirrors: []repo.MirrorConfig{
 			{
 				URL:       repoUrl,
@@ -85,4 +87,19 @@ func (c *ConfigServerV2) parseConfig(repoUrl string) (repo.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// invalidHostnameCharsPattern contains all characters not allowed by the spec in
+// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url
+var invalidHostnameCharsPattern = regexp.MustCompile("[^a-z0-9-.]")
+
+// buildRepoUrl ensures the repoUrl string complies with the hostname spec
+// in https://fuchsia.dev/fuchsia-src/concepts/packages/package_url
+func buildRepoUrl(repoUrl string) string {
+	ps := strings.Index(repoUrl, "://")
+	if ps >= 0 && len(repoUrl) > ps+3 {
+		repoUrl = repoUrl[ps+3:]
+	}
+	repoUrl = invalidHostnameCharsPattern.ReplaceAllString(strings.ToLower(repoUrl), "-")
+	return "fuchsia-pkg://" + repoUrl
 }

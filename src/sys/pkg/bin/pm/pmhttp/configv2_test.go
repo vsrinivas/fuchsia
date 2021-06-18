@@ -176,3 +176,34 @@ func TestConfigV2(t *testing.T) {
 		}
 	})
 }
+
+func TestBuildRepoUrl(t *testing.T) {
+	testCases := []struct {
+		url  string
+		want string
+	}{
+		{
+			url:  "fuchsia-pkg://devhost",
+			want: "fuchsia-pkg://devhost",
+		},
+		{
+			url:  "fuchsia-pkg://DEVHOST",
+			want: "fuchsia-pkg://devhost",
+		},
+		{
+			url:  "http://fuchsia.com",
+			want: "fuchsia-pkg://fuchsia.com",
+		},
+		{
+			url:  "https://fuchsia.com/packages",
+			want: "fuchsia-pkg://fuchsia.com-packages",
+		},
+	}
+
+	for _, tc := range testCases {
+		got := buildRepoUrl(tc.url)
+		if got != tc.want {
+			t.Errorf("buildRepoUrl(%v) returned %v, wanted %v", tc.url, got, tc.want)
+		}
+	}
+}
