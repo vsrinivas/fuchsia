@@ -58,7 +58,7 @@ To add a glossary definition, you need to edit the
           <td><code>full_description</code></td><td><b>Optional</b>
             <p>
               Define a full for your glossary term. This description should be
-              complete and fully explain the term. You must use HTML syntax.
+              complete and fully explain the term.
             </p>
             <p>
               You must use HTML syntax, including for links.
