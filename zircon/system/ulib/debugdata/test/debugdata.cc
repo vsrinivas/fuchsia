@@ -20,6 +20,7 @@
 #include <zircon/status.h>
 
 #include <filesystem>
+#include <unordered_map>
 
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
@@ -40,7 +41,10 @@ TEST(DebugDataTest, PublishData) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
-  debugdata::DebugData svc(fbl::unique_fd{open("/", O_RDONLY)});
+  std::unordered_map<std::string, std::vector<zx::vmo>> data;
+  debugdata::DebugData svc(
+      loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},
+      [&](std::string data_sink, zx::vmo vmo) { data[data_sink].push_back(std::move(vmo)); });
   fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server), &svc);
 
   zx::vmo vmo;
@@ -58,7 +62,43 @@ TEST(DebugDataTest, PublishData) {
   ASSERT_OK(loop.RunUntilIdle());
   loop.Shutdown();
 
-  const auto data = svc.TakeData();
+  ASSERT_EQ(data.size(), 1);
+
+  ASSERT_NE(data.find(kTestSink), data.end());
+  const auto& dump = data.at(kTestSink);
+  ASSERT_EQ(dump.size(), 1);
+
+  uint8_t content[sizeof(kTestData)];
+  ASSERT_OK(dump[0].read(content, 0, sizeof(content)));
+  ASSERT_EQ(memcmp(content, kTestData, sizeof(kTestData)), 0);
+}
+
+TEST(DebugDataTest, DrainData) {
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  zx::channel client, server;
+  ASSERT_OK(zx::channel::create(0, &client, &server));
+  std::unordered_map<std::string, std::vector<zx::vmo>> data;
+  debugdata::DebugData svc(
+      loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},
+      [&](std::string data_sink, zx::vmo vmo) { data[data_sink].push_back(std::move(vmo)); });
+  fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server), &svc);
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(vmo.write(kTestData, 0, sizeof(kTestData)));
+
+  zx::channel token_client, token_server;
+  ASSERT_OK(zx::channel::create(0, &token_client, &token_server));
+  ASSERT_OK(fidl::WireCall<fuchsia_debugdata::DebugData>(zx::unowned_channel(client))
+                .Publish(kTestSink, std::move(vmo), std::move(token_server))
+                .status());
+
+  ASSERT_OK(loop.RunUntilIdle());
+  // As token_client is held open the data is not processed.
+  ASSERT_EQ(data.size(), 0);
+  // After draining data the VMO is processed anyway.
+  svc.DrainData();
+
   ASSERT_EQ(data.size(), 1);
 
   ASSERT_NE(data.find(kTestSink), data.end());
@@ -99,7 +139,8 @@ TEST(DebugDataTest, LoadConfig) {
   async::Loop svc_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
-  debugdata::DebugData svc(fbl::unique_fd{fdio_ns_opendir(ns)});
+  debugdata::DebugData svc(loop.dispatcher(), fbl::unique_fd{fdio_ns_opendir(ns)},
+                           [&](std::string, zx::vmo) {});
   fidl::BindSingleInFlightOnly(svc_loop.dispatcher(), std::move(server), &svc);
   ASSERT_OK(svc_loop.StartThread());
 

@@ -36,6 +36,14 @@ std::unordered_map<std::string, std::vector<DumpFile>> ProcessDebugData(
     std::unordered_map<std::string, std::vector<zx::vmo>> debug_data,
     DataSinkCallback error_callback, DataSinkCallback warning_callback);
 
+/// Processes debug data from a single VMO and returns all files written to `data_sink_dir_fd`
+/// and mapped by data_sink. This function will execute callbacks with error or warnings.
+std::optional<std::vector<DumpFile>> ProcessSingleDebugData(const fbl::unique_fd& data_sink_dir_fd,
+                                                            const std::string& data_sink,
+                                                            zx::vmo debug_data,
+                                                            DataSinkCallback error_callback,
+                                                            DataSinkCallback warning_callback);
+
 }  // namespace debugdata
 
 #endif  // LIB_DEBUGDATA_DATASINK_H_

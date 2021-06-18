@@ -22,27 +22,30 @@
 
 namespace debugdata {
 
-DebugData::DebugData(fbl::unique_fd root_dir_fd) : root_dir_fd_(std::move(root_dir_fd)) {}
+DebugData::DebugData(async_dispatcher_t* dispatcher, fbl::unique_fd root_dir_fd,
+                     VmoHandler vmo_callback)
+    : dispatcher_(dispatcher),
+      vmo_callback_(std::move(vmo_callback)),
+      root_dir_fd_(std::move(root_dir_fd)) {}
 
 void DebugData::Publish(PublishRequestView request, PublishCompleter::Sync&) {
-  std::lock_guard<std::mutex> lock(lock_);
-  std::string name(request->data_sink.data(), request->data_sink.size());
-  data_[name].push_back(std::move(request->data));
-  vmo_token_channels_.push_back(request->vmo_token.TakeChannel());
-}
+  std::string data_sink(request->data_sink.data(), request->data_sink.size());
+  zx::channel vmo_token = request->vmo_token.TakeChannel();
 
-std::unordered_map<std::string, std::vector<zx::vmo>> DebugData::TakeData() {
-  std::lock_guard<std::mutex> lock(lock_);
-  for (zx::channel& channel : vmo_token_channels_) {
-    zx_status_t status = channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
-    if (status != ZX_OK) {
-      fprintf(stderr, "debugdata: error: Unable to wait for token channel to close");
-    }
-  }
-  vmo_token_channels_.clear();
-  auto temp = std::move(data_);
-  data_ = std::unordered_map<std::string, std::vector<zx::vmo>>();
-  return temp;
+  auto wait = std::make_shared<async::WaitOnce>(vmo_token.get(), ZX_CHANNEL_PEER_CLOSED);
+
+  auto iterator = pending_handlers_.emplace(pending_handlers_.begin(), wait, std::move(data_sink),
+                                            std::move(request->data));
+
+  wait->Begin(dispatcher_, [this, vmo_token = std::move(vmo_token), iterator = std::move(iterator)](
+                               async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
+                               const zx_packet_signal_t*) mutable {
+    vmo_token.reset();
+    auto handler = std::move(*iterator);
+    pending_handlers_.erase(iterator);
+
+    vmo_callback_(std::move(std::get<1>(handler)), std::move(std::get<2>(handler)));
+  });
 }
 
 void DebugData::LoadConfig(LoadConfigRequestView request, LoadConfigCompleter::Sync& completer) {
@@ -73,6 +76,14 @@ void DebugData::LoadConfig(LoadConfigRequestView request, LoadConfigCompleter::S
   }
   vmo.set_property(ZX_PROP_NAME, config_name.data(), config_name.size());
   completer.Reply(std::move(vmo));
+}
+
+void DebugData::DrainData() {
+  for (auto& handler : pending_handlers_) {
+    std::get<0>(handler)->Cancel();
+    vmo_callback_(std::move(std::get<1>(handler)), std::move(std::get<2>(handler)));
+  }
+  pending_handlers_.clear();
 }
 
 }  // namespace debugdata

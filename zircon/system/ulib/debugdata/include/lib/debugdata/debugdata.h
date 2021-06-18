@@ -12,9 +12,9 @@
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 
+#include <list>
 #include <mutex>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -23,23 +23,27 @@
 
 namespace debugdata {
 
+// DebugData implements the |fuchsia.debugdata.DebugData| protocol. When a VMO
+// is ready for processing it invokes the |vmo_callback| function.
+// DebugData is not thread safe.
 class DebugData : public fidl::WireServer<fuchsia_debugdata::DebugData> {
  public:
-  explicit DebugData(fbl::unique_fd root_dir_fd);
+  using VmoHandler = fit::function<void(std::string, zx::vmo)>;
+
+  explicit DebugData(async_dispatcher_t* dispatcher, fbl::unique_fd root_dir_fd,
+                     VmoHandler vmo_callback);
   ~DebugData() = default;
 
   void Publish(PublishRequestView request, PublishCompleter::Sync& completer) override;
   void LoadConfig(LoadConfigRequestView request, LoadConfigCompleter::Sync& completer) override;
-
-  // Wait for DebugData publishers to indicate vmos are ready, then take data.
-  // Note this may wait indefinitely if any publishing processes are active and have not closed
-  // their control channels passed through DebugData::Publish.
-  std::unordered_map<std::string, std::vector<zx::vmo>> TakeData();
+  // Invoke |vmo_callback| on any outstanding VMOs, without waiting for the signal indicating the
+  // VMO is ready.
+  void DrainData();
 
  private:
-  std::unordered_map<std::string, std::vector<zx::vmo>> data_ __TA_GUARDED(lock_);
-  std::vector<zx::channel> vmo_token_channels_ __TA_GUARDED(lock_);
-  std::mutex lock_;
+  async_dispatcher_t* dispatcher_;
+  std::list<std::tuple<std::shared_ptr<async::WaitOnce>, std::string, zx::vmo>> pending_handlers_;
+  VmoHandler vmo_callback_;
   fbl::unique_fd root_dir_fd_;
 };
 
