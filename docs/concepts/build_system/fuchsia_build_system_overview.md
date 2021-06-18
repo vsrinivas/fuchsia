@@ -54,10 +54,8 @@ declaration types) are defined in the [GN reference][gn-reference]. There are
 also a handful of custom templates in `.gni` files in the
 [`//build` project][build-project].
 
-These custom templates mostly define custom target declaration types, such as
-the package declaration type.
-
-> TODO(pylaligand): list available templates
+Fuchsia defines many [custom templates](/docs/development/components/build.md#gn_templates)
+to support defining and building Fuchsia specific artifacts.
 
 ## Executing a build
 
