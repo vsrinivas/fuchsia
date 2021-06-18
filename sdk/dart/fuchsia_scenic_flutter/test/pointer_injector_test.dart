@@ -22,7 +22,7 @@ void main() {
 
   test('PointerInjector register', () async {
     final device = _mockDevice();
-    final registry = MockRegistry();
+    final registry = _mockRegistry();
     final injector = PointerInjector(registry, device);
 
     final hostViewRef = _mockViewRef();
@@ -43,16 +43,17 @@ void main() {
   });
 
   test('PointerInjector dispatchEvent', () async {
-    final device = _mockDevice();
-    final registry = MockRegistry();
+    MockDevice device = _mockDevice() as MockDevice;
+    final registry = _mockRegistry();
     final injector = PointerInjector(registry, device);
+    when(device.inject(any)).thenAnswer((_) => Future<void>.value());
 
     final rect = Rect.fromLTWH(0, 0, 100, 100);
     final pointer = PointerDownEvent(position: Offset(10, 10));
     await injector.dispatchEvent(pointer: pointer, viewport: rect);
 
     final List<Event> events =
-        verify((device as MockDevice).inject(captureAny)).captured.single;
+        verify(device.inject(captureAny)).captured.single;
     expect(events.length, 2);
     final viewportEvent = events.first;
     expect(
@@ -66,20 +67,34 @@ void main() {
     expect(pointerEvent.data!.pointerSample!.positionInViewport, [10.0, 10.0]);
   });
 
-  test('PointerInjector dispatchEvent logs exception', () async {
+  test('PointerInjector dispatchEvent exception', () async {
     MockDevice device = _mockDevice() as MockDevice;
-    final registry = MockRegistry();
+    final registry = _mockRegistry();
     final injector = PointerInjector(registry, device);
+    when(device.inject(any)).thenAnswer((_) =>
+        Future<void>.error(FidlStateException('Proxy<Device> is closed.')));
 
-    // Throw a FidlError when inject gets called. This should be logged.
-    when(device.inject(any)).thenThrow(FidlError('Proxy<Device> is closed.'));
+    final rect = Rect.fromLTWH(0, 0, 100, 100);
+    final pointer = PointerDownEvent(position: Offset(10, 10));
+
+    // Check for errors being thrown or logs being generated.
+    FidlError? caughtError;
     bool logsError = false;
     log.onRecord.listen((event) {
       logsError = true;
     });
 
-    final rect = Rect.fromLTWH(0, 0, 100, 100);
-    final pointer = PointerDownEvent(position: Offset(10, 10));
+    // The first dispatch should throw an exception and log.
+    try {
+      await injector.dispatchEvent(pointer: pointer, viewport: rect);
+    } on FidlError catch (e) {
+      caughtError = e;
+    }
+    expect(caughtError, isNotNull);
+    expect(logsError, isTrue);
+
+    // The second dispatch should only log.
+    logsError = false;
     await injector.dispatchEvent(pointer: pointer, viewport: rect);
     expect(logsError, isTrue);
   });
@@ -93,6 +108,12 @@ ViewRef _mockViewRef() {
   when(eventPair.isValid).thenReturn(true);
 
   return viewRef;
+}
+
+MockRegistry _mockRegistry() {
+  final registry = MockRegistry();
+  when(registry.register(any, any)).thenAnswer((_) => Future<void>.value());
+  return registry;
 }
 
 DeviceProxy _mockDevice() {

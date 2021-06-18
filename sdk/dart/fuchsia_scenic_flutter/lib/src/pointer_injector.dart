@@ -23,6 +23,7 @@ import 'package:meta/meta.dart';
 class PointerInjector {
   final Registry _registry;
   final DeviceProxy _device;
+  bool _injectionFailed = false;
 
   /// Returns [true] if the PointerInjector is successfully registered.
   bool registered = false;
@@ -68,12 +69,13 @@ class PointerInjector {
       dispatchPolicy: DispatchPolicy.exclusiveTarget,
     );
 
-    try {
-      await _registry.register(config, _device.ctrl.request());
+    return _registry.register(config, _device.ctrl.request()).then((_) {
       registered = true;
-    } catch (e) {
+    }).catchError((e) {
       log.warning('Failed to register pointer injector: $e');
-    }
+      _injectionFailed = true;
+      throw e; // Registration failures are critical; higher-level code should handle them
+    });
   }
 
   /// Dispatch [PointerEvent] and [Rect] viewport event to embedded child.
@@ -82,8 +84,13 @@ class PointerInjector {
     required Rect? viewport,
   }) async {
     assert(viewport != null && pointer != null);
-    final events = <Event>[];
+    if (_injectionFailed) {
+      log.warning(
+          'Attempted pointer event dispatch after injection failed; dropping');
+      return;
+    }
 
+    final events = <Event>[];
     if (viewport != null) {
       final timestamp = DateTime.now().microsecondsSinceEpoch * 1000;
       final injectorEvent = Event(
@@ -98,7 +105,6 @@ class PointerInjector {
       );
       events.add(injectorEvent);
     }
-
     if (_isValidPointerEvent(pointer)) {
       final x = pointer.localPosition.dx;
       final y = pointer.localPosition.dy;
@@ -123,11 +129,11 @@ class PointerInjector {
       events.add(injectorEvent);
     }
 
-    try {
-      return _device.inject(events);
-    } catch (e) {
+    return _device.inject(events).catchError((e) {
       log.warning('Failed to dispatch pointer events: $e');
-    }
+      _injectionFailed = true;
+      throw e; // This will only throw on the first failed injection
+    });
   }
 
   // Check if [PointerEvent] is one of supported events.
