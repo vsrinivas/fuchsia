@@ -125,6 +125,18 @@ fuchsia_package("wlancfg") {
   deps = [ ":service" ]
 }
 
+# Keep around a V1 version of the manifest until all tests are migrated
+fuchsia_component("service-v1") {
+  testonly = true
+  component_name = "wlancfg"
+  manifest = "meta/wlancfg.cmx"
+  deps = [ ":bin" ]
+}
+fuchsia_package("wlancfg-v1") {
+  testonly = true
+  deps = [ ":service-v1" ]
+}
+
 config_data("config") {
   for_pkg = "wlancfg"
   if (wlancfg_config_type == "ap") {

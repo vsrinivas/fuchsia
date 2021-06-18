@@ -12,7 +12,7 @@
                     "fuchsia-pkg://fuchsia.com/rate-selection#meta/wlan-devmgr.cmx"
                 ],
                 "fuchsia.wlan.policy.ClientProvider": [
-                    "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
+                    "fuchsia-pkg://fuchsia.com/wlancfg-v1#meta/wlancfg.cmx"
                 ]
             }
         }
