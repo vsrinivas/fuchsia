@@ -1116,6 +1116,13 @@ that users can easily switch revisions using a single arg.
 
 From //build/images/args.gni:46
 
+### fit_promise_compat
+Enable backwards compatible fit namespace and include path.
+
+**Current value (from the default):** `true`
+
+From //sdk/lib/fit-promise/BUILD.gn:9
+
 ### flatland_visual_debugging
 If true, this enables the display compositor to tint all Flatland views that
 are rendered via the GPU renderer instead of by direct DisplayController scanout.
@@ -3780,6 +3787,13 @@ From //build/images/args.gni:84
 **Current value (from the default):** `""`
 
 From //build/images/args.gni:85
+
+### vboot_verbose
+If true, vboot() image builds print out the exact "futility" command line.
+
+**Current value (from the default):** `false`
+
+From //build/images/vboot/vboot.gni:10
 
 ### vendor_linting
 Whether libraries under //vendor should be linted.
