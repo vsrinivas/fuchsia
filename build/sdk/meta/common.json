@@ -59,6 +59,10 @@
             },
             "type": "array"
         },
+        "kind": {
+            "description": "Represents the kind of an SDK element",
+            "type": "string"
+        },
         "sdk_element": {
             "description": "Base type for SDK elements",
             "properties": {
@@ -102,11 +106,22 @@
                 {
                     "properties": {
                         "data": {
-                            "oneOf": [
-                                {
-                                    "$ref": "#/definitions/sdk_element"
+                            "description": "Base kind for SDK elements",
+                            "properties": {
+                                "kind": {
+                                    "description": "The kind of the element",
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "description": "The name of the element",
+                                    "type": "string"
                                 }
-                            ]
+                            },
+                            "required": [
+                                "kind",
+                                "name"
+                            ],
+                            "type": "object"
                         }
                     },
                     "type": "object"

@@ -26,6 +26,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:valico",
   ]
 
   non_rust_deps = [ ":schemas" ]

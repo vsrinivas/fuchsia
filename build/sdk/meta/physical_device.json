@@ -2,21 +2,18 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "allOf": [
         {
-            "$ref": "common.json#/definitions/envelope"
+            "$ref": "common.json#/definitions/versioned_sdk_element"
         },
         {
             "properties": {
                 "data": {
                     "allOf": [
                         {
-                            "$ref": "common.json#/definitions/sdk_element"
-                        },
-                        {
                             "properties": {
-                                "type": {
+                                "kind": {
                                     "allOf": [
                                         {
-                                            "$ref": "common.json#/definitions/type"
+                                            "$ref": "common.json#/definitions/kind"
                                         },
                                         {
                                             "enum": [

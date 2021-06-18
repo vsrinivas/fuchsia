@@ -9,8 +9,9 @@
 use {
     anyhow::{bail, format_err, Result},
     serde::Deserialize,
-    serde_json::{from_reader, from_value, Value},
+    serde_json::{from_reader, from_str, from_value, Value},
     std::{collections::HashMap, io},
+    valico::json_schema,
 };
 
 /// Description of a physical (rather than virtual) hardware device.
@@ -21,8 +22,7 @@ pub struct PhysicalDeviceSpec {
 
     /// Always "physical_device" for a PhysicalDeviceSpec. This is valuable for
     /// debugging or when writing this record to a json string.
-    #[serde(rename = "type")]
-    pub data_type: String,
+    pub kind: String,
 }
 
 /// Description of the data needed to set up (flash) a device.
@@ -49,11 +49,30 @@ pub enum Entry {
 pub struct Entries {
     /// A collection of FMS Entries that have been added.
     data: HashMap<String, Entry>,
+
+    /// Collection of schema to validate new data against. The key is the value
+    /// of the "version" field. Version is a hash so it incorporates both the
+    /// type and the revision.
+    schemata: HashMap<String, serde_json::Value>,
 }
 
 impl Entries {
     pub fn new() -> Self {
-        Self { data: HashMap::new() }
+        let mut schemata = HashMap::new();
+
+        let input: Value =
+            from_str(include_str!("../../../../../../build/sdk/meta/physical_device.json"))
+                .expect("unicode string");
+        let key = input["id"].as_str().expect("need id for schema");
+        schemata.insert(key.to_string(), input);
+
+        let input: Value =
+            from_str(include_str!("../../../../../../build/sdk/meta/product_bundle.json"))
+                .expect("unicode string");
+        let key = input["id"].as_str().expect("need id for schema");
+        schemata.insert(key.to_string(), input);
+
+        Self { data: HashMap::new(), schemata }
     }
 
     /// Add metadata from json text to the store of FMS entries.
@@ -69,6 +88,44 @@ impl Entries {
         // Which schema should this follow.
         let schema_id: &str =
             input["version"].as_str().ok_or(format_err!("Missing version string"))?;
+
+        // Validate the input against the schema.
+        let mut scope = json_schema::Scope::new();
+
+        let common_schema = from_str(include_str!("../../../../../../build/sdk/meta/common.json"))?;
+        scope
+            .compile(common_schema, /*ban_unknown=*/ true)
+            .map_err(|e| format_err!("common.json failed to compile: {:?}", e))?;
+
+        let common_schema =
+            from_str(include_str!("../../../../../../build/sdk/meta/hardware.json"))?;
+        scope
+            .compile(common_schema, /*ban_unknown=*/ true)
+            .map_err(|e| format_err!("hardware.json failed to compile: {:?}", e))?;
+
+        let schema = self
+            .schemata
+            .get(schema_id)
+            .ok_or(format_err!("No matching schema for version: {:?}", input["version"]))?;
+        let compiled_schema = scope
+            .compile_and_return(schema.to_owned(), /*ban_unknown=*/ true)
+            .map_err(|e| format_err!(format!("Couldn't parse schema '{}': {:?}", schema_id, e)))?;
+        let validation = compiled_schema.validate(&input);
+        if !validation.is_strictly_valid() {
+            let mut errors = Vec::new();
+            for error in &validation.errors {
+                errors.push(
+                    format!("\n    {} at {}", error.get_title(), error.get_path()).into_boxed_str(),
+                );
+            }
+            for missing in &validation.missing {
+                errors.push(
+                    format!("\n    schema definition is missing URL {}", missing).into_boxed_str(),
+                );
+            }
+            errors.sort_unstable();
+            bail!("{} {}", schema_id, errors.join(""));
+        }
 
         // Create a new FMS Entry.
         let entry: Entry = match schema_id {
@@ -114,8 +171,8 @@ mod tests {
                             "arch": "arm64"
                         }
                     },
-                    "name": "generic-arm64",
-                    "type": "physical_device"
+                    "kind": "physical_device",
+                    "name": "generic-arm64"
                 },
                 "version": "http://fuchsia.com/schemas/sdk/physical_device.json"
             }
