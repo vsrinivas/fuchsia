@@ -10,7 +10,7 @@ use {
     fuchsia_zircon::prelude::*,
     pin_utils::pin_mut,
     wlan_common::{
-        assert_variant,
+        assert_variant_at_idx,
         bss::Protection,
         format::SsidFmt as _,
         mac::{self, Bssid},
@@ -31,8 +31,8 @@ fn handle_phy_event(
     protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
     update_sink: &mut Option<wlan_rsn::rsna::UpdateSink>,
-    all_auth_updates: &mut Vec<SecAssocUpdate>,
-    esssa_established_sender_ptr: &mut Option<oneshot::Sender<()>>,
+    sec_assoc_update_trace: &mut Vec<SecAssocUpdate>,
+    esssa_established_sender: &mut Option<oneshot::Sender<()>>,
 ) {
     match event {
         WlantapPhyEvent::SetChannel { args } => {
@@ -51,7 +51,7 @@ fn handle_phy_event(
              phy,
              ready_for_sae_frames,
              ready_for_eapol_frames| {
-                all_auth_updates.append(&mut update_sink.to_vec());
+                sec_assoc_update_trace.append(&mut update_sink.to_vec());
                 process_tx_auth_updates(
                     authenticator,
                     update_sink,
@@ -65,11 +65,10 @@ fn handle_phy_event(
                 // After updates are processed, the update sink can be drained. A WPA2 EAPOL
                 // exchange does not require persisting updates in the update_sink
                 // since all TxEapolFrame updates appear after association. Draining
-                // the update_sink avoids adding entries to all_auth_updates twice.
+                // the update_sink avoids adding entries to sec_assoc_update_trace twice.
                 for update in update_sink.drain(..) {
-                    if let SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished) = update {
-                        if let Some(esssa_established_sender) = esssa_established_sender_ptr.take()
-                        {
+                    if matches!(update, SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished)) {
+                        if let Some(esssa_established_sender) = esssa_established_sender.take() {
                             esssa_established_sender.send(()).map_err(|e| {
                                 format_err!(
                                     "Unable to send confirmation EssSa establishment: {:?}",
@@ -108,8 +107,8 @@ async fn handle_tx_event_hooks() {
     let protection = Protection::Wpa2Personal;
 
     let (esssa_established_sender, esssa_established_receiver) = oneshot::channel();
-    let mut esssa_established_sender_ptr = Some(esssa_established_sender);
-    let mut all_auth_updates: Vec<SecAssocUpdate> = vec![];
+    let mut esssa_established_sender = Some(esssa_established_sender);
+    let mut sec_assoc_update_trace: Vec<SecAssocUpdate> = vec![];
 
     // Wait for policy to indicate client connected AND the authenticator to indicate
     // EssSa established.
@@ -142,8 +141,8 @@ async fn handle_tx_event_hooks() {
                     &protection,
                     &mut authenticator,
                     &mut update_sink,
-                    &mut all_auth_updates,
-                    &mut esssa_established_sender_ptr,
+                    &mut sec_assoc_update_trace,
+                    &mut esssa_established_sender,
                 );
             },
             connect_to_network_fut,
@@ -151,13 +150,29 @@ async fn handle_tx_event_hooks() {
         .await;
 
     // The process_auth_update hook for this test collects all of the updates that appear
-    // in an update_sink while connecting to a WPA2 AP.
-    assert_variant!(&all_auth_updates[0], SecAssocUpdate::Status(SecAssocStatus::PmkSaEstablished));
-    assert_variant!(&all_auth_updates[1], SecAssocUpdate::TxEapolKeyFrame { .. });
-    assert_variant!(&all_auth_updates[2], SecAssocUpdate::TxEapolKeyFrame { .. });
-    assert_variant!(&all_auth_updates[3], SecAssocUpdate::Key(Key::Ptk(..)));
-    assert_variant!(&all_auth_updates[4], SecAssocUpdate::Key(Key::Gtk(..)));
-    assert_variant!(&all_auth_updates[5], SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished));
+    // in an update_sink while connecting to a WPA2 AP. If association succeeds, then
+    // the last six updates should be in the order asserted below.
+    let n = sec_assoc_update_trace.len();
+    assert!(
+        n >= 6,
+        "There should be at least 6 updates in a successful association:\n{:#?}",
+        sec_assoc_update_trace
+    );
+
+    assert_variant_at_idx!(
+        sec_assoc_update_trace,
+        n - 6,
+        SecAssocUpdate::Status(SecAssocStatus::PmkSaEstablished)
+    );
+    assert_variant_at_idx!(sec_assoc_update_trace, n - 5, SecAssocUpdate::TxEapolKeyFrame { .. });
+    assert_variant_at_idx!(sec_assoc_update_trace, n - 4, SecAssocUpdate::TxEapolKeyFrame { .. });
+    assert_variant_at_idx!(sec_assoc_update_trace, n - 3, SecAssocUpdate::Key(Key::Ptk(..)));
+    assert_variant_at_idx!(sec_assoc_update_trace, n - 2, SecAssocUpdate::Key(Key::Gtk(..)));
+    assert_variant_at_idx!(
+        &sec_assoc_update_trace,
+        n - 1,
+        SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished)
+    );
 
     helper.stop().await;
 }

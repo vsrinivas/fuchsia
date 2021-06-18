@@ -17,6 +17,7 @@ rustc_test("handle_tx_event_hooks") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:pin-utils",
   ]
 

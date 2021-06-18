@@ -112,26 +112,57 @@ macro_rules! assert_variant {
     };
     // Custom error message.
     ($test:expr, $variant:pat $( | $others:pat)* , $fmt:expr $(, $args:tt)*) => {
-        assert_variant!($test, $variant $( | $others)* => {}, $fmt $(, $args)*);
+        $crate::assert_variant!($test, $variant $( | $others)* => {}, $fmt $(, $args)*);
     };
     // Custom expression and custom error message.
     ($test:expr, $variant:pat $( | $others:pat)* => $e:expr, $fmt:expr $(, $args:tt)*) => {
-        assert_variant!($test, $variant $( | $others)* => { $e }, $fmt $(, $args)*);
+        $crate::assert_variant!($test, $variant $( | $others)* => { $e }, $fmt $(, $args)*);
     };
     // Default error message.
     ($test:expr, $variant:pat $( | $others:pat)*) => {
-        assert_variant!($test, $variant $( | $others)* => {});
+        $crate::assert_variant!($test, $variant $( | $others)* => {});
     };
     // Optional trailing comma after expression.
     ($test:expr, $variant:pat $( | $others:pat)* => $e:expr,) => {
-        assert_variant!($test, $variant $( | $others)* => { $e });
+        $crate::assert_variant!($test, $variant $( | $others)* => { $e });
     };
     // Optional trailing comma.
     ($test:expr, $variant:pat $( | $others:pat)* => $b:block,) => {
-        assert_variant!($test, $variant $( | $others)* => $b);
+        $crate::assert_variant!($test, $variant $( | $others)* => $b);
     };
     ($test:expr, $variant:pat $( | $others:pat)* => $b:expr,) => {
-        assert_variant!($test, $variant $( | $others)* => { $b });
+        $crate::assert_variant!($test, $variant $( | $others)* => { $b });
+    };
+}
+
+/// Asserts the value at a particular index of an expression
+/// evaluating to a type implementing the Index trait. This macro
+/// is effectively a thin wrapper around `assert_variant` that will
+/// pretty-print the entire indexable value if the assertion fails.
+///
+/// This macro is particularly useful when failure to assert a single
+/// value in a Vec requires more context to debug the failure.
+///
+/// # Examples
+///
+/// ```
+/// let v = vec![0, 2];
+/// // Success
+/// assert_variant_at_idx!(v, 0, 0);
+/// // Panics: "unexpected variant at 0 in v:
+/// // [
+/// //   0,
+/// //   2,
+/// // ]"
+/// assert_variant_at_idx!(v, 0, 2);
+/// ```
+#[macro_export]
+macro_rules! assert_variant_at_idx {
+    ($indexable:expr, $idx:expr, $variant:pat $( | $others:pat)*) => {
+        let indexable_name = stringify!($indexable);
+        $crate::assert_variant!(&$indexable[$idx], $variant $(| $others)*,
+                        "unexpected variant at {:?} in {}:\n{:#?}",
+                        $idx, indexable_name, $indexable);
     };
 }
 
@@ -218,5 +249,18 @@ mod tests {
     #[should_panic(expected = "custom error message token1 token2")]
     fn assert_variant_custom_message_with_multiple_fmt_tokens_failure() {
         assert_variant!(Foo::A(8), Foo::B { .. }, "custom error message {} {}", "token1", "token2");
+    }
+
+    #[test]
+    fn assert_variant_at_idx_success() {
+        let v = vec![0, 2];
+        assert_variant_at_idx!(v, 0, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "unexpected variant at 0 in v:\n[\n    0,\n    2,\n]")]
+    fn assert_variant_at_idx_failure() {
+        let v = vec![0, 2];
+        assert_variant_at_idx!(v, 0, 2);
     }
 }
