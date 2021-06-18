@@ -202,6 +202,10 @@ int ConsoleMain(int argc, const char* argv[]) {
       }
       replay.dispatcher()->SessionEnded();
     }
+  } else if (decode_options.input_mode == InputMode::kDump) {
+    fidlcat::Replay replay(decoder_dispatcher.get());
+    replay.DecodeTrace(std::cin);
+    replay.dispatcher()->SessionEnded();
   } else {
     InterceptionWorkflow workflow;
     workflow.Initialize(options.symbol_index_files, options.symbol_paths, options.build_id_dirs,

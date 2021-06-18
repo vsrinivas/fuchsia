@@ -55,6 +55,10 @@
 ##                                     At least one of '--remote-pid', '--remote-name',
 ##                                     '--remote-job-id', --'remote-job-name', 'run' must be
 ##                                     specified.
+##                       --from=dump   The input comes from stdin which is the log output of one
+##                                     or several programs. The lines in the log which dump
+##                                     syscalls are decoded and replaced by the decoded version.
+##                                     All other lines are unchanged.
 ##                       --from=<path> Playback. Used to replay a session previously recorded with
 ##                                     --to=<path> (protobuf format). Path gives the name of the
 ##                                     file to read. If path is '-' then the standard input is used.
@@ -254,6 +258,9 @@ while [[ $# -gt 0 ]]; do
       use_gdb=1
   elif [[ $1 == "--from=device" ]]; then
       arguments+=("$1")
+  elif [[ $1 == "--from=dump" ]]; then
+      arguments+=("$1")
+    launch_agent=0
   elif equal_argument "$1" "--from" "<source>"; then
     arguments+=("$1")
     launch_agent=0

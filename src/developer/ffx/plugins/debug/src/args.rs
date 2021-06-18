@@ -39,6 +39,10 @@ pub struct FidlcatSubCommand {
     /// several processes. At least one of '--remote-pid', '--remote-name', '--remote-job-id',
     /// --'remote-job-name', 'run' must be specified.
     ///
+    /// dump: The input comes from stdin which is the log output of one or several programs. The
+    /// lines in the log which dump syscalls are decoded and replaced by the decoded version.
+    /// All other lines are unchanged.
+    ///
     /// <path>: playback. Used to replay a session previously recorded with --to <path>
     /// (protobuf format). Path gives the name of the file to read. If path is '-' then the standard
     /// input is used.

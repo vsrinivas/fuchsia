@@ -106,6 +106,10 @@ const char* const kFromHelp = R"(  --from=<source>
                     several processes.
                     At least one of '--remote-pid', '--remote-name', '--remote-job-id',
                     '--remote-job-name, 'run' must be specified.
+      --from=dump   The input comes from stdin which is the log output of one or several programs.
+                    The lines in the log which dump syscalls are decoded and replaced by the
+                    decoded version.
+                    All other lines are unchanged.
       --from=<path> The input comes from a previously recorded session (protobuf format). Path gives
                     the name of the file to read. If path is '-' then the standard input is used.)";
 
@@ -487,7 +491,9 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
 
   display_options->dump_messages = options->dump_messages;
 
-  if (!options->from.empty() && (options->from != "device")) {
+  if (!options->from.empty() && (options->from == "dump")) {
+    decode_options->input_mode = InputMode::kDump;
+  } else if (!options->from.empty() && (options->from != "device")) {
     decode_options->input_mode = InputMode::kFile;
   } else {
     if (options->connect && options->unix_connect) {

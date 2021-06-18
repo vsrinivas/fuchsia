@@ -92,10 +92,14 @@ bool DecodedMessage::DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_
     case SyscallFidlType::kOutputRequest:
       is_request_ = true;
       received_ = false;
-      break;
+      direction_ = Direction::kClient;
+      dispatcher->UpdateDirection(process_koid, handle, direction_);
+      return true;
     case SyscallFidlType::kInputResponse:
       received_ = true;
-      break;
+      direction_ = Direction::kClient;
+      dispatcher->UpdateDirection(process_koid, handle, direction_);
+      return true;
   }
   if (direction_ != Direction::kUnknown) {
     if ((is_request_ && !matched_request_) || (!is_request_ && !matched_response_)) {

@@ -1858,6 +1858,19 @@ class SyscallDecoderDispatcher {
     return returned_value;
   }
 
+  Thread* CreateThread(std::string_view process_name, zx_koid_t process_koid, zx_koid_t thread_koid,
+                       fxl::WeakPtr<zxdb::Process> zxdb_process) {
+    Process* process = SearchProcess(process_koid);
+    if (process == nullptr) {
+      process = CreateProcess(process_name, process_koid, std::move(zxdb_process));
+    }
+    Thread* thread = SearchThread(thread_koid);
+    if (thread != nullptr) {
+      return thread;
+    }
+    return CreateThread(thread_koid, process);
+  }
+
   // Ensures that the handle has been added to the process this thread belongs to.
   // If this handle has not been added (this is the first time fidlcat monitors it),
   // the handle is added to the process list of handle using |creation_time| and |startup|.

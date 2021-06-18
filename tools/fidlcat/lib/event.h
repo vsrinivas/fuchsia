@@ -59,6 +59,7 @@ class HandleInfo {
   uint32_t handle() const { return handle_; }
   int64_t creation_time() const { return creation_time_; }
   bool startup() const { return startup_; }
+  void set_startup() { startup_ = true; }
   zx_obj_type_t object_type() const { return object_type_; }
   void set_object_type(zx_obj_type_t object_type) { object_type_ = object_type; }
   zx_rights_t rights() const { return rights_; }
@@ -103,7 +104,7 @@ class HandleInfo {
   Thread* const thread_;
   const uint32_t handle_;
   const int64_t creation_time_;
-  const bool startup_;
+  bool startup_;
   // The object type for the handle.
   zx_obj_type_t object_type_ = ZX_OBJ_TYPE_NONE;
   // The rights for the handle.

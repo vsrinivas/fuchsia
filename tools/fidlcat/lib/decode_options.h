@@ -15,7 +15,7 @@
 #include "src/lib/fxl/macros.h"
 
 enum StackLevel { kNoStack = 0, kPartialStack = 1, kFullStack = 2 };
-enum class InputMode { kDevice, kFile };
+enum class InputMode { kDevice, kFile, kDump };
 enum class OutputMode { kNone, kStandard, kTextProtobuf };
 
 class Regex {

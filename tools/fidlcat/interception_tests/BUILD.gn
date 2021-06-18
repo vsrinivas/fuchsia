@@ -49,6 +49,7 @@ if (is_host) {
       "thread_test.cc",
       "ticks_test.cc",
       "timer_test.cc",
+      "trace_decode_test.cc",
       "vcpu_test.cc",
       "vmar_test.cc",
       "vmo_test.cc",
