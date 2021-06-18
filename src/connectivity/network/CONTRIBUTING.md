@@ -133,7 +133,7 @@ is being done and the citation allows a reader to get more context.
 As with code comments, consider the future reader of the error messages emitted
 by your code. Ensure that your error messages are actionable. For example, avoid
 test failure messages such as "unexpected value" - always include the unexpected
-value; another example is "expected <variable> to be empty, was non-empty" -
+value; another example is "expected `<variable>` to be empty, was non-empty" -
 this message would be much more useful if it included the unexpected elements.
 
 Always consider: what will the reader do with this message?
