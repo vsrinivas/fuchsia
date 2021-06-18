@@ -24,7 +24,11 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     pty::{key_util::CodePoint, key_util::HidUsage, Pty},
     rive_rs as rive,
-    std::{collections::BTreeMap, io::Write, path::PathBuf},
+    std::{
+        collections::{BTreeMap, BTreeSet},
+        io::Write,
+        path::PathBuf,
+    },
     term_model::{
         event::{Event, EventListener},
         term::SizeInfo,
@@ -49,6 +53,19 @@ fn get_input_sequence_for_key_event(event: &input::keyboard::Event) -> Option<St
         }
         _ => None,
     }
+}
+
+/// Returns a scale factor given a set of DPI buckets and an actual DPI value.
+/// First bucket gets scale factor 1.0, second gets 2.0, third gets 3.0, etc.
+fn get_scale_factor(dpi: &BTreeSet<u32>, actual_dpi: f32) -> f32 {
+    let mut scale_factor = 1.0;
+    for value in dpi.iter() {
+        if *value as f32 > actual_dpi {
+            break;
+        }
+        scale_factor += 1.0;
+    }
+    scale_factor
 }
 
 pub struct EventProxy {
@@ -108,6 +125,7 @@ pub struct VirtualConsoleViewAssistant {
     color_scheme: ColorScheme,
     round_scene_corners: bool,
     font_size: f32,
+    dpi: BTreeSet<u32>,
     scene_details: Option<SceneDetails>,
     terminals: BTreeMap<u32, (Terminal<EventProxy>, bool)>,
     font: FontFace,
@@ -128,6 +146,7 @@ impl VirtualConsoleViewAssistant {
         color_scheme: ColorScheme,
         round_scene_corners: bool,
         font_size: f32,
+        dpi: BTreeSet<u32>,
         animation: bool,
     ) -> Result<ViewAssistantPtr, Error> {
         let scene_details = None;
@@ -160,6 +179,7 @@ impl VirtualConsoleViewAssistant {
             color_scheme,
             round_scene_corners,
             font_size,
+            dpi,
             scene_details,
             terminals,
             font,
@@ -174,13 +194,14 @@ impl VirtualConsoleViewAssistant {
     #[cfg(test)]
     fn new_for_test(animation: bool) -> Result<ViewAssistantPtr, Error> {
         let app_context = AppContext::new_for_testing_purposes_only();
-        Self::new(&app_context, 1, ColorScheme::default(), false, 15.0, animation)
+        let dpi: BTreeSet<u32> = [160, 320, 480, 640].iter().cloned().collect();
+        Self::new(&app_context, 1, ColorScheme::default(), false, 15.0, dpi, animation)
     }
 
     // Resize all terminals for 'new_size'.
-    fn resize_terminals(&mut self, new_size: &Size) {
+    fn resize_terminals(&mut self, new_size: &Size, new_font_size: f32) {
         let floored_size = new_size.floor();
-        let cell_size = font_to_cell_size(self.font_size, self.font_size * CELL_PADDING_FACTOR);
+        let cell_size = font_to_cell_size(new_font_size, new_font_size * CELL_PADDING_FACTOR);
         let size = Size::new(floored_size.width, floored_size.height - cell_size.height);
         let size_info = SizeInfo {
             width: size.width,
@@ -394,10 +415,21 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 builder.facet(Box::new(RiveFacet::new(context.size, animation.artboard.clone())));
                 None
             } else {
-                let cell_size = font_to_cell_size(self.font_size, self.font_size * CELL_PADDING_FACTOR);
+                let scale_factor = if let Some(fb) = context.frame_buffer.as_ref() {
+                    const MM_PER_INCH: f32 = 25.4;
+
+                    let config = fb.borrow_mut().get_config();
+                    let dpi = config.height as f32 * MM_PER_INCH / config.vertical_size_mm as f32;
+
+                    get_scale_factor(&self.dpi, dpi)
+                } else {
+                    1.0
+                };
+                let font_size = self.font_size * scale_factor;
+                let cell_size = font_to_cell_size(font_size, font_size * CELL_PADDING_FACTOR);
                 let status_size = Size::new(context.size.width, cell_size.height);
 
-                self.resize_terminals(&context.size);
+                self.resize_terminals(&context.size, font_size);
 
                 let active_term =
                     self.terminals.get(&self.active_terminal_id).map(|(t, _)| t.clone_term());
@@ -415,12 +447,12 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 // Add the text grid to the scene.
                 let textgrid = builder.facet(Box::new(TextGridFacet::new(
                     self.font.clone(),
-                    self.font_size,
+                    font_size,
                     self.color_scheme.front,
                     active_term,
                     status,
                     tab_width,
-                    self.font_size * CELL_PADDING_FACTOR,
+                    font_size * CELL_PADDING_FACTOR,
                 )));
 
                 // Add status bar background to the scene if needed.

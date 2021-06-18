@@ -21,6 +21,7 @@ pub struct VirtualConsoleArgs {
     pub color_scheme: ColorScheme,
     pub display_rotation: DisplayRotation,
     pub font_size: f32,
+    pub dpi: Vec<u32>,
 }
 
 impl VirtualConsoleArgs {
@@ -40,11 +41,16 @@ impl VirtualConsoleArgs {
             animation = values[2];
         }
 
-        let string_keys =
-            vec!["virtcon.colorscheme", "virtcon.display_rotation", "virtcon.font_size"];
+        let string_keys = vec![
+            "virtcon.colorscheme",
+            "virtcon.display_rotation",
+            "virtcon.font_size",
+            "virtcon.dpi",
+        ];
         let mut color_scheme = ColorScheme::default();
         let mut display_rotation = DisplayRotation::default();
-        let mut font_size = 14.0;
+        let mut font_size = 15.0;
+        let mut dpi = vec![];
         if let Ok(values) = boot_args.get_strings(&mut string_keys.into_iter()).await {
             if let Some(value) = values[0].as_ref() {
                 color_scheme = ColorScheme::from_str(value)?;
@@ -55,6 +61,11 @@ impl VirtualConsoleArgs {
             if let Some(value) = values[2].as_ref() {
                 font_size = value.parse::<f32>()?.clamp(MIN_FONT_SIZE, MAX_FONT_SIZE);
             }
+            if let Some(value) = values[3].as_ref() {
+                let result: Result<Vec<_>, _> =
+                    value.split(",").map(|x| x.parse::<u32>()).collect();
+                dpi = result?;
+            }
         }
 
         Ok(VirtualConsoleArgs {
@@ -64,6 +75,7 @@ impl VirtualConsoleArgs {
             color_scheme,
             display_rotation,
             font_size,
+            dpi,
         })
     }
 }
@@ -236,6 +248,19 @@ mod tests {
         let proxy = serve_bootargs(vars)?;
         let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
         assert_eq!(args.font_size, MAX_FONT_SIZE);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn check_dpi() -> Result<(), Error> {
+        let vars: HashMap<String, String> = [("virtcon.dpi", "160,320,480,640")]
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect();
+        let proxy = serve_bootargs(vars)?;
+        let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
+        assert_eq!(args.dpi, vec![160, 320, 480, 640]);
 
         Ok(())
     }

@@ -89,6 +89,7 @@ impl AppAssistant for VirtualConsoleAppAssistant {
             self.args.color_scheme,
             self.args.rounded_corners,
             self.args.font_size,
+            self.args.dpi.iter().cloned().collect(),
             self.args.animation,
         )?;
         self.view_key = view_key;
