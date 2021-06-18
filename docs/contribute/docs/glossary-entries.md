@@ -102,7 +102,7 @@ To add a glossary definition, you need to edit the
           <td><code>related_guides</code></td><td><b>Optional</b>
             <p>
               Create a list of related guides for the term. This should
-              only be links to guides located in `//docs/development/`. You must
+              only be links to guides located in <code>//docs/development/</code>. You must
               use HTML syntax.
             </p>
             <ul>
