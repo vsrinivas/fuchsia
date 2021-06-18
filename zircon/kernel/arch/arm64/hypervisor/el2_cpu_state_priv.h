@@ -35,12 +35,17 @@ class El2Stack {
 };
 
 // Maintains the EL2 state for each CPU.
-class El2CpuState : public hypervisor::IdAllocator<uint8_t, 64> {
+class El2CpuState {
  public:
   static zx_status_t Create(ktl::unique_ptr<El2CpuState>* out);
   ~El2CpuState();
 
+  // Allocate/free a VMID.
+  zx_status_t AllocVmid(uint8_t* vmid);
+  zx_status_t FreeVmid(uint8_t vmid);
+
  private:
+  hypervisor::IdAllocator<uint8_t, 64> id_allocator_;
   cpu_mask_t cpu_mask_ = 0;
   El2TranslationTable table_;
   fbl::Array<El2Stack> stacks_;

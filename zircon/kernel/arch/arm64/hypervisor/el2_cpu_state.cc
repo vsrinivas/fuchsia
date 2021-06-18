@@ -111,7 +111,7 @@ zx_status_t El2CpuState::Create(ktl::unique_ptr<El2CpuState>* out) {
   cpu_state->stacks_ = ktl::move(el2_stacks);
 
   // Setup EL2 for all online CPUs.
-  cpu_state->cpu_mask_ = percpu_exec(OnTask, cpu_state.get());
+  cpu_state->cpu_mask_ = hypervisor::percpu_exec(OnTask, cpu_state.get());
   if (cpu_state->cpu_mask_ != mp_get_online_mask()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -122,6 +122,14 @@ zx_status_t El2CpuState::Create(ktl::unique_ptr<El2CpuState>* out) {
 
 El2CpuState::~El2CpuState() { mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask_, el2_off_task, nullptr); }
 
+zx_status_t El2CpuState::AllocVmid(uint8_t* vmid) {
+  return id_allocator_.AllocId(vmid);
+}
+
+zx_status_t El2CpuState::FreeVmid(uint8_t vmid) {
+  return id_allocator_.FreeId(vmid);
+}
+
 zx_status_t alloc_vmid(uint8_t* vmid) {
   Guard<Mutex> guard(GuestMutex::Get());
   if (num_guests == 0) {
@@ -131,12 +139,12 @@ zx_status_t alloc_vmid(uint8_t* vmid) {
     }
   }
   num_guests++;
-  return el2_cpu_state->AllocId(vmid);
+  return el2_cpu_state->AllocVmid(vmid);
 }
 
 zx_status_t free_vmid(uint8_t vmid) {
   Guard<Mutex> guard(GuestMutex::Get());
-  zx_status_t status = el2_cpu_state->FreeId(vmid);
+  zx_status_t status = el2_cpu_state->FreeVmid(vmid);
   if (status != ZX_OK) {
     return status;
   }
