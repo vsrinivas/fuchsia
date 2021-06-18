@@ -88,7 +88,8 @@ use the board configuration `x64` when running `fx set`. For example `fx set cor
 
 Before installing Fuchsia to a device you need to prepare a bootable USB drive. On a NUC, Fuchsia
 boots via a chain of bootloaders. The instructions below will create a drive containing the first
-two steps in the chain: [Gigaboot](/src/firmware/gigaboot) and [Zedboot](/docs/glossary/README.md#zedboot).
+two steps in the chain: [Gigaboot](/src/firmware/gigaboot) and
+[Zedboot](/docs/glossary/README.md#zedboot).
 Gigaboot is a UEFI boot shim with some limited functionality including
 [netbooting](/docs/development/kernel/getting_started.md#network_booting), and flashing. By default,
 Gigaboot will chain into Zedboot, which is a bootloader built on top of Zircon and either boots into
