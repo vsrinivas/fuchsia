@@ -87,6 +87,16 @@
             },
         },
         {
+            instance_id: "eb345fb7dcaa4260ee0c65bb73ef0ec5341b15a4f603f358d6631c4be6bf7080",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/forensics#meta/feedback.cmx",
+                realm_path: [
+                    "app",
+                    "sys",
+                ],
+            },
+        },
+        {
             instance_id: "796fc46a1898539f901c909c1ccf61c98660692fa45dabe474afaec84be6d720",
             appmgr_moniker: {
                 url: "fuchsia-pkg://fuchsia.com/forensics#meta/feedback_data.cmx",
