@@ -26,7 +26,6 @@ group("compile") {
 tests = [
   "dhcp",
   "dns",
-  "filter",
   "ipv4",
   "ipv6",
   "management",
@@ -91,6 +90,7 @@ fuchsia_test_package("netstack-integration-tests") {
 
 tests_v2 = [
   "fidl",
+  "filter",
   "inspect",
   "routes",
 ]

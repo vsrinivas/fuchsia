@@ -12,8 +12,8 @@ use fidl_fuchsia_net_filter as fnetfilter;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use futures::{io::AsyncReadExt as _, io::AsyncWriteExt as _, FutureExt as _, TryFutureExt as _};
 use net_declare::fidl_subnet;
-use netemul::{EnvironmentTcpListener as _, EnvironmentTcpStream as _, EnvironmentUdpSocket as _};
-use netstack_testing_common::environments::{Netstack2, TestSandboxExt as _};
+use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _};
+use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
 use netstack_testing_common::{
     Result, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
@@ -42,10 +42,10 @@ struct Test {
 }
 
 async fn run_udp_socket_test(
-    server: &netemul::TestEnvironment<'_>,
+    server: &netemul::TestRealm<'_>,
     server_addr: fidl_fuchsia_net::IpAddress,
     server_port: u16,
-    client: &netemul::TestEnvironment<'_>,
+    client: &netemul::TestRealm<'_>,
     client_addr: fidl_fuchsia_net::IpAddress,
     client_port: u16,
     expected_traffic: ExpectedTraffic,
@@ -58,13 +58,13 @@ async fn run_udp_socket_test(
         fidl_fuchsia_net_ext::IpAddress::from(server_addr);
     let server_addr = std::net::SocketAddr::new(server_addr, server_port);
 
-    let client_sock = fuchsia_async::net::UdpSocket::bind_in_env(client, client_addr)
+    let client_sock = fuchsia_async::net::UdpSocket::bind_in_realm(client, client_addr)
         .await
         .context("failed to create client socket")?;
     let client_addr =
         client_sock.local_addr().context("failed to get local address from client socket")?;
 
-    let server_sock = fuchsia_async::net::UdpSocket::bind_in_env(server, server_addr)
+    let server_sock = fuchsia_async::net::UdpSocket::bind_in_realm(server, server_addr)
         .await
         .context("failed to create server socket")?;
 
@@ -135,10 +135,10 @@ async fn run_udp_socket_test(
 }
 
 async fn run_tcp_socket_test(
-    server: &netemul::TestEnvironment<'_>,
+    server: &netemul::TestRealm<'_>,
     server_addr: fidl_fuchsia_net::IpAddress,
     server_port: u16,
-    client: &netemul::TestEnvironment<'_>,
+    client: &netemul::TestRealm<'_>,
     client_addr: fidl_fuchsia_net::IpAddress,
     client_port: u16,
     expected_traffic: ExpectedTraffic,
@@ -152,7 +152,7 @@ async fn run_tcp_socket_test(
     let server_addr = std::net::SocketAddr::new(server_addr, server_port);
 
     let listener =
-        fuchsia_async::net::TcpListener::listen_in_env_with(server, server_addr, |sock| {
+        fuchsia_async::net::TcpListener::listen_in_realm_with(server, server_addr, |sock| {
             sock.set_reuse_port(true).context("failed to set reuse port")
         })
         .await
@@ -205,7 +205,7 @@ async fn run_tcp_socket_test(
     let client_fut = async move {
         match expected_traffic {
             ExpectedTraffic::ClientToServerOnly => {
-                match fuchsia_async::net::TcpStream::connect_in_env(client, server_addr)
+                match fuchsia_async::net::TcpStream::connect_in_realm(client, server_addr)
                     .map_ok(Some)
                     .on_timeout(ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT.after_now(), || Ok(None))
                     .await
@@ -218,15 +218,16 @@ async fn run_tcp_socket_test(
                 }
             }
             ExpectedTraffic::TwoWay => {
-                let mut stream = fuchsia_async::net::TcpStream::connect_in_env(client, server_addr)
-                    .map(|r| r.context("connect_in_env failed"))
-                    .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
-                        Err(anyhow::anyhow!(
-                            "timed out waiting for a connection after {:?}",
-                            ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT
-                        ))
-                    })
-                    .await?;
+                let mut stream =
+                    fuchsia_async::net::TcpStream::connect_in_realm(client, server_addr)
+                        .map(|r| r.context("connect_in_realm failed"))
+                        .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
+                            Err(anyhow::anyhow!(
+                                "timed out waiting for a connection after {:?}",
+                                ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT
+                            ))
+                        })
+                        .await?;
 
                 let write_count = stream
                     .write(CLIENT_PAYLOAD.as_bytes())
@@ -256,10 +257,10 @@ async fn run_tcp_socket_test(
 
 async fn run_socket_test(
     proto: fnetfilter::SocketProtocol,
-    server: &netemul::TestEnvironment<'_>,
+    server: &netemul::TestRealm<'_>,
     server_addr: fidl_fuchsia_net::IpAddress,
     server_port: u16,
-    client: &netemul::TestEnvironment<'_>,
+    client: &netemul::TestRealm<'_>,
     client_addr: fidl_fuchsia_net::IpAddress,
     client_port: u16,
     expected_traffic: ExpectedTraffic,
@@ -298,8 +299,8 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
     let net = sandbox.create_network("net").await.context("failed to create network")?;
 
     let client = sandbox
-        .create_netstack_environment::<Netstack2, _>(format!("{}_client", name))
-        .context("failed to create client environment")?;
+        .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
+        .context("failed to create client realm")?;
     let client_ep = client
         .join_network::<E, _>(
             &net,
@@ -313,8 +314,8 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
         .context("client failed to connect to filter service")?;
 
     let server = sandbox
-        .create_netstack_environment::<Netstack2, _>(format!("{}_server", name))
-        .context("failed to create server environment")?;
+        .create_netstack_realm::<Netstack2, _>(format!("{}_server", name))
+        .context("failed to create server realm")?;
     let server_ep = server
         .join_network::<E, _>(
             &net,
