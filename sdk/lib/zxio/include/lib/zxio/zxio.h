@@ -269,6 +269,10 @@ zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo, size_t* out_siz
 // the vmo as queried from the kernel would be rounded up to the page boundary.
 zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
 
+// Queries the number of bytes available to read from this object without
+// blocking.
+zx_status_t zxio_get_read_buffer_available(zxio_t* io, size_t* out_available);
+
 // Directory
 
 // Open a new file relative to the given |directory|.

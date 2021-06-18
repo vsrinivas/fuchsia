@@ -68,7 +68,6 @@ struct pipe : public zxio {
   pipe() = default;
   ~pipe() override = default;
 
-  static Errno posix_ioctl_inner(const zx::socket& socket, int request, va_list va);
   static zx_status_t shutdown_inner(const zx::socket& socket, int how);
 
  private:

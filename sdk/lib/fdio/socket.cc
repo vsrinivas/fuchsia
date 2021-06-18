@@ -1937,9 +1937,8 @@ struct stream_socket : public pipe {
   }
 
   Errno posix_ioctl(int req, va_list va) override {
-    return zxsio_posix_ioctl(req, va, [this](int req, va_list va) {
-      return posix_ioctl_inner(zxio_stream_socket().pipe.socket, req, va);
-    });
+    return zxsio_posix_ioctl(req, va,
+                             [this](int req, va_list va) { return pipe::posix_ioctl(req, va); });
   }
 
   zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {

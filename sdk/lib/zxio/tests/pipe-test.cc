@@ -61,3 +61,34 @@ TEST(Pipe, Basic) {
 
   ASSERT_OK(zxio_close(io));
 }
+
+TEST(Pipe, GetReadBufferAvailable) {
+  zx::socket socket0, socket1;
+  ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
+
+  zxio_storage_t storage;
+  ASSERT_OK(zxio_create(socket0.release(), &storage));
+  zxio_t* io = &storage.io;
+
+  size_t available = 0;
+  ASSERT_OK(zxio_get_read_buffer_available(io, &available));
+  EXPECT_EQ(0u, available);
+
+  const uint32_t data = 0x41424344;
+
+  size_t actual = 0u;
+  ASSERT_OK(socket1.write(0u, &data, sizeof(data), &actual));
+  EXPECT_EQ(actual, sizeof(data));
+
+  ASSERT_OK(zxio_get_read_buffer_available(io, &available));
+  EXPECT_EQ(sizeof(data), available);
+
+  uint32_t buffer = 0u;
+  ASSERT_OK(zxio_read(io, &buffer, sizeof(buffer), 0u, &actual));
+  EXPECT_EQ(actual, sizeof(buffer));
+
+  ASSERT_OK(zxio_get_read_buffer_available(io, &available));
+  EXPECT_EQ(0u, available);
+
+  ASSERT_OK(zxio_close(io));
+}

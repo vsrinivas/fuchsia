@@ -49,6 +49,7 @@ typedef struct zxio_ops {
   zx_status_t (*flags_get)(zxio_t* io, uint32_t* out_flags);
   zx_status_t (*flags_set)(zxio_t* io, uint32_t flags);
   zx_status_t (*vmo_get)(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo, size_t* out_size);
+  zx_status_t (*get_read_buffer_available)(zxio_t* io, size_t* out_available);
   zx_status_t (*open_async)(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
                             size_t path_len, zx_handle_t request);
   zx_status_t (*add_inotify_filter)(zxio_t* io, const char* path, size_t path_len, uint32_t mask,

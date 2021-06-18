@@ -97,6 +97,21 @@ static constexpr zxio_ops_t zxio_pipe_ops = []() {
     *out_zxio_signals = zxio_signals;
   };
 
+  ops.get_read_buffer_available = [](zxio_t* io, size_t* out_available) {
+    if (out_available == nullptr) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    zx_info_socket_t info;
+    memset(&info, 0, sizeof(info));
+    zx_status_t status =
+        zxio_get_pipe(io).socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+    if (status != ZX_OK) {
+      return status;
+    }
+    *out_available = info.rx_buf_available;
+    return ZX_OK;
+  };
+
   return ops;
 }();
 

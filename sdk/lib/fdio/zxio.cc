@@ -391,19 +391,13 @@ zx::status<std::pair<fdio_ptr, fdio_ptr>> pipe::create_pair(uint32_t options) {
 }
 
 Errno pipe::posix_ioctl(int request, va_list va) {
-  return posix_ioctl_inner(zxio_pipe().socket, request, va);
-}
-
-Errno pipe::posix_ioctl_inner(const zx::socket& socket, int request, va_list va) {
   switch (request) {
     case FIONREAD: {
-      zx_info_socket_t info;
-      memset(&info, 0, sizeof(info));
-      zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+      size_t available = 0u;
+      zx_status_t status = zxio_get_read_buffer_available(&zxio_storage().io, &available);
       if (status != ZX_OK) {
-        return Errno(fdio_status_to_errno(status));
+        return Errno(ENOTTY);
       }
-      size_t available = info.rx_buf_available;
       if (available > INT_MAX) {
         available = INT_MAX;
       }
