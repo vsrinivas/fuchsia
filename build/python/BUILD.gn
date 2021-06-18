@@ -2,54 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/copy_tree.gni")
-import("//build/python/python.gni")
 import("//build/testing/host_test_data.gni")
 
-# Make the host python prebuilt available in the out dir so it
-# can be used in python_host_test without making multiple copies.
-
-copy_tree("copy_lib") {
-  src_dir = "//prebuilt/third_party/python3/${host_platform}/lib"
-  dest_dir = "${python_out_dir}/lib"
-  ignore_patterns = [
-    # The .pyc files may be produced while this action is running,
-    # so we don't want to try to copy them while the're being written.
-    "__pycache__",
-    "*.pyc.*",
-    "*.pyc",
-  ]
-  inputs = [
-    # This file should change when the package version changes.
-    "//prebuilt/third_party/python3/${host_platform}/include/python${python_version}/pyconfig.h",
-  ]
-  visibility = [ ":*" ]
-}
-
-host_test_data("lib") {
-  sources = [ "${python_out_dir}/lib" ]
-  deps = [ ":copy_lib" ]
-  visibility = [ ":*" ]
-}
-
-host_test_data("exe") {
-  sources = [ python_exe_src ]
-  outputs = [ python_exe_path ]
-  visibility = [ ":*" ]
-}
-
-group("interpreter") {
-  testonly = true
-  deps = [
-    ":exe",
-    ":interpreter-mig",
-    ":lib",
-  ]
-}
-
-# TODO(jayzhuang): Remove all targets above and rename this to "interpreter"
-# when usages of python_exe_path out of fuchsia.git move to python_exe_src.
-host_test_data("interpreter-mig") {
+host_test_data("interpreter") {
   sources = [
     "//prebuilt/third_party/python3/${host_platform}/lib",
     python_exe_src,

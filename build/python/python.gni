@@ -5,9 +5,3 @@
 import("//third_party/jinja2/py_srcs.gni")
 import("//third_party/markupsafe/py_srcs.gni")
 import("//third_party/pyyaml/py_srcs.gni")
-
-# TODO(jayzhuang): Remove the variables below after they are no longer
-# referenced out of fuchsia.git.
-# Variables shared between BUILD.gn and python_host_test.gni.
-python_out_dir = "${root_out_dir}/python${python_version}"
-python_exe_path = "${python_out_dir}/bin/python${python_version}"
