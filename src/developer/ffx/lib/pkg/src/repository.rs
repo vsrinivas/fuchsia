@@ -36,7 +36,7 @@ mod server;
 pub use file_system::FileSystemRepository;
 pub use http_repository::package_download;
 pub use manager::{RepositoryManager, RepositorySpec};
-pub use server::{RepositoryServer, RepositoryServerBuilder};
+pub use server::{RepositoryServer, RepositoryServerBuilder, LISTEN_PORT};
 
 /// A unique ID which is given to every repository.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -252,8 +252,8 @@ impl Repository {
         Ok(bytes)
     }
 
-    pub async fn get_config(&self, mirror_url: &str) -> Result<RepositoryConfig, Error> {
-        Ok(RepositoryConfig {
+    pub fn get_config(&self, mirror_url: &str) -> RepositoryConfig {
+        RepositoryConfig {
             repo_url: Some(format!("fuchsia-pkg://{}", self.name)),
             root_keys: Some(self.metadata.root_keys.clone()),
             root_version: Some(self.metadata.root_version),
@@ -261,7 +261,7 @@ impl Repository {
                 mirror_url: Some(format!("http://{}", mirror_url)),
                 subscribe: Some(self.backend.supports_watch()),
             }]),
-        })
+        }
     }
 
     async fn get_metadata(
@@ -359,6 +359,6 @@ mod test {
             }]),
         };
 
-        assert_eq!(repo.get_config(server_url).await.unwrap(), expected);
+        assert_eq!(repo.get_config(server_url), expected);
     }
 }

@@ -32,6 +32,10 @@ use {
     },
 };
 
+// FIXME(http://fxbug.dev/77015): ffx doesn't have the ability to dynamically create and tear down
+// the ssh tunnel, so we need to hardcode the port.
+pub const LISTEN_PORT: u16 = 8085;
+
 // FIXME: This value was chosen basically at random.
 const AUTO_BUFFER_SIZE: usize = 10;
 
@@ -194,13 +198,7 @@ async fn handle_request(
 
     let resource = match resource_path {
         "repo.json" => {
-            let config = match repo.get_config(&local_addr.to_string()).await {
-                Ok(c) => c,
-                Err(e) => {
-                    error!("failed to generate config: {:?}", e);
-                    return status_response(StatusCode::INTERNAL_SERVER_ERROR);
-                }
-            };
+            let config = repo.get_config(&local_addr.to_string());
             match config.try_into() {
                 Ok(c) => c,
                 Err(e) => {

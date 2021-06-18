@@ -5,6 +5,7 @@
 use {
     argh::FromArgs,
     ffx_core::ffx_command,
+    pkg::repository::LISTEN_PORT,
     std::{
         net::{Ipv4Addr, SocketAddr},
         str::FromStr as _,
@@ -21,7 +22,7 @@ pub struct ServeCommand {
 }
 
 fn default_listen_addr() -> SocketAddr {
-    (Ipv4Addr::LOCALHOST, 8085).into()
+    (Ipv4Addr::LOCALHOST, LISTEN_PORT).into()
 }
 
 fn parse_listen_addr(addr: &str) -> Result<SocketAddr, String> {

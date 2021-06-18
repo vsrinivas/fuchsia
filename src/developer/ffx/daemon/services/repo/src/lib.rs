@@ -14,6 +14,7 @@ use {
     fuchsia_async::{self as fasync, futures::StreamExt as _},
     pkg::repository::{
         FileSystemRepository, Repository, RepositoryManager, RepositoryServer, RepositorySpec,
+        LISTEN_PORT,
     },
     serde_json,
     services::prelude::*,
@@ -73,61 +74,55 @@ impl Repo {
         &self,
         cx: &Context,
         target_info: bridge::RepositoryTarget,
-        responder: bridge::RepositoriesRegisterTargetResponder,
-    ) -> Result<()> {
-        let repo_opt = if let Some(repo_name) = target_info.repo_name {
-            self.manager.get(&repo_name)
-        } else {
-            responder.send(&mut Err(bridge::RepositoryError::MissingRepositoryName))?;
-            return Ok(());
-        };
+    ) -> std::result::Result<(), bridge::RepositoryError> {
+        let repo_name = target_info.repo_name.as_ref().ok_or_else(|| {
+            log::warn!("Registering repository target is missing a repository name");
+            bridge::RepositoryError::MissingRepositoryName
+        })?;
 
-        let repo = if let Some(repo) = repo_opt {
-            repo
-        } else {
-            responder.send(&mut Err(bridge::RepositoryError::NoMatchingRepository))?;
-            return Ok(());
-        };
+        log::info!(
+            "Registering repository {:?} for target {:?}",
+            repo_name,
+            target_info.target_identifier
+        );
 
-        let proxy = match cx
+        let repo = self
+            .manager
+            .get(&repo_name)
+            .ok_or_else(|| bridge::RepositoryError::NoMatchingRepository)?;
+
+        let proxy = cx
             .open_target_proxy::<RepositoryManagerMarker>(
                 target_info.target_identifier.clone(),
                 REPOSITORY_MANAGER_SELECTOR,
             )
             .await
-        {
-            Ok(p) => p,
-            Err(e) => {
+            .map_err(|err| {
                 log::warn!(
-                    "failed to open target proxy with target name '{:?}'. Error was: {}",
+                    "failed to open target proxy with target name {:?}: {}",
                     target_info.target_identifier,
-                    e
+                    err
                 );
-                responder.send(&mut Err(bridge::RepositoryError::TargetCommunicationFailure))?;
-                return Ok(());
-            }
-        };
+                bridge::RepositoryError::TargetCommunicationFailure
+            })?;
 
         // TODO(fxbug.dev/77015): parameterize the mirror_url value here once we are dynamically assigning ports.
-        let config = repo.get_config(&format!("localhost:8084/{}", repo.name())).await?;
+        let config = repo.get_config(&format!("localhost:{}/{}", LISTEN_PORT, repo.name()));
+
         match proxy.add(config.into()).await {
-            Ok(result) => {
-                if let Err(s) = result {
-                    log::warn!("failed to add config. Status was: {}", s);
-                    responder.send(&mut Err(bridge::RepositoryError::RepositoryManagerError))?;
-                    return Ok(());
-                }
+            Ok(Ok(())) => {}
+            Ok(Err(err)) => {
+                log::warn!("failed to add config: {}", err);
+                return Err(bridge::RepositoryError::RepositoryManagerError);
             }
-            Err(e) => {
-                log::warn!("failed to add config. Error was: {}", e);
-                responder.send(&mut Err(bridge::RepositoryError::TargetCommunicationFailure))?;
-                return Ok(());
+            Err(err) => {
+                log::warn!("failed to add config: {}", err);
+                return Err(bridge::RepositoryError::TargetCommunicationFailure);
             }
         }
 
         let aliases = target_info.aliases.unwrap_or(vec![]);
         if aliases.is_empty() {
-            responder.send(&mut Ok(()))?;
             return Ok(());
         }
 
@@ -141,17 +136,22 @@ impl Repo {
             Ok(p) => p,
             Err(e) => {
                 log::warn!(
-                            "failed to open Rewrite Engine target proxy with target name '{:?}'. Error was: {}",
-                            target_info.target_identifier,
-                            e
-                        );
-                responder.send(&mut Err(bridge::RepositoryError::TargetCommunicationFailure))?;
-                return Ok(());
+                    "failed to open Rewrite Engine target proxy with target name {:?}: {}",
+                    target_info.target_identifier,
+                    e
+                );
+                return Err(bridge::RepositoryError::TargetCommunicationFailure);
             }
         };
 
-        let (transaction_proxy, server_end) = create_proxy()?;
-        rewrite_proxy.start_edit_transaction(server_end)?;
+        let (transaction_proxy, server_end) = create_proxy().map_err(|err| {
+            log::warn!("failed to create Rewrite transaction: {}", err);
+            bridge::RepositoryError::RewriteEngineError
+        })?;
+        rewrite_proxy.start_edit_transaction(server_end).map_err(|err| {
+            log::warn!("failed to start edit transaction: {}", err);
+            bridge::RepositoryError::RewriteEngineError
+        })?;
 
         for alias in aliases.iter() {
             let rule = LiteralRule {
@@ -163,33 +163,27 @@ impl Repo {
             match transaction_proxy.add(&mut Rule::Literal(rule)).await {
                 Err(e) => {
                     log::warn!("failed to add rewrite rule. Error was: {}", e);
-                    responder.send(&mut Err(bridge::RepositoryError::RewriteEngineError))?;
-                    return Ok(());
+                    return Err(bridge::RepositoryError::RewriteEngineError);
                 }
                 Ok(Err(e)) => {
                     log::warn!("Adding rewrite rule returned failure. Error was: {}", e);
-                    responder.send(&mut Err(bridge::RepositoryError::RewriteEngineError))?;
-                    return Ok(());
+                    return Err(bridge::RepositoryError::RewriteEngineError);
                 }
                 Ok(_) => {}
             }
         }
+
         match transaction_proxy.commit().await {
-            Err(e) => {
-                log::warn!("failed to commit rewrite rule. Error was: {}", e);
-                responder.send(&mut Err(bridge::RepositoryError::RewriteEngineError))?;
-                return Ok(());
-            }
+            Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => {
                 log::warn!("Committing rewrite rule returned failure. Error was: {}", e);
-                responder.send(&mut Err(bridge::RepositoryError::RewriteEngineError))?;
-                return Ok(());
+                Err(bridge::RepositoryError::RewriteEngineError)
             }
-            Ok(_) => {}
+            Err(e) => {
+                log::warn!("failed to commit rewrite rule. Error was: {}", e);
+                Err(bridge::RepositoryError::RewriteEngineError)
+            }
         }
-
-        responder.send(&mut Ok(()))?;
-        Ok(())
     }
 }
 
@@ -293,7 +287,8 @@ impl FidlService for Repo {
                 Ok(())
             }
             bridge::RepositoriesRequest::RegisterTarget { target_info, responder } => {
-                self.register_target(cx, target_info, responder).await
+                responder.send(&mut self.register_target(cx, target_info).await)?;
+                Ok(())
             }
             bridge::RepositoriesRequest::List { iterator, .. } => {
                 let mut stream = iterator.into_stream()?;
@@ -411,7 +406,10 @@ mod tests {
                         RepositoryConfig {
                             repo_url: Some(format!("fuchsia-pkg://{}", REPO_NAME)),
                             mirrors: Some(vec![MirrorConfig {
-                                mirror_url: Some(format!("http://localhost:8084/{}", REPO_NAME)),
+                                mirror_url: Some(format!(
+                                    "http://localhost:{}/{}",
+                                    LISTEN_PORT, REPO_NAME
+                                )),
                                 subscribe: Some(true),
                                 ..MirrorConfig::EMPTY
                             }]),
@@ -446,7 +444,10 @@ mod tests {
                         RepositoryConfig {
                             repo_url: Some(format!("fuchsia-pkg://{}", REPO_NAME)),
                             mirrors: Some(vec![MirrorConfig {
-                                mirror_url: Some(format!("http://localhost:8084/{}", REPO_NAME)),
+                                mirror_url: Some(format!(
+                                    "http://localhost:{}/{}",
+                                    LISTEN_PORT, REPO_NAME
+                                )),
                                 subscribe: Some(true),
                                 ..MirrorConfig::EMPTY
                             }]),
