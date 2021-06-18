@@ -6,6 +6,12 @@
         "//sdk/lib/diagnostics/syslog/client.shard.cml",
         "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
     ],
+    children: [
+        {
+            name: "network-tun",
+            url: "#meta/network-tun.cm",
+        },
+    ],
     collections: [
         {
             name: "netemul",
@@ -15,11 +21,21 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.process.Launcher",
-            ],
+            protocol: [ "fuchsia.process.Launcher" ],
             from: "parent",
+            to: "#netemul",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#netemul",
+                "#network-tun",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.net.tun.Control" ],
+            from: "#network-tun",
             to: "#netemul",
         },
     ],

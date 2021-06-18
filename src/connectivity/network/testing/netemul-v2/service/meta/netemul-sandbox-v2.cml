@@ -15,5 +15,9 @@
             protocol: "fuchsia.netemul.Sandbox",
             from: "self",
         },
+        {
+            protocol: "fuchsia.net.tun.Control",
+            from: "#network-tun",
+        },
     ],
 }

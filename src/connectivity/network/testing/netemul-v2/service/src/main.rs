@@ -492,7 +492,6 @@ fn make_devfs() -> Result<(fio::DirectoryProxy, Arc<SimpleMutableDir>)> {
 
 const NETWORK_CONTEXT_COMPONENT_NAME: &str = "network-context";
 const ISOLATED_DEVMGR_COMPONENT_NAME: &str = "isolated-devmgr";
-const NETWORK_TUN_COMPONENT_NAME: &str = "network-tun";
 
 #[derive(serde::Deserialize)]
 struct Package {
@@ -521,7 +520,6 @@ async fn setup_network_realm(
     };
     let network_context_package_url = package_url(NETWORK_CONTEXT_COMPONENT_NAME);
     let isolated_devmgr_package_url = package_url(ISOLATED_DEVMGR_COMPONENT_NAME);
-    let network_tun_package_url = package_url(NETWORK_TUN_COMPONENT_NAME);
 
     let mut builder = RealmBuilder::new().await.context("error creating new realm builder")?;
     let _: &mut RealmBuilder = builder
@@ -537,9 +535,6 @@ async fn setup_network_realm(
         )
         .await
         .context("error adding isolated-devmgr component")?
-        .add_component(NETWORK_TUN_COMPONENT_NAME, ComponentSource::url(network_tun_package_url))
-        .await
-        .context("error adding network-tun component")?
         .add_route(CapabilityRoute {
             capability: Capability::protocol(fnetemul_network::NetworkContextMarker::SERVICE_NAME),
             source: RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME),
@@ -565,12 +560,12 @@ async fn setup_network_realm(
         })?
         .add_route(CapabilityRoute {
             capability: Capability::protocol(fnet_tun::ControlMarker::SERVICE_NAME),
-            source: RouteEndpoint::component(NETWORK_TUN_COMPONENT_NAME),
+            source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)],
         })
         .with_context(|| {
             format!(
-                "error adding route offering capability '{}' from component '{}'",
+                "error adding route offering capability '{}' to component '{}'",
                 fnet_tun::ControlMarker::SERVICE_NAME,
                 NETWORK_CONTEXT_COMPONENT_NAME
             )
@@ -592,7 +587,6 @@ async fn setup_network_realm(
             targets: vec![
                 RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME),
                 RouteEndpoint::component(ISOLATED_DEVMGR_COMPONENT_NAME),
-                RouteEndpoint::component(NETWORK_TUN_COMPONENT_NAME),
             ],
         })
         .with_context(|| {
