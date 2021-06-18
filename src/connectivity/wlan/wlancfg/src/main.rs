@@ -204,10 +204,7 @@ fn run_regulatory_manager(
     }
 }
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    syslog::init().expect("Syslog init should not fail");
-
+async fn run_all_futures() -> Result<(), Error> {
     let wlan_svc = fuchsia_component::client::connect_to_protocol::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
     let (cobalt_api, cobalt_fut) =
@@ -287,4 +284,14 @@ async fn main() -> Result<(), Error> {
         regulatory_fut,
     )?;
     Ok(())
+}
+
+// The return value from main() gets swallowed, including if it returns a Result<Err>. Therefore,
+// use this simple wrapper to ensure that any errors from run_all_futures() are printed to the log.
+#[fasync::run_singlethreaded]
+async fn main() {
+    syslog::init().expect("Syslog init should not fail");
+    if let Err(e) = run_all_futures().await {
+        error!("{:?}", e);
+    }
 }
