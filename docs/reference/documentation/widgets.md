@@ -151,7 +151,7 @@ There are several ways of using this widget:
   [Prerequisites: (only for HTML/Jinja2)](#widgets-prereq).
 
   ```none
-  {% verbatim %}{{ widgets.glossary_simple ('<var>display_name</var>', '<var>term</var>', '<var>notClickable</var>')}}{% endverbatim %}
+  {% verbatim %}{{ widgets.glossary_simple ('<var>term</var>', '<var>display_name</var>', '<var>notClickable</var>')}}{% endverbatim %}
   ```
 
 
@@ -188,20 +188,20 @@ Note: When using the widgets in Jinja2 there are additional parameters available
         <th colspan=2>Parameters</th>
       </tr>
       <tr>
-        <td><code>display_name</code></td>
-        <td><b>Required</b><br>Specify the text in your markdown file that will have
-        hover over text.
-      </tr>
-      <tr>
         <td><code>term</code></td>
         <td><b>Required</b><br>Specify a term that is defined
           in the <a href="{{fuchsia_editor }}{{ glossary_file }}">
           _glossary.yaml</a> file.</td>
       </tr>
       <tr>
+        <td><code>display_name</code></td>
+        <td><b>Optional</b><br>Specify the text in your markdown file that will have
+        hover over text.
+      </tr>
+      <tr>
         <td><code>notClickable</code></td>
-        <td><b>Optional</b><br>Determines if the term gets a link to the
-        full glossary. If this is not
+        <td><b>Optional</b><br>Required if using <code>display_name</code>Determines
+        if the term gets a link to the full glossary. If this is not
         specified, the term will become clickable and have a link to its glossary
         entry.</td>
       </tr>
@@ -265,7 +265,7 @@ There are several ways of using this widget:
   make sure to follow the [Prerequisites: (only for HTML/Jinja2)](#widgets-prereq).
 
   ```none
-  {% verbatim %}{{ widgets.glossary_box ('<var>display_name</var>', '<var>term</var>') }}{% endverbatim %}
+  {% verbatim %}{{ widgets.glossary_box ('<var>term</var>', '<var>display_name</var>') }}{% endverbatim %}
   ```
 
 #### Parameters
@@ -278,15 +278,15 @@ Note: The parameters for markdown and Jinja2 are the same.
       <th colspan=2>Parameters</th>
     </tr>
     <tr>
-        <td><code>display_name</code></td>
-        <td><b>Required</b><br>This parameter is required to prevent errors, but
-        does not do anything.
-    </tr>
-    <tr>
       <td><code>term</code></td>
       <td><b>Required</b><br>Specify a term that is defined
         in the <a href="{{fuchsia_editor }}{{ glossary_file }}">
         _glossary.yaml</a> file.</td>
+    </tr>
+    <tr>
+        <td><code>display_name</code></td>
+        <td><b>Required</b><br>This parameter is required to prevent errors, but
+        does not do anything.
     </tr>
   </tbody>
 </table>
