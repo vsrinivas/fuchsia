@@ -35,7 +35,7 @@ use {
     futures::{
         self,
         channel::{mpsc, oneshot},
-        future::{try_join, try_join5, BoxFuture},
+        future::{try_join, BoxFuture},
         lock::Mutex,
         prelude::*,
         select, TryFutureExt,
@@ -204,17 +204,16 @@ fn run_regulatory_manager(
     }
 }
 
-fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     syslog::init().expect("Syslog init should not fail");
 
-    let mut executor = fasync::LocalExecutor::new().context("error create event loop")?;
     let wlan_svc = fuchsia_component::client::connect_to_protocol::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
     let (cobalt_api, cobalt_fut) =
         CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
 
-    let saved_networks =
-        Arc::new(executor.run_singlethreaded(SavedNetworksManager::new(cobalt_api.clone()))?);
+    let saved_networks = Arc::new(SavedNetworksManager::new(cobalt_api.clone()).await?);
     let network_selector = Arc::new(NetworkSelector::new(
         Arc::clone(&saved_networks),
         cobalt_api.clone(),
@@ -271,18 +270,21 @@ fn main() -> Result<(), Error> {
         .take_event_stream()
         .try_for_each(|evt| device::handle_event(&listener, evt).map(Ok))
         .err_into()
-        .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));
+        .and_then(|_| {
+            let result: Result<(), Error> =
+                Err(format_err!("Device watcher future exited unexpectedly"));
+            future::ready(result)
+        });
 
     let metrics_fut = serve_metrics(saved_networks.clone(), cobalt_fut);
     let regulatory_fut = run_regulatory_manager(iface_manager.clone(), regulatory_sender);
 
-    executor
-        .run_singlethreaded(try_join5(
-            fidl_fut,
-            dev_watcher_fut,
-            iface_manager_service,
-            metrics_fut,
-            regulatory_fut,
-        ))
-        .map(|_: (Void, (), Void, (), ())| ())
+    let _ = futures::try_join!(
+        fidl_fut,
+        dev_watcher_fut,
+        iface_manager_service,
+        metrics_fut,
+        regulatory_fut,
+    )?;
+    Ok(())
 }
