@@ -13,11 +13,12 @@ these responsibilities.
 ## Presenting an element's view {#presenting-an-elements-view}
 
 In the following example, a session forwards an `[Elements](/docs/glossary/README.md#element)` view to a
-`[GraphicalPresenter](/docs/glossary/README.md#graphicalpresenter)`, by calling `PresentView()` with a
+`[GraphicalPresenter](/docs/glossary/README.md#graphicalpresenter)`,
+by calling `PresentView()` with a
 `[ViewSpec](/docs/glossary/README.md#viewspec)`. The
 `ViewSpec` includes the duplicated `[ViewRef](/docs/glossary/README.md#ViewRef)` \(a sharable handle to the
 `Element`'s View), and an optional set of initial, product-specific
-`[Annotations](/docs/glossary/README.md#element-anotation)`.
+`[Annotations](/docs/glossary/README.md#element-annotation)`.
 
 The component that implements the Graphical Presenter role knows how to open
 the view on a connected display.
