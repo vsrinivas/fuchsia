@@ -737,6 +737,10 @@ uint16_t SimFirmware::GetNumClients(uint16_t ifidx) {
   return iface_tbl_[softap_ifidx_.value()].ap_config.clients.size();
 }
 
+void SimFirmware::TriggerFirmwareDisassoc(::fuchsia::wlan::ieee80211::ReasonCode reason) {
+  DisassocLocalClient(reason);
+}
+
 // Process an RX CTL message. We simply pass back the results of the previous TX CTL
 // operation, which has been stored in bcdc_response_. In real hardware, we may have to
 // indicate that the TX CTL operation has not completed. In simulated hardware, we perform
