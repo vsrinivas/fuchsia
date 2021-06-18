@@ -416,7 +416,7 @@ impl Default for BlendMode {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Style {
-    pub fill_rule: FillRule,
+    pub is_clipped: bool,
     pub fill: Fill,
     pub blend_mode: BlendMode,
 }

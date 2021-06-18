@@ -238,6 +238,7 @@ impl Facet for ClockFaceFacet {
             .iter()
             .map(|hand| Layer {
                 raster: hand.raster.clone().unwrap().translate(center),
+                clip: None,
                 style: Style {
                     fill_rule: FillRule::NonZero,
                     fill: Fill::Solid(hand.color),
@@ -256,6 +257,7 @@ impl Facet for ClockFaceFacet {
                         }
                     })
                     .unwrap(),
+                clip: None,
                 style: Style {
                     fill_rule: FillRule::NonZero,
                     fill: Fill::Solid(SHADOW_COLOR),
@@ -279,6 +281,7 @@ impl Facet for ClockFaceFacet {
                         }
                     })
                     .unwrap(),
+                clip: None,
                 style: Style {
                     fill_rule: FillRule::NonZero,
                     fill: Fill::Solid(SHADOW_COLOR),

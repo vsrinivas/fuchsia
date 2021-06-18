@@ -30,7 +30,7 @@ const LAST_BIT_MASK: i32 = 0b1;
 
 macro_rules! cols {
     ( & $array:expr, $x0:expr, $x1:expr ) => {{
-        fn size_of_el<T: Simd>(_: &[T]) -> usize {
+        fn size_of_el<T: Simd>(_: impl AsRef<[T]>) -> usize {
             T::LANES
         }
 
@@ -41,7 +41,7 @@ macro_rules! cols {
     }};
 
     ( & mut $array:expr, $x0:expr, $x1:expr ) => {{
-        fn size_of_el<T: Simd>(_: &[T]) -> usize {
+        fn size_of_el<T: Simd>(_: impl AsRef<[T]>) -> usize {
             T::LANES
         }
 
@@ -124,27 +124,32 @@ fn to_bytes(color: [f32; 4]) -> [u8; 4] {
     ]
 }
 
-pub trait LayerStyles: Send + Sync {
-    fn get(&self, layer: u16) -> Style;
+#[derive(Clone, Debug, PartialEq)]
+pub enum Func {
+    Draw(Style),
+    Clip(usize),
+}
+
+impl Default for Func {
+    fn default() -> Self {
+        Self::Draw(Style::default())
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Props {
+    pub fill_rule: FillRule,
+    pub func: Func,
+}
+
+pub trait LayerProps: Send + Sync {
+    fn get(&self, layer: u16) -> Props;
     fn is_unchanged(&self, layer: u16) -> bool;
 }
 
-impl<F> LayerStyles for F
-where
-    F: Fn(u16) -> Style + Send + Sync,
-{
-    fn get(&self, layer: u16) -> Style {
-        self(layer)
-    }
-
-    fn is_unchanged(&self, _: u16) -> bool {
-        false
-    }
-}
-
-fn reduce_layers_is_unchanged<S: LayerStyles>(
+fn reduce_layers_is_unchanged<P: LayerProps>(
     segments: &[CompactSegment],
-    styles: &S,
+    props: &P,
     skip: bool,
 ) -> (usize, bool) {
     fn l(segment: Option<&CompactSegment>) -> Option<u16> {
@@ -157,16 +162,16 @@ fn reduce_layers_is_unchanged<S: LayerStyles>(
     if first_layer == last_layer {
         return (
             if first_layer.is_some() && !skip { 1 } else { 0 },
-            first_layer.map(|l| skip || styles.is_unchanged(l)).unwrap_or(true),
+            first_layer.map(|l| skip || props.is_unchanged(l)).unwrap_or(true),
         );
     }
 
     let mid = segments.len() / 2;
 
-    let left = reduce_layers_is_unchanged(&segments[..mid], styles, skip);
+    let left = reduce_layers_is_unchanged(&segments[..mid], props, skip);
     let right = reduce_layers_is_unchanged(
         &segments[mid..],
-        styles,
+        props,
         l(segments.get(mid - 1)) == l(segments.get(mid)),
     );
 
@@ -175,7 +180,7 @@ fn reduce_layers_is_unchanged<S: LayerStyles>(
 
 #[derive(Clone, Copy, Debug)]
 struct CoverCarry {
-    covers: [i8x16; TILE_SIZE / 16],
+    covers: [i8x16; TILE_SIZE / i8x16::LANES],
     layer: u16,
 }
 
@@ -207,6 +212,7 @@ impl CoverCarry {
 pub struct Painter {
     areas: [i16x16; TILE_SIZE * TILE_SIZE / i16x16::LANES],
     covers: [i8x16; (TILE_SIZE + 1) * TILE_SIZE / i8x16::LANES],
+    clip: Option<([f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES], u16)>,
     c0: [f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES],
     c1: [f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES],
     c2: [f32x8; TILE_SIZE * TILE_SIZE / f32x8::LANES],
@@ -221,6 +227,7 @@ impl Painter {
         Self {
             areas: [i16x16::splat(0); TILE_SIZE * TILE_SIZE / i16x16::LANES],
             covers: [i8x16::splat(0); (TILE_SIZE + 1) * TILE_SIZE / i8x16::LANES],
+            clip: None,
             c0: [f32x8::splat(0.0); TILE_SIZE * TILE_SIZE / f32x8::LANES],
             c1: [f32x8::splat(0.0); TILE_SIZE * TILE_SIZE / f32x8::LANES],
             c2: [f32x8::splat(0.0); TILE_SIZE * TILE_SIZE / f32x8::LANES],
@@ -285,62 +292,104 @@ impl Painter {
         }
     }
 
+    fn blend_at(
+        &mut self,
+        x: usize,
+        y: usize,
+        coverages: [f32x8; TILE_SIZE / f32x8::LANES],
+        is_clipped: bool,
+        fill: [f32x8; 4],
+        blend_mode: BlendMode,
+    ) {
+        let c0 = cols!(&mut self.c0, x, x + 1);
+        let c1 = cols!(&mut self.c1, x, x + 1);
+        let c2 = cols!(&mut self.c2, x, x + 1);
+        let alpha = cols!(&mut self.alpha, x, x + 1);
+
+        let mut alphas = fill[3] * coverages[y];
+
+        if is_clipped {
+            if let Some((mask, _)) = self.clip {
+                alphas *= cols!(&mask, x, x + 1)[y];
+            }
+        }
+
+        let inv_alphas = f32x8::splat(1.0) - alphas;
+
+        let [mut current_c0, mut current_c1, mut current_c2] =
+            blend_function!(blend_mode, c0[y], c1[y], c2[y], fill[0], fill[1], fill[2],);
+
+        current_c0 *= alphas;
+        current_c1 *= alphas;
+        current_c2 *= alphas;
+        let current_alpha = alphas;
+
+        c0[y] = c0[y].mul_add(inv_alphas, current_c0);
+        c1[y] = c1[y].mul_add(inv_alphas, current_c1);
+        c2[y] = c2[y].mul_add(inv_alphas, current_c2);
+        alpha[y] = alpha[y].mul_add(inv_alphas, current_alpha);
+    }
+
+    fn clip_at(
+        &mut self,
+        x: usize,
+        y: usize,
+        coverages: [f32x8; TILE_SIZE / f32x8::LANES],
+        last_layer: u16,
+    ) {
+        let clip = self.clip.get_or_insert_with(|| {
+            ([f32x8::splat(0.0); TILE_SIZE * TILE_SIZE / f32x8::LANES], last_layer)
+        });
+        cols!(&mut clip.0, x, x + 1)[y] = coverages[y];
+    }
+
     fn paint_layer(
         &mut self,
         tile_i: usize,
         tile_j: usize,
-        style: &Style,
+        layer: u16,
+        props: &Props,
     ) -> [i8x16; TILE_SIZE / i8x16::LANES] {
         let mut areas = [i32x8::splat(0); TILE_SIZE / i32x8::LANES];
         let mut covers = [i8x16::splat(0); TILE_SIZE / i8x16::LANES];
         let mut coverages = [f32x8::splat(0.0); TILE_SIZE / f32x8::LANES];
-        let mut alphas = [f32x8::splat(0.0); TILE_SIZE / f32x8::LANES];
-        let mut inv_alphas = [f32x8::splat(0.0); TILE_SIZE / f32x8::LANES];
 
         for x in 0..=TILE_SIZE {
             if x != 0 {
                 self.compute_areas(x - 1, &covers, &mut areas);
 
                 for y in 0..coverages.len() {
-                    coverages[y] = from_area(areas[y], style.fill_rule);
+                    coverages[y] = from_area(areas[y], props.fill_rule);
 
-                    if coverages[y].eq(f32x8::splat(0.0)).all() {
-                        continue;
+                    match &props.func {
+                        Func::Draw(style) => {
+                            if coverages[y].eq(f32x8::splat(0.0)).all() {
+                                continue;
+                            }
+
+                            if style.is_clipped && self.clip.is_none() {
+                                continue;
+                            }
+
+                            let fill = Self::fill_at(
+                                x + tile_i * TILE_SIZE,
+                                y * f32x8::LANES + tile_j * TILE_SIZE,
+                                &style,
+                            );
+
+                            self.blend_at(
+                                x - 1,
+                                y,
+                                coverages,
+                                style.is_clipped,
+                                fill,
+                                style.blend_mode,
+                            );
+                        }
+                        Func::Clip(layers) => {
+                            self.clip_at(x - 1, y, coverages, layer + *layers as u16)
+                        }
                     }
-
-                    let fill = Self::fill_at(
-                        x + tile_i * TILE_SIZE,
-                        y * f32x8::LANES + tile_j * TILE_SIZE,
-                        &style,
-                    );
-
-                    let c0 = cols!(&mut self.c0, x - 1, x);
-                    let c1 = cols!(&mut self.c1, x - 1, x);
-                    let c2 = cols!(&mut self.c2, x - 1, x);
-                    let alpha = cols!(&mut self.alpha, x - 1, x);
-
-                    alphas[y] = fill[3] * coverages[y];
-                    inv_alphas[y] = f32x8::splat(1.0) - alphas[y];
-
-                    let [mut current_c0, mut current_c1, mut current_c2] = blend_function!(
-                        style.blend_mode,
-                        c0[y],
-                        c1[y],
-                        c2[y],
-                        fill[0],
-                        fill[1],
-                        fill[2],
-                    );
-
-                    current_c0 *= alphas[y];
-                    current_c1 *= alphas[y];
-                    current_c2 *= alphas[y];
-                    let current_alpha = alphas[y];
-
-                    c0[y] = c0[y].mul_add(inv_alphas[y], current_c0);
-                    c1[y] = c1[y].mul_add(inv_alphas[y], current_c1);
-                    c2[y] = c2[y].mul_add(inv_alphas[y], current_c2);
-                    alpha[y] = alpha[y].mul_add(inv_alphas[y], current_alpha);
                 }
             }
 
@@ -385,15 +434,16 @@ impl Painter {
         }
     }
 
-    pub fn paint_tile<S: LayerStyles>(
+    pub fn paint_tile<P: LayerProps>(
         &mut self,
         tile_i: usize,
         tile_j: usize,
         segments: &[CompactSegment],
-        styles: &S,
+        props: &P,
     ) {
         let mut i = 0;
 
+        self.clip = None;
         self.next_queue.clear();
 
         while let Some(ordering) = Self::next_layer(&self.queue, segments.get(i)) {
@@ -404,6 +454,12 @@ impl Painter {
             } else {
                 segments[i].layer()
             };
+
+            if let Some((_, last_layer)) = self.clip {
+                if last_layer < layer {
+                    self.clip = None;
+                }
+            }
 
             if ordering != Ordering::Less {
                 i += Self::for_each_layer_segments(&segments[i..], layer, |segment| {
@@ -420,73 +476,108 @@ impl Painter {
                 });
             }
 
-            let style = styles.get(layer);
-            let cover_carry =
-                CoverCarry { covers: self.paint_layer(tile_i, tile_j, &style), layer };
+            let props = props.get(layer);
 
-            if !cover_carry.is_empty(style.fill_rule) {
+            let cover_carry =
+                CoverCarry { covers: self.paint_layer(tile_i, tile_j, layer, &props), layer };
+
+            if !cover_carry.is_empty(props.fill_rule) {
                 self.next_queue.push_back(cover_carry);
             }
         }
     }
 
-    fn top_carry_layers_solid_opaque<S: LayerStyles>(
+    fn top_carry_layers_solid_opaque<P: LayerProps>(
         &mut self,
         segments: &[CompactSegment],
-        styles: &S,
+        props: &P,
         clear_color: [f32; 4],
     ) -> Option<[f32; 4]> {
         if self.queue.is_empty() {
             return None;
         }
 
-        let first_incomplete_layer_index = self
+        let last_incomplete_layer_index = self
             .queue
             .iter()
             .enumerate()
             .rev()
-            .find(|(_, cover_carry)| !cover_carry.is_full(styles.get(cover_carry.layer).fill_rule))
+            .find(|(_, cover_carry)| {
+                let props = props.get(cover_carry.layer);
+
+                if let Func::Draw(Style { is_clipped: true, .. }) = props.func {
+                    return true;
+                }
+
+                !cover_carry.is_full(props.fill_rule)
+            })
             .map(|(i, _)| i);
 
-        let mut first_incomplete_layer = None;
+        let mut bottom_layer = None;
 
-        if let Some(i) = first_incomplete_layer_index {
+        if let Some(i) = last_incomplete_layer_index {
             if i == self.queue.len() - 1 {
                 // Last layer is incomplete.
                 return None;
             }
 
-            first_incomplete_layer = Some(self.queue[i + 1].layer);
+            bottom_layer = Some(self.queue[i + 1].layer);
         }
 
         if let Some(segment_layer) = segments.last().map(|segment| segment.layer()) {
-            if segment_layer >= first_incomplete_layer.unwrap_or_else(|| self.queue[0].layer) {
+            if segment_layer >= bottom_layer.unwrap_or_else(|| self.queue[0].layer) {
                 // There are segments over the complete top carry layer.
                 return None;
             }
         }
 
-        let bottom_color = match first_incomplete_layer.map(|layer| styles.get(layer)) {
-            Some(Style { fill: Fill::Solid(color), blend_mode: BlendMode::Over, .. })
-                if color[3] == 1.0 =>
-            {
-                Some(color)
-            }
+        let bottom_color = match bottom_layer.map(|layer| props.get(layer)) {
+            Some(Props {
+                func:
+                    Func::Draw(Style { fill: Fill::Solid(color), blend_mode: BlendMode::Over, .. }),
+                ..
+            }) if color[3] == 1.0 => Some(color),
             None => Some(clear_color),
             // Bottom layer is not opaque.
             _ => None,
         };
 
         bottom_color.and_then(|bottom_color| {
-            let color = self.queue.iter().try_fold(bottom_color, |dst, cover_carry| {
-                match styles.get(cover_carry.layer) {
-                    Style { fill: Fill::Solid(color), blend_mode, .. } => {
-                        Some(blend_mode.blend(dst, color))
+            let color = self
+                .queue
+                .iter()
+                .try_fold((bottom_color, None), |(dst, mut clip), cover_carry| {
+                    if let Some(last_layer) = clip {
+                        if cover_carry.layer > last_layer {
+                            clip = None;
+                        }
                     }
-                    // Fill is not solid.
-                    _ => None,
-                }
-            })?;
+
+                    let props = props.get(cover_carry.layer);
+
+                    if let Func::Draw(Style { is_clipped: true, .. }) = props.func {
+                        if clip.is_some() {
+                            if !cover_carry.is_full(props.fill_rule) {
+                                return None;
+                            }
+                        } else {
+                            return Some((dst, clip));
+                        }
+                    }
+
+                    match props {
+                        Props {
+                            func: Func::Draw(Style { fill: Fill::Solid(color), blend_mode, .. }),
+                            ..
+                        } => Some((blend_mode.blend(dst, color), clip)),
+                        Props { func: Func::Clip(layers), .. } => {
+                            Some((dst, Some(cover_carry.layer + layers as u16)))
+                        }
+                        // Fill is not solid.
+                        _ => None,
+                    }
+                })
+                .map(|(color, _)| color)?;
 
             let mut i = 0;
 
@@ -529,19 +620,19 @@ impl Painter {
         })
     }
 
-    fn is_unchanged<S: LayerStyles>(
+    fn is_unchanged<P: LayerProps>(
         &mut self,
         mut entry: Entry<'_, (usize, usize), usize>,
         segments: &[CompactSegment],
-        styles: &S,
+        props: &P,
     ) -> bool {
         let queue_layers = self.queue.len();
 
-        let (segment_layers, is_unchanged) = reduce_layers_is_unchanged(segments, styles, false);
+        let (segment_layers, is_unchanged) = reduce_layers_is_unchanged(segments, props, false);
 
         let total_layers = queue_layers + segment_layers;
         let is_unchanged = is_unchanged
-            & self.queue.iter().all(|cover_carry| styles.is_unchanged(cover_carry.layer));
+            & self.queue.iter().all(|cover_carry| props.is_unchanged(cover_carry.layer));
 
         match entry {
             Entry::Occupied(ref mut occupied) => {
@@ -631,11 +722,11 @@ impl Painter {
         }
     }
 
-    pub fn paint_tile_row<S: LayerStyles>(
+    pub fn paint_tile_row<P: LayerProps>(
         &mut self,
         j: usize,
         mut segments: &[CompactSegment],
-        styles: &S,
+        props: &P,
         clear_color: [f32; 4],
         layers_per_tile: Option<&DashMap<(usize, usize), usize>>,
         flusher: Option<&dyn Flusher>,
@@ -711,7 +802,7 @@ impl Painter {
 
             let is_unchanged = layers_per_tile
                 .map(|layers_per_tile| {
-                    self.is_unchanged(layers_per_tile.entry((i, j)), current_segments, styles)
+                    self.is_unchanged(layers_per_tile.entry((i, j)), current_segments, props)
                 })
                 .unwrap_or_default();
 
@@ -725,13 +816,13 @@ impl Painter {
 
             if !is_unchanged {
                 if let Some(color) =
-                    self.top_carry_layers_solid_opaque(current_segments, styles, clear_color)
+                    self.top_carry_layers_solid_opaque(current_segments, props, clear_color)
                 {
                     self.write_to_tile(tile, Some(to_bytes(color)), flusher);
                 } else {
                     self.clear(clear_color);
 
-                    self.paint_tile(i, j, current_segments, styles);
+                    self.paint_tile(i, j, current_segments, props);
                     self.compute_srgb();
 
                     self.write_to_tile(tile, None, flusher);
@@ -754,7 +845,7 @@ impl Painter {
                 for (layer, covers) in covers {
                     let cover_carry = CoverCarry { covers, layer };
 
-                    if !cover_carry.is_empty(styles.get(layer).fill_rule) {
+                    if !cover_carry.is_empty(props.get(layer).fill_rule) {
                         self.next_queue.push_back(cover_carry);
                     }
                 }
@@ -771,7 +862,11 @@ mod tests {
 
     use std::collections::HashMap;
 
-    use crate::{point::Point, rasterizer::Rasterizer, LinesBuilder, Segment, TILE_SIZE};
+    use crate::{
+        point::Point,
+        rasterizer::{self, Rasterizer},
+        LinesBuilder, Segment, TILE_SIZE,
+    };
 
     const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
     const BLACK_TRANSPARENT: [f32; 4] = [0.0, 0.0, 0.0, 0.5];
@@ -780,6 +875,43 @@ mod tests {
     const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
     const GREEN_50: [f32; 4] = [0.0, 0.5, 0.0, 1.0];
     const RED_GREEN_50: [f32; 4] = [0.5, 0.5, 0.0, 1.0];
+
+    impl LayerProps for HashMap<u16, Style> {
+        fn get(&self, layer: u16) -> Props {
+            let style = self.get(&layer).unwrap().clone();
+
+            Props { fill_rule: FillRule::NonZero, func: Func::Draw(style) }
+        }
+
+        fn is_unchanged(&self, _: u16) -> bool {
+            false
+        }
+    }
+
+    impl LayerProps for HashMap<u16, Props> {
+        fn get(&self, layer: u16) -> Props {
+            self.get(&layer).unwrap().clone()
+        }
+
+        fn is_unchanged(&self, _: u16) -> bool {
+            false
+        }
+    }
+
+    impl<F> LayerProps for F
+    where
+        F: Fn(u16) -> Style + Send + Sync,
+    {
+        fn get(&self, layer: u16) -> Props {
+            let style = self(layer);
+
+            Props { fill_rule: FillRule::NonZero, func: Func::Draw(style) }
+        }
+
+        fn is_unchanged(&self, _: u16) -> bool {
+            false
+        }
+    }
 
     impl Painter {
         fn colors(&self) -> [[f32; 4]; TILE_SIZE * TILE_SIZE] {
@@ -816,6 +948,10 @@ mod tests {
 
         let mut segments: Vec<_> = rasterizer.segments().iter().copied().collect();
         segments.sort_unstable();
+
+        let last_segment =
+            rasterizer::search_last_by_key(&segments, 0, |segment| segment.is_none()).unwrap_or(0);
+        segments.truncate(last_segment + 1);
         segments
     }
 
@@ -831,27 +967,13 @@ mod tests {
 
         let mut styles = HashMap::new();
 
-        styles.insert(
-            0,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(GREEN),
-                blend_mode: BlendMode::Over,
-            },
-        );
-        styles.insert(
-            1,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(RED),
-                blend_mode: BlendMode::Over,
-            },
-        );
+        styles.insert(0, Style { fill: Fill::Solid(GREEN), ..Default::default() });
+        styles.insert(1, Style { fill: Fill::Solid(RED), ..Default::default() });
 
         let mut painter = Painter::new();
         painter.queue.push_back(cover_carry);
 
-        painter.paint_tile(0, 0, &segments, &|order| styles[&order].clone());
+        painter.paint_tile(0, 0, &segments, &styles);
 
         assert_eq!(painter.colors()[0..2], [GREEN, RED]);
     }
@@ -868,25 +990,11 @@ mod tests {
 
         let mut styles = HashMap::new();
 
-        styles.insert(
-            0,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(GREEN),
-                blend_mode: BlendMode::Over,
-            },
-        );
-        styles.insert(
-            1,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(RED),
-                blend_mode: BlendMode::Over,
-            },
-        );
+        styles.insert(0, Style { fill: Fill::Solid(GREEN), ..Default::default() });
+        styles.insert(1, Style { fill: Fill::Solid(RED), ..Default::default() });
 
         let mut painter = Painter::new();
-        painter.paint_tile(0, 0, &segments, &|order| styles[&order].clone());
+        painter.paint_tile(0, 0, &segments, &styles);
 
         let row_start = TILE_SIZE / 2 - 2;
         let row_end = TILE_SIZE / 2 + 2;
@@ -928,25 +1036,11 @@ mod tests {
 
         let mut styles = HashMap::new();
 
-        styles.insert(
-            0,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(RED),
-                blend_mode: BlendMode::Over,
-            },
-        );
-        styles.insert(
-            1,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(BLACK_TRANSPARENT),
-                blend_mode: BlendMode::Over,
-            },
-        );
+        styles.insert(0, Style { fill: Fill::Solid(RED), ..Default::default() });
+        styles.insert(1, Style { fill: Fill::Solid(BLACK_TRANSPARENT), ..Default::default() });
 
         let mut painter = Painter::new();
-        painter.paint_tile(0, 0, &segments, &|order| styles[&order].clone());
+        painter.paint_tile(0, 0, &segments, &styles);
 
         assert_eq!(painter.colors()[0], RED_50);
     }
@@ -1159,5 +1253,78 @@ mod tests {
         let segments = [segment_layer(0), segment_layer(0), segment_layer(0), segment_layer(1)];
 
         assert_eq!(reduce_layers_is_unchanged(&segments, &|_| Style::default(), false).0, 2);
+    }
+
+    #[test]
+    fn clip() {
+        let segments = line_segments(
+            &[
+                (Point::new(0.0, 0.0), Point::new(TILE_SIZE as f32, TILE_SIZE as f32)),
+                (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
+                (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
+            ],
+            false,
+        );
+
+        let mut props = HashMap::new();
+
+        props.insert(0, Props { fill_rule: FillRule::NonZero, func: Func::Clip(2) });
+        props.insert(
+            1,
+            Props {
+                fill_rule: FillRule::NonZero,
+                func: Func::Draw(Style {
+                    fill: Fill::Solid(GREEN),
+                    is_clipped: true,
+                    ..Default::default()
+                }),
+            },
+        );
+        props.insert(
+            2,
+            Props {
+                fill_rule: FillRule::NonZero,
+                func: Func::Draw(Style {
+                    fill: Fill::Solid(RED),
+                    is_clipped: true,
+                    ..Default::default()
+                }),
+            },
+        );
+        props.insert(
+            3,
+            Props {
+                fill_rule: FillRule::NonZero,
+                func: Func::Draw(Style { fill: Fill::Solid(GREEN), ..Default::default() }),
+            },
+        );
+
+        let mut painter = Painter::new();
+        painter.paint_tile(0, 0, &segments, &props);
+
+        let colors = painter.colors();
+        let mut col = [BLACK; TILE_SIZE];
+
+        for i in 0..TILE_SIZE {
+            col[i] = [0.5, 0.25, 0.0, 1.0];
+
+            if i >= 1 {
+                col[i - 1] = RED;
+            }
+
+            assert_eq!(colors[i * TILE_SIZE..(i + 1) * TILE_SIZE], col);
+        }
+
+        mem::swap(&mut painter.queue, &mut painter.next_queue);
+        painter.clear(BLACK);
+
+        let segments = line_segments(
+            &[(Point::new(TILE_SIZE as f32, 0.0), Point::new(TILE_SIZE as f32, TILE_SIZE as f32))],
+            false,
+        );
+
+        painter.paint_tile(1, 0, &segments, &props);
+
+        assert_eq!(painter.colors(), [RED; TILE_SIZE * TILE_SIZE]);
     }
 }

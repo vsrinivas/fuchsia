@@ -6,7 +6,7 @@ use std::mem;
 
 use surpass;
 
-use crate::Style;
+use surpass::painter::Props;
 
 const IDENTITY: &[f32; 6] = &[1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
 const MAX_LAYER: usize = u16::MAX as usize;
@@ -143,7 +143,7 @@ impl SmallBitSet {
 #[derive(Debug, Default)]
 pub struct Layer {
     pub(crate) inner: surpass::Layer,
-    style: Style,
+    props: Props,
     pub(crate) is_unchanged: SmallBitSet,
     pub(crate) len: usize,
 }
@@ -215,15 +215,15 @@ impl Layer {
     }
 
     #[inline]
-    pub fn style(&self) -> &Style {
-        &self.style
+    pub fn props(&self) -> &Props {
+        &self.props
     }
 
     #[inline]
-    pub fn set_style(&mut self, style: Style) -> &mut Self {
-        if self.style != style {
+    pub fn set_props(&mut self, props: Props) -> &mut Self {
+        if self.props != props {
             self.is_unchanged.clear();
-            self.style = style;
+            self.props = props;
         }
 
         self

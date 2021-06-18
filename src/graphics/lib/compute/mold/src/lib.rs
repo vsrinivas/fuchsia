@@ -20,5 +20,5 @@ pub use point::Point;
 pub use utils::clear_buffer;
 
 pub use surpass::painter::{
-    BlendMode, Fill, FillRule, Gradient, GradientBuilder, GradientType, Rect, Style,
+    BlendMode, Fill, FillRule, Func, Gradient, GradientBuilder, GradientType, Props, Rect, Style,
 };

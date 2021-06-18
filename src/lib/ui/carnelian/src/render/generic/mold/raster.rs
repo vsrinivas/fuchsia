@@ -18,6 +18,12 @@ pub(crate) struct Print {
     pub(crate) transform: Transform2D<f32>,
 }
 
+impl PartialEq for Print {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.path, &other.path) && self.transform == other.transform
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct MoldRaster {
     pub(crate) prints: SmallVec<[Print; 1]>,

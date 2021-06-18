@@ -9,7 +9,7 @@ use crate::{
     math::Mat,
     node::Node,
     option_cell::OptionCell,
-    shapes::{paint::BlendMode, ClippingShape, Shape},
+    shapes::{paint::BlendMode, ClippingShape, CommandPath, CommandPathBuilder, Shape},
     Renderer,
 };
 
@@ -47,8 +47,21 @@ impl ObjectRef<'_, Drawable> {
         self.clipping_shapes.push(clipping_shape);
     }
 
-    pub fn clip(&self) {
-        todo!();
+    pub fn clip(&self) -> Option<CommandPath> {
+        self.clipping_shapes
+            .iter()
+            .fold(None, |mut option, clipping_shape| {
+                let builder = option.get_or_insert_with(|| CommandPathBuilder::new());
+
+                clipping_shape.as_ref().with_command_path(|path| {
+                    if let Some(path) = path {
+                        builder.path(path, None);
+                    }
+                });
+
+                option
+            })
+            .map(|builder| builder.build())
     }
 
     pub fn draw(&self, renderer: &mut impl Renderer, transform: Mat) {

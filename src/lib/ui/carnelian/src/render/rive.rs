@@ -6,8 +6,8 @@ use {
     crate::{
         color::Color,
         render::{
-            BlendMode, Context as RenderContext, Fill, FillRule, Gradient, GradientType, Path,
-            PathBuilder, Raster, Style,
+            BlendMode, Context as RenderContext, Fill, FillRule, Gradient, GradientType, Layer,
+            Path, PathBuilder, Raster, Style,
         },
         Point,
     },
@@ -48,7 +48,7 @@ struct CachedRaster {
 pub struct RenderCache {
     cached_rasters: HashMap<NonZeroU64, CachedRaster>,
     tag: NonZeroU64,
-    pub rasters: Vec<(Raster, Style)>,
+    pub layers: Vec<Layer>,
 }
 
 impl RenderCache {
@@ -56,7 +56,7 @@ impl RenderCache {
         Self {
             cached_rasters: HashMap::new(),
             tag: NonZeroU64::new(1).unwrap(),
-            rasters: Vec::new(),
+            layers: Vec::new(),
         }
     }
 
@@ -64,13 +64,11 @@ impl RenderCache {
         // Retain rasters used last frame and reset `was_used` field.
         self.cached_rasters
             .retain(|_, cached_raster| std::mem::replace(&mut cached_raster.was_used, false));
-
-        self.rasters.clear();
     }
 
     pub fn with_renderer(&mut self, context: &RenderContext, f: impl FnOnce(&mut Renderer<'_>)) {
         self.reset();
-        f(&mut Renderer { context, cache: self });
+        f(&mut Renderer { context, cache: self, clip: None });
     }
 }
 
@@ -78,6 +76,7 @@ impl RenderCache {
 pub struct Renderer<'c> {
     context: &'c RenderContext,
     cache: &'c mut RenderCache,
+    clip: Option<Raster>,
 }
 
 impl<'c> Renderer<'c> {
@@ -253,6 +252,79 @@ impl rive::Renderer for Renderer<'_> {
             }
         };
 
-        self.cache.rasters.push((raster, style));
+        self.cache.layers.push(Layer {
+            raster,
+            clip: paint.is_clipped.then(|| self.clip.clone()).flatten(),
+            style,
+        });
+    }
+
+    fn clip(&mut self, path: &CommandPath, transform: Mat, _: usize) {
+        fn transform_translates_by_integers(transform: &Mat) -> bool {
+            fn approx_eq(a: f32, b: f32) -> bool {
+                (a - b).abs() < 0.001
+            }
+
+            approx_eq(transform.scale_x, 1.0)
+                && approx_eq(transform.shear_x, 0.0)
+                && approx_eq(transform.shear_y, 0.0)
+                && approx_eq(transform.scale_y, 1.0)
+                && transform.translate_x.fract().abs() < 0.001
+                && transform.translate_y.fract().abs() < 0.001
+        }
+
+        let raster = match path
+            .user_tag
+            .get()
+            .and_then(|tag| self.cache.cached_rasters.get_mut(&tag))
+            .and_then(|cached_raster| {
+                if cached_raster.was_used {
+                    return None;
+                }
+
+                cached_raster.was_used = true;
+                Some((&mut cached_raster.raster, transform * cached_raster.inverted_transform))
+            }) {
+            Some((raster, transform)) if transform_translates_by_integers(&transform) => {
+                *raster = raster.clone().translate(vec2(
+                    transform.translate_x.round() as i32,
+                    transform.translate_y.round() as i32,
+                ));
+                raster.clone()
+            }
+            _ => {
+                let render_path = to_path(self.context.path_builder().unwrap(), &path.commands);
+
+                let mut raster_builder = self.context.raster_builder().unwrap();
+
+                raster_builder.add_with_transform(
+                    &render_path,
+                    &Transform2D::new(
+                        transform.scale_x,
+                        transform.shear_y,
+                        transform.shear_x,
+                        transform.scale_y,
+                        transform.translate_x,
+                        transform.translate_y,
+                    ),
+                );
+
+                let raster = raster_builder.build();
+
+                if let Some(inverted_transform) = transform.invert() {
+                    let tag = self.tag();
+
+                    path.user_tag.set(Some(tag));
+                    self.cache.cached_rasters.insert(
+                        tag,
+                        CachedRaster { raster: raster.clone(), inverted_transform, was_used: true },
+                    );
+                }
+
+                raster
+            }
+        };
+
+        self.clip = Some(raster);
     }
 }

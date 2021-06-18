@@ -7,7 +7,7 @@ use std::{cell::RefCell, rc::Rc};
 use rustc_hash::FxHashMap;
 use surpass::{
     self,
-    painter::{BufferLayout, LayerStyles, Rect, Style},
+    painter::{BufferLayout, LayerProps, Props, Rect},
     rasterizer::{self, Rasterizer},
     LinesBuilder,
 };
@@ -187,16 +187,16 @@ impl Composition {
             cache_id: Option<u8>,
         }
 
-        impl LayerStyles for CompositionContext<'_> {
+        impl LayerProps for CompositionContext<'_> {
             #[inline]
-            fn get(&self, layer: u16) -> Style {
+            fn get(&self, layer: u16) -> Props {
                 let layer_id = self
                     .orders_to_layers
                     .get(&layer)
                     .expect("orders_to_layers was not populated in Composition::render");
                 self.layers
                     .get(layer_id)
-                    .map(|layer| layer.style().clone())
+                    .map(|layer| layer.props().clone())
                     .expect("orders_to_layers points to non-existant Layer")
             }
 
@@ -265,7 +265,7 @@ mod tests {
 
     use surpass::TILE_SIZE;
 
-    use crate::{Fill, FillRule, Point, Style};
+    use crate::{Fill, FillRule, Func, Point, Style};
 
     const BLACK: [u8; 4] = [0x00, 0x0, 0x00, 0xFF];
     const BLACKF: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
@@ -284,6 +284,13 @@ mod tests {
         path.line(Point::new((x + 1) as f32, y as f32), Point::new(x as f32, y as f32));
 
         path
+    }
+
+    fn solid(color: [f32; 4]) -> Props {
+        Props {
+            func: Func::Draw(Style { fill: Fill::Solid(color), ..Default::default() }),
+            ..Default::default()
+        }
     }
 
     #[test]
@@ -306,9 +313,7 @@ mod tests {
         let mut composition = Composition::new();
 
         let layer_id = composition.create_layer().unwrap();
-        composition
-            .insert_in_layer(layer_id, &pixel_path(1, 0))
-            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
+        composition.insert_in_layer(layer_id, &pixel_path(1, 0)).set_props(solid(REDF));
 
         composition.render(
             Buffer { buffer: &mut buffer, width: 3, ..Default::default() },
@@ -325,9 +330,7 @@ mod tests {
         let mut composition = Composition::new();
 
         let layer_id = composition.create_layer().unwrap();
-        composition
-            .insert_in_layer(layer_id, &pixel_path(1, 0))
-            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
+        composition.insert_in_layer(layer_id, &pixel_path(1, 0)).set_props(solid(REDF));
         composition.insert_in_layer(layer_id, &pixel_path(2, 0));
 
         composition.render(
@@ -347,7 +350,7 @@ mod tests {
         let layer_id = composition.create_layer().unwrap();
         composition
             .insert_in_layer(layer_id, &pixel_path(1, 0))
-            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() })
+            .set_props(solid(REDF))
             .set_transform(&[1.0, 0.0, 0.0, 1.0, 0.5, 0.0]);
 
         composition.render(
@@ -368,7 +371,7 @@ mod tests {
         let layer_id = composition.create_layer().unwrap();
         composition
             .insert_in_layer(layer_id, &pixel_path(-1, 1))
-            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() })
+            .set_props(solid(REDF))
             .set_transform(&[angle.cos(), -angle.sin(), angle.sin(), angle.cos(), 0.0, 0.0]);
 
         composition.render(
@@ -388,18 +391,10 @@ mod tests {
         let layer_id0 = composition.create_layer().unwrap();
         let layer_id1 = composition.create_layer().unwrap();
         let layer_id2 = composition.create_layer().unwrap();
-        composition
-            .insert_in_layer(layer_id0, &pixel_path(0, 0))
-            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
-        composition
-            .insert_in_layer(layer_id1, &pixel_path(1, 0))
-            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
-        composition
-            .insert_in_layer(layer_id2, &pixel_path(2, 0))
-            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
-        composition
-            .insert_in_layer(layer_id2, &pixel_path(3, 0))
-            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
+        composition.insert_in_layer(layer_id0, &pixel_path(0, 0)).set_props(solid(REDF));
+        composition.insert_in_layer(layer_id1, &pixel_path(1, 0)).set_props(solid(REDF));
+        composition.insert_in_layer(layer_id2, &pixel_path(2, 0)).set_props(solid(REDF));
+        composition.insert_in_layer(layer_id2, &pixel_path(3, 0)).set_props(solid(REDF));
 
         composition.render(
             Buffer { buffer: &mut buffer, width: 4, ..Default::default() },
@@ -445,9 +440,7 @@ mod tests {
         let mut composition = Composition::new();
 
         let layer_id = composition.create_layer().unwrap();
-        composition
-            .insert_in_layer(layer_id, &pixel_path(0, 0))
-            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
+        composition.insert_in_layer(layer_id, &pixel_path(0, 0)).set_props(solid(REDF));
 
         assert_eq!(composition.actual_len(), 4);
 
@@ -467,15 +460,13 @@ mod tests {
         let layer_cache = composition.create_buffer_layer_cache();
 
         let layer_id = composition.create_layer().unwrap();
-        composition
-            .insert_in_layer(layer_id, &pixel_path(0, 0))
-            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
+        composition.insert_in_layer(layer_id, &pixel_path(0, 0)).set_props(solid(REDF));
         composition.insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32, 0));
 
         let layer_id = composition.create_layer().unwrap();
         composition
             .insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32 + 1, 0))
-            .set_style(Style { fill: Fill::Solid(GREENF), ..Default::default() });
+            .set_props(solid(GREENF));
         composition.insert_in_layer(layer_id, &pixel_path(2 * TILE_SIZE as i32, 0));
 
         composition.render(
@@ -496,10 +487,7 @@ mod tests {
 
         buffer.fill(BLACK);
 
-        composition
-            .get_mut(layer_id)
-            .unwrap()
-            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
+        composition.get_mut(layer_id).unwrap().set_props(solid(REDF));
 
         composition.render(
             Buffer {
@@ -525,9 +513,7 @@ mod tests {
         let layer_cache = composition.create_buffer_layer_cache();
 
         let layer_id = composition.create_layer().unwrap();
-        composition
-            .insert_in_layer(layer_id, &pixel_path(0, 0))
-            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
+        composition.insert_in_layer(layer_id, &pixel_path(0, 0)).set_props(solid(REDF));
         composition.insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32, 0));
 
         composition.render(
@@ -618,9 +604,7 @@ mod tests {
         let layer_cache1 = composition.create_buffer_layer_cache();
 
         let layer_id = composition.create_layer().unwrap();
-        composition
-            .insert_in_layer(layer_id, &pixel_path(0, 0))
-            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
+        composition.insert_in_layer(layer_id, &pixel_path(0, 0)).set_props(solid(REDF));
 
         composition.render(
             Buffer {
@@ -728,10 +712,9 @@ mod tests {
         let mut composition = Composition::new();
 
         let layer_id = composition.create_layer().unwrap();
-        composition.insert_in_layer(layer_id, &path).set_style(Style {
+        composition.insert_in_layer(layer_id, &path).set_props(Props {
             fill_rule: FillRule::EvenOdd,
-            fill: Fill::Solid(REDF),
-            ..Default::default()
+            func: Func::Draw(Style { fill: Fill::Solid(REDF), ..Default::default() }),
         });
 
         composition.render(

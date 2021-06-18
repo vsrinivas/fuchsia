@@ -144,6 +144,7 @@ impl<T: 'static> Facet for TextGridFacet<T> {
             })
             .map(|(raster, color)| Layer {
                 raster,
+                clip: None,
                 style: Style {
                     fill_rule: FillRule::NonZero,
                     fill: Fill::Solid(*color),

@@ -286,6 +286,7 @@ impl Facet for TestFacet {
         self.raster = Some(line_raster);
         layer_group.replace_all(std::iter::once(Layer {
             raster: raster,
+            clip: None,
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(self.color),

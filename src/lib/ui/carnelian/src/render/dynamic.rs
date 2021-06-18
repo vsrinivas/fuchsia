@@ -499,6 +499,8 @@ impl RasterBuilder {
 pub struct Layer {
     /// Layer raster.
     pub raster: Raster,
+    /// Layer clip.
+    pub clip: Option<Raster>,
     /// Layer style.
     pub style: Style, // Will also contain txty when available.
 }
@@ -531,6 +533,13 @@ impl Composition {
                         } else {
                             panic!("mismatched backends");
                         },
+                        clip: layer.clip.map(|clip| {
+                            if let RasterInner::Mold(clip) = clip.inner {
+                                clip
+                            } else {
+                                panic!("mismatched backends");
+                            }
+                        }),
                         style: layer.style,
                     })
                     .collect(),
@@ -543,6 +552,13 @@ impl Composition {
                         } else {
                             panic!("mismatched backends");
                         },
+                        clip: layer.clip.map(|clip| {
+                            if let RasterInner::Spinel(clip) = clip.inner {
+                                clip
+                            } else {
+                                panic!("mismatched backends");
+                            }
+                        }),
                         style: layer.style,
                     })
                     .collect(),
@@ -592,6 +608,13 @@ impl Composition {
                         } else {
                             panic!("mismatched backends");
                         },
+                        clip: layer.clip.map(|clip| {
+                            if let RasterInner::Mold(clip) = clip.inner {
+                                clip
+                            } else {
+                                panic!("mismatched backends");
+                            }
+                        }),
                         style: layer.style,
                     }),
                 );
@@ -605,6 +628,13 @@ impl Composition {
                         } else {
                             panic!("mismatched backends");
                         },
+                        clip: layer.clip.map(|clip| {
+                            if let RasterInner::Spinel(clip) = clip.inner {
+                                clip
+                            } else {
+                                panic!("mismatched backends");
+                            }
+                        }),
                         style: layer.style,
                     }),
                 );

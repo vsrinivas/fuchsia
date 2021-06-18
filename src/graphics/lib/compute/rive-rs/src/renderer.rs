@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::fmt;
+
 use crate::{
     math::{self, Mat},
     shapes::{
@@ -13,6 +15,7 @@ use crate::{
 #[derive(Clone, Debug, Default)]
 pub struct RenderPaint {
     pub fill_rule: FillRule,
+    pub is_clipped: bool,
     pub color: PaintColor,
     pub style: Style,
     pub blend_mode: BlendMode,
@@ -100,6 +103,7 @@ pub enum GradientType {
     Radial,
 }
 
-pub trait Renderer {
+pub trait Renderer: fmt::Debug {
     fn draw(&mut self, path: &CommandPath, transform: Mat, paint: &RenderPaint);
+    fn clip(&mut self, path: &CommandPath, transform: Mat, layers: usize);
 }

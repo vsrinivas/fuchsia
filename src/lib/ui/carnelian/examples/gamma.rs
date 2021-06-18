@@ -91,6 +91,7 @@ impl Facet for GammaFacet {
 
         let layers = std::iter::once(Layer {
             raster: raster.clone(),
+            clip: None,
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(GRAY_COLOR),
@@ -99,6 +100,7 @@ impl Facet for GammaFacet {
         })
         .chain(std::iter::once(Layer {
             raster: raster.clone().translate(vec2(0, (size.height * 0.5) as i32)),
+            clip: None,
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(TRANSLUCENT_COLOR),
@@ -107,6 +109,7 @@ impl Facet for GammaFacet {
         }))
         .chain((0..size.height as i32).step_by(2).map(|y| Layer {
             raster: line_raster.clone().translate(vec2((size.width * 0.5) as i32, y)),
+            clip: None,
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(BLACK_COLOR),

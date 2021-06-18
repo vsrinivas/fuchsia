@@ -12,7 +12,7 @@ use dashmap::DashMap;
 use rayon::prelude::*;
 
 use crate::{
-    painter::LayerStyles,
+    painter::LayerProps,
     rasterizer::{search_last_by_key, CompactSegment},
     TILE_MASK, TILE_SHIFT, TILE_SIZE,
 };
@@ -134,7 +134,7 @@ impl BufferLayout {
         buffer.as_mut_ptr() == self.ptr && buffer.len() == self.len
     }
 
-    pub fn print<S: LayerStyles>(
+    pub fn print<S: LayerProps>(
         &mut self,
         buffer: &mut [[u8; 4]],
         layers_per_tile: Option<&DashMap<(usize, usize), usize>>,
@@ -203,7 +203,7 @@ mod tests {
     use std::{collections::HashMap, iter};
 
     use crate::{
-        painter::{BlendMode, Fill, FillRule, Style},
+        painter::{Fill, Style},
         PIXEL_WIDTH,
     };
 
@@ -321,30 +321,9 @@ mod tests {
 
         let mut styles = HashMap::new();
 
-        styles.insert(
-            0,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(BLUE),
-                blend_mode: BlendMode::Over,
-            },
-        );
-        styles.insert(
-            1,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(GREEN),
-                blend_mode: BlendMode::Over,
-            },
-        );
-        styles.insert(
-            2,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(RED),
-                blend_mode: BlendMode::Over,
-            },
-        );
+        styles.insert(0, Style { fill: Fill::Solid(BLUE), ..Default::default() });
+        styles.insert(1, Style { fill: Fill::Solid(GREEN), ..Default::default() });
+        styles.insert(2, Style { fill: Fill::Solid(RED), ..Default::default() });
 
         buffer_layout
             .print(&mut buffer, None, None, &segments, BLACK, None, |layer| styles[&layer].clone());
@@ -394,14 +373,7 @@ mod tests {
 
         let mut styles = HashMap::new();
 
-        styles.insert(
-            0,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(BLUE),
-                blend_mode: BlendMode::Over,
-            },
-        );
+        styles.insert(0, Style { fill: Fill::Solid(BLUE), ..Default::default() });
 
         buffer_layout.print(
             &mut buffer,

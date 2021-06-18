@@ -186,6 +186,7 @@ impl ViewAssistant for PngViewAssistant {
         // Clear area where image was previously located.
         let clear_layer = rendering.clear_raster.iter().map(|raster| Layer {
             raster: raster.clone(),
+            clip: None,
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(background),

@@ -65,7 +65,7 @@ impl ObjectRef<'_, PathComposer> {
                 path.with_command_path(|command_path| {
                     builder.path(
                         command_path.expect("command_path should already be set"),
-                        local_transform,
+                        Some(local_transform),
                     );
                 });
             }
@@ -81,8 +81,10 @@ impl ObjectRef<'_, PathComposer> {
 
                 let transform = path.transform();
                 path.with_command_path(|command_path| {
-                    builder
-                        .path(command_path.expect("command_path should already be set"), transform);
+                    builder.path(
+                        command_path.expect("command_path should already be set"),
+                        Some(transform),
+                    );
                 });
             }
 

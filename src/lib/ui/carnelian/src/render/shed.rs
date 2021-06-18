@@ -281,7 +281,7 @@ impl Shed {
                     context.raster_builder().expect("failed to get RasterBuilder");
                 raster_builder.add(&path_builder.build(), transform);
 
-                Layer { raster: raster_builder.build(), style }
+                Layer { raster: raster_builder.build(), clip: None, style }
             })
             .collect()
     }

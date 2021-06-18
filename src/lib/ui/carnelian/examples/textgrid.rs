@@ -193,6 +193,7 @@ impl Facet for TextGridFacet {
             })
             .map(|raster| Layer {
                 raster,
+                clip: None,
                 style: Style {
                     fill_rule: FillRule::NonZero,
                     fill: Fill::Solid(*foreground),

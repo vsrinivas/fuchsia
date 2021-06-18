@@ -272,6 +272,8 @@ pub struct Style {
 pub struct Layer<B: Backend> {
     /// Layer raster.
     pub raster: B::Raster,
+    /// Layer clip.
+    pub clip: Option<B::Raster>,
     /// Layer style.
     pub style: Style, // Will also contain txty when available.
 }
@@ -328,6 +330,7 @@ pub(crate) mod tests {
                 &Composition::with_layers(
                     vec![Layer {
                         raster: raster.clone() + raster,
+                        clip: None,
                         style: Style {
                             fill_rule: FillRule::NonZero,
                             fill: Fill::Solid(Color::white()),

@@ -96,6 +96,7 @@ impl GridView {
                         let bg_raster = raster_for_rectangle(&cell_bounds, render_context);
                         Some(Layer {
                             raster: bg_raster,
+                            clip: None,
                             style: Style {
                                 fill_rule: FillRule::NonZero,
                                 fill: Fill::Solid(cell_background_color),
@@ -109,6 +110,7 @@ impl GridView {
                     Some((
                         Layer {
                             raster: fg_raster,
+                            clip: None,
                             style: Style {
                                 fill_rule: FillRule::NonZero,
                                 fill: Fill::Solid(make_color(&cell.fg)),
@@ -268,6 +270,7 @@ impl ScrollBar {
         let raster = raster_for_rectangle(&frame, render_context);
         Layer {
             raster: raster,
+            clip: None,
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(white),

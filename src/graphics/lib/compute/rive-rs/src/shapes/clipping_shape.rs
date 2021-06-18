@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{cell::Cell, fmt, iter};
+use std::{fmt, iter};
 
 use crate::{
     component::Component,
@@ -10,7 +10,6 @@ use crate::{
     core::{Core, CoreContext, Object, ObjectRef, OnAdded, Property},
     drawable::Drawable,
     dyn_vec::DynVec,
-    math::Mat,
     node::Node,
     option_cell::OptionCell,
     shapes::{FillRule, PathSpace, Shape},
@@ -27,27 +26,22 @@ pub struct ClippingShape {
     is_visible: Property<bool>,
     shapes: DynVec<Object<Shape>>,
     source: OptionCell<Object<Node>>,
-    command_path: Cell<Option<CommandPath>>,
+    command_path: OptionCell<CommandPath>,
 }
 
 impl fmt::Debug for ClippingShape {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let command_path = self.command_path.take();
-
-        let result = f
-            .debug_struct("ClippingShape")
-            .field("component", &self.component)
-            .field("source_id", &self.source_id)
-            .field("fill_rule", &self.fill_rule)
-            .field("is_visible", &self.is_visible)
-            .field("shapes", &self.shapes)
-            .field("source", &self.source)
-            .field("command_path", &command_path)
-            .finish();
-
-        self.command_path.set(command_path);
-
-        result
+        self.command_path.with(|command_path| {
+            f.debug_struct("ClippingShape")
+                .field("component", &self.component)
+                .field("source_id", &self.source_id)
+                .field("fill_rule", &self.fill_rule)
+                .field("is_visible", &self.is_visible)
+                .field("shapes", &self.shapes)
+                .field("source", &self.source)
+                .field("command_path", &command_path)
+                .finish()
+        })
     }
 }
 
@@ -78,6 +72,10 @@ impl ObjectRef<'_, ClippingShape> {
 }
 
 impl ObjectRef<'_, ClippingShape> {
+    pub(crate) fn with_command_path(&self, f: impl FnMut(Option<&CommandPath>)) {
+        self.command_path.with(f);
+    }
+
     pub fn build_dependencies(&self) {
         for shape in self.shapes.iter() {
             ObjectRef::from(shape.as_ref().path_composer())
@@ -94,7 +92,7 @@ impl ObjectRef<'_, ClippingShape> {
                 ObjectRef::from(shape.as_ref().path_composer()).with_world_path(|path| {
                     builder.path(
                         path.expect("world_path should already be set on PathComposer"),
-                        Mat::default(),
+                        None,
                     );
                 });
             }
@@ -187,7 +185,7 @@ impl Default for ClippingShape {
             is_visible: Property::new(true),
             shapes: DynVec::new(),
             source: OptionCell::new(),
-            command_path: Cell::new(None),
+            command_path: OptionCell::new(),
         }
     }
 }

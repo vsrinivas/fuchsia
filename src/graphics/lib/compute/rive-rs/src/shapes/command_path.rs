@@ -45,13 +45,17 @@ impl CommandPathBuilder {
             .close()
     }
 
-    pub fn path(&mut self, path: &CommandPath, t: Mat) -> &mut Self {
-        self.commands.extend(path.commands.iter().map(|&command| match command {
-            Command::MoveTo(p) => Command::MoveTo(t * p),
-            Command::LineTo(p) => Command::LineTo(t * p),
-            Command::CubicTo(c0, c1, p) => Command::CubicTo(t * c0, t * c1, t * p),
-            Command::Close => Command::Close,
-        }));
+    pub fn path(&mut self, path: &CommandPath, t: Option<Mat>) -> &mut Self {
+        if let Some(t) = t {
+            self.commands.extend(path.commands.iter().map(|&command| match command {
+                Command::MoveTo(p) => Command::MoveTo(t * p),
+                Command::LineTo(p) => Command::LineTo(t * p),
+                Command::CubicTo(c0, c1, p) => Command::CubicTo(t * c0, t * c1, t * p),
+                Command::Close => Command::Close,
+            }));
+        } else {
+            self.commands.extend(path.commands.iter().copied());
+        }
         self
     }
 

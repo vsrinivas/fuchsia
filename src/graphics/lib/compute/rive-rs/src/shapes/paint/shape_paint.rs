@@ -74,6 +74,10 @@ impl ObjectRef<'_, ShapePaint> {
             .set_render_opacity(render_opacity);
     }
 
+    pub fn set_is_clipped(&self, is_clipped: bool) {
+        self.render_paint().borrow_mut().is_clipped = is_clipped;
+    }
+
     pub fn draw(&self, renderer: &mut impl Renderer, path: &CommandPath, transform: Mat) {
         if let Some(fill) = self.try_cast::<Fill>() {
             return fill.draw(renderer, path, transform);

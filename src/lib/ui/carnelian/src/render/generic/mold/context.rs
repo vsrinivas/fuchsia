@@ -6,7 +6,7 @@ use std::{cell::RefCell, collections::HashMap, io::Read, mem, ptr, u32};
 
 use anyhow::Error;
 use euclid::{
-    default::{Rect, Size2D},
+    default::{Rect, Size2D, Vector2D},
     vec2,
 };
 use fidl::endpoints::{ClientEnd, ServerEnd};
@@ -27,7 +27,8 @@ use crate::{
     drawing::DisplayRotation,
     render::generic::{
         mold::{
-            image::VmoImage, Mold, MoldComposition, MoldImage, MoldPathBuilder, MoldRasterBuilder,
+            image::VmoImage, Mold, MoldComposition, MoldImage, MoldPathBuilder, MoldRaster,
+            MoldRasterBuilder,
         },
         BlendMode, Context, CopyRegion, Fill, FillRule, GradientType, PostCopy, PreClear, PreCopy,
         RenderExt,
@@ -186,6 +187,43 @@ impl MoldContext {
     }
 }
 
+fn add_to_composition(
+    mold_composition: &mut mold::Composition,
+    raster: &MoldRaster,
+) -> (mold::LayerId, Vector2D<f32>) {
+    let mut option = raster.layer_details.borrow_mut();
+    let layer_details = option
+        .filter(|&(layer_id, layer_translation)| {
+            mold_composition.get(layer_id).is_some() && raster.translation == layer_translation
+        })
+        .unwrap_or_else(|| {
+            let layer_id = mold_composition
+                .create_layer()
+                .expect(&format!("Layer limit reached. ({})", u16::max_value()));
+
+            for print in &raster.prints {
+                let transform: [f32; 9] = [
+                    print.transform.m11,
+                    print.transform.m21,
+                    print.transform.m31,
+                    print.transform.m12,
+                    print.transform.m22,
+                    print.transform.m32,
+                    0.0,
+                    0.0,
+                    1.0,
+                ];
+                mold_composition.insert_in_layer_transformed(layer_id, &*print.path, &transform);
+            }
+
+            (layer_id, raster.translation)
+        });
+
+    *option = Some(layer_details);
+
+    layer_details
+}
+
 fn render_composition(
     mold_composition: &mut mold::Composition,
     composition: &MoldComposition,
@@ -200,53 +238,80 @@ fn render_composition(
         layer.disable();
     }
 
-    for (order, layer) in composition.layers.iter().rev().enumerate() {
+    // mold and Carnelian use different APIs to express path clips:
+    // Carnelian has an optional clip field on layers while mold
+    // currently requires clips to be added to the layer set and
+    // each layer to specify whether or not is clipped by that particular
+    // clip.
+    //
+    // To make this work, Carnelian keeps track of the current clip, adds
+    // it to the layer set, then clips any subsequent layers that need to
+    // be clipped by the current clip. When a layer comes up with a different
+    // clip, the current layer gets reset and the cycle begins anew.
+
+    let mut order = 0;
+    let mut current_clip = None;
+    let mut layers = composition.layers.iter().rev();
+
+    macro_rules! prints {
+        ( $raster:expr ) => {
+            // Currently, testing mold rasters for equality forces the
+            // underlying prints to the be the same.
+            $raster.as_ref().map(|r: &MoldRaster| &r.prints)
+        };
+    }
+
+    while let Some(layer) = layers.next() {
         if layer.raster.prints.is_empty() {
             continue;
         }
 
-        let mut option = layer.raster.layer_details.borrow_mut();
-        let layer_details = option
-            .filter(|&(layer_id, layer_translation)| {
-                mold_composition.get(layer_id).is_some()
-                    && layer.raster.translation == layer_translation
-            })
-            .unwrap_or_else(|| {
-                let layer_id = mold_composition
-                    .create_layer()
-                    .expect(&format!("Layer limit reached. ({})", u16::max_value()));
+        if prints!(current_clip) != prints!(layer.clip) {
+            if let Some(ref first_clip) = layer.clip {
+                let layer_details = add_to_composition(mold_composition, first_clip);
 
-                for print in &layer.raster.prints {
-                    let transform: [f32; 9] = [
-                        print.transform.m11,
-                        print.transform.m21,
-                        print.transform.m31,
-                        print.transform.m12,
-                        print.transform.m22,
-                        print.transform.m32,
-                        0.0,
-                        0.0,
-                        1.0,
-                    ];
-                    mold_composition.insert_in_layer_transformed(
-                        layer_id,
-                        &*print.path,
-                        &transform,
-                    );
-                }
+                let mold_layer = mold_composition.get_mut(layer_details.0).unwrap();
+                let clip_count = 1 + layers
+                    .clone()
+                    .filter_map(|layer| layer.clip.as_ref())
+                    .take_while(|clip| clip.prints == first_clip.prints)
+                    .count();
 
-                (layer_id, layer.raster.translation)
-            });
+                mold_layer.enable().set_order(order).set_props(mold::Props {
+                    fill_rule: match layer.style.fill_rule {
+                        FillRule::NonZero => mold::FillRule::NonZero,
+                        FillRule::EvenOdd => mold::FillRule::EvenOdd,
+                    },
+                    func: mold::Func::Clip(clip_count),
+                });
 
-        *option = Some(layer_details);
+                let transform = display_rotation
+                    .transform(&display_size.to_f32())
+                    .pre_translate(vec2(layer.raster.translation.x, layer.raster.translation.y));
 
-        let maybe_mold_layer = mold_composition.get_mut(layer_details.0);
-        if let Some(mold_layer) = maybe_mold_layer {
-            mold_layer.enable().set_order(order as u16).set_style(mold::Style {
-                fill_rule: match layer.style.fill_rule {
-                    FillRule::NonZero => mold::FillRule::NonZero,
-                    FillRule::EvenOdd => mold::FillRule::EvenOdd,
-                },
+                mold_layer.set_transform(&[
+                    transform.m11,
+                    transform.m21,
+                    transform.m12,
+                    transform.m22,
+                    transform.m31,
+                    transform.m32,
+                ]);
+
+                order += 1;
+                current_clip = layer.clip.clone();
+            }
+        }
+
+        let layer_details = add_to_composition(mold_composition, &layer.raster);
+
+        let mold_layer = mold_composition.get_mut(layer_details.0).unwrap();
+        mold_layer.enable().set_order(order).set_props(mold::Props {
+            fill_rule: match layer.style.fill_rule {
+                FillRule::NonZero => mold::FillRule::NonZero,
+                FillRule::EvenOdd => mold::FillRule::EvenOdd,
+            },
+            func: mold::Func::Draw(mold::Style {
                 fill: match &layer.style.fill {
                     Fill::Solid(color) => mold::Fill::Solid(color.to_linear_bgra()),
                     Fill::Gradient(gradient) => {
@@ -266,6 +331,7 @@ fn render_composition(
                         mold::Fill::Gradient(builder.build().unwrap())
                     }
                 },
+                is_clipped: layer.clip.is_some(),
                 blend_mode: match layer.style.blend_mode {
                     BlendMode::Over => mold::BlendMode::Over,
                     BlendMode::Screen => mold::BlendMode::Screen,
@@ -280,21 +346,24 @@ fn render_composition(
                     BlendMode::Exclusion => mold::BlendMode::Exclusion,
                     BlendMode::Multiply => mold::BlendMode::Multiply,
                 },
-            });
+                ..Default::default()
+            }),
+        });
 
-            let transform = display_rotation
-                .transform(&display_size.to_f32())
-                .pre_translate(vec2(layer.raster.translation.x, layer.raster.translation.y));
+        let transform = display_rotation
+            .transform(&display_size.to_f32())
+            .pre_translate(vec2(layer.raster.translation.x, layer.raster.translation.y));
 
-            mold_layer.set_transform(&[
-                transform.m11,
-                transform.m21,
-                transform.m12,
-                transform.m22,
-                transform.m31,
-                transform.m32,
-            ]);
-        }
+        mold_layer.set_transform(&[
+            transform.m11,
+            transform.m21,
+            transform.m12,
+            transform.m22,
+            transform.m31,
+            transform.m32,
+        ]);
+
+        order += 1;
     }
 
     mold_composition.render(

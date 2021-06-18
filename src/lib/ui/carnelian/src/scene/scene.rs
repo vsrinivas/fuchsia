@@ -36,6 +36,7 @@ fn create_mouse_cursor_raster(render_context: &mut RenderContext) -> Raster {
 fn cursor_layer(cursor_raster: &Raster, position: IntPoint, color: &Color) -> Layer {
     Layer {
         raster: cursor_raster.clone().translate(position.to_vector()),
+        clip: None,
         style: Style {
             fill_rule: FillRule::NonZero,
             fill: Fill::Solid(*color),
@@ -242,6 +243,7 @@ impl Scene {
         let corner_knockouts_layer = corner_knockouts.as_ref().and_then(|raster| {
             Some(Layer {
                 raster: raster.clone(),
+                clip: None,
                 style: Style {
                     fill_rule: FillRule::NonZero,
                     fill: Fill::Solid(Color::new()),

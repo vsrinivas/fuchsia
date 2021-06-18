@@ -54,7 +54,18 @@ impl ObjectRef<'_, Shape> {
     }
 
     pub fn draw(&self, renderer: &mut impl Renderer, transform: Mat) {
-        // todo!("clip");
+        let mut is_clipped = false;
+        if let Some(path) = self.cast::<Drawable>().clip() {
+            is_clipped = true;
+
+            let layers = self
+                .cast::<ShapePaintContainer>()
+                .shape_paints()
+                .filter(|shape_paint| shape_paint.as_ref().is_visible())
+                .count();
+
+            renderer.clip(&path, transform, layers);
+        }
 
         let path_composer = self.path_composer();
 
@@ -64,6 +75,8 @@ impl ObjectRef<'_, Shape> {
             if !shape_paint.is_visible() {
                 continue;
             }
+
+            shape_paint.set_is_clipped(is_clipped);
 
             if shape_paint.path_space() & PathSpace::LOCAL == PathSpace::LOCAL {
                 let transform = transform * self.cast::<TransformComponent>().world_transform();

@@ -789,6 +789,7 @@ impl Contents {
                                 }
                             })
                             .unwrap(),
+                        clip: None,
                         style: Style {
                             fill_rule: FillRule::NonZero,
                             fill: Fill::Solid(stroke.color),
@@ -797,6 +798,7 @@ impl Contents {
                     })
                     .chain(std::iter::once(Layer {
                         raster: fill.raster.clone(),
+                        clip: None,
                         style: Style {
                             fill_rule: FillRule::NonZero,
                             fill: Fill::Solid(fill.color),
@@ -833,6 +835,7 @@ impl Contents {
                         }
                     })
                     .unwrap(),
+                clip: None,
                 style: Style {
                     fill_rule: FillRule::NonZero,
                     fill: Fill::Solid(stroke.color),

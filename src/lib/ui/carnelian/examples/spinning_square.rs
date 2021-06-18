@@ -149,6 +149,7 @@ impl Facet for SpinningSquareFacet {
         let square_raster = raster_builder.build();
         layer_group.replace_all(std::iter::once(Layer {
             raster: square_raster,
+            clip: None,
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(self.square_color),
