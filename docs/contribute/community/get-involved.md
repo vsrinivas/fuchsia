@@ -128,7 +128,7 @@ Fuchsia:
   <tr>
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/drivers-dev">drivers-dev</a>
    </td>
-   <td>For conversation about {{ widgets.glossary_simple ('driver', 'drivers') }}s.
+   <td>For conversation about {{ widgets.glossary_simple ('driver', 'drivers') }}.
    </td>
   </tr>
   <tr>
