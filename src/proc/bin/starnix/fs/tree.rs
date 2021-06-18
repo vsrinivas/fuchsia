@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use once_cell::sync::OnceCell;
-use parking_lot::{RwLock, RwLockUpgradableReadGuard};
+use parking_lot::{RwLock, RwLockUpgradableReadGuard, RwLockWriteGuard};
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 
@@ -15,10 +15,11 @@ pub type FsStr = [u8];
 
 pub struct FsNode {
     ops: OnceCell<Box<dyn FsNodeOps>>,
+    // TODO: replace with superblock handle
     device: DeviceHandle,
     parent: Option<FsNodeHandle>,
     name: FsString,
-    inode_number: ino_t,
+    stat: RwLock<stat_t>,
     state: RwLock<FsNodeState>,
 }
 
@@ -39,18 +40,36 @@ pub trait FsNodeOps: Send + Sync {
     fn mkdir(&self, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
         Err(ENOTDIR)
     }
+
+    /// Update node.stat if needed.
+    fn update_stat(&self, _node: &FsNode) -> Result<(), Errno> {
+        Ok(())
+    }
 }
 
 impl FsNode {
     pub fn new_root<T: FsNodeOps + 'static>(ops: T, device: DeviceHandle) -> FsNodeHandle {
+        Self::new_orphan(ops, S_IFDIR | 0777, device)
+    }
+    pub fn new_orphan<T: FsNodeOps + 'static>(
+        ops: T,
+        mode: mode_t,
+        device: DeviceHandle,
+    ) -> FsNodeHandle {
         let ops: Box<dyn FsNodeOps> = Box::new(ops);
         let inode_number = device.allocate_inode_number();
+        let device_id = device.get_device_id();
         Arc::new(FsNode {
             ops: OnceCell::from(ops),
             device,
             parent: None,
             name: FsString::new(),
-            inode_number,
+            stat: RwLock::new(stat_t {
+                st_ino: inode_number,
+                st_dev: device_id,
+                st_mode: mode,
+                ..Default::default()
+            }),
             state: Default::default(),
         })
     }
@@ -102,12 +121,15 @@ impl FsNode {
         Ok(node)
     }
 
-    pub fn fstat(&self) -> stat_t {
-        stat_t {
-            st_dev: self.device.get_device_id(),
-            st_ino: self.inode_number,
-            ..stat_t::default()
-        }
+    pub fn update_stat(&self) -> Result<stat_t, Errno> {
+        self.ops().update_stat(self)?;
+        Ok(self.stat())
+    }
+    pub fn stat(&self) -> stat_t {
+        self.stat.read().clone()
+    }
+    pub fn stat_mut(&self) -> RwLockWriteGuard<'_, stat_t> {
+        self.stat.write()
     }
 
     fn get_or_create_empty_child(self: &FsNodeHandle, name: FsString) -> FsNodeHandle {
@@ -122,7 +144,10 @@ impl FsNode {
             device: Arc::clone(&self.device),
             parent: Some(Arc::clone(self)),
             name: name.clone(),
-            inode_number: self.device.allocate_inode_number(),
+            stat: RwLock::new(stat_t {
+                st_ino: self.device.allocate_inode_number(),
+                ..Default::default()
+            }),
             state: Default::default(),
         });
         state.children.insert(name, Arc::downgrade(&child));

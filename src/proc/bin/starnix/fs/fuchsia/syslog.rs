@@ -35,20 +35,6 @@ impl FileOps for SyslogFile {
         Ok(0)
     }
 
-    fn fstat(&self, _file: &FileObject, task: &Task) -> Result<stat_t, Errno> {
-        // TODO(tbodt): Replace these random numbers with an anonymous inode
-        Ok(stat_t {
-            st_dev: 0x16,
-            st_ino: 3,
-            st_nlink: 1,
-            st_mode: 0x2190,
-            st_uid: task.creds.uid,
-            st_gid: task.creds.gid,
-            st_rdev: 0x8800,
-            ..stat_t::default()
-        })
-    }
-
     fn ioctl(
         &self,
         _file: &FileObject,

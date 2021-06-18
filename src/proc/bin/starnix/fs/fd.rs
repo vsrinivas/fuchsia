@@ -104,11 +104,6 @@ pub trait FileOps: Send + Sync {
         Err(ENODEV)
     }
 
-    // TODO(tbodt): This is actually an operation of the filesystem and not the file descriptor: if
-    // you open a device file, fstat will go to the filesystem, not to the device. It's only here
-    // because we don't have such a thing yet. Will need to be moved.
-    fn fstat(&self, file: &FileObject, task: &Task) -> Result<stat_t, Errno>;
-
     fn ioctl(
         &self,
         _file: &FileObject,

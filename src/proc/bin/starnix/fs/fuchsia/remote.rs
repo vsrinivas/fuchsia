@@ -25,6 +25,24 @@ lazy_static! {
     };
 }
 
+fn update_stat_from_result(
+    node: &FsNode,
+    result: Result<(i32, fio::NodeAttributes), fidl::Error>,
+) -> Result<(), Errno> {
+    /// st_blksize is measured in units of 512 bytes.
+    const BYTES_PER_BLOCK: i64 = 512;
+
+    let (status, attrs) = result.map_err(fidl_error)?;
+    zx::Status::ok(status).map_err(fio_error)?;
+    let mut stat = node.stat_mut();
+    stat.st_ino = attrs.id;
+    stat.st_mode = attrs.mode;
+    stat.st_size = attrs.content_size as i64;
+    stat.st_blocks = attrs.storage_size as i64 / BYTES_PER_BLOCK;
+    stat.st_nlink = attrs.link_count;
+    Ok(())
+}
+
 struct RemoteDirectoryNode {
     dir: fio::DirectorySynchronousProxy,
     // The fuchsia.io rights for the dir handle. Subdirs will be opened with the same rights.
@@ -77,6 +95,10 @@ impl FsNodeOps for RemoteDirectoryNode {
         not_implemented!("remote mkdir");
         Err(ENOSYS)
     }
+
+    fn update_stat(&self, node: &FsNode) -> Result<(), Errno> {
+        update_stat_from_result(node, self.dir.get_attr(zx::Time::INFINITE))
+    }
 }
 
 struct RemoteFileNode {
@@ -90,6 +112,10 @@ impl FsNodeOps for RemoteFileNode {
                 syncio::file_clone(&self.file, fio::CLONE_FLAG_SAME_RIGHTS).map_err(|_| EIO)?,
             ),
         }))
+    }
+
+    fn update_stat(&self, node: &FsNode) -> Result<(), Errno> {
+        update_stat_from_result(node, self.file.get_attr(zx::Time::INFINITE))
     }
 }
 
@@ -106,17 +132,6 @@ enum RemoteNode {
     File(fio::FileSynchronousProxy),
     Directory(fio::DirectorySynchronousProxy),
 }
-
-impl RemoteNode {
-    fn get_attr(&self) -> Result<(i32, fio::NodeAttributes), fidl::Error> {
-        match self {
-            RemoteNode::File(n) => n.get_attr(zx::Time::INFINITE),
-            RemoteNode::Directory(n) => n.get_attr(zx::Time::INFINITE),
-        }
-    }
-}
-
-const BYTES_PER_BLOCK: i64 = 512;
 
 impl FileOps for RemoteFile {
     fd_impl_seekable!();
@@ -172,21 +187,6 @@ impl FileOps for RemoteFile {
             vmo = vmo.replace_as_executable(&VMEX_RESOURCE).expect("replace_as_executable failed");
         }
         Ok(vmo)
-    }
-
-    fn fstat(&self, _file: &FileObject, task: &Task) -> Result<stat_t, Errno> {
-        let (status, attrs) = self.node.get_attr().map_err(fidl_error)?;
-        zx::Status::ok(status).map_err(fio_error)?;
-        Ok(stat_t {
-            st_mode: attrs.mode,
-            st_ino: attrs.id,
-            st_size: attrs.content_size as i64,
-            st_blocks: attrs.storage_size as i64 / BYTES_PER_BLOCK,
-            st_uid: task.creds.uid,
-            st_gid: task.creds.gid,
-            st_nlink: attrs.link_count,
-            ..stat_t::default()
-        })
     }
 }
 

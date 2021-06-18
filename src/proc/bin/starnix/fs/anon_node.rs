@@ -17,7 +17,7 @@ pub struct Anon(());
 
 impl Anon {
     pub fn new_node(kernel: &Kernel, name: AnonNodeType) -> FsNodeHandle {
-        FsNode::new_root(Anon(()), kernel.devices.get_anon_node_device(name))
+        FsNode::new_orphan(Anon(()), 0600, kernel.devices.get_anon_node_device(name))
     }
     pub fn new_file<T: FileOps + 'static>(
         kernel: &Kernel,

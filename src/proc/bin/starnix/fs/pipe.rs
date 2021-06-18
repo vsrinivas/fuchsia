@@ -145,6 +145,7 @@ pub struct PipeWriteEndpoint {
 pub fn new_pipe(kern: &Kernel) -> (FileHandle, FileHandle) {
     let pipe = Pipe::new();
     let node = Anon::new_node(kern, AnonNodeType::Pipe);
+    node.stat_mut().st_blksize = ATOMIC_IO_BYTES as i64;
     let read = FileObject::new(PipeReadEndpoint { pipe: pipe.clone() }, node.clone());
     let write = FileObject::new(PipeWriteEndpoint { pipe }, node);
     (read, write)
@@ -222,10 +223,6 @@ impl FileOps for PipeReadEndpoint {
         Ok(actual)
     }
 
-    fn fstat(&self, file: &FileObject, _task: &Task) -> Result<stat_t, Errno> {
-        Ok(stat_t { st_blksize: ATOMIC_IO_BYTES as i64, ..file.node.as_ref().fstat() })
-    }
-
     fn fcntl(
         &self,
         file: &FileObject,
@@ -280,10 +277,6 @@ impl FileOps for PipeWriteEndpoint {
 
     fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
         Err(EBADF)
-    }
-
-    fn fstat(&self, file: &FileObject, _task: &Task) -> Result<stat_t, Errno> {
-        Ok(stat_t { st_blksize: ATOMIC_IO_BYTES as i64, ..file.node.as_ref().fstat() })
     }
 
     fn fcntl(

@@ -45,8 +45,4 @@ impl FileOps for FuchsiaPipe {
         })?;
         Ok(size)
     }
-
-    fn fstat(&self, _file: &FileObject, _task: &Task) -> Result<stat_t, Errno> {
-        Err(ENOSYS)
-    }
 }

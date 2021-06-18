@@ -249,7 +249,7 @@ pub fn sys_fstat(
     buffer: UserRef<stat_t>,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    let result = file.ops().fstat(&file, &ctx.task)?;
+    let result = file.node.update_stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
 }
@@ -267,7 +267,7 @@ pub fn sys_newfstatat(
     }
     let fio_flags = fio::OPEN_RIGHT_READABLE;
     let file = open_internal(&ctx.task, dir_fd, user_path, fio_flags, 0)?;
-    let result = file.ops().fstat(&file, &ctx.task)?;
+    let result = file.node.update_stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
 }
