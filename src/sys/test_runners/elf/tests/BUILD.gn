@@ -12,7 +12,7 @@ rustc_test("tests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/lib/fuchsia-async",
-    "//src/lib/test_executor/rust:test_executor",
+    "//src/sys/test_manager:test_lib",
     "//src/sys/test_runners:test_lib",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

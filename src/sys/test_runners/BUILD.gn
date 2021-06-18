@@ -80,9 +80,9 @@ rustc_library("test_lib") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
-    "//src/lib/test_executor/rust:test_executor",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/runner",
+    "//src/sys/test_manager:test_lib",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

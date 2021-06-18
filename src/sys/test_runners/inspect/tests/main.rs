@@ -19,7 +19,7 @@ use {
     pretty_assertions::assert_eq,
     serde_json,
     std::collections::BTreeSet,
-    test_executor::{GroupRunEventByTestCase, RunEvent},
+    test_manager_test_lib::{GroupRunEventByTestCase, RunEvent},
 };
 
 #[derive(Debug)]
@@ -105,7 +105,7 @@ async fn run_test(
 
     let run_builder =
         instance.root.connect_to_protocol_at_exposed_dir::<ftest_manager::RunBuilderMarker>()?;
-    let run_builder = test_executor::TestBuilder::new(run_builder);
+    let run_builder = test_manager_test_lib::TestBuilder::new(run_builder);
     let suite_instance = run_builder
         .add_suite(
             test_url,

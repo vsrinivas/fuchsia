@@ -599,7 +599,7 @@
         },
         {
             protocol: [
-                "fuchsia.test.manager.Harness",
+                "fuchsia.test.manager.Query",
                 "fuchsia.test.manager.RunBuilder",
             ],
             from: "#test_manager",
@@ -682,7 +682,7 @@
             to: "#appmgr",
         },
         {
-            protocol: "fuchsia.test.manager.Harness",
+            protocol: "fuchsia.test.manager.Query",
             from: "#test_manager",
             to: [ "#appmgr" ],
         },

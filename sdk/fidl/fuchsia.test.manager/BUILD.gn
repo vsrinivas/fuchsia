@@ -12,7 +12,6 @@ fidl("fuchsia.test.manager") {
   public_deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol",
     "//sdk/fidl/fuchsia.diagnostics",
-    "//sdk/fidl/fuchsia.test",
     "//sdk/fidl/fuchsia.url",
   ]
 }

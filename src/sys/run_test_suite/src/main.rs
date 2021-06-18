@@ -6,7 +6,7 @@ use {
     argh::FromArgs,
     async_trait::async_trait,
     diagnostics_data::Severity,
-    fidl_fuchsia_test_manager::{HarnessMarker, RunBuilderMarker, RunBuilderProxy},
+    fidl_fuchsia_test_manager::{RunBuilderMarker, RunBuilderProxy},
 };
 
 #[derive(FromArgs, Default, PartialEq, Eq, Debug)]
@@ -94,9 +94,6 @@ async fn main() {
         std::process::exit(1);
     }
 
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let log_opts = run_test_suite_lib::diagnostics::LogCollectionOptions {
         min_severity: min_severity_logs,
         max_severity: max_severity_logs,
@@ -114,7 +111,6 @@ async fn main() {
             also_run_disabled_tests,
             parallel,
             test_args: test_args,
-            harness,
             builder_connector: RunBuilderConnector::new(),
         },
         log_opts,

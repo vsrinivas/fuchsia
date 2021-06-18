@@ -77,7 +77,7 @@
             backing_dir: "memfs",
             storage_id: "static_instance_id_or_moniker",
         },
-        { protocol: "fuchsia.test.manager.Harness" },
+        { protocol: "fuchsia.test.manager.Query" },
         { protocol: "fuchsia.test.internal.Info" },
         { protocol: "fuchsia.test.manager.RunBuilder" },
     ],
@@ -286,7 +286,7 @@
     ],
     expose: [
         {
-            protocol: "fuchsia.test.manager.Harness",
+            protocol: "fuchsia.test.manager.Query",
             from: "self",
         },
         {

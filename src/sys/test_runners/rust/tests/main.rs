@@ -8,7 +8,7 @@ use {
     crate::lib::run_test,
     fidl_fuchsia_test_manager::{CaseStatus, SuiteStatus},
     pretty_assertions::assert_eq,
-    test_executor::{GroupRunEventByTestCase as _, RunEvent},
+    test_manager_test_lib::{GroupRunEventByTestCase as _, RunEvent},
 };
 
 #[fuchsia_async::run_singlethreaded(test)]

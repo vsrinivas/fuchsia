@@ -4,7 +4,7 @@
 
 use async_trait::async_trait;
 use diagnostics_data::Severity;
-use fidl_fuchsia_test_manager::{HarnessMarker, HarnessProxy, RunBuilderMarker, RunBuilderProxy};
+use fidl_fuchsia_test_manager::{RunBuilderMarker, RunBuilderProxy};
 use futures::prelude::*;
 use regex::Regex;
 use run_test_suite_lib::{diagnostics, output, Outcome, SuiteRunResult, TestParams};
@@ -67,10 +67,9 @@ impl RunBuilderConnector {
     }
 }
 
-fn new_test_params(test_url: &str, harness: HarnessProxy) -> TestParams {
+fn new_test_params(test_url: &str) -> TestParams {
     TestParams {
         test_url: test_url.to_string(),
-        harness,
         builder_connector: RunBuilderConnector::new(),
         timeout: None,
         test_filter: None,
@@ -100,13 +99,10 @@ async fn run_test_once<W: Write + Send>(
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_no_clean_exit() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let run_result = run_test_once(
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm",
-            harness),
+            ),
         diagnostics::LogCollectionOptions::default(),
         &mut output
     )
@@ -143,13 +139,10 @@ log3 for Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_passing_v2_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let run_result = run_test_once(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
-                harness),
+                ),
             diagnostics::LogCollectionOptions::default(),
             &mut output
         )
@@ -187,12 +180,10 @@ log3 for Example.Test3
 async fn launch_and_test_passing_v2_test_multiple_times() {
     let mut output: Vec<u8> = vec![];
     let mut reporter = output::RunReporter::new_noop();
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
     let streams = run_test_suite_lib::run_test(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
-                harness),
+                ),
             10, diagnostics::LogCollectionOptions::default(),&mut output,
             &mut reporter
         )
@@ -215,12 +206,8 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_with_filter() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
-        harness,
     );
 
     test_params.test_filter = Some("*Test3".to_string());
@@ -249,13 +236,9 @@ log3 for Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_empty_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let run_result = run_test_once(
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cm",
-            harness,
         ),
         diagnostics::LogCollectionOptions::default(),
         &mut output,
@@ -271,13 +254,10 @@ async fn launch_and_test_empty_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_huge_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
 
     let run_result = run_test_once(
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/huge-test-example.cm",
-            harness,
         ),
         diagnostics::LogCollectionOptions::default(),
         &mut output,
@@ -293,13 +273,9 @@ async fn launch_and_test_huge_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_disabled_test_exclude_disabled() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let run_result = run_test_once(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
-                harness
             ),
             diagnostics::LogCollectionOptions::default(),
             &mut output,
@@ -334,12 +310,8 @@ log3 for Example.Test1
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_disabled_test_include_disabled() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
-        harness,
     );
     test_params.also_run_disabled_tests = true;
     let run_result =
@@ -380,13 +352,9 @@ log3 for Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_failing_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let run_result = run_test_once(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
-                harness
             ),
             diagnostics::LogCollectionOptions::default(),
             &mut output,
@@ -424,13 +392,10 @@ log3 for Example.Test3
 async fn launch_and_test_failing_v2_test_multiple_times() {
     let mut output: Vec<u8> = vec![];
     let mut reporter = output::RunReporter::new_noop();
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let streams = run_test_suite_lib::run_test(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
-                harness),
+                ),
             10, diagnostics::LogCollectionOptions::default(),&mut output, &mut reporter
         )
     .await.expect("run test");
@@ -449,13 +414,9 @@ async fn launch_and_test_failing_v2_test_multiple_times() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_incomplete_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let run_result = run_test_once(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm",
-                harness
             ),
             diagnostics::LogCollectionOptions::default(),
             &mut output,
@@ -494,13 +455,10 @@ Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_invalid_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let run_result = run_test_once(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm",
-                harness
+
             ),
             diagnostics::LogCollectionOptions::default(),
             &mut output,
@@ -541,13 +499,9 @@ Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_echo_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let run_result = run_test_once(
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm",
-            harness,
         ),
         diagnostics::LogCollectionOptions::default(),
         &mut output,
@@ -570,12 +524,8 @@ async fn launch_and_run_echo_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_timeout() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
-        harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(1);
     let run_result =
@@ -597,12 +547,8 @@ async fn test_timeout() {
 async fn test_timeout_multiple_times() {
     let mut output: Vec<u8> = vec![];
     let mut reporter = output::RunReporter::new_noop();
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
-        harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(1);
     let streams = run_test_suite_lib::run_test(
@@ -631,12 +577,8 @@ async fn test_timeout_multiple_times() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_passes_with_large_timeout() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm",
-        harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
     let run_result =
@@ -659,12 +601,8 @@ async fn test_passes_with_large_timeout() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_logging_component() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
-        harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
     let run_result =
@@ -686,12 +624,8 @@ async fn test_logging_component() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_logging_component_min_severity() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
-        harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
     let log_opts = diagnostics::LogCollectionOptions {
@@ -715,12 +649,8 @@ async fn test_logging_component_min_severity() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_stdout_ansi() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
-        harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
     let log_opts = diagnostics::LogCollectionOptions {
@@ -745,12 +675,8 @@ async fn test_stdout_filter_ansi() {
     let mut output: Vec<u8> = vec![];
     let mut ansi_filter = output::AnsiFilterWriter::new(&mut output);
     let mut reporter = output::RunReporter::new_noop();
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
-        harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
     let log_opts = diagnostics::LogCollectionOptions {
@@ -794,12 +720,8 @@ async fn test_logging_component_max_severity_error() {
 
 async fn test_max_severity(max_severity: Severity) {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
-        harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
     let log_opts = diagnostics::LogCollectionOptions {
@@ -857,12 +779,8 @@ async fn test_max_severity(max_severity: Severity) {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_stdout_to_directory() {
     let output_dir = tempfile::tempdir().expect("create temp directory");
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
-        harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
 
@@ -902,12 +820,8 @@ async fn test_stdout_to_directory() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_syslog_to_directory() {
     let output_dir = tempfile::tempdir().expect("create temp directory");
-    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
-        .expect("connecting to HarnessProxy");
-
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
-        harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
     let log_opts = diagnostics::LogCollectionOptions {

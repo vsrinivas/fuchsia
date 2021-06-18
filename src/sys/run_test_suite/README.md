@@ -1,20 +1,20 @@
-# test executor
+# run-test-suite
 
-Reviewed on: 2019-10-16
+Reviewed on: 2021-06-15
 
-Test Executor runs tests which implement `fuchsia.test.Suite` and displays result.
+Run test suite runs tests which implement `fuchsia.test.Suite` and displays result.
 It will exit with code 0 if tests passes else with code 1.
 
 ## Building
 
-Test Executor should be included test build of Fuchsia, but if missing
-can be added to builds by including `--with //src/sys/test_executor` to the
+Run test suite should be included test build of Fuchsia, but if missing
+can be added to builds by including `--with //src/sys/run_test_suite` to the
 `fx set` invocation.
 
 ## Running
 
 ```
-$ fx shell run fuchsia-pkg://fuchsia.com/test_executor#meta/test_executor.cmx <v2_test_component_url>
+$ fx shell run run-test-suite <v2_test_component_url>
 ```
 
 ## Testing
@@ -22,7 +22,7 @@ $ fx shell run fuchsia-pkg://fuchsia.com/test_executor#meta/test_executor.cmx <v
 Tests for this project are available in the `tests` folder.
 
 ```
-$ fx run-test test_executor_integration_tests
+$ fx test run_test_suite_integration_tests
 ```
 
 ## Source layout

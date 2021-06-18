@@ -13,7 +13,7 @@ use {
     futures::{channel::mpsc, prelude::*},
     maplit::hashmap,
     pretty_assertions::assert_eq,
-    test_executor::{GroupRunEventByTestCase, RunEvent},
+    test_manager_test_lib::{GroupRunEventByTestCase, RunEvent, TestBuilder},
 };
 
 async fn connect_test_manager() -> Result<ftest_manager::RunBuilderProxy, Error> {
@@ -32,11 +32,27 @@ async fn connect_test_manager() -> Result<ftest_manager::RunBuilderProxy, Error>
         .context("failed to open test suite service")
 }
 
+async fn connect_query_server() -> Result<ftest_manager::QueryProxy, Error> {
+    let realm = client::connect_to_protocol::<fsys::RealmMarker>()
+        .context("could not connect to Realm service")?;
+
+    let mut child_ref = fsys::ChildRef { name: "test_manager".to_owned(), collection: None };
+    let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>()?;
+    realm
+        .bind_child(&mut child_ref, server_end)
+        .await
+        .context("bind_child fidl call failed for test manager")?
+        .map_err(|e| format_err!("failed to create test manager: {:?}", e))?;
+
+    client::connect_to_protocol_at_dir_root::<ftest_manager::QueryMarker>(&dir)
+        .context("failed to open test suite service")
+}
+
 async fn run_single_test(
     test_url: &str,
     run_options: RunOptions,
 ) -> Result<(Vec<RunEvent>, Vec<String>), Error> {
-    let builder = test_executor::TestBuilder::new(
+    let builder = TestBuilder::new(
         connect_test_manager().await.context("cannot connect to run builder proxy")?,
     );
     let suite_instance =
@@ -49,7 +65,7 @@ async fn run_single_test(
 }
 
 async fn collect_suite_events(
-    suite_instance: test_executor::SuiteRunInstance,
+    suite_instance: test_manager_test_lib::SuiteRunInstance,
 ) -> Result<(Vec<RunEvent>, Vec<String>), Error> {
     let (sender, mut recv) = mpsc::channel(1);
     let execution_task =
@@ -58,7 +74,7 @@ async fn collect_suite_events(
     let mut log_tasks = vec![];
     while let Some(event) = recv.next().await {
         match event.payload {
-            test_executor::SuiteEventPayload::RunEvent(RunEvent::CaseStdout {
+            test_manager_test_lib::SuiteEventPayload::RunEvent(RunEvent::CaseStdout {
                 name,
                 mut stdout_message,
             }) => {
@@ -70,12 +86,12 @@ async fn collect_suite_events(
                     events.push(RunEvent::case_stdout(name.clone(), log.to_string()));
                 }
             }
-            test_executor::SuiteEventPayload::RunEvent(e) => events.push(e),
-            test_executor::SuiteEventPayload::SuiteLog { log_stream } => {
+            test_manager_test_lib::SuiteEventPayload::RunEvent(e) => events.push(e),
+            test_manager_test_lib::SuiteEventPayload::SuiteLog { log_stream } => {
                 let t = fasync::Task::spawn(log_stream.collect::<Vec<_>>());
                 log_tasks.push(t);
             }
-            test_executor::SuiteEventPayload::TestCaseLog { .. } => {
+            test_manager_test_lib::SuiteEventPayload::TestCaseLog { .. } => {
                 panic!("not supported yet!")
             }
         }
@@ -97,7 +113,7 @@ async fn collect_suite_events(
 #[fuchsia_async::run_singlethreaded(test)]
 async fn calling_kill_should_kill_test() {
     let proxy = connect_test_manager().await.unwrap();
-    let builder = test_executor::TestBuilder::new(proxy);
+    let builder = TestBuilder::new(proxy);
     let suite = builder
         .add_suite(
             "fuchsia-pkg://fuchsia.com/test_manager_test#meta/hanging_test.cm",
@@ -119,7 +135,7 @@ async fn calling_kill_should_kill_test() {
     let events = events
         .into_iter()
         .filter_map(|e| match e.payload {
-            test_executor::SuiteEventPayload::RunEvent(e) => Some(e),
+            test_manager_test_lib::SuiteEventPayload::RunEvent(e) => Some(e),
             _ => None,
         })
         .collect::<Vec<_>>();
@@ -137,7 +153,7 @@ async fn calling_kill_should_kill_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn calling_builder_kill_should_kill_test() {
     let proxy = connect_test_manager().await.unwrap();
-    let builder = test_executor::TestBuilder::new(proxy);
+    let builder = TestBuilder::new(proxy);
     let suite = builder
         .add_suite(
             "fuchsia-pkg://fuchsia.com/test_manager_test#meta/hanging_test.cm",
@@ -160,7 +176,7 @@ async fn calling_builder_kill_should_kill_test() {
     let events = events
         .into_iter()
         .filter_map(|e| match e.payload {
-            test_executor::SuiteEventPayload::RunEvent(e) => Some(e),
+            test_manager_test_lib::SuiteEventPayload::RunEvent(e) => Some(e),
             _ => None,
         })
         .collect::<Vec<_>>();
@@ -178,7 +194,7 @@ async fn calling_builder_kill_should_kill_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn calling_stop_should_stop_test() {
     let proxy = connect_test_manager().await.unwrap();
-    let builder = test_executor::TestBuilder::new(proxy);
+    let builder = TestBuilder::new(proxy);
     // can't use hanging test here as stop will only return once current running test completes.
     let suite = builder
         .add_suite(
@@ -202,7 +218,7 @@ async fn calling_stop_should_stop_test() {
     let events = events
         .into_iter()
         .filter_map(|e| match e.payload {
-            test_executor::SuiteEventPayload::RunEvent(e) => match e {
+            test_manager_test_lib::SuiteEventPayload::RunEvent(e) => match e {
                 RunEvent::SuiteFinished { .. } => Some(e),
                 _ => None,
             },
@@ -346,7 +362,7 @@ async fn multiple_test() {
     let gtest_test_url =
         "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
 
-    let builder = test_executor::TestBuilder::new(
+    let builder = TestBuilder::new(
         connect_test_manager().await.expect("cannot connect to run builder proxy"),
     );
     let gtest_suite_instance1 = builder
@@ -382,7 +398,7 @@ async fn multiple_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn no_suite_service_test() {
     let proxy = connect_test_manager().await.unwrap();
-    let builder = test_executor::TestBuilder::new(proxy);
+    let builder = TestBuilder::new(proxy);
     let suite = builder
         .add_suite(
             "fuchsia-pkg://fuchsia.com/test_manager_test#meta/no_suite_service.cm",
@@ -396,15 +412,15 @@ async fn no_suite_service_test() {
         .collect_events(sender)
         .await
         .expect_err("this should return instance not found error");
-    let err = err.downcast::<test_executor::SuiteLaunchError>().unwrap();
+    let err = err.downcast::<test_manager_test_lib::SuiteLaunchError>().unwrap();
     // as test doesn't expose suite service, enumeration of test cases will fail.
-    assert_eq!(err, test_executor::SuiteLaunchError::CaseEnumeration);
+    assert_eq!(err, test_manager_test_lib::SuiteLaunchError::CaseEnumeration);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_not_resolved() {
     let proxy = connect_test_manager().await.unwrap();
-    let builder = test_executor::TestBuilder::new(proxy);
+    let builder = TestBuilder::new(proxy);
     let suite = builder
         .add_suite(
             "fuchsia-pkg://fuchsia.com/test_manager_test#meta/invalid_cml.cm",
@@ -418,8 +434,8 @@ async fn test_not_resolved() {
         .collect_events(sender)
         .await
         .expect_err("this should return instance not found error");
-    let err = err.downcast::<test_executor::SuiteLaunchError>().unwrap();
-    assert_eq!(err, test_executor::SuiteLaunchError::InstanceCannotResolve);
+    let err = err.downcast::<test_manager_test_lib::SuiteLaunchError>().unwrap();
+    assert_eq!(err, test_manager_test_lib::SuiteLaunchError::InstanceCannotResolve);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -457,4 +473,69 @@ async fn collect_isolated_logs_using_archive_iterator() {
         logs,
         vec!["Started diagnostics publisher ".to_owned(), "Finishing through Stop ".to_owned()]
     );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn enumerate_invalid_test() {
+    let proxy = connect_query_server().await.unwrap();
+    let (_iterator, server_end) = endpoints::create_proxy().unwrap();
+    let err = proxy
+        .enumerate("fuchsia-pkg://fuchsia.com/test_manager_test#meta/invalid_cml.cm", server_end)
+        .await
+        .unwrap()
+        .expect_err("This should error out as we have invalid test");
+    assert_eq!(err, ftest_manager::LaunchError::InstanceCannotResolve);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn enumerate_echo_test() {
+    let proxy = connect_query_server().await.unwrap();
+    let (iterator, server_end) = endpoints::create_proxy().unwrap();
+    proxy
+        .enumerate("fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm", server_end)
+        .await
+        .unwrap()
+        .expect("This should not fail");
+
+    let mut cases = vec![];
+    loop {
+        let mut c = iterator.get_next().await.unwrap();
+        if c.is_empty() {
+            break;
+        }
+        cases.append(&mut c);
+    }
+    assert_eq!(
+        cases.into_iter().map(|c| c.name.unwrap()).collect::<Vec<_>>(),
+        vec!["EchoTest".to_string()]
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn enumerate_huge_test() {
+    let proxy = connect_query_server().await.unwrap();
+    let (iterator, server_end) = endpoints::create_proxy().unwrap();
+    proxy
+        .enumerate(
+            "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/huge_gtest.cm",
+            server_end,
+        )
+        .await
+        .unwrap()
+        .expect("This should not fail");
+
+    let mut cases = vec![];
+    loop {
+        let mut c = iterator.get_next().await.unwrap();
+        if c.is_empty() {
+            break;
+        }
+        cases.append(&mut c);
+    }
+    let expected_cases = (0..=999)
+        .into_iter()
+        .map(|n| format!("HugeStress/HugeTest.Test/{}", n))
+        .collect::<Vec<_>>();
+
+    assert_eq!(cases.into_iter().map(|c| c.name.unwrap()).collect::<Vec<_>>(), expected_cases);
 }

@@ -18,46 +18,21 @@ use {
     },
 };
 
-#[cfg(not(target_os = "fuchsia"))]
-use log::warn;
-
 #[cfg(target_os = "fuchsia")]
 use crate::diagnostics::fuchsia::BatchLogStream;
-
-#[derive(Debug)]
-pub enum LogStreamProtocol {
-    BatchIterator,
-    ArchiveIterator,
-}
 
 #[pin_project]
 pub struct LogStream {
     #[pin]
     stream: BoxStream<'static, Result<LogsData, Error>>,
-
-    // TODO(75807): remove this field.
-    iterator_server_end: Option<ftest_manager::LogsIterator>,
 }
 
 impl LogStream {
-    fn new<S>(stream: S, iterator: Option<ftest_manager::LogsIterator>) -> Self
+    fn new<S>(stream: S) -> Self
     where
         S: Stream<Item = Result<LogsData, Error>> + Send + 'static,
     {
-        Self { stream: stream.boxed(), iterator_server_end: iterator }
-    }
-
-    /// Creates a new `LogStream` forcing the backing log iterator protocol to the given one or the
-    /// platform default. In Fuchsia, defaults to BatchIterator. In host, defaults to
-    /// ArchiveIterator. If the platform is host and BatchIterator is requested, the request is
-    /// ignored since that one is not supported in host.
-    pub fn create(force_log_protocol: Option<LogStreamProtocol>) -> Result<LogStream, fidl::Error> {
-        get_log_legacy_stream(force_log_protocol)
-    }
-
-    /// Takes the server end of the backing log iterator protocol.
-    pub fn take_iterator_server_end(&mut self) -> Option<ftest_manager::LogsIterator> {
-        self.iterator_server_end.take()
+        Self { stream: stream.boxed() }
     }
 
     pub fn from_syslog(syslog: ftest_manager::Syslog) -> Result<LogStream, fidl::Error> {
@@ -74,33 +49,13 @@ impl Stream for LogStream {
 }
 
 #[cfg(target_os = "fuchsia")]
-fn get_log_legacy_stream(
-    force_log_protocol: Option<LogStreamProtocol>,
-) -> Result<LogStream, fidl::Error> {
-    match force_log_protocol {
-        Some(LogStreamProtocol::BatchIterator) => {
-            let (stream, iterator) = BatchLogStream::new()?;
-            Ok(LogStream::new(stream, iterator.into()))
-        }
-        Some(LogStreamProtocol::ArchiveIterator) => {
-            let (stream, iterator) = ArchiveLogStream::new()?;
-            Ok(LogStream::new(stream, iterator.into()))
-        }
-        None => {
-            let (stream, iterator) = BatchLogStream::new()?;
-            Ok(LogStream::new(stream, iterator.into()))
-        }
-    }
-}
-
-#[cfg(target_os = "fuchsia")]
 fn get_log_stream(syslog: ftest_manager::Syslog) -> Result<LogStream, fidl::Error> {
     match syslog {
         ftest_manager::Syslog::Archive(client_end) => {
-            Ok(LogStream::new(ArchiveLogStream::from_client_end(client_end)?, None))
+            Ok(LogStream::new(ArchiveLogStream::from_client_end(client_end)?))
         }
         ftest_manager::Syslog::Batch(client_end) => {
-            Ok(LogStream::new(BatchLogStream::from_client_end(client_end)?, None))
+            Ok(LogStream::new(BatchLogStream::from_client_end(client_end)?))
         }
         _ => {
             panic!("not supported")
@@ -109,27 +64,10 @@ fn get_log_stream(syslog: ftest_manager::Syslog) -> Result<LogStream, fidl::Erro
 }
 
 #[cfg(not(target_os = "fuchsia"))]
-fn get_log_legacy_stream(
-    force_log_protocol: Option<LogStreamProtocol>,
-) -> Result<LogStream, fidl::Error> {
-    match force_log_protocol {
-        Some(LogStreamProtocol::BatchIterator) => {
-            warn!("Batch iterator is not supported in host, ignoring force_log_protocol");
-            let (stream, iterator) = ArchiveLogStream::new()?;
-            Ok(LogStream::new(stream, iterator.into()))
-        }
-        None | Some(LogStreamProtocol::ArchiveIterator) => {
-            let (stream, iterator) = ArchiveLogStream::new()?;
-            Ok(LogStream::new(stream, iterator.into()))
-        }
-    }
-}
-
-#[cfg(not(target_os = "fuchsia"))]
 fn get_log_stream(syslog: ftest_manager::Syslog) -> Result<LogStream, fidl::Error> {
     match syslog {
         ftest_manager::Syslog::Archive(client_end) => {
-            Ok(LogStream::new(ArchiveLogStream::from_client_end(client_end)?, None))
+            Ok(LogStream::new(ArchiveLogStream::from_client_end(client_end)?))
         }
         ftest_manager::Syslog::Batch(_) => panic!("batch iterator not supported on host"),
         _ => {
@@ -152,6 +90,7 @@ mod fuchsia {
     }
 
     impl BatchLogStream {
+        #[cfg(test)]
         pub fn new() -> Result<(Self, ftest_manager::LogsIterator), fidl::Error> {
             fidl::endpoints::create_proxy::<BatchIteratorMarker>().map(|(proxy, server_end)| {
                 let subscription = Subscription::new(proxy);
@@ -188,6 +127,8 @@ struct ArchiveLogStream {
 }
 
 impl ArchiveLogStream {
+    #[cfg(test)]
+    #[cfg(not(target_os = "fuchsia"))]
     fn new() -> Result<(Self, ftest_manager::LogsIterator), fidl::Error> {
         fidl::endpoints::create_proxy::<ArchiveIteratorMarker>().map(|(proxy, server_end)| {
             let (receiver, _drain_task) = Self::start_streaming_logs(proxy);
@@ -274,6 +215,11 @@ mod tests {
             matches::assert_matches,
         };
 
+        fn create_log_stream() -> Result<(LogStream, ftest_manager::LogsIterator), fidl::Error> {
+            let (stream, iterator) = BatchLogStream::new()?;
+            Ok((LogStream::new(stream), iterator))
+        }
+
         struct BatchIteratorOpts {
             with_error: bool,
         }
@@ -311,9 +257,9 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn log_stream_returns_logs() {
-            let mut log_stream = LogStream::create(None).expect("got log stream");
-            let server_end = match log_stream.take_iterator_server_end() {
-                Some(ftest_manager::LogsIterator::Batch(server_end)) => server_end,
+            let (mut log_stream, iterator) = create_log_stream().expect("got log stream");
+            let server_end = match iterator {
+                ftest_manager::LogsIterator::Batch(server_end) => server_end,
                 _ => panic!("unexpected logs iterator server end"),
             };
             fasync::Task::spawn(spawn_batch_iterator_server(
@@ -329,9 +275,9 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn log_stream_can_return_errors() {
-            let mut log_stream = LogStream::create(None).expect("got log stream");
-            let server_end = match log_stream.take_iterator_server_end() {
-                Some(ftest_manager::LogsIterator::Batch(server_end)) => server_end,
+            let (mut log_stream, iterator) = create_log_stream().expect("got log stream");
+            let server_end = match iterator {
+                ftest_manager::LogsIterator::Batch(server_end) => server_end,
                 _ => panic!("unexpected logs iterator server end"),
             };
             fasync::Task::spawn(spawn_batch_iterator_server(
@@ -340,29 +286,6 @@ mod tests {
             ))
             .detach();
             assert_matches!(log_stream.next().await, Some(Err(_)));
-        }
-
-        #[fasync::run_singlethreaded(test)]
-        async fn get_log_legacy_stream_on_fuchsia() {
-            let mut stream = LogStream::create(None).expect("get log stream ok");
-            assert_matches!(
-                stream.take_iterator_server_end(),
-                Some(ftest_manager::LogsIterator::Batch(_))
-            );
-
-            let mut stream = LogStream::create(Some(LogStreamProtocol::ArchiveIterator))
-                .expect("get log stream ok");
-            assert_matches!(
-                stream.take_iterator_server_end(),
-                Some(ftest_manager::LogsIterator::Archive(_))
-            );
-
-            let mut stream = LogStream::create(Some(LogStreamProtocol::BatchIterator))
-                .expect("get log stream ok");
-            assert_matches!(
-                stream.take_iterator_server_end(),
-                Some(ftest_manager::LogsIterator::Batch(_))
-            );
         }
     }
 
@@ -376,6 +299,11 @@ mod tests {
             },
             matches::assert_matches,
         };
+
+        fn create_log_stream() -> Result<(LogStream, ftest_manager::LogsIterator), fidl::Error> {
+            let (stream, iterator) = ArchiveLogStream::new()?;
+            Ok((LogStream::new(stream), iterator))
+        }
 
         async fn spawn_archive_iterator_server(
             server_end: ServerEnd<ArchiveIteratorMarker>,
@@ -409,33 +337,10 @@ mod tests {
         }
 
         #[fasync::run_singlethreaded(test)]
-        async fn get_log_legacy_stream_always_returns_archive_in_host() {
-            let mut stream = LogStream::create(None).expect("get log stream ok");
-            assert_matches!(
-                stream.take_iterator_server_end(),
-                Some(ftest_manager::LogsIterator::Archive(_))
-            );
-
-            let mut stream = LogStream::create(Some(LogStreamProtocol::ArchiveIterator))
-                .expect("get log stream ok");
-            assert_matches!(
-                stream.take_iterator_server_end(),
-                Some(ftest_manager::LogsIterator::Archive(_))
-            );
-
-            let mut stream = LogStream::create(Some(LogStreamProtocol::BatchIterator))
-                .expect("get log stream ok");
-            assert_matches!(
-                stream.take_iterator_server_end(),
-                Some(ftest_manager::LogsIterator::Archive(_))
-            );
-        }
-
-        #[fasync::run_singlethreaded(test)]
         async fn archive_stream_returns_logs() {
-            let mut log_stream = LogStream::create(None).expect("got log stream");
-            let server_end = match log_stream.take_iterator_server_end() {
-                Some(ftest_manager::LogsIterator::Archive(server_end)) => server_end,
+            let (mut log_stream, iterator) = create_log_stream().expect("got log stream");
+            let server_end = match iterator {
+                ftest_manager::LogsIterator::Archive(server_end) => server_end,
                 _ => panic!("unexpected logs iterator server end"),
             };
             fasync::Task::spawn(spawn_archive_iterator_server(server_end, false)).detach();
@@ -447,9 +352,9 @@ mod tests {
 
         #[fasync::run_singlethreaded(test)]
         async fn archive_stream_can_return_errors() {
-            let mut log_stream = LogStream::create(None).expect("got log stream");
-            let server_end = match log_stream.take_iterator_server_end() {
-                Some(ftest_manager::LogsIterator::Archive(server_end)) => server_end,
+            let (mut log_stream, iterator) = create_log_stream().expect("got log stream");
+            let server_end = match iterator {
+                ftest_manager::LogsIterator::Archive(server_end) => server_end,
                 _ => panic!("unexpected logs iterator server end"),
             };
             fasync::Task::spawn(spawn_archive_iterator_server(server_end, true)).detach();

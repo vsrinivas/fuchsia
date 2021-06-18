@@ -8,7 +8,7 @@
     use {
         maplit::hashmap,
         fidl_fuchsia_test_manager::{SuiteStatus, CaseStatus},
-        test_executor::RunEvent,
+        test_manager_test_lib::RunEvent,
     };
 
     hashmap! {

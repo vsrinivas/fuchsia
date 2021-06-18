@@ -11,7 +11,7 @@ use {
     maplit::{hashmap, hashset},
     pretty_assertions::assert_eq,
     std::{collections::HashSet, iter::FromIterator},
-    test_executor::{GroupRunEventByTestCase, RunEvent},
+    test_manager_test_lib::{GroupRunEventByTestCase, RunEvent},
 };
 
 fn default_options() -> ftest_manager::RunOptions {

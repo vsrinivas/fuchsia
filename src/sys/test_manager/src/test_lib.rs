@@ -1,0 +1,445 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+//! This crate provides helper functions for testing architecture tests.
+
+use {
+    anyhow::{Context as _, Error},
+    fidl_fuchsia_test_manager::{
+        self as ftest_manager, SuiteControllerProxy, SuiteEvent as FidlSuiteEvent,
+        SuiteEventPayload as FidlSuiteEventPayload,
+    },
+    fuchsia_async as fasync,
+    futures::{channel::mpsc, prelude::*},
+    linked_hash_map::LinkedHashMap,
+    log::*,
+    std::{collections::HashMap, sync::Arc},
+    test_diagnostics::{collect_and_send_stdout, LogStream},
+};
+
+/// Builds and runs test suite(s).
+pub struct TestBuilder {
+    proxy: ftest_manager::RunBuilderProxy,
+}
+
+impl TestBuilder {
+    /// Create new instance
+    pub fn new(proxy: ftest_manager::RunBuilderProxy) -> Self {
+        Self { proxy }
+    }
+
+    pub fn take_proxy(self) -> ftest_manager::RunBuilderProxy {
+        self.proxy
+    }
+
+    /// Add suite to run.
+    pub async fn add_suite(
+        &self,
+        test_url: &str,
+        run_options: ftest_manager::RunOptions,
+    ) -> Result<SuiteRunInstance, Error> {
+        let (controller_proxy, controller) =
+            fidl::endpoints::create_proxy().context("Cannot create proxy")?;
+        self.proxy.add_suite(test_url, run_options, controller)?;
+        Ok(SuiteRunInstance { controller_proxy: controller_proxy.into() })
+    }
+
+    /// Runs all tests to completion.
+    pub async fn run(self) -> Result<(), Error> {
+        let (controller_proxy, controller) =
+            fidl::endpoints::create_proxy().context("Cannot create proxy")?;
+        self.proxy.build(controller).context("Error starting tests")?;
+        // wait for test to end
+        let v = controller_proxy.get_events().await.context("Cannot wait for tests to end")?;
+        if v.len() != 0 {
+            return Err(anyhow::format_err!("The vector should have been empty, something wrong with test manager. Please file bug."));
+        }
+        Ok(())
+    }
+}
+
+/// Events produced by test suite.
+pub struct SuiteEvent {
+    pub timestamp: Option<i64>,
+    pub payload: SuiteEventPayload,
+}
+
+impl SuiteEvent {
+    pub fn case_found(timestamp: Option<i64>, name: String) -> Self {
+        SuiteEvent { timestamp, payload: SuiteEventPayload::RunEvent(RunEvent::case_found(name)) }
+    }
+
+    pub fn case_started(timestamp: Option<i64>, name: String) -> Self {
+        SuiteEvent { timestamp, payload: SuiteEventPayload::RunEvent(RunEvent::case_started(name)) }
+    }
+
+    pub fn case_stdout<N, L>(timestamp: Option<i64>, name: N, stdout_message: L) -> Self
+    where
+        N: Into<String>,
+        L: Into<String>,
+    {
+        SuiteEvent {
+            timestamp,
+            payload: SuiteEventPayload::RunEvent(RunEvent::case_stdout(
+                name.into(),
+                stdout_message.into(),
+            )),
+        }
+    }
+
+    pub fn case_stopped(
+        timestamp: Option<i64>,
+        name: String,
+        status: ftest_manager::CaseStatus,
+    ) -> Self {
+        SuiteEvent {
+            timestamp,
+            payload: SuiteEventPayload::RunEvent(RunEvent::case_stopped(name, status)),
+        }
+    }
+
+    pub fn case_finished(timestamp: Option<i64>, name: String) -> Self {
+        SuiteEvent {
+            timestamp,
+            payload: SuiteEventPayload::RunEvent(RunEvent::case_finished(name)),
+        }
+    }
+
+    pub fn suite_finished(timestamp: Option<i64>, status: ftest_manager::SuiteStatus) -> Self {
+        SuiteEvent {
+            timestamp,
+            payload: SuiteEventPayload::RunEvent(RunEvent::suite_finished(status)),
+        }
+    }
+
+    pub fn suite_log(timestamp: Option<i64>, log_stream: LogStream) -> Self {
+        SuiteEvent { timestamp, payload: SuiteEventPayload::SuiteLog { log_stream } }
+    }
+
+    pub fn test_case_log(timestamp: Option<i64>, name: String, log_stream: LogStream) -> Self {
+        SuiteEvent { timestamp, payload: SuiteEventPayload::TestCaseLog { name, log_stream } }
+    }
+}
+
+pub enum SuiteEventPayload {
+    /// Logger for test suite
+    SuiteLog { log_stream: LogStream },
+
+    /// Logger for a test case in suite.
+    TestCaseLog { name: String, log_stream: LogStream },
+
+    /// Test events.
+    RunEvent(RunEvent),
+}
+
+#[derive(PartialEq, Debug, Eq, Hash, Ord, PartialOrd, Clone)]
+pub enum RunEvent {
+    CaseFound { name: String },
+    CaseStarted { name: String },
+    CaseStdout { name: String, stdout_message: String },
+    CaseStopped { name: String, status: ftest_manager::CaseStatus },
+    CaseFinished { name: String },
+    SuiteFinished { status: ftest_manager::SuiteStatus },
+}
+
+impl RunEvent {
+    pub fn case_found<S>(name: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Self::CaseFound { name: name.into() }
+    }
+
+    pub fn case_started<S>(name: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Self::CaseStarted { name: name.into() }
+    }
+
+    pub fn case_stdout<S, L>(name: S, stdout_message: L) -> Self
+    where
+        S: Into<String>,
+        L: Into<String>,
+    {
+        Self::CaseStdout { name: name.into(), stdout_message: stdout_message.into() }
+    }
+
+    pub fn case_stopped<S>(name: S, status: ftest_manager::CaseStatus) -> Self
+    where
+        S: Into<String>,
+    {
+        Self::CaseStopped { name: name.into(), status }
+    }
+
+    pub fn case_finished<S>(name: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Self::CaseFinished { name: name.into() }
+    }
+
+    pub fn suite_finished(status: ftest_manager::SuiteStatus) -> Self {
+        Self::SuiteFinished { status }
+    }
+    /// Returns the name of the test case to which the event belongs, if applicable.
+    pub fn test_case_name(&self) -> Option<&String> {
+        match self {
+            RunEvent::CaseFound { name }
+            | RunEvent::CaseStarted { name }
+            | RunEvent::CaseStdout { name, .. }
+            | RunEvent::CaseStopped { name, .. }
+            | RunEvent::CaseFinished { name } => Some(name),
+            RunEvent::SuiteFinished { .. } => None,
+        }
+    }
+
+    /// Same as `test_case_name`, but returns an owned `Option<String>`.
+    pub fn owned_test_case_name(&self) -> Option<String> {
+        self.test_case_name().map(String::from)
+    }
+}
+
+/// Trait allowing iterators over `RunEvent` to be partitioned by test case name.
+pub trait GroupRunEventByTestCase: Iterator<Item = RunEvent> + Sized {
+    /// Groups the `RunEvent`s by test case name into a map that preserves insertion order.
+    /// The overall order of test cases (by first event) and the orders of events within each test
+    /// case are preserved, but events from different test cases are effectively de-interleaved.
+    ///
+    /// Example:
+    /// ```rust
+    /// use test_diagnostics::{RunEvent, GroupRunEventByTestCase as _};
+    /// use linked_hash_map::LinkedHashMap;
+    ///
+    /// let events: Vec<RunEvent> = get_events();
+    /// let grouped: LinkedHashMap<Option<String>, RunEvent> =
+    ///     events.into_iter().group_by_test_case();
+    /// ```
+    fn group_by_test_case_ordered(self) -> LinkedHashMap<Option<String>, Vec<RunEvent>> {
+        let mut map = LinkedHashMap::new();
+        for run_event in self {
+            map.entry(run_event.owned_test_case_name()).or_insert(Vec::new()).push(run_event);
+        }
+        map
+    }
+
+    /// De-interleaves the `RunEvents` by test case. The overall order of test cases (by first
+    /// event) and the orders of events within each test case are preserved.
+    fn deinterleave(self) -> Box<dyn Iterator<Item = RunEvent>> {
+        Box::new(
+            self.group_by_test_case_ordered()
+                .into_iter()
+                .flat_map(|(_, events)| events.into_iter()),
+        )
+    }
+
+    /// Groups the `RunEvent`s by test case name into an unordered map. The orders of events within
+    /// each test case are preserved, but the test cases themselves are not in a defined order.
+    fn group_by_test_case_unordered(self) -> HashMap<Option<String>, Vec<RunEvent>> {
+        let mut map = HashMap::new();
+        for run_event in self {
+            map.entry(run_event.owned_test_case_name()).or_insert(Vec::new()).push(run_event);
+        }
+        map
+    }
+}
+
+impl<T> GroupRunEventByTestCase for T where T: Iterator<Item = RunEvent> + Sized {}
+
+#[derive(Default)]
+struct FidlSuiteEventProcessor {
+    case_map: HashMap<u32, String>,
+    stdout_map: HashMap<u32, Vec<fasync::Task<Result<(), Error>>>>,
+}
+
+impl FidlSuiteEventProcessor {
+    fn new() -> Self {
+        FidlSuiteEventProcessor::default()
+    }
+
+    fn get_test_case_name(&self, identifier: u32) -> String {
+        self.case_map
+            .get(&identifier)
+            .expect(&format!("invalid test case identifier: {}", identifier))
+            .clone()
+    }
+
+    async fn process(
+        &mut self,
+        event: FidlSuiteEvent,
+        mut sender: mpsc::Sender<SuiteEvent>,
+    ) -> Result<(), Error> {
+        let timestamp = event.timestamp;
+        let e = match event.payload.expect("Payload cannot be null, please file bug.") {
+            FidlSuiteEventPayload::CaseFound(cf) => {
+                self.case_map.insert(cf.identifier, cf.test_case_name.clone());
+                SuiteEvent::case_found(timestamp, cf.test_case_name).into()
+            }
+            FidlSuiteEventPayload::CaseStarted(cs) => {
+                let test_case_name = self.get_test_case_name(cs.identifier);
+                SuiteEvent::case_started(timestamp, test_case_name).into()
+            }
+            FidlSuiteEventPayload::CaseStopped(cs) => {
+                let test_case_name = self.get_test_case_name(cs.identifier);
+                if let Some(stdouts) = self.stdout_map.remove(&cs.identifier) {
+                    for s in stdouts {
+                        s.await
+                            .context(format!("error collecting stdout of {}", test_case_name))?;
+                    }
+                }
+                SuiteEvent::case_stopped(timestamp, test_case_name, cs.status).into()
+            }
+            FidlSuiteEventPayload::CaseFinished(cf) => {
+                let test_case_name = self.get_test_case_name(cf.identifier);
+                SuiteEvent::case_finished(timestamp, test_case_name).into()
+            }
+            FidlSuiteEventPayload::CaseArtifact(ca) => {
+                let name = self.get_test_case_name(ca.identifier);
+                match ca.artifact {
+                    ftest_manager::Artifact::Stdout(stdout) => {
+                        let (s, mut r) = mpsc::channel(1024);
+                        let stdout_task = fasync::Task::spawn(collect_and_send_stdout(stdout, s));
+                        let mut sender_clone = sender.clone();
+                        let send_stdout_task = fasync::Task::spawn(async move {
+                            while let Some(msg) = r.next().await {
+                                sender_clone
+                                    .send(SuiteEvent::case_stdout(None, &name, msg))
+                                    .await
+                                    .context(format!("cannot send logs for {}", name))?;
+                            }
+                            Ok(())
+                        });
+                        match self.stdout_map.get_mut(&ca.identifier) {
+                            Some(v) => {
+                                v.push(stdout_task);
+                                v.push(send_stdout_task);
+                            }
+                            None => {
+                                self.stdout_map
+                                    .insert(ca.identifier, vec![stdout_task, send_stdout_task]);
+                            }
+                        }
+                        None
+                    }
+                    ftest_manager::Artifact::Stderr(_) => {
+                        panic!("not supported")
+                    }
+                    ftest_manager::Artifact::Log(log) => match LogStream::from_syslog(log) {
+                        Ok(log_stream) => {
+                            SuiteEvent::test_case_log(timestamp, name, log_stream).into()
+                        }
+                        Err(e) => {
+                            warn!("Cannot collect logs for test suite: {:?}", e);
+                            None
+                        }
+                    },
+                    _ => {
+                        panic!("not supported")
+                    }
+                }
+            }
+            FidlSuiteEventPayload::SuiteArtifact(sa) => match sa.artifact {
+                ftest_manager::Artifact::Stdout(_) => {
+                    panic!("not supported")
+                }
+                ftest_manager::Artifact::Stderr(_) => {
+                    panic!("not supported")
+                }
+                ftest_manager::Artifact::Log(log) => match LogStream::from_syslog(log) {
+                    Ok(log_stream) => SuiteEvent::suite_log(timestamp, log_stream).into(),
+                    Err(e) => {
+                        warn!("Cannot collect logs for test suite: {:?}", e);
+                        None
+                    }
+                },
+                _ => {
+                    panic!("not supported")
+                }
+            },
+            FidlSuiteEventPayload::SuiteFinished(sf) => SuiteEvent {
+                timestamp,
+                payload: SuiteEventPayload::RunEvent(RunEvent::SuiteFinished { status: sf.status }),
+            }
+            .into(),
+        };
+        if let Some(item) = e {
+            sender.send(item).await.context("Cannot send event")?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, thiserror::Error, Eq, PartialEq, Copy, Clone)]
+pub enum SuiteLaunchError {
+    #[error("Cannot enumerate tests")]
+    CaseEnumeration,
+
+    #[error("Cannot resolve test url")]
+    InstanceCannotResolve,
+
+    #[error("Invalid arguments passed")]
+    InvalidArgs,
+
+    #[error("Cannot connect to test suite")]
+    FailedToConnectToTestSuite,
+
+    #[error("resource unavailable")]
+    ResourceUnavailable,
+
+    #[error("Some internal error ocurred. Please file bug")]
+    InternalError,
+}
+
+impl From<ftest_manager::LaunchError> for SuiteLaunchError {
+    fn from(error: ftest_manager::LaunchError) -> Self {
+        match error {
+            ftest_manager::LaunchError::ResourceUnavailable => {
+                SuiteLaunchError::ResourceUnavailable
+            }
+            ftest_manager::LaunchError::InstanceCannotResolve => {
+                SuiteLaunchError::InstanceCannotResolve
+            }
+            ftest_manager::LaunchError::InvalidArgs => SuiteLaunchError::InvalidArgs,
+            ftest_manager::LaunchError::FailedToConnectToTestSuite => {
+                SuiteLaunchError::FailedToConnectToTestSuite
+            }
+            ftest_manager::LaunchError::CaseEnumeration => SuiteLaunchError::CaseEnumeration,
+            ftest_manager::LaunchError::InternalError => SuiteLaunchError::InternalError,
+        }
+    }
+}
+
+/// Instance to control a single test suite run.
+pub struct SuiteRunInstance {
+    controller_proxy: Arc<SuiteControllerProxy>,
+}
+
+impl SuiteRunInstance {
+    pub fn controller(&self) -> Arc<SuiteControllerProxy> {
+        self.controller_proxy.clone()
+    }
+
+    pub async fn collect_events(&self, sender: mpsc::Sender<SuiteEvent>) -> Result<(), Error> {
+        let controller_proxy = self.controller_proxy.clone();
+        let mut processor = FidlSuiteEventProcessor::new();
+        loop {
+            match controller_proxy.get_events().await? {
+                Err(e) => return Err(SuiteLaunchError::from(e).into()),
+                Ok(events) => {
+                    if events.len() == 0 {
+                        break;
+                    }
+                    for event in events {
+                        if let Err(e) = processor.process(event, sender.clone()).await {
+                            warn!("error running test suite: {:?}", e);
+                            let _ = controller_proxy.kill();
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}

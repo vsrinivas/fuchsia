@@ -10,7 +10,7 @@ use {
     pretty_assertions::assert_eq,
     regex::Regex,
     std::collections::HashMap,
-    test_executor::{GroupRunEventByTestCase, RunEvent},
+    test_manager_test_lib::{GroupRunEventByTestCase, RunEvent},
 };
 
 pub async fn run_test(
@@ -21,7 +21,7 @@ pub async fn run_test(
 ) -> Result<Vec<RunEvent>, Error> {
     let time_taken = Regex::new(r" \(.*?\)$").unwrap();
     let run_builder = test_runners_test_lib::connect_to_test_manager().await?;
-    let builder = test_executor::TestBuilder::new(run_builder);
+    let builder = test_manager_test_lib::TestBuilder::new(run_builder);
     let run_options = RunOptions {
         run_disabled_tests: Some(run_disabled_tests),
         parallel,

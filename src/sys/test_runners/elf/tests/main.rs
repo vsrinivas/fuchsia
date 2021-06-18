@@ -8,7 +8,7 @@ use {
     ftest_manager::{CaseStatus, RunOptions, SuiteStatus},
     fuchsia_async as fasync,
     pretty_assertions::assert_eq,
-    test_executor::RunEvent,
+    test_manager_test_lib::RunEvent,
 };
 
 fn default_options() -> RunOptions {
@@ -17,7 +17,7 @@ fn default_options() -> RunOptions {
 
 pub async fn run_test(test_url: &str, run_options: RunOptions) -> Result<Vec<RunEvent>, Error> {
     let run_builder = test_runners_test_lib::connect_to_test_manager().await?;
-    let builder = test_executor::TestBuilder::new(run_builder);
+    let builder = test_manager_test_lib::TestBuilder::new(run_builder);
     let suite_instance =
         builder.add_suite(test_url, run_options).await.context("Cannot create suite instance")?;
     let builder_run = fasync::Task::spawn(async move { builder.run().await });

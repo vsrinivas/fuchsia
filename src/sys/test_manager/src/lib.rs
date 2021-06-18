@@ -13,9 +13,8 @@ use {
     fidl_fuchsia_test_internal as ftest_internal, fidl_fuchsia_test_manager as ftest_manager,
     ftest::{Invocation, SuiteMarker},
     ftest_manager::{
-        CaseStatus, LaunchError, LaunchOptions, LegacySuiteControllerRequestStream,
-        RunControllerRequest, RunControllerRequestStream, SuiteControllerRequest,
-        SuiteControllerRequestStream, SuiteEvent as FidlSuiteEvent,
+        CaseStatus, LaunchError, RunControllerRequest, RunControllerRequestStream,
+        SuiteControllerRequest, SuiteControllerRequestStream, SuiteEvent as FidlSuiteEvent,
         SuiteEventPayload as FidlSuiteEventPayload, SuiteStatus,
     },
     fuchsia_async as fasync,
@@ -817,33 +816,24 @@ impl Suite {
         suite_request: ServerEnd<SuiteMarker>,
         test_map: Arc<TestMap>,
     ) -> Option<RunningTest> {
-        let (launch_options, syslog) = match self.options.log_iterator {
+        let (log_iterator, syslog) = match self.options.log_iterator {
             Some(ftest_manager::LogsIteratorOption::ArchiveIterator) => {
                 let (proxy, request) =
                     fidl::endpoints::create_endpoints().expect("cannot create suite");
                 (
-                    ftest_manager::LaunchOptions {
-                        logs_iterator: Some(ftest_manager::LogsIterator::Archive(request)),
-                        ..ftest_manager::LaunchOptions::EMPTY
-                    },
+                    ftest_manager::LogsIterator::Archive(request),
                     ftest_manager::Syslog::Archive(proxy),
                 )
             }
             _ => {
                 let (proxy, request) =
                     fidl::endpoints::create_endpoints().expect("cannot create suite");
-                (
-                    ftest_manager::LaunchOptions {
-                        logs_iterator: Some(ftest_manager::LogsIterator::Batch(request)),
-                        ..ftest_manager::LaunchOptions::EMPTY
-                    },
-                    ftest_manager::Syslog::Batch(proxy),
-                )
+                (ftest_manager::LogsIterator::Batch(request), ftest_manager::Syslog::Batch(proxy))
             }
         };
 
         sender.send(Ok(SuiteEvents::suite_syslog(syslog).into())).await.unwrap();
-        match launch_test(&self.test_url, suite_request, test_map, launch_options).await {
+        match launch_test(&self.test_url, suite_request, test_map, Some(log_iterator)).await {
             Ok(test) => Some(test),
             Err(err) => {
                 warn!(?err, "Failed to launch test");
@@ -901,47 +891,80 @@ pub async fn run_test_manager(
 }
 
 /// Start test manager and serve it over `stream`.
-pub async fn run_test_manager_old(
-    mut stream: ftest_manager::HarnessRequestStream,
+pub async fn run_test_manager_query_server(
+    mut stream: ftest_manager::QueryRequestStream,
     test_map: Arc<TestMap>,
 ) -> Result<(), TestManagerError> {
     while let Some(event) = stream.try_next().await.map_err(TestManagerError::Stream)? {
         match event {
-            ftest_manager::HarnessRequest::LaunchSuite {
-                test_url,
-                options,
-                suite,
-                controller,
-                responder,
-            } => {
-                let controller = match controller.into_stream() {
-                    Err(error) => {
-                        error!(%error, component_url = %test_url, "invalid controller channel");
-                        responder
-                            .send(&mut Err(LaunchError::InvalidArgs))
-                            .map_err(TestManagerError::Response)?;
-                        // process next request
-                        continue;
-                    }
+            ftest_manager::QueryRequest::Enumerate { test_url, iterator, responder } => {
+                let mut iterator = match iterator.into_stream() {
                     Ok(c) => c,
-                };
-
-                match launch_test(&test_url, suite, test_map.clone(), options).await {
-                    Ok(test) => {
-                        let test_name = test.instance.root.child_name();
-                        responder.send(&mut Ok(())).map_err(TestManagerError::Response)?;
-                        let test_map = test_map.clone();
-                        fasync::Task::spawn(async move {
-                            test.serve_controller(controller).await.unwrap_or_else(|error| {
-                                error!(%error, component_url = %test_url, "serve_controller failed");
-                            });
-                            test_map.mark_as_stale(&test_name);
-                        })
-                        .detach();
+                    Err(e) => {
+                        warn!("Cannot query test, invalid iterator {}: {}", test_url, e);
+                        let _ = responder.send(&mut Err(LaunchError::InvalidArgs));
+                        break;
                     }
-                    Err(err) => {
-                        error!(?err, "Failed to launch test");
-                        responder.send(&mut Err(err.into())).map_err(TestManagerError::Response)?;
+                };
+                let (suite, suite_request) =
+                    fidl::endpoints::create_proxy().expect("cannot create suite proxy");
+                match launch_test(&test_url, suite_request, test_map.clone(), None).await {
+                    Ok(test) => {
+                        let enumeration_result = enumerate_tests(&suite, None).await;
+                        let test_name = test.instance.root.child_name();
+                        let t = fasync::Task::spawn(test.destroy());
+                        match enumeration_result {
+                            Ok(invocations) => {
+                                const NAMES_CHUNK: usize = 50;
+                                let mut names = Vec::with_capacity(invocations.len());
+                                if let Ok(_) =
+                                    invocations.into_iter().try_for_each(|i| match i.name {
+                                        Some(name) => {
+                                            names.push(name);
+                                            Ok(())
+                                        }
+                                        None => {
+                                            warn!("no name for a invocation in {}", test_url);
+                                            Err(())
+                                        }
+                                    })
+                                {
+                                    let _ = responder.send(&mut Ok(()));
+                                    let mut names = names.chunks(NAMES_CHUNK);
+                                    while let Ok(Some(request)) = iterator.try_next().await {
+                                        match request {
+                                            ftest_manager::CaseIteratorRequest::GetNext {
+                                                responder,
+                                            } => match names.next() {
+                                                Some(names) => {
+                                                    let _ =
+                                                        responder.send(&mut names.into_iter().map(
+                                                            |s| ftest_manager::Case {
+                                                                name: Some(s.into()),
+                                                                ..ftest_manager::Case::EMPTY
+                                                            },
+                                                        ));
+                                                }
+                                                None => {
+                                                    let _ = responder.send(&mut vec![].into_iter());
+                                                }
+                                            },
+                                        }
+                                    }
+                                } else {
+                                    let _ = responder.send(&mut Err(LaunchError::CaseEnumeration));
+                                }
+                            }
+                            Err(e) => {
+                                warn!("cannot enumerate tests for {}: {:?}", test_url, e);
+                                let _ = responder.send(&mut Err(LaunchError::CaseEnumeration));
+                            }
+                        }
+                        t.await;
+                        test_map.mark_as_stale(&test_name);
+                    }
+                    Err(e) => {
+                        let _ = responder.send(&mut Err(e.into()));
                     }
                 }
             }
@@ -1007,24 +1030,6 @@ impl RunningTest {
             error!(?err, "Failed to destroy instance");
         });
     }
-
-    /// Serves Suite controller and destroys this test afterwards.
-    pub async fn serve_controller(
-        self,
-        mut stream: LegacySuiteControllerRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await? {
-            match event {
-                ftest_manager::LegacySuiteControllerRequest::Kill { .. } => {
-                    self.destroy().await;
-                    return Ok(());
-                }
-            }
-        }
-
-        self.destroy().await;
-        Ok(())
-    }
 }
 
 /// Launch test and return the name of test used to launch it in collection.
@@ -1032,7 +1037,7 @@ async fn launch_test(
     test_url: &str,
     suite_request: ServerEnd<SuiteMarker>,
     test_map: Arc<TestMap>,
-    options: LaunchOptions,
+    log_iterator: Option<ftest_manager::LogsIterator>,
 ) -> Result<RunningTest, LaunchTestError> {
     // This archive accessor will be served by the embedded archivist.
     let (archive_accessor, archive_accessor_server_end) =
@@ -1057,7 +1062,7 @@ async fn launch_test(
             .map_err(LaunchTestError::ConnectToArchiveAccessor)?;
 
         let mut isolated_logs_provider = IsolatedLogsProvider::new(archive_accessor_arc_clone);
-        let logs_iterator_task = match options.logs_iterator {
+        let logs_iterator_task = match log_iterator {
             None => None,
             Some(ftest_manager::LogsIterator::Archive(iterator)) => {
                 let task = isolated_logs_provider

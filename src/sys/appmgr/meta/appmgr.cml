@@ -19,7 +19,7 @@
         },
         {
             protocol: [
-                "fuchsia.test.manager.Harness",
+                "fuchsia.test.manager.Query",
                 "fuchsia.test.manager.RunBuilder",
             ],
         },
@@ -452,8 +452,8 @@
 
         // From test_manager
         {
-            protocol: "fuchsia.test.manager.Harness",
-            path: "/svc_for_sys/fuchsia.test.manager.Harness",
+            protocol: "fuchsia.test.manager.Query",
+            path: "/svc_for_sys/fuchsia.test.manager.Query",
         },
 
         // From test_manager
@@ -510,7 +510,7 @@
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys.Loader",
                 "fuchsia.sysmem.Allocator",
-                "fuchsia.test.manager.Harness",
+                "fuchsia.test.manager.Query",
                 "fuchsia.test.manager.RunBuilder",
                 "fuchsia.tracing.controller.Controller",
                 "fuchsia.tracing.provider.Registry",

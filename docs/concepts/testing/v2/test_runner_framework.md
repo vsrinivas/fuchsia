@@ -19,7 +19,7 @@ on a variety of systems and targeting different hardware.
 
 The `test_manager` component is responsible for running tests on a Fuchsia
 device. Test manager exposes the
-[`fuchsia.test.manager.Harness`][fidl-test-manager] protocol, which allows
+[`fuchsia.test.manager.RunBuilder`][fidl-test-manager] protocol, which allows
 launching test suites.
 
 Each test suite is launched as a child of test manager. Test suites are offered

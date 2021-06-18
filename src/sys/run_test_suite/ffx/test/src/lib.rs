@@ -13,7 +13,6 @@ use {
     fidl::endpoints::create_proxy,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_remotecontrol as fremotecontrol,
-    fidl_fuchsia_test::CaseIteratorMarker,
     fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{RunBuilderMarker, RunBuilderProxy},
     output_directory::DirectoryManager,
@@ -59,20 +58,18 @@ impl RunBuilderConnector {
 
 #[ffx_plugin(
     "cmd-test.experimental",
-    ftest_manager::HarnessProxy = "core/test_manager:expose:fuchsia.test.manager.Harness"
+    ftest_manager::QueryProxy = "core/test_manager:expose:fuchsia.test.manager.Query"
 )]
 pub async fn test(
-    harness_proxy: ftest_manager::HarnessProxy,
+    query_proxy: ftest_manager::QueryProxy,
     remote_control: fremotecontrol::RemoteControlProxy,
     cmd: TestCommand,
 ) -> Result<()> {
     let writer = Box::new(stdout());
 
     match cmd.subcommand {
-        TestSubcommand::Run(run) => {
-            run_test(harness_proxy, RunBuilderConnector::new(remote_control), run).await
-        }
-        TestSubcommand::List(list) => get_tests(harness_proxy, writer, list).await,
+        TestSubcommand::Run(run) => run_test(RunBuilderConnector::new(remote_control), run).await,
+        TestSubcommand::List(list) => get_tests(query_proxy, writer, list).await,
         TestSubcommand::Result(result) => result_command(result, writer).await,
     }
 }
@@ -89,11 +86,7 @@ async fn get_directory_manager() -> Result<DirectoryManager> {
     DirectoryManager::new(output_path_config, save_count_config)
 }
 
-async fn run_test(
-    harness_proxy: ftest_manager::HarnessProxy,
-    builder_connector: Box<RunBuilderConnector>,
-    cmd: RunCommand,
-) -> Result<()> {
+async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) -> Result<()> {
     let count = cmd.count.unwrap_or(1);
     let count = std::num::NonZeroU16::new(count)
         .ok_or_else(|| anyhow!("--count should be greater than zero."))?;
@@ -116,7 +109,6 @@ async fn run_test(
             also_run_disabled_tests: cmd.run_disabled,
             parallel: cmd.parallel,
             test_args: vec![],
-            harness: harness_proxy,
             builder_connector: builder_connector,
         },
         diagnostics::LogCollectionOptions {
@@ -138,34 +130,26 @@ async fn run_test(
 }
 
 async fn get_tests<W: Write>(
-    harness_proxy: ftest_manager::HarnessProxy,
+    query_proxy: ftest_manager::QueryProxy,
     mut write: W,
     cmd: ListCommand,
 ) -> Result<()> {
     let writer = &mut write;
-    let (suite_proxy, suite_server_end) = create_proxy().unwrap();
-    let (_controller_proxy, controller_server_end) = create_proxy().unwrap();
+    let (iterator_proxy, iterator) = create_proxy().unwrap();
 
     log::info!("launching test suite {}", cmd.test_url);
 
-    let _result = harness_proxy
-        .launch_suite(
-            &cmd.test_url,
-            ftest_manager::LaunchOptions::EMPTY,
-            suite_server_end,
-            controller_server_end,
-        )
-        .await
-        .context("launch_suite call failed")?
-        .map_err(|e| format_err!("error launching test: {:?}", e))?;
-
-    let (case_iterator, test_server_end) = create_proxy::<CaseIteratorMarker>()?;
-    suite_proxy
-        .get_tests(test_server_end)
-        .map_err(|e| format_err!("Error getting test steps: {}", e))?;
+    query_proxy.enumerate(&cmd.test_url, iterator).await.context("enumeration failed")?.map_err(
+        |e| {
+            format_err!(
+                "error launching test: {:?}",
+                run_test_suite_lib::convert_launch_error_to_str(e)
+            )
+        },
+    )?;
 
     loop {
-        let cases = case_iterator.get_next().await?;
+        let cases = iterator_proxy.get_next().await?;
         if cases.is_empty() {
             return Ok(());
         }
@@ -174,7 +158,7 @@ async fn get_tests<W: Write>(
             match case.name {
                 Some(n) => writeln!(writer, "{}", n)?,
                 None => writeln!(writer, "<No name>")?,
-            };
+            }
         }
     }
 }

@@ -6,7 +6,6 @@ library fuchsia.test.manager;
 
 using fuchsia.developer.remotecontrol;
 using fuchsia.diagnostics;
-using fuchsia.test;
 using fuchsia.url;
 using zx;
 
@@ -16,12 +15,6 @@ resource flexible union LogsIterator {
     1: request<fuchsia.developer.remotecontrol.ArchiveIterator> archive;
     /// Server end of the iterator, when this protocol is used by Fuchsia clients.
     2: request<fuchsia.diagnostics.BatchIterator> batch;
-};
-
-/// Options to run particular test suite.
-resource table LaunchOptions {
-    /// Isolated logs from the test component will be streamed through this iterator.
-    1: LogsIterator logs_iterator;
 };
 
 /// Error for `LaunchSuite` call.
@@ -46,29 +39,27 @@ enum LaunchError {
     /// Check logs and report bug.
     INTERNAL_ERROR = 6;
 };
+/// Human-readable name for a test case.
+alias CaseName = string:512;
 
-/// Controller for running suite. Suite would be destroyed when client end of
-/// this protocol is closed.
-/// Note: Plan to deprecate and remove this as soon as all the clients are moved
-/// to new protocol.
-protocol LegacySuiteController {
-    /// Destroys running suite.
-    Kill();
+/// Information about the enumerated test case.
+table Case {
+    /// Name of the test case.
+    1: CaseName name;
 };
 
-/// Launches a test that implements the `fuchsia.test.Suite` protocol
-/// (either directly or via a runner adapter). The test must be a
-/// v2 component test.
-///
-/// Designed to be used by run_test_suite to execute v2 tests.
-///
-/// If test suite doesn't expose `fuchsia.test.Suite` protocol, this
-/// call will suceed but call on suite protocol will fail with `PEER_CLOSED` error.
+/// Iterator for listing available test cases.
+protocol CaseIterator {
+    /// Returns the next batch of test cases. 
+    /// Empty vector if no more test cases.
+    GetNext() -> (vector<Case>:MAX cases);
+};
+
+// Query server for tests which implement `fuchsia.test.Suite` protocol.
 [Discoverable]
-protocol Harness {
-    LaunchSuite(fuchsia.url.Url test_url, LaunchOptions options,
-                request<fuchsia.test.Suite> suite, request<LegacySuiteController> controller) -> ()
-        error LaunchError;
+protocol Query {
+    /// Enumerates test cases.
+    Enumerate(fuchsia.url.Url test_url, request<CaseIterator> iterator) -> () error LaunchError;
 };
 
 /// This is the entry point of running test suites. A test "run" consists of
@@ -208,9 +199,6 @@ resource union SuiteEventPayload {
     /// Suite run finished executing
     7: SuiteFinished suite_finished;
 };
-
-/// Human-readable name for a test case.
-alias CaseName = string:512;
 
 /// Test case identifier. Unique in a suite run.
 alias TestCaseId = uint32;

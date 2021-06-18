@@ -13,7 +13,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_test_manager::{
         self as ftest_manager, CaseArtifact, CaseFinished, CaseFound, CaseStarted, CaseStopped,
-        HarnessProxy, RunBuilderProxy, SuiteArtifact, SuiteFinished,
+        RunBuilderProxy, SuiteArtifact, SuiteFinished,
     },
     fuchsia_async as fasync,
     futures::{channel::mpsc, join, prelude::*, stream::LocalBoxStream},
@@ -105,11 +105,27 @@ pub struct TestParams {
     /// Arguments to pass to test using command line.
     pub test_args: Vec<String>,
 
-    /// HarnessProxy that manages running the tests.
-    pub harness: HarnessProxy,
-
     /// RunBuilderProxy connector that manages running the tests.
     pub builder_connector: Box<dyn BuilderConnector>,
+}
+
+pub fn convert_launch_error_to_str(e: ftest_manager::LaunchError) -> &'static str {
+    match e {
+        ftest_manager::LaunchError::CaseEnumeration => "Cannot enumerate test. This may mean `fuchsia.test.Suite` was not \
+        configured correctly. Refer to: \
+        https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test",
+        ftest_manager::LaunchError::ResourceUnavailable => "Resource unavailable",
+        ftest_manager::LaunchError::InstanceCannotResolve => "Cannot resolve test.",
+        ftest_manager::LaunchError::InvalidArgs => {
+            "Invalid args passed to builder while adding suite. Please file bug"
+        }
+        ftest_manager::LaunchError::FailedToConnectToTestSuite => {
+            "Cannot communicate with the tests. This may mean `fuchsia.test.Suite` was not \
+            configured correctly. Refer to: \
+            https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test"
+        }
+        ftest_manager::LaunchError::InternalError => "Internal error, please file bug",
+    }
 }
 
 async fn collect_results_for_suite(
@@ -133,23 +149,7 @@ async fn collect_results_for_suite(
         match suite_controller.get_events().await? {
             Err(e) => {
                 suite_reporter.outcome(&Outcome::Error.into())?;
-                let err = match e {
-                    ftest_manager::LaunchError::CaseEnumeration => "Cannot enumerate test. This may mean `fuchsia.test.Suite` was not \
-                    configured correctly. Refer to: \
-                    https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test",
-                    ftest_manager::LaunchError::ResourceUnavailable => "Resource unavailable",
-                    ftest_manager::LaunchError::InstanceCannotResolve => "Cannot resolve test.",
-                    ftest_manager::LaunchError::InvalidArgs => {
-                        "Invalid args passed to builder while adding suite. Please file bug"
-                    }
-                    ftest_manager::LaunchError::FailedToConnectToTestSuite => {
-                        "Cannot communicate with the tests. This may mean `fuchsia.test.Suite` was not \
-                        configured correctly. Refer to: \
-                        https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test"
-                    }
-                    ftest_manager::LaunchError::InternalError => "Internal error, please file bug",
-                };
-                return Err(anyhow::anyhow!(err));
+                return Err(anyhow::anyhow!(convert_launch_error_to_str(e)));
             }
             Ok(events) => {
                 if events.len() == 0 {
@@ -218,7 +218,7 @@ async fn collect_results_for_suite(
                                     .clone();
                                 let (sender, mut recv) = mpsc::channel(1024);
                                 let t = fuchsia_async::Task::local(
-                                    test_executor::collect_and_send_stdout(socket, sender),
+                                    test_diagnostics::collect_and_send_stdout(socket, sender),
                                 );
                                 let mut writer_clone = artifact_sender.clone();
                                 let reporter = test_cases_executed.get_mut(&identifier).unwrap();
@@ -360,7 +360,7 @@ async fn collect_results_for_suite(
                                     .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
                             }
                             ftest_manager::Artifact::Log(syslog) => {
-                                match test_executor::LogStream::from_syslog(syslog) {
+                                match test_diagnostics::LogStream::from_syslog(syslog) {
                                     Ok(log_stream) => {
                                         suite_log_tasks.push(fuchsia_async::Task::spawn(
                                             diagnostics::collect_logs(

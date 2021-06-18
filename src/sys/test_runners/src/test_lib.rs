@@ -27,7 +27,7 @@ use {
     std::collections::HashMap,
     std::convert::TryFrom,
     std::sync::Arc,
-    test_executor::RunEvent,
+    test_manager_test_lib::RunEvent,
     test_runners_lib::elf::{BuilderArgs, Component},
 };
 
@@ -171,7 +171,7 @@ pub fn names_to_invocation(names: Vec<&str>) -> Vec<Invocation> {
 
 // process events by parsing and normalizing logs. Returns `RunEvents` and collected logs.
 pub async fn process_events(
-    suite_instance: test_executor::SuiteRunInstance,
+    suite_instance: test_manager_test_lib::SuiteRunInstance,
     exclude_empty_logs: bool,
 ) -> Result<(Vec<RunEvent>, Vec<String>), Error> {
     let (sender, mut recv) = mpsc::channel(1);
@@ -182,7 +182,7 @@ pub async fn process_events(
     let mut buffered_logs = HashMap::new();
     while let Some(event) = recv.next().await {
         match event.payload {
-            test_executor::SuiteEventPayload::RunEvent(RunEvent::CaseStdout {
+            test_manager_test_lib::SuiteEventPayload::RunEvent(RunEvent::CaseStdout {
                 name,
                 stdout_message,
             }) => {
@@ -213,12 +213,12 @@ pub async fn process_events(
                     }
                 }
             }
-            test_executor::SuiteEventPayload::RunEvent(e) => events.push(e),
-            test_executor::SuiteEventPayload::SuiteLog { log_stream } => {
+            test_manager_test_lib::SuiteEventPayload::RunEvent(e) => events.push(e),
+            test_manager_test_lib::SuiteEventPayload::SuiteLog { log_stream } => {
                 let t = fasync::Task::spawn(log_stream.collect::<Vec<_>>());
                 log_tasks.push(t);
             }
-            test_executor::SuiteEventPayload::TestCaseLog { .. } => {
+            test_manager_test_lib::SuiteEventPayload::TestCaseLog { .. } => {
                 panic!("not supported yet!")
             }
         }

@@ -6,6 +6,29 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
+rustc_library("test_lib") {
+  testonly = true
+  name = "test_manager_test_lib"
+  with_unit_tests = true
+  edition = "2018"
+  source_root = "src/test_lib.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/test_diagnostics/rust:test_diagnostics",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:futures-util",
+    "//third_party/rust_crates:linked-hash-map",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [ "src/test_lib.rs" ]
+}
+
 rustc_library("lib") {
   testonly = true
   name = "test_manager_lib"

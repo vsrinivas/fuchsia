@@ -122,7 +122,7 @@ group("tests") {
     "storage:tests",
     "syslog:tests",
     "tcp-stream-ext:tests",
-    "test_executor:tests",
+    "test_diagnostics:tests",
     "test_util:tests",
     "testing:tests",
     "thinfs:tests",

@@ -6,7 +6,7 @@ use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_test_manager::RunOptions,
     fuchsia_async as fasync,
-    test_executor::RunEvent,
+    test_manager_test_lib::RunEvent,
 };
 
 pub async fn run_test(
@@ -16,7 +16,7 @@ pub async fn run_test(
     arguments: Vec<String>,
 ) -> Result<(Vec<RunEvent>, Vec<String>), Error> {
     let run_builder = test_runners_test_lib::connect_to_test_manager().await?;
-    let builder = test_executor::TestBuilder::new(run_builder);
+    let builder = test_manager_test_lib::TestBuilder::new(run_builder);
     let suite_instance = builder
         .add_suite(
             test_url,

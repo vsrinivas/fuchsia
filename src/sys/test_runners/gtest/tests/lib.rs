@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_test_manager::RunOptions,
     fuchsia_async as fasync,
     std::collections::{HashMap, HashSet},
-    test_executor::RunEvent,
+    test_manager_test_lib::RunEvent,
 };
 
 pub async fn run_test(
@@ -15,7 +15,7 @@ pub async fn run_test(
     run_options: RunOptions,
 ) -> Result<(Vec<RunEvent>, Vec<String>), Error> {
     let run_builder = test_runners_test_lib::connect_to_test_manager().await?;
-    let builder = test_executor::TestBuilder::new(run_builder);
+    let builder = test_manager_test_lib::TestBuilder::new(run_builder);
     let suite_instance =
         builder.add_suite(test_url, run_options).await.context("Cannot create suite instance")?;
     let builder_run = fasync::Task::spawn(async move { builder.run().await });

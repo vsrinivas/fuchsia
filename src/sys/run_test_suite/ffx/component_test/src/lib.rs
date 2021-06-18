@@ -10,7 +10,6 @@ use {
     fidl::endpoints::create_proxy,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_remotecontrol as fremotecontrol,
-    fidl_fuchsia_test::CaseIteratorMarker,
     fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{RunBuilderMarker, RunBuilderProxy},
     run_test_suite_lib::diagnostics,
@@ -51,9 +50,9 @@ impl RunBuilderConnector {
     }
 }
 
-#[ffx_plugin(ftest_manager::HarnessProxy = "core/test_manager:expose:fuchsia.test.manager.Harness")]
+#[ffx_plugin(ftest_manager::QueryProxy = "core/test_manager:expose:fuchsia.test.manager.Query")]
 pub async fn test(
-    harness_proxy: ftest_manager::HarnessProxy,
+    query_proxy: ftest_manager::QueryProxy,
     remote_control: fremotecontrol::RemoteControlProxy,
     cmd: TestCommand,
 ) -> Result<(), Error> {
@@ -63,7 +62,7 @@ pub async fn test(
         .ok_or_else(|| anyhow!("--count should be greater than zero."))?;
 
     if cmd.list {
-        get_tests(harness_proxy, writer, &cmd.test_url).await
+        get_tests(query_proxy, writer, &cmd.test_url).await
     } else {
         match run_test_suite_lib::run_tests_and_get_outcome(
             run_test_suite_lib::TestParams {
@@ -73,7 +72,6 @@ pub async fn test(
                 also_run_disabled_tests: cmd.run_disabled,
                 parallel: cmd.parallel,
                 test_args: vec![],
-                harness: harness_proxy,
                 builder_connector: RunBuilderConnector::new(remote_control),
             },
             diagnostics::LogCollectionOptions {
@@ -98,34 +96,23 @@ pub async fn test(
 }
 
 async fn get_tests<W: Write>(
-    harness_proxy: ftest_manager::HarnessProxy,
+    query_proxy: ftest_manager::QueryProxy,
     mut write: W,
     suite_url: &String,
 ) -> Result<(), Error> {
     let writer = &mut write;
-    let (suite_proxy, suite_server_end) = create_proxy().unwrap();
-    let (_controller_proxy, controller_server_end) = create_proxy().unwrap();
+    let (iterator_proxy, iterator) = create_proxy().unwrap();
 
     log::info!("launching test suite {}", suite_url);
 
-    let _result = harness_proxy
-        .launch_suite(
-            &suite_url,
-            ftest_manager::LaunchOptions::EMPTY,
-            suite_server_end,
-            controller_server_end,
-        )
+    query_proxy
+        .enumerate(&suite_url, iterator)
         .await
-        .context("launch_suite call failed")?
+        .context("enumeration failed")?
         .map_err(|e| format_err!("error launching test: {:?}", e))?;
 
-    let (case_iterator, test_server_end) = create_proxy::<CaseIteratorMarker>()?;
-    suite_proxy
-        .get_tests(test_server_end)
-        .map_err(|e| format_err!("Error getting test steps: {}", e))?;
-
     loop {
-        let cases = case_iterator.get_next().await?;
+        let cases = iterator_proxy.get_next().await?;
         if cases.is_empty() {
             return Ok(());
         }
@@ -134,7 +121,7 @@ async fn get_tests<W: Write>(
             match case.name {
                 Some(n) => writeln!(writer, "{}", n)?,
                 None => writeln!(writer, "<No name>")?,
-            };
+            }
         }
     }
 }

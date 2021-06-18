@@ -19,20 +19,21 @@ fn main() -> Result<(), Error> {
     let test_map = test_manager_lib::TestMap::new(zx::Duration::from_minutes(5));
     let test_map_clone = test_map.clone();
     let test_map_clone2 = test_map.clone();
+
     fs.dir("svc")
         .add_fidl_service(move |stream| {
-            let test_map = test_map_clone.clone();
+            let test_map = test_map_clone2.clone();
             fasync::Task::spawn(async move {
-                test_manager_lib::run_test_manager_old(stream, test_map.clone())
+                test_manager_lib::run_test_manager(stream, test_map.clone())
                     .await
                     .unwrap_or_else(|error| warn!(?error, "test manager returned error"))
             })
             .detach();
         })
         .add_fidl_service(move |stream| {
-            let test_map = test_map_clone2.clone();
+            let test_map = test_map_clone.clone();
             fasync::Task::spawn(async move {
-                test_manager_lib::run_test_manager(stream, test_map.clone())
+                test_manager_lib::run_test_manager_query_server(stream, test_map.clone())
                     .await
                     .unwrap_or_else(|error| warn!(?error, "test manager returned error"))
             })

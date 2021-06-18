@@ -8,7 +8,7 @@ use {
     crate::lib::{assert_events_eq, run_test},
     fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{CaseStatus, SuiteStatus},
-    test_executor::{GroupRunEventByTestCase, RunEvent},
+    test_manager_test_lib::{GroupRunEventByTestCase, RunEvent},
 };
 
 // Stress test with a very large gtest suite.
