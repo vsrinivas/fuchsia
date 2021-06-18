@@ -90,6 +90,10 @@ pub struct LogCommand {
     #[argh(switch)]
     pub ignore_symbolizer_failure: bool,
 
+    /// shows process-id and thread-id in log output
+    #[argh(switch)]
+    pub show_process_info: bool,
+
     /// how to display log timestamps
     #[argh(option, default = "TimeFormat::Monotonic")]
     pub time: TimeFormat,

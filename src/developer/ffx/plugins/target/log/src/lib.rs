@@ -73,6 +73,18 @@ struct LogFilterCriteria {
     excludes: Vec<String>,
 }
 
+impl Default for LogFilterCriteria {
+    fn default() -> Self {
+        Self {
+            monikers: vec![],
+            exclude_monikers: vec![],
+            min_severity: Severity::Info,
+            filters: vec![],
+            excludes: vec![],
+        }
+    }
+}
+
 impl LogFilterCriteria {
     fn new(
         monikers: Vec<Arc<ComponentSelector>>,
@@ -157,13 +169,18 @@ impl From<&LogCommand> for LogFilterCriteria {
     }
 }
 
+struct LogFormatterOptions {
+    color: bool,
+    time_format: TimeFormat,
+    show_process_info: bool,
+}
+
 struct DefaultLogFormatter<'a> {
     writer: Box<dyn AsyncWrite + Unpin + 'a>,
     has_previous_log: bool,
     filters: LogFilterCriteria,
-    color: bool,
-    time_format: TimeFormat,
     boot_ts_nanos: Option<i64>,
+    options: LogFormatterOptions,
 }
 
 #[async_trait(?Send)]
@@ -223,17 +240,15 @@ impl<'a> LogFormatter for DefaultLogFormatter<'_> {
 impl<'a> DefaultLogFormatter<'a> {
     fn new(
         filters: LogFilterCriteria,
-        color: bool,
-        time_format: TimeFormat,
         writer: impl AsyncWrite + Unpin + 'a,
+        options: LogFormatterOptions,
     ) -> Self {
         Self {
             filters,
-            color,
             writer: Box::new(writer),
             has_previous_log: false,
-            time_format,
             boot_ts_nanos: None,
+            options,
         }
     }
 
@@ -242,7 +257,7 @@ impl<'a> DefaultLogFormatter<'a> {
         let time_format = match self.boot_ts_nanos {
             Some(boot_ts) => {
                 abs_ts = boot_ts + *ts;
-                self.time_format.clone()
+                self.options.time_format.clone()
             }
             None => TimeFormat::Monotonic,
         };
@@ -260,21 +275,28 @@ impl<'a> DefaultLogFormatter<'a> {
         }
     }
 
-    fn format_target_log_data(&self, data: LogsData, symbolized_msg: Option<String>) -> String {
+    pub fn format_target_log_data(&self, data: LogsData, symbolized_msg: Option<String>) -> String {
         let ts = self.format_target_timestamp(data.metadata.timestamp);
-        let color_str = if self.color {
+        let color_str = if self.options.color {
             severity_to_color_str(data.metadata.severity)
         } else {
             String::default()
         };
         let msg = symbolized_msg.unwrap_or(data.msg().unwrap_or("<missing message>").to_string());
 
+        let process_info_str = if self.options.show_process_info {
+            format!("[{}][{}]", data.pid().unwrap_or(0), data.tid().unwrap_or(0))
+        } else {
+            String::default()
+        };
+
         let severity_str = &format!("{}", data.metadata.severity)[..1];
         msg.lines()
             .map(|l| {
                 format!(
-                    "[{}][{}][{}{}{}] {}{}{}",
+                    "[{}]{}[{}][{}{}{}] {}{}{}",
                     ts,
+                    process_info_str,
                     data.moniker,
                     color_str,
                     severity_str,
@@ -344,9 +366,12 @@ pub async fn log(
     let mut stdout = Unblock::new(std::io::stdout());
     let mut formatter = DefaultLogFormatter::new(
         LogFilterCriteria::from(&cmd),
-        should_color(config_color, cmd.color),
-        cmd.time.clone(),
         &mut stdout,
+        LogFormatterOptions {
+            color: should_color(config_color, cmd.color),
+            time_format: cmd.time.clone(),
+            show_process_info: cmd.show_process_info,
+        },
     );
 
     if get(SYMBOLIZE_ENABLED_CONFIG).await.unwrap_or(true) {
@@ -582,6 +607,7 @@ mod test {
             moniker: vec![],
             exclude_moniker: vec![],
             min_severity: Severity::Info,
+            show_process_info: false,
         }
     }
 
@@ -596,6 +622,20 @@ mod test {
 
     fn empty_dump_command() -> LogCommand {
         empty_log_command(empty_dump_subcommand())
+    }
+
+    fn logs_data() -> LogsData {
+        diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+            timestamp_nanos: Timestamp::from(default_ts().as_nanos() as i64),
+            component_url: "component_url".to_string(),
+            moniker: "some/moniker".to_string(),
+            severity: diagnostics_data::Severity::Warn,
+            size_bytes: 1,
+        })
+        .set_message("message")
+        .set_pid(1)
+        .set_tid(2)
+        .build()
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1234,5 +1274,117 @@ mod test {
         .unwrap_err()
         .ffx_error()
         .is_some());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_formatter() {
+        let mut stdout = Unblock::new(std::io::stdout());
+        let formatter = DefaultLogFormatter::new(
+            LogFilterCriteria::default(),
+            &mut stdout,
+            LogFormatterOptions {
+                color: false,
+                time_format: TimeFormat::Monotonic,
+                show_process_info: false,
+            },
+        );
+
+        assert_eq!(
+            formatter.format_target_log_data(logs_data(), None),
+            "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_formatter_local_time() {
+        let mut stdout = Unblock::new(std::io::stdout());
+        let mut formatter = DefaultLogFormatter::new(
+            LogFilterCriteria::default(),
+            &mut stdout,
+            LogFormatterOptions {
+                color: false,
+                time_format: TimeFormat::Local,
+                show_process_info: false,
+            },
+        );
+
+        // Before setting the boot timestamp, it should use monotonic time.
+        assert_eq!(
+            formatter.format_target_log_data(logs_data(), None),
+            "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
+        );
+
+        formatter.set_boot_timestamp(1);
+
+        // In order to avoid flakey tests due to timezone differences, we just verify that
+        // the output *did* change.
+        assert_ne!(
+            formatter.format_target_log_data(logs_data(), None),
+            "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_formatter_utc_time() {
+        let mut stdout = Unblock::new(std::io::stdout());
+        let mut formatter = DefaultLogFormatter::new(
+            LogFilterCriteria::default(),
+            &mut stdout,
+            LogFormatterOptions {
+                color: false,
+                time_format: TimeFormat::Utc,
+                show_process_info: false,
+            },
+        );
+
+        // Before setting the boot timestamp, it should use monotonic time.
+        assert_eq!(
+            formatter.format_target_log_data(logs_data(), None),
+            "[1615535969.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
+        );
+
+        formatter.set_boot_timestamp(1);
+        assert_eq!(
+            formatter.format_target_log_data(logs_data(), None),
+            "[2021-03-12 07:59:29.000][some/moniker][W\u{1b}[m] message\u{1b}[m"
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_formatter_colored_output() {
+        let mut stdout = Unblock::new(std::io::stdout());
+        let formatter = DefaultLogFormatter::new(
+            LogFilterCriteria::default(),
+            &mut stdout,
+            LogFormatterOptions {
+                color: true,
+                time_format: TimeFormat::Monotonic,
+                show_process_info: false,
+            },
+        );
+
+        assert_eq!(
+            formatter.format_target_log_data(logs_data(), None),
+            "[1615535969.000][some/moniker][\u{1b}[38;5;3mW\u{1b}[m] \u{1b}[38;5;3mmessage\u{1b}[m"
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_formatter_show_process_info() {
+        let mut stdout = Unblock::new(std::io::stdout());
+        let formatter = DefaultLogFormatter::new(
+            LogFilterCriteria::default(),
+            &mut stdout,
+            LogFormatterOptions {
+                color: false,
+                time_format: TimeFormat::Monotonic,
+                show_process_info: true,
+            },
+        );
+
+        assert_eq!(
+            formatter.format_target_log_data(logs_data(), None),
+            "[1615535969.000][1][2][some/moniker][W\u{1b}[m] message\u{1b}[m"
+        );
     }
 }
