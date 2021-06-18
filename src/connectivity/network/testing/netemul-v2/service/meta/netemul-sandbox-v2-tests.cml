@@ -3,34 +3,16 @@
 // found in the LICENSE file.
 {
     include: [
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
-        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/connectivity/network/testing/netemul-v2/service/meta/common.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
         binary: "bin/netemul_sandbox_v2_bin_test",
     },
-    collections: [
-        {
-            name: "netemul",
-            environment: "#realm_builder_env",
-            durability: "transient",
-        },
-    ],
     use: [
         {
             protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
             from: "parent",
-        },
-    ],
-    offer: [
-        {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.process.Launcher",
-            ],
-            from: "parent",
-            to: "#netemul",
         },
     ],
 }

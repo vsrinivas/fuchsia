@@ -2,33 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
-        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
-    ],
+    include: [ "//src/connectivity/network/testing/netemul-v2/service/meta/common.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/netemul_sandbox_v2",
     },
-    collections: [
-        {
-            name: "netemul",
-            environment: "#realm_builder_env",
-            durability: "transient",
-        },
-    ],
     capabilities: [
         { protocol: "fuchsia.netemul.Sandbox" },
-    ],
-    offer: [
-        {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.process.Launcher",
-            ],
-            from: "parent",
-            to: "#netemul",
-        },
     ],
     expose: [
         {
