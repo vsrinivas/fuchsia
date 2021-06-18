@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/integration/fint/filetype"
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
@@ -47,6 +48,19 @@ const (
 	// files, and it conservatively considers all targets to be affected.
 	unknownAffectedStatus = "Found dependency (all)"
 )
+
+// skipAnalysisAllowlist returns the directories whose files cannot be
+// correctly analyzed for build graph dependencies. If there are changed
+// files in these directories, we should skip the analysis and always
+// build. This allowlist should cover all the targets that skip strict
+// source checking listed in the allowlists here:
+// //build/go/BUILD.gn
+// //build/rust/BUILD.gn
+func skipAnalysisAllowlist() []string {
+	return []string{
+		"third_party/",
+	}
+}
 
 // shouldBuild runs `gn analyze` on the given files to determine
 // whether they are part of the build graph. It returns a boolean indicating
@@ -127,6 +141,10 @@ func formatFilePaths(paths []string) []string {
 
 func canAnalyzeFiles(ctx context.Context, changedFiles []string) bool {
 	for _, path := range changedFiles {
+		if shouldSkipAnalysis(path) {
+			logger.Debugf(ctx, "Build graph analysis is not supported for file %q", path)
+			return false
+		}
 		ft := filetype.TypeForFile(path)
 		if !containsFileType(filetype.KnownFileTypes(), ft) {
 			logger.Debugf(ctx, "Build graph analysis is not supported for file %q", path)
@@ -134,6 +152,15 @@ func canAnalyzeFiles(ctx context.Context, changedFiles []string) bool {
 		}
 	}
 	return true
+}
+
+func shouldSkipAnalysis(file string) bool {
+	for _, path := range skipAnalysisAllowlist() {
+		if strings.HasPrefix(file, path) {
+			return true
+		}
+	}
+	return false
 }
 
 func containsFileType(collection []filetype.FileType, target filetype.FileType) bool {

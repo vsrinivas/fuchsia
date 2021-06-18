@@ -16,6 +16,10 @@ group("disable_strict_sources_check_allowlist") {
   # This is an allowlist of packages that do not enforce that the source files
   # are listed in `source`. This is only intended to be used as a temporary
   # allowlist during soft migrations.
+  #
+  # All file dependencies of the targets in this list should be covered by the
+  # paths in the skipAnalysisAllowlist in
+  # //tools/integration/fint/should_build.go.
   visibility = []
 }
 

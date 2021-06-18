@@ -105,6 +105,12 @@ func TestShouldBuild(t *testing.T) {
 			},
 			expectErr: true,
 		},
+		{
+			name:              "skipped",
+			files:             []string{"third_party/go/foo.go", "foo/bar.go"},
+			expectNoCommand:   true,
+			expectShouldBuild: true,
+		},
 	}
 
 	for _, tc := range testCases {
