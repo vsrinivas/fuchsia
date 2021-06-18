@@ -202,10 +202,36 @@ do
         link_arg_files+=("$link_arg")
         ;;
 
+    # This flag informs the linker where to search for libraries.
     -Lnative=* )
-        link_arg="$(realpath --relative-to="$project_root" "$optarg")"
-        debug_var "[from -Lnative]" "$link_arg"
-        link_arg_files+=("$link_arg")
+        if test -d "$optarg"
+        then
+          # Rather than grab the entire directory (whose contents are not stable
+          # due to temporary files being written during a build), list specific
+          # shared objects and archives.  Observed temporary files include
+          # .o.tmp files.
+          #
+          # Caveat: if the same dir is home to more than one archive produced by
+          # parallel build actions, the partial directory listing may not be
+          # stable throughout the entire build, and be subject to race
+          # conditions.
+          #
+          # Some of these directories contain both .a and .o files.
+          # It is not yet clear whether the .o files are needed when there is a
+          # .a archive.
+          # There are also directories that contain only .o files.
+          # It is safe to over-specify inputs, so for now, we grab them all.
+          #
+          # || : to ignore exit code of ls.
+          objs=($(ls "$optarg"/*.{so,a,o} 2> /dev/null)) || :
+          objs_rel=($(echo "${objs[@]}" | grep . | xargs -n 1 realpath --relative-to="$project_root"))
+          debug_var "[from -Lnative (dir:$optarg)]" "${objs_rel[@]}"
+          link_arg_files+=("${objs_rel[@]}")
+        else
+          link_arg="$(realpath --relative-to="$project_root" "$optarg")"
+          debug_var "[from -Lnative (file:$optarg)]" "$link_arg"
+          link_arg_files+=("$link_arg")
+        fi
         ;;
 
     --*=* ) ;;  # forward
