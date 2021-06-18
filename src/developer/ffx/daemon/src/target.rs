@@ -171,13 +171,17 @@ impl ConnectionState {
 }
 
 #[derive(Debug, Clone, Hash)]
+pub(crate) enum TargetAddrType {
+    Ssh,
+    Manual,
+    Netsvc,
+}
+
+#[derive(Debug, Clone, Hash)]
 pub(crate) struct TargetAddrEntry {
     addr: TargetAddr,
     timestamp: DateTime<Utc>,
-    // If the target entry was added manually
-    manual: bool,
-    // If the target comes from netsvc,
-    netsvc: bool,
+    addr_type: TargetAddrType,
 }
 
 impl PartialEq for TargetAddrEntry {
@@ -188,30 +192,20 @@ impl PartialEq for TargetAddrEntry {
 
 impl Eq for TargetAddrEntry {}
 
-impl From<(TargetAddr, DateTime<Utc>)> for TargetAddrEntry {
-    fn from(t: (TargetAddr, DateTime<Utc>)) -> Self {
-        let (addr, timestamp) = t;
-        Self { addr, timestamp, manual: false, netsvc: false }
+impl TargetAddrEntry {
+    pub(crate) fn new(
+        addr: TargetAddr,
+        timestamp: DateTime<Utc>,
+        addr_type: TargetAddrType,
+    ) -> Self {
+        Self { addr, timestamp, addr_type }
     }
 }
 
-impl From<(TargetAddr, DateTime<Utc>, bool)> for TargetAddrEntry {
-    fn from(t: (TargetAddr, DateTime<Utc>, bool)) -> Self {
-        let (addr, timestamp, manual) = t;
-        Self { addr, timestamp, manual, netsvc: false }
-    }
-}
-
-impl From<(TargetAddr, DateTime<Utc>, bool, bool)> for TargetAddrEntry {
-    fn from(t: (TargetAddr, DateTime<Utc>, bool, bool)) -> Self {
-        let (addr, timestamp, manual, netsvc) = t;
-        Self { addr, timestamp, manual, netsvc }
-    }
-}
-
+#[cfg(test)]
 impl From<TargetAddr> for TargetAddrEntry {
     fn from(addr: TargetAddr) -> Self {
-        Self { addr, timestamp: Utc::now(), manual: false, netsvc: false }
+        Self { addr, timestamp: Utc::now(), addr_type: TargetAddrType::Ssh }
     }
 }
 
@@ -336,7 +330,10 @@ impl Target {
     {
         let target = Self::new();
         target.nodename.replace(nodename.map(Into::into));
-        target.addrs_extend(addrs);
+        let now = Utc::now();
+        target.addrs_extend(
+            addrs.iter().map(|addr| TargetAddrEntry::new(*addr, now.clone(), TargetAddrType::Ssh)),
+        );
         target
     }
 
@@ -358,7 +355,12 @@ impl Target {
     {
         let target = Self::new();
         target.nodename.replace(nodename.map(Into::into));
-        target.addrs.replace(addrs.iter().map(|e| (*e, Utc::now(), false, true).into()).collect());
+        target.addrs.replace(
+            addrs
+                .iter()
+                .map(|e| TargetAddrEntry::new(*e, Utc::now(), TargetAddrType::Netsvc))
+                .collect(),
+        );
         target.update_connection_state(|_| ConnectionState::Zedboot(Instant::now()));
         target
     }
@@ -461,13 +463,14 @@ impl Target {
         };
 
         let manual_link_local_recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| {
-            match (e1.manual, e2.manual) {
+            match (&e1.addr_type, &e2.addr_type) {
                 // Note: for manually added addresses, they are ordered strictly
                 // by recency, not link-local first.
-                (true, true) => recency(e1, e2),
-                (true, false) => Ordering::Less,
-                (false, true) => Ordering::Greater,
-                (false, false) => link_local_recency(e1, e2),
+                (TargetAddrType::Manual, TargetAddrType::Manual) => recency(e1, e2),
+                (TargetAddrType::Manual, TargetAddrType::Ssh) => Ordering::Less,
+                (TargetAddrType::Ssh, TargetAddrType::Manual) => Ordering::Greater,
+                (TargetAddrType::Ssh, TargetAddrType::Ssh) => link_local_recency(e1, e2),
+                _ => Ordering::Less, // Should not get here due to filtering in next line.
             }
         };
 
@@ -475,7 +478,10 @@ impl Target {
             .addrs
             .borrow()
             .iter()
-            .filter(|t| !t.netsvc)
+            .filter(|t| match t.addr_type {
+                TargetAddrType::Manual | TargetAddrType::Ssh => true,
+                _ => false,
+            })
             .sorted_by(|e1, e2| manual_link_local_recency(e1, e2))
             .next()
             .map(|e| e.addr);
@@ -491,12 +497,14 @@ impl Target {
         use itertools::Itertools;
         // Order e1 & e2 by most recent timestamp
         let recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| e2.timestamp.cmp(&e1.timestamp);
-        // TODO(fxb/76325) `.find(|t| t.netsvc)` doesn't work for some reason, using next()
         self.addrs
             .borrow()
             .iter()
             .sorted_by(|e1, e2| recency(e1, e2))
-            .next()
+            .find(|t| match t.addr_type {
+                TargetAddrType::Netsvc => true,
+                _ => false,
+            })
             .map(|addr_entry| addr_entry.addr.clone())
     }
 
@@ -664,13 +672,10 @@ impl Target {
         *addrs = addrs
             .clone()
             .into_iter()
-            .filter(|entry| {
-                entry.manual
-                    || if let IpAddr::V6(v) = &entry.addr.ip() {
-                        entry.addr.scope_id() != 0 || !v.is_link_local_addr()
-                    } else {
-                        true
-                    }
+            .filter(|entry| match (&entry.addr_type, &entry.addr.ip()) {
+                (TargetAddrType::Manual, _) => true,
+                (_, IpAddr::V6(v)) => entry.addr.scope_id() != 0 || !v.is_link_local_addr(),
+                _ => true,
             })
             .collect();
     }
@@ -681,9 +686,10 @@ impl Target {
         *addrs = addrs
             .clone()
             .into_iter()
-            .filter(|entry| {
-                entry.manual
-                    || if let IpAddr::V4(v) = &entry.addr.ip() { !v.is_loopback() } else { true }
+            .filter(|entry| match (&entry.addr_type, &entry.addr.ip()) {
+                (TargetAddrType::Manual, _) => true,
+                (_, IpAddr::V4(v)) => !v.is_loopback(),
+                _ => true,
             })
             .collect();
     }
@@ -700,7 +706,10 @@ impl Target {
         self.addrs
             .borrow()
             .iter()
-            .filter_map(|entry| if entry.manual { Some(entry.addr.clone()) } else { None })
+            .filter_map(|entry| match entry.addr_type {
+                TargetAddrType::Manual => Some(entry.addr.clone()),
+                _ => None,
+            })
             .collect()
     }
 
@@ -726,9 +735,8 @@ impl Target {
 
     fn addrs_extend<T>(&self, new_addrs: T)
     where
-        T: IntoIterator<Item = TargetAddr>,
+        T: IntoIterator<Item = TargetAddrEntry>,
     {
-        let now = Utc::now();
         let mut addrs = self.addrs.borrow_mut();
 
         for mut addr in new_addrs.into_iter() {
@@ -737,7 +745,7 @@ impl Target {
             // insertion, in the manual add case.
             let localhost_v4 = IpAddr::V4(Ipv4Addr::LOCALHOST);
             let localhost_v6 = IpAddr::V6(Ipv6Addr::LOCALHOST);
-            if addr.ip() == localhost_v4 || addr.ip() == localhost_v6 {
+            if addr.addr.ip() == localhost_v4 || addr.addr.ip() == localhost_v6 {
                 continue;
             }
 
@@ -751,17 +759,17 @@ impl Target {
             // originally present, for example if a directly connected USB target has restarted,
             // wherein the scopeid could be incremented due to the device being given a new
             // interface id allocation.
-            if addr.ip().is_ipv6() && addr.scope_id() == 0 {
-                if let Some(entry) = addrs.get(&(addr, now.clone()).into()) {
-                    addr.set_scope_id(entry.addr.scope_id());
+            if addr.addr.ip().is_ipv6() && addr.addr.scope_id() == 0 {
+                if let Some(entry) = addrs.get(&addr) {
+                    addr.addr.set_scope_id(entry.addr.scope_id());
                 }
 
                 // Note: not adding ipv6 link-local addresses without scopes here is deliberate!
-                if addr.ip().is_link_local_addr() && addr.scope_id() == 0 {
+                if addr.addr.ip().is_link_local_addr() && addr.addr.scope_id() == 0 {
                     continue;
                 }
             }
-            addrs.replace((addr, now.clone()).into());
+            addrs.replace(addr);
         }
     }
 
@@ -801,8 +809,15 @@ impl Target {
         }
         if let Some(addrs) = identify.addresses {
             let mut taddrs = target.addrs.borrow_mut();
-            for addr in addrs.iter().map(|addr| TargetAddr::from(addr.clone())) {
-                taddrs.insert(addr.into());
+            let now = Utc::now();
+            for addr in addrs.iter().map(|addr| {
+                TargetAddrEntry::new(
+                    TargetAddr::from(addr.clone()),
+                    now.clone(),
+                    TargetAddrType::Ssh,
+                )
+            }) {
+                taddrs.insert(addr);
             }
         }
         Ok(target)
@@ -918,7 +933,10 @@ impl Target {
     }
 
     pub fn is_manual(&self) -> bool {
-        self.addrs.borrow().iter().any(|addr_entry| addr_entry.manual)
+        self.addrs
+            .borrow()
+            .iter()
+            .any(|addr_entry| matches!(addr_entry.addr_type, TargetAddrType::Manual))
     }
 }
 
@@ -1214,7 +1232,9 @@ impl TargetCollection {
             }
 
             to_update.update_last_response(new_target.last_response());
-            to_update.addrs_extend(new_target.addrs());
+            let mut addrs = new_target.addrs.borrow().iter().cloned().collect::<Vec<_>>();
+            addrs.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+            to_update.addrs_extend(addrs.drain(..).collect::<Vec<TargetAddrEntry>>());
             to_update.update_boot_timestamp(new_target.boot_timestamp_nanos());
 
             to_update.update_connection_state(|_| new_target.get_connection_state());
@@ -1968,7 +1988,11 @@ mod test {
             .cloned()
             .enumerate()
             .map(|(i, e)| {
-                (TargetAddr::from(e), Utc.ymd(2014 + (i as i32), 10, 31).and_hms(9, 10, 12)).into()
+                TargetAddrEntry::new(
+                    TargetAddr::from(e),
+                    Utc.ymd(2014 + (i as i32), 10, 31).and_hms(9, 10, 12),
+                    TargetAddrType::Ssh,
+                )
             })
             .collect::<Vec<TargetAddrEntry>>();
         for a in addrs_post.iter().cloned() {
@@ -2002,29 +2026,17 @@ mod test {
             .cloned()
             .enumerate()
             .map(|(i, e)| {
-                (TargetAddr::from(e), Utc.ymd(2014 + (i as i32), 10, 31).and_hms(9, 10, 12)).into()
+                TargetAddrEntry::new(
+                    TargetAddr::from(e),
+                    Utc.ymd(2014 + (i as i32), 10, 31).and_hms(9, 10, 12),
+                    TargetAddrType::Ssh,
+                )
             })
             .collect::<Vec<TargetAddrEntry>>();
         for a in addrs_post.iter().cloned() {
             t.addrs_insert_entry(a);
         }
         assert_eq!(t.addrs().into_iter().next().unwrap(), TargetAddr::from(expected));
-    }
-
-    #[test]
-    fn test_target_addr_entry_from_with_manual() {
-        let ta = TargetAddrEntry::from((
-            TargetAddr::from(("127.0.0.1".parse::<IpAddr>().unwrap(), 0)),
-            Utc::now(),
-            true,
-        ));
-        assert_eq!(ta.manual, true);
-        let ta = TargetAddrEntry::from((
-            TargetAddr::from(("127.0.0.1".parse::<IpAddr>().unwrap(), 0)),
-            Utc::now(),
-            false,
-        ));
-        assert_eq!(ta.manual, false);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -2042,7 +2054,11 @@ mod test {
         // missing scope information, this is essentially what occurs when we
         // ask the target for its addresses.
         let t2 = Target::new_named("this-is-a-crunchy-falafel");
-        t2.addrs.borrow_mut().replace(TargetAddr::from((ip, 0)).into());
+        t2.addrs.borrow_mut().replace(TargetAddrEntry::new(
+            TargetAddr::from((ip, 0)),
+            Utc::now(),
+            TargetAddrType::Ssh,
+        ));
 
         let tc = TargetCollection::new_with_queue();
         tc.merge_insert(t1);
@@ -2333,8 +2349,16 @@ mod test {
 
         // Given two addresses, from the exact same time, neither manual, prefer any link-local address.
         let addrs = BTreeSet::from_iter(vec![
-            (("2000::1".parse().unwrap(), 0).into(), start.into(), false).into(),
-            (("fe80::1".parse().unwrap(), 2).into(), start.into(), false).into(),
+            TargetAddrEntry::new(
+                ("2000::1".parse().unwrap(), 0).into(),
+                start.into(),
+                TargetAddrType::Ssh,
+            ),
+            TargetAddrEntry::new(
+                ("fe80::1".parse().unwrap(), 2).into(),
+                start.into(),
+                TargetAddrType::Ssh,
+            ),
         ]);
         assert_eq!(
             Target::new_with_addr_entries(name, addrs.into_iter()).ssh_address(),
@@ -2343,13 +2367,16 @@ mod test {
 
         // Given two addresses, one link local the other not, prefer the link local even if older.
         let addrs = BTreeSet::from_iter(vec![
-            (("2000::1".parse().unwrap(), 0).into(), start.into(), false).into(),
-            (
+            TargetAddrEntry::new(
+                ("2000::1".parse().unwrap(), 0).into(),
+                start.into(),
+                TargetAddrType::Ssh,
+            ),
+            TargetAddrEntry::new(
                 ("fe80::1".parse().unwrap(), 2).into(),
                 (start - Duration::from_secs(1)).into(),
-                false,
-            )
-                .into(),
+                TargetAddrType::Ssh,
+            ),
         ]);
         assert_eq!(
             Target::new_with_addr_entries(name, addrs.into_iter()).ssh_address(),
@@ -2358,13 +2385,16 @@ mod test {
 
         // Given two addresses, both link-local, pick the one most recent.
         let addrs = BTreeSet::from_iter(vec![
-            (("fe80::2".parse().unwrap(), 1).into(), start.into(), false).into(),
-            (
+            TargetAddrEntry::new(
+                ("fe80::2".parse().unwrap(), 1).into(),
+                start.into(),
+                TargetAddrType::Ssh,
+            ),
+            TargetAddrEntry::new(
                 ("fe80::1".parse().unwrap(), 2).into(),
                 (start - Duration::from_secs(1)).into(),
-                false,
-            )
-                .into(),
+                TargetAddrType::Ssh,
+            ),
         ]);
         assert_eq!(
             Target::new_with_addr_entries(name, addrs.into_iter()).ssh_address(),
@@ -2373,9 +2403,16 @@ mod test {
 
         // Given two addresses, one manual, old and non-local, prefer the manual entry.
         let addrs = BTreeSet::from_iter(vec![
-            (("fe80::2".parse().unwrap(), 1).into(), start.into(), false).into(),
-            (("2000::1".parse().unwrap(), 0).into(), (start - Duration::from_secs(1)).into(), true)
-                .into(),
+            TargetAddrEntry::new(
+                ("fe80::2".parse().unwrap(), 1).into(),
+                start.into(),
+                TargetAddrType::Ssh,
+            ),
+            TargetAddrEntry::new(
+                ("2000::1".parse().unwrap(), 0).into(),
+                (start - Duration::from_secs(1)).into(),
+                TargetAddrType::Manual,
+            ),
         ]);
         assert_eq!(
             Target::new_with_addr_entries(name, addrs.into_iter()).ssh_address(),
@@ -2384,13 +2421,16 @@ mod test {
 
         // Given two addresses, neither local, neither manual, prefer the most recent.
         let addrs = BTreeSet::from_iter(vec![
-            (("2000::1".parse().unwrap(), 0).into(), start.into(), false).into(),
-            (
+            TargetAddrEntry::new(
+                ("2000::1".parse().unwrap(), 0).into(),
+                start.into(),
+                TargetAddrType::Ssh,
+            ),
+            TargetAddrEntry::new(
                 ("2000::2".parse().unwrap(), 0).into(),
                 (start + Duration::from_secs(1)).into(),
-                false,
-            )
-                .into(),
+                TargetAddrType::Ssh,
+            ),
         ]);
         assert_eq!(
             Target::new_with_addr_entries(name, addrs.into_iter()).ssh_address(),
@@ -2402,11 +2442,11 @@ mod test {
     async fn test_ssh_address_info_no_port_provides_default_port() {
         let target = Target::new_with_addr_entries(
             Some("foo"),
-            vec![TargetAddrEntry::from((
+            vec![TargetAddrEntry::new(
                 TargetAddr::from(("::1".parse::<IpAddr>().unwrap().into(), 0)),
                 Utc::now(),
-                true,
-            ))]
+                TargetAddrType::Ssh,
+            )]
             .into_iter(),
         );
 
@@ -2426,11 +2466,11 @@ mod test {
     async fn test_ssh_address_info_with_port() {
         let target = Target::new_with_addr_entries(
             Some("foo"),
-            vec![TargetAddrEntry::from((
+            vec![TargetAddrEntry::new(
                 TargetAddr::from(("::1".parse::<IpAddr>().unwrap().into(), 0)),
                 Utc::now(),
-                true,
-            ))]
+                TargetAddrType::Ssh,
+            )]
             .into_iter(),
         );
         target.set_ssh_port(Some(8022));
@@ -2530,24 +2570,6 @@ mod test {
     }
 
     #[test]
-    fn test_target_addr_entry_from_with_netsvc() {
-        let ta = TargetAddrEntry::from((
-            TargetAddr::from(("127.0.0.1".parse::<IpAddr>().unwrap(), 0)),
-            Utc::now(),
-            false,
-            true,
-        ));
-        assert_eq!(ta.netsvc, true);
-        let ta = TargetAddrEntry::from((
-            TargetAddr::from(("127.0.0.1".parse::<IpAddr>().unwrap(), 0)),
-            Utc::now(),
-            false,
-            false,
-        ));
-        assert_eq!(ta.netsvc, false);
-    }
-
-    #[test]
     fn test_netsvc_target_has_no_ssh() {
         use std::iter::FromIterator;
         let target = Target::new_with_netsvc_addrs(
@@ -2560,10 +2582,20 @@ mod test {
 
         let target = Target::new();
         target.addrs_insert_entry(
-            (("2000::1".parse().unwrap(), 0).into(), Utc::now().into(), false, true).into(),
+            TargetAddrEntry::new(
+                ("2000::1".parse().unwrap(), 0).into(),
+                Utc::now().into(),
+                TargetAddrType::Netsvc,
+            )
+            .into(),
         );
         target.addrs_insert_entry(
-            (("fe80::1".parse().unwrap(), 0).into(), Utc::now().into(), false).into(),
+            TargetAddrEntry::new(
+                ("fe80::1".parse().unwrap(), 0).into(),
+                Utc::now().into(),
+                TargetAddrType::Ssh,
+            )
+            .into(),
         );
         assert_eq!(target.ssh_address(), Some("[fe80::1%0]:22".parse::<SocketAddr>().unwrap()));
     }
@@ -2581,9 +2613,11 @@ mod test {
     #[test]
     fn test_target_is_manual() {
         let target = Target::new();
-        target.addrs_insert_entry(
-            (("::1".parse().unwrap(), 0).into(), Utc::now().into(), true).into(),
-        );
+        target.addrs_insert_entry(TargetAddrEntry::new(
+            ("::1".parse().unwrap(), 0).into(),
+            Utc::now(),
+            TargetAddrType::Manual,
+        ));
         assert!(target.is_manual());
 
         let target = Target::new();
@@ -2593,9 +2627,11 @@ mod test {
     #[test]
     fn test_update_connection_state_manual_disconnect() {
         let target = Target::new();
-        target.addrs_insert_entry(
-            (("::1".parse().unwrap(), 0).into(), Utc::now().into(), true).into(),
-        );
+        target.addrs_insert_entry(TargetAddrEntry::new(
+            ("::1".parse().unwrap(), 0).into(),
+            Utc::now(),
+            TargetAddrType::Manual,
+        ));
         target.set_state(ConnectionState::Manual);
 
         // Attempting to transition a manual target into the disconnected state remains in manual.

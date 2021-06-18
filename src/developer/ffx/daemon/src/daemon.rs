@@ -10,7 +10,7 @@ use {
     crate::manual_targets,
     crate::target::{
         target_addr_info_to_socketaddr, ConnectionState, RcsConnection, Target, TargetAddrEntry,
-        TargetCollection, TargetEvent,
+        TargetAddrType, TargetCollection, TargetEvent,
     },
     crate::target_control::TargetControl,
     crate::zedboot::zedboot_discovery,
@@ -387,7 +387,7 @@ impl Daemon {
     }
 
     async fn add_manual_target(&self, addr: SocketAddr) {
-        let tae: TargetAddrEntry = (addr.into(), Utc::now(), true).into();
+        let tae = TargetAddrEntry::new(addr.into(), Utc::now(), TargetAddrType::Manual);
 
         let _ = self.manual_targets.add(format!("{}", addr)).await.map_err(|e| {
             log::error!("Unable to persist manual target: {:?}", e);
