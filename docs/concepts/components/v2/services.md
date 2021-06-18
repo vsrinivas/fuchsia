@@ -2,7 +2,8 @@
 
 <<../_v2_banner.md>>
 
-A service provides a set of [FIDL][glossary.fidl] [protocols][glossary.protocol]
+A service provides a set of [FIDL][glossary.fidl]
+[protocols][glossary.protocol]
 over a [channel][glossary.channel].
 
 ## Instances
