@@ -7,7 +7,7 @@ Enable debug output in the ACPI library (used by the ACPI bus driver).
 
 **Current value (from the default):** `false`
 
-From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/d7bd2596db70275e5f0d0dab6e538c4d46a4cb54/BUILD.gn#9)
+From //zircon/system/ulib/acpica/acpica.gni:7
 
 ### active_partition
 
