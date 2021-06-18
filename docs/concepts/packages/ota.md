@@ -393,7 +393,7 @@ After this, the update is considered committed. This means:
 
 
 [glossary.ABR]: /docs/glossary/README.md#ABR
-[configured]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/pkg/bin/system-update-checker/BUILD.gn;l=114;drc=50245a9ce68f3b877e165b004175e2a4fc12eaef
+[configured]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/pkg/bin/system-update-checker/BUILD.gn;l=114;drc=50245a9ce68f3b877e165b004175e2a4fc12eaef
 [paver API]: https://fuchsia.dev/reference/fidl/fuchsia.paver#DataSink
 [update package]: /docs/concepts/packages/update_pkg.md
 [recovery-mode-code]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/pkg/bin/system-updater/src/update.rs;l=429;drc=202c37fa01f75c431f61ca824b4d2f7c2ec82178
