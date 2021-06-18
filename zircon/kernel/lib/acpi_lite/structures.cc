@@ -6,7 +6,6 @@
 
 #include "lib/acpi_lite/structures.h"
 
-#include <endian.h>
 #include <lib/acpi_lite/internal.h>
 #include <stdint.h>
 #include <string.h>

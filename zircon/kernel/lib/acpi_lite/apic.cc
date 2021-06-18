@@ -65,7 +65,8 @@ zx_status_t EnumerateProcessorLocalApics(
     const AcpiParserInterface& parser,
     const fbl::Function<zx_status_t(const AcpiMadtLocalApicEntry&)>& callback) {
   return ForEachMadtEntryOfType<AcpiMadtLocalApicEntry>(
-      parser, ACPI_MADT_TYPE_LOCAL_APIC, [&callback](const AcpiMadtLocalApicEntry& record) {
+      parser, ACPI_MADT_TYPE_LOCAL_APIC,
+      [&callback](const AcpiMadtLocalApicEntry& record) -> zx_status_t {
         if (!(record.flags & ACPI_MADT_FLAG_ENABLED)) {
           return ZX_OK;
         }

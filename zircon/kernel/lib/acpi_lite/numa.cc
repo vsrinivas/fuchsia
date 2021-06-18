@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <inttypes.h>
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/numa.h>
 #include <lib/acpi_lite/structures.h>
@@ -65,7 +66,8 @@ zx_status_t EnumerateCpuNumaPairs(
     uint64_t length = (static_cast<uint64_t>(mem->length_high) << 32) | mem->length_low;
     domain.memory[domain.memory_count++] = {.base_address = base, .length = length};
 
-    LOG_DEBUG("acpi_lite: ACPI SRAT: numa Region:{ domain: %u base: %#lx length: %#lx (%lu) }\n",
+    LOG_DEBUG("acpi_lite: ACPI SRAT: numa Region:{ domain: %" PRIu32 " base: %#" PRIx64
+              " length: %#" PRIx64 " (%" PRIu64 ") }\n",
               mem->proximity_domain, base, length, length);
   }
 
