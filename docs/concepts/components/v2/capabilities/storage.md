@@ -15,7 +15,8 @@ instances (including their own children).
 
 As an example, if component instance `a` receives a
 [directory capability][glossary.directory capability] from its
-[realm][glossary.realm] and both [uses][glossary.use] it and
+[realm][glossary.realm] and both
+[uses][glossary.use] it and
 [offers][glossary.offer] it to `b`, which also uses the directory,
 both component instances can see and interact with the same directory.
 
