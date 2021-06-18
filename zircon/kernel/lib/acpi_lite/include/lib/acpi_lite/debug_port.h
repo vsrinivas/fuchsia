@@ -16,9 +16,14 @@ namespace acpi_lite {
 // Describes a dedicated system debug port suitable for low-level
 // debugging and diagnostics.
 //
-// Currently, we only support a 16550-compatible UART using MMIO.
+// Currently, we only support a 16550-compatible UART using MMIO or PIO.
 struct AcpiDebugPortDescriptor {
-  // Physical address of the 16550 MMIO registers.
+  enum class Type { kMmio, kPio };
+
+  Type type;
+
+  // Physical address of the 16550 MMIO registers for Type::kMmio.
+  // IO port base for Type::kPio.
   zx_paddr_t address;
   size_t length;
 };

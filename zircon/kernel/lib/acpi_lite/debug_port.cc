@@ -66,16 +66,22 @@ zx::status<AcpiDebugPortDescriptor> ParseAcpiDbg2Table(const AcpiDbg2Table& debu
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  // Ensure we read an MMIO address.
-  if (address->address_space_id != ACPI_ADDR_SPACE_MEMORY) {
-    LOG_INFO("acpi_lite: Address space unsupported (space_id=%x)\n", address->address_space_id);
-    return zx::error(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  return zx::success(AcpiDebugPortDescriptor{
+  AcpiDebugPortDescriptor result = {
       .address = static_cast<zx_paddr_t>(address->address),
       .length = length->value,
-  });
+  };
+  switch (address->address_space_id) {
+    case ACPI_ADDR_SPACE_MEMORY:
+      result.type = AcpiDebugPortDescriptor::Type::kMmio;
+      break;
+    case ACPI_ADDR_SPACE_IO:
+      result.type = AcpiDebugPortDescriptor::Type::kPio;
+      break;
+    default:
+      LOG_INFO("acpi_lite: Address space unsupported (space_id=%x)\n", address->address_space_id);
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+  return zx::success(result);
 }
 
 zx::status<AcpiDebugPortDescriptor> GetDebugPort(const AcpiParserInterface& parser) {
