@@ -84,14 +84,14 @@ reg_xc  .req x13
 // void arm64_el2_gicv3_read_gich_state(zx_paddr_t state)
 FUNCTION(arm64_el2_gicv3_read_gich_state)
     mov reg_xa, READ_SYSREG
-    hvc 5
+    hvc 6
     ret
 END_FUNCTION(arm64_el2_gicv3_read_gich_state)
 
 // void arm64_el2_gicv3_write_gich_state(zx_paddr_t state, uint32_t hcr)
 FUNCTION(arm64_el2_gicv3_write_gich_state)
     mov reg_xa, WRITE_SYSREG
-    hvc 5
+    hvc 6
     ret
 END_FUNCTION(arm64_el2_gicv3_write_gich_state)
 
@@ -184,7 +184,7 @@ FUNCTION_LABEL(el2_hvc_write_gich_state)
 
 // uint32_t arm64_el2_gicv3_read_gich_vtr()
 FUNCTION(arm64_el2_gicv3_read_gich_vtr)
-    hvc 6
+    hvc 7
     ret
 END_FUNCTION(arm64_el2_gicv3_read_gich_vtr)
 

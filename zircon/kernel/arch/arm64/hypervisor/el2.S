@@ -221,18 +221,22 @@ reg_xa  .req x11
 
 .macro entry_init
 .align 7
-    hvc_jump .Linit_table 4
+    hvc_jump .Linit_table 8
 .Linit_table:
-    b el2_hvc_psci
-    b el2_hvc_mexec
-    b el2_hvc_on
-    b el2_hvc_tlbi
+    b el2_hvc_psci        // HVC 0:      psci
+    b el2_hvc_mexec       // HVC 1:      mexec
+    b el2_hvc_tlbi        // HVC 2:      tlbi
+    b el2_hvc_on          // HVC 3:      on
+    b el2_hvc_bad_state   // HVC 4: (**) off        (disabled)
+    b el2_hvc_bad_state   // HVC 5: (**) resume     (disabled)
+    b el2_hvc_bad_state   // HVC 6: (**) gich_state (disabled)
+    b el2_hvc_bad_state   // HVC 7: (**) gich_vtr   (disabled)
+
 .endm
 
 .macro entry_sync return_code
 .align 7
     guest_exit \return_code
-
     // Check VTTBR_EL2 to determine whether the exception came from the guest or
     // from the host.
     mrs reg_xs, vttbr_el2
@@ -243,15 +247,16 @@ reg_xa  .req x11
 
     // If we got to here, the exception came from the host or EL2.
     // Continue execution through a jump table based on the HVC index.
-    hvc_jump .Lsync_table 7
+    hvc_jump .Lsync_table 8
 .Lsync_table:
-    b el2_hvc_psci
-    b el2_hvc_mexec
-    b el2_hvc_off
-    b el2_hvc_tlbi
-    b el2_hvc_resume
-    b el2_hvc_gich_state
-    b el2_hvc_gich_vtr
+    b el2_hvc_psci        // HVC 0:      psci
+    b el2_hvc_mexec       // HVC 1:      mexec
+    b el2_hvc_tlbi        // HVC 2:      tlbi
+    b el2_hvc_bad_state   // HVC 3: (**) on        (disabled)
+    b el2_hvc_off         // HVC 4:      off
+    b el2_hvc_resume      // HVC 5:      resume
+    b el2_hvc_gich_state  // HVC 6:      gich_state
+    b el2_hvc_gich_vtr    // HVC 7:      gich_vtr
 .endm
 
 .macro entry_irq return_code
@@ -331,7 +336,7 @@ FUNCTION_LABEL(arm64_el2_exec_table)
 //
 // |stack_top| must point to the physical address of a contiguous stack.
 FUNCTION(arm64_el2_on)
-    hvc 2
+    hvc 3
     ret
 END_FUNCTION(arm64_el2_on)
 FUNCTION_LABEL(el2_hvc_on)
@@ -388,40 +393,17 @@ FUNCTION_LABEL(el2_hvc_psci)
 FUNCTION_LABEL(el2_hvc_mexec)
     br x0
 
-// zx_status_t arm64_el2_off();
-FUNCTION(arm64_el2_off)
-    hvc 2
-    ret
-END_FUNCTION(arm64_el2_off)
-FUNCTION_LABEL(el2_hvc_off)
-    // Disable the MMU, but enable I-cache, D-cache, and stack alignment checking.
-    movlit reg_xs, SCTLR_ELX_C | SCTLR_ELX_SA | SCTLR_ELX_I | SCTLR_EL2_RES1
-    msr sctlr_el2, reg_xs
-    isb
-
-    // Invalidate all EL2 TLB entries.
-    tlbi alle2
-    dsb sy
-    isb
-
-    // Setup the init vector table for EL2.
-    adr_global reg_xs, arm64_el2_init_table
-    msr vbar_el2, reg_xs
-    isb
-
-    exception_return ZX_OK
-
 // zx_status_t arm64_el2_tlbi_ipa(zx_paddr_t vttbr, zx_vaddr_t addr, bool terminal);
 FUNCTION(arm64_el2_tlbi_ipa)
     mov reg_xa, 0
-    hvc 3
+    hvc 2
     ret
 END_FUNCTION(arm64_el2_tlbi_ipa)
 
 // zx_status_t arm64_el2_tlbi_vmid(zx_paddr_t vttbr);
 FUNCTION(arm64_el2_tlbi_vmid)
     mov reg_xa, 1
-    hvc 3
+    hvc 2
     ret
 END_FUNCTION(arm64_el2_tlbi_vmid)
 
@@ -461,9 +443,32 @@ FUNCTION_LABEL(el2_hvc_tlbi_vmid)
     isb
     b .Ltlbi_exit
 
+// zx_status_t arm64_el2_off();
+FUNCTION(arm64_el2_off)
+    hvc 4
+    ret
+END_FUNCTION(arm64_el2_off)
+FUNCTION_LABEL(el2_hvc_off)
+    // Disable the MMU, but enable I-cache, D-cache, and stack alignment checking.
+    movlit reg_xs, SCTLR_ELX_C | SCTLR_ELX_SA | SCTLR_ELX_I | SCTLR_EL2_RES1
+    msr sctlr_el2, reg_xs
+    isb
+
+    // Invalidate all EL2 TLB entries.
+    tlbi alle2
+    dsb sy
+    isb
+
+    // Setup the init vector table for EL2.
+    adr_global reg_xs, arm64_el2_init_table
+    msr vbar_el2, reg_xs
+    isb
+
+    exception_return ZX_OK
+
 // zx_status_t arm64_el2_resume(zx_paddr_t vttbr, zx_paddr_t state, uint64_t hcr);
 FUNCTION(arm64_el2_resume)
-    hvc 4
+    hvc 5
     ret
 END_FUNCTION(arm64_el2_resume)
 FUNCTION_LABEL(el2_hvc_resume)
@@ -587,3 +592,7 @@ FUNCTION_LABEL(el2_fp_resume)
     ldp reg_xs, reg_xt, [sp], 16
     eret
     SPECULATION_POSTFENCE
+
+FUNCTION_LABEL(el2_hvc_bad_state)
+    // Simply returns the ZX_ERR_BAD_STATE error code.
+    exception_return ZX_ERR_BAD_STATE
