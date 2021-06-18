@@ -44,6 +44,27 @@ enum EventType {
   kString,
 };
 
+inline const char* FrameDropReasonToString(FrameDropReason reason) {
+  switch (reason) {
+    case FrameDropReason::kGeneral:
+      return "General";
+    case FrameDropReason::kInvalidFrame:
+      return "InvalidFrame";
+    case FrameDropReason::kNoMemory:
+      return "NoMemory";
+    case FrameDropReason::kFrameIdInUse:
+      return "FrameIdInUse";
+    case FrameDropReason::kInvalidTimestamp:
+      return "InvalidTimestamp";
+    case FrameDropReason::kTooManyFramesInFlight:
+      return "TooManyFramesInFlight";
+    case FrameDropReason::kMuted:
+      return "Muted";
+    case FrameDropReason::kNoClient:
+      return "NoClient";
+  }
+}
+
 }  // namespace camera::cobalt
 
 #endif  // SRC_CAMERA_LIB_COBALT_LOGGER_METRICS_H_

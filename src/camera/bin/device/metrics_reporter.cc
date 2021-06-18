@@ -5,6 +5,7 @@
 
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 namespace camera {
 namespace {
@@ -222,9 +223,15 @@ void MetricsReporter::StreamRecord::SetProperties(
   format_record_.Set(props.image_format());
 }
 
-void MetricsReporter::StreamRecord::FrameReceived() { frames_received_.Add(1); }
+void MetricsReporter::StreamRecord::FrameReceived() {
+  TRACE_INSTANT("camera", "StreamRecord::FrameReceived", TRACE_SCOPE_THREAD);
+  frames_received_.Add(1);
+}
 
 void MetricsReporter::StreamRecord::FrameDropped(cobalt::FrameDropReason why) {
+  TRACE_INSTANT("camera", "StreamRecord::FrameDropped", TRACE_SCOPE_THREAD, "reason",
+                FrameDropReasonToString(why));
+
   frames_dropped_.Add(1);
 
   if (!impl_.logger_) {
