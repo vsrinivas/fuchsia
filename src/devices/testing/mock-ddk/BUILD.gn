@@ -1,0 +1,56 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/cpp/sdk_source_set.gni")
+import("//build/test.gni")
+
+sdk_source_set("mock-ddk") {
+  category = "partner"
+  sdk_name = "mock-ddk"
+
+  testonly = true
+
+  sources = [
+    "libdriver-api.cc",
+    "mock-device.cc",
+    "mock-device.h",
+  ]
+
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/lib/ddk",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+  ]
+  public_deps = [
+    # mock_ddk.h has #include <ddk/device.h>.
+    "//src/lib/ddk",
+
+    # mock_ddk.h has #include <lib/sync/completion.h>.
+    "//zircon/public/lib/sync",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":mock-ddk-test" ]
+}
+
+test("mock-ddk-test-bin") {
+  output_name = "mock-ddk-test"
+  sources = [ "mock-ddk-test.cc" ]
+  deps = [
+    ":mock-ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("mock-ddk-test") {
+  deps = [ ":mock-ddk-test-bin" ]
+}
