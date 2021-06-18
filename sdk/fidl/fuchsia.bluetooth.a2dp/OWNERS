@@ -1,14 +1,1 @@
-# BT media
-aniramakri@google.com
-jamuraa@google.com
-zbowling@google.com
-
-# BT team
-belgum@google.com
-benlawson@google.com
-kehrt@google.com
-lucasjenkins@google.com
-nickpollard@google.com
-xow@google.com
-
-# COMPONENT: Bluetooth
+include /src/connectivity/bluetooth/OWNERS
