@@ -15,6 +15,7 @@ zx_library("boot-shim") {
 
   sdk = "source"
   sdk_headers = [
+    "lib/boot-shim/acpi.h",
     "lib/boot-shim/boot-shim.h",
     "lib/boot-shim/item-base.h",
     "lib/boot-shim/test-serial-number.h",
@@ -33,12 +34,14 @@ zx_library("boot-shim") {
   ]
 
   sources = [
+    "acpi.cc",
     "boot-shim.cc",
     "cmdline.cc",
     "test-serial-number.cc",
   ]
 
   deps = [
+    "//zircon/kernel/lib/acpi_lite",
     "//zircon/kernel/lib/boot-options",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/uart",
@@ -72,10 +75,14 @@ group("tests") {
 }
 
 test("boot-shim-unittests") {
-  sources = [ "test-serial-number-tests.cc" ]
+  sources = [
+    "acpi-tests.cc",
+    "test-serial-number-tests.cc",
+  ]
   deps = [
     ":boot-shim",
     ":boot-shim-test",
+    "//zircon/kernel/lib/acpi_lite",
     "//zircon/system/ulib/zxtest",
   ]
 }

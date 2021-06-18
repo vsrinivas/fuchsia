@@ -14,6 +14,8 @@
 #include <zircon/boot/image.h>
 
 #include <cstdint>
+#include <type_traits>
+#include <variant>
 
 namespace boot_shim {
 
@@ -65,6 +67,77 @@ class SingleItem : public ItemBase {
 
  private:
   ByteView payload_;
+};
+
+// This is a base class for defining simple item types that store their data
+// directly and can handle a fixed set of alternative payload types.  The
+// different Payload... template parameters give different types, e.g.
+// dcfg_this_t and dcfg_that_t.  The derived class Item must then define an
+// overload for each Payload type:
+// ```
+//   static constexpr zbi_header_t ItemHeader(const dcfg_this_t& cfg) {
+//     return {.type = ZBI_TYPE_KERNEL_DRIVER, .extra = KDRV_THIS};
+//   }
+//   static constexpr zbi_header_t ItemHeader(const dcfg_that_t& cfg) {
+//     return {.type = ZBI_TYPE_KERNEL_DRIVER, .extra = KDRV_THAT};
+//   }
+// ```
+// Calling set_payload with either a dcfg_this_t or dcfg_that_t argument
+// installs a value.  The ItemHeader overload corresponding to the type of the
+// argument to set_payload will be used to produce the ZBI item.  set_payload
+// with no arguments resets it to initial state so no item is produced.
+template <class Item, typename... Payload>
+class SingleVariantItemBase : public ItemBase {
+ public:
+  using AnyPayload = std::variant<Payload...>;
+
+  static_assert((zbitl::is_uniquely_representable_pod_v<Payload> && ...));
+
+  constexpr size_t size_bytes() const { return SizeBytes(payload_); }
+
+  constexpr Item& set_payload(const AnyPayload& payload) {
+    std::visit([this](const auto& payload) { payload_ = payload; }, payload);
+    return static_cast<Item&>(*this);
+  }
+
+  constexpr Item& set_payload() {
+    payload_ = std::monostate{};
+    return static_cast<Item&>(*this);
+  }
+
+  fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) const {
+    return std::visit([&zbi](const auto& payload) { return Append(zbi, payload); }, payload_);
+  }
+
+ protected:
+  // The derived class defines overloads for each Payload... type.
+  static constexpr zbi_header_t ItemHeader(std::monostate none) { return {}; }
+
+  static constexpr size_t SizeBytes(std::monostate none) { return 0; }
+
+  template <typename T>
+  static constexpr size_t SizeBytes(const T& payload) {
+    return ItemSize(sizeof(payload));
+  }
+
+  static constexpr fitx::result<DataZbi::Error> Append(DataZbi& zbi, std::monostate none) {
+    return fitx::ok();
+  }
+
+  template <typename T>
+  static constexpr fitx::result<DataZbi::Error> Append(DataZbi& zbi, const T& payload) {
+    static_assert((std::is_same_v<T, Payload> || ...));
+    return zbi.Append(Item::ItemHeader(payload), zbitl::AsBytes(payload));
+  }
+
+  template <typename... Args>
+  static constexpr fitx::result<DataZbi::Error> Append(Args&&... args) {
+    static_assert((std::is_void_v<Args> && ...));
+    return fitx::ok();
+  }
+
+ private:
+  std::variant<std::monostate, Payload...> payload_;
 };
 
 }  // namespace boot_shim
