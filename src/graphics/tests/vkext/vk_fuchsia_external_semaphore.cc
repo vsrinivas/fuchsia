@@ -537,22 +537,8 @@ TEST(VulkanExtension, ExternalSemaphoreFuchsia) {
   EXPECT_TRUE(VulkanTest::Exec(&t1, &t2, false));
 }
 
-TEST(VulkanExtension, ExternalSemaphoreFuchsiaTemp) {
-  VulkanTest t1(true), t2(true);
-  ASSERT_TRUE(t1.Initialize());
-  ASSERT_TRUE(t2.Initialize());
-  EXPECT_TRUE(VulkanTest::Exec(&t1, &t2, false));
-}
-
 TEST(VulkanExtension, TemporaryExternalSemaphoreFuchsia) {
   VulkanTest t1(false), t2(false);
-  ASSERT_TRUE(t1.Initialize());
-  ASSERT_TRUE(t2.Initialize());
-  EXPECT_TRUE(VulkanTest::Exec(&t1, &t2, true));
-}
-
-TEST(VulkanExtension, TemporaryExternalSemaphoreFuchsiaTemp) {
-  VulkanTest t1(true), t2(true);
   ASSERT_TRUE(t1.Initialize());
   ASSERT_TRUE(t2.Initialize());
   EXPECT_TRUE(VulkanTest::Exec(&t1, &t2, true));
@@ -565,22 +551,8 @@ TEST(VulkanExtension, QueueExternalSemaphoreFuchsia) {
   EXPECT_TRUE(VulkanTest::ExecUsingQueue(&t1, &t2, false));
 }
 
-TEST(VulkanExtension, QueueExternalSemaphoreFuchsiaTemp) {
-  VulkanTest t1(true), t2(true);
-  ASSERT_TRUE(t1.Initialize());
-  ASSERT_TRUE(t2.Initialize());
-  EXPECT_TRUE(VulkanTest::ExecUsingQueue(&t1, &t2, false));
-}
-
 TEST(VulkanExtension, QueueTemporaryExternalSemaphoreFuchsia) {
   VulkanTest t1(false), t2(false);
-  ASSERT_TRUE(t1.Initialize());
-  ASSERT_TRUE(t2.Initialize());
-  EXPECT_TRUE(VulkanTest::ExecUsingQueue(&t1, &t2, true));
-}
-
-TEST(VulkanExtension, QueueTemporaryExternalSemaphoreFuchsiaTemp) {
-  VulkanTest t1(true), t2(true);
   ASSERT_TRUE(t1.Initialize());
   ASSERT_TRUE(t2.Initialize());
   EXPECT_TRUE(VulkanTest::ExecUsingQueue(&t1, &t2, true));
