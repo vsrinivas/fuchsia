@@ -19,7 +19,6 @@ import (
 	"unicode"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
-	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 var (
@@ -269,9 +268,6 @@ func checkNinjaNoop(
 func touchFiles(ctx context.Context, paths []string) error {
 	now := time.Now()
 	for _, path := range paths {
-		// TODO(fxbug.dev/75371): Delete this log once we're done debugging
-		// discrepancies between fint and affected_tests.py.
-		logger.Debugf(ctx, "Touch: %s", path)
 		err := os.Chtimes(path, now, now)
 		// Skip any paths that don't exist, e.g. because the file was deleted in
 		// the change under test.
@@ -333,23 +329,6 @@ func affectedTestsNoWork(
 			return result, err
 		}
 		testsByStamp[stamp] = append(testsByStamp[stamp], test.Name)
-	}
-
-	// Keep track of the files' original modification times so we can reset them
-	// before exiting. Otherwise they will affect the results of the
-	// affected_tests.py script.
-	// TODO(fxbug.dev/75371): Stop resetting the mtimes once we stop running
-	// affected_tests.py after fint.
-	originalModTimes := map[string]time.Time{}
-	for _, path := range affectedFiles {
-		fi, err := os.Stat(path)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return result, err
-		}
-		originalModTimes[path] = fi.ModTime()
 	}
 
 	var gnFiles, nonGNFiles []string
@@ -423,20 +402,6 @@ func affectedTestsNoWork(
 	}
 	result.logs["ninja dry run output"] = ninjaOutput
 	result.noWork = strings.Contains(ninjaOutput, noWorkString)
-
-	// TODO(fxbug.dev/75371): Stop resetting the mtimes once we stop running
-	// affected_tests.py after fint.
-	for _, path := range affectedFiles {
-		mtime, ok := originalModTimes[path]
-		if !ok {
-			// If the file doesn't exist, it won't be present in `originalModTimes`.
-			continue
-		}
-		if err := os.Chtimes(path, mtime, mtime); err != nil {
-			return result, err
-		}
-	}
-
 	result.affectedTests = removeDuplicates(affectedTests)
 
 	return result, nil
