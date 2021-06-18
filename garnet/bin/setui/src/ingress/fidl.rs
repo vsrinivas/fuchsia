@@ -89,11 +89,10 @@ pub(crate) type Register = Box<
     dyn for<'a> FnOnce(&Delegate, &Seeder, &mut ServiceFsDir<'_, ServiceObj<'a, ()>>) + Send + Sync,
 >;
 
-impl From<Interface> for Vec<Dependency> {
-    fn from(item: Interface) -> Self {
-        let mut dependencies = Vec::new();
-
-        dependencies.append(&mut match item {
+impl Interface {
+    /// Returns the list of [Dependencies](Dependency) that are necessary to provide this Interface.
+    fn dependencies(self) -> Vec<Dependency> {
+        match self {
             Interface::Accessibility => {
                 vec![Dependency::Entity(Entity::Handler(SettingType::Accessibility))]
             }
@@ -148,22 +147,18 @@ impl From<Interface> for Vec<Dependency> {
                     Dependency::Entity(Entity::Handler(SettingType::Power)),
                 ]
             }
-        });
-
-        dependencies
+        }
     }
-}
 
-// Converts an Interface into the closure to bring up the interface in the service environment as
-// defined by Register.
-impl From<Interface> for Register {
-    fn from(interface: Interface) -> Self {
+    /// Converts an [Interface] into the closure to bring up the interface in the service environment
+    /// as defined by [Register].
+    fn registration_fn(self) -> Register {
         Box::new(
             move |delegate: &Delegate,
                   seeder: &Seeder,
                   service_dir: &mut ServiceFsDir<'_, ServiceObj<'_, ()>>| {
                 let delegate = delegate.clone();
-                match interface {
+                match self {
                     Interface::Audio => {
                         service_dir.add_fidl_service(move |stream: AudioRequestStream| {
                             crate::audio::fidl_io::spawn(delegate.clone(), stream);
@@ -229,14 +224,13 @@ impl From<Interface> for Register {
             },
         )
     }
-}
 
-// Derives a Registrant from Interface. This is used convert a list of Interfaces specified in a
-// configuration into actionable Registrants that can be used in the setting service.
-impl From<Interface> for Registrant {
-    fn from(item: Interface) -> Self {
-        let mut builder = registration::Builder::new(Registrar::Fidl(item.into()));
-        let dependencies: Vec<Dependency> = item.into();
+    /// Derives a [Registrant] from this [Interface]. This is used convert a list of Interfaces
+    /// specified in a configuration into actionable Registrants that can be used in the setting
+    /// service.
+    pub(crate) fn registrant(self) -> Registrant {
+        let mut builder = registration::Builder::new(Registrar::Fidl(self.registration_fn()));
+        let dependencies: Vec<Dependency> = self.dependencies();
         for dependency in dependencies {
             builder = builder.add_dependency(dependency);
         }
@@ -276,7 +270,7 @@ mod tests {
 
         let setting_type = SettingType::Privacy;
 
-        let registrant: Registrant = Interface::Privacy.into();
+        let registrant: Registrant = Interface::Privacy.registrant();
 
         // Verify dependencies properly derived from the interface.
         assert!(registrant

@@ -417,8 +417,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             _ => (HashSet::new(), HashSet::new(), HashSet::new(), HashSet::new()),
         };
 
-        self.registrants
-            .extend(fidl_interfaces.into_iter().map(|x| x.into()).collect::<Vec<Registrant>>());
+        self.registrants.extend(fidl_interfaces.into_iter().map(|x| x.registrant()));
 
         let mut settings = HashSet::new();
         settings.extend(self.settings);

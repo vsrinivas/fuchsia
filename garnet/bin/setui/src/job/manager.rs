@@ -61,8 +61,6 @@ impl Manager {
     /// Creates a new [Manager] with the given MessageHub. A reference to the service MessageHub is
     /// provided so that it can be passed to [Jobs](Job) for communicating with the rest of the
     /// service.
-    // TODO(fxbug.dev/70534): Use Manager to handle FIDL requests.
-    #[allow(dead_code)]
     pub(crate) async fn spawn(message_hub_delegate: &message::Delegate) -> message::Signature {
         // Create a top-level receptor in the MessageHub to accept new sources from.
         let receptor = message_hub_delegate
