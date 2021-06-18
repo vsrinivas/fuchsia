@@ -19,7 +19,11 @@ namespace hypervisor {
 template <typename T, T N>
 class IdAllocator {
  public:
-  zx_status_t Init() { return id_bitmap_.Reset(N); }
+  IdAllocator() {
+    zx_status_t status = id_bitmap_.Reset(N);
+    // We use bitmap::FixedStorage, so allocation cannot fail.
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+  }
 
   zx_status_t AllocId(T* id) {
     size_t first_unset;

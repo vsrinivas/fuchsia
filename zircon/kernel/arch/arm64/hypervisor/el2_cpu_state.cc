@@ -88,13 +88,9 @@ zx_status_t El2CpuState::Create(ktl::unique_ptr<El2CpuState>* out) {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  zx_status_t status = cpu_state->Init();
-  if (status != ZX_OK) {
-    return status;
-  }
 
   // Initialise the EL2 translation table.
-  status = cpu_state->table_.Init();
+  zx_status_t status = cpu_state->table_.Init();
   if (status != ZX_OK) {
     return status;
   }

@@ -37,11 +37,6 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
   }
 
   Guard<Mutex> lock{&guest->vcpu_mutex_};
-  status = guest->vpid_allocator_.Init();
-  if (status != ZX_OK) {
-    return status;
-  }
-
   status = hypervisor::GuestPhysicalAddressSpace::Create(vmid, &guest->gpas_);
   if (status != ZX_OK) {
     return status;

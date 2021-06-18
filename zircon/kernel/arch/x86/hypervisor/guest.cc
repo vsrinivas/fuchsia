@@ -77,13 +77,6 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
   ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_SYSENTER_ESP);
   ignore_msr(&guest->msr_bitmaps_page_, true, X86_MSR_IA32_SYSENTER_EIP);
 
-  // Setup VPID allocator
-  Guard<Mutex> lock{&guest->vcpu_mutex_};
-  status = guest->vpid_allocator_.Init();
-  if (status != ZX_OK) {
-    return status;
-  }
-
   *out = ktl::move(guest);
   return ZX_OK;
 }
