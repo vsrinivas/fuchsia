@@ -11,8 +11,8 @@ executable("bin") {
   sources = [ "src/main.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.scenic.allocation",
     "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.scenic.internal",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -32,8 +32,8 @@ rustc_binary("bin-rust") {
 
   deps = [
     "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
+    "//sdk/fidl/fuchsia.scenic.allocation:fuchsia.scenic.allocation-rustc",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
-    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition-rustc",
     "//sdk/fidl/fuchsia.ui.scenic.internal:fuchsia.ui.scenic.internal-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

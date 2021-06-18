@@ -9,7 +9,7 @@
 #include <lib/ui/scenic/cpp/commands_sizing.h>
 
 #include <fuchsia/images/cpp/fidl.h>
-#include <fuchsia/ui/composition/cpp/fidl.h>
+#include <fuchsia/scenic/allocation/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -32,12 +32,12 @@ class MeasuringTape {
     num_bytes_ += FIDL_ALIGN(32);
   }
 
-  void Measure(const ::fuchsia::ui::composition::BufferCollectionImportToken& value) {
+  void Measure(const ::fuchsia::scenic::allocation::BufferCollectionImportToken& value) {
     num_bytes_ += FIDL_ALIGN(4);
     MeasureHandles(value);
   }
 
-  void MeasureHandles(const ::fuchsia::ui::composition::BufferCollectionImportToken& value) {
+  void MeasureHandles(const ::fuchsia::scenic::allocation::BufferCollectionImportToken& value) {
     num_handles_ += 1;
   }
 

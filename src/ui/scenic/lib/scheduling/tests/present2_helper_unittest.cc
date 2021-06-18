@@ -14,10 +14,10 @@ namespace test {
 
 // Register three presents and see that they fire at the right time with the right arguments.
 TEST(Present2HelperTest, OnPresented_ShouldTriggerCallbacksCorrectly) {
-  std::optional<fuchsia::ui::composition::FramePresentedInfo> presented_info;
+  std::optional<fuchsia::scenic::scheduling::FramePresentedInfo> presented_info;
   Present2Helper helper(
       /*on_frame_presented_event*/ [&presented_info](
-                                       fuchsia::ui::composition::FramePresentedInfo info) {
+                                       fuchsia::scenic::scheduling::FramePresentedInfo info) {
         presented_info.emplace(std::move(info));
       });
 

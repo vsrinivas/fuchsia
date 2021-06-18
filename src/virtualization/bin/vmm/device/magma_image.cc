@@ -4,8 +4,8 @@
 
 #include "magma_image.h"
 
+#include <fuchsia/scenic/allocation/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
-#include <fuchsia/ui/composition/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/service/llcpp/service.h>
@@ -88,14 +88,14 @@ class VulkanImageCreator {
   vk::UniqueInstance instance_;
   vk::PhysicalDevice physical_device_;
   vk::UniqueDevice device_;
-  fidl::WireSyncClient<fuchsia_ui_composition::Allocator> scenic_allocator_;
+  fidl::WireSyncClient<fuchsia_scenic_allocation::Allocator> scenic_allocator_;
   fidl::WireSyncClient<fuchsia_sysmem::Allocator> sysmem_allocator_;
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> local_token_;
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> vulkan_token_;
   fidl::ClientEnd<fuchsia_sysmem::BufferCollectionToken> scenic_token_endpoint_;
   std::shared_ptr<AsyncHandler> async_handler_;
   fidl::Client<fuchsia_sysmem::BufferCollection> collection_;
-  fuchsia_ui_composition::wire::BufferCollectionImportToken scenic_import_token_;
+  fuchsia_scenic_allocation::wire::BufferCollectionImportToken scenic_import_token_;
 };
 
 vk::Result VulkanImageCreator::InitVulkan(uint32_t physical_device_index) {
@@ -260,14 +260,14 @@ zx_status_t VulkanImageCreator::InitSysmem() {
 }
 
 zx_status_t VulkanImageCreator::InitScenic() {
-  auto client_end = service::Connect<fuchsia_ui_composition::Allocator>();
+  auto client_end = service::Connect<fuchsia_scenic_allocation::Allocator>();
   if (!client_end.is_ok()) {
     LOG_VERBOSE("Failed to connect to scenic allocator: %d", client_end.status_value());
     return client_end.status_value();
   }
 
   scenic_allocator_ =
-      fidl::WireSyncClient<fuchsia_ui_composition::Allocator>(std::move(*client_end));
+      fidl::WireSyncClient<fuchsia_scenic_allocation::Allocator>(std::move(*client_end));
 
   return ZX_OK;
 }
@@ -286,7 +286,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
   assert(device_);
 
   if (use_scenic()) {
-    fuchsia_ui_composition::wire::BufferCollectionExportToken export_token;
+    fuchsia_scenic_allocation::wire::BufferCollectionExportToken export_token;
 
     zx_status_t status = zx::eventpair::create(0, &export_token.value, &scenic_import_token_.value);
     if (status != ZX_OK) {
@@ -295,7 +295,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
     }
 
     fidl::FidlAllocator allocator;
-    fuchsia_ui_composition::wire::RegisterBufferCollectionArgs args(allocator);
+    fuchsia_scenic_allocation::wire::RegisterBufferCollectionArgs args(allocator);
     args.set_export_token(allocator, std::move(export_token));
     args.set_buffer_collection_token(allocator, std::move(scenic_token_endpoint_));
 

@@ -5,7 +5,7 @@
 #include "src/graphics/lib/magma/include/virtio/virtio_magma.h"
 
 #include <drm_fourcc.h>
-#include <fuchsia/ui/composition/cpp/fidl.h>
+#include <fuchsia/scenic/allocation/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
@@ -60,21 +60,23 @@ class WaylandImporterMock : public fuchsia::virtualization::hardware::VirtioWayl
   std::unique_ptr<VirtioImage> image_;
 };
 
-class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator {
+class ScenicAllocatorFake : public fuchsia::scenic::allocation::Allocator {
  public:
   // Must set constraints on the given buffer collection token to allow the constraints
   // negotiation to complete.
-  void RegisterBufferCollection(fuchsia::ui::composition::RegisterBufferCollectionArgs args,
+  void RegisterBufferCollection(fuchsia::scenic::allocation::RegisterBufferCollectionArgs args,
                                 RegisterBufferCollectionCallback callback) override {
     if (!args.has_export_token()) {
       FX_LOGS(ERROR) << "RegisterBufferCollection called with missing export token";
-      callback(fit::error(fuchsia::ui::composition::RegisterBufferCollectionError::BAD_OPERATION));
+      callback(
+          fit::error(fuchsia::scenic::allocation::RegisterBufferCollectionError::BAD_OPERATION));
       return;
     }
 
     if (!args.has_buffer_collection_token()) {
       FX_LOGS(ERROR) << "RegisterBufferCollection called with missing buffer collection token";
-      callback(fit::error(fuchsia::ui::composition::RegisterBufferCollectionError::BAD_OPERATION));
+      callback(
+          fit::error(fuchsia::scenic::allocation::RegisterBufferCollectionError::BAD_OPERATION));
       return;
     }
 
@@ -89,7 +91,8 @@ class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator {
         std::move(*args.mutable_buffer_collection_token()), buffer_collection.NewRequest());
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "BindSharedCollection failed: " << status;
-      callback(fit::error(fuchsia::ui::composition::RegisterBufferCollectionError::BAD_OPERATION));
+      callback(
+          fit::error(fuchsia::scenic::allocation::RegisterBufferCollectionError::BAD_OPERATION));
       return;
     }
 
@@ -115,7 +118,8 @@ class ScenicAllocatorFake : public fuchsia::ui::composition::Allocator {
     status = buffer_collection->SetConstraints(true, constraints);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "SetConstraints failed: " << status;
-      callback(fit::error(fuchsia::ui::composition::RegisterBufferCollectionError::BAD_OPERATION));
+      callback(
+          fit::error(fuchsia::scenic::allocation::RegisterBufferCollectionError::BAD_OPERATION));
       return;
     }
 
@@ -384,7 +388,7 @@ class VirtioMagmaTest : public TestWithDevice {
   async::Loop wayland_importer_mock_loop_;
   ScenicAllocatorFake scenic_allocator_fake_;
   async::Loop scenic_allocator_loop_;
-  fidl::BindingSet<fuchsia::ui::composition::Allocator> scenic_allocator_binding_set_;
+  fidl::BindingSet<fuchsia::scenic::allocation::Allocator> scenic_allocator_binding_set_;
 };
 
 TEST_F(VirtioMagmaTest, HandleQuery) {

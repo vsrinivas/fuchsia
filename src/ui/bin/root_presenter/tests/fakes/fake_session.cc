@@ -42,7 +42,7 @@ void FakeSession::RequestPresentationTimes(zx_duration_t request_prediction_span
 void FakeSession::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback callback) {
   presents_called_++;
 
-  fuchsia::ui::composition::FramePresentedInfo info = {};
+  fuchsia::scenic::scheduling::FramePresentedInfo info = {};
   info.num_presents_allowed = 1;
   info.presentation_infos.push_back({});
   binding_.events().OnFramePresented(std::move(info));

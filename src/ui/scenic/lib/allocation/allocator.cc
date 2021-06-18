@@ -13,8 +13,8 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
-using fuchsia::ui::composition::BufferCollectionExportToken;
-using fuchsia::ui::composition::RegisterBufferCollectionError;
+using fuchsia::scenic::allocation::BufferCollectionExportToken;
+using fuchsia::scenic::allocation::RegisterBufferCollectionError;
 
 namespace allocation {
 
@@ -44,7 +44,7 @@ Allocator::~Allocator() {
 }
 
 void Allocator::RegisterBufferCollection(
-    fuchsia::ui::composition::RegisterBufferCollectionArgs args,
+    fuchsia::scenic::allocation::RegisterBufferCollectionArgs args,
     RegisterBufferCollectionCallback callback) {
   FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
 
@@ -58,8 +58,9 @@ void Allocator::RegisterBufferCollection(
 
   auto export_token = std::move(*args.mutable_export_token());
   auto buffer_collection_token = std::move(*args.mutable_buffer_collection_token());
-  auto usage = args.has_usage() ? args.usage()
-                                : fuchsia::ui::composition::RegisterBufferCollectionUsage::DEFAULT;
+  auto usage = args.has_usage()
+                   ? args.usage()
+                   : fuchsia::scenic::allocation::RegisterBufferCollectionUsage::DEFAULT;
 
   if (!buffer_collection_token.is_valid()) {
     FX_LOGS(ERROR) << "RegisterBufferCollection called with invalid buffer collection token";
@@ -98,7 +99,7 @@ void Allocator::RegisterBufferCollection(
 
   // Case on whether or not it is a default or screenshot BufferCollection.
   std::vector<std::shared_ptr<BufferCollectionImporter>>* importers =
-      usage == fuchsia::ui::composition::RegisterBufferCollectionUsage::DEFAULT
+      usage == fuchsia::scenic::allocation::RegisterBufferCollectionUsage::DEFAULT
           ? &default_buffer_collection_importers_
           : &screenshot_buffer_collection_importers_;
   for (uint32_t i = 0; i < importers->size(); i++) {
@@ -196,7 +197,7 @@ void Allocator::ReleaseBufferCollection(GlobalBufferCollectionId collection_id) 
   buffer_collections_.erase(collection_id);
 
   // Remove buffer collections from all importers.
-  auto importers = usage == fuchsia::ui::composition::RegisterBufferCollectionUsage::DEFAULT
+  auto importers = usage == fuchsia::scenic::allocation::RegisterBufferCollectionUsage::DEFAULT
                        ? &default_buffer_collection_importers_
                        : &screenshot_buffer_collection_importers_;
   for (auto& importer : (*importers)) {

@@ -103,7 +103,7 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
   void Start(fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
              fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatcher,
              fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_allocator,
-             fidl::InterfaceHandle<fuchsia::ui::composition::Allocator> scenic_allocator,
+             fidl::InterfaceHandle<fuchsia::scenic::allocation::Allocator> scenic_allocator,
              StartCallback callback) override;
   void GetImporter(fidl::InterfaceRequest<fuchsia::virtualization::hardware::VirtioWaylandImporter>
                        request) override;
@@ -137,7 +137,7 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
   zx::vmar vmar_;
   fuchsia::virtualization::WaylandDispatcherPtr dispatcher_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
-  fuchsia::ui::composition::AllocatorPtr scenic_allocator_;
+  fuchsia::scenic::allocation::AllocatorPtr scenic_allocator_;
   VirtioChain out_chain_;
   size_t bytes_written_for_send_request_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<Vfd>> vfds_;

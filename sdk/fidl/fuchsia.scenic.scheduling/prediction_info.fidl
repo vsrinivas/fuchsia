@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 deprecated_syntax;
 
-library fuchsia.ui.composition;
+library fuchsia.scenic.scheduling;
 
 using zx;
 

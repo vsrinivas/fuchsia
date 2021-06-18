@@ -170,8 +170,8 @@ source_set("magma_image") {
     "magma_image.h",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.scenic.allocation:fuchsia.scenic.allocation_llcpp",
     "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_llcpp",
     "//src/graphics/lib/magma/include:magma_abi",
     "//src/lib/fsl",
     "//src/lib/vulkan",
@@ -299,8 +299,8 @@ executable("virtio_wl_bin") {
 
   deps = [
     ":virtio",
+    "//sdk/fidl/fuchsia.scenic.allocation",
     "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.ui.composition",
     "//src/lib/fsl",
     "//zircon/system/ulib/fbl",
   ]

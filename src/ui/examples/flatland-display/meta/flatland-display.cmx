@@ -7,8 +7,8 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.scenic.allocation.Allocator",
             "fuchsia.sysmem.Allocator",
-            "fuchsia.ui.composition.Allocator",
             "fuchsia.ui.scenic.internal.Flatland",
             "fuchsia.ui.scenic.internal.FlatlandDisplay"
         ]

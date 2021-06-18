@@ -694,7 +694,7 @@ void BufferCollage::SetupView() {
   view_->AddChild(mute_indicator_->node);
 
   session_->set_on_frame_presented_handler(
-      [this](fuchsia::ui::composition::FramePresentedInfo info) {
+      [this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
         constexpr std::array kHeartbeatColor = {0xFF, 0x00, 0xFF};
         constexpr auto kHeartbeatPeriod = zx::sec(1);
         zx::duration t = (zx::clock::get_monotonic() - start_time_) % kHeartbeatPeriod.get();
@@ -703,9 +703,9 @@ void BufferCollage::SetupView() {
         heartbeat_indicator_.material->SetColor(kHeartbeatColor[0] * amplitude,
                                                 kHeartbeatColor[1] * amplitude,
                                                 kHeartbeatColor[2] * amplitude, 0xFF);
-        session_->Present2(0, 0, [](fuchsia::ui::composition::FuturePresentationTimes times) {});
+        session_->Present2(0, 0, [](fuchsia::scenic::scheduling::FuturePresentationTimes times) {});
       });
-  session_->Present2(0, 0, [](fuchsia::ui::composition::FuturePresentationTimes times) {});
+  session_->Present2(0, 0, [](fuchsia::scenic::scheduling::FuturePresentationTimes times) {});
   UpdateLayout();
 }
 

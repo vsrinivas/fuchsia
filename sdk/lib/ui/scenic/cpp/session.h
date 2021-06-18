@@ -48,16 +48,16 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   using PresentCallback = fit::function<void(fuchsia::images::PresentationInfo info)>;
   // Provides immediate information about predicted future latch and presentation times.
   using Present2Callback =
-      fit::function<void(fuchsia::ui::composition::FuturePresentationTimes info)>;
+      fit::function<void(fuchsia::scenic::scheduling::FuturePresentationTimes info)>;
   // Provides immediate information about predicted future latch and presentation times.
   using RequestPresentationTimesCallback =
-      fit::function<void(fuchsia::ui::composition::FuturePresentationTimes info)>;
+      fit::function<void(fuchsia::scenic::scheduling::FuturePresentationTimes info)>;
 
   // Called when session events are received.
   using EventHandler = fit::function<void(std::vector<fuchsia::ui::scenic::Event>)>;
   // Called when one or more Present2s are presented.
   using OnFramePresentedCallback =
-      fit::function<void(fuchsia::ui::composition::FramePresentedInfo info)>;
+      fit::function<void(fuchsia::scenic::scheduling::FramePresentedInfo info)>;
 
   // Wraps the provided session and session listener.
   // The listener is optional.

@@ -313,8 +313,8 @@ int main(int argc, char** argv) {
       FX_LOGS(INFO) << "Could not connect to sysmem allocator service";
       return status;
     }
-    fidl::InterfaceHandle<fuchsia::ui::composition::Allocator> scenic_allocator = nullptr;
-    status = fdio_service_connect("/svc/fuchsia.ui.composition.Allocator",
+    fidl::InterfaceHandle<fuchsia::scenic::allocation::Allocator> scenic_allocator = nullptr;
+    status = fdio_service_connect("/svc/fuchsia.scenic.allocation.Allocator",
                                   scenic_allocator.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
       FX_LOGS(INFO) << "Could not connect to scenic allocator service";

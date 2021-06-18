@@ -203,7 +203,7 @@ TEST_F(ScenicSessionFlushTest, AddNonInputCommandThenPresent2) {
   EXPECT_EQ(session_->num_flushed_, 0);
 
   // Present2
-  auto callback = [&](fuchsia::ui::composition::FuturePresentationTimes info) {};
+  auto callback = [&](fuchsia::scenic::scheduling::FuturePresentationTimes info) {};
   session_->Present2(0u, 0u, std::move(callback));
 
   // And check that we've flushed.

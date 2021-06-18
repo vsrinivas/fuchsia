@@ -17,7 +17,7 @@ using QueuePresentCallback = fit::function<void()>;
 // SafePresenter ensures that the Session will not be shut down, thus, users of SafePresenter should
 // not call Present2 on their own.
 //
-// More information can be found in the fuchsia.ui.composition FIDL library, in the
+// More information can be found in the fuchsia.scenic.scheduling FIDL library, in the
 // prediction_info.fidl file.
 class SafePresenter {
  public:

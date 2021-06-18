@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <drm_fourcc.h>
+#include <fuchsia/scenic/allocation/cpp/fidl_test_base.h>
 #include <fuchsia/sysmem/cpp/fidl_test_base.h>
-#include <fuchsia/ui/composition/cpp/fidl_test_base.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/zx/socket.h>
@@ -137,14 +137,15 @@ class TestSysmemAllocator : public fuchsia::sysmem::testing::Allocator_TestBase 
   fidl::Binding<fuchsia::sysmem::Allocator> binding_{this};
 };
 
-class TestAllocator : public fuchsia::ui::composition::testing::Allocator_TestBase {
+class TestAllocator : public fuchsia::scenic::allocation::testing::Allocator_TestBase {
  public:
-  fidl::InterfaceHandle<fuchsia::ui::composition::Allocator> Bind(async_dispatcher_t* dispatcher) {
+  fidl::InterfaceHandle<fuchsia::scenic::allocation::Allocator> Bind(
+      async_dispatcher_t* dispatcher) {
     return binding_.NewBinding(dispatcher);
   }
 
  private:
-  void RegisterBufferCollection(fuchsia::ui::composition::RegisterBufferCollectionArgs args,
+  void RegisterBufferCollection(fuchsia::scenic::allocation::RegisterBufferCollectionArgs args,
                                 RegisterBufferCollectionCallback callback) override {
     callback(fit::ok());
   }
@@ -153,7 +154,7 @@ class TestAllocator : public fuchsia::ui::composition::testing::Allocator_TestBa
     FAIL() << "Not Implemented Allocator." << name;
   }
 
-  fidl::Binding<fuchsia::ui::composition::Allocator> binding_{this};
+  fidl::Binding<fuchsia::scenic::allocation::Allocator> binding_{this};
 };
 
 class VirtioWlTest : public TestWithDevice {

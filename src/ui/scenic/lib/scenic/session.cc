@@ -103,7 +103,7 @@ void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback 
         /*on_frame_presented_event*/
         // Safe to capture |this| because the Session is guaranteed to outlive |present_helper_|,
         // Session is non-movable and Present2Helper does not fire closures after destruction.
-        [this](fuchsia::ui::composition::FramePresentedInfo info) {
+        [this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
           binding_.events().OnFramePresented(std::move(info));
         });
   } else if (!std::holds_alternative<scheduling::Present2Helper>(present_helper_)) {
@@ -211,7 +211,7 @@ void Session::InvokeFuturePresentationTimesCallback(zx_duration_t requested_pred
         [weak = weak_factory_.GetWeakPtr(), callback = std::move(callback)](
             std::vector<scheduling::FuturePresentationInfo> presentation_infos) {
           if (weak) {
-            std::vector<fuchsia::ui::composition::PresentationInfo> infos;
+            std::vector<fuchsia::scenic::scheduling::PresentationInfo> infos;
             for (auto& presentation_info : presentation_infos) {
               auto& info = infos.emplace_back();
               info.set_latch_point(presentation_info.latch_point.get());

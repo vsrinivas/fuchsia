@@ -364,9 +364,9 @@ TEST_F(ScenicSessionTest, TriggeringPresent2Callback_ShouldIncrementPresentsAllo
 
 TEST_F(ScenicSessionTest, Present2Update_ShouldHaveReasonablePresentReceivedTime) {
   fuchsia::ui::scenic::SessionPtr session_ptr;
-  fuchsia::ui::composition::FramePresentedInfo frame_presented_info;
+  fuchsia::scenic::scheduling::FramePresentedInfo frame_presented_info;
   session_ptr.events().OnFramePresented =
-      [&frame_presented_info](fuchsia::ui::composition::FramePresentedInfo info) {
+      [&frame_presented_info](fuchsia::scenic::scheduling::FramePresentedInfo info) {
         frame_presented_info = std::move(info);
       };
 

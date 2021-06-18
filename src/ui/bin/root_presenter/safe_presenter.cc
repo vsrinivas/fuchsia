@@ -14,7 +14,7 @@ SafePresenter::SafePresenter(scenic::Session* session) : session_(session) {
   FX_DCHECK(session_);
 
   session_->set_on_frame_presented_handler(
-      [this](fuchsia::ui::composition::FramePresentedInfo info) {
+      [this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
         present_in_flight_ = false;
 
         size_t num_presents_handled = info.presentation_infos.size();
@@ -56,7 +56,7 @@ SafePresenter::SafePresenter(scenic::Session* session) : session_(session) {
   // initialized.
   session_->RequestPresentationTimes(
       /*requested_prediction_span=*/0,
-      [this](fuchsia::ui::composition::FuturePresentationTimes info) {
+      [this](fuchsia::scenic::scheduling::FuturePresentationTimes info) {
         presents_allowed_ = info.remaining_presents_in_flight_allowed > 0;
         // Since we only have one Present2() call in progress at once, this must be true.
         FX_DCHECK(presents_allowed_);

@@ -3,7 +3,7 @@
 ## API and Timing Model {#timing-model}
 
 * [session.fidl](/sdk/fidl/fuchsia.ui.scenic/session.fidl)
-* [prediction_info.fidl](/sdk/fidl/fuchsia.ui.composition/prediction_info.fidl)
+* [prediction_info.fidl](/sdk/fidl/fuchsia.scenic.scheduling/prediction_info.fidl)
 
 ## Frame Scheduler Development
 
@@ -35,7 +35,7 @@ One problem is when VSync occurs (on the scale of microseconds) before the time
 that Scenic reports.
 
 Assume a client receives a future Vsync time of 1000us, in a
-[`FuturePresentationTimes`](/sdk/fidl/fuchsia.ui.composition/prediction_info.fidl)
+[`FuturePresentationTimes`](/sdk/fidl/fuchsia.scenic.scheduling/prediction_info.fidl)
 object. The client then calls
 [`Present2`](/sdk/fidl/fuchsia.ui.scenic/session.fidl) with a requested
 presentation time of 1000us, expecting that its content will be displayed at

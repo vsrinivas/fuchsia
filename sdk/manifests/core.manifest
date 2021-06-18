@@ -91,6 +91,8 @@ sdk://fidl/fuchsia.posix.socket
 sdk://fidl/fuchsia.process
 sdk://fidl/fuchsia.recovery
 sdk://fidl/fuchsia.recovery.ui
+sdk://fidl/fuchsia.scenic.allocation
+sdk://fidl/fuchsia.scenic.scheduling
 sdk://fidl/fuchsia.settings
 sdk://fidl/fuchsia.settings.policy
 sdk://fidl/fuchsia.sys
@@ -102,7 +104,6 @@ sdk://fidl/fuchsia.ui.activity
 sdk://fidl/fuchsia.ui.activity.control
 sdk://fidl/fuchsia.ui.app
 sdk://fidl/fuchsia.ui.brightness
-sdk://fidl/fuchsia.ui.composition
 sdk://fidl/fuchsia.ui.gfx
 sdk://fidl/fuchsia.ui.input
 sdk://fidl/fuchsia.ui.input3
