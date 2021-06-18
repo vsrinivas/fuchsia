@@ -335,7 +335,7 @@ properties:
 -   `startup` _(optional)_: The component instance's startup mode.
     -   `lazy` _(default)_: Start the component instance only if another
         component instance binds to it.
-    -   `eager`: ([legacy feature][doc-eager]) Start the component instance as
+    -   [`eager`][doc-eager]: Start the component instance as
         soon as its parent starts.
 -   `environment` _(optional)_: If present, the name of the environment to be
     assigned to the child component instance, one of

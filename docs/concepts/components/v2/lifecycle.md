@@ -78,33 +78,25 @@ depend on the runner that runs the component.
 Once stopped, a component instance can then be [restarted](#starting) or
 [destroyed](#destroying).
 
-### Destroying a component instance {#destroying}
+## Destroying a component instance {#destroying}
 
 Once destroyed, a component instance ceases to exist and cannot be restarted.
 New instances of the same component can still be created but they will each have
 their own identity and state distinct from all prior instances. From an external
 point of view, the component doesn't exist anymore in the component topology.
 
-### Purging a component instance {#purging}
+## Purging a component instance {#purging}
 
 Purging a destroyed component instance deletes any persistent storage it's using
 and all its internal state from component_manager.
 
-## Legacy features {#legacy}
-
-### Eager binding {#eager}
+## Eager binding {#eager}
 
 [Component manifests][doc-manifests] let you mark a child as
 [`eager`][doc-manifests-children], which causes the component framework to
 implicitly bind to that child when any component binds to the parent. In other
 words, this causes the child to be immediately started whenever the parent is
-started. This is a legacy feature, and additional uses should be limited to
-tests. The future of this feature is being tracked at
-[fxb/61721](https://fxbug.dev/61721).
-
-`eager` primarily has two uses: to start the first component, and as a
-convenience in tests to run components without having to explicitly bind to
-them.
+started.
 
 If the eager child fails to start for any reason (such as a missing component),
 component manager exhibits the following behavior:
@@ -112,7 +104,16 @@ component manager exhibits the following behavior:
 -   If the parent is not the root component, the parent will start but the
     component that bound to it will observe a dropped connection (just like any
     other failed binding).
--   If the parent is the root component, component manager will crash.
+-   If the parent is the root component, component manager will crash, with an
+    error message like:
+    ```
+    [component_manager] ERROR: Failed to route protocol `fuchsia.appmgr.Startup` with target component `/startup:0`: failed to resolve "fuchsia-pkg://fuchsia.com/your_component#meta/your_component.cm": package not found: remote resolver responded with PackageNotFound
+    ```
+
+Several tests and products build system images which contain only a subset of components.
+Components marked with `eager` will cause system crashes when they are not present in these builds.
+You should declare the components using **core realm shards** to ensure they can be safely excluded
+from test builds and product images containing subsets of components.
 
 [doc-collections]: realms.md#collections
 [doc-lifecycle]: lifecycle.md
