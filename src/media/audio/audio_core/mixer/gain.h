@@ -105,7 +105,9 @@ class Gain {
   // Retrieve the overall gain-scale, recalculating from respective pieces if needed.
   AScale GetGainScale();
 
-  void GetScaleArray(AScale* scale_arr, int64_t num_frames, const TimelineRate& rate);
+  // Calculate and return an array of gain-scale values for the next `num_frames`. The returned
+  // value is the maximum gain-scale value over that interval.
+  AScale GetScaleArray(AScale* scale_arr, int64_t num_frames, const TimelineRate& rate);
 
   // Calculate the gain-scale, then convert it to decibels-full-scale.
   float GetGainDb() { return ScaleToDb(GetGainScale()); }

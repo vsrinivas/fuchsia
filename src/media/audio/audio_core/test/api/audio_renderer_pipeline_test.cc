@@ -246,7 +246,7 @@ TEST_F(AudioRendererPipelineTestInt16, PlayRampUp) {
   // Starting at frame 1, values should successively ramp up (increase) to our const input value.
   for (auto frame = 1; frame < ring_buffer.NumFrames(); ++frame) {
     EXPECT_GT(ring_buffer.SampleAt(frame, 0), ring_buffer.SampleAt(frame - 1, 0))
-        << "Frame values should monotonically ramp up (frarme " << frame << ")";
+        << "Frame values should monotonically ramp up (frame " << frame << ")";
     for (auto chan = 1; chan < num_channels; ++chan) {
       // this sample should be more than this channel's in the previous frame
       EXPECT_EQ(ring_buffer.SampleAt(frame, 0), ring_buffer.SampleAt(frame, chan))
