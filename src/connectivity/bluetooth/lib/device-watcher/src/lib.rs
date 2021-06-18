@@ -1,11 +1,13 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Convenience library that wraps around the VFS watcher.
+
 use {
-    crate::util::open_rdwr,
     anyhow::{format_err, Error},
     fuchsia_async::{DurationExt, TimeoutExt},
+    fuchsia_bluetooth::util::open_rdwr,
     fuchsia_vfs_watcher::{WatchEvent, Watcher as VfsWatcher},
     fuchsia_zircon as zx,
     futures::{Future, TryStreamExt},

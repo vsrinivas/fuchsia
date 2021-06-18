@@ -11,7 +11,6 @@ rustc_library("fuchsia-bluetooth") {
   # TODO(armansito): Split out testing code into a separate library and move
   # test-specific dependencies out.
   deps = [
-    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
@@ -23,7 +22,6 @@ rustc_library("fuchsia-bluetooth") {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
@@ -40,17 +38,13 @@ rustc_library("fuchsia-bluetooth") {
     "//third_party/rust_crates:uuid",
   ]
 
-  test_deps = [
-    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
-    "//third_party/rust_crates:matches",
-  ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
 
   sources = [
     "src/assigned_numbers.rs",
     "src/assigned_numbers/constants.rs",
     "src/constants.rs",
     "src/detachable_map.rs",
-    "src/device_watcher.rs",
     "src/error.rs",
     "src/expectation.rs",
     "src/expectation/asynchronous.rs",
@@ -80,15 +74,8 @@ rustc_library("fuchsia-bluetooth") {
 }
 
 fuchsia_unittest_package("bluetooth-crate-tests") {
-  manifest = "meta/bluetooth-crate-unittests.cmx"
-  deps = [
-    ":fuchsia-bluetooth_test",
-
-    # TODO(armansito): The bt-hci-emulator driver is a runtime dependency of the test utilities
-    # contained within the crate. We should separate them out into a testing library and have that
-    # depend on this driver.
-    "//src/connectivity/bluetooth/hci/emulator",
-  ]
+  v2 = true
+  deps = [ ":fuchsia-bluetooth_test" ]
 }
 
 group("tests") {

@@ -25,6 +25,3 @@ pub mod profile;
 pub mod types;
 /// Frequently Used Functions
 pub mod util;
-
-/// Convenience wrappers around VFS watcher.
-pub mod device_watcher;

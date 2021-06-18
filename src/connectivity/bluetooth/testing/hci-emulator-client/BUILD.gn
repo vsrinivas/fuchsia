@@ -14,6 +14,7 @@ rustc_library("hci-emulator-client") {
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth-rustc",
+    "//src/connectivity/bluetooth/lib/device-watcher",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",

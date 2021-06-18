@@ -4,17 +4,14 @@
 
 use {
     anyhow::{format_err, Context, Error},
+    device_watcher::{DeviceFile, DeviceWatcher, WatchFilter},
     fdio,
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciEmulatorProxy},
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_device_test::{DeviceProxy, RootDeviceProxy, CONTROL_DEVICE, MAX_DEVICE_NAME_LEN},
     fidl_fuchsia_hardware_bluetooth::EmulatorProxy,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
-    fuchsia_bluetooth::{
-        constants::HOST_DEVICE_DIR,
-        device_watcher::{DeviceFile, DeviceWatcher, WatchFilter},
-        util::open_rdwr,
-    },
+    fuchsia_bluetooth::{constants::HOST_DEVICE_DIR, util::open_rdwr},
     fuchsia_zircon::{self as zx, DurationNum},
     futures::TryFutureExt,
     log::error,

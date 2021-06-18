@@ -4,12 +4,12 @@
 
 use {
     anyhow::{Context, Error},
+    device_watcher::DeviceWatcher,
     diagnostics_reader::{ArchiveReader, ComponentSelector, DiagnosticsHierarchy, Inspect},
     fidl_fuchsia_bluetooth_sys::{AccessMarker, AccessProxy},
     fuchsia_async::DurationExt,
     fuchsia_bluetooth::{
         constants::HOST_DEVICE_DIR,
-        device_watcher::DeviceWatcher,
         expectation::{
             asynchronous::{
                 expectable, Expectable, ExpectableExt, ExpectableState, ExpectableStateExt,

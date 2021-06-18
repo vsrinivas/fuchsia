@@ -4,12 +4,12 @@
 
 use {
     anyhow::{Context, Error},
+    device_watcher::DeviceWatcher,
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
         constants::HOST_DEVICE_DIR,
-        device_watcher::DeviceWatcher,
         expectation::{
             asynchronous::{
                 expectable, Expectable, ExpectableExt, ExpectableState, ExpectableStateExt,
