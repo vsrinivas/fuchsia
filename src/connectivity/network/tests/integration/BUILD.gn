@@ -29,7 +29,6 @@ tests = [
   "ipv4",
   "ipv6",
   "management",
-  "neighbor",
   "reachability",
   "socket",
   "sys",
@@ -92,6 +91,7 @@ tests_v2 = [
   "fidl",
   "filter",
   "inspect",
+  "neighbor",
   "routes",
 ]
 

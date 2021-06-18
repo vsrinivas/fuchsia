@@ -15,10 +15,9 @@ use futures::{stream, FutureExt as _, StreamExt as _, TryFutureExt as _, TryStre
 use net_declare::{fidl_ip, fidl_mac};
 use net_types::SpecifiedAddress;
 use netemul::{
-    Endpoint as _, EnvironmentUdpSocket as _, TestEnvironment, TestInterface, TestNetwork,
-    TestSandbox,
+    Endpoint as _, RealmUdpSocket as _, TestInterface, TestNetwork, TestRealm, TestSandbox,
 };
-use netstack_testing_common::environments::*;
+use netstack_testing_common::realms::*;
 use netstack_testing_common::Result;
 
 const ALICE_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:00:01:02:03:04");
@@ -28,30 +27,30 @@ const BOB_IP: fidl_fuchsia_net::IpAddress = fidl_ip!("192.168.0.1");
 const SUBNET_PREFIX: u8 = 24;
 
 /// Helper type holding values pertinent to neighbor tests.
-struct NeighborEnvironment<'a> {
-    env: TestEnvironment<'a>,
+struct NeighborRealm<'a> {
+    realm: TestRealm<'a>,
     ep: TestInterface<'a>,
     ipv6: fidl_fuchsia_net::IpAddress,
     loopback_id: u64,
 }
 
-/// Helper function to create an environment with a static IP address and an
+/// Helper function to create a realm with a static IP address and an
 /// endpoint with a set MAC address.
 ///
-/// Returns the created environment, ep, the first observed assigned IPv6
+/// Returns the created realm, ep, the first observed assigned IPv6
 /// address, and the id of the loopback interface.
-async fn create_environment<'a>(
+async fn create_realm<'a>(
     sandbox: &'a TestSandbox,
     network: &'a TestNetwork<'a>,
     test_name: &'static str,
     variant_name: &'static str,
     static_addr: fidl_fuchsia_net::Subnet,
     mac: fidl_fuchsia_net::MacAddress,
-) -> Result<NeighborEnvironment<'a>> {
-    let env = sandbox
-        .create_netstack_environment::<Netstack2, _>(format!("{}_{}", test_name, variant_name))
-        .context("failed to create environment")?;
-    let ep = env
+) -> Result<NeighborRealm<'a>> {
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>(format!("{}_{}", test_name, variant_name))
+        .context("failed to create realm")?;
+    let ep = realm
         .join_network_with(
             &network,
             format!("ep-{}", variant_name),
@@ -62,7 +61,7 @@ async fn create_environment<'a>(
         .context("failed to join network")?;
 
     // Get IPv6 address.
-    let interfaces = env
+    let interfaces = realm
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("failed to connect to interfaces.State")?;
     let (ipv6, loopback_id) = fidl_fuchsia_net_interfaces_ext::wait_interface(
@@ -97,17 +96,17 @@ async fn create_environment<'a>(
     .await
     .context("failed to retrieve IPv6 address")?;
 
-    Ok(NeighborEnvironment { env, ep, ipv6, loopback_id })
+    Ok(NeighborRealm { realm, ep, ipv6, loopback_id })
 }
 
-/// Helper function that creates two environments in the same `network` with
-/// default test parameters. Returns a tuple of environments `(alice, bob)`.
-async fn create_neighbor_environments<'a>(
+/// Helper function that creates two realms in the same `network` with
+/// default test parameters. Returns a tuple of realms `(alice, bob)`.
+async fn create_neighbor_realms<'a>(
     sandbox: &'a TestSandbox,
     network: &'a TestNetwork<'a>,
     test_name: &'static str,
-) -> Result<(NeighborEnvironment<'a>, NeighborEnvironment<'a>)> {
-    let alice = create_environment(
+) -> Result<(NeighborRealm<'a>, NeighborRealm<'a>)> {
+    let alice = create_realm(
         sandbox,
         network,
         test_name,
@@ -116,8 +115,8 @@ async fn create_neighbor_environments<'a>(
         ALICE_MAC,
     )
     .await
-    .context("failed to setup alice environment")?;
-    let bob = create_environment(
+    .context("failed to setup alice realm")?;
+    let bob = create_realm(
         sandbox,
         network,
         test_name,
@@ -126,16 +125,16 @@ async fn create_neighbor_environments<'a>(
         BOB_MAC,
     )
     .await
-    .context("failed to set up bob environment")?;
+    .context("failed to set up bob realm")?;
     Ok((alice, bob))
 }
 
-/// Gets a neighbor entry iterator stream with `options` in `env`.
+/// Gets a neighbor entry iterator stream with `options` in `realm`.
 fn get_entry_iterator(
-    env: &TestEnvironment<'_>,
+    realm: &TestRealm<'_>,
     options: fidl_fuchsia_net_neighbor::EntryIteratorOptions,
 ) -> Result<impl futures::Stream<Item = Result<fidl_fuchsia_net_neighbor::EntryIteratorItem>>> {
-    let view = env
+    let view = realm
         .connect_to_service::<fidl_fuchsia_net_neighbor::ViewMarker>()
         .context("failed to connect to fuchsia.net.neighbor/View")?;
     let (proxy, server_end) =
@@ -152,16 +151,16 @@ fn get_entry_iterator(
     .try_flatten())
 }
 
-/// Retrieves all existing neighbor entries in `env`.
+/// Retrieves all existing neighbor entries in `realm`.
 ///
 /// Entries are identified by unique `(interface_id, ip_address)` tuples in the
 /// returned map.
 async fn list_existing_entries(
-    env: &TestEnvironment<'_>,
+    realm: &TestRealm<'_>,
 ) -> Result<HashMap<(u64, fidl_fuchsia_net::IpAddress), fidl_fuchsia_net_neighbor::Entry>> {
     use async_utils::fold::*;
     try_fold_while(
-        get_entry_iterator(env, fidl_fuchsia_net_neighbor::EntryIteratorOptions::EMPTY)?,
+        get_entry_iterator(realm, fidl_fuchsia_net_neighbor::EntryIteratorOptions::EMPTY)?,
         HashMap::new(),
         |mut map, item| {
             futures::future::ready(match item {
@@ -208,9 +207,9 @@ async fn list_existing_entries(
 /// `alice` will send a single UDP datagram to `bob`. This function will block
 /// until `bob` receives the datagram.
 async fn exchange_dgram(
-    alice: &TestEnvironment<'_>,
+    alice: &TestRealm<'_>,
     alice_addr: fidl_fuchsia_net::IpAddress,
-    bob: &TestEnvironment<'_>,
+    bob: &TestRealm<'_>,
     bob_addr: fidl_fuchsia_net::IpAddress,
 ) -> Result {
     let fidl_fuchsia_net_ext::IpAddress(alice_addr) =
@@ -220,11 +219,11 @@ async fn exchange_dgram(
     let fidl_fuchsia_net_ext::IpAddress(bob_addr) = fidl_fuchsia_net_ext::IpAddress::from(bob_addr);
     let bob_addr = std::net::SocketAddr::new(bob_addr, 8080);
 
-    let alice_sock = fuchsia_async::net::UdpSocket::bind_in_env(alice, alice_addr)
+    let alice_sock = fuchsia_async::net::UdpSocket::bind_in_realm(alice, alice_addr)
         .await
         .context("failed to create client socket")?;
 
-    let bob_sock = fuchsia_async::net::UdpSocket::bind_in_env(bob, bob_addr)
+    let bob_sock = fuchsia_async::net::UdpSocket::bind_in_realm(bob, bob_addr)
         .await
         .context("failed to create server socket")?;
 
@@ -247,15 +246,12 @@ async fn exchange_dgram(
 
 /// Helper function to exchange an IPv4 and IPv6 datagram between `alice` and
 /// `bob`.
-async fn exchange_dgrams(
-    alice: &NeighborEnvironment<'_>,
-    bob: &NeighborEnvironment<'_>,
-) -> Result<()> {
-    let () = exchange_dgram(&alice.env, ALICE_IP, &bob.env, BOB_IP)
+async fn exchange_dgrams(alice: &NeighborRealm<'_>, bob: &NeighborRealm<'_>) -> Result<()> {
+    let () = exchange_dgram(&alice.realm, ALICE_IP, &bob.realm, BOB_IP)
         .await
         .context("IPv4 exchange failed")?;
 
-    let () = exchange_dgram(&alice.env, alice.ipv6, &bob.env, bob.ipv6)
+    let () = exchange_dgram(&alice.realm, alice.ipv6, &bob.realm, bob.ipv6)
         .await
         .context("IPv6 exchange failed")?;
 
@@ -287,29 +283,29 @@ async fn neigh_list_entries() -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
 
-    let (alice, bob) = create_neighbor_environments(&sandbox, &network, "neigh_list_entries")
+    let (alice, bob) = create_neighbor_realms(&sandbox, &network, "neigh_list_entries")
         .await
-        .context("failed to setup environments")?;
+        .context("failed to setup realms")?;
 
     // No Neighbors should exist initially.
     let alice_entries =
-        list_existing_entries(&alice.env).await.context("failed to get entries for alice")?;
+        list_existing_entries(&alice.realm).await.context("failed to get entries for alice")?;
     assert!(alice_entries.is_empty(), "expected empty set of entries: {:?}", alice_entries);
     let bob_entries =
-        list_existing_entries(&bob.env).await.context("failed to get entries for bob")?;
+        list_existing_entries(&bob.realm).await.context("failed to get entries for bob")?;
     assert!(bob_entries.is_empty(), "expected empty set of entries: {:?}", bob_entries);
 
     // Send a single UDP datagram between alice and bob.
-    let () = exchange_dgram(&alice.env, ALICE_IP, &bob.env, BOB_IP)
+    let () = exchange_dgram(&alice.realm, ALICE_IP, &bob.realm, BOB_IP)
         .await
         .context("IPv4 exchange failed")?;
-    let () = exchange_dgram(&alice.env, alice.ipv6, &bob.env, bob.ipv6)
+    let () = exchange_dgram(&alice.realm, alice.ipv6, &bob.realm, bob.ipv6)
         .await
         .context("IPv6 exchange failed")?;
 
     // Check that bob is listed as a neighbor for alice.
     let mut alice_entries =
-        list_existing_entries(&alice.env).await.context("failed to get entries for alice")?;
+        list_existing_entries(&alice.realm).await.context("failed to get entries for alice")?;
     // IPv4 entry.
     let () = assert_entry(
         alice_entries.remove(&(alice.ep.id(), BOB_IP)).context("missing IPv4 neighbor entry")?,
@@ -336,7 +332,7 @@ async fn neigh_list_entries() -> Result {
     // listed as STALE entries due to having received solicitations as part of
     // the UDP exchange.
     let mut bob_entries =
-        list_existing_entries(&bob.env).await.context("failed to get entries for bob")?;
+        list_existing_entries(&bob.realm).await.context("failed to get entries for bob")?;
 
     // IPv4 entry.
     let () = assert_entry(
@@ -519,7 +515,7 @@ async fn neigh_clear_entries_errors() -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
 
-    let alice = create_environment(
+    let alice = create_realm(
         &sandbox,
         &network,
         "neigh_clear_entries_errors",
@@ -528,11 +524,11 @@ async fn neigh_clear_entries_errors() -> Result {
         ALICE_MAC,
     )
     .await
-    .context("failed to setup alice environment")?;
+    .context("failed to setup alice realm")?;
 
     // Connect to the service and check some error cases.
     let controller = alice
-        .env
+        .realm
         .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?;
     // Clearing neighbors on loopback interface is not supported.
@@ -566,17 +562,17 @@ async fn neigh_clear_entries() -> Result {
     let fake_ep = network.create_fake_endpoint().context("failed to create fake endpoint")?;
     let mut solicit_stream = create_metadata_stream(&fake_ep);
 
-    let (alice, bob) = create_neighbor_environments(&sandbox, &network, "neigh_clear_entries")
+    let (alice, bob) = create_neighbor_realms(&sandbox, &network, "neigh_clear_entries")
         .await
-        .context("failed to setup environments")?;
+        .context("failed to setup realms")?;
 
     let controller = alice
-        .env
+        .realm
         .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?;
 
     let entries =
-        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
+        list_existing_entries(&alice.realm).await.context("failed to get existing entries")?;
     assert!(entries.is_empty(), "entries should be empty on startup, got: {:?}", entries);
 
     // Exchange some datagrams to add some entries to the list and check that we
@@ -599,7 +595,7 @@ async fn neigh_clear_entries() -> Result {
     );
 
     let mut entries =
-        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
+        list_existing_entries(&alice.realm).await.context("failed to get existing entries")?;
     // IPv4 entry.
     let () = assert_entry(
         entries.remove(&(alice.ep.id(), BOB_IP)).context("missing IPv4 neighbor entry")?,
@@ -626,7 +622,7 @@ async fn neigh_clear_entries() -> Result {
         .map_err(fuchsia_zircon::Status::from_raw)
         .context("clear_entries failed")?;
     let mut entries =
-        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
+        list_existing_entries(&alice.realm).await.context("failed to get existing entries")?;
     // IPv6 entry.
     let () = assert_entry(
         entries.remove(&(alice.ep.id(), bob.ipv6)).context("missing IPv6 neighbor entry")?,
@@ -643,7 +639,7 @@ async fn neigh_clear_entries() -> Result {
         .map_err(fuchsia_zircon::Status::from_raw)
         .context("clear_entries failed")?;
     let entries =
-        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
+        list_existing_entries(&alice.realm).await.context("failed to get existing entries")?;
     assert_eq!(entries, HashMap::new(), "IPv6 entries should have been emptied");
 
     // Exchange datagrams again and assert that new solicitation requests were
@@ -682,18 +678,18 @@ async fn neigh_add_remove_entry() -> Result {
         })
     });
 
-    let (alice, bob) = create_neighbor_environments(&sandbox, &network, "neigh_add_remove_entry")
+    let (alice, bob) = create_neighbor_realms(&sandbox, &network, "neigh_add_remove_entry")
         .await
-        .context("failed to setup environments")?;
+        .context("failed to setup realms")?;
 
     let controller = alice
-        .env
+        .realm
         .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?;
 
     // Entries start out empty.
     let entries =
-        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
+        list_existing_entries(&alice.realm).await.context("failed to get existing entries")?;
     assert!(entries.is_empty(), "entries should be empty on startup, got: {:?}", entries);
 
     // Check error conditions.
@@ -756,7 +752,7 @@ async fn neigh_add_remove_entry() -> Result {
         .context("add_entry failed")?;
 
     let mut entries =
-        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
+        list_existing_entries(&alice.realm).await.context("failed to get existing entries")?;
     let () = assert_entry(
         entries.remove(&(alice.ep.id(), BOB_IP)).expect("static IPv4 entry missing"),
         alice.ep.id(),
@@ -800,7 +796,7 @@ async fn neigh_add_remove_entry() -> Result {
         .context("remove_entry failed")?;
 
     let entries =
-        list_existing_entries(&alice.env).await.context("failed to get existing entries")?;
+        list_existing_entries(&alice.realm).await.context("failed to get existing entries")?;
     assert!(entries.is_empty(), "entries should've been emptied, got: {:?}", entries);
 
     // Exchange datagrams again and assert that new solicitation requests were
@@ -827,7 +823,7 @@ async fn neigh_unreachability_config_errors() -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
 
-    let alice = create_environment(
+    let alice = create_realm(
         &sandbox,
         &network,
         "neigh_update_unreachability_config_errors",
@@ -836,10 +832,10 @@ async fn neigh_unreachability_config_errors() -> Result {
         ALICE_MAC,
     )
     .await
-    .context("failed to setup environment")?;
+    .context("failed to setup realm")?;
 
     let view = alice
-        .env
+        .realm
         .connect_to_service::<fidl_fuchsia_net_neighbor::ViewMarker>()
         .context("failed to connect to View")?;
     assert_eq!(
@@ -851,7 +847,7 @@ async fn neigh_unreachability_config_errors() -> Result {
     );
 
     let controller = alice
-        .env
+        .realm
         .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?;
     assert_eq!(
@@ -900,7 +896,7 @@ async fn neigh_unreachability_config() -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
 
-    let alice = create_environment(
+    let alice = create_realm(
         &sandbox,
         &network,
         "neigh_update_unreachability_config",
@@ -909,14 +905,14 @@ async fn neigh_unreachability_config() -> Result {
         ALICE_MAC,
     )
     .await
-    .context("failed to setup environment")?;
+    .context("failed to setup realm")?;
 
     let view = alice
-        .env
+        .realm
         .connect_to_service::<fidl_fuchsia_net_neighbor::ViewMarker>()
         .context("failed to connect to View")?;
     let controller = alice
-        .env
+        .realm
         .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?;
 
@@ -1008,7 +1004,7 @@ async fn neigh_unreachable_entries() -> Result {
     let sandbox = TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
 
-    let alice = create_environment(
+    let alice = create_realm(
         &sandbox,
         &network,
         "neigh_unreachable_entries",
@@ -1017,11 +1013,11 @@ async fn neigh_unreachable_entries() -> Result {
         ALICE_MAC,
     )
     .await
-    .context("failed to setup alice environment")?;
+    .context("failed to setup alice realm")?;
 
     // No Neighbors should exist initially.
     let initial_entries =
-        list_existing_entries(&alice.env).await.context("failed to get entries for alice")?;
+        list_existing_entries(&alice.realm).await.context("failed to get entries for alice")?;
     assert!(initial_entries.is_empty(), "expected empty set of entries: {:?}", initial_entries);
 
     // Intentionally fail to send a packet to Bob so we can create a neighbor
@@ -1034,7 +1030,7 @@ async fn neigh_unreachable_entries() -> Result {
 
     const PAYLOAD: &'static str = "Hello, is it me you're looking for?";
     assert_eq!(
-        fuchsia_async::net::UdpSocket::bind_in_env(&alice.env, alice_addr)
+        fuchsia_async::net::UdpSocket::bind_in_realm(&alice.realm, alice_addr)
             .await
             .context("failed to create client socket")?
             .send_to(PAYLOAD.as_bytes(), bob_addr)
@@ -1050,7 +1046,7 @@ async fn neigh_unreachable_entries() -> Result {
 
     while let Some(()) = interval.next().await {
         let mut entries =
-            list_existing_entries(&alice.env).await.context("failed to get entries for alice")?;
+            list_existing_entries(&alice.realm).await.context("failed to get entries for alice")?;
         let entry =
             entries.remove(&(alice.ep.id(), BOB_IP)).context("missing IPv4 neighbor entry")?;
         assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
