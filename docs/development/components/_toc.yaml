@@ -14,6 +14,8 @@ toc:
   path: /docs/development/components/data.md
 - title: "Component storage index"
   path: /docs/development/components/component_id_index.md
+- title: "Realm builder"
+  path: /docs/development/components/v2/realm_builder.md
 - title: "Migration guides"
   section:
   - title: "Migrating legacy packages"
