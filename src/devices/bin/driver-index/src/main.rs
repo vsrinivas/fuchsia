@@ -36,7 +36,7 @@ enum IncomingRequest {
 }
 
 struct Driver {
-    bind_program: bind::decoded_bind_program::DecodedProgram,
+    bind_rules: bind::decode_bind_rules::DecodedBindRules,
     url: String,
 }
 
@@ -47,15 +47,15 @@ impl Driver {
     ) -> Result<bool, bind::bytecode_common::BytecodeError> {
         // TODO(fxbug.dev/77377): This needs to be updated when DeviceMatcher no longer consumes
         // the bind program.
-        bind::match_bind::DeviceMatcher::new(self.bind_program.clone(), properties).match_bind()
+        bind::match_bind::DeviceMatcher::new(self.bind_rules.clone(), properties).match_bind()
     }
 
     fn create(
         url: String,
-        bind_program: Vec<u8>,
+        bind_rules: Vec<u8>,
     ) -> Result<Driver, bind::bytecode_common::BytecodeError> {
         Ok(Driver {
-            bind_program: bind::decoded_bind_program::DecodedProgram::new(bind_program)?,
+            bind_rules: bind::decode_bind_rules::DecodedBindRules::new(bind_rules)?,
             url: url,
         })
     }
@@ -202,15 +202,15 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn match_driver_no_node_properties() {
-        let bind_program = bind::compiler::BindProgram {
+        let bind_rules = bind::compiler::BindProgram {
             symbol_table: bind::compiler::SymbolTable::new(),
             instructions: vec![],
             use_new_bytecode: true,
         };
-        let byte_code = bind_program.encode_to_bytecode().unwrap();
-        let bind_program = bind::decoded_bind_program::DecodedProgram::new(byte_code).unwrap();
+        let byte_code = bind_rules.encode_to_bytecode().unwrap();
+        let bind_rules = bind::decode_bind_rules::DecodedBindRules::new(byte_code).unwrap();
         let index = Rc::new(Indexer {
-            drivers: vec![Driver { bind_program: bind_program, url: "my-url.cmx".to_string() }],
+            drivers: vec![Driver { bind_rules: bind_rules, url: "my-url.cmx".to_string() }],
         });
 
         let (proxy, stream) =
@@ -227,7 +227,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn match_driver_bind_error() {
-        let bind_program = bind::compiler::BindProgram {
+        let bind_rules = bind::compiler::BindProgram {
             symbol_table: bind::compiler::SymbolTable::new(),
             instructions: vec![bind::compiler::SymbolicInstructionInfo {
                 location: None,
@@ -238,10 +238,10 @@ mod tests {
             }],
             use_new_bytecode: true,
         };
-        let byte_code = bind_program.encode_to_bytecode().unwrap();
-        let bind_program = bind::decoded_bind_program::DecodedProgram::new(byte_code).unwrap();
+        let byte_code = bind_rules.encode_to_bytecode().unwrap();
+        let bind_rules = bind::decode_bind_rules::DecodedBindRules::new(byte_code).unwrap();
         let index = Rc::new(Indexer {
-            drivers: vec![Driver { bind_program: bind_program, url: "my-url.cmx".to_string() }],
+            drivers: vec![Driver { bind_rules: bind_rules, url: "my-url.cmx".to_string() }],
         });
 
         // This property does not match the above program.
@@ -262,7 +262,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn match_driver_success() {
-        let bind_program = bind::compiler::BindProgram {
+        let bind_rules = bind::compiler::BindProgram {
             symbol_table: bind::compiler::SymbolTable::new(),
             instructions: vec![bind::compiler::SymbolicInstructionInfo {
                 location: None,
@@ -273,13 +273,12 @@ mod tests {
             }],
             use_new_bytecode: true,
         };
-        let byte_code = bind_program.encode_to_bytecode().unwrap();
-        let bind_program = bind::decoded_bind_program::DecodedProgram::new(byte_code).unwrap();
+        let byte_code = bind_rules.encode_to_bytecode().unwrap();
+        let bind_rules = bind::decode_bind_rules::DecodedBindRules::new(byte_code).unwrap();
 
         let url = "my-url.cmx".to_string();
-        let index = Rc::new(Indexer {
-            drivers: vec![Driver { bind_program: bind_program, url: url.clone() }],
-        });
+        let index =
+            Rc::new(Indexer { drivers: vec![Driver { bind_rules: bind_rules, url: url.clone() }] });
 
         // This property does match the above program
         let property =

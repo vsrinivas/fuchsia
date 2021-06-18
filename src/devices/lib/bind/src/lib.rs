@@ -13,7 +13,7 @@ pub mod bytecode_common;
 pub mod compiler;
 pub mod ddk_bind_constants;
 pub mod debugger;
-pub mod decoded_bind_program;
+pub mod decode_bind_rules;
 mod dependency_graph;
 mod device_specification;
 pub mod encode_bind_program_v1;

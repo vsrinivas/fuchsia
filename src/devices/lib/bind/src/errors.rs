@@ -537,6 +537,24 @@ impl From<BytecodeError> for UserError {
                 None,
                 false,
             ),
+            BytecodeError::InvalidPrimaryNode => UserError::new(
+                "E816",
+                "There must be a primary node at the beginning of the composite node instructions",
+                None,
+                false,
+            ),
+            BytecodeError::MultiplePrimaryNodes => {
+                UserError::new("E817", "There must only be one primary node", None, false)
+            }
+            BytecodeError::InvalidNodeType(node_type) => {
+                UserError::new("E818", &format!("Invalid node type: {}", node_type), None, false)
+            }
+            BytecodeError::IncorrectNodeSectionSize => {
+                UserError::new("E819", "Incorrect node section size", None, false)
+            }
+            BytecodeError::MissingDeviceNameInSymbolTable => {
+                UserError::new("E820", "Missing device name ID in the symbol table", None, false)
+            }
         }
     }
 }

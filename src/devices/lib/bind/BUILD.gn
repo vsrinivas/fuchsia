@@ -80,7 +80,7 @@ rustc_library("lib") {
     "src/compiler.rs",
     "src/ddk_bind_constants.rs",
     "src/debugger.rs",
-    "src/decoded_bind_program.rs",
+    "src/decode_bind_rules.rs",
     "src/dependency_graph.rs",
     "src/device_specification.rs",
     "src/encode_bind_program_v1.rs",

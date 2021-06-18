@@ -26,6 +26,11 @@ pub enum BytecodeError {
     MismatchValueTypes,
     InvalidJumpLocation,
     InvalidKeyType,
+    InvalidPrimaryNode,
+    MultiplePrimaryNodes,
+    InvalidNodeType(u8),
+    IncorrectNodeSectionSize,
+    MissingDeviceNameInSymbolTable,
 }
 
 impl fmt::Display for BytecodeError {

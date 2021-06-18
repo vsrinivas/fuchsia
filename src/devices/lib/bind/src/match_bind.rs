@@ -6,7 +6,7 @@ use crate::bind_library;
 use crate::bind_program_v2_constants::*;
 use crate::bytecode_common::*;
 use crate::compiler::Symbol;
-use crate::decoded_bind_program::DecodedProgram;
+use crate::decode_bind_rules::DecodedBindRules;
 use core::hash::Hash;
 use num_traits::FromPrimitive;
 use std::collections::HashMap;
@@ -36,7 +36,7 @@ pub struct DeviceMatcher {
 }
 
 impl DeviceMatcher {
-    pub fn new(bind_rules: DecodedProgram, properties: DeviceProperties) -> DeviceMatcher {
+    pub fn new(bind_rules: DecodedBindRules, properties: DeviceProperties) -> DeviceMatcher {
         DeviceMatcher {
             properties: properties,
             symbol_table: bind_rules.symbol_table,
@@ -174,7 +174,7 @@ pub fn match_bytecode(
     bytecode: Vec<u8>,
     properties: DeviceProperties,
 ) -> Result<bool, BytecodeError> {
-    DeviceMatcher::new(DecodedProgram::new(bytecode)?, properties).match_bind()
+    DeviceMatcher::new(DecodedBindRules::new(bytecode)?, properties).match_bind()
 }
 
 #[cfg(test)]
@@ -262,7 +262,7 @@ mod test {
 
     fn verify_match_result(
         expected_result: Result<bool, BytecodeError>,
-        bind_rules: DecodedProgram,
+        bind_rules: DecodedBindRules,
         device_properties: DeviceProperties,
     ) {
         assert_eq!(expected_result, DeviceMatcher::new(bind_rules, device_properties).match_bind());
@@ -272,7 +272,7 @@ mod test {
     fn empty_instructions() {
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: vec![] },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: vec![] },
             HashMap::new(),
         );
     }
@@ -292,7 +292,7 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             device_properties.clone(),
         );
 
@@ -305,7 +305,7 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             device_properties.clone(),
         );
 
@@ -318,7 +318,7 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             device_properties.clone(),
         );
     }
@@ -345,7 +345,7 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
             device_properties.clone(),
         );
 
@@ -358,7 +358,7 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedProgram { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
             device_properties.clone(),
         );
 
@@ -371,7 +371,7 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedProgram { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
             device_properties.clone(),
         );
     }
@@ -391,7 +391,7 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             device_properties.clone(),
         );
 
@@ -404,7 +404,7 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             device_properties.clone(),
         );
 
@@ -417,7 +417,7 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             device_properties.clone(),
         );
     }
@@ -443,7 +443,7 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
             device_properties.clone(),
         );
 
@@ -457,7 +457,7 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
             device_properties.clone(),
         );
 
@@ -470,7 +470,7 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedProgram { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
             device_properties.clone(),
         );
     }
@@ -481,7 +481,7 @@ mod test {
         append_abort(&mut instructions);
         verify_match_result(
             Ok(false),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             HashMap::new(),
         );
     }
@@ -503,7 +503,7 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
             device_properties.clone(),
         );
 
@@ -515,7 +515,7 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedProgram { symbol_table: symbol_table, instructions: instructions },
+            DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
             device_properties.clone(),
         );
     }
@@ -533,7 +533,7 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             device_properties.clone(),
         );
 
@@ -545,7 +545,7 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             device_properties.clone(),
         );
     }
@@ -564,7 +564,7 @@ mod test {
         );
         verify_match_result(
             Err(BytecodeError::MissingEntryInSymbolTable(10)),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             HashMap::new(),
         );
 
@@ -576,7 +576,7 @@ mod test {
         );
         verify_match_result(
             Err(BytecodeError::MissingEntryInSymbolTable(15)),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             HashMap::new(),
         );
     }
@@ -592,7 +592,7 @@ mod test {
 
         verify_match_result(
             Err(BytecodeError::InvalidOp(0xFF)),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             HashMap::new(),
         );
     }
@@ -602,7 +602,7 @@ mod test {
         let instructions: Vec<u8> = vec![0x01, 0x05, 0, 0, 0, 0, 0x01, 0, 0, 0, 0];
         verify_match_result(
             Err(BytecodeError::InvalidValueType(0x05)),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             HashMap::new(),
         );
     }
@@ -618,7 +618,7 @@ mod test {
 
         verify_match_result(
             Err(BytecodeError::InvalidBoolValue(15)),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             HashMap::new(),
         );
     }
@@ -634,7 +634,7 @@ mod test {
 
         verify_match_result(
             Err(BytecodeError::InvalidKeyType),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             HashMap::new(),
         );
     }
@@ -661,7 +661,7 @@ mod test {
 
         verify_match_result(
             Err(BytecodeError::MismatchValueTypes),
-            DecodedProgram { symbol_table: symbol_table, instructions: instructions },
+            DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
             device_properties,
         );
     }
@@ -671,7 +671,7 @@ mod test {
         let instructions: Vec<u8> = vec![0x01, 0x02, 0, 0, 0];
         verify_match_result(
             Err(BytecodeError::UnexpectedEnd),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             HashMap::new(),
         );
     }
@@ -709,7 +709,7 @@ mod test {
 
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: symbol_table, instructions: instructions },
+            DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
             device_properties,
         );
     }
@@ -747,7 +747,7 @@ mod test {
 
         verify_match_result(
             Ok(false),
-            DecodedProgram { symbol_table: symbol_table, instructions: instructions },
+            DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
             device_properties,
         );
     }
@@ -766,7 +766,7 @@ mod test {
 
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             HashMap::new(),
         );
     }
@@ -792,7 +792,7 @@ mod test {
             .insert(PropertyKey::NumberKey(10), Symbol::StringValue("whimbrel".to_string()));
         verify_match_result(
             Ok(true),
-            DecodedProgram {
+            DecodedBindRules {
                 symbol_table: symbol_table.clone(),
                 instructions: instructions.clone(),
             },
@@ -804,7 +804,7 @@ mod test {
             .insert(PropertyKey::NumberKey(10), Symbol::StringValue("godwit".to_string()));
         verify_match_result(
             Ok(false),
-            DecodedProgram { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
             device_properties,
         );
     }
@@ -826,7 +826,7 @@ mod test {
         device_properties.insert(PropertyKey::NumberKey(10), Symbol::NumberValue(2000));
         verify_match_result(
             Ok(false),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions.clone() },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions.clone() },
             device_properties,
         );
 
@@ -834,7 +834,7 @@ mod test {
         device_properties.insert(PropertyKey::NumberKey(10), Symbol::NumberValue(20));
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             device_properties,
         );
     }
@@ -855,7 +855,7 @@ mod test {
         append_abort(&mut instructions);
         verify_match_result(
             Err(BytecodeError::InvalidJumpLocation),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             device_properties,
         );
     }
@@ -876,7 +876,7 @@ mod test {
         append_jump_pad(&mut instructions);
         verify_match_result(
             Err(BytecodeError::UnexpectedEnd),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             device_properties,
         );
     }
@@ -900,7 +900,7 @@ mod test {
         device_properties.insert(PropertyKey::NumberKey(10), Symbol::NumberValue(2000));
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions.clone() },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions.clone() },
             device_properties,
         );
 
@@ -912,7 +912,7 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
             device_properties,
         );
     }
@@ -969,7 +969,7 @@ mod test {
 
         verify_match_result(
             Ok(true),
-            DecodedProgram { symbol_table: symbol_table, instructions: instructions },
+            DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
             device_properties,
         );
     }
