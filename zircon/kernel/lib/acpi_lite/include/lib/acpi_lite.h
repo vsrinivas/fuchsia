@@ -44,6 +44,8 @@ class AcpiParser final : public AcpiParserInterface {
   // PhysMemReader must outlive this object. Caller retains ownership of the PhysMemReader.
   static zx::status<AcpiParser> Init(PhysMemReader& physmem_reader, zx_paddr_t rsdp_pa);
 
+  uint64_t rsdp_pa() const { return rsdp_addr_; }
+
   // Print tables to debug output.
   void DumpTables() const;
 
@@ -55,13 +57,14 @@ class AcpiParser final : public AcpiParserInterface {
   // Create a new AcpiParser.
   //
   // |reader| and |sdt| must outlive the created instance.
-  AcpiParser(PhysMemReader& reader, const AcpiRsdt* rsdt, const AcpiXsdt* xsdt, size_t num_tables,
-             zx_paddr_t root_table_addr)
+  AcpiParser(PhysMemReader& reader, zx_paddr_t rsdp_addr, const AcpiRsdt* rsdt,
+             const AcpiXsdt* xsdt, size_t num_tables, zx_paddr_t root_table_addr)
       : reader_(&reader),
         rsdt_(rsdt),
         xsdt_(xsdt),
         num_tables_(num_tables),
-        root_table_addr_(root_table_addr) {}
+        root_table_addr_(root_table_addr),
+        rsdp_addr_(rsdp_addr) {}
 
   // Get the physical address of the given table, or return 0 if the table does not exist.
   zx_paddr_t GetTablePhysAddr(size_t index) const;
@@ -71,6 +74,7 @@ class AcpiParser final : public AcpiParserInterface {
   const AcpiXsdt* xsdt_;        // Owned elsewhere. May be null.
   size_t num_tables_;           // Number of top level tables
   zx_paddr_t root_table_addr_;  // Physical address of the root table.
+  zx_paddr_t rsdp_addr_;        // Physical address of the RSDP.
 };
 
 // Get the first table matching the given signature. Return nullptr if no table found.

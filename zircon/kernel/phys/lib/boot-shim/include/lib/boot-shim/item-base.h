@@ -14,6 +14,7 @@
 #include <zircon/boot/image.h>
 
 #include <cstdint>
+#include <optional>
 #include <type_traits>
 #include <variant>
 
@@ -67,6 +68,38 @@ class SingleItem : public ItemBase {
 
  private:
   ByteView payload_;
+};
+
+// This defines a simple item with a payload stored directly in this object.
+template <typename Payload, uint32_t Type, uint32_t Extra = 0>
+class SingleOptionalItem : public ItemBase {
+ public:
+  static_assert(zbitl::is_uniquely_representable_pod_v<Payload>);
+
+  constexpr size_t size_bytes() const { return payload_ ? ItemSize(sizeof(*payload_)) : 0; }
+
+  constexpr SingleOptionalItem& set_payload(const Payload& payload) {
+    payload_ = payload;
+    return *this;
+  }
+
+  constexpr SingleOptionalItem& set_payload() {
+    payload_ = std::nullopt;
+    return *this;
+  }
+
+  fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) const {
+    return payload_ ? zbi.Append(
+                          {
+                              .type = Type,
+                              .extra = Extra,
+                          },
+                          zbitl::AsBytes(*payload_))
+                    : fitx::ok();
+  }
+
+ private:
+  std::optional<Payload> payload_;
 };
 
 // This is a base class for defining simple item types that store their data

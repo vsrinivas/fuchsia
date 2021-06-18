@@ -10,6 +10,8 @@
 
 namespace boot_shim {
 
+void AcpiRsdpItem::Init(const acpi_lite::AcpiParser& parser) { set_payload(parser.rsdp_pa()); }
+
 void AcpiUartItem::Init(const acpi_lite::AcpiParserInterface& parser) {
   set_payload();  // Clear out any old state in case we find nothing below.
   if (auto dbg2 = acpi_lite::GetDebugPort(parser); dbg2.is_ok()) {

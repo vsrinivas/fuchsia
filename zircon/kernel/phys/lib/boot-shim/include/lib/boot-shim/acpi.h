@@ -14,9 +14,19 @@
 // Forward declaration for <lib/acpi_lite.h>.
 namespace acpi_lite {
 class AcpiParserInterface;
+class AcpiParser;
 }  // namespace acpi_lite
 
 namespace boot_shim {
+
+// This can supply an item with the ACPI root table pointer, if available.
+// Its set_payload method takes a uint64_t physical address argument.
+class AcpiRsdpItem : public SingleOptionalItem<uint64_t, ZBI_TYPE_ACPI_RSDP> {
+ public:
+  // This sets a payload of the physical address the parser is using.
+  // If Init is not called, no item will be produced.
+  void Init(const acpi_lite::AcpiParser& parser);
+};
 
 // This can supply a ZBI_TYPE_KERNEL_DRIVER item based on the serial console
 // details in ACPI's DBG2 table.

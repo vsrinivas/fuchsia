@@ -67,6 +67,7 @@ bool ValidateRsdp(const AcpiRsdp* rsdp) {
 }
 
 struct RootSystemTableDetails {
+  uint64_t rsdp_address;
   uint32_t rsdt_address;
   uint64_t xsdt_address;
 };
@@ -87,6 +88,7 @@ zx::status<RootSystemTableDetails> ParseRsdp(PhysMemReader& reader, zx_paddr_t r
   // If this is just a V1 RSDP, parse it and finish up.
   if (rsdp_v1->revision < 2) {
     return zx::success(RootSystemTableDetails{
+        .rsdp_address = rsdp_pa,
         .rsdt_address = rsdp_v1->rsdt_address,
         .xsdt_address = 0,
     });
@@ -104,6 +106,7 @@ zx::status<RootSystemTableDetails> ParseRsdp(PhysMemReader& reader, zx_paddr_t r
   }
 
   return zx::success(RootSystemTableDetails{
+      .rsdp_address = rsdp_pa,
       .rsdt_address = rsdp_v2.value()->v1.rsdt_address,
       .xsdt_address = rsdp_v2.value()->xsdt_address,
   });
@@ -310,7 +313,8 @@ zx::status<AcpiParser> AcpiParser::Init(PhysMemReader& physmem_reader, zx_paddr_
       if (xsdt.is_ok()) {
         LOG_DEBUG("ACPI LITE: Found valid XSDT table at physical address %#" PRIx64 "\n",
                   root_tables.value().xsdt_address);
-        return zx::success(AcpiParser(physmem_reader, /*rsdt=*/nullptr, xsdt.value(), num_tables,
+        return zx::success(AcpiParser(physmem_reader, root_tables.value().rsdp_address,
+                                      /*rsdt=*/nullptr, xsdt.value(), num_tables,
                                       root_tables.value().xsdt_address));
       }
       LOG_DEBUG("ACPI LITE: Invalid XSDT table at physical address %#" PRIx64 "\n",
@@ -325,7 +329,8 @@ zx::status<AcpiParser> AcpiParser::Init(PhysMemReader& physmem_reader, zx_paddr_
       if (rsdt.is_ok()) {
         LOG_DEBUG("ACPI LITE: Found valid RSDT table at physical address %#" PRIx32 "\n",
                   root_tables.value().rsdt_address);
-        return zx::success(AcpiParser(physmem_reader, rsdt.value(), /*xsdt=*/nullptr, num_tables,
+        return zx::success(AcpiParser(physmem_reader, root_tables.value().rsdp_address,
+                                      rsdt.value(), /*xsdt=*/nullptr, num_tables,
                                       root_tables.value().rsdt_address));
       }
       LOG_DEBUG("ACPI LITE: Invalid RSDT table at physical address %#" PRIx32 "\n",
