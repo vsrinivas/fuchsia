@@ -268,7 +268,7 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
 
   zx_signals_t pending;
   ASSERT_STATUS(socket.wait_one(0, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
-  EXPECT_EQ(pending, ZX_SOCKET_WRITABLE | ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_3);
+  EXPECT_EQ(pending, ZX_SOCKET_WRITABLE | ZX_USER_SIGNAL_3);
 }
 
 TEST(SocketTest, CloseClonedSocketAfterTcpRst) {

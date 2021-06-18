@@ -1303,18 +1303,13 @@ func (eps *endpointWithSocket) startPollLoop() {
 	}
 }
 
-func (eps *endpointWithSocket) startReadWriteLoops(connected bool) {
+func (eps *endpointWithSocket) startReadWriteLoops() {
 	eps.mu.Lock()
 	defer eps.mu.Unlock()
 	select {
 	case <-eps.closing:
 	default:
-		// TODO(https://fxbug.dev/76279): Remove SignalStreamOutgoing after ABI transition.
-		var signals zx.Signals = zxsocket.SignalStreamOutgoing
-		if connected {
-			signals |= zxsocket.SignalStreamConnected
-		}
-		if err := eps.local.Handle().SignalPeer(0, signals); err != nil {
+		if err := eps.local.Handle().SignalPeer(0, zxsocket.SignalStreamConnected); err != nil {
 			panic(err)
 		}
 		for _, m := range []struct {
@@ -1354,10 +1349,12 @@ func (eps *endpointWithSocket) Connect(ctx fidl.Context, address fidlnet.SocketA
 			cb := func(m waiter.EventMask) {
 				once.Do(func() {
 					go eps.wq.EventUnregister(&entry)
-					// TODO(https://fxbug.dev/76279): Close the endpoint directly on error
-					// after ABI transition (instead of starting loops).
-					eps.startPollLoop()
-					eps.startReadWriteLoops(m&waiter.EventErr == 0)
+					if m&waiter.EventErr == 0 {
+						eps.startPollLoop()
+						eps.startReadWriteLoops()
+					} else {
+						eps.HUp()
+					}
 				})
 			}
 			entry.Callback = callback(func(_ *waiter.Entry, m waiter.EventMask) {
@@ -1428,7 +1425,7 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 		//
 		// See //sdk/lib/fdio/socket.cc:stream_socket::wait_begin/wait_end for
 		// details on how fdio infers the error code from asserted signals.
-		eps.onConnect.Do(func() { eps.startReadWriteLoops(true) })
+		eps.onConnect.Do(func() { eps.startReadWriteLoops() })
 
 		// Check if the endpoint has already encountered an error since
 		// our installed callback will not fire in this case.
