@@ -121,12 +121,19 @@ void Gain::Advance(int64_t num_frames, const TimelineRate& destination_frames_pe
   FX_CHECK(destination_frames_per_reference_tick.invertible())
       << "Output clock must be running! Numerator of dest_frames/ref_tick is zero";
 
+  int64_t total_frames_ramped;
+  zx::duration ramp_duration;
+
   // First advance any source-gain ramps
   if (source_ramp_duration_.get() > 0) {
     source_frames_ramped_ += num_frames;
+
     zx::duration advance_duration =
         zx::nsec(destination_frames_per_reference_tick.Inverse().Scale(source_frames_ramped_));
-    float source_gain_db;
+
+    // These might get cleared; save them in case we need to display them later.
+    total_frames_ramped = source_frames_ramped_;
+    ramp_duration = source_ramp_duration_;
 
     if (source_ramp_duration_ > advance_duration) {
       // Even after this advance, some duration of source_ramp remains
@@ -134,22 +141,20 @@ void Gain::Advance(int64_t num_frames, const TimelineRate& destination_frames_pe
                              static_cast<double>(source_ramp_duration_.to_nsecs()) *
                              (end_source_scale_ - start_source_scale_);
       AScale source_scale = static_cast<AScale>(scale_from_ramp + start_source_scale_);
-      source_gain_db = ScaleToDb(source_scale);
+      target_source_gain_db_ = ScaleToDb(source_scale);
     } else {
       // This advance takes us beyond the end of source_ramp.
       source_ramp_duration_ = zx::nsec(0);
       source_frames_ramped_ = 0;
-      source_gain_db = end_source_gain_db_;
+      target_source_gain_db_ = end_source_gain_db_;
     }
-
-    target_source_gain_db_ = source_gain_db;
 
     if constexpr (kLogRampAdvance) {
       FX_LOGS(INFO) << "Gain(" << this << ") advanced " << advance_duration.to_usecs()
                     << " usec for " << num_frames
-                    << " source frames. Total frames ramped: " << source_frames_ramped_ << ".";
-      FX_LOGS(INFO) << "source_gain_db is now " << source_gain_db << " for this "
-                    << source_ramp_duration_.to_usecs() << "-usec ramp to " << end_source_gain_db_
+                    << " source frames. Total frames ramped: " << total_frames_ramped << ".";
+      FX_LOGS(INFO) << "source gain_db is now " << target_source_gain_db_ << " for this "
+                    << ramp_duration.to_usecs() << "-usec ramp to " << end_source_gain_db_
                     << " dB.";
     }
   }
@@ -159,7 +164,10 @@ void Gain::Advance(int64_t num_frames, const TimelineRate& destination_frames_pe
     dest_frames_ramped_ += num_frames;
     zx::duration advance_duration =
         zx::nsec(destination_frames_per_reference_tick.Inverse().Scale(dest_frames_ramped_));
-    float dest_gain_db;
+
+    // These might get cleared; save them in case we need to display them later.
+    total_frames_ramped = dest_frames_ramped_;
+    ramp_duration = dest_ramp_duration_;
 
     if (dest_ramp_duration_ > advance_duration) {
       // Even after this advance, some duration of dest_ramp remains
@@ -167,23 +175,20 @@ void Gain::Advance(int64_t num_frames, const TimelineRate& destination_frames_pe
                              static_cast<double>(dest_ramp_duration_.to_nsecs()) *
                              (end_dest_scale_ - start_dest_scale_);
       AScale dest_scale = static_cast<AScale>(scale_from_ramp + start_dest_scale_);
-      dest_gain_db = ScaleToDb(dest_scale);
+      target_dest_gain_db_ = ScaleToDb(dest_scale);
     } else {
       // This advance takes us beyond the end of dest_ramp.
       dest_ramp_duration_ = zx::nsec(0);
       dest_frames_ramped_ = 0;
-      dest_gain_db = end_dest_gain_db_;
+      target_dest_gain_db_ = end_dest_gain_db_;
     }
-
-    target_dest_gain_db_ = dest_gain_db;
 
     if constexpr (kLogRampAdvance) {
       FX_LOGS(INFO) << "Gain(" << this << ") advanced " << advance_duration.to_usecs()
                     << " usec for " << num_frames
-                    << " dest frames. Total frames ramped: " << dest_frames_ramped_ << ".";
-      FX_LOGS(INFO) << "dest_gain_db is now " << dest_gain_db << " for this "
-                    << dest_ramp_duration_.to_usecs() << "-usec ramp to " << end_dest_gain_db_
-                    << " dB.";
+                    << " dest frames. Total frames ramped: " << total_frames_ramped << ".";
+      FX_LOGS(INFO) << "dest gain_db is now " << target_dest_gain_db_ << " for this "
+                    << ramp_duration.to_usecs() << "-usec ramp to " << end_dest_gain_db_ << " dB.";
     }
   }
 }
@@ -302,6 +307,10 @@ void Gain::RecalculateGainScale() {
   // If nothing changed, our previously-computed amplitude scale value is accurate.
   if ((current_source_gain_db_ == target_source_gain_db_) &&
       (current_dest_gain_db_ == target_dest_gain_db_)) {
+    if constexpr (kLogGainScaleCalculation) {
+      FX_LOGS(INFO) << "Gain(" << this
+                    << ") retained existing combined_gain_scale_: " << combined_gain_scale_;
+    }
     return;
   }
 
@@ -334,6 +343,10 @@ void Gain::RecalculateGainScale() {
   // Apply gain limits.
   if (combined_gain_scale_ > kMuteScale) {
     combined_gain_scale_ = std::clamp(combined_gain_scale_, min_gain_scale_, max_gain_scale_);
+  }
+
+  if constexpr (kLogGainScaleCalculation) {
+    FX_LOGS(INFO) << "Gain(" << this << ") new gain_scale: " << combined_gain_scale_;
   }
 }
 

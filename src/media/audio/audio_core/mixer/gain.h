@@ -21,6 +21,7 @@ constexpr bool kLogSetGain = false;
 constexpr bool kLogSetMute = false;
 constexpr bool kLogSetRamp = false;
 constexpr bool kLogRampAdvance = false;
+constexpr bool kLogGainScaleCalculation = false;
 
 // A class containing factors used for software scaling in the mixer pipeline.
 // Not thread safe.
@@ -90,7 +91,12 @@ class Gain {
         max_gain_db_(std::min(limits.max_gain_db.value_or(kMaxGainDb), kMaxGainDb)),
         min_gain_scale_(DbToScale(min_gain_db_)),
         max_gain_scale_(DbToScale(max_gain_db_)),
-        combined_gain_scale_(std::clamp(kUnityScale, min_gain_scale_, max_gain_scale_)) {}
+        combined_gain_scale_(std::clamp(kUnityScale, min_gain_scale_, max_gain_scale_)) {
+    if constexpr (kLogGainScaleCalculation) {
+      FX_LOGS(INFO) << "Gain(" << this << ") created with min_gain_scale_: " << min_gain_scale_
+                    << ", max_gain_scale_: " << max_gain_scale_;
+    }
+  }
 
   // The Gain object specifies the volume scaling to be performed for a given
   // Mix operation, when mixing a single stream into some combined resultant

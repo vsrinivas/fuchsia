@@ -275,11 +275,9 @@ void HermeticFidelityTest::VerifyResults(const TestCase<InputFormat, OutputForma
 }
 
 // Additional fidelity assessments, potentially added in the future:
-// (1) Cross-talk (FreqResp/Sinad across channels)
-//     This could identify issues masked by our collapse to mono for final device output.
-// (2) Dynamic range (1kHz input at -30/60/90 db: measure level, sinad. Overall gain sensitivity)
+// (1) Dynamic range (1kHz input at -30/60/90 db: measure level, sinad. Overall gain sensitivity)
 //     This should clearly show the impact of dynamic compression in the effects chain.
-// (3) Assess the e2e input data path (from device to capturer)
+// (2) Assess the e2e input data path (from device to capturer)
 //     Included for completeness: we apply no capture effects; should equal audio_fidelity_tests.
 template <ASF InputFormat, ASF OutputFormat>
 void HermeticFidelityTest::Run(
@@ -429,9 +427,9 @@ void HermeticFidelityTest::Run(
         sinad_db = DoubleToDb(result.magnitudes[freq] / result.total_magn_other);
         if constexpr (kDisplayInProgressResults) {
           FX_LOGS(INFO) << "Channel " << channel_spec.channel << ": " << std::setw(5)
-                        << freq_for_display << " Hz --  level " << std::fixed
-                        << std::setprecision(4) << std::setw(9) << level_db << " db,  sinad "
-                        << std::setw(8) << sinad_db << " db";
+                        << freq_for_display << " Hz [" << std::setw(2) << freq_idx << "] --  level "
+                        << std::fixed << std::setprecision(4) << std::setw(9) << level_db
+                        << " db,  sinad " << std::setw(8) << sinad_db << " db";
         }
       } else {
         // For out-of-band frequencies, we use the sinad array to store Out-of-Band Rejection,
@@ -440,8 +438,9 @@ void HermeticFidelityTest::Run(
 
         if constexpr (kDisplayInProgressResults) {
           FX_LOGS(INFO) << "Channel " << channel_spec.channel << ": " << std::setw(5)
-                        << freq_for_display << " Hz --       out-of-band rejection " << std::fixed
-                        << std::setprecision(4) << std::setw(8) << sinad_db << " db";
+                        << freq_for_display << " Hz [" << std::setw(2) << freq_idx
+                        << "] --       out-of-band rejection " << std::fixed << std::setprecision(4)
+                        << std::setw(8) << sinad_db << " db";
         }
       }
 

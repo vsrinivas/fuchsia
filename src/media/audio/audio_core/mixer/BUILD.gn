@@ -136,6 +136,7 @@ executable("mixer_unittest_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
     "//src/media/audio/lib/format",
+    "//src/media/audio/lib/test:constants",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fbl",
   ]

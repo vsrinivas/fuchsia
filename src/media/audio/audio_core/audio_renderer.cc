@@ -195,6 +195,10 @@ fuchsia::media::Usage AudioRenderer::GetStreamUsage() const {
   return fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage_));
 }
 
+constexpr bool kLogUsageVolumeGainActions = true;
+constexpr bool kLogSetGainMuteRampCalls = false;
+constexpr bool kLogSetGainMuteRampActions = false;
+
 // Set a change to the usage volume+gain_adjustment
 void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
   context().link_matrix().ForEachDestLink(
@@ -205,13 +209,15 @@ void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
             GainDbFsValue{volume_command.gain_db_adjustment},
         });
 
-        // TODO(fxbug.dev/51049) Swap this logging for inspect or other real-time gain observation
-        FX_LOGS(INFO) << static_cast<const void*>(this) << " (mixer "
-                      << static_cast<const void*>(link.mixer.get()) << ") "
-                      << StreamUsage::WithRenderUsage(usage_).ToString() << " dest_gain("
-                      << (volume_command.ramp.has_value() ? "ramping to " : "") << gain_db
-                      << "db) = Vol(" << volume_command.volume << ") + GainAdjustment("
-                      << volume_command.gain_db_adjustment << "db)";
+        if constexpr (kLogUsageVolumeGainActions) {
+          // TODO(fxbug.dev/51049) Swap this logging for inspect or other real-time gain observation
+          FX_LOGS(INFO) << static_cast<const void*>(this) << " (mixer "
+                        << static_cast<const void*>(link.mixer.get()) << ") "
+                        << StreamUsage::WithRenderUsage(usage_).ToString() << " dest_gain("
+                        << (volume_command.ramp.has_value() ? "ramping to " : "") << gain_db
+                        << "db) = Vol(" << volume_command.volume << ") + GainAdjustment("
+                        << volume_command.gain_db_adjustment << "db)";
+        }
 
         link.mix_domain->PostTask([link, volume_command, gain_db, reporter = &reporter()]() {
           auto& gain = link.mixer->bookkeeping().gain;
@@ -229,8 +235,6 @@ void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
       });
 }
 
-constexpr bool kLogSetGainMuteRampCalls = false;
-constexpr bool kLogSetGainMuteRampActions = true;
 void AudioRenderer::PostStreamGainMute(StreamGainCommand gain_command) {
   context().link_matrix().ForEachDestLink(
       *this, [this, gain_command](LinkMatrix::LinkHandle link) mutable {
