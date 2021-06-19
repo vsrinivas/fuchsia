@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//src/devices/bus/drivers/pci/pci.gni")
-
-#import("//zircon/system/ulib/acpica/acpica.gni")
+import("//zircon/system/ulib/acpica/acpica.gni")
 
 config("acpica-config") {
   include_dirs = [ "include" ]
@@ -26,15 +25,11 @@ source_set("acpica-fuchsia") {
 
   defines = [ "_ALL_SOURCE" ]
 
-  # Will be removed after acpica no longer uses osfuchsia.cc directly.
-  defines += [ "NOT_IN_ACPICA" ]
-
   if (platform_enable_user_pci) {
     defines += [ "ENABLE_USER_PCI" ]
   }
 
-  # Will be enabled after acpica_debug_output is no longer declared in acpica.
-  #if (acpica_debug_output) {
-  #  defines += [ "ACPI_DEBUG_OUTPUT" ]
-  #}
+  if (acpica_debug_output) {
+    defines += [ "ACPI_DEBUG_OUTPUT" ]
+  }
 }

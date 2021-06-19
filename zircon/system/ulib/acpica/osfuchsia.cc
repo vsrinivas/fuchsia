@@ -35,11 +35,7 @@
 #error "Unsupported architecture"
 #endif
 
-#ifdef NOT_IN_ACPICA
 #include <acpica/acpi.h>
-#else
-#include "acpi.h"
-#endif
 
 __WEAK zx_handle_t root_resource_handle;
 
