@@ -6,10 +6,14 @@
 #define FBL_ARRAY_H_
 
 #include <zircon/assert.h>
-#include <fbl/macros.h>
+
 #include <type_traits>
 
+#include <fbl/macros.h>
+
 namespace fbl {
+
+class AllocChecker;
 
 // |Array| is lightweight movable container that takes ownership of an array.
 // At destruction or when reset() is invoked, it uses delete[] to release the owned array.
@@ -98,6 +102,26 @@ class __OWNER(T) Array {
   T* ptr_;
   size_t count_;
 };
+
+// Allocate memory for an array of size `n`, default-constructing each element in the array.
+//
+// If the allocation fails, an array of size 0 is returned.
+template <typename T>
+Array<T> MakeArray(fbl::AllocChecker* ac, size_t n) {
+  auto* alloc = new (ac) T[n]();
+  if (unlikely(alloc == nullptr)) {
+    return Array<T>();
+  }
+  return Array<T>(alloc, n);
+}
+
+#ifndef _KERNEL
+// Allocate memory for an array of size `n`.
+template <typename T>
+Array<T> MakeArray(size_t n) {
+  return Array<T>(new T[n](), n);
+}
+#endif
 
 }  // namespace fbl
 
