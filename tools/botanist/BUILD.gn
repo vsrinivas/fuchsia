@@ -8,7 +8,6 @@ import("//build/go/go_test.gni")
 
 go_library("botanist_lib") {
   sources = [
-    "botanist.go",
     "ip.go",
     "pkg.go",
     "pkg_test.go",
