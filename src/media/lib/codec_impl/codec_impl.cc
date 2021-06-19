@@ -552,6 +552,10 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lif
     // nothing more that the stream is permitted to do).
     ZX_DEBUG_ASSERT(IsStreamActiveLocked());
     ZX_DEBUG_ASSERT(stream_->stream_lifetime_ordinal() == stream_lifetime_ordinal);
+    if (stream_->failure_seen()) {
+      // Already reported to client.
+      return;
+    }
     if (!stream_->input_end_of_stream()) {
       LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientProtocolError);
       FailLocked(

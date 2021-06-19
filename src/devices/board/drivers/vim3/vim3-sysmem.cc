@@ -21,7 +21,7 @@ static const sysmem_metadata_t sysmem_metadata = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_A311D,
     .protected_memory_size = 0,
-    .contiguous_memory_size = 0,
+    .contiguous_memory_size = 32LL * 1024 * 1024,
 };
 
 static const pbus_metadata_t sysmem_metadata_list[] = {{

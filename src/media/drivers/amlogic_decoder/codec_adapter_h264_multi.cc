@@ -303,31 +303,36 @@ void CodecAdapterH264Multi::CoreCodecQueueInputEndOfStream() {
 // TODO(dustingreen): See comment on CoreCodecStartStream() re. not deleting
 // creating as much stuff for each stream.
 void CodecAdapterH264Multi::CoreCodecStopStream() {
-  std::unique_lock<std::mutex> lock(lock_);
-  std::condition_variable condition;
-  async::PostTask(core_loop_.dispatcher(), [this, &condition] {
-    std::list<CodecInputItem> leftover_input_items = CoreCodecStopStreamInternal();
-    for (auto& input_item : leftover_input_items) {
-      if (input_item.is_packet()) {
-        events_->onCoreCodecInputPacketDone(std::move(input_item.packet()));
-      }
+  std::list<CodecInputItem> leftover_input_items = CoreCodecStopStreamInternal();
+  for (auto& input_item : leftover_input_items) {
+    if (input_item.is_packet()) {
+      events_->onCoreCodecInputPacketDone(std::move(input_item.packet()));
     }
-    condition.notify_all();
-  });
-  condition.wait(lock);
+  }
 }
 
 // TODO(dustingreen): See comment on CoreCodecStartStream() re. not deleting
 // creating as much stuff for each stream.
 std::list<CodecInputItem> CodecAdapterH264Multi::CoreCodecStopStreamInternal() {
-  std::list<CodecInputItem> leftover_input_items;
-  // TODO: start cancellation of input processing before acquiring decoder lock, in case decoder is
-  // stuck decoding and is trying to use onCoreCodecResetStreamAfterCurrentFrame().
+  std::list<CodecInputItem> input_items_result;
   {  // scope lock
-    std::lock_guard<std::mutex> lock(lock_);
-    leftover_input_items = std::move(input_queue_);
-  }
-
+    std::unique_lock<std::mutex> lock(lock_);
+    bool is_cancelling_input_processing = true;
+    std::condition_variable stop_input_processing_condition;
+    async::PostTask(core_loop_.dispatcher(), [this, &stop_input_processing_condition, &input_items_result, &is_cancelling_input_processing] {
+      {  // scope lock
+        std::lock_guard<std::mutex> lock(lock_);
+        ZX_DEBUG_ASSERT(input_items_result.empty());
+        input_items_result.swap(input_queue_);
+        is_cancelling_input_processing = false;
+      }  // ~lock
+      stop_input_processing_condition.notify_all();
+    });
+    while (is_cancelling_input_processing) {
+      stop_input_processing_condition.wait(lock);
+    }
+    ZX_DEBUG_ASSERT(!is_cancelling_input_processing);
+  }  // ~lock
   LOG(DEBUG, "RemoveDecoder()...");
   {
     std::lock_guard<std::mutex> decoder_lock(*video_->video_decoder_lock());
@@ -337,7 +342,7 @@ std::list<CodecInputItem> CodecAdapterH264Multi::CoreCodecStopStreamInternal() {
     }
   }
   LOG(DEBUG, "RemoveDecoder() done.");
-  return leftover_input_items;
+  return input_items_result;
 }
 
 void CodecAdapterH264Multi::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
@@ -1298,9 +1303,9 @@ void CodecAdapterH264Multi::CoreCodecResetStreamAfterCurrentFrame() {
   // current way we use that code exactly the same way for reset as for init and de-init, which is
   // good from a test coverage point of view.
 
-  // This fences and quiesces the input processing thread, and the current StreamControl thread is
-  // the only other thread that modifies is_input_end_of_stream_queued_to_core_, so we know
-  // is_input_end_of_stream_queued_to_core_ won't be changing.
+  // This fences and quiesces the input processing thread, and the StreamControl thread (current
+  // thread) is the only other thread that modifies is_input_end_of_stream_queued_to_core_, so we
+  // know is_input_end_of_stream_queued_to_core_ won't be changing.
   LOG(DEBUG, "before CoreCodecStopStreamInternal()");
   std::list<CodecInputItem> input_items = CoreCodecStopStreamInternal();
   auto return_any_input_items = fit::defer([this, &input_items] {

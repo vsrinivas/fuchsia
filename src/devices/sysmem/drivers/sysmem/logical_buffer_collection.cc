@@ -14,6 +14,7 @@
 #include <limits.h>  // PAGE_SIZE
 #include <zircon/assert.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <limits>  // std::numeric_limits
 #include <type_traits>
@@ -2751,11 +2752,16 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
       }
       offset += bytes_to_write;
     }
-    // Flush out the zeroes.
+  }
+  if (heap_properties.need_clear() || (heap_properties.has_need_flush() && heap_properties.need_flush())) {
+    // Flush out the zeroes written above, or the zeroes that are already in the pages (but not
+    // flushed yet) thanks to zx_vmo_create_contiguous(), or zeroes that are already in the pages
+    // (but not necessarily flushed yet) thanks to whatever other allocator strategy.  The barrier
+    // after this flush is in the caller after all the VMOs are allocated.
     status = raw_parent_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, info.size_bytes, nullptr, 0);
     if (status != ZX_OK) {
       LogError(FROM_HERE, "raw_parent_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN) failed - status: %d",
-               status);
+                status);
       return fit::error();
     }
   }

@@ -27,6 +27,9 @@ table HeapProperties {
     1: CoherencyDomainSupport coherency_domain_support;
     /// Indicates whether sysmem needs to clear VMOs allocated by the Heap.
     2: bool need_clear;
+    /// Some heaps provide pre-cleared allocations, but haven't flushed the
+    /// zeroes to RAM yet.  Flush is also performed if need_clear is true.
+    3: bool need_flush;
 };
 
 /// Manages resources on a specific sysmem heap.

@@ -65,7 +65,7 @@ T AlignUp(T value, T divisor) {
 // Helper function to build owned HeapProperties table with coherency domain support.
 fuchsia_sysmem2::wire::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
     fidl::AnyAllocator& allocator, bool cpu_supported, bool ram_supported,
-    bool inaccessible_supported, bool need_clear) {
+    bool inaccessible_supported, bool need_clear, bool need_flush) {
   using fuchsia_sysmem2::wire::CoherencyDomainSupport;
   using fuchsia_sysmem2::wire::HeapProperties;
 
@@ -76,7 +76,8 @@ fuchsia_sysmem2::wire::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupp
 
   HeapProperties heap_properties(allocator);
   heap_properties.set_coherency_domain_support(allocator, std::move(coherency_domain_support))
-      .set_need_clear(allocator, need_clear);
+      .set_need_clear(allocator, need_clear)
+      .set_need_flush(allocator, need_flush);
   return heap_properties;
 }
 
@@ -88,8 +89,9 @@ class SystemRamMemoryAllocator : public MemoryAllocator {
                             parent_device->table_set().allocator(), true /*cpu*/, true /*ram*/,
                             true /*inaccessible*/,
                             // Zircon guarantees created VMO are filled with 0; sysmem doesn't
-                            // need to clear it once again.
-                            false /*need_clear*/)) {
+                            // need to clear it once again.  There's little point in flushing a
+                            // demand-backed VMO that's only virtually filled with 0.
+                            /*need_clear=*/false, /*need_flush=*/false)) {
     node_ = parent_device->heap_node()->CreateChild("SysmemRamMemoryAllocator");
     node_.CreateUint("id", id(), &properties_);
   }
@@ -132,8 +134,13 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
                             parent_device->table_set().allocator(), true /*cpu*/, true /*ram*/,
                             true /*inaccessible*/,
                             // Zircon guarantees contagious VMO created are filled with 0;
-                            // sysmem doesn't need to clear it once again.
-                            false /*need_clear*/)),
+                            // sysmem doesn't need to clear it once again.  Unlike non-contiguous
+                            // VMOs which haven't backed pages yet, contiguous VMOs have backed
+                            // pages, and it's effective to flush the zeroes to RAM.  Some current
+                            // sysmem clients rely on contiguous allocations having their initial
+                            // zero-fill already flushed to RAM (at least for the RAM coherency
+                            // domain, this should probably remain true).
+                            /*need_clear=*/false , /*need_flush=*/true)),
         parent_device_(parent_device) {
     node_ = parent_device_->heap_node()->CreateChild("ContiguousSystemRamMemoryAllocator");
     node_.CreateUint("id", id(), &properties_);

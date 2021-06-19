@@ -31,6 +31,7 @@ fuchsia_sysmem2::wire::HeapProperties BuildHeapProperties(fidl::AnyAllocator& al
   auto heap_properties = HeapProperties(allocator);
   heap_properties.set_coherency_domain_support(allocator, std::move(coherency_domain_support));
   heap_properties.set_need_clear(allocator, is_cpu_accessible);
+  heap_properties.set_need_flush(allocator, is_cpu_accessible);
 
   return heap_properties;
 }

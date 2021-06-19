@@ -579,7 +579,6 @@ std::list<CodecInputItem> CodecAdapterVp9::CoreCodecStopStreamInternal() {
     // We know there won't be any new queuing of input, so once this posted work
     // runs, we know all previously-queued ProcessInput() calls have returned.
     PostToInputProcessingThread([this, &stop_input_processing_condition, &input_items_result] {
-      std::list<CodecInputItem> leftover_input_items;
       {  // scope lock
         std::lock_guard<std::mutex> lock(lock_);
         ZX_DEBUG_ASSERT(is_cancelling_input_processing_);
