@@ -107,6 +107,8 @@ void InitMemory(void* bootloader_data) {
     };
   }
 
+  gLegacyBoot.acpi_rsdp = bp.acpi_rsdp_addr;
+
   // First translate the data into ZBI item format in gLegacyBoot.mem_config.
   PopulateMemRages(bp);
 

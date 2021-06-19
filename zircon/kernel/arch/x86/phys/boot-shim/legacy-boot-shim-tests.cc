@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/acpi_lite/testing/test_data.h>
 #include <lib/boot-shim/test-helper.h>
 #include <stdio.h>
 
@@ -92,6 +93,47 @@ TEST(X86LegacyBootShimTests, CmdlineItem) {
       cmdline_payload.substr(cmdline_payload.size() - info.cmdline.size());
   EXPECT_STR_EQ(cmdline_tail.data(), info.cmdline.data(), "CMDLINE |%.*s|",
                 static_cast<int>(cmdline_payload.size()), cmdline_payload.data());
+}
+
+TEST(X86LegacyBootShimTests, AcpiItems) {
+  LegacyBoot info;
+  boot_shim::testing::TestHelper test;
+  LegacyBootShim shim("X86LegacyBootShimTests", info, test.log());
+
+  constexpr dcfg_simple_pio_t kUart = {.base = 0x3f8};
+  constexpr size_t kUartItemSize = sizeof(zbi_header_t) + sizeof(kUart);
+  {
+    auto mem_reader = acpi_lite::testing::IntelNuc7i5dnPhysMemReader();
+    auto result = acpi_lite::AcpiParser::Init(mem_reader, mem_reader.rsdp());
+    ASSERT_TRUE(result.is_ok());
+    auto& parser = result.value();
+    shim.InitAcpi(parser);
+  }
+
+  size_t data_budget = shim.size_bytes();
+  EXPECT_GE(data_budget, kUartItemSize);
+
+  auto [buffer, owner] = test.GetZbiBuffer();
+  LegacyBootShim::DataZbi zbi(buffer);
+  ASSERT_TRUE(zbi.clear().is_ok());
+
+  auto result = shim.AppendItems(zbi);
+  ASSERT_TRUE(result.is_ok());
+
+  zbitl::ByteView uart_payload;
+  for (auto [header, payload] : zbi) {
+    switch (header->type) {
+      case ZBI_TYPE_KERNEL_DRIVER:
+        EXPECT_TRUE(uart_payload.empty(), "too many uart items");
+        EXPECT_FALSE(payload.empty());
+        uart_payload = payload;
+        break;
+    }
+  }
+  EXPECT_TRUE(zbi.take_error().is_ok());
+
+  ASSERT_EQ(sizeof(kUart), uart_payload.size());
+  EXPECT_BYTES_EQ(uart_payload.data(), &kUart, sizeof(kUart));
 }
 
 }  // namespace

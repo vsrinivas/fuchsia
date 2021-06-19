@@ -128,6 +128,7 @@ if (toolchain.environment == "kernel.phys32") {
       ":trampoline-boot",
       "..:address-space",
       "..:legacy-boot",
+      "//zircon/kernel/lib/acpi_lite",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/phys:arch-header",
@@ -181,6 +182,7 @@ if (toolchain.environment == "kernel.phys32") {
 test("legacy-boot-shim-tests") {
   sources = [ "legacy-boot-shim-tests.cc" ]
   deps = [
+    "//zircon/kernel/lib/acpi_lite",
     "//zircon/kernel/phys/lib/boot-shim",
     "//zircon/kernel/phys/lib/boot-shim:boot-shim-test",
     "//zircon/system/ulib/zxtest",
