@@ -19,6 +19,7 @@ executable("focus-input-test-bin") {
     ":test.focus",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",

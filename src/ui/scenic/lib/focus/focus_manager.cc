@@ -26,8 +26,7 @@ zx_koid_t FocusKoidOf(const std::vector<zx_koid_t>& chain) {
 }  // namespace
 
 FocusManager::FocusManager(inspect::Node inspect_node, LegacyFocusListener legacy_focus_listener)
-    : focus_chain_listener_registry_(this),
-      legacy_focus_listener_(std::move(legacy_focus_listener)),
+    : legacy_focus_listener_(std::move(legacy_focus_listener)),
       inspect_node_(std::move(inspect_node)) {
   // Track the focus chain in inspect.
   lazy_ = inspect_node_.CreateLazyValues("values", [this] {
@@ -45,9 +44,7 @@ FocusManager::FocusManager(inspect::Node inspect_node, LegacyFocusListener legac
 
 void FocusManager::Publish(sys::ComponentContext& component_context) {
   component_context.outgoing()->AddPublicService<FocusChainListenerRegistry>(
-      [this](fidl::InterfaceRequest<FocusChainListenerRegistry> request) {
-        focus_chain_listener_registry_.Bind(std::move(request));
-      });
+      focus_chain_listener_registry_.GetHandler(this));
 }
 
 FocusChangeStatus FocusManager::RequestFocus(zx_koid_t requestor, zx_koid_t request) {
@@ -189,7 +186,7 @@ void FocusManager::SetFocus(zx_koid_t koid) {
 
 void FocusManager::SetFocusChain(std::vector<zx_koid_t> update) {
   if (update != focus_chain_) {
-    FX_VLOGS(1) << "Focus chain update: " <<  ToString(update);
+    FX_VLOGS(1) << "Focus chain update: " << ToString(update);
     const zx_koid_t old_focus = FocusKoidOf(focus_chain_);
     const zx_koid_t new_focus = FocusKoidOf(update);
 

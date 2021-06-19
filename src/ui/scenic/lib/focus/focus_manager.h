@@ -7,7 +7,7 @@
 
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <unordered_map>
@@ -101,7 +101,7 @@ class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry
   std::shared_ptr<const view_tree::Snapshot> snapshot_ =
       std::make_shared<const view_tree::Snapshot>();
 
-  fidl::Binding<fuchsia::ui::focus::FocusChainListenerRegistry> focus_chain_listener_registry_;
+  fidl::BindingSet<fuchsia::ui::focus::FocusChainListenerRegistry> focus_chain_listener_registry_;
   uint64_t next_focus_chain_listener_id_ = 0;
   std::unordered_map<uint64_t, fuchsia::ui::focus::FocusChainListenerPtr> focus_chain_listeners_;
 

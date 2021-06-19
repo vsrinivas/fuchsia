@@ -4,6 +4,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
@@ -161,7 +162,8 @@ class FocusInputTest : public sys::testing::TestWithEnvironment,
 // This test exercises the focus contract with Root Presenter: the view offered to Root
 // Presenter will have focus transferred to it. The test itself offers such a view to Root
 // Presenter.
-// NOTE. This test does not use test.focus.ResponseListener.
+// NOTE. This test does not use test.focus.ResponseListener. There's not a client that listens to
+// ViewRefFocused.
 TEST_F(FocusInputTest, TestView_ReceivesFocusTransfer_FromRootPresenter) {
   auto tokens_rt = scenic::ViewTokenPair::New();  // Root Presenter -> Test
   auto refs_rt = scenic::ViewRefPair::New();
@@ -293,6 +295,62 @@ TEST_F(FocusInputTest, TestView_TransfersFocus_ToChildView) {
     ASSERT_TRUE(child_focus_status.value().focus_status()) << "child view should gain focus";
     FX_LOGS(INFO) << "*** PASS ***";
   }
+}
+
+// This test ensures that multiple clients can connect to the FocusChainListenerRegistry.
+// It does not set up a scene; these "early" listeners should observe an empty focus chain.
+// NOTE. This test does not use test.focus.ResponseListener. There's not a client that listens to
+// ViewRefFocused.
+TEST_F(FocusInputTest, SimultaneousCallsTo_FocusChainListenerRegistry) {
+  using fuchsia::ui::focus::FocusChain;
+
+  // Miniature FocusChainListener, just for this one test.
+  class FocusChainListenerImpl : public fuchsia::ui::focus::FocusChainListener {
+   public:
+    FocusChainListenerImpl(sys::testing::EnclosingEnvironment* env,
+                           std::vector<FocusChain>& collector, bool& error_fired)
+        : listener_impl_(this), collector_(collector), error_fired_(error_fired) {
+      env->ConnectToService(listener_registry_.NewRequest());
+      listener_registry_.set_error_handler([this](zx_status_t) { error_fired_ = true; });
+      listener_registry_->Register(listener_impl_.NewBinding());
+    }
+    // |fuchsia.ui.focus.FocusChainListener|
+    void OnFocusChange(FocusChain focus_chain, OnFocusChangeCallback callback) {
+      collector_.push_back(std::move(focus_chain));
+      callback();
+    }
+
+   private:
+    fuchsia::ui::focus::FocusChainListenerRegistryPtr listener_registry_;
+    fidl::Binding<fuchsia::ui::focus::FocusChainListener> listener_impl_;
+    std::vector<FocusChain>& collector_;
+    bool& error_fired_;
+  };
+
+  std::vector<FocusChain> collected_a;
+  bool error_fired_a = false;
+  FocusChainListenerImpl listener_a(test_env_.get(), collected_a, error_fired_a);
+
+  std::vector<FocusChain> collected_b;
+  bool error_fired_b = false;
+  FocusChainListenerImpl listener_b(test_env_.get(), collected_b, error_fired_b);
+
+  RunLoopUntil([&error_fired_a, &error_fired_b, &collected_a, &collected_b] {
+    // Wait until an error fired, or both listeners see their first report.
+    return error_fired_a || error_fired_b || (collected_a.size() > 0 && collected_b.size() > 0);
+  });
+
+  // Client "a" is clean, and collected a focus chain.
+  EXPECT_FALSE(error_fired_a);
+  ASSERT_EQ(collected_a.size(), 1u);
+  // It's empty, since there's no scene at time of connection.
+  EXPECT_FALSE(collected_a[0].has_focus_chain());
+
+  // Client "b" is clean, and collected a focus chain.
+  EXPECT_FALSE(error_fired_b);
+  ASSERT_EQ(collected_b.size(), 1u);
+  // It's empty, since there's no scene at time of connection.
+  EXPECT_FALSE(collected_b[0].has_focus_chain());
 }
 
 }  // namespace
