@@ -76,6 +76,8 @@ pub struct TestCaseResultV0 {
 mod test {
     use super::*;
     use serde_json::{from_str, json, to_string, Value};
+    use std::path::Path;
+    use valico::json_schema;
 
     #[test]
     fn run_version_serialized() {
@@ -146,5 +148,107 @@ mod test {
         let serialized = to_string(&wrong_version_json).expect("serialize result");
 
         assert!(from_str::<SuiteResult>(&serialized).unwrap_err().is_data());
+    }
+
+    #[test]
+    fn run_conforms_to_schema() {
+        const RUN_SCHEMA: &str = include_str!("../schema/run_summary.schema.json");
+        let run_schema = serde_json::from_str(RUN_SCHEMA).expect("parse json schema");
+        let mut scope = json_schema::Scope::new();
+        let compiled_schema =
+            scope.compile_and_return(run_schema, false).expect("compile json schema");
+
+        let cases = vec![
+            TestRunResult::V0 { artifacts: vec![], outcome: Outcome::Skipped, suites: vec![] },
+            TestRunResult::V0 {
+                artifacts: vec![Path::new("a/b.txt").to_path_buf()],
+                outcome: Outcome::Skipped,
+                suites: vec![SuiteEntryV0 { summary: "suite-summary.json".to_string() }],
+            },
+            TestRunResult::V0 {
+                artifacts: vec![
+                    Path::new("a/b.txt").to_path_buf(),
+                    Path::new("c/d.txt").to_path_buf(),
+                ],
+                outcome: Outcome::Skipped,
+                suites: vec![
+                    SuiteEntryV0 { summary: "suite-summary-1.json".to_string() },
+                    SuiteEntryV0 { summary: "suite-summary-2.json".to_string() },
+                ],
+            },
+        ];
+
+        for case in cases.iter() {
+            let serialized = serde_json::to_value(case).expect("serialize test run");
+            let validate_result = compiled_schema.validate(&serialized);
+            if !validate_result.is_strictly_valid() {
+                panic!(
+                    "Run did not conform with schema: {:?}, {:?}, {:?}",
+                    case, serialized, validate_result
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn suite_conforms_to_schema() {
+        const SUITE_SCHEMA: &str = include_str!("../schema/suite_summary.schema.json");
+        let suite_schema = serde_json::from_str(SUITE_SCHEMA).expect("parse json schema");
+        let mut scope = json_schema::Scope::new();
+        let compiled_schema =
+            scope.compile_and_return(suite_schema, false).expect("compile json schema");
+
+        let cases = vec![
+            SuiteResult::V0 {
+                artifacts: vec![],
+                outcome: Outcome::Passed,
+                name: "my test suite".to_string(),
+                cases: vec![],
+            },
+            SuiteResult::V0 {
+                artifacts: vec![],
+                outcome: Outcome::Failed,
+                name: "another suite".to_string(),
+                cases: vec![TestCaseResultV0 {
+                    artifacts: vec![],
+                    outcome: Outcome::Inconclusive,
+                    name: "test case".to_string(),
+                }],
+            },
+            SuiteResult::V0 {
+                artifacts: vec![Path::new("suite/a.txt").to_path_buf()],
+                outcome: Outcome::Failed,
+                name: "another suite".to_string(),
+                cases: vec![
+                    TestCaseResultV0 {
+                        artifacts: vec![
+                            Path::new("case-0/b.txt").to_path_buf(),
+                            Path::new("case-0/c.txt").to_path_buf(),
+                        ],
+                        outcome: Outcome::Timedout,
+                        name: "test case".to_string(),
+                    },
+                    TestCaseResultV0 {
+                        artifacts: vec![
+                            Path::new("case-1/d.txt").to_path_buf(),
+                            Path::new("case-1/e.txt").to_path_buf(),
+                        ],
+                        outcome: Outcome::Error,
+                        name: "test case 2".to_string(),
+                    },
+                ],
+            },
+        ];
+
+        for case in cases.iter() {
+            let serialized = serde_json::to_value(case).expect("serialize test run");
+            let validate_result = compiled_schema.validate(&serialized);
+            if !validate_result.is_strictly_valid() {
+                panic!(
+                    "Run did not conform with schema: {:?}, {:?}, {:?}",
+                    case, serialized, validate_result
+                );
+            }
+        }
     }
 }

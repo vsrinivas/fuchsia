@@ -15,10 +15,17 @@ rustc_library("directory") {
     "src/testing.rs",
   ]
 
+  inputs = [
+    "schema/run_summary.schema.json",
+    "schema/suite_summary.schema.json",
+  ]
+
   deps = [
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]
+
+  test_deps = [ "//third_party/rust_crates:valico" ]
 }
 
 fuchsia_unittest_component("test-output-directory-lib-test") {

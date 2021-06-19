@@ -1,0 +1,77 @@
+{
+    "$defs": {
+        "artifacts": {
+            "description": "List of relative paths to artifacts scoped to a suite run or test case",
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
+        "caseEntry": {
+            "properties": {
+                "artifacts": {
+                    "$ref": "#/$defs/artifacts"
+                },
+                "name": {
+                    "description": "name of the test case",
+                    "type": "string"
+                },
+                "outcome": {
+                    "$ref": "#/$defs/outcome"
+                }
+            },
+            "required": [
+                "outcome",
+                "name"
+            ]
+        },
+        "outcome": {
+            "description": "The outcome scoped to a suite run or test case",
+            "enum": [
+                "PASSED",
+                "FAILED",
+                "INCONCLUSIVE",
+                "TIMEDOUT",
+                "ERROR",
+                "SKIPPED"
+            ],
+            "type": "string"
+        }
+    },
+    "$id": "https://fuchsia.dev/schema/src/sys/run_test_suite/directory/schema/suite_summary.schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "Format for the summary of a suite run in a fuchsia test output directory.",
+    "properties": {
+        "artifacts": {
+            "$ref": "#/$defs/artifacts"
+        },
+        "cases": {
+            "description": "list of test cases",
+            "items": {
+                "$ref": "#/$defs/caseEntry"
+            },
+            "type": "array"
+        },
+        "name": {
+            "description": "name of the test suite",
+            "type": "string"
+        },
+        "outcome": {
+            "$ref": "#/$defs/outcome"
+        },
+        "version": {
+            "description": "Schema version",
+            "enum": [
+                "0"
+            ],
+            "type": "string"
+        }
+    },
+    "required": [
+        "outcome",
+        "name",
+        "cases",
+        "version"
+    ],
+    "type": "object"
+}
