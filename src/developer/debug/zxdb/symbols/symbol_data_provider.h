@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <map>
 #include <optional>
 #include <vector>
 
@@ -46,6 +47,11 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
   // running or this register wasn't saved on the stack frame.
   using GetRegisterCallback = fit::callback<void(const Err&, std::vector<uint8_t>)>;
 
+  // CAllback for multiple register values. The map will contain the requested register values when
+  // the error is not set.
+  using GetRegistersCallback =
+      fit::callback<void(const Err&, std::map<debug_ipc::RegisterID, std::vector<uint8_t>>)>;
+
   using GetFrameBaseCallback = fit::callback<void(const Err&, uint64_t value)>;
 
   using WriteCallback = fit::callback<void(const Err&)>;
@@ -66,6 +72,11 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
   // Request for register data with an asynchronous callback. The callback will be issued when the
   // register data is available.
   virtual void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback);
+
+  // A wrapper around GetRegister and GetRegisterAsync that collects all the requested register
+  // values. The callback will be issued with all collected values. If all values are known
+  // synchronously, the callback will be called reentrantly.
+  void GetRegisters(const std::vector<debug_ipc::RegisterID>& regs, GetRegistersCallback cb);
 
   // Writes the given canonical register ID.
   //

@@ -278,6 +278,7 @@ source_set("tests") {
     "module_symbols_impl_unittest.cc",
     "process_symbols_unittest.cc",
     "source_util_unittest.cc",
+    "symbol_data_provider_unittest.cc",
     "symbol_unittest.cc",
     "symbol_utils_unittest.cc",
     "target_symbols_unittest.cc",
