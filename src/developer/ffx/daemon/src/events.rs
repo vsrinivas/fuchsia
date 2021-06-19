@@ -20,6 +20,7 @@ pub struct TargetInfo {
     pub addresses: Vec<TargetAddr>,
     pub serial: Option<String>,
     pub ssh_port: Option<u16>,
+    pub is_fastboot: bool,
 }
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]

@@ -140,12 +140,16 @@ impl DaemonEventHandler {
         target.run_logger();
     }
 
-    fn handle_fastboot(&self, t: TargetInfo, tc: &TargetCollection) {
+    fn handle_fastboot(&self, t: TargetInfo, tc: &TargetCollection, over_network: bool) {
         log::trace!(
             "Found new target via fastboot: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
-        let target = tc.merge_insert(Target::from_target_info(t.into()));
+        let target = if over_network {
+            tc.merge_insert(Target::from_fastboot_target_info(t.into()))
+        } else {
+            tc.merge_insert(Target::from_target_info(t.into()))
+        };
         target.update_connection_state(|s| match s {
             ConnectionState::Disconnected | ConnectionState::Fastboot(_) => {
                 ConnectionState::Fastboot(Instant::now())
@@ -233,10 +237,14 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
         match event {
             DaemonEvent::WireTraffic(traffic) => match traffic {
                 WireTrafficType::Mdns(t) => {
-                    self.handle_mdns(t, &tc, Rc::downgrade(&self.config_reader)).await;
+                    if t.is_fastboot {
+                        self.handle_fastboot(t, &tc, true /*over network*/);
+                    } else {
+                        self.handle_mdns(t, &tc, Rc::downgrade(&self.config_reader)).await;
+                    }
                 }
                 WireTrafficType::Fastboot(t) => {
-                    self.handle_fastboot(t, &tc);
+                    self.handle_fastboot(t, &tc, false /*over network*/);
                 }
                 WireTrafficType::Zedboot(t) => {
                     self.handle_zedboot(t, &tc).await;
@@ -363,6 +371,7 @@ impl Daemon {
                                 .addresses
                                 .map(|a| a.into_iter().map(Into::into).collect())
                                 .unwrap_or(Vec::new()),
+                            is_fastboot: t.target_state == Some(bridge::TargetState::Fastboot),
                             ..Default::default()
                         })))
                         .unwrap(),

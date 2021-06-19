@@ -175,6 +175,7 @@ pub(crate) enum TargetAddrType {
     Ssh,
     Manual,
     Netsvc,
+    Fastboot,
 }
 
 #[derive(Debug, Clone, Hash)]
@@ -349,6 +350,22 @@ impl Target {
         target
     }
 
+    pub fn new_with_fastboot_addrs<S>(nodename: Option<S>, addrs: BTreeSet<TargetAddr>) -> Rc<Self>
+    where
+        S: Into<String>,
+    {
+        let target = Self::new();
+        target.nodename.replace(nodename.map(Into::into));
+        target.addrs.replace(
+            addrs
+                .iter()
+                .map(|e| TargetAddrEntry::new(*e, Utc::now(), TargetAddrType::Fastboot))
+                .collect(),
+        );
+        target.update_connection_state(|_| ConnectionState::Fastboot(Instant::now()));
+        target
+    }
+
     pub fn new_with_netsvc_addrs<S>(nodename: Option<S>, addrs: BTreeSet<TargetAddr>) -> Rc<Self>
     where
         S: Into<String>,
@@ -393,12 +410,17 @@ impl Target {
         Self::new_with_netsvc_addrs(t.nodename.take(), t.addresses.drain(..).collect())
     }
 
+    pub fn from_fastboot_target_info(mut t: TargetInfo) -> Rc<Self> {
+        Self::new_with_fastboot_addrs(t.nodename.take(), t.addresses.drain(..).collect())
+    }
+
     pub fn target_info(&self) -> TargetInfo {
         TargetInfo {
             nodename: self.nodename(),
             addresses: self.addrs(),
             serial: self.serial(),
             ssh_port: self.ssh_port(),
+            is_fastboot: matches!(self.get_connection_state(), ConnectionState::Fastboot(_)),
         }
     }
 
@@ -503,6 +525,21 @@ impl Target {
             .sorted_by(|e1, e2| recency(e1, e2))
             .find(|t| match t.addr_type {
                 TargetAddrType::Netsvc => true,
+                _ => false,
+            })
+            .map(|addr_entry| addr_entry.addr.clone())
+    }
+
+    pub fn fastboot_address(&self) -> Option<TargetAddr> {
+        use itertools::Itertools;
+        // Order e1 & e2 by most recent timestamp
+        let recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| e2.timestamp.cmp(&e1.timestamp);
+        self.addrs
+            .borrow()
+            .iter()
+            .sorted_by(|e1, e2| recency(e1, e2))
+            .find(|t| match t.addr_type {
+                TargetAddrType::Fastboot => true,
                 _ => false,
             })
             .map(|addr_entry| addr_entry.addr.clone())
