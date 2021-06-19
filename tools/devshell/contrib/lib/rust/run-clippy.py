@@ -55,11 +55,11 @@ def main():
     targets = set()
     if args.target:
         try:
-            targets.add(rust.GnTarget(target))
+            targets.add(rust.GnTarget(args.target))
         except ValueError as e:
             # The target may not be a Rust one, so it's okay if it didn't find the Cargo.toml.
             if args.v:
-                print("No Rust target found for %s:\n%s" % (target, e))
+                print("No Rust target found for %s:\n%s" % (args.target, e))
 
     for file in args.files:
         # Skip non-rust files.
@@ -83,7 +83,9 @@ def main():
         if cargo and os.path.isfile(cargo):
             cargos.add(cargo)
         else:
-            print("Cargo.toml file not found for %s, try running fx build." % target)
+            print(
+                "Cargo.toml file not found for %s, try running fx build." %
+                target)
             return 1
 
     rust_tool_prebuilts = \
