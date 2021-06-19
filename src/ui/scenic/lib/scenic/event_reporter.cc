@@ -4,8 +4,6 @@
 
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 
-#include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
-#include <lib/fostr/fidl/fuchsia/ui/scenic/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/ui/scenic/lib/scenic/util/print_event.h"
@@ -17,22 +15,18 @@ namespace {
 // Session::event_reporter_ is never null.
 class DefaultEventReporter : public EventReporter {
  public:
-  DefaultEventReporter() : weak_factory_(this) {}
-
-  void EnqueueEvent(fuchsia::ui::gfx::Event event) override {
-    FX_LOGS(WARNING) << "EventReporter not set up, dropped event: " << event;
+  DefaultEventReporter() : weak_factory_(this) {
+    FX_LOGS(INFO) << "EventReporter not set up, events will be dropped. This may be intended "
+                     "behavior for some Scenic clients.";
   }
 
-  void EnqueueEvent(fuchsia::ui::input::InputEvent event) override {
-    FX_LOGS(WARNING) << "EventReporter not set up, dropped event: " << event;
-  }
-
-  void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override {
-    FX_LOGS(WARNING) << "EventReporter not set up, dropped event: " << unhandled;
-  }
+  void EnqueueEvent(fuchsia::ui::gfx::Event) override {}         // nop
+  void EnqueueEvent(fuchsia::ui::input::InputEvent) override {}  // nop
+  void EnqueueEvent(fuchsia::ui::scenic::Command) override {}    // nop
 
   EventReporterWeakPtr GetWeakPtr() override { return weak_factory_.GetWeakPtr(); }
 
+ private:
   fxl::WeakPtrFactory<DefaultEventReporter> weak_factory_;  // must be last
 };
 

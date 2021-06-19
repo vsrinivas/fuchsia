@@ -36,7 +36,7 @@ class EventReporter {
   // Decode the event type and enqueue appropriately.
   void EnqueueEvent(fuchsia::ui::scenic::Event event);
 
-  // A handy backup implementation. Logs an error and drops events.
+  // A handy backup implementation. Just drops events.
   static const std::shared_ptr<EventReporter>& Default();
 };
 
