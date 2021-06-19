@@ -350,7 +350,7 @@ TEST(GestureArenaTest, SingleContender_ShouldWinImmediately) {
 }
 
 class GestureArenaParameterizedTest : public testing::TestWithParam<Contest> {};
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, GestureArenaParameterizedTest,
     testing::Values(
         HigherPriorityShouldLose_WithNoFollowdByYes_AgainstMaybe(),                  // 0
@@ -397,7 +397,7 @@ TEST_P(GestureArenaParameterizedTest, Basic) {
 enum class Win { kLeft, kRight, kHold, kNoWinner };
 class GestureArenaResponsePairTest
     : public testing::TestWithParam<std::tuple<GestureResponse, GestureResponse, Win>> {};
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     /*no header*/, GestureArenaResponsePairTest,
     testing::Values(
         // clang-format off
