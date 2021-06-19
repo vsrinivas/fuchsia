@@ -33,14 +33,15 @@ variant("asan") {
   }
   rustflags = []
   foreach(asan, needed_asan_libs) {
-    libclang_rt_asan =
-        exec_script("/usr/bin/env",
-                    [
-                      "${clang_prefix}/clang",
-                      "--target=${clang_target}",
-                      "-print-file-name=libclang_rt.${asan}${extension}",
-                    ],
-                    "trim string")
+    libclang_rt_asan = rebase_path(
+            exec_script("/usr/bin/env",
+                        [
+                          "${clang_prefix}/clang",
+                          "--target=${clang_target}",
+                          "-print-file-name=libclang_rt.${asan}${extension}",
+                        ],
+                        "trim string"),
+            root_build_dir)
     rustflags += [ "-Clink-arg=${libclang_rt_asan}" ]
   }
   if (is_fuchsia) {
