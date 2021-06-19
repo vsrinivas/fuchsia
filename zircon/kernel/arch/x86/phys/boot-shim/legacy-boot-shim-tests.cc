@@ -102,6 +102,10 @@ TEST(X86LegacyBootShimTests, AcpiItems) {
 
   constexpr dcfg_simple_pio_t kUart = {.base = 0x3f8};
   constexpr size_t kUartItemSize = sizeof(zbi_header_t) + sizeof(kUart);
+
+  constexpr uint64_t kRsdp = 0x7fa2'9000;
+  constexpr size_t kRsdpItemSize = sizeof(zbi_header_t) + sizeof(kRsdp);
+
   {
     auto mem_reader = acpi_lite::testing::IntelNuc7i5dnPhysMemReader();
     auto result = acpi_lite::AcpiParser::Init(mem_reader, mem_reader.rsdp());
@@ -111,7 +115,7 @@ TEST(X86LegacyBootShimTests, AcpiItems) {
   }
 
   size_t data_budget = shim.size_bytes();
-  EXPECT_GE(data_budget, kUartItemSize);
+  EXPECT_GE(data_budget, kUartItemSize + kRsdpItemSize);
 
   auto [buffer, owner] = test.GetZbiBuffer();
   LegacyBootShim::DataZbi zbi(buffer);
@@ -120,7 +124,7 @@ TEST(X86LegacyBootShimTests, AcpiItems) {
   auto result = shim.AppendItems(zbi);
   ASSERT_TRUE(result.is_ok());
 
-  zbitl::ByteView uart_payload;
+  zbitl::ByteView uart_payload, rsdp_payload;
   for (auto [header, payload] : zbi) {
     switch (header->type) {
       case ZBI_TYPE_KERNEL_DRIVER:
@@ -128,12 +132,20 @@ TEST(X86LegacyBootShimTests, AcpiItems) {
         EXPECT_FALSE(payload.empty());
         uart_payload = payload;
         break;
+      case ZBI_TYPE_ACPI_RSDP:
+        EXPECT_TRUE(rsdp_payload.empty(), "too many rsdp items");
+        EXPECT_FALSE(payload.empty());
+        rsdp_payload = payload;
+        break;
     }
   }
   EXPECT_TRUE(zbi.take_error().is_ok());
 
   ASSERT_EQ(sizeof(kUart), uart_payload.size());
   EXPECT_BYTES_EQ(uart_payload.data(), &kUart, sizeof(kUart));
+
+  ASSERT_EQ(sizeof(kRsdp), rsdp_payload.size());
+  EXPECT_BYTES_EQ(rsdp_payload.data(), &kRsdp, sizeof(kRsdp));
 }
 
 }  // namespace

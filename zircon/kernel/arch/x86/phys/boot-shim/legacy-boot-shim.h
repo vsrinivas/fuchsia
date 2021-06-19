@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_LEGACY_BOOT_SHIM_H_
 #define ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_LEGACY_BOOT_SHIM_H_
 
+#include <lib/acpi_lite.h>
 #include <lib/boot-shim/acpi.h>
 #include <lib/boot-shim/boot-shim.h>
 #include <lib/boot-shim/test-serial-number.h>
@@ -16,6 +17,7 @@
 
 using LegacyBootShimBase = boot_shim::BootShim<  //
     boot_shim::AcpiUartItem,                     //
+    boot_shim::AcpiRsdpItem,                     //
     boot_shim::SingleItem<ZBI_TYPE_MEM_CONFIG>,  //
     boot_shim::TestSerialNumberItem>;
 
@@ -30,8 +32,9 @@ class LegacyBootShim : public LegacyBootShimBase {
     Check("Error scanning ZBI", Get<SerialNumber>().Init(input_zbi_));
   }
 
-  void InitAcpi(const acpi_lite::AcpiParserInterface& parser) {
+  void InitAcpi(const acpi_lite::AcpiParser& parser) {
     Get<boot_shim::AcpiUartItem>().Init(parser);
+    Get<boot_shim::AcpiRsdpItem>().Init(parser);
   }
 
   InputZbi& input_zbi() { return input_zbi_; }
