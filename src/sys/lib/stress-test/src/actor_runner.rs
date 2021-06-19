@@ -40,8 +40,10 @@ impl ActorRunner {
         Self { name: name.to_string(), delay, actor: actor as Arc<Mutex<dyn Actor>> }
     }
 
-    /// Run the actor on a new thread indefinitely for the given generation.
+    /// Run the actor in a new task indefinitely for the given generation.
     /// The runner will stop if the actor requests an environment reset.
+    /// The amount of parallelism is determined by the caller's executor.
+    // TODO(fxbug.dev/78793): Find a different way to set parallelism.
     pub fn run(
         self,
         counter_tx: CounterTx,
@@ -90,6 +92,6 @@ impl ActorRunner {
                 local_count += 1;
             }
         };
-        (Task::blocking(Abortable::new(fut, abort_registration)), abort_handle)
+        (Task::spawn(Abortable::new(fut, abort_registration)), abort_handle)
     }
 }

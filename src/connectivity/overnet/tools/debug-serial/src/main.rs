@@ -5,14 +5,14 @@
 //! Component that allows access to the kernel's debug serial line
 
 use anyhow::{Context as _, Error};
-use fasync::Task;
+use fasync::unblock;
 use fidl_fuchsia_boot::RootResourceMarker;
 use fidl_fuchsia_hardware_serial::{
     Class, NewDeviceProxy_Request, NewDeviceProxy_RequestStream, NewDeviceRequest,
 };
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, Time, Timer};
 use fuchsia_component::server::ServiceFs;
-use fuchsia_zircon as zx;
+use fuchsia_zircon::{self as zx, DurationNum};
 use futures::channel::mpsc;
 use futures::lock::Mutex;
 use futures::prelude::*;
@@ -26,9 +26,13 @@ enum IncomingService {
 async fn writer_task(mut rx: mpsc::Receiver<Vec<u8>>) -> Result<(), Error> {
     while let Some(data) = rx.next().await {
         log::trace!("write bytes: {:?}", data);
-        zx::Status::ok(unsafe { zx_debug_write(data.as_ptr(), data.len()) })
-            .context("zx_debug_write failed: check your kernel command line; is kernel.enable-serial-syscalls=true, and kernel.serial=<<whatever is appropriate for your platform>>")?;
-        std::thread::sleep(std::time::Duration::from_micros(30 * data.len() as u64));
+        let data_len = data.len();
+        unblock(move || {
+            zx::Status::ok(unsafe { zx_debug_write(data.as_ptr(), data.len()) })
+                .context("zx_debug_write failed: check your kernel command line; is kernel.enable-serial-syscalls=true, and kernel.serial=<<whatever is appropriate for your platform>>")?;
+            Result::<(), Error>::Ok(())
+        }).await?;
+        Timer::new(Time::after((30 * data_len as i64).micros())).await;
     }
     Ok(())
 }
@@ -38,19 +42,19 @@ async fn reader_task(
     root_resource: zx::Resource,
 ) -> Result<(), Error> {
     loop {
-        let mut buffer = [0u8; 1024];
-        let mut actual = 0usize;
-        zx::Status::ok(unsafe {
-            zx_debug_read(
-                root_resource.raw_handle(),
-                buffer.as_mut_ptr(),
-                buffer.len(),
-                &mut actual,
-            )
+        let raw_handle = root_resource.raw_handle();
+        let v = unblock(move || {
+            let mut buffer = [0u8; 1024];
+            let mut actual = 0usize;
+            zx::Status::ok(unsafe {
+                zx_debug_read(raw_handle, buffer.as_mut_ptr(), buffer.len(), &mut actual)
+            })
+            .context("zx_debug_read")?;
+            Ok::<Vec<u8>, Error>(buffer[..actual].to_vec())
         })
-        .context("zx_debug_read")?;
-        log::trace!("got bytes: {:?}", &buffer[..actual]);
-        if let Err(e) = tx.send((&buffer[..actual]).to_vec()).await {
+        .await?;
+        log::trace!("got bytes: {:?}", &v);
+        if let Err(e) = tx.send(v).await {
             log::warn!("failed to send read to channel: {:?}", e);
         }
     }
@@ -73,10 +77,8 @@ async fn main() -> Result<(), Error> {
 
     let reader = &Mutex::new(Some(rx_read));
 
-    let r = future::try_join3(
-        Task::blocking(reader_task(tx_read, root_resource)),
-        Task::blocking(writer_task(rx_write)),
-        async move {
+    let r =
+        future::try_join3(reader_task(tx_read, root_resource), writer_task(rx_write), async move {
             fs.for_each_concurrent(None, move |IncomingService::NewDeviceProxy(requests)| {
                 let tx_write = tx_write.clone();
                 requests.for_each_concurrent(None, move |request| {
@@ -98,10 +100,9 @@ async fn main() -> Result<(), Error> {
             })
             .await;
             Ok(())
-        },
-    )
-    .map_ok(drop)
-    .await;
+        })
+        .map_ok(drop)
+        .await;
 
     if let Err(e) = &r {
         log::error!("main loop failed: {:?}", e);

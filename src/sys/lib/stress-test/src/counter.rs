@@ -18,13 +18,13 @@ use {
 /// This ensures that runners are not blocked.
 pub type CounterTx = mpsc::UnboundedSender<String>;
 
-/// Starts a new thread that maintains a count of all successful operations
-/// This thread will terminate when the target number of operations has been hit.
+/// Starts a new task that maintains a count of all successful operations
+/// This task will terminate when the target number of operations has been hit.
 ///
 /// Returns the counter task and a CounterTx.
 pub fn start_counter(target: u64) -> (Task<()>, CounterTx) {
     let (tx, mut rx) = mpsc::unbounded();
-    let task = Task::blocking(async move {
+    let task = Task::spawn(async move {
         // Keep track of global count + individual actor contributions
         let mut count_map: HashMap<String, u64> = HashMap::new();
         let mut total = 0;

@@ -527,7 +527,7 @@ impl InspectData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::connect_proxy;
+    use crate::utils::connect_channel_to_service;
     use inspect::assert_data_tree;
     use matches::assert_matches;
     use std::cell::Cell;
@@ -816,23 +816,24 @@ mod tests {
             .await
             .unwrap();
 
-        // We need to run the connect_proxy and associated FIDL calls in a separate thread because
-        // the underlying fdio calls block the calling thread. Since the Directory and fake driver
-        // are set up on the initial thread, this would otherwise result in a deadlock.
-        fasync::Task::blocking(async {
-            // Connect to the fake driver
-            let proxy = connect_proxy::<fdevicemgr::SystemStateTransitionMarker>(
-                &"/dev/class/fake".to_string(),
-            )
-            .unwrap();
+        let (proxy, server_end) =
+            fidl::endpoints::create_proxy::<fdevicemgr::SystemStateTransitionMarker>().unwrap();
 
-            // Verify we can make a FIDL call to the fake driver and get a successful response
-            assert!(proxy
-                .set_termination_system_state(fpowerstatecontrol::SystemPowerState::Reboot)
-                .await
-                .is_ok());
+        // We need to run `connect_channel_to_service` in a separate thread because the underlying
+        // fdio calls block the calling thread. Since the Directory and fake driver are set up on
+        // the initial thread, this would otherwise result in a deadlock.
+        fasync::unblock(|| {
+            // Use `connect_channel_to_service` instead of using `connect_proxy` directly because
+            // connect_proxy requires an Executor (when `into_proxy` is called on the ClientEnd).
+            connect_channel_to_service(server_end, &"/dev/class/fake".to_string()).unwrap()
         })
         .await;
+
+        // Verify we can make a FIDL call to the fake driver and get a successful response
+        assert!(proxy
+            .set_termination_system_state(fpowerstatecontrol::SystemPowerState::Reboot)
+            .await
+            .is_ok());
     }
 
     /// Tests that the DriverManagerHandler correctly processes the SetTerminationState message by

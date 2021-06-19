@@ -32,7 +32,7 @@ pub async fn get_target_nodename() -> Result<String> {
     let start = Instant::now();
     loop {
         let mut cmd = isolate.ffx(&["ffx", "target", "list"]);
-        let out = fuchsia_async::Task::blocking(async move { cmd.output() }).await?;
+        let out = fuchsia_async::unblock(move || cmd.output()).await?;
         if out.stdout.len() > 10 {
             break;
         }
@@ -42,10 +42,9 @@ pub async fn get_target_nodename() -> Result<String> {
     }
 
     let mut cmd = isolate.ffx(&["target", "list", "-f", "j"]);
-    let out =
-        fuchsia_async::Task::blocking(async move { cmd.output().context("failed to execute") })
-            .await
-            .context("getting target list")?;
+    let out = fuchsia_async::unblock(move || cmd.output().context("failed to execute"))
+        .await
+        .context("getting target list")?;
 
     ensure!(out.status.success(), "Looking up a target name failed: {:?}", out);
 

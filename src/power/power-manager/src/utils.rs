@@ -38,23 +38,31 @@ fn wait_for_path(path: &std::path::Path) -> Result<(), anyhow::Error> {
     }
 }
 
-/// Create and connect a FIDL proxy to the service at `path`. Calls `wait_for_path` to ensure the
-/// path exists before attempting a connection.
+/// Creates a FIDL proxy and connects its ServerEnd to the service at the specified path.
 pub fn connect_proxy<T: fidl::endpoints::ServiceMarker>(
     path: &String,
 ) -> Result<T::Proxy, anyhow::Error> {
-    let (proxy, server) = fidl::endpoints::create_proxy::<T>()
-        .map_err(|e| anyhow::format_err!("Failed to create proxy: {}", e))?;
+    let (proxy, server_end) = fidl::endpoints::create_proxy::<T>()?;
+    connect_channel_to_service(server_end, path)?;
+    Ok(proxy)
+}
 
+/// Connects a ServerEnd to the service at the specified path. Calls `wait_for_path` to ensure the
+/// path exists before attempting a connection.
+pub fn connect_channel_to_service<T: fidl::endpoints::ServiceMarker>(
+    server_end: fidl::endpoints::ServerEnd<T>,
+    path: &String,
+) -> Result<(), anyhow::Error> {
     // Verify the path exists before attempting to connect to it. We do this because when connecting
     // to drivers, a connection to a missing driver path would succeed but calls to it would fail.
     // So instead of requiring us to implement logic at a higher layer to poll repeatedly until a
     // driver is present, just verify the path exists here using the appropriate watcher APIs.
     wait_for_path(&std::path::Path::new(path))?;
 
-    fdio::service_connect(path, server.into_channel())
+    fdio::service_connect(path, server_end.into_channel())
         .map_err(|s| anyhow::format_err!("Failed to connect to service at {}: {}", path, s))?;
-    Ok(proxy)
+
+    Ok(())
 }
 
 /// The number of nanoseconds since the system was powered on.

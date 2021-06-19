@@ -8,7 +8,7 @@ use {
     crate::target::{ConnectionState, Target},
     anyhow::{anyhow, Context, Result},
     async_io::Async,
-    fuchsia_async::{Task, Timer},
+    fuchsia_async::{unblock, Task, Timer},
     futures::channel::oneshot,
     futures::future::FutureExt,
     futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
@@ -174,7 +174,7 @@ impl HostPipeConnection {
             // dropping) then will set the target to disconnected state. If
             // there was an error running the command for some reason, then
             // continue and attempt to run the command again.
-            match Task::blocking(async move { cmd.wait() })
+            match unblock(move || cmd.wait())
                 .await
                 .map_err(|e| anyhow!("host-pipe error running try-wait: {}", e.to_string()))
             {

@@ -13,7 +13,7 @@
 //! See tests for examples using the Zedmon power monitor.
 
 use anyhow::{bail, format_err, Result};
-use fuchsia_async::Task;
+use fuchsia_async::unblock;
 use futures::{
     io::{AsyncRead, AsyncWrite},
     task::{Context, Poll},
@@ -69,7 +69,7 @@ lazy_static! {
 /// writing.
 pub struct AsyncInterface {
     serial: String,
-    task: Option<Pin<Box<Task<std::io::Result<usize>>>>>,
+    task: Option<Pin<Box<dyn Future<Output = std::io::Result<usize>>>>>,
 }
 
 impl Interface {
@@ -213,7 +213,7 @@ impl AsyncWrite for AsyncInterface {
         let buffer = buf[..].to_vec();
         if self.task.is_none() {
             let serial_clone = self.serial.clone();
-            self.task.replace(Box::pin(Task::blocking(async move {
+            self.task.replace(Box::pin(unblock(move || {
                 let read_guard = IFACE_REGISTRY
                     .read()
                     .expect("could not acquire read lock on interface registry");
