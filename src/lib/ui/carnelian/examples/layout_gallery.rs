@@ -164,7 +164,8 @@ impl ViewAssistant for LayoutsViewAssistant {
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
-            let mut builder = SceneBuilder::new().background_color(Color::white());
+            let mut builder =
+                SceneBuilder::new().background_color(Color::white()).enable_mouse_cursor(false);
             builder.group().stack().expand().align(Alignment::top_center()).contents(|builder| {
                 let label = match self.mode {
                     Mode::Stack(alignment) => format!("make_two_boxes_{:?}", ALIGNS[alignment]()),

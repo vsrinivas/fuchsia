@@ -63,6 +63,9 @@ pub struct SceneOptions {
     /// should round the corners of the screen to match the
     /// presentation that sometimes occurs with Scenic.
     pub round_scene_corners: bool,
+    /// True if, when running without Scenic, the mouse cursor should
+    /// be drawn.
+    pub enable_mouse_cursor: bool,
     /// Option arranger for the root group.
     pub root_arranger: Option<ArrangerPtr>,
 }
@@ -76,7 +79,12 @@ impl SceneOptions {
 
 impl Default for SceneOptions {
     fn default() -> Self {
-        Self { background_color: Color::new(), round_scene_corners: false, root_arranger: None }
+        Self {
+            background_color: Color::new(),
+            round_scene_corners: false,
+            enable_mouse_cursor: true,
+            root_arranger: None,
+        }
     }
 }
 
@@ -293,13 +301,18 @@ impl Scene {
             None
         };
 
-        if context.mouse_cursor_position.is_some() && self.mouse_cursor_raster.is_none() {
-            self.mouse_cursor_raster = Some(create_mouse_cursor_raster(render_context));
-        }
+        let mouse_cursor_position = if self.options.enable_mouse_cursor {
+            if context.mouse_cursor_position.is_some() && self.mouse_cursor_raster.is_none() {
+                self.mouse_cursor_raster = Some(create_mouse_cursor_raster(render_context));
+            }
+            &context.mouse_cursor_position
+        } else {
+            &None
+        };
 
         Self::update_composition(
             self.layers(size, render_context, context),
-            &context.mouse_cursor_position,
+            mouse_cursor_position,
             &self.mouse_cursor_raster,
             &corner_knockouts,
             &mut self.composition,
@@ -486,6 +499,13 @@ impl SceneBuilder {
     /// presentation that sometimes occurs with Scenic.
     pub fn round_scene_corners(mut self, round: bool) -> Self {
         self.options.round_scene_corners = round;
+        self
+    }
+
+    /// If true, when running without Scenic, the mouse cursor should
+    /// be drawn.
+    pub fn enable_mouse_cursor(mut self, enable: bool) -> Self {
+        self.options.enable_mouse_cursor = enable;
         self
     }
 

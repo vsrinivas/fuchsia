@@ -409,6 +409,7 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
             let mut builder = SceneBuilder::new()
                 .background_color(self.color_scheme.back)
+                .enable_mouse_cursor(false)
                 .round_scene_corners(self.round_scene_corners);
 
             let textgrid = if let Some(animation) = &self.animation {
