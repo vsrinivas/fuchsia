@@ -29,19 +29,20 @@
 #include "src/virtualization/tests/logger.h"
 #include "src/virtualization/tests/periodic_logger.h"
 
-static constexpr char kGuestManagerUrl[] =
-    "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
-static constexpr char kRealm[] = "realmguestintegrationtest";
-// TODO(fxbug.dev/12589): Use consistent naming for the test utils here.
-static constexpr char kFuchsiaTestUtilsUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtualization-test-utils";
-static constexpr char kDebianTestUtilDir[] = "/test_utils";
-static constexpr zx::duration kLoopConditionStep = zx::msec(10);
-static constexpr zx::duration kRetryStep = zx::msec(200);
-static constexpr uint32_t kTerminaStartupListenerPort = 7777;
-static constexpr uint32_t kTerminaMaitredPort = 8888;
+namespace {
 
-static bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition, zx::time deadline) {
+constexpr char kGuestManagerUrl[] =
+    "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
+constexpr char kRealm[] = "realmguestintegrationtest";
+// TODO(fxbug.dev/12589): Use consistent naming for the test utils here.
+constexpr char kFuchsiaTestUtilsUrl[] = "fuchsia-pkg://fuchsia.com/virtualization-test-utils";
+constexpr char kDebianTestUtilDir[] = "/test_utils";
+constexpr zx::duration kLoopConditionStep = zx::msec(10);
+constexpr zx::duration kRetryStep = zx::msec(200);
+constexpr uint32_t kTerminaStartupListenerPort = 7777;
+constexpr uint32_t kTerminaMaitredPort = 8888;
+
+bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition, zx::time deadline) {
   while (zx::clock::get_monotonic() < deadline) {
     // Check our condition.
     if (condition()) {
@@ -56,7 +57,7 @@ static bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition, zx:
   return condition();
 }
 
-static std::string JoinArgVector(const std::vector<std::string>& argv) {
+std::string JoinArgVector(const std::vector<std::string>& argv) {
   std::string result;
   for (const auto& arg : argv) {
     result += arg;
@@ -65,11 +66,13 @@ static std::string JoinArgVector(const std::vector<std::string>& argv) {
   return result;
 }
 
+}  // namespace
+
 // Execute |command| on the guest serial and wait for the |result|.
 zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
                                    const std::unordered_map<std::string, std::string>& env,
                                    zx::time deadline, std::string* result, int32_t* return_code) {
-  if (env.size() > 0) {
+  if (!env.empty()) {
     FX_LOGS(ERROR) << "Only TerminaEnclosedGuest::Execute accepts environment variables.";
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -462,7 +465,7 @@ zx_status_t TerminaEnclosedGuest::Execute(const std::vector<std::string>& argv,
     *result = std::move(command_result.value().out);
     if (!command_result.value().err.empty()) {
       *result += "\n";
-      *result += std::move(command_result.value().err);
+      *result += command_result.value().err;
     }
   }
   if (return_code) {
@@ -472,9 +475,9 @@ zx_status_t TerminaEnclosedGuest::Execute(const std::vector<std::string>& argv,
 }
 
 std::vector<std::string> TerminaEnclosedGuest::GetTestUtilCommand(
-    const std::string& util, const std::vector<std::string>& args) {
-  std::vector<std::string> argv;
-  argv.emplace_back("/tmp/test_utils/" + util);
-  argv.insert(argv.end(), args.begin(), args.end());
-  return argv;
+    const std::string& util, const std::vector<std::string>& argv) {
+  std::vector<std::string> final_argv;
+  final_argv.emplace_back("/tmp/test_utils/" + util);
+  final_argv.insert(final_argv.end(), argv.begin(), argv.end());
+  return final_argv;
 }
