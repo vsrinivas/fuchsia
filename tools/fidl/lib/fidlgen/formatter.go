@@ -92,26 +92,26 @@ func (s formattedStream) Close() error {
 	in, err := cmd.StdinPipe()
 	if err != nil {
 		s.out.Write(s.unformattedBuf.Bytes())
-		return err
+		return fmt.Errorf("Error creating stdin pipe: %w", err)
 	}
 	if err := cmd.Start(); err != nil {
 		s.out.Write(s.unformattedBuf.Bytes())
-		return err
+		return fmt.Errorf("Error starting formatter process: %w", err)
 	}
 	if _, err := in.Write(s.unformattedBuf.Bytes()); err != nil {
 		s.out.Write(s.unformattedBuf.Bytes())
-		return err
+		return fmt.Errorf("Error writing stdin: %w", err)
 	}
 	if err := in.Close(); err != nil {
 		s.out.Write(s.unformattedBuf.Bytes())
-		return err
+		return fmt.Errorf("Error closing stdin: %w", err)
 	}
 	if err := cmd.Wait(); err != nil {
 		s.out.Write(s.unformattedBuf.Bytes())
 		if errContent := errBuf.Bytes(); len(errContent) != 0 {
-			return fmt.Errorf("%s: %s", err, string(errContent))
+			return fmt.Errorf("Formatter (%v) error: %w (stderr: %s)", cmd, err, string(errContent))
 		}
-		return err
+		return fmt.Errorf("Formatter (%v) error but stderr was empty: %w", cmd, err)
 	}
 	_, err = s.out.Write(formattedBuf.Bytes())
 	return err

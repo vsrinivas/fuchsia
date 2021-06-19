@@ -252,19 +252,23 @@ func generateFile(filename, clangFormatPath string, contentGenerator func(wr io.
 
 	file, err := fidlgen.NewLazyWriter(filename)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error creating LazyWriter: %w", err)
 	}
 
 	generatedPipe, err := cpp.NewClangFormatter(clangFormatPath).FormatPipe(file)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error in FormatPipe: %w", err)
 	}
 
 	if err := contentGenerator(generatedPipe); err != nil {
-		return err
+		return fmt.Errorf("Error generating content: %w", err)
 	}
 
-	return generatedPipe.Close()
+	if err := generatedPipe.Close(); err != nil {
+		return fmt.Errorf("Error closing generatedPipe: %w", err)
+	}
+
+	return nil
 }
 
 func (gen *Generator) generateHeader(wr io.Writer, tree cpp.Root) error {
