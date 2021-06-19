@@ -469,11 +469,11 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   } boot_list[] = {
       // ZIRCON-A with legacy fallback filename on EFI partition
       {L"zircon.bin", "zircon.bin", GUID_ZIRCON_A_VALUE, GUID_ZIRCON_A_NAME, &kernel, &ksz},
+      // no filename fallback for ZIRCON-B
+      {NULL, NULL, GUID_ZIRCON_B_VALUE, GUID_ZIRCON_B_NAME, &kernel_b, &ksz_b},
       // Recovery / ZIRCON-R
       {L"zedboot.bin", "zedboot.bin", GUID_ZIRCON_R_VALUE, GUID_ZIRCON_R_NAME, &zedboot_kernel,
        &zedboot_size},
-      // no filename fallback for ZIRCON-B
-      {NULL, NULL, GUID_ZIRCON_B_VALUE, GUID_ZIRCON_B_NAME, &kernel_b, &ksz_b},
   };
   unsigned i;
 
