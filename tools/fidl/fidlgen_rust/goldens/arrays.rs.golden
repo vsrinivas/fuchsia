@@ -135,15 +135,21 @@ pub struct TableSmallArray {
     pub __non_exhaustive: (),
 }
 
+impl TableSmallArray {
+    /// An empty table with every field set to None.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { a: None, unknown_data: None, __non_exhaustive: () };
+}
+
 fidl_table! {
-  name: TableSmallArray,
-  members: [
-    a {
-      ty: [u32; 2],
-      ordinal: 1,
-    },
-  ],
-  value_unknown_member: unknown_data,
+    name: TableSmallArray,
+    members: [
+        a {
+            ty: [u32; 2],
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: unknown_data,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -157,13 +163,19 @@ pub struct TableLargeArray {
     pub __non_exhaustive: (),
 }
 
+impl TableLargeArray {
+    /// An empty table with every field set to None.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { a: None, unknown_data: None, __non_exhaustive: () };
+}
+
 fidl_table! {
-  name: TableLargeArray,
-  members: [
-    a {
-      ty: [u32; 100],
-      ordinal: 1,
-    },
-  ],
-  value_unknown_member: unknown_data,
+    name: TableLargeArray,
+    members: [
+        a {
+            ty: [u32; 100],
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: unknown_data,
 }

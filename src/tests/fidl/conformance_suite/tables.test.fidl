@@ -5,6 +5,13 @@ deprecated_syntax;
 
 library conformance;
 
+table EmptyTable {
+};
+
+struct StructOfEmptyTable {
+    EmptyTable table;
+};
+
 table SimpleTable {
     1: int64 x;
     2: reserved;
@@ -53,4 +60,15 @@ table ReverseOrdinalTable {
 
 struct StructOfReverseOrdinalTable {
     ReverseOrdinalTable table;
+};
+
+table TableWithGaps {
+    1: reserved;
+    2: int32 second;
+    3: reserved;
+    4: int32 fourth;
+};
+
+struct StructOfTableWithGaps {
+    TableWithGaps table;
 };

@@ -48,3 +48,13 @@ flexible resource union FlexibleResourceThing {
     1: uint32 number;
     2: string name;
 };
+
+table ValueRecord {
+    1: string name;
+    2: uint8 age;
+};
+
+resource table ResourceRecord {
+    1: string name;
+    2: uint8 age;
+};

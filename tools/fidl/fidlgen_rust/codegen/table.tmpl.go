@@ -11,37 +11,62 @@ const tableTmpl = `
 {{- end}}
 {{ .Derives }}
 pub struct {{ .Name }} {
-  {{- range .Members }}
-  {{- range .DocComments}}
-  ///{{ . }}
-  {{- end}}
-  pub {{ .Name }}: Option<{{ .Type }}>,
-  {{- end }}
-  /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
-  /// map from ordinals to raw data. The ` + "`Some`" + ` case is always nonempty.
-  pub unknown_data: Option<std::collections::BTreeMap<u64, {{ if .IsResourceType }}fidl::UnknownData{{ else }}Vec<u8>{{ end }}>>,
-  #[deprecated = "Use ` + "`..{{ .Name }}::EMPTY` to construct and `..`" + ` to match."]
-  #[doc(hidden)]
-  pub __non_exhaustive: (),
+	{{- range .Members }}
+	{{- range .DocComments}}
+	///{{ . }}
+	{{- end}}
+	pub {{ .Name }}: Option<{{ .Type }}>,
+	{{- end }}
+	/// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+	/// map from ordinals to raw data. The ` + "`Some`" + ` case is always nonempty.
+	pub unknown_data: Option<std::collections::BTreeMap<u64, {{ if .IsResourceType }}fidl::UnknownData{{ else }}Vec<u8>{{ end }}>>,
+	#[deprecated = "Use ` + "`..{{ .Name }}::EMPTY` to construct and `..`" + ` to match."]
+	#[doc(hidden)]
+	pub __non_exhaustive: (),
+}
+
+impl {{ .Name }} {
+	{{/*
+		Note: We use a constant below since this is currently the only way the
+		to make the functional update syntax work. For example:
+
+			SomeTable { some_member: some_value, ..SomeTable::EMPTY }
+
+		Using a constant (::EMPTY) will only create members that do not have a
+		value explicitly specified, whereas using a function (::empty()) will
+		fully instantiate an instance of the struct and overwrite the members
+		that do not have a value specified. The latter prevents creating const
+		tables because overwiting heap allocated values (even when wrapped in
+		Option<_> and set to None) will first drop them, which is not const.
+	*/}}
+	/// An empty table with every field set to None.
+	#[allow(deprecated)]
+	pub const EMPTY: Self = Self {
+		{{- range .Members }}
+		{{ .Name }}: None,
+		{{- end }}
+		unknown_data: None,
+		__non_exhaustive: (),
+	};
 }
 
 fidl_table! {
-  name: {{ .Name }},
-  members: [
-    {{- range .Members }}
-    {{ .Name }} {
-      ty: {{ .Type }},
-      ordinal: {{ .Ordinal }},
-      {{- if .HasHandleMetadata }}
-      handle_metadata: {
-        handle_subtype: {{ .HandleSubtype }},
-        handle_rights: {{ .HandleRights }},
-      },
-      {{- end }}
-    },
-    {{- end }}
-  ],
-  {{ if .IsResourceType }}resource{{ else }}value{{ end }}_unknown_member: unknown_data,
+	name: {{ .Name }},
+	members: [
+		{{- range .Members }}
+		{{ .Name }} {
+			ty: {{ .Type }},
+			ordinal: {{ .Ordinal }},
+			{{- if .HasHandleMetadata }}
+			handle_metadata: {
+				handle_subtype: {{ .HandleSubtype }},
+				handle_rights: {{ .HandleRights }},
+			},
+			{{- end }}
+		},
+		{{- end }}
+	],
+	{{ if .IsResourceType }}resource{{ else }}value{{ end }}_unknown_member: unknown_data,
 }
-{{- end }}
+{{ end }}
 `

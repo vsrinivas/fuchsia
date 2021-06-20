@@ -304,10 +304,10 @@ mod tests {
     use {
         super::*,
         crate::{directory, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-        fidl::fidl_table,
+        fidl_fidl_test_schema::{DataTable1, DataTable2},
         fuchsia_async as fasync,
         matches::assert_matches,
-        std::{collections::BTreeMap, path::Path},
+        std::path::Path,
         tempfile::TempDir,
     };
 
@@ -507,29 +507,6 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn write_fidl_writes_to_file() {
-        struct DataTable {
-            num: Option<i32>,
-            string: Option<String>,
-            pub unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
-            #[deprecated = "Do not use __non_exhaustive"]
-            pub __non_exhaustive: (),
-        }
-
-        fidl_table! {
-            name: DataTable,
-            members: [
-                num {
-                    ty: i32,
-                    ordinal: 1,
-                },
-                string {
-                    ty: String,
-                    ordinal: 2,
-                },
-            ],
-            value_unknown_member: unknown_data,
-        }
-
         let tempdir = TempDir::new().unwrap();
         let dir = directory::open_in_namespace(
             tempdir.path().to_str().unwrap(),
@@ -541,10 +518,10 @@ mod tests {
         let flags = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE | fidl_fuchsia_io::OPEN_FLAG_CREATE;
         let file = directory::open_file(&dir, "file", flags).await.unwrap();
 
-        let mut data = DataTable {
+        let mut data = DataTable1 {
             num: Some(42),
             string: Some(DATA_FILE_CONTENTS.to_string()),
-            ..DataTable::EMPTY
+            ..DataTable1::EMPTY
         };
 
         // Binary encoded FIDL message, with header and padding.
@@ -559,44 +536,15 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn read_fidl_reads_from_file() {
-        #[derive(PartialEq, Eq, Debug)]
-        struct DataTable {
-            num: Option<i32>,
-            string: Option<String>,
-            new_field: Option<String>,
-            pub unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
-            #[deprecated = "Do not use __non_exhaustive"]
-            pub __non_exhaustive: (),
-        }
-
-        fidl_table! {
-            name: DataTable,
-            members: [
-                num {
-                    ty: i32,
-                    ordinal: 1,
-                },
-                string {
-                    ty: String,
-                    ordinal: 2,
-                },
-                new_field {
-                    ty: String,
-                    ordinal: 3,
-                },
-            ],
-            value_unknown_member: unknown_data,
-        }
-
         let file = open_in_namespace("/pkg/data/fidl_file", OPEN_RIGHT_READABLE).unwrap();
 
-        let contents = read_fidl::<DataTable>(&file).await.unwrap();
+        let contents = read_fidl::<DataTable2>(&file).await.unwrap();
 
-        let data = DataTable {
+        let data = DataTable2 {
             num: Some(42),
             string: Some(DATA_FILE_CONTENTS.to_string()),
             new_field: None,
-            ..DataTable::EMPTY
+            ..DataTable2::EMPTY
         };
         assert_eq!(&contents, &data);
     }

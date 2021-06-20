@@ -376,15 +376,21 @@ pub struct Table {
     pub __non_exhaustive: (),
 }
 
+impl Table {
+    /// An empty table with every field set to None.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { field: None, unknown_data: None, __non_exhaustive: () };
+}
+
 fidl_table! {
-  name: Table,
-  members: [
-    field {
-      ty: i32,
-      ordinal: 1,
-    },
-  ],
-  value_unknown_member: unknown_data,
+    name: Table,
+    members: [
+        field {
+            ty: i32,
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: unknown_data,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

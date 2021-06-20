@@ -1,0 +1,16 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.test.schema;
+
+table DataTable1 {
+    1: int32 num;
+    2: string:MAX string;
+};
+
+table DataTable2 {
+    1: int32 num;
+    2: string:MAX string;
+    3: string:MAX new_field;
+};

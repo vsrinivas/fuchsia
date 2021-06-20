@@ -2662,8 +2662,7 @@ pub fn decode_unknown_data_contents(
 
 /// Implements the FIDL `Encodable` and `Decodable` traits for a struct
 /// representing a FIDL table. All the struct's fields must be `Option`s, except
-/// for the `pub __non_exhaustive: ()` field. Also generates the `empty()` method
-/// returning an empty table.
+/// for the `pub __non_exhaustive: ()` field.
 #[macro_export]
 macro_rules! fidl_table {
     (
@@ -2688,38 +2687,6 @@ macro_rules! fidl_table {
         $( value_unknown_member: $value_unknown_name:ident, )?
     ) => {
         impl $name {
-            // Note: this value is implemented as a constant since this
-            // is currently the only way that the Rust compiler can directly
-            // construct members when using the FRU syntax. For example in:
-            //
-            // SomeTable { some_member: some_value, ..SomeTable::empty() }
-            //
-            // Using a constant (::EMPTY) will only create members that do not
-            // have a value explicitly specified, whereas using a function
-            // (::EMPTY()) will fully instantiate an instance of the struct and
-            // overwrite the members that do not have a value specified. The
-            // latter makes it impossible to construct a const value because
-            // overwiting heap allocated values (even if they are optional and
-            // are None) will call their destructor which is not const.
-            //
-            // Workarounds, like implementing ::EMPTY in terms of empty() or
-            // the other way around do not work either
-            // https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=697cddc6b8c34464ffaeb15584f2618e
-            /// An empty table with every field set to `None`.
-            #[allow(deprecated)]
-            pub const EMPTY: Self = Self {
-                $(
-                    $member_name: None,
-                )*
-                $(
-                    $resource_unknown_name: None,
-                )?
-                $(
-                    $value_unknown_name: None,
-                )?
-                __non_exhaustive: (),
-            };
-
             #[inline(always)]
             fn find_max_ordinal(&self) -> u64 {
                 std::cmp::max(self.find_max_known_ordinal(), self.find_max_unknown_ordinal())
@@ -4007,7 +3974,7 @@ mod test {
 
     use super::*;
     use matches::assert_matches;
-    use std::{collections::BTreeMap, f32, f64, fmt, i64, u64};
+    use std::{f32, f64, fmt, i64, u64};
 
     pub const CONTEXTS: &[&Context] = &[&Context {}];
 
@@ -4478,410 +4445,6 @@ mod test {
         }
     }
 
-    pub struct MyTable {
-        pub num: Option<i32>,
-        pub num_none: Option<i32>,
-        pub string: Option<String>,
-        pub handle: Option<Handle>,
-        pub unknown_data: Option<BTreeMap<u64, UnknownData>>,
-        #[deprecated = "Do not use MyTable"]
-        pub __non_exhaustive: (),
-    }
-
-    fidl_table! {
-        name: MyTable,
-        members: [
-            num {
-                ty: i32,
-                ordinal: 1,
-            },
-            num_none {
-                ty: i32,
-                ordinal: 2,
-            },
-            string {
-                ty: String,
-                ordinal: 3,
-            },
-            handle {
-                ty: Handle,
-                ordinal: 4,
-                handle_metadata: {
-                    handle_subtype: ObjectType::NONE,
-                    handle_rights: Rights::SAME_RIGHTS,
-                },
-            },
-        ],
-        resource_unknown_member: unknown_data,
-    }
-
-    struct EmptyTableCompiles {
-        pub unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
-        #[deprecated = "Do not use __non_exhaustive"]
-        pub __non_exhaustive: (),
-    }
-    fidl_table! {
-        name: EmptyTableCompiles,
-        members: [],
-        value_unknown_member: unknown_data,
-    }
-
-    struct TablePrefix {
-        num: Option<i32>,
-        num_none: Option<i32>,
-        pub unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
-        #[deprecated = "Do not use __non_exhaustive"]
-        pub __non_exhaustive: (),
-    }
-
-    fidl_table! {
-        name: TablePrefix,
-        members: [
-            num {
-                ty: i32,
-                ordinal: 1,
-            },
-            num_none {
-                ty: i32,
-                ordinal: 2,
-            },
-        ],
-        value_unknown_member: unknown_data,
-    }
-
-    #[test]
-    fn empty_table() {
-        let mut table: MyTable = MyTable::EMPTY;
-        assert_eq!(None, table.num);
-        table = MyTable { num: Some(32), ..MyTable::EMPTY };
-        assert_eq!(Some(32), table.num);
-        assert_eq!(None, table.string);
-    }
-
-    #[test]
-    fn table_encode_prefix_decode_full() {
-        for ctx in CONTEXTS {
-            let mut table_prefix_in = TablePrefix { num: Some(5), ..TablePrefix::EMPTY };
-            let mut table_out: MyTable = Decodable::new_empty();
-
-            let buf = &mut Vec::new();
-            let handle_buf = &mut Vec::new();
-            Encoder::encode_with_context(ctx, buf, handle_buf, &mut table_prefix_in).unwrap();
-            Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), &mut table_out)
-                .unwrap();
-
-            assert_eq!(table_out.num, Some(5));
-            assert_eq!(table_out.num_none, None);
-            assert_eq!(table_out.string, None);
-            assert_eq!(table_out.handle, None);
-        }
-    }
-
-    #[test]
-    fn table_encode_omits_none_tail() {
-        for ctx in CONTEXTS {
-            // "None" fields at the tail of a table shouldn't be encoded at all.
-            let mut table_in = MyTable {
-                num: Some(5),
-                // The rest of the fields should all be omitted in the encoded repr,
-                // allowing decoding of the prefix to succeed.
-                num_none: None,
-                string: None,
-                handle: None,
-                ..MyTable::EMPTY
-            };
-            let mut table_prefix_out: TablePrefix = Decodable::new_empty();
-
-            let buf = &mut Vec::new();
-            let handle_buf = &mut Vec::new();
-            Encoder::encode_with_context(ctx, buf, handle_buf, &mut table_in).unwrap();
-            Decoder::decode_with_context(
-                ctx,
-                buf,
-                &mut to_handle_info(handle_buf),
-                &mut table_prefix_out,
-            )
-            .unwrap();
-
-            assert_eq!(table_prefix_out.num, Some(5));
-            assert_eq!(table_prefix_out.num_none, None);
-        }
-    }
-
-    #[test]
-    fn table_decode_ignores_unrecognized_tail() {
-        for ctx in CONTEXTS {
-            let mut table_in = MyTable {
-                num: Some(5),
-                num_none: None,
-                string: Some("foo".to_string()),
-                handle: None,
-                ..MyTable::EMPTY
-            };
-            let mut table_prefix_out: TablePrefix = Decodable::new_empty();
-
-            let buf = &mut Vec::new();
-            let handle_buf = &mut Vec::new();
-            Encoder::encode_with_context(ctx, buf, handle_buf, &mut table_in).unwrap();
-            Decoder::decode_with_context(
-                ctx,
-                buf,
-                &mut to_handle_info(handle_buf),
-                &mut table_prefix_out,
-            )
-            .unwrap();
-            assert_eq!(table_prefix_out.num, Some(5));
-            assert_eq!(table_prefix_out.num_none, None);
-        }
-    }
-
-    #[derive(Debug, PartialEq)]
-    pub struct SimpleTable {
-        x: Option<i64>,
-        y: Option<i64>,
-        unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
-        #[deprecated = "Do not use __non_exhaustive"]
-        pub __non_exhaustive: (),
-    }
-
-    fidl_table! {
-        name: SimpleTable,
-        members: [
-            x {
-                ty: i64,
-                ordinal: 1,
-            },
-            y {
-                ty: i64,
-                ordinal: 5,
-            },
-        ],
-        value_unknown_member: unknown_data,
-    }
-
-    #[derive(Debug, PartialEq)]
-    pub struct TableWithStringAndVector {
-        foo: Option<String>,
-        bar: Option<i32>,
-        baz: Option<Vec<u8>>,
-        unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
-        #[deprecated = "Do not use __non_exhaustive"]
-        pub __non_exhaustive: (),
-    }
-
-    fidl_table! {
-        name: TableWithStringAndVector,
-        members: [
-            foo {
-                ty: String,
-                ordinal: 1,
-            },
-            bar {
-                ty: i32,
-                ordinal: 2,
-            },
-            baz {
-                ty: Vec<u8>,
-                ordinal: 3,
-            },
-        ],
-        value_unknown_member: unknown_data,
-    }
-
-    #[test]
-    fn table_golden_simple_table_with_xy() {
-        let simple_table_with_xy: &[u8] = &[
-            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            42, 0, 0, 0, 0, 0, 0, 0, // field X
-            67, 0, 0, 0, 0, 0, 0, 0, // field Y
-        ];
-        for ctx in CONTEXTS {
-            encode_assert_bytes(
-                ctx,
-                SimpleTable { x: Some(42), y: Some(67), ..SimpleTable::EMPTY },
-                simple_table_with_xy,
-            );
-        }
-    }
-
-    #[test]
-    fn table_golden_simple_table_with_y() {
-        let simple_table_with_y: &[u8] = &[
-            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
-            0, 0, 0, 0, 0, 0, 0, 0, // no alloc
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            67, 0, 0, 0, 0, 0, 0, 0, // field Y
-        ];
-        for ctx in CONTEXTS {
-            encode_assert_bytes(
-                ctx,
-                SimpleTable { x: None, y: Some(67), ..SimpleTable::EMPTY },
-                simple_table_with_y,
-            );
-        }
-    }
-
-    #[test]
-    fn table_golden_string_and_vector_hello_27() {
-        let table_with_string_and_vector_hello_27: &[u8] = &[
-            2, 0, 0, 0, 0, 0, 0, 0, // max ordinal
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            24, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // envelope 1: alloc present
-            8, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
-            255, 255, 255, 255, 255, 255, 255, 255, // envelope 2: alloc present
-            5, 0, 0, 0, 0, 0, 0, 0, // element 1: length
-            255, 255, 255, 255, 255, 255, 255, 255, // element 1: alloc present
-            104, 101, 108, 108, 111, 0, 0, 0, // element 1: hello
-            27, 0, 0, 0, 0, 0, 0, 0, // element 2: value
-        ];
-        for ctx in CONTEXTS {
-            encode_assert_bytes(
-                ctx,
-                TableWithStringAndVector {
-                    foo: Some("hello".to_string()),
-                    bar: Some(27),
-                    baz: None,
-                    ..TableWithStringAndVector::EMPTY
-                },
-                table_with_string_and_vector_hello_27,
-            );
-        }
-    }
-
-    #[test]
-    fn table_golden_empty_table() {
-        let empty_table: &[u8] = &[
-            0, 0, 0, 0, 0, 0, 0, 0, // max ordinal
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-        ];
-
-        for ctx in CONTEXTS {
-            encode_assert_bytes(ctx, SimpleTable::EMPTY, empty_table);
-        }
-    }
-
-    #[derive(Debug)]
-    pub struct TableWithGaps {
-        second: Option<i32>,
-        fourth: Option<i32>,
-        unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
-        #[deprecated = "Do not use __non_exhaustive"]
-        pub __non_exhaustive: (),
-    }
-
-    fidl_table! {
-        name: TableWithGaps,
-        members: [
-            second {
-                ty: i32,
-                ordinal: 2,
-            },
-            fourth {
-                ty: i32,
-                ordinal: 4,
-            },
-        ],
-        value_unknown_member: unknown_data,
-    }
-
-    #[test]
-    fn encode_decode_table_with_gaps() {
-        for ctx in CONTEXTS {
-            let mut table =
-                TableWithGaps { second: Some(1), fourth: Some(2), ..TableWithGaps::EMPTY };
-            let table_out = encode_decode(ctx, &mut table);
-            assert_eq!(table_out.second, Some(1));
-            assert_eq!(table_out.fourth, Some(2));
-        }
-    }
-
-    #[test]
-    fn encode_empty_envelopes_for_reserved_table_fields() {
-        for ctx in CONTEXTS {
-            let mut table =
-                TableWithGaps { second: Some(1), fourth: Some(2), ..TableWithGaps::EMPTY };
-            let buf = &mut Vec::new();
-            Encoder::encode_with_context(ctx, buf, &mut Vec::new(), &mut table).unwrap();
-
-            // Expected layout:
-            //     0x00 table header
-            //     0x10 envelope 1 (reserved)
-            //     0x20 envelope 2 (second)
-            //     0x30 envelope 3 (reserved)
-            //     0x40 envelope 4 (fourth)
-            assert_eq!(&buf[0x10..0x20], &[0; 16]);
-            assert_eq!(&buf[0x30..0x40], &[0; 16]);
-        }
-    }
-
-    #[test]
-    fn decode_table_missing_gaps() {
-        struct TableWithoutGaps {
-            first: Option<i32>,
-            second: Option<i32>,
-            pub unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
-            #[deprecated = "Do not use __non_exhaustive"]
-            pub __non_exhaustive: (),
-        }
-        fidl_table! {
-            name: TableWithoutGaps,
-            members: [
-                first {
-                    ty: i32,
-                    ordinal: 1,
-                },
-                second {
-                    ty: i32,
-                    ordinal: 2,
-                },
-            ],
-            value_unknown_member: unknown_data,
-        }
-
-        for ctx in CONTEXTS {
-            // This test shows what would happen when decoding a TableWithGaps
-            // that was incorrectly encoded _without_ gaps.
-            //
-            //     Ordinal:  #1     #2      #3     #4
-            //     Encoded:  first second
-            //     Decoding: _____ second  _____ fourth
-            //
-            // Field #1 is assumed to be a new field in a reserved slot (i.e.
-            // the sender is newer than us), so it is ignored. Fields #3 and #4
-            // are assumed to be None because the tail is omitted.
-            let mut table =
-                TableWithoutGaps { first: Some(1), second: Some(2), ..TableWithoutGaps::EMPTY };
-            let buf = &mut Vec::new();
-            Encoder::encode_with_context(ctx, buf, &mut Vec::new(), &mut table).unwrap();
-
-            let mut out = TableWithGaps::new_empty();
-            Decoder::decode_with_context(ctx, buf, &mut Vec::new(), &mut out).unwrap();
-            assert_eq!(out.second, Some(2));
-            assert_eq!(out.fourth, None);
-        }
-    }
-
     #[derive(Debug, PartialEq, zerocopy::AsBytes, zerocopy::FromBytes)]
     #[repr(C)]
     pub struct DirectCopyStruct {
@@ -4966,7 +4529,7 @@ mod test {
     #[derive(Debug, PartialEq)]
     pub enum TestSampleXUnion {
         U(u32),
-        St(SimpleTable),
+        St(String),
         __Unknown { ordinal: u64, data: UnknownData },
     }
     fidl_union! {
@@ -4977,7 +4540,7 @@ mod test {
                 ordinal: 0x29df47a5,
             },
             St {
-                ty: SimpleTable,
+                ty: String,
                 ordinal: 0x6f317664,
             },
         ],
@@ -5215,26 +4778,6 @@ mod zx_test {
             .expect("Decoding failed");
 
             assert_eq!(raw_handle, handle_out.into_inner().raw_handle());
-        }
-    }
-
-    #[test]
-    fn encode_decode_table() {
-        for ctx in CONTEXTS {
-            // create a random handle to encode and then decode.
-            let handle = zx::Vmo::create(1024).expect("vmo creation failed");
-            let raw_handle = handle.raw_handle();
-            let mut starting_table = MyTable {
-                num: Some(5),
-                string: Some("foo".to_string()),
-                handle: Some(handle.into_handle()),
-                ..MyTable::EMPTY
-            };
-            let table_out = encode_decode(ctx, &mut starting_table);
-            assert_eq!(table_out.num, Some(5));
-            assert_eq!(table_out.num_none, None);
-            assert_eq!(table_out.string, Some("foo".to_string()));
-            assert_eq!(table_out.handle.unwrap().raw_handle(), raw_handle);
         }
     }
 

@@ -72,6 +72,18 @@ success("Uint64Uint32Uint16Uint8") {
     },
 }
 
+success("EmptyTable") {
+    value = StructOfEmptyTable {
+        table: EmptyTable {},
+    },
+    bytes = {
+        v1 = [
+            0, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+        ],
+    },
+}
+
 success("SimpleTableEmpty") {
     value = StructOfSimpleTable {
         table: SimpleTable {},
@@ -107,6 +119,23 @@ success("SimpleTableXAndY") {
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             42, 0, 0, 0, 0, 0, 0, 0, // field X
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+    },
+}
+
+success("SimpleTableJustX") {
+    value = StructOfSimpleTable {
+        table: SimpleTable {
+            x: 42,
+        },
+    },
+    bytes = {
+        v1 = [
+            1, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
         ],
     },
 }
@@ -219,6 +248,26 @@ success("ReverseOrdinalTable") {
             0xcc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // z
             0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // y
             0xaa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // x
+        ],
+    },
+}
+
+success("TableWithGaps") {
+    value = StructOfTableWithGaps {
+        table: TableWithGaps {
+            second: 1,
+            fourth: 2,
+        },
+    },
+    bytes = {
+        v1 = [
+            num(4):8, repeat(0xff):8, // max ordinal, present
+            num(0):4, num(0):4, repeat(0x00):8, // envelope #1: empty
+            num(8):4, num(0):4, repeat(0xff):8, // envelope #2: second
+            num(0):4, num(0):4, repeat(0x00):8, // envelope #3: empty
+            num(8):4, num(0):4, repeat(0xff):8, // envelope #2: fourth
+            num(1):4, padding:4, // second
+            num(2):4, padding:4, // fourth
         ],
     },
 }

@@ -34,11 +34,17 @@ pub struct EmptyTable {
     pub __non_exhaustive: (),
 }
 
+impl EmptyTable {
+    /// An empty table with every field set to None.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { unknown_data: None, __non_exhaustive: () };
+}
+
 fidl_table! {
-  name: EmptyTable,
-  members: [
-  ],
-  value_unknown_member: unknown_data,
+    name: EmptyTable,
+    members: [
+    ],
+    value_unknown_member: unknown_data,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -53,19 +59,25 @@ pub struct SimpleTable {
     pub __non_exhaustive: (),
 }
 
+impl SimpleTable {
+    /// An empty table with every field set to None.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { x: None, y: None, unknown_data: None, __non_exhaustive: () };
+}
+
 fidl_table! {
-  name: SimpleTable,
-  members: [
-    x {
-      ty: i64,
-      ordinal: 1,
-    },
-    y {
-      ty: i64,
-      ordinal: 5,
-    },
-  ],
-  value_unknown_member: unknown_data,
+    name: SimpleTable,
+    members: [
+        x {
+            ty: i64,
+            ordinal: 1,
+        },
+        y {
+            ty: i64,
+            ordinal: 5,
+        },
+    ],
+    value_unknown_member: unknown_data,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -79,15 +91,21 @@ pub struct OlderSimpleTable {
     pub __non_exhaustive: (),
 }
 
+impl OlderSimpleTable {
+    /// An empty table with every field set to None.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { x: None, unknown_data: None, __non_exhaustive: () };
+}
+
 fidl_table! {
-  name: OlderSimpleTable,
-  members: [
-    x {
-      ty: i64,
-      ordinal: 1,
-    },
-  ],
-  value_unknown_member: unknown_data,
+    name: OlderSimpleTable,
+    members: [
+        x {
+            ty: i64,
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: unknown_data,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -103,23 +121,30 @@ pub struct NewerSimpleTable {
     pub __non_exhaustive: (),
 }
 
+impl NewerSimpleTable {
+    /// An empty table with every field set to None.
+    #[allow(deprecated)]
+    pub const EMPTY: Self =
+        Self { x: None, y: None, z: None, unknown_data: None, __non_exhaustive: () };
+}
+
 fidl_table! {
-  name: NewerSimpleTable,
-  members: [
-    x {
-      ty: i64,
-      ordinal: 1,
-    },
-    y {
-      ty: i64,
-      ordinal: 5,
-    },
-    z {
-      ty: i64,
-      ordinal: 6,
-    },
-  ],
-  value_unknown_member: unknown_data,
+    name: NewerSimpleTable,
+    members: [
+        x {
+            ty: i64,
+            ordinal: 1,
+        },
+        y {
+            ty: i64,
+            ordinal: 5,
+        },
+        z {
+            ty: i64,
+            ordinal: 6,
+        },
+    ],
+    value_unknown_member: unknown_data,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -135,21 +160,28 @@ pub struct ReverseOrdinalTable {
     pub __non_exhaustive: (),
 }
 
+impl ReverseOrdinalTable {
+    /// An empty table with every field set to None.
+    #[allow(deprecated)]
+    pub const EMPTY: Self =
+        Self { z: None, y: None, x: None, unknown_data: None, __non_exhaustive: () };
+}
+
 fidl_table! {
-  name: ReverseOrdinalTable,
-  members: [
-    z {
-      ty: i64,
-      ordinal: 1,
-    },
-    y {
-      ty: i64,
-      ordinal: 2,
-    },
-    x {
-      ty: i64,
-      ordinal: 3,
-    },
-  ],
-  value_unknown_member: unknown_data,
+    name: ReverseOrdinalTable,
+    members: [
+        z {
+            ty: i64,
+            ordinal: 1,
+        },
+        y {
+            ty: i64,
+            ordinal: 2,
+        },
+        x {
+            ty: i64,
+            ordinal: 3,
+        },
+    ],
+    value_unknown_member: unknown_data,
 }

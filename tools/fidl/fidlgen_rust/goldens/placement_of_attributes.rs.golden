@@ -209,15 +209,21 @@ pub struct ExampleTable {
     pub __non_exhaustive: (),
 }
 
+impl ExampleTable {
+    /// An empty table with every field set to None.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { member: None, unknown_data: None, __non_exhaustive: () };
+}
+
 fidl_table! {
-  name: ExampleTable,
-  members: [
-    member {
-      ty: u32,
-      ordinal: 1,
-    },
-  ],
-  value_unknown_member: unknown_data,
+    name: ExampleTable,
+    members: [
+        member {
+            ty: u32,
+            ordinal: 1,
+        },
+    ],
+    value_unknown_member: unknown_data,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

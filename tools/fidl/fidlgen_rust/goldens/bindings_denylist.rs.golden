@@ -36,9 +36,15 @@ pub struct OnlyRust {
     pub __non_exhaustive: (),
 }
 
+impl OnlyRust {
+    /// An empty table with every field set to None.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { unknown_data: None, __non_exhaustive: () };
+}
+
 fidl_table! {
-  name: OnlyRust,
-  members: [
-  ],
-  value_unknown_member: unknown_data,
+    name: OnlyRust,
+    members: [
+    ],
+    value_unknown_member: unknown_data,
 }

@@ -205,17 +205,23 @@ pub struct TableWithHandle {
     pub __non_exhaustive: (),
 }
 
+impl TableWithHandle {
+    /// An empty table with every field set to None.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { h: None, unknown_data: None, __non_exhaustive: () };
+}
+
 fidl_table! {
-  name: TableWithHandle,
-  members: [
-    h {
-      ty: fidl::Vmo,
-      ordinal: 1,
-      handle_metadata: {
-        handle_subtype: fidl::ObjectType::VMO,
-        handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
-      },
-    },
-  ],
-  resource_unknown_member: unknown_data,
+    name: TableWithHandle,
+    members: [
+        h {
+            ty: fidl::Vmo,
+            ordinal: 1,
+            handle_metadata: {
+                handle_subtype: fidl::ObjectType::VMO,
+                handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
+            },
+        },
+    ],
+    resource_unknown_member: unknown_data,
 }
