@@ -16,7 +16,7 @@ decode_failure("NonEmptyStringWithNullPtrBody") {
     bindings_denylist = [fuzzer_corpus],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // length of string data
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // invalid null pointer to content
         ],

@@ -7,7 +7,7 @@ success("FlexibleEnumInt8") {
         e: 0x01,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0x01, padding:7,
         ],
     },
@@ -18,7 +18,7 @@ success("FlexibleEnumInt16") {
         e: 0x0102,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0x02, 0x01, padding:6,
         ],
     },
@@ -29,7 +29,7 @@ success("FlexibleEnumInt32") {
         e: 0x01020304,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0x04, 0x03, 0x02, 0x01, padding:4,
         ],
     },
@@ -40,7 +40,7 @@ success("FlexibleEnumInt64") {
         e: 0x0102030405060708,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
         ],
     },
@@ -51,7 +51,7 @@ success("FlexibleEnumUint8") {
         e: 0x01,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0x01, padding:7,
         ],
     },
@@ -62,7 +62,7 @@ success("FlexibleEnumUint16") {
         e: 0x0102,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0x02, 0x01, padding:6,
         ],
     },
@@ -73,7 +73,7 @@ success("FlexibleEnumUint32") {
         e: 0x01020304,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0x04, 0x03, 0x02, 0x01, padding:4,
         ],
     },
@@ -84,7 +84,7 @@ success("FlexibleEnumUint64") {
         e: 0x0102030405060708,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
         ],
     },
@@ -95,7 +95,7 @@ success("FlexibleEnumInt8UnknownValue") {
         e: 0x0f,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0x0f, padding:7,
         ],
     },
@@ -106,7 +106,7 @@ success("FlexibleEnumInt16UnknownValue") {
         e: 0x0fee,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0xee, 0x0f, padding:6,
         ],
     },
@@ -117,7 +117,7 @@ success("FlexibleEnumInt32UnknownValue") {
         e: 0x0feeddcc,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0xcc, 0xdd, 0xee, 0x0f, padding:4,
         ],
     },
@@ -128,7 +128,7 @@ success("FlexibleEnumInt64UnknownValue") {
         e: 0x0feeddccbbaa9988,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0x0f,
         ],
     },
@@ -139,7 +139,7 @@ success("FlexibleEnumUint8UnknownValue") {
         e: 0xff,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0xff, padding:7,
         ],
     },
@@ -150,7 +150,7 @@ success("FlexibleEnumUint16UnknownValue") {
         e: 0xffee,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0xee, 0xff, padding:6,
         ],
     },
@@ -161,7 +161,7 @@ success("FlexibleEnumUint32UnknownValue") {
         e: 0xffeeddcc,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0xcc, 0xdd, 0xee, 0xff, padding:4,
         ],
     },
@@ -172,7 +172,7 @@ success("FlexibleEnumUint64UnknownValue") {
         e: 0xffeeddccbbaa9988,
     },
     bytes = {
-        v1 = [
+        v1, v2= [
             0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff,
         ],
     },

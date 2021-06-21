@@ -6,7 +6,7 @@ success("EmptyStruct") {
     value = EmptyStruct {
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x00, padding:7,
         ],
     },
@@ -19,7 +19,7 @@ success("EmptyStructSandwich") {
         after: "after",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             6, 0, 0, 0, 0, 0, 0, 0, // length of "before"
             255, 255, 255, 255, 255, 255, 255, 255, // "before" is present
             0,                   // empty struct zero field
@@ -42,7 +42,7 @@ success("Uint8Uint16Uint32Uint64") {
         f4: 0x08090a0b0c0d0e0f,
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01, // f1
             0x00, // padding
             0x03, 0x02, // f2
@@ -62,7 +62,7 @@ success("Uint64Uint32Uint16Uint8") {
         f4: 0x01,
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, // f1
             0x07, 0x06, 0x05, 0x04, // f2
             0x03, 0x02, // f3
@@ -1326,7 +1326,7 @@ success("FileGetAttrResponse") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xaf, 0xbe, 0xad, 0x7e, 0x00, 0x00, 0x00, 0x00,
             0xa4, 0x81, 0x23, 0x96, 0x00, 0x00, 0x00, 0x00,
             1, 0, 0, 0, 0, 0, 0, 0,
@@ -1404,7 +1404,7 @@ success("OutOfLinePaddingZeroed7") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             repeat(0xff):8, // a*
             repeat(0xff):8, // b*
             0x01, padding:7, // a + 7 padding
@@ -1423,7 +1423,7 @@ success("OutOfLinePaddingZeroed6") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             repeat(0xff):8, // a*
             repeat(0xff):8, // b*
             0x01,0x02, padding:6, // a + 6 padding
@@ -1442,7 +1442,7 @@ success("OutOfLinePaddingZeroed4") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             repeat(0xff):8, // a*
             repeat(0xff):8, // b*
             0x01,0x02,0x03,0x04, padding:4, // a + 4 padding
@@ -1461,7 +1461,7 @@ success("Arrays") {
         arr_arr_int: [[1, 2, 3,], [4, 5, 6,],],
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // primary object
             0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00, // arr_int: 1, 2
             0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // arr_string: "a" size 1
@@ -1499,7 +1499,7 @@ success("Vectors") {
         vec_vec_int: [[1, 2,], [3,],],
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // primary object
             0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // vec_empty: size 0
             0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //   present
@@ -1570,7 +1570,7 @@ success("LargeArrays") {
         nested: [],
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             num(5):8, repeat(0xff):8, // "first" length + present
             repeat(0):496, // 31x length + absent (16)
             num(4):8, repeat(0xff):8, // "last" length + present

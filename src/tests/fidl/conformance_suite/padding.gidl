@@ -11,7 +11,7 @@ success("CorrectPaddingBetweenFieldsInt8Int16") {
         b: 0x0203,
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01,
             padding:1,
             0x03, 0x02,
@@ -24,7 +24,7 @@ decode_failure("BadPaddingBetweenFieldsInt8Int16") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt8Int16,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01,
             0xee, // should be padding:1
             0x03, 0x02,
@@ -40,7 +40,7 @@ success("CorrectPaddingBetweenFieldsInt8Int32") {
         b: 0x02030405,
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01,
             padding:3,
             0x05, 0x04, 0x03, 0x02,
@@ -52,7 +52,7 @@ decode_failure("BadPaddingBetweenFieldsInt8Int32LowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt8Int32,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01,
             0xee, padding:2, // should be padding:3
             0x05, 0x04, 0x03, 0x02,
@@ -65,7 +65,7 @@ decode_failure("BadPaddingBetweenFieldsInt8Int32MiddleByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt8Int32,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01,
             padding:1, 0xee, padding:1, // should be padding:3
             0x05, 0x04, 0x03, 0x02,
@@ -78,7 +78,7 @@ decode_failure("BadPaddingBetweenFieldsInt8Int32UpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt8Int32,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01,
             padding:2, 0xee, // should be padding:3
             0x05, 0x04, 0x03, 0x02,
@@ -93,7 +93,7 @@ success("CorrectPaddingBetweenFieldsInt8Int64") {
         b: 0x0203040506070809,
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01,
             padding:7,
             0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02
@@ -105,7 +105,7 @@ decode_failure("BadPaddingBetweenFieldsInt8Int64LowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt8Int64,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01,
             0xee, padding:6, // should be padding:7
             0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02
@@ -118,7 +118,7 @@ decode_failure("BadPaddingBetweenFieldsInt8Int64MiddleByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt8Int64,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01,
             padding:3, 0xee, padding:3, // should be padding:7
             0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02
@@ -131,7 +131,7 @@ decode_failure("BadPaddingBetweenFieldsInt8Int64UpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt8Int64,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01,
             padding:6, 0xee, // should be padding:7
             0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02
@@ -146,7 +146,7 @@ success("CorrectPaddingBetweenFieldsInt16Int32") {
         b: 0x03040506,
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x02, 0x01,
             padding:2,
             0x06, 0x05, 0x04, 0x03,
@@ -158,7 +158,7 @@ decode_failure("BadPaddingBetweenFieldsInt16Int32LowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt16Int32,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x02, 0x01,
             0xee, padding:1, // should be padding:2
             0x06, 0x05, 0x04, 0x04,
@@ -171,7 +171,7 @@ decode_failure("BadPaddingBetweenFieldsInt16Int32UpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt16Int32,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x02, 0x01,
             padding:1, 0xee, // should be padding:2
             0x06, 0x05, 0x04, 0x04,
@@ -186,7 +186,7 @@ success("CorrectPaddingBetweenFieldsInt16Int64") {
         b: 0x030405060708090a,
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x02, 0x01,
             padding:6,
             0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03
@@ -198,7 +198,7 @@ decode_failure("BadPaddingBetweenFieldsInt16Int64LowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt16Int64,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x02, 0x01,
             0xee, padding:5, // should be padding:6
             0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03
@@ -211,7 +211,7 @@ decode_failure("BadPaddingBetweenFieldsInt16Int64MiddleByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt16Int64,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x02, 0x01,
             padding:2, 0xee, padding:3, // should be padding:6
             0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03
@@ -224,7 +224,7 @@ decode_failure("BadPaddingBetweenFieldsInt16Int64UpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt16Int64,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x02, 0x01,
             padding:5, 0xee, // should be padding:6
             0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03
@@ -239,7 +239,7 @@ success("CorrectPaddingBetweenFieldsInt32Int64") {
         b: 0x05060708090a0b0c,
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             padding:4,
             0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05
@@ -251,7 +251,7 @@ decode_failure("BadPaddingBetweenFieldsInt32Int64LowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt32Int64,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             0xee, padding:3, // should be padding:4
             0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05
@@ -264,7 +264,7 @@ decode_failure("BadPaddingBetweenFieldsInt32Int64MiddleByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt32Int64,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             padding:1, 0xee, padding:2, // should be padding:4
             0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05
@@ -277,7 +277,7 @@ decode_failure("BadPaddingBetweenFieldsInt32Int64UpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingBetweenFieldsInt32Int64,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             padding:3, 0xee, // should be padding:4
             0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05
@@ -294,7 +294,7 @@ success("CorrectPaddingEndOfInlineObject1Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01,
             padding:7
         ]
@@ -305,7 +305,7 @@ decode_failure("BadPaddingEndOfInlineObject1ByteLowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject1Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01,
             0xee, padding:6, // should be padding:7
         ],
@@ -317,7 +317,7 @@ decode_failure("BadPaddingEndOfInlineObject1ByteUpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject1Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01,
             padding:6, 0xee, // should be padding:7
         ],
@@ -332,7 +332,7 @@ success("CorrectPaddingEndOfInlineObject2Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x02, 0x01,
             padding:6,
         ]
@@ -343,7 +343,7 @@ decode_failure("BadPaddingEndOfInlineObject2ByteLowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject2Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x02, 0x01,
             0xee, padding:5, // should be padding:6
         ],
@@ -355,7 +355,7 @@ decode_failure("BadPaddingEndOfInlineObject2ByteUpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject2Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x02, 0x01,
             padding:5, 0xee, // should be padding:6
         ],
@@ -372,7 +372,7 @@ success("CorrectPaddingEndOfInlineObject3Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x02, 0x01,
             0x03,
             padding:5,
@@ -384,7 +384,7 @@ decode_failure("BadPaddingEndOfInlineObject3ByteLowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject3Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x02, 0x01,
             0x03,
             0xee, padding:4, // should be padding:5
@@ -397,7 +397,7 @@ decode_failure("BadPaddingEndOfInlineObject3ByteUpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject3Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x02, 0x01,
             0x03,
             padding:4, 0xee, // should be padding:5
@@ -413,7 +413,7 @@ success("CorrectPaddingEndOfInlineObject4Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             padding:4,
         ]
@@ -424,7 +424,7 @@ decode_failure("BadPaddingEndOfInlineObject4ByteLowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject4Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             0xee, padding:3, // should be padding:4
         ],
@@ -436,7 +436,7 @@ decode_failure("BadPaddingEndOfInlineObject4ByteUpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject4Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             padding:3, 0xee, // should be padding:4
         ],
@@ -452,7 +452,7 @@ success("CorrectPaddingEndOfInlineObject5Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             0x05,
             padding:3,
@@ -464,7 +464,7 @@ decode_failure("BadPaddingEndOfInlineObject5ByteLowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject5Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             0x05,
             0xee, padding:2, // should be padding:3
@@ -477,7 +477,7 @@ decode_failure("BadPaddingEndOfInlineObject5ByteUpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject5Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             0x05,
             padding:2, 0xee, // should be padding:3
@@ -494,7 +494,7 @@ success("CorrectPaddingEndOfInlineObject6Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             0x06, 0x05,
             padding:2,
@@ -506,7 +506,7 @@ decode_failure("BadPaddingEndOfInlineObject6ByteLowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject6Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             0x06, 0x05,
             0xee, padding:1, // should be padding:2
@@ -519,7 +519,7 @@ decode_failure("BadPaddingEndOfInlineObject6ByteUpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject6Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             0x06, 0x05,
             padding:1, 0xee, // should be padding:2
@@ -537,7 +537,7 @@ success("CorrectPaddingEndOfInlineObject7Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             0x06, 0x05,
             0x07,
@@ -550,7 +550,7 @@ decode_failure("BadPaddingEndOfInlineObject7Byte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObject7Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x04, 0x03, 0x02, 0x01,
             0x06, 0x05,
             0x07,
@@ -570,7 +570,7 @@ success("CorrectPaddingEndOfInlineObjectBeforeNextObject1Byte") {
         }
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x09,
@@ -585,7 +585,7 @@ decode_failure("BadPaddingEndOfInlineObjectBeforeNextObject1ByteLowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObjectBeforeNextObject1Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x09,
@@ -601,7 +601,7 @@ decode_failure("BadPaddingEndOfInlineObjectBeforeNextObject1ByteUpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObjectBeforeNextObject1Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x09,
@@ -623,7 +623,7 @@ success("CorrectPaddingEndOfInlineObjectBeforeNextObject2Byte") {
         }
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0a, 0x09,
@@ -638,7 +638,7 @@ decode_failure("BadPaddingEndOfInlineObjectBeforeNextObject2ByteLowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObjectBeforeNextObject2Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0a, 0x09,
@@ -654,7 +654,7 @@ decode_failure("BadPaddingEndOfInlineObjectBeforeNextObject2ByteUpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObjectBeforeNextObject2Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0a, 0x09,
@@ -677,7 +677,7 @@ success("CorrectPaddingEndOfInlineObjectBeforeNextObject3Byte") {
         }
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0a, 0x09,
@@ -693,7 +693,7 @@ decode_failure("BadPaddingEndOfInlineObjectBeforeNextObject3ByteLowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObjectBeforeNextObject3Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0a, 0x09,
@@ -710,7 +710,7 @@ decode_failure("BadPaddingEndOfInlineObjectBeforeNextObject3ByteUpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObjectBeforeNextObject3Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0a, 0x09,
@@ -733,7 +733,7 @@ success("CorrectPaddingEndOfInlineObjectBeforeNextObject4Byte") {
         }
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0c, 0x0b, 0x0a, 0x09,
@@ -748,7 +748,7 @@ decode_failure("BadPaddingEndOfInlineObjectBeforeNextObject4ByteLowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObjectBeforeNextObject4Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0c, 0x0b, 0x0a, 0x09,
@@ -764,7 +764,7 @@ decode_failure("BadPaddingEndOfInlineObjectBeforeNextObject4ByteUpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObjectBeforeNextObject4Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0c, 0x0b, 0x0a, 0x09,
@@ -787,7 +787,7 @@ success("CorrectPaddingEndOfInlineObjectBeforeNextObject5Byte") {
         }
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0c, 0x0b, 0x0a, 0x09,
@@ -803,7 +803,7 @@ decode_failure("BadPaddingEndOfInlineObjectBeforeNextObject5ByteLowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObjectBeforeNextObject5Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0c, 0x0b, 0x0a, 0x09,
@@ -820,7 +820,7 @@ decode_failure("BadPaddingEndOfInlineObjectBeforeNextObject5ByteUpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObjectBeforeNextObject5Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0c, 0x0b, 0x0a, 0x09,
@@ -844,7 +844,7 @@ success("CorrectPaddingEndOfInlineObjectBeforeNextObject6Byte") {
         }
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0c, 0x0b, 0x0a, 0x09,
@@ -860,7 +860,7 @@ decode_failure("BadPaddingEndOfInlineObjectBeforeNextObject6ByteLowerByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObjectBeforeNextObject6Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0c, 0x0b, 0x0a, 0x09,
@@ -877,7 +877,7 @@ decode_failure("BadPaddingEndOfInlineObjectBeforeNextObject6ByteUpperByte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObjectBeforeNextObject6Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0c, 0x0b, 0x0a, 0x09,
@@ -902,7 +902,7 @@ success("CorrectPaddingEndOfInlineObjectBeforeNextObject7Byte") {
         }
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0c, 0x0b, 0x0a, 0x09,
@@ -919,7 +919,7 @@ decode_failure("BadPaddingEndOfInlineObjectBeforeNextObject7Byte") {
     bindings_denylist = [go, dart],
     type = PaddingEndOfInlineObjectBeforeNextObject7Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
             0x0c, 0x0b, 0x0a, 0x09,
@@ -943,7 +943,7 @@ success("CorrectPaddingInBetweenOutOfLineObjects1Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -959,7 +959,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects1ByteLower") {
     bindings_denylist = [go, dart],
     type = PaddingInBetweenOutOfLineObjects1Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -976,7 +976,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects1ByteUpper") {
     bindings_denylist = [go, dart],
     type = PaddingInBetweenOutOfLineObjects1Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1000,7 +1000,7 @@ success("CorrectPaddingInBetweenOutOfLineObjects2Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1016,7 +1016,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects2ByteLower") {
     bindings_denylist = [go, dart],
     type = PaddingInBetweenOutOfLineObjects2Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1033,7 +1033,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects2ByteUpper") {
     bindings_denylist = [go, dart],
     type = PaddingInBetweenOutOfLineObjects2Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1057,7 +1057,7 @@ success("CorrectPaddingInBetweenOutOfLineObjects3Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1074,7 +1074,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects3ByteLower") {
     bindings_denylist = [go, dart],
     type = PaddingInBetweenOutOfLineObjects3Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1092,7 +1092,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects3ByteUpper") {
     bindings_denylist = [go, dart],
     type = PaddingInBetweenOutOfLineObjects3Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1117,7 +1117,7 @@ success("CorrectPaddingInBetweenOutOfLineObjects4Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1133,7 +1133,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects4ByteLower") {
     bindings_denylist = [go, dart],
     type = PaddingInBetweenOutOfLineObjects4Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1150,7 +1150,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects4ByteUpper") {
     bindings_denylist = [go, dart],
     type = PaddingInBetweenOutOfLineObjects4Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1174,7 +1174,7 @@ success("CorrectPaddingInBetweenOutOfLineObjects5Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1191,7 +1191,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects5ByteLower") {
     bindings_denylist = [go, dart],
     type = PaddingInBetweenOutOfLineObjects5Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1209,7 +1209,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects5ByteUpper") {
     bindings_denylist = [go, dart],
     type = PaddingInBetweenOutOfLineObjects5Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1234,7 +1234,7 @@ success("CorrectPaddingInBetweenOutOfLineObjects6Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1251,7 +1251,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects6ByteLower") {
     bindings_denylist = [go, dart],
     type = PaddingInBetweenOutOfLineObjects6Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1269,7 +1269,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects6ByteUpper") {
     bindings_denylist = [go, dart],
     type = PaddingInBetweenOutOfLineObjects6Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1295,7 +1295,7 @@ success("CorrectPaddingInBetweenOutOfLineObjects7Byte") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1313,7 +1313,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects7Byte") {
     bindings_denylist = [go, dart],
     type = PaddingInBetweenOutOfLineObjects7Byte,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
@@ -1335,7 +1335,7 @@ success("CorrectPaddedUnionStruct") {
         },
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -1350,7 +1350,7 @@ decode_failure("BadPaddedUnionStructLowerByte") {
     bindings_denylist = [go, dart],
     type = PaddedUnionStruct,
     bytes = {
-        v1 = [
+        v1, v2 = [
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,

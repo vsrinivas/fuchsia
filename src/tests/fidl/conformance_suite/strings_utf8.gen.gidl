@@ -14,7 +14,7 @@ success("StringsValidCase1") {
         str: "\x00",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -33,7 +33,7 @@ success("StringsValidCase2") {
         str: "\x7f",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -52,7 +52,7 @@ success("StringsValidCase3") {
         str: "\xc2\x80",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -72,7 +72,7 @@ success("StringsValidCase4") {
         str: "\xdf\xbf",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -92,7 +92,7 @@ success("StringsValidCase5") {
         str: "\xe1\x80\x80",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -113,7 +113,7 @@ success("StringsValidCase6") {
         str: "\xef\xbf\xbf",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -134,7 +134,7 @@ success("StringsValidCase7") {
         str: "\xf0\x90\x80\x80",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -156,7 +156,7 @@ success("StringsValidCase8") {
         str: "\xf4\x8f\xbf\xbf",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -185,7 +185,7 @@ decode_failure("StringsInvalidCase1") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -212,7 +212,7 @@ decode_failure("StringsInvalidCase2") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -240,7 +240,7 @@ decode_failure("StringsInvalidCase3") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -268,7 +268,7 @@ decode_failure("StringsInvalidCase4") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -297,7 +297,7 @@ decode_failure("StringsInvalidCase5") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -326,7 +326,7 @@ decode_failure("StringsInvalidCase6") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -356,7 +356,7 @@ decode_failure("StringsInvalidCase7") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -379,7 +379,7 @@ success("StringsValidCase9") {
         str: "\xc2\x80",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -406,7 +406,7 @@ decode_failure("StringsInvalidCase8") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -434,7 +434,7 @@ decode_failure("StringsInvalidCase9") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -463,7 +463,7 @@ decode_failure("StringsInvalidCase10") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -485,7 +485,7 @@ success("StringsValidCase10") {
         str: "\xf0\x90\x80\x80",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -514,7 +514,7 @@ decode_failure("StringsInvalidCase11") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -544,7 +544,7 @@ decode_failure("StringsInvalidCase12") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -574,7 +574,7 @@ decode_failure("StringsInvalidCase13") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -597,7 +597,7 @@ success("StringsValidCase11") {
         str: "\x2f",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -623,7 +623,7 @@ decode_failure("StringsInvalidCase14") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -651,7 +651,7 @@ decode_failure("StringsInvalidCase15") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -680,7 +680,7 @@ decode_failure("StringsInvalidCase16") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -703,7 +703,7 @@ success("StringsValidCase12") {
         str: "\xd8\x9d",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -723,7 +723,7 @@ success("StringsValidCase13") {
         str: "\xd7\xb6",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -743,7 +743,7 @@ success("StringsValidCase14") {
         str: "\xe0\xab\xb4",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -764,7 +764,7 @@ success("StringsValidCase15") {
         str: "\xe0\xb1\x92",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -785,7 +785,7 @@ success("StringsValidCase16") {
         str: "\xf0\x9e\x91\x94",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -807,7 +807,7 @@ success("StringsValidCase17") {
         str: "\xf0\x9f\xa5\xb8",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -829,7 +829,7 @@ success("StringsValidCase18") {
         str: "",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(0):8,
             repeat(0xff):8,
@@ -846,7 +846,7 @@ success("StringsValidCase19") {
         str: "\x61",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -865,7 +865,7 @@ success("StringsValidCase20") {
         str: "\xe2\x82\xac",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -886,7 +886,7 @@ success("StringsValidCase21") {
         str: "\x00\xf4\x8f\xbf\xbf\x7f\xf0\x90\x80\x80\xc2\x80",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(12):8,
             repeat(0xff):8,
@@ -916,7 +916,7 @@ success("StringsValidCase22") {
         str: "\xdf\xbf\xef\xbf\xbf\xe1\x80\x80",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(8):8,
             repeat(0xff):8,
@@ -941,7 +941,7 @@ success("StringsValidCase23") {
         str: "\xef\xbb\xbf",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -969,7 +969,7 @@ decode_failure("StringsInvalidCase17") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -996,7 +996,7 @@ decode_failure("StringsInvalidCase18") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -1024,7 +1024,7 @@ decode_failure("StringsInvalidCase19") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -1053,7 +1053,7 @@ decode_failure("StringsInvalidCase20") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -1075,7 +1075,7 @@ success("StringsValidCase24") {
         str: "\xe1\x80\x80",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -1103,7 +1103,7 @@ decode_failure("StringsInvalidCase21") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -1124,7 +1124,7 @@ success("StringsValidCase25") {
         str: "\x0d",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1143,7 +1143,7 @@ success("StringsValidCase26") {
         str: "\x0a",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1162,7 +1162,7 @@ success("StringsValidCase27") {
         str: "\x61",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1181,7 +1181,7 @@ success("StringsValidCase28") {
         str: "\xc2\x81",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -1201,7 +1201,7 @@ success("StringsValidCase29") {
         str: "\xe1\x80\xbf",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -1222,7 +1222,7 @@ success("StringsValidCase30") {
         str: "\xf1\x80\xa0\xbf",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -1244,7 +1244,7 @@ success("StringsValidCase31") {
         str: "\xef\xbb\xbf",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -1272,7 +1272,7 @@ decode_failure("StringsInvalidCase22") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1299,7 +1299,7 @@ decode_failure("StringsInvalidCase23") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1326,7 +1326,7 @@ decode_failure("StringsInvalidCase24") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1353,7 +1353,7 @@ decode_failure("StringsInvalidCase25") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1380,7 +1380,7 @@ decode_failure("StringsInvalidCase26") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1407,7 +1407,7 @@ decode_failure("StringsInvalidCase27") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1434,7 +1434,7 @@ decode_failure("StringsInvalidCase28") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1461,7 +1461,7 @@ decode_failure("StringsInvalidCase29") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1488,7 +1488,7 @@ decode_failure("StringsInvalidCase30") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1515,7 +1515,7 @@ decode_failure("StringsInvalidCase31") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1542,7 +1542,7 @@ decode_failure("StringsInvalidCase32") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1569,7 +1569,7 @@ decode_failure("StringsInvalidCase33") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1596,7 +1596,7 @@ decode_failure("StringsInvalidCase34") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(1):8,
             repeat(0xff):8,
@@ -1623,7 +1623,7 @@ decode_failure("StringsInvalidCase35") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -1652,7 +1652,7 @@ decode_failure("StringsInvalidCase36") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -1681,7 +1681,7 @@ decode_failure("StringsInvalidCase37") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -1710,7 +1710,7 @@ decode_failure("StringsInvalidCase38") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -1738,7 +1738,7 @@ decode_failure("StringsInvalidCase39") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -1766,7 +1766,7 @@ decode_failure("StringsInvalidCase40") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -1794,7 +1794,7 @@ decode_failure("StringsInvalidCase41") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -1823,7 +1823,7 @@ decode_failure("StringsInvalidCase42") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -1852,7 +1852,7 @@ decode_failure("StringsInvalidCase43") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(3):8,
             repeat(0xff):8,
@@ -1881,7 +1881,7 @@ decode_failure("StringsInvalidCase44") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -1911,7 +1911,7 @@ decode_failure("StringsInvalidCase45") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -1941,7 +1941,7 @@ decode_failure("StringsInvalidCase46") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -1971,7 +1971,7 @@ decode_failure("StringsInvalidCase47") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -2001,7 +2001,7 @@ decode_failure("StringsInvalidCase48") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(5):8,
             repeat(0xff):8,
@@ -2032,7 +2032,7 @@ decode_failure("StringsInvalidCase49") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(6):8,
             repeat(0xff):8,
@@ -2064,7 +2064,7 @@ decode_failure("StringsInvalidCase50") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(4):8,
             repeat(0xff):8,
@@ -2094,7 +2094,7 @@ decode_failure("StringsInvalidCase51") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(5):8,
             repeat(0xff):8,
@@ -2125,7 +2125,7 @@ decode_failure("StringsInvalidCase52") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(6):8,
             repeat(0xff):8,
@@ -2157,7 +2157,7 @@ decode_failure("StringsInvalidCase53") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,
@@ -2185,7 +2185,7 @@ decode_failure("StringsInvalidCase54") {
     bindings_allowlist = [go,rust,hlcpp,llcpp,],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num(2):8,
             repeat(0xff):8,

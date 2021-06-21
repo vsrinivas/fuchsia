@@ -87,6 +87,7 @@ var allLanguages = func() []string {
 
 var allWireFormats = []gidlir.WireFormat{
 	gidlir.V1WireFormat,
+	gidlir.V2WireFormat,
 }
 
 // GIDLFlags stores the command-line flags for the GIDL program.
