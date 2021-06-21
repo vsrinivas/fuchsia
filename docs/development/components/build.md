@@ -1040,12 +1040,14 @@ this call for the use of `resource_group()` instead, as shown above.
 The underlying behavior of `resource()` and `resource_group()` is identical.
 You are free to choose whichever one you prefer.
 
+Note: see more information in [provide data files to components][provide-data].
+
 ## Unstable features {#unstable-features}
 
 When a new component manifest feature is under active development, the
 Component Framework team may wish to experiment with the API or implementation
-before committing to supporting the new feature. The CML compiler (`cmc`) 
-controls access to these unstable features through an opt-in property in your 
+before committing to supporting the new feature. The CML compiler (`cmc`)
+controls access to these unstable features through an opt-in property in your
 component build rule.
 
 In order to use an unstable feature, add the `unstable_features` property:
@@ -1077,6 +1079,7 @@ You must add your component to the allowlist for the feature in
 [glossary.gn]: /docs/glossary/README.md#gn
 [glossary.package]: /docs/glossary/README.md#fuchsia-package
 [gn-get-target-outputs]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_get_target_outputs
+[provide-data]: /docs/development/components/data.md
 [rustc-binary]: /build/rust/rustc_binary.gni
 [rustc-test]: /build/rust/rustc_test.gni
 [source-code-layout]: /docs/concepts/source_code/layout.md
