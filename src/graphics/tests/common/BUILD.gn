@@ -52,8 +52,7 @@ fuchsia_test_package("vkcontext-pkg") {
   test_components = [ ":vkcontext_cmp" ]
   test_specs = {
     environments = magma_libvulkan_hardware_envs
-    # TODO(fxbug.dev/70272): Enable when fixed.
-    # environments += [ aemu_env ]
+    environments += [ aemu_env ]
   }
 }
 
