@@ -8,7 +8,7 @@
 
 ## Usage:
 ##     fx self-build
-##        Executes some sanity checks and performs the equivalent of
+##        Executes some checks and performs the equivalent of
 ##        'fx build :host'
 ##
 
