@@ -46,6 +46,10 @@
   popf
   .cfi_adjust_cfa_offset -4
 
+  // Clear the LDTR segment selector so any LDT selectors will GPF.
+  // %eax is already zero from above.
+  lldt %ax
+
   // Set up our own GDT rather than continuing with what the boot loader
   // supplied.  This lets us use a %gs segment for the stack-safety ABIs.
   // It's also needed eventually to switch to 64-bit mode, so might as well.

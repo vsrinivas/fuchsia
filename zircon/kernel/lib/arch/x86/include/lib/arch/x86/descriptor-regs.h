@@ -34,14 +34,26 @@ inline void LoadGdt(const GdtRegister64& gdt) {
                        : "memory"  // Ensure compiler writes out changes to GDT.
   );
 }
-inline void LoadGdt(const AlignedGdtRegister64& gdt) {
-  LoadGdt(gdt.reg);
-}
+inline void LoadGdt(const AlignedGdtRegister64& gdt) { LoadGdt(gdt.reg); }
 
 // Activate the given code selector and data selector.
 //
 // The two selectors should be indexes into the currently loaded GDT.
 extern "C" void LoadCodeSegmentSelector(SegmentSelector code_segment);
+
+// Load the Local Descriptor Table Register (LDTR).
+//
+// `selector` can be null or a GDT selector for a valid ring 0 data segment.
+// If the selector is valid, the base address and limit for the LDT are loaded
+// from the GDT descriptor chosen by this selector.  If the selector is null,
+// the LDT is disabled.
+inline void LoadLdt(SegmentSelector selector) {
+  __asm__ __volatile__("lldt %0" : : "rm"(selector.raw));
+}
+
+// Disable the LDT.  Any future use of segment selectors with the LDT bit set
+// produces an immediate #GP fault without examining any table in memory.
+inline void DisableLdt() { LoadLdt({}); }
 
 }  // namespace arch
 

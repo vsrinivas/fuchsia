@@ -32,6 +32,10 @@ void X86StandardSegments::Load() {
   // Initialize the tables.
   Init();
 
+  // Clear to a safely invalid LDT so any segment selectors with the LDT bit
+  // set will cause a GPF rather than looking at any bogus table contents.
+  arch::DisableLdt();
+
   // Install the new GDT.
   arch::LoadGdt({gdt_pointer()});
 
@@ -48,6 +52,10 @@ void X86StandardSegments::Load(uintptr_t entry, uintptr_t arg) {
   Init();
 
 #ifdef __x86_64__
+
+  // Clear to a safely invalid LDT so any segment selectors with the LDT bit
+  // set will cause a GPF rather than looking at any bogus table contents.
+  arch::DisableLdt();
 
   // Install the new GDT.
   arch::LoadGdt({gdt_pointer()});
