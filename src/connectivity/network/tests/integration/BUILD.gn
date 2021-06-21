@@ -30,7 +30,6 @@ tests = [
   "ipv6",
   "management",
   "reachability",
-  "socket",
   "sys",
 ]
 
@@ -93,6 +92,7 @@ tests_v2 = [
   "inspect",
   "neighbor",
   "routes",
+  "socket",
 ]
 
 foreach(test, tests_v2) {
