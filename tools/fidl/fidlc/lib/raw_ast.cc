@@ -420,6 +420,8 @@ void UnionDeclaration::Accept(TreeVisitor* visitor) const {
 
 // TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
 // --- start new syntax ---
+void Modifiers::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
+
 void IdentifierLayoutParameter::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   visitor->OnCompoundIdentifier(identifier);
@@ -485,6 +487,9 @@ void Layout::Accept(TreeVisitor* visitor) const {
   // TODO(fxbug.dev/68792): Parse attributes. Interestingly, we'll only want to
   //  do that in cases where the layout is defined inline on a layout member.
 
+  if (modifiers != nullptr) {
+    visitor->OnModifiers(modifiers);
+  }
   if (subtype_ctor != nullptr) {
     visitor->OnTypeConstructorNew(subtype_ctor);
   }

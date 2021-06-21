@@ -296,7 +296,7 @@ void JSONGenerator::Generate(const flat::Bits& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameSpan(value.name));
-    // TODO(fxbug.dev/75895): refactor this to only have a single null state.
+    // TODO(fxbug.dev/79094): refactor this to only have a single null state.
     if (value.attributes && !value.attributes->attributes.empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateTypeAndFromTypeAlias(value.subtype_ctor);

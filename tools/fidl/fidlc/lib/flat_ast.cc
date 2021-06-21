@@ -3363,9 +3363,12 @@ bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout, const Name
     return false;
   }
 
+  auto strictness = types::Strictness::kFlexible;
+  if (layout->modifiers != nullptr)
+    strictness = layout->modifiers->maybe_strictness.value_or(types::Strictness::kFlexible);
+
   RegisterDecl(std::make_unique<T>(std::move(attributes), context, std::move(subtype_ctor),
-                                   std::move(members),
-                                   layout->strictness.value_or(types::Strictness::kFlexible)));
+                                   std::move(members), strictness));
   return true;
 }
 
@@ -3404,9 +3407,16 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout, const 
     return false;
   }
 
-  RegisterDecl(std::make_unique<T>(std::move(attributes), context, std::move(members),
-                                   layout->strictness.value_or(types::Strictness::kFlexible),
-                                   layout->resourceness));
+  auto strictness = types::Strictness::kFlexible;
+  if (layout->modifiers != nullptr)
+    strictness = layout->modifiers->maybe_strictness.value_or(types::Strictness::kFlexible);
+
+  auto resourceness = types::Resourceness::kValue;
+  if (layout->modifiers != nullptr && layout->modifiers->maybe_resourceness != std::nullopt)
+    resourceness = layout->modifiers->maybe_resourceness.value_or(types::Resourceness::kValue);
+
+  RegisterDecl(std::make_unique<T>(std::move(attributes), context, std::move(members), strictness,
+                                   resourceness));
   return true;
 }
 
@@ -3446,8 +3456,12 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Nam
     return false;
   }
 
+  auto resourceness = types::Resourceness::kValue;
+  if (layout->modifiers != nullptr && layout->modifiers->maybe_resourceness != std::nullopt)
+    resourceness = layout->modifiers->maybe_resourceness.value_or(types::Resourceness::kValue);
+
   RegisterDecl(std::make_unique<Struct>(std::move(attributes), context, std::move(members),
-                                        layout->resourceness, is_request_or_response));
+                                        resourceness, is_request_or_response));
   return true;
 }
 

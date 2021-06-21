@@ -154,11 +154,17 @@ std::unique_ptr<raw::Identifier> Parser::ParseIdentifier(bool is_discarded) {
 
 std::unique_ptr<raw::CompoundIdentifier> Parser::ParseCompoundIdentifier() {
   ASTScope scope(this);
-  std::vector<std::unique_ptr<raw::Identifier>> components;
-
-  components.emplace_back(ParseIdentifier());
+  auto first_identifier = ParseIdentifier();
   if (!Ok())
     return Fail();
+
+  return ParseCompoundIdentifier(scope, std::move(first_identifier));
+}
+
+std::unique_ptr<raw::CompoundIdentifier> Parser::ParseCompoundIdentifier(
+    ASTScope& scope, std::unique_ptr<raw::Identifier> first_identifier) {
+  std::vector<std::unique_ptr<raw::Identifier>> components;
+  components.push_back(std::move(first_identifier));
 
   auto parse_component = [&components, this]() {
     switch (Peek().combined()) {
@@ -2062,7 +2068,7 @@ std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::LayoutMember::
 }
 
 std::unique_ptr<raw::Layout> Parser::ParseLayout(
-    ASTScope& scope, const Modifiers& modifiers,
+    ASTScope& scope, std::unique_ptr<raw::Modifiers> modifiers,
     std::unique_ptr<raw::CompoundIdentifier> compound_identifier,
     std::unique_ptr<raw::TypeConstructorNew> subtype_ctor) {
   raw::Layout::Kind kind;
@@ -2078,23 +2084,28 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
   // maybe we want to have a 'recognize token subkind' on an identifier
   // instead of doing string comparison directly.
   if (identifier->span().data() == "bits") {
-    ValidateModifiers<types::Strictness>(modifiers, identifier->start_);
+    if (modifiers != nullptr)
+      ValidateModifiersNew<types::Strictness>(modifiers, identifier->start_);
     kind = raw::Layout::Kind::kBits;
     member_kind = raw::LayoutMember::Kind::kValue;
   } else if (identifier->span().data() == "enum") {
-    ValidateModifiers<types::Strictness>(modifiers, identifier->start_);
+    if (modifiers != nullptr)
+      ValidateModifiersNew<types::Strictness>(modifiers, identifier->start_);
     kind = raw::Layout::Kind::kEnum;
     member_kind = raw::LayoutMember::Kind::kValue;
   } else if (identifier->span().data() == "struct") {
-    ValidateModifiers<types::Resourceness>(modifiers, identifier->start_);
+    if (modifiers != nullptr)
+      ValidateModifiersNew<types::Resourceness>(modifiers, identifier->start_);
     kind = raw::Layout::Kind::kStruct;
     member_kind = raw::LayoutMember::Kind::kStruct;
   } else if (identifier->span().data() == "table") {
-    ValidateModifiers<types::Resourceness>(modifiers, identifier->start_);
+    if (modifiers != nullptr)
+      ValidateModifiersNew<types::Resourceness>(modifiers, identifier->start_);
     kind = raw::Layout::Kind::kTable;
     member_kind = raw::LayoutMember::Kind::kOrdinaled;
   } else if (identifier->span().data() == "union") {
-    ValidateModifiers<types::Strictness, types::Resourceness>(modifiers, identifier->start_);
+    if (modifiers != nullptr)
+      ValidateModifiersNew<types::Strictness, types::Resourceness>(modifiers, identifier->start_);
     kind = raw::Layout::Kind::kUnion;
     member_kind = raw::LayoutMember::Kind::kOrdinaled;
   } else {
@@ -2156,9 +2167,8 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
       return Fail(ErrMustHaveNonReservedMember);
   }
 
-  return std::make_unique<raw::Layout>(
-      scope.GetSourceElement(), kind, std::move(members), modifiers.strictness,
-      modifiers.resourceness.value_or(types::Resourceness::kValue), std::move(subtype_ctor));
+  return std::make_unique<raw::Layout>(scope.GetSourceElement(), kind, std::move(members),
+                                       std::move(modifiers), std::move(subtype_ctor));
 }
 
 // The colon character is ambiguous. Consider the following two examples:
@@ -2227,17 +2237,115 @@ raw::ConstraintOrSubtype Parser::ParseTokenAfterColon() {
 // [ name | { ... } ][ < ... > ][ : ... ]
 std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
   ASTScope scope(this);
-  const auto modifiers = ParseModifiers();
-  auto identifier = ParseCompoundIdentifier();
-  if (!Ok())
-    return Fail();
+  ASTScope modifiers_scope(this);
+  bool resourceness_comes_first = false;
+  std::unique_ptr<raw::Modifiers> modifiers;
+  std::unique_ptr<raw::CompoundIdentifier> identifier;
+  std::optional<types::Strictness> maybe_strictness = std::nullopt;
+  std::optional<Token> maybe_strictness_token = std::nullopt;
+  std::optional<types::Resourceness> maybe_resourceness = std::nullopt;
+  std::optional<Token> maybe_resourceness_token = std::nullopt;
+
+  // Consume tokens until we get one that isn't a modifier, treating duplicates
+  // and conflicts as immediately recovered errors. For conflicts (e.g. "strict
+  // flexible" or "flexible strict"), we use the earliest one.
+  for (;;) {
+    if (Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kStrict) ||
+        Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kFlexible) ||
+        Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kResource)) {
+      ASTScope maybe_compound_identifier_scope(this);
+      auto modifier_subkind = Peek().subkind();
+      auto maybe_modifier = ParseIdentifier();
+      if (!Ok())
+        return Fail();
+
+      // Special case: this is either a reference to a type named "flexible/strict/resource" (ex:
+      // `struct { foo resource; };`, or otherwise the first modifier on an inline type definition
+      // (ex: `struct { foo resource union {...}; };`).  The only way to decide which is which is to
+      // peek ahead: if the next token is not an identifier, we assume that the last parsed modifier
+      // is actually the identifier of a named value instead.  For example, if the next token after
+      // this one isn't an identifier, we're looking at something like:
+      //
+      //   strict resource;
+      //
+      // If that's the case, the user is referencing a type named "flexible/strict/resource."  This
+      // will need special handling to properly reclassify this modifier as the identifier for the
+      // whole TypeConstructorNew being built here.
+      if (Peek().kind() != Token::kIdentifier) {
+        // Looks like we're dealing with named layout reference that has unfortunately been named
+        // "flexible/strict/resource."
+        identifier =
+            ParseCompoundIdentifier(maybe_compound_identifier_scope, std::move(maybe_modifier));
+        break;
+      }
+
+      Token& modifier_token = maybe_modifier->start_;
+      switch (modifier_subkind) {
+        case Token::Subkind::kFlexible:
+        case Token::Subkind::kStrict: {
+          auto as_strictness = modifier_subkind == Token::Subkind::kFlexible
+                                   ? types::Strictness::kFlexible
+                                   : types::Strictness::kStrict;
+          if (maybe_strictness == as_strictness) {
+            Fail(ErrDuplicateModifier, modifier_token, modifier_token.kind_and_subkind());
+            RecoverOneError();
+            break;
+          }
+          if (maybe_strictness.has_value()) {
+            Fail(ErrConflictingModifier, modifier_token, modifier_token.kind_and_subkind(),
+                 Token::KindAndSubkind(Token::Kind::kIdentifier,
+                                       modifier_subkind == Token::Subkind::kFlexible
+                                           ? Token::Subkind::kStrict
+                                           : Token::Subkind::kFlexible));
+            RecoverOneError();
+            break;
+          }
+          maybe_strictness = as_strictness;
+          maybe_strictness_token = maybe_modifier->start_;
+          break;
+        }
+        case Token::Subkind::kResource: {
+          if (maybe_resourceness == types::Resourceness::kResource) {
+            Fail(ErrDuplicateModifier, modifier_token, modifier_token.kind_and_subkind());
+            RecoverOneError();
+            break;
+          }
+          if (maybe_strictness == std::nullopt) {
+            resourceness_comes_first = true;
+          }
+          maybe_resourceness = types::Resourceness::kResource;
+          maybe_resourceness_token = maybe_modifier->start_;
+          break;
+        }
+        default: {
+          assert(false && "expected modifier token");
+        }
+      }
+    } else {
+      if (maybe_strictness.has_value() || maybe_resourceness.has_value()) {
+        modifiers = std::make_unique<raw::Modifiers>(
+            modifiers_scope.GetSourceElement(), maybe_resourceness, maybe_resourceness_token,
+            maybe_strictness, maybe_strictness_token, resourceness_comes_first);
+      }
+      break;
+    }
+  }
+
+  // Any type constructor which is not a reference to a type named "flexible/strict/resource" will
+  // have the identifier unset, and will enter the block below to parse it.
+  if (identifier == nullptr) {
+    identifier = ParseCompoundIdentifier();
+    if (!Ok())
+      return Fail();
+  }
 
   std::unique_ptr<raw::LayoutReference> layout_ref;
   std::unique_ptr<raw::LayoutParameterList> parameters;
   std::unique_ptr<raw::TypeConstraints> constraints;
   switch (Peek().kind()) {
     case Token::Kind::kLeftCurly: {
-      auto layout = ParseLayout(scope, modifiers, std::move(identifier), /*subtype_ctor=*/nullptr);
+      auto layout =
+          ParseLayout(scope, std::move(modifiers), std::move(identifier), /*subtype_ctor=*/nullptr);
       if (!Ok())
         return Fail();
 
@@ -2256,8 +2364,9 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
                      },
                      [&](std::unique_ptr<raw::TypeConstructorNew>& type_ctor) -> void {
                        auto named_ref = static_cast<raw::NamedLayoutReference*>(layout_ref.get());
-                       auto layout = ParseLayout(scope, modifiers, std::move(named_ref->identifier),
-                                                 std::move(type_ctor));
+                       auto layout =
+                           ParseLayout(scope, std::move(modifiers),
+                                       std::move(named_ref->identifier), std::move(type_ctor));
                        if (!Ok()) {
                          Fail();
                          return;
@@ -2276,7 +2385,8 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
       break;
     }
     default: {
-      ValidateModifiers</* none */>(modifiers, identifier->start_);
+      if (modifiers != nullptr)
+        ValidateModifiersNew</* none */>(modifiers, identifier->start_);
       layout_ref = std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
                                                                std::move(identifier));
     }

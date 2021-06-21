@@ -217,6 +217,8 @@ class TreeVisitor {
 
   // TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
   // --- start new syntax ---
+  virtual void OnModifiers(std::unique_ptr<Modifiers> const& element) { element->Accept(this); }
+
   virtual void OnLayoutParameter(std::unique_ptr<LayoutParameter> const& element) {
     LayoutParameter::Kind kind = element->kind;
     switch (kind) {

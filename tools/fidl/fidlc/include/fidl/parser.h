@@ -243,6 +243,26 @@ class Parser {
     std::optional<Token> resourceness_token;
   };
 
+  // Reports an error if |modifiers| contains a modifier whose type is not
+  // included in |Allowlist|. The |decl_token| should be "struct", "enum", etc.
+  // Marks the error as recovered so that parsing will continue.
+  template <typename... Allowlist>
+  void ValidateModifiersNew(const std::unique_ptr<raw::Modifiers>& modifiers, Token decl_token) {
+    const auto fail = [&](std::optional<Token> token) {
+      Fail(ErrCannotSpecifyModifier, token.value(), token.value().kind_and_subkind(),
+           decl_token.kind_and_subkind());
+      RecoverOneError();
+    };
+    if (!(std::is_same_v<types::Strictness, Allowlist> || ...) &&
+        modifiers->maybe_strictness != std::nullopt) {
+      fail(modifiers->maybe_strictness_token);
+    }
+    if (!(std::is_same_v<types::Resourceness, Allowlist> || ...) &&
+        modifiers->maybe_resourceness != std::nullopt) {
+      fail(modifiers->maybe_resourceness_token);
+    }
+  }
+
   Modifiers ParseModifiers();
 
   // Reports an error if |modifiers| contains a modifier whose type is not
@@ -265,6 +285,8 @@ class Parser {
 
   std::unique_ptr<raw::Identifier> ParseIdentifier(bool is_discarded = false);
   std::unique_ptr<raw::CompoundIdentifier> ParseCompoundIdentifier();
+  std::unique_ptr<raw::CompoundIdentifier> ParseCompoundIdentifier(
+      ASTScope& scope, std::unique_ptr<raw::Identifier> first_identifier);
   std::unique_ptr<raw::LibraryDecl> ParseLibraryDecl();
 
   std::unique_ptr<raw::StringLiteral> ParseStringLiteral();
@@ -354,9 +376,10 @@ class Parser {
   std::unique_ptr<raw::LayoutParameter> ParseLayoutParameter();
   std::unique_ptr<raw::LayoutParameterList> MaybeParseLayoutParameterList();
   std::unique_ptr<raw::LayoutMember> ParseLayoutMember(raw::LayoutMember::Kind);
-  std::unique_ptr<raw::Layout> ParseLayout(ASTScope&, const Modifiers&,
-                                           std::unique_ptr<raw::CompoundIdentifier>,
-                                           std::unique_ptr<raw::TypeConstructorNew>);
+  std::unique_ptr<raw::Layout> ParseLayout(
+      ASTScope& scope, std::unique_ptr<raw::Modifiers> modifiers,
+      std::unique_ptr<raw::CompoundIdentifier> compound_identifier,
+      std::unique_ptr<raw::TypeConstructorNew> subtype_ctor);
   std::unique_ptr<raw::TypeConstraints> ParseTypeConstraints();
   raw::ConstraintOrSubtype ParseTokenAfterColon();
 

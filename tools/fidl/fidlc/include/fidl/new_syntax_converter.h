@@ -77,6 +77,9 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
       std::unique_ptr<raw::LiteralLayoutParameter> const& element) override {
     AbortUnimplemented();
   }
+  void OnModifiers(std::unique_ptr<raw::Modifiers> const& element) override {
+    AbortUnimplemented();
+  }
   void OnNamedLayoutReference(std::unique_ptr<raw::NamedLayoutReference> const& element) override {
     AbortUnimplemented();
   }

@@ -60,7 +60,7 @@ library a_b;
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "a_b");
 }
 
-// Test that otherwise reserved words can be appropriarely parsed when context
+// Test that otherwise reserved words can be appropriately parsed when context
 // is clear.
 TEST(ParsingTests, GoodParsingReservedWordsInStructTest) {
   TestLibrary library(R"FIDL(
@@ -70,8 +70,15 @@ struct struct {
     bool field;
 };
 
+struct flexible {};
+struct strict {};
+struct resource {};
+
 struct InStruct {
     struct foo;
+    flexible bar;
+    strict baz;
+    resource qux;
 
     bool as;
     bool library;

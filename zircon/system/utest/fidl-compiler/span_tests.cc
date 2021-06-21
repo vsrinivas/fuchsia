@@ -73,6 +73,7 @@ namespace {
   DO(AttributeArg)              \
   DO(AttributeNew)              \
   DO(AttributeListNew)          \
+  DO(Modifiers)                 \
   DO(IdentifierLayoutParameter) \
   DO(LiteralLayoutParameter)    \
   DO(TypeLayoutParameter)       \
@@ -283,6 +284,10 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
   void OnAttributeListNew(std::unique_ptr<fidl::raw::AttributeListNew> const& element) override {
     CheckSpanOfType(ElementType::AttributeListNew, *element);
     TreeVisitor::OnAttributeListNew(element);
+  }
+  void OnModifiers(std::unique_ptr<fidl::raw::Modifiers> const& element) override {
+    CheckSpanOfType(ElementType::Modifiers, *element);
+    TreeVisitor::OnModifiers(element);
   }
   void OnIdentifierLayoutParameter(
       std::unique_ptr<fidl::raw::IdentifierLayoutParameter> const& element) override {
@@ -693,14 +698,38 @@ const std::vector<TestCase> new_syntax_test_cases = {
           const bool MY_BOOL = false;
         )FIDL",
      }},
-    {ElementType::AttributeListNew,
+    {ElementType::Modifiers,
      {
-         R"FIDL(library x; «@foo("foo") @bar» const bool MY_BOOL = false;)FIDL",
+         R"FIDL(library x; type MyBits = «flexible» bits { MY_VALUE = 1; };)FIDL",
+         R"FIDL(library x; type MyBits = «strict» bits : uint32 { MY_VALUE = 1; };)FIDL",
+         R"FIDL(library x; type MyEnum = «flexible» enum : uint32 { MY_VALUE = 1; };)FIDL",
+         R"FIDL(library x; type MyEnum = «strict» enum { MY_VALUE = 1; };)FIDL",
+         R"FIDL(library x; type MyStruct = «resource» struct {};)FIDL",
+         R"FIDL(library x; type MyTable = «resource» table { 1: my_member bool; };)FIDL",
+         R"FIDL(library x; type MyUnion = «resource» union { 1: my_member bool; };)FIDL",
+         R"FIDL(library x; type MyUnion = «flexible» union { 1: my_member bool; };)FIDL",
+         R"FIDL(library x; type MyUnion = «strict» union { 1: my_member bool; };)FIDL",
+         R"FIDL(library x; type MyUnion = «resource strict» union { 1: my_member bool; };)FIDL",
+         // Note that the following 3 tests have union members named like modifiers.
+         R"FIDL(library x; type MyUnion = «resource flexible» union { 1: my_member resource; };)FIDL",
+         R"FIDL(library x; type MyUnion = «strict resource» union { 1: my_member flexible; };)FIDL",
+         R"FIDL(library x; type MyUnion = «flexible resource» union { 1: my_member strict; };)FIDL",
+     }},
+    {ElementType::NamedLayoutReference,
+     {
          R"FIDL(library x;
-          «@foo("foo")
-          @bar»
-          const bool MY_BOOL = false;
-        )FIDL",
+          type S = struct {
+            intval «int64»;
+            boolval «bool» = false;
+            stringval «string»:MAX_STRING_SIZE;
+            inner struct {
+              floatval «float64»;
+              uintval «uint8» = 7;
+              vecval «vector»<«vector»<Foo>>;
+              arrval «array»<uint8,4>;
+            };
+          };
+         )FIDL",
      }},
     {ElementType::IdentifierLayoutParameter,
      {
@@ -879,6 +908,9 @@ const std::vector<TestCase> new_syntax_test_cases = {
          R"FIDL(library «x»;
           type «MyStruct» = resource struct {
             «boolval» «bool»;
+            «boolval» «resource»;
+            «boolval» «flexible»;
+            «boolval» «struct»;
           };
          )FIDL",
          R"FIDL(library «x»;

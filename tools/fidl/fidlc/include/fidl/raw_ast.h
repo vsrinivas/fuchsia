@@ -965,6 +965,28 @@ class StructLayoutMember final : public LayoutMember {
   std::unique_ptr<Constant> default_value;
 };
 
+class Modifiers final : public SourceElement {
+ public:
+  Modifiers(SourceElement const& element, std::optional<types::Resourceness> maybe_resourceness,
+            std::optional<Token> maybe_resourceness_token,
+            std::optional<types::Strictness> maybe_strictness,
+            std::optional<Token> maybe_strictness_token, bool resourceness_comes_first)
+      : SourceElement(element),
+        maybe_resourceness(maybe_resourceness),
+        maybe_resourceness_token(maybe_resourceness_token),
+        maybe_strictness(maybe_strictness),
+        maybe_strictness_token(maybe_strictness_token),
+        resourceness_comes_first(resourceness_comes_first) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::optional<types::Resourceness> maybe_resourceness;
+  std::optional<Token> maybe_resourceness_token;
+  std::optional<types::Strictness> maybe_strictness;
+  std::optional<Token> maybe_strictness_token;
+  bool resourceness_comes_first;
+};
+
 class Layout final : public SourceElement {
  public:
   enum Kind {
@@ -978,21 +1000,19 @@ class Layout final : public SourceElement {
   Layout(SourceElement const& element,
          // TODO(fxbug.dev/65978): Support layout attributes.
          Kind kind, std::vector<std::unique_ptr<LayoutMember>> members,
-         std::optional<types::Strictness> strictness, types::Resourceness resourceness,
-         std::unique_ptr<TypeConstructorNew> subtype_ctor)
+         std::unique_ptr<Modifiers> modifiers, std::unique_ptr<TypeConstructorNew> subtype_ctor)
       : SourceElement(element),
         kind(kind),
         members(std::move(members)),
-        strictness(strictness),
-        resourceness(resourceness),
+        modifiers(std::move(modifiers)),
         subtype_ctor(std::move(subtype_ctor)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
   Kind kind;
   std::vector<std::unique_ptr<raw::LayoutMember>> members;
-  std::optional<types::Strictness> strictness;
-  types::Resourceness resourceness;
+  // TODO(fxbug.dev/79094): refactor this to only have a single null state.
+  std::unique_ptr<Modifiers> modifiers;
   // TODO(fxbug.dev/77853): Eventually we'll make [Struct/Ordinaled/Value]Layout
   //  classes to inherit from the now-abstract Layout class, similar to what can
   //  currently be seen on LayoutMember and its children.  When that happens
