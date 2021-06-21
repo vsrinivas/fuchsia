@@ -192,9 +192,9 @@ void CheckSuperblock(const minfs::Superblock& actual_superblock,
   EXPECT_EQ(actual_superblock.block_size, original_superblock.block_size);
   EXPECT_EQ(actual_superblock.alloc_block_count, original_superblock.alloc_block_count);
   EXPECT_EQ(actual_superblock.alloc_inode_count, original_superblock.alloc_inode_count);
-  EXPECT_EQ(actual_superblock.format_version, original_superblock.format_version);
+  EXPECT_EQ(actual_superblock.major_version, original_superblock.major_version);
   EXPECT_EQ(actual_superblock.inode_size, original_superblock.inode_size);
-  EXPECT_EQ(actual_superblock.oldest_revision, original_superblock.oldest_revision);
+  EXPECT_EQ(actual_superblock.oldest_minor_version, original_superblock.oldest_minor_version);
   EXPECT_EQ(actual_superblock.unlinked_head, original_superblock.unlinked_head);
   EXPECT_EQ(actual_superblock.unlinked_tail, original_superblock.unlinked_tail);
 

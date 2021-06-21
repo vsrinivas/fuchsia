@@ -362,7 +362,7 @@ zx_time_t GetTimeUTC() {
 void DumpInfo(const Superblock& info) {
   FX_LOGS(DEBUG) << "magic0:  " << std::setw(10) << info.magic0;
   FX_LOGS(DEBUG) << "magic1:  " << std::setw(10) << info.magic1;
-  FX_LOGS(DEBUG) << "format version:  " << std::setw(10) << info.format_version;
+  FX_LOGS(DEBUG) << "major version:  " << std::setw(10) << info.major_version;
   FX_LOGS(DEBUG) << "data blocks:  " << std::setw(10) << info.block_count << " (size "
                  << info.block_size << ")";
   FX_LOGS(DEBUG) << "inodes:  " << std::setw(10) << info.inode_count << " (size " << info.inode_size
@@ -377,7 +377,7 @@ void DumpInfo(const Superblock& info) {
   FX_LOGS(DEBUG) << "FVM-aware: " << ((info.flags & kMinfsFlagFVM) ? "YES" : "NO");
   FX_LOGS(DEBUG) << "checksum:  " << std::setw(10) << info.checksum;
   FX_LOGS(DEBUG) << "generation count:  " << std::setw(10) << info.generation_count;
-  FX_LOGS(DEBUG) << "oldest_revision:  " << std::setw(10) << info.oldest_revision;
+  FX_LOGS(DEBUG) << "oldest_minor_version:  " << std::setw(10) << info.oldest_minor_version;
   FX_LOGS(DEBUG) << "slice_size: " << info.slice_size;
   FX_LOGS(DEBUG) << "ibm_slices: " << info.ibm_slices;
   FX_LOGS(DEBUG) << "abm_slices: " << info.abm_slices;
@@ -421,10 +421,10 @@ zx_status_t CheckSuperblock(const Superblock* info, uint32_t max_blocks) {
                    << ". Minfs magic: " << std::setfill(' ') << std::setw(8) << kMinfsMagic0;
     return ZX_ERR_WRONG_TYPE;
   }
-  if (info->format_version != kMinfsCurrentFormatVersion) {
+  if (info->major_version != kMinfsCurrentMajorVersion) {
     FX_LOGS(ERROR) << "FS major version: " << std::setfill('0') << std::setw(8) << std::hex
-                   << info->format_version << ". Driver major version: " << std::setw(8)
-                   << kMinfsCurrentFormatVersion;
+                   << info->major_version << ". Driver major version: " << std::setw(8)
+                   << kMinfsCurrentMajorVersion;
     return ZX_ERR_NOT_SUPPORTED;
   }
   if ((info->block_size != kMinfsBlockSize) || (info->inode_size != kMinfsInodeSize)) {
@@ -845,8 +845,8 @@ zx_status_t Minfs::UpdateCleanBitAndOldestRevision(bool is_clean) {
     FX_LOGS(ERROR) << "failed to " << (is_clean ? "set" : "unset") << " clean flag: " << status;
     return status;
   }
-  if (kMinfsCurrentRevision < Info().oldest_revision) {
-    sb_->MutableInfo()->oldest_revision = kMinfsCurrentRevision;
+  if (kMinfsCurrentMinorVersion < Info().oldest_minor_version) {
+    sb_->MutableInfo()->oldest_minor_version = kMinfsCurrentMinorVersion;
   }
   UpdateFlags(transaction.get(), kMinfsFlagClean, is_clean);
   CommitTransaction(std::move(transaction));
@@ -1399,7 +1399,8 @@ void Minfs::LogMountMetrics() {
   cobalt_logger_->LogEventCount(
       static_cast<uint32_t>(fs_metrics::Event::kVersion),
       static_cast<uint32_t>(fs_metrics::Source::kMinfs),
-      std::to_string(Info().format_version) + "/" + std::to_string(Info().oldest_revision), {}, 1);
+      std::to_string(Info().major_version) + "/" + std::to_string(Info().oldest_minor_version), {},
+      1);
 }
 
 void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
@@ -1443,7 +1444,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
   memset(&info, 0x00, sizeof(info));
   info.magic0 = kMinfsMagic0;
   info.magic1 = kMinfsMagic1;
-  info.format_version = kMinfsCurrentFormatVersion;
+  info.major_version = kMinfsCurrentMajorVersion;
   info.flags = kMinfsFlagClean;
   info.block_size = kMinfsBlockSize;
   info.inode_size = kMinfsInodeSize;
@@ -1534,7 +1535,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
     info.integrity_start_block = kFvmSuperblockBackup;
     info.dat_block = kFVMBlockDataStart;
   }
-  info.oldest_revision = kMinfsCurrentRevision;
+  info.oldest_minor_version = kMinfsCurrentMinorVersion;
   DumpInfo(info);
 
   RawBitmap abm;

@@ -25,8 +25,8 @@ std::unique_ptr<disk_inspector::DiskObject> SuperBlockObject::GetElementAt(uint3
       return CreateUint64DiskObj("magic1", &(sb_.magic1));
     }
     case 2: {
-      // uint32_t format_version.
-      return CreateUint32DiskObj("format_version", &(sb_.format_version));
+      // uint32_t major_version.
+      return CreateUint32DiskObj("major_version", &(sb_.major_version));
     }
     case 3: {
       // uint32_t flags.
@@ -109,8 +109,8 @@ std::unique_ptr<disk_inspector::DiskObject> SuperBlockObject::GetElementAt(uint3
       return CreateUint32DiskObj("unlinked_tail", &(sb_.unlinked_tail));
     }
     case 23: {
-      // uint32_t oldest_revision
-      return CreateUint32DiskObj("oldest_revision", &(sb_.oldest_revision));
+      // uint32_t oldest_minor_version
+      return CreateUint32DiskObj("oldest_minor_version", &(sb_.oldest_minor_version));
     }
     case 24: {
       //  uint32_t checksum.

@@ -30,13 +30,13 @@ TEST(MountTest, OldestRevisionUpdatedOnMount) {
   Superblock superblock = {};
   ASSERT_EQ(LoadSuperblock(bcache.get(), &superblock), ZX_OK);
 
-  ASSERT_EQ(kMinfsCurrentRevision, superblock.oldest_revision);
+  ASSERT_EQ(kMinfsCurrentMinorVersion, superblock.oldest_minor_version);
 
-  superblock.oldest_revision = kMinfsCurrentRevision + 1;
+  superblock.oldest_minor_version = kMinfsCurrentMinorVersion + 1;
   UpdateChecksum(&superblock);
   ASSERT_EQ(bcache->Writeblk(kSuperblockStart, &superblock), ZX_OK);
   ASSERT_EQ(LoadSuperblock(bcache.get(), &superblock), ZX_OK);
-  ASSERT_EQ(kMinfsCurrentRevision + 1, superblock.oldest_revision);
+  ASSERT_EQ(kMinfsCurrentMinorVersion + 1, superblock.oldest_minor_version);
 
   MountOptions options = {};
   std::unique_ptr<Minfs> fs;
@@ -44,7 +44,7 @@ TEST(MountTest, OldestRevisionUpdatedOnMount) {
   bcache = Minfs::Destroy(std::move(fs));
 
   ASSERT_EQ(LoadSuperblock(bcache.get(), &superblock), ZX_OK);
-  ASSERT_EQ(kMinfsCurrentRevision, superblock.oldest_revision);
+  ASSERT_EQ(kMinfsCurrentMinorVersion, superblock.oldest_minor_version);
 }
 
 TEST(MountTest, VersionLoggedWithCobalt) {
@@ -61,8 +61,8 @@ TEST(MountTest, VersionLoggedWithCobalt) {
       MockCobaltLogger::LogEventCount(metric_id, event_code, component, period_duration, count);
       EXPECT_EQ(metric_id, static_cast<uint32_t>(fs_metrics::Event::kVersion));
       EXPECT_EQ(event_code, static_cast<uint32_t>(fs_metrics::Source::kMinfs));
-      EXPECT_EQ(component, std::to_string(kMinfsCurrentFormatVersion) + "/" +
-                               std::to_string(kMinfsCurrentRevision));
+      EXPECT_EQ(component, std::to_string(kMinfsCurrentMajorVersion) + "/" +
+                               std::to_string(kMinfsCurrentMinorVersion));
       EXPECT_EQ(period_duration, zx::duration());
       EXPECT_EQ(count, 1);
     }

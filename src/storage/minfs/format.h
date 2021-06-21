@@ -31,12 +31,20 @@ using ino_t = uint32_t;
 constexpr uint64_t kMinfsMagic0         = (0x002153466e694d21ULL);
 constexpr uint64_t kMinfsMagic1         = (0x385000d3d3d3d304ULL);
 
-// Increment the FormatRevision for each backward-incompatible format change, and increment
-// kMinfsRevison for every change to how things are serialized, whether or not they are backwards
-// compatible. See //src/storage/docs/versioning.md
-constexpr uint32_t kMinfsCurrentFormatVersion = 9u;
-// Revision 2: Removed minor_version field.
-constexpr uint32_t kMinfsCurrentRevision      = 2u;
+// Current version of the format. The major version determines backwards-compatibility. The minor
+// version can be freely incremented at any time and does not impact backwards-compatibility; the
+// more often it is updated, the more granularly we can find out what the oldest driver that has
+// touched a filesystem instance.
+//
+// Minimally, the minor version should be incremented whenever a (backwards-compatible) format
+// change is made, but it can also be incremented when major logic changes are made in case there is
+// chance of bugs being introduced and we would like to be able to detect if the filesystem has been
+// touched by a potentially buggy driver. The kBlobfsCurrentMinorVersion is used to updated the
+// oldest_minor_version field in the header when it is opened.
+//
+// See //src/storage/docs/versioning.md for more.
+constexpr uint32_t kMinfsCurrentMajorVersion = 9u;
+constexpr uint32_t kMinfsCurrentMinorVersion = 2u;
 
 constexpr ino_t    kMinfsRootIno        = 1;
 constexpr uint32_t kMinfsFlagClean      = 0x00000001;  // Currently unused,
@@ -98,14 +106,14 @@ struct Superblock {
   uint64_t magic1;
 
   // The format version is the version of the overall format. If this is larger than
-  // kCurrentMinfsFormatVersion the driver must not access the data.
+  // kCurrentMinfsMajorVersion the driver must not access the data.
   //
-  // See also "oldest_revision" below and //src/storage/docs/versioning.md.
+  // See also "oldest_minor_version" below and //src/storage/docs/versioning.md.
   //
   // The deprecated2 field used to store a minor version which was never used and should always
   // be zero. Old versions of the MinFS driver will fail to mount if this field is nonzero when
   // otherwise they may have been able to mount a filesystem of version 9.
-  uint32_t format_version;
+  uint32_t major_version;
   uint32_t deprecated2;
 
   uint32_t checksum;          // Crc32 checksum of the contents of the info block.
@@ -139,10 +147,10 @@ struct Superblock {
   // Records the oldest revision of Minfs code that has touched this volume. It can be used for
   // example by fsck to determine what checks should be strict and what should be warnings. This
   // should be incremented any time there's any change in how data is written to the device, even
-  // if it's backwards compatible. Compatibility is determined by format_version above.
+  // if it's backwards compatible. Compatibility is determined by major_version above.
   //
   // See //src/storage/docs/versioning.md
-  uint32_t oldest_revision;
+  uint32_t oldest_minor_version;
 
   uint32_t reserved[2018];
 

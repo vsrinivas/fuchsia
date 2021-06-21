@@ -59,7 +59,7 @@ void FillSuperblockFields(Superblock* info) {
   constexpr uint32_t kDefaultAllocCount = 2;
   info->magic0 = kMinfsMagic0;
   info->magic1 = kMinfsMagic1;
-  info->format_version = kMinfsCurrentFormatVersion;
+  info->major_version = kMinfsCurrentMajorVersion;
   info->flags = kMinfsFlagClean;
   info->block_size = kMinfsBlockSize;
   info->inode_size = kMinfsInodeSize;
@@ -73,7 +73,7 @@ void FillSuperblockFields(Superblock* info) {
   info->alloc_block_count = kDefaultAllocCount;
   info->alloc_inode_count = kDefaultAllocCount;
   info->generation_count = 0;
-  info->oldest_revision = kMinfsCurrentRevision;
+  info->oldest_minor_version = kMinfsCurrentMinorVersion;
   minfs::UpdateChecksum(info);
 }
 
@@ -183,10 +183,10 @@ TEST(SuperblockTest, TestCorruptSuperblockWithoutCorrection) {
   memcpy(&backup, &info, sizeof(backup));
 
   // Corrupt original Superblock.
-  info.format_version = 0xdeadbeef;
+  info.major_version = 0xdeadbeef;
 
   // Corrupt backup Superblock.
-  backup.format_version = 0x55;
+  backup.major_version = 0x55;
 
   // Write superblock and backup to disk.
   block_fifo_request_t request[2];
@@ -210,8 +210,8 @@ TEST(SuperblockTest, TestCorruptSuperblockWithoutCorrection) {
 
   // Confirm that the superblock is not updated by backup.
   ASSERT_NE(memcmp(&info, &backup, sizeof(backup)), 0);
-  ASSERT_EQ(0xdeadbeef, info.format_version);
-  ASSERT_EQ(backup.format_version, 0x55u);
+  ASSERT_EQ(0xdeadbeef, info.major_version);
+  ASSERT_EQ(backup.major_version, 0x55u);
 }
 
 // Tests corrupt superblock and non-corrupt backup superblock.
@@ -227,7 +227,7 @@ TEST(SuperblockTest, TestCorruptSuperblockWithCorrection) {
   memcpy(&backup, &info, sizeof(backup));
 
   // Corrupt original Superblock.
-  info.format_version = 0xdeadbeef;
+  info.major_version = 0xdeadbeef;
 
   // Write superblock and backup to disk.
   block_fifo_request_t request[2];

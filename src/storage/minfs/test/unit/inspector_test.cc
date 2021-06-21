@@ -87,11 +87,11 @@ void RunSuperblockTest(SuperblockType version) {
   Superblock sb;
   sb.magic0 = kMinfsMagic0;
   sb.magic1 = kMinfsMagic1;
-  sb.format_version = kMinfsCurrentFormatVersion;
+  sb.major_version = kMinfsCurrentMajorVersion;
   sb.flags = kMinfsFlagClean;
   sb.block_size = kMinfsBlockSize;
   sb.inode_size = kMinfsInodeSize;
-  sb.oldest_revision = kMinfsCurrentRevision;
+  sb.oldest_minor_version = kMinfsCurrentMinorVersion;
 
   size_t size;
   const void* buffer = nullptr;
@@ -119,7 +119,7 @@ void RunSuperblockTest(SuperblockType version) {
 
   std::unique_ptr<disk_inspector::DiskObject> obj2 = superblock->GetElementAt(2);
   obj2->GetValue(&buffer, &size);
-  ASSERT_EQ(kMinfsCurrentFormatVersion, *(reinterpret_cast<const uint32_t*>(buffer)));
+  ASSERT_EQ(kMinfsCurrentMajorVersion, *(reinterpret_cast<const uint32_t*>(buffer)));
 
   std::unique_ptr<disk_inspector::DiskObject> obj4 = superblock->GetElementAt(3);
   obj4->GetValue(&buffer, &size);

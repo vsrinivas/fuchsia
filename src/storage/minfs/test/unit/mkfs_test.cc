@@ -51,8 +51,8 @@ TEST(FormatFilesystemTest, FilesystemFormatClearsJournal) {
   // Verify the superblock has the correct versions.
   Superblock new_superblock = {};
   ASSERT_EQ(LoadSuperblock(bcache.get(), &new_superblock), ZX_OK);
-  EXPECT_EQ(kMinfsCurrentFormatVersion, new_superblock.format_version);
-  EXPECT_EQ(kMinfsCurrentRevision, new_superblock.oldest_revision);
+  EXPECT_EQ(kMinfsCurrentMajorVersion, new_superblock.major_version);
+  EXPECT_EQ(kMinfsCurrentMinorVersion, new_superblock.oldest_minor_version);
 
   // Verify that the device has written zeros to the expected location, overwriting the sentinel
   // pages.

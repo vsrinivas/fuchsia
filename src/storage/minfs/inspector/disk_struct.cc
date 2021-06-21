@@ -19,7 +19,7 @@ std::unique_ptr<disk_inspector::DiskStruct> GetSuperblockStruct() {
       disk_inspector::DiskStruct::Create("Superblock", sizeof(Superblock));
   ADD_FIELD(object, Superblock, magic0);
   ADD_FIELD(object, Superblock, magic1);
-  ADD_FIELD(object, Superblock, format_version);
+  ADD_FIELD(object, Superblock, major_version);
   ADD_FIELD(object, Superblock, checksum);
   ADD_FIELD(object, Superblock, generation_count);
   ADD_FIELD(object, Superblock, flags);
@@ -42,7 +42,7 @@ std::unique_ptr<disk_inspector::DiskStruct> GetSuperblockStruct() {
   ADD_FIELD(object, Superblock, dat_slices);
   ADD_FIELD(object, Superblock, unlinked_head);
   ADD_FIELD(object, Superblock, unlinked_tail);
-  ADD_FIELD(object, Superblock, oldest_revision);
+  ADD_FIELD(object, Superblock, oldest_minor_version);
   ADD_ARRAY_FIELD(object, Superblock, reserved, 2018);
   return object;
 }
