@@ -76,5 +76,8 @@ TEST(DependencyInjection, Load) {
   EXPECT_TRUE(ddk.Ok());
 
   device->DdkRelease();
+
+  // Ensure loop shutdown happens before |provider| is torn down.
+  loop.Shutdown();
 }
 }  // namespace
