@@ -97,6 +97,7 @@ test("optee-controller-test-bin") {
     "//src/devices/testing/fake-resource",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

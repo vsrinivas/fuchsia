@@ -19,7 +19,11 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
 
+#include <condition_variable>
+#include <list>
+#include <map>
 #include <memory>
+#include <thread>
 
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
@@ -38,6 +42,35 @@ namespace optee {
 class OpteeClient;
 class OpteeDeviceInfo;
 
+class WaitCtx {
+ public:
+  WaitCtx() = default;
+  WaitCtx(const WaitCtx&) = delete;
+  WaitCtx& operator=(const WaitCtx*) = delete;
+
+  void Wait() {
+    std::unique_lock<std::mutex> lck(lock_);
+    cv_.wait(lck, [this] { return done_; });
+  }
+  void Signal() {
+    {
+      std::unique_lock<std::mutex> lck(lock_);
+      done_ = true;
+    }
+    cv_.notify_one();
+  }
+
+  bool Signaled() {
+    std::unique_lock<std::mutex> lck(lock_);
+    return done_;
+  }
+
+ private:
+  bool done_{false};
+  std::mutex lock_;
+  std::condition_variable cv_;
+};
+
 class OpteeControllerBase {
  public:
   using RpcHandler = fbl::Function<zx_status_t(const RpcFunctionArgs&, RpcFunctionResult*)>;
@@ -55,9 +88,27 @@ class OpteeControllerBase {
   virtual CallResult CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) = 0;
   virtual SharedMemoryManager::DriverMemoryPool* driver_pool() const = 0;
   virtual SharedMemoryManager::ClientMemoryPool* client_pool() const = 0;
+
+  void WaitQueueWait(uint64_t key);
+  void WaitQueueSignal(uint64_t key);
+  size_t WaitQueueSize() const;
+  std::list<WaitCtx>::iterator CommandQueueInit();
+  void CommandQueueWait(std::list<WaitCtx>::iterator& el);
+  void CommandQueueSignal(const std::list<WaitCtx>::iterator& el);
+  size_t CommandQueueSize() const;
+  size_t CommandQueueWaitSize() const;
+
   virtual zx_status_t RpmbConnectServer(
       fidl::ServerEnd<fuchsia_hardware_rpmb::Rpmb> server) const = 0;
   virtual zx_device_t* GetDevice() const = 0;
+
+ private:
+  fbl::Mutex wq_lock_;
+  std::map<uint64_t, WaitCtx> wait_queue_;
+
+  fbl::Mutex cq_lock_;
+  std::list<WaitCtx> command_queue_;
+  std::list<WaitCtx*> command_queue_wait_;
 };
 
 class OpteeController;
@@ -69,9 +120,12 @@ class OpteeController : public OpteeControllerBase,
                         public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
                         public fidl::WireServer<fuchsia_tee::DeviceInfo> {
  public:
-  explicit OpteeController(zx_device_t* parent)
-      : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+  explicit OpteeController(zx_device_t* parent, uint32_t thread_count = 3)
+      : DeviceType(parent),
+        loop_(&kAsyncLoopConfigNeverAttachToThread),
+        thread_count_(thread_count) {}
 
+  ~OpteeController() override;
   OpteeController(const OpteeController&) = delete;
   OpteeController& operator=(const OpteeController&) = delete;
 
@@ -144,6 +198,7 @@ class OpteeController : public OpteeControllerBase,
 
   ddk::PDev pdev_;
   async::Loop loop_;
+  uint32_t thread_count_;
   ddk::SysmemProtocolClient sysmem_;
   ddk::RpmbProtocolClient rpmb_protocol_client_ = {};
   zx::resource secure_monitor_;

@@ -542,7 +542,7 @@ fit::result<RpmbRpcMessage, zx_status_t> RpmbRpcMessage::CreateFromRpcMessage(
       result_message.set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
       return fit::error(ZX_ERR_NOT_SUPPORTED);
     default:
-      LOG(ERROR, "RPC command to load trusted app received unexpected first parameter!");
+      LOG(ERROR, "RPC command to access RPMB storage received unexpected first parameter!");
       result_message.set_return_origin(TEEC_ORIGIN_COMMS);
       result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
       return fit::error(ZX_ERR_INVALID_ARGS);
@@ -565,11 +565,38 @@ fit::result<RpmbRpcMessage, zx_status_t> RpmbRpcMessage::CreateFromRpcMessage(
       result_message.set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
       return fit::error(ZX_ERR_NOT_SUPPORTED);
     default:
-      LOG(ERROR, "RPC command to load trusted app received unexpected second parameter!");
+      LOG(ERROR, "RPC command to access RPMB storage received unexpected second parameter!");
       result_message.set_return_origin(TEEC_ORIGIN_COMMS);
       result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
       return fit::error(ZX_ERR_INVALID_ARGS);
   }
+
+  return fit::ok(std::move(result_message));
+}
+
+fit::result<WaitQueueRpcMessage, zx_status_t> WaitQueueRpcMessage::CreateFromRpcMessage(
+    RpcMessage&& rpc_message) {
+  ZX_DEBUG_ASSERT(rpc_message.command() == RpcMessage::Command::kWaitQueue);
+
+  WaitQueueRpcMessage result_message(std::move(rpc_message));
+  if (result_message.header()->num_params != kNumParams) {
+    LOG(ERROR, "RPC command for WaitQueue received unexpected number of parameters! (%u)",
+        result_message.header()->num_params);
+    result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+    result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  MessageParam& param = result_message.params()[kParamIndex];
+  if (param.attribute != MessageParam::kAttributeTypeValueInput) {
+    LOG(ERROR, "RPC command for WaitQueue received unexpected first parameter!");
+    result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+    result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  result_message.command_ = param.payload.value.wait_queue.command;
+  result_message.key_ = param.payload.value.wait_queue.key;
 
   return fit::ok(std::move(result_message));
 }

@@ -10,15 +10,19 @@
 #include <lib/ddk/io-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/fit/defer.h>
+#include <lib/fit/function.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
 #include <string.h>
+#include <zircon/assert.h>
 #include <zircon/threads.h>
 
 #include <limits>
 #include <memory>
 #include <optional>
+#include <thread>
 #include <utility>
 
 #include <fbl/auto_lock.h>
@@ -43,6 +47,94 @@ static bool IsOpteeApiRevisionSupported(const tee_smc::TrustedOsCallRevisionResu
   ZX_DEBUG_ASSERT(returned_rev.minor <= static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
   return returned_rev.major == kOpteeApiRevisionMajor &&
          static_cast<int32_t>(returned_rev.minor) >= static_cast<int32_t>(kOpteeApiRevisionMinor);
+}
+
+void OpteeControllerBase::WaitQueueWait(const uint64_t key) {
+  wq_lock_.Acquire();
+  if (wait_queue_.find(key) == wait_queue_.end()) {
+    wait_queue_.emplace(std::piecewise_construct, std::forward_as_tuple(key),
+                        std::forward_as_tuple());
+  }
+  wq_lock_.Release();
+
+  wait_queue_.at(key).Wait();
+
+  wq_lock_.Acquire();
+  wait_queue_.erase(key);
+  wq_lock_.Release();
+}
+
+void OpteeControllerBase::WaitQueueSignal(const uint64_t key) {
+  fbl::AutoLock wq_lock(&wq_lock_);
+  if (wait_queue_.find(key) == wait_queue_.end()) {
+    wait_queue_.emplace(std::piecewise_construct, std::forward_as_tuple(key),
+                        std::forward_as_tuple());
+  }
+  wait_queue_.at(key).Signal();
+}
+
+size_t OpteeControllerBase::WaitQueueSize() const { return wait_queue_.size(); }
+
+std::list<WaitCtx>::iterator OpteeControllerBase::CommandQueueInit() {
+  std::list<WaitCtx>::iterator it;
+  cq_lock_.Acquire();
+  command_queue_.emplace_back();
+  // get iterator to inserted element
+  it = std::prev(command_queue_.end());
+  cq_lock_.Release();
+
+  return it;
+}
+
+void OpteeControllerBase::CommandQueueWait(std::list<WaitCtx>::iterator& el) {
+  WaitCtx* ctx;
+  cq_lock_.Acquire();
+  ctx = &*el;
+  command_queue_wait_.push_back(ctx);
+  cq_lock_.Release();
+
+  ctx->Wait();
+
+  cq_lock_.Acquire();
+  // remove our WaitCtx if it is still in wait queue.
+  // This may happened if CommandQueueWait was called after the the WaitCtx was actually signaled
+  // (race between wait and signaled threads).
+  command_queue_wait_.remove(ctx);
+  cq_lock_.Release();
+}
+
+void OpteeControllerBase::CommandQueueSignal(const std::list<WaitCtx>::iterator& el) {
+  fbl::AutoLock cq_lock(&cq_lock_);
+
+  // remove our own context from command queue
+  command_queue_.erase(el);
+
+  // signal the first waiting thread if any
+  if (!command_queue_wait_.empty()) {
+    auto ctx = command_queue_wait_.front();
+    // remove WaitCtx from wait queue to void multi signaling the same context.
+    command_queue_wait_.pop_front();
+    ctx->Signal();
+  } else {  // signal context from command queue
+    // there is a more probability that last context in queue will get
+    // ThreadLimit than the first one.
+    // So, let's find the first not signaled WaitCtx from the end.
+    for (auto it = command_queue_.rbegin(); it != command_queue_.rend(); ++it) {
+      if (!it->Signaled()) {
+        it->Signal();
+        break;
+      }
+    }
+  }
+}
+
+size_t OpteeControllerBase::CommandQueueSize() const { return command_queue_.size(); }
+size_t OpteeControllerBase::CommandQueueWaitSize() const { return command_queue_wait_.size(); }
+
+OpteeController::~OpteeController() {
+  loop_.Quit();
+  loop_.JoinThreads();
+  loop_.Shutdown();
 }
 
 zx_status_t OpteeController::ValidateApiUid() const {
@@ -162,7 +254,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
   zx_paddr_t mmio_vmo_paddr;
   zx::pmt pmt;
   status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, *zx::unowned_vmo(mmio_dev.vmo),
-                    /*offset=*/0, ZX_PAGE_SIZE, &mmio_vmo_paddr, /*num_addrs=*/1, &pmt);
+                    /*offset=*/0, ZX_PAGE_SIZE, &mmio_vmo_paddr, /*addrs_count=*/1, &pmt);
   if (status != ZX_OK) {
     LOG(ERROR, "unable to pin secure world memory");
     return status;
@@ -314,27 +406,32 @@ zx_status_t OpteeController::Bind() {
     return status;
   }
 
-  thrd_t optee_thread;
-  status = loop_.StartThread("optee-thread", &optee_thread);
-  if (status != ZX_OK) {
-    LOG(ERROR, "could not start optee thread");
-    return status;
-  }
-
-  // TODO(http://fxbug.dev/13562): The below deadline profile is currently defined by the strictest
-  // latency requirements of the trusted app workloads (media decryption). This is intended to be
-  // temporary, as it is not ideal for all trusted applications and we should revisit once the TA
-  // calls are dispatched on a separate thread pool.
-  zx::profile profile;
-  status = device_get_deadline_profile(parent(), ZX_USEC(2000), ZX_USEC(2500), ZX_USEC(2500),
-                                       "optee", profile.reset_and_get_address());
-  if (status != ZX_OK) {
-    LOG(WARNING, "could not get deadline profile");
-  } else {
-    status =
-        zx::unowned_thread(thrd_get_zx_handle(optee_thread))->set_profile(std::move(profile), 0);
+  for (uint32_t i = 0; i < thread_count_; ++i) {
+    thrd_t optee_thread;
+    char name[32];
+    snprintf(name, sizeof(name), "optee-thread-%d", i);
+    status = loop_.StartThread(name, &optee_thread);
+    LOG(INFO, "Starting OPTEE thread %s...", name);
     if (status != ZX_OK) {
-      LOG(WARNING, "could not set profile");
+      LOG(ERROR, "could not start optee thread %d of %d", i, thread_count_);
+      return status;
+    }
+
+    // TODO(http://fxbug.dev/13562): The below deadline profile is currently defined by the
+    // strictest latency requirements of the trusted app workloads (media decryption). This is
+    // intended to be temporary, as it is not ideal for all trusted applications and we should
+    // revisit once the TA calls are dispatched on a separate thread pool.
+    zx::profile profile;
+    status = device_get_deadline_profile(parent(), ZX_USEC(2000), ZX_USEC(2500), ZX_USEC(2500),
+                                         "optee", profile.reset_and_get_address());
+    if (status != ZX_OK) {
+      LOG(WARNING, "could not get deadline profile");
+    } else {
+      status =
+          zx::unowned_thread(thrd_get_zx_handle(optee_thread))->set_profile(std::move(profile), 0);
+      if (status != ZX_OK) {
+        LOG(WARNING, "could not set profile %d", status);
+      }
     }
   }
 
@@ -438,6 +535,11 @@ OpteeController::CallResult OpteeController::CallWithMessage(const optee::Messag
                                                     static_cast<uint32_t>(message.paddr() >> 32),
                                                     static_cast<uint32_t>(message.paddr()));
 
+  // create Wait context for thread handling
+  auto cur = CommandQueueInit();
+  // remove our Wait context from list and signal waiting context.
+  auto deferred_action = fit::deferred_action([&]() { this->CommandQueueSignal(cur); });
+
   while (true) {
     union {
       zx_smc_result_t raw;
@@ -459,10 +561,7 @@ OpteeController::CallResult OpteeController::CallWithMessage(const optee::Messag
     }
 
     if (result.response.status == kReturnEThreadLimit) {
-      // TODO(rjascani): This should actually block until a thread is available. For now,
-      // just quit.
-      LOG(ERROR, "hit thread limit, need to fix this");
-      break;
+      CommandQueueWait(cur);
     } else if (optee::IsReturnRpc(result.response.status)) {
       rpc_handler(result.rpc_args, &func_call.rpc_result);
     } else {
