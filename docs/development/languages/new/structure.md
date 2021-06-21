@@ -97,10 +97,8 @@ that is consumed by the language-specific backends.
 
 You should create a new backend for the FIDL compiler for your language. The
 backend can be written in whatever language you prefer. Typically, language
-maintainer choose either Go or the target language.
-
- * [fidlgen](/garnet/go/src/fidl/compiler/backend) (C++, Rust, and Go)
- * [fidlgen_dart](https://fuchsia.googlesource.com/topaz/+/HEAD/bin/fidlgen_dart) (Dart)
+maintainers choose either Go or the target language. Official backends are named
+`fidlgen_<lang>` and can be found in [//tools/fidl](/tools/fidl).
 
 ### Generated code
 
