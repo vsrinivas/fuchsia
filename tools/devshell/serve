@@ -51,6 +51,8 @@ pave_args=(--reuseport)
 fx-standard-switches "$@"
 set -- "${FX_ARGV[@]}"
 
+config_format="2"
+
 while (($#)); do
   case "$1" in
     -v|-vv|--verbose)
@@ -69,7 +71,7 @@ while (($#)); do
       shift
       ;;
     -c)
-      serve_args+=("$1" "$2")
+      config_format=("$2")
       shift
       ;;
     -a)
@@ -82,6 +84,8 @@ while (($#)); do
   esac
   shift
 done
+
+serve_args+=("-c" "${config_format}")
 
 if fx-is-bringup; then
   fx-error "$0 is not supported in the bringup build configuration, as there are no package features in bringup."

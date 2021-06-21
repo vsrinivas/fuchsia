@@ -93,7 +93,6 @@ function main {
 
   fx-command-run shell pkgctl repo add url\
     -n "${source_name}" \
-    -f 1 \
     "${persist}" \
     "${config_url}"
   err=$?
