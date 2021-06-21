@@ -1806,6 +1806,119 @@ TEST(Sysmem, ComplicatedFormatModifiers) {
   ASSERT_OK(allocate_result_1->status);
 }
 
+TEST(Sysmem, DuplicateSync) {
+  auto allocator = connect_to_sysmem_driver();
+
+  auto token_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  ASSERT_OK(token_endpoints_1);
+  auto [token_client_1, token_server_1] = std::move(*token_endpoints_1);
+  auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+
+  ASSERT_OK(allocator->AllocateSharedCollection(std::move(token_server_1)));
+
+  zx::wire::Rights rights_attenuation_masks[] = {zx::wire::Rights::kSameRights};
+  auto duplicate_result = token_1.DuplicateSync(
+      fidl::VectorView<zx::wire::Rights>::FromExternal(rights_attenuation_masks));
+  ASSERT_OK(duplicate_result);
+  ASSERT_EQ(duplicate_result->tokens.count(), 1);
+  auto token_client_2 = std::move(duplicate_result->tokens[0]);
+
+  auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  ASSERT_OK(collection_endpoints_1);
+  auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
+  auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
+
+  ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_OK(allocator->BindSharedCollection(std::move(token_1.client_end()),
+                                            std::move(collection_server_1)));
+
+  SetDefaultCollectionName(collection_1);
+
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints_1;
+  constraints_1.usage.cpu =
+      fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften;
+  constraints_1.min_buffer_count_for_camping = 1;
+  constraints_1.has_buffer_memory_constraints = true;
+  constraints_1.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
+      .min_size_bytes = 64 * 1024,
+      .cpu_domain_supported = true,
+  };
+
+  // Start with constraints_2 a copy of constraints_1.  There are no handles
+  // in the constraints struct so a struct copy instead of clone is fine here.
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints_2(constraints_1);
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints_3(constraints_1);
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints_4(constraints_1);
+
+  ASSERT_OK(collection_1.SetConstraints(true, std::move(constraints_1)));
+
+  auto collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  ASSERT_OK(collection_endpoints_2);
+  auto collection_2 = fidl::BindSyncClient(std::move(collection_endpoints_2->client));
+
+  auto token_2 = fidl::BindSyncClient(std::move(token_client_2));
+  // Remove write from last token
+  zx::wire::Rights rights_attenuation_masks_2[] = {
+      zx::wire::Rights::kSameRights, ~zx::wire::Rights::kWrite};
+  auto duplicate_result_2 = token_2.DuplicateSync(
+      fidl::VectorView<zx::wire::Rights>::FromExternal(rights_attenuation_masks_2));
+  ASSERT_OK(duplicate_result_2);
+  ASSERT_EQ(duplicate_result_2->tokens.count(), 2);
+
+  ASSERT_NE(token_2.client_end().channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_OK(allocator->BindSharedCollection(std::move(token_2.client_end()),
+                                            std::move(collection_endpoints_2->server)));
+
+  ASSERT_OK(collection_2.SetConstraints(true, std::move(constraints_2)));
+
+  auto collection_endpoints_3 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  ASSERT_OK(collection_endpoints_3);
+  auto collection_3 = fidl::BindSyncClient(std::move(collection_endpoints_3->client));
+
+  auto collection_endpoints_4 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  ASSERT_OK(collection_endpoints_4);
+  auto collection_4 = fidl::BindSyncClient(std::move(collection_endpoints_4->client));
+
+  ASSERT_NE(duplicate_result_2->tokens[0].channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_OK(allocator->BindSharedCollection(std::move(duplicate_result_2->tokens[0]),
+                                            std::move(collection_endpoints_3->server)));
+
+  ASSERT_NE(duplicate_result_2->tokens[1].channel().get(), ZX_HANDLE_INVALID, "");
+  ASSERT_OK(allocator->BindSharedCollection(std::move(duplicate_result_2->tokens[1]),
+                                            std::move(collection_endpoints_4->server)));
+
+  ASSERT_OK(collection_3.SetConstraints(true, std::move(constraints_3)));
+  ASSERT_OK(collection_4.SetConstraints(true, std::move(constraints_4)));
+
+  //
+  // Only after all participants have SetConstraints() will
+  // the allocation be successful.
+  //
+  auto allocate_result_1 = collection_1.WaitForBuffersAllocated();
+  // This is the first round-trip to/from sysmem.  A failure here can be due
+  // to any step above failing async.
+  ASSERT_OK(allocate_result_1);
+  ASSERT_OK(allocate_result_1->status);
+
+  auto allocate_result_3 = collection_3.WaitForBuffersAllocated();
+  ASSERT_OK(allocate_result_3);
+  ASSERT_OK(allocate_result_3->status);
+
+  auto allocate_result_4 = collection_4.WaitForBuffersAllocated();
+  ASSERT_OK(allocate_result_4);
+  ASSERT_OK(allocate_result_4->status);
+
+  // Check rights
+  zx_info_handle_basic_t info = {};
+  ASSERT_OK(allocate_result_3->buffer_collection_info.buffers[0].vmo.get_info(
+      ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(info.rights & ZX_RIGHT_WRITE, ZX_RIGHT_WRITE);
+
+  ASSERT_OK(allocate_result_4->buffer_collection_info.buffers[0].vmo.get_info(
+      ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(info.rights & ZX_RIGHT_WRITE, 0);
+}
+
 TEST(Sysmem, CloseWithOutstandingWait) {
   auto allocator_1 = connect_to_sysmem_driver();
   ASSERT_OK(allocator_1);

@@ -79,6 +79,43 @@ void BufferCollectionToken::Bind(
                        });
 }
 
+void BufferCollectionToken::DuplicateSync(DuplicateSyncRequestView request,
+                                          DuplicateSyncCompleter::Sync& completer) {
+  TRACE_DURATION("gfx", "BufferCollectionToken::DuplicateSync", "this", this,
+                 "logical_buffer_collection", &logical_buffer_collection());
+  table_set_.MitigateChurn();
+  if (is_done_) {
+    // Probably a Close() followed by DuplicateSync(), which is illegal and
+    // causes the whole LogicalBufferCollection to fail.
+    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
+             "BufferCollectionToken::DuplicateSync() attempted when is_done_");
+    return;
+  }
+  std::vector<fidl::ClientEnd<fuchsia_sysmem::BufferCollectionToken>> new_tokens;
+
+  for (auto& rights_attenuation_mask : request->rights_attenuation_masks) {
+    auto token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+    if (!token_endpoints.is_ok()) {
+      FailSync(FROM_HERE, completer, token_endpoints.status_value(),
+               "BufferCollectionToken::DuplicateSync() failed to create token channel.");
+      return;
+    }
+
+    NodeProperties* new_node_properties = node_properties().NewChild(&logical_buffer_collection());
+    if (rights_attenuation_mask != zx::wire::Rights::kSameRights) {
+      new_node_properties->rights_attenuation_mask() &= uint32_t(rights_attenuation_mask);
+    }
+    logical_buffer_collection().CreateBufferCollectionToken(shared_logical_buffer_collection(),
+                                                            new_node_properties,
+                                                            std::move(token_endpoints->server));
+    new_tokens.push_back(std::move(token_endpoints->client));
+  }
+
+  completer.Reply(
+      fidl::VectorView<fidl::ClientEnd<fuchsia_sysmem::BufferCollectionToken>>::FromExternal(
+          new_tokens));
+}
+
 void BufferCollectionToken::Duplicate(DuplicateRequestView request,
                                       DuplicateCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollectionToken::Duplicate", "this", this,

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.sysmem;
 
 using zx;
+
+const uint32 MAX_COUNT_DUPLICATES = 64;
 
 /// A BufferCollectionToken is not a BufferCollection, but rather a way to
 /// identify a potential shared BufferCollection prior to the BufferCollection
@@ -15,30 +16,43 @@ using zx;
 /// (pair) because this way we can detect error conditions like a participant
 /// dying mid-create.
 protocol BufferCollectionToken {
-    /// The initiator or a participant can send Duplicate() as part of creating
-    /// another participant-side handle to the same logical
-    /// BufferCollectionToken.
+    /// This method can be used to add more participants prior to creating a
+    /// shared BufferCollection. A new token will be returned for each entry in
+    /// the `rights_attenuation_masks` array. The return value is the client
+    /// ends of each new participant token.
     ///
-    /// This method is used to hand the logical token to all participants so all
-    /// participants can provide constraints to sysmem for the overall
-    /// BufferCollection to achieve the goal of allocating buffers compatible
-    /// with all participants.
+    /// In contrast to Duplicate(), no Sync() is needed after calling this
+    /// method.
     ///
-    /// The Duplicate() message is intentionally available only on
-    /// BufferCollectionToken not BufferCollection.
+    /// All tokens must be turned in via BindSharedCollection() or Close() for a
+    /// BufferCollection to be successfully created.
     ///
-    /// The token is separate from BufferCollection so that participants contact
-    /// sysmem directly, so that participants are only trusting their environment
-    /// for who sysmem is (fake token mitigation), not an initiator.  Only after
-    /// successful BindSharedCollection does a participant know that the token
-    /// was a real sysmem token.  In contrast, if we had Duplicate() directly on
-    /// BufferCollection, an initiator could attempt to serve the
-    /// BufferCollection channel itself, which would allow for some problematic
-    /// possibilities.
+    /// In each entry of `rights_attenuation_masks`, rights bits that are zero
+    /// will be absent in the buffer VMO rights obtainable via the corresponding
+    /// returned token. This allows an initiator or intermediary participant to
+    /// attenuate the rights available to a participant. This does not allow a
+    /// participant to gain rights that the participant doesn't already have.
+    /// The value ZX_RIGHT_SAME_RIGHTS can be used to specify that no
+    /// attenuation should be applied.
+    DuplicateSync(vector<zx.rights>:MAX_COUNT_DUPLICATES rights_attenuation_masks)
+        -> (vector<BufferCollectionToken>:MAX_COUNT_DUPLICATES tokens);
+
+    /// This method can be used to add a participant prior to creating a shared
+    /// BufferCollection. It should only be used instead of DuplicateSync in
+    /// performance sensitive cases where it would be undesireable to wait for
+    /// sysmem to respond as part of each duplicate.
     ///
-    /// All the BufferCollectionToken channels of a logical token must be turned
-    /// in via BindSharedCollection() for a BufferCollection to be successfully
-    /// created.  Else the BufferCollection channel will close.
+    /// After sending one or more Duplicate() messages, and before sending the
+    /// created tokens to other participants (or to other Allocator channels),
+    /// the client should send a Sync() and wait for its response.  The Sync()
+    /// call can be made on the token, or on the BufferCollection obtained by
+    /// passing this token to BindSharedCollection().  Either will ensure that
+    /// the server knows about the tokens created via Duplicate() before the
+    /// other participant sends the token to the server via separate Allocator
+    /// channel.
+    ///
+    /// All tokens must be turned in via BindSharedCollection() or Close() for a
+    /// BufferCollection to be successfully created.
     ///
     /// When a client calls BindSharedCollection() to turn in a
     /// BufferCollectionToken, the server will process all Duplicate() messages
@@ -50,37 +64,20 @@ protocol BufferCollectionToken {
     ///
     /// `rights_attenuation_mask` rights bits that are zero in this mask will be
     /// absent in the buffer VMO rights obtainable via the client end of
-    /// token_request.  This allows an initiator or intermediary participant
-    /// to attenuate the rights available to a participant.  This may not be the
-    /// only mechanism that attenuates rights on the VMO handles obtainable via
-    /// the client end of token_request.  This does not allow a participant
-    /// to gain rights that the participant doesn't already have.  The value
-    /// ZX_RIGHT_SAME_RIGHTS can be used to specify that no attenuation should
-    /// be applied.
-    ///
-    /// `token_request` is the server end of a BufferCollectionToken channel.
-    /// The client end of this channel acts as another handle to the same logical
-    /// BufferCollectionToken.  Typically the sender of Duplicate() will transfer
-    /// the client end corresponding to collection_request to a/another
-    /// participant running in a separate process, but it's also fine for the
-    /// additional logical participant to be in the same process.
-    ///
-    /// After sending one or more Duplicate() messages, and before sending the
-    /// created tokens to other participants (or to other Allocator channels),
-    /// the client should send a Sync() and wait for its response.  The Sync()
-    /// call can be made on the token, or on the BufferCollection obtained by
-    /// passing this token to BindSharedCollection().  Either will ensure that
-    /// the server knows about the tokens created via Duplicate() before the
-    /// other participant sends the token to the server via separate Allocator
-    /// channel.
+    /// token_request. This allows an initiator or intermediary participant to
+    /// attenuate the rights available to a participant. This does not allow a
+    /// participant to gain rights that the participant doesn't already have.
+    /// The value ZX_RIGHT_SAME_RIGHTS can be used to specify that no
+    /// attenuation should be applied.
     ///
     /// These values for rights_attenuation_mask result in no attenuation:
     ///   * ZX_RIGHT_SAME_RIGHTS (preferred)
     ///   * 0xFFFFFFFF (this is reasonable when an attenuation mask is computed)
     ///   * 0 (deprecated - do not use 0 - an ERROR will go to the log)
-    //
-    // TODO(dustingreen): Consider other mechanisms to ensure the token created
-    // here is recognized by the server.
+    ///
+    /// `token_request` is the server end of a BufferCollectionToken channel.
+    /// The client end of this channel acts as another participant in creating the
+    /// shared BufferCollection.
     Duplicate(uint32 rights_attenuation_mask,
               request<BufferCollectionToken> token_request);
 

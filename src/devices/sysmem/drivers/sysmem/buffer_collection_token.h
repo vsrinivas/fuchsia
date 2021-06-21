@@ -34,6 +34,8 @@ class BufferCollectionToken : public Node,
   }
   void Bind(fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request);
 
+  void DuplicateSync(DuplicateSyncRequestView request,
+                     DuplicateSyncCompleter::Sync& completer) override;
   void Duplicate(DuplicateRequestView request, DuplicateCompleter::Sync& completer) override;
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override;
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
