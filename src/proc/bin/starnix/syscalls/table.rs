@@ -137,6 +137,7 @@ pub fn dispatch_syscall(
         getppid[0],
         getrandom[3],
         getrusage[2],
+        getsid[1],
         gettid[0],
         gettimeofday[2],
         getuid[0],

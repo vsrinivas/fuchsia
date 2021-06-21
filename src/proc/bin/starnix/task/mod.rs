@@ -15,7 +15,7 @@ use std::sync::{Arc, Weak};
 
 pub mod syscalls;
 
-use crate::auth::Credentials;
+use crate::auth::{Credentials, ShellJobControl};
 use crate::devices::DeviceRegistry;
 use crate::fs::{FdTable, FileSystem};
 use crate::loader::*;
@@ -328,6 +328,9 @@ pub struct Task {
     /// The security credentials for this task.
     pub creds: Credentials,
 
+    /// The IDs used to perform shell job control.
+    pub shell_job_control: ShellJobControl,
+
     // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
     pub set_child_tid: Mutex<UserRef<pid_t>>,
     pub clear_child_tid: Mutex<UserRef<pid_t>>,
@@ -366,6 +369,7 @@ impl Task {
         mm: Arc<MemoryManager>,
         fs: Arc<FileSystem>,
         creds: Credentials,
+        sjc: ShellJobControl,
         exit_signal: Option<Signal>,
     ) -> TaskOwner {
         TaskOwner {
@@ -379,6 +383,7 @@ impl Task {
                 mm,
                 fs,
                 creds,
+                shell_job_control: sjc,
                 set_child_tid: Mutex::new(UserRef::default()),
                 clear_child_tid: Mutex::new(UserRef::default()),
                 signal_stack: Mutex::new(None),
@@ -418,6 +423,7 @@ impl Task {
 
         let mut pids = kernel.pids.write();
         let id = pids.allocate_pid();
+
         let task_owner = Self::new(
             id,
             Arc::new(ThreadGroup::new(kernel.clone(), process, id)),
@@ -430,6 +436,7 @@ impl Task {
             ),
             fs,
             creds,
+            ShellJobControl::new(id),
             exit_signal,
         );
         pids.add_task(&task_owner.task);
@@ -466,6 +473,7 @@ impl Task {
             Arc::clone(&self.mm),
             fs,
             creds,
+            ShellJobControl::new(self.shell_job_control.sid),
             None,
         );
         pids.add_task(&task_owner.task);
@@ -619,6 +627,10 @@ impl Task {
         // This is set to 1 because Bionic skips referencing /dev if getpid() == 1, under the
         // assumption that anything running after init will have access to /dev.
         1.into()
+    }
+
+    pub fn get_sid(&self) -> pid_t {
+        self.shell_job_control.sid
     }
 
     pub fn get_tid(&self) -> pid_t {

@@ -88,6 +88,13 @@ pub fn sys_getpid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
     Ok(ctx.task.get_pid().into())
 }
 
+pub fn sys_getsid(ctx: &SyscallContext<'_>, pid: pid_t) -> Result<SyscallResult, Errno> {
+    if pid == 0 {
+        return Ok(ctx.task.get_sid().into());
+    }
+    Ok(ctx.task.get_task(pid).ok_or(ESRCH)?.get_sid().into())
+}
+
 pub fn sys_gettid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
     Ok(ctx.task.get_tid().into())
 }
@@ -320,6 +327,8 @@ pub fn sys_getrusage(
 
 #[cfg(test)]
 mod tests {
+    use std::u64;
+
     use super::*;
     use fuchsia_async as fasync;
 
@@ -374,6 +383,24 @@ mod tests {
         assert_eq!(
             SyscallResult::Success(0),
             sys_prctl(&ctx, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable")
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_sys_getsid() {
+        let (kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+
+        assert_eq!(
+            SyscallResult::Success(task_owner.task.get_tid() as u64),
+            sys_getsid(&ctx, 0).expect("failed to get sid")
+        );
+
+        let second_task_owner = create_task(&kernel, "second task");
+
+        assert_eq!(
+            SyscallResult::Success(second_task_owner.task.get_tid() as u64),
+            sys_getsid(&ctx, second_task_owner.task.get_tid().into()).expect("failed to get sid")
         );
     }
 }
