@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 
@@ -259,6 +260,8 @@ GainFormat Tas58xx::GetGainFormat() {
 }
 
 void Tas58xx::SetGainState(GainState gain_state) {
+  TRACE_DURATION_BEGIN("tas58xx", "SetGainState", "Enable AGL",
+                       gain_state.agc_enabled != last_agc_);
   fbl::AutoLock lock(&lock_);
   float gain = std::clamp(gain_state.gain, kMinGain, kMaxGain);
   uint8_t gain_reg = static_cast<uint8_t>(48 - gain * 2);
@@ -294,6 +297,9 @@ void Tas58xx::SetGainState(GainState gain_state) {
     }
     last_agc_ = gain_state.agc_enabled;
   }
+  // Report the time at which AGL was enabled. This along with the brownout protection driver trace
+  // will let us calculate the total latency.
+  TRACE_DURATION_END("tas58xx", "SetGainState", "timestamp", zx::clock::get_monotonic().get());
   gain_state_ = gain_state;
   static_cast<void>(UpdateReg(kRegDeviceCtrl2, 0x08, gain_state.muted ? 0x08 : 0x00));
 }
