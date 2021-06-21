@@ -17,19 +17,6 @@ pub mod task {
     pub struct Task<T>(async_executor::Task<T>);
 
     impl<T: 'static> Task<T> {
-        /// Poll the given future on a thread dedicated to blocking tasks.
-        ///
-        /// Blocking tasks should ideally be constrained to only blocking regions
-        /// of code, such as the system call invocation that is being made that
-        /// needs to avoid blocking the reactor. For such a use case, using
-        /// blocking::unblock() directly may be more efficient.
-        pub fn blocking(fut: impl Future<Output = T> + Send + 'static) -> Self
-        where
-            T: Send,
-        {
-            Self::spawn(super::executor::blocking(fut))
-        }
-
         /// spawn a new `Send` task onto the executor.
         pub fn spawn(fut: impl Future<Output = T> + Send + 'static) -> Self
         where
@@ -106,12 +93,6 @@ pub mod executor {
         fn into_time(self) -> Time {
             self
         }
-    }
-
-    pub(crate) fn blocking<T: Send + 'static>(
-        fut: impl Future<Output = T> + Send + 'static,
-    ) -> impl Future<Output = T> {
-        blocking::unblock(|| LOCAL.with(|local| async_io::block_on(GLOBAL.run(local.run(fut)))))
     }
 
     pub(crate) fn spawn<T: 'static>(

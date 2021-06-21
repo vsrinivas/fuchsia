@@ -20,11 +20,6 @@ pub mod task {
     }
 
     impl<T: Send> Task<T> {
-        /// Stub blocking, panics if used.
-        pub fn blocking(_: impl core::future::Future<Output = T> + Send + 'static) -> Task<T> {
-            unimplemented!();
-        }
-
         /// Stub spawn, panics if used.
         pub fn spawn(_: impl Future<Output = T> + Send + 'static) -> Task<T> {
             unimplemented!();

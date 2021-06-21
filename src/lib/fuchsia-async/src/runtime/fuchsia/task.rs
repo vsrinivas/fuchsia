@@ -72,49 +72,6 @@ impl<T: Send> Task<T> {
         super::executor::spawn(future);
         Task { remote_handle }
     }
-
-    /// Spawn a new *blocking* task backed by a thread.
-    ///
-    /// This function can be called from an asynchronous function without blocking
-    /// it, returning a task handle that can be `.await`ed normally. The provided
-    /// future should contain at least one blocking operation, such as:
-    ///
-    /// - A synchronous syscall that does not yet have an async counterpart.
-    /// - A compute operation which risks blocking the executor for an unacceptable
-    ///   amount of time.
-    ///
-    /// If neither of these conditions are satisfied, use [`Task::spawn`] instead.
-    ///
-    /// NOTE: Unlike regular async tasks, cancelling the task through dropping the
-    /// task handle can take longer to take effect, since a synchronous operation
-    /// has no yield points and thus will run to completion.
-    ///
-    // TODO(fxbug.dev/78332): Consider using a backing thread pool to alleviate the cost of
-    // spawning new threads if this proves to be a bottleneck.
-    // TODO(fxbug.dev/78075): Remove this API in favor of unblock.
-    pub fn blocking(future: impl Future<Output = T> + Send + 'static) -> Task<T> {
-        // Fuse is a combinator that will drop the underlying future as soon as it has been
-        // completed to ensure resources are reclaimed as soon as possible. That gives callers that
-        // await on the Task the guarantee that the future has been dropped.
-        //
-        // This is especially important for the `blocking` call which starts up an executor in
-        // another thread.
-        //
-        // For example, if a receiver was registered on the main executor and its
-        // ReceiverRegistration object is moved into a Task that runs on a different executor,
-        // then the result of that Task should only be sent *after* the ReceiverRegistration object
-        // has been destroyed. Otherwise there can be a race between the main executor shutting
-        // down on one thread and the receiver being deregistered on another.
-        //
-        // Note that it is safe to pass in a future that has already been fused. Double fusing
-        // a future does not change the expected behavior.
-        let future = future.fuse();
-        let (future, remote_handle) = future.remote_handle();
-        std::thread::spawn(move || {
-            super::executor::LocalExecutor::new().unwrap().run_singlethreaded(future)
-        });
-        Task { remote_handle }
-    }
 }
 
 impl<T> Task<T> {
@@ -246,35 +203,12 @@ mod tests {
         LocalExecutor::new().unwrap().run_singlethreaded(async {
             let (sets_bool_true_on_drop, value) = SetsBoolTrueOnDrop::new();
 
-            // Move the switch into a future that runs on a different thread.
+            // Move the switch into a different thread.
             // Once we return from this await, that switch should have been dropped.
-            Task::blocking(async move {
+            unblock(move || {
                 let lock = sets_bool_true_on_drop.value.lock().unwrap();
                 assert_eq!(*lock, false);
             })
-            .await;
-
-            // Switch moved into the future should have been dropped at this point.
-            // The value of the boolean should now be true.
-            let lock = value.lock().unwrap();
-            assert_eq!(*lock, true);
-        });
-    }
-
-    #[test]
-    fn fused_future_passed_into_task() {
-        LocalExecutor::new().unwrap().run_singlethreaded(async {
-            let (sets_bool_true_on_drop, value) = SetsBoolTrueOnDrop::new();
-
-            // The fused future passed in here gets double fused. This should not
-            // change the expected behavior.
-            Task::blocking(
-                async move {
-                    let lock = sets_bool_true_on_drop.value.lock().unwrap();
-                    assert_eq!(*lock, false);
-                }
-                .fuse(),
-            )
             .await;
 
             // Switch moved into the future should have been dropped at this point.

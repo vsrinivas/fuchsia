@@ -275,8 +275,7 @@ impl Inner {
         //
         // - Storing channel and FIDL objects in static variables.
         //
-        // - fuchsia_async::Task::blocking calls that detach or move channels or FIDL objects to the
-        // main thread.
+        // - fuchsia_async::unblock calls that move channels or FIDL objects to another thread.
         assert!(
             self.receivers.lock().mapping.is_empty(),
             "receivers must not outlive their executor"

@@ -232,14 +232,6 @@ mod task_tests {
     }
 
     #[test]
-    fn can_join_blocking() {
-        // can we spawn, then join a task
-        run(async move {
-            assert_eq!(42, Task::blocking(async move { 42u8 }).await);
-        })
-    }
-
-    #[test]
     fn can_join_unblock() {
         // can we poll a blocked task
         run(async move {
