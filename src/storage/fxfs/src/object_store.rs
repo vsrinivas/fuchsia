@@ -23,7 +23,11 @@ pub use record::{ObjectDescriptor, Timestamp};
 use {
     crate::{
         errors::FxfsError,
-        lsm_tree::{layers_from_handles, types::LayerIterator, LSMTree},
+        lsm_tree::{
+            layers_from_handles,
+            types::{BoxedLayerIterator, ItemRef, LayerIterator},
+            LSMTree,
+        },
         object_handle::{
             ObjectHandle, ObjectHandleExt, ObjectProperties, Writer, INVALID_OBJECT_ID,
         },
@@ -31,8 +35,8 @@ use {
             filesystem::{Filesystem, Mutations},
             journal::{checksum_list::ChecksumList, fletcher64},
             record::{
-                Checksums, ExtentKey, ExtentValue, ObjectAttributes, ObjectItem, ObjectKey,
-                ObjectKind, ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
+                AttributeKey, Checksums, ExtentKey, ExtentValue, ObjectAttributes, ObjectItem,
+                ObjectKey, ObjectKeyData, ObjectKind, ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
             },
             transaction::{
                 AssocObj, AssociatedObject, LockKey, Mutation, ObjectStoreMutation, Operation,
@@ -409,17 +413,17 @@ impl ObjectStore {
             {
                 let device_range = *device_offset..*device_offset + (range.end - range.start);
                 allocator.deallocate(transaction, device_range).await?;
+                transaction.add(
+                    self.store_object_id,
+                    Mutation::merge_object(
+                        ObjectKey::extent(search_key.object_id, attribute_id, 0..range.end),
+                        ObjectValue::deleted_extent(),
+                    ),
+                );
                 // Stop if the transaction is getting too big.  At time of writing, this threshold
                 // limits transactions to about 10,000 bytes.
                 const TRANSACTION_MUTATION_THRESHOLD: usize = 200;
                 if transaction.mutations.len() >= TRANSACTION_MUTATION_THRESHOLD {
-                    transaction.add(
-                        self.store_object_id,
-                        Mutation::merge_object(
-                            ObjectKey::extent(search_key.object_id, attribute_id, 0..range.end),
-                            ObjectValue::deleted_extent(),
-                        ),
-                    );
                     return Ok(Some(ObjectKey::with_extent_key(
                         search_key.object_id,
                         attribute_id,
@@ -612,6 +616,53 @@ impl ObjectStore {
     }
 }
 
+// In a major compaction (i.e. a compaction which involves the base layer), we have an opportunity
+// to apply a number of optimizations, such as removing tombstoned objects or deleted extents.
+// These optimizations can only be applied after the compaction completes, thus we have an explicit
+// iterator to apply these optimizations.
+struct MajorCompactionIterator<'a> {
+    iter: BoxedLayerIterator<'a, ObjectKey, ObjectValue>,
+}
+
+impl<'a> MajorCompactionIterator<'a> {
+    pub fn new(
+        iter: BoxedLayerIterator<'a, ObjectKey, ObjectValue>,
+    ) -> MajorCompactionIterator<'a> {
+        Self { iter }
+    }
+
+    fn can_discard_item(item: ItemRef<'_, ObjectKey, ObjectValue>) -> bool {
+        match (item.key, item.value) {
+            (ObjectKey { data: ObjectKeyData::Tombstone, .. }, _) => true,
+            (
+                ObjectKey {
+                    object_id: _,
+                    data: ObjectKeyData::Attribute(_, AttributeKey::Extent(..)),
+                },
+                ObjectValue::Extent(ExtentValue { device_offset: None }),
+            ) => true,
+            _ => false,
+        }
+    }
+}
+
+#[async_trait]
+impl LayerIterator<ObjectKey, ObjectValue> for MajorCompactionIterator<'_> {
+    async fn advance(&mut self) -> Result<(), Error> {
+        self.iter.advance().await?;
+        loop {
+            match self.iter.get() {
+                Some(item) if Self::can_discard_item(item) => self.iter.advance().await?,
+                _ => return Ok(()),
+            }
+        }
+    }
+
+    fn get(&self) -> Option<ItemRef<'_, ObjectKey, ObjectValue>> {
+        self.iter.get()
+    }
+}
+
 #[async_trait]
 impl Mutations for ObjectStore {
     async fn apply_mutation(
@@ -755,7 +806,14 @@ impl Mutations for ObjectStore {
 
         {
             let mut merger = layer_set.merger();
-            let iter = merger.seek(Bound::Unbounded).await?;
+            let iter: BoxedLayerIterator<'_, ObjectKey, ObjectValue> = if layers_to_keep.is_empty()
+            {
+                Box::new(MajorCompactionIterator::new(Box::new(
+                    merger.seek(Bound::Unbounded).await?,
+                )))
+            } else {
+                Box::new(merger.seek(Bound::Unbounded).await?)
+            };
             self.tree
                 .compact_with_iterator(iter, Writer::new(&object_handle, txn_options))
                 .await
@@ -1670,7 +1728,9 @@ mod tests {
             object_store::{
                 allocator::Allocator,
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},
-                record::{ObjectKey, ObjectKeyData, Timestamp},
+                record::{
+                    AttributeKey, ExtentValue, ObjectKey, ObjectKeyData, ObjectValue, Timestamp,
+                },
                 round_up,
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore, StoreObjectHandle, MIN_BLOCK_SIZE,
@@ -2066,12 +2126,20 @@ mod tests {
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
         let mut found = false;
-        while let Some(ItemRef { key: ObjectKey { object_id, data }, .. }) = iter.get() {
-            if let ObjectKeyData::Tombstone = data {
-                assert!(!found);
-                found = true;
-            } else {
-                assert!(*object_id != object.object_id(), "{:?}", iter.get());
+        while let Some(ItemRef { key: ObjectKey { object_id, data }, value, .. }) = iter.get() {
+            if *object_id == object.object_id() {
+                if let ObjectKeyData::Tombstone = data {
+                    assert!(!found);
+                    found = true;
+                } else if let ObjectKeyData::Attribute(_, AttributeKey::Extent(_)) = data {
+                    if let ObjectValue::Extent(ExtentValue { device_offset: None }) = value {
+                        // Skip deleted extents
+                    } else {
+                        assert!(false, "Unexpected extent {:?}", data);
+                    }
+                } else {
+                    assert!(false, "Unexpected item {:?}", iter.get());
+                }
             }
             iter.advance().await.expect("advance failed");
         }
@@ -2489,6 +2557,110 @@ mod tests {
         } else {
             panic!("open_object succeeded");
         }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_tombstone_deletes_data() {
+        let fs = test_filesystem().await;
+        let root_store = fs.root_store();
+        let child_id = {
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            let child =
+                ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
+                    .await
+                    .expect("create_child failed");
+            transaction.commit().await;
+
+            // Allocate an extent in the file.
+            let mut buffer = child.allocate_buffer(8192);
+            buffer.as_mut_slice().fill(0xaa);
+            child.write(0, buffer.as_ref()).await.expect("write failed");
+
+            child.object_id()
+        };
+
+        root_store.tombstone(child_id, Options::default()).await.expect("tombstone failed");
+
+        let layers = root_store.tree.layer_set();
+        let mut merger = layers.merger();
+        let mut iter = merger
+            .seek(Bound::Included(&ObjectKey::extent(child_id, 0, 0..8192).search_key()))
+            .await
+            .expect("seek failed");
+        assert_matches!(
+            iter.get(),
+            Some(ItemRef {
+                key: ObjectKey { data: ObjectKeyData::Attribute(_, AttributeKey::Extent(_)), .. },
+                value: ObjectValue::Extent(ExtentValue { device_offset: None }),
+                ..
+            })
+        );
+        iter.advance().await.expect("advance failed");
+        assert_matches!(iter.get(), None);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_major_compaction_discards_unnecessary_records() {
+        let fs = test_filesystem().await;
+        let root_store = fs.root_store();
+        let child_id = {
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            let child =
+                ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
+                    .await
+                    .expect("create_child failed");
+            transaction.commit().await;
+
+            // Allocate an extent in the file.
+            let mut buffer = child.allocate_buffer(8192);
+            buffer.as_mut_slice().fill(0xaa);
+            child.write(0, buffer.as_ref()).await.expect("write failed");
+
+            child.object_id()
+        };
+
+        let has_deleted_extent_records = |root_store: Arc<ObjectStore>, child_id| async move {
+            let layers = root_store.tree.layer_set();
+            let mut merger = layers.merger();
+            let mut iter = merger
+                .seek(Bound::Included(&ObjectKey::extent(child_id, 0, 0..1).search_key()))
+                .await
+                .expect("seek failed");
+            loop {
+                match iter.get() {
+                    None => return false,
+                    Some(ItemRef {
+                        key: ObjectKey { object_id, .. },
+                        value: ObjectValue::Extent(ExtentValue { device_offset: None }),
+                        ..
+                    }) if *object_id == child_id => return true,
+                    _ => {}
+                }
+                iter.advance().await.expect("advance failed");
+            }
+        };
+
+        root_store.tombstone(child_id, Options::default()).await.expect("tombstone failed");
+        assert_matches!(
+            root_store.tree.find(&ObjectKey::tombstone(child_id)).await.expect("find failed"),
+            Some(_)
+        );
+        assert!(has_deleted_extent_records(root_store.clone(), child_id).await);
+
+        root_store.flush().await.expect("flush failed");
+        assert_matches!(
+            root_store.tree.find(&ObjectKey::tombstone(child_id)).await.expect("find failed"),
+            None
+        );
+        assert!(!has_deleted_extent_records(root_store.clone(), child_id).await);
     }
 }
 

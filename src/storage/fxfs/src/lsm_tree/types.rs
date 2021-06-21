@@ -253,6 +253,16 @@ pub trait LayerIterator<K, V>: Send + Sync {
 
 pub type BoxedLayerIterator<'iter, K, V> = Box<dyn LayerIterator<K, V> + 'iter>;
 
+#[async_trait]
+impl<'iter, K, V> LayerIterator<K, V> for BoxedLayerIterator<'iter, K, V> {
+    async fn advance(&mut self) -> Result<(), Error> {
+        (**self).advance().await
+    }
+    fn get(&self) -> Option<ItemRef<'_, K, V>> {
+        (**self).get()
+    }
+}
+
 /// Mutable layers need an iterator that implements this in order to make merge_into work.
 #[async_trait]
 pub(super) trait LayerIteratorMut<K, V>: LayerIterator<K, V> {
