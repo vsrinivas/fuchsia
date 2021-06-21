@@ -245,24 +245,6 @@ func TestServerSerialClosing(t *testing.T) {
 	}
 }
 
-func TestIsErrNetClosing(t *testing.T) {
-	// see golang issue 4373, this is the sad story from upstream, and the pattern
-	// we follow is similar to that of the net/http and net/http2 package. There's
-	// a variable stashed away in internal/poll, but it's not actually exported to
-	// us for comparison.
-
-	l, err := net.ListenUnix("unix", &net.UnixAddr{Net: "unix", Name: "foo.sock"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	l.Close()
-	_, err = l.Accept()
-
-	if !IsErrNetClosing(err) {
-		t.Fatalf("expected a wrapped errnetclosing, got: %#v", err)
-	}
-}
-
 // Creates a "serial connection" in terms of its host- and device-side
 // descriptors. They are implemented with synchronous in-memory pipes, so
 // associated writes and reads will be one-to-one (with the usual caveats of

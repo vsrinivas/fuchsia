@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -164,7 +165,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			for {
 				line, err := b.ReadString('\n')
 				if err != nil {
-					if !serial.IsErrNetClosing(err) {
+					if !errors.Is(err, net.ErrClosed) {
 						return fmt.Errorf("%s: %w", constants.SerialReadErrorMsg, err)
 					}
 					return nil

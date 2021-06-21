@@ -17,18 +17,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
-// ErrNetClosing comes from the stdlib, but is not exported by the stdlib, see
-// https://golang.org/issues/4373. There is a test to assert this is still a
-// sound match for the behavior we're matching against.
-var ErrNetClosing = errors.New("use of closed network connection")
-
-func IsErrNetClosing(err error) bool {
-	if e, ok := err.(*net.OpError); ok {
-		return e.Err.Error() == ErrNetClosing.Error()
-	}
-	return false
-}
-
 // Server proxies all i/o to/from a serial port via another io.ReadWriter.
 // Start and Stop may be pairwise called any number of times.
 type Server struct {
@@ -84,7 +72,7 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 			conn, err := listener.Accept()
 			if err != nil {
 				// if the listener was closed, we don't care.
-				if IsErrNetClosing(err) {
+				if errors.Is(err, net.ErrClosed) {
 					return
 				}
 				s.errorf("serial: accept: %s", err)
