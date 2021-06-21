@@ -28,7 +28,7 @@ use {
 };
 
 const SKIP_LIST_LAYER_ITEMS: usize = 512;
-const SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE: u32 = 512;
+const SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE: u32 = 4096;
 
 pub async fn layers_from_handles<K: Key, V: Value>(
     handles: Box<[impl ObjectHandle + 'static]>,

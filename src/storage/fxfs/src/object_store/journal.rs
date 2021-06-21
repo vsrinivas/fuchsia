@@ -76,7 +76,7 @@ const CHUNK_SIZE: u64 = 131_072;
 // In the steady state, the journal should fluctuate between being approximately half of this number
 // and this number.  New super-blocks will be written every time about half of this amount is
 // written to the journal.
-const RECLAIM_SIZE: u64 = 262_144;
+pub const RECLAIM_SIZE: u64 = 262_144;
 
 // Temporary space that should be reserved for the journal.  For example: space that is currently
 // used in the journal file but cannot be deallocated yet because we are flushing.
@@ -130,6 +130,8 @@ pub enum JournalRecord {
     Commit,
     // Discard all mutations with offsets greater than or equal to the given offset.
     Discard(u64),
+    // Indicates the device was flushed at the given journal offset.
+    DidFlushDevice(u64),
 }
 
 pub(super) fn journal_handle_options() -> HandleOptions {
@@ -143,14 +145,15 @@ pub(super) fn journal_handle_options() -> HandleOptions {
 /// ability to have mutations that are to be applied atomically together.
 pub struct Journal {
     objects: Arc<ObjectManager>,
+    // TODO(csuter): I think with a bit of refactoring, this lock doesn't need to be async.
     writer: futures::lock::Mutex<JournalWriter>,
     handle: OnceCell<StoreObjectHandle<ObjectStore>>,
     inner: Mutex<Inner>,
+    extension_mutex: futures::lock::Mutex<()>,
+    sync_mutex: futures::lock::Mutex<()>,
 }
 
 struct Inner {
-    needs_super_block: bool,
-
     super_block: SuperBlock,
     super_block_to_write: SuperBlockCopy,
 
@@ -172,12 +175,13 @@ impl Journal {
             )),
             handle: OnceCell::new(),
             inner: Mutex::new(Inner {
-                needs_super_block: true,
                 super_block: SuperBlock::default(),
                 super_block_to_write: SuperBlockCopy::A,
                 reclaim_event: None,
                 zero_offset: None,
             }),
+            extension_mutex: futures::lock::Mutex::new(()),
+            sync_mutex: futures::lock::Mutex::new(()),
         }
     }
 
@@ -264,7 +268,6 @@ impl Journal {
         self.objects.set_last_end_offset(super_block.super_block_journal_file_offset);
         {
             let mut inner = self.inner.lock().unwrap();
-            inner.needs_super_block = false;
             inner.super_block = super_block.clone();
             inner.super_block_to_write = current_super_block.next();
         }
@@ -306,6 +309,7 @@ impl Journal {
         let mut transactions = Vec::new();
         let mut current_transaction = None;
         let mut end_block = false;
+        let mut flushed_offset = super_block.super_block_journal_file_offset;
         loop {
             let current_checkpoint = reader.journal_file_checkpoint();
             match reader.deserialize().await? {
@@ -390,6 +394,11 @@ impl Journal {
                                 transactions.pop();
                             }
                         }
+                        JournalRecord::DidFlushDevice(offset) => {
+                            if offset > flushed_offset {
+                                flushed_offset = offset;
+                            }
+                        }
                     }
                 }
                 // This is expected when we reach the end of the journal stream.
@@ -404,7 +413,7 @@ impl Journal {
 
         // Validate the checksums.
         let journal_offset = checksum_list
-            .verify(device.as_ref(), reader.journal_file_checkpoint().file_offset)
+            .verify(device.as_ref(), flushed_offset, reader.journal_file_checkpoint().file_offset)
             .await?;
 
         // Apply the mutations.
@@ -469,8 +478,7 @@ impl Journal {
     }
 
     /// Creates an empty filesystem with the minimum viable objects (including a root parent and
-    /// root store but no further child stores).  Nothing is written to the device until sync is
-    /// called.
+    /// root store but no further child stores).
     pub async fn init_empty(&self, filesystem: Arc<dyn Filesystem>) -> Result<(), Error> {
         // The following constants are only used at format time. When mounting, the recorded values
         // in the superblock should be used.  The root parent store does not have a parent, but
@@ -570,7 +578,7 @@ impl Journal {
         // Initialize the journal writer.
         let _ = self.handle.set(journal_handle);
 
-        Ok(())
+        self.write_super_block().await
     }
 
     /// Commits a transaction.
@@ -578,11 +586,13 @@ impl Journal {
         if transaction.is_empty() {
             return;
         }
-        let mut writer = self.writer.lock().await;
         // TODO(csuter): handle the case where we are unable to extend the journal file.
-        self.maybe_extend_journal_file(&mut writer).await.unwrap();
+        if !transaction.skip_journal_extension {
+            self.maybe_extend_journal_file().await.unwrap();
+        }
         // TODO(csuter): writing to the journal here can be asynchronous.
-        self.write_and_apply_mutations(&mut *writer, transaction).await;
+        let mut writer = self.writer.lock().await;
+        debug_assert_not_too_long!(self.write_and_apply_mutations(&mut *writer, transaction));
 
         if let Some(handle) = self.handle.get() {
             // TODO(jfsulliv): We should separate writing to the journal buffer from flushing the
@@ -598,21 +608,33 @@ impl Journal {
         }
     }
 
-    async fn maybe_extend_journal_file(&self, writer: &mut JournalWriter) -> Result<(), Error> {
+    async fn maybe_extend_journal_file(&self) -> Result<(), Error> {
         // TODO(csuter): this currently assumes that a transaction can fit in CHUNK_SIZE.
-        let file_offset = writer.journal_file_checkpoint().file_offset;
+        let mut extension_guard = None;
         let handle = match self.handle.get() {
             None => return Ok(()),
             Some(x) => x,
         };
-        let size = handle.get_size();
 
-        let needs_extending = file_offset + self.chunk_size() > size;
-        let zero_offset = self.inner.lock().unwrap().zero_offset.clone();
+        let (size, zero_offset) = loop {
+            // TODO(csuter): we could maybe use self.objects.last_end_offset() instead here.
+            let file_offset = debug_assert_not_too_long!(self.writer.lock())
+                .journal_file_checkpoint()
+                .file_offset;
+            let size = handle.get_size();
 
-        if !needs_extending && zero_offset.is_none() {
-            return Ok(());
-        }
+            let size = if file_offset + self.chunk_size() > size { Some(size) } else { None };
+            let zero_offset = self.inner.lock().unwrap().zero_offset.clone();
+
+            if size.is_none() && zero_offset.is_none() {
+                return Ok(());
+            }
+            if extension_guard.is_some() {
+                break (size, zero_offset);
+            }
+            extension_guard = Some(debug_assert_not_too_long!(self.extension_mutex.lock()));
+        };
+
         let mut transaction = handle
             .new_transaction_with_options(Options {
                 skip_journal_checks: true,
@@ -621,24 +643,19 @@ impl Journal {
                 ..Default::default()
             })
             .await?;
-        if needs_extending {
+        transaction.skip_journal_extension = true;
+        if let Some(size) = size {
             handle.preallocate_range(&mut transaction, size..size + self.chunk_size()).await?;
         }
         if let Some(zero_offset) = zero_offset {
             handle.zero(&mut transaction, 0..zero_offset).await?;
         }
+        transaction.commit().await;
 
-        self.write_and_apply_mutations(writer, &mut transaction).await;
-
-        // We need to be sure that any journal records that arose from preallocation can fit in
-        // within the old preallocated range.  If this situation arose (it shouldn't, so it would be
-        // a bug if it did), then it could be fixed (e.g. by fsck) by forcing a sync of the root
-        // store.
-        if needs_extending {
-            assert!(writer.journal_file_checkpoint().file_offset <= size);
-            let file_offset = writer.journal_file_checkpoint().file_offset;
-            assert!(file_offset + self.chunk_size() <= self.handle.get().unwrap().get_size());
-        }
+        // TODO(csuter): See if we can add an assertion that checks we managed to fit the
+        // transaction that extends the journal within the old space.  It's tricky at this point
+        // because as soon as we commit the transaction above, something else can slip in and start
+        // using up the journal space.
 
         let mut inner = self.inner.lock().unwrap();
         if inner.zero_offset == zero_offset {
@@ -669,24 +686,10 @@ impl Journal {
         let mutable_layer = root_parent_store.tree().mutable_layer();
         let _guard = mutable_layer.lock_writes();
 
-        // After locking, we need to flush the journal because it might have records that a new
-        // super-block would refer to.
-        let (journal_file_checkpoint, borrowed) = {
-            let mut writer = self.writer.lock().await;
-
-            serialize_into(&mut *writer, &JournalRecord::EndBlock)?;
-            writer.pad_to_block()?;
-            writer.flush_buffer(self.handle.get().unwrap()).await?;
-            (writer.journal_file_checkpoint(), self.objects.borrowed_metadata_space())
-        };
-
         // We need to flush previous writes to the device since the new super-block we are writing
         // relies on written data being observable.
-        root_parent_store.device().flush().await?;
-
-        // Tell the allocator that we flushed the device so that it can now start using space that
-        // was deallocated.
-        self.objects.allocator().did_flush_device(journal_file_checkpoint.file_offset).await;
+        let (checkpoint, borrowed) =
+            self.sync(SyncOptions { flush_device: true, ..Default::default() }).await?.unwrap();
 
         let (mut new_super_block, super_block_to_write) = {
             let inner = self.inner.lock().unwrap();
@@ -698,8 +701,8 @@ impl Journal {
 
         // TODO(jfsulliv): Handle overflow.
         new_super_block.generation = new_super_block.generation.checked_add(1).unwrap();
-        new_super_block.super_block_journal_file_offset = journal_file_checkpoint.file_offset;
-        new_super_block.journal_checkpoint = min_checkpoint.unwrap_or(journal_file_checkpoint);
+        new_super_block.super_block_journal_file_offset = checkpoint.file_offset;
+        new_super_block.journal_checkpoint = min_checkpoint.unwrap_or(checkpoint);
         new_super_block.journal_file_offsets = journal_file_offsets;
         new_super_block.borrowed_metadata_space = borrowed;
 
@@ -720,7 +723,6 @@ impl Journal {
             let mut inner = self.inner.lock().unwrap();
             inner.super_block = new_super_block;
             inner.super_block_to_write = super_block_to_write.next();
-            inner.needs_super_block = false;
             inner.zero_offset = Some(round_down(old_super_block_offset, BLOCK_SIZE));
             if let Some(event) = inner.reclaim_event.take() {
                 event.signal();
@@ -731,18 +733,49 @@ impl Journal {
     }
 
     /// Flushes any buffered journal data to the device.  Note that this does not flush the device
-    /// so it still does not guarantee data will have been persisted to lower layers.
-    pub async fn sync(&self, _options: SyncOptions) -> Result<(), Error> {
-        // TODO(csuter): There needs to be some kind of locking here.
-        let needs_super_block = self.inner.lock().unwrap().needs_super_block;
-        if needs_super_block {
-            self.write_super_block().await?;
+    /// so it still does not guarantee data will have been persisted to lower layers.  If a
+    /// precondition is supplied, it is evaluated and the sync will be skipped if it returns false.
+    /// This allows callers to check a condition whilst a lock is held.  If a sync is performed,
+    /// this function returns the checkpoint that was flushed and the amount of borrowed metadata
+    /// space at the point it was flushed.
+    pub async fn sync(
+        &self,
+        options: SyncOptions<'_>,
+    ) -> Result<Option<(JournalCheckpoint, u64)>, Error> {
+        let _guard = self.sync_mutex.lock().await;
+
+        if let Some(precondition) = options.precondition {
+            if !precondition() {
+                return Ok(None);
+            }
         }
-        let mut writer = self.writer.lock().await;
-        serialize_into(&mut *writer, &JournalRecord::EndBlock)?;
-        writer.pad_to_block()?;
-        writer.flush_buffer(self.handle.get().unwrap()).await?;
-        Ok(())
+
+        // TODO(csuter): We should optimize for the case where nothing needs to be done.
+        let (checkpoint, borrowed) = {
+            let mut writer = debug_assert_not_too_long!(self.writer.lock());
+            serialize_into(&mut *writer, &JournalRecord::EndBlock)?;
+            writer.pad_to_block()?;
+            (
+                writer.flush_buffer(self.handle.get().unwrap()).await?,
+                self.objects.borrowed_metadata_space(),
+            )
+        };
+        if options.flush_device {
+            self.handle.get().unwrap().flush_device().await?;
+            // If we are about to write a super-block, we could skip writing this record since it is
+            // implicit, but it is probably not worth that optimisation.
+            {
+                let mut writer = self.writer.lock().await;
+                serialize_into(
+                    &mut *writer,
+                    &JournalRecord::DidFlushDevice(checkpoint.file_offset),
+                )?;
+            }
+            // Tell the allocator that we flushed the device so that it can now start using space
+            // that was deallocated.
+            self.objects.allocator().did_flush_device(checkpoint.file_offset).await;
+        }
+        Ok(Some((checkpoint, borrowed)))
     }
 
     /// Returns a copy of the super-block.
@@ -776,7 +809,6 @@ impl Journal {
             });
         }
     }
-
     fn block_size(&self) -> u64 {
         BLOCK_SIZE
     }
@@ -931,7 +963,7 @@ mod tests {
     async fn test_reset() {
         const TEST_DATA: &[u8] = b"hello";
 
-        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(16384, TEST_DEVICE_BLOCK_SIZE));
 
         let mut object_ids = Vec::new();
 

@@ -60,7 +60,7 @@ impl Filesystem for FakeFilesystem {
         self.object_manager.clone()
     }
 
-    async fn sync(&self, _: SyncOptions) -> Result<(), Error> {
+    async fn sync(&self, _: SyncOptions<'_>) -> Result<(), Error> {
         self.num_syncs.fetch_add(1u64, Ordering::Relaxed);
         Ok(())
     }

@@ -66,8 +66,11 @@ impl JournalWriter {
     }
 
     /// Flushes any outstanding complete blocks to the journal object.  Part blocks can be flushed
-    /// by calling pad_to_block first.
-    pub async fn flush_buffer(&mut self, handle: &impl ObjectHandle) -> Result<(), Error> {
+    /// by calling pad_to_block first.  Returns the checkpoint of the last flushed bit of data.
+    pub async fn flush_buffer(
+        &mut self,
+        handle: &impl ObjectHandle,
+    ) -> Result<JournalCheckpoint, Error> {
         let to_do = self.buf.len() - self.buf.len() % self.block_size;
         if to_do > 0 {
             // TODO(jfsulliv): This is horribly inefficient. We should reuse the transfer
@@ -80,7 +83,7 @@ impl JournalWriter {
             self.checkpoint.file_offset += to_do as u64;
             self.checkpoint.checksum = self.last_checksum;
         }
-        Ok(())
+        Ok(self.checkpoint.clone())
     }
 
     /// Seeks to the given offset in the journal file, to be used once replay has finished.

@@ -113,6 +113,10 @@ pub trait ObjectHandle: Send + Sync + 'static {
 
     /// Sets tracing for this object.
     fn set_trace(&self, _v: bool) {}
+
+    /// Flushes the object and the underlying device.  This is expensive and should be used
+    /// sparingly.
+    async fn flush_device(&self) -> Result<(), Error>;
 }
 
 #[async_trait]

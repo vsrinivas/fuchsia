@@ -6,6 +6,7 @@ pub mod merge;
 
 use {
     crate::{
+        debug_assert_not_too_long,
         errors::FxfsError,
         lsm_tree::{
             layers_from_handles,
@@ -18,16 +19,18 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt, Writer},
         object_store::{
-            filesystem::{Filesystem, Mutations},
+            filesystem::{Filesystem, Mutations, SyncOptions},
             journal::checksum_list::ChecksumList,
+            round_down,
             transaction::{AllocatorMutation, AssocObj, Mutation, Options, Transaction},
-            HandleOptions, ObjectStore,
+            HandleOptions, ObjectStore, MIN_BLOCK_SIZE,
         },
         trace_duration,
     },
     anyhow::{anyhow, bail, ensure, Error},
     async_trait::async_trait,
     bincode::{deserialize_from, serialize_into},
+    either::Either::{Left, Right},
     interval_tree::utils::RangeOps,
     merge::merge,
     serde::{Deserialize, Serialize},
@@ -154,13 +157,13 @@ impl Reservation {
     }
 
     /// Places a hold an `amount` from the reservation.
-    pub fn hold(&self, amount: u64) -> Result<(), Error> {
+    pub fn hold(&self, amount: u64) -> Result<Hold<'_>, Error> {
         let mut inner = self.inner.lock().unwrap();
         if amount > inner.amount - inner.held {
             bail!(FxfsError::NoSpace);
         }
         inner.held += amount;
-        Ok(())
+        Ok(Hold { reservation: self, amount })
     }
 
     /// Releases some previously held amount.
@@ -194,6 +197,35 @@ impl Reservation {
 impl Drop for Reservation {
     fn drop(&mut self) {
         self.allocator.release_reservation(self.inner.get_mut().unwrap().amount);
+    }
+}
+
+#[must_use]
+pub struct Hold<'a> {
+    reservation: &'a Reservation,
+    amount: u64,
+}
+
+impl Hold<'_> {
+    pub fn take(&mut self) -> u64 {
+        let amount = self.amount;
+        self.amount = 0;
+        amount
+    }
+
+    pub fn take_some(&mut self, amount: u64) {
+        self.amount -= amount;
+    }
+
+    pub fn commit(&mut self, amount: u64) {
+        self.amount -= amount;
+        self.reservation.commit(amount);
+    }
+}
+
+impl Drop for Hold<'_> {
+    fn drop(&mut self) {
+        self.reservation.release(self.amount);
     }
 }
 
@@ -257,7 +289,8 @@ struct AllocatorInfo {
 
 const MAX_ALLOCATOR_INFO_SERIALIZED_SIZE: usize = 131072;
 
-// For now this just implements a first-fit strategy.  This is a very naiive implementation.
+// For now this just implements a simple strategy of returning the first gap it can find (no matter
+// the size).  This is a very naiive implementation.
 pub struct SimpleAllocator {
     filesystem: Weak<dyn Filesystem>,
     block_size: u32,
@@ -267,7 +300,7 @@ pub struct SimpleAllocator {
     tree: LSMTree<AllocatorKey, AllocatorValue>,
     reserved_allocations: Arc<SkipListLayer<AllocatorKey, AllocatorValue>>,
     inner: Mutex<Inner>,
-    allocation_lock: futures::lock::Mutex<()>,
+    allocation_mutex: futures::lock::Mutex<()>,
 }
 
 struct Inner {
@@ -284,20 +317,38 @@ struct Inner {
     // `info` is the value as it was when we last flushed.  This is i64 because it can be negative
     // during replay.
     allocated_bytes: i64,
-    // This value is the number of bytes allocated to either uncommitted allocations, or
-    // reservations.
+    // This value is the number of bytes allocated to uncommitted allocations.
+    uncommitted_allocated_bytes: u64,
+    // This value is the number of bytes allocated to reservations.
     reserved_bytes: u64,
     // Committed deallocations that we cannot use until they are flushed to the device.  Each entry
     // in this list is the log file offset at which it was committed and an array of deallocations
     // that occurred at that time.
-    committed_deallocations: VecDeque<(u64, Range<u64>)>,
+    committed_deallocated: VecDeque<(u64, Range<u64>)>,
+    // The total number of committed deallocated bytes.
+    committed_deallocated_bytes: u64,
+}
+
+impl Inner {
+    // Returns the amount that is not available to be allocated, which includes actually allocated
+    // bytes, bytes that have been allocated for a transaction but the transaction hasn't committed
+    // yet, and bytes that have been deallocated, but the device hasn't been flushed yet so we can't
+    // reuse those bytes yet.
+    fn unavailable_bytes(&self) -> u64 {
+        self.allocated_bytes as u64
+            + self.uncommitted_allocated_bytes
+            + self.committed_deallocated_bytes
+    }
 }
 
 impl SimpleAllocator {
     pub fn new(filesystem: Arc<dyn Filesystem>, object_id: u64, empty: bool) -> SimpleAllocator {
         SimpleAllocator {
             filesystem: Arc::downgrade(&filesystem),
-            block_size: filesystem.device().block_size(),
+            // TODO(csuter): Rather than computing the block size here, we should perhaps have the
+            // filesystem determine what it should be.  Also, it eventually needs to come from the
+            // super-block.
+            block_size: std::cmp::max(filesystem.device().block_size(), MIN_BLOCK_SIZE),
             device_size: filesystem.device().size(),
             object_id,
             empty,
@@ -308,10 +359,12 @@ impl SimpleAllocator {
                 opened: false,
                 dropped_allocations: Vec::new(),
                 allocated_bytes: 0,
+                uncommitted_allocated_bytes: 0,
                 reserved_bytes: 0,
-                committed_deallocations: VecDeque::new(),
+                committed_deallocated: VecDeque::new(),
+                committed_deallocated_bytes: 0,
             }),
-            allocation_lock: futures::lock::Mutex::new(()),
+            allocation_mutex: futures::lock::Mutex::new(()),
         }
     }
 
@@ -329,7 +382,7 @@ impl SimpleAllocator {
             }
         }
 
-        let _guard = self.allocation_lock.lock().await;
+        let _guard = debug_assert_not_too_long!(self.allocation_mutex.lock());
         {
             if self.inner.lock().unwrap().opened {
                 // We lost a race.
@@ -403,6 +456,14 @@ impl SimpleAllocator {
         // those, since nothing else references them.
         self.inner.lock().unwrap().info.layers.clone()
     }
+
+    fn needs_sync(&self) -> bool {
+        // TODO(csuter): This will only trigger if *all* free space is taken up with committed
+        // deallocated bytes, but we might want to trigger a sync if we're low and there happens to
+        // be a lot of deallocated bytes as that might mean we can fully satisfy allocation
+        // requests.
+        self.inner.lock().unwrap().unavailable_bytes() >= self.device_size
+    }
 }
 
 #[async_trait]
@@ -414,30 +475,76 @@ impl Allocator for SimpleAllocator {
     async fn allocate(
         &self,
         transaction: &mut Transaction<'_>,
-        len: u64,
+        mut len: u64,
     ) -> Result<Range<u64>, Error> {
-        ensure!(len % self.block_size as u64 == 0);
+        assert_eq!(len % self.block_size as u64, 0);
 
         self.ensure_open().await?;
 
-        let _guard = self.allocation_lock.lock().await;
-
-        if let Some(reservation) = transaction.allocator_reservation {
-            ensure!(
-                reservation.avail() >= len,
-                anyhow!(FxfsError::NoSpace).context("Insufficient space in reservation")
-            );
-        }
-
-        let dropped_allocations = {
-            let mut inner = self.inner.lock().unwrap();
-            if transaction.allocator_reservation.is_none()
-                && self.device_size - inner.allocated_bytes as u64 - inner.reserved_bytes < len
-            {
-                bail!(FxfsError::NoSpace);
+        let hold = if let Some(reservation) = transaction.allocator_reservation {
+            Left(reservation.hold(len)?)
+        } else {
+            // We can't use a Reservation here because it needs Arc<Self>, so we use a simple RAII
+            // object instead.
+            struct AllocatorHold<'a> {
+                allocator: &'a SimpleAllocator,
+                amount: u64,
             }
-            std::mem::take(&mut inner.dropped_allocations)
+
+            impl Drop for AllocatorHold<'_> {
+                fn drop(&mut self) {
+                    self.allocator.release_reservation(self.amount);
+                }
+            }
+
+            let mut inner = self.inner.lock().unwrap();
+            // We must take not to use up space that might be reserved.
+            len = round_down(
+                std::cmp::min(
+                    len,
+                    self.device_size
+                        - inner.allocated_bytes as u64
+                        - inner.reserved_bytes
+                        - inner.uncommitted_allocated_bytes,
+                ),
+                self.block_size,
+            );
+            ensure!(len > 0, FxfsError::NoSpace);
+            inner.reserved_bytes += len;
+            Right(AllocatorHold { allocator: self, amount: len })
         };
+
+        let _guard = loop {
+            {
+                let guard = self.allocation_mutex.lock().await;
+
+                if !self.needs_sync() {
+                    break guard;
+                }
+            }
+
+            // All the free space is currently tied up with deallocations, so we need to sync
+            // and flush the device to free that up.
+            //
+            // We can't hold the allocation lock whilst we sync here because the allocation lock is
+            // also taken in apply_mutations, which is called when journal locks are held, and we
+            // call sync here which takes those same locks, so it would have the potential to result
+            // in a deadlock.  Sync holds its own lock to guard against multiple syncs occurring at
+            // the same time, and we can supply a precondition that is evaluated under that lock to
+            // ensure we don't sync twice if we don't need to.
+            self.filesystem
+                .upgrade()
+                .unwrap()
+                .sync(SyncOptions {
+                    flush_device: true,
+                    precondition: Some(Box::new(|| self.needs_sync())),
+                    ..Default::default()
+                })
+                .await?;
+        };
+
+        let dropped_allocations =
+            std::mem::take(&mut self.inner.lock().unwrap().dropped_allocations);
 
         // Update reserved_allocations using dropped_allocations.
         for item in dropped_allocations {
@@ -455,14 +562,16 @@ impl Allocator for SimpleAllocator {
             let mut iter = merger.seek(Bound::Unbounded).await?;
             let mut last_offset = 0;
             loop {
-                // TODO(csuter): This is inconsistent; here we return no-space, but otherwise we
-                // return less than requested.
-                if last_offset + len >= self.device_size as u64 {
-                    bail!(anyhow!(FxfsError::NoSpace).context("no space after search"));
-                }
                 match iter.get() {
                     None => {
-                        break last_offset..last_offset + len;
+                        let end = std::cmp::min(last_offset + len, self.device_size);
+                        if end <= last_offset {
+                            // This is unexpected since we reserved space above.  It would suggest
+                            // that our counters are confused somehow.
+                            bail!(anyhow!(FxfsError::NoSpace)
+                                .context("Unexpectedly found no space after search"));
+                        }
+                        break last_offset..end;
                     }
                     Some(ItemRef { key: AllocatorKey { device_range, .. }, .. }) => {
                         if device_range.start > last_offset {
@@ -476,7 +585,22 @@ impl Allocator for SimpleAllocator {
         };
 
         log::debug!("allocate {:?}", result);
-        self.mark_allocated(transaction, result.clone()).await?;
+
+        let len = result.length();
+        hold.either(|mut h| h.take_some(len), |mut h| h.amount -= len);
+        {
+            let mut inner = self.inner.lock().unwrap();
+            inner.reserved_bytes -= result.length();
+            inner.uncommitted_allocated_bytes += result.length();
+        }
+
+        let item = AllocatorItem::new(
+            AllocatorKey { device_range: result.clone() },
+            AllocatorValue { delta: 1 },
+        );
+        self.reserved_allocations.insert(item.clone()).await;
+        transaction.add(self.object_id(), Mutation::allocation(item));
+
         Ok(result)
     }
 
@@ -487,12 +611,10 @@ impl Allocator for SimpleAllocator {
     ) -> Result<(), Error> {
         ensure!(device_range.end <= self.device_size, FxfsError::NoSpace);
         if let Some(reservation) = &mut transaction.allocator_reservation {
-            // This shouldn't fail because we checked the reservation had enough space at the
-            // beginning of allocate, after we took the lock and the lock should still be held.
-            reservation.hold(device_range.length()).unwrap();
-        } else {
-            self.inner.lock().unwrap().reserved_bytes += device_range.length();
+            // The transaction takes ownership of this hold.
+            reservation.hold(device_range.length())?.take();
         }
+        self.inner.lock().unwrap().uncommitted_allocated_bytes += device_range.length();
         let item = AllocatorItem::new(AllocatorKey { device_range }, AllocatorValue { delta: 1 });
         self.reserved_allocations.insert(item.clone()).await;
         transaction.add(self.object_id(), Mutation::allocation(item));
@@ -609,25 +731,23 @@ impl Allocator for SimpleAllocator {
         // First take out the deallocations that we now know to be flushed.  The list is maintained
         // in order, so we can stop on the first entry that we find that should not be unreserved
         // yet.
-        let deallocs = {
+        let deallocs = 'outer: loop {
             let mut inner = self.inner.lock().unwrap();
-            if let Some((index, _)) = inner
-                .committed_deallocations
-                .iter()
-                .enumerate()
-                .find(|(_, (dealloc_log_offset, _))| *dealloc_log_offset > flush_log_offset)
-            {
-                let mut deallocs = inner.committed_deallocations.split_off(index);
-                // Swap because we want the opposite of what split_off does.
-                std::mem::swap(&mut inner.committed_deallocations, &mut deallocs);
-                deallocs
-            } else {
-                std::mem::take(&mut inner.committed_deallocations)
+            for (index, (dealloc_log_offset, _)) in inner.committed_deallocated.iter().enumerate() {
+                if *dealloc_log_offset > flush_log_offset {
+                    let mut deallocs = inner.committed_deallocated.split_off(index);
+                    // Swap because we want the opposite of what split_off does.
+                    std::mem::swap(&mut inner.committed_deallocated, &mut deallocs);
+                    break 'outer deallocs;
+                }
             }
+            break std::mem::take(&mut inner.committed_deallocated);
         };
         // Now we can erase those elements from reserved_allocations (whilst we're not holding the
         // lock on inner).
+        let mut total = 0;
         for (_, device_range) in deallocs {
+            total += device_range.length();
             self.reserved_allocations
                 .erase(
                     Item::new(AllocatorKey { device_range }, AllocatorValue { delta: 0 })
@@ -635,6 +755,10 @@ impl Allocator for SimpleAllocator {
                 )
                 .await;
         }
+        // This *must* come after we've removed the records from reserved reservations because the
+        // allocator uses this value to decide whether or not a device-flush is required and it must
+        // be possible to find free space if it thinks no device-flush is required.
+        self.inner.lock().unwrap().committed_deallocated_bytes -= total;
     }
 
     fn reserve(self: Arc<Self>, amount: u64) -> Option<Reservation> {
@@ -703,19 +827,35 @@ impl Mutations for SimpleAllocator {
                 // We currently rely on barriers here between inserting/removing from reserved
                 // allocations and merging into the tree.  These barriers are present whilst we use
                 // skip_list_layer's commit_and_wait method, rather than just commit.
-                if transaction.is_some() && item.value.delta < 0 {
-                    self.inner
-                        .lock()
-                        .unwrap()
-                        .committed_deallocations
-                        .push_back((log_offset, item.key.device_range.clone()));
-                    let mut item = item.clone();
-                    item.value.delta = 1;
-                    self.reserved_allocations.insert(item).await;
+                let len = item.key.device_range.length();
+                if item.value.delta < 0 {
+                    {
+                        let mut inner = self.inner.lock().unwrap();
+                        inner.allocated_bytes = inner.allocated_bytes.saturating_sub(len as i64);
+
+                        if transaction.is_some() {
+                            inner
+                                .committed_deallocated
+                                .push_back((log_offset, item.key.device_range.clone()));
+                            inner.committed_deallocated_bytes += item.key.device_range.length();
+                        }
+
+                        if let Some(Transaction {
+                            allocator_reservation: Some(reservation), ..
+                        }) = transaction
+                        {
+                            inner.reserved_bytes += len;
+                            reservation.add(len);
+                        }
+                    }
+                    if transaction.is_some() {
+                        let mut item = item.clone();
+                        item.value.delta = 1;
+                        self.reserved_allocations.insert(item).await;
+                    }
                 }
                 let lower_bound = item.key.lower_bound_for_merge_into();
                 self.tree.merge_into(item.clone(), &lower_bound).await;
-                let len = item.key.device_range.length();
                 if item.value.delta > 0 {
                     if transaction.is_some() {
                         self.reserved_allocations.erase(item.as_item_ref()).await;
@@ -723,19 +863,10 @@ impl Mutations for SimpleAllocator {
                     let mut inner = self.inner.lock().unwrap();
                     inner.allocated_bytes = inner.allocated_bytes.saturating_add(len as i64);
                     if let Some(transaction) = transaction {
-                        inner.reserved_bytes -= len;
+                        inner.uncommitted_allocated_bytes -= len;
                         if let Some(reservation) = transaction.allocator_reservation {
                             reservation.commit(len);
                         }
-                    }
-                } else {
-                    let mut inner = self.inner.lock().unwrap();
-                    inner.allocated_bytes = inner.allocated_bytes.saturating_sub(len as i64);
-                    if let Some(Transaction { allocator_reservation: Some(reservation), .. }) =
-                        transaction
-                    {
-                        inner.reserved_bytes += len;
-                        reservation.add(len);
                     }
                 }
             }
@@ -750,7 +881,7 @@ impl Mutations for SimpleAllocator {
                     // layer, but we cannot safely do that whilst we are attempting to allocate
                     // because there is a chance it might miss an allocation and also not see the
                     // allocation in reserved_allocations.
-                    let _guard = self.allocation_lock.lock().await;
+                    let _guard = debug_assert_not_too_long!(self.allocation_mutex.lock());
                     self.tree.seal().await;
                 }
                 // Transfer our running count for allocated_bytes so that it gets written to the new
@@ -788,10 +919,11 @@ impl Mutations for SimpleAllocator {
             Mutation::Allocator(AllocatorMutation(item)) => {
                 if item.value.delta > 0 {
                     let mut inner = self.inner.lock().unwrap();
+                    let len = item.key.device_range.length();
+                    inner.uncommitted_allocated_bytes -= len;
                     if let Some(reservation) = transaction.allocator_reservation {
-                        reservation.release(item.key.device_range.length());
-                    } else {
-                        inner.reserved_bytes -= item.key.device_range.length();
+                        reservation.release(len);
+                        inner.reserved_bytes += len;
                     }
                     inner.dropped_allocations.push(item);
                 }
@@ -974,7 +1106,7 @@ mod tests {
                 graveyard::Graveyard,
                 testing::fake_filesystem::FakeFilesystem,
                 transaction::{Options, TransactionHandler},
-                ObjectStore,
+                ObjectStore, MIN_BLOCK_SIZE,
             },
         },
         fuchsia_async as fasync,
@@ -1085,19 +1217,31 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
-        device_ranges
-            .push(allocator.allocate(&mut transaction, 512).await.expect("allocate failed"));
-        assert!(device_ranges.last().unwrap().length() == 512);
-        device_ranges
-            .push(allocator.allocate(&mut transaction, 512).await.expect("allocate failed"));
-        assert!(device_ranges.last().unwrap().length() == 512);
+        device_ranges.push(
+            allocator
+                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .await
+                .expect("allocate failed"),
+        );
+        assert_eq!(device_ranges.last().unwrap().length(), MIN_BLOCK_SIZE as u64);
+        device_ranges.push(
+            allocator
+                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .await
+                .expect("allocate failed"),
+        );
+        assert_eq!(device_ranges.last().unwrap().length(), MIN_BLOCK_SIZE as u64);
         assert_eq!(overlap(&device_ranges[0], &device_ranges[1]), 0);
         transaction.commit().await;
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
-        device_ranges
-            .push(allocator.allocate(&mut transaction, 512).await.expect("allocate failed"));
-        assert!(device_ranges[2].length() == 512);
+        device_ranges.push(
+            allocator
+                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .await
+                .expect("allocate failed"),
+        );
+        assert_eq!(device_ranges[2].length(), MIN_BLOCK_SIZE as u64);
         assert_eq!(overlap(&device_ranges[0], &device_ranges[2]), 0);
         assert_eq!(overlap(&device_ranges[1], &device_ranges[2]), 0);
         transaction.commit().await;
@@ -1115,9 +1259,11 @@ mod tests {
         fs.object_manager().set_root_store(store.clone());
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
-        let device_range1 =
-            allocator.allocate(&mut transaction, 512).await.expect("allocate failed");
-        assert!(device_range1.length() == 512);
+        let device_range1 = allocator
+            .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+            .await
+            .expect("allocate failed");
+        assert_eq!(device_range1.length(), MIN_BLOCK_SIZE as u64);
         transaction.commit().await;
 
         let mut transaction =
@@ -1139,14 +1285,18 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
-        device_ranges.push(0..512);
+        device_ranges.push(0..MIN_BLOCK_SIZE as u64);
         allocator
             .mark_allocated(&mut transaction, device_ranges.last().unwrap().clone())
             .await
             .expect("mark_allocated failed");
-        device_ranges
-            .push(allocator.allocate(&mut transaction, 512).await.expect("allocate failed"));
-        assert!(device_ranges.last().unwrap().length() == 512);
+        device_ranges.push(
+            allocator
+                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .await
+                .expect("allocate failed"),
+        );
+        assert_eq!(device_ranges.last().unwrap().length(), MIN_BLOCK_SIZE as u64);
         assert_eq!(overlap(&device_ranges[0], &device_ranges[1]), 0);
         transaction.commit().await;
 
@@ -1167,12 +1317,24 @@ mod tests {
         let graveyard = Graveyard::create(&mut transaction, &store).await.expect("create failed");
         fs.object_manager().register_graveyard(graveyard);
         let mut device_ranges = Vec::new();
-        device_ranges
-            .push(allocator.allocate(&mut transaction, 512).await.expect("allocate failed"));
-        device_ranges
-            .push(allocator.allocate(&mut transaction, 512).await.expect("allocate failed"));
-        device_ranges
-            .push(allocator.allocate(&mut transaction, 512).await.expect("allocate failed"));
+        device_ranges.push(
+            allocator
+                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .await
+                .expect("allocate failed"),
+        );
+        device_ranges.push(
+            allocator
+                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .await
+                .expect("allocate failed"),
+        );
+        device_ranges.push(
+            allocator
+                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .await
+                .expect("allocate failed"),
+        );
         transaction.commit().await;
 
         allocator.flush().await.expect("flush failed");
@@ -1185,8 +1347,12 @@ mod tests {
         // are not writing anything to these ranges.
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
-        device_ranges
-            .push(allocator.allocate(&mut transaction, 512).await.expect("allocate failed"));
+        device_ranges.push(
+            allocator
+                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .await
+                .expect("allocate failed"),
+        );
         for r in &device_ranges[..3] {
             assert_eq!(overlap(r, device_ranges.last().unwrap()), 0);
         }
@@ -1208,7 +1374,10 @@ mod tests {
                 .new_transaction(&[], Options::default())
                 .await
                 .expect("new_transaction failed");
-            allocator.allocate(&mut transaction, 512).await.expect("allocate failed")
+            allocator
+                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .await
+                .expect("allocate failed")
         };
         // After dropping the transaction and attempting to allocate again, we should end up with
         // the same range because the reservation should have been released.
@@ -1218,7 +1387,10 @@ mod tests {
             .await
             .expect("new_transaction failed");
         assert_eq!(
-            allocator.allocate(&mut transaction, 512).await.expect("allocate failed"),
+            allocator
+                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .await
+                .expect("allocate failed"),
             allocated_range
         );
     }
@@ -1236,7 +1408,7 @@ mod tests {
         assert_eq!(allocator.get_allocated_bytes(), 0);
 
         // Verify allocated_bytes reflects allocation changes.
-        const ALLOCATED_BYTES: u64 = 512;
+        const ALLOCATED_BYTES: u64 = MIN_BLOCK_SIZE as u64;
         let allocated_range = {
             let mut transaction = fs
                 .clone()
@@ -1258,7 +1430,10 @@ mod tests {
                 .new_transaction(&[], Options::default())
                 .await
                 .expect("new_transaction failed");
-            allocator.allocate(&mut transaction, 512).await.expect("allocate failed");
+            allocator
+                .allocate(&mut transaction, MIN_BLOCK_SIZE as u64)
+                .await
+                .expect("allocate failed");
 
             // Prior to commiiting, the count of allocated bytes shouldn't change.
             assert_eq!(allocator.get_allocated_bytes(), ALLOCATED_BYTES);

@@ -387,6 +387,10 @@ pub struct Transaction<'a> {
 
     /// The reservation for the metadata for this transaction.
     pub metadata_reservation: MetadataReservation,
+
+    /// If true, don't check to see if the journal needs extending.  This should only be set if this
+    /// transaction is actually involved in extending the journal.
+    pub skip_journal_extension: bool,
 }
 
 impl<'a> Transaction<'a> {
@@ -412,6 +416,7 @@ impl<'a> Transaction<'a> {
             read_locks,
             allocator_reservation: None,
             metadata_reservation,
+            skip_journal_extension: false,
         }
     }
 

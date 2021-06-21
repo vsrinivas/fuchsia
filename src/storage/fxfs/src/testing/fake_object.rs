@@ -185,4 +185,8 @@ impl ObjectHandle for FakeObjectHandle {
     ) -> Result<Transaction<'a>, Error> {
         self.object.clone().new_transaction(&[], options).await
     }
+
+    async fn flush_device(&self) -> Result<(), Error> {
+        Ok(())
+    }
 }

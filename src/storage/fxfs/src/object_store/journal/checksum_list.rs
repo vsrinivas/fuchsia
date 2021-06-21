@@ -88,13 +88,23 @@ impl ChecksumList {
 
     /// Verifies the checksums in the list.  `journal_offset` should indicate the last journal
     /// offset read and verify will return the journal offset that it is safe to replay up to.
-    pub async fn verify(&self, device: &dyn Device, mut journal_offset: u64) -> Result<u64, Error> {
+    /// `flushed_offset` indicates the offset that we know to have been flushed and so we don't need
+    /// to perform verification.
+    pub async fn verify(
+        &self,
+        device: &dyn Device,
+        flushed_offset: u64,
+        mut journal_offset: u64,
+    ) -> Result<u64, Error> {
         let mut last_journal_offset = u64::MAX;
         let mut buf = device.allocate_buffer(self.max_chunk_size);
         'try_again: loop {
             for e in &self.checksum_entries {
                 if e.journal_offset >= journal_offset {
                     break;
+                }
+                if e.journal_offset < flushed_offset {
+                    continue;
                 }
                 let chunk_size = (e.device_range.length() / e.checksums.len() as u64) as usize;
                 let mut offset = e.device_range.start;
@@ -147,32 +157,35 @@ mod tests {
         );
 
         // All entries should pass.
-        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 10);
+        assert_eq!(list.verify(&device, 0, 10).await.expect("verify failed"), 10);
 
         // Corrupt the middle of the three 512 byte blocks.
         buffer.as_mut_slice()[512] = 0;
         device.write(512, buffer.as_ref()).await.expect("write failed");
 
         // Verification should fail now.
-        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 1);
+        assert_eq!(list.verify(&device, 0, 10).await.expect("verify failed"), 1);
+
+        // If we verify from #2 (using flushed_offset), everything should pass.
+        assert_eq!(list.verify(&device, 2, 10).await.expect("verify failed"), 10);
 
         // Mark the middle block as deallocated and then it should pass again.
         list.mark_deallocated(2, 1024..1536);
-        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 10);
+        assert_eq!(list.verify(&device, 0, 10).await.expect("verify failed"), 10);
 
         // Add another entry followed by a deallocation.
         list.push(3, 2048..2560, &vec![fletcher64(&[4; 512], 0)]);
         list.mark_deallocated(4, 1536..2048);
 
         // All entries should validate.
-        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 10);
+        assert_eq!(list.verify(&device, 0, 10).await.expect("verify failed"), 10);
 
         // Now corrupt the block at 2048.
         buffer.as_mut_slice()[1536] = 0;
         device.write(512, buffer.as_ref()).await.expect("write failed");
 
         // This should only validate up to journal offset 3.
-        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 3);
+        assert_eq!(list.verify(&device, 0, 10).await.expect("verify failed"), 3);
 
         // Corrupt the block that was marked as deallocated in #4.
         buffer.as_mut_slice()[1024] = 0;
@@ -180,6 +193,6 @@ mod tests {
 
         // The deallocation in #4 should be ignored and so validation should only succeed up
         // to offset 1.
-        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 1);
+        assert_eq!(list.verify(&device, 0, 10).await.expect("verify failed"), 1);
     }
 }

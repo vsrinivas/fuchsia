@@ -262,6 +262,7 @@ mod tests {
     use {
         crate::{
             object_handle::INVALID_OBJECT_ID,
+            object_store,
             server::testing::{close_file_checked, open_file_checked, TestFixture},
         },
         fidl_fuchsia_io::{
@@ -385,7 +386,7 @@ mod tests {
         let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
         Status::ok(status).expect("get_attr failed");
         assert_eq!(attrs.content_size, expected_output.as_bytes().len() as u64);
-        assert_eq!(attrs.storage_size, 512u64);
+        assert_eq!(attrs.storage_size, object_store::MIN_BLOCK_SIZE as u64);
 
         close_file_checked(file).await;
         fixture.close().await;
@@ -456,7 +457,7 @@ mod tests {
         let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
         Status::ok(status).expect("get_attr failed");
         assert_eq!(attrs.content_size, expected_output.as_bytes().len() as u64);
-        assert_eq!(attrs.storage_size, 512u64);
+        assert_eq!(attrs.storage_size, object_store::MIN_BLOCK_SIZE as u64);
 
         close_file_checked(file).await;
         fixture.close().await;

@@ -165,4 +165,8 @@ impl ObjectHandle for Handle {
     ) -> Result<Transaction<'a>, Error> {
         unreachable!();
     }
+
+    async fn flush_device(&self) -> Result<(), Error> {
+        Ok(())
+    }
 }

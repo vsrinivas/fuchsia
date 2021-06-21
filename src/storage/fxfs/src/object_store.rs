@@ -65,6 +65,8 @@ use {
     },
 };
 
+pub const MIN_BLOCK_SIZE: u32 = 4096;
+
 // TODO(jfsulliv): This probably could have a better home.
 pub fn current_time() -> Timestamp {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or(Duration::ZERO).into()
@@ -130,7 +132,8 @@ impl ObjectStore {
         tree: LSMTree<ObjectKey, ObjectValue>,
     ) -> Arc<ObjectStore> {
         let device = filesystem.device();
-        let block_size = device.block_size();
+        let block_size = std::cmp::max(device.block_size(), MIN_BLOCK_SIZE);
+        assert_eq!(block_size % MIN_BLOCK_SIZE, 0);
         let store = Arc::new(ObjectStore {
             parent_store,
             store_object_id,
@@ -164,7 +167,7 @@ impl ObjectStore {
     }
 
     pub fn block_size(&self) -> u32 {
-        self.device.block_size()
+        self.block_size
     }
 
     pub fn filesystem(&self) -> Arc<dyn Filesystem> {
@@ -257,7 +260,6 @@ impl ObjectStore {
                 owner: owner.clone(),
                 object_id,
                 attribute_id: DEFAULT_DATA_ATTRIBUTE_ID,
-                block_size: store.block_size.into(),
                 size: Mutex::new(size),
                 options,
                 pending_properties: Mutex::new(PendingPropertyUpdates::default()),
@@ -297,7 +299,6 @@ impl ObjectStore {
         );
         Ok(StoreObjectHandle {
             owner: owner.clone(),
-            block_size: store.block_size.into(),
             object_id,
             attribute_id: DEFAULT_DATA_ATTRIBUTE_ID,
             size: Mutex::new(0),
@@ -713,25 +714,44 @@ impl Mutations for ObjectStore {
         // relieve space in the journal, so if it's too large, we could end up exhausting the
         // journal before we've finished.  With that said, its current value might be too small;
         // it's something that will need to be tuned.
-        const SIZE_THRESHOLD: u64 = 32768;
         let mut layer_set = self.tree.immutable_layer_set();
         let mut total_size = 0;
-        let layers_to_keep = match layer_set.layers.iter().enumerate().find(|(_, layer)| {
-            match layer.handle() {
-                None => {}
-                Some(handle) => {
-                    let size = handle.get_size();
-                    if total_size + size > SIZE_THRESHOLD {
-                        return true;
+        let mut layer_count = 0;
+        let mut split_index = layer_set
+            .layers
+            .iter()
+            .position(|layer| {
+                match layer.handle() {
+                    None => {}
+                    Some(handle) => {
+                        let size = handle.get_size();
+                        // Stop adding more layers when the total size of all the immutable layers
+                        // so far is less than 3/4 of the layer we are looking at.
+                        if total_size > 0 && total_size * 4 < size * 3 {
+                            return true;
+                        }
+                        total_size += size;
+                        layer_count += 1;
                     }
-                    total_size += size;
                 }
-            }
-            false
-        }) {
-            Some((index, _)) => layer_set.layers.split_off(index),
-            None => Vec::new(),
-        };
+                false
+            })
+            .unwrap_or(layer_set.layers.len());
+
+        // If there's only one immutable layer to merge with and it's big, don't merge with it.
+        // Instead, we'll create a new layer and eventually that will grow to be big enough to merge
+        // with the existing layers.  The threshold here cannot be so big such that merging with a
+        // layer that big ends up using so much journal space that we have to immediately flush
+        // again as that has the potential to end up in an infinite loop, and so the number chosen
+        // here is related to the journal's RECLAIM_SIZE.
+        if layer_count == 1
+            && total_size > journal::RECLAIM_SIZE
+            && layer_set.layers[split_index - 1].handle().is_some()
+        {
+            split_index -= 1;
+        }
+
+        let layers_to_keep = layer_set.layers.split_off(split_index);
 
         {
             let mut merger = layer_set.merger();
@@ -814,11 +834,10 @@ struct PendingPropertyUpdates {
 }
 
 // TODO(csuter): We should probably be a little more frugal about what we store here since there
-// could be a lot of these structures. We could remove block_size and change the size to be atomic.
+// could be a lot of these structures. We could change the size to be atomic.
 pub struct StoreObjectHandle<S> {
     owner: Arc<S>,
     object_id: u64,
-    block_size: u64,
     attribute_id: u64,
     size: Mutex<u64>,
     options: HandleOptions,
@@ -878,7 +897,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         device_range: Range<u64>,
     ) -> Result<(), Error> {
         let old_end =
-            round_up(self.txn_get_size(transaction), self.block_size).ok_or(FxfsError::TooBig)?;
+            round_up(self.txn_get_size(transaction), self.block_size()).ok_or(FxfsError::TooBig)?;
         let new_size = old_end + device_range.end - device_range.start;
         self.store().allocator().mark_allocated(transaction, device_range.clone()).await?;
         transaction.add_with_object(
@@ -907,14 +926,14 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         compute_checksum: bool,
     ) -> Result<Checksums, Error> {
         // Deal with alignment.
-        let start_align = (offset % self.block_size) as usize;
+        let block_size = u64::from(self.block_size());
+        let start_align = (offset % block_size) as usize;
         let start_offset = offset - start_align as u64;
         let trace = self.trace.load(atomic::Ordering::Relaxed);
         let mut checksums = Vec::new();
         let remainder = if start_align > 0 {
-            let (head, remainder) =
-                buf.split_at(min(self.block_size as usize - start_align, buf.len()));
-            let mut align_buf = self.store().device.allocate_buffer(self.block_size as usize);
+            let (head, remainder) = buf.split_at(min(block_size as usize - start_align, buf.len()));
+            let mut align_buf = self.store().device.allocate_buffer(block_size as usize);
             let read = self.read(start_offset, align_buf.as_mut()).await?;
             align_buf.as_mut_slice()[read..].fill(0);
             align_buf.as_mut_slice()[start_align..(start_align + head.len())]
@@ -934,14 +953,14 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 }
                 Ok(())
             })?;
-            device_offset += self.block_size;
+            device_offset += block_size;
             remainder
         } else {
             buf
         };
         if remainder.len() > 0 {
             let end = offset + buf.len() as u64;
-            let end_align = (end % self.block_size) as usize;
+            let end_align = (end % block_size) as usize;
             let (whole_blocks, tail) = remainder.split_at(remainder.len() - end_align);
             if whole_blocks.len() > 0 {
                 if trace {
@@ -954,8 +973,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 }
                 try_join!(self.store().device.write(device_offset, whole_blocks), async {
                     if compute_checksum {
-                        for chunk in whole_blocks.as_slice().chunks_exact(self.block_size as usize)
-                        {
+                        for chunk in whole_blocks.as_slice().chunks_exact(block_size as usize) {
                             checksums.push(fletcher64(chunk, 0));
                         }
                     }
@@ -964,7 +982,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 device_offset += whole_blocks.len() as u64;
             }
             if tail.len() > 0 {
-                let mut align_buf = self.store().device.allocate_buffer(self.block_size as usize);
+                let mut align_buf = self.store().device.allocate_buffer(block_size as usize);
                 let read = self.read(end - end_align as u64, align_buf.as_mut()).await?;
                 align_buf.as_mut_slice()[read..].fill(0);
                 &align_buf.as_mut_slice()[..tail.len()].copy_from_slice(tail.as_slice());
@@ -993,8 +1011,9 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         transaction: &mut Transaction<'_>,
         range: Range<u64>,
     ) -> Result<u64, Error> {
-        assert_eq!(range.start % self.block_size as u64, 0);
-        assert_eq!(range.end % self.block_size as u64, 0);
+        let block_size = u64::from(self.block_size());
+        assert_eq!(range.start % block_size, 0);
+        assert_eq!(range.end % block_size, 0);
         if range.start == range.end {
             return Ok(0);
         }
@@ -1181,9 +1200,12 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
         if buf.len() == 0 {
             return Ok(0);
         }
-        if offset % self.block_size != 0 || buf.range().start as u64 % self.block_size != 0 {
-            panic!("Misaligned read off: {} buf_range: {:?}", offset, buf.range());
-        }
+        // Whilst the read offset must be aligned to the filesystem block size, the buffer need only
+        // be aligned to the device's block size.
+        let block_size = self.block_size() as u64;
+        let device_block_size = self.store().device.block_size() as u64;
+        assert_eq!(offset % block_size, 0);
+        assert_eq!(buf.range().start as u64 % device_block_size, 0);
         let fs = self.store().filesystem();
         let _guard = fs
             .read_lock(&[LockKey::object_attribute(
@@ -1208,7 +1230,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
             .await?;
         let to_do = min(buf.len() as u64, size - offset) as usize;
         buf = buf.subslice_mut(0..to_do);
-        let end_align = ((offset + to_do as u64) % self.block_size) as usize;
+        let end_align = ((offset + to_do as u64) % block_size) as usize;
         let trace = self.trace.load(atomic::Ordering::Relaxed);
         while let Some((object_id, attribute_id, extent_key, extent_value)) =
             iter.get().and_then(Into::into)
@@ -1257,8 +1279,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
                 // Deal with end alignment, again by reading the exsting contents into an alignment
                 // buffer.
                 if offset < extent_key.range.end && end_align > 0 {
-                    let mut align_buf =
-                        self.store().device.allocate_buffer(self.block_size as usize);
+                    let mut align_buf = self.store().device.allocate_buffer(block_size as usize);
                     if trace {
                         log::info!(
                             "{}.{} RT {:?}",
@@ -1295,8 +1316,9 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
             return Ok(());
         }
         self.apply_pending_properties(transaction).await?;
-        let aligned = round_down(offset, self.block_size)
-            ..round_up(offset + buf.len() as u64, self.block_size).ok_or(FxfsError::TooBig)?;
+        let block_size = u64::from(self.block_size());
+        let aligned = round_down(offset, block_size)
+            ..round_up(offset + buf.len() as u64, block_size).ok_or(FxfsError::TooBig)?;
         let mut buf_offset = 0;
         let store = self.store();
         let store_id = store.store_object_id;
@@ -1332,7 +1354,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
                     .write_at(
                         offset,
                         buf.subslice(buf_offset..buf_offset + len),
-                        device_range.start + offset % self.block_size,
+                        device_range.start + offset % block_size,
                         true,
                     )
                     .await?;
@@ -1408,21 +1430,25 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
     ) -> Result<(), Error> {
         let old_size = self.txn_get_size(transaction);
         if size < old_size {
-            let aligned_size = round_up(size, self.block_size).ok_or(FxfsError::TooBig)?;
+            let block_size = self.block_size().into();
+            let aligned_size = round_up(size, block_size).ok_or(FxfsError::TooBig)?;
             self.zero(
                 transaction,
-                aligned_size..round_up(old_size, self.block_size).ok_or(FxfsError::Inconsistent)?,
+                aligned_size..round_up(old_size, block_size).ok_or(FxfsError::Inconsistent)?,
             )
             .await?;
             let to_zero = aligned_size - size;
             if to_zero > 0 {
-                assert!(to_zero < self.block_size);
+                assert!(to_zero < block_size);
                 // We intentionally use the COW write path even if we're in overwrite mode. There's
                 // no need to support overwrite mode here, and it would be difficult since we'd need
                 // to transactionalize zeroing the tail of the last block with the other metadata
                 // changes, which we don't currently have a way to do.
                 // TODO(csuter): This is allocating a small buffer that we'll just end up copying.
                 // Is there a better way?
+                // TODO(csuter): This might cause an allocation when there needs be none; ideally
+                // this would know if the tail block is allocated and if it isn't, it should leave
+                // it be.
                 let mut buf = self.store().device.allocate_buffer(to_zero as usize);
                 buf.as_mut_slice().fill(0);
                 self.txn_write(transaction, size, buf.as_ref()).await?;
@@ -1446,6 +1472,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
         transaction: &mut Transaction<'a>,
         mut file_range: Range<u64>,
     ) -> Result<Vec<Range<u64>>, Error> {
+        assert_eq!(file_range.length() % self.block_size() as u64, 0);
         let mut ranges = Vec::new();
         let tree = &self.store().tree;
         let layer_set = tree.layer_set();
@@ -1627,6 +1654,10 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
             )
             .await?)
     }
+
+    async fn flush_device(&self) -> Result<(), Error> {
+        self.store().device().flush().await
+    }
 }
 
 #[cfg(test)]
@@ -1642,7 +1673,7 @@ mod tests {
                 record::{ObjectKey, ObjectKeyData, Timestamp},
                 round_up,
                 transaction::{Options, TransactionHandler},
-                HandleOptions, ObjectStore, StoreObjectHandle,
+                HandleOptions, ObjectStore, StoreObjectHandle, MIN_BLOCK_SIZE,
             },
         },
         fuchsia_async as fasync,
@@ -1661,10 +1692,10 @@ mod tests {
 
     // Some tests (the preallocate_range ones) currently assume that the data only occupies a single
     // device block.
-    const TEST_DATA_OFFSET: u64 = 600;
+    const TEST_DATA_OFFSET: u64 = 5000;
     const TEST_DATA: &[u8] = b"hello";
-    const TEST_OBJECT_SIZE: u64 = 913;
-    const TEST_OBJECT_ALLOCATED_SIZE: u64 = 512;
+    const TEST_OBJECT_SIZE: u64 = 5678;
+    const TEST_OBJECT_ALLOCATED_SIZE: u64 = 4096;
 
     async fn test_filesystem() -> OpenFxFilesystem {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
@@ -1709,7 +1740,7 @@ mod tests {
     async fn test_beyond_eof_read() {
         let (fs, object) = test_filesystem_and_object().await;
         let offset = TEST_OBJECT_SIZE as usize - 2;
-        let align = offset % TEST_DEVICE_BLOCK_SIZE as usize;
+        let align = offset % MIN_BLOCK_SIZE as usize;
         let len: usize = 2;
         let mut buf = object.allocate_buffer(align + len + 1);
         buf.as_mut_slice().fill(123u8);
@@ -1778,7 +1809,7 @@ mod tests {
         transaction.commit().await;
         let data = b"foo";
         let offset = 1500u64;
-        let align = (offset % TEST_DEVICE_BLOCK_SIZE as u64) as usize;
+        let align = (offset % MIN_BLOCK_SIZE as u64) as usize;
         let mut buf = object.allocate_buffer(align + data.len());
         buf.as_mut_slice()[align..].copy_from_slice(data);
         object.write(1500, buf.subslice(align..)).await.expect("write failed"); // This adds 1024..1536.
@@ -1847,7 +1878,10 @@ mod tests {
     ) {
         let allocated_before = allocator.get_allocated_bytes();
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
-        object.preallocate_range(&mut transaction, 0..512).await.expect("preallocate_range failed");
+        object
+            .preallocate_range(&mut transaction, 0..MIN_BLOCK_SIZE as u64)
+            .await
+            .expect("preallocate_range failed");
         transaction.commit().await;
         assert!(object.get_size() < 1048576);
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
@@ -1859,18 +1893,14 @@ mod tests {
         assert_eq!(object.get_size(), 1048576);
         // Check that it didn't reallocate the space for the existing extent
         let allocated_after = allocator.get_allocated_bytes();
-        assert_eq!(allocated_after - allocated_before, 1048576 - TEST_DEVICE_BLOCK_SIZE as u64);
+        assert_eq!(allocated_after - allocated_before, 1048576 - MIN_BLOCK_SIZE as u64);
 
-        // Reopen the object in overwrite mode.
-        let object =
-            ObjectStore::open_object(&object.owner, object.object_id(), HandleOptions::default())
-                .await
-                .expect("open_object failed");
-        let mut buf = object.allocate_buffer(2048);
+        let mut buf =
+            object.allocate_buffer(round_up(TEST_DATA_OFFSET, MIN_BLOCK_SIZE).unwrap() as usize);
         buf.as_mut_slice().fill(47);
         object.write(0, buf.subslice(..TEST_DATA_OFFSET as usize)).await.expect("write failed");
         buf.as_mut_slice().fill(95);
-        let offset = round_up(TEST_OBJECT_SIZE, TEST_DEVICE_BLOCK_SIZE).unwrap();
+        let offset = round_up(TEST_OBJECT_SIZE, MIN_BLOCK_SIZE).unwrap();
         object.write(offset, buf.as_ref()).await.expect("write failed");
 
         // Make sure there were no more allocations.
@@ -1910,9 +1940,9 @@ mod tests {
         let allocator = fs.allocator();
         let allocated_before = allocator.get_allocated_bytes();
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
-        let offset = TEST_DATA_OFFSET - TEST_DATA_OFFSET % TEST_DEVICE_BLOCK_SIZE as u64;
+        let offset = TEST_DATA_OFFSET - TEST_DATA_OFFSET % MIN_BLOCK_SIZE as u64;
         object
-            .preallocate_range(&mut transaction, offset..offset + 512)
+            .preallocate_range(&mut transaction, offset..offset + MIN_BLOCK_SIZE as u64)
             .await
             .expect("preallocate_range failed");
         transaction.commit().await;
@@ -1931,7 +1961,7 @@ mod tests {
                 .expect("open_object failed");
         let mut buf = object.allocate_buffer(2048);
         buf.as_mut_slice().fill(95);
-        let offset = round_up(TEST_OBJECT_SIZE, TEST_DEVICE_BLOCK_SIZE).unwrap();
+        let offset = round_up(TEST_OBJECT_SIZE, MIN_BLOCK_SIZE).unwrap();
         object.overwrite(offset, buf.as_ref()).await.expect_err("write succeeded");
         fs.close().await.expect("Close failed");
     }
@@ -1949,24 +1979,21 @@ mod tests {
         handle = ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
             .await
             .expect("create_object failed");
-        handle
-            .extend(&mut transaction, 0..5 * TEST_DEVICE_BLOCK_SIZE as u64)
-            .await
-            .expect("extend failed");
+        handle.extend(&mut transaction, 0..5 * MIN_BLOCK_SIZE as u64).await.expect("extend failed");
         transaction.commit().await;
-        let mut buf = handle.allocate_buffer(5 * TEST_DEVICE_BLOCK_SIZE as usize);
+        let mut buf = handle.allocate_buffer(5 * MIN_BLOCK_SIZE as usize);
         buf.as_mut_slice().fill(123);
         handle.write(0, buf.as_ref()).await.expect("write failed");
         buf.as_mut_slice().fill(67);
         handle.read(0, buf.as_mut()).await.expect("read failed");
-        assert_eq!(buf.as_slice(), [123; 5 * TEST_DEVICE_BLOCK_SIZE as usize]);
+        assert_eq!(buf.as_slice(), [123; 5 * MIN_BLOCK_SIZE as usize]);
         fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_truncate_deallocates_old_extents() {
         let (fs, object) = test_filesystem_and_object().await;
-        let mut buf = object.allocate_buffer(5 * TEST_DEVICE_BLOCK_SIZE as usize);
+        let mut buf = object.allocate_buffer(5 * MIN_BLOCK_SIZE as usize);
         buf.as_mut_slice().fill(0xaa);
         object.write(0, buf.as_ref()).await.expect("write failed");
 
@@ -1977,10 +2004,7 @@ mod tests {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        object
-            .truncate(&mut transaction, TEST_DEVICE_BLOCK_SIZE as u64)
-            .await
-            .expect("truncate failed");
+        object.truncate(&mut transaction, MIN_BLOCK_SIZE as u64).await.expect("truncate failed");
         transaction.commit().await;
         let allocated_after = allocator.get_allocated_bytes();
         assert!(
@@ -2036,10 +2060,7 @@ mod tests {
             .await
             .expect("purge failed");
 
-        assert_eq!(
-            allocated_before - allocator.get_allocated_bytes(),
-            TEST_DEVICE_BLOCK_SIZE as u64
-        );
+        assert_eq!(allocated_before - allocator.get_allocated_bytes(), MIN_BLOCK_SIZE as u64,);
 
         let layer_set = store.tree.layer_set();
         let mut merger = layer_set.merger();
@@ -2083,7 +2104,7 @@ mod tests {
                 recv1.await.unwrap();
                 // Reads should not block.
                 let offset = TEST_DATA_OFFSET as usize;
-                let align = offset % TEST_DEVICE_BLOCK_SIZE as usize;
+                let align = offset % MIN_BLOCK_SIZE as usize;
                 let len = TEST_DATA.len();
                 let mut buf = object.allocate_buffer(align + len);
                 assert_eq!(
@@ -2163,7 +2184,7 @@ mod tests {
         buf.as_mut_slice().copy_from_slice(b"hello");
         object.write(0, buf.as_ref()).await.expect("write failed");
         let after = object.get_allocated_size().await.expect("get_allocated_size failed");
-        assert_eq!(after, before + TEST_DEVICE_BLOCK_SIZE as u64);
+        assert_eq!(after, before + MIN_BLOCK_SIZE as u64);
 
         // Do the same write again and there should be no change.
         object.write(0, buf.as_ref()).await.expect("write failed");
@@ -2171,38 +2192,38 @@ mod tests {
 
         // extend...
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
-        let offset = 1000 * TEST_DEVICE_BLOCK_SIZE as u64;
+        let offset = 1000 * MIN_BLOCK_SIZE as u64;
         let before = after;
         object
-            .extend(&mut transaction, offset..offset + TEST_DEVICE_BLOCK_SIZE as u64)
+            .extend(&mut transaction, offset..offset + MIN_BLOCK_SIZE as u64)
             .await
             .expect("extend failed");
         transaction.commit().await;
         let after = object.get_allocated_size().await.expect("get_allocated_size failed");
-        assert_eq!(after, before + TEST_DEVICE_BLOCK_SIZE as u64);
+        assert_eq!(after, before + MIN_BLOCK_SIZE as u64);
 
         // truncate...
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         let before = after;
         let size = object.get_size();
         object
-            .truncate(&mut transaction, size - TEST_DEVICE_BLOCK_SIZE as u64)
+            .truncate(&mut transaction, size - MIN_BLOCK_SIZE as u64)
             .await
             .expect("extend failed");
         transaction.commit().await;
         let after = object.get_allocated_size().await.expect("get_allocated_size failed");
-        assert_eq!(after, before - TEST_DEVICE_BLOCK_SIZE as u64);
+        assert_eq!(after, before - MIN_BLOCK_SIZE as u64);
 
         // preallocate_range...
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         let before = after;
         object
-            .preallocate_range(&mut transaction, offset..offset + TEST_DEVICE_BLOCK_SIZE as u64)
+            .preallocate_range(&mut transaction, offset..offset + MIN_BLOCK_SIZE as u64)
             .await
             .expect("extend failed");
         transaction.commit().await;
         let after = object.get_allocated_size().await.expect("get_allocated_size failed");
-        assert_eq!(after, before + TEST_DEVICE_BLOCK_SIZE as u64);
+        assert_eq!(after, before + MIN_BLOCK_SIZE as u64);
         fs.close().await.expect("Close failed");
     }
 
@@ -2211,13 +2232,10 @@ mod tests {
         let (fs, object) = test_filesystem_and_object().await;
         let expected_size = object.get_size();
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
-        object
-            .zero(&mut transaction, 0..TEST_DEVICE_BLOCK_SIZE as u64 * 10)
-            .await
-            .expect("zero failed");
+        object.zero(&mut transaction, 0..MIN_BLOCK_SIZE as u64 * 10).await.expect("zero failed");
         transaction.commit().await;
         assert_eq!(object.get_size(), expected_size);
-        let mut buf = object.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize * 10);
+        let mut buf = object.allocate_buffer(MIN_BLOCK_SIZE as usize * 10);
         assert_eq!(object.read(0, buf.as_mut()).await.expect("read failed") as u64, expected_size);
         assert_eq!(
             &buf.as_slice()[0..expected_size as usize],

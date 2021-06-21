@@ -45,7 +45,7 @@ pub trait Filesystem: TransactionHandler {
     fn object_manager(&self) -> Arc<ObjectManager>;
 
     /// Flushes buffered data to the underlying device.
-    async fn sync(&self, options: SyncOptions) -> Result<(), Error>;
+    async fn sync(&self, options: SyncOptions<'_>) -> Result<(), Error>;
 }
 
 #[async_trait]
@@ -70,7 +70,13 @@ pub trait Mutations: Send + Sync {
 }
 
 #[derive(Default)]
-pub struct SyncOptions {}
+pub struct SyncOptions<'a> {
+    pub flush_device: bool,
+
+    // A precondition that is evaluated whilst a lock is held that determines whether or not the
+    // sync needs to proceed.
+    pub precondition: Option<Box<dyn FnOnce() -> bool + 'a + Send>>,
+}
 
 pub struct OpenFxFilesystem(Arc<FxFilesystem>);
 
@@ -201,14 +207,15 @@ impl FxFilesystem {
         if let Some(graveyard) = self.objects.graveyard() {
             graveyard.wait_for_reap().await;
         }
-        // Regardless of whether sync succeeds, we should close the device, since otherwise we will
-        // crash instead of exiting gracefully.
-        let sync_status = self.journal.sync(SyncOptions::default()).await;
+        let sync_status =
+            self.journal.sync(SyncOptions { flush_device: true, ..Default::default() }).await;
         if sync_status.is_err() {
             log::error!("Failed to sync filesystem; data may be lost: {:?}", sync_status);
         }
+        // Regardless of whether sync succeeds, we should close the device, since otherwise we will
+        // crash instead of exiting gracefully.
         self.device().close().await.expect("Failed to close device");
-        sync_status
+        sync_status.map(|_| ())
     }
 
     async fn compact(self: Arc<Self>) {
@@ -264,8 +271,8 @@ impl Filesystem for FxFilesystem {
         self.objects.clone()
     }
 
-    async fn sync(&self, options: SyncOptions) -> Result<(), Error> {
-        self.journal.sync(options).await
+    async fn sync(&self, options: SyncOptions<'_>) -> Result<(), Error> {
+        self.journal.sync(options).await.map(|_| ())
     }
 }
 
@@ -302,12 +309,13 @@ impl TransactionHandler for FxFilesystem {
         //
         //   3. No reservation is supplied, so we try and reserve space with the allocator now,
         //      and will return NoSpace if that fails.
+        let mut hold = None;
         let metadata_reservation = if options.borrow_metadata_space {
             MetadataReservation::Borrowed
         } else {
             match options.allocator_reservation {
                 Some(reservation) => {
-                    reservation.hold(METADATA_RESERVATION_AMOUNT)?;
+                    hold = Some(reservation.hold(METADATA_RESERVATION_AMOUNT)?);
                     MetadataReservation::Hold(METADATA_RESERVATION_AMOUNT)
                 }
                 None => {
@@ -315,13 +323,13 @@ impl TransactionHandler for FxFilesystem {
                         .allocator()
                         .reserve(METADATA_RESERVATION_AMOUNT)
                         .ok_or(FxfsError::NoSpace)?;
-                    reservation.hold(METADATA_RESERVATION_AMOUNT).unwrap();
                     MetadataReservation::Reservation(reservation)
                 }
             }
         };
         let mut transaction =
             Transaction::new(self, metadata_reservation, &[LockKey::Filesystem], locks).await;
+        hold.map(|mut h| h.take()); // Transaction takes ownership from here on.
         transaction.allocator_reservation = options.allocator_reservation;
         Ok(transaction)
     }
