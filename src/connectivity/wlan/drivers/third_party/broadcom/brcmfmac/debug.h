@@ -203,6 +203,7 @@ class Debug {
     kSIMERRINJ = 1 << 22,
     kWLANPHY = 1 << 23,
     kBTCOEX = 1 << 24,
+    kQUERY = 1 << 25,
     kALL = ~0u,
   };
 
