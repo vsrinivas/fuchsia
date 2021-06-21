@@ -187,7 +187,7 @@ class Controller : public ControllerParent,
   // Currently located at bootstrap/driver_manager:root/display.
   inspect::Node root_;
 
-  bool kernel_framebuffer_disabled_;
+  bool kernel_framebuffer_enabled_;
 
   // mtx_ is a global lock on state shared among clients.
   mutable mtx_t mtx_;
