@@ -198,13 +198,14 @@ impl Joining {
                 })
             }
             other => {
-                error!("Join request failed with result code {:?}", other);
+                let msg = format!("Join request failed: {:?}", other);
+                warn!("{}", msg);
                 report_connect_finished(
                     self.cmd.responder,
                     context,
                     ConnectResult::Failed(ConnectFailure::JoinFailure(other)),
                 );
-                state_change_ctx.set_msg(format!("join failed; result code: {:?}", other));
+                state_change_ctx.set_msg(msg);
                 Err(Idle { cfg: self.cfg })
             }
         }
@@ -238,13 +239,23 @@ impl Authenticating {
                 })
             }
             other => {
-                error!("Authenticate request failed with result code {:?}", other);
+                let msg = format!("Authenticate request failed: {:?}", other);
+                match other {
+                    // TODO(fxbug.dev/79114): These result codes should never make it to here
+                    // since they should be separately processed by the SAE handshake.
+                    fidl_mlme::AuthenticateResultCode::AntiCloggingTokenRequired
+                    | fidl_mlme::AuthenticateResultCode::FiniteCyclicGroupNotSupported => {
+                        error!("{}", msg)
+                    }
+                    _ => warn!("{}", msg),
+                }
+
                 report_connect_finished(
                     self.cmd.responder,
                     context,
                     ConnectResult::Failed(ConnectFailure::AuthenticationFailure(other)),
                 );
-                state_change_ctx.set_msg(format!("auth failed; result code: {:?}", other));
+                state_change_ctx.set_msg(msg);
                 Err(Idle { cfg: self.cfg })
             }
         }
@@ -256,10 +267,9 @@ impl Authenticating {
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Idle {
-        error!(
-            "authentication request failed due to spurious deauthentication: {:?}",
-            ind.reason_code
-        );
+        let msg = format!("Authenticate request failed due to spurious deauthentication; reason code: {:?}, locally_initiated: {:?}",
+            ind.reason_code, ind.locally_initiated);
+        warn!("{}", msg);
         report_connect_finished(
             self.cmd.responder,
             context,
@@ -267,10 +277,7 @@ impl Authenticating {
                 fidl_mlme::AuthenticateResultCode::Refused,
             )),
         );
-        state_change_ctx.set_msg(format!(
-            "received DeauthenticateInd msg; reason code: {:?}, locally_initiated: {:?}",
-            ind.reason_code, ind.locally_initiated,
-        ));
+        state_change_ctx.set_msg(msg);
         Idle { cfg: self.cfg }
     }
 
@@ -354,6 +361,7 @@ impl Associating {
                         if negotiated_cap.rates.is_empty() {
                             // This is unlikely to happen with any spec-compliant AP. In case the
                             // user somehow decided to connect to a malicious AP, reject and reset.
+                            // Log at ERROR level to raise visibility of when this event occurs.
                             error!(
                                 "Associate terminated because AP's capabilities in association \
                                  response is different from beacon"
@@ -392,7 +400,7 @@ impl Associating {
                     }
                 }
                 other => {
-                    error!("Associate request failed with result code {:?}", other);
+                    warn!("Associate request failed: {:?}", other);
                     report_connect_finished(
                         self.cmd.responder,
                         context,
@@ -440,10 +448,7 @@ impl Associating {
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Idle {
-        error!(
-            "association request failed due to spurious deauthentication: {:?}",
-            ind.reason_code
-        );
+        warn!("association request failed due to spurious deauthentication: {:?}", ind.reason_code);
         report_connect_finished(
             self.cmd.responder,
             context,
@@ -468,7 +473,7 @@ impl Associating {
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Idle {
-        error!("association request failed due to spurious disassociation: {:?}", ind.reason_code);
+        warn!("association request failed due to spurious disassociation: {:?}", ind.reason_code);
         report_connect_finished(
             self.cmd.responder,
             context,

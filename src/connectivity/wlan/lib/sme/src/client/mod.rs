@@ -491,9 +491,7 @@ impl super::Station for ClientSme {
                         if bss_list.is_empty() =>
                     {
                         info!("Scan results:");
-                        info!("  No Results");
-                        let error_msg_str = "no matching BSS found";
-                        error!("{}", error_msg_str);
+                        warn!("  No Results");
                         report_connect_finished(
                             Some(token.responder),
                             &mut self.context,
@@ -503,7 +501,7 @@ impl super::Station for ClientSme {
                             &mut self.context,
                             &bss_list,
                             None,
-                            Some(error_msg_str.to_string()),
+                            Some("no matching BSS found".to_string()),
                         );
                     }
                     scan::ScanResult::JoinScanFinished { token, result: Ok(bss_list) } => {
@@ -523,8 +521,8 @@ impl super::Station for ClientSme {
                         );
 
                         if compatible_bss_iter.peek() == None {
-                            let error_msg_str = "incompatible connect request for scan results";
-                            error!("{}", error_msg_str);
+                            let warn_msg = "incompatible connect request for scan results";
+                            warn!("{}", warn_msg);
                             report_connect_finished(
                                 Some(token.responder),
                                 &mut self.context,
@@ -534,7 +532,7 @@ impl super::Station for ClientSme {
                                 &mut self.context,
                                 &bss_list,
                                 None,
-                                Some(error_msg_str.to_string()),
+                                Some(warn_msg.to_string()),
                             );
                         } else {
                             match filter_to_viable_bss(

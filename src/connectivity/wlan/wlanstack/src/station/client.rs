@@ -12,7 +12,7 @@ use fuchsia_zircon::{self as zx, DurationNum};
 use futures::channel::mpsc;
 use futures::{prelude::*, select, stream::FuturesUnordered};
 use itertools::Itertools;
-use log::{error, info};
+use log::{error, info, warn};
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
@@ -328,7 +328,7 @@ fn send_connect_result(
         let code = match result {
             Some(connect_result) => {
                 if let ConnectResult::Failed(_) = connect_result {
-                    error!("Connection failed: {:?}", connect_result);
+                    warn!("Connection failed: {:?}", connect_result);
                 }
                 convert_connect_result(&connect_result)
             }

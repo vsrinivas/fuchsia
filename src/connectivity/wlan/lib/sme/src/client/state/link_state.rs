@@ -95,7 +95,7 @@ impl EstablishingRsna {
             return Ok(self);
         }
 
-        error!("timeout establishing RSNA");
+        warn!("timeout establishing RSNA");
         cancel(&mut self.rsna_timeout);
         Err(EstablishRsnaFailureReason::OverallTimeout)
     }
