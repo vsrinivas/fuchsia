@@ -30,6 +30,8 @@ pub struct ExampleUseOfVectors {
     pub vector_of_vector_of_bool: Vec<Vec<bool>>,
 }
 
+impl fidl::encoding::Persistable for ExampleUseOfVectors {}
+
 fidl_struct! {
   name: ExampleUseOfVectors,
   members: [

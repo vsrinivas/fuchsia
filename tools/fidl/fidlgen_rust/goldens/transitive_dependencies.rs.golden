@@ -29,6 +29,8 @@ pub struct Baz {
     pub g: fidl_middle::Bar,
 }
 
+impl fidl::encoding::Persistable for Baz {}
+
 fidl_struct! {
   name: Baz,
   members: [

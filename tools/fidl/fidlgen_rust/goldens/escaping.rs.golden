@@ -28,4 +28,6 @@ use {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct DocCommentWithQuotes;
 
+impl fidl::encoding::Persistable for DocCommentWithQuotes {}
+
 fidl_empty_struct!(DocCommentWithQuotes);

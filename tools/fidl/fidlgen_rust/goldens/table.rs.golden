@@ -40,6 +40,8 @@ impl EmptyTable {
     pub const EMPTY: Self = Self { unknown_data: None, __non_exhaustive: () };
 }
 
+impl fidl::encoding::Persistable for EmptyTable {}
+
 fidl_table! {
     name: EmptyTable,
     members: [
@@ -64,6 +66,8 @@ impl SimpleTable {
     #[allow(deprecated)]
     pub const EMPTY: Self = Self { x: None, y: None, unknown_data: None, __non_exhaustive: () };
 }
+
+impl fidl::encoding::Persistable for SimpleTable {}
 
 fidl_table! {
     name: SimpleTable,
@@ -97,6 +101,8 @@ impl OlderSimpleTable {
     pub const EMPTY: Self = Self { x: None, unknown_data: None, __non_exhaustive: () };
 }
 
+impl fidl::encoding::Persistable for OlderSimpleTable {}
+
 fidl_table! {
     name: OlderSimpleTable,
     members: [
@@ -127,6 +133,8 @@ impl NewerSimpleTable {
     pub const EMPTY: Self =
         Self { x: None, y: None, z: None, unknown_data: None, __non_exhaustive: () };
 }
+
+impl fidl::encoding::Persistable for NewerSimpleTable {}
 
 fidl_table! {
     name: NewerSimpleTable,
@@ -166,6 +174,8 @@ impl ReverseOrdinalTable {
     pub const EMPTY: Self =
         Self { z: None, y: None, x: None, unknown_data: None, __non_exhaustive: () };
 }
+
+impl fidl::encoding::Persistable for ReverseOrdinalTable {}
 
 fidl_table! {
     name: ReverseOrdinalTable,

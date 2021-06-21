@@ -25,6 +25,10 @@ pub struct {{ .Name }} {
   {{- end }}
 }
 
+{{ if .IsValueType }}
+impl fidl::encoding::Persistable for {{ .Name }} {}
+{{- end }}
+
 {{ if .UseFidlStructCopy -}}
 fidl_struct_copy! {
 {{- else -}}
@@ -74,6 +78,10 @@ fidl_struct! {
 {{- end}}
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct {{ .Name }};
+
+{{ if .IsValueType }}
+impl fidl::encoding::Persistable for {{ .Name }} {}
+{{- end }}
 
 fidl_empty_struct!({{ .Name }});
 

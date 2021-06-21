@@ -7,7 +7,7 @@
 use {
     crate::node::{CloseError, OpenError},
     anyhow::Error,
-    fidl::encoding::{decode_persistent, encode_persistent, Decodable, Encodable},
+    fidl::encoding::{decode_persistent, encode_persistent, Persistable},
     fidl_fuchsia_io::{FileProxy, MAX_BUF},
     fuchsia_zircon_status as zx_status,
     thiserror::Error,
@@ -175,7 +175,7 @@ where
 }
 
 /// Write the given FIDL message in a binary form into a file open for writing.
-pub async fn write_fidl<T: Encodable>(file: &FileProxy, data: &mut T) -> Result<(), Error> {
+pub async fn write_fidl<T: Persistable>(file: &FileProxy, data: &mut T) -> Result<(), Error> {
     write(file, encode_persistent(data)?).await?;
     Ok(())
 }
@@ -184,7 +184,10 @@ pub async fn write_fidl<T: Encodable>(file: &FileProxy, data: &mut T) -> Result<
 /// * If the file already exists, replaces existing contents.
 /// * If the file does not exist, creates the file.
 #[cfg(target_os = "fuchsia")]
-pub async fn write_fidl_in_namespace<T: Encodable>(path: &str, data: &mut T) -> Result<(), Error> {
+pub async fn write_fidl_in_namespace<T: Persistable>(
+    path: &str,
+    data: &mut T,
+) -> Result<(), Error> {
     write_in_namespace(path, encode_persistent(data)?).await?;
     Ok(())
 }
@@ -282,7 +285,7 @@ pub async fn read_in_namespace_to_string_with_timeout(
 /// FIDL structure should be provided at a read time.
 /// Incompatible data is populated as per FIDL ABI compatibility guide:
 /// https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/abi-compat
-pub async fn read_fidl<T: Decodable>(file: &FileProxy) -> Result<T, Error> {
+pub async fn read_fidl<T: Persistable>(file: &FileProxy) -> Result<T, Error> {
     let bytes = read(file).await?;
     Ok(decode_persistent(&bytes)?)
 }
@@ -293,7 +296,7 @@ pub async fn read_fidl<T: Decodable>(file: &FileProxy) -> Result<T, Error> {
 /// Incompatible data is populated as per FIDL ABI compatibility guide:
 /// https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/abi-compat
 #[cfg(target_os = "fuchsia")]
-pub async fn read_in_namespace_to_fidl<T: Decodable>(path: &str) -> Result<T, Error> {
+pub async fn read_in_namespace_to_fidl<T: Persistable>(path: &str) -> Result<T, Error> {
     let bytes = read_in_namespace(path).await?;
     Ok(decode_persistent(&bytes)?)
 }

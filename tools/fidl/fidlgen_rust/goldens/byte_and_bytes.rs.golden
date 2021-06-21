@@ -32,6 +32,8 @@ pub struct ByteAndBytes {
     pub opt_only_one_k_bytes: Option<Vec<u8>>,
 }
 
+impl fidl::encoding::Persistable for ByteAndBytes {}
+
 fidl_struct! {
   name: ByteAndBytes,
   members: [

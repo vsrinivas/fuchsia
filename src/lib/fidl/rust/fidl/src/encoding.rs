@@ -836,6 +836,9 @@ pub trait Decodable: Layout + Sized {
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()>;
 }
 
+/// Marker trait for types that can be encoded/decoded for persistence.
+pub trait Persistable: Encodable + Decodable {}
+
 macro_rules! impl_layout {
     ($ty:ty, align: $align:expr, size: $size:expr) => {
         impl Layout for $ty {
@@ -3569,6 +3572,9 @@ fidl_struct! {
             mask: 0xffffffffffffffffu64,
         },
     ],
+    // TODO(fxbug.dev/78978): This was inadvertently copied from
+    // TransactionHeader, giving PersistentHeader 8 bytes of trailing padding.
+    // A future RFC will specify the size, which may or may not be 16 bytes.
     size_v1: 16,
     align_v1: 8,
 }
@@ -3611,25 +3617,28 @@ impl PersistentHeader {
 }
 
 /// Persistently stored FIDL message
-pub struct PersistentMessage<'a, T> {
+pub struct PersistentMessage<'a, T: Persistable> {
     /// Header of the message
     pub header: PersistentHeader,
     /// Body of the message
     pub body: &'a mut T,
 }
 
-impl<T: Layout> Layout for PersistentMessage<'_, T> {
+impl<T: Persistable> Layout for PersistentMessage<'_, T> {
     #[inline(always)]
     fn inline_align(context: &Context) -> usize {
-        cmp::max(<PersistentHeader as Layout>::inline_align(context), T::inline_align(context))
+        cmp::max(
+            <PersistentHeader as Layout>::inline_align(context),
+            <T as Layout>::inline_align(context),
+        )
     }
     #[inline(always)]
     fn inline_size(context: &Context) -> usize {
-        <PersistentHeader as Layout>::inline_size(context) + T::inline_size(context)
+        <PersistentHeader as Layout>::inline_size(context) + <T as Layout>::inline_size(context)
     }
 }
 
-impl<T: Encodable> Encodable for PersistentMessage<'_, T> {
+impl<T: Persistable> Encodable for PersistentMessage<'_, T> {
     #[inline]
     fn encode(
         &mut self,
@@ -3650,7 +3659,7 @@ impl<T: Encodable> Encodable for PersistentMessage<'_, T> {
 
 /// Encode the referred parameter into persistent binary form.
 /// Generates and adds message header to the returned bytes.
-pub fn encode_persistent<T: Encodable>(body: &mut T) -> Result<Vec<u8>> {
+pub fn encode_persistent<T: Persistable>(body: &mut T) -> Result<Vec<u8>> {
     let msg = &mut PersistentMessage { header: PersistentHeader::new(), body };
     let mut combined_bytes = Vec::<u8>::new();
     let mut handles = Vec::<HandleDisposition<'static>>::new();
@@ -3672,7 +3681,7 @@ pub fn encode_persistent_header(header: &mut PersistentHeader) -> Result<Vec<u8>
 }
 
 /// Encode the message body to to persistent binary form.
-pub fn encode_persistent_body<T: Encodable>(
+pub fn encode_persistent_body<T: Persistable>(
     body: &mut T,
     header: &PersistentHeader,
 ) -> Result<Vec<u8>> {
@@ -3689,7 +3698,7 @@ pub fn encode_persistent_body<T: Encodable>(
 }
 
 /// Decode the type expected from the persistent binary form.
-pub fn decode_persistent<T: Decodable>(bytes: &[u8]) -> Result<T> {
+pub fn decode_persistent<T: Persistable>(bytes: &[u8]) -> Result<T> {
     let context = Context {};
     let header_len = <PersistentHeader as Layout>::inline_size(&context);
     if bytes.len() < header_len {
@@ -3710,7 +3719,10 @@ pub fn decode_persistent_header(bytes: &[u8]) -> Result<PersistentHeader> {
 
 /// Decodes the persistently stored header from a message.
 /// Returns the header and a reference to the tail of the message.
-pub fn decode_persistent_body<T: Decodable>(bytes: &[u8], header: &PersistentHeader) -> Result<T> {
+pub fn decode_persistent_body<T: Persistable>(
+    bytes: &[u8],
+    header: &PersistentHeader,
+) -> Result<T> {
     let mut output = T::new_empty();
     Decoder::decode_with_context(&header.decoding_context(), bytes, &mut [], &mut output)?;
     Ok(output)
@@ -4300,6 +4312,7 @@ mod test {
         }
     }
 
+    #[derive(Debug, PartialEq)]
     struct Foo {
         byte: u8,
         bignum: u64,
@@ -4615,37 +4628,6 @@ mod test {
             Decoder::decode_with_context(ctx, bytes, &mut [], &mut out).expect("Decoding failed");
             assert_eq!(out, header);
         }
-    }
-
-    #[test]
-    fn encode_decode_persistent_combined() {
-        let mut body = "hello".to_string();
-
-        let buf = encode_persistent(&mut body).expect("Encoding failed");
-        let body_out = decode_persistent::<String>(&buf).expect("Decoding failed");
-
-        assert_eq!(body, body_out);
-    }
-
-    #[test]
-    fn encode_decode_persistent_separate() {
-        let mut body = "hello".to_string();
-        let mut another_body = "world".to_string();
-
-        let mut header = create_persistent_header();
-        let buf_header = encode_persistent_header(&mut header).expect("Header encoding failed");
-        let buf_body = encode_persistent_body(&mut body, &header).expect("Body encoding failed");
-        let buf_another_body =
-            encode_persistent_body(&mut another_body, &header).expect("Body encoding failed");
-
-        let header_out = decode_persistent_header(&buf_header).expect("Header decoding failed");
-        assert_eq!(header, header_out);
-        let body_out =
-            decode_persistent_body::<String>(&buf_body, &header).expect("Body decoding failed");
-        assert_eq!(body, body_out);
-        let another_body_out = decode_persistent_body::<String>(&buf_another_body, &header)
-            .expect("Another body decoding failed");
-        assert_eq!(another_body, another_body_out);
     }
 
     #[test]

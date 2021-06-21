@@ -264,6 +264,8 @@ impl StrictUnion {
     }
 }
 
+impl fidl::encoding::Persistable for StrictUnion {}
+
 fidl_union! {
     name: StrictUnion,
     members: [
@@ -321,6 +323,8 @@ impl FlexibleUnion {
     }
 }
 
+impl fidl::encoding::Persistable for FlexibleUnion {}
+
 fidl_union! {
     name: FlexibleUnion,
     members: [
@@ -345,6 +349,8 @@ pub struct Struct {
     /// struct member comment #3
     pub field: i32,
 }
+
+impl fidl::encoding::Persistable for Struct {}
 
 fidl_struct_copy! {
   name: Struct,
@@ -381,6 +387,8 @@ impl Table {
     #[allow(deprecated)]
     pub const EMPTY: Self = Self { field: None, unknown_data: None, __non_exhaustive: () };
 }
+
+impl fidl::encoding::Persistable for Table {}
 
 fidl_table! {
     name: Table,

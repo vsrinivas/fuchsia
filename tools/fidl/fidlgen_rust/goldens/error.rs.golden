@@ -38,6 +38,8 @@ pub struct ExampleFooResponse {
     pub y: i64,
 }
 
+impl fidl::encoding::Persistable for ExampleFooResponse {}
+
 fidl_struct_copy! {
   name: ExampleFooResponse,
   members: [

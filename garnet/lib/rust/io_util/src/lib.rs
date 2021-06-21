@@ -15,7 +15,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl::encoding::{Decodable, Encodable},
+    fidl::encoding::Persistable,
     fidl::endpoints::{create_proxy, Proxy, ServerEnd},
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, FileProxy, NodeProxy, MODE_TYPE_DIRECTORY,
@@ -183,7 +183,7 @@ pub async fn write_path_bytes(path: &str, data: &[u8]) -> Result<(), Error> {
 /// FIDL structure should be provided at a read time.
 /// Incompatible data is populated as per FIDL ABI compatibility guide:
 /// https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/abi-compat
-pub async fn read_file_fidl<T: Decodable>(file: &FileProxy) -> Result<T, Error> {
+pub async fn read_file_fidl<T: Persistable>(file: &FileProxy) -> Result<T, Error> {
     Ok(file::read_fidl(file).await?)
 }
 
@@ -193,12 +193,12 @@ pub async fn read_file_fidl<T: Decodable>(file: &FileProxy) -> Result<T, Error> 
 /// Incompatible data is populated as per FIDL ABI compatibility guide:
 /// https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/abi-compat
 #[cfg(target_os = "fuchsia")]
-pub async fn read_path_fidl<T: Decodable>(path: &str) -> Result<T, Error> {
+pub async fn read_path_fidl<T: Persistable>(path: &str) -> Result<T, Error> {
     Ok(file::read_in_namespace_to_fidl(path).await?)
 }
 
 /// Write the given FIDL message in a binary form into a file open for writing.
-pub async fn write_file_fidl<T: Encodable>(file: &FileProxy, data: &mut T) -> Result<(), Error> {
+pub async fn write_file_fidl<T: Persistable>(file: &FileProxy, data: &mut T) -> Result<(), Error> {
     file::write_fidl(file, data).await?;
     Ok(())
 }
@@ -207,7 +207,7 @@ pub async fn write_file_fidl<T: Encodable>(file: &FileProxy, data: &mut T) -> Re
 /// * If the file already exists, replaces existing contents.
 /// * If the file does not exist, creates the file.
 #[cfg(target_os = "fuchsia")]
-pub async fn write_path_fidl<T: Encodable>(path: &str, data: &mut T) -> Result<(), Error> {
+pub async fn write_path_fidl<T: Persistable>(path: &str, data: &mut T) -> Result<(), Error> {
     file::write_fidl_in_namespace(path, data).await?;
     Ok(())
 }

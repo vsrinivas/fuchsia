@@ -121,6 +121,10 @@ impl {{ .Name }} {
 {{- end }}
 }
 
+{{ if .IsValueType }}
+impl fidl::encoding::Persistable for {{ .Name }} {}
+{{- end }}
+
 fidl_union! {
 	name: {{ .Name }},
 	members: [

@@ -29,6 +29,11 @@ flexible enum FlexibleAnimal : int32 {
     FROG = 2;
 };
 
+struct Coordinate {
+    uint8 x;
+    uint8 y;
+};
+
 strict union StrictValueThing {
     1: uint32 number;
     2: string name;

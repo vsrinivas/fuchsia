@@ -29,6 +29,8 @@ const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Empty;
 
+impl fidl::encoding::Persistable for Empty {}
+
 fidl_empty_struct!(Empty);
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

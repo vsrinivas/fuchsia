@@ -29,6 +29,8 @@ pub struct Foo {
     pub field: fidl_dependent::MyEnum,
 }
 
+impl fidl::encoding::Persistable for Foo {}
+
 fidl_struct! {
   name: Foo,
   members: [

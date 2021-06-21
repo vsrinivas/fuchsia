@@ -50,6 +50,10 @@ impl {{ .Name }} {
 	};
 }
 
+{{ if .IsValueType }}
+impl fidl::encoding::Persistable for {{ .Name }} {}
+{{- end }}
+
 fidl_table! {
 	name: {{ .Name }},
 	members: [

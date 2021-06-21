@@ -46,6 +46,8 @@ impl PizzaOrPasta {
     }
 }
 
+impl fidl::encoding::Persistable for PizzaOrPasta {}
+
 fidl_union! {
     name: PizzaOrPasta,
     members: [
@@ -79,6 +81,8 @@ impl ExplicitPizzaOrPasta {
         false
     }
 }
+
+impl fidl::encoding::Persistable for ExplicitPizzaOrPasta {}
 
 fidl_union! {
     name: ExplicitPizzaOrPasta,
@@ -139,6 +143,8 @@ impl FlexiblePizzaOrPasta {
     }
 }
 
+impl fidl::encoding::Persistable for FlexiblePizzaOrPasta {}
+
 fidl_union! {
     name: FlexiblePizzaOrPasta,
     members: [
@@ -174,6 +180,8 @@ impl StrictPizzaOrPasta {
     }
 }
 
+impl fidl::encoding::Persistable for StrictPizzaOrPasta {}
+
 fidl_union! {
     name: StrictPizzaOrPasta,
     members: [
@@ -208,6 +216,8 @@ impl Union {
         false
     }
 }
+
+impl fidl::encoding::Persistable for Union {}
 
 fidl_union! {
     name: Union,
@@ -273,6 +283,8 @@ impl FlexibleUnion {
     }
 }
 
+impl fidl::encoding::Persistable for FlexibleUnion {}
+
 fidl_union! {
     name: FlexibleUnion,
     members: [
@@ -313,6 +325,8 @@ impl StrictUnion {
     }
 }
 
+impl fidl::encoding::Persistable for StrictUnion {}
+
 fidl_union! {
     name: StrictUnion,
     members: [
@@ -350,6 +364,8 @@ impl FieldCollision {
     }
 }
 
+impl fidl::encoding::Persistable for FieldCollision {}
+
 fidl_union! {
     name: FieldCollision,
     members: [
@@ -379,6 +395,8 @@ impl ExplicitUnion {
         false
     }
 }
+
+impl fidl::encoding::Persistable for ExplicitUnion {}
 
 fidl_union! {
     name: ExplicitUnion,
@@ -413,6 +431,8 @@ impl ReverseOrdinalUnion {
         false
     }
 }
+
+impl fidl::encoding::Persistable for ReverseOrdinalUnion {}
 
 fidl_union! {
     name: ReverseOrdinalUnion,
@@ -473,6 +493,8 @@ impl FlexibleFoo {
     }
 }
 
+impl fidl::encoding::Persistable for FlexibleFoo {}
+
 fidl_union! {
     name: FlexibleFoo,
     members: [
@@ -507,6 +529,8 @@ impl StrictFoo {
         false
     }
 }
+
+impl fidl::encoding::Persistable for StrictFoo {}
 
 fidl_union! {
     name: StrictFoo,
@@ -567,6 +591,8 @@ impl ExplicitFoo {
     }
 }
 
+impl fidl::encoding::Persistable for ExplicitFoo {}
+
 fidl_union! {
     name: ExplicitFoo,
     members: [
@@ -601,6 +627,8 @@ impl ExplicitStrictFoo {
         false
     }
 }
+
+impl fidl::encoding::Persistable for ExplicitStrictFoo {}
 
 fidl_union! {
     name: ExplicitStrictFoo,
@@ -660,6 +688,8 @@ impl OlderSimpleUnion {
         }
     }
 }
+
+impl fidl::encoding::Persistable for OlderSimpleUnion {}
 
 fidl_union! {
     name: OlderSimpleUnion,
@@ -722,6 +752,8 @@ impl NewerSimpleUnion {
     }
 }
 
+impl fidl::encoding::Persistable for NewerSimpleUnion {}
+
 fidl_union! {
     name: NewerSimpleUnion,
     members: [
@@ -761,6 +793,8 @@ impl StrictSimpleXUnion {
         false
     }
 }
+
+impl fidl::encoding::Persistable for StrictSimpleXUnion {}
 
 fidl_union! {
     name: StrictSimpleXUnion,
@@ -824,6 +858,8 @@ impl XUnionContainingEmptyStruct {
     }
 }
 
+impl fidl::encoding::Persistable for XUnionContainingEmptyStruct {}
+
 fidl_union! {
     name: XUnionContainingEmptyStruct,
     members: [
@@ -853,6 +889,8 @@ impl StrictBoundedXUnion {
         false
     }
 }
+
+impl fidl::encoding::Persistable for StrictBoundedXUnion {}
 
 fidl_union! {
     name: StrictBoundedXUnion,
@@ -909,6 +947,8 @@ impl ExplicitXUnion {
     }
 }
 
+impl fidl::encoding::Persistable for ExplicitXUnion {}
+
 fidl_union! {
     name: ExplicitXUnion,
     members: [
@@ -929,6 +969,8 @@ pub struct Pizza {
     pub toppings: Vec<String>,
 }
 
+impl fidl::encoding::Persistable for Pizza {}
+
 fidl_struct! {
   name: Pizza,
   members: [
@@ -946,6 +988,8 @@ fidl_struct! {
 pub struct Pasta {
     pub sauce: String,
 }
+
+impl fidl::encoding::Persistable for Pasta {}
 
 fidl_struct! {
   name: Pasta,
@@ -965,6 +1009,8 @@ pub struct NullableUnionStruct {
     pub the_union: Option<Box<Union>>,
 }
 
+impl fidl::encoding::Persistable for NullableUnionStruct {}
+
 fidl_struct! {
   name: NullableUnionStruct,
   members: [
@@ -981,12 +1027,16 @@ fidl_struct! {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Empty;
 
+impl fidl::encoding::Persistable for Empty {}
+
 fidl_empty_struct!(Empty);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructWithNullableXUnion {
     pub x1: Option<Box<OlderSimpleUnion>>,
 }
+
+impl fidl::encoding::Persistable for StructWithNullableXUnion {}
 
 fidl_struct! {
   name: StructWithNullableXUnion,

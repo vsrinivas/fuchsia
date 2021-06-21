@@ -164,6 +164,8 @@ pub struct WithErrorSyntaxResponseAsStructResponse {
     pub c: i64,
 }
 
+impl fidl::encoding::Persistable for WithErrorSyntaxResponseAsStructResponse {}
+
 fidl_struct_copy! {
   name: WithErrorSyntaxResponseAsStructResponse,
   members: [
@@ -188,10 +190,14 @@ fidl_struct_copy! {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct WithErrorSyntaxErrorAsPrimitiveResponse;
 
+impl fidl::encoding::Persistable for WithErrorSyntaxErrorAsPrimitiveResponse {}
+
 fidl_empty_struct!(WithErrorSyntaxErrorAsPrimitiveResponse);
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct WithErrorSyntaxErrorAsEnumResponse;
+
+impl fidl::encoding::Persistable for WithErrorSyntaxErrorAsEnumResponse {}
 
 fidl_empty_struct!(WithErrorSyntaxErrorAsEnumResponse);
 

@@ -42,6 +42,8 @@ impl OnlyRust {
     pub const EMPTY: Self = Self { unknown_data: None, __non_exhaustive: () };
 }
 
+impl fidl::encoding::Persistable for OnlyRust {}
+
 fidl_table! {
     name: OnlyRust,
     members: [

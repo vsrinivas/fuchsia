@@ -112,6 +112,8 @@ impl ExampleUnion {
     }
 }
 
+impl fidl::encoding::Persistable for ExampleUnion {}
+
 fidl_union! {
     name: ExampleUnion,
     members: [
@@ -166,6 +168,8 @@ impl ExampleXUnion {
     }
 }
 
+impl fidl::encoding::Persistable for ExampleXUnion {}
+
 fidl_union! {
     name: ExampleXUnion,
     members: [
@@ -184,6 +188,8 @@ fidl_union! {
 pub struct ExampleStruct {
     pub member: u32,
 }
+
+impl fidl::encoding::Persistable for ExampleStruct {}
 
 fidl_struct_copy! {
   name: ExampleStruct,
@@ -214,6 +220,8 @@ impl ExampleTable {
     #[allow(deprecated)]
     pub const EMPTY: Self = Self { member: None, unknown_data: None, __non_exhaustive: () };
 }
+
+impl fidl::encoding::Persistable for ExampleTable {}
 
 fidl_table! {
     name: ExampleTable,

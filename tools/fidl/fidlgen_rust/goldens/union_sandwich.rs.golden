@@ -43,6 +43,8 @@ impl UnionSize8Alignment4 {
     }
 }
 
+impl fidl::encoding::Persistable for UnionSize8Alignment4 {}
+
 fidl_union! {
     name: UnionSize8Alignment4,
     members: [
@@ -71,6 +73,8 @@ impl UnionSize12Alignment4 {
         false
     }
 }
+
+impl fidl::encoding::Persistable for UnionSize12Alignment4 {}
 
 fidl_union! {
     name: UnionSize12Alignment4,
@@ -101,6 +105,8 @@ impl UnionSize24Alignment8 {
     }
 }
 
+impl fidl::encoding::Persistable for UnionSize24Alignment8 {}
+
 fidl_union! {
     name: UnionSize24Alignment8,
     members: [
@@ -130,6 +136,8 @@ impl UnionSize36Alignment4 {
     }
 }
 
+impl fidl::encoding::Persistable for UnionSize36Alignment4 {}
+
 fidl_union! {
     name: UnionSize36Alignment4,
     members: [
@@ -146,6 +154,8 @@ pub struct SandwichUnionSize8Alignment4 {
     pub union: UnionSize8Alignment4,
     pub after: u32,
 }
+
+impl fidl::encoding::Persistable for SandwichUnionSize8Alignment4 {}
 
 fidl_struct! {
   name: SandwichUnionSize8Alignment4,
@@ -184,6 +194,8 @@ pub struct SandwichUnionSize12Alignment4 {
     pub union: UnionSize12Alignment4,
     pub after: i32,
 }
+
+impl fidl::encoding::Persistable for SandwichUnionSize12Alignment4 {}
 
 fidl_struct! {
   name: SandwichUnionSize12Alignment4,
@@ -225,6 +237,8 @@ pub struct StructSize16Alignment8 {
     pub f2: u64,
 }
 
+impl fidl::encoding::Persistable for StructSize16Alignment8 {}
+
 fidl_struct_copy! {
   name: StructSize16Alignment8,
   members: [
@@ -248,6 +262,8 @@ pub struct SandwichUnionSize24Alignment8 {
     pub union: UnionSize24Alignment8,
     pub after: u32,
 }
+
+impl fidl::encoding::Persistable for SandwichUnionSize24Alignment8 {}
 
 fidl_struct! {
   name: SandwichUnionSize24Alignment8,
@@ -286,6 +302,8 @@ pub struct SandwichUnionSize36Alignment4 {
     pub union: UnionSize36Alignment4,
     pub after: u32,
 }
+
+impl fidl::encoding::Persistable for SandwichUnionSize36Alignment4 {}
 
 fidl_struct! {
   name: SandwichUnionSize36Alignment4,
