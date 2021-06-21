@@ -95,7 +95,7 @@ class _ListSettings extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: appState.shutdown,
                   icon: Icon(Icons.power_settings_new_rounded),
-                  label: Text(Strings.powerOff.toUpperCase()),
+                  label: Text(Strings.shutdown.toUpperCase()),
                 ),
 
                 Spacer(),

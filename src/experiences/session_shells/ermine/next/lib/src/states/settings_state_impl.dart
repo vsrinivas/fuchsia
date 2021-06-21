@@ -4,10 +4,13 @@
 
 import 'dart:io';
 
+import 'package:flutter/material.dart' hide Action;
 import 'package:intl/intl.dart';
 import 'package:mobx/mobx.dart';
 
+import 'package:next/src/services/settings/battery_watcher_service.dart';
 import 'package:next/src/services/settings/datetime_service.dart';
+import 'package:next/src/services/settings/memory_watcher_service.dart';
 import 'package:next/src/services/settings/network_address_service.dart';
 import 'package:next/src/services/settings/task_service.dart';
 import 'package:next/src/services/settings/timezone_service.dart';
@@ -49,6 +52,21 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   final networkAddresses = ObservableList<String>();
 
+  @override
+  final Observable<String> memUsed = '--'.asObservable();
+
+  @override
+  final Observable<String> memTotal = '--'.asObservable();
+
+  @override
+  final Observable<double?> memPercentUsed = Observable<double?>(null);
+
+  @override
+  final Observable<IconData> powerIcon = Icons.battery_unknown.asObservable();
+
+  @override
+  final Observable<double?> powerLevel = Observable<double?>(null);
+
   final List<String> _timezones;
 
   @override
@@ -66,12 +84,16 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final DateTimeService dateTimeService;
   final TimezoneService timezoneService;
   final NetworkAddressService networkService;
+  final MemoryWatcherService memoryWatcherService;
+  final BatteryWatcherService batteryWatcherService;
 
   SettingsStateImpl({
     required ShortcutsService shortcutsService,
     required this.timezoneService,
     required this.dateTimeService,
     required this.networkService,
+    required this.memoryWatcherService,
+    required this.batteryWatcherService,
   })  : shortcutBindings = shortcutsService.keyboardBindings,
         _timezones = _loadTimezones(),
         selectedTimezone = timezoneService.timezone.asObservable() {
@@ -91,6 +113,22 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
             ..clear()
             ..addAll(addresses.map((address) => address.address)));
         });
+    memoryWatcherService.onChanged = () {
+      runInAction(() {
+        memUsed.value =
+            '${memoryWatcherService.memUsed!.toStringAsPrecision(2)}GB';
+        memTotal.value =
+            '${memoryWatcherService.memTotal!.toStringAsPrecision(2)}GB';
+        memPercentUsed.value =
+            memoryWatcherService.memUsed! / memoryWatcherService.memTotal!;
+      });
+    };
+    batteryWatcherService.onChanged = () {
+      runInAction(() {
+        powerIcon.value = batteryWatcherService.icon;
+        powerLevel.value = batteryWatcherService.levelPercent;
+      });
+    };
   }
 
   @override
@@ -99,6 +137,8 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       dateTimeService.start(),
       timezoneService.start(),
       networkService.start(),
+      memoryWatcherService.start(),
+      batteryWatcherService.start(),
     ]);
   }
 
@@ -108,6 +148,8 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     await dateTimeService.stop();
     await timezoneService.stop();
     await networkService.stop();
+    await memoryWatcherService.stop();
+    await batteryWatcherService.stop();
     _dateTimeNow = null;
   }
 

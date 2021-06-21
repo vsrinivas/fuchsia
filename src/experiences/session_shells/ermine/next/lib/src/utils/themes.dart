@@ -31,6 +31,9 @@ class AppTheme {
             side: BorderSide(color: Colors.black),
           ),
         ),
+        tooltipTheme: TooltipThemeData(
+          padding: EdgeInsets.all(16),
+        ),
         // Used by AppBar under QuickSettings details screen.
         appBarTheme: AppBarTheme(
           backgroundColor: Colors.grey[100],
@@ -63,6 +66,9 @@ class AppTheme {
             primary: Colors.white,
             side: BorderSide(color: Colors.white),
           ),
+        ),
+        tooltipTheme: TooltipThemeData(
+          padding: EdgeInsets.all(16),
         ),
         // Used by AppBar under QuickSettings details screen.
         appBarTheme: AppBarTheme(

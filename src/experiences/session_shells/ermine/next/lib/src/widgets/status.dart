@@ -11,12 +11,13 @@ import 'package:next/src/states/app_state.dart';
 /// Defines a widget to display glanceable information like build verison, ip
 /// addresses, battery charge or cpu metrics.
 class Status extends StatelessWidget {
-  final AppState appState;
+  final AppState app;
 
-  const Status(this.appState);
+  const Status(this.app);
 
   @override
   Widget build(BuildContext context) {
+    final settings = app.settingsState;
     return Observer(builder: (_) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -30,28 +31,26 @@ class Status extends StatelessWidget {
                   child: ListTile(
                     minVerticalPadding: 0,
                     title: Text(Strings.network),
-                    subtitle: appState.settingsState.networkAddresses.isEmpty
+                    subtitle: settings.networkAddresses.isEmpty
                         ? Text('--')
-                        : appState.settingsState.networkAddresses.length == 1
+                        : settings.networkAddresses.length == 1
                             ? Text(
-                                appState.settingsState.networkAddresses.first,
+                                settings.networkAddresses.first,
                                 maxLines: 2,
                                 style: TextStyle(
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               )
                             : Tooltip(
-                                message: appState.settingsState.networkAddresses
-                                    .join('\n'),
+                                message: settings.networkAddresses.join('\n'),
                                 child: Text(
-                                  appState.settingsState.networkAddresses.first,
+                                  settings.networkAddresses.join('\n'),
                                   maxLines: 2,
                                   style: TextStyle(
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ),
-                    onTap: () {},
                   ),
                 ),
                 Expanded(
@@ -59,19 +58,25 @@ class Status extends StatelessWidget {
                     minVerticalPadding: 0,
                     title: Text(Strings.build),
                     subtitle: Text(
-                      appState.buildVersion,
+                      app.buildVersion,
                       maxLines: 2,
                       style: TextStyle(overflow: TextOverflow.ellipsis),
                     ),
-                    onTap: () {},
                   ),
                 ),
                 Expanded(
                   child: ListTile(
                     minVerticalPadding: 0,
                     title: Text(Strings.power),
-                    subtitle: Text('n/a'),
-                    onTap: () {},
+                    subtitle: Row(
+                      children: [
+                        if (settings.powerLevel.value != null) ...[
+                          Text('${settings.powerLevel.value!.toInt()}%'),
+                          SizedBox(width: 4),
+                        ],
+                        Icon(settings.powerIcon.value),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -89,15 +94,28 @@ class Status extends StatelessWidget {
                     minVerticalPadding: 0,
                     title: Text(Strings.cpu),
                     subtitle: Text('n/a'),
-                    onTap: () {},
                   ),
                 ),
                 Expanded(
                   child: ListTile(
                     minVerticalPadding: 0,
                     title: Text(Strings.memory),
-                    subtitle: Text('n/a'),
-                    onTap: () {},
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(height: 8),
+                        if (settings.memPercentUsed.value != null) ...[
+                          LinearProgressIndicator(
+                            value: settings.memPercentUsed.value,
+                          ),
+                          SizedBox(height: 8),
+                        ],
+                        Text(
+                          '${settings.memUsed.value} / ${settings.memTotal.value}',
+                          textAlign: TextAlign.end,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 Expanded(
@@ -105,7 +123,6 @@ class Status extends StatelessWidget {
                     minVerticalPadding: 0,
                     title: Text(Strings.processes),
                     subtitle: Text('n/a'),
-                    onTap: () {},
                   ),
                 ),
               ],

@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter/material.dart' hide Action;
 import 'package:mobx/mobx.dart';
 
+import 'package:next/src/services/settings/battery_watcher_service.dart';
 import 'package:next/src/services/settings/datetime_service.dart';
+import 'package:next/src/services/settings/memory_watcher_service.dart';
 import 'package:next/src/services/settings/network_address_service.dart';
 import 'package:next/src/services/settings/task_service.dart';
 import 'package:next/src/services/settings/timezone_service.dart';
@@ -39,6 +42,11 @@ abstract class SettingsState with Store implements TaskService {
   ObservableValue<String> get dateTime;
   ObservableValue<String> get selectedTimezone;
   ObservableList<String> get networkAddresses;
+  ObservableValue<String> get memUsed;
+  ObservableValue<String> get memTotal;
+  ObservableValue<double?> get memPercentUsed;
+  ObservableValue<IconData> get powerIcon;
+  ObservableValue<double?> get powerLevel;
   Map<String, Set<String>> get shortcutBindings;
   List<String> get timezones;
 
@@ -48,6 +56,8 @@ abstract class SettingsState with Store implements TaskService {
       timezoneService: TimezoneService(),
       dateTimeService: DateTimeService(),
       networkService: NetworkAddressService(),
+      memoryWatcherService: MemoryWatcherService(),
+      batteryWatcherService: BatteryWatcherService(),
     );
   }
 
