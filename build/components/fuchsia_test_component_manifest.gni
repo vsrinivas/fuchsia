@@ -17,13 +17,29 @@ import("//tools/cmc/build/cmc.gni")
 #     Type: boolean
 #
 #   deps
+#   metadata
 #   visibility
 template("fuchsia_test_component_manifest") {
+  invoker_deps = []
+  if (defined(invoker.deps)) {
+    invoker_deps = invoker.deps
+  }
+
+  if (defined(invoker.metadata)) {
+    metadata_target = "${target_name}_metadata"
+    group(metadata_target) {
+      forward_variables_from(invoker, [ "metadata" ])
+      testonly = true
+      visibility = [ ":*" ]
+    }
+    invoker_deps += [ ":$metadata_target" ]
+  }
+
   # Collect `program` part with its own barrier,
   # since executables may depend on other executables.
   program_target = "${target_name}_program"
   generated_file(program_target) {
-    forward_variables_from(invoker, [ "deps" ])
+    deps = invoker_deps
     data_keys = [ "test_component_manifest_program" ]
     walk_keys = [ "test_component_manifest_program_barrier" ]
     outputs = [ "$target_out_dir/${target_name}.json" ]
@@ -35,7 +51,7 @@ template("fuchsia_test_component_manifest") {
   # Collect any other manifest elements
   other_target = "${target_name}_other"
   generated_file(other_target) {
-    forward_variables_from(invoker, [ "deps" ])
+    deps = invoker_deps
     if (!defined(invoker.v2) || invoker.v2) {
       data_keys = [ "test_component_manifest_cml" ]
     } else {
@@ -49,6 +65,7 @@ template("fuchsia_test_component_manifest") {
 
   cmc_merge(target_name) {
     forward_variables_from(invoker, [ "visibility" ])
+    testonly = true
     output_name = invoker.target_name
     if (!defined(invoker.v2) || invoker.v2) {
       output_name += ".cml"
