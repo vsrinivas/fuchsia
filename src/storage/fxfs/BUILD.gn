@@ -56,6 +56,7 @@ fxfs_sources = [
   "src/object_store/merge.rs",
   "src/object_store/object_manager.rs",
   "src/object_store/record.rs",
+  "src/object_store/store_object_handle.rs",
   "src/object_store/testing.rs",
   "src/object_store/testing/fake_allocator.rs",
   "src/object_store/testing/fake_filesystem.rs",
