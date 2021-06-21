@@ -24,6 +24,7 @@ shared_deps = [
 source_set("acpi") {
   configs += [ "..:config" ]
   sources = [
+    "acpi-impl.cc",
     "acpi.cc",
     "device.cc",
     "manager.cc",
@@ -37,6 +38,7 @@ source_set("acpi") {
 test("acpi-test") {
   sources = [
     "../resources.cc",
+    "acpi.cc",
     "device.cc",
     "manager-test.cc",
     "manager.cc",

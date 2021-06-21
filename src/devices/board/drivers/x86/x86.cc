@@ -91,7 +91,7 @@ zx_status_t X86::Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* ou
   }
 
   fbl::AllocChecker ac;
-  *out = fbl::make_unique_checked<X86>(&ac, parent, &pbus, std::make_unique<acpi::RealAcpi>());
+  *out = fbl::make_unique_checked<X86>(&ac, parent, &pbus, std::make_unique<acpi::AcpiImpl>());
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
