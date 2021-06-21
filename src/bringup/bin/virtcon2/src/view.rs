@@ -136,7 +136,7 @@ pub struct VirtualConsoleViewAssistant {
     owns_display: bool,
 }
 
-const LOGO: &'static str = "/pkg/data/logo.riv";
+const ANIMATION: &'static str = "/pkg/data/animation.riv";
 const FONT: &'static str = "/pkg/data/font.ttf";
 
 impl VirtualConsoleViewAssistant {
@@ -155,7 +155,7 @@ impl VirtualConsoleViewAssistant {
         let font = load_font(PathBuf::from(FONT))?;
         let virtcon_mode = VirtconMode::Forced; // We always start out in forced mode.
         let (animation, desired_virtcon_mode) = if animation {
-            let logo = load_rive(PathBuf::from(LOGO))?;
+            let logo = load_rive(PathBuf::from(ANIMATION))?;
             let artboard = logo.artboard().ok_or_else(|| anyhow!("missing artboard"))?;
             let first_animation = artboard
                 .as_ref()

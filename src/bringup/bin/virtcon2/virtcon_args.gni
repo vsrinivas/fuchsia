@@ -7,6 +7,6 @@ declare_args() {
   virtcon_font_path =
       "//prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf"
 
-  # Path to file to use for logo
-  virtcon_logo_path = "//src/bringup/bin/virtcon2/data/fuchsia.riv"
+  # Path to file to use for animation
+  virtcon_animation_path = "//src/bringup/bin/virtcon2/data/animation.riv"
 }
