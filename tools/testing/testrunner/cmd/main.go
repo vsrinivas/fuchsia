@@ -14,7 +14,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"math"
 	"net"
 	"net/url"
 	"os"
@@ -28,6 +27,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
+	"go.fuchsia.dev/fuchsia/tools/lib/clock"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -36,7 +36,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
 	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
-	"golang.org/x/sync/errgroup"
 )
 
 // Fuchsia-specific environment variables possibly exposed to the testrunner.
@@ -297,10 +296,7 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 	if err := finalize(localTester, localSinks); err != nil {
 		return err
 	}
-	if err := finalize(fuchsiaTester, fuchsiaSinks); err != nil {
-		return err
-	}
-	return nil
+	return finalize(fuchsiaTester, fuchsiaSinks)
 }
 
 // stdioBuffer is a simple thread-safe wrapper around bytes.Buffer. It
@@ -321,44 +317,51 @@ func (b *stdioBuffer) Write(p []byte) (n int, err error) {
 
 func runAndOutputTest(ctx context.Context, test testsharder.Test, t tester, outputs *testOutputs, collectiveStdout, collectiveStderr io.Writer, outDir string) ([]*testrunner.TestResult, error) {
 	var results []*testrunner.TestResult
-	runTestCtx := ctx
-	timeoutSecs := math.Max(float64(test.TimeoutSecs), perTestTimeout.Seconds())
-	if timeoutSecs > 0 {
-		var cancel func()
-		runTestCtx, cancel = context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
-		defer cancel()
-	}
-	eg, runTestCtx := errgroup.WithContext(runTestCtx)
-	eg.Go(func() error {
-		for i := 0; i < test.Runs; i++ {
-			outDirForI := filepath.Join(outDir, url.PathEscape(strings.ReplaceAll(test.Name, ":", "")), strconv.Itoa(i))
-			result, err := runTestOnce(runTestCtx, test, t, i, collectiveStdout, collectiveStderr, outDirForI)
-			if err != nil {
-				return err
-			}
-			if err := outputs.record(*result); err != nil {
-				return err
-			}
-			results = append(results, result)
 
-			if (test.RunAlgorithm == testsharder.StopOnSuccess && result.Result == runtests.TestSuccess) ||
-				(test.RunAlgorithm == testsharder.StopOnFailure && result.Result == runtests.TestFailure) {
-				break
-			}
-		}
-		return nil
-	})
-	err := eg.Wait()
-	if errors.Is(err, context.DeadlineExceeded) && len(results) > 0 {
-		// If the timeout was reached but previous runs succeeded, we
-		// just want to return the completed runs instead of failing for
-		// a timeout failure.
-		err = nil
+	var stopRepeatingTime time.Time
+	if test.StopRepeatingAfterSecs > 0 {
+		timeLimit := time.Second * time.Duration(test.StopRepeatingAfterSecs)
+		stopRepeatingTime = clock.Now(ctx).Add(timeLimit)
 	}
-	return results, err
+
+	for i := 0; i < test.Runs; i++ {
+		outDir := filepath.Join(outDir, url.PathEscape(strings.ReplaceAll(test.Name, ":", "")), strconv.Itoa(i))
+		result, err := runTestOnce(ctx, test, t, perTestTimeout, collectiveStdout, collectiveStderr, outDir)
+		if err != nil {
+			return nil, err
+		}
+		result.RunIndex = i
+		if err := outputs.record(*result); err != nil {
+			return nil, err
+		}
+		results = append(results, result)
+
+		// Stop rerunning the test if we've exceeded the time limit for reruns,
+		// or if the most recent test run met one of the stop conditions.
+		if (!stopRepeatingTime.IsZero() && !clock.Now(ctx).Before(stopRepeatingTime)) ||
+			(test.RunAlgorithm == testsharder.StopOnSuccess && result.Result == runtests.TestSuccess) ||
+			(test.RunAlgorithm == testsharder.StopOnFailure && result.Result == runtests.TestFailure) {
+			break
+		}
+	}
+	return results, nil
 }
 
-func runTestOnce(ctx context.Context, test testsharder.Test, t tester, runIndex int, collectiveStdout, collectiveStderr io.Writer, outDir string) (*testrunner.TestResult, error) {
+// runTestOnce runs the given test once. It will not return an error if the test
+// fails, only if an unrecoverable error occurs or testing should otherwise stop.
+func runTestOnce(
+	ctx context.Context,
+	test testsharder.Test,
+	t tester,
+	timeout time.Duration,
+	collectiveStdout io.Writer,
+	collectiveStderr io.Writer,
+	outDir string,
+) (*testrunner.TestResult, error) {
+	parentCtx := ctx
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
 	// The test case parser specifically uses stdout, so we need to have a
 	// dedicated stdout buffer.
 	stdout := new(bytes.Buffer)
@@ -379,23 +382,31 @@ func runTestOnce(ctx context.Context, test testsharder.Test, t tester, runIndex 
 	}
 
 	result := runtests.TestSuccess
-	startTime := time.Now()
+	startTime := clock.Now(ctx)
 	dataSinks, err := t.Test(ctx, test, multistdout, multistderr, outDir)
 	if err != nil {
-		result = runtests.TestFailure
-		logger.Errorf(ctx, err.Error())
-		if sshutil.IsConnectionError(err) {
+		if parentCtx.Err() != nil {
+			// testrunner is shutting down, give up running tests.
+			return nil, err
+		} else if sshutil.IsConnectionError(err) {
+			// TODO(olivernewman): An SSH connection error can only be produced
+			// by a fuchsiaSSHTester. Figure out a way for each tester type to
+			// expose whether a failure is "fatal" (i.e. we should just exit and
+			// not try to run any other tests) or just a regular test failure,
+			// so we don't need to have this SSH-specific logic here.
 			return nil, err
 		}
-		if runIndex > 0 && errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			// If this is a rerun and the timeout was reached, return the
-			// DeadlineExceeded error so as not to record the output.
-			// Only completed runs will be recorded.
-			return nil, ctx.Err()
+		result = runtests.TestFailure
+		if errors.Is(err, context.DeadlineExceeded) {
+			// TODO(fxbug.dev/49266): Emit a different "Timeout" result if the
+			// test timed out.
+			logger.Errorf(ctx, "Test %s timed out after %s", test.Name, timeout)
+		} else {
+			logger.Errorf(ctx, "Error running test %s: %s", test.Name, err)
 		}
 	}
 
-	endTime := time.Now()
+	endTime := clock.Now(ctx)
 
 	// Record the test details in the summary.
 	return &testrunner.TestResult{
@@ -407,6 +418,5 @@ func runTestOnce(ctx context.Context, test testsharder.Test, t tester, runIndex 
 		StartTime: startTime,
 		EndTime:   endTime,
 		DataSinks: dataSinks,
-		RunIndex:  runIndex,
 	}, nil
 }

@@ -176,7 +176,7 @@ func MultiplyShards(
 					match.test.Runs = 1
 				}
 				match.test.RunAlgorithm = StopOnFailure
-				match.test.TimeoutSecs = int(targetDuration.Seconds())
+				match.test.StopRepeatingAfterSecs = int(targetDuration.Seconds())
 			}
 		}
 

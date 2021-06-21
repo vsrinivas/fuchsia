@@ -12,9 +12,13 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
+	"go.fuchsia.dev/fuchsia/tools/lib/clock"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
@@ -60,13 +64,6 @@ func (t *fakeTester) RunSnapshot(_ context.Context, _ string) error {
 	return nil
 }
 
-func assertEqual(t1, t2 *testrunner.TestResult) bool {
-	return (t1.Name == t2.Name &&
-		t1.Result == t2.Result &&
-		t1.RunIndex == t2.RunIndex &&
-		string(t1.Stdio) == string(t2.Stdio))
-}
-
 func TestValidateTest(t *testing.T) {
 	cases := []struct {
 		name      string
@@ -83,7 +80,8 @@ func TestValidateTest(t *testing.T) {
 				Runs: 1,
 			},
 			expectErr: true,
-		}, {
+		},
+		{
 			name: "missing OS",
 			test: testsharder.Test{
 				Test: build.Test{
@@ -93,7 +91,8 @@ func TestValidateTest(t *testing.T) {
 				Runs: 1,
 			},
 			expectErr: true,
-		}, {
+		},
+		{
 			name: "spurious package URL",
 			test: testsharder.Test{
 				Test: build.Test{
@@ -126,7 +125,8 @@ func TestValidateTest(t *testing.T) {
 				Runs: 1,
 			},
 			expectErr: true,
-		}, {
+		},
+		{
 			name: "missing runs",
 			test: testsharder.Test{
 				Test: build.Test{
@@ -136,7 +136,8 @@ func TestValidateTest(t *testing.T) {
 				},
 			},
 			expectErr: true,
-		}, {
+		},
+		{
 			name: "missing run algorithm",
 			test: testsharder.Test{
 				Test: build.Test{
@@ -147,7 +148,8 @@ func TestValidateTest(t *testing.T) {
 				Runs: 2,
 			},
 			expectErr: true,
-		}, {
+		},
+		{
 			name: "valid test with path",
 			test: testsharder.Test{
 				Test: build.Test{
@@ -158,7 +160,8 @@ func TestValidateTest(t *testing.T) {
 				Runs: 1,
 			},
 			expectErr: false,
-		}, {
+		},
+		{
 			name: "valid test with packageurl",
 			test: testsharder.Test{
 				Test: build.Test{
@@ -182,7 +185,7 @@ func TestValidateTest(t *testing.T) {
 	}
 }
 
-func TestRunTest(t *testing.T) {
+func TestRunAndOutputTest(t *testing.T) {
 	cases := []struct {
 		name           string
 		test           build.Test
@@ -200,7 +203,6 @@ func TestRunTest(t *testing.T) {
 				Path: "/foo/bar",
 				OS:   "linux",
 			},
-			testErr: nil,
 			expectedResult: []*testrunner.TestResult{{
 				Name:   "bar",
 				Result: runtests.TestSuccess,
@@ -214,7 +216,6 @@ func TestRunTest(t *testing.T) {
 				OS:         "fuchsia",
 				PackageURL: "fuchsia-pkg://foo/bar",
 			},
-			testErr: nil,
 			expectedResult: []*testrunner.TestResult{{
 				Name:   "bar",
 				Result: runtests.TestSuccess,
@@ -256,7 +257,6 @@ func TestRunTest(t *testing.T) {
 			},
 			runs:         2,
 			runAlgorithm: testsharder.KeepGoing,
-			testErr:      nil,
 			expectedResult: []*testrunner.TestResult{{
 				Name:   "bar (2)",
 				Result: runtests.TestSuccess,
@@ -265,7 +265,8 @@ func TestRunTest(t *testing.T) {
 				Result:   runtests.TestSuccess,
 				RunIndex: 1,
 			}},
-		}, {
+		},
+		{
 			name: "combines stdio and stdout in chronological order",
 			test: build.Test{
 				Name:       "fuchsia-pkg://foo/bar",
@@ -282,7 +283,8 @@ func TestRunTest(t *testing.T) {
 				stderr.Write([]byte("stderr "))
 				stdout.Write([]byte("stdout"))
 			},
-		}, {
+		},
+		{
 			name: "retries test",
 			test: build.Test{
 				Name:       "fuchsia-pkg://foo/bar",
@@ -334,6 +336,30 @@ func TestRunTest(t *testing.T) {
 			},
 		},
 		{
+			name: "retries test after timeout",
+			test: build.Test{
+				Name:       "bar",
+				Path:       "/foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
+			},
+			runAlgorithm: testsharder.StopOnSuccess,
+			runs:         2,
+			testErr:      context.DeadlineExceeded,
+			expectedResult: []*testrunner.TestResult{
+				{
+					Name:     "bar",
+					Result:   runtests.TestFailure,
+					RunIndex: 0,
+				},
+				{
+					Name:     "bar",
+					Result:   runtests.TestFailure,
+					RunIndex: 1,
+				},
+			},
+		},
+		{
 			name: "returns on first success even if max attempts > 1",
 			test: build.Test{
 				Name:       "fuchsia-pkg://foo/bar",
@@ -382,15 +408,17 @@ func TestRunTest(t *testing.T) {
 			results, err := runAndOutputTest(context.Background(), testsharder.Test{Test: c.test, Runs: c.runs, RunAlgorithm: c.runAlgorithm}, tester, o, &buf, &buf, "out-dir")
 
 			if err != c.expectedErr {
-				t.Errorf("got error: %v, expected: %v", err, c.expectedErr)
+				t.Fatalf("got error: %v, expected: %v", err, c.expectedErr)
 			}
-			if err == nil {
-				for j, result := range results {
-					if !assertEqual(result, c.expectedResult[j]) {
-						t.Errorf("got result: %v, expected: %v", result, c.expectedResult[j])
-					}
-				}
+
+			opts := []cmp.Option{
+				cmpopts.IgnoreFields(testrunner.TestResult{}, "StartTime", "EndTime"),
+				cmpopts.EquateEmpty(),
 			}
+			if diff := cmp.Diff(results, c.expectedResult, opts...); diff != "" {
+				t.Errorf("test results mismatch (-want +got):\n%s", diff)
+			}
+
 			if c.runs > 1 {
 				funcCalls := strings.Join(tester.funcCalls, ",")
 				testCount := strings.Count(funcCalls, testFunc)
@@ -420,7 +448,47 @@ func TestRunTest(t *testing.T) {
 			if len(submatches) != 1 {
 				t.Errorf("unexpected output:\nexpected: %v\nactual: %v\n", expectedOutput, actualOutput)
 			}
-
 		})
 	}
+
+	// Tests that `runAndOutputTest` doesn't return an error if running in
+	// StopOnFailure mode with a deadline, as would be the case with
+	// `StopRepeatingAfterSecs`.
+	t.Run("multiplied shard hitting time limit", func(t *testing.T) {
+		test := testsharder.Test{
+			Test: build.Test{
+				Name:       "fuchsia-pkg://foo/bar",
+				OS:         "fuchsia",
+				PackageURL: "fuchsia-pkg://foo/bar",
+			},
+			RunAlgorithm:           testsharder.StopOnFailure,
+			Runs:                   100,
+			StopRepeatingAfterSecs: 5,
+		}
+
+		o, err := createTestOutputs(tap.NewProducer(io.Discard), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer o.Close()
+
+		fakeClock := clock.NewFakeClock()
+		ctx := clock.NewContext(context.Background(), fakeClock)
+
+		// If each test run takes 1 second, we should be able to run the test
+		// exactly `StopRepeatingAfterSecs` times.
+		tester := fakeTester{
+			runTest: func(t testsharder.Test, w1, w2 io.Writer) {
+				fakeClock.Advance(time.Second)
+			},
+		}
+
+		results, err := runAndOutputTest(ctx, test, &tester, o, io.Discard, io.Discard, t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(results) != test.StopRepeatingAfterSecs {
+			t.Fatalf("Expected %d test results but got %d", test.StopRepeatingAfterSecs, len(results))
+		}
+	})
 }

@@ -21,6 +21,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
+	"go.fuchsia.dev/fuchsia/tools/lib/clock"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
@@ -368,14 +369,14 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 
 	var sinkErr error
 	if t.useRuntests && !strings.HasSuffix(test.PackageURL, componentV2Suffix) {
-		startTime := time.Now()
+		startTime := clock.Now(ctx)
 		var sinksPerTest map[string]runtests.DataSinkReference
 		if sinksPerTest, sinkErr = t.copier.GetReferences(dataOutputDir); sinkErr != nil {
 			logger.Errorf(ctx, "failed to determine data sinks for test %q: %v", test.Name, sinkErr)
 		} else {
 			sinks = sinksPerTest[test.Name]
 		}
-		duration := time.Now().Sub(startTime)
+		duration := clock.Now(ctx).Sub(startTime)
 		if sinks.Size() > 0 {
 			logger.Debugf(ctx, "%d data sinks found in %v", sinks.Size(), duration)
 		}
@@ -408,12 +409,12 @@ func (t *fuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.
 }
 
 func (t *fuchsiaSSHTester) copySinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, localOutputDir string) error {
-	startTime := time.Now()
+	startTime := clock.Now(ctx)
 	sinkMap, err := t.copier.Copy(sinkRefs, localOutputDir)
 	if err != nil {
 		return fmt.Errorf("failed to copy data sinks off target: %v", err)
 	}
-	copyDuration := time.Now().Sub(startTime)
+	copyDuration := clock.Now(ctx).Sub(startTime)
 	sinkRef := runtests.DataSinkReference{Sinks: sinkMap}
 	numSinks := sinkRef.Size()
 	if numSinks > 0 {
@@ -432,12 +433,12 @@ func (t *fuchsiaSSHTester) RunSnapshot(ctx context.Context, snapshotFile string)
 		return fmt.Errorf("failed to create snapshot output file: %w", err)
 	}
 	defer snapshotOutFile.Close()
-	startTime := time.Now()
+	startTime := clock.Now(ctx)
 	err = t.runSSHCommandWithRetry(ctx, []string{"/bin/snapshot"}, snapshotOutFile, os.Stderr)
 	if err != nil {
 		logger.Errorf(ctx, "%s: %v", constants.FailedToRunSnapshotMsg, err)
 	}
-	logger.Debugf(ctx, "ran snapshot in %v", time.Now().Sub(startTime))
+	logger.Debugf(ctx, "ran snapshot in %v", clock.Now(ctx).Sub(startTime))
 	return err
 }
 

@@ -56,7 +56,7 @@ func TestMultiplyShards(t *testing.T) {
 		test := makeTest(id, os)
 		test.Runs = runs
 		test.RunAlgorithm = StopOnFailure
-		test.TimeoutSecs = timeoutSecs
+		test.StopRepeatingAfterSecs = timeoutSecs
 		return &Shard{
 			Name:  multipliedShardPrefix + environmentName(env) + "-" + normalizeTestName(test.Name),
 			Tests: []Test{test},

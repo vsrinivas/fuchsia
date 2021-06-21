@@ -6,7 +6,7 @@ package testsharder
 
 import "go.fuchsia.dev/fuchsia/tools/build"
 
-// RunAlgorithm descibes how to run a test using the test's `Runs` field.
+// RunAlgorithm describes how to run a test using the test's `Runs` field.
 type RunAlgorithm string
 
 const (
@@ -31,11 +31,13 @@ type Test struct {
 	// RunAlgorithm determines how `Runs` will be used to run the test.
 	RunAlgorithm RunAlgorithm `json:"run_algorithm,omitempty"`
 
-	// RealmLabel is an optional arg passed to run-test-component to specify a realm
+	// RealmLabel is an optional arg passed to run-test-component to specify a
+	// realm.
 	RealmLabel string `json:"realm_label,omitempty"`
 
-	// TimeoutSecs is the duration for which to keep running a test.
-	TimeoutSecs int `json:"timeout,omitempty"`
+	// StopRepeatingAfterSecs is the duration for which to repeatedly run a
+	// test.
+	StopRepeatingAfterSecs int `json:"stop_repeating_after_secs,omitempty"`
 }
 
 func (t *Test) applyModifier(m TestModifier) {

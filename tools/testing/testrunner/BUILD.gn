@@ -38,6 +38,7 @@ go_library("main") {
     "//tools/build",
     "//tools/debug/elflib",
     "//tools/integration/testsharder:testsharder_lib",
+    "//tools/lib/clock",
     "//tools/lib/color",
     "//tools/lib/environment",
     "//tools/lib/iomisc",
