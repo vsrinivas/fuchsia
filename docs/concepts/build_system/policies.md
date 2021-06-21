@@ -23,7 +23,7 @@ The following are considered to be good properties for the build:
 
 * Hermeticity - the build is self-contained and neither influences external
   software and configuration or is influenced by external software and
-  configuration. Build steps 
+  configuration.
 * Repeatability and reproducibility - two builds from the same source tree
   produce the same output or the same outcome deterministically.
   Reproducibility promotes security and auditing, and simplifies
