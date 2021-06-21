@@ -31,7 +31,7 @@ class QuickSettings extends StatelessWidget {
                 top: BorderSide(color: Theme.of(context).dividerColor),
               ),
             ),
-            padding: EdgeInsets.all(24),
+            padding: EdgeInsets.all(8),
             child: Status(appState),
           ),
 

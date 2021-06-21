@@ -79,11 +79,17 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     timezoneService.onChanged =
         (timezone) => runInAction(() => selectedTimezone.value = timezone);
     networkService.onChanged = () => NetworkInterface.list().then((interfaces) {
+          // Gather all addresses from all interfaces and sort them such that
+          // IPv4 addresses come before IPv6.
+          final addresses = interfaces
+              .expand((interface) => interface.addresses)
+              .toList(growable: false)
+                ..sort((addr1, addr2) =>
+                    addr1.type == InternetAddressType.IPv4 ? -1 : 0);
+
           runInAction(() => networkAddresses
             ..clear()
-            ..addAll(interfaces
-                .expand((interface) => interface.addresses)
-                .map((address) => address.address)));
+            ..addAll(addresses.map((address) => address.address)));
         });
   }
 

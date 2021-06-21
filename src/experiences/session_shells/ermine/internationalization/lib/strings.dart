@@ -121,6 +121,12 @@ class Strings {
         desc: 'The label for the "Top processes" label',
       );
 
+  static String get processes => Intl.message(
+        'Processes',
+        name: 'processes',
+        desc: 'The label for the "Processes" label',
+      );
+
   static String get shutdown => Intl.message(
         'Shutdown',
         name: 'shutdown',
@@ -222,6 +228,12 @@ class Strings {
         'Battery',
         name: 'battery',
         desc: 'The long name for the "Battery level" label',
+      );
+
+  static String get power => Intl.message(
+        'Power',
+        name: 'power',
+        desc: 'The short name for the system source of "Power" label',
       );
 
   static String get wireless => Intl.message(
@@ -367,6 +379,12 @@ class Strings {
         'Channel',
         name: 'channel',
         desc: 'The short name for the "channel" label',
+      );
+
+  static String get build => Intl.message(
+        'Build',
+        name: 'build',
+        desc: 'The short name for the build version label',
       );
 
   static String get proposeElementErrorTitle => Intl.message(
