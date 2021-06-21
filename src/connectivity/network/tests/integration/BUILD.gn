@@ -26,7 +26,6 @@ group("compile") {
 tests = [
   "dhcp",
   "dns",
-  "ipv4",
   "ipv6",
   "management",
   "reachability",
@@ -90,6 +89,7 @@ tests_v2 = [
   "fidl",
   "filter",
   "inspect",
+  "ipv4",
   "neighbor",
   "routes",
   "socket",

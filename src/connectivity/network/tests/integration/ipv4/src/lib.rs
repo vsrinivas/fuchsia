@@ -12,7 +12,7 @@ use futures::{StreamExt as _, TryStreamExt as _};
 use net_declare::std_ip_v4;
 use net_types::ip::{self as net_types_ip};
 use net_types::MulticastAddress as _;
-use netemul::EnvironmentUdpSocket as _;
+use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{setup_network, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT};
 use netstack_testing_macros::variants_test;
 use packet::ParsablePacket as _;
@@ -27,7 +27,7 @@ async fn sends_igmp_reports<E: netemul::Endpoint>(name: &str) -> Result {
     const MULTICAST_ADDR: std::net::Ipv4Addr = std_ip_v4!("224.1.2.3");
 
     let sandbox = netemul::TestSandbox::new().context("error creating sandbox")?;
-    let (_network, environment, _netstack, iface, fake_ep) =
+    let (_network, realm, _netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await.context("error setting up network")?;
 
     let () = iface
@@ -38,8 +38,8 @@ async fn sends_igmp_reports<E: netemul::Endpoint>(name: &str) -> Result {
         .await
         .context("error adding IP address")?;
 
-    let sock = fuchsia_async::net::UdpSocket::bind_in_env(
-        &environment,
+    let sock = fuchsia_async::net::UdpSocket::bind_in_realm(
+        &realm,
         std::net::SocketAddrV4::new(std::net::Ipv4Addr::UNSPECIFIED, 0).into(),
     )
     .await
