@@ -84,21 +84,12 @@ rustc_binary("bin") {
 
 fuchsia_component("component") {
   component_name = "bt-avrcp"
-  manifest = "meta/bt-avrcp.cmx"
-  deps = [ ":bin" ]
-}
-
-fuchsia_component("component-v2") {
-  component_name = "bt-avrcp"
   manifest = "meta/bt-avrcp.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_package("bt-avrcp") {
-  deps = [
-    ":component",
-    ":component-v2",
-  ]
+  deps = [ ":component" ]
 }
 
 fuchsia_unittest_package("bt-avrcp-tests") {

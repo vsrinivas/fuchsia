@@ -74,7 +74,7 @@ src/connectivity/bluetooth/profiles/bt-avrcp --with
 
 The `bt-avrcp` component includes support for
 [component inspection](https://fuchsia.dev/fuchsia-src/development/diagnostics/inspect). To view
-component metrics or the current state of any connected peers , use `fx iquery show bt-avrcp.cmx`.
+component metrics or the current state of any connected peers , use `fx iquery show core/bt-avrcp`.
 
 ### Hierarchy
 

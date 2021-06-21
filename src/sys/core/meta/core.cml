@@ -135,6 +135,11 @@
             name: "ssh-key-manager",
             url: "fuchsia-pkg://fuchsia.com/ssh-key-manager#meta/ssh-key-manager.cm",
         },
+        {
+            name: "bt-avrcp",
+            url: "fuchsia-pkg://fuchsia.com/bt-avrcp#meta/bt-avrcp.cm",
+            environment: "#universe-resolver-env",
+        },
     ],
     capabilities: [
         {
@@ -465,6 +470,7 @@
                 "#activity",
                 "#appmgr",
                 "#brightness_manager",
+                "#bt-avrcp",
                 "#debug_serial",
                 "#detect",
                 "#device_settings",
@@ -1005,6 +1011,20 @@
             ],
             from: "#appmgr",
             to: [ "#test_manager" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.avrcp.PeerManager",
+                "fuchsia.bluetooth.avrcp.test.PeerManagerExt",
+            ],
+            from: "#bt-avrcp",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            from: "#appmgr",
+            to: [ "#bt-avrcp" ],
             dependency: "weak_for_migration",
         },
         {

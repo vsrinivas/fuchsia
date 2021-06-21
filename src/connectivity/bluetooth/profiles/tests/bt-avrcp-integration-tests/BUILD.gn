@@ -37,7 +37,7 @@ fuchsia_test_package("bt-avrcp-integration-tests") {
   test_components = [ ":component" ]
 
   deps = [
-    "//src/connectivity/bluetooth/profiles/bt-avrcp:component-v2",
+    "//src/connectivity/bluetooth/profiles/bt-avrcp:component",
     "//src/connectivity/bluetooth/testing/bt-profile-test-server",
     "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia_component_test_framework_intermediary_component",
   ]

@@ -728,11 +728,6 @@ mod tests {
         // Launching the same profile is OK.
         let launch_info2 = a2dp_component_launch_information();
         let _component_stream2 = do_launch_profile(&mut mock_peer, launch_info2).await;
-
-        // Launching a different profile is OK.
-        let profile_url3 = fuchsia_single_component_package_url!("bt-avrcp").to_string();
-        let launch_info3 = LaunchInfo { url: profile_url3, arguments: vec![] };
-        let _component_stream3 = do_launch_profile(&mut mock_peer, launch_info3).await;
     }
 
     #[fasync::run_singlethreaded(test)]

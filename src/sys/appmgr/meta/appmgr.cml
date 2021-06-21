@@ -36,6 +36,7 @@
         // be disallowed in the future.
         {
             protocol: [
+                "fuchsia.bluetooth.bredr.Profile",
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.exception.Handler",
@@ -393,6 +394,14 @@
             protocol: "fuchsia.vulkan.loader.Loader",
             path: "/svc_for_sys/fuchsia.vulkan.loader.Loader",
         },
+        {
+            protocol: "fuchsia.bluetooth.avrcp.PeerManager",
+            path: "/svc_for_sys/fuchsia.bluetooth.avrcp.PeerManager",
+        },
+        {
+            protocol: "fuchsia.bluetooth.avrcp.test.PeerManagerExt",
+            path: "/svc_for_sys/fuchsia.bluetooth.avrcp.test.PeerManagerExt",
+        },
 
         // From archivist
         {
@@ -486,6 +495,7 @@
         },
         {
             protocol: [
+                "fuchsia.bluetooth.bredr.Profile",
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.exception.Handler",

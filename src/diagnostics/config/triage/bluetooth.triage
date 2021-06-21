@@ -1,44 +1,55 @@
 {
     select: {
-      avrcp_connection_failures: "INSPECT:bt-avrcp.cmx:root/metrics:connection_errors",
-      le_connection_failures: "INSPECT:bootstrap/driver_manager:root/bt-host/adapter/low_energy_connection_manager:recent_connection_failures",
+        avrcp_connection_failures: [
+            "INSPECT:bt-avrcp.cmx:root/metrics:connection_errors",
+            "INSPECT:core/bt-avrcp:root/metrics:connection_errors",
+        ],
+        le_connection_failures: "INSPECT:bootstrap/driver_manager:root/bt-host/adapter/low_energy_connection_manager:recent_connection_failures",
     },
     act: {
         le_connection_failures: {
             type: "Warning",
             trigger: "le_connection_failures > 0",
-            print: "Bluetooth: There have been 1+ Bluetooth Low Energy connection failures in the bt-host driver recently"
+            print: "Bluetooth: There have been 1+ Bluetooth Low Energy connection failures in the bt-host driver recently",
         },
         avrcp_connection_failures: {
             type: "Warning",
             trigger: "avrcp_connection_failures > 0",
-            print: "Bluetooth: There have been 1+ AVRCP connection failures recently"
-        }
+            print: "Bluetooth: There have been 1+ AVRCP connection failures recently",
+        },
     },
     test: {
         test_one_le_connection_failure: {
-            yes: [ "le_connection_failures"],
+            yes: [
+                "le_connection_failures",
+            ],
             values: {
-                le_connection_failures: 1
-            }
+                le_connection_failures: 1,
+            },
         },
         test_no_le_connection_failures: {
-            no: [ "le_connection_failures"],
+            no: [
+                "le_connection_failures",
+            ],
             values: {
-                le_connection_failures: 0
-            }
+                le_connection_failures: 0,
+            },
         },
         test_one_avrcp_connection_failure: {
-            yes: [ "avrcp_connection_failures"],
+            yes: [
+                "avrcp_connection_failures",
+            ],
             values: {
-                avrcp_connection_failures: 1
-            }
+                avrcp_connection_failures: 1,
+            },
         },
         test_no_avrcp_connection_failure: {
-            no: [ "avrcp_connection_failures"],
+            no: [
+                "avrcp_connection_failures",
+            ],
             values: {
-                avrcp_connection_failures: 0
-            }
-        }
-    }
+                avrcp_connection_failures: 0,
+            },
+        },
+    },
 }

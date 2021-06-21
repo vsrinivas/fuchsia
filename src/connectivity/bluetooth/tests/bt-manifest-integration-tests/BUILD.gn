@@ -84,7 +84,7 @@ fuchsia_test_component("bt-avrcp-smoke-test-component") {
 
 fuchsia_test_package("bt-avrcp-smoke-test") {
   test_components = [ ":bt-avrcp-smoke-test-component" ]
-  deps = [ "//src/connectivity/bluetooth/profiles/bt-avrcp:component-v2" ]
+  deps = [ "//src/connectivity/bluetooth/profiles/bt-avrcp:component" ]
 }
 
 rustc_test("bt_avrcp_target_smoke_test_bin") {
