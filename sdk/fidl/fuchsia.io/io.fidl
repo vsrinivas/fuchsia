@@ -2,32 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.io;
 
 using fuchsia.io2;
 using fuchsia.mem;
 using zx;
 
-/// Describes how the connection to an should be handled, as well as
-/// how to interpret the optional handle.
+/// Connection information.
 ///
-/// Refer to `Node.Describe()` and `Node.OnOpen()` for usage.
+/// Refer to [`Node.Describe`] and [`Node.OnOpen`] for usage.
 resource union NodeInfo {
+    /// No protocol information was supplied by the connection.
     1: Service service;
+    /// The connection composes [`File`].
     2: FileObject file;
+    /// The connection composes [`Directory`].
     3: DirectoryObject directory;
     4: Pipe pipe;
+    /// The connection composes [`File`]. Its implementation is backed by a VMO.
     5: Vmofile vmofile;
     6: Device device;
     7: Tty tty;
     8: reserved;
+    /// The connection composes [`fuchsia.posix.socket/DatagramSocket`].
     9: DatagramSocket datagram_socket;
+    /// The connection composes [`fuchsia.posix.socket/StreamSocket`].
     10: StreamSocket stream_socket;
 };
 
-/// The default protocol, interface information must be acquired some
-/// other way.
+/// A [`NodeInfo`] variant.
+// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
 struct Service {
 };
 
@@ -36,7 +40,8 @@ const uint32 FILE_SIGNAL_READABLE = 0x01000000; // ZX_USER_SIGNAL_0
 /// Indicates the file is ready for writing.
 const uint32 FILE_SIGNAL_WRITABLE = 0x02000000; // ZX_USER_SIGNAL_1
 
-/// The object may be cast to interface 'File'.
+/// A [`NodeInfo`] variant.
+// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
 resource struct FileObject {
     /// An optional event which transmits information about an object's readability
     /// or writability. This event relays information about the underlying object, not
@@ -52,19 +57,19 @@ resource struct FileObject {
     zx.handle:STREAM? stream;
 };
 
-/// The object may be cast to interface 'Directory'.
+/// A [`NodeInfo`] variant.
+// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
 struct DirectoryObject {
 };
 
-/// The object is accompanied by a pipe.
+/// A [`NodeInfo`] variant.
+// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
 resource struct Pipe {
     zx.handle:SOCKET socket;
 };
 
-/// The object is a file which is represented as an immutable VMO.
-/// Although a VMO is returned as a part of this structure, this underlying object
-/// may represent multiple Vmofiles. To identify the logical portion of the VMO
-/// that represents the single file, an offset and length parameter are also supplied.
+/// A [`NodeInfo`] variant.
+// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
 resource struct Vmofile {
     /// The VMO which backs this file.
     zx.handle:VMO vmo;
@@ -85,7 +90,8 @@ const uint32 DEVICE_SIGNAL_ERROR = 0x08000000; // ZX_USER_SIGNAL_3
 /// Indicates the device has hung up on the current connection.
 const uint32 DEVICE_SIGNAL_HANGUP = 0x10000000; // ZX_USER_SIGNAL_4
 
-/// The object may be cast to interface 'Device'.
+/// A [`NodeInfo`] variant.
+// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
 resource struct Device {
     /// An optional event which transmits information about a device's state.
     ///
@@ -93,18 +99,21 @@ resource struct Device {
     zx.handle:EVENTPAIR? event;
 };
 
-/// The object may be cast to interface 'Tty'
+/// A [`NodeInfo`] variant.
+// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
 resource struct Tty {
     zx.handle:EVENTPAIR? event;
 };
 
-/// The object may be cast to interface [`fuchsia.posix.socket.DatagramSocket`].
+/// A [`NodeInfo`] variant.
+// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
 resource struct DatagramSocket {
     /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
     zx.handle:EVENTPAIR event;
 };
 
-/// The object may be cast to interface [`fuchsia.posix.socket.StreamSocket`].
+/// A [`NodeInfo`] variant.
+// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
 resource struct StreamSocket {
     zx.handle:SOCKET socket;
 };
