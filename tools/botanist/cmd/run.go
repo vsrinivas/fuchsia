@@ -179,9 +179,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		// Otherwise, spin up a serial server now.
 		defer t0.Serial().Close()
 
-		sOpts := serial.ServerOptions{
-			Logger: logger.LoggerFromContext(ctx),
-		}
+		var sOpts serial.ServerOptions
 		if r.serialLogFile != "" {
 			serialLog, err := os.Create(r.serialLogFile)
 			if err != nil {

@@ -19,6 +19,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"golang.org/x/sync/errgroup"
 )
 
 var warningLogger = logger.NewLogger(logger.WarningLevel, color.NewColor(color.ColorNever), nil, nil, "test-serial")
@@ -99,7 +100,7 @@ func TestServerSocketOutput(t *testing.T) {
 	serial, device := serialAndDevice()
 	aux := mkTempFile(t)
 
-	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: warningLogger})
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux})
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -119,16 +120,18 @@ func TestServerSocketOutput(t *testing.T) {
 
 	// A device writes things to serial, eventually writing a completion match the
 	// reader was looking for
-	go func() {
+	var eg errgroup.Group
+	eg.Go(func() error {
 		for i := 0; i < 10000; i++ {
 			if _, err := io.WriteString(device, "hello world\n"); err != nil {
-				t.Fatal(err)
+				return err
 			}
 		}
 		if _, err := io.WriteString(device, "MAGIC!\n"); err != nil {
-			t.Fatal(err)
+			return err
 		}
-	}()
+		return nil
+	})
 
 	// a client is tailing the log and tells the server it's done when it reads the magic:
 	bio := bufio.NewReader(c)
@@ -147,13 +150,17 @@ func TestServerSocketOutput(t *testing.T) {
 	if serverErr != nil {
 		t.Fatalf("unexpected server error: %s", serverErr)
 	}
+
+	if err := eg.Wait(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestServerSerialWrites(t *testing.T) {
 	serial, device := serialAndDevice()
 	aux := mkTempFile(t)
 
-	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: warningLogger})
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux})
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -172,17 +179,19 @@ func TestServerSerialWrites(t *testing.T) {
 	}
 
 	var expectedCount = 10000
+	var eg errgroup.Group
 	// A test driver writes things to conn
-	go func() {
+	eg.Go(func() error {
 		for i := 0; i < expectedCount-1; i++ {
 			if _, err := io.WriteString(c, "hello world\n"); err != nil {
-				t.Fatal(err)
+				return err
 			}
 		}
 		if _, err := io.WriteString(c, "MAGIC!\n"); err != nil {
-			t.Fatal(err)
+			return err
 		}
-	}()
+		return nil
+	})
 
 	var count int
 	// a device is receiving the input from the conn
@@ -207,13 +216,17 @@ func TestServerSerialWrites(t *testing.T) {
 	if expectedCount != count {
 		t.Fatalf("got %d, want %d", count, expectedCount)
 	}
+
+	if err := eg.Wait(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestServerSerialClosing(t *testing.T) {
 	serial, _ := serialAndDevice()
 	aux := mkTempFile(t)
 
-	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: warningLogger})
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux})
 
 	ctx := context.Background()
 
