@@ -50,7 +50,7 @@ impl Color32 {
 
     pub fn lerp(self, other: Self, ratio: f32) -> Self {
         fn lerp(a: u8, b: u8, ratio: f32) -> u8 {
-            a + ((b as f32 - a as f32) * ratio).round() as u8
+            (a as f32 + ((b as f32 - a as f32) * ratio)).round() as u8
         }
 
         Self::from_argb(

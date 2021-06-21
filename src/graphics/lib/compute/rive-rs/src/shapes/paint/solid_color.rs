@@ -24,6 +24,7 @@ impl ObjectRef<'_, SolidColor> {
 
     pub fn set_color_value(&self, color_value: Color32) {
         self.color_value.set(color_value);
+        self.render_opacity_changed();
     }
 }
 
