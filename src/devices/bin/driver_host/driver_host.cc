@@ -22,8 +22,6 @@
 #include <lib/zx/process.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
-#include <lib/zxio/inception.h>
-#include <lib/zxio/null.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
