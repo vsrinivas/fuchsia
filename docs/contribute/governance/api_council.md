@@ -27,13 +27,15 @@ Interface. For example, FDIO is a client library that provides a POSIX-like
 abstraction over the underlying fuchsia.io protocol in the Fuchsia System
 Interface.
 
-The *Fuchsia IDK* is a collection of libraries and tools that the Fuchsia
+The *Fuchsia IDK* is a collection of libraries, metadata, and tools that the Fuchsia
 project provides to people writing software for Fuchsia. Among other things, the
 Fuchsia IDK contains a definition of the Fuchsia System Interface as well as a
 number of client libraries.
 
-The *Fuchsia API Surface* is the combination of the Fuchsia System Interface and
-the client libraries included in the Fuchsia IDK.
+The *Fuchsia API Surface* is the collection of artifacts that we include in the IDK.
+This includes, but is not limited to, the Fuchsia System Interface, 
+the client libraries included in the Fuchsia IDK, the IDK metadata, and the core
+Fuchsia developer tools.
 
 *Fuchsia contributors* are people who are involved in creating the Fuchsia
 operating system, including people who work for Google and people who do not.
