@@ -42,7 +42,7 @@ available for use in Fuchsia product builds.
 
 The metadata and list of external sources for font files is maintained in a
 _font data repo_. For Fuchsia's open-source fonts, this is found at
-[`//fontdata`](https://goto.google.com/fuchsia-fontdata).
+[`//fontdata`](https://fuchsia.googlesource.com/fontdata/).
 <!-- TODO: Add fuchsia/fontdata to validProjects -->
 
 Note: The `fontdata` repo is not part of Fuchsia's standard `jiri` checkout; for
