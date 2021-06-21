@@ -546,8 +546,8 @@ impl super::Station for ClientSme {
                             {
                                 None => {
                                     // Report a SelectNetworkFailure if there are no compatible results.
-                                    let error_msg_str = "internal protection error";
-                                    error!("{}", error_msg_str);
+                                    let error_msg = "internal protection error";
+                                    error!("{}", error_msg);
                                     report_connect_finished(
                                         Some(token.responder),
                                         &mut self.context,
@@ -557,7 +557,7 @@ impl super::Station for ClientSme {
                                         &mut self.context,
                                         &bss_list,
                                         None,
-                                        Some(error_msg_str.to_string()),
+                                        Some(error_msg.to_string()),
                                     );
                                 }
                                 Some(best_compatible_bss) => {
