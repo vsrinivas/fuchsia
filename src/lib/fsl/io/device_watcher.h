@@ -41,7 +41,7 @@ class FXL_EXPORT DeviceWatcher {
   //
   // Asynchronously invokes |exists_callback| for all existing devices within
   // the specified directory as well as any subsequently added devices until
-  // the device watcher is destroyed.
+  // the device watcher is destroyed. Ignores the "." directory.
   //
   // Equivalent to:
   // CreateWithIdleCallback(directory_path, exists_callback, []{});
@@ -58,7 +58,7 @@ class FXL_EXPORT DeviceWatcher {
   //
   // Asynchronously invokes |exists_callback| for all existing devices within
   // the specified directory as well as any subsequently added devices until
-  // the device watcher is destroyed.
+  // the device watcher is destroyed. Ignores the "." directory.
   //
   // The |idle_callback| is invoked once immediately after all pre-existing
   // devices have been reported via |exists_callback| shortly after creation.

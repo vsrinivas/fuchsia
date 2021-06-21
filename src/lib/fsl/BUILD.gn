@@ -22,6 +22,7 @@ executable("fsl_unittests") {
 
   sources = [
     "handles/object_info_unittest.cc",
+    "io/device_watcher_unittest.cc",
     "io/redirection_unittest.cc",
     "socket/blocking_drain_unittest.cc",
     "socket/files_unittest.cc",
@@ -38,7 +39,10 @@ executable("fsl_unittests") {
   deps = [
     ":fsl",
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fit",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp",
     "//third_party/googletest:gtest",
   ]
 }

@@ -71,7 +71,8 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(caller.borrow_channel()))
                     .Watch(mask, 0, zx::channel(server.release()));
   if (result.status() != ZX_OK || result->s != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create device watcher: status=" << result->s;
+    FX_LOGS(ERROR) << "Failed to create device watcher: outer status=" << result.status()
+                   << " status=" << result->s;
     return nullptr;
   }
 
@@ -103,7 +104,11 @@ void DeviceWatcher::Handler(async_dispatcher_t* dispatcher, async::WaitBase* wai
         break;
       }
       if ((event == fio::wire::kWatchEventAdded) || (event == fio::wire::kWatchEventExisting)) {
-        exists_callback_(dir_fd_.get(), std::string(reinterpret_cast<char*>(msg), namelen));
+        std::string filename(reinterpret_cast<char*>(msg), namelen);
+        // "." is not a device, so ignore it.
+        if (filename != ".") {
+          exists_callback_(dir_fd_.get(), filename);
+        }
       } else if (event == fio::wire::kWatchEventIdle) {
         idle_callback_();
         // Only call the idle callback once.  In case there is some captured
