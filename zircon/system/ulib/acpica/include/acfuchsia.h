@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <semaphore.h>
 #include <stdbool.h>
 #include <threads.h>
 #include <zircon/assert.h>
@@ -39,11 +38,14 @@ extern zx_handle_t root_resource_handle;
 
 #define ACPI_MUTEX_TYPE ACPI_OSL_MUTEX
 
+typedef struct AcpiSemaphore acpi_semaphore_t;
+typedef struct sync_mutex sync_mutex_t;
+
 // Specify the types Fuchsia uses for various common objects
 #define ACPI_CPU_FLAGS int
-#define ACPI_SPINLOCK mtx_t *
-#define ACPI_MUTEX mtx_t *
-#define ACPI_SEMAPHORE sem_t *
+#define ACPI_SPINLOCK sync_mutex_t *
+#define ACPI_MUTEX sync_mutex_t *
+#define ACPI_SEMAPHORE acpi_semaphore_t *
 
 // Borrowed from aclinuxex.h
 

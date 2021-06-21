@@ -4,8 +4,11 @@
 
 #include <errno.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/hw/inout.h>
 #include <lib/pci/pio.h>
+#include <lib/sync/condition.h>
+#include <lib/sync/mutex.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <limits.h>
 #include <pthread.h>
@@ -36,6 +39,53 @@
 #endif
 
 #include <acpica/acpi.h>
+
+// Semaphore implementation using condvar + mutex.
+struct AcpiSemaphore {
+ public:
+  explicit AcpiSemaphore(uint32_t initial_count) : count_(initial_count) {}
+
+  void Wait(uint32_t units) {
+    sync_mutex_lock(&mutex_);
+    while (count_ < units) {
+      sync_condition_wait(&condition_, &mutex_);
+    }
+    sync_mutex_unlock(&mutex_);
+  }
+
+  ACPI_STATUS WaitWithDeadline(uint32_t units, zx_time_t deadline) {
+    zx_status_t result = sync_mutex_timedlock(&mutex_, deadline);
+    if (result == ZX_ERR_TIMED_OUT) {
+      return AE_TIME;
+    }
+    sync_mutex_assert_held(&mutex_);
+    while (result != ZX_ERR_TIMED_OUT && count_ < units && zx_clock_get_monotonic() < deadline) {
+      result = sync_condition_timedwait(&condition_, &mutex_, deadline);
+    }
+    if (result == ZX_ERR_TIMED_OUT) {
+      sync_mutex_unlock(&mutex_);
+      return AE_TIME;
+    }
+    count_ -= units;
+    return AE_OK;
+  }
+
+  void Signal(uint32_t units) {
+    sync_mutex_lock(&mutex_);
+    count_ += units;
+    if (units == 1) {
+      sync_condition_signal(&condition_);
+    } else {
+      sync_condition_broadcast(&condition_);
+    }
+    sync_mutex_unlock(&mutex_);
+  }
+
+ private:
+  sync_condition_t condition_;
+  sync_mutex_t mutex_;
+  uint32_t count_;
+};
 
 __WEAK zx_handle_t root_resource_handle;
 
@@ -160,7 +210,7 @@ static ACPI_STATUS thrd_status_to_acpi_status(int status) {
 }
 
 static std::timespec timeout_to_timespec(UINT16 Timeout) {
-  std::timespec ts;
+  std::timespec ts{.tv_sec = 0, .tv_nsec = 0};
   ZX_ASSERT(std::timespec_get(&ts, TIME_UTC) != 0);
   return zx_timespec_from_duration(
       zx_duration_add_duration(zx_duration_from_timespec(ts), ZX_MSEC(Timeout)));
@@ -183,6 +233,9 @@ static std::timespec timeout_to_timespec(UINT16 Timeout) {
 // the |acpi_spinlock_lock|.
 //
 // Non-contested mode needs to apply to both spin locks and mutexes to prevent deadlock.
+// TODO(fxbug.dev/79085): remove this, and replace it with a higher-level lock on the ACPI FIDL
+// protocol. This is risky because pthread timeouts use CLOCK_REALTIME, which makes no forward
+// progress in early boot.
 static pthread_rwlock_t acpi_spinlock_lock = PTHREAD_RWLOCK_INITIALIZER;
 static thread_local uint64_t acpi_spinlocks_held = 0;
 
@@ -619,13 +672,9 @@ void AcpiOsStall(UINT32 Microseconds) { zx_nanosleep(zx_deadline_after(ZX_USEC(M
  * @return AE_NO_MEMORY Insufficient memory to create the semaphore.
  */
 ACPI_STATUS AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits, ACPI_SEMAPHORE* OutHandle) {
-  sem_t* sem = (sem_t*)malloc(sizeof(sem_t));
+  AcpiSemaphore* sem = new AcpiSemaphore(InitialUnits);
   if (!sem) {
     return AE_NO_MEMORY;
-  }
-  if (sem_init(sem, 0, InitialUnits) < 0) {
-    free(sem);
-    return AE_ERROR;
   }
   *OutHandle = sem;
   return AE_OK;
@@ -640,7 +689,7 @@ ACPI_STATUS AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits, ACPI_SEM
  * @return AE_OK The semaphore was successfully deleted.
  */
 ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle) {
-  free(Handle);
+  delete Handle;
   return AE_OK;
 }
 
@@ -660,18 +709,12 @@ ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle) {
  */
 ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout) {
   if (Timeout == UINT16_MAX) {
-    if (sem_wait(Handle) < 0) {
-      ZX_ASSERT_MSG(false, "sem_wait failed %d", errno);
-    }
+    Handle->Wait(Units);
     return AE_OK;
   }
 
-  std::timespec then = timeout_to_timespec(Timeout);
-  if (sem_timedwait(Handle, &then) < 0) {
-    ZX_ASSERT_MSG(errno == ETIMEDOUT, "sem_timedwait failed unexpectedly %d", errno);
-    return AE_TIME;
-  }
-  return AE_OK;
+  zx_time_t deadline = zx_deadline_after(ZX_MSEC(Timeout));
+  return Handle->WaitWithDeadline(Units, deadline);
 }
 
 /**
@@ -685,10 +728,7 @@ ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Time
  * @return AE_BAD_PARAMETER The Handle is invalid.
  */
 ACPI_STATUS AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units) {
-  // TODO: Implement support for Units > 1
-  ZX_DEBUG_ASSERT(Units == 1);
-
-  sem_post(Handle);
+  Handle->Signal(Units);
   return AE_OK;
 }
 
@@ -703,15 +743,11 @@ ACPI_STATUS AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units) {
  * @return AE_NO_MEMORY Insufficient memory to create the mutex.
  */
 ACPI_STATUS AcpiOsCreateMutex(ACPI_MUTEX* OutHandle) {
-  mtx_t* lock = (mtx_t*)malloc(sizeof(mtx_t));
+  sync_mutex_t* lock = new sync_mutex_t();
   if (!lock) {
     return AE_NO_MEMORY;
   }
 
-  ACPI_STATUS status = thrd_status_to_acpi_status(mtx_init(lock, mtx_plain));
-  if (status != AE_OK) {
-    return status;
-  }
   *OutHandle = lock;
   return AE_OK;
 }
@@ -722,10 +758,7 @@ ACPI_STATUS AcpiOsCreateMutex(ACPI_MUTEX* OutHandle) {
  * @param Handle A handle to a mutex objected that was returned by a
  *        previous call to AcpiOsCreateMutex.
  */
-void AcpiOsDeleteMutex(ACPI_MUTEX Handle) {
-  mtx_destroy(Handle);
-  free(Handle);
-}
+void AcpiOsDeleteMutex(ACPI_MUTEX Handle) { delete Handle; }
 
 /**
  * @brief Acquire a mutex.
@@ -748,27 +781,40 @@ ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
       ZX_ASSERT(ret == 0);
     }
 
-    int res = mtx_lock(Handle);
-    ZX_ASSERT(res == thrd_success);
+    sync_mutex_lock(Handle);
   } else {
-    std::timespec then = timeout_to_timespec(Timeout);
+    zx_time_t deadline = zx_deadline_after(ZX_MSEC(Timeout));
 
     if (acpi_spinlocks_held == 0) {
-      int ret = pthread_rwlock_timedrdlock(&acpi_spinlock_lock, &then);
-      if (ret == ETIMEDOUT)
-        return AE_TIME;
+      int ret;
+      if (Timeout == 0) {
+        // We don't want to use pthread_rwlock_timedrdlock here, because it relies on
+        // CLOCK_REALTIME. During early boot, CLOCK_REALTIME doesn't move forward.
+        ret = pthread_rwlock_tryrdlock(&acpi_spinlock_lock);
+        if (ret != 0) {
+          return AE_TIME;
+        }
+      } else {
+        // This relise on CLOCK_REALTIME. If the clock hasn't started, we will wait
+        // indefinitely. There's not much else we can do.
+        // TODO(fxbug.dev/79085): remove the rwlock from here.
+        std::timespec then = timeout_to_timespec(Timeout);
+        ret = pthread_rwlock_timedrdlock(&acpi_spinlock_lock, &then);
+        if (ret == ETIMEDOUT)
+          return AE_TIME;
+      }
       ZX_ASSERT(ret == 0);
     }
 
-    int res = mtx_timedlock(Handle, &then);
-    if (res == thrd_timedout) {
+    zx_status_t res = sync_mutex_timedlock(Handle, deadline);
+    if (res == ZX_ERR_TIMED_OUT) {
       if (acpi_spinlocks_held == 0) {
         int res = pthread_rwlock_unlock(&acpi_spinlock_lock);
         ZX_ASSERT(res == 0);
       }
       return AE_TIME;
     }
-    ZX_ASSERT(res == thrd_success);
+    ZX_ASSERT(res == ZX_OK);
   }
 
   acpi_spinlocks_held++;
@@ -782,7 +828,7 @@ ACPI_STATUS AcpiOsAcquireMutex(ACPI_MUTEX Handle, UINT16 Timeout)
  *        previous call to AcpiOsCreateMutex.
  */
 void AcpiOsReleaseMutex(ACPI_MUTEX Handle) TA_REL(Handle) {
-  mtx_unlock(Handle);
+  sync_mutex_unlock(Handle);
 
   acpi_spinlocks_held--;
   if (acpi_spinlocks_held == 0) {
@@ -1183,7 +1229,8 @@ static ACPI_STATUS AcpiOsReadWritePciConfiguration(ACPI_PCI_ID* PciId, UINT32 Re
       (Write) ? st = pci_pio_write16(addr, offset, static_cast<uint16_t>(*Value))
               : st = pci_pio_read16(addr, offset, reinterpret_cast<uint16_t*>(Value));
       break;
-    // assume 32bit by default since 64 bit reads on IO ports are not a thing supported by the spec
+    // assume 32bit by default since 64 bit reads on IO ports are not a thing supported by the
+    // spec
     default:
       (Write) ? st = pci_pio_write32(addr, offset, static_cast<uint32_t>(*Value))
               : st = pci_pio_read32(addr, offset, reinterpret_cast<uint32_t*>(Value));
@@ -1311,14 +1358,14 @@ ACPI_STATUS AcpiOsSignal(UINT32 Function, void* Info) {
 }
 
 /*
- * According to the the ACPI specification, section 5.2.10, the platform boot firmware aligns the
- * FACS (Firmware ACPI Control Structure) on a 64-byte boundary anywhere within the system’s
+ * According to the the ACPI specification, section 5.2.10, the platform boot firmware aligns
+ * the FACS (Firmware ACPI Control Structure) on a 64-byte boundary anywhere within the system’s
  * memory address space. This means we can assume the alignment when interacting with it.
  * Specifically we need to be able to manipulate the GlobalLock contained in the FACS table with
  * atomic operations, and these require aligned accesses.
  *
- * Although we know that the table will be aligned, to prevent the compiler from complaining we use
- * a wrapper struct to set the alignment attribute.
+ * Although we know that the table will be aligned, to prevent the compiler from complaining we
+ * use a wrapper struct to set the alignment attribute.
  */
 struct AlignedFacs {
   ACPI_TABLE_FACS table;
@@ -1364,8 +1411,8 @@ bool _acpica_acquire_global_lock(void* FacsPtr) {
  * @return True if there is someone waiting to acquire the lock
  */
 bool _acpica_release_global_lock(void* FacsPtr) {
-  // the FACS table is required to be 8 byte aligned, so sanity check with an assert but otherwise
-  // we can just treat it as being aligned.
+  // the FACS table is required to be 8 byte aligned, so sanity check with an assert but
+  // otherwise we can just treat it as being aligned.
   ZX_DEBUG_ASSERT(reinterpret_cast<uintptr_t>(FacsPtr) % 8 == 0);
   AlignedFacs* table = (AlignedFacs*)FacsPtr;
   uint32_t old_val, new_val, test_val;
