@@ -323,7 +323,9 @@ impl Authenticating {
             Err(e) => {
                 // An error in handling a timeout means that we may have no way to abort a
                 // failed handshake. Drop to idle.
-                state_change_ctx.set_msg(format!("failed to handle SAE timeout: {:?}", e));
+                let msg = format!("failed to handle SAE timeout: {:?}", e);
+                error!("{}", msg);
+                state_change_ctx.set_msg(msg);
                 return Err(Idle { cfg: self.cfg });
             }
         }
