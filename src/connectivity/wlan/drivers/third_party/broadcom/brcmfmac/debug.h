@@ -202,6 +202,7 @@ class Debug {
     kWLANIF = 1 << 21,
     kSIMERRINJ = 1 << 22,
     kWLANPHY = 1 << 23,
+    kBTCOEX = 1 << 24,
     kALL = ~0u,
   };
 
