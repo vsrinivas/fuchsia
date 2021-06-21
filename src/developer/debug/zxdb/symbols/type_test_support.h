@@ -32,6 +32,7 @@ fxl::RefPtr<BaseType> MakeUint32Type();
 fxl::RefPtr<BaseType> MakeInt64Type();
 fxl::RefPtr<BaseType> MakeUint64Type();
 
+fxl::RefPtr<BaseType> MakeFloatType();
 fxl::RefPtr<BaseType> MakeDoubleType();
 
 fxl::RefPtr<BaseType> MakeSignedChar8Type();

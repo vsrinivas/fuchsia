@@ -17,8 +17,12 @@ class AbiArm64 : public Abi {
   debug_ipc::RegisterID GetReturnRegisterForMachineInt() const final {
     return debug_ipc::RegisterID::kARMv8_x0;
   }
-  std::optional<RegisterReturn> GetReturnRegisterForBaseType(const BaseType* base_type) final;
-  std::optional<CollectionReturn> GetCollectionReturnLocation(const Collection* collection) final;
+  std::optional<debug_ipc::RegisterID> GetReturnRegisterForBaseType(
+      const BaseType* base_type) final;
+  std::optional<CollectionReturn> GetCollectionReturnByRefLocation(
+      const Collection* collection) final;
+  std::optional<CollectionByValueReturn> GetCollectionReturnByValueLocation(
+      const fxl::RefPtr<EvalContext>& eval_context, const Collection* collection) final;
 };
 
 }  // namespace zxdb

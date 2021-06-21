@@ -36,6 +36,10 @@ fxl::RefPtr<BaseType> MakeUint64Type() {
   return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 8, "uint64_t");
 }
 
+fxl::RefPtr<BaseType> MakeFloatType() {
+  return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float");
+}
+
 fxl::RefPtr<BaseType> MakeDoubleType() {
   return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double");
 }

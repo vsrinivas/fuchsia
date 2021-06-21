@@ -11,8 +11,7 @@
 
 namespace zxdb {
 
-// Represents a C/C++ class, struct, or union, or a Rust enum (see the
-// variant_part() member).
+// Represents a C/C++ class, struct, or union, or a Rust enum (see the variant_part() member).
 class Collection final : public Type {
  public:
   // Construct with fxl::MakeRefCounted().

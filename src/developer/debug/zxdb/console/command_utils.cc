@@ -702,7 +702,7 @@ void PrintReturnValue(const FunctionReturnInfo& info) {
     ConsoleFormatOptions val_options;
     val_options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
     val_options.wrapping = ConsoleFormatOptions::Wrapping::kSmart;
-    val_options.max_depth = 2;
+    val_options.max_depth = 3;
 
     out->Append(FormatValueForConsole(val.value(), val_options, eval_context));
     out->Complete();

@@ -62,9 +62,11 @@ void MockSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
         }
 
         const auto& found = weak_provider->regs_.find(id);
-        if (found == weak_provider->regs_.end())
+        if (found == weak_provider->regs_.end()) {
           callback(Err("Failed"), {});
-        callback(Err(), found->second.value);
+        } else {
+          callback(Err(), found->second.value);
+        }
       });
 }
 

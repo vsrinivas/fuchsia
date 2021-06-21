@@ -8,6 +8,7 @@
 #include <optional>
 
 #include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/zxdb/expr/eval_context.h"
 
 namespace zxdb {
 
@@ -16,19 +17,6 @@ class Collection;
 
 class Abi {
  public:
-  struct RegisterReturn {
-    // Register the value is returned in.
-    debug_ipc::RegisterID reg = debug_ipc::RegisterID::kUnknown;
-
-    // The fundamental type of the register. The controls how the data in the register is
-    // interpreted to convert to the return type.
-    enum RegisterBaseType {
-      kFloat,
-      kInt,
-    };
-    RegisterBaseType base_type = kInt;
-  };
-
   // Information about how a collection is returned on the platform. This is a structure because it
   // will need to be enhanced in the future. It currently doesn't support several cases:
   //
@@ -52,6 +40,18 @@ class Abi {
     debug_ipc::RegisterID addr_return_reg = debug_ipc::RegisterID::kUnknown;
   };
 
+  // Represents a component of a register that contributes to a by-value returned item. The register
+  // bytes are copied from the low end.
+  struct RegisterComponent {
+    debug_ipc::RegisterID reg = debug_ipc::RegisterID::kUnknown;
+    uint32_t bytes = 0;  // The number of bytes of the register that is actually used.
+  };
+
+  // Represents a collection returned in registers.
+  struct CollectionByValueReturn {
+    std::vector<RegisterComponent> regs;
+  };
+
   virtual ~Abi() = default;
 
   // Returns the register used to return a machine word like a pointer or a "regular"-sized integer.
@@ -61,12 +61,21 @@ class Abi {
   //
   // Returns nullopt if the base type is unsupported or the value doesn't fit into a single register
   // (for example, 128 bit numbers are often split across several registers).
-  virtual std::optional<RegisterReturn> GetReturnRegisterForBaseType(const BaseType* base_type) = 0;
+  //
+  // The returned register might be larger than the base_type. In this case, the low bytes of the
+  // register up to the size of the base type are used.
+  virtual std::optional<debug_ipc::RegisterID> GetReturnRegisterForBaseType(
+      const BaseType* base_type) = 0;
 
-  // Returns the information about how the given collection is returned. Returns nullopt if the
-  // debugger can't compute this.
-  virtual std::optional<CollectionReturn> GetCollectionReturnLocation(
+  // Returns the information about how the given collection is returned. The collection must be
+  // concrete and it must be returned by reference. Returns nullopt if the debugger can't compute
+  // this.
+  virtual std::optional<CollectionReturn> GetCollectionReturnByRefLocation(
       const Collection* collection) = 0;
+
+  // The collection must be concrete. Returns nullopt if the debugger can't compute this.
+  virtual std::optional<CollectionByValueReturn> GetCollectionReturnByValueLocation(
+      const fxl::RefPtr<EvalContext>& eval_context, const Collection* collection) = 0;
 };
 
 }  // namespace zxdb

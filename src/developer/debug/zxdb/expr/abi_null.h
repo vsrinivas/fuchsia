@@ -16,10 +16,16 @@ class AbiNull : public Abi {
   debug_ipc::RegisterID GetReturnRegisterForMachineInt() const final {
     return debug_ipc::RegisterID::kUnknown;
   }
-  std::optional<RegisterReturn> GetReturnRegisterForBaseType(const BaseType* base_type) final {
+  std::optional<debug_ipc::RegisterID> GetReturnRegisterForBaseType(
+      const BaseType* base_type) final {
     return std::nullopt;
   }
-  std::optional<CollectionReturn> GetCollectionReturnLocation(const Collection* collection) final {
+  std::optional<CollectionReturn> GetCollectionReturnByRefLocation(
+      const Collection* collection) final {
+    return std::nullopt;
+  }
+  std::optional<CollectionByValueReturn> GetCollectionReturnByValueLocation(
+      const fxl::RefPtr<EvalContext>& eval_context, const Collection* collection) final {
     return std::nullopt;
   }
 };
