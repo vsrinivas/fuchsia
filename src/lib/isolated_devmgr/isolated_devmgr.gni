@@ -57,49 +57,39 @@ template("isolated_devmgr_component") {
     component_name = invoker.component_name
   }
 
-  manifest_path = "${target_gen_dir}/meta/${component_name}.cmx"
-
-  devmgr_args = []
-  if (defined(invoker.args)) {
-    devmgr_args = invoker.args
-  }
-
-  manifest_name = "${component_name}.cmx"
-  generated_file(manifest_name) {
-    outputs = [ manifest_path ]
-
-    contents = {
-      program = {
-        args = devmgr_args
-        binary = "bin/isolated_devmgr"
-      }
-      include = [ "//sdk/lib/diagnostics/syslog/client.shard.cmx" ]
-      sandbox = {
-        services = [
-          "fuchsia.exception.Handler",
-          "fuchsia.process.Launcher",
-        ]
-      }
+  manifest_target = "${target_name}_manifest"
+  fuchsia_test_component_manifest(manifest_target) {
+    forward_variables_from(invoker, [ "deps" ])
+    visibility = [ ":*" ]
+    v2 = false
+    if (!defined(deps)) {
+      deps = []
     }
-    output_conversion = "json"
+    deps += [ "//src/lib/isolated_devmgr:isolated_devmgr" ]
+    metadata = {
+      # Include args in the generated manifest to be passed to isolated_devmgr
+      test_component_manifest_cmx = [
+        {
+          program = {
+            forward_variables_from(invoker, [ "args" ])
+          }
+        },
+      ]
+    }
   }
 
   fuchsia_component(target_name) {
-    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "visibility",
+                           ])
+    manifest = get_target_outputs(":$manifest_target")
+    manifest = manifest[0]
     testonly = true
-    component_name = component_name
-    manifest = manifest_path
-    deps = []
-    if (defined(invoker.deps)) {
-      deps = invoker.deps
+    if (!defined(deps)) {
+      deps = []
     }
-    deps += [
-      ":${manifest_name}",
-      "//src/bringup/bin/device-name-provider",
-      "//src/devices/bin/driver_host",
-      "//src/devices/bin/driver_manager",
-      "//src/lib/isolated_devmgr:isolated_devmgr",
-      "//src/storage/fshost",
-    ]
+    deps += [ ":$manifest_target" ]
   }
 }

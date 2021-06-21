@@ -52,6 +52,29 @@ executable("isolated_devmgr") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/devmgr-integration-test",
   ]
+
+  # These binaries are used by isolated_devmgr at runtime and should be
+  # present in the same package.
+  data_deps = [
+    "//src/bringup/bin/device-name-provider",
+    "//src/devices/bin/driver_host",
+    "//src/devices/bin/driver_manager",
+    "//src/storage/fshost",
+  ]
+
+  metadata = {
+    # Tests that use isolated_devmgr require the following capabilities
+    test_component_manifest_cmx = [
+      {
+        sandbox = {
+          services = [
+            "fuchsia.exception.Handler",
+            "fuchsia.process.Launcher",
+          ]
+        }
+      },
+    ]
+  }
 }
 
 static_library("usb-virtual-bus") {
