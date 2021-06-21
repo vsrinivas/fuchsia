@@ -678,11 +678,11 @@ repo_add_tests! {
     test_repo_add_v1_file: "file", "1", "",
     test_repo_add_v1_file_with_name: "file", "1", "legacy-repo",
     test_repo_add_v2_file: "file", "2", "",
-    test_repo_add_v2_file_with_name: "file", "2", "fuchsia.com",
+    test_repo_add_v2_file_with_name: "file", "2", "example.com",
     test_repo_add_v1_url: "url", "1", "",
     test_repo_add_v1_url_with_name: "url", "1", "legacy-repo",
     test_repo_add_v2_url: "url", "2", "",
-    test_repo_add_v2_url_with_name: "url", "2", "fuchsia.com",
+    test_repo_add_v2_url_with_name: "url", "2", "example.com",
 }
 
 #[fasync::run_singlethreaded(test)]

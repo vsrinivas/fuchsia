@@ -18,12 +18,15 @@ use {
         PackageCacheMarker, PackageResolverAdminMarker, PackageResolverMarker, PackageUrl,
         RepositoryManagerMarker, RepositoryManagerProxy,
     },
-    fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryStorageType},
+    fidl_fuchsia_pkg_ext::{
+        BlobId, RepositoryConfig, RepositoryConfigBuilder, RepositoryStorageType,
+    },
     fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
     fidl_fuchsia_pkg_rewrite_ext::{Rule as RewriteRule, RuleConfig},
     fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
     files_async, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
+    fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon as zx,
     futures::io::copy,
     futures::stream::TryStreamExt,
@@ -201,9 +204,16 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                                     r
                                 }
                                 RepoConfigFormat::Version2 => {
-                                    let repo: RepositoryConfig = serde_json::from_reader(
+                                    let mut repo: RepositoryConfig = serde_json::from_reader(
                                         io::BufReader::new(File::open(file)?),
                                     )?;
+                                    // If a name is specified via the command line, override the
+                                    // automatically derived name.
+                                    if let Some(n) = name {
+                                        repo = RepositoryConfigBuilder::from(repo)
+                                            .repo_url(RepoUrl::new(n)?)
+                                            .build();
+                                    }
                                     let r = repo_manager.add(repo.into()).await?;
                                     r
                                 }
@@ -236,7 +246,14 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                                     r
                                 }
                                 RepoConfigFormat::Version2 => {
-                                    let repo: RepositoryConfig = serde_json::from_slice(&res)?;
+                                    let mut repo: RepositoryConfig = serde_json::from_slice(&res)?;
+                                    // If a name is specified via the command line, override the
+                                    // automatically derived name.
+                                    if let Some(n) = name {
+                                        repo = RepositoryConfigBuilder::from(repo)
+                                            .repo_url(RepoUrl::new(n)?)
+                                            .build();
+                                    }
                                     let r = repo_manager.add(repo.into()).await?;
                                     r
                                 }
