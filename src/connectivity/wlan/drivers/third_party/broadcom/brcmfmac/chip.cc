@@ -520,8 +520,8 @@ static zx_status_t brcmf_chip_cores_check(struct brcmf_chip_priv* ci) {
   int idx = 1;
 
   list_for_every_entry (&ci->cores, core, struct brcmf_core_priv, list) {
-    BRCMF_DBG(INFO, " [%-2d] core 0x%x:%-2d base 0x%08x wrap 0x%08x", idx++, core->pub.id,
-              core->pub.rev, core->pub.base, core->wrapbase);
+    BRCMF_INFO(" [%-2d] core 0x%x:%-2d base 0x%08x wrap 0x%08x", idx++, core->pub.id, core->pub.rev,
+               core->pub.base, core->wrapbase);
 
     switch (core->pub.id) {
       case CHIPSET_ARM_CM3_CORE:
@@ -749,8 +749,8 @@ static zx_status_t brcmf_chip_get_raminfo(struct brcmf_chip_priv* ci) {
       brcmf_chip_socram_ramsize(mem_core, &ci->pub.ramsize, &ci->pub.srsize);
     }
   }
-  BRCMF_DBG(INFO, "RAM: base=0x%x size=%d (0x%x) sr=%d (0x%x)", ci->pub.rambase, ci->pub.ramsize,
-            ci->pub.ramsize, ci->pub.srsize, ci->pub.srsize);
+  BRCMF_INFO("RAM: base=0x%x size=%d (0x%x) sr=%d (0x%x)", ci->pub.rambase, ci->pub.ramsize,
+             ci->pub.ramsize, ci->pub.srsize, ci->pub.srsize);
 
   if (!ci->pub.ramsize) {
     BRCMF_ERR("RAM size is undetermined");
@@ -943,8 +943,8 @@ static zx_status_t brcmf_chip_recognition(struct brcmf_chip_priv* ci) {
   socitype = (regdata & CID_TYPE_MASK) >> CID_TYPE_SHIFT;
 
   brcmf_chip_name(ci->pub.chip, ci->pub.name, sizeof(ci->pub.name));
-  BRCMF_DBG(INFO, "found %s chip: BCM%s, rev=%d", socitype == SOCI_SB ? "SB" : "AXI", ci->pub.name,
-            ci->pub.chiprev);
+  BRCMF_INFO("found %s chip: BCM%s, rev=%d", socitype == SOCI_SB ? "SB" : "AXI", ci->pub.name,
+             ci->pub.chiprev);
 
   if (socitype == SOCI_SB) {
     if (ci->pub.chip != BRCM_CC_4329_CHIP_ID) {
@@ -1065,7 +1065,7 @@ static int brcmf_chip_setup(struct brcmf_chip_priv* chip) {
     pub->pmucaps = val;
   }
 
-  BRCMF_DBG(INFO, "ccrev=%d, pmurev=%d, pmucaps=0x%x", cc->pub.rev, pub->pmurev, pub->pmucaps);
+  BRCMF_INFO("ccrev=%d, pmurev=%d, pmucaps=0x%x", cc->pub.rev, pub->pmurev, pub->pmucaps);
 
   /* execute bus core specific setup */
   if (chip->ops->setup) {
