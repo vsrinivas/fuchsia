@@ -32,7 +32,7 @@ metadata, so that tools can consume it.
 
 When we distribute metadata that is both complete and easy to use, SDK users
 will be able to choose which image they want to flash to their device or boot
-with an emulator without signficant help from Fuchsia's infrastructure or SDK
+with an emulator without significant help from Fuchsia's infrastructure or SDK
 teams. SDK developers will have a single source of truth for how they surface
 information about products to users. Tool developers will have a well-defined
 contract for how they consume this information.
@@ -507,7 +507,7 @@ installed on a device.
                "items": {"$ref": "#/definitions/image_bundle"}
              },
              "packages": {
-               "description": "A list of package bundles. Each package bundle must be equivalent to all otherws. I.e., all package bundle URIs are effectively mirrors of each other. Their formats may vary. Pick an entry that best suits your needs.",
+               "description": "A list of package bundles. Each package bundle must be equivalent to all otherwise. I.e., all package bundle URIs are effectively mirrors of each other. Their formats may vary. Pick an entry that best suits your needs.",
                "type": "array",
                "minItems": 1,
                "items": {"$ref": "#/definitions/package_bundle"}
@@ -921,5 +921,4 @@ schema can be found there][prior-art].
 [build-configuration]: /products/
 [ffx]: /docs/development/tools/ffx/overview.md
 [json-schema]: http://json-schema.org/draft-07/schema#
-[prioir-art]: https://fuchsia.googlesource.com/fuchsia/+/545a693eabe7c282de7e1560a3ee64f24f6988d1/build/images/BUILD.gn#177701
-
+[prior-art]: https://fuchsia.googlesource.com/fuchsia/+/545a693eabe7c282de7e1560a3ee64f24f6988d1/build/images/BUILD.gn#177701
