@@ -42,23 +42,41 @@ fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
   FX_DCHECK(ValidateExtensions(params.extension_names, params.layer_names));
 
   // Gather names of layers/extensions to populate InstanceCreateInfo.
-  std::vector<const char *> layer_names;
-  for (auto &layer : params.layer_names) {
-    layer_names.push_back(layer.c_str());
-  }
-  std::vector<const char *> extension_names;
-  for (auto &extension : params.extension_names) {
-    extension_names.push_back(extension.c_str());
-  }
 
   uint32_t api_version = 0;
   if (vkEnumerateInstanceVersion(&api_version) != VK_SUCCESS) {
     api_version = VK_API_VERSION_1_0;
   }
 
+  auto instance = fxl::AdoptRef(new VulkanInstance(std::move(params), api_version));
+  if (instance->Initialize() != vk::Result::eSuccess)
+    return nullptr;
+  return instance;
+}
+
+VulkanInstance::VulkanInstance(Params params, uint32_t api_version)
+    : params_(std::move(params)), api_version_(api_version) {
+  for (auto &callback : params_.initial_debug_report_callbacks) {
+    callbacks_.emplace_back(std::move(callback), nullptr);
+  }
+}
+
+vk::Result VulkanInstance::Initialize() {
+  auto callback_flags = vk::DebugReportFlagBitsEXT::eError | vk::DebugReportFlagBitsEXT::eWarning |
+                        vk::DebugReportFlagBitsEXT::ePerformanceWarning;
+  vk::DebugReportCallbackCreateInfoEXT create_info(callback_flags, DebugReportCallbackEntrance,
+                                                   this);
+  std::vector<const char *> layer_names;
+  for (auto &layer : params_.layer_names) {
+    layer_names.push_back(layer.c_str());
+  }
+  std::vector<const char *> extension_names;
+  for (auto &extension : params_.extension_names) {
+    extension_names.push_back(extension.c_str());
+  }
   vk::ApplicationInfo app_info;
   app_info.pApplicationName = "Escher";
-  app_info.apiVersion = api_version;
+  app_info.apiVersion = api_version_;
 
   vk::InstanceCreateInfo info;
   info.pApplicationInfo = &app_info;
@@ -66,40 +84,40 @@ fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
   info.ppEnabledLayerNames = layer_names.data();
   info.enabledExtensionCount = static_cast<uint32_t>(extension_names.size());
   info.ppEnabledExtensionNames = extension_names.data();
+  bool supports_initial_debug_report = true;
+#if defined(__x86_64__)
+  // Chaining VkDebugReportCallbackCreateInfoEXT onto VkInstanceCreateInfo can crash AEMU.
+  // TODO(fxbug.dev/78625): Fix.
+  supports_initial_debug_report = false;
+#endif
+  if (HasDebugReportExt() && supports_initial_debug_report) {
+    info.setPNext(&create_info);
+  }
 
   auto result = vk::createInstance(info);
   if (result.result != vk::Result::eSuccess) {
     FX_LOGS(WARNING) << "Could not create Vulkan Instance: " << vk::to_string(result.result) << ".";
-    return fxl::RefPtr<VulkanInstance>();
+    return result.result;
   }
 
-  return fxl::AdoptRef(new VulkanInstance(result.value, std::move(params), api_version));
-}
+  instance_ = result.value;
+  proc_addrs_ = ProcAddrs(instance_, params_.requires_surface);
 
-VulkanInstance::VulkanInstance(vk::Instance instance, Params params, uint32_t api_version)
-    : instance_(instance),
-      params_(std::move(params)),
-      proc_addrs_(instance_, params_.requires_surface),
-      api_version_(api_version) {
   // Register global debug report callback function.
   // Do this only if extension VK_EXT_debug_report is enabled.
   if (HasDebugReportExt()) {
-    auto callback_flags = vk::DebugReportFlagBitsEXT::eError |
-                          vk::DebugReportFlagBitsEXT::eWarning |
-                          vk::DebugReportFlagBitsEXT::ePerformanceWarning;
-    vk::DebugReportCallbackCreateInfoEXT create_info(callback_flags, DebugReportCallbackEntrance,
-                                                     this);
     auto create_callback_result =
         vk_instance().createDebugReportCallbackEXT(create_info, nullptr, proc_addrs());
     FX_CHECK(create_callback_result.result == vk::Result::eSuccess);
     vk_callback_entrance_handle_ = create_callback_result.value;
   }
+  return vk::Result::eSuccess;
 }
 
 VulkanInstance::~VulkanInstance() {
   // Unregister global debug report callback function.
   // Do this only if extension VK_EXT_debug_report is enabled.
-  if (HasDebugReportExt()) {
+  if (HasDebugReportExt() && vk_instance()) {
     vk_instance().destroyDebugReportCallbackEXT(vk_callback_entrance_handle_, nullptr,
                                                 proc_addrs());
   }

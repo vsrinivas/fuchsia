@@ -64,13 +64,6 @@ CommandDispatcherUniquePtr GfxSystem::CreateCommandDispatcher(
 }
 
 escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_context) {
-  // TODO(fxbug.dev/24317): VulkanIsSupported() should not be used in production.
-  // It tries to create a VkInstance and VkDevice, and immediately deletes them
-  // regardless of success/failure.
-  if (!escher::VulkanIsSupported()) {
-    return nullptr;
-  }
-
   // Initialize Vulkan.
   constexpr bool kRequiresSurface = false;
   escher::VulkanInstance::Params instance_params(
@@ -88,8 +81,10 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
 #if defined(SCENIC_ENABLE_VULKAN_VALIDATION)
   instance_params.layer_names.insert("VK_LAYER_KHRONOS_validation");
 #endif
+  instance_params.initial_debug_report_callbacks.push_back(HandleDebugReport);
   auto vulkan_instance = escher::VulkanInstance::New(std::move(instance_params));
-  auto callback_handle = vulkan_instance->RegisterDebugReportCallback(HandleDebugReport);
+  if (!vulkan_instance)
+    return nullptr;
 
   // Tell Escher not to filter out queues that don't support presentation.
   // The display manager only supports a single connection, so none of the
@@ -116,6 +111,9 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
 
   auto vulkan_device_queues =
       escher::VulkanDeviceQueues::New(vulkan_instance, device_queues_params);
+  if (!vulkan_device_queues) {
+    return nullptr;
+  }
 
   // Provide a PseudoDir where the gfx system can register debugging services.
   auto debug_dir = std::make_shared<vfs::PseudoDir>();
@@ -147,7 +145,6 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
       // The vulkan instance is a stack variable, but it is a
       // fxl::RefPtr, so we can store by value.
       [=](escher::Escher* escher) {
-        vulkan_instance->DeregisterDebugReportCallback(callback_handle);
 #if ESCHER_USE_RUNTIME_GLSL
         escher::GlslangFinalizeProcess();
 #endif

@@ -32,11 +32,15 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
     std::set<std::string> layer_names;
     std::set<std::string> extension_names;
     bool requires_surface = true;
+    // These callbacks cannot be removed and must live at least as long as the VulkanInstance. They
+    // can catch errors with instance initialization.
+    std::list<VkDebugReportCallbackFn> initial_debug_report_callbacks;
   };
 
   // Contains dynamically-obtained addresses of instance-specific functions.
   struct ProcAddrs {
     ProcAddrs(vk::Instance instance, bool requires_surface);
+    ProcAddrs() = default;
 
     PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT = nullptr;
     PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT = nullptr;
@@ -99,7 +103,9 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
   uint32_t api_version() const { return api_version_; }
 
  private:
-  VulkanInstance(vk::Instance instance, Params params, uint32_t api_version);
+  VulkanInstance(Params params, uint32_t api_version);
+
+  vk::Result Initialize();
 
   // The "entrance" handler for all Vulkan instances. When validation error
   // occurs, this function will invoke all debug report callback functions
