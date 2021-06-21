@@ -459,14 +459,14 @@ pub mod fake {
         /// packet. The connection will return success when this write operation occurs.
         /// Panics if called on a connection that has been set to fail.
         pub fn expect_write(&self, packet: Packet) {
-            &self.enqueue(Operation::WriteSuccess(packet));
+            self.enqueue(Operation::WriteSuccess(packet));
         }
 
         /// Enqueues an expectation that write will be called on this connection with the supplied
         /// packet. The connection will return a failure when this write operation occurs.
         /// Panics if called on a connection that has been set to fail.
         pub fn expect_write_error(&self, packet: Packet) {
-            &self.enqueue(Operation::WriteFail(packet));
+            self.enqueue(Operation::WriteFail(packet));
         }
 
         /// Enqueues an expectation that write will be called on this connection for all the
@@ -474,7 +474,7 @@ pub mod fake {
         /// writes. Panics if called on a connection that has been set to fail.
         pub fn expect_message_write(&self, message: Message) {
             for packet in message.into_iter() {
-                &self.enqueue(Operation::WriteSuccess(packet));
+                self.enqueue(Operation::WriteSuccess(packet));
             }
         }
 
@@ -482,14 +482,14 @@ pub mod fake {
         /// will return success and the supplied packet when this read operation occurs.
         /// Panics if called on a connection that has been set to fail.
         pub fn expect_read(&self, packet: Packet) {
-            &self.enqueue(Operation::ReadSuccess(packet));
+            self.enqueue(Operation::ReadSuccess(packet));
         }
 
         /// Enqueues an expectation that read will be called on this connection. The connection
         /// will return a failure when this write operation occurs.
         /// Panics if called on a connection that has been set to fail.
         pub fn expect_read_error(&self) {
-            &self.enqueue(Operation::ReadFail());
+            self.enqueue(Operation::ReadFail());
         }
 
         /// Enqueues an expectation that read will be called on this connection for all the
@@ -497,7 +497,7 @@ pub mod fake {
         /// reads. Panics if called on a connection that has been set to fail.
         pub fn expect_message_read(&self, message: Message) {
             for packet in message.into_iter() {
-                &self.enqueue(Operation::ReadSuccess(packet));
+                self.enqueue(Operation::ReadSuccess(packet));
             }
         }
 
