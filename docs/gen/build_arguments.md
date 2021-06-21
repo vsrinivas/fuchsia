@@ -3802,18 +3802,18 @@ Whether libraries under //vendor should be linted.
 
 From //build/fidl/fidl_library.gni:13
 
+### virtcon_animation_path
+Path to file to use for animation
+
+**Current value (from the default):** `"//src/bringup/bin/virtcon2/data/animation.riv"`
+
+From //src/bringup/bin/virtcon2/virtcon_args.gni:11
+
 ### virtcon_font_path
 
 **Current value (from the default):** `"//prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf"`
 
 From //src/bringup/bin/virtcon2/virtcon_args.gni:8
-
-### virtcon_logo_path
-Path to file to use for logo
-
-**Current value (from the default):** `"//src/bringup/bin/virtcon2/data/fuchsia.riv"`
-
-From //src/bringup/bin/virtcon2/virtcon_args.gni:11
 
 ### virtmagma_debug
 Enable verbose logging in virtmagma-related code
