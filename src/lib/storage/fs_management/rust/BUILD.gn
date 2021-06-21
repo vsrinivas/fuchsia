@@ -22,6 +22,11 @@ rustc_library("fs_management") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]
+  data_deps = [
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/factoryfs",
+    "//src/storage/bin/minfs",
+  ]
 
   sources = [ "src/lib.rs" ]
 }
@@ -29,14 +34,7 @@ rustc_library("fs_management") {
 storage_isolated_devmgr_unittest_v2_component(
     "fs-management-rust-tests-component") {
   component_name = "fs-management-rust-tests"
-  executable_path = "bin/fs_management_lib_test"
-  runner = "rust_test_runner"
-  deps = [
-    ":fs_management_test",
-    "//src/storage/bin/blobfs",
-    "//src/storage/bin/factoryfs",
-    "//src/storage/bin/minfs",
-  ]
+  deps = [ ":fs_management_test" ]
 }
 
 fuchsia_test_package("fs-management-rust-tests") {

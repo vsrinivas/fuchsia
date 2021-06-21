@@ -29,8 +29,6 @@ test("ramdisk") {
 }
 
 storage_isolated_devmgr_unittest_v2_component("ramdisk-test") {
-  executable_path = "test/ramdisk-test"
-
   deps = [
     ":ramdisk",
     "//src/devices/block/drivers/core",

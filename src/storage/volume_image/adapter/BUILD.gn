@@ -366,7 +366,6 @@ test("adapter-integration-test") {
 storage_isolated_devmgr_unittest_v2_component(
     "adapter-integration-test-component") {
   component_name = "adapter-integration-test"
-  executable_path = "test/adapter-integration-test"
   deps = [
     ":adapter-integration-test",
     ":adapter-test-images",

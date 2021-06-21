@@ -62,67 +62,47 @@ template("isolated_devmgr_v2_component") {
 template("isolated_devmgr_unittest_v2_component") {
   if (!defined(invoker.manifest)) {
     generated_target = "${target_name}_generated_manifest"
-    manifest = "$target_out_dir/${generated_target}.cml"
-    package_name = invoker.package_name
-    generated_file(generated_target) {
-      contents = {
-        include = [
-          "//sdk/lib/diagnostics/inspect/client.shard.cml",
-          "//sdk/lib/diagnostics/syslog/client.shard.cml",
-        ]
-        program = {
-          if (defined(invoker.runner)) {
-            runner = invoker.runner
-          } else {
-            runner = "gtest_runner"
-          }
-          binary = invoker.executable_path
-        }
-        children = [
+    fuchsia_test_component_manifest(generated_target) {
+      forward_variables_from(invoker, [ "deps" ])
+      visibility = [ ":*" ]
+      metadata = {
+        test_component_manifest_cml = [
           {
-            name = "isolated-devmgr"
-            url = "fuchsia-pkg://fuchsia.com/${package_name}#meta/isolated-devmgr.cm"
-            startup = "eager"
-          },
-        ]
-        capabilities = [
-          {
-            protocol = "fuchsia.test.Suite"
-          },
-        ]
-        use = [
-          {
-            protocol = "fuchsia.process.Launcher"
-          },
-          {
-            protocol = "fuchsia.sys2.Realm"
-            from = "framework"
-          },
-        ]
-        offer = [
-          {
-            protocol = [
-              "fuchsia.logger.LogSink",
-              "fuchsia.process.Launcher",
-              "fuchsia.sys.Launcher",
+            children = [
+              {
+                name = "isolated-devmgr"
+                url = "fuchsia-pkg://fuchsia.com/${invoker.package_name}#meta/isolated-devmgr.cm"
+                startup = "eager"
+              },
             ]
-            from = "parent"
-            to = [ "#isolated-devmgr" ]
-          },
-        ]
-        expose = [
-          {
-            protocol = "fuchsia.test.Suite"
-            from = "self"
+            use = [
+              {
+                protocol = "fuchsia.process.Launcher"
+              },
+              {
+                protocol = "fuchsia.sys2.Realm"
+                from = "framework"
+              },
+            ]
+            offer = [
+              {
+                protocol = [
+                  "fuchsia.logger.LogSink",
+                  "fuchsia.process.Launcher",
+                  "fuchsia.sys.Launcher",
+                ]
+                from = "parent"
+                to = [ "#isolated-devmgr" ]
+              },
+            ]
           },
         ]
       }
-      outputs = [ "$manifest" ]
-      output_conversion = "json"
-      testonly = true
-      visibility = [ ":*" ]
     }
+    manifest = get_target_outputs(":$generated_target")
+    manifest = manifest[0]
   }
+
   fuchsia_component(target_name) {
     testonly = true
     forward_variables_from(invoker,

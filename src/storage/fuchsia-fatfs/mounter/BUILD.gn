@@ -49,8 +49,6 @@ fuchsia_component("fatfs-mounter") {
 
 storage_isolated_devmgr_unittest_v2_component("fatfs-mounter-test") {
   deps = [ ":bin_test" ]
-  executable_path = "bin/fatfs_mounter_bin_test"
-  runner = "rust_test_runner"
 }
 
 fuchsia_test_package("fatfs-mounter-tests") {

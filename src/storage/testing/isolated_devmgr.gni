@@ -14,9 +14,7 @@ template("storage_isolated_devmgr_unittest_v2_component") {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "executable_path",
                              "manifest",
-                             "runner",
                              "visibility",
                              "component_name",
                            ])

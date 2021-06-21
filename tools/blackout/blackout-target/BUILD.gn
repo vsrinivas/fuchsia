@@ -41,8 +41,6 @@ rustc_test("blackout-target-lib-test") {
 storage_isolated_devmgr_unittest_v2_component(
     "blackout-target-test-component") {
   component_name = "blackout-target-test"
-  executable_path = "bin/blackout_target_lib_test"
-  runner = "rust_test_runner"
   deps = [ ":blackout-target-lib-test" ]
 }
 

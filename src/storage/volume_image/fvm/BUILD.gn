@@ -165,7 +165,6 @@ test("fvm_sparse_image_reader_test") {
 storage_isolated_devmgr_unittest_v2_component(
     "fvm-sparse-image-reader-tests-component") {
   component_name = "fvm-sparse-image-reader-tests"
-  executable_path = "test/fvm_sparse_image_reader_test"
   deps = [
     ":fvm_sparse_image_reader_test",
     ":test_fvm.sparse.blk-resource",

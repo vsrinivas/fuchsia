@@ -104,8 +104,6 @@ rustc_binary("bin") {
 
 storage_isolated_devmgr_unittest_v2_component("live-usb-test") {
   deps = [ ":bin_test" ]
-  executable_path = "bin/live_usb_bin_test"
-  runner = "rust_test_runner"
 }
 
 fuchsia_test_package("live-usb-unittests") {

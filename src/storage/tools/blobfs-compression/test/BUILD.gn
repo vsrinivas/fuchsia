@@ -48,7 +48,6 @@ test("cli-option-validation-test") {
 
 storage_isolated_devmgr_unittest_v2_component(
     "cli-option-validation-tests-component") {
-  executable_path = "test/cli-option-validation-test"
   deps = [ ":cli-option-validation-test" ]
 }
 

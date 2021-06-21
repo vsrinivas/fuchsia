@@ -37,8 +37,6 @@ rustc_library("remote-block-device") {
 
 storage_isolated_devmgr_unittest_v2_component("block-client-tests-component") {
   component_name = "block-client-tests"
-  executable_path = "bin/remote_block_device_lib_test"
-  runner = "rust_test_runner"
   deps = [ ":remote-block-device_test" ]
 }
 

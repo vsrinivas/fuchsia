@@ -80,7 +80,6 @@ test("minfs-integration") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -129,7 +128,6 @@ test("minfs-power") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -200,18 +198,15 @@ fuzzers_package("minfs-fuzzers") {
 }
 
 storage_isolated_devmgr_unittest_v2_component("minfs-integration-test") {
-  executable_path = "test/minfs-integration"
   deps = [ ":minfs-integration" ]
 }
 
 storage_isolated_devmgr_unittest_v2_component(
     "minfs-dirty-cache-integration-test") {
-  executable_path = "test/minfs_dirty_cache_integration"
   deps = [ ":minfs_dirty_cache_integration" ]
 }
 
 storage_isolated_devmgr_unittest_v2_component("minfs-power-test") {
-  executable_path = "test/minfs-power"
   deps = [ ":minfs-power" ]
 }
 
@@ -221,7 +216,6 @@ fuchsia_unittest_component("minfs-unit-test") {
 }
 
 storage_isolated_devmgr_unittest_v2_component("minfs-micro-benchmark-test") {
-  executable_path = "test/minfs_micro_benchmark"
   deps = [ ":minfs_micro_benchmark" ]
 }
 

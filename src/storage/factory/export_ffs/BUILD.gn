@@ -53,8 +53,6 @@ rustc_library("export_ffs") {
 
 storage_isolated_devmgr_unittest_v2_component("export-ffs-tests-component") {
   component_name = "export-ffs-tests"
-  executable_path = "bin/export_ffs_lib_test"
-  runner = "rust_test_runner"
   deps = [ ":export_ffs_test" ]
 }
 
