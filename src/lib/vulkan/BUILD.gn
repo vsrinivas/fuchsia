@@ -71,6 +71,9 @@ config("vulkan_hpp") {
   defines = [
     "VULKAN_HPP_ASSERT(expr)=do {} while(0)",
     "VULKAN_HPP_NO_EXCEPTIONS",
+
+    # TODO(fxbug.dev/78968): Fix.
+    "VULKAN_HPP_NO_NODISCARD_WARNINGS",
   ]
 }
 
