@@ -43,7 +43,7 @@ bind_rules("bind") {
   rules = "bind-test.bind"
   output = "bind-test-bind.h"
   disable_autobind = true
-  use_new_bytecode = false
+  disable_new_bytecode = true
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 

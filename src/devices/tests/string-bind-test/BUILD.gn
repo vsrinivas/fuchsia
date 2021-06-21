@@ -48,7 +48,6 @@ bind_rules("parent-driver-bind") {
   rules = "parent-driver.bind"
   output = "parent-driver-bind.h"
   disable_autobind = true
-  use_new_bytecode = true
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
@@ -73,7 +72,6 @@ driver_module("parent-driver") {
 bind_rules("child-driver-bind") {
   rules = "child-driver.bind"
   output = "child-driver-bind.h"
-  use_new_bytecode = true
   deps = [
     ":stringbind.lib",
     "//src/devices/bind/fuchsia.test",
