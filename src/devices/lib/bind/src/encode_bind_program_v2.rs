@@ -286,8 +286,8 @@ mod test {
                 rhs: Symbol::NumberValue(1),
             },
             SymbolicInstruction::AbortIfEqual {
-                lhs: Symbol::Key("pintail".to_string(), ValueType::Str),
-                rhs: Symbol::StringValue("mallard".to_string()),
+                lhs: Symbol::Key("pintail".to_string(), ValueType::Enum),
+                rhs: Symbol::EnumValue("mallard".to_string()),
             },
         ];
 
@@ -334,7 +334,7 @@ mod test {
         );
         checker.verify_abort_equal(
             EncodedValue { value_type: RawValueType::Key, value: 4 },
-            EncodedValue { value_type: RawValueType::StringValue, value: 5 },
+            EncodedValue { value_type: RawValueType::EnumValue, value: 5 },
         );
         checker.verify_end();
     }

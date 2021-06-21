@@ -23,7 +23,6 @@ impl SymbolTableEncoder {
 
     // Assign a unique key to |value| and add it to the list of encoded symbols and
     // the bytecode.
-    // TODO(fxb/67919): Add support for enum values.
     fn add_symbol(&mut self, value: String) -> Result<u32, BindProgramEncodeError> {
         if value.len() > MAX_STRING_LENGTH {
             return Err(BindProgramEncodeError::InvalidStringLength(value));

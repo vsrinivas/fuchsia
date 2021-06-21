@@ -247,7 +247,9 @@ impl<'a> InstructionEncoder<'a> {
                 Ok((RawValueType::Key as u8, symbol_table_encoder.get_key(key)?))
             }
             Symbol::DeprecatedKey(key) => Ok((RawValueType::NumberValue as u8, key)),
-            _ => unimplemented!("Unsupported symbol"),
+            Symbol::EnumValue(value) => {
+                Ok((RawValueType::EnumValue as u8, symbol_table_encoder.get_key(value)?))
+            }
         }?;
 
         bytecode.push(value_type);
