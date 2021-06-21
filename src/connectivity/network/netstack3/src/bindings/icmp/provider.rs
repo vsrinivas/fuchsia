@@ -18,7 +18,7 @@ use fidl_fuchsia_net_icmp::{
     EchoSocketConfig, EchoSocketRequestStream, ProviderRequest, ProviderRequestStream,
 };
 
-use netstack3_core::EventDispatcher;
+use netstack3_core::context::RngContext as _;
 
 use super::{
     echo::EchoSocketWorker, EchoSocket, IcmpEchoSockets, IcmpStackContext, IpExt, RX_BUFFER_SIZE,

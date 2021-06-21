@@ -45,7 +45,7 @@ use rand::{CryptoRng, RngCore};
 use crate::{Context, EventDispatcher, Instant};
 
 /// A context that provides access to a monotonic clock.
-pub(crate) trait InstantContext {
+pub trait InstantContext {
     /// The type of an instant in time.
     ///
     /// All time is measured using `Instant`s, including scheduling timers
@@ -64,7 +64,7 @@ pub(crate) trait InstantContext {
 // Temporary blanket impl until we switch over entirely to the traits defined in
 // this module.
 impl<D: EventDispatcher> InstantContext for Context<D> {
-    type Instant = <D as EventDispatcher>::Instant;
+    type Instant = D::Instant;
 
     fn now(&self) -> Self::Instant {
         self.dispatcher().now()
@@ -171,8 +171,11 @@ pub trait RngContext {
     /// that property for their correctness and security.
     type Rng: RngCore + CryptoRng;
 
-    /// Get the random number generator (RNG).
-    fn rng(&mut self) -> &mut Self::Rng;
+    /// Gets the random number generator (RNG).
+    fn rng(&self) -> &Self::Rng;
+
+    /// Gets the random number generator (RNG) mutably.
+    fn rng_mut(&mut self) -> &mut Self::Rng;
 }
 
 /// A context that provides access to a random number generator (RNG) and a
@@ -210,7 +213,11 @@ impl<State, C: RngStateContext<State>> RngStateContextExt<State> for C {}
 impl<D: EventDispatcher> RngContext for Context<D> {
     type Rng = D::Rng;
 
-    fn rng(&mut self) -> &mut D::Rng {
+    fn rng(&self) -> &D::Rng {
+        self.dispatcher().rng()
+    }
+
+    fn rng_mut(&mut self) -> &mut D::Rng {
         self.dispatcher_mut().rng_mut()
     }
 }
@@ -466,7 +473,7 @@ pub(crate) mod testutil {
 
     /// A dummy implementation of `Instant` for use in testing.
     #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
-    pub(crate) struct DummyInstant {
+    pub struct DummyInstant {
         // A DummyInstant is just an offset from some arbitrary epoch.
         offset: Duration,
     }
@@ -524,7 +531,7 @@ pub(crate) mod testutil {
     /// A dummy [`InstantContext`] which stores the current time as a
     /// [`DummyInstant`].
     #[derive(Default)]
-    pub(crate) struct DummyInstantContext {
+    pub struct DummyInstantContext {
         time: DummyInstant,
     }
 
@@ -933,7 +940,11 @@ pub(crate) mod testutil {
     impl<S, Id, Meta> RngContext for DummyContext<S, Id, Meta> {
         type Rng = FakeCryptoRng<XorShiftRng>;
 
-        fn rng(&mut self) -> &mut Self::Rng {
+        fn rng(&self) -> &Self::Rng {
+            &self.rng
+        }
+
+        fn rng_mut(&mut self) -> &mut Self::Rng {
             &mut self.rng
         }
     }

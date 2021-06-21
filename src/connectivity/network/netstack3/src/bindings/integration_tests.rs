@@ -26,6 +26,7 @@ use net_types::{
     SpecifiedAddr,
 };
 use netstack3_core::{
+    context::{InstantContext, RngContext},
     error::NoRouteError,
     icmp::{
         self as core_icmp, BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt,
@@ -150,12 +151,26 @@ impl<I: crate::bindings::socket::udp::UdpSocketIpExt> netstack3_core::UdpEventDi
     }
 }
 
-impl EventDispatcher for TestDispatcher {
-    type Instant = <BindingsDispatcher as EventDispatcher>::Instant;
+impl InstantContext for TestDispatcher {
+    type Instant = <BindingsDispatcher as InstantContext>::Instant;
     fn now(&self) -> Self::Instant {
         self.disp.now()
     }
+}
 
+impl RngContext for TestDispatcher {
+    type Rng = <BindingsDispatcher as RngContext>::Rng;
+
+    fn rng(&self) -> &Self::Rng {
+        self.disp.rng()
+    }
+
+    fn rng_mut(&mut self) -> &mut Self::Rng {
+        self.disp.rng_mut()
+    }
+}
+
+impl EventDispatcher for TestDispatcher {
     fn schedule_timeout_instant(
         &mut self,
         time: Self::Instant,
@@ -174,16 +189,6 @@ impl EventDispatcher for TestDispatcher {
 
     fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant> {
         self.disp.scheduled_instant(id)
-    }
-
-    type Rng = <BindingsDispatcher as EventDispatcher>::Rng;
-
-    fn rng(&self) -> &Self::Rng {
-        self.disp.rng()
-    }
-
-    fn rng_mut(&mut self) -> &mut Self::Rng {
-        self.disp.rng_mut()
     }
 }
 

@@ -47,6 +47,7 @@ use socket::udp::UdpSocketCollection;
 use timers::TimerDispatcher;
 
 use netstack3_core::{
+    context::{InstantContext, RngContext},
     error::NoRouteError,
     handle_timeout,
     icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt},
@@ -260,13 +261,27 @@ impl netstack3_core::Instant for StackTime {
     }
 }
 
-impl EventDispatcher for BindingsDispatcher {
+impl InstantContext for BindingsDispatcher {
     type Instant = StackTime;
 
     fn now(&self) -> StackTime {
         StackTime(fasync::Time::now())
     }
+}
 
+impl RngContext for BindingsDispatcher {
+    type Rng = OsRng;
+
+    fn rng(&self) -> &OsRng {
+        &self.rng
+    }
+
+    fn rng_mut(&mut self) -> &mut OsRng {
+        &mut self.rng
+    }
+}
+
+impl EventDispatcher for BindingsDispatcher {
     fn schedule_timeout_instant(&mut self, time: StackTime, id: TimerId) -> Option<StackTime> {
         self.timers.schedule_timer(id, time)
     }
@@ -281,16 +296,6 @@ impl EventDispatcher for BindingsDispatcher {
 
     fn scheduled_instant(&self, id: TimerId) -> Option<StackTime> {
         self.timers.scheduled_time(&id)
-    }
-
-    type Rng = OsRng;
-
-    fn rng(&self) -> &OsRng {
-        &self.rng
-    }
-
-    fn rng_mut(&mut self) -> &mut OsRng {
-        &mut self.rng
     }
 }
 

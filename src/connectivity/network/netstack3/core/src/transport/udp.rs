@@ -211,7 +211,7 @@ fn try_alloc_listen_port<I: IcmpIpExt, C: UdpContext<I>>(
     ctx: &mut C,
     used_ports: &HashSet<NonZeroU16>,
 ) -> Option<NonZeroU16> {
-    let mut port = UdpConnectionState::<I>::rand_ephemeral(ctx.rng());
+    let mut port = UdpConnectionState::<I>::rand_ephemeral(ctx.rng_mut());
     for _ in UdpConnectionState::<I>::EPHEMERAL_RANGE {
         // We can unwrap here because we know that the EPHEMERAL_RANGE doesn't
         // include 0.

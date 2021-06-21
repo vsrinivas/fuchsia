@@ -22,6 +22,7 @@ use packet_formats::ip::IpProto;
 use rand::{self, CryptoRng, RngCore, SeedableRng};
 use rand_xorshift::XorShiftRng;
 
+use crate::context::{InstantContext, RngContext};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::NoRouteError;
 use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt};
@@ -115,7 +116,11 @@ impl<R: RngCore> CryptoRng for FakeCryptoRng<R> {}
 impl<R: RngCore> crate::context::RngContext for FakeCryptoRng<R> {
     type Rng = Self;
 
-    fn rng(&mut self) -> &mut Self::Rng {
+    fn rng(&self) -> &Self::Rng {
+        self
+    }
+
+    fn rng_mut(&mut self) -> &mut Self::Rng {
         self
     }
 }
@@ -798,13 +803,27 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for DummyEventDispatcher {
     }
 }
 
-impl EventDispatcher for DummyEventDispatcher {
+impl InstantContext for DummyEventDispatcher {
     type Instant = DummyInstant;
 
     fn now(&self) -> DummyInstant {
         self.current_time
     }
+}
 
+impl RngContext for DummyEventDispatcher {
+    type Rng = FakeCryptoRng<XorShiftRng>;
+
+    fn rng(&self) -> &FakeCryptoRng<XorShiftRng> {
+        &self.rng
+    }
+
+    fn rng_mut(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
+        &mut self.rng
+    }
+}
+
+impl EventDispatcher for DummyEventDispatcher {
     fn schedule_timeout(&mut self, duration: Duration, id: TimerId) -> Option<DummyInstant> {
         self.schedule_timeout_instant(self.current_time + duration, id)
     }
@@ -846,16 +865,6 @@ impl EventDispatcher for DummyEventDispatcher {
 
     fn scheduled_instant(&self, id: TimerId) -> Option<DummyInstant> {
         self.timer_events.iter().find_map(|x| if x.1 == id { Some(x.0) } else { None })
-    }
-
-    type Rng = FakeCryptoRng<XorShiftRng>;
-
-    fn rng(&self) -> &FakeCryptoRng<XorShiftRng> {
-        &self.rng
-    }
-
-    fn rng_mut(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
-        &mut self.rng
     }
 }
 

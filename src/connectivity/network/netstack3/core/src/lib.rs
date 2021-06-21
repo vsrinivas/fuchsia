@@ -34,7 +34,7 @@ mod macros;
 mod algorithm;
 #[cfg(test)]
 mod benchmarks;
-mod context;
+pub mod context;
 mod data_structures;
 mod device;
 pub mod error;
@@ -72,9 +72,8 @@ use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, SubnetEither};
 use net_types::SpecifiedAddr;
 use packet::{Buf, BufferMut, EmptyBuf};
-use rand::{CryptoRng, RngCore};
 
-use crate::context::TimerContext;
+use crate::context::{InstantContext, RngContext, TimerContext};
 use crate::device::{DeviceLayerState, DeviceLayerTimerId, DeviceStateBuilder};
 use crate::ip::{IpLayerTimerId, Ipv4State, Ipv6State};
 use crate::transport::{TransportLayerState, TransportLayerTimerId};
@@ -364,26 +363,15 @@ impl<
 /// that must be supported in order to support that layer of the stack. The
 /// `EventDispatcher` trait is a sub-trait of all of these traits.
 pub trait EventDispatcher:
-    DeviceLayerEventDispatcher<Buf<Vec<u8>>>
+    InstantContext
+    + RngContext
+    + DeviceLayerEventDispatcher<Buf<Vec<u8>>>
     + DeviceLayerEventDispatcher<EmptyBuf>
     + IpLayerEventDispatcher<Buf<Vec<u8>>>
     + IpLayerEventDispatcher<EmptyBuf>
     + TransportLayerEventDispatcher<Ipv4>
     + TransportLayerEventDispatcher<Ipv6>
 {
-    /// The type of an instant in time.
-    ///
-    /// All time is measured using `Instant`s, including scheduling timeouts.
-    /// This type may represent some sort of real-world time (e.g.,
-    /// [`std::time::Instant`]), or may be mocked in testing using a fake clock.
-    type Instant: Instant;
-
-    /// Returns the current instant.
-    ///
-    /// `now` guarantees that two subsequent calls to `now` will return
-    /// monotonically non-decreasing values.
-    fn now(&self) -> Self::Instant;
-
     /// Schedule a callback to be invoked after a timeout.
     ///
     /// `schedule_timeout` schedules `f` to be invoked after `duration` has
@@ -430,35 +418,6 @@ pub trait EventDispatcher:
     /// Returns the [`Instant`] a timer with ID `id` will be invoked. If no
     /// timer with the given ID exists, `scheduled_instant` will return `None`.
     fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant>;
-
-    // TODO(joshlf): If the CSPRNG requirement becomes a performance problem,
-    // introduce a second, non-cryptographically secure, RNG.
-
-    /// The random number generator (RNG) provided by this `EventDispatcher`.
-    ///
-    /// Code in the core is required to only obtain random values through this
-    /// RNG. This allows a deterministic RNG to be provided when useful (for
-    /// example, in tests).
-    ///
-    /// The provided RNG must be cryptographically secure in order to ensure
-    /// that random values produced within the network stack are not predictable
-    /// by outside observers. This helps to prevent certain kinds of
-    /// fingerprinting and denial of service attacks.
-    type Rng: RngCore + CryptoRng;
-
-    /// Get the random number generator (RNG) immutably.
-    ///
-    /// Code in the core is required to only obtain random values through this
-    /// RNG. This allows a deterministic RNG to be provided when useful (for
-    /// example, in tests).
-    fn rng(&self) -> &Self::Rng;
-
-    /// Get the random number generator (RNG) mutably.
-    ///
-    /// `rng_mut` is like [`rng`], but it returns a mutable reference.
-    ///
-    /// [`rng`]: crate::EventDispatcher::rng
-    fn rng_mut(&mut self) -> &mut Self::Rng;
 }
 
 impl<D: EventDispatcher> TimerContext<TimerId> for Context<D> {

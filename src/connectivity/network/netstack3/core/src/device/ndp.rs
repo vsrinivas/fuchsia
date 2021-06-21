@@ -2099,7 +2099,7 @@ fn schedule_next_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
         .get_router_advertisements_interval();
 
     let mut delay =
-        Duration::from_secs(ctx.rng().gen_range(tx_range.start(), tx_range.end()).into());
+        Duration::from_secs(ctx.rng_mut().gen_range(tx_range.start(), tx_range.end()).into());
 
     // As per RFC 6.2.4, for the first few advertisements (up to
     // `MAX_INITIAL_RTR_ADVERTISEMENTS`) sent from an interface when it becomes
@@ -2208,7 +2208,7 @@ fn start_soliciting_routers<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device
         // random amount of time between 0 and `MAX_RTR_SOLICITATION_DELAY` to
         // alleviate congestion when many hosts start up on a link at the same
         // time.
-        let delay = ctx.rng().gen_range(Duration::new(0, 0), MAX_RTR_SOLICITATION_DELAY);
+        let delay = ctx.rng_mut().gen_range(Duration::new(0, 0), MAX_RTR_SOLICITATION_DELAY);
 
         // MUST NOT already be performing router solicitation.
         assert!(ctx
@@ -2750,7 +2750,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             // Calculate random delay between `MIN_RA_DELAY_TIME` and
             // `MAX_RA_DELAY_TIME`.
             let now = ctx.now();
-            let delay = ctx.rng().gen_range(MIN_RA_DELAY_TIME, MAX_RA_DELAY_TIME);
+            let delay = ctx.rng_mut().gen_range(MIN_RA_DELAY_TIME, MAX_RA_DELAY_TIME);
             let send_instant = now
                 .checked_add(delay)
                 .expect("Failed to calculate instant to reply to Router Solicitation");

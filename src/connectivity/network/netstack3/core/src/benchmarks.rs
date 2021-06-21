@@ -25,6 +25,7 @@ use packet_formats::ipv4::{
 };
 use rand_xorshift::XorShiftRng;
 
+use crate::context::{InstantContext, RngContext};
 use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
 use crate::error::NoRouteError;
 use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt};
@@ -83,13 +84,27 @@ impl<I: IcmpIpExt, B: BufferMut> BufferIcmpEventDispatcher<I, B> for BenchmarkEv
 
 impl<B: BufferMut> IpLayerEventDispatcher<B> for BenchmarkEventDispatcher {}
 
-impl EventDispatcher for BenchmarkEventDispatcher {
+impl InstantContext for BenchmarkEventDispatcher {
     type Instant = DummyInstant;
 
     fn now(&self) -> DummyInstant {
         DummyInstant::default()
     }
+}
 
+impl RngContext for BenchmarkEventDispatcher {
+    type Rng = FakeCryptoRng<XorShiftRng>;
+
+    fn rng(&self) -> &FakeCryptoRng<XorShiftRng> {
+        &self.rng
+    }
+
+    fn rng_mut(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
+        &mut self.rng
+    }
+}
+
+impl EventDispatcher for BenchmarkEventDispatcher {
     fn schedule_timeout(&mut self, _duration: Duration, _id: TimerId) -> Option<DummyInstant> {
         unimplemented!()
     }
@@ -112,16 +127,6 @@ impl EventDispatcher for BenchmarkEventDispatcher {
 
     fn scheduled_instant(&self, _id: TimerId) -> Option<DummyInstant> {
         unimplemented!()
-    }
-
-    type Rng = FakeCryptoRng<XorShiftRng>;
-
-    fn rng(&self) -> &FakeCryptoRng<XorShiftRng> {
-        &self.rng
-    }
-
-    fn rng_mut(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
-        &mut self.rng
     }
 }
 
