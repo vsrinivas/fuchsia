@@ -50,6 +50,8 @@ to integrate with the Test Runner Framework.
 
 ## Test runners {#test-runners}
 
+### A language and runtime-inclusive framework
+
 Test runners are reusable adapters between the Test Runner Framework and common
 languages & frameworks used by developers to write tests. They implement the
 [`fuchsia.test.Suite`][fidl-test-suite] protocol on behalf of the test author,
@@ -244,6 +246,20 @@ fuchsia.test.Suite provides equivalent functionality that replaces them
 - **-test.count** - See [Running test multiple times](#running_test_multiple_times).
 - **-test.v** - Output is printed by default.
 - **-test.parallel** - See [Controlling parallel execution of test cases](#controlling_parallel_execution_of_test_cases).
+
+### A runtime-agnostic, runtime-inclusive testing framework {#inclusive}
+
+Fuchsia aims to be [inclusive][inclusive], for instance in the sense that
+developers can create components (and their tests) in their language and runtime
+of choice. The Test Runner Framework itself is language-agnostic by design, with
+individual test runners specializing in particular programming languages or test
+runtimes and therefore being language-inclusive. Anyone can create and use new
+test runners.
+
+Creating new test runners is relatively easy, with the possibility of sharing
+code between different runners. For instance, the GoogleTest runner and the Rust
+runner share code related to launching an ELF binary, but differ in code for
+passing command line arguments to the test and parsing the test's results.
 
 ## Temporary storage
 
