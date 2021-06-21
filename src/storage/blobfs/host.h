@@ -115,7 +115,7 @@ union info_block_t {
   Superblock info;
 };
 
-// Stores pointer to an inode's metadata and the matching block number
+// Stores pointer to an inode's metadata and the matching block number.
 class InodeBlock {
  public:
   InodeBlock(size_t bno, Inode* inode, const Digest& digest) : bno_(bno) {
@@ -150,10 +150,10 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
 
   ~Blobfs() override = default;
 
-  // Checks to see if a blob already exists, and if not allocates a new node
+  // Checks to see if a blob already exists, and if not allocates a new node.
   zx_status_t NewBlob(const Digest& digest, std::unique_ptr<InodeBlock>* out);
 
-  // Allocate |nblocks| starting at |*blkno_out| in memory
+  // Allocate |nblocks| starting at |*blkno_out| in memory.
   zx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
 
   zx_status_t WriteData(Inode* inode, const void* merkle_data, const void* blob_data,
@@ -162,7 +162,7 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   zx_status_t WriteNode(std::unique_ptr<InodeBlock> ino_block);
   zx_status_t WriteInfo();
 
-  // Access the |node_index|-th inode
+  // Access the |node_index|-th inode.
   zx::status<InodePtr> GetNode(uint32_t node_index) final;
 
   NodeFinder* GetNodeFinder() { return this; }
@@ -212,7 +212,7 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   // Write |block_count| blocks of |data| at block number starting at |block_number|.
   zx_status_t WriteBlocks(size_t block_number, uint64_t block_count, const void* data);
 
-  // Write |data| into block |bno|
+  // Write |data| into block |bno|.
   zx_status_t WriteBlock(size_t bno, const void* data);
 
   zx_status_t ResetCache();
@@ -242,7 +242,7 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
     uint8_t info_block_[kBlobfsBlockSize];
   };
 
-  // Caches the most recent block read from disk
+  // Caches the most recent block read from disk.
   BlockCache cache_;
 };
 
@@ -256,7 +256,7 @@ zx_status_t WriteBlock(int fd, uint64_t bno, const void* data);
 zx_status_t GetBlockCount(int fd, uint64_t* out);
 
 // Formats a blobfs filesystem, meant to contain |block_count| blobfs blocks, to the device
-// represteted by |fd|.
+// represented by |fd|.
 //
 // Returns -1 on error, 0 on success.
 int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options);
@@ -299,9 +299,9 @@ zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, JsonRecorder* json_recorder,
 zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
                         const fbl::Vector<size_t>& extent_lengths);
 
-// Create a blobfs from a sparse file
-// |start| indicates where the blobfs partition starts within the file (in bytes)
-// |end| indicates the end of the blobfs partition (in bytes)
+// Create a blobfs from a sparse file.
+// |start| indicates where the blobfs partition starts within the file (in bytes).
+// |end| indicates the end of the blobfs partition (in bytes).
 // |extent_lengths| contains the length (in bytes) of each blobfs extent: currently this includes
 // the superblock, block bitmap, inode table, and data blocks.
 zx_status_t blobfs_create_sparse(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd, off_t start,
