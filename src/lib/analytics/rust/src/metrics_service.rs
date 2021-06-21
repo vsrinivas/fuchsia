@@ -177,7 +177,7 @@ impl MetricsService {
                         Ok(())
                     }
                     Some(bc) => {
-                        &mut bc.add_event_string(body);
+                        bc.add_event_string(body);
                         Ok(())
                     }
                 }
@@ -225,7 +225,7 @@ impl MetricsService {
                         Ok(())
                     }
                     Some(bc) => {
-                        &mut bc.add_event_string(body);
+                        bc.add_event_string(body);
                         Ok(())
                     }
                 }

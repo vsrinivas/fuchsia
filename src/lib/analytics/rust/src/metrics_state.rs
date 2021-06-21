@@ -385,14 +385,14 @@ mod tests {
         assert_eq!(m.status, MetricsStatus::OptedIn);
         assert_eq!(m.uuid, Some(uuid));
 
-        &m.set_opt_in_status(false)?;
+        m.set_opt_in_status(false)?;
 
         assert_eq!(m.status, MetricsStatus::OptedOut);
         assert_eq!(m.uuid, None);
         let app_status_file = &dir.join(&APP_NAME);
         assert!(metadata(app_status_file).is_err(), "App status file should not exist.");
 
-        &m.set_opt_in_status(true)?;
+        m.set_opt_in_status(true)?;
 
         assert_eq!(m.status, MetricsStatus::OptedIn);
         assert_eq!(m.uuid, Some(read_uuid_file(&dir).unwrap()));
