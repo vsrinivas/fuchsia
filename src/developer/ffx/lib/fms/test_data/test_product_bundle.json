@@ -1,0 +1,71 @@
+{
+    "data": {
+        "description": "A terminal x64 product.",
+        "device_refs": [
+            "generic-x64"
+        ],
+        "images": [
+            {
+                "base_uri": "gs://fuchsia/development/0.20201216.2.1/images/generic-x64.tgz",
+                "format": "tgz"
+            },
+            {
+                "base_uri": "https://storage.googleapis.com/fuchsia/development/0.20201216.2.1/images/generic-x64.tgz",
+                "format": "tgz"
+            }
+        ],
+        "kind": "product_bundle",
+        "manifests": {
+            "flash": {
+                "hw_revision": "x64",
+                "products": [
+                    {
+                        "bootloader_partitions": [],
+                        "name": "fuchsia",
+                        "oem_files": [],
+                        "partitions": [
+                            [
+                                "",
+                                "fuchsia.zbi"
+                            ],
+                            [
+                                "",
+                                "zedboot.zbi"
+                            ],
+                            [
+                                "",
+                                "fuchsia.vbmeta"
+                            ],
+                            [
+                                "",
+                                "zedboot.vbmeta"
+                            ]
+                        ]
+                    }
+                ]
+            }
+        },
+        "metadata": [
+            [
+                "build-type",
+                "release"
+            ],
+            [
+                "product",
+                "terminal"
+            ]
+        ],
+        "name": "generic-x64",
+        "packages": [
+            {
+                "format": "tgz",
+                "repo_uri": "gs://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
+            },
+            {
+                "format": "tgz",
+                "repo_uri": "https://storage.googleapis.com/fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
+            }
+        ]
+    },
+    "version": "http://fuchsia.com/schemas/sdk/product_bundle-02.json"
+}

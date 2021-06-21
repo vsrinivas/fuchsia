@@ -1,0 +1,13 @@
+{
+    "data": {
+        "description": "A generic arm64 device",
+        "hardware": {
+            "cpu": {
+                "arch": "arm64"
+            }
+        },
+        "kind": "physical_device",
+        "name": "generic-arm64"
+    },
+    "version": "http://fuchsia.com/schemas/sdk/physical_device.json"
+}

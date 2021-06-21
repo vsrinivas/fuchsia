@@ -7,35 +7,15 @@
 //! Uses a unique identifier (FMS Name) to lookup SDK Module metadata.
 
 use {
+    crate::{physical_device::PhysicalDeviceSpec, product_bundle::ProductBundle},
     anyhow::{bail, format_err, Result},
-    serde::Deserialize,
     serde_json::{from_reader, from_str, from_value, Value},
     std::{collections::HashMap, io},
     valico::json_schema,
 };
 
-/// Description of a physical (rather than virtual) hardware device.
-#[derive(Debug, Deserialize, PartialEq, Clone)]
-pub struct PhysicalDeviceSpec {
-    /// A unique name identifying this FMS entry.
-    pub name: String,
-
-    /// Always "physical_device" for a PhysicalDeviceSpec. This is valuable for
-    /// debugging or when writing this record to a json string.
-    pub kind: String,
-}
-
-/// Description of the data needed to set up (flash) a device.
-#[derive(Debug, Deserialize, PartialEq, Clone)]
-pub struct ProductBundle {
-    /// A unique name identifying this FMS entry.
-    pub name: String,
-
-    /// Always "product_bundle" for a ProductBundle. This is valuable for
-    /// debugging or when writing this record to a json string.
-    #[serde(rename = "type")]
-    pub data_type: String,
-}
+mod physical_device;
+mod product_bundle;
 
 // A metadata record about a physical/virtual device, product bundle, etc.
 #[derive(Debug, PartialEq, Clone)]
@@ -67,7 +47,7 @@ impl Entries {
         schemata.insert(key.to_string(), input);
 
         let input: Value =
-            from_str(include_str!("../../../../../../build/sdk/meta/product_bundle.json"))
+            from_str(include_str!("../../../../../../build/sdk/meta/product_bundle-02.json"))
                 .expect("unicode string");
         let key = input["id"].as_str().expect("need id for schema");
         schemata.insert(key.to_string(), input);
@@ -96,6 +76,18 @@ impl Entries {
         scope
             .compile(common_schema, /*ban_unknown=*/ true)
             .map_err(|e| format_err!("common.json failed to compile: {:?}", e))?;
+
+        let common_schema =
+            from_str(include_str!("../../../../../../build/sdk/meta/emu_manifest.json"))?;
+        scope
+            .compile(common_schema, /*ban_unknown=*/ true)
+            .map_err(|e| format_err!("emu_manifest.json failed to compile: {:?}", e))?;
+
+        let common_schema =
+            from_str(include_str!("../../../../../../build/sdk/meta/flash_manifest-02.json"))?;
+        scope
+            .compile(common_schema, /*ban_unknown=*/ true)
+            .map_err(|e| format_err!("flash_manifest-02.json failed to compile: {:?}", e))?;
 
         let common_schema =
             from_str(include_str!("../../../../../../build/sdk/meta/hardware.json"))?;
@@ -161,24 +153,18 @@ mod tests {
     fn test_entries() {
         use std::io::BufReader;
         let mut entries = Entries::new();
-        let mut reader = BufReader::new(
-            r#"
-            {
-                "data": {
-                    "description": "A generic arm64 device",
-                    "hardware": {
-                        "cpu": {
-                            "arch": "arm64"
-                        }
-                    },
-                    "kind": "physical_device",
-                    "name": "generic-arm64"
-                },
-                "version": "http://fuchsia.com/schemas/sdk/physical_device.json"
-            }
-            "#
-            .as_bytes(),
-        );
+        const METADATA: &str = include_str!("../test_data/test_physical_device.json");
+
+        // Damage "kind" key.
+        let broken = str::replace(METADATA, r#""kind""#, r#""wrong""#);
+        let mut reader = BufReader::new(broken.as_bytes());
+        match entries.add_json(&mut reader) {
+            Ok(_) => panic!("badly formed metadata passed schema"),
+            Err(_) => (),
+        }
+        assert_eq!(entries.entry("generic-x64"), None);
+
+        let mut reader = BufReader::new(METADATA.as_bytes());
         // Not present until the json metadata is added.
         assert_eq!(entries.entry("generic-arm64"), None);
         entries.add_json(&mut reader).expect("add fms metadata");
@@ -186,5 +172,35 @@ mod tests {
         assert_ne!(entries.entry("generic-arm64"), None);
         // This isn't just returning non-None for everything.
         assert_eq!(entries.entry("unfound"), None);
+    }
+
+    #[test]
+    fn test_product_bundle() {
+        use std::io::BufReader;
+        let mut entries = Entries::new();
+        const METADATA: &str = include_str!("../test_data/test_product_bundle.json");
+
+        // Damage Urls in the metadata.
+        let broken = str::replace(METADATA, "https", "wrong");
+        let mut reader = BufReader::new(broken.as_bytes());
+        match entries.add_json(&mut reader) {
+            Ok(_) => panic!("badly formed metadata passed schema"),
+            Err(_) => (),
+        }
+        assert_eq!(entries.entry("generic-x64"), None);
+
+        // Damage "kind" key.
+        let broken = str::replace(METADATA, r#""kind""#, r#""wrong""#);
+        let mut reader = BufReader::new(broken.as_bytes());
+        match entries.add_json(&mut reader) {
+            Ok(_) => panic!("badly formed metadata passed schema"),
+            Err(_) => (),
+        }
+        assert_eq!(entries.entry("generic-x64"), None);
+
+        // Finally, add the correct (original) metadata.
+        let mut reader = BufReader::new(METADATA.as_bytes());
+        entries.add_json(&mut reader).expect("add fms metadata");
+        assert_ne!(entries.entry("generic-x64"), None);
     }
 }

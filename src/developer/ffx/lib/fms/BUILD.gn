@@ -8,9 +8,11 @@ import("//build/testing/test_spec.gni")
 
 schemas = [
   "//build/sdk/meta/common.json",
+  "//build/sdk/meta/emu_manifest.json",
+  "//build/sdk/meta/flash_manifest-02.json",
   "//build/sdk/meta/hardware.json",
   "//build/sdk/meta/physical_device.json",
-  "//build/sdk/meta/product_bundle.json",
+  "//build/sdk/meta/product_bundle-02.json",
 ]
 
 source_set("schemas") {
@@ -32,8 +34,16 @@ rustc_library("lib") {
   non_rust_deps = [ ":schemas" ]
 
   inputs = schemas
+  inputs += [
+    "test_data/test_physical_device.json",
+    "test_data/test_product_bundle.json",
+  ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/lib.rs",
+    "src/physical_device.rs",
+    "src/product_bundle.rs",
+  ]
 }
 
 group("fms") {

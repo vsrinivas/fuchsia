@@ -31,12 +31,15 @@
                         },
                         "manifests": {
                             "description": "Manifests describing how to boot the product on a device.",
-                            "emu": {
-                                "$ref": "emu_manifest.json#/definitions/manifest"
+                            "properties": {
+                                "emu": {
+                                    "$ref": "emu_manifest.json#/definitions/manifest"
+                                },
+                                "flash": {
+                                    "$ref": "flash_manifest-02.json#/definitions/manifest"
+                                }
                             },
-                            "flash": {
-                                "$ref": "flash_manifest-02.json#/definitions/manifest"
-                            }
+                            "type": "object"
                         },
                         "metadata": {
                             "$ref": "common.json#/definitions/key_value_list",
@@ -84,7 +87,7 @@
         },
         "image_bundle": {
             "additionalProperties": false,
-            "description": "A set of artifacts necessary to provision a physical or virtual device",
+            "description": "A set of artifacts necessary to provision a physical or virtual device.",
             "properties": {
                 "base_uri": {
                     "$ref": "#/definitions/bundle_uri",
@@ -106,7 +109,7 @@
         },
         "package_bundle": {
             "additionalProperties": false,
-            "description": "A set of artifacts necessary to run a physical or virtual device",
+            "description": "A set of artifacts necessary to run a physical or virtual device.",
             "properties": {
                 "blob_uri": {
                     "$ref": "#/definitions/bundle_uri",

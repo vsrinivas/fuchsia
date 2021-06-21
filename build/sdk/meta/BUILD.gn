@@ -24,7 +24,7 @@ schemas = [
   "loadable_module.json",
   "manifest.json",
   "physical_device.json",
-  "product_bundle.json",
+  "product_bundle-02.json",
   "sysroot.json",
 ]
 
