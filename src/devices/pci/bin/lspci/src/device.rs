@@ -42,12 +42,7 @@ impl<'a> Device<'a> {
         let (class, name) = if let Some(db) = id_db {
             (
                 db.find_class(cfg.base_class, cfg.sub_class, Some(cfg.program_interface)),
-                db.find_device(
-                    cfg.vendor_id,
-                    cfg.device_id,
-                    Some(cfg.sub_vendor_id),
-                    Some(cfg.subsystem_id),
-                ),
+                db.find_device(cfg.vendor_id, cfg.device_id),
             )
         } else {
             (None, None)

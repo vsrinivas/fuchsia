@@ -176,13 +176,7 @@ impl<'a> PciDb<'a> {
         Ok(PciDb { device_db, class_db })
     }
 
-    pub fn find_device(
-        &self,
-        vendor: u16,
-        device: u16,
-        subvendor: Option<u16>,
-        subdevice: Option<u16>,
-    ) -> Option<String> {
+    pub fn find_device(&self, vendor: u16, device: u16) -> Option<String> {
         if let Some(v_entry) = self.device_db.get(&vendor) {
             let mut name = v_entry.name.to_string();
             // The ID database sorts devices in a manner like:
@@ -193,15 +187,8 @@ impl<'a> PciDb<'a> {
             //               1000 1020  LSI8952U PCI to Ultra2 SCSI host adapter
             //               1de1 3906  DC-390U2B SCSI adapter
             //               1de1 3907  DC-390U2W
-            // By reversing the list under this vendor/device we grab the most
-            // specific name if possible, but fall back on the general device
-            // name if none is find for that specific subvendor / subdevice
-            // combination.
-            for dev in v_entry.devices.iter().rev() {
-                if device == dev.device
-                    && ((dev.subvendor == None && dev.subdevice == None)
-                        || (subvendor == dev.subvendor && subdevice == dev.subdevice))
-                {
+            for dev in &v_entry.devices {
+                if device == dev.device {
                     name.push(' ');
                     name.push_str(&dev.name);
                     break;
@@ -253,36 +240,18 @@ mod test {
 
     #[test]
     fn vendor_without_devices() -> Result<(), Error> {
-        assert_eq!("SafeNet (wrong ID)", DB.find_device(0x0001, 0, None, None).unwrap());
+        assert_eq!("SafeNet (wrong ID)", DB.find_device(0x0001, 0).unwrap());
         // This vendor has no devices, does it still work if we specify one?
-        assert_eq!("SafeNet (wrong ID)", DB.find_device(0x0001, 0xFFFF, None, None).unwrap());
+        assert_eq!("SafeNet (wrong ID)", DB.find_device(0x0001, 0xFFFF).unwrap());
         Ok(())
     }
 
     #[test]
     fn general_device_and_subdevices() -> Result<(), Error> {
-        assert_eq!("PEAK-System Technik GmbH", DB.find_device(0x001c, 0, None, None).unwrap());
+        assert_eq!("PEAK-System Technik GmbH", DB.find_device(0x001c, 0).unwrap());
         assert_eq!(
             "PEAK-System Technik GmbH PCAN-PCI CAN-Bus controller",
-            DB.find_device(0x001c, 0x001, None, None).unwrap()
-        );
-        assert_eq!(
-            "PEAK-System Technik GmbH 2 Channel CAN Bus SJC1000",
-            DB.find_device(0x001c, 0x001, Some(0x001c), Some(0x0004)).unwrap()
-        );
-        assert_eq!(
-            "PEAK-System Technik GmbH 2 Channel CAN Bus SJC1000 (Optically Isolated)",
-            DB.find_device(0x001c, 0x001, Some(0x001c), Some(0x0005)).unwrap()
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn numeric_fields_in_entries() -> Result<(), Error> {
-        assert_eq!("Broadcom / LSI 53c810", DB.find_device(0x1000, 0x0001, None, None).unwrap());
-        assert_eq!(
-            "Broadcom / LSI LSI53C810AE PCI to SCSI I/O Processor",
-            DB.find_device(0x1000, 0x0001, Some(0x1000), Some(0x1000)).unwrap()
+            DB.find_device(0x001c, 0x001).unwrap()
         );
         Ok(())
     }
@@ -290,13 +259,13 @@ mod test {
     #[test]
     fn device_not_found() -> Result<(), Error> {
         // The device ID matches an Allied Telesis, Inc device, but the vendor is invalid.
-        assert_eq!(None, DB.find_device(0x0000, 0x8139, None, None));
+        assert_eq!(None, DB.find_device(0x0000, 0x8139));
         // Vendor is LevelOne, but invalid device ID
-        assert_eq!("LevelOne", DB.find_device(0x018a, 0x1000, None, None).unwrap());
+        assert_eq!("LevelOne", DB.find_device(0x018a, 0x1000).unwrap());
         // Valid LevelOne FPC-0106TX
         assert_eq!(
             "LevelOne FPC-0106TX misprogrammed [RTL81xx]",
-            DB.find_device(0x018a, 0x0106, None, None).unwrap(),
+            DB.find_device(0x018a, 0x0106).unwrap(),
         );
         Ok(())
     }
