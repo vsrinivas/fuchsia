@@ -75,7 +75,7 @@ impl<T: FileLike> Write for WrappedBlockDevice<T> {
         // Chop off anything that goes beyond the bounds of the block device,
         // and update our copy of what's going to be written.
         let end = std::cmp::min(offset + buf.len(), read_result);
-        &mut real_buf[offset..end].copy_from_slice(buf);
+        real_buf[offset..end].copy_from_slice(buf);
         // Write out full blocks to the disk.
         self.inner.seek(SeekFrom::Start(rounded_start))?;
         self.inner.write(&real_buf)?;
@@ -149,7 +149,7 @@ mod tests {
             assert_eq!(buf.len() % self.block_size as usize, 0);
 
             let pos = self.pos as usize;
-            &mut self.inner[pos..pos + buf.len()].copy_from_slice(buf);
+            self.inner[pos..pos + buf.len()].copy_from_slice(buf);
 
             self.pos += buf.len() as u64;
 
