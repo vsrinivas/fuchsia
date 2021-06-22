@@ -13,10 +13,16 @@ use {
 };
 
 #[ffx_plugin()]
-pub async fn scrutiny_routes(_cmd: ScrutinyRoutesCommand) -> Result<(), Error> {
+pub async fn scrutiny_routes(cmd: ScrutinyRoutesCommand) -> Result<(), Error> {
     let config = Config {
         launch: LaunchConfig {
-            command: Some("verify.capability_routes --capability_types protocol directory --response_level error".to_string()),
+            command: Some(
+                format!(
+                    "verify.capability_routes --capability_types {} --response_level error",
+                    cmd.capability
+                )
+                .to_string(),
+            ),
             script_path: None,
         },
         runtime: RuntimeConfig::minimal(),
