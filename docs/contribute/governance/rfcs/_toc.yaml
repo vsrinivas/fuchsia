@@ -223,5 +223,3 @@ toc:
   path: /docs/contribute/governance/rfcs/0104_relative_urls.md
 - title: "RFC-0105: Regular expression libraries"
   path: /docs/contribute/governance/rfcs/0105_regular_expression_libraries.md
-- title: "RFC-NNNN: System-absolute paths considered harmful"
-  path: /docs/contribute/governance/rfcs/NNNN_system_absolute_paths_considered_harmful.md

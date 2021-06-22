@@ -1366,16 +1366,3 @@
   reviewers: ['cpu@google.com', 'shayba@google.com', 'phosek@google.com', 'vbelliard@google.com', 'brettw@google.com', 'maruel@google.com', 'pascallouis@google.com']
   submitted: '2021-04-26'
   reviewed: '2021-06-16'
-
-- name: 'RFC-NNNN'
-  title: 'System-absolute paths considered harmful'
-  short_description: 'Enacting a policy to use relative paths everywhere wherever possible.'
-  authors: ['shayba@google.com']
-  file: 'NNNN_system_absolute_paths_considered_harmful.md'
-  area: ['Build']
-  issue: ['79082']
-  gerrit_change_id: ['545707']
-  status: 'Accepted'
-  reviewers: ['TODO']
-  submitted: '2021-06-20'
-  reviewed: 'TODO'
