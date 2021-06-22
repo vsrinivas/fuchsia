@@ -47,6 +47,8 @@ zx_status_t zxio_default_flags_set(zxio_t* io, uint32_t flags);
 zx_status_t zxio_default_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
                                  size_t* out_size);
 zx_status_t zxio_default_get_read_buffer_available(zxio_t* io, size_t* out_available);
+zx_status_t zxio_default_open(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
+                              size_t path_len, zxio_storage_t* storage);
 zx_status_t zxio_default_open_async(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
                                     size_t path_len, zx_handle_t request);
 zx_status_t zxio_default_add_inotify_filter(zxio_t* io, const char* path, size_t path_len,
@@ -88,6 +90,7 @@ static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .flags_set = zxio_default_flags_set,
     .vmo_get = zxio_default_vmo_get,
     .get_read_buffer_available = zxio_default_get_read_buffer_available,
+    .open = zxio_default_open,
     .open_async = zxio_default_open_async,
     .add_inotify_filter = zxio_default_add_inotify_filter,
     .unlink = zxio_default_unlink,

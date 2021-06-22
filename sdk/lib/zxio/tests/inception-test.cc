@@ -176,11 +176,15 @@ TEST(CreateWithInfo, Device) {
   device_control_loop.Shutdown();
 }
 
+namespace {
+
 class TestDirectoryServer final : public zxio_tests::TestDirectoryServerBase {
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final {
     completer.Reply(ZX_OK);
   }
 };
+
+}  // namespace
 
 TEST(CreateWithInfo, Directory) {
   auto dir_ends = fidl::CreateEndpoints<fuchsia_io::Directory>();

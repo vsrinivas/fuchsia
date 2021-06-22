@@ -74,11 +74,17 @@ zx_status_t zxio_default_get_read_buffer_available(zxio_t* io, size_t* out_avail
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t zxio_default_open(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
+                              size_t path_len, zxio_storage_t* storage) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t zxio_default_open_async(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
                                     size_t path_len, zx_handle_t request) {
   zx_handle_close(request);
   return ZX_ERR_NOT_SUPPORTED;
 }
+
 zx_status_t zxio_default_add_inotify_filter(zxio_t* io, const char* path, size_t path_len,
                                             uint32_t mask, uint32_t watch_descriptor,
                                             zx_handle_t socket) {

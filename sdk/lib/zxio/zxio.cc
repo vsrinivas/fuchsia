@@ -310,6 +310,15 @@ zx_status_t zxio_get_read_buffer_available(zxio_t* io, size_t* out_available) {
   return zio->ops->get_read_buffer_available(io, out_available);
 }
 
+zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,
+                      size_t path_len, zxio_storage_t* storage) {
+  if (!zxio_is_valid(directory)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+  zxio_internal_t* zio = to_internal(directory);
+  return zio->ops->open(directory, flags, mode, path, path_len, storage);
+}
+
 zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,
                             size_t path_len, zx_handle_t request) {
   if (!zxio_is_valid(directory)) {

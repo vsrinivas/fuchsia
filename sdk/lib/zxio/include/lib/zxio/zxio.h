@@ -275,11 +275,24 @@ zx_status_t zxio_get_read_buffer_available(zxio_t* io, size_t* out_available);
 
 // Directory
 
-// Open a new file relative to the given |directory|.
+// Open a new zxio object relative to the given |directory| and initialize it
+// into |storage|.
 //
-// The connection is represented as a |zx_handle_t|. The caller is responsible
-// for creating the |zx_handle_t|, which must be a channel. This call does not
-// block on the remote server.
+// This call blocks on the remote server.
+//
+// See io.fidl for the available |flags| and |mode|.
+zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,
+                      size_t path_len, zxio_storage_t* storage);
+
+// Open a new object relative to the given |directory|.
+//
+// The object's connection is represented as a |zx_handle_t|. The caller is
+// responsible for creating the |zx_handle_t|, which must be a channel. This
+// call does not block on the remote server.
+//
+// If the caller specifies the flag fuchsia.io.OPEN_FLAG_DESCRIBE then the
+// connection can be wrapped in a zxio object by calling
+// zxio_create_with_on_open().
 //
 // See io.fidl for the available |flags| and |mode|.
 zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,

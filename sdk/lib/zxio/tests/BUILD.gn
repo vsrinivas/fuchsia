@@ -17,6 +17,7 @@ test("zxio") {
     "create-test.cc",
     "debuglog-test.cc",
     "dir_v2-test.cc",
+    "directory-test.cc",
     "dirent-test.cc",
     "extensions-test.cc",
     "file-test.cc",

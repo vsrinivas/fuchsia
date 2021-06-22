@@ -744,13 +744,33 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo
   return ZX_OK;
 }
 
+zx_status_t zxio_dir_open(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
+                          size_t path_len, zxio_storage_t* storage) {
+  flags = flags | fio::wire::kOpenFlagDescribe;
+
+  Remote rio(io);
+  zx::status node_ends = fidl::CreateEndpoints<fio::Node>();
+  if (!node_ends.is_ok()) {
+    return node_ends.status_value();
+  }
+  auto [node_client_end, node_server_end] = std::move(node_ends.value());
+
+  fidl::Result result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
+                            .Open(flags, mode, fidl::StringView::FromExternal(path, path_len),
+                                  std::move(node_server_end));
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  return zxio_create_with_on_open(node_client_end.TakeChannel().release(), storage);
+}
+
 zx_status_t zxio_remote_open_async(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
                                    size_t path_len, zx_handle_t request) {
   Remote rio(io);
   auto node_request = fidl::ServerEnd<fio::Node>(zx::channel(request));
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                    .Open(flags, mode, fidl::StringView::FromExternal(path, path_len),
-                          std::move(node_request));
+  fidl::WireResult result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
+                                .Open(flags, mode, fidl::StringView::FromExternal(path, path_len),
+                                      std::move(node_request));
   return result.status();
 }
 
@@ -934,6 +954,7 @@ static constexpr zxio_ops_t zxio_dir_ops = []() {
   ops.readv_at = zxio_dir_readv_at;
   ops.flags_get = zxio_remote_flags_get;
   ops.flags_set = zxio_remote_flags_set;
+  ops.open = zxio_dir_open;
   ops.open_async = zxio_remote_open_async;
   ops.add_inotify_filter = zxio_remote_add_inotify_filter;
   ops.unlink = zxio_remote_unlink;
