@@ -11,7 +11,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/va
 fx-config-read
 
 if is-remote-workflow-device; then
-  "${FUCHSIA_BUILD_DIR}/host-tools/ffx" target add $(get-device-pair)
+  fx-command-run host-tool ffx target add $(get-device-pair)
 fi
 
 # NOTE: this could be improved if it knew enough about ffx args to
@@ -76,4 +76,4 @@ fi
 
 config="{ \"sdk\": { \"root\": \"${FUCHSIA_BUILD_DIR}\", \"type\": \"in-tree\" } }"
 
-exec "${FUCHSIA_BUILD_DIR}/host-tools/ffx" "--config" "${config}" "${args[@]}"
+fx-command-exec host-tool ffx "--config" "${config}" "${args[@]}"
