@@ -571,7 +571,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
 
           if (scan_state_.state == ScanState::SCANNING) {
             BRCMF_DBG(SIM, "Scan in progress, aborting scan.");
-            hw_.RequestCallback(std::bind(&SimFirmware::ScanComplete, this, BRCMF_E_STATUS_ABORT),
+            hw_.RequestCallback(std::bind(&SimFirmware::ScanComplete, this, BRCMF_E_STATUS_NEWASSOC),
                                 kAbortScanDelay);
           }
 

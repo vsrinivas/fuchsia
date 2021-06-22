@@ -785,6 +785,8 @@ static void brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
   BRCMF_DBG(SCAN, "Enter");
 
   struct net_device* ndev = cfg_to_ndev(cfg);
+  uint8_t scan_result = WLAN_SCAN_RESULT_SUCCESS;
+
   if (!ndev) {
     BRCMF_WARN("Device does not exist, skipping escan complete notify.");
     return;
@@ -806,11 +808,19 @@ static void brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
       BRCMF_WARN("Sending notification of failed scan: %d", status);
     }
 
-    brcmf_signal_scan_end(ndev, ndev->scan_txn_id,
-                          status == BRCMF_E_STATUS_SUCCESS ? WLAN_SCAN_RESULT_SUCCESS
-                          : status == BRCMF_E_STATUS_ABORT
-                              ? WLAN_SCAN_RESULT_CANCELED_BY_DRIVER_OR_FIRMWARE
-                              : WLAN_SCAN_RESULT_INTERNAL_ERROR);
+    switch (status) {
+      case BRCMF_E_STATUS_SUCCESS:
+        scan_result = WLAN_SCAN_RESULT_SUCCESS;
+        break;
+      case BRCMF_E_STATUS_NEWASSOC:
+        // In this case, the scan process has been interrupted by an assoc inside the firwmare.
+      case BRCMF_E_STATUS_ABORT:
+        scan_result = WLAN_SCAN_RESULT_CANCELED_BY_DRIVER_OR_FIRMWARE;
+        break;
+      default:
+        scan_result = WLAN_SCAN_RESULT_INTERNAL_ERROR;
+    }
+    brcmf_signal_scan_end(ndev, ndev->scan_txn_id, scan_result);
   }
 
   if (!brcmf_test_and_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
