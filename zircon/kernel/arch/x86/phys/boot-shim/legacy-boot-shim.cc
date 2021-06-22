@@ -15,32 +15,9 @@
 #include <phys/main.h>
 #include <phys/symbolize.h>
 
+#include "acpi.h"
 #include "stdout.h"
 #include "trampoline-boot.h"
-
-namespace {
-
-class PhysPhysMemReader final : public acpi_lite::PhysMemReader {
- public:
-  constexpr PhysPhysMemReader() = default;
-
-  zx::status<const void*> PhysToPtr(uintptr_t phys, size_t length) final {
-    return zx::success(reinterpret_cast<const void*>(phys));
-  }
-};
-
-void InitAcpi(LegacyBootShim& shim, uintptr_t rsdp) {
-  PhysPhysMemReader mem_reader;
-  auto acpi_parser = acpi_lite::AcpiParser::Init(mem_reader, rsdp);
-  if (acpi_parser.is_ok()) {
-    shim.InitAcpi(acpi_parser.value());
-  } else {
-    printf("%s: Cannot find ACPI tables (%" PRId32 ") from %#" PRIxPTR "\n",
-           Symbolize::kProgramName_, acpi_parser.error_value(), rsdp);
-  }
-}
-
-}  // namespace
 
 void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
   StdoutInit();
@@ -55,8 +32,7 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
   LegacyBootShim shim(Symbolize::kProgramName_, gLegacyBoot);
   shim.set_build_id(Symbolize::GetInstance()->BuildIdString());
 
-  // If the RSDP address is 0, AcpiParser::Init will try to find it by magic.
-  InitAcpi(shim, gLegacyBoot.acpi_rsdp);
+  InitAcpi(shim);
 
   TrampolineBoot boot;
   if (shim.Check("Not a bootable ZBI", boot.Init(shim.input_zbi())) &&

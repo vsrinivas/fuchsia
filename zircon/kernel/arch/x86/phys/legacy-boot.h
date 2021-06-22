@@ -28,6 +28,10 @@ struct LegacyBoot {
 // allocator after InitMemory().
 extern LegacyBoot gLegacyBoot;
 
+// InitMemory() calls this to adjust gLegacyBoot before using its data.
+// It need not be defined.
+[[gnu::weak]] void LegacyBootQuirks();
+
 // This is a subroutine of InitMemory().  It primes the allocator and reserves
 // ranges based on the data in gLegacyBoot.
 void InitMemoryFromRanges();

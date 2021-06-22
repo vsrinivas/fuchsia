@@ -19,10 +19,11 @@ _futility_tool = "//prebuilt/tools/futility/${host_platform}/futility"
 # switches to vbutil_kernel would be used here for a different boot shim.
 _vboot_shim = {
   # Label for the shim, to be used in deps.
-  label = "//zircon/kernel/target/pc/multiboot"
+  label = "//zircon/kernel/arch/x86/phys/boot-shim:depthcharge-multiboot-shim(//zircon/kernel/arch/x86/phys:kernel.phys32)"
 
   # GN path to the shim binary, to be used in inputs.
-  path = "$root_build_dir/multiboot.bin"
+  path = get_label_info(label, "root_out_dir") + "/" +
+         get_label_info(label, "name") + ".bin"
 
   # Arguments to vbutil_kernel to point to the shim.
   #

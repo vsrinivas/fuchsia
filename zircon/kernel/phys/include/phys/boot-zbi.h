@@ -67,6 +67,9 @@ class BootZbi {
   // image in place before loading.
   fitx::result<Error> Init(InputZbi zbi);
 
+  // This does the same, but with a preselected kernel item.
+  fitx::result<Error> Init(InputZbi zbi, InputZbi::iterator kernel_item);
+
   // Load the kernel and data ZBIs from the input ZBI.  The data ZBI will have
   // at least extra_data_capacity bytes of space available to Append() items to
   // it.  The input ZBI's memory may be reused for the kernel or data images,
@@ -120,6 +123,8 @@ class BootZbi {
   bool FixedKernelOverlapsData(uint64_t kernel_load_address) const;
 
  private:
+  fitx::result<Error> InitKernelFromItem();
+
   // These are set on construction by Init().
   InputZbi zbi_;
   InputZbi::iterator kernel_item_;

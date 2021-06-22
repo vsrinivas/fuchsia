@@ -11,13 +11,34 @@ import("//zircon/kernel/phys/phys_executable.gni")
 import("//zircon/kernel/phys/qemu.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
 
+# All these 32-bit legacy shims can be booted directly by QEMU.
+legacy_shims = [
+  {
+    name = "linux-x86-boot-shim"
+    format = "linuxboot"
+  },
+  {
+    name = "multiboot-shim"
+    format = "multiboot"
+  },
+  {
+    # This boot shim is not meant to be used with qemu, but it works with it.
+    # So we test it via qemu just to get some automated testing of it at all.
+    # Its logic that differs from multiboot-shim won't really be exercised this
+    # way, so it needs direct testing on Chromebook devices too.
+    name = "depthcharge-multiboot-shim"
+    format = "multiboot"
+  },
+]
+
 group("boot-shim") {
   deps = [
-    ":linux-x86-boot-shim",
-    ":multiboot-shim",
     ":pic-1mb-boot-shim",
     ":x86-1mb-boot-shim",
   ]
+  foreach(shim, legacy_shims) {
+    deps += [ ":${shim.name}" ]
+  }
 }
 
 # This is a shim between a legacy 1M ZBI boot loader and a modern
@@ -119,11 +140,17 @@ zbi_test("x86-boot-shim-tests") {
 
 if (toolchain.environment == "kernel.phys32") {
   source_set("legacy-boot-shim") {
-    sources = [
-      "legacy-boot-shim.cc",
+    sources = [ "legacy-boot-shim.cc" ]
+    deps = [ ":legacy-boot-shim.common" ]
+  }
+
+  source_set("legacy-boot-shim.common") {
+    public = [
+      "acpi.h",
       "legacy-boot-shim.h",
     ]
-    deps = [
+    sources = [ "acpi.cc" ]
+    public_deps = [
       ":stdout",
       ":trampoline-boot",
       "..:address-space",
@@ -167,15 +194,21 @@ if (toolchain.environment == "kernel.phys32") {
       "//zircon/kernel/phys:symbolize",
     ]
   }
-} else {
-  group("linux-x86-boot-shim") {
-    public_deps =
-        [ ":linux-x86-boot-shim(//zircon/kernel/arch/x86/phys:kernel.phys32)" ]
-  }
 
-  group("multiboot-shim") {
-    public_deps =
-        [ ":multiboot-shim(//zircon/kernel/arch/x86/phys:kernel.phys32)" ]
+  phys_executable("depthcharge-multiboot-shim") {
+    sources = [ "depthcharge-multiboot-shim.cc" ]
+    deps = [
+      ":legacy-boot-shim.common",
+      "..:multiboot",
+      "//zircon/kernel/phys:symbolize",
+    ]
+  }
+} else {
+  foreach(shim, legacy_shims) {
+    group(shim.name) {
+      public_deps =
+          [ ":${shim.name}(//zircon/kernel/arch/x86/phys:kernel.phys32)" ]
+    }
   }
 }
 
@@ -189,17 +222,6 @@ test("legacy-boot-shim-tests") {
   ]
 }
 
-qemu_shims = [
-  {
-    name = "linux-x86-boot-shim"
-    format = "linuxboot"
-  },
-  {
-    name = "multiboot-shim"
-    format = "multiboot"
-  },
-]
-
 qemu_shim_tests = [
   "bootsvc-integration-tests",
   "core-tests",
@@ -207,7 +229,7 @@ qemu_shim_tests = [
 ]
 
 template("qemu_shim_test") {
-  foreach(shim, qemu_shims) {
+  foreach(shim, legacy_shims) {
     zbi_test("${shim.name}-$target_name") {
       foreach(qemu, qemu_boot_formats) {
         if (qemu.name == shim.format) {
@@ -230,7 +252,7 @@ group("tests") {
     ":legacy-boot-shim-tests($host_toolchain)",
     ":x86-boot-shim-tests",
   ]
-  foreach(shim, qemu_shims) {
+  foreach(shim, legacy_shims) {
     deps += [ ":${shim.name}" ]
     foreach(test, qemu_shim_tests) {
       deps += [ ":${shim.name}-$test" ]
