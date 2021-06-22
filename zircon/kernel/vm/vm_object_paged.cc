@@ -737,9 +737,9 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
 
     // Pin any committed range if required.
     if (pin && committed_len > 0) {
-      zx_status_t status = cow_pages_locked()->PinRangeLocked(offset, committed_len);
-      if (status != ZX_OK) {
-        return status;
+      zx_status_t pin_status = cow_pages_locked()->PinRangeLocked(offset, committed_len);
+      if (pin_status != ZX_OK) {
+        return pin_status;
       }
     }
 

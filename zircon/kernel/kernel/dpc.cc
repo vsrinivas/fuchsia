@@ -58,8 +58,6 @@ zx_status_t Dpc::QueueThreadLocked() {
       return ZX_ERR_ALREADY_EXISTS;
     }
 
-    DpcQueue& dpc_queue = percpu::GetCurrent().dpc_queue;
-
     // Put this Dpc at the tail of the list and signal the worker.
     dpc_queue.Enqueue(this);
   }

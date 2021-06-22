@@ -789,24 +789,26 @@ class __POINTER(KeyType_) WAVLTree {
           node_ = lr_child;
           lr_child = LRTraits::LRChild(NodeTraits::node_state(*node_));
         }
-      } else {
-        // Climb up the tree until we traverse a LR-hand link.  Because
-        // of the sentinel termination, we should never attempt to climb
-        // up past the root.
-        bool done;
-        auto ns = &NodeTraits::node_state(*node_);
-        do {
-          ZX_DEBUG_ASSERT(internal::valid_sentinel_ptr(ns->parent_));
 
-          auto parent_ns = &NodeTraits::node_state(*ns->parent_);
-          done = (LRTraits::LRChild(*parent_ns) == node_);
-
-          ZX_DEBUG_ASSERT(done || (LRTraits::RLChild(*parent_ns) == node_));
-
-          node_ = ns->parent_;
-          ns = parent_ns;
-        } while (!done);
+        return;
       }
+
+      // Climb up the tree until we traverse a LR-hand link.  Because
+      // of the sentinel termination, we should never attempt to climb
+      // up past the root.
+      bool done;
+      ns = &NodeTraits::node_state(*node_);
+      do {
+        ZX_DEBUG_ASSERT(internal::valid_sentinel_ptr(ns->parent_));
+
+        auto parent_ns = &NodeTraits::node_state(*ns->parent_);
+        done = (LRTraits::LRChild(*parent_ns) == node_);
+
+        ZX_DEBUG_ASSERT(done || (LRTraits::RLChild(*parent_ns) == node_));
+
+        node_ = ns->parent_;
+        ns = parent_ns;
+        } while (!done);
     }
 
     typename PtrTraits::RawPtrType node_ = nullptr;

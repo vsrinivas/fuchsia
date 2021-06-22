@@ -116,7 +116,7 @@ void SharedLegacyIrqHandler::Handler() {
    * chance to handle any interrupts which may be pending in their device.
    * Keep track of whether or not any device has requested a re-schedule event
    * at the end of this IRQ. */
-  Guard<SpinLock, NoIrqSave> guard{&device_handler_list_lock_};
+  Guard<SpinLock, NoIrqSave> device_guard{&device_handler_list_lock_};
 
   if (device_handler_list_.is_empty()) {
     TRACEF(
@@ -133,7 +133,7 @@ void SharedLegacyIrqHandler::Handler() {
     auto cfg = dev.config();
 
     {
-      Guard<SpinLock, NoIrqSave> guard{&dev.cmd_reg_lock_};
+      Guard<SpinLock, NoIrqSave> cmd_reg_guard{&dev.cmd_reg_lock_};
       command = cfg->Read(PciConfig::kCommand);
       status = cfg->Read(PciConfig::kStatus);
     }
@@ -143,7 +143,7 @@ void SharedLegacyIrqHandler::Handler() {
 
       if (hstate) {
         pcie_irq_handler_retval_t irq_ret = PCIE_IRQRET_MASK;
-        Guard<SpinLock, NoIrqSave> guard{&hstate->lock};
+        Guard<SpinLock, NoIrqSave> hstate_guard{&hstate->lock};
 
         if (hstate->handler) {
           if (!hstate->masked) {
@@ -160,7 +160,7 @@ void SharedLegacyIrqHandler::Handler() {
         if (irq_ret & PCIE_IRQRET_MASK) {
           hstate->masked = true;
           {
-            Guard<SpinLock, NoIrqSave> guard{&dev.cmd_reg_lock_};
+            Guard<SpinLock, NoIrqSave> cmd_reg_guard{&dev.cmd_reg_lock_};
             command = cfg->Read(PciConfig::kCommand);
             cfg->Write(PciConfig::kCommand, command | PCIE_CFG_COMMAND_INT_DISABLE);
           }
@@ -172,7 +172,7 @@ void SharedLegacyIrqHandler::Handler() {
             irq_id_, dev.bus_id_, dev.dev_id_, dev.func_id_);
 
         {
-          Guard<SpinLock, NoIrqSave> guard{&dev.cmd_reg_lock_};
+          Guard<SpinLock, NoIrqSave> cmd_reg_guard{&dev.cmd_reg_lock_};
           command = cfg->Read(PciConfig::kCommand);
           cfg->Write(PciConfig::kCommand, command | PCIE_CFG_COMMAND_INT_DISABLE);
         }

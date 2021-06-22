@@ -250,7 +250,7 @@ class PackageList {
 
     SharedCache* cache = nullptr;
     if (cache_id.has_value()) {
-      zx_status_t status = die->GetCache(*cache_id, &cache);
+      status = die->GetCache(*cache_id, &cache);
       if (status != ZX_OK) {
         return status;
       }

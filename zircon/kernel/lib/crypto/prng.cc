@@ -49,7 +49,7 @@ void PRNG::AddEntropy(const void* data, size_t size) {
   DEBUG_ASSERT(data || size == 0);
   ASSERT(size <= kMaxEntropy);
   // Concurrent calls to |AddEntropy| must run sequentially.
-  Guard<Mutex> guard(&mutex_);
+  Guard<Mutex> mutex_guard(&mutex_);
   // Save the key on the stack, but guarantee we clean them up
   uint8_t key[sizeof(key_)];
   auto cleanup = fit::defer([&] { mandatory_memset(key, 0, sizeof(key)); });
@@ -59,13 +59,13 @@ void PRNG::AddEntropy(const void* data, size_t size) {
   SHA256_Init(&ctx);
   SHA256_Update(&ctx, data, size);
   {
-    Guard<SpinLock, IrqSave> guard(&spinlock_);
+    Guard<SpinLock, IrqSave> spinlock_guard(&spinlock_);
     memcpy(key, key_, sizeof(key));
   }
   SHA256_Update(&ctx, key, sizeof(key));
   SHA256_Final(key, &ctx);
   {
-    Guard<SpinLock, IrqSave> guard(&spinlock_);
+    Guard<SpinLock, IrqSave> spinlock_guard(&spinlock_);
     memcpy(key_, key, sizeof(key_));
   }
   // Increment how much entropy has been added, and signal if we have enough.

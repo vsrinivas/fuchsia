@@ -733,7 +733,7 @@ bool scoped_allocation_disabled_test() {
       ScopedMemoryAllocationDisabled smad;
       EXPECT_FALSE(Thread::Current::memory_allocation_state().IsEnabled());
       {
-        ScopedMemoryAllocationDisabled smad;
+        ScopedMemoryAllocationDisabled nested_smad;
         EXPECT_FALSE(Thread::Current::memory_allocation_state().IsEnabled());
       }
       EXPECT_FALSE(Thread::Current::memory_allocation_state().IsEnabled());

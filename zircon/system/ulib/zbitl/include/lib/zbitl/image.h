@@ -131,14 +131,16 @@ class Image : public View<Storage> {
       header.crc32 = crc;
     }
 
-    if (auto result = Append(header); result.is_error()) {
-      return result.take_error();
+    if (auto append_result = Append(header); append_result.is_error()) {
+      return append_result.take_error();
     } else if (data.size() > 0) {
-      auto it = std::move(result).value();
+      auto it = std::move(append_result).value();
       ZX_DEBUG_ASSERT(it != this->end());
       uint32_t offset = it.payload_offset();
-      if (auto result = Traits::Write(this->storage(), offset, data); result.is_error()) {
-        return fitx::error{Error{"cannot write payload", offset, std::move(result.error_value())}};
+      if (auto write_result = Traits::Write(this->storage(), offset, data);
+          write_result.is_error()) {
+        return fitx::error{
+            Error{"cannot write payload", offset, std::move(write_result.error_value())}};
       }
     }
     return fitx::ok();

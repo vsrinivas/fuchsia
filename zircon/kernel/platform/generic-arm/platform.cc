@@ -422,25 +422,26 @@ void ProcessZbiLate(const zbi_header_t* zbi) {
         uint16_t logical_id = 0;
         for (size_t cluster = 0; cluster < cpu_config->cluster_count; cluster++) {
           const auto cluster_index = flat_index;
-          auto& node = flat_topology.get()[flat_index++];
-          node.entity_type = ZBI_TOPOLOGY_ENTITY_CLUSTER;
-          node.parent_index = ZBI_TOPOLOGY_NO_PARENT;
+          zbi_topology_node_t& cluster_node = flat_topology.get()[flat_index++];
+          cluster_node.entity_type = ZBI_TOPOLOGY_ENTITY_CLUSTER;
+          cluster_node.parent_index = ZBI_TOPOLOGY_NO_PARENT;
 
           // We don't have this data so it is a guess that little cores are
           // first.
-          node.entity.cluster.performance_class = static_cast<uint8_t>(cluster);
+          cluster_node.entity.cluster.performance_class = static_cast<uint8_t>(cluster);
 
           for (size_t i = 0; i < cpu_config->clusters[cluster].cpu_count; i++) {
-            auto& node = flat_topology.get()[flat_index++];
-            node.entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR;
-            node.parent_index = static_cast<uint16_t>(cluster_index);
-            node.entity.processor.logical_id_count = 1;
-            node.entity.processor.logical_ids[0] = logical_id;
-            node.entity.processor.architecture = ZBI_TOPOLOGY_ARCH_ARM;
-            node.entity.processor.architecture_info.arm.cluster_1_id =
+            zbi_topology_node_t& processor_node = flat_topology.get()[flat_index++];
+            processor_node.entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR;
+            processor_node.parent_index = static_cast<uint16_t>(cluster_index);
+            processor_node.entity.processor.logical_id_count = 1;
+            processor_node.entity.processor.logical_ids[0] = logical_id;
+            processor_node.entity.processor.architecture = ZBI_TOPOLOGY_ARCH_ARM;
+            processor_node.entity.processor.architecture_info.arm.cluster_1_id =
                 static_cast<uint8_t>(cluster);
-            node.entity.processor.architecture_info.arm.cpu_id = static_cast<uint8_t>(i);
-            node.entity.processor.architecture_info.arm.gic_id = static_cast<uint8_t>(logical_id++);
+            processor_node.entity.processor.architecture_info.arm.cpu_id = static_cast<uint8_t>(i);
+            processor_node.entity.processor.architecture_info.arm.gic_id =
+                static_cast<uint8_t>(logical_id++);
           }
         }
         DEBUG_ASSERT(flat_index == node_count);
@@ -680,12 +681,12 @@ void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_
 zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) {
   auto mexec_data_image = GetMexecDataImage();
   zbitl::Image image(data_zbi);
-  if (auto result = image.Extend(mexec_data_image.begin(), mexec_data_image.end());
-      result.is_error()) {
-    zbitl::PrintViewCopyError(result.error_value());
+  if (auto extend_result = image.Extend(mexec_data_image.begin(), mexec_data_image.end());
+      extend_result.is_error()) {
+    zbitl::PrintViewCopyError(extend_result.error_value());
     // The only possible storage error that can result from a span-backed Image
     // would be a failure to increase the capacity.
-    return result.error_value().write_error ? ZX_ERR_BUFFER_TOO_SMALL : ZX_ERR_INTERNAL;
+    return extend_result.error_value().write_error ? ZX_ERR_BUFFER_TOO_SMALL : ZX_ERR_INTERNAL;
   } else if (auto result = mexec_data_image.take_error(); result.is_error()) {
     zbitl::PrintViewError(result.error_value());
     return ZX_ERR_INTERNAL;

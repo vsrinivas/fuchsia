@@ -143,11 +143,12 @@ class ROMTable {
       }
 
       for (uint32_t i = 0; i < upper_bound.value(); ++i) {
-        auto result = ReadEntryAt(io, offset, i, classid, format);
-        if (result.is_error()) {
-          return fitx::error(result.error_value());
+        fitx::result<std::string_view, EntryContents> read_entry_result =
+            ReadEntryAt(io, offset, i, classid, format);
+        if (read_entry_result.is_error()) {
+          return fitx::error(read_entry_result.error_value());
         }
-        EntryContents contents = result.value();
+        EntryContents contents = read_entry_result.value();
         if (contents.value == 0) {
           break;  // Terminal entry if identically zero.
         } else if (!contents.present) {
@@ -160,8 +161,9 @@ class ROMTable {
           printf("does not fit: (view size, offset) = (%u, %u)\n", span_size_, new_offset);
           return fitx::error("does not fit");
         }
-        if (auto result = WalkFrom(io, callback, new_offset); result.is_error()) {
-          return result;
+        if (fitx::result<std::string_view> walk_result = WalkFrom(io, callback, new_offset);
+            walk_result.is_error()) {
+          return walk_result;
         }
       }
       return fitx::ok();

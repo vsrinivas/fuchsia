@@ -236,7 +236,7 @@ zx_status_t ChannelDispatcher::Call(zx_koid_t owner, MessagePacketPtr msg, zx_ti
                                     MessagePacketPtr* reply) {
   canary_.Assert();
 
-  auto waiter = ThreadDispatcher::GetCurrent()->GetMessageWaiter();
+  ChannelDispatcher::MessageWaiter* waiter = ThreadDispatcher::GetCurrent()->GetMessageWaiter();
   if (unlikely(waiter->BeginWait(fbl::RefPtr(this)) != ZX_OK)) {
     // If a thread tries BeginWait'ing twice, the VDSO contract around retrying
     // channel calls has been violated.  Shoot the misbehaving process.
@@ -266,8 +266,8 @@ zx_status_t ChannelDispatcher::Call(zx_koid_t owner, MessagePacketPtr msg, zx_ti
     // that's already in use.  This is unlikely.  It's atypical for multiple
     // threads to be invoking channel_call() on the same channel at once, so
     // the waiter list is most commonly empty.
-    for (auto& waiter : waiters_) {
-      if (waiter.get_txid() == txid) {
+    for (ChannelDispatcher::MessageWaiter& w : waiters_) {
+      if (w.get_txid() == txid) {
         goto alloc_txid;
       }
     }

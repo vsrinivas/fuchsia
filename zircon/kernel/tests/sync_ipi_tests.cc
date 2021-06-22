@@ -96,9 +96,9 @@ static bool sync_ipi_tests() {
   for (uint i = 0; i < runs; ++i) {
     LTRACEF("Sequential test\n");
     ktl::atomic<int> inorder_counter = 0;
-    for (cpu_num_t i = 0; i < num_cpus; ++i) {
-      mp_sync_exec(MP_IPI_TARGET_MASK, 1u << i, inorder_count_task, &inorder_counter);
-      LTRACEF("  Finished signaling CPU %u\n", i);
+    for (cpu_num_t j = 0; j < num_cpus; ++j) {
+      mp_sync_exec(MP_IPI_TARGET_MASK, 1u << j, inorder_count_task, &inorder_counter);
+      LTRACEF("  Finished signaling CPU %u\n", j);
     }
   }
 

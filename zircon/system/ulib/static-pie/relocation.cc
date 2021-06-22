@@ -155,21 +155,21 @@ void ApplyDynamicRelocs(Program& program, fbl::Span<const Elf64DynamicEntry> tab
 
   // Apply any relocations.
   {
-    fbl::Span<const uint64_t> table =
+    fbl::Span<const uint64_t> relr_span =
         program.MapRegion<const uint64_t>(relr_table.start, relr_table.size_bytes);
-    ApplyRelrRelocs(program, table);
+    ApplyRelrRelocs(program, relr_span);
   }
   {
-    fbl::Span<const Elf64RelaEntry> table =
+    fbl::Span<const Elf64RelaEntry> rela_span =
         program.MapRegion<const Elf64RelaEntry>(rela_table.start, rela_table.size_bytes);
     // Only the first `num_relative_relocs` will be R_RELATIVE entries.
-    ApplyRelaRelocs(program, table.subspan(0, rela_table.num_relative_relocs));
+    ApplyRelaRelocs(program, rela_span.subspan(0, rela_table.num_relative_relocs));
   }
   {
-    fbl::Span<const Elf64RelEntry> table =
+    fbl::Span<const Elf64RelEntry> rel_span =
         program.MapRegion<const Elf64RelEntry>(rel_table.start, rel_table.size_bytes);
     // Only the first `num_relative_relocs` will be R_RELATIVE entries.
-    ApplyRelRelocs(program, table.subspan(0, rel_table.num_relative_relocs));
+    ApplyRelRelocs(program, rel_span.subspan(0, rel_table.num_relative_relocs));
   }
 }
 

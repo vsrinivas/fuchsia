@@ -18,11 +18,11 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
-static uint8_t* src;
-static uint8_t* dst;
+static uint8_t* g_src;
+static uint8_t* g_dst;
 
-static uint8_t* src2;
-static uint8_t* dst2;
+static uint8_t* g_src2;
+static uint8_t* g_dst2;
 
 #define BUFFER_SIZE (8 * 1024 * 1024)
 #define ITERATIONS \
@@ -139,7 +139,7 @@ static zx_duration_t bench_memcpy_routine(void* memcpy_routine(void*, const void
 
   t0 = current_time();
   for (i = 0; i < ITERATIONS; i++) {
-    memcpy_routine(dst + dstalign, src + srcalign, BUFFER_SIZE);
+    memcpy_routine(g_dst + dstalign, g_src + srcalign, BUFFER_SIZE);
   }
   return current_time() - t0;
 }
@@ -211,15 +211,15 @@ static void validate_memcpy(void) {
       for (size = 0; size < maxsize; size++) {
         // printf("srcalign %zu, dstalign %zu, size %zu\n", srcalign, dstalign, size);
 
-        fillbuf(src, maxsize * 2, 567);
-        fillbuf(src2, maxsize * 2, 567);
-        fillbuf(dst, maxsize * 2, 123514);
-        fillbuf(dst2, maxsize * 2, 123514);
+        fillbuf(g_src, maxsize * 2, 567);
+        fillbuf(g_src2, maxsize * 2, 567);
+        fillbuf(g_dst, maxsize * 2, 123514);
+        fillbuf(g_dst2, maxsize * 2, 123514);
 
-        c_memmove(dst + dstalign, src + srcalign, size);
-        memcpy(dst2 + dstalign, src2 + srcalign, size);
+        c_memmove(g_dst + dstalign, g_src + srcalign, size);
+        memcpy(g_dst2 + dstalign, g_src2 + srcalign, size);
 
-        int comp = memcmp(dst, dst2, maxsize * 2);
+        int comp = memcmp(g_dst, g_dst2, maxsize * 2);
         if (comp != 0) {
           printf("error! srcalign %zu, dstalign %zu, size %zu\n", srcalign, dstalign, size);
         }
@@ -235,7 +235,7 @@ static zx_duration_t bench_memset_routine(void* memset_routine(void*, int, size_
 
   t0 = current_time();
   for (i = 0; i < ITERATIONS; i++) {
-    memset_routine(dst + dstalign, 0, len);
+    memset_routine(g_dst + dstalign, 0, len);
   }
   return current_time() - t0;
 }
@@ -278,13 +278,13 @@ static void validate_memset(void) {
     printf("align %zu\n", dstalign);
     for (size = 0; size < maxsize; size++) {
       for (c = -1; c < 257; c++) {
-        fillbuf(dst, maxsize * 2, 123514);
-        fillbuf(dst2, maxsize * 2, 123514);
+        fillbuf(g_dst, maxsize * 2, 123514);
+        fillbuf(g_dst2, maxsize * 2, 123514);
 
-        c_memset(dst + dstalign, c, size);
-        memset(dst2 + dstalign, c, size);
+        c_memset(g_dst + dstalign, c, size);
+        memset(g_dst2 + dstalign, c, size);
 
-        int comp = memcmp(dst, dst2, maxsize * 2);
+        int comp = memcmp(g_dst, g_dst2, maxsize * 2);
         if (comp != 0) {
           printf("error! align %zu, c 0x%hhx, size %zu\n", dstalign, (unsigned char)c, size);
         }
@@ -302,7 +302,7 @@ static int string_tests(int argc, const cmd_args* argv, uint32_t flags) {
   // free the physical pages on exit
   auto free_pages = fit::defer([&list]() {
     pmm_free(&list);
-    src = dst = src2 = dst2 = nullptr;
+    g_src = g_dst = g_src2 = g_dst2 = nullptr;
   });
 
   // allocate a large run of physically contiguous pages and get the address out
@@ -316,13 +316,13 @@ static int string_tests(int argc, const cmd_args* argv, uint32_t flags) {
   }
 
   uint8_t* base = (uint8_t*)paddr_to_physmap(pa);
-  src = base;
-  dst = base + BUFFER_SIZE + 256;
-  src2 = base + (BUFFER_SIZE + 256) * 2;
-  dst2 = base + (BUFFER_SIZE + 256) * 3;
+  g_src = base;
+  g_dst = base + BUFFER_SIZE + 256;
+  g_src2 = base + (BUFFER_SIZE + 256) * 2;
+  g_dst2 = base + (BUFFER_SIZE + 256) * 3;
 
-  printf("src %p, dst %p\n", src, dst);
-  printf("src2 %p, dst2 %p\n", src2, dst2);
+  printf("src %p, dst %p\n", g_src, g_dst);
+  printf("src2 %p, dst2 %p\n", g_src2, g_dst2);
 
   if (argc < 3) {
     printf("not enough arguments:\n");

@@ -264,15 +264,15 @@ zx_status_t parse_rom_table(volatile void *_rom, bool dump = false) {
   }
 
   // is this a rom table?
-  uint32_t class_id;
-  if (!is_component(rom, &class_id)) {
+  uint32_t table_class_id;
+  if (!is_component(rom, &table_class_id)) {
     if (dump) {
       printf("not a coresight component\n");
     }
     return ZX_ERR_NOT_FOUND;
   }
 
-  if (class_id != 1) {
+  if (table_class_id != 1) {
     // not a type 1 rom table
     return ZX_ERR_NOT_FOUND;
   }

@@ -266,7 +266,7 @@ paddr_t vaddr_to_paddr(const void* ptr) {
   return pa;
 }
 
-static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
+static int cmd_vm(int argc, const cmd_args* argv, uint32_t) {
   if (argc < 2) {
   notenoughargs:
     printf("not enough arguments\n");

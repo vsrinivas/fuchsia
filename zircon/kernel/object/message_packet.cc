@@ -164,7 +164,7 @@ zx_status_t MessagePacket::CreateIovecUnbounded(user_in_ptr<const zx_channel_iov
     uint32_t chunk_iovecs = ktl::min(num_iovecs, kIovecChunkSize);
 
     zx_channel_iovec_t iovecs[kIovecChunkSize];
-    zx_status_t status = user_iovecs.copy_array_from_user(iovecs, chunk_iovecs);
+    status = user_iovecs.copy_array_from_user(iovecs, chunk_iovecs);
     if (unlikely(status != ZX_OK)) {
       return status;
     }

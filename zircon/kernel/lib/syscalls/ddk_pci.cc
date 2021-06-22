@@ -252,9 +252,9 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
       pol = IRQ_POLARITY_ACTIVE_HIGH;
     }
 
-    zx_status_t status = configure_interrupt(irq, tm, pol);
-    if (status != ZX_OK) {
-      return status;
+    zx_status_t configure_status = configure_interrupt(irq, tm, pol);
+    if (configure_status != ZX_OK) {
+      return configure_status;
     }
   }
   // TODO(teisenbe): For now assume there is only one ECAM, unless it's a

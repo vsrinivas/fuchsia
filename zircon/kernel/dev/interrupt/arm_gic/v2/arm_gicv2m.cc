@@ -49,18 +49,18 @@ void arm_gicv2m_init(const paddr_t* reg_frames, const vaddr_t* reg_frames_virt,
 
   // Walk the list of regions, and make sure that all of the controlled SPIs
   // are configured for edge triggered mode.
-  for (uint i = 0; i < g_reg_frame_count; ++i) {
-    uint32_t type_reg = REG_RD(g_reg_frames_virt[i], MSI_TYPER_OFFSET);
+  for (uint virt_index = 0; virt_index < g_reg_frame_count; ++virt_index) {
+    uint32_t type_reg = REG_RD(g_reg_frames_virt[virt_index], MSI_TYPER_OFFSET);
     uint base_spi = (type_reg >> 16) & 0x3FF;
     uint num_spi = type_reg & 0x3FF;
 
-    dprintf(SPEW, "GICv2m %u: base spi %u count %u\n", i, base_spi, num_spi);
+    dprintf(SPEW, "GICv2m %u: base spi %u count %u\n", virt_index, base_spi, num_spi);
 
-    for (uint i = 0; i < num_spi; ++i) {
-      uint spi_id = base_spi + i;
+    for (uint spi_index = 0; spi_index < num_spi; ++spi_index) {
+      uint spi_id = base_spi + spi_index;
       if ((spi_id < MIN_VALID_MSI_SPI) || (spi_id > MAX_VALID_MSI_SPI)) {
         TRACEF("Invalid SPI ID (%u) found in GICv2m register frame @%p\n", spi_id,
-               (void*)g_reg_frames[i]);
+               (void*)g_reg_frames[spi_index]);
         continue;
       }
 

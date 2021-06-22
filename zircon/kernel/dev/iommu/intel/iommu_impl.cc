@@ -198,22 +198,22 @@ zx_status_t IommuImpl::ValidateIommuDesc(const ktl::unique_ptr<const uint8_t[]>&
       LTRACEF("desc reserved memory entry has no scopes\n");
       return ZX_ERR_INVALID_ARGS;
     }
-    const size_t num_scopes = mem->scope_bytes / sizeof(zx_iommu_desc_intel_scope_t);
-    size_t scope_bytes = num_scopes;
-    if (mul_overflow(scope_bytes, sizeof(zx_iommu_desc_intel_scope_t), &scope_bytes) ||
-        scope_bytes != desc->scope_bytes) {
+    const size_t mem_num_scopes = mem->scope_bytes / sizeof(zx_iommu_desc_intel_scope_t);
+    size_t mem_scope_bytes = mem_num_scopes;
+    if (mul_overflow(mem_scope_bytes, sizeof(zx_iommu_desc_intel_scope_t), &mem_scope_bytes) ||
+        mem_scope_bytes != desc->scope_bytes) {
       LTRACEF("desc reserved memory entry has invalid scope_bytes field\n");
       return ZX_ERR_INVALID_ARGS;
     }
 
-    auto scopes = reinterpret_cast<zx_iommu_desc_intel_scope_t*>(reinterpret_cast<uintptr_t>(mem) +
-                                                                 sizeof(*mem));
-    for (size_t i = 0; i < num_scopes; ++i) {
-      if (scopes[i].num_hops == 0) {
+    auto mem_scopes = reinterpret_cast<zx_iommu_desc_intel_scope_t*>(
+        reinterpret_cast<uintptr_t>(mem) + sizeof(*mem));
+    for (size_t i = 0; i < mem_num_scopes; ++i) {
+      if (mem_scopes[i].num_hops == 0) {
         LTRACEF("desc reserved memory entry scope %zu has no hops\n", i);
         return ZX_ERR_INVALID_ARGS;
       }
-      if (scopes[i].num_hops > ktl::size(scopes[0].dev_func)) {
+      if (mem_scopes[i].num_hops > ktl::size(mem_scopes[0].dev_func)) {
         LTRACEF("desc reserved memory entry scope %zu has too many hops\n", i);
         return ZX_ERR_INVALID_ARGS;
       }

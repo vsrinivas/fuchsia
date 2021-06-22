@@ -309,6 +309,12 @@ if (is_kernel) {
       cflags += [ "-Wformat-signedness" ]
     }
 
+    # TODO(fxbug.dev/78934): Eventually enable -Wshadow for GCC.  It's currently
+    # disabled because GCC is more aggressive than Clang.
+    if (!is_gcc) {
+      cflags += [ "-Wshadow" ]
+    }
+
     cflags_c = [ "-Wmissing-prototypes" ]
   }
 

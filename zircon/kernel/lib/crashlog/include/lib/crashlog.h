@@ -33,7 +33,7 @@ typedef struct {
 #endif
 } crashlog_t;
 
-extern crashlog_t crashlog;
+extern crashlog_t g_crashlog;
 
 // Serialize the crashlog to string in `out' up to `len' characters. If `reason'
 // is OOM, then a different preamble will be used, and the backtrace will not be

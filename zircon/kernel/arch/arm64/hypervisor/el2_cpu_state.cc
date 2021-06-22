@@ -103,7 +103,7 @@ zx_status_t El2CpuState::Create(ktl::unique_ptr<El2CpuState>* out) {
   }
   fbl::Array<El2Stack> el2_stacks(stacks, num_cpus);
   for (auto& stack : el2_stacks) {
-    zx_status_t status = stack.Alloc();
+    status = stack.Alloc();
     if (status != ZX_OK) {
       return status;
     }

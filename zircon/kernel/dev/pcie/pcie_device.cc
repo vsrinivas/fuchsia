@@ -190,7 +190,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
   // reset timeouts run.  This way, a spontaneous unplug event can occur and
   // not block the whole world because the device unplugged was in the process
   // of a FLR.
-  Guard<Mutex> guard{&dev_lock_};
+  Guard<Mutex> dev_guard{&dev_lock_};
 
   // Make certain to check to see if the device is still plugged in.
   if (!plugged_in_)
@@ -253,7 +253,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
   //    initiated.  Also back up the BARs in the process.
   {
     DEBUG_ASSERT(irq_.legacy.shared_handler != nullptr);
-    Guard<SpinLock, IrqSave> guard{&cmd_reg_lock_};
+    Guard<SpinLock, IrqSave> cmd_reg_guard{&cmd_reg_lock_};
 
     cmd_backup = cfg_->Read(PciConfig::kCommand);
     cfg_->Write(PciConfig::kCommand, PCIE_CFG_COMMAND_INT_DISABLE);

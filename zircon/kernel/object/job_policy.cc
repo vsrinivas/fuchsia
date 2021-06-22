@@ -231,7 +231,7 @@ zx_status_t JobPolicy::AddBasicPolicy(uint32_t mode, const zx_policy_basic_v2_t*
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  zx_status_t res = ZX_OK;
+  zx_status_t status = ZX_OK;
   JobPolicyBits pol_new(cookie_);
   bool has_new_any = false;
   uint32_t new_any_override = 0;
@@ -241,24 +241,24 @@ zx_status_t JobPolicy::AddBasicPolicy(uint32_t mode, const zx_policy_basic_v2_t*
 
     if (in.condition == ZX_POL_NEW_ANY) {
       for (auto cond : kNewObjectPolicies) {
-        res = AddPartial(mode, cond, in.action, ZX_POL_OVERRIDE_ALLOW, &pol_new);
-        if (res != ZX_OK)
-          return res;
+        status = AddPartial(mode, cond, in.action, ZX_POL_OVERRIDE_ALLOW, &pol_new);
+        if (status != ZX_OK)
+          return status;
       }
       has_new_any = true;
       new_any_override = in.flags;
     } else {
-      res = AddPartial(mode, in.condition, in.action, in.flags, &pol_new);
-      if (res != ZX_OK)
-        return res;
+      status = AddPartial(mode, in.condition, in.action, in.flags, &pol_new);
+      if (status != ZX_OK)
+        return status;
     }
   }
 
   if (has_new_any) {
     for (auto cond : kNewObjectPolicies) {
-      auto res = SetOverride(&pol_new, cond, new_any_override);
-      if (res != ZX_OK)
-        return res;
+      status = SetOverride(&pol_new, cond, new_any_override);
+      if (status != ZX_OK)
+        return status;
     }
   }
 

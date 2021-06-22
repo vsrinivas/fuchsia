@@ -282,7 +282,7 @@ void DlogReader::Initialize(NotifyCallback* notify, void* cookie) {
   notify_ = notify;
   cookie_ = cookie;
 
-  Guard<Mutex> guard(&log->readers_lock);
+  Guard<Mutex> readers_guard(&log->readers_lock);
   log->readers.push_back(this);
 
   bool do_notify = false;
@@ -306,7 +306,7 @@ void DlogReader::InitializeForTest(DLog* log) {
 
   log_ = log;
 
-  Guard<Mutex> guard(&log->readers_lock);
+  Guard<Mutex> readers_guard(&log->readers_lock);
   log->readers.push_back(this);
 
   {
@@ -451,7 +451,7 @@ void dlog_bluescreen_init() {
   printf("\nZIRCON KERNEL PANIC\n\n");
   printf("UPTIME: %" PRIi64 "ms\n", current_time() / ZX_MSEC(1));
   print_backtrace_version_info();
-  crashlog.base_address = (uintptr_t)__code_start;
+  g_crashlog.base_address = (uintptr_t)__code_start;
 }
 
 void dlog_force_panic() { dlog_bypass_ = true; }

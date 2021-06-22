@@ -29,7 +29,7 @@
 #include <vm/pmm_checker.h>
 #include <vm/vm.h>
 
-crashlog_t crashlog = {};
+crashlog_t g_crashlog = {};
 
 PanicBuffer panic_buffer;
 
@@ -84,7 +84,7 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
 
     case ZirconCrashReason::Panic:
       reason_str = "KERNEL PANIC";
-      crashlog_base_address = crashlog.base_address;
+      crashlog_base_address = g_crashlog.base_address;
       break;
 
     case ZirconCrashReason::SoftwareWatchdog:
@@ -124,7 +124,7 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
   if (reason != ZirconCrashReason::SoftwareWatchdog) {
     PrintSymbolizerContext(&outfile.stream_);
 
-    if (crashlog.iframe) {
+    if (g_crashlog.iframe) {
 #if defined(__aarch64__)
       fprintf(&outfile.stream_,
               // clang-format off
@@ -167,18 +167,18 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
               " far: %#18" PRIx64 "\n"
               "\n",
               // clang-format on
-              crashlog.iframe->r[0], crashlog.iframe->r[1], crashlog.iframe->r[2],
-              crashlog.iframe->r[3], crashlog.iframe->r[4], crashlog.iframe->r[5],
-              crashlog.iframe->r[6], crashlog.iframe->r[7], crashlog.iframe->r[8],
-              crashlog.iframe->r[9], crashlog.iframe->r[10], crashlog.iframe->r[11],
-              crashlog.iframe->r[12], crashlog.iframe->r[13], crashlog.iframe->r[14],
-              crashlog.iframe->r[15], crashlog.iframe->r[16], crashlog.iframe->r[17],
-              crashlog.iframe->r[18], crashlog.iframe->r[19], crashlog.iframe->r[20],
-              crashlog.iframe->r[21], crashlog.iframe->r[22], crashlog.iframe->r[23],
-              crashlog.iframe->r[24], crashlog.iframe->r[25], crashlog.iframe->r[26],
-              crashlog.iframe->r[27], crashlog.iframe->r[28], crashlog.iframe->r[29],
-              crashlog.iframe->lr, crashlog.iframe->usp, crashlog.iframe->elr,
-              crashlog.iframe->spsr, crashlog.esr, crashlog.far);
+              g_crashlog.iframe->r[0], g_crashlog.iframe->r[1], g_crashlog.iframe->r[2],
+              g_crashlog.iframe->r[3], g_crashlog.iframe->r[4], g_crashlog.iframe->r[5],
+              g_crashlog.iframe->r[6], g_crashlog.iframe->r[7], g_crashlog.iframe->r[8],
+              g_crashlog.iframe->r[9], g_crashlog.iframe->r[10], g_crashlog.iframe->r[11],
+              g_crashlog.iframe->r[12], g_crashlog.iframe->r[13], g_crashlog.iframe->r[14],
+              g_crashlog.iframe->r[15], g_crashlog.iframe->r[16], g_crashlog.iframe->r[17],
+              g_crashlog.iframe->r[18], g_crashlog.iframe->r[19], g_crashlog.iframe->r[20],
+              g_crashlog.iframe->r[21], g_crashlog.iframe->r[22], g_crashlog.iframe->r[23],
+              g_crashlog.iframe->r[24], g_crashlog.iframe->r[25], g_crashlog.iframe->r[26],
+              g_crashlog.iframe->r[27], g_crashlog.iframe->r[28], g_crashlog.iframe->r[29],
+              g_crashlog.iframe->lr, g_crashlog.iframe->usp, g_crashlog.iframe->elr,
+              g_crashlog.iframe->spsr, g_crashlog.esr, g_crashlog.far);
 #elif defined(__x86_64__)
       fprintf(&outfile.stream_,
               // clang-format off
@@ -205,14 +205,14 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
               " R15: %#18" PRIx64 "\n"
               "errc: %#18" PRIx64 "\n"
               "\n",
-              crashlog.iframe->cs, crashlog.iframe->ip, crashlog.iframe->flags,
-              x86_get_cr2(), crashlog.iframe->rax, crashlog.iframe->rbx,
-              crashlog.iframe->rcx, crashlog.iframe->rdx, crashlog.iframe->rsi,
-              crashlog.iframe->rdi, crashlog.iframe->rbp,
-              crashlog.iframe->user_sp, crashlog.iframe->r8,
-              crashlog.iframe->r9, crashlog.iframe->r10, crashlog.iframe->r11,
-              crashlog.iframe->r12, crashlog.iframe->r13, crashlog.iframe->r14,
-              crashlog.iframe->r15, crashlog.iframe->err_code);
+              g_crashlog.iframe->cs, g_crashlog.iframe->ip, g_crashlog.iframe->flags,
+              x86_get_cr2(), g_crashlog.iframe->rax, g_crashlog.iframe->rbx,
+              g_crashlog.iframe->rcx, g_crashlog.iframe->rdx, g_crashlog.iframe->rsi,
+              g_crashlog.iframe->rdi, g_crashlog.iframe->rbp,
+              g_crashlog.iframe->user_sp, g_crashlog.iframe->r8,
+              g_crashlog.iframe->r9, g_crashlog.iframe->r10, g_crashlog.iframe->r11,
+              g_crashlog.iframe->r12, g_crashlog.iframe->r13, g_crashlog.iframe->r14,
+              g_crashlog.iframe->r15, g_crashlog.iframe->err_code);
       // clang-format on
 #endif
     }

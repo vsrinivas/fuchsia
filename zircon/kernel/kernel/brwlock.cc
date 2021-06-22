@@ -89,7 +89,7 @@ ResourceOwnership BrwLock<PI>::Wake() {
     DEBUG_ASSERT(next != NULL);
     if (next->state() == THREAD_BLOCKED_READ_LOCK) {
       while (!wait_.IsEmpty()) {
-        Thread* next = wait_.Peek();
+        next = wait_.Peek();
         if (next->state() != THREAD_BLOCKED_READ_LOCK) {
           break;
         }

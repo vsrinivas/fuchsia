@@ -59,9 +59,9 @@ zx_status_t Graph::Initialize(Graph* graph, const zbi_topology_node_t* flat_node
 
   Node* node = nullptr;
   const zbi_topology_node_t* flat_node = nullptr;
-  for (size_t i = 0; i < count; ++i) {
-    flat_node = &flat_nodes[i];
-    node = &nodes[i];
+  for (size_t flat_node_index = 0; flat_node_index < count; ++flat_node_index) {
+    flat_node = &flat_nodes[flat_node_index];
+    node = &nodes[flat_node_index];
 
     node->entity_type = flat_node->entity_type;
 
@@ -77,7 +77,7 @@ zx_status_t Graph::Initialize(Graph* graph, const zbi_topology_node_t* flat_node
         }
 
         for (int i = 0; i < node->entity.processor.logical_id_count; ++i) {
-          const auto index = node->entity.processor.logical_ids[i];
+          const uint16_t index = node->entity.processor.logical_ids[i];
           GrowVector(index + 1, &processors_by_logical_id, &checker);
           processors_by_logical_id[index] = node;
           if (!checker.check()) {

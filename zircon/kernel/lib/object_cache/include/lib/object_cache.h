@@ -457,7 +457,7 @@ class ObjectCache<T, Option::Single, Allocator> {
       Entry* entry = reinterpret_cast<Entry*>(pointer);
       DEBUG_ASSERT(entry >= entries.begin() && entry < entries.end());
 
-      Guard<Mutex> guard{&control.lock};
+      Guard<Mutex> control_guard{&control.lock};
       DEBUG_ASSERT(available_objects() < kEntriesPerSlab);
 
       // If the cache containing this slab was destroyed while destroying the

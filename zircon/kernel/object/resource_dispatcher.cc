@@ -68,7 +68,6 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
     storage = &static_storage_;
   }
 
-  zx_status_t status;
   RegionAllocator::Region::UPtr region_uptr = nullptr;
   switch (kind) {
     case ZX_RSRC_KIND_ROOT:
@@ -84,7 +83,8 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
         return ZX_ERR_BAD_STATE;
       }
 
-      status = storage->rallocs[kind].GetRegion({.base = base, .size = size}, region_uptr);
+      zx_status_t status =
+          storage->rallocs[kind].GetRegion({.base = base, .size = size}, region_uptr);
       if (status != ZX_OK) {
         LTRACEF("%s couldn't pull the resource out of the ralloc %d\n", kLogTag, status);
         return status;

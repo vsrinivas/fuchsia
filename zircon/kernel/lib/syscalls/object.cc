@@ -278,14 +278,14 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
         return ZX_ERR_INVALID_ARGS;
       }
       if (_actual) {
-        zx_status_t status = _actual.copy_to_user(num_to_copy);
-        if (status != ZX_OK)
-          return status;
+        zx_status_t copy_status = _actual.copy_to_user(num_to_copy);
+        if (copy_status != ZX_OK)
+          return copy_status;
       }
       if (_avail) {
-        zx_status_t status = _avail.copy_to_user(num_threads);
-        if (status != ZX_OK)
-          return status;
+        zx_status_t copy_status = _avail.copy_to_user(num_threads);
+        if (copy_status != ZX_OK)
+          return copy_status;
       }
       return ZX_OK;
     }
@@ -454,14 +454,14 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       status = process->GetAspaceMaps(up->aspace().get(), maps, count, &count, &avail);
 
       if (_actual) {
-        zx_status_t status = _actual.copy_to_user(count);
-        if (status != ZX_OK)
-          return status;
+        zx_status_t copy_status = _actual.copy_to_user(count);
+        if (copy_status != ZX_OK)
+          return copy_status;
       }
       if (_avail) {
-        zx_status_t status = _avail.copy_to_user(avail);
-        if (status != ZX_OK)
-          return status;
+        zx_status_t copy_status = _avail.copy_to_user(avail);
+        if (copy_status != ZX_OK)
+          return copy_status;
       }
       return status;
     }
@@ -487,14 +487,14 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       }
 
       if (_actual) {
-        zx_status_t status = _actual.copy_to_user(count);
-        if (status != ZX_OK)
-          return status;
+        zx_status_t copy_status = _actual.copy_to_user(count);
+        if (copy_status != ZX_OK)
+          return copy_status;
       }
       if (_avail) {
-        zx_status_t status = _avail.copy_to_user(avail);
-        if (status != ZX_OK)
-          return status;
+        zx_status_t copy_status = _avail.copy_to_user(avail);
+        if (copy_status != ZX_OK)
+          return copy_status;
       }
       return status;
     }
@@ -531,7 +531,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     }
 
     case ZX_INFO_GUEST_STATS: {
-      auto status =
+      zx_status_t status =
           validate_ranged_resource(handle, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_INFO_BASE, 1);
       if (status != ZX_OK)
         return status;
@@ -576,21 +576,21 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       }
 
       if (_actual) {
-        zx_status_t status = _actual.copy_to_user(num_to_copy);
-        if (status != ZX_OK)
-          return status;
+        zx_status_t copy_status = _actual.copy_to_user(num_to_copy);
+        if (copy_status != ZX_OK)
+          return copy_status;
       }
 
       if (_avail) {
-        zx_status_t status = _avail.copy_to_user(num_cpus);
-        if (status != ZX_OK)
-          return status;
+        zx_status_t copy_status = _avail.copy_to_user(num_cpus);
+        if (copy_status != ZX_OK)
+          return copy_status;
       }
       return ZX_OK;
     }
 
     case ZX_INFO_CPU_STATS: {
-      auto status =
+      zx_status_t status =
           validate_ranged_resource(handle, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_INFO_BASE, 1);
       if (status != ZX_OK)
         return status;
@@ -650,14 +650,14 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       }
 
       if (_actual) {
-        zx_status_t status = _actual.copy_to_user(num_to_copy);
-        if (status != ZX_OK)
-          return status;
+        zx_status_t copy_status = _actual.copy_to_user(num_to_copy);
+        if (copy_status != ZX_OK)
+          return copy_status;
       }
       if (_avail) {
-        zx_status_t status = _avail.copy_to_user(num_cpus);
-        if (status != ZX_OK)
-          return status;
+        zx_status_t copy_status = _avail.copy_to_user(num_cpus);
+        if (copy_status != ZX_OK)
+          return copy_status;
       }
       return ZX_OK;
     }
@@ -897,14 +897,14 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
         return ZX_ERR_INVALID_ARGS;
       }
       if (_actual) {
-        zx_status_t status = _actual.copy_to_user(num_to_copy);
-        if (status != ZX_OK)
-          return status;
+        zx_status_t copy_status = _actual.copy_to_user(num_to_copy);
+        if (copy_status != ZX_OK)
+          return copy_status;
       }
       if (_avail) {
-        zx_status_t status = _avail.copy_to_user(num_records);
-        if (status != ZX_OK)
-          return status;
+        zx_status_t copy_status = _avail.copy_to_user(num_records);
+        if (copy_status != ZX_OK)
+          return copy_status;
       }
       return ZX_OK;
     }
@@ -1077,10 +1077,10 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<Dispatcher> dispatcher;
 
-  auto status =
+  const zx_status_t get_dispatcher_status =
       up->handle_table().GetDispatcherWithRights(handle_value, ZX_RIGHT_SET_PROPERTY, &dispatcher);
-  if (status != ZX_OK)
-    return status;
+  if (get_dispatcher_status != ZX_OK)
+    return get_dispatcher_status;
 
   switch (property) {
     case ZX_PROP_NAME: {

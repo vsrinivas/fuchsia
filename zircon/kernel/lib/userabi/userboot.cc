@@ -316,15 +316,15 @@ void userboot_init(uint) {
   // Create the process.
   KernelHandle<ProcessDispatcher> process_handle;
   KernelHandle<VmAddressRegionDispatcher> vmar_handle;
-  zx_rights_t rights, vmar_rights;
+  zx_rights_t process_rights, vmar_rights;
   status = ProcessDispatcher::Create(GetRootJobDispatcher(), "userboot", 0, &process_handle,
-                                     &rights, &vmar_handle, &vmar_rights);
+                                     &process_rights, &vmar_handle, &vmar_rights);
   ASSERT(status == ZX_OK);
 
   // It needs its own process and root VMAR handles.
   auto process = process_handle.dispatcher();
   auto vmar = vmar_handle.dispatcher();
-  HandleOwner proc_handle_owner = Handle::Make(ktl::move(process_handle), rights);
+  HandleOwner proc_handle_owner = Handle::Make(ktl::move(process_handle), process_rights);
   HandleOwner vmar_handle_owner = Handle::Make(ktl::move(vmar_handle), vmar_rights);
   ASSERT(proc_handle_owner);
   ASSERT(vmar_handle_owner);
@@ -364,7 +364,8 @@ void userboot_init(uint) {
 
   // Make the channel that will hold the message.
   KernelHandle<ChannelDispatcher> user_handle, kernel_handle;
-  status = ChannelDispatcher::Create(&user_handle, &kernel_handle, &rights);
+  zx_rights_t channel_rights;
+  status = ChannelDispatcher::Create(&user_handle, &kernel_handle, &channel_rights);
   ASSERT(status == ZX_OK);
 
   // Transfer it in.
@@ -372,7 +373,7 @@ void userboot_init(uint) {
   ASSERT(status == ZX_OK);
 
   // Inject the user-side channel handle into the process.
-  HandleOwner user_handle_owner = Handle::Make(ktl::move(user_handle), rights);
+  HandleOwner user_handle_owner = Handle::Make(ktl::move(user_handle), channel_rights);
   ASSERT(user_handle_owner);
   zx_handle_t hv = process->handle_table().MapHandleToValue(user_handle_owner);
   process->handle_table().AddHandle(ktl::move(user_handle_owner));
@@ -405,8 +406,9 @@ void userboot_init(uint) {
   fbl::RefPtr<ThreadDispatcher> thread;
   {
     KernelHandle<ThreadDispatcher> thread_handle;
-    zx_rights_t rights;
-    status = ThreadDispatcher::Create(ktl::move(process), 0, "userboot", &thread_handle, &rights);
+    zx_rights_t thread_rights;
+    status =
+        ThreadDispatcher::Create(ktl::move(process), 0, "userboot", &thread_handle, &thread_rights);
     ASSERT(status == ZX_OK);
     status = thread_handle.dispatcher()->Initialize();
     ASSERT(status == ZX_OK);

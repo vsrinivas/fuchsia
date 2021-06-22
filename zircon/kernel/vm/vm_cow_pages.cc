@@ -293,10 +293,10 @@ bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
 
   if (IsZeroPage(page_or_marker->Page())) {
     RangeChangeUpdateLocked(offset, PAGE_SIZE, RangeChangeOp::Unmap);
-    vm_page_t* page = page_or_marker->ReleasePage();
-    pmm_page_queues()->Remove(page);
-    DEBUG_ASSERT(!list_in_list(&page->queue_node));
-    pmm_free_page(page);
+    vm_page_t* released_page = page_or_marker->ReleasePage();
+    pmm_page_queues()->Remove(released_page);
+    DEBUG_ASSERT(!list_in_list(&released_page->queue_node));
+    pmm_free_page(released_page);
     *page_or_marker = VmPageOrMarker::Marker();
     eviction_event_count_++;
     IncrementHierarchyGenerationCountLocked();
@@ -1182,10 +1182,10 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset, bool d
   }
   // If this is actually a real page, we need to place it into the appropriate queue.
   if (p->IsPage()) {
-    vm_page_t* page = p->Page();
-    DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
-    DEBUG_ASSERT(page->object.pin_count == 0);
-    SetNotWired(page, offset);
+    vm_page_t* low_level_page = p->Page();
+    DEBUG_ASSERT(low_level_page->state() == vm_page_state::OBJECT);
+    DEBUG_ASSERT(low_level_page->object.pin_count == 0);
+    SetNotWired(low_level_page, offset);
   }
   *page = ktl::move(*p);
 

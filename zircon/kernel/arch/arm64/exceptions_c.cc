@@ -143,9 +143,9 @@ __NO_RETURN static void exception_die(iframe_t* iframe, uint32_t esr, uint64_t f
   printf("ESR %#x: ec %#x, il %#x, iss %#x\n", esr, ec, il, iss);
   printf("FAR %#" PRIx64 "\n", far);
   dump_iframe(iframe);
-  crashlog.iframe = iframe;
-  crashlog.esr = esr;
-  crashlog.far = far;
+  g_crashlog.iframe = iframe;
+  g_crashlog.esr = esr;
+  g_crashlog.far = far;
 
   platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }

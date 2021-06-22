@@ -381,13 +381,11 @@ zx_status_t sys_process_read_memory(zx_handle_t handle, zx_vaddr_t vaddr, user_o
   }
   zx_status_t st =
       vmo->ReadUser(up->aspace().get(), buffer.reinterpret<char>(), offset, buffer_size);
-
-  if (st == ZX_OK) {
-    zx_status_t status = _actual.copy_to_user(static_cast<size_t>(buffer_size));
-    if (status != ZX_OK)
-      return status;
+  if (st != ZX_OK) {
+    return st;
   }
-  return st;
+
+  return _actual.copy_to_user(static_cast<size_t>(buffer_size));
 }
 
 // zx_status_t zx_process_write_memory
@@ -444,13 +442,11 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
   }
   zx_status_t st =
       vmo->WriteUser(up->aspace().get(), buffer.reinterpret<const char>(), offset, buffer_size);
-
-  if (st == ZX_OK) {
-    zx_status_t status = _actual.copy_to_user(static_cast<size_t>(buffer_size));
-    if (status != ZX_OK)
-      return status;
+  if (st != ZX_OK) {
+    return st;
   }
-  return st;
+
+  return _actual.copy_to_user(static_cast<size_t>(buffer_size));
 }
 
 // helper routine for sys_task_kill

@@ -56,7 +56,7 @@ struct vm_page {
       // offset 0x2d
 
       void* get_object() const { return object_priv; }
-      void set_object(void* object) { object_priv = object; }
+      void set_object(void* obj) { object_priv = obj; }
       uint64_t get_page_offset() const { return page_offset_priv; }
       void set_page_offset(uint64_t page_offset) { page_offset_priv = page_offset; }
       uint32_t get_pager_queue_merge_rotation() const { return pager_queue_merge_rotation_priv; }
