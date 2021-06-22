@@ -402,8 +402,6 @@ static unsigned x86_perfmon_lbr_stack_size() {
       {X86_MICROARCH_INTEL_CANNONLAKE, 32},
   };
 
-  unsigned g_lbr_format =
-      perfmon_capabilities & ((1u << IA32_PERF_CAPABILITIES_LBR_FORMAT_LEN) - 1);
   // TODO(dje): KISS and only support these formats for now.
   switch (g_lbr_format) {
     case LBR_FORMAT_INFO:
@@ -495,6 +493,7 @@ static void x86_perfmon_init_once(uint level) {
   if (arch::BootCpuid<arch::CpuidFeatureFlagsC>().pdcm()) {
     perfmon_capabilities = static_cast<uint32_t>(read_msr(IA32_PERF_CAPABILITIES));
   }
+  g_lbr_format = perfmon_capabilities & ((1u << IA32_PERF_CAPABILITIES_LBR_FORMAT_LEN) - 1);
 
   perfmon_counter_status_bits = 0;
   for (unsigned i = 0; i < perfmon_num_programmable_counters; ++i)
