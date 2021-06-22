@@ -27,7 +27,9 @@ namespace {
 // testing the conversion math.
 escher::Rectangle2D GetRectangleForMatrix(const glm::mat3& matrix) {
   // Compute the global rectangle vector and return the first entry.
-  const auto rectangles = ComputeGlobalRectangles({matrix});
+  allocation::ImageMetadata image = {.width = 1, .height = 1};
+  const auto rectangles =
+      ComputeGlobalRectangles({matrix}, {ImageSampleRegion{0, 0, 1, 1}}, {image});
   EXPECT_EQ(rectangles.size(), 1ul);
   return rectangles[0];
 }
@@ -442,6 +444,88 @@ TEST(GlobalImageDataTest, GlobalImagesMultipleUberStructs) {
   auto global_opacity_values =
       ComputeGlobalOpacityValues(topology_vector, parent_indices, uber_structs);
   EXPECT_THAT(global_opacity_values, ::testing::ElementsAreArray(expected_opacity_values));
+}
+
+// The following tests test for image sample regions.
+
+// Test that an empty uber struct returns empty sample regions.
+TEST(GlobalImageDataTest, EmptyTopologyReturnsEmptyImageSampleRegions) {
+  UberStruct::InstanceMap uber_structs;
+  GlobalTopologyData::TopologyVector topology_vector;
+  GlobalTopologyData::ParentIndexVector parent_indices;
+
+  auto global_sample_regions =
+      ComputeGlobalImageSampleRegions(topology_vector, parent_indices, uber_structs);
+  EXPECT_TRUE(global_sample_regions.empty());
+}
+
+// Check that if there are no sample regions provided, they default to
+// empty ImageSampleRegion structs.
+TEST(GlobalImageDataTest, EmptySampleRegionsAreInvalid) {
+  UberStruct::InstanceMap uber_structs;
+
+  // Make a global topology representing the following graph:
+  //
+  // 1:0 - 1:1
+  GlobalTopologyData::TopologyVector topology_vector = {{1, 0}, {1, 1}};
+  GlobalTopologyData::ParentIndexVector parent_indices = {0, 0};
+
+  // The UberStruct for instance ID 1 must exist, but it contains no local opacity values.
+  auto uber_struct = std::make_unique<UberStruct>();
+  uber_structs[1] = std::move(uber_struct);
+
+  GlobalImageSampleRegionVector expected_sample_regions = {kInvalidSampleRegion,
+                                                           kInvalidSampleRegion};
+
+  auto global_sample_regions =
+      ComputeGlobalImageSampleRegions(topology_vector, parent_indices, uber_structs);
+  EXPECT_EQ(expected_sample_regions.size(), global_sample_regions.size());
+  for (uint32_t i = 0; i < global_sample_regions.size(); i++) {
+    EXPECT_EQ(expected_sample_regions[i].x, global_sample_regions[i].x);
+    EXPECT_EQ(expected_sample_regions[i].y, global_sample_regions[i].y);
+    EXPECT_EQ(expected_sample_regions[i].width, global_sample_regions[i].width);
+    EXPECT_EQ(expected_sample_regions[i].height, global_sample_regions[i].height);
+  }
+}
+
+// Test a more complicated scenario with multiple transforms, each with its own
+// set of image sample regions, and make sure that they all get calculated correctly.
+TEST(GlobalImageDataTest, ComplicatedGraphImageSampleRegions) {
+  UberStruct::InstanceMap uber_structs;
+
+  // Make a global topology representing the following graph:
+  //
+  // 1:0 - 1:1 - 1:2
+  //     \
+  //       1:3 - 1:4
+  GlobalTopologyData::TopologyVector topology_vector = {{1, 0}, {1, 1}, {1, 2}, {1, 3}, {1, 4}};
+  GlobalTopologyData::ParentIndexVector parent_indices = {0, 0, 1, 0, 3};
+
+  auto uber_struct = std::make_unique<UberStruct>();
+
+  GlobalImageSampleRegionVector expected_sample_regions = {
+      {0, 0, 81, 15}, {5, 18, 100, 145}, {10, 4, 10, 667}, {33, 99, 910, 783}, {90, 76, 392, 991},
+  };
+
+  uber_struct->local_image_sample_regions[{1, 0}] = expected_sample_regions[0];
+
+  uber_struct->local_image_sample_regions[{1, 1}] = expected_sample_regions[1];
+  uber_struct->local_image_sample_regions[{1, 2}] = expected_sample_regions[2];
+
+  uber_struct->local_image_sample_regions[{1, 3}] = expected_sample_regions[3];
+  uber_struct->local_image_sample_regions[{1, 4}] = expected_sample_regions[4];
+
+  uber_structs[1] = std::move(uber_struct);
+
+  auto global_sample_regions =
+      ComputeGlobalImageSampleRegions(topology_vector, parent_indices, uber_structs);
+  EXPECT_EQ(expected_sample_regions.size(), global_sample_regions.size());
+  for (uint32_t i = 0; i < global_sample_regions.size(); i++) {
+    EXPECT_EQ(expected_sample_regions[i].x, global_sample_regions[i].x);
+    EXPECT_EQ(expected_sample_regions[i].y, global_sample_regions[i].y);
+    EXPECT_EQ(expected_sample_regions[i].width, global_sample_regions[i].width);
+    EXPECT_EQ(expected_sample_regions[i].height, global_sample_regions[i].height);
+  }
 }
 
 }  // namespace test

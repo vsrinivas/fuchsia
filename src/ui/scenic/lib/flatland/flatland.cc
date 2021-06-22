@@ -20,6 +20,7 @@
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+using fuchsia::math::RectF;
 using fuchsia::math::SizeU;
 using fuchsia::math::Vec;
 using fuchsia::ui::scenic::internal::ContentLink;
@@ -188,6 +189,10 @@ void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args) {
 
   for (const auto& [handle, matrix_data] : matrices_) {
     uber_struct->local_matrices[handle] = matrix_data.GetMatrix();
+  }
+
+  for (const auto& [handle, sample_region] : image_sample_regions_) {
+    uber_struct->local_image_sample_regions[handle] = sample_region;
   }
 
   for (const auto& [handle, opacity_value] : opacity_values_) {
@@ -651,6 +656,45 @@ void Flatland::CreateImage(ContentId image_id,
   auto handle = transform_graph_.CreateTransform();
   content_handles_[image_id.value] = handle;
   image_metadatas_[handle] = metadata;
+
+  // Set the default sample region of the image to be the full image.
+  SetImageSampleRegion(image_id, {0, 0, static_cast<float>(properties.size().width),
+                                  static_cast<float>(properties.size().height)});
+}
+
+void Flatland::SetImageSampleRegion(ContentId image_id, RectF rect) {
+  if (image_id.value == kInvalidId) {
+    error_reporter_->ERROR() << "SetImageSampleRegion called with content id 0";
+    ReportBadOperationError();
+    return;
+  }
+
+  auto content_kv = content_handles_.find(image_id.value);
+  if (content_kv == content_handles_.end()) {
+    error_reporter_->ERROR() << "SetImageSampleRegion called with non-existent image_id "
+                             << image_id.value;
+    ReportBadOperationError();
+    return;
+  }
+
+  auto image_kv = image_metadatas_.find(content_kv->second);
+  if (image_kv == image_metadatas_.end()) {
+    error_reporter_->ERROR() << "SetImageSampleRegion called on non-image content.";
+    ReportBadOperationError();
+    return;
+  }
+
+  // The provided sample region needs to be within the bounds of the image.
+  auto metadata = image_kv->second;
+  if (rect.x < 0.f || rect.x > metadata.width || rect.width < 0.f ||
+      (rect.x + rect.width) > metadata.width || rect.y < 0.f || rect.y > metadata.height ||
+      rect.height < 0.f || (rect.y + rect.height) > metadata.height) {
+    error_reporter_->ERROR() << "SetImageSampleRegion rect out of bounds for image.";
+    ReportBadOperationError();
+    return;
+  }
+
+  image_sample_regions_[content_kv->second] = rect;
 }
 
 void Flatland::SetImageDestinationSize(ContentId image_id, SizeU size) {
@@ -670,7 +714,8 @@ void Flatland::SetImageDestinationSize(ContentId image_id, SizeU size) {
 
   auto image_kv = image_metadatas_.find(content_kv->second);
   if (image_kv == image_metadatas_.end()) {
-    error_reporter_->ERROR() << "SetImageSize called on non-image content.";
+    error_reporter_->ERROR() << "SetImageSize called on non-image content  " << image_id.value;
+    ReportBadOperationError();
     return;
   }
 

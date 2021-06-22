@@ -3052,6 +3052,58 @@ TEST_F(FlatlandTest, SetOpacityTestCases) {
   }
 }
 
+TEST_F(FlatlandTest, SetImageSampleRegionTestCases) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  const TransformId kTransformId = {1};
+  const ContentId kId = {3};
+  const uint32_t kImageWidth = 300;
+  const uint32_t kImageHeight = 400;
+
+  // Zero is not a valid content ID.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetImageSampleRegion({0}, {0, 0, 100, 200});
+    PRESENT(flatland, false);
+  }
+
+  // The content id hasn't been imported yet.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetImageSampleRegion(kId, {0, 0, 100, 200});
+    PRESENT(flatland, false);
+  }
+
+  // Setup a valid transform and image.
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
+  flatland->CreateTransform(kTransformId);
+  flatland->SetRootTransform(kTransformId);
+
+  BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
+  ImageProperties properties;
+  properties.set_size({kImageWidth, kImageHeight});
+
+  CreateImage(flatland.get(), allocator.get(), kId, std::move(ref_pair), std::move(properties));
+
+  flatland->SetContent(kTransformId, kId);
+  PRESENT(flatland, true);
+
+  // Testing now with good values should finally work.
+  {
+    flatland->SetImageSampleRegion(kId, {0, 0, kImageWidth, kImageHeight});
+    PRESENT(flatland, true);
+
+    flatland->SetImageSampleRegion(kId, {50, 60, kImageWidth - 100, kImageHeight - 200});
+    PRESENT(flatland, true);
+  }
+
+  // Test one more time with out of bounds values and it should fail.
+  {
+    // (x + width) exceeeds the image width and should fail.
+    flatland->SetImageSampleRegion(kId, {1, 0, kImageWidth, kImageHeight});
+    PRESENT(flatland, false);
+  }
+}
+
 TEST_F(FlatlandTest, CreateImageErrorCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
 

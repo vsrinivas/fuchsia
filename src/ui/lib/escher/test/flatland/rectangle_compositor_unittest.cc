@@ -33,7 +33,8 @@ TexturePtr CreateWhiteTexture(EscherWeakPtr escher, BatchGpuUploader* gpu_upload
 // 2x2 texture with white, red, green and blue pixels.
 TexturePtr CreateFourColorTexture(EscherWeakPtr escher, BatchGpuUploader* gpu_uploader) {
   FX_DCHECK(escher);
-  uint8_t channels[16] = {255, 255, 255, 255, 255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255};
+  uint8_t channels[16] = {/*white*/ 255, 255, 255, 255, /*red*/ 255, 0, 0,   255,
+                          /*green*/ 0,   255, 0,   255, /*blue*/ 0,  0, 255, 255};
   auto image = escher->NewRgbaImage(gpu_uploader, 2, 2, channels);
   return escher->NewTexture(std::move(image), vk::Filter::eNearest);
 };
@@ -161,6 +162,52 @@ VK_TEST_F(RectangleCompositorTest, SimpleTextureTest) {
   EXPECT_EQ(histogram[kRed], num_pixels);
   EXPECT_EQ(histogram[kGreen], num_pixels);
   EXPECT_EQ(histogram[kBlue], num_pixels);
+}
+
+// Render a single full-screen renderable with a texture that has 4 colors but
+// with uv coordinates that make it so only one pixel is covering the renderable
+// at a time, and test each one.
+VK_TEST_F(RectangleCompositorTest, SimpleTextureNonStandardUVsTest) {
+  frame_setup();
+
+  auto gpu_uploader =
+      std::make_shared<escher::BatchGpuUploader>(escher(), frame_data_.frame->frame_number());
+  EXPECT_TRUE(gpu_uploader);
+  EXPECT_TRUE(ren_);
+
+  auto texture = CreateFourColorTexture(escher(), gpu_uploader.get());
+  gpu_uploader->Submit();
+
+  constexpr uint32_t num_pixels = 512 * 512;
+
+  const uint32_t kNumColors = 4;
+  ColorBgra colors[] = {kWhite, kRed, kGreen, kBlue};
+
+  std::array<vec2, 4> uvs[] = {
+      /*white*/ {vec2(0, 0), vec2(0.5, 0), vec2(0.5, 0.5), vec2(0, 0.5)},
+      /*red*/ {vec2(0.5, 0), vec2(1.0, 0), vec2(1.0, 0.5), vec2(0.5, 0.5)},
+      /*green*/ {vec2(0., 0.5), vec2(0.5, 0.5), vec2(0.5, 1.0), vec2(0, 1.0)},
+      /*blue*/ {vec2(0.5, 0.5), vec2(1.0, 0.5), vec2(1.0, 1.0), vec2(0.5, 1.0)}};
+
+  RectangleCompositor::ColorData color_data(vec4(1), /*is_opaque*/ true);
+  for (uint32_t i = 0; i < kNumColors; i++) {
+    auto cmd_buf = frame_data_.frame->cmds();
+    auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
+
+    Rectangle2D rectangle(vec2(0, 0), vec2(512, 512), uvs[i]);
+
+    ren_->DrawBatch(cmd_buf, {rectangle}, {texture}, {color_data}, frame_data_.color_attachment,
+                    depth_texture);
+
+    auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
+                                             frame_data_.color_attachment->swapchain_layout(),
+                                             vk::ImageLayout::eColorAttachmentOptimal);
+
+    const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
+
+    EXPECT_EQ(1U, histogram.size());
+    EXPECT_EQ(histogram[colors[i]], num_pixels);
+  }
 }
 
 // Render a single full-screen renderable that is rotated by 90 degrees

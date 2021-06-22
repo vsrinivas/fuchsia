@@ -285,8 +285,16 @@ void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D r
 
   std::unique_lock<std::mutex> lock(lock_);
 
-  // We just use the identity transform because the rectangles have already been rotated by
-  // the flatland code.
+  // TODO(fxbug.dev/77993): The display controller pathway currently does not accurately take into
+  // account rotation, even though the gpu rendering path does. While the gpu renderer can directly
+  // make use of UV rotation to represent rotations, the display controller, making only use of a
+  // source_rect (image sample region), will give false results with this current setup if a
+  // rotation has been applied to the rectangle. On top of that, the current rectangle struct gives
+  // no indication that it has been rotated, as the rotation is stored implicitly, meaning that we
+  // cannot currently exit out of this pathway early if rotation is caught, nor can we accurately
+  // choose the right transform. Therefore we will need explicit rotation data to be plumbed down to
+  // be able to choose the right enum. This will be easier to do once we settle on the proper way to
+  // handle transforms/matrices going forward.
   auto transform = fuchsia::hardware::display::Transform::IDENTITY;
 
   // TODO(fxbug.dev/71344): Pixel format should be ignored when using sysmem. We do not want to have

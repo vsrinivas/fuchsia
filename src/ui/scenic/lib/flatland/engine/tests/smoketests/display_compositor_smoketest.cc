@@ -227,6 +227,9 @@ VK_TEST_P(DisplayCompositorParameterizedSmokeTest, FullscreenRectangleTest) {
   uberstruct->images[image_handle] = image_metadata;
   uberstruct->local_matrices[image_handle] = glm::scale(
       glm::translate(glm::mat3(1.0), glm::vec2(0, 0)), glm::vec2(kRectWidth, kRectHeight));
+  uberstruct->local_image_sample_regions[image_handle] = {0, 0,
+                                                          static_cast<float>(kTextureWidth),
+                                                          static_cast<float>(kTextureHeight)};
   session.PushUberStruct(std::move(uberstruct));
 
   // Now we can finally render.

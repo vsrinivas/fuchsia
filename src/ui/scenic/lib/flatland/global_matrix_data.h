@@ -17,6 +17,11 @@ namespace flatland {
 // the |topology_vector| supplied to ComputeGlobalMatrices().
 using GlobalMatrixVector = std::vector<glm::mat3>;
 
+// The list of global image sample regions for a particular global topology.
+using GlobalImageSampleRegionVector = std::vector<ImageSampleRegion>;
+
+const extern ImageSampleRegion kInvalidSampleRegion;
+
 // Computes the global transform matrix for each transform in |global_topology| using the local
 // matrices in the |uber_structs|. If a transform doesn't have a local matrix present in the
 // appropriate UberStruct, this function assumes that transform's local matrix is the identity
@@ -27,18 +32,34 @@ GlobalMatrixVector ComputeGlobalMatrices(
     const GlobalTopologyData::ParentIndexVector& parent_indices,
     const UberStruct::InstanceMap& uber_structs);
 
+// Gathers the image sample regions for each transform in |global_topology| using the local
+// image sample regions in the |uber_structs|. If a transform doesn't have image sample
+// regions present in the appropriate UberStruct, this function assumes the region is null.
+GlobalImageSampleRegionVector ComputeGlobalImageSampleRegions(
+    const GlobalTopologyData::TopologyVector& global_topology,
+    const GlobalTopologyData::ParentIndexVector& parent_indices,
+    const UberStruct::InstanceMap& uber_structs);
+
 // The list of global rectangles for a particular global topology. Each entry is the global
 // rectangle (i.e. relative to the root TransformHandle) of the transform in the corresponding
 // position of the |matrices| supplied to ComputeGlobalRectangles().
 using GlobalRectangleVector = std::vector<escher::Rectangle2D>;
 
 // Computes the global rectangle for each matrix in |matrices|.
-GlobalRectangleVector ComputeGlobalRectangles(const GlobalMatrixVector& matrices);
+GlobalRectangleVector ComputeGlobalRectangles(const GlobalMatrixVector& matrices,
+                                              const GlobalImageSampleRegionVector& sample_regions,
+                                              const std::vector<allocation::ImageMetadata>& images);
 
-// Returns the vector of matrices that correspond to the provided indices, from the original
-// global matrix vector.
-GlobalMatrixVector SelectMatrices(const GlobalMatrixVector& matrices,
-                                  const GlobalIndexVector& indices);
+// Templatized function to retrieve a vector of attributes that correspond to the provided
+// indices, from the original vector.
+template <typename T>
+T SelectAttribute(const T& vector, const GlobalIndexVector& indices) {
+  T selection;
+  for (auto index : indices) {
+    selection.push_back(vector[index]);
+  }
+  return selection;
+}
 
 }  // namespace flatland
 

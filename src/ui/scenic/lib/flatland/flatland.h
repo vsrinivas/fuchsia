@@ -115,6 +115,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
                    uint32_t vmo_index,
                    fuchsia::ui::scenic::internal::ImageProperties properties) override;
   // |fuchsia::ui::scenic::internal::Flatland|
+  void SetImageSampleRegion(ContentId image_id, fuchsia::math::RectF rect) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
   void SetImageDestinationSize(ContentId image_id, fuchsia::math::SizeU size) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void SetOpacity(TransformId transform_id, float val) override;
@@ -310,6 +312,10 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland,
   // [0.f,1.f). 0.f is completely transparent and 1.f, which is completely opaque, is stored
   // implicitly as a transform handle with no entry in this map will default to 1.0.
   std::unordered_map<TransformHandle, float> opacity_values_;
+
+  // A map of content (image) transform handles to ImageSampleRegion structs which are used
+  // to determine the portion of an image that is actually used for rendering.
+  std::unordered_map<TransformHandle, ImageSampleRegion> image_sample_regions_;
 
   // A mapping from Flatland-generated TransformHandle to the ImageMetadata it represents.
   std::unordered_map<TransformHandle, allocation::ImageMetadata> image_metadatas_;

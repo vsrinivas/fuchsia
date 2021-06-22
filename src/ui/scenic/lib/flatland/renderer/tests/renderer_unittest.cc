@@ -559,7 +559,7 @@ VK_TEST_F(VulkanRendererTest, AsyncEventSignalTest) {
 }
 
 // This test actually renders a rectangle using the VKRenderer. We create a single rectangle,
-// with a half-red, half-green texture, translate and scale it. The render target is 16x8
+// with a half-red, half-green texture, and translate it. The render target is 16x8
 // and the rectangle is 4x2. So in the end the result should look like this:
 //
 // ----------------
@@ -570,6 +570,20 @@ VK_TEST_F(VulkanRendererTest, AsyncEventSignalTest) {
 // ----------------
 // ----------------
 // ----------------
+//
+// It then renders the renderable a second time, this time with modified UVs so that only
+// the green portion of the texture covers the rect, resulting in a fully green view despite
+// the texture also having red pixels:
+//
+// ----------------
+// ----------------
+// ----------------
+// ------GGGG------
+// ------GGGG------
+// ----------------
+// ----------------
+// ----------------
+//
 VK_TEST_F(VulkanRendererTest, RenderTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
@@ -692,14 +706,56 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
                              zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
                                             ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
 
-                   // Make sure the pixels are in the right order give that we rotated
-                   // the rectangle.
+                   // Make sure the pixels are in the right order.
                    EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 3), glm::ivec4(255, 0, 0, 255));
                    EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 3), glm::ivec4(255, 0, 0, 255));
                    EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 3), glm::ivec4(0, 255, 0, 255));
                    EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 3), glm::ivec4(0, 255, 0, 255));
                    EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 4), glm::ivec4(255, 0, 0, 255));
                    EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 4), glm::ivec4(255, 0, 0, 255));
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 4), glm::ivec4(0, 255, 0, 255));
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 4), glm::ivec4(0, 255, 0, 255));
+
+                   // Make sure the remaining pixels are black.
+                   uint32_t black_pixels = 0;
+                   for (uint32_t y = 0; y < kTargetHeight; y++) {
+                     for (uint32_t x = 0; x < kTargetWidth; x++) {
+                       auto col = GetPixel(vmo_host, kTargetWidth, x, y);
+                       if (col == glm::ivec4(0, 0, 0, 0))
+                         black_pixels++;
+                     }
+                   }
+                   EXPECT_EQ(black_pixels,
+                             kTargetWidth * kTargetHeight - kRenderableWidth * kRenderableHeight);
+                 });
+
+  // Now let's update the uvs of the renderable so only the green portion of the image maps onto
+  // the rect.
+  auto renderable2 =
+      Rectangle2D(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight),
+                  {glm::vec2(0.5, 0), glm::vec2(1.0, 0), glm::vec2(1.0, 1.0), glm::vec2(0.5, 1.0)});
+
+  // Render the renderable to the render target.
+  renderer.Render(render_target, {renderable2}, {renderable_texture});
+  renderer.WaitIdle();
+
+  // Get a raw pointer from the client collection's vmo that represents the render target
+  // and read its values. This should show that the renderable was rendered to the center
+  // of the render target, with its associated texture.
+  MapHostPointer(client_target_info, render_target.vmo_index,
+                 [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+                   // Flush the cache before reading back target image.
+                   EXPECT_EQ(ZX_OK,
+                             zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
+                                            ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+
+                   // All of the renderable's pixels should be green.
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 3), glm::ivec4(0, 255, 0, 255));
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 3), glm::ivec4(0, 255, 0, 255));
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 3), glm::ivec4(0, 255, 0, 255));
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 3), glm::ivec4(0, 255, 0, 255));
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 6, 4), glm::ivec4(0, 255, 0, 255));
+                   EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 7, 4), glm::ivec4(0, 255, 0, 255));
                    EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 8, 4), glm::ivec4(0, 255, 0, 255));
                    EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, 9, 4), glm::ivec4(0, 255, 0, 255));
 

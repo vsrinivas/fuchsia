@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.ui.scenic.internal;
 
 using fuchsia.math;
@@ -431,6 +430,17 @@ protocol Flatland {
                 fuchsia.scenic.allocation.BufferCollectionImportToken import_token,
                 uint32 vmo_index,
                 ImageProperties properties);
+
+    /// This function is used to determine the region (in texel space) of an image that will be
+    /// used by Flatland when rendering. The image to be sampled is referenced by |image_id| and
+    /// the sample region is specified by |rect| which itself is comprised of an origin point (x,y)
+    /// as well as a width and height, in unnormalized coordinates. It is illegal to call this
+    /// function on non-image content, or to sample a region outside of the texel space of the
+    /// image. In other words, the region specifed by |rect| must not exceed the ranges
+    /// (0, image_width) and (0, image_height). If (rect.x + rect.width > image_width) or
+    /// (rect.y + rect.height > image_height) or if any of the values are negative, this will
+    /// result in an error.
+    SetImageSampleRegion(ContentId image_id, fuchsia.math.RectF rect);
 
     /// The content size for an Image is the size of the rectangle in the parent's space that the
     /// image occupies. This combined with the global translation of the transform it is attached

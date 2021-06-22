@@ -57,8 +57,12 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
   const auto [image_indices, images] = flatland::ComputeGlobalImageData(
       topology_data.topology_vector, topology_data.parent_indices, snapshot);
 
-  const auto image_rectangles =
-      flatland::ComputeGlobalRectangles(flatland::SelectMatrices(global_matrices, image_indices));
+  const auto global_image_sample_regions = ComputeGlobalImageSampleRegions(
+      topology_data.topology_vector, topology_data.parent_indices, snapshot);
+
+  const auto image_rectangles = flatland::ComputeGlobalRectangles(
+      flatland::SelectAttribute(global_matrices, image_indices),
+      flatland::SelectAttribute(global_image_sample_regions, image_indices), images);
 
   const auto hw_display = display.display();
 

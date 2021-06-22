@@ -392,6 +392,7 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
 
   parent_struct->local_matrices[parent_image_handle] =
       glm::scale(glm::translate(glm::mat3(1.0), glm::vec2(9, 13)), glm::vec2(10, 20));
+  parent_struct->local_image_sample_regions[parent_image_handle] = {0, 0, 128, 256};
 
   // Submit the UberStruct.
   parent_session.PushUberStruct(std::move(parent_struct));
@@ -411,6 +412,7 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
   child_struct->images[child_image_handle] = child_image_metadata;
   child_struct->local_matrices[child_image_handle] =
       glm::scale(glm::translate(glm::mat3(1), glm::vec2(5, 7)), glm::vec2(30, 40));
+  child_struct->local_image_sample_regions[child_image_handle] = {0, 0, 512, 1024};
 
   // Submit the UberStruct.
   child_session.PushUberStruct(std::move(child_struct));
