@@ -13,7 +13,6 @@ dart_library("settings") {
   sources = [
     "settings.dart",
     "src/battery.dart",
-    "src/bluetooth.dart",
     "src/brightness.dart",
     "src/channel.dart",
     "src/datetime.dart",
@@ -26,7 +25,6 @@ dart_library("settings") {
   deps = [
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
-    "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.memory",
@@ -48,7 +46,6 @@ flutter_test("ermine_settings_unittests") {
   null_safe = true
   sources = [
     "battery_test.dart",
-    "bluetooth_test.dart",
     "brightness_test.dart",
     "channel_test.dart",
     "datetime_test.dart",
@@ -61,7 +58,6 @@ flutter_test("ermine_settings_unittests") {
   deps = [
     ":settings",
     "//sdk/dart/fidl",
-    "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.memory",

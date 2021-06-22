@@ -87,7 +87,6 @@ dart_library("lib") {
     "//sdk/dart/fuchsia_scenic_flutter",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.feedback",

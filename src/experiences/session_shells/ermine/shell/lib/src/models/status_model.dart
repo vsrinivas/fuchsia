@@ -21,7 +21,6 @@ class StatusModel implements Inspectable {
   final UiStream memory;
   final UiStream battery;
   final UiStream volume;
-  final UiStream bluetooth;
   final UiStream datetime;
   final UiStream timezone;
   final UiStream channel;
@@ -39,7 +38,6 @@ class StatusModel implements Inspectable {
     this.memory,
     this.battery,
     this.volume,
-    this.bluetooth,
     this.deviceManager,
     this.logout,
     this.channel,
@@ -60,7 +58,6 @@ class StatusModel implements Inspectable {
       memory: UiStream(Memory.withSvcPath()),
       battery: UiStream(Battery.withSvcPath()),
       volume: UiStream(Volume.withSvcPath()),
-      bluetooth: UiStream(Bluetooth.withSvcPath()),
       deviceManager: deviceManager,
       logout: logout,
       channel: UiStream(Channel.withSvcPath()),
@@ -76,7 +73,6 @@ class StatusModel implements Inspectable {
     volume.dispose();
     datetime.dispose();
     timezone.dispose();
-    bluetooth.dispose();
     channel.dispose();
     systemInformation.dispose();
   }

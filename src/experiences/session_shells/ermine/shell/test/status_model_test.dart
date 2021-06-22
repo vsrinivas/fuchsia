@@ -18,7 +18,6 @@ void main() {
   final memory = MockUiStream();
   final battery = MockUiStream();
   final volume = MockUiStream();
-  final bluetooth = MockUiStream();
   final channel = MockUiStream();
   final systemInformation = MockUiStream();
   final deviceManager = MockAdministratorProxy();
@@ -32,7 +31,6 @@ void main() {
       memory: memory,
       battery: battery,
       volume: volume,
-      bluetooth: bluetooth,
       deviceManager: deviceManager,
       channel: channel,
       systemInformation: systemInformation,
@@ -52,7 +50,6 @@ void main() {
     verify(memory.dispose()).called(1);
     verify(battery.dispose()).called(1);
     verify(volume.dispose()).called(1);
-    verify(bluetooth.dispose()).called(1);
     verify(channel.dispose()).called(1);
     verify(systemInformation.dispose()).called(1);
   });

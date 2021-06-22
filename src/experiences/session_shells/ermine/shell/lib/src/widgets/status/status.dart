@@ -84,7 +84,6 @@ class Status extends StatelessWidget {
                 model.volume,
                 model.brightness,
                 model.battery,
-                model.bluetooth,
                 model.channel,
                 model.systemInformation,
               ])

@@ -12,7 +12,6 @@
         ],
         "services": [
             "fuchsia.accessibility.semantics.SemanticsManager",
-            "fuchsia.bluetooth.control.Control",
             "fuchsia.buildinfo.Provider",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.device.manager.Administrator",

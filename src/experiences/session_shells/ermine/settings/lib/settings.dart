@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 export 'src/battery.dart';
-export 'src/bluetooth.dart';
 export 'src/brightness.dart';
 export 'src/channel.dart';
 export 'src/datetime.dart';
