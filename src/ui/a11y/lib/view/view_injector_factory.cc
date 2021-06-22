@@ -24,7 +24,6 @@ std::shared_ptr<input::Injector> ViewInjectorFactory::BuildAndConfigureInjector(
     return true;
   });
 
-  // TODO(fxbug.dev/77608): Verify viewport configuration to match a11y view.
   a11y_view->add_view_properties_changed_callback(
       [injector = injector_weak_ptr](fuchsia::ui::gfx::ViewProperties properties) {
         auto ptr = injector.lock();
@@ -32,6 +31,8 @@ std::shared_ptr<input::Injector> ViewInjectorFactory::BuildAndConfigureInjector(
           return false;
         }
 
+        // The viewport of the injector needs to match the a11y view size.
+        // TODO(fxbug.dev/76667): Do proper viewport setup when possible.
         input::Injector::Viewport viewport;
         viewport.height = properties.bounding_box.max.y;
         viewport.width = properties.bounding_box.max.x;
