@@ -73,7 +73,9 @@ fn read_channel_sync(chan: &zx::Channel, buf: &mut zx::MessageBuf) -> Result<(),
 fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error> {
     let task = &task_owner.task;
     let mut buffer = zx::MessageBuf::new();
-    while read_channel_sync(&exceptions, &mut buffer).is_ok() {
+    loop {
+        read_channel_sync(&exceptions, &mut buffer)?;
+
         let info = as_exception_info(&buffer);
         assert!(buffer.n_handles() == 1);
         let exception = zx::Exception::from(buffer.take_handle(0).unwrap());
@@ -144,8 +146,6 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
         thread.write_state_general_regs(ctx.registers)?;
         exception.set_exception_state(&ZX_EXCEPTION_STATE_HANDLED)?;
     }
-
-    Ok(0)
 }
 
 fn start_task(
