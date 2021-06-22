@@ -251,13 +251,6 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
                         fuchsia::wlan::mlme::internal::kMLME_QueryDeviceInfo_Ordinal, txid);
 }
 
-zx_status_t Dispatcher::HandleMlmeStats(uint64_t ordinal) const {
-  debugfn();
-  wlan_mlme::StatsQueryResponse resp = GetStatsToFidl();
-  return SendServiceMsg(device_, &resp,
-                        fuchsia::wlan::mlme::internal::kMLME_StatsQueryResp_Ordinal);
-}
-
 zx_status_t Dispatcher::HandleMinstrelPeerList(uint64_t ordinal, zx_txid_t txid) const {
   debugfn();
   wlan_mlme::MinstrelListResponse resp{};
