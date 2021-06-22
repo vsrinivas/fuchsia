@@ -96,42 +96,27 @@ impl Appendable for FixedSizedTestBuffer {
 /// ```
 #[macro_export]
 macro_rules! assert_variant {
-    // Use custom formatting when panicing.
-    ($test:expr, $variant:pat $( | $others:pat)* => $e:expr, $fmt:expr $(, $args:tt)*) => {
+    // Use custom formatting when panicking.
+    ($test:expr, $variant:pat $( | $others:pat)* => $e:expr, $fmt:expr $(, $args:tt)* $(,)?) => {
         match $test {
             $variant $(| $others)* => $e,
             _ => panic!($fmt, $($args,)*),
         }
     };
-    // Use default message when panicing.
-    ($test:expr, $variant:pat $( | $others:pat)* => $e:expr) => {
+    // Use default message when panicking.
+    ($test:expr, $variant:pat $( | $others:pat)* => $e:expr $(,)?) => {
         match $test {
             $variant $(| $others)* => $e,
             other => panic!("unexpected variant: {:?}", other),
         }
     };
     // Custom error message.
-    ($test:expr, $variant:pat $( | $others:pat)* , $fmt:expr $(, $args:tt)*) => {
-        $crate::assert_variant!($test, $variant $( | $others)* => {}, $fmt $(, $args)*);
-    };
-    // Custom expression and custom error message.
-    ($test:expr, $variant:pat $( | $others:pat)* => $e:expr, $fmt:expr $(, $args:tt)*) => {
-        $crate::assert_variant!($test, $variant $( | $others)* => { $e }, $fmt $(, $args)*);
+    ($test:expr, $variant:pat $( | $others:pat)* , $fmt:expr $(, $args:tt)* $(,)?) => {
+        $crate::assert_variant!($test, $variant $( | $others)* => {}, $fmt $(, $args)*)
     };
     // Default error message.
-    ($test:expr, $variant:pat $( | $others:pat)*) => {
-        $crate::assert_variant!($test, $variant $( | $others)* => {});
-    };
-    // Optional trailing comma after expression.
-    ($test:expr, $variant:pat $( | $others:pat)* => $e:expr,) => {
-        $crate::assert_variant!($test, $variant $( | $others)* => { $e });
-    };
-    // Optional trailing comma.
-    ($test:expr, $variant:pat $( | $others:pat)* => $b:block,) => {
-        $crate::assert_variant!($test, $variant $( | $others)* => $b);
-    };
-    ($test:expr, $variant:pat $( | $others:pat)* => $b:expr,) => {
-        $crate::assert_variant!($test, $variant $( | $others)* => { $b });
+    ($test:expr, $variant:pat $( | $others:pat)* $(,)?) => {
+        $crate::assert_variant!($test, $variant $( | $others)* => {})
     };
 }
 
@@ -158,11 +143,23 @@ macro_rules! assert_variant {
 /// ```
 #[macro_export]
 macro_rules! assert_variant_at_idx {
-    ($indexable:expr, $idx:expr, $variant:pat $( | $others:pat)*) => {
+    // Use custom formatting when panicking.
+    ($indexable:expr, $idx:expr, $variant:pat $( | $others:pat)* => $e:expr, $fmt:expr $(, $args:tt)* $(,)?) => {
+        $crate::assert_variant!(&$indexable[$idx], $variant $( | $others)* => { $e }, $fmt $(, $args)*)
+    };
+    // Use default message when panicking.
+    ($indexable:expr, $idx:expr, $variant:pat $( | $others:pat)* => $e:expr $(,)?) => {{
         let indexable_name = stringify!($indexable);
-        $crate::assert_variant!(&$indexable[$idx], $variant $(| $others)*,
-                        "unexpected variant at {:?} in {}:\n{:#?}",
-                        $idx, indexable_name, $indexable);
+        $crate::assert_variant_at_idx!($indexable, $idx, $variant $( | $others)* => { $e },
+                                       "unexpected variant at {:?} in {}:\n{:#?}", $idx, indexable_name, $indexable)
+    }};
+    // Custom error message.
+    ($indexable:expr, $idx:expr, $variant:pat $( | $others:pat)*, $fmt:expr $(, $args:tt)* $(,)?) => {
+        $crate::assert_variant_at_idx!($indexable, $idx, $variant $( | $others)* => {}, $fmt $(, $args)*)
+    };
+    // Default error message.
+    ($indexable:expr, $idx:expr, $variant:pat $( | $others:pat)* $(,)?) => {
+        $crate::assert_variant_at_idx!($indexable, $idx, $variant $( | $others)* => {})
     };
 }
 
@@ -180,6 +177,12 @@ mod tests {
     #[test]
     fn assert_variant_full_match_success() {
         assert_variant!(Foo::A(8), Foo::A(8));
+    }
+
+    #[test]
+    fn assert_variant_no_expr_value() {
+        let value = assert_variant!(0, 0);
+        assert_eq!(value, ());
     }
 
     #[test]
@@ -220,7 +223,7 @@ mod tests {
     }
 
     #[test]
-    fn assert_variant_block_expr() {
+    fn assert_variant_expr() {
         assert_variant!(Foo::A(8), Foo::A(value) => {
             assert_eq!(value, 8);
         });
@@ -229,6 +232,9 @@ mod tests {
         });
 
         let named = assert_variant!(Foo::B { named: 7, bar: 8 }, Foo::B { named, .. } => named);
+        assert_eq!(named, 7);
+
+        let named = assert_variant!(Foo::B { named: 7, bar: 8 }, Foo::B { named, .. } => named, "custom error message");
         assert_eq!(named, 7);
 
         assert_variant!(Foo::B { named: 7, bar: 8 }, Foo::B { .. } => (), "custom error message");
@@ -258,9 +264,52 @@ mod tests {
     }
 
     #[test]
+    fn assert_variant_at_idx_no_expr_value() {
+        let v = vec![0, 2];
+        let value = assert_variant_at_idx!(v, 0, 0);
+        assert_eq!(value, ());
+    }
+
+    #[test]
     #[should_panic(expected = "unexpected variant at 0 in v:\n[\n    0,\n    2,\n]")]
     fn assert_variant_at_idx_failure() {
         let v = vec![0, 2];
         assert_variant_at_idx!(v, 0, 2);
+    }
+
+    #[test]
+    fn assert_variant_at_idx_custom_message_success() {
+        let v = vec![0, 2];
+        assert_variant_at_idx!(v, 0, 0, "custom error message");
+    }
+
+    #[test]
+    #[should_panic(expected = "custom error message")]
+    fn assert_variant_at_idx_custom_message_failure() {
+        let v = vec![0, 2];
+        assert_variant_at_idx!(v, 0, 2, "custom error message");
+    }
+
+    #[test]
+    #[should_panic(expected = "custom error message token1 token2")]
+    fn assert_variant_at_idx_custom_message_with_multiple_tokens_failure() {
+        let v = vec![0, 2];
+        assert_variant_at_idx!(v, 0, 2, "custom error message {} {}", "token1", "token2");
+    }
+
+    #[test]
+    fn assert_variant_at_idx_expr() {
+        let v = vec![0, 2];
+        assert_variant_at_idx!(v, 0, 0 => {
+            assert_eq!(1, 1);
+        });
+
+        let named = assert_variant_at_idx!(v, 0, 0 => 1);
+        assert_eq!(named, 1);
+
+        let named = assert_variant_at_idx!(v, 0, 0 => 1, "custom error message");
+        assert_eq!(named, 1);
+
+        assert_variant_at_idx!(v, 0, 0 => (), "custom error message");
     }
 }
