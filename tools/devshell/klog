@@ -8,10 +8,6 @@
 
 ## usage: fx klog [--raw] [-r | --remote-symbols]
 ##
-##    --experimental          use the experimental C++ symbolizer
-##
-##    --legacy                use the legacy Go symbolizer
-##
 ##    --raw                   do not attempt to symbolize the log
 ##
 ##    --remote-symbols|-r     attemp to resolve symbols using predefined remote
@@ -45,9 +41,6 @@ while [[ $# -ne 0 ]]; do
   --remote-symbols|-r)
     is_remote=1
     symbolizer+=("-r")
-    ;;
-  --experimental|--legacy)
-    symbolizer+=("$1")
     ;;
   *)
     fx-error Invalid syntax

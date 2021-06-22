@@ -6,12 +6,7 @@
 #### CATEGORY=Run, inspect and debug
 ### symbolize backtraces and program locations provided as input on stdin
 
-## usage: fx symbolize [--experimental] [--legacy] [-i IDS_TXT_FILE]
-##                     [-r | --remote-symbols]
-##
-##    --experimental          use the experimental C++ symbolizer
-##
-##    --legacy                use the legacy Go symbolizer
+## usage: fx symbolize [-i IDS_TXT_FILE] [-r | --remote-symbols]
 ##
 ##    -i IDS_TXT_FILE         specify an ids.txt file to be used
 ##
@@ -30,50 +25,14 @@
 ##   By default, `fx log` and `fx klog` automatically pipe their results into
 ##   this command.
 ##
-##   --experimental / --legacy controls which implementation to use. The default
-##   is to use the experimental symbolizer.
-##
 ## Authentication
 ##
 ##   If the `--remote-symbols` option is specified, authentication for the symbol
-##   server is needed.
-##
-##   When using the Go symbolizer, `fx symbolize` will fail if the current user
-##   is not authenticated or doesn't have enough privileges on the symbol
-##   servers. To ensure that the current user is properly authenticated, run:
-##      `gcloud auth application-default login`
-##
-##   When using the C++ implementation, failed or missing authentication will be
-##   silent. To authenticate, run:
-##      `fx symbolize --experimental --auth`
+##   server is needed. However, failed or missing authentication is silent.
+##   To authenticate, run:
+##      `fx symbolize --auth`
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
-
-function go_symbolizer {
-  fx-config-read
-  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/contrib/lib/symbol-index.sh || exit $?
-  ensure-symbol-index-registered || fx-warn "Failed to register ${FUCHSIA_DIR} in symbol-index!"
-  local symbolize="${HOST_OUT_DIR}/symbolize"
-  if [[ ! -x "${symbolize}" ]]; then
-    fx-error "Cannot execute '${symbolize}'. Try \`fx build\` first."
-    exit 1
-  fi
-  local llvm_symbolizer="${PREBUILT_CLANG_DIR}/bin/llvm-symbolizer"
-  local extra_args=()
-  for i in "${ids_txt[@]}"; do
-    extra_args+=(-ids-txt "${i}")
-  done
-  if [[ "${is_remote}" -eq 1 ]]; then
-    extra_args+=(
-      "-symbol-cache" "$HOME/.fuchsia-symbol-cache"
-      "-symbol-server" "gs://fuchsia-artifacts/debug"
-      "-symbol-server" "gs://fuchsia-artifacts-internal/debug"
-      "-symbol-server" "gs://fuchsia-artifacts-release/debug"
-    )
-    trap '_code=$?; set +x; exit-with-warning ${_code}' ERR
-  fi
-  "${symbolize}" -llvm-symbolizer "${llvm_symbolizer}" -ids-rel "${extra_args[@]}"
-}
 
 function cpp_symbolizer {
   fx-config-read
@@ -118,19 +77,12 @@ function exit-with-warning {
 declare ids_txt=()
 declare is_remote=0
 declare auth_mode=0
-declare use_experimental=1
 
 while [[ $# -ne 0 ]]; do
   case "$1" in
   -h|--help)
     fx-command-help
     exit 0
-    ;;
-  --experimental)
-    use_experimental=1
-    ;;
-  --legacy)
-    use_experimental=0
     ;;
   --auth)
     auth_mode=1
@@ -155,8 +107,4 @@ while [[ $# -ne 0 ]]; do
   shift
 done
 
-if [[ "${use_experimental}" -eq 1 ]]; then
-  cpp_symbolizer
-else
-  go_symbolizer
-fi
+cpp_symbolizer
