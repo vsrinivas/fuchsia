@@ -7,7 +7,7 @@
 /// 64 handles sent over a message.
 // TODO(fxbug.dev/4601): Greedily fill the vmos with object delimited json, rather than
 // giving every schema its own vmo.
-pub const IN_MEMORY_SNAPSHOT_LIMIT: usize = 8;
+pub const IN_MEMORY_SNAPSHOT_LIMIT: usize = 64;
 
 // Number of seconds to wait for a single component to have its diagnostics data "pumped".
 // This involves diagnostics directory traversal, contents extraction, and snapshotting.
