@@ -94,7 +94,7 @@ TEST(Parse, ExtractMissingType) {
 
 TEST(Parse, ExtractInvalidType) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true);
-  strncpy(args.type_arg, "blobfs", sizeof(args.type_arg));
+  strncpy(args.type_arg, "njgenkgnaw", sizeof(args.type_arg));
   EXPECT_EQ(remove(args.output_file), 0);
   std::vector<char*> argv{args.command,  args.sub_command, args.type,
                           args.type_arg, args.disk,        args.input_file,

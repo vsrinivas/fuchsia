@@ -20,12 +20,19 @@ int Extract(extractor::ExtractOptions& args) {
     return EXIT_FAILURE;
   }
   auto extractor = std::move(extractor_or.value());
-  auto status = extractor::MinfsExtract(std::move(args.input_fd), *extractor);
-  if (status.is_error()) {
-    std::cerr << "minfs extraction failed with " << status.error_value() << std::endl;
-    return EXIT_FAILURE;
+  zx::status<> status;
+  switch (args.type.value()) {
+    case extractor::DiskType::kMinfs:
+      status = extractor::MinfsExtract(std::move(args.input_fd), *extractor);
+      if (status.is_error()) {
+        std::cerr << "minfs extraction failed with " << status.error_value() << std::endl;
+        return EXIT_FAILURE;
+      }
+      break;
+    case extractor::DiskType::kBlobfs:
+      std::cerr << "blobfs extractor not yet implemented" << std::endl;
+      return EXIT_SUCCESS;
   }
-
   status = extractor->Write();
   if (status.is_error()) {
     std::cerr << "Failed to write extracted image " << status.error_value() << std::endl;

@@ -24,6 +24,7 @@ enum class SubCommand {
 
 enum class DiskType {
   kMinfs,
+  kBlobfs,
 };
 
 struct ExtractOptions {

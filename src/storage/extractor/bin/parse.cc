@@ -101,11 +101,14 @@ zx::status<ExtractOptions> ParseExtractArguments(int argc, char* const argv[]) {
         }
         break;
       case 't':
-        if (strncmp(optarg, "minfs", strlen(optarg)) != 0) {
-          std::cerr << "Type supplied " << optarg << " and needs to be minfs\n";
+        if (strncmp(optarg, "minfs", strlen(optarg)) == 0) {
+          options.type = DiskType::kMinfs;
+        } else if (strncmp(optarg, "blobfs", strlen(optarg)) == 0) {
+          options.type = DiskType::kBlobfs;
+        } else {
+          std::cerr << "Type supplied " << optarg << " and needs to be either minfs or blobfs\n";
           return zx::error(ZX_ERR_INVALID_ARGS);
         }
-        options.type = DiskType::kMinfs;
         break;
       case 'p':
         std::cerr << "Dumping Pii\n";
