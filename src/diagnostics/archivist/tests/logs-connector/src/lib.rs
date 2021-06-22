@@ -22,13 +22,12 @@ use fuchsia_component::{
 use fuchsia_syslog::levels::INFO;
 use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use fuchsia_zircon as zx;
-use futures::{channel::mpsc, StreamExt, TryStreamExt};
+use futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt};
 
 #[fuchsia::test]
 async fn same_log_sink_simultaneously_via_connector() {
     let (client, server) = zx::Channel::create().unwrap();
     let mut serverend = Some(ServerEnd::new(server));
-
     // connect multiple identical log sinks
     let mut sockets = Vec::new();
     for _ in 0..50 {
@@ -68,18 +67,23 @@ async fn same_log_sink_simultaneously_via_connector() {
             log_sink.connect(socket).unwrap();
         }
     }
-
     let (dir_client, dir_server) = zx::Channel::create().unwrap();
     let mut fs = ServiceFs::new();
+    let (take_log_listener_response_snd, mut take_log_listener_response_rcv) =
+        futures::channel::mpsc::channel(1);
     fs.add_fidl_service_at(
         LogConnectorMarker::NAME,
         move |mut stream: LogConnectorRequestStream| {
             let mut serverend = serverend.take();
+            let mut sender_mut = Some(take_log_listener_response_snd.clone());
             fasync::Task::spawn(async move {
                 while let Some(LogConnectorRequest::TakeLogConnectionListener { responder }) =
                     stream.try_next().await.unwrap()
                 {
-                    responder.send(serverend.take()).unwrap()
+                    responder.send(serverend.take()).unwrap();
+                    if let Some(mut sender) = sender_mut.take() {
+                        sender.send(()).await.unwrap();
+                    }
                 }
             })
             .detach()
@@ -101,7 +105,7 @@ async fn same_log_sink_simultaneously_via_connector() {
         options,
     )
     .unwrap();
-
+    take_log_listener_response_rcv.next().await.unwrap();
     // run log listener
     let log_proxy = archivist.connect_to_protocol::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
