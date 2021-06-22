@@ -98,6 +98,9 @@ using std::remove_pointer_t;
 using std::remove_reference;
 using std::remove_reference_t;
 
+using std::aligned_storage;
+using std::aligned_storage_t;
+
 }  // namespace ktl
 
 #endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_TYPE_TRAITS_H_

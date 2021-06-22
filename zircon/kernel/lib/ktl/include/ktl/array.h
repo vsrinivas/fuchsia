@@ -11,9 +11,8 @@
 
 namespace ktl {
 
-using std::array;
-
 using cpp20::to_array;
+using std::array;
 
 }  // namespace ktl
 
