@@ -8,6 +8,6 @@
         "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "bin/bt_profile_test_server_client_lib_test",
+        binary: "bin/mock_piconet_client_lib_test",
     },
 }

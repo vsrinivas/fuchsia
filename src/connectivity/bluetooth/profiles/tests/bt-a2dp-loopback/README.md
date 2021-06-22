@@ -1,6 +1,6 @@
 # A2DP Loopback Test App
 
-This app uses the Profile Test server to launch both Sink and Source profiles in
+This app uses the Mock Piconet Server to launch both Sink and Source profiles in
 a fake piconet, where they connect to each other and stream audio in an endless
 loop using the real system audio services.
 

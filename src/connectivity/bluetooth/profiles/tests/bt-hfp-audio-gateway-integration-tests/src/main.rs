@@ -6,7 +6,6 @@ use {
     anyhow::format_err,
     at_commands::{self as at, SerDe},
     bitflags::bitflags,
-    bt_profile_test_server_client::v2::{PiconetMember, ProfileTestHarnessV2},
     fidl::{encoding::Decodable, endpoints::DiscoverableService},
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::HfpMarker,
@@ -16,6 +15,7 @@ use {
     fuchsia_zircon::Duration,
     futures::{stream::StreamExt, TryFutureExt},
     matches::assert_matches,
+    mock_piconet_client::v2::{PiconetHarness, PiconetMember},
     std::convert::TryInto,
     test_call_manager::TestCallManager,
 };
@@ -94,7 +94,7 @@ fn hfp_hf_service_definition() -> bredr::ServiceDefinition {
 /// discovered by another peer in the mock piconet.
 #[fuchsia::test]
 async fn test_hfp_ag_service_advertisement() {
-    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let mut test_harness = PiconetHarness::new().await;
 
     // Add a mock piconet member.
     let spec = test_harness
@@ -155,7 +155,7 @@ async fn setup_test_call_manager(topology: &RealmInstance) -> TestCallManager {
 /// providing it, and attempts to connect to the mock peer.
 #[fuchsia::test]
 async fn test_hfp_search_and_connect() {
-    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let mut test_harness = PiconetHarness::new().await;
 
     // Add a mock piconet member.
     let spec = test_harness
@@ -255,7 +255,7 @@ const CIND_TEST_RESPONSE_BYTES: &[u8] = b"+CIND: \
 /// this is implementation specific.
 #[fuchsia::test]
 async fn test_hfp_full_slc_init_procedure() {
-    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let mut test_harness = PiconetHarness::new().await;
 
     // Add a mock piconet member.
     let spec = test_harness

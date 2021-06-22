@@ -4,12 +4,12 @@
 
 use {
     anyhow::{format_err, Error},
-    bt_profile_test_server_client::v2::{PiconetMember, ProfileTestHarnessV2},
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
     fuchsia_bluetooth::types::{Channel, Uuid},
     fuchsia_zircon as zx,
     futures::{stream::StreamExt, TryFutureExt},
+    mock_piconet_client::v2::{PiconetHarness, PiconetMember},
     std::convert::TryInto,
 };
 
@@ -49,7 +49,7 @@ fn avrcp_controller_service_definition() -> bredr::ServiceDefinition {
 /// discovered by another peer in the mock piconet.
 #[fasync::run_singlethreaded(test)]
 async fn test_avrcp_target_service_advertisement() -> Result<(), Error> {
-    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let mut test_harness = PiconetHarness::new().await;
     let spec = test_harness.add_mock_piconet_member("mock-peer".to_string()).await?;
     let profile_observer =
         test_harness.add_profile("bt-avrcp-profile".to_string(), AVRCP_URL_V2.to_string()).await?;
@@ -75,7 +75,7 @@ async fn test_avrcp_target_service_advertisement() -> Result<(), Error> {
 /// discovered by another peer in the mock piconet.
 #[fasync::run_singlethreaded(test)]
 async fn test_avrcp_controller_service_advertisement() -> Result<(), Error> {
-    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let mut test_harness = PiconetHarness::new().await;
     let spec = test_harness.add_mock_piconet_member("mock-peer".to_string()).await?;
     let profile_observer =
         test_harness.add_profile("bt-avrcp-profile".to_string(), AVRCP_URL_V2.to_string()).await?;
@@ -98,7 +98,7 @@ async fn test_avrcp_controller_service_advertisement() -> Result<(), Error> {
 /// providing it, and attempts to connect to the mock peer.
 #[fasync::run_singlethreaded(test)]
 async fn test_avrcp_search_and_connect() -> Result<(), Error> {
-    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let mut test_harness = PiconetHarness::new().await;
     let spec = test_harness.add_mock_piconet_member("mock-peer".to_string()).await?;
     let mut profile_observer =
         test_harness.add_profile("bt-avrcp-profile".to_string(), AVRCP_URL_V2.to_string()).await?;
@@ -138,7 +138,7 @@ async fn test_avrcp_search_and_connect() -> Result<(), Error> {
 /// sending/receiving data should be OK.
 #[fasync::run_singlethreaded(test)]
 async fn test_remote_initiates_connection_to_avrcp() -> Result<(), Error> {
-    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let mut test_harness = PiconetHarness::new().await;
     let spec = test_harness.add_mock_piconet_member("mock-peer".to_string()).await?;
     let mut profile_observer =
         test_harness.add_profile("bt-avrcp-profile".to_string(), AVRCP_URL_V2.to_string()).await?;
@@ -217,7 +217,7 @@ async fn test_remote_initiates_connection_to_avrcp() -> Result<(), Error> {
 /// after the control channel. We expect AVRCP to drop the incoming channel.
 #[fasync::run_singlethreaded(test)]
 async fn test_remote_initiates_browse_channel_before_control() -> Result<(), Error> {
-    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let mut test_harness = PiconetHarness::new().await;
     let spec = test_harness.add_mock_piconet_member("mock-peer".to_string()).await?;
     let mut profile_observer =
         test_harness.add_profile("bt-avrcp-profile".to_string(), AVRCP_URL_V2.to_string()).await?;

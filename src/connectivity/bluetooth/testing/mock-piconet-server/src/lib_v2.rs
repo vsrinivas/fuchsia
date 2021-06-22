@@ -22,8 +22,8 @@ use {
     futures::{stream::StreamExt, TryFutureExt},
 };
 
-static PROFILE_TEST_SERVER_URL_V2: &str =
-    "fuchsia-pkg://fuchsia.com/bt-profile-test-server#meta/bt-profile-test-server-v2.cm";
+static MOCK_PICONET_SERVER_URL_V2: &str =
+    "fuchsia-pkg://fuchsia.com/mock-piconet-server#meta/mock-piconet-server-v2.cm";
 static PROFILE_INTERPOSER_PREFIX: &str = "profile-interposer";
 
 /// Specification data for creating a peer in the mock piconet. This may be a
@@ -210,7 +210,7 @@ impl ProfileObserver {
 }
 
 /// Adds a profile. This also creates a component that sits between the profile
-/// and the Profile Test Server. This node acts as a facade between the profile
+/// and the Mock Piconet Server. This node acts as a facade between the profile
 /// under test and the Test Server. If the PiconetMemberSpec passed in contains
 /// a Channel then PeerObserver events will be forwarded to that channel.
 /// `additional_capabilities` specifies capability routings for any protocols used/exposed
@@ -241,7 +241,7 @@ async fn add_profile<'a>(
 
     // Route:
     //   * Profile from mock piconet member to profile under test
-    //   * ProfileTest from Profile Test Server to mock piconet member
+    //   * ProfileTest from Mock Piconet Server to mock piconet member
     //   * LogSink from parent to the profile under test + mock piconet member.
     //   * Additional capabilities from the profile under test to AboveRoot to be
     //     accessible via the test realm service directory.
@@ -350,7 +350,7 @@ async fn add_mock_piconet_component(
 }
 
 /// Drives the mock piconet member. This receives the open request for the
-/// Profile service, attaches it to the Profile Test Server, and wires up the
+/// Profile service, attaches it to the Mock Piconet Server, and wires up the
 /// the PeerObserver.
 async fn piconet_member(
     handles: mock::MockHandles,
@@ -504,11 +504,11 @@ async fn drain_observer(mut stream: bredr::PeerObserverRequestStream) -> Result<
     Ok(())
 }
 
-async fn add_profile_test_server(builder: &mut RealmBuilder) -> String {
-    let name = test_profile_server_moniker().to_string();
+async fn add_mock_piconet_server(builder: &mut RealmBuilder) -> String {
+    let name = mock_piconet_server_moniker().to_string();
 
     builder
-        .add_component(name.clone(), ComponentSource::url(PROFILE_TEST_SERVER_URL_V2))
+        .add_component(name.clone(), ComponentSource::url(MOCK_PICONET_SERVER_URL_V2))
         .await
         .expect("failed to add");
 
@@ -521,24 +521,51 @@ async fn add_profile_test_server(builder: &mut RealmBuilder) -> String {
     name
 }
 
-pub fn test_profile_server_moniker() -> Moniker {
-    vec!["test-profile-server".to_string()].into()
+fn mock_piconet_server_moniker() -> Moniker {
+    vec!["mock-piconet-server".to_string()].into()
 }
 
-pub fn interposer_name_for_profile(profile_name: &'_ str) -> String {
+fn interposer_name_for_profile(profile_name: &'_ str) -> String {
     format!("{}-{}", PROFILE_INTERPOSER_PREFIX, profile_name)
 }
 
-pub struct ProfileTestHarnessV2 {
+/// Represents the topology of the piconet set up by an integration test.
+///
+/// Provides an API to add members to the piconet, define Bluetooth profiles to be used
+/// under test, and specify capability routing in the topology. Bluetooth profiles
+/// specified in the topology _must_ be v2 components.
+///
+/// ### Example Usage:
+///
+/// let harness = PiconetHarness::new().await;
+///
+/// // Add a mock piconet member to be driven by test code.
+/// let spec = harness.add_mock_piconet_member("mock-peer".to_string()).await?;
+/// // Add a Bluetooth Profile (AVRCP) to the topology.
+/// let profile_observer = harness.add_profile("bt-avrcp-profile", AVRCP_URL_V2).await?;
+///
+/// // The topology has been defined and can be built. After this step, it cannot be
+/// // modified (e.g Can't add a new mock piconet member).
+/// let test_topology = test_harness.build().await?;
+///
+/// // Get the test-driven peer from the topology.
+/// let test_driven_peer = PiconetMember::new_from_spec(spec, &test_topology)?;
+///
+/// // Manipulate the test-driven peer to indirectly interact with the profile-under-test.
+/// let search_results = test_driven_peer.register_service_search(..)?;
+/// // Expect some behavior from the profile-under-test.
+/// let req = profile_observer.expect_observer_request().await?;
+/// assert_eq!(req, ..);
+pub struct PiconetHarness {
     pub builder: RealmBuilder,
     pub ps_moniker: String,
 }
 
-impl ProfileTestHarnessV2 {
+impl PiconetHarness {
     pub async fn new() -> Self {
         let mut builder = RealmBuilder::new().await.expect("Couldn't create realm builder");
-        let ps_moniker = add_profile_test_server(&mut builder).await;
-        ProfileTestHarnessV2 { builder, ps_moniker }
+        let ps_moniker = add_mock_piconet_server(&mut builder).await;
+        PiconetHarness { builder, ps_moniker }
     }
 
     pub async fn add_mock_piconet_members(
@@ -655,19 +682,19 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_profile_server_added() {
-        let test_harness = ProfileTestHarnessV2::new().await;
+        let test_harness = PiconetHarness::new().await;
         let topology = test_harness.builder.build();
-        let pts = topology
-            .contains(&super::test_profile_server_moniker())
+        let mps = topology
+            .contains(&super::mock_piconet_server_moniker())
             .await
             .expect("failed to check realm contents");
-        assert!(pts);
+        assert!(mps);
         topology.create().await.expect("build failed");
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_add_piconet_member() {
-        let mut test_harness = ProfileTestHarnessV2::new().await;
+        let mut test_harness = PiconetHarness::new().await;
         let member_name = "test-piconet-member";
         let member_spec = test_harness
             .add_mock_piconet_member(member_name.to_string())
@@ -682,7 +709,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_add_multiple_piconet_members() {
-        let mut test_harness = ProfileTestHarnessV2::new().await;
+        let mut test_harness = PiconetHarness::new().await;
         let member1_name = "test-piconet-member".to_string();
         let member2_name = "test-piconet-member-two".to_string();
         let mut members = vec![
@@ -750,11 +777,11 @@ mod tests {
         }
 
         // Check that the root offers ProfileTest to the piconet member from
-        // the Profile Test Server
+        // the Mock Piconet Server
         let profile_test_name = CapabilityName(bredr::ProfileTestMarker::SERVICE_NAME.to_string());
         let root = topology.get_decl(&vec![].into()).await.expect("failed to get root");
         let offer_profile_test = OfferDecl::Protocol(OfferProtocolDecl {
-            source: OfferSource::Child(super::test_profile_server_moniker().to_string()),
+            source: OfferSource::Child(super::mock_piconet_server_moniker().to_string()),
             source_name: profile_test_name.clone(),
             target: OfferTarget::Child(pico_member_moniker.to_string()),
             target_name: profile_test_name,
@@ -762,15 +789,15 @@ mod tests {
         });
         assert!(root.offers.contains(&offer_profile_test));
 
-        // We don't check that the Profile Test Server exposes ProfileTest
+        // We don't check that the Mock Piconet Server exposes ProfileTest
         // because the builder won't actually know if this is true until it
         // resolves the component URL. We assume other tests validate the
-        // Profile Test Server has this expose.
+        // Mock Piconet Server has this expose.
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_add_profile() {
-        let mut test_harness = ProfileTestHarnessV2::new().await;
+        let mut test_harness = PiconetHarness::new().await;
         let profile_name = "test-profile-member";
         let profile_moniker: Moniker = vec![profile_name.to_string()].into();
         let interposer_name = super::interposer_name_for_profile(profile_name);
@@ -832,9 +859,9 @@ mod tests {
         let root = topology.get_decl(&vec![].into()).await.expect("unable to get root decl");
         assert!(root.offers.contains(&profile_offer));
 
-        // ProfileTest is offered by root to interposer from Profile Test Server
+        // ProfileTest is offered by root to interposer from Mock Piconet Server
         let profile_test_offer = OfferDecl::Protocol(OfferProtocolDecl {
-            source: OfferSource::Child(super::test_profile_server_moniker().to_string()),
+            source: OfferSource::Child(super::mock_piconet_server_moniker().to_string()),
             source_name: profile_test_name.clone(),
             target: OfferTarget::Child(interposer_name.clone()),
             target_name: profile_test_name.clone(),
@@ -856,7 +883,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_add_profile_with_additional_capabilities() {
-        let mut test_harness = ProfileTestHarnessV2::new().await;
+        let mut test_harness = PiconetHarness::new().await;
         let profile_name = "test-profile-member";
         let profile_moniker: Moniker = vec![profile_name.to_string()].into();
 

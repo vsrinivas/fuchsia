@@ -43,7 +43,7 @@ group("end_to_end_deps") {
 
     # Needed for bt-a2dp test
     "//src/connectivity/bluetooth/profiles/tests/bt-a2dp-loopback",
-    "//src/connectivity/bluetooth/testing/bt-profile-test-server",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server",
 
     # Service that tests use to log cpu usage into traces
     "//src/testing/system-metrics-logger",

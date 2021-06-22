@@ -5,7 +5,6 @@
 use {
     anyhow::{format_err, Error},
     argh::FromArgs,
-    bt_profile_test_server_client::ProfileTestHarness,
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
@@ -13,6 +12,7 @@ use {
     futures::future,
     log::info,
     matches::assert_matches,
+    mock_piconet_client::ProfileTestHarness,
     std::convert::TryInto,
 };
 

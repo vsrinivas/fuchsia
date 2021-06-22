@@ -32,17 +32,17 @@ mod types;
 
 use crate::{peer::MockPeer, types::LaunchInfo};
 
-/// The TestProfileServer implements both the bredr.Profile service and the bredr.ProfileTest
+/// The MockPiconetServer implements both the bredr.Profile service and the bredr.ProfileTest
 /// service. The server is responsible for routing incoming asynchronous requests from peers in
 /// the piconet.
-pub struct TestProfileServer {
-    inner: Arc<Mutex<TestProfileServerInner>>,
+pub struct MockPiconetServer {
+    inner: Arc<Mutex<MockPiconetServerInner>>,
     proxy_launcher_enabled: bool,
 }
 
-impl TestProfileServer {
+impl MockPiconetServer {
     pub fn new(proxy_launcher_enabled: bool) -> Self {
-        Self { inner: Arc::new(Mutex::new(TestProfileServerInner::new())), proxy_launcher_enabled }
+        Self { inner: Arc::new(Mutex::new(MockPiconetServerInner::new())), proxy_launcher_enabled }
     }
 
     fn contains_peer(&self, id: &PeerId) -> bool {
@@ -95,7 +95,7 @@ impl TestProfileServer {
 
         fasync::Task::spawn(peer_service_fs.collect()).detach();
 
-        // Complete registration by storing the `MockPeer` in the Profile Test Server database.
+        // Complete registration by storing the `MockPeer` in the Mock Piconet Server database.
         {
             let mut inner = self.inner.lock();
             inner.register_peer(id, mock_peer)?;
@@ -302,15 +302,15 @@ impl TestProfileServer {
         }
     }
 }
-/// The `TestProfileServerInner` handles all state bookkeeping for the peers in the piconet.
+/// The `MockPiconetServerInner` handles all state bookkeeping for the peers in the piconet.
 /// There is one `MockPeer` object, identified by a unique PeerId, for every peer.
 /// FIDL requests for a specific Peer will be routed to a peer's `MockPeer`.
-pub struct TestProfileServerInner {
+pub struct MockPiconetServerInner {
     /// Map of all the peers in the piconet, identified by a unique PeerId.
     peers: HashMap<PeerId, MockPeer>,
 }
 
-impl TestProfileServerInner {
+impl MockPiconetServerInner {
     pub fn new() -> Self {
         Self { peers: HashMap::new() }
     }
@@ -508,23 +508,23 @@ async fn handle_test_client_connection(
 }
 
 #[derive(Debug, FromArgs)]
-/// Run the Bluetooth Profile Test Server, which is a mock piconet manager.
+/// Run the Bluetooth Mock Piconet Server, which is a mock piconet manager.
 struct Options {
     #[argh(switch)]
     /// whether we should run in v1 mode. LaunchProfile can only be used with
-    /// v1. This defaults to false so the Profile Test Server defaults to v2
+    /// v1. This defaults to false so the Mock Piconet Server defaults to v2
     /// mode.
     v1: bool,
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), anyhow::Error> {
-    fuchsia_syslog::init_with_tags(&["bt-profile-test-server"])
+    fuchsia_syslog::init_with_tags(&["bt-mock-piconet-server"])
         .expect("Unable to initialize logger");
 
     let args: Options = argh::from_env();
 
-    let profile_server = TestProfileServer::new(args.v1);
+    let server = MockPiconetServer::new(args.v1);
 
     let (test_sender, test_receiver) = mpsc::channel(0);
 
@@ -536,7 +536,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let mut drive_service_fs = fs.collect::<()>().fuse();
 
     select! {
-        _ = profile_server.handle_fidl_requests(test_receiver).fuse() => {}
+        _ = server.handle_fidl_requests(test_receiver).fuse() => {}
         _ = drive_service_fs => {}
     }
 
@@ -588,28 +588,28 @@ mod tests {
     #[test]
     fn test_register_peer() -> Result<(), Error> {
         let mut exec = fasync::TestExecutor::new().unwrap();
-        let pts = TestProfileServer::new(true);
+        let mps = MockPiconetServer::new(true);
         let (mut sender, receiver) = mpsc::channel(0);
 
         // The main handler - this is under test.
-        let pts_fut = pts.handle_fidl_requests(receiver);
-        pin_mut!(pts_fut);
-        assert!(exec.run_until_stalled(&mut pts_fut).is_pending());
+        let mps_fut = mps.handle_fidl_requests(receiver);
+        pin_mut!(mps_fut);
+        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
 
         // Register a mock peer.
         let id = PeerId(123);
         let (mock_peer, _observer, request) = generate_register_peer_request(&mut exec, id);
 
-        // Forward the request to the handler. After running the main `pts_fut`, the peer
+        // Forward the request to the handler. After running the main `mps_fut`, the peer
         // should be registered.
         assert!(exec.run_until_stalled(&mut sender.send(request)).is_pending());
-        assert!(exec.run_until_stalled(&mut pts_fut).is_pending());
-        assert!(pts.contains_peer(&id));
+        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
+        assert!(mps.contains_peer(&id));
 
         // Dropping the MockPeer client should simulate peer disconnection.
         drop(mock_peer);
-        assert!(exec.run_until_stalled(&mut pts_fut).is_pending());
-        assert!(!pts.contains_peer(&id));
+        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
+        assert!(!mps.contains_peer(&id));
 
         Ok(())
     }
@@ -617,28 +617,28 @@ mod tests {
     #[test]
     fn test_advertisement_request_resolves_when_terminated() {
         let mut exec = fasync::TestExecutor::new().unwrap();
-        let pts = TestProfileServer::new(true);
+        let mps = MockPiconetServer::new(true);
         let (mut sender, receiver) = mpsc::channel(0);
 
         // The main handler - this is under test.
-        let pts_fut = pts.handle_fidl_requests(receiver);
-        pin_mut!(pts_fut);
-        assert!(exec.run_until_stalled(&mut pts_fut).is_pending());
+        let mps_fut = mps.handle_fidl_requests(receiver);
+        pin_mut!(mps_fut);
+        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
 
         // Register a mock peer.
         let id = PeerId(123);
         let (mock_peer, _observer, request) = generate_register_peer_request(&mut exec, id);
 
-        // Forward the request to the handler. After running the main `pts_fut`, the peer
+        // Forward the request to the handler. After running the main `mps_fut`, the peer
         // should be registered.
         assert!(exec.run_until_stalled(&mut sender.send(request)).is_pending());
-        assert!(exec.run_until_stalled(&mut pts_fut).is_pending());
+        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
 
         // Connect the ProfileProxy.
         let (c, s) = create_proxy::<ProfileMarker>().unwrap();
         let connect_fut = mock_peer.connect_proxy_(s);
         pin_mut!(connect_fut);
-        assert!(exec.run_until_stalled(&mut pts_fut).is_pending());
+        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
         assert!(exec.run_until_stalled(&mut connect_fut).is_ready());
 
         // Advertise - the hanging-get request shouldn't resolve.
@@ -647,11 +647,11 @@ mod tests {
         let mut adv_fut =
             c.advertise(&mut services.into_iter(), ChannelParameters::new_empty(), target);
         assert!(exec.run_until_stalled(&mut adv_fut).is_pending());
-        assert!(exec.run_until_stalled(&mut pts_fut).is_pending());
+        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
 
         // We decide to stop advertising.
         drop(receiver);
-        assert!(exec.run_until_stalled(&mut pts_fut).is_pending());
+        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
         assert!(exec.run_until_stalled(&mut adv_fut).is_ready());
     }
 }

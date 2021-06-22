@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    bt_profile_test_server_client::v2::{PiconetMember, ProfileObserver, ProfileTestHarnessV2},
     fidl::endpoints::DiscoverableService,
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::types::{PeerId, Uuid},
     fuchsia_component_test::{builder::Capability, RealmInstance},
     futures::stream::StreamExt,
+    mock_piconet_client::v2::{PiconetHarness, PiconetMember, ProfileObserver},
     profile_client::ProfileClient,
 };
 
@@ -61,7 +61,7 @@ pub fn spp_service_definition() -> bredr::ServiceDefinition {
 /// for bt-rfcomm, and a piconet member which can be driven by the test.
 #[track_caller]
 async fn setup_test_topology() -> (RealmInstance, ProfileObserver, PiconetMember) {
-    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let mut test_harness = PiconetHarness::new().await;
 
     // Add a mock piconet member.
     let spec = test_harness

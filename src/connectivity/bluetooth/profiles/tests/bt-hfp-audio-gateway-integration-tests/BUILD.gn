@@ -13,7 +13,7 @@ rustc_test("tests_bin") {
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/connectivity/bluetooth/testing/bt-profile-test-server:lib",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:lib",
     "//src/connectivity/bluetooth/testing/test-call-manager",
     "//src/connectivity/lib/at-commands",
     "//src/lib/fidl/rust/fidl",
@@ -53,8 +53,8 @@ fuchsia_test_package("bt-hfp-audio-gateway-integration-tests") {
     "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:component-v2",
     "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:default_config",
 
-    # Profile Test Server
-    "//src/connectivity/bluetooth/testing/bt-profile-test-server",
+    # Mock Piconet Server
+    "//src/connectivity/bluetooth/testing/mock-piconet-server",
 
     # Fuchsia Component Test library component
     "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia_component_test_framework_intermediary_component",

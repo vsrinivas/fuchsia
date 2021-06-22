@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Client utilities for launching and interacting with the Profile Test Server.
+//! Client utilities for launching and interacting with the Mock Piconet Server.
+
 use {
     anyhow::{format_err, Context, Error},
     fidl::{
@@ -20,9 +21,9 @@ use {
 #[path = "lib_v2.rs"]
 pub mod v2;
 
-/// The component URL of the Profile Test Server - used in integration tests.
-static PROFILE_TEST_SERVER_URL: &str =
-    "fuchsia-pkg://fuchsia.com/bt-profile-test-server#meta/bt-profile-test-server.cmx";
+/// The component URL of the Mock Piconet Server - used in integration tests.
+static MOCK_PICONET_SERVER_URL: &str =
+    "fuchsia-pkg://fuchsia.com/mock-piconet-server#meta/mock-piconet-server.cmx";
 
 /// Timeout for updates over the PeerObserver of a MockPeer.
 ///
@@ -38,37 +39,37 @@ pub fn peer_observer_timeout() -> Duration {
 }
 
 /// The `ProfileTestHarness` provides functionality for writing integration tests
-/// for our Rust profiles.
+/// for Bluetooth profiles in Rust.
 /// A client of `ProfileTestHarness` can import this object and write integration
 /// tests using the common helpers provided in the Impl block.
 /// All helpers leverage the ProfileTest API. See `fuchsia.bluetooth.bredr.ProfileTest`
 /// for more documentation on the API.
 pub struct ProfileTestHarness {
-    /// A handle to the ProfileTest service. This is acquired by launching the Profile Test Server
+    /// A handle to the ProfileTest service. This is acquired by launching the Mock Piconet Server
     /// component, which provides the ProfileTest service.
     /// This can be used to register peers in the mock piconet.
     profile_test_svc: ProfileTestProxy,
 
-    /// A handle to the launched Profile Test Server. This must be kept alive for the lifetime
+    /// A handle to the launched Mock Piconet Server. This must be kept alive for the lifetime
     /// of the `ProfileTestHarness` object.
-    _profile_test_server: App,
+    _mock_piconet_server: App,
 }
 
 impl ProfileTestHarness {
-    /// Creates a new `ProfileTestHarness` by launching the Profile Test Server and connecting to the
+    /// Creates a new `ProfileTestHarness` by launching the Mock Piconet Server and connecting to the
     /// ProfileTest service.
     pub fn new() -> Result<Self, Error> {
         let launcher = client::launcher().context("Failed to get the launcher")?;
-        let app = client::launch(&launcher, PROFILE_TEST_SERVER_URL.to_string(), None)
+        let app = client::launch(&launcher, MOCK_PICONET_SERVER_URL.to_string(), None)
             .context("failed to launch the profile test server")?;
 
         let profile_test_svc = app
             .connect_to_protocol::<ProfileTestMarker>()
             .context("Failed to connect to Bluetooth ProfileTest service")?;
-        Ok(Self { profile_test_svc, _profile_test_server: app })
+        Ok(Self { profile_test_svc, _mock_piconet_server: app })
     }
 
-    /// Registers a peer in the Profile Test Server database.
+    /// Registers a peer in the Mock Piconet Server database.
     /// `peer_id` is the unique identifier for the peer.
     ///
     /// Returns a MockPeer that can be used to control peer behavior.

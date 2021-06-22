@@ -14,7 +14,7 @@ group("tests") {
     # Mock cobalt component that is injected into the integration tests.
     "//src/cobalt/bin/testing/mock_cobalt",
 
-    # Profile test server component that is injected into the integration tests.
-    "//src/connectivity/bluetooth/testing/bt-profile-test-server",
+    # Mock piconet server component that is injected into the integration tests.
+    "//src/connectivity/bluetooth/testing/mock-piconet-server",
   ]
 }

@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("lib") {
-  name = "bt_profile_test_server_client"
+  name = "mock_piconet_client"
   testonly = true
   with_unit_tests = true
 
@@ -35,13 +35,13 @@ rustc_library("lib") {
   ]
 }
 
-fuchsia_unittest_package("bt-profile-lib-v2-tests") {
-  manifest = "meta/bt-profile-lib-v2-tests.cml"
+fuchsia_unittest_package("mock-piconet-client-v2-tests") {
+  manifest = "meta/mock-piconet-client-v2-tests.cml"
   deps = [ ":lib_test" ]
 }
 
 rustc_binary("bin") {
-  output_name = "bt_profile_test_server"
+  output_name = "mock_piconet_server"
   with_unit_tests = true
 
   deps = [
@@ -78,34 +78,34 @@ rustc_binary("bin") {
 }
 
 fuchsia_component("component") {
-  component_name = "bt-profile-test-server"
-  manifest = "meta/bt-profile-test-server.cmx"
+  component_name = "mock-piconet-server"
+  manifest = "meta/mock-piconet-server.cmx"
   deps = [ ":bin" ]
 }
 
 fuchsia_component("component-v2") {
-  component_name = "bt-profile-test-server-v2"
-  manifest = "meta/bt-profile-test-server.cml"
+  component_name = "mock-piconet-server-v2"
+  manifest = "meta/mock-piconet-server.cml"
   deps = [ ":bin" ]
 }
 
-fuchsia_package("bt-profile-test-server") {
+fuchsia_package("mock-piconet-server") {
   deps = [
     ":component",
     ":component-v2",
   ]
 }
 
-fuchsia_unittest_package("bt-profile-test-server-tests") {
-  manifest = "meta/bt-profile-test-server-tests.cmx"
+fuchsia_unittest_package("mock-piconet-server-tests") {
+  manifest = "meta/mock-piconet-server-tests.cmx"
   deps = [ ":bin_test" ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":bt-profile-lib-v2-tests",
-    ":bt-profile-test-server-tests",
+    ":mock-piconet-client-v2-tests",
+    ":mock-piconet-server-tests",
 
     # Packages for components that are injected into the tests.
     "//src/cobalt/bin/testing/mock_cobalt",

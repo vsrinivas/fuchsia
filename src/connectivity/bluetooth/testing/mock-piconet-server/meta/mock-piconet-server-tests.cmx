@@ -18,7 +18,7 @@
         "args": [
             "--test-threads=1"
         ],
-        "binary": "bin/bt_profile_test_server_bin_test"
+        "binary": "bin/mock_piconet_server_bin_test"
     },
     "sandbox": {
         "services": [

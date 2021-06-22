@@ -6,7 +6,7 @@
         "args": [
             "--v1"
         ],
-        "binary": "bin/bt_profile_test_server"
+        "binary": "bin/mock_piconet_server"
     },
     "sandbox": {
         "services": [

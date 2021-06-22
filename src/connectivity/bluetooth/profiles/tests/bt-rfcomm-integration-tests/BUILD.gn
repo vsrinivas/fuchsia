@@ -13,7 +13,7 @@ rustc_test("tests_bin") {
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/lib/profile-client",
-    "//src/connectivity/bluetooth/testing/bt-profile-test-server:lib",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/sys/lib/fuchsia-component-test",
@@ -35,8 +35,8 @@ fuchsia_test_package("bt-rfcomm-integration-tests") {
     # The RFCOMM v2 component.
     "//src/connectivity/bluetooth/profiles/bt-rfcomm:component-v2",
 
-    # Profile Test Server component.
-    "//src/connectivity/bluetooth/testing/bt-profile-test-server",
+    # Mock Piconet Server component.
+    "//src/connectivity/bluetooth/testing/mock-piconet-server",
 
     # Fuchsia Component Test library component
     "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia_component_test_framework_intermediary_component",

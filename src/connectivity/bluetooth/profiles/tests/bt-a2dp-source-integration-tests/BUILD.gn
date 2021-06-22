@@ -16,7 +16,7 @@ rustc_test("tests_bin") {
     "//src/connectivity/bluetooth/lib/fuchsia-audio-codec",
     "//src/connectivity/bluetooth/lib/fuchsia-audio-device-output",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/connectivity/bluetooth/testing/bt-profile-test-server:lib",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

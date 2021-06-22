@@ -4,12 +4,12 @@
 
 use {
     anyhow::{format_err, Error},
-    bt_profile_test_server_client::ProfileTestHarness,
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::{PeerId, Uuid},
     futures::{stream::StreamExt, TryFutureExt},
+    mock_piconet_client::ProfileTestHarness,
 };
 
 const A2DP_URL: &str = fuchsia_component::fuchsia_single_component_package_url!("bt-a2dp");

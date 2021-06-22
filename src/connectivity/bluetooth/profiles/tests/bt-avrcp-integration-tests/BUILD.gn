@@ -14,7 +14,7 @@ rustc_test("bin") {
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/connectivity/bluetooth/testing/bt-profile-test-server:lib",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -38,7 +38,7 @@ fuchsia_test_package("bt-avrcp-integration-tests") {
 
   deps = [
     "//src/connectivity/bluetooth/profiles/bt-avrcp:component",
-    "//src/connectivity/bluetooth/testing/bt-profile-test-server",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server",
     "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia_component_test_framework_intermediary_component",
   ]
 }
