@@ -28,7 +28,7 @@ zx_status_t TriggerCondition::Inc() {
   std::lock_guard<std::mutex> lock(trigger_lock_);
   zx_status_t error = ZX_OK;
 
-  BRCMF_DBG(INFO, "Catched an error instance, increasing TriggerCondition counter.\n");
+  BRCMF_WARN("Caught an error instance, increasing TriggerCondition counter.");
 
   if (++counter_ >= threshold_) {
     // Check whether the callback function has value first.
@@ -41,7 +41,7 @@ zx_status_t TriggerCondition::Inc() {
     // Test and set the bool to true if there is a callback function, because it should be cleared
     // inside the callback function.
     if (!over_threshold_.compare_exchange_strong(expected, true)) {
-      BRCMF_DBG(INFO, "The recovery process has already been triggered by this condition.\n");
+      BRCMF_INFO("Recovery already triggered - ignoring additional trigger");
       return ZX_ERR_BAD_STATE;
     }
 

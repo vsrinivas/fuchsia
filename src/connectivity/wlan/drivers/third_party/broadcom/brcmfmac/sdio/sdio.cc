@@ -805,7 +805,7 @@ static zx_status_t __brcmf_sdio_sharedrw(struct brcmf_sdio* bus, struct sdpcm_sh
     goto fail;
   }
 
-  BRCMF_DBG(INFO, "sdpcm_shared address 0x%08X", addr);
+  BRCMF_DBG(SDIO, "sdpcm_shared address 0x%08X", addr);
 
   /* Read or write hndrte_shared structure */
   rv = brcmf_sdiod_ramrw(bus->sdiodev, write, addr, (uint8_t*)sh, sizeof(struct sdpcm_shared_le));
@@ -2270,7 +2270,7 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
 
   /* Would be active due to wake-wlan in gSPI */
   if (intstatus & I_CHIPACTIVE) {
-    BRCMF_DBG(INFO, "Dongle reports CHIPACTIVE");
+    BRCMF_DBG(SDIO, "Dongle reports CHIPACTIVE");
     intstatus &= ~I_CHIPACTIVE;
   }
 
@@ -2640,7 +2640,7 @@ static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
   }
 
   if ((sh.flags & SDPCM_SHARED_ASSERT_BUILT) == 0) {
-    BRCMF_DBG(INFO, "firmware not built with -assert");
+    BRCMF_DBG(SDIO, "firmware not built with -assert");
   } else if (sh.flags & SDPCM_SHARED_ASSERT) {
     BRCMF_ERR("assertion in dongle");
   }
@@ -2731,7 +2731,7 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
   int len;
 
   /* read back and verify */
-  BRCMF_DBG(INFO, "Compare RAM dl & ul at 0x%08x; size=%zu", ram_addr, ram_sz);
+  BRCMF_DBG(SDIO, "Compare RAM dl & ul at 0x%08x; size=%zu", ram_addr, ram_sz);
   ram_cmp = static_cast<decltype(ram_cmp)>(malloc(MEMBLOCK));
   /* do not proceed while no memory but  */
   if (!ram_cmp) {
@@ -2904,7 +2904,7 @@ static void brcmf_sdio_sr_init(struct brcmf_sdio* bus) {
 
   /* set flag */
   bus->sr_enabled = true;
-  BRCMF_DBG(INFO, "SR enabled");
+  BRCMF_DBG(SDIO, "SR enabled");
 }
 
 /* enable KSO bit */
@@ -3181,7 +3181,7 @@ zx_status_t brcmf_sdio_load_files(brcmf_pub* drvr, bool reload) TA_NO_THREAD_SAF
   ifp.drvr = drvr;
   ifp.ifidx = 0;
   if ((status = brcmf_c_process_clm_blob(&ifp, clm_binary)) != ZX_OK) {
-    BRCMF_ERR("Process clm blob fail.\n");
+    BRCMF_ERR("Process clm blob fail.");
     return status;
   }
 
@@ -3305,7 +3305,7 @@ static void brcmf_sdio_drivestrengthinit(struct brcmf_sdio_dev* sdiodev, struct 
       str_shift = 11;
       break;
     default:
-      BRCMF_DBG(INFO, "No SDIO driver strength init needed for chip %s rev %d pmurev %d", ci->name,
+      BRCMF_DBG(SDIO, "No SDIO driver strength init needed for chip %s rev %d pmurev %d", ci->name,
                 ci->chiprev, ci->pmurev);
       break;
   }
@@ -3327,7 +3327,7 @@ static void brcmf_sdio_drivestrengthinit(struct brcmf_sdio_dev* sdiodev, struct 
     cc_data_temp |= drivestrength_sel;
     brcmf_sdiod_func1_wl(sdiodev, addr, cc_data_temp, NULL);
 
-    BRCMF_DBG(INFO, "SDIO: %d mA (req=%d mA) drive strength selected, set to 0x%08x",
+    BRCMF_DBG(SDIO, "SDIO: %d mA (req=%d mA) drive strength selected, set to 0x%08x",
               str_tab[i].strength, drivestrength, cc_data_temp);
   }
 }
@@ -3458,7 +3458,7 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
   }
 #endif  // SDIO_PRINTER
 
-  BRCMF_DBG(INFO, "brcmfmac: F1 signature read @0x18000000=0x%4x",
+  BRCMF_DBG(SDIO, "brcmfmac: F1 signature read @0x18000000=0x%4x",
             brcmf_sdiod_func1_rl(sdiodev, SI_ENUM_BASE, NULL));
   BRCMF_DBG(TEMP, "Survived signature read");
 
@@ -3768,7 +3768,7 @@ zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
                        SDPCM_PROT_VERSION << SMB_DATA_VERSION_SHIFT, NULL);
 
   err = sdio_enable_fn(&sdiodev->sdio_proto_fn2);
-  BRCMF_DBG(INFO, "enable F2: err=%d", err);
+  BRCMF_DBG(SDIO, "enable F2: err=%d", err);
 
   /* If F2 successfully enabled, set core and enable interrupts */
   if (err == ZX_OK) {
@@ -3975,7 +3975,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   /* SR state */
   bus->sr_enabled = false;
 
-  BRCMF_DBG(INFO, "completed!!");
+  BRCMF_DBG(SDIO, "completed!!");
   if (ret != ZX_OK) {
     goto fail;
   }

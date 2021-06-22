@@ -115,8 +115,8 @@ zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_
       }
 
       for (uint16_t retry = 0; retry < CLMLOAD_RETRY_LIMIT; retry++) {
-        BRCMF_DBG(INFO, "Retrying clmload, %u times left after this one.",
-                  CLMLOAD_RETRY_LIMIT - retry - 1);
+        BRCMF_INFO("Retrying clmload, %u times left after this one.",
+                   CLMLOAD_RETRY_LIMIT - retry - 1);
         // Delay the retry to wait for firmware ready.
         zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
         if ((status = brcmf_fil_iovar_data_set(
@@ -125,7 +125,7 @@ zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_
         }
       }
       if (status != ZX_OK) {
-        BRCMF_DBG(INFO, "All Retry clmload failed at offset %zu: %s, fw err %s", offset,
+        BRCMF_ERR("All Retry clmload failed at offset %zu: %s, fw err %s", offset,
                   zx_status_get_string(status), brcmf_fil_get_errstr(fw_err));
         return status;
       }
@@ -198,7 +198,7 @@ static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
     }
     BRCMF_ERR("random mac address to be assigned.");
 #if !defined(NDEBUG)
-    BRCMF_DBG(INFO, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(mac_addr));
+    BRCMF_ERR("  address: " MAC_FMT_STR, MAC_FMT_ARGS(mac_addr));
 #endif /* !defined(NDEBUG) */
   }
 
@@ -322,9 +322,9 @@ zx_status_t brcmf_clear_country(brcmf_pub* drvr) {
 
   err = brcmf_set_country(drvr, &country);
   if (err != ZX_OK) {
-    BRCMF_ERR("Clear country failed");
+    BRCMF_ERR("Failed to reset country code to %c%c", country.alpha2[0], country.alpha2[1]);
   } else {
-    BRCMF_DBG(INFO, "Clear country success");
+    BRCMF_INFO("Country code reset to default: %c%c", country.alpha2[0], country.alpha2[1]);
   }
 
   return err;
@@ -439,8 +439,8 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
   memset(buf, 0, sizeof(buf));
   err = brcmf_fil_iovar_data_get(ifp, "clmver", buf, sizeof(buf), &fw_err);
   if (err != ZX_OK) {
-    BRCMF_DBG(INFO, "Failed to retrieve clmver: %s, fw err %s", zx_status_get_string(err),
-              brcmf_fil_get_errstr(fw_err));
+    BRCMF_INFO("Failed to retrieve clmver: %s, fw err %s", zx_status_get_string(err),
+               brcmf_fil_get_errstr(fw_err));
   } else {
     clmver = (char*)buf;
     /* store CLM version for adding it to revinfo debugfs file */

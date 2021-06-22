@@ -88,7 +88,7 @@ namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 
 static bool check_vif_up(struct brcmf_cfg80211_vif* vif) {
   if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_READY, &vif->sme_state)) {
-    BRCMF_DBG(INFO, "device is not ready : status (%lu)\n", vif->sme_state.load());
+    BRCMF_INFO("device is not ready : status (%lu)", vif->sme_state.load());
     return false;
   }
   return true;
@@ -469,7 +469,7 @@ static zx_status_t brcmf_ap_add_vif(struct brcmf_cfg80211_info* cfg, const char*
       return ZX_ERR_UNAVAILABLE;
     }
 
-    BRCMF_DBG(INFO, "Adding vif \"%s\"", name);
+    BRCMF_INFO("Adding vif \"%s\"", name);
 
     err = brcmf_alloc_vif(cfg, WLAN_INFO_MAC_ROLE_AP, &vif);
     if (err != ZX_OK) {
@@ -678,7 +678,7 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
           BRCMF_IFDBG(WLANIF, ndev, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(client_mac_addr.byte));
 #endif /* !defined(NDEBUG) */
         } else {
-          BRCMF_DBG(INFO, "Retrieved bootloader wifi MAC addresss");
+          BRCMF_IFDBG(WLANIF, ndev, "Retrieved bootloader wifi MAC addresss");
 #if !defined(NDEBUG)
           BRCMF_IFDBG(WLANIF, ndev, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(client_mac_addr.byte));
 #endif /* !defined(NDEBUG) */
@@ -712,6 +712,8 @@ static void brcmf_scan_config_mpc(struct brcmf_if* ifp, int mpc) {
 // This function set "mpc" to the requested value only if SoftAP
 // has not been started. Else it sets "mpc" to 0.
 void brcmf_enable_mpc(struct brcmf_if* ifp, int mpc) {
+  BRCMF_DBG(TRACE, "Enter");
+
   zx_status_t err = ZX_OK;
   bcme_status_t fw_err = BCME_OK;
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
@@ -726,7 +728,7 @@ void brcmf_enable_mpc(struct brcmf_if* ifp, int mpc) {
                brcmf_fil_get_errstr(fw_err));
     return;
   }
-  BRCMF_DBG(INFO, "MPC : %d", mpc);
+  BRCMF_DBG(TRACE, "Exit");
 }
 
 static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
@@ -1329,11 +1331,13 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, wlan_ieee80211::Reas
   struct brcmf_cfg80211_info* cfg = vif->ifp->drvr->config;
   zx_status_t err = ZX_OK;
 
-  BRCMF_DBG(TRACE, "Enter\n");
+  BRCMF_DBG(TRACE, "Enter");
 
   if (brcmf_test_and_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &vif->sme_state)) {
-    BRCMF_DBG(INFO, "Call WLC_DISASSOC to stop excess roaming\n ");
+    BRCMF_INFO("Link down while connected.");
     bcme_status_t fwerr = BCME_OK;
+
+    // Calling WLC_DISASSOC to stop excess roaming
     err = brcmf_fil_cmd_data_set(vif->ifp, BRCMF_C_DISASSOC, nullptr, 0, &fwerr);
     if (err != ZX_OK) {
       BRCMF_ERR("WLC_DISASSOC failed: %s, fw err %s\n", zx_status_get_string(err),
@@ -3925,7 +3929,7 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_
   }
   status = brcmf_fil_iovar_int_get(ifp, "txbf_bfr_cap_hw", &txbf_bfr_cap, nullptr);
   if (status != ZX_OK) {
-    BRCMF_DBG(INFO, "Failed to get iovar txbf_bfr_cap_hw. Falling back to txbf_bfr_cap.");
+    BRCMF_DBG(FIL, "Failed to get iovar txbf_bfr_cap_hw. Falling back to txbf_bfr_cap.");
     (void)brcmf_fil_iovar_int_get(ifp, "txbf_bfr_cap", &txbf_bfr_cap, nullptr);
   }
 
@@ -4471,7 +4475,7 @@ void brcmf_if_stats_query_req(net_device* ndev) {
           BRCMF_ERR("could not get pkt cnts: %s, fw err %s", zx_status_get_string(status),
                     brcmf_fil_get_errstr(fw_err));
         } else {
-          BRCMF_DBG(INFO, "Cntrs: rxgood:%d rxbad:%d txgood:%d txbad:%d rxocast:%d",
+          BRCMF_DBG(DATA, "Cntrs: rxgood:%d rxbad:%d txgood:%d txbad:%d rxocast:%d",
                     pktcnt.rx_good_pkt, pktcnt.rx_bad_pkt, pktcnt.tx_good_pkt, pktcnt.tx_bad_pkt,
                     pktcnt.rx_ocast_good_pkt);
 
@@ -5745,7 +5749,7 @@ static zx_status_t brcmf_dongle_roam(struct brcmf_if* ifp) {
   /* Enable/Disable built-in roaming to allow supplicant to take care of
    * roaming.
    */
-  BRCMF_DBG(INFO, "Internal Roaming = %s", ifp->drvr->settings->roamoff ? "Off" : "On");
+  BRCMF_INFO("Setting roam_off = %s", ifp->drvr->settings->roamoff ? "Off" : "On");
   err = brcmf_fil_iovar_int_set(ifp, "roam_off", ifp->drvr->settings->roamoff, &fw_err);
   if (err != ZX_OK) {
     BRCMF_ERR("roam_off error: %s, fw err %s", zx_status_get_string(err),
@@ -5821,7 +5825,7 @@ static zx_status_t brcmf_enable_bw40_2g(struct brcmf_cfg80211_info* cfg) {
     band_bwcap.bw_cap = WLC_BW_CAP_40MHZ;
     err = brcmf_fil_iovar_data_set(ifp, "bw_cap", &band_bwcap, sizeof(band_bwcap), nullptr);
   } else {
-    BRCMF_DBG(INFO, "Falling back to mimo_bw_cap to set 40MHz bandwidth for 2.4GHz bands.");
+    BRCMF_DBG(FIL, "Falling back to mimo_bw_cap to set 40MHz bandwidth for 2.4GHz bands.");
     val = WLC_N_BW_40ALL;
     err = brcmf_fil_iovar_int_set(ifp, "mimo_bw_cap", val, nullptr);
   }
@@ -5857,7 +5861,7 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
   if (err != ZX_OK) {
     goto default_conf_out;
   }
-  BRCMF_DBG(INFO, "power save set to %s", (power_mode ? "enabled" : "disabled"));
+  BRCMF_DBG(FIL, "power save set to %s", (power_mode ? "enabled" : "disabled"));
 
   err = brcmf_dongle_roam(ifp);
   if (err != ZX_OK) {
@@ -5869,7 +5873,7 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
   err = brcmf_fil_iovar_int_set(ifp, "wnm", 0, &fwerr);
   if (err == ZX_OK || err == ZX_ERR_NOT_SUPPORTED) {
     // Note: if iovar is not supported, then WNM is effectively disabled.
-    BRCMF_DBG(INFO, "WNM is disabled in firmware");
+    BRCMF_DBG(FIL, "WNM is disabled in firmware");
   } else {
     // Proceed even if WNM could not be disabled.
     BRCMF_WARN("Could not disable WNM, firmware error %s", brcmf_fil_get_errstr(fwerr));
@@ -6114,8 +6118,8 @@ zx_status_t brcmf_cfg80211_attach(struct brcmf_pub* drvr) {
   if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_TDLS)) {
     err = brcmf_fil_iovar_int_set(ifp, "tdls_enable", 1, &fw_err);
     if (err != ZX_OK) {
-      BRCMF_DBG(INFO, "TDLS not enabled: %s, fw err %s", zx_status_get_string(err),
-                brcmf_fil_get_errstr(fw_err));
+      BRCMF_INFO("TDLS not enabled: %s, fw err %s", zx_status_get_string(err),
+                 brcmf_fil_get_errstr(fw_err));
       goto btcoex_out;
     } else {
       brcmf_fweh_register(cfg->pub, BRCMF_E_TDLS_PEER_EVENT, brcmf_notify_tdls_peer_event);

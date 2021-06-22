@@ -62,8 +62,7 @@ void Device::DdkInit(ddk::InitTxn txn) { Init(std::move(txn)); }
 void Device::DdkRelease() { delete this; }
 
 void Device::Get(GetRequestView request, GetCompleter::Sync& _completer) {
-  BRCMF_DBG(INFO, "brcmfmac: Device::Get cmd: %d len: %lu\n", request->cmd,
-            request->request.count());
+  BRCMF_DBG(TRACE, "Enter. cmd %d, len %lu", request->cmd, request->request.count());
   zx_status_t status =
       brcmf_send_cmd_to_firmware(brcmf_pub_.get(), request->iface_idx, request->cmd,
                                  (void*)request->request.data(), request->request.count(), false);
@@ -72,11 +71,11 @@ void Device::Get(GetRequestView request, GetCompleter::Sync& _completer) {
   } else {
     _completer.ReplyError(status);
   }
+  BRCMF_DBG(TRACE, "Exit");
 }
 
 void Device::Set(SetRequestView request, SetCompleter::Sync& _completer) {
-  BRCMF_DBG(INFO, "brcmfmac: Device::Set cmd: %d len: %lu\n", request->cmd,
-            request->request.count());
+  BRCMF_DBG(TRACE, "Enter. cmd %d, len %lu", request->cmd, request->request.count());
   zx_status_t status =
       brcmf_send_cmd_to_firmware(brcmf_pub_.get(), request->iface_idx, request->cmd,
                                  (void*)request->request.data(), request->request.count(), true);
@@ -85,6 +84,7 @@ void Device::Set(SetRequestView request, SetCompleter::Sync& _completer) {
   } else {
     _completer.ReplyError(status);
   }
+  BRCMF_DBG(TRACE, "Exit");
 }
 
 brcmf_pub* Device::drvr() { return brcmf_pub_.get(); }

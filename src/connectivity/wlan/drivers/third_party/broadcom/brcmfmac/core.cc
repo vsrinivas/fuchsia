@@ -494,9 +494,8 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
    * modified by this function after its first call.
    */
   if (ifp && ifidx == 0) {
-    BRCMF_DBG(INFO,
-              "netdev:%s ignoring IF event requesting to modify the primary network interface",
-              ifp->ndev->name);
+    BRCMF_WARN("netdev:%s ignoring IF event requesting to modify the primary network interface",
+               ifp->ndev->name);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -668,8 +667,8 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr, bool drvr_restarting) {
   if (!bus_if->chip) {
     bus_if->chip = drvr->revinfo.fwrevinfo.chipnum;
     bus_if->chiprev = drvr->revinfo.fwrevinfo.chiprev;
-    BRCMF_DBG(INFO, "firmware revinfo: chip %x (%d) rev %d", bus_if->chip, bus_if->chip,
-              bus_if->chiprev);
+    BRCMF_INFO("firmware revinfo: chip %x (%d) rev %d", bus_if->chip, bus_if->chip,
+               bus_if->chiprev);
   }
   brcmf_feat_attach(drvr);
 
@@ -856,8 +855,7 @@ zx_status_t brcmf_schedule_recovery_worker(struct brcmf_pub* drvr) {
   bool expected = false;
 
   if (!drvr->drvr_resetting.compare_exchange_strong(expected, true)) {
-    BRCMF_ERR("process already started.");
-    BRCMF_DBG(INFO, "The recovery process has already started\n");
+    BRCMF_WARN("The recovery process has already started.");
     return ZX_ERR_UNAVAILABLE;
   }
   BRCMF_INFO("The crash recovery process has been triggered.");
