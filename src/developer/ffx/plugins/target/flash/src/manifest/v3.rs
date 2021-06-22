@@ -95,7 +95,7 @@ impl From<&FlashManifest> for FlashManifestV2 {
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl Flash for FlashManifest {
     async fn flash<W, F>(
         &self,

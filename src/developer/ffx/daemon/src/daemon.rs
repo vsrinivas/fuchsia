@@ -601,7 +601,7 @@ impl Daemon {
                 let mut fastboot_manager = Fastboot::new(target);
                 let stream = fastboot.into_stream()?;
                 fuchsia_async::Task::local(async move {
-                    match fastboot_manager.0.handle_fastboot_requests_from_stream(stream).await {
+                    match fastboot_manager.handle_fastboot_requests_from_stream(stream).await {
                         Ok(_) => log::debug!("Fastboot proxy finished - client disconnected"),
                         Err(e) => {
                             log::error!("There was an error handling fastboot requests: {:?}", e)

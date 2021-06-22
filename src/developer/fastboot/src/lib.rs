@@ -14,7 +14,7 @@ use {
     },
     lazy_static::lazy_static,
     reply::Reply,
-    std::convert::{TryFrom, TryInto},
+    std::convert::TryFrom,
     thiserror::Error,
 };
 
@@ -104,7 +104,8 @@ pub async fn upload<T: AsyncRead + AsyncWrite + Unpin>(
     listener: &impl UploadProgressListener,
 ) -> Result<Reply> {
     let _lock = UPLOAD_LOCK.lock().await;
-    let reply = send(Command::Download(u32::try_from(data.len())?), interface).await?;
+    let size = u32::try_from(data.len())?;
+    let reply = send(Command::Download(size), interface).await?;
     match reply {
         Reply::Data(s) => {
             if s != u32::try_from(data.len())? {
@@ -118,22 +119,14 @@ pub async fn upload<T: AsyncRead + AsyncWrite + Unpin>(
                 bail!(err);
             }
             listener.on_started(data.len())?;
-            let mut t: usize = 0;
-            // Chunk into 1mb chunks so that progress can be reported during
-            // large writes.
-            for chunk in data.chunks(1 << 20) {
-                match interface.write(&chunk).await {
-                    Ok(x) => {
-                        t += x;
-                        listener.on_progress(t.try_into().expect("usize should fit in u64"))?;
-                    }
-                    Err(e) => {
-                        let err = format!("Could not write to usb interface: {:?}", e);
-                        log::error!("{}", err);
-                        listener.on_error(&err)?;
-                        bail!(err);
-                    }
+            match interface.write(&data).await {
+                Err(e) => {
+                    let err = format!("Could not write to usb interface: {:?}", e);
+                    log::error!("{}", err);
+                    listener.on_error(&err)?;
+                    bail!(err);
                 }
+                _ => (),
             }
             match read_and_log_info(interface).await {
                 Ok(reply) => {

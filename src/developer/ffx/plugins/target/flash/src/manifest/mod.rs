@@ -39,7 +39,7 @@ pub(crate) const UNKNOWN_VERSION: &str = "Unknown flash manifest version";
 const LARGE_FILE: &str = "large file, please wait... ";
 const REVISION_VAR: &str = "hw-revision";
 
-#[async_trait]
+#[async_trait(?Send)]
 pub(crate) trait Flash {
     async fn flash<W, F>(
         &self,
@@ -84,7 +84,7 @@ impl FlashManifest {
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl Flash for FlashManifest {
     async fn flash<W, F>(
         &self,

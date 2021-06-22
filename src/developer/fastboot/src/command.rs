@@ -125,7 +125,7 @@ impl TryFrom<Command> for Vec<u8> {
     fn try_from(command: Command) -> Result<Self, Self::Error> {
         match command {
             Command::GetVar(v) => Ok([b"getvar:", &Vec::<u8>::try_from(v)?[..]].concat()),
-            Command::Download(s) => Ok([b"download:", format!("{:08X}", s).as_bytes()].concat()),
+            Command::Download(s) => Ok([b"download:", format!("{:08x}", s).as_bytes()].concat()),
             Command::Upload => Ok(b"upload".to_vec()),
             Command::Flash(s) => concat_message(b"flash:", s),
             Command::Erase(s) => concat_message(b"erase:", s),

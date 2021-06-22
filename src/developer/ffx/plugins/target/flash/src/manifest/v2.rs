@@ -22,7 +22,7 @@ pub(crate) struct FlashManifest {
     pub(crate) v1: FlashManifestV1,
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl Flash for FlashManifest {
     async fn flash<W, F>(
         &self,
@@ -35,7 +35,9 @@ impl Flash for FlashManifest {
         W: Write + Send,
         F: FileResolver + Send + Sync,
     {
-        verify_hardware(&self.hw_revision, &fastboot_proxy).await?;
+        if !cmd.skip_verify {
+            verify_hardware(&self.hw_revision, &fastboot_proxy).await?;
+        }
         self.v1.flash(writer, file_resolver, fastboot_proxy, cmd).await
     }
 }

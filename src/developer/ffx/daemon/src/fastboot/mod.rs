@@ -21,7 +21,9 @@ use {
     ffx_config::get,
     ffx_daemon_core::events,
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_developer_bridge::{UploadProgressListenerMarker, UploadProgressListenerProxy},
+    fidl_fuchsia_developer_bridge::{
+        FastbootRequestStream, UploadProgressListenerMarker, UploadProgressListenerProxy,
+    },
     fuchsia_async::Timer,
     futures::{
         io::{AsyncRead, AsyncWrite},
@@ -47,23 +49,39 @@ lazy_static! {
 const FLASH_TIMEOUT_RATE: &str = "fastboot.flash.timeout_rate";
 const MIN_FLASH_TIMEOUT: &str = "fastboot.flash.min_timeout_secs";
 
-pub(crate) struct Fastboot(pub(crate) FastbootImpl<Interface>);
-#[allow(dead_code)]
-pub(crate) struct FastbootNetwork(pub(crate) FastbootImpl<NetworkInterface>);
+#[derive(Default)]
+pub(crate) struct Fastboot {
+    usb: Option<FastbootImpl<Interface>>,
+    udp: Option<FastbootImpl<NetworkInterface>>,
+}
 
 impl Fastboot {
     pub(crate) fn new(target: Rc<Target>) -> Self {
-        Self(FastbootImpl::new(target, Box::new(UsbFactory { serial: None })))
+        match target.serial() {
+            Some(_) => Self {
+                usb: Some(FastbootImpl::new(target, Box::new(UsbFactory::default()))),
+                ..Default::default()
+            },
+            None => Self {
+                udp: Some(FastbootImpl::new(target, Box::new(NetworkFactory::new()))),
+                ..Default::default()
+            },
+        }
+    }
+
+    pub(crate) async fn handle_fastboot_requests_from_stream(
+        &mut self,
+        stream: FastbootRequestStream,
+    ) -> Result<()> {
+        match (self.usb.as_mut(), self.udp.as_mut()) {
+            (Some(fastboot), _) => fastboot.handle_fastboot_requests_from_stream(stream).await,
+            (_, Some(fastboot)) => fastboot.handle_fastboot_requests_from_stream(stream).await,
+            _ => bail!("Could not identify protocol for Fastboot transport"),
+        }
     }
 }
 
-impl FastbootNetwork {
-    #[allow(dead_code)]
-    pub(crate) fn new(target: Rc<Target>) -> Self {
-        Self(FastbootImpl::new(target, Box::new(NetworkFactory::new())))
-    }
-}
-
+#[derive(Default)]
 struct UsbFactory {
     serial: Option<String>,
 }

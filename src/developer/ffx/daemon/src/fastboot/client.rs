@@ -201,7 +201,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                         match try_join!(
                             self.target
                                 .events
-                                .wait_for(Some(Duration::from_secs(10)), |e| {
+                                .wait_for(Some(Duration::from_secs(30)), |e| {
                                     e == TargetEvent::Rediscovered
                                 })
                                 .map_err(|_| FastbootError::RediscoveredError),

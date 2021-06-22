@@ -179,7 +179,7 @@ impl TargetControl {
         let mut fastboot_manager = Fastboot::new(self.target.clone());
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<FastbootMarker>()?;
         fuchsia_async::Task::local(async move {
-            match fastboot_manager.0.handle_fastboot_requests_from_stream(stream).await {
+            match fastboot_manager.handle_fastboot_requests_from_stream(stream).await {
                 Ok(_) => log::debug!("Fastboot proxy finished - client disconnected"),
                 Err(e) => {
                     log::error!("There was an error handling fastboot requests: {:?}", e)

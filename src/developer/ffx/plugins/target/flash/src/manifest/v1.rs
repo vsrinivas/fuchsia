@@ -69,7 +69,7 @@ impl Partition {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct FlashManifest(pub(crate) Vec<Product>);
 
-#[async_trait]
+#[async_trait(?Send)]
 impl Flash for FlashManifest {
     async fn flash<W, F>(
         &self,
@@ -108,10 +108,9 @@ impl Flash for FlashManifest {
         flash_partitions(writer, file_resolver, &product.partitions, &fastboot_proxy).await?;
         stage_oem_files(writer, file_resolver, true, &product.oem_files, &fastboot_proxy).await?;
         stage_oem_files(writer, file_resolver, false, &cmd.oem_stage, &fastboot_proxy).await?;
-        fastboot_proxy
-            .erase("misc")
-            .await?
-            .map_err(|_| anyhow!("Could not erase misc partition"))?;
+        if fastboot_proxy.erase("misc").await?.is_err() {
+            log::debug!("Could not erase misc partition");
+        }
         fastboot_proxy.set_active("a").await?.map_err(|_| anyhow!("Could not set active slot"))?;
         fastboot_proxy.continue_boot().await?.map_err(|_| anyhow!("Could not reboot device"))?;
         writeln!(writer, "Continuing to boot - this could take awhile")?;

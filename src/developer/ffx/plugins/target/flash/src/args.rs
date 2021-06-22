@@ -70,6 +70,12 @@ pub struct FlashCommand {
         description = "the device should not reboot after bootloader images are flashed"
     )]
     pub no_bootloader_reboot: bool,
+
+    #[argh(
+        switch,
+        description = "skip hardware verification.  This is dangerous, please be sure the images you are flashing match the device"
+    )]
+    pub skip_verify: bool,
 }
 
 #[derive(Default, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
