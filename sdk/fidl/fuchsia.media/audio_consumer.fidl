@@ -8,10 +8,10 @@ library fuchsia.media;
 using zx;
 using fuchsia.media.audio;
 
-/// Interface for creating audio consumers bound to a session
+/// Interface for creating audio consumers bound to a session.
 [Discoverable]
 protocol SessionAudioConsumerFactory {
-    /// Creates an `AudioConsumer` which is an interface for playing audio bound
+    /// Creates an `AudioConsumer`, which is an interface for playing audio, bound
     /// to a particular session. `session_id` is the identifier of the media session
     /// for which audio is to be rendered.
     // TODO(dalesat): Can't use fuchsia.media.sessions2.SessionId here, because dependencies.
@@ -20,7 +20,17 @@ protocol SessionAudioConsumerFactory {
         request<AudioConsumer> audio_consumer_request);
 };
 
-/// Interface for playing and controlling audio
+/// Interface for creating audio consumers for local rendering.
+[Discoverable]
+protocol UsageAudioConsumerFactory {
+    /// Creates an `AudioConsumer`, which is an interface for playing audio, given a usage value.
+    /// Audio submitted to such a consumer is always rendered locally.
+    CreateAudioConsumer(
+        AudioRenderUsage usage,
+        request<AudioConsumer> audio_consumer_request);
+};
+
+/// Interface for playing and controlling audio.
 protocol AudioConsumer {
     /// Creates a `StreamSink` for the consumer with the indicated properties.
     ///
@@ -32,7 +42,7 @@ protocol AudioConsumer {
     ///
     /// If an unsupported compression type is supplied, the
     /// `stream_sink_request` request will be closed with an epitaph value of
-    /// `ZX_ERR_INVALID_ARGS`
+    /// `ZX_ERR_INVALID_ARGS`.
     CreateStreamSink(
         vector<zx.handle:VMO>:16 buffers,
         AudioStreamType stream_type,
