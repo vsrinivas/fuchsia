@@ -17,6 +17,8 @@ import 'memory.dart' as memory;
 
 const licenseUrl =
     'fuchsia-pkg://fuchsia.com/license_settings#meta/license_settings.cmx';
+const feedbackUrl =
+    'fuchsia-pkg://fuchsia.com/feedback_settings#meta/feedback_settings.cmx';
 
 // ignore_for_file: prefer_constructors_over_static_methods
 
@@ -28,8 +30,6 @@ class SystemInformation extends UiSpec {
   static String get _view => Strings.view;
   static String get _loading => Strings.loading;
   static String get _feedback => Strings.feedback;
-  static String get _please => Strings.please;
-  static String get _visit => Strings.visit;
   static String get _openSource => Strings.openSource;
   static String get _license => Strings.license;
 
@@ -75,7 +75,13 @@ class SystemInformation extends UiSpec {
       if (value.text!.action == changeAction) {
         spec = await _specForSystemInformation(changeAction);
       } else {
-        await launchLicense();
+        final index = value.text!.action ^ QuickAction.submit.$value;
+        if (index == 1) {
+          await launchUrl(feedbackUrl);
+        }
+        if (index == 2) {
+          await launchUrl(licenseUrl);
+        }
         spec = await _specForSystemInformation();
       }
     }
@@ -86,18 +92,18 @@ class SystemInformation extends UiSpec {
     memoryModel.dispose();
   }
 
-  Future<void> launchLicense() async {
+  Future<void> launchUrl(String url) async {
     final proxy = session.ElementManagerProxy();
     final elementController = session.ElementControllerProxy();
 
     final incoming = Incoming.fromSvcPath()..connectToService(proxy);
 
-    final spec = session.ElementSpec(componentUrl: licenseUrl);
+    final spec = session.ElementSpec(componentUrl: url);
 
     await proxy
         .proposeElement(spec, elementController.ctrl.request())
         .catchError((err) {
-      log.shout('$err: Failed to propose element <$licenseUrl>');
+      log.shout('$err: Failed to propose element <$url>');
     });
 
     proxy.ctrl.close();
@@ -128,14 +134,15 @@ class SystemInformation extends UiSpec {
               TextValue(text: '${usedMemory}GB / ${totalMemory}GB'),
               TextValue(text: '${_feedback.toUpperCase()}'),
               TextValue(
-                  text:
-                      '$_please ${_visit.toLowerCase()} https://fuchsia.dev/fuchsia-src/contribute/report-issue'),
+                text: '${_view.toUpperCase()}',
+                action: QuickAction.submit.$value | 1,
+              ),
               TextValue(
                 text: '${_openSource.toUpperCase()} ${_license.toUpperCase()}',
               ),
               TextValue(
                 text: '${_view.toUpperCase()}',
-                action: QuickAction.submit.$value,
+                action: QuickAction.submit.$value | 2,
               )
             ],
           )),
