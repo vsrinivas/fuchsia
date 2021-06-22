@@ -9,8 +9,8 @@ intended for both users and infrastructure integrators alike.
 
 ## Getting Started
 
-- [Using ffx command line tool](docs/getting-started.md)
-- [Developing for ffx](docs/plugins.md)
+- [Using ffx command line tool](/docs/development/tools/ffx/getting-started.md)
+- [Developing for ffx](/docs/development/tools/ffx/development/plugins.md)
 
 
 {% comment %}

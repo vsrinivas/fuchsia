@@ -20,7 +20,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
     To list all cml components in the topology:
 
-    $ ffx comopnent list --only cml
+    $ ffx component list --only cml
 
     To list all running components in the topology:
 
