@@ -457,6 +457,94 @@ async fn echo_servers() -> Result<(), Error> {
     Ok(())
 }
 
+#[fasync::run_singlethreaded(test)]
+async fn protocol_with_use_from_url_child_test() -> Result<(), Error> {
+    let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
+    let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
+
+    let mut builder = RealmBuilder::new().await?;
+    builder
+        .add_eager_component(
+            "echo-client",
+            ComponentSource::mock(move |mock_handles: mock::MockHandles| {
+                let sender = sender.clone();
+                Box::pin(async move {
+                    let echo_proxy = mock_handles.connect_to_service::<fecho::EchoMarker>()?;
+                    assert_eq!(
+                        Some("hello".to_string()),
+                        echo_proxy.echo_string(Some("hello")).await?
+                    );
+                    sender.lock().await.take().unwrap().send(()).expect("failed to send results");
+                    Ok(())
+                })
+            }),
+        )
+        .await?
+        .add_component("echo-client/echo-server", ComponentSource::url(V2_ECHO_SERVER_ABSOLUTE_URL))
+        .await?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+            source: RouteEndpoint::component("echo-client/echo-server"),
+            targets: vec![RouteEndpoint::component("echo-client")],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![
+                RouteEndpoint::component("echo-client"),
+                RouteEndpoint::component("echo-client/echo-server"),
+            ],
+        })?;
+    let _child_instance = builder.build().create().await?;
+
+    receive_echo_server_called.await?;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn protocol_with_use_from_mock_child_test() -> Result<(), Error> {
+    let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
+    let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
+
+    let mut builder = RealmBuilder::new().await?;
+    builder
+        .add_eager_component(
+            "echo-client",
+            ComponentSource::mock(move |mock_handles: mock::MockHandles| {
+                Box::pin(async move {
+                    let echo_proxy = mock_handles.connect_to_service::<fecho::EchoMarker>()?;
+                    let _ = echo_proxy.echo_string(Some(DEFAULT_ECHO_STR)).await?;
+                    Ok(())
+                })
+            }),
+        )
+        .await?
+        .add_component(
+            "echo-client/echo-server",
+            ComponentSource::mock(move |mock_handles: mock::MockHandles| {
+                Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), mock_handles))
+            }),
+        )
+        .await?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+            source: RouteEndpoint::component("echo-client/echo-server"),
+            targets: vec![RouteEndpoint::component("echo-client")],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![
+                RouteEndpoint::component("echo-client"),
+                RouteEndpoint::component("echo-client/echo-server"),
+            ],
+        })?;
+    let _child_instance = builder.build().create().await?;
+
+    receive_echo_server_called.await?;
+    Ok(())
+}
+
 // [START echo_server_mock]
 // A mock echo server implementation, that will crash if it doesn't receive anything other than the
 // contents of `expected_echo_str`. It takes and sends a message over `send_echo_server_called`

@@ -571,11 +571,26 @@ impl RealmNode {
             } else {
                 // We're routing a capability from one component within our constructed realm to
                 // another
-                self.route_capability_between_components(
-                    &capability,
-                    source.clone().try_into()?,
-                    target.try_into()?,
-                )?;
+                let source_moniker = source.clone().try_into()?;
+                let target_moniker: Moniker = target.try_into()?;
+                if target_moniker.is_ancestor_of(&source_moniker) {
+                    // The target is an ancestor of the source, so this is a "use from child"
+                    // scenario
+                    self.route_capability_use_from_child(
+                        &capability,
+                        source_moniker,
+                        target_moniker,
+                    )?;
+                } else {
+                    // The target is _not_ an ancestor of the source, so this is a classic "routing
+                    // between two components" scenario, where the target uses the capability from
+                    // its parent.
+                    self.route_capability_between_components(
+                        &capability,
+                        source_moniker,
+                        target_moniker,
+                    )?;
+                }
             }
         }
         Ok(())
@@ -638,12 +653,55 @@ impl RealmNode {
         }
 
         if let Ok(target_node) = self.get_node_mut(&target_moniker, GetBehavior::ErrorIfMissing) {
-            Self::add_use_for_capability(&mut target_node.decl.uses, &capability)?;
+            Self::add_use_for_capability(&mut target_node.decl.uses, &capability, None)?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //target_node.validate(&target_moniker)?;
         } else {
             // `get_node_mut` only returns `Ok` for mutable nodes. If this node is immutable
             // (located behind a ChildDecl) we have to presume that the component already uses
+            // the capability.
+        }
+        Ok(())
+    }
+
+    // This will panic if `target_moniker.is_ancestor_of(source_moniker)` returns false
+    fn route_capability_use_from_child(
+        &mut self,
+        capability: &ffrb::Capability,
+        source_moniker: Moniker,
+        target_moniker: Moniker,
+    ) -> Result<(), Error> {
+        let target_node = self.get_node_mut(&target_moniker, GetBehavior::ErrorIfMissing)?;
+        let child_source =
+            Some(target_moniker.downward_path_to(&source_moniker).get(0).unwrap().clone());
+        Self::add_use_for_capability(&mut target_node.decl.uses, &capability, child_source)?;
+        // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
+        //target_node.validate(&target_moniker)?;
+
+        let mut path_to_source = target_moniker.downward_path_to(&source_moniker);
+        let first_expose_name = path_to_source.remove(0);
+        let mut current_moniker = target_moniker.child(first_expose_name.clone());
+        let mut current_node = target_node.child(&first_expose_name);
+        for child_name in path_to_source {
+            let current = current_node?;
+            Self::add_expose_for_capability(
+                &mut current.decl.exposes,
+                &capability,
+                Some(&child_name),
+            )?;
+            // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
+            //current.validate(&current_moniker)?;
+            current_node = current.child(&child_name);
+            current_moniker = current_moniker.child(child_name);
+        }
+        if let Ok(source_node) = current_node {
+            Self::add_capability_decl(&mut source_node.decl.capabilities, &capability)?;
+            Self::add_expose_for_capability(&mut source_node.decl.exposes, &capability, None)?;
+            // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
+            //source_node.validate(&current_moniker)?;
+        } else {
+            // `get_node_mut` only returns `Ok` for mutable nodes. If this node is immutable
+            // (located behind a ChildDecl) we have to presume that the component already declares
             // the capability.
         }
         Ok(())
@@ -656,7 +714,7 @@ impl RealmNode {
         target_moniker: Moniker,
     ) -> Result<(), Error> {
         if let Ok(target_node) = self.get_node_mut(&target_moniker, GetBehavior::ErrorIfMissing) {
-            Self::add_use_for_capability(&mut target_node.decl.uses, &capability)?;
+            Self::add_use_for_capability(&mut target_node.decl.uses, &capability, None)?;
             // TODO(fxbug.dev/74977): eagerly validate decls once weak routes are supported
             //target_node.validate(&target_moniker)?;
         } else {
@@ -881,11 +939,14 @@ impl RealmNode {
     fn add_use_for_capability(
         uses: &mut Vec<cm_rust::UseDecl>,
         capability: &ffrb::Capability,
+        child_source: Option<String>,
     ) -> Result<(), Error> {
+        let source =
+            child_source.map(cm_rust::UseSource::Child).unwrap_or(cm_rust::UseSource::Parent);
         let use_decl = match capability {
             ffrb::Capability::Protocol(ffrb::ProtocolCapability { name, .. }) => {
                 cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
-                    source: cm_rust::UseSource::Parent,
+                    source,
                     source_name: name.as_ref().unwrap().clone().try_into().unwrap(),
                     target_path: format!("/svc/{}", name.as_ref().unwrap())
                         .as_str()
@@ -897,7 +958,7 @@ impl RealmNode {
             ffrb::Capability::Directory(ffrb::DirectoryCapability {
                 name, path, rights, ..
             }) => cm_rust::UseDecl::Directory(cm_rust::UseDirectoryDecl {
-                source: cm_rust::UseSource::Parent,
+                source,
                 source_name: name.as_ref().unwrap().as_str().try_into().unwrap(),
                 target_path: path.as_ref().unwrap().as_str().try_into().unwrap(),
                 rights: rights.as_ref().unwrap().clone(),
@@ -905,6 +966,11 @@ impl RealmNode {
                 dependency_type: cm_rust::DependencyType::Strong,
             }),
             ffrb::Capability::Storage(ffrb::StorageCapability { name, path, .. }) => {
+                if source != cm_rust::UseSource::Parent {
+                    // Storage can't be exposed, so we can't use it from a child, because how would
+                    // the child expose it?
+                    return Err(Error::UnableToExpose("storage"));
+                }
                 cm_rust::UseDecl::Storage(cm_rust::UseStorageDecl {
                     source_name: name.as_ref().unwrap().as_str().try_into().unwrap(),
                     target_path: path.as_ref().unwrap().as_str().try_into().unwrap(),
@@ -2347,6 +2413,253 @@ mod tests {
                                 dependency_type: cm_rust::DependencyType::Strong,
                             }),
                         ],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                ),
+            ],
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn parent_use_from_url_child() {
+        let mut realm = RealmNode::default();
+        realm
+            .set_component(
+                "a".into(),
+                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                &None,
+            )
+            .await
+            .unwrap();
+        realm
+            .set_component("a/b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()), &None)
+            .await
+            .unwrap();
+        realm.mark_as_eager("a/b".into()).unwrap();
+        realm
+            .route_capability(ffrb::CapabilityRoute {
+                capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
+                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                    ..ffrb::ProtocolCapability::EMPTY
+                })),
+                source: Some(ffrb::RouteEndpoint::Component("a/b".to_string())),
+                targets: Some(vec![ffrb::RouteEndpoint::Component("a".to_string())]),
+                ..ffrb::CapabilityRoute::EMPTY
+            })
+            .unwrap();
+
+        check_results(
+            realm,
+            vec![
+                (
+                    "",
+                    cm_rust::ComponentDecl {
+                        children: vec![
+                                // Mock children aren't inserted into the decls at this point, as their
+                                // URLs are unknown until registration with the framework intermediary,
+                                // and that happens during Realm::create
+                        ],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a",
+                    cm_rust::ComponentDecl {
+                        uses: vec![cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+                            source: cm_rust::UseSource::Child("b".to_string()),
+                            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            target_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            dependency_type: cm_rust::DependencyType::Strong,
+                        })],
+                        children: vec![cm_rust::ChildDecl {
+                            name: "b".to_string(),
+                            url: "fuchsia-pkg://b".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                            environment: None,
+                        }],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                ),
+            ],
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn parent_use_from_mock_child() {
+        let mut realm = RealmNode::default();
+        realm
+            .set_component(
+                "a".into(),
+                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                &None,
+            )
+            .await
+            .unwrap();
+        realm
+            .set_component(
+                "a/b".into(),
+                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                &None,
+            )
+            .await
+            .unwrap();
+        realm.mark_as_eager("a/b".into()).unwrap();
+        realm
+            .route_capability(ffrb::CapabilityRoute {
+                capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
+                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                    ..ffrb::ProtocolCapability::EMPTY
+                })),
+                source: Some(ffrb::RouteEndpoint::Component("a/b".to_string())),
+                targets: Some(vec![ffrb::RouteEndpoint::Component("a".to_string())]),
+                ..ffrb::CapabilityRoute::EMPTY
+            })
+            .unwrap();
+
+        check_results(
+            realm,
+            vec![
+                (
+                    "",
+                    cm_rust::ComponentDecl {
+                        children: vec![
+                            // Mock children aren't inserted into the decls at this point, as their
+                            // URLs are unknown until registration with the framework intermediary,
+                            // and that happens during Realm::create
+                        ],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a",
+                    cm_rust::ComponentDecl {
+                        uses: vec![cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+                            source: cm_rust::UseSource::Child("b".to_string()),
+                            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            target_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            dependency_type: cm_rust::DependencyType::Strong,
+                        })],
+                        children: vec![
+                            // Mock children aren't inserted into the decls at this point, as their
+                            // URLs are unknown until registration with the framework intermediary,
+                            // and that happens during Realm::create
+                        ],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a/b",
+                    cm_rust::ComponentDecl {
+                        capabilities: vec![cm_rust::CapabilityDecl::Protocol(
+                            cm_rust::ProtocolDecl {
+                                name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                source_path: "/svc/fidl.examples.routing.echo.Echo"
+                                    .try_into()
+                                    .unwrap(),
+                            },
+                        )],
+                        exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+                            source: cm_rust::ExposeSource::Self_,
+                            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            target: cm_rust::ExposeTarget::Parent,
+                            target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                        })],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                ),
+            ],
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn grandparent_use_from_mock_child() {
+        let mut realm = RealmNode::default();
+        realm
+            .set_component(
+                "a/b/c".into(),
+                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                &None,
+            )
+            .await
+            .unwrap();
+        realm.mark_as_eager("a/b/c".into()).unwrap();
+        realm
+            .route_capability(ffrb::CapabilityRoute {
+                capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
+                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                    ..ffrb::ProtocolCapability::EMPTY
+                })),
+                source: Some(ffrb::RouteEndpoint::Component("a/b/c".to_string())),
+                targets: Some(vec![ffrb::RouteEndpoint::Component("a".to_string())]),
+                ..ffrb::CapabilityRoute::EMPTY
+            })
+            .unwrap();
+
+        check_results(
+            realm,
+            vec![
+                (
+                    "",
+                    cm_rust::ComponentDecl {
+                        children: vec![
+                            // Mock children aren't inserted into the decls at this point, as their
+                            // URLs are unknown until registration with the framework intermediary,
+                            // and that happens during Realm::create
+                        ],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a",
+                    cm_rust::ComponentDecl {
+                        uses: vec![cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+                            source: cm_rust::UseSource::Child("b".to_string()),
+                            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            target_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            dependency_type: cm_rust::DependencyType::Strong,
+                        })],
+                        children: vec![
+                            // Mock children aren't inserted into the decls at this point, as their
+                            // URLs are unknown until registration with the framework intermediary,
+                            // and that happens during Realm::create
+                        ],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a/b",
+                    cm_rust::ComponentDecl {
+                        exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+                            source: cm_rust::ExposeSource::Child("c".to_string()),
+                            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            target: cm_rust::ExposeTarget::Parent,
+                            target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                        })],
+                        children: vec![
+                            // Mock children aren't inserted into the decls at this point, as their
+                            // URLs are unknown until registration with the framework intermediary,
+                            // and that happens during Realm::create
+                        ],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a/b/c",
+                    cm_rust::ComponentDecl {
+                        capabilities: vec![cm_rust::CapabilityDecl::Protocol(
+                            cm_rust::ProtocolDecl {
+                                name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                                source_path: "/svc/fidl.examples.routing.echo.Echo"
+                                    .try_into()
+                                    .unwrap(),
+                            },
+                        )],
+                        exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+                            source: cm_rust::ExposeSource::Self_,
+                            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                            target: cm_rust::ExposeTarget::Parent,
+                            target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
+                        })],
                         ..cm_rust::ComponentDecl::default()
                     },
                 ),
