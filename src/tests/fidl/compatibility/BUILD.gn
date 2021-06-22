@@ -195,7 +195,6 @@ foreach(test, fidl_compatibility_tests) {
   generate_output = "${target_gen_dir}/${component_name}.cmx"
 
   test_component_labels += [ ":${component_label}" ]
-  test_labels += [ ":${test_label}" ]
 
   ## Generate a CMX
   fuchsia_test_component_manifest(generate_label) {
@@ -221,22 +220,11 @@ foreach(test, fidl_compatibility_tests) {
   generate_output = generate_output[0]
 
   ## The test component
-  fuchsia_component(component_label) {
+  fuchsia_test_component(component_label) {
     visibility = [ ":*" ]
-    testonly = true
-
     component_name = component_name
     manifest = generate_output
     deps = [ ":$generate_label" ]
-  }
-
-  ## The test declaration
-  fuchsia_test(test_label) {
-    package = ":fidl_compatibility_test_package"
-    package_name = "fidl-compatibility-test"
-    component = ":${component_label}"
-
-    environments = basic_envs
   }
 }
 
@@ -248,17 +236,16 @@ fuchsia_component("fidl_compatibility_test_component") {
   deps = [ ":fidl_compatibility_test_executable" ]
 }
 
-fuchsia_package("fidl_compatibility_test_package") {
-  testonly = true
-
+fuchsia_test_package("fidl_compatibility_test_package") {
   package_name = "fidl-compatibility-test"
   deps = [
-           ":hlcpp-server",
-           ":llcpp-server",
-           ":rust-server",
-           "golang:go-server",
-           ":dart-server",
-         ] + test_component_labels
+    ":dart-server",
+    ":hlcpp-server",
+    ":llcpp-server",
+    ":rust-server",
+    "golang:go-server",
+  ]
+  test_components = test_component_labels
 }
 
 group("compatibility") {
