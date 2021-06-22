@@ -23,17 +23,17 @@ void ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
   auto binding = AsyncClientBinding::Create(dispatcher, channel_tracker_.Get(), std::move(client),
                                             event_handler, std::move(teardown_observer));
   binding_ = binding;
-  binding->BeginWait();
+  binding->BeginFirstWait();
 }
 
-void ClientBase::Unbind() {
+void ClientBase::AsyncTeardown() {
   if (auto binding = binding_.lock())
-    binding->Unbind(std::move(binding));
+    binding->StartTeardown(std::move(binding));
 }
 
 zx::channel ClientBase::WaitForChannel() {
   // Unbind to release the AsyncClientBinding's reference to the channel.
-  Unbind();
+  AsyncTeardown();
   // Wait for all references to be released.
   return channel_tracker_.WaitForChannel();
 }
@@ -151,7 +151,7 @@ void ClientController::Bind(std::shared_ptr<ClientBase>&& client_impl, zx::chann
 void ClientController::Unbind() {
   ZX_ASSERT(client_impl_);
   control_.reset();
-  client_impl_->ClientBase::Unbind();
+  client_impl_->ClientBase::AsyncTeardown();
 }
 
 zx::channel ClientController::WaitForChannel() {

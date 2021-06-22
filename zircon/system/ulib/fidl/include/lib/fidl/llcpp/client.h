@@ -235,8 +235,6 @@ Client(fidl::ClientEnd<Protocol>, async_dispatcher_t*, AsyncEventHandlerReferenc
 template <typename Protocol>
 Client(fidl::ClientEnd<Protocol>, async_dispatcher_t*) -> Client<Protocol>;
 
-// TODO(fxbug.dev/75485): This class is not yet ready for general use.
-//
 // |WireSharedClient| is a client for sending and receiving wire messages. It is
 // suitable for systems with less defined threading guarantees, by providing the
 // building blocks to implement a two-phase asynchronous shutdown pattern.

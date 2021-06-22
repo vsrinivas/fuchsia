@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/time.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/sync/completion.h>
@@ -396,6 +397,63 @@ TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
   fidl::Result result = client->TwoWay(buffer.view(), "foo", &context);
   ASSERT_STATUS(ZX_ERR_ACCESS_DENIED, result.status());
   ASSERT_OK(sync_completion_wait(&error, ZX_TIME_INFINITE));
+}
+
+// The client should not notify the user of teardown completion until all
+// up-calls to user code have finished. This is essential for a two-phase
+// shutdown pattern to prevent use-after-free.
+TEST(WireSharedClient, TeardownCompletesAfterUserCallbackReturns) {
+  // This invariant should hold regardless of how many threads are on the
+  // dispatcher.
+  for (int num_threads = 1; num_threads < 4; num_threads++) {
+    auto endpoints = fidl::CreateEndpoints<Example>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = std::move(*endpoints);
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    for (int i = 0; i < num_threads; i++) {
+      ASSERT_OK(loop.StartThread());
+    }
+
+    class EventHandler : public fidl::WireAsyncEventHandler<Example> {
+      void OnResourceEvent(fidl::WireResponse<Example::OnResourceEvent>* event) override {
+        // Signal to the test that the dispatcher thread has entered into
+        // a user callback.
+        event_ = zx::eventpair(event->h.release());
+        event_.signal_peer(ZX_SIGNAL_NONE, ZX_USER_SIGNAL_0);
+
+        // Block the user callback until |ZX_USER_SIGNAL_1| is observed.
+        zx_signals_t observed;
+        ASSERT_OK(event_.wait_one(ZX_USER_SIGNAL_1, zx::time::infinite(), &observed));
+        ASSERT_EQ(ZX_USER_SIGNAL_1, observed);
+      }
+
+     private:
+      zx::eventpair event_;
+    };
+
+    fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher(),
+                                           std::make_unique<EventHandler>());
+    fidl::WireEventSender<Example> event_sender(std::move(remote));
+
+    zx::eventpair ep1, ep2;
+    ASSERT_OK(zx::eventpair::create(0, &ep1, &ep2));
+    ASSERT_OK(event_sender.OnResourceEvent(std::move(ep1)));
+
+    zx_signals_t observed;
+    ASSERT_OK(zx_object_wait_one(ep2.get(), ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, &observed));
+    ASSERT_EQ(ZX_USER_SIGNAL_0, observed);
+
+    // Initiate teardown. The |EventHandler| must not be destroyed until the
+    // |OnResourceEvent| callback returns.
+    client.AsyncTeardown();
+    ASSERT_EQ(ZX_ERR_TIMED_OUT,
+              ep2.wait_one(ZX_EVENTPAIR_PEER_CLOSED, async::Now(loop.dispatcher()) + zx::msec(250),
+                           &observed));
+
+    ep2.signal_peer(ZX_SIGNAL_NONE, ZX_USER_SIGNAL_1);
+    ASSERT_OK(ep2.wait_one(ZX_EVENTPAIR_PEER_CLOSED, zx::time::infinite(), &observed));
+  }
 }
 
 }  // namespace

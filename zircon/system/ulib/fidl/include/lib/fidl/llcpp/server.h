@@ -230,7 +230,7 @@ class ServerBindingRef {
   // OnUnboundFn from a dispatcher thread, as that will likely deadlock.
   void Unbind() {
     if (auto binding = event_sender_.binding_.lock())
-      binding->Unbind(std::move(binding));
+      binding->StartTeardown(std::move(binding));
   }
 
   // Triggers an asynchronous unbind operation. Eventually, the epitaph will be sent over the

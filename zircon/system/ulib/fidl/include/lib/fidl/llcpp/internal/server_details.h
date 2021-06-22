@@ -100,7 +100,7 @@ ServerBindingRef<Protocol> BindServerTypeErased(async_dispatcher_t* dispatcher,
   // The binding object keeps itself alive until unbinding, so dropping the
   // shared pointer here is fine.
   internal_binding.reset();
-  binding_ptr->BeginWait();
+  binding_ptr->BeginFirstWait();
   return binding_ref;
 }
 

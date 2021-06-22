@@ -150,7 +150,7 @@ class ChannelRefTracker {
 };
 
 // Base LLCPP client class supporting use with a multithreaded asynchronous dispatcher, safe error
-// handling and unbinding, and asynchronous transaction tracking. Users should not directly interact
+// handling and teardown, and asynchronous transaction tracking. Users should not directly interact
 // with this class. |ClientBase| objects must be managed via std::shared_ptr.
 class ClientBase {
  public:
@@ -171,12 +171,12 @@ class ClientBase {
             AsyncEventHandler* event_handler,
             fidl::internal::AnyTeardownObserver&& teardown_observer);
 
-  // Asynchronously unbind the client from the dispatcher. on_unbound will be invoked on a
-  // dispatcher thread if provided.
-  void Unbind();
+  // Asynchronously unbind the client from the dispatcher. |teardown_observer|
+  // will be notified on a dispatcher thread.
+  void AsyncTeardown();
 
   // Waits for all strong references to the channel to be released, then returns it. This
-  // necessarily triggers unbinding first in order to release the binding's reference.
+  // necessarily triggers teardown first in order to release the binding's reference.
   //
   // NOTE: As this returns a zx::channel which owns the handle, only a single call is expected to
   // succeed. Additional calls will simply return an empty zx::channel.
@@ -326,21 +326,21 @@ class ClientController {
 
  private:
   // |ControlBlock| controls the lifecycle of a client binding, such that
-  // unbinding will only happen after all clones of a |Client| managing
+  // teardown will only happen after all clones of a |Client| managing
   // the same channel goes out of scope.
   //
   // Specifically, all clones of a |Client| will share the same |ControlBlock|
   // instance, which in turn references the |ClientImpl|, and is responsible
-  // for its unbinding via RAII.
+  // for its teardown via RAII.
   class ControlBlock final {
    public:
     explicit ControlBlock(std::shared_ptr<ClientBase> client) : client_impl_(std::move(client)) {}
 
-    // Triggers unbinding, which will cause any strong references to the
+    // Triggers teardown, which will cause any strong references to the
     // |ClientBase| to be released.
     ~ControlBlock() {
       if (client_impl_) {
-        client_impl_->Unbind();
+        client_impl_->AsyncTeardown();
       }
     }
 

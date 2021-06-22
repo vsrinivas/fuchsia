@@ -65,9 +65,11 @@ void AsyncTransaction::EnableNextDispatch() {
   auto* binding_raw = static_cast<AnyAsyncServerBinding*>(owned_binding_.get());
   unowned_binding_ = owned_binding_;  // Preserve a weak reference to the binding.
   binding_raw->keep_alive_ = std::move(owned_binding_);
-  if (binding_raw->EnableNextDispatch() == ZX_OK) {
+  if (binding_raw->CheckForTeardownAndBeginNextWait() == ZX_OK) {
     *binding_released_ = true;
   } else {
+    // Propagate a placeholder error, such that the message handler will
+    // terminate dispatch right after the processing of this transaction.
     unbind_info_ = UnbindInfo::Unbind();
   }
 }
@@ -80,7 +82,6 @@ void AsyncTransaction::Close(zx_status_t epitaph) {
     }
     return;
   }
-  // OnUnbind() will run after Dispatch() returns.
   unbind_info_ = UnbindInfo::Close(epitaph);
   // Return ownership of the binding to the dispatcher.
   auto* binding_raw = static_cast<AnyAsyncServerBinding*>(owned_binding_.get());
@@ -91,11 +92,11 @@ void AsyncTransaction::InternalError(UnbindInfo error) {
   if (!owned_binding_) {
     if (auto binding = unowned_binding_.lock()) {
       auto* binding_raw = static_cast<AnyAsyncServerBinding*>(binding.get());
-      binding_raw->InternalError(std::move(binding), error);
+      binding_raw->StartTeardownWithInfo(std::move(binding), error);
     }
     return;
   }
-  unbind_info_ = error;  // OnUnbind() will run after Dispatch() returns.
+  unbind_info_ = error;
   // Return ownership of the binding to the dispatcher.
   auto* binding_raw = static_cast<AnyAsyncServerBinding*>(owned_binding_.get());
   binding_raw->keep_alive_ = std::move(owned_binding_);
