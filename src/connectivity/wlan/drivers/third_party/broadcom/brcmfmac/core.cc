@@ -305,9 +305,6 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
     ifp->netif_stop |= reason;
   } else {
     ifp->netif_stop &= ~reason;
-    if (!ifp->netif_stop) {
-      brcmf_enable_tx(ifp->ndev);
-    }
   }
   // spin_unlock_irqrestore(&ifp->netif_stop_lock, flags);
   ifp->drvr->irq_callback_lock.unlock();
@@ -812,9 +809,6 @@ void brcmf_free_net_device(struct net_device* dev) {
   }
 }
 
-void brcmf_enable_tx(struct net_device* dev) {
-  BRCMF_DBG(INFO, " * * NOTE: brcmf_enable_tx called. Enable TX. (Was netif_wake_queue)");
-}
 void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp) {
   zx_status_t result;
 

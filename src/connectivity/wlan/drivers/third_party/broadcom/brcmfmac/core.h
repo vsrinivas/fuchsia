@@ -240,7 +240,6 @@ struct brcmf_if {
 void brcmf_write_net_device_name(struct net_device* dev, const char* name);
 struct net_device* brcmf_allocate_net_device(size_t priv_size, const char* name);
 void brcmf_free_net_device(struct net_device* dev);
-void brcmf_enable_tx(struct net_device* dev);
 void brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp);
 void brcmf_netdev_start_xmit(struct net_device* ndev,
                              std::unique_ptr<wlan::brcmfmac::Netbuf> netbuf);
