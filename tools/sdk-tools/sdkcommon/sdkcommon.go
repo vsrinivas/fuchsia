@@ -263,16 +263,18 @@ func (sdk SDKProperties) getDefaultPackageRepoDir(deviceName string) string {
 	return filepath.Join(sdk.GetSDKDataPath(), "packages", "amber-files")
 }
 
-// GetDefaultDeviceName returns the default fconfig device name if exists.
+// getDefaultDeviceName returns the default fconfig device name if exists.
 // If it doesn't exist, it will try to get the default ffx device.
-// TODO(fxbug.dev/69008): Unexport this method once consumers don't use it.
-func (sdk SDKProperties) GetDefaultDeviceName() (string, error) {
+func (sdk SDKProperties) getDefaultDeviceName(skipCheckingFFX bool) (string, error) {
 	dataKey := getDeviceDataKey([]string{defaultDeviceKey})
 	data, err := getDeviceConfigurationData(sdk, dataKey)
 	if err != nil {
 		return "", err
 	}
 	if name, ok := data[dataKey].(string); ok {
+		if skipCheckingFFX {
+			return name, nil
+		}
 		if name == "" {
 			return sdk.getDefaultFFXDevice()
 		}
@@ -282,6 +284,9 @@ func (sdk SDKProperties) GetDefaultDeviceName() (string, error) {
 		}
 		return name, nil
 	} else if len(data) == 0 {
+		if skipCheckingFFX {
+			return "", nil
+		}
 		return sdk.getDefaultFFXDevice()
 	}
 	return "", fmt.Errorf("Cannot parse default device from %v", data)
@@ -357,46 +362,8 @@ func (sdk SDKProperties) RunFFXDoctor() (string, error) {
 	return sdk.RunFFX(args, false)
 }
 
-// GetAddressByName returns the IPv6 address of the device.
-// TODO(fxbug.dev/78804): Deprecated. Remove once other tools no longer use it.
-func (sdk SDKProperties) GetAddressByName(deviceName string) (string, error) {
-	device, err := sdk.FindDeviceByName(deviceName)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(device.IpAddr), nil
-}
-
 func (f *FuchsiaDevice) String() string {
 	return fmt.Sprintf("%s %s", f.IpAddr, f.Name)
-}
-
-// FindDeviceByName returns a fuchsia device matching a specific device name.
-func (sdk SDKProperties) FindDeviceByName(deviceName string) (*FuchsiaDevice, error) {
-	devices, err := sdk.ListDevices()
-	if err != nil {
-		return nil, err
-	}
-	for _, device := range devices {
-		if device.Name == deviceName {
-			return device, nil
-		}
-	}
-	return nil, fmt.Errorf("No device with device name %s found", deviceName)
-}
-
-// FindDeviceByIP returns a fuchsia device matching a specific ip address.
-func (sdk SDKProperties) FindDeviceByIP(ipAddr string) (*FuchsiaDevice, error) {
-	devices, err := sdk.ListDevices()
-	if err != nil {
-		return nil, err
-	}
-	for _, device := range devices {
-		if device.IpAddr == ipAddr {
-			return device, nil
-		}
-	}
-	return nil, fmt.Errorf("No device with IP address %s found", ipAddr)
 }
 
 // ListDevices returns all available fuchsia devices.
@@ -936,7 +903,7 @@ func (sdk SDKProperties) GetDeviceConfigurations() ([]DeviceConfig, error) {
 		return configs, fmt.Errorf("Could not read configuration data : %v", err)
 	}
 
-	defaultDeviceName, err := sdk.GetDefaultDeviceName()
+	defaultDeviceName, err := sdk.getDefaultDeviceName(false)
 	if err != nil {
 		return configs, err
 	}
@@ -985,7 +952,8 @@ func (sdk SDKProperties) GetDeviceConfiguration(name string) (DeviceConfig, erro
 
 	if deviceData, ok := configData[dataKey]; ok {
 		if deviceConfig, ok := mapToDeviceConfig(deviceData); ok {
-			defaultDeviceName, err := sdk.GetDefaultDeviceName()
+			// Skip checking ffx for default device.
+			defaultDeviceName, err := sdk.getDefaultDeviceName(true)
 			if err != nil {
 				return deviceConfig, err
 			}
@@ -1069,7 +1037,8 @@ func (sdk SDKProperties) RemoveDeviceConfiguration(deviceName string) error {
 		return fmt.Errorf("Error removing %s configuration: %v", deviceName, err)
 	}
 
-	defaultDeviceName, err := sdk.GetDefaultDeviceName()
+	// Skip checking ffx for default device.
+	defaultDeviceName, err := sdk.getDefaultDeviceName(true)
 	if err != nil {
 		return err
 	}

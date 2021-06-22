@@ -112,7 +112,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	log.Debugf("Using target address: %v", deviceConfig.DeviceIP)
+	log.Infof("Using target address: %v", deviceConfig.DeviceIP)
 
 	// Set the defaults from the SDK if not present.
 	if *repoFlag == "" {

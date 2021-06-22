@@ -66,7 +66,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	log.Debugf("Using target address: %v", deviceConfig.DeviceIP)
+	log.Infof("Using target address: %v", deviceConfig.DeviceIP)
 
 	// if no deviceIPFlag was given, then get the SSH Port from the configuration.
 	// We can't look at the configuration if the ip address was passed in since we don't have the

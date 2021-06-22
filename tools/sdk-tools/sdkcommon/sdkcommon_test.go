@@ -163,33 +163,6 @@ func TestGetAvailableImages(t *testing.T) {
 	}
 }
 
-func TestGetAddressByNameFfx(t *testing.T) {
-	ExecCommand = helperCommandForSDKCommon
-	defer func() {
-		ExecCommand = exec.Command
-	}()
-	testSDK := SDKProperties{
-		dataPath: t.TempDir(),
-	}
-	deviceName := "test-device"
-	_, err := testSDK.GetAddressByName(deviceName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	deviceName = "unknown-test-device"
-	_, err = testSDK.GetAddressByName(deviceName)
-	if err != nil {
-		expected := "No device with device name unknown-test-device found"
-		actual := fmt.Sprintf("%v", err)
-		if actual != expected {
-			t.Fatalf("Expected exception [%v] got [%v]", expected, actual)
-		}
-	} else {
-		t.Fatal("Expected exception, but did not get one")
-	}
-}
-
 func compareFuchsiaDevices(f1, f2 *FuchsiaDevice) bool {
 	return cmp.Equal(f1.IpAddr, f2.IpAddr) && cmp.Equal(f1.Name, f2.Name)
 }
@@ -203,122 +176,6 @@ func TestDeviceString(t *testing.T) {
 	actual := device.String()
 	if actual != expectedOutput {
 		t.Errorf("Expected String [%v] got [%v]", expectedOutput, actual)
-	}
-}
-
-func TestFindDeviceByNameFfx(t *testing.T) {
-	ExecCommand = helperCommandForSDKCommon
-	defer func() {
-		ExecCommand = exec.Command
-	}()
-	testSDK, err := NewWithDataPath(t.TempDir())
-	if err != nil {
-		t.Error(err)
-	}
-
-	deviceName := "test-device"
-	expectedFuchsiaDevice := &FuchsiaDevice{
-		IpAddr: resolvedAddr,
-		Name:   "test-device",
-	}
-	output, err := testSDK.FindDeviceByName(deviceName)
-	if err != nil {
-		t.Error(err)
-	}
-	if d := cmp.Diff(expectedFuchsiaDevice, output, cmp.Comparer(compareFuchsiaDevices)); d != "" {
-		t.Errorf("findDeviceByName mismatch: (-want +got):\n%s", d)
-	}
-
-	deviceName = "unknown-device"
-	_, err = testSDK.FindDeviceByName(deviceName)
-	if err != nil {
-		expected := "No device with device name unknown-device found"
-		actual := fmt.Sprintf("%v", err)
-		if actual != expected {
-			t.Errorf("Expected exception [%v] got [%v]", expected, actual)
-		}
-	} else {
-		t.Error("Expected exception, but did not get one")
-	}
-}
-
-func TestFindDeviceByIPFfx(t *testing.T) {
-	ExecCommand = helperCommandForSDKCommon
-	defer func() {
-		ExecCommand = exec.Command
-		os.Unsetenv("TEST_FFX_TARGET_LIST_OUTPUT")
-		os.Unsetenv("TEST_GET_SSH_ADDRESS_OUTPUT")
-	}()
-	testSDK := SDKProperties{
-		dataPath: t.TempDir(),
-	}
-	tests := []struct {
-		ipAddr                 string
-		ffxTargetListOutput    string
-		ffxGetSSHAddressOutput string
-		expectedFuchsiaDevice  *FuchsiaDevice
-		expectedError          string
-	}{
-		{
-			ipAddr: "fe80::9ded:df4f:5ee8:605f",
-			expectedFuchsiaDevice: &FuchsiaDevice{
-				IpAddr: "fe80::9ded:df4f:5ee8:605f",
-				Name:   "another-test-device",
-			},
-		},
-		{
-			ipAddr:              "::1",
-			ffxTargetListOutput: `[{"nodename":"another-target-device-name","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["123-123-123"]}, {"nodename":"remote-target-name","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1"]}]`,
-			expectedFuchsiaDevice: &FuchsiaDevice{
-				IpAddr: "::1",
-				Name:   "remote-target-name",
-			},
-		},
-		{
-			ipAddr:                 "::1",
-			ffxGetSSHAddressOutput: "[::1]:8022",
-			ffxTargetListOutput:    `[{"nodename":"some-test-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["123-123-123"]}, {"nodename":"another-test-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1", "fe80::16ae:11ff:fe11:fe85"]}]`,
-			expectedFuchsiaDevice: &FuchsiaDevice{
-				IpAddr: "::1",
-				Name:   "another-test-device",
-			},
-		},
-		{
-			ipAddr:                 "fe80::16ae:11ff:fe11:fe85",
-			ffxGetSSHAddressOutput: "[fe80::16ae:11ff:fe11:fe85]:8022",
-			ffxTargetListOutput:    `[{"nodename":"another-target-device-name","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["123-123-123"]}, {"nodename":"another-test-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1", "fe80::16ae:11ff:fe11:fe85"]}]`,
-			expectedFuchsiaDevice: &FuchsiaDevice{
-				IpAddr: "fe80::16ae:11ff:fe11:fe85",
-				Name:   "another-test-device",
-			},
-		},
-		{
-			ipAddr:                 "fe80::16ae:11ff:fe11:fe85",
-			ffxGetSSHAddressOutput: "123-123-123-123",
-			ffxTargetListOutput:    `[{"nodename":"another-target-device-name","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["123-123-123"]}, {"nodename":"another-test-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1","123-123-123-123", "fe80::16ae:11ff:fe11:fe85"]}]`,
-			expectedError:          "No device with IP address fe80::16ae:11ff:fe11:fe85 found",
-		},
-		{
-			ipAddr:        "999-999-999-999",
-			expectedError: "No device with IP address 999-999-999-999 found",
-		},
-	}
-	for _, test := range tests {
-		os.Setenv("TEST_FFX_TARGET_LIST_OUTPUT", test.ffxTargetListOutput)
-		os.Setenv("TEST_GET_SSH_ADDRESS_OUTPUT", test.ffxGetSSHAddressOutput)
-		output, err := testSDK.FindDeviceByIP(test.ipAddr)
-		if err != nil {
-			message := fmt.Sprintf("%v", err)
-			if message != test.expectedError {
-				t.Fatalf("Error '%v' did not match expected error '%v'", message, test.expectedError)
-			}
-		} else if test.expectedError != "" {
-			t.Fatalf("Expected error '%v', but got no error", test.expectedError)
-		} else {
-			if d := cmp.Diff(test.expectedFuchsiaDevice, output, cmp.Comparer(compareFuchsiaDevices)); d != "" {
-				t.Fatalf("findDeviceByIP mismatch: (-want +got):\n%s", d)
-			}
-		}
 	}
 }
 
@@ -635,6 +492,7 @@ func TestGetDefaultDeviceName(t *testing.T) {
 
 	tests := []struct {
 		ffxTargetDefaultGetOutput string
+		skipCheckingFFX           bool
 		expectedDefaultDevice     string
 		execHelper                func(command string, s ...string) (cmd *exec.Cmd)
 	}{
@@ -659,11 +517,18 @@ func TestGetDefaultDeviceName(t *testing.T) {
 			expectedDefaultDevice:     "fake-target-device-name",
 			execHelper:                helperCommandForGetFuchsiaProperty,
 		},
+		{
+			// ffx has a default device but we are skipping the check.
+			ffxTargetDefaultGetOutput: "some-other-device",
+			skipCheckingFFX:           true,
+			expectedDefaultDevice:     "",
+			execHelper:                helperCommandForNoDefaultDevice,
+		},
 	}
 	for _, test := range tests {
 		os.Setenv("TEST_FFX_TARGET_DEFAULT_GET", test.ffxTargetDefaultGetOutput)
 		ExecCommand = test.execHelper
-		val, err := sdk.GetDefaultDeviceName()
+		val, err := sdk.getDefaultDeviceName(test.skipCheckingFFX)
 		if err != nil {
 			t.Fatalf("Unexpected err: %v", err)
 		}
