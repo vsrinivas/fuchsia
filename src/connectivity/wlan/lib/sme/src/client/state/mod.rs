@@ -188,7 +188,7 @@ impl Joining {
                     sae_password,
                 }));
 
-                state_change_ctx.set_msg("successful join".to_string());
+                state_change_ctx.set_msg(format!("Join succeeded"));
                 Ok(Authenticating {
                     cfg: self.cfg,
                     cmd: self.cmd,
@@ -228,7 +228,7 @@ impl Authenticating {
                     &self.protection_ie,
                     &context.mlme_sink,
                 );
-                state_change_ctx.set_msg("successful authentication".to_string());
+                state_change_ctx.set_msg(format!("Authenticate succeeded"));
                 Ok(Associating {
                     cfg: self.cfg,
                     cmd: self.cmd,
@@ -364,10 +364,11 @@ impl Associating {
                             // This is unlikely to happen with any spec-compliant AP. In case the
                             // user somehow decided to connect to a malicious AP, reject and reset.
                             // Log at ERROR level to raise visibility of when this event occurs.
-                            error!(
+                            let msg = format!(
                                 "Associate terminated because AP's capabilities in association \
                                  response is different from beacon"
                             );
+                            error!("{}", msg);
                             report_connect_finished(
                             self.cmd.responder,
                             context,
@@ -376,10 +377,7 @@ impl Associating {
                                 code: fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch,
                             }.into()),
                         );
-                            state_change_ctx.set_msg(format!(
-                                "failed associating; AP's capabilites changed between beacon and\
-                                 association response"
-                            ));
+                            state_change_ctx.set_msg(msg);
                             return Err(Idle { cfg: self.cfg });
                         }
                         context.mlme_sink.send(MlmeRequest::FinalizeAssociation(
@@ -390,7 +388,10 @@ impl Associating {
                     match LinkState::new(self.cmd.protection, context) {
                         Ok(link_state) => link_state,
                         Err(failure_reason) => {
-                            state_change_ctx.set_msg(format!("failed to initialized LinkState"));
+                            let msg =
+                                format!("Associate terminated; failed to initialized LinkState");
+                            error!("{}", msg);
+                            state_change_ctx.set_msg(msg);
                             send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
                             report_connect_finished(
                                 self.cmd.responder,
@@ -402,7 +403,8 @@ impl Associating {
                     }
                 }
                 other => {
-                    warn!("Associate request failed: {:?}", other);
+                    let msg = format!("Associate request failed: {:?}", other);
+                    warn!("{}", msg);
                     report_connect_finished(
                         self.cmd.responder,
                         context,
@@ -414,12 +416,11 @@ impl Associating {
                             .into(),
                         ),
                     );
-                    state_change_ctx
-                        .set_msg(format!("failed associating; result code: {:?}", other));
+                    state_change_ctx.set_msg(msg);
                     return Err(Idle { cfg: self.cfg });
                 }
             };
-        state_change_ctx.set_msg("successful assoc".to_string());
+        state_change_ctx.set_msg(format!("Associate succeeded"));
 
         let mut responder = self.cmd.responder;
         if let LinkState::LinkUp(_) = link_state {
@@ -450,7 +451,9 @@ impl Associating {
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Idle {
-        warn!("association request failed due to spurious deauthentication: {:?}", ind.reason_code);
+        let msg = format!("Association request failed due to spurious deauthentication; reason code: {:?}, locally_initiated: {:?}",
+                          ind.reason_code, ind.locally_initiated);
+        warn!("{}", msg);
         report_connect_finished(
             self.cmd.responder,
             context,
@@ -462,10 +465,7 @@ impl Associating {
                 .into(),
             ),
         );
-        state_change_ctx.set_msg(format!(
-            "received DeauthenticateInd msg; reason code: {:?}, locally_initiated: {:?}",
-            ind.reason_code, ind.locally_initiated,
-        ));
+        state_change_ctx.set_msg(msg);
         Idle { cfg: self.cfg }
     }
 
@@ -475,7 +475,9 @@ impl Associating {
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Idle {
-        warn!("association request failed due to spurious disassociation: {:?}", ind.reason_code);
+        let msg = format!("Association request failed due to spurious disassociation; reason code: {:?}, locally_initiated: {:?}",
+                          ind.reason_code, ind.locally_initiated);
+        warn!("{}", msg);
         report_connect_finished(
             self.cmd.responder,
             context,
@@ -487,10 +489,7 @@ impl Associating {
                 .into(),
             ),
         );
-        state_change_ctx.set_msg(format!(
-            "received DisassociateInd msg; reason code: {:?}, locally_initiated: {:?}",
-            ind.reason_code, ind.locally_initiated,
-        ));
+        state_change_ctx.set_msg(msg);
         Idle { cfg: self.cfg }
     }
 
@@ -524,7 +523,9 @@ impl Associating {
             Err(e) => {
                 // An error in handling a timeout means that we may have no way to abort a
                 // failed handshake. Drop to idle.
-                state_change_ctx.set_msg(format!("failed to handle SAE timeout: {:?}", e));
+                let msg = format!("failed to handle SAE timeout: {:?}", e);
+                error!("{}", msg);
+                state_change_ctx.set_msg(msg);
                 return Err(Idle { cfg: self.cfg });
             }
         }
