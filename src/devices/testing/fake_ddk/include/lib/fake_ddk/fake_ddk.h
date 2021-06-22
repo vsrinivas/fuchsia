@@ -251,7 +251,7 @@ class Bind {
  private:
   // Spawns a thread to call the unbind hook if it exists and has not already been called,
   // else sets |remove_called_| as true.
-  void StartUnbindIfNeeded();
+  void StartUnbindIfNeeded(zx_device_t* device);
   // Joins with |unbind_thread_| if it has been created and not yet joined.
   void JoinUnbindThread();
 };

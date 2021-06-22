@@ -110,7 +110,7 @@ void Bind::SetMetadata(const void* data, size_t data_length) {
   get_metadata_length_old_ = data_length;
 }
 
-void Bind::StartUnbindIfNeeded() {
+void Bind::StartUnbindIfNeeded(zx_device* device) {
   // We need to call unbind from a separate thread, as some drivers may call DdkAsyncRemove
   // from a worker thread that they then try to join with in their unbind hook.
   // This will only be run once.
@@ -127,7 +127,7 @@ void Bind::StartUnbindIfNeeded() {
     ZX_ASSERT(res == thrd_success);
   } else if (!unbind_op_) {
     // The unbind hook is optional. If not present, we should mark the device as removed.
-    remove_called_ = true;
+    DeviceRemove(device);
   }
 }
 
@@ -184,7 +184,7 @@ void Bind::DeviceInitReply(zx_device_t* device, zx_status_t status,
     unbind_requested_ = true;
   }
   if (unbind_requested_) {
-    StartUnbindIfNeeded();
+    StartUnbindIfNeeded(device);
   }
   sync_completion_signal(&init_replied_sync_);
 }
@@ -209,7 +209,7 @@ void Bind::DeviceAsyncRemove(zx_device_t* device) {
 
   // We should not call unbind until the init hook has been replied to.
   if (!has_init_hook_ || init_reply_.has_value()) {
-    StartUnbindIfNeeded();
+    StartUnbindIfNeeded(device);
   }
 }
 
