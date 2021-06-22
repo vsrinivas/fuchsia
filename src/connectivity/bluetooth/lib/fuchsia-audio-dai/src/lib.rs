@@ -24,3 +24,6 @@ pub use discover::find_devices;
 /// Fuchsia Audio device integration.
 pub mod audio;
 pub use audio::DaiAudioDevice;
+
+/// Helpers and mocks for writing tests
+pub mod test;

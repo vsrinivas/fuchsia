@@ -10,6 +10,7 @@ use futures::{future::MaybeDone, StreamExt};
 use log::info;
 use std::sync::Arc;
 
+use crate::driver::{ensure_dai_format_is_supported, ensure_pcm_format_is_supported};
 use crate::DigitalAudioInterface;
 
 pub struct DaiAudioDevice {
@@ -90,43 +91,6 @@ impl DaiAudioDevice {
     pub fn stop(&mut self) {
         self.config_stream_task = MaybeDone::Gone;
     }
-}
-
-fn ensure_pcm_format_is_supported(
-    ring_buffer_formats: &[SupportedFormats],
-    pcm_format: &PcmFormat,
-) -> Result<(), Error> {
-    for format in ring_buffer_formats {
-        if let SupportedFormats { pcm_supported_formats: Some(pcm_supported), .. } = format {
-            if pcm_supported.number_of_channels.contains(&pcm_format.number_of_channels)
-                && pcm_supported.sample_formats.contains(&pcm_format.sample_format)
-                && pcm_supported.bytes_per_sample.contains(&pcm_format.bytes_per_sample)
-                && pcm_supported.valid_bits_per_sample.contains(&pcm_format.valid_bits_per_sample)
-                && pcm_supported.frame_rates.contains(&pcm_format.frame_rate)
-            {
-                return Ok(());
-            }
-        }
-    }
-    Err(format_err!("DAI does not support PCM format: {:?}", pcm_format))
-}
-
-fn ensure_dai_format_is_supported(
-    supported_formats: &[DaiSupportedFormats],
-    dai_format: &DaiFormat,
-) -> Result<(), Error> {
-    for dai_supported in supported_formats.iter() {
-        if dai_supported.number_of_channels.contains(&dai_format.number_of_channels)
-            && dai_supported.sample_formats.contains(&dai_format.sample_format)
-            && dai_supported.frame_formats.contains(&dai_format.frame_format)
-            && dai_supported.frame_rates.contains(&dai_format.frame_rate)
-            && dai_supported.bits_per_slot.contains(&dai_format.bits_per_slot)
-            && dai_supported.bits_per_sample.contains(&dai_format.bits_per_sample)
-        {
-            return Ok(());
-        }
-    }
-    Err(format_err!("DAI does not support DAI format: {:?}", dai_format))
 }
 
 /// Process the audio system requests for the digital audio interface, with the given `dai`
@@ -233,6 +197,7 @@ mod tests {
     use std::pin::Pin;
 
     use super::*;
+    use crate::test::test_digital_audio_interface;
 
     const SUPPORTED_DAI_FORMAT: DaiFormat = DaiFormat {
         number_of_channels: 1,
@@ -259,87 +224,12 @@ mod tests {
     const UNSUPPORTED_PCM_FORMAT: PcmFormat =
         PcmFormat { number_of_channels: 4, ..SUPPORTED_PCM_FORMAT };
 
-    async fn handle_ring_buffer(mut requests: RingBufferRequestStream) {
-        while let Some(req) = requests.next().await {
-            let req = req.expect("An error on the RingBuffer:");
-            match req {
-                RingBufferRequest::Start { responder } => {
-                    responder.send(0).expect("fidl response send ok");
-                }
-                x => unimplemented!("RingBuffer Request not implemented: {:?}", x),
-            };
-        }
-    }
-
-    async fn handle_dai_requests(mut requests: DaiRequestStream) {
-        let supported_dai_formats = DaiSupportedFormats {
-            number_of_channels: vec![1],
-            sample_formats: vec![DaiSampleFormat::PcmSigned],
-            frame_formats: vec![DaiFrameFormat::FrameFormatStandard(DaiFrameFormatStandard::Tdm1)],
-            frame_rates: vec![8000, 16000, 32000, 48000, 96000],
-            bits_per_slot: vec![16],
-            bits_per_sample: vec![16],
-        };
-
-        let supported_formats = SupportedFormats {
-            pcm_supported_formats: Some(PcmSupportedFormats {
-                number_of_channels: vec![1],
-                sample_formats: vec![SampleFormat::PcmSigned],
-                bytes_per_sample: vec![2],
-                valid_bits_per_sample: vec![16],
-                frame_rates: vec![8000, 16000, 32000, 48000, 96000],
-            }),
-            ..SupportedFormats::EMPTY
-        };
-
-        let properties = DaiProperties {
-            is_input: Some(true),
-            manufacturer: Some("Fuchsia".to_string()),
-            ..DaiProperties::EMPTY
-        };
-
-        let mut _rb_task = None;
-        while let Some(req) = requests.next().await {
-            if let Err(e) = req {
-                panic!("Had an error on the request stream for the DAI: {:?}", e);
-            }
-            match req.unwrap() {
-                DaiRequest::GetProperties { responder } => {
-                    responder.send(properties.clone()).expect("properties response")
-                }
-                DaiRequest::GetDaiFormats { responder } => responder
-                    .send(&mut Ok(vec![supported_dai_formats.clone()]))
-                    .expect("formats response"),
-                DaiRequest::GetRingBufferFormats { responder } => {
-                    responder.send(&mut Ok(vec![supported_formats.clone()])).expect("pcm response")
-                }
-                DaiRequest::CreateRingBuffer {
-                    dai_format,
-                    ring_buffer_format,
-                    ring_buffer,
-                    ..
-                } => {
-                    assert_eq!(SUPPORTED_DAI_FORMAT, dai_format);
-                    assert_eq!(SUPPORTED_PCM_FORMAT, ring_buffer_format.pcm_format.expect("pcm"));
-                    let requests = ring_buffer.into_stream().expect("stream from serverend");
-                    _rb_task = Some(fasync::Task::spawn(handle_ring_buffer(requests)));
-                }
-                x => panic!("Got a reqest we haven't implemented: {:?}", x),
-            };
-        }
-    }
-
     async fn fix_audio_device<F, Fut>(_name: &str, test: F)
     where
         F: FnOnce(DaiAudioDevice) -> Fut,
         Fut: futures::Future<Output = ()>,
     {
-        let (proxy, requests) = fidl::endpoints::create_proxy_and_stream::<DaiMarker>()
-            .expect("dai proxy creation to work");
-
-        fasync::Task::spawn(handle_dai_requests(requests)).detach();
-
-        let dai = DigitalAudioInterface::from_proxy(proxy);
+        let (dai, _handle) = test_digital_audio_interface(true);
         let device = DaiAudioDevice::build(dai).await.expect("builds okay");
         test(device).await
     }

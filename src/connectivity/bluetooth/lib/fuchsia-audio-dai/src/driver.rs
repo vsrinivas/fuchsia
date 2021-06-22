@@ -10,7 +10,6 @@ use futures::{
     future::{self, Either},
     Future, FutureExt, TryFutureExt,
 };
-use log::info;
 use std::{
     fs::OpenOptions,
     path::{Path, PathBuf},
@@ -32,7 +31,6 @@ impl DigitalAudioInterface {
     }
 
     /// Build a DAI from a proxy.  Path will be empty.
-    #[cfg(test)]
     pub(crate) fn from_proxy(proxy: DaiProxy) -> Self {
         Self { path: PathBuf::new(), proxy: Some(proxy) }
     }
@@ -46,7 +44,7 @@ impl DigitalAudioInterface {
         }
         let dai_dev = OpenOptions::new().read(true).write(true).open(self.path.as_path())?;
         let device_topo = fdio::device_get_topo_path(&dai_dev)?;
-        info!("Connecting to DAI: {:?} @ {:?}", self.path, device_topo);
+        log::info!("Connecting to DAI: {:?} @ {:?}", self.path, device_topo);
 
         let dev_channel = fdio::clone_channel(&dai_dev)?;
         let connect = DaiConnectSynchronousProxy::new(dev_channel);
@@ -109,11 +107,49 @@ impl DigitalAudioInterface {
     }
 }
 
+pub(crate) fn ensure_pcm_format_is_supported(
+    ring_buffer_formats: &[SupportedFormats],
+    pcm_format: &PcmFormat,
+) -> Result<(), Error> {
+    for format in ring_buffer_formats {
+        if let SupportedFormats { pcm_supported_formats: Some(pcm_supported), .. } = format {
+            if pcm_supported.number_of_channels.contains(&pcm_format.number_of_channels)
+                && pcm_supported.sample_formats.contains(&pcm_format.sample_format)
+                && pcm_supported.bytes_per_sample.contains(&pcm_format.bytes_per_sample)
+                && pcm_supported.valid_bits_per_sample.contains(&pcm_format.valid_bits_per_sample)
+                && pcm_supported.frame_rates.contains(&pcm_format.frame_rate)
+            {
+                return Ok(());
+            }
+        }
+    }
+    Err(format_err!("DAI does not support PCM format: {:?}", pcm_format))
+}
+
+pub(crate) fn ensure_dai_format_is_supported(
+    supported_formats: &[DaiSupportedFormats],
+    dai_format: &DaiFormat,
+) -> Result<(), Error> {
+    for dai_supported in supported_formats.iter() {
+        if dai_supported.number_of_channels.contains(&dai_format.number_of_channels)
+            && dai_supported.sample_formats.contains(&dai_format.sample_format)
+            && dai_supported.frame_formats.contains(&dai_format.frame_format)
+            && dai_supported.frame_rates.contains(&dai_format.frame_rate)
+            && dai_supported.bits_per_slot.contains(&dai_format.bits_per_slot)
+            && dai_supported.bits_per_sample.contains(&dai_format.bits_per_sample)
+        {
+            return Ok(());
+        }
+    }
+    Err(format_err!("DAI does not support DAI format: {:?}", dai_format))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use async_utils::PollExt;
+    use fuchsia;
     use fuchsia_async as fasync;
     use futures::{pin_mut, task::Poll, StreamExt};
 
@@ -124,7 +160,7 @@ mod tests {
         (dai, requests)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn get_properties() {
         let mut exec = fasync::TestExecutor::new().expect("executor");
         // Unconnected DAI
@@ -158,7 +194,7 @@ mod tests {
         assert_eq!(Some(true), properties.is_input);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn dai_formats() {
         let mut exec = fasync::TestExecutor::new().expect("executor");
         let (dai, mut requests) = connected_dai();
