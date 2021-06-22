@@ -46,18 +46,18 @@ class BlobfsCreator : public FsCreator {
   zx_status_t UsedSize() override;
   zx_status_t Add() override;
 
-  // A comparison function used to quickly compare MerkleInfo.
+  // A comparison function used to quickly compare BlobInfo.
   struct DigestCompare {
-    inline bool operator()(const blobfs::MerkleInfo& lhs, const blobfs::MerkleInfo& rhs) const {
-      return memcmp(lhs.digest.get(), rhs.digest.get(), digest::kSha256Length) < 0;
+    inline bool operator()(const blobfs::BlobInfo& lhs, const blobfs::BlobInfo& rhs) const {
+      return lhs.GetDigest() < rhs.GetDigest();
     }
   };
 
   // List of all blobs to be copied into blobfs.
-  fbl::Vector<fbl::String> blob_list_;
+  std::vector<std::filesystem::path> blob_list_;
 
-  // A list of Merkle Information for blobs in |blob_list_|.
-  std::vector<blobfs::MerkleInfo> merkle_list_;
+  // A list of Blob Information for blobs in |blob_list_|.
+  std::vector<blobfs::BlobInfo> blob_info_list_;
 
   // The format blobfs should use to store blobs.
   blobfs::BlobLayoutFormat blob_layout_format_ = blobfs::BlobLayoutFormat::kPaddedMerkleTreeAtStart;

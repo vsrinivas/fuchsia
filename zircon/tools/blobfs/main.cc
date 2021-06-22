@@ -25,19 +25,23 @@ namespace {
 
 // Add the blob described by |info| on host to the |blobfs| blobfs store.
 zx_status_t AddBlob(blobfs::Blobfs* blobfs, JsonRecorder* json_recorder,
-                    const blobfs::MerkleInfo& info) {
-  const char* path = info.path.c_str();
-  fbl::unique_fd data_fd(open(path, O_RDONLY, 0644));
-  if (!data_fd) {
-    fprintf(stderr, "error: cannot open '%s'\n", path);
-    return ZX_ERR_IO;
+                    const blobfs::BlobInfo& info) {
+  const std::optional<std::filesystem::path>& blob_src = info.GetSrcFilePath();
+  if (zx::status<> status = blobfs->AddBlob(info); status.is_error()) {
+    if (blob_src.has_value()) {
+      fprintf(stderr, "blobfs: Failed to add blob '%s': %d\n", blob_src->c_str(),
+              status.status_value());
+    }
+    return status.status_value();
   }
-  zx_status_t status =
-      blobfs::blobfs_add_blob_with_merkle(blobfs, json_recorder, data_fd.get(), info);
-  if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
-    fprintf(stderr, "blobfs: Failed to add blob '%s': %d\n", path, status);
-    return status;
+
+  if (json_recorder != nullptr && blob_src.has_value()) {
+    const blobfs::BlobLayout& blob_layout = info.GetBlobLayout();
+    json_recorder->Append(blob_src->string(), info.GetDigest().ToString().c_str(),
+                          blob_layout.FileSize(),
+                          size_t{blob_layout.TotalBlockCount()} * blobfs::kBlobfsBlockSize);
   }
+
   return ZX_OK;
 }
 
@@ -170,9 +174,10 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
   }
   zx_status_t status = ZX_OK;
   std::mutex mtx;
+  bool should_compress = ShouldCompress();
   for (unsigned j = n_threads; j > 0; j--) {
-    threads.push_back(std::thread([&] {
-      std::vector<blobfs::MerkleInfo> local_merkle_list;
+    threads.emplace_back([&] {
+      std::vector<blobfs::BlobInfo> local_blob_info_list;
       unsigned i = 0;
       while (true) {
         mtx.lock();
@@ -185,39 +190,40 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
         if (i >= blob_list_.size()) {
           break;
         }
-        const char* path = blob_list_[i].c_str();
+        const std::filesystem::path& path = blob_list_[i];
         zx_status_t res;
-        if ((res = AppendDepfile(path)) != ZX_OK) {
+        if ((res = AppendDepfile(path.c_str())) != ZX_OK) {
           mtx.lock();
           status = res;
           mtx.unlock();
           return;
         }
 
-        blobfs::MerkleInfo info;
-        fbl::unique_fd data_fd(open(path, O_RDONLY, 0644));
-
-        if ((res = blobfs::blobfs_preprocess(data_fd.get(), ShouldCompress(), blob_layout_format_,
-                                             &info)) != ZX_OK) {
+        fbl::unique_fd data_fd(open(path.c_str(), O_RDONLY, 0644));
+        zx::status<blobfs::BlobInfo> blob_info =
+            should_compress ? blobfs::BlobInfo::CreateCompressed(data_fd.get(), blob_layout_format_,
+                                                                 std::optional(path))
+                            : blobfs::BlobInfo::CreateUncompressed(
+                                  data_fd.get(), blob_layout_format_, std::optional(path));
+        if (blob_info.is_error()) {
           mtx.lock();
-          status = res;
+          status = blob_info.status_value();
           mtx.unlock();
           return;
         }
 
-        info.path = path;
-
-        local_merkle_list.push_back(std::move(info));
+        local_blob_info_list.push_back(std::move(blob_info).value());
       }
       mtx.lock();
-      merkle_list_.insert(merkle_list_.end(), std::make_move_iterator(local_merkle_list.begin()),
-                          std::make_move_iterator(local_merkle_list.end()));
+      blob_info_list_.insert(blob_info_list_.end(),
+                             std::make_move_iterator(local_blob_info_list.begin()),
+                             std::make_move_iterator(local_blob_info_list.end()));
       mtx.unlock();
-    }));
+    });
   }
 
-  for (unsigned i = 0; i < threads.size(); i++) {
-    threads[i].join();
+  for (auto& thread : threads) {
+    thread.join();
   }
 
   if (status != ZX_OK) {
@@ -226,25 +232,18 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
 
   // Remove all duplicate blobs by first sorting the merkle trees by
   // digest, and then by reshuffling the vector to exclude duplicates.
-  std::sort(merkle_list_.begin(), merkle_list_.end(), DigestCompare());
-  auto compare = [](const blobfs::MerkleInfo& lhs, const blobfs::MerkleInfo& rhs) {
-    return memcmp(lhs.digest.get(), rhs.digest.get(), digest::kSha256Length) == 0;
+  std::sort(blob_info_list_.begin(), blob_info_list_.end(), DigestCompare());
+  auto compare = [](const blobfs::BlobInfo& lhs, const blobfs::BlobInfo& rhs) {
+    return lhs.GetDigest() == rhs.GetDigest();
   };
-  auto it = std::unique(merkle_list_.begin(), merkle_list_.end(), compare);
-  merkle_list_.resize(std::distance(merkle_list_.begin(), it));
+  auto it = std::unique(blob_info_list_.begin(), blob_info_list_.end(), compare);
+  blob_info_list_.erase(it, blob_info_list_.end());
 
-  for (const auto& info : merkle_list_) {
-    auto blob_layout = blobfs::BlobLayout::CreateFromSizes(
-        blob_layout_format_, info.length, info.GetDataSize(), blobfs::kBlobfsBlockSize);
-    if (blob_layout.is_error()) {
-      fprintf(stderr, "blobfs: Failed to create blob layout for: %s\n",
-              info.digest.ToString().c_str());
-      return blob_layout.status_value();
-    }
-    data_blocks_ += blob_layout->TotalBlockCount();
+  for (const auto& blob_info : blob_info_list_) {
+    data_blocks_ += blob_info.GetBlobLayout().TotalBlockCount();
   }
 
-  required_inodes_ = std::max(blobfs::kBlobfsDefaultInodeCount, uint64_t{merkle_list_.size()});
+  required_inodes_ = std::max(blobfs::kBlobfsDefaultInodeCount, uint64_t{blob_info_list_.size()});
 
   blobfs::Superblock info;
   // Initialize enough of |info| to be able to compute the number of bytes the image will occupy.
@@ -265,7 +264,7 @@ zx_status_t BlobfsCreator::Mkfs() {
   int r = blobfs::Mkfs(fd_.get(), block_count,
                        {.blob_layout_format = blob_layout_format_, .num_inodes = required_inodes_});
 
-  if (r >= 0 && !blob_list_.is_empty()) {
+  if (r >= 0 && !blob_list_.empty()) {
     zx_status_t status;
     if ((status = Add()) != ZX_OK) {
       return status;
@@ -318,7 +317,7 @@ zx_status_t BlobfsCreator::UsedSize() {
 }
 
 zx_status_t BlobfsCreator::Add() {
-  if (blob_list_.is_empty()) {
+  if (blob_list_.empty()) {
     fprintf(stderr, "Adding a blob requires an additional file argument\n");
     return Usage();
   }
@@ -329,8 +328,8 @@ zx_status_t BlobfsCreator::Add() {
     return status;
   }
 
-  for (size_t i = 0; i < merkle_list_.size(); i++) {
-    if ((status = AddBlob(blobfs.get(), json_recorder(), merkle_list_[i])) < 0) {
+  for (const auto& blob_info : blob_info_list_) {
+    if ((status = AddBlob(blobfs.get(), json_recorder(), blob_info)) < 0) {
       break;
     }
   }

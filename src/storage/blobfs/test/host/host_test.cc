@@ -81,7 +81,7 @@ std::unique_ptr<Blobfs> CreateBlobfs(
   return blobfs;
 }
 
-std::optional<Inode> FindInodeByMerkleDigest(Blobfs& blobfs, digest::Digest& digest) {
+std::optional<Inode> FindInodeByMerkleDigest(Blobfs& blobfs, const digest::Digest& digest) {
   for (uint32_t i = 0; i < blobfs.Info().alloc_inode_count; ++i) {
     auto inode = blobfs.GetNode(i);
     ZX_ASSERT(inode.is_ok());
@@ -115,36 +115,43 @@ void FillFileWithRandomContent(File& file, size_t size, unsigned int* seed) {
   ASSERT_EQ(written, static_cast<int>(size));
 }
 
-void InitBlob(uint64_t data_size, Blobfs& blobfs, File& blob, MerkleInfo& info,
-              unsigned int* seed) {
-  EXPECT_EQ(ftruncate(blob.fd(), data_size), 0);
-  FillFileWithRandomContent(blob, data_size, seed);
-  EXPECT_EQ(blobfs_add_blob(&blobfs, /*json_recorder=*/nullptr, blob.fd()), ZX_OK);
-  EXPECT_EQ(blobfs_preprocess(blob.fd(), false, GetBlobLayoutFormat(blobfs.Info()), &info), ZX_OK);
+std::unique_ptr<File> CreateEmptyFile(uint64_t file_size) {
+  auto file = std::make_unique<File>(tmpfile());
+  EXPECT_EQ(ftruncate(file->fd(), file_size), 0);
+  return file;
+}
+
+std::unique_ptr<File> CreateFileWithRandomContent(uint64_t file_size, unsigned int* seed) {
+  auto file = CreateEmptyFile(file_size);
+  FillFileWithRandomContent(*file, file_size, seed);
+  return file;
 }
 
 // Adds an uncompressed blob of size |data_size| to |blobfs| and returns the created blob's Inode.
 Inode AddUncompressedBlob(uint64_t data_size, Blobfs& blobfs) {
-  File blob_file(tmpfile());
-  MerkleInfo info;
   unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
-  InitBlob(data_size, blobfs, blob_file, info, &seed);
-  return FindInodeByMerkleDigest(blobfs, info.digest).value();
+  auto file = CreateFileWithRandomContent(data_size, &seed);
+  auto blob_info = BlobInfo::CreateUncompressed(file->fd(), GetBlobLayoutFormat(blobfs.Info()));
+  ZX_ASSERT(blob_info.is_ok());
+  EXPECT_FALSE(blob_info->IsCompressed());
+
+  ZX_ASSERT(blobfs.AddBlob(blob_info.value()).is_ok());
+
+  return FindInodeByMerkleDigest(blobfs, blob_info->GetDigest()).value();
 }
 
 // Adds a compressed blob with an uncompressed size of |data_size| to |blobfs| and returns the
 // created blob's Inode.  The blobs data will be all zeros which will be significantly compressed.
 Inode AddCompressedBlob(uint64_t data_size, Blobfs& blobfs) {
-  File blob_file(tmpfile());
-  EXPECT_EQ(ftruncate(blob_file.fd(), data_size), 0);
-  MerkleInfo info;
-  EXPECT_EQ(blobfs_preprocess(blob_file.fd(), true, GetBlobLayoutFormat(blobfs.Info()), &info),
-            ZX_OK);
+  auto file = CreateEmptyFile(data_size);
+  auto blob_info = BlobInfo::CreateCompressed(file->fd(), GetBlobLayoutFormat(blobfs.Info()));
+  ZX_ASSERT(blob_info.is_ok());
   // Make sure that the blob was compressed.
-  EXPECT_TRUE(info.compressed);
-  EXPECT_EQ(blobfs_add_blob_with_merkle(&blobfs, /*json_recorder=*/nullptr, blob_file.fd(), info),
-            ZX_OK);
-  return FindInodeByMerkleDigest(blobfs, info.digest).value();
+  EXPECT_TRUE(blob_info->IsCompressed());
+
+  ZX_ASSERT(blobfs.AddBlob(blob_info.value()).is_ok());
+
+  return FindInodeByMerkleDigest(blobfs, blob_info->GetDigest()).value();
 }
 
 TEST(BlobfsHostFormatTest, FormatDevice) {
@@ -200,21 +207,15 @@ TEST(BlobfsHostFormatTest, JournalFormattedAsEmpty) {
 
 // Verify that we compress small files.
 TEST(BlobfsHostCompressionTest, CompressSmallFiles) {
-  File fs_file(tmpfile());
-  EXPECT_EQ(Mkfs(fs_file.fd(), 10000, DefaultFilesystemOptions()), 0);
-
   constexpr size_t all_zero_size = 12 * 1024;
-  File blob_file(tmpfile());
-  EXPECT_EQ(ftruncate(blob_file.fd(), all_zero_size), 0);
+  auto file = CreateEmptyFile(all_zero_size);
 
-  constexpr bool compress = true;
-  MerkleInfo info;
-  EXPECT_EQ(blobfs_preprocess(blob_file.fd(), compress, BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                              &info),
-            ZX_OK);
+  auto blob_info =
+      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kPaddedMerkleTreeAtStart);
+  ASSERT_TRUE(blob_info.is_ok());
 
-  EXPECT_TRUE(info.compressed);
-  EXPECT_LE(info.compressed_length, all_zero_size);
+  EXPECT_TRUE(blob_info->IsCompressed());
+  EXPECT_LE(blob_info->GetData().size(), all_zero_size);
 }
 
 TEST(BlobfsHostTest, WriteBlobWithPaddedFormatIsCorrect) {
@@ -335,22 +336,24 @@ TEST(BlobfsHostTest, VisitBlobsVisitsAllBlobsAndProvidesTheCorrectContents) {
   unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
   int blob_count = 32;
   std::vector<std::unique_ptr<File>> blobs;
-  std::vector<MerkleInfo> blob_info;
+  std::vector<BlobInfo> blob_infos;
 
   for (int i = 0; i < blob_count; ++i) {
     // 1-3 blocks and random tail(empty tail is acceptable too).
     size_t data_size = (i % 3 + 1) * kBlobfsBlockSize + (rand_r(&seed) % kBlobfsBlockSize);
-    blobs.push_back(std::make_unique<File>(tmpfile()));
-    blob_info.push_back({});
-
-    InitBlob(data_size, *blobfs, *blobs.back(), blob_info.back(), &seed);
+    blobs.push_back(CreateFileWithRandomContent(data_size, &seed));
+    auto blob_info =
+        BlobInfo::CreateUncompressed(blobs.back()->fd(), GetBlobLayoutFormat(blobfs->Info()));
+    ASSERT_TRUE(blob_info.is_ok());
+    blob_infos.push_back(std::move(blob_info).value());
+    ASSERT_TRUE(blobfs->AddBlob(blob_infos.back()).is_ok());
   }
 
   auto get_blob_index_by_digest =
       [&](fbl::Span<const uint8_t> merkle_root_hash) -> std::optional<int> {
     int i = 0;
-    for (auto& info : blob_info) {
-      if (info.digest.Equals(merkle_root_hash.data(), merkle_root_hash.size())) {
+    for (auto& blob_info : blob_infos) {
+      if (blob_info.GetDigest().Equals(merkle_root_hash.data(), merkle_root_hash.size())) {
         return i;
       }
       ++i;
@@ -415,13 +418,12 @@ TEST(BlobfsHostTest, ExportBlobsCreatesBlobsWithTheCorrectContentAndName) {
   unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
   int blob_count = 20;
   std::vector<std::unique_ptr<File>> blobs;
-  std::vector<MerkleInfo> blob_info;
+  std::vector<BlobInfo> blob_infos;
 
   auto find_blob_index_by_name = [&](const char* name) -> std::optional<int> {
-    std::string target(name);
+    fbl::String target(name);
     for (int i = 0; i < blob_count; ++i) {
-      auto& info = blob_info[i];
-      auto blob_name = std::string(info.digest.ToString().c_str(), info.digest.ToString().length());
+      fbl::String blob_name = blob_infos[i].GetDigest().ToString();
       if (target == blob_name) {
         return i;
       }
@@ -432,10 +434,12 @@ TEST(BlobfsHostTest, ExportBlobsCreatesBlobsWithTheCorrectContentAndName) {
   for (int i = 0; i < blob_count; ++i) {
     // 1-3 blocks and random tail(empty tail is acceptable too).
     size_t data_size = (i % 3 + 1) * kBlobfsBlockSize + (rand_r(&seed) % kBlobfsBlockSize);
-    blobs.push_back(std::make_unique<File>(tmpfile()));
-    blob_info.push_back({});
-
-    InitBlob(data_size, *blobfs, *blobs.back(), blob_info.back(), &seed);
+    blobs.push_back(CreateFileWithRandomContent(data_size, &seed));
+    auto blob_info =
+        BlobInfo::CreateUncompressed(blobs.back()->fd(), GetBlobLayoutFormat(blobfs->Info()));
+    ASSERT_TRUE(blob_info.is_ok());
+    blob_infos.push_back(std::move(blob_info).value());
+    ASSERT_TRUE(blobfs->AddBlob(blob_infos.back()).is_ok());
   }
 
   // Create a temporal output dir.
@@ -482,6 +486,23 @@ TEST(BlobfsHostTest, CreateBlobfsWithNullBlobPassesFsck) {
   AddUncompressedBlob(/*data_size=*/0, *blobfs);
   BlobfsChecker checker(blobfs.get());
   EXPECT_TRUE(checker.Check());
+}
+
+TEST(BlobfsHostTest, BlobInfoCreateCompressedWithUncompressableFileDoesNotCompressBlob) {
+  unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
+  auto file = CreateFileWithRandomContent(2 * kBlobfsBlockSize, &seed);
+  auto blob_info =
+      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd);
+  ASSERT_TRUE(blob_info.is_ok());
+  EXPECT_FALSE(blob_info->IsCompressed());
+}
+
+TEST(BlobfsHostTest, BlobInfoCreateCompressedWithTinyFileDoesNotCompressBlob) {
+  auto file = CreateEmptyFile(kBlobfsBlockSize);
+  auto blob_info =
+      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd);
+  ASSERT_TRUE(blob_info.is_ok());
+  EXPECT_FALSE(blob_info->IsCompressed());
 }
 
 }  // namespace

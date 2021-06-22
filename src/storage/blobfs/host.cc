@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <cstddef>
@@ -25,6 +26,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
@@ -33,6 +35,8 @@
 #include <safemath/checked_math.h>
 #include <safemath/safe_conversions.h>
 
+#include "fbl/unique_fd.h"
+#include "lib/zx/status.h"
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
 #include "src/lib/digest/node-digest.h"
@@ -68,19 +72,23 @@ constexpr CompressionSettings kCompressionSettings = {
     .compression_algorithm = CompressionAlgorithm::kChunked,
 };
 
-zx_status_t ReadBlockOffset(int fd, uint64_t bno, off_t offset, void* data) {
-  off_t off = offset + bno * kBlobfsBlockSize;
+zx::status<> ReadBlockWithOffset(int fd, uint64_t block_number, off_t file_offset, void* data) {
+  off_t off = safemath::checked_cast<off_t>(
+      safemath::CheckAdd(file_offset,
+                         safemath::CheckMul(block_number, kBlobfsBlockSize).ValueOrDie())
+          .ValueOrDie());
   if (pread(fd, data, kBlobfsBlockSize, off) != kBlobfsBlockSize) {
-    FX_LOGS(ERROR) << "cannot read block " << bno;
-    return ZX_ERR_IO;
+    FX_LOGS(ERROR) << "cannot read block " << block_number;
+    return zx::error(ZX_ERR_IO);
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t WriteBlockOffset(int fd, const void* data, uint64_t block_count, off_t offset,
-                             uint64_t block_number) {
+zx::status<> WriteBlocksWithOffset(int fd, uint64_t start_block, uint64_t block_count,
+                                   off_t file_offset, const void* data) {
   off_t off = safemath::checked_cast<off_t>(
-      safemath::CheckAdd(offset, safemath::CheckMul(block_number, kBlobfsBlockSize).ValueOrDie())
+      safemath::CheckAdd(file_offset,
+                         safemath::CheckMul(start_block, kBlobfsBlockSize).ValueOrDie())
           .ValueOrDie());
   size_t size = safemath::CheckMul(block_count, kBlobfsBlockSize).ValueOrDie();
   ssize_t ret;
@@ -89,176 +97,83 @@ zx_status_t WriteBlockOffset(int fd, const void* data, uint64_t block_count, off
     ret = pwrite(fd, udata, size, off);
     if (ret < 0) {
       perror("failed write");
-      FX_LOGS(ERROR) << "cannot write block " << block_number << " size:" << size << " off:" << off;
-      return ZX_ERR_IO;
+      FX_LOGS(ERROR) << "cannot write block " << start_block << " size:" << size << " off:" << off;
+      return zx::error(ZX_ERR_IO);
     }
     size -= ret;
     off += ret;
     udata += ret;
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
-// From a buffer, create a merkle tree.
-//
-// Given a mapped blob at |blob_data| of length |length|, compute the Merkle digest and the output
-// merkle tree as a uint8_t array.
-zx_status_t buffer_create_merkle(const FileMapping& mapping, bool use_compact_format,
-                                 MerkleInfo* out_info) {
-  zx_status_t status;
-  MerkleTreeCreator mtc;
-  mtc.SetUseCompactFormat(use_compact_format);
-  if ((status = mtc.SetDataLength(mapping.length())) != ZX_OK) {
-    return status;
-  }
-  std::unique_ptr<uint8_t[]> merkle_tree;
-  size_t merkle_length = mtc.GetTreeLength();
-  if (merkle_length > 0) {
-    merkle_tree.reset(new uint8_t[merkle_length]);
-  }
-  uint8_t root[digest::kSha256Length];
-  if ((status = mtc.SetTree(merkle_tree.get(), merkle_length, root, digest::kSha256Length)) !=
-      ZX_OK) {
-    return status;
-  }
-  if ((status = mtc.Append(mapping.data(), mapping.length())) != ZX_OK) {
-    return status;
-  }
-  out_info->digest = root;
-  out_info->merkle = std::move(merkle_tree);
-  out_info->merkle_length = merkle_length;
-  out_info->length = mapping.length();
-  return ZX_OK;
+zx::status<> WriteBlocks(int fd, uint64_t start_block, uint64_t block_count, const void* data) {
+  return WriteBlocksWithOffset(fd, start_block, block_count, /*file_offset=*/0, data);
 }
 
-zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
-  size_t max = HostCompressor::BufferMax(mapping.length());
-  out_info->compressed_data.reset(new uint8_t[max]);
-  out_info->compressed = false;
+zx::status<> WriteBlock(int fd, uint64_t block_number, const void* data) {
+  return WriteBlocks(fd, block_number, /*block_count=*/1, data);
+}
 
-  if (mapping.length() < kCompressionSizeThresholdBytes) {
-    return ZX_OK;
+struct MerkleTreeInfo {
+  static zx::status<MerkleTreeInfo> Create(fbl::Span<const uint8_t> data,
+                                           BlobLayoutFormat blob_layout_format) {
+    MerkleTreeCreator mtc;
+    mtc.SetUseCompactFormat(blob_layout_format == BlobLayoutFormat::kCompactMerkleTreeAtEnd);
+    if (zx_status_t status = mtc.SetDataLength(data.size()); status != ZX_OK) {
+      return zx::error(status);
+    }
+
+    std::vector<uint8_t> merkle_tree(mtc.GetTreeLength(), 0);
+    uint8_t root[digest::kSha256Length];
+    if (zx_status_t status =
+            mtc.SetTree(merkle_tree.data(), merkle_tree.size(), root, digest::kSha256Length);
+        status != ZX_OK) {
+      return zx::error(status);
+    }
+    if (zx_status_t status = mtc.Append(data.data(), data.size()); status != ZX_OK) {
+      return zx::error(status);
+    }
+    MerkleTreeInfo mti;
+    mti.digest = root;
+    mti.merkle_tree = std::move(merkle_tree);
+    return zx::ok(std::move(mti));
   }
 
-  zx_status_t status;
+  Digest digest;
+  std::vector<uint8_t> merkle_tree;
+};
+
+zx::status<std::vector<uint8_t>> CompressData(fbl::Span<const uint8_t> data) {
+  size_t max = HostCompressor::BufferMax(data.size());
+  std::vector<uint8_t> compressed_data(max, 0);
+
   std::unique_ptr<HostCompressor> compressor;
   size_t output_limit;
-  if ((status = HostCompressor::Create(kCompressionSettings, mapping.length(), &output_limit,
-                                       &compressor)) != ZX_OK) {
+  if (zx_status_t status =
+          HostCompressor::Create(kCompressionSettings, data.size(), &output_limit, &compressor);
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize blobfs compressor: " << status;
-    return status;
-  }
-  if ((status = compressor->SetOutput(out_info->compressed_data.get(), max)) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to initialize blobfs compressor: " << status;
-    return status;
+    return zx::error(status);
   }
 
-  if ((status = compressor->Update(mapping.data(), mapping.length())) != ZX_OK) {
+  if (zx_status_t status = compressor->SetOutput(compressed_data.data(), max); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to initialize blobfs compressor: " << status;
+    return zx::error(status);
+  }
+
+  if (zx_status_t status = compressor->Update(data.data(), data.size()); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to update blobfs compressor: " << status;
-    return status;
+    return zx::error(status);
   }
 
-  if ((status = compressor->End()) != ZX_OK) {
+  if (zx_status_t status = compressor->End(); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to complete blobfs compressor: " << status;
-    return status;
+    return zx::error(status);
   }
 
-  if (fbl::round_up(compressor->Size(), kBlobfsBlockSize) <
-      fbl::round_up(mapping.length(), kBlobfsBlockSize)) {
-    out_info->compressed_length = compressor->Size();
-    out_info->compressed = true;
-  }
-
-  return ZX_OK;
-}
-
-// Given a buffer (and pre-computed merkle tree), add the buffer as a blob in Blobfs.
-zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_recorder,
-                                               const FileMapping& mapping, const MerkleInfo& info) {
-  ZX_ASSERT(mapping.length() == info.length);
-  const void* data;
-
-  if (info.compressed) {
-    data = info.compressed_data.get();
-  } else {
-    data = mapping.data();
-  }
-
-  auto blob_layout = BlobLayout::CreateFromSizes(GetBlobLayoutFormat(bs->Info()), info.length,
-                                                 info.GetDataSize(), bs->GetBlockSize());
-  if (blob_layout.is_error()) {
-    FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout.status_value();
-    return blob_layout.status_value();
-  }
-
-  // After we've pre-calculated all necessary information, actually add the blob to the filesystem
-  // itself.
-  static std::mutex add_blob_mutex_;
-  std::lock_guard lock(add_blob_mutex_);
-  std::unique_ptr<InodeBlock> inode_block;
-  zx_status_t status;
-  if ((status = bs->NewBlob(info.digest, &inode_block)) != ZX_OK) {
-    FX_LOGS(ERROR) << "error: Failed to allocate a new blob " << status;
-    return status;
-  }
-  if (inode_block == nullptr) {
-    FX_LOGS(ERROR) << "error: No nodes available on blobfs image";
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  Inode* inode = inode_block->GetInode();
-  inode->blob_size = mapping.length();
-  inode->block_count = blob_layout->TotalBlockCount();
-  inode->header.flags |=
-      kBlobFlagAllocated | (info.compressed ? HostCompressor::InodeHeaderCompressionFlags() : 0);
-
-  // TODO(fxbug.rev/74008) Currently, host-side tools can only generate single-extent blobs. This
-  // should be fixed.
-  if (inode->block_count > kBlockCountMax) {
-    FX_LOGS(ERROR) << "error: Blobs larger than " << kBlockCountMax
-                   << " blocks not yet implemented";
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  size_t start_block = 0;
-  if ((status = bs->AllocateBlocks(inode->block_count, &start_block)) != ZX_OK) {
-    FX_LOGS(ERROR) << "error: No blocks available " << inode->block_count;
-    return status;
-  }
-
-  // TODO(fxbug.rev/74008): This is hardcoded alongside the check against "kBlockCountMax" above.
-  if (inode->block_count > 0) {
-    inode->extents[0].SetStart(start_block);
-    inode->extents[0].SetLength(static_cast<BlockCountType>(inode->block_count));
-    inode->extent_count = 1;
-  } else {
-    inode->extent_count = 0;
-  }
-
-  if (json_recorder) {
-    json_recorder->Append(info.path.c_str(), info.digest.ToString().c_str(), info.length,
-                          kBlobfsBlockSize * inode->block_count);
-  }
-
-  if ((status = bs->WriteData(inode, info.merkle.get(), data, *blob_layout.value())) != ZX_OK) {
-    FX_LOGS(ERROR) << "Blobfs WriteData failed " << status;
-    return status;
-  }
-
-  if ((status = bs->WriteBitmap(inode->block_count, inode->extents[0].Start())) != ZX_OK) {
-    FX_LOGS(ERROR) << "Blobfs WriteBitmap failed " << status;
-    return status;
-  }
-  if ((status = bs->WriteNode(std::move(inode_block))) != ZX_OK) {
-    FX_LOGS(ERROR) << "Blobfs WriteNode failed " << status;
-    return status;
-  }
-  if ((status = bs->WriteInfo()) != ZX_OK) {
-    FX_LOGS(ERROR) << "Blobfs WriteInfo failed " << status;
-    return status;
-  }
-
-  return ZX_OK;
+  compressed_data.resize(compressor->Size());
+  return zx::ok(std::move(compressed_data));
 }
 
 // Returns ZX_OK and copies blobfs info_block_t, which is a block worth of data containing
@@ -267,22 +182,23 @@ zx_status_t blobfs_load_info_block(const fbl::unique_fd& fd, info_block_t* out_i
                                    off_t start = 0, std::optional<off_t> end = std::nullopt) {
   info_block_t info_block;
 
-  if (ReadBlockOffset(fd.get(), 0, start, reinterpret_cast<void*>(info_block.block)) < 0) {
+  if (ReadBlockWithOffset(fd.get(), /*block_number=*/0, start,
+                          reinterpret_cast<void*>(info_block.block))
+          .is_error()) {
     return ZX_ERR_IO;
   }
-  uint64_t blocks;
-  zx_status_t status;
-  if ((status = GetBlockCount(fd.get(), &blocks)) != ZX_OK) {
+  uint64_t block_count;
+  if (zx_status_t status = GetBlockCount(fd.get(), &block_count); status != ZX_OK) {
     FX_LOGS(ERROR) << "cannot find end of underlying device";
     return status;
   }
 
   if (end &&
-      ((blocks * kBlobfsBlockSize) < safemath::checked_cast<uint64_t>(end.value() - start))) {
+      ((block_count * kBlobfsBlockSize) < safemath::checked_cast<uint64_t>(end.value() - start))) {
     FX_LOGS(ERROR) << "Invalid file size " << safemath::checked_cast<uint64_t>(end.value() - start);
     return ZX_ERR_BAD_STATE;
   }
-  if ((status = CheckSuperblock(&info_block.info, blocks)) != ZX_OK) {
+  if (zx_status_t status = CheckSuperblock(&info_block.info, block_count); status != ZX_OK) {
     FX_LOGS(ERROR) << "Info check failed " << status;
     return status;
   }
@@ -308,26 +224,115 @@ zx_status_t get_superblock(const fbl::unique_fd& fd, off_t start, std::optional<
 
 }  // namespace
 
-zx_status_t ReadBlock(int fd, uint64_t bno, void* data) {
-  off_t off = bno * kBlobfsBlockSize;
-  if (pread(fd, data, kBlobfsBlockSize, off) != kBlobfsBlockSize) {
-    FX_LOGS(ERROR) << "cannot read block " << bno;
-    return ZX_ERR_IO;
+zx::status<FileMapping> FileMapping::Create(int fd) {
+  struct stat s;
+  if (fstat(fd, &s) < 0) {
+    return zx::error(ZX_ERR_BAD_STATE);
   }
-  return ZX_OK;
+  if (s.st_size == 0) {
+    // Empty files can't be mapped.
+    return zx::ok(FileMapping(nullptr, 0));
+  }
+
+  void* data = mmap(nullptr, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+  if (data == MAP_FAILED) {
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+  return zx::ok(FileMapping(data, s.st_size));
 }
 
-zx_status_t WriteBlocks(int fd, uint64_t block_offset, uint64_t block_count, const void* data) {
-  if (WriteBlockOffset(fd, data, block_count, 0, block_offset) != ZX_OK) {
-    FX_LOGS(ERROR) << "cannot write blocks: " << block_count
-                   << " at block offset: " << block_offset;
-    return ZX_ERR_IO;
-  }
-  return ZX_OK;
+FileMapping::FileMapping(FileMapping&& other) noexcept
+    : data_(other.data_), length_(other.length_) {
+  other.data_ = nullptr;
+  other.length_ = 0;
 }
 
-zx_status_t WriteBlock(int fd, uint64_t bno, const void* data) {
-  return WriteBlocks(fd, bno, 1, data);
+FileMapping& FileMapping::operator=(FileMapping&& other) noexcept {
+  data_ = other.data_;
+  length_ = other.length_;
+  other.data_ = nullptr;
+  other.length_ = 0;
+  return *this;
+}
+
+FileMapping::~FileMapping() {
+  if (data_ != nullptr) {
+    munmap(data_, length_);
+  }
+}
+
+zx::status<BlobInfo> BlobInfo::CreateCompressed(int fd, BlobLayoutFormat blob_layout_format,
+                                                std::optional<std::filesystem::path> file_path) {
+  zx::status<BlobInfo> blob_info = CreateUncompressed(fd, blob_layout_format, std::move(file_path));
+  if (blob_info.is_error()) {
+    return blob_info;
+  }
+
+  fbl::Span<const uint8_t> data = blob_info->GetData();
+  if (data.size() <= kCompressionSizeThresholdBytes) {
+    // The blob is already small and compressing wouldn't save any space, leave the blob
+    // uncompressed.
+    return blob_info;
+  }
+
+  zx::status<std::vector<uint8_t>> compressed_data = CompressData(data);
+  if (compressed_data.is_error()) {
+    return compressed_data.take_error();
+  }
+
+  zx::status<std::unique_ptr<BlobLayout>> compressed_blob_layout = BlobLayout::CreateFromSizes(
+      blob_layout_format, data.size(), compressed_data->size(), kBlobfsBlockSize);
+  if (compressed_blob_layout.is_error()) {
+    return compressed_blob_layout.take_error();
+  }
+
+  // TODO(fxbug.dev/36663): Use TotalBlockCount instead of DataBlockAlignedSize. With the compact
+  // Merkle tree format even if compressing the blob doesn't save a block it may save enough space
+  // to fit the Merkle tree and lower block requirements for the combined data + merkle tree.
+  if (compressed_blob_layout->DataBlockAlignedSize() >=
+      blob_info->GetBlobLayout().DataBlockAlignedSize()) {
+    // Compressing the blob didn't save any blocks, leave the blob uncompressed.
+    return blob_info;
+  }
+  // Replace the uncompressed data with the compressed data.
+  blob_info->blob_layout_ = std::move(compressed_blob_layout).value();
+  blob_info->blob_data_ = std::move(compressed_data).value();
+
+  return blob_info;
+}
+
+zx::status<BlobInfo> BlobInfo::CreateUncompressed(int fd, BlobLayoutFormat blob_layout_format,
+                                                  std::optional<std::filesystem::path> file_path) {
+  BlobInfo blob_info;
+  blob_info.src_file_path_ = std::move(file_path);
+
+  zx::status<FileMapping> file_mapping = FileMapping::Create(fd);
+  if (file_mapping.is_error()) {
+    return file_mapping.take_error();
+  }
+
+  fbl::Span<const uint8_t> data = file_mapping->data();
+  zx::status<MerkleTreeInfo> merkle_tree_info = MerkleTreeInfo::Create(data, blob_layout_format);
+  if (merkle_tree_info.is_error()) {
+    return merkle_tree_info.take_error();
+  }
+  blob_info.merkle_tree_ = std::move(merkle_tree_info->merkle_tree);
+  blob_info.digest_ = std::move(merkle_tree_info->digest);
+
+  auto blob_layout =
+      BlobLayout::CreateFromSizes(blob_layout_format, data.size(), data.size(), kBlobfsBlockSize);
+  if (blob_layout.is_error()) {
+    return blob_layout.take_error();
+  }
+  blob_info.blob_layout_ = std::move(blob_layout).value();
+
+  blob_info.blob_data_.emplace<FileMapping>(std::move(file_mapping).value());
+
+  return zx::ok(std::move(blob_info));
+}
+
+zx_status_t ReadBlock(int fd, uint64_t block_number, void* data) {
+  return ReadBlockWithOffset(fd, block_number, /*file_offset=*/0, data).status_value();
 }
 
 zx_status_t GetBlockCount(int fd, uint64_t* out) {
@@ -369,7 +374,8 @@ int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options) {
                                                   uint64_t block_offset, uint64_t block_count) {
     ZX_ASSERT((block_offset + block_count) <= JournalBlocks(info));
     ZX_ASSERT(buffer.size() >= (block_count * kBlobfsBlockSize));
-    return WriteBlocks(fd, JournalStartBlock(info) + block_offset, block_count, buffer.data());
+    return WriteBlocks(fd, JournalStartBlock(info) + block_offset, block_count, buffer.data())
+        .status_value();
   };
   status = fs::MakeJournal(JournalBlocks(info), write_blocks_fn);
   if (status != ZX_OK) {
@@ -379,14 +385,15 @@ int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options) {
 
   // Write the root block to disk.
   static_assert(kBlobfsBlockSize == sizeof(info));
-  if ((status = WriteBlock(fd, 0, &info)) != ZX_OK) {
+  if (WriteBlock(fd, 0, &info).is_error()) {
     FX_LOGS(ERROR) << "Failed to write Superblock";
     return -1;
   }
 
   // Write allocation bitmap to disk.
   if (WriteBlocks(fd, BlockMapStartBlock(info), block_bitmap_blocks,
-                  block_bitmap.StorageUnsafe()->GetData()) != ZX_OK) {
+                  block_bitmap.StorageUnsafe()->GetData())
+          .is_error()) {
     FX_LOGS(ERROR) << "Failed to write blockmap block " << block_bitmap_blocks;
     return -1;
   }
@@ -398,7 +405,7 @@ int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options) {
     FX_LOGS(ERROR) << "failed to map zeroes for inode map of size " << map_length;
     return -1;
   }
-  if (WriteBlocks(fd, NodeMapStartBlock(info), node_map_blocks, blocks) != ZX_OK) {
+  if (WriteBlocks(fd, NodeMapStartBlock(info), node_map_blocks, blocks).is_error()) {
     FX_LOGS(ERROR) << "failed writing inode map";
     munmap(blocks, map_length);
     return -1;
@@ -482,11 +489,13 @@ zx_status_t blobfs_create(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
     extent_lengths[4] = DataBlocks(info_block.info) * kBlobfsBlockSize;
   }
 
-  if ((status = Blobfs::Create(std::move(fd), 0, info_block, extent_lengths, out)) != ZX_OK) {
+  auto blobfs = Blobfs::Create(std::move(fd), 0, info_block, extent_lengths);
+  if (blobfs.is_error()) {
     FX_LOGS(ERROR) << "mount failed; could not create blobfs";
-    return status;
+    return blobfs.status_value();
   }
 
+  *out = std::move(blobfs).value();
   return ZX_OK;
 }
 
@@ -516,61 +525,14 @@ zx_status_t blobfs_create_sparse(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd
   extent_lengths[3] = extent_vector[3];
   extent_lengths[4] = extent_vector[4];
 
-  if ((status = Blobfs::Create(std::move(fd), start, info_block, extent_lengths, out)) != ZX_OK) {
+  auto blobfs = Blobfs::Create(std::move(fd), start, info_block, extent_lengths);
+  if (blobfs.is_error()) {
     FX_LOGS(ERROR) << "mount failed; could not create blobfs";
-    return status;
+    return blobfs.status_value();
   }
 
+  *out = std::move(blobfs).value();
   return ZX_OK;
-}
-
-zx_status_t blobfs_preprocess(int data_fd, bool compress, BlobLayoutFormat blob_layout_format,
-                              MerkleInfo* out_info) {
-  FileMapping mapping;
-  zx_status_t status = mapping.Map(data_fd);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  if ((status = buffer_create_merkle(mapping, ShouldUseCompactMerkleTreeFormat(blob_layout_format),
-                                     out_info)) != ZX_OK) {
-    return status;
-  }
-
-  if (compress) {
-    status = buffer_compress(mapping, out_info);
-  }
-
-  return status;
-}
-
-zx_status_t blobfs_add_blob(Blobfs* bs, JsonRecorder* json_recorder, int data_fd) {
-  FileMapping mapping;
-  zx_status_t status = mapping.Map(data_fd);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Calculate the actual Merkle tree.
-  MerkleInfo info;
-  status = buffer_create_merkle(
-      mapping, ShouldUseCompactMerkleTreeFormat(GetBlobLayoutFormat(bs->Info())), &info);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return blobfs_add_mapped_blob_with_merkle(bs, json_recorder, mapping, info);
-}
-
-zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, JsonRecorder* json_recorder, int data_fd,
-                                        const MerkleInfo& info) {
-  FileMapping mapping;
-  zx_status_t status = mapping.Map(data_fd);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return blobfs_add_mapped_blob_with_merkle(bs, json_recorder, mapping, info);
 }
 
 zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
@@ -591,7 +553,7 @@ Blobfs::Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
     : blockfd_(std::move(fd)), offset_(offset) {
   ZX_ASSERT(extent_lengths.size() == kExtentCount);
   memcpy(&info_block_, info_block.block, kBlobfsBlockSize);
-  cache_.bno = 0;
+  cache_.block_number = 0;
 
   block_map_start_block_ = extent_lengths[0] / kBlobfsBlockSize;
   block_map_block_count_ = extent_lengths[1] / kBlobfsBlockSize;
@@ -603,45 +565,45 @@ Blobfs::Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
   data_block_count_ = extent_lengths[4] / kBlobfsBlockSize;
 }
 
-zx_status_t Blobfs::Create(fbl::unique_fd blockfd_, off_t offset, const info_block_t& info_block,
-                           const fbl::Array<size_t>& extent_lengths, std::unique_ptr<Blobfs>* out) {
-  zx_status_t status = CheckSuperblock(&info_block.info, TotalBlocks(info_block.info));
-  if (status < 0) {
+zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(fbl::unique_fd blockfd_, off_t offset,
+                                                   const info_block_t& info_block,
+                                                   const fbl::Array<size_t>& extent_lengths) {
+  if (zx_status_t status = CheckSuperblock(&info_block.info, TotalBlocks(info_block.info));
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "Check info failure";
-    return status;
+    return zx::error(status);
   }
 
   ZX_ASSERT(extent_lengths.size() == kExtentCount);
 
   for (unsigned i = 0; i < 3; i++) {
     if (extent_lengths[i] % kBlobfsBlockSize) {
-      return ZX_ERR_INVALID_ARGS;
+      return zx::error(ZX_ERR_INVALID_ARGS);
     }
   }
 
   auto fs =
       std::unique_ptr<Blobfs>(new Blobfs(std::move(blockfd_), offset, info_block, extent_lengths));
 
-  if ((status = fs->LoadBitmap()) < 0) {
+  if (zx::status<> status = fs->LoadBitmap(); status.is_error()) {
     FX_LOGS(ERROR) << "Failed to load bitmaps";
-    return status;
+    return status.take_error();
   }
-  if ((status = fs->LoadNodeMap()) != ZX_OK) {
+  if (zx::status<> status = fs->LoadNodeMap(); status.is_error()) {
     FX_LOGS(ERROR) << "Failed to load node map";
-    return status;
+    return status.take_error();
   }
 
-  *out = std::move(fs);
-  return ZX_OK;
+  return zx::ok(std::move(fs));
 }
 
-zx_status_t Blobfs::LoadBitmap() {
-  zx_status_t status;
-  if ((status = block_map_.Reset(block_map_block_count_ * kBlobfsBlockBits)) != ZX_OK) {
-    return status;
+zx::status<> Blobfs::LoadBitmap() {
+  if (zx_status_t status = block_map_.Reset(block_map_block_count_ * kBlobfsBlockBits);
+      status != ZX_OK) {
+    return zx::error(status);
   }
-  if ((status = block_map_.Shrink(info_.data_block_count)) != ZX_OK) {
-    return status;
+  if (zx_status_t status = block_map_.Shrink(info_.data_block_count); status != ZX_OK) {
+    return zx::error(status);
   }
   const void* bmstart = block_map_.StorageUnsafe()->GetData();
 
@@ -650,39 +612,38 @@ zx_status_t Blobfs::LoadBitmap() {
 
     if (n >= node_map_start_block_) {
       memset(bmdata, 0, kBlobfsBlockSize);
-    } else if ((status = ReadBlock(block_map_start_block_ + n)) != ZX_OK) {
+    } else if (zx::status<> status = ReadBlock(block_map_start_block_ + n); status.is_error()) {
       return status;
     } else {
       memcpy(bmdata, cache_.blk, kBlobfsBlockSize);
     }
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t Blobfs::LoadNodeMap() {
+zx::status<> Blobfs::LoadNodeMap() {
   const size_t nodes_to_load = fbl::round_up(Info().inode_count, kBlobfsInodesPerBlock);
   nodes_ = std::make_unique<Inode[]>(nodes_to_load);
   for (size_t i = 0; i < nodes_to_load / kBlobfsInodesPerBlock; i++) {
-    if (zx_status_t s = ReadBlockOffset(blockfd_.get(), node_map_start_block_ + i, offset_,
-                                        &nodes_[i * kBlobfsInodesPerBlock]);
-        s != ZX_OK) {
-      return s;
+    if (zx::status<> status = ReadBlockWithOffset(blockfd_.get(), node_map_start_block_ + i,
+                                                  offset_, &nodes_[i * kBlobfsInodesPerBlock]);
+        status.is_error()) {
+      return status;
     }
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t Blobfs::NewBlob(const Digest& digest, std::unique_ptr<InodeBlock>* out) {
+zx::status<std::unique_ptr<Blobfs::InodeBlock>> Blobfs::NewBlob(const Digest& digest) {
   size_t ino = info_.inode_count;
 
   for (size_t i = 0; i < info_.inode_count; ++i) {
     size_t bno = (i / kBlobfsInodesPerBlock) + node_map_start_block_;
 
-    zx_status_t status;
     if ((i % kBlobfsInodesPerBlock) == 0) {
-      if ((status = ReadBlock(bno)) != ZX_OK) {
-        FX_LOGS(ERROR) << "error: Failed to read block " << status;
-        return status;
+      if (zx::status<> status = ReadBlock(bno); status.is_error()) {
+        FX_LOGS(ERROR) << "error: Failed to read block " << status.status_value();
+        return status.take_error();
       }
     }
 
@@ -691,7 +652,7 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, std::unique_ptr<InodeBlock>* o
     if (observed_inode->header.IsAllocated() && !observed_inode->header.IsExtentContainer()) {
       if (digest == observed_inode->merkle_root_hash) {
         FX_LOGS(ERROR) << "Blob already exists " << digest.ToString();
-        return ZX_ERR_ALREADY_EXISTS;
+        return zx::error(ZX_ERR_ALREADY_EXISTS);
       }
     } else if (ino >= info_.inode_count) {
       // If |ino| has not already been set to a valid value, set it to the first free value we find.
@@ -703,34 +664,96 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, std::unique_ptr<InodeBlock>* o
   if (ino >= info_.inode_count) {
     FX_LOGS(ERROR) << "No inode resources left. requested inode number: " << ino
                    << " more than allowed inode count: " << info_.inode_count;
-    return ZX_ERR_NO_RESOURCES;
+    return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
   size_t bno = (ino / kBlobfsInodesPerBlock) + NodeMapStartBlock(info_);
-  std::unique_ptr<InodeBlock> ino_block(new InodeBlock(bno, &nodes_[ino], digest));
+  auto ino_block = std::make_unique<InodeBlock>(bno, &nodes_[ino], digest);
 
   info_.alloc_inode_count++;
-  *out = std::move(ino_block);
-  return ZX_OK;
+  return zx::ok(std::move(ino_block));
 }
 
-zx_status_t Blobfs::AllocateBlocks(size_t nblocks, size_t* blkno_out) {
-  zx_status_t status;
-  if ((status = block_map_.Find(false, 0, block_map_.size(), nblocks, blkno_out)) != ZX_OK) {
+zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
+  const BlobLayout& blob_layout = blob_info.GetBlobLayout();
+  if (blob_layout.Format() != GetBlobLayoutFormat(Info())) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  auto inode_block = NewBlob(blob_info.GetDigest());
+  if (inode_block.is_error()) {
+    FX_LOGS(ERROR) << "error: Failed to allocate a new blob " << inode_block.status_value();
+    return inode_block.take_error();
+  }
+
+  Inode* inode = inode_block->GetInode();
+  inode->blob_size = blob_layout.FileSize();
+  inode->block_count = blob_layout.TotalBlockCount();
+  inode->header.flags |=
+      kBlobFlagAllocated |
+      (blob_info.IsCompressed() ? HostCompressor::InodeHeaderCompressionFlags() : 0);
+
+  // TODO(fxbug.rev/74008) Currently, host-side tools can only generate single-extent blobs. This
+  // should be fixed.
+  if (inode->block_count > kBlockCountMax) {
+    FX_LOGS(ERROR) << "error: Blobs larger than " << kBlockCountMax
+                   << " blocks not yet implemented";
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  if (inode->block_count > 0) {
+    auto start_block = AllocateBlocks(inode->block_count);
+    if (start_block.is_error()) {
+      FX_LOGS(ERROR) << "error: No blocks available " << inode->block_count;
+      return start_block.take_error();
+    }
+    inode->extents[0].SetStart(start_block.value());
+    inode->extents[0].SetLength(static_cast<BlockCountType>(inode->block_count));
+    inode->extent_count = 1;
+  } else {
+    inode->extent_count = 0;
+  }
+
+  if (zx::status<> status = WriteData(inode, blob_info); status.is_error()) {
+    FX_LOGS(ERROR) << "Blobfs WriteData failed " << status.status_value();
     return status;
   }
-  if ((status = block_map_.Set(*blkno_out, *blkno_out + nblocks)) != ZX_OK) {
+  if (zx::status<> status = WriteBitmap(inode->extents[0].Start(), inode->block_count);
+      status.is_error()) {
+    FX_LOGS(ERROR) << "Blobfs WriteBitmap failed " << status.status_value();
+    return status;
+  }
+  if (zx::status<> status = WriteNode(std::move(inode_block).value()); status.is_error()) {
+    FX_LOGS(ERROR) << "Blobfs WriteNode failed " << status.status_value();
+    return status;
+  }
+  if (zx::status<> status = WriteInfo(); status.is_error()) {
+    FX_LOGS(ERROR) << "Blobfs WriteInfo failed " << status.status_value();
     return status;
   }
 
-  info_.alloc_block_count += nblocks;
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t Blobfs::WriteBitmap(size_t nblocks, size_t start_block) {
-  uint64_t block_bitmap_start_block = start_block / kBlobfsBlockBits;
+zx::status<uint64_t> Blobfs::AllocateBlocks(uint64_t block_count) {
+  size_t start_block;
+  if (zx_status_t status = block_map_.Find(false, 0, block_map_.size(), block_count, &start_block);
+      status != ZX_OK) {
+    return zx::error(status);
+  }
+  if (zx_status_t status = block_map_.Set(start_block, start_block + block_count);
+      status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  info_.alloc_block_count += block_count;
+  return zx::ok(start_block);
+}
+
+zx::status<> Blobfs::WriteBitmap(uint64_t data_start_block, uint64_t data_block_count) {
+  uint64_t block_bitmap_start_block = data_start_block / kBlobfsBlockBits;
   uint64_t block_bitmap_end_block =
-      fbl::round_up(start_block + nblocks, kBlobfsBlockBits) / kBlobfsBlockBits;
+      fbl::round_up(data_start_block + data_block_count, kBlobfsBlockBits) / kBlobfsBlockBits;
   const void* bmstart = block_map_.StorageUnsafe()->GetData();
   const void* data = fs::GetBlock(kBlobfsBlockSize, bmstart, block_bitmap_start_block);
   uint64_t absolute_block_number = block_map_start_block_ + block_bitmap_start_block;
@@ -738,17 +761,17 @@ zx_status_t Blobfs::WriteBitmap(size_t nblocks, size_t start_block) {
   return WriteBlocks(absolute_block_number, block_count, data);
 }
 
-zx_status_t Blobfs::WriteNode(std::unique_ptr<InodeBlock> ino_block) {
+zx::status<> Blobfs::WriteNode(std::unique_ptr<InodeBlock> ino_block) {
   size_t inode_block_index =
-      (ino_block->GetBno() - NodeMapStartBlock(info_)) * kBlobfsInodesPerBlock;
-  return WriteBlock(ino_block->GetBno(), &nodes_[inode_block_index]);
+      (ino_block->GetBlockNumber() - NodeMapStartBlock(info_)) * kBlobfsInodesPerBlock;
+  return WriteBlock(ino_block->GetBlockNumber(), &nodes_[inode_block_index]);
 }
 
-zx_status_t Blobfs::WriteData(Inode* inode, const void* merkle_data, const void* blob_data,
-                              const BlobLayout& blob_layout) {
+zx::status<> Blobfs::WriteData(Inode* inode, const BlobInfo& blob_info) {
+  const BlobLayout& blob_layout = blob_info.GetBlobLayout();
   if (blob_layout.TotalBlockCount() == 0) {
     // Nothing to write.
-    return ZX_OK;
+    return zx::ok();
   }
   // Allocate a new buffer to hold both the data and Merkle tree together.  The data and Merkle tree
   // may not be block multiples in size which makes writing them separately in terms of blocks
@@ -756,60 +779,63 @@ zx_status_t Blobfs::WriteData(Inode* inode, const void* merkle_data, const void*
   // uses more memory but makes writing the blob significantly easier.
   uint64_t block_size = GetBlockSize();
   uint64_t buf_size = block_size * blob_layout.TotalBlockCount();
-  auto buf = std::make_unique<uint8_t[]>(blob_layout.TotalBlockCount() * GetBlockSize());
+  auto buf = std::make_unique<uint8_t[]>(size_t{blob_layout.TotalBlockCount()} * GetBlockSize());
   // Zero the entire buffer instead of trying to calculate where the data and Merkle tree won't be.
   memset(buf.get(), 0, buf_size);
 
   // Copy the data to the buffer.
   uint64_t data_offset = block_size * blob_layout.DataBlockOffset();
-  memcpy(buf.get() + data_offset, blob_data, blob_layout.DataSizeUpperBound());
+  fbl::Span<const uint8_t> data = blob_info.GetData();
+  memcpy(buf.get() + data_offset, data.data(), data.size());
 
   // |merkle_data| will be null when the blob size is less than or equal to the Merkle tree node
   // size.
-  if (merkle_data) {
+  fbl::Span<const uint8_t> merkle_tree = blob_info.GetMerkleTree();
+  if (!merkle_tree.empty()) {
     // Copy the Merkle tree to the buffer.
     uint64_t merkle_offset = block_size * blob_layout.MerkleTreeBlockOffset() +
                              blob_layout.MerkleTreeOffsetWithinBlockOffset();
-    memcpy(buf.get() + merkle_offset, merkle_data, blob_layout.MerkleTreeSize());
+    memcpy(buf.get() + merkle_offset, merkle_tree.data(), merkle_tree.size());
   }
 
-  zx_status_t status;
   uint32_t blob_start_block = data_start_block_ + inode->extents[0].Start();
-  if ((status = WriteBlocks(blob_start_block, blob_layout.TotalBlockCount(), buf.get())) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to write a blob: " << status;
+  if (zx::status<> status = WriteBlocks(blob_start_block, blob_layout.TotalBlockCount(), buf.get());
+      status.is_error()) {
+    FX_LOGS(ERROR) << "Failed to write a blob: " << status.status_value();
     return status;
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t Blobfs::WriteInfo() { return WriteBlock(0, info_block_); }
+zx::status<> Blobfs::WriteInfo() { return WriteBlock(0, info_block_); }
 
-zx_status_t Blobfs::ReadBlock(size_t bno) {
-  zx_status_t status;
-  if ((cache_.bno != bno) &&
-      ((status = ReadBlockOffset(blockfd_.get(), bno, offset_, &cache_.blk)) != ZX_OK)) {
-    FX_LOGS(ERROR) << "Failed to read a blob: " << status;
-    return status;
+zx::status<> Blobfs::ReadBlock(uint64_t block_number) {
+  if (cache_.block_number != block_number) {
+    if (zx::status<> status =
+            ReadBlockWithOffset(blockfd_.get(), block_number, offset_, &cache_.blk);
+        status.is_error()) {
+      FX_LOGS(ERROR) << "Failed to read a blob: " << status.status_value();
+      return status;
+    }
+    cache_.block_number = block_number;
   }
-
-  cache_.bno = bno;
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t Blobfs::WriteBlocks(size_t block_number, uint64_t block_count, const void* data) {
-  return WriteBlockOffset(blockfd_.get(), data, block_count, offset_, block_number);
+zx::status<> Blobfs::WriteBlocks(uint64_t start_block, uint64_t block_count, const void* data) {
+  return WriteBlocksWithOffset(blockfd_.get(), start_block, block_count, offset_, data);
 }
 
-zx_status_t Blobfs::WriteBlock(size_t bno, const void* data) {
-  return WriteBlockOffset(blockfd_.get(), data, 1, offset_, bno);
+zx::status<> Blobfs::WriteBlock(uint64_t block_number, const void* data) {
+  return WriteBlocks(block_number, /*block_count=*/1, data);
 }
 
-zx_status_t Blobfs::ResetCache() {
-  if (cache_.bno != 0) {
+zx::status<> Blobfs::ResetCache() {
+  if (cache_.block_number != 0) {
     memset(cache_.blk, 0, kBlobfsBlockSize);
-    cache_.bno = 0;
+    cache_.block_number = 0;
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
 zx::status<InodePtr> Blobfs::GetNode(uint32_t index) {
@@ -819,38 +845,49 @@ zx::status<InodePtr> Blobfs::GetNode(uint32_t index) {
   return zx::ok(InodePtr(&nodes_[index], InodePtrDeleter(this)));
 }
 
-zx_status_t Blobfs::ReadBlocksForInode(uint32_t node_index, size_t bno, size_t length,
-                                       uint8_t* data) {
+// TODO(smklein): Consider deduplicating the host and target allocation systems.
+bool Blobfs::CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
+                                  uint64_t* first_unset) const {
+  size_t unset_bit;
+  bool allocated = block_map_.Get(start_block, end_block, &unset_bit);
+  if (!allocated && first_unset != nullptr) {
+    *first_unset = static_cast<uint64_t>(unset_bit);
+  }
+  return allocated;
+}
+
+zx::status<> Blobfs::ReadBlocksForInode(uint32_t node_index, uint64_t start_block,
+                                        uint64_t block_count, uint8_t* data) {
   zx::status<AllocatedExtentIterator> extent_iterator_or =
       AllocatedExtentIterator::Create(this, node_index);
   if (extent_iterator_or.is_error()) {
-    return extent_iterator_or.error_value();
+    return extent_iterator_or.take_error();
   }
   BlockIterator iter(
       std::make_unique<AllocatedExtentIterator>(std::move(extent_iterator_or.value())));
-  if (zx_status_t status = IterateToBlock(&iter, bno); status != ZX_OK) {
-    return status;
+  if (zx_status_t status = IterateToBlock(&iter, start_block); status != ZX_OK) {
+    return zx::error(status);
   }
   std::vector<std::pair<uint64_t, uint32_t>> ranges;
   zx_status_t status =
-      StreamBlocks(&iter, length, [&ranges](int64_t, uint64_t start, uint32_t length) {
-        ranges.push_back(std::make_pair(start, length));
+      StreamBlocks(&iter, block_count, [&ranges](int64_t, uint64_t start, uint32_t length) {
+        ranges.emplace_back(start, length);
         return ZX_OK;
       });
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
   size_t offset = 0;
   for (auto range : ranges) {
     for (uint64_t i = 0; i < range.second; i++) {
-      status = ReadBlockOffset(blockfd_.get(), data_start_block_ + range.first + i, offset_,
-                               &data[offset++ * GetBlockSize()]);
-      if (status != ZX_OK) {
+      zx::status<> status = ReadBlockWithOffset(blockfd_.get(), data_start_block_ + range.first + i,
+                                                offset_, &data[offset++ * GetBlockSize()]);
+      if (status.is_error()) {
         return status;
       }
     }
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
 fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlob(uint32_t node_index) {
@@ -862,7 +899,7 @@ fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlob(uin
   Inode inode = *inode_ptr.value();
   const uint32_t block_size = GetBlockSize();
   zx_status_t status;
-  auto make_error = [&](std::string error) {
+  auto make_error = [&](const std::string& error) {
     digest::Digest digest(inode.merkle_root_hash);
     auto digest_str = digest.ToString();
     return fit::error("Blob with merkle root hash of " +
@@ -880,19 +917,19 @@ fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlob(uin
   std::vector<uint8_t> merkle_tree_blocks(blob_layout->MerkleTreeBlockAlignedSize(), 0);
   std::vector<uint8_t> data_blocks(blob_layout->DataBlockAlignedSize(), 0);
   if (blob_layout->MerkleTreeBlockAlignedSize() > 0) {
-    if (zx_status_t status = ReadBlocksForInode(
-            node_index, blob_layout->MerkleTreeBlockOffset(), blob_layout->MerkleTreeBlockCount(),
-            reinterpret_cast<uint8_t*>(merkle_tree_blocks.data()));
-        status != ZX_OK) {
-      return make_error("Failed to read in merkle tree blocks: " + std::to_string(status));
+    if (zx::status<> status =
+            ReadBlocksForInode(node_index, blob_layout->MerkleTreeBlockOffset(),
+                               blob_layout->MerkleTreeBlockCount(), merkle_tree_blocks.data());
+        status.is_error()) {
+      return make_error("Failed to read in merkle tree blocks: " +
+                        std::to_string(status.status_value()));
     }
   }
   if (blob_layout->DataBlockAlignedSize() > 0) {
-    if (zx_status_t status = ReadBlocksForInode(node_index, blob_layout->DataBlockOffset(),
-                                                blob_layout->DataBlockCount(),
-                                                reinterpret_cast<uint8_t*>(data_blocks.data()));
-        status != ZX_OK) {
-      return make_error("Failed to read in data blocks: " + std::to_string(status));
+    if (zx::status<> status = ReadBlocksForInode(node_index, blob_layout->DataBlockOffset(),
+                                                 blob_layout->DataBlockCount(), data_blocks.data());
+        status.is_error()) {
+      return make_error("Failed to read in data blocks: " + std::to_string(status.status_value()));
     }
   }
 
@@ -936,12 +973,11 @@ fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlob(uin
 
 zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
   auto load_result = LoadDataAndVerifyBlob(node_index);
-  if (load_result.is_ok()) {
-    return ZX_OK;
-  } else {
+  if (load_result.is_error()) {
     FX_LOGS(ERROR) << load_result.error();
     return ZX_ERR_INTERNAL;
   }
+  return ZX_OK;
 }
 
 uint32_t Blobfs::GetBlockSize() const { return Info().block_size; }
@@ -992,7 +1028,7 @@ fit::result<void, std::string> ExportBlobs(int output_dir, Blobfs& fs) {
     }
 
     size_t written_bytes = 0;
-    int write_result = 0;
+    ssize_t write_result = 0;
     while (written_bytes < view.blob_contents.size()) {
       write_result = write(file.get(), &view.blob_contents[written_bytes],
                            view.blob_contents.size() - written_bytes);
@@ -1009,8 +1045,8 @@ fit::result<void, std::string> ExportBlobs(int output_dir, Blobfs& fs) {
 }
 
 zx::status<std::unique_ptr<Superblock>> Blobfs::ReadBackupSuperblock() {
-  if (zx_status_t status = ReadBlock(kFVMBackupSuperblockOffset); status != ZX_OK) {
-    return zx::error(status);
+  if (zx::status<> status = ReadBlock(kFVMBackupSuperblockOffset); status.is_error()) {
+    return status.take_error();
   }
   return zx::ok(std::make_unique<Superblock>(*reinterpret_cast<Superblock*>(cache_.blk)));
 }
