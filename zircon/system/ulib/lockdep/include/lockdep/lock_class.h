@@ -309,15 +309,7 @@ class SingletonLockDep : public Lock<LockType> {
   using LockClass = ConditionalLockClass<Class, RemoveGlobalReference<LockType>, 0, Flags>;
 
   // Returns a pointer to the singleton object.
-  static Class* Get() {
-    // The singleton instance of the global lock.
-    // Note: This must be a local static variable to avoid global initialization
-    // sequencing issues in environments that may acquire locks before ctors are
-    // executed (i.e. the kernel).
-    static Class global_lock;
-
-    return &global_lock;
-  }
+  static Class* Get() { return &global_lock_; }
 
  protected:
   // Initializes the base Lock<LockType> with lock class id for this lock. The
@@ -325,6 +317,9 @@ class SingletonLockDep : public Lock<LockType> {
   template <typename... Args>
   constexpr SingletonLockDep(Args&&... args)
       : Lock<LockType>{LockClass::Id(), std::forward<Args>(args)...} {}
+
+ private:
+  inline static Class global_lock_;
 };
 
 }  // namespace lockdep

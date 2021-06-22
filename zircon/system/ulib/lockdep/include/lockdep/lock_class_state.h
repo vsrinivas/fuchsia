@@ -99,7 +99,7 @@ class LockClassState {
     }
     bool operator!=(const Iterator& other) const { return state_ != other.state_; }
 
-    Iterator begin() { return {*Head()}; }
+    Iterator begin() { return {head_}; }
     Iterator end() { return {nullptr}; }
 
    private:
@@ -125,13 +125,6 @@ class LockClassState {
 
   LockClassState* connected_set() { return LoopDetector::FindSet(&loop_node_)->ToState(); }
 
-  // Runs a loop detection pass on the set of lock classes to find possible
-  // circular lock dependencies.
-  static void LoopDetectionPass() {
-    static LoopDetector detector;
-    detector.DetectionPass();
-  }
-
   uint64_t index() const { return loop_node_.index; }
   uint64_t least() const { return loop_node_.least; }
 
@@ -143,6 +136,8 @@ class LockClassState {
   }
 
  private:
+  friend class SingletonLoopDetector;
+
   // The name of the lock class type.
   const char* const name_;
 
@@ -153,24 +148,21 @@ class LockClassState {
   // Flags specifying which which rules to apply during lock validation.
   const LockFlags flags_;
 
+  // Head pointer to linked list of state instances.
+  inline static LockClassState* head_{nullptr};
+
   // Linked list pointer to the next state instance. This list is constructed
   // by a global initializer and never modified again. The list is used by the
   // loop detector and runtime lock inspection commands to access the complete
   // list of lock classes.
   LockClassState* next_{InitNext(this)};
 
-  // Returns a pointer to the head pointer of the state linked list.
-  static LockClassState** Head() {
-    static LockClassState* head{nullptr};
-    return &head;
-  }
-
   // Updates the linked list to include the given state node and returns the
   // previous head. This is used by the global initializer to setup the
   // next_ member.
   static LockClassState* InitNext(LockClassState* state) {
-    LockClassState* head = *Head();
-    *Head() = state;
+    LockClassState* head = head_;
+    head_ = state;
     return head;
   }
 
@@ -360,10 +352,21 @@ class LockClassState {
   };
 };
 
+// Provides storage for the global instance of the loop detector.
+class SingletonLoopDetector {
+ public:
+  // Runs a loop detection pass on the set of lock classes to find possible
+  // circular lock dependencies.
+  static void LoopDetectionPass() { detector_.DetectionPass(); }
+
+ private:
+  inline static LockClassState::LoopDetector detector_;
+};
+
 // Runs a loop detection pass to find circular lock dependencies. This must be
 // invoked at some point in the future after the lock validator calls the
 // system-defined SystemTriggerLoopDetection().
-static inline void LoopDetectionPass() { LockClassState::LoopDetectionPass(); }
+inline void LoopDetectionPass() { SingletonLoopDetector::LoopDetectionPass(); }
 
 }  // namespace lockdep
 
