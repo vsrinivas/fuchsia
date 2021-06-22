@@ -108,6 +108,8 @@ link_sysroot=()
 # input files referenced in environment variables
 envvar_files=()
 
+rust_lld=()
+
 debug_var() {
   # With --verbose, prints variable values to stdout.
   # $1 is name of variable to display.
@@ -193,6 +195,12 @@ EOF
       # This includes (prebuilt) system libraries as well.
       # TODO(fxb/78292): this -Z flag is not known to be stable yet.
       dep_only_command+=( "-Zbinary-dep-depinfo" )
+      ;;
+
+    # --crate-type cdylib needs rust-lld (hard-coding this is a hack)
+    cdylib)
+      _rust_lld_rel="$(dirname "$rustc")"/../lib/rustlib/x86_64-unknown-linux-gnu/bin/rust-lld
+      rust_lld=("$(realpath --relative-to="$project_root" "$_rust_lld_rel")")
       ;;
 
     # Detect custom linker, preserve symlinks
@@ -338,6 +346,7 @@ test "${#linker[@]}" = 0 || {
 
 remote_inputs=(
   "$rustc_relative"
+  "${rust_lld[@]}"
   "${rustc_shlibs[@]}"
   "$top_source"
   "${depfile_inputs[@]}"
@@ -359,6 +368,7 @@ dump_vars() {
   debug_var "outputs" "${outputs[@]}"
   debug_var "rustc binary" "$rustc_relative"
   debug_var "rustc shlibs" "${rustc_shlibs[@]}"
+  debug_var "rust lld" "${rust_lld[@]}"
   debug_var "source root" "$top_source"
   debug_var "linker" "${linker[@]}"
   debug_var "link args" "${link_arg_files[@]}"
