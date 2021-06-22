@@ -785,6 +785,8 @@ static int read_ctrl_info(NDM ndm) {
     // Adjust running count of bad blocks to account for this one.
     ++ndm->num_bad_blks;
   }
+  ndm->logger.info(__FILE__, __LINE__, "Bad blocks known at NDM mount: %u initial, %u run-time,\n",
+                   ndm->num_bad_blks - ndm->num_rbb, ndm->num_rbb);
 
   // Retrieve the NDM partitions if any.
   if (ndm->num_partitions) {
