@@ -6,6 +6,7 @@
 
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -49,15 +50,16 @@ const char* Collection::GetKindString() const {
   }
 }
 
-std::string Collection::ComputeFullName() const {
-  // Some compiler-generated classes have no names. Clang does this for the
-  // implicit classes that hold closure values. So provide a better description
-  // when those are printed. This isn't qualified with namespaces because that
-  // doesn't add much value when there's no name.
-  const std::string& assigned_name = GetAssignedName();
-  if (assigned_name.empty())
-    return fxl::StringPrintf("(anon %s)", GetKindString());
-  return Symbol::ComputeFullName();
+Identifier Collection::ComputeIdentifier() const {
+  Identifier result = GetSymbolScopePrefix(this);
+
+  if (auto& assigned_name = GetAssignedName(); !assigned_name.empty()) {
+    result.AppendComponent(IdentifierComponent(assigned_name));
+  } else {
+    // Provide a name for anonymous structs.
+    result.AppendComponent(IdentifierComponent(fxl::StringPrintf("(anon %s)", GetKindString())));
+  }
+  return result;
 }
 
 Collection::SpecialType Collection::ComputeSpecialType() const {

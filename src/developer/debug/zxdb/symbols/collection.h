@@ -106,7 +106,7 @@ class Collection final : public Type {
   virtual ~Collection();
 
   // Symbol protected overrides.
-  std::string ComputeFullName() const override;
+  Identifier ComputeIdentifier() const override;
 
   // Backend to GetSpecialType() which adds caching.
   SpecialType ComputeSpecialType() const;

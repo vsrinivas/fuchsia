@@ -9,6 +9,8 @@
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variant_part.h"
@@ -49,6 +51,25 @@ TEST(Collection, GetSpecialType) {
   rust_enum->set_variant_part(
       fxl::MakeRefCounted<VariantPart>(LazySymbol(), std::vector<LazySymbol>()));
   EXPECT_EQ(Collection::kRustEnum, rust_enum->GetSpecialType());
+}
+
+// Collection adds some special handling for anonymous names.
+TEST(Collection, GetIdentifier) {
+  auto ns = fxl::MakeRefCounted<Namespace>("my_namespace");
+
+  auto anon_coll = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, "");
+  SymbolTestParentSetter coll_parent(anon_coll, ns);
+
+  EXPECT_EQ("::\"my_namespace\"; ::\"(anon struct)\"", anon_coll->GetIdentifier().GetDebugName());
+  EXPECT_EQ("my_namespace::(anon struct)", anon_coll->GetFullName());
+
+  auto func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  SymbolTestParentSetter func_parent(func, anon_coll);
+  func->set_assigned_name("MyFunc");
+
+  EXPECT_EQ("::\"my_namespace\"; ::\"(anon struct)\"; ::\"MyFunc\"",
+            func->GetIdentifier().GetDebugName());
+  EXPECT_EQ("my_namespace::(anon struct)::MyFunc", func->GetFullName());
 }
 
 }  // namespace zxdb
