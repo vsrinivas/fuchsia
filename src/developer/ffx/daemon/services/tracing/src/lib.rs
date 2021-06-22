@@ -15,6 +15,8 @@ use {
     std::collections::hash_map::Entry,
     std::collections::HashMap,
     std::pin::Pin,
+    std::rc::{Rc, Weak},
+    std::time::Duration,
     thiserror::Error,
 };
 
@@ -46,10 +48,33 @@ enum TraceTaskStartError {
     GeneralError(#[from] anyhow::Error),
 }
 
+async fn trace_shutdown(proxy: &trace::ControllerProxy) -> Result<(), bridge::RecordingError> {
+    proxy
+        .stop_tracing(trace::StopOptions { write_results: Some(true), ..trace::StopOptions::EMPTY })
+        .await
+        .map_err(|e| {
+            log::warn!("stopping tracing: {:?}", e);
+            bridge::RecordingError::RecordingStop
+        })?;
+    proxy
+        .terminate_tracing(trace::TerminateOptions {
+            write_results: Some(true),
+            ..trace::TerminateOptions::EMPTY
+        })
+        .await
+        .map_err(|e| {
+            log::warn!("terminating tracing: {:?}", e);
+            bridge::RecordingError::RecordingStop
+        })?;
+    Ok(())
+}
+
 impl TraceTask {
     async fn new(
+        map: Weak<Mutex<TraceMap>>,
         target_query: Option<String>,
         output_file: String,
+        duration: Option<f64>,
         config: trace::TraceConfig,
         proxy: trace::ControllerProxy,
     ) -> Result<Self, TraceTaskStartError> {
@@ -63,53 +88,67 @@ impl TraceTask {
             .await?
             .map_err(TraceTaskStartError::TracingStartError)?;
         let output_file_clone = output_file.clone();
+        let target_query_clone = target_query.clone();
+        let pipe_fut = async move {
+            log::debug!("{:?} -> {} starting trace.", target_query_clone, output_file_clone);
+            let mut out_file = f;
+            let res = futures::io::copy(client, &mut out_file)
+                .await
+                .map_err(|e| log::warn!("file error: {:#?}", e));
+            log::debug!(
+                "{:?} -> {} trace complete, result: {:#?}",
+                target_query_clone,
+                output_file_clone,
+                res
+            );
+        };
+        let shutdown_proxy = proxy.clone();
         Ok(Self {
-            target_query: target_query.clone(),
+            target_query,
             config,
             proxy,
-            output_file,
-            task: fuchsia_async::Task::local(async move {
-                log::debug!("{:?} -> {} starting trace.", target_query, output_file_clone);
-                let mut out_file = f;
-                let fut = futures::io::copy(client, &mut out_file);
-                let res = fut.await.map_err(|e| log::warn!("file error: {:#?}", e));
-                log::debug!(
-                    "{:?} -> {} trace complete, result: {:#?}",
-                    target_query,
-                    output_file_clone,
-                    res
-                );
+            output_file: output_file.clone(),
+            task: Task::local(async move {
+                if let Some(duration) = duration {
+                    let mut pipe_fut = Box::pin(pipe_fut).fuse();
+                    let mut timeout_fut = Box::pin(async move {
+                        fuchsia_async::Timer::new(Duration::from_secs_f64(duration)).await;
+                        if let Err(e) = trace_shutdown(&shutdown_proxy).await {
+                            log::warn!(
+                                "shutting down trace from timer for {} secs: {:?}",
+                                duration,
+                                e
+                            );
+                            return;
+                        }
+                    })
+                    .fuse();
+                    futures::select! {
+                        _ = pipe_fut => (),
+                        _ = timeout_fut => pipe_fut.await,
+                    };
+                } else {
+                    pipe_fut.await;
+                }
+
+                if let Some(map) = map.upgrade() {
+                    let _ = map.lock().await.remove(&output_file);
+                }
             }),
         })
     }
 
     async fn shutdown(self) -> Result<(), bridge::RecordingError> {
-        self.proxy
-            .stop_tracing(trace::StopOptions {
-                write_results: Some(true),
-                ..trace::StopOptions::EMPTY
-            })
-            .await
-            .map_err(|e| {
-                log::warn!("stopping tracing: {:?}", e);
-                bridge::RecordingError::RecordingStop
-            })?;
-        self.proxy
-            .terminate_tracing(trace::TerminateOptions {
-                write_results: Some(true),
-                ..trace::TerminateOptions::EMPTY
-            })
-            .await
-            .map_err(|e| {
-                log::warn!("terminating tracing: {:?}", e);
-                bridge::RecordingError::RecordingStop
-            })?;
+        trace_shutdown(&self.proxy).await?;
         log::trace!(
             "trace task {:?} -> {} shutdown await start",
             self.target_query,
             self.output_file
         );
+        let query = self.target_query.clone();
+        let output_file = self.output_file.clone();
         self.await;
+        log::trace!("trace task {:?} -> {} shutdown await completed", query, output_file);
         Ok(())
     }
 }
@@ -120,7 +159,7 @@ type TraceMap = HashMap<String, TraceTask>;
 #[ffx_service]
 #[derive(Default)]
 pub struct TracingService {
-    tasks: Mutex<TraceMap>,
+    tasks: Rc<Mutex<TraceMap>>,
 }
 
 async fn get_controller_proxy(
@@ -144,7 +183,8 @@ impl FidlService for TracingService {
             bridge::TracingRequest::StartRecording {
                 target_query,
                 output_file,
-                config,
+                options,
+                target_config,
                 responder,
             } => {
                 let mut tasks = self.tasks.lock().await;
@@ -164,23 +204,31 @@ impl FidlService for TracingService {
                             .map_err(Into::into);
                     }
                     Entry::Vacant(e) => {
-                        let task =
-                            match TraceTask::new(target_query, output_file, config, proxy).await {
-                                Ok(t) => t,
-                                Err(e) => {
-                                    log::warn!("unable to start trace: {:?}", e);
-                                    let mut res = match e {
-                                        TraceTaskStartError::TracingStartError(t) => match t {
-                                            trace::StartErrorCode::AlreadyStarted => {
-                                                Err(bridge::RecordingError::RecordingAlreadyStarted)
-                                            }
-                                            _ => Err(bridge::RecordingError::RecordingStart),
-                                        },
+                        let task = match TraceTask::new(
+                            Rc::downgrade(&self.tasks),
+                            target_query,
+                            output_file,
+                            options.duration,
+                            target_config,
+                            proxy,
+                        )
+                        .await
+                        {
+                            Ok(t) => t,
+                            Err(e) => {
+                                log::warn!("unable to start trace: {:?}", e);
+                                let mut res = match e {
+                                    TraceTaskStartError::TracingStartError(t) => match t {
+                                        trace::StartErrorCode::AlreadyStarted => {
+                                            Err(bridge::RecordingError::RecordingAlreadyStarted)
+                                        }
                                         _ => Err(bridge::RecordingError::RecordingStart),
-                                    };
-                                    return responder.send(&mut res).map_err(Into::into);
-                                }
-                            };
+                                    },
+                                    _ => Err(bridge::RecordingError::RecordingStart),
+                                };
+                                return responder.send(&mut res).map_err(Into::into);
+                            }
+                        };
                         e.insert(task);
                     }
                 }
@@ -200,6 +248,13 @@ impl FidlService for TracingService {
             }
         }
     }
+
+    async fn stop(&mut self, _cx: &Context) -> Result<()> {
+        let tasks =
+            { self.tasks.lock().await.drain().map(|(_, v)| v.shutdown()).collect::<Vec<_>>() };
+        futures::future::join_all(tasks).await;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -207,6 +262,7 @@ mod tests {
     use super::*;
     use async_lock::Mutex;
     use services::testing::FakeDaemonBuilder;
+    use std::cell::RefCell;
 
     const FAKE_CONTROLLER_TRACE_OUTPUT: &'static str = "HOWDY HOWDY HOWDY";
 
@@ -257,7 +313,11 @@ mod tests {
         let proxy = daemon.open_proxy::<bridge::TracingMarker>().await;
         let temp_dir = tempfile::TempDir::new().unwrap();
         let output = temp_dir.path().join("trace-test.fxt").into_os_string().into_string().unwrap();
-        proxy.start_recording(None, &output, trace::TraceConfig::EMPTY).await.unwrap().unwrap();
+        proxy
+            .start_recording(None, &output, bridge::TraceOptions::EMPTY, trace::TraceConfig::EMPTY)
+            .await
+            .unwrap()
+            .unwrap();
         proxy.stop_recording(&output).await.unwrap().unwrap();
 
         let mut f = File::open(std::path::PathBuf::from(output)).await.unwrap();
@@ -275,10 +335,22 @@ mod tests {
         let proxy = daemon.open_proxy::<bridge::TracingMarker>().await;
         let temp_dir = tempfile::TempDir::new().unwrap();
         let output = temp_dir.path().join("trace-test.fxt").into_os_string().into_string().unwrap();
-        proxy.start_recording(None, &output, trace::TraceConfig::EMPTY).await.unwrap().unwrap();
+        proxy
+            .start_recording(None, &output, bridge::TraceOptions::EMPTY, trace::TraceConfig::EMPTY)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(
             Err(bridge::RecordingError::RecordingAlreadyStarted),
-            proxy.start_recording(None, &output, trace::TraceConfig::EMPTY).await.unwrap()
+            proxy
+                .start_recording(
+                    None,
+                    &output,
+                    bridge::TraceOptions::EMPTY,
+                    trace::TraceConfig::EMPTY
+                )
+                .await
+                .unwrap()
         );
     }
 
@@ -299,7 +371,15 @@ mod tests {
         let output = temp_dir.path().join("trace-test.fxt").into_os_string().into_string().unwrap();
         assert_eq!(
             Err(bridge::RecordingError::RecordingAlreadyStarted),
-            proxy.start_recording(None, &output, trace::TraceConfig::EMPTY).await.unwrap()
+            proxy
+                .start_recording(
+                    None,
+                    &output,
+                    bridge::TraceOptions::EMPTY,
+                    trace::TraceConfig::EMPTY
+                )
+                .await
+                .unwrap()
         );
     }
 
@@ -320,7 +400,15 @@ mod tests {
         let output = temp_dir.path().join("trace-test.fxt").into_os_string().into_string().unwrap();
         assert_eq!(
             Err(bridge::RecordingError::RecordingStart),
-            proxy.start_recording(None, &output, trace::TraceConfig::EMPTY).await.unwrap()
+            proxy
+                .start_recording(
+                    None,
+                    &output,
+                    bridge::TraceOptions::EMPTY,
+                    trace::TraceConfig::EMPTY
+                )
+                .await
+                .unwrap()
         );
     }
 
@@ -331,5 +419,32 @@ mod tests {
         let temp_dir = tempfile::TempDir::new().unwrap();
         let output = temp_dir.path().join("trace-test.fxt").into_os_string().into_string().unwrap();
         proxy.stop_recording(&output).await.unwrap().unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_trace_duration_override() {
+        let daemon = FakeDaemonBuilder::new().register_fidl_service::<FakeController>().build();
+        let service = Rc::new(RefCell::new(TracingService::default()));
+        let (proxy, _task) = services::testing::create_proxy(service.clone(), &daemon).await;
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let output = temp_dir.path().join("trace-test.fxt").into_os_string().into_string().unwrap();
+        proxy
+            .start_recording(
+                None,
+                &output,
+                bridge::TraceOptions { duration: Some(500000.0), ..bridge::TraceOptions::EMPTY },
+                trace::TraceConfig::EMPTY,
+            )
+            .await
+            .unwrap()
+            .unwrap();
+        proxy.stop_recording(&output).await.unwrap().unwrap();
+
+        let mut f = File::open(std::path::PathBuf::from(output)).await.unwrap();
+        let mut res = String::new();
+        f.read_to_string(&mut res).await.unwrap();
+        assert_eq!(res, FAKE_CONTROLLER_TRACE_OUTPUT.to_string());
+        let tasks = service.borrow().tasks.clone();
+        assert!(tasks.lock().await.is_empty());
     }
 }

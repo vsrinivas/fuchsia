@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, Result},
     ffx_core::ffx_plugin,
     ffx_trace_args::{TraceCommand, TraceSubCommand},
-    fidl_fuchsia_developer_bridge::TracingProxy,
+    fidl_fuchsia_developer_bridge::{self as bridge, TracingProxy},
     fidl_fuchsia_tracing_controller::{ControllerProxy, TraceConfig},
     std::io::{stdout, Write},
     std::path::{Component, PathBuf},
@@ -49,7 +49,12 @@ async fn trace_impl<W: Write>(
             };
             let output = canonical_path(opts.output)?;
             proxy
-                .start_recording(default, &output, trace_config)
+                .start_recording(
+                    default,
+                    &output,
+                    bridge::TraceOptions { duration: opts.duration, ..bridge::TraceOptions::EMPTY },
+                    trace_config,
+                )
                 .await?
                 .map_err(|e| anyhow!("recording start error {:?}", e))?;
         }
