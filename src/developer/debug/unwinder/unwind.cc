@@ -47,8 +47,8 @@ class CFIUnwinder {
 
     auto cfi_it = cfi_map_.find(module_address);
     if (cfi_it == cfi_map_.end()) {
-      cfi_it = cfi_map_.emplace(module_address, DwarfCfi()).first;
-      if (auto err = cfi_it->second.Load(module_it->second, module_address); err.has_err()) {
+      cfi_it = cfi_map_.emplace(module_address, DwarfCfi(module_it->second, module_address)).first;
+      if (auto err = cfi_it->second.Load(); err.has_err()) {
         return err;
       }
     }

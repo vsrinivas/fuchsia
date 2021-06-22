@@ -74,4 +74,20 @@ TEST(Memory, ReadEncoded) {
   ASSERT_EQ(0x1004UL, res);
 }
 
+TEST(BoundedLocalMemory, Read) {
+  BoundedLocalMemory mem;
+
+  uint8_t data[] = {0xAB, 0xCD};
+  auto p = reinterpret_cast<uint64_t>(data);
+
+  uint8_t res;
+  ASSERT_TRUE(mem.Read(p, res).has_err());
+
+  mem.AddRegion(p, 1);
+  ASSERT_TRUE(mem.Read(p, res).ok());
+  ASSERT_EQ(res, 0xAB);
+
+  ASSERT_TRUE(mem.Read(p, res).has_err());
+}
+
 }  // namespace unwinder

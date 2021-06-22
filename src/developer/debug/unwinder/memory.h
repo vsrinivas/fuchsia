@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <map>
 
 #include "src/developer/debug/unwinder/error.h"
 
@@ -46,6 +47,17 @@ class LocalMemory : public Memory {
     memcpy(dst, reinterpret_cast<void*>(addr), size);  // NOLINT(performance-no-int-to-ptr)
     return Success();
   }
+};
+
+// Bounded local memory to avoid segmentation fault.
+class BoundedLocalMemory : public LocalMemory {
+ public:
+  virtual ~BoundedLocalMemory() = default;
+  void AddRegion(uint64_t base, uint64_t size);
+  Error ReadBytes(uint64_t addr, uint64_t size, void* dst) override;
+
+ private:
+  std::map<uint64_t, uint64_t> regions_;
 };
 
 }  // namespace unwinder

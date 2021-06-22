@@ -21,7 +21,7 @@ class MinidumpMemory : public unwindstack::Memory, public unwinder::Memory {
   explicit MinidumpMemory(const crashpad::ProcessSnapshotMinidump& minidump);
 
   // Used by UnwindFromUnwinder.
-  std::map<uint64_t, unwinder::Memory*> module_map() { return module_map_; }
+  const std::map<uint64_t, unwinder::Memory*>& module_map() const { return module_map_; }
 
   // Implementation of unwindstack::Memory and unwinder::Memory.
   size_t Read(uint64_t addr, void* dst, size_t size) override;

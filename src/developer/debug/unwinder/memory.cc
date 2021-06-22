@@ -5,6 +5,7 @@
 #include "src/developer/debug/unwinder/memory.h"
 
 #include <cstdint>
+#include "src/developer/debug/unwinder/error.h"
 
 namespace unwinder {
 
@@ -56,8 +57,8 @@ Error Memory::ReadEncoded(uint64_t& addr, uint64_t& res, uint8_t enc, uint64_t d
       res = addr;
       break;
     // case 0x20:  // DW_EH_PE_textrel  Value is relative to the beginning of the .text section.
-    case 0x30:  // DW_EH_PE_datarel  Value is relative to the beginning of the .eh_frame_hdr
-                // section. This is only valid when decoding .eh_frame_hdr section.
+    case 0x30:  // DW_EH_PE_datarel  Value is relative to a given base address. This is used when
+                // decoding .eh_frame_hdr and pc in FDE in .debug_frame.
       if (!data_rel_base) {
         return Error("DW_EH_PE_datarel is invalid");
       }
@@ -155,6 +156,21 @@ Error Memory::ReadEncoded(uint64_t& addr, uint64_t& res, uint8_t enc, uint64_t d
   }
 
   return Success();
+}
+
+void BoundedLocalMemory::AddRegion(uint64_t base, uint64_t size) {
+  regions_.emplace(base, size);
+}
+
+Error BoundedLocalMemory::ReadBytes(uint64_t addr, uint64_t size, void* dst) {
+  auto it = regions_.upper_bound(addr);
+  if (it != regions_.begin()) {
+    it--;
+    if (addr >= it->first && addr + size <= it->first + it->second) {
+      return LocalMemory::ReadBytes(addr, size, dst);
+    }
+  }
+  return Error("out of boundry");
 }
 
 }  // namespace unwinder

@@ -91,15 +91,8 @@ class ElfMemoryRegion : public MinidumpMemory::MemoryRegion, public unwinder::Me
   ~ElfMemoryRegion() override { fclose(file_); }
 
   size_t Read(uint64_t offset, size_t size, void* dst) const override {
-    if (offset + size > this->size) {
-      return 0;
-    }
-
-    size_t read_end = std::min(this->size, static_cast<size_t>(offset + size));
-
-    std::vector<uint8_t> data;
     fseek(file_, static_cast<int64_t>(offset), SEEK_SET);
-    return fread(dst, 1, read_end - offset, file_);
+    return fread(dst, 1, size, file_);
   }
 
   unwinder::Error ReadBytes(uint64_t addr, uint64_t size, void* dst) override {
