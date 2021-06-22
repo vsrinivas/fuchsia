@@ -398,50 +398,44 @@ static zx_status_t brcmf_set_ap_macaddr(struct brcmf_if* ifp,
   return ZX_OK;
 }
 
-static zx_status_t brcmf_cfg80211_change_iface(struct brcmf_cfg80211_info* cfg,
-                                               struct net_device* ndev, wlan_info_mac_role_t type,
-                                               struct vif_params* params) {
+static zx_status_t brcmf_cfg80211_change_iface_mac_role(struct brcmf_cfg80211_info* cfg,
+                                                        struct net_device* ndev,
+                                                        wlan_info_mac_role_t mac_role) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_vif* vif = ifp->vif;
-  int32_t infra = 0;
-  int32_t ap = 0;
+  const char* mac_role_str = "OTHER";
   zx_status_t err = ZX_OK;
   bcme_status_t fw_err = BCME_OK;
 
   BRCMF_DBG(TRACE, "Enter");
 
-  err = brcmf_vif_change_validate(cfg, vif, type);
+  err = brcmf_vif_change_validate(cfg, vif, mac_role);
   if (err != ZX_OK) {
     BRCMF_ERR("iface validation failed: err=%d", err);
     return err;
   }
-  switch (type) {
+  switch (mac_role) {
     case WLAN_INFO_MAC_ROLE_CLIENT:
-      infra = 1;
+      err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, 1, &fw_err);
+      if (err != ZX_OK) {
+        BRCMF_ERR("WLC_SET_INFRA error: %s, fw err %s", zx_status_get_string(err),
+                  brcmf_fil_get_errstr(fw_err));
+        err = ZX_ERR_UNAVAILABLE;
+        goto done;
+      }
+      mac_role_str = const_cast<char*>("CLIENT");
       break;
     case WLAN_INFO_MAC_ROLE_AP:
-      ap = 1;
+      mac_role_str = const_cast<char*>("AP");
       break;
     default:
       err = ZX_ERR_OUT_OF_RANGE;
       goto done;
   }
 
-  if (ap) {
-    BRCMF_DBG(INFO, "IF Type = AP");
-  } else {
-    err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, infra, &fw_err);
-    if (err != ZX_OK) {
-      BRCMF_ERR("WLC_SET_INFRA error: %s, fw err %s", zx_status_get_string(err),
-                brcmf_fil_get_errstr(fw_err));
-      err = ZX_ERR_UNAVAILABLE;
-      goto done;
-    }
-    BRCMF_DBG(INFO, "IF Type = Infra");
-  }
-  vif->wdev.iftype = type;
-
+  vif->wdev.iftype = mac_role;
   brcmf_cfg80211_update_proto_addr_mode(&vif->wdev);
+  BRCMF_IFDBG(WLANIF, ndev, "iface mac role set to \"%s\"", mac_role_str);
 
 done:
   BRCMF_DBG(TRACE, "Exit");
@@ -498,9 +492,9 @@ static zx_status_t brcmf_ap_add_vif(struct brcmf_cfg80211_info* cfg, const char*
     // Else reuse the existing IF itself but change its type
     vif = ifp->vif;
     vif->ifp = ifp;
-    err = brcmf_cfg80211_change_iface(cfg, ifp->ndev, WLAN_INFO_MAC_ROLE_AP, nullptr);
+    err = brcmf_cfg80211_change_iface_mac_role(cfg, ifp->ndev, WLAN_INFO_MAC_ROLE_AP);
     if (err != ZX_OK) {
-      BRCMF_ERR("Unable to change IF type err: %u", err);
+      BRCMF_ERR("failed to change iface mac role to AP: %s", zx_status_get_string(err));
       err = ZX_ERR_IO;
       goto fail;
     }
@@ -638,10 +632,10 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
         // Since a single IF is shared when operating with manufacturing FW, change
         // IF type.
-        err = brcmf_cfg80211_change_iface(drvr->config, ifp->ndev, WLAN_INFO_MAC_ROLE_CLIENT,
-                                          nullptr);
+        err = brcmf_cfg80211_change_iface_mac_role(drvr->config, ifp->ndev,
+                                                   WLAN_INFO_MAC_ROLE_CLIENT);
         if (err != ZX_OK) {
-          BRCMF_ERR("Unable to change iface to client");
+          BRCMF_ERR("failed to change iface mac role to CLIENT: %s", zx_status_get_string(err));
           return err;
         }
       }
@@ -5878,7 +5872,7 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
     BRCMF_WARN("Could not disable WNM, firmware error %s", brcmf_fil_get_errstr(fwerr));
   }
 
-  err = brcmf_cfg80211_change_iface(cfg, ndev, wdev->iftype, nullptr);
+  err = brcmf_cfg80211_change_iface_mac_role(cfg, ndev, wdev->iftype);
   if (err != ZX_OK) {
     goto default_conf_out;
   }
