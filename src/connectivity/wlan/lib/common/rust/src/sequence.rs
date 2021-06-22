@@ -162,7 +162,7 @@ mod tests {
     }
 
     #[test]
-    fn mixed_sns_next() {
+    fn sns1_sns2_sns4_next() {
         let mut seq_mgr = SequenceManager::new();
 
         seq_mgr.next_sns1(&[1; 6]);

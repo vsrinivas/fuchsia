@@ -88,7 +88,7 @@ mod tests {
     }
 
     #[test]
-    fn test_map_mixed_case() {
+    fn test_map_ascending_available() {
         let mut aid_map: Map = Default::default();
         for i in 1..=1000u16 {
             assert_eq!(aid_map.assign_aid().unwrap(), i);
