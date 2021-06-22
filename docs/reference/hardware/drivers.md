@@ -8,7 +8,7 @@ files:
 /docs/reference/hardware/_drivers.yaml
 
 Since this page is generated from on a template, the full page is best viewed at
-http://wwww.fuchsia.dev/fuchsia-src/reference/hardware/drivers
+http://www.fuchsia.dev/fuchsia-src/reference/hardware/drivers
 {% endcomment %}
 
 <a name="drivers"><h2>Drivers</h2></a>
@@ -38,7 +38,7 @@ http://wwww.fuchsia.dev/fuchsia-src/reference/hardware/drivers
   <hr>
 </form>
   <devsite-filter match="all" checkbox-form-id="filter-checkboxes-reset" sortable="0">
-  <input type="text" placeholder="Find a driver" column="1,2">
+  <input type="text" placeholder="Find a driver" column="all">
 {% include "docs/reference/hardware/_common/_index_table_header.md" %}
 {% for driver in drivers | sort(attribute='short_description') %}
         {% include "docs/reference/hardware/_common/_index_table_body.md" %}
@@ -46,15 +46,14 @@ http://wwww.fuchsia.dev/fuchsia-src/reference/hardware/drivers
 {% include "docs/reference/hardware/_common/_index_table_footer.md" %}
 </div>
 
-{% comment %}
 <a name="deprecated-drivers"><h2>Deprecated drivers</h2></a>
   <div class="form-checkbox">
   <h4 class="showalways">Driver area</h4>
 <form id="filter-checkboxes-reset-2">
   {% for area in areas %}
     {% set found=false %}
-    {% for driver in drivers %}
-        {% for drivera in driver.areas %}
+    {% for epitaph in epitaphs %}
+        {% for drivera in epitaph.areas %}
           {% if drivera == area %}
             {% set found=true %}
           {% endif %}
@@ -62,8 +61,8 @@ http://wwww.fuchsia.dev/fuchsia-src/reference/hardware/drivers
     {% endfor %}
     {% if found %}
       <div class="checkbox-div">
-        <input type="checkbox" id="checkbox-reset-{{ area|replace(" ", "-") }}">
-        <label for="checkbox-reset-{{ area|replace(" ", "-") }}">{{ area }}</label>
+        <input type="checkbox" id="checkbox-reset-deprecated-{{ area|replace(" ", "-") }}">
+        <label for="checkbox-reset-deprecated-{{ area|replace(" ", "-") }}">{{ area }}</label>
       </div>
     {% endif %}
   {% endfor %}
@@ -74,7 +73,7 @@ http://wwww.fuchsia.dev/fuchsia-src/reference/hardware/drivers
   <hr>
 </form>
     <devsite-filter match="all" checkbox-form-id="filter-checkboxes-reset-2" sortable="0">
-  <input type="text" placeholder="Find a deprecated driver" column="1,2">
+  <input type="text" placeholder="Find a driver" column="all">
 {% include "docs/reference/hardware/_common/_index_table_header.md" %}
 {% for epitaph in epitaphs | sort(attribute='short_description') %}
         {% include "docs/reference/hardware/_common/_index_table_body_deprecated.md" %}
@@ -82,4 +81,3 @@ http://wwww.fuchsia.dev/fuchsia-src/reference/hardware/drivers
 {% include "docs/reference/hardware/_common/_index_table_footer.md" %}
 {# This div is used to close the filter that is initialized above #}
 </div>
-{% endcomment %}

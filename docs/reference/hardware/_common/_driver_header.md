@@ -18,11 +18,9 @@
 {% include "docs/reference/hardware/_drivers_areas.yaml" %}
 {% endset %}
 
-{% comment %}
 {% set epitaphs | yamlloads %}
-{% include "docs/reference/hardware/_epitaphs.yaml" %}
+{% include "docs/reference/hardware/_drivers_epitaphs.yaml" %}
 {% endset %}
-{% endcomment %}
 
 <style>
 .comma-list {
