@@ -215,13 +215,48 @@ __Commands:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
+  bind              Binds to the v2 component designated by the provided
+                    relative moniker
   knock             Connect to a service on the target
   list              List all components, with the option of listing only cmx/cml
                     components
-  run               Run a component on the target
+  run               Create and run a v2 component instance in an isolated realm
+  run-legacy        Run a v1 component on the target
   select            Lists components matching a selector
   show              Show useful information about a component
   test              Run test suite
+
+```
+
+### bind
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx component bind <moniker>
+
+Binds to the v2 component designated by the provided relative moniker
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Examples:
+  To bind to the v2 component designated by the moniker:
+  
+      $ ffx component bind core/brightness_manager
+
+Notes:
+  Binds to the v2 component designated by the provided relative moniker
+      relative to the v2 component to which the protocol is scoped.
+      This will resolve the v2 component if it's not already resolved, and will start the v2 component
+      if it isn't already running. 
+
+Error codes:
+  1 Failed to bind to the v2 component with moniker <moniker>.
 
 ```
 
@@ -322,9 +357,38 @@ Error codes:
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx component run <url> [<args...>] [-b]
+Usage: ffx component run <url>
 
-Run a component on the target
+Create and run a v2 component instance in an isolated realm
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Examples:
+  To run the 'hello_world_rust' component:
+  
+      $ ffx component run \
+      fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cm
+
+Notes:
+  The <url> must follow the format:
+  
+  `fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cm`
+
+```
+
+### run-legacy
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx component run-legacy <url> [<args...>] [-b]
+
+Run a v1 component on the target
 
 ```
 
@@ -338,12 +402,12 @@ __Options:__
 Examples:
   To run the 'hello_world_rust' component:
   
-      $ ffx component run \
+      $ ffx component run-legacy \
       fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx
   
   To run the Remote Control Service:
   
-      $ ffx component run \
+      $ ffx component run-legacy \
       fuchsia-pkg://fuchsia.com/remote-control#meta/remote-control-runner.cmx
 
 Notes:
