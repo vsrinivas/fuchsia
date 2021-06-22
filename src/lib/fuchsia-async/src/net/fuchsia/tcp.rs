@@ -49,7 +49,17 @@ impl TcpListener {
         };
         let socket =
             socket2::Socket::new(domain, socket2::Type::STREAM, Some(socket2::Protocol::TCP))?;
-        let () = socket.set_reuse_address(true)?;
+        // Allow this socket to be rebound while it is in TIME_WAIT.
+        //
+        // This is borrowed from std::net::TcpListener::bind. See
+        // https://github.com/rust-lang/rust/blob/db492ec/library/std/src/sys_common/net.rs#L371-L379.
+        //
+        // TODO(https://github.com/google/gvisor/issues/6209): SO_REUSEADDR is incorrectly
+        // implemented in gvisor. Temporarily disable this option for ephemeral sockets to avoid
+        // test flakes.
+        if addr.port() != 0 {
+            let () = socket.set_reuse_address(true)?;
+        }
         let addr = (*addr).into();
         let () = socket.bind(&addr)?;
         let () = socket.listen(1024)?;
