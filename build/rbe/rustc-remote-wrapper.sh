@@ -11,6 +11,7 @@ script_dir="$(dirname "$script")"
 # The project_root must cover all inputs, prebuilt tools, and build outputs.
 # This should point to $FUCHSIA_DIR for the Fuchsia project.
 # ../../ because this script lives in build/rbe.
+# The value is an absolute path.
 project_root="$(readlink -f "$script_dir"/../..)"
 
 function usage() {
@@ -129,6 +130,19 @@ debug_var() {
 prev_opt=
 for opt in "${rustc_command[@]}"
 do
+  # Reject absolute paths, for the sake of build artifact portability,
+  # and remote-action cache hit benefits.
+  case "$opt" in
+    *"$project_root"*)
+      cat <<EOF
+Absolute paths are not remote-portable.  Found:
+  $opt
+Please rewrite the command without absolute paths.
+EOF
+      exit 1
+      ;;
+  esac
+
   # Copy most command tokens.
   dep_only_token="$opt"
   # handle --option arg
