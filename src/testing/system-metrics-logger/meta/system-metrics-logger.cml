@@ -9,11 +9,6 @@
     ],
     use: [
         {
-            directory: "config-data",
-            rights: [ "r*" ],
-            path: "/config/data",
-        },
-        {
             protocol: [
                 "fuchsia.device.Controller",
                 "fuchsia.kernel.Stats",
