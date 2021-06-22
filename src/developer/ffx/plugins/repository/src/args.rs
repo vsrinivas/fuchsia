@@ -6,7 +6,7 @@ use {argh::FromArgs, ffx_core::ffx_command, ffx_repository_sub_command::Subcomma
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "repository", description = "")]
+#[argh(subcommand, name = "repository", description = "Inspect and manage package repositories")]
 pub struct RepositoryCommand {
     #[argh(subcommand)]
     pub subcommand: Subcommand,
