@@ -319,93 +319,29 @@ void do_netboot(void) {
   }
 }
 
-// Runs the top-level boot menu.
-//
-// Args:
-//   have_network: true if we have a working network interface.
-//   have_fb: true if we have a framebuffer.
-//
-// Returns the user's selection.
-static BootAction main_boot_menu(bool have_network, bool have_fb) {
-  int timeout_s = cmdline_get_uint32("bootloader.timeout", DEFAULT_TIMEOUT);
+// Finds c in s and swaps it with the character at s's head. For example:
+// swap_to_head('b', "foobar", 6) = "boofar";
+static inline void swap_to_head(const char c, char* s, const size_t n) {
+  // Empty buffer?
+  if (n == 0)
+    return;
 
-  while (1) {
-#define VALID_KEYS_COMMON "\r\nbf1m2rz"
-    const char* valid_keys = VALID_KEYS_COMMON;
-    printf(
-        "\n"
-        "Boot options:\n"
-        "  <enter> to continue default boot\n"
-        "  b) boot menu\n"
-        "  f) fastboot\n"
-        "  1) set A slot active and boot (alternate: m)\n"
-        "  2) set B slot active and boot\n"
-        "  r) one-time boot R slot (alternate: z)\n");
-    if (have_network) {
-      valid_keys = VALID_KEYS_COMMON "n";
-      printf("  n) network boot\n");
-    }
-#undef VALID_KEYS_COMMON
-
-    char key = key_prompt(valid_keys, timeout_s);
-    printf("\n\n");
-
-    switch (key) {
-      case '\r':
-      case '\n':
-        // <enter> or timeout, use the default boot behavior.
-        return kBootActionDefault;
-      case 'b':
-        // Run the sub-menu then repeat this top-level menu.
-        do_bootmenu(have_fb);
-        break;
-      case 'n':
-        return kBootActionNetboot;
-      case 'f':
-        return kBootActionFastboot;
-      case '1':
-      case 'm':
-        return kBootActionSlotA;
-      case '2':
-        return kBootActionSlotB;
-      case 'r':
-      case 'z':
-        return kBootActionSlotR;
-    }
-  }
-}
-
-BootAction get_boot_action(bool have_network, bool have_fb) {
-  // 1. Bootbyte.
-  // Ignore the reboot count, we have a more robust mechanism now in the A/B/R
-  // retry count.
-  unsigned char bootbyte = bootbyte_read() & ~RTC_BOOT_COUNT_MASK;
-  bootbyte_clear();
-  if (bootbyte == RTC_BOOT_RECOVERY) {
-    return kBootActionSlotR;
-  } else if (bootbyte == RTC_BOOT_BOOTLOADER) {
-    return kBootActionFastboot;
-  }
-
-  // 2. Boot menu.
-  BootAction boot_action = main_boot_menu(have_network, have_fb);
-
-  // 3. Commandline, options are "local", "zedboot", or "network".
-  if (boot_action == kBootActionDefault) {
-    // If no commandline, default to network (TODO: Is this still needed?).
-    const char* defboot = cmdline_get("bootloader.default", "network");
-    if (strcmp(defboot, "local") == 0) {
-      return kBootActionDefault;
-    } else if (strcmp(defboot, "zedboot") == 0) {
-      return kBootActionSlotR;
-    } else if (strcmp(defboot, "network") == 0) {
-      return kBootActionNetboot;
-    } else {
-      printf("Warning: ignoring unknown bootloader.default: '%s'\n", defboot);
+  // Find c in s
+  size_t i;
+  for (i = 0; i < n; i++) {
+    if (c == s[i]) {
+      break;
     }
   }
 
-  return boot_action;
+  // Couldn't find c in s
+  if (i == n)
+    return;
+
+  // Swap c to the head.
+  const char tmp = s[0];
+  s[0] = s[i];
+  s[i] = tmp;
 }
 
 size_t kernel_zone_size;
@@ -489,6 +425,8 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   }
   printf("KALLOC DONE\n");
 
+  // Default boot defaults to network
+  const char* defboot = cmdline_get("bootloader.default", "network");
   const char* nodename = cmdline_get("zircon.nodename", "");
   uint32_t namegen = cmdline_get_uint32("zircon.namegen", 1);
 
@@ -610,110 +548,193 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
   if (!have_network && zedboot_kernel == NULL && kernel == NULL && kernel_b == NULL) {
     printf("No valid kernel image found to load. Abort.\n");
-    xefi_getc(-1);
-    return EFI_SUCCESS;
+    goto fail;
   }
+
+  // Valid keys in the bootloader:
+  // n - netboot mode
+  // f - fastboot mode
+  // m - boot local ramdisk
+  // 1 - boot A
+  // 2 - boot B
+  // z/r - boot R
+  // b - boot menu
+  char valid_keys[9];
+  memset(valid_keys, 0, sizeof(valid_keys));
+  size_t key_idx = 0;
+
+  if (have_network) {
+    valid_keys[key_idx++] = 'n';
+    valid_keys[key_idx++] = 'f';
+  }
+  if (kernel != NULL) {
+    valid_keys[key_idx++] = 'm';
+    valid_keys[key_idx++] = '1';
+  }
+  if (kernel_b != NULL) {
+    valid_keys[key_idx++] = '2';
+  }
+  if (zedboot_kernel) {
+    valid_keys[key_idx++] = 'z';
+    valid_keys[key_idx++] = 'r';
+  }
+
+  // query the boot byte from OS shutdown to select normal or recovery boot
+  // if byte is initialized, clears the byte so future start-ups don't loop on a failing value
+  unsigned char bootbyte = bootbyte_read();
+
+  // unpack reboot_count from boot_options
+  unsigned char reboot_count = (bootbyte & RTC_BOOT_COUNT_MASK) >> RTC_BOOT_COUNT_SHIFT;
+  bootbyte &= ~RTC_BOOT_COUNT_MASK;
+
+  if (reboot_count == 1)
+    bootbyte_clear();  // 1 = final attempt
+  else
+    bootbyte_decrement();
+
+  //
+  // The first entry in valid_keys will be the default after the timeout.
+
+  // Move the current slot according to ABR to the top.
+  // Then check the bootbyte to override abr decision if necessary.
+  // Lastly use the value of bootloader.default to determine the first entry. If
+  // bootloader.default is not set, use "network".
+  // TODO(fxbug.dev/47049) : Make this logic more simpler
+
+  switch (zircon_abr_get_boot_slot()) {
+    case kAbrSlotIndexA:
+      swap_to_head('1', valid_keys, key_idx);
+      break;
+    case kAbrSlotIndexB:
+      swap_to_head('2', valid_keys, key_idx);
+      break;
+    case kAbrSlotIndexR:
+      swap_to_head('r', valid_keys, key_idx);
+      break;
+    default:
+      printf("Fatal error in ABR metadata!!");
+  }
+
+  if (bootbyte == RTC_BOOT_RECOVERY) {
+    swap_to_head('z', valid_keys, key_idx);
+  } else if (bootbyte == RTC_BOOT_BOOTLOADER) {
+    swap_to_head('f', valid_keys, key_idx);
+  } else if (bootbyte == RTC_BOOT_NORMAL) {
+    // TODO(fxbug.dev/47049) Commented out to use the ABR choice. Refactor to use a simple boot
+    // selection code.
+    //
+    // swap_to_head('m', valid_keys, key_idx);
+  } else if (!memcmp(defboot, "zedboot", 7)) {
+    swap_to_head('z', valid_keys, key_idx);
+  } else if (!memcmp(defboot, "local", 5)) {
+    // TODO(fxbug.dev/47049) Commented out to use the ABR choice. Refactor to use a simple boot
+    // selection code.
+    //
+    // swap_to_head('m', valid_keys, key_idx);
+  } else {
+    swap_to_head('n', valid_keys, key_idx);
+  }
+  valid_keys[key_idx++] = 'b';
+
+  // make sure we update valid_keys if we ever add new options
+  if (key_idx >= sizeof(valid_keys))
+    goto fail;
 
   // Disable WDT
   // The second parameter can be any value outside of the range [0,0xffff]
   gBS->SetWatchdogTimer(0, 0x10000, 0, NULL);
 
-  bool force_recovery = false;
-  BootAction boot_action = get_boot_action(have_network, have_fb);
-  switch (boot_action) {
-    case kBootActionDefault:
-      break;
-    case kBootActionFastboot:
-      // do_fastboot() only returns on `fastboot continue`, in which case we
-      // continue to boot from disk.
-      do_fastboot(img, sys, namegen);
-      break;
-    case kBootActionNetboot:
-      // do_netboot() only returns on error.
-      do_netboot();
-      printf("Error: netboot failure\n");
-      xefi_getc(-1);
-      return EFI_SUCCESS;
-    case kBootActionSlotA:
-      zircon_abr_set_slot_active(kAbrSlotIndexA);
-      break;
-    case kBootActionSlotB:
-      zircon_abr_set_slot_active(kAbrSlotIndexB);
-      break;
-    case kBootActionSlotR:
-      // We could use zircon_abr_set_oneshot_recovery() here but there's no
-      // need to write to disk when we can just track it locally.
-      force_recovery = true;
-      break;
-  }
+  int timeout_s = cmdline_get_uint32("bootloader.timeout", DEFAULT_TIMEOUT);
 
-  // If we got here, boot from disk according to A/B/R metadata.
-  // Consider switching over to using the zircon_boot library which has a lot
-  // of this logic built-in.
-  void* zbi = NULL;
-  size_t zbi_size = 0;
-  const char* slot_string = NULL;
-  AbrSlotIndex slot;
-  while (1) {
-    slot = force_recovery ? kAbrSlotIndexR : zircon_abr_get_boot_slot(true);
-    switch (slot) {
-      case kAbrSlotIndexA:
-        zbi = kernel;
-        zbi_size = ksz;
-        slot_string = "-a";
-        break;
-      case kAbrSlotIndexB:
-        zbi = kernel_b;
-        zbi_size = ksz_b;
-        slot_string = "-b";
-        break;
-      case kAbrSlotIndexR:
-        zbi = zedboot_kernel;
-        zbi_size = zedboot_size;
-        slot_string = "-r";
-        break;
+  while (true) {
+    printf("\nBoot options:\n");
+    printf("  b) boot menu\n");
+    printf("  f) fastboot\n");
+    if (have_network) {
+      printf("  n) network boot\n");
+    }
+    if (kernel) {
+      printf("  1) boot A slot (alternate: m)\n");
+    }
+    if (kernel_b) {
+      printf("  2) boot B slot\n");
+    }
+    if (zedboot_kernel) {
+      printf("  r) boot R slot (alternate: z)\n");
     }
 
-    // No verified boot yet, if we have a non-NULL ZBI we assume it's good.
-    if (zbi != NULL) {
-      printf("Booting slot %d\n", slot);
-      break;
-    }
-    printf("Failed to find a kernel in slot %d\n", slot);
+    char key = key_prompt(valid_keys, timeout_s);
+    printf("\n\n");
 
-    // R is always the last slot to try, if we got here there's nothing else
-    // we can do.
-    if (slot == kAbrSlotIndexR) {
-      printf("Error: no valid kernel was found\n");
-      break;
-    }
-
-    // Move to the next slot since we don't have a kernel in this one.
-    AbrResult result = zircon_abr_mark_slot_unbootable(slot);
-    if (result != kAbrResultOk) {
-      printf("Error: failed to mark slot %d unbootable (%d)\n", slot, result);
-      break;
-    }
-  }
-
-  if (zbi != NULL) {
-    // Only set these flags when not booting zedboot. See http://fxbug.dev/72713
-    // for more information.
-    if (slot != kAbrSlotIndexR && is_booting_from_usb(img, sys)) {
+    // Only set these flags when not booting zedboot. See http://fxbug.dev/72713 for more
+    // information.
+    if (is_booting_from_usb(img, sys) && strchr("12m", key) != NULL) {
       printf("booting from usb!\n");
-      // TODO(fxbug.dev/44586): remove devmgr.bind-eager once better driver
-      // prioritisation exists.
+      // TODO(fxbug.dev/44586): remove devmgr.bind-eager once better driver prioritisation exists.
       static const char* usb_boot_args = "boot.usb=true devmgr.bind-eager=usb_composite";
       cmdline_append(usb_boot_args, strlen(usb_boot_args));
     }
 
-    zircon_abr_update_boot_slot_metadata();
-    append_avb_zbi_items(img, sys, zbi, zbi_size, slot_string);
-    zbi_boot(img, sys, zbi, zbi_size);
+    switch (key) {
+      case 'b':
+        do_bootmenu(have_fb);
+        break;
+      case 'n':
+        do_netboot();
+        break;
+      case 'f':
+        do_fastboot(img, sys, namegen);
+        break;
+      case '1':
+      case 'm':
+        printf("Booting ZIRCON-A...\n");
+        // Update current boot slot, in case the user chose differenlty than the ABR data
+        if (zircon_abr_get_boot_slot() != kAbrSlotIndexA) {
+          zircon_abr_set_slot_active(kAbrSlotIndexA);
+        }
+        zircon_abr_update_boot_slot_metadata();
+        append_avb_zbi_items(img, sys, kernel, ksz, "-a");
+        print_cmdline();
+
+        if (kernel != NULL) {
+          zbi_boot(img, sys, kernel, ksz);
+        }
+        goto fail;
+      case '2':
+        printf("Booting ZIRCON-B...\n");
+        // Update current boot slot, in case the user chose differenlty than the ABR data
+        if (zircon_abr_get_boot_slot() != kAbrSlotIndexB) {
+          zircon_abr_set_slot_active(kAbrSlotIndexB);
+        }
+        zircon_abr_update_boot_slot_metadata();
+        append_avb_zbi_items(img, sys, kernel_b, ksz_b, "-b");
+        print_cmdline();
+
+        if (kernel_b != NULL) {
+          zbi_boot(img, sys, kernel_b, ksz_b);
+        }
+        goto fail;
+      case 'r':
+      case 'z':
+        printf("Booting Recovery...\n");
+        if (zircon_abr_get_boot_slot() != kAbrSlotIndexR) {
+          zircon_abr_set_oneshot_recovery();
+        }
+        zircon_abr_update_boot_slot_metadata();
+        append_avb_zbi_items(img, sys, zedboot_kernel, zedboot_size, "-r");
+        print_cmdline();
+
+        if (zedboot_kernel != NULL) {
+          zbi_boot(img, sys, zedboot_kernel, zedboot_size);
+        }
+        goto fail;
+      default:
+        goto fail;
+    }
   }
 
-  // We only get here if we ran out of slots to try or zbi_boot() failed.
-  printf("Error: failed to boot from disk\n");
+fail:
+  printf("\nBoot Failure\n");
   xefi_getc(-1);
   return EFI_SUCCESS;
 }

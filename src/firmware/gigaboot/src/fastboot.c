@@ -769,7 +769,7 @@ int get_max_download_size(const char *arg, char *result) {
 
 // get_current_slot returns the current boot slot.
 int get_current_slot(const char *arg, char *result) {
-  AbrSlotIndex idx = zircon_abr_get_boot_slot(false);
+  AbrSlotIndex idx = zircon_abr_get_boot_slot();
   switch (idx) {
     case kAbrSlotIndexA:
       strncpy(result, "a", FB_MAX_PAYLOAD_SIZE);

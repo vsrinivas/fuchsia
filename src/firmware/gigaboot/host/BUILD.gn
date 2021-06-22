@@ -6,26 +6,10 @@
 assert(!is_efi_toolchain)
 
 config("host_config") {
-  include_dirs = [
-    # Include the parent dir so that our code can use more qualified paths e.g.
-    # <host/foo.h>.
-    "..",
-
-    # The "include" subdir is for faking out headers that we need to compile
-    # but aren't available for host builds.
-    "include",
-  ]
-  cflags = [
-    # If it's not possible to redirect to host-only files, as a last resort we
-    # can use this to conditionally compile.
-    "-DGIGABOOT_HOST",
-
-    # Gigaboot often uses wide string literals e.g. L"foo" as UTF-16, which is
-    # not typically correct on the host. This flag forces them to be 16-bytes,
-    # but be aware that any builtin host functions that use wide strings will
-    # not work correctly.
-    "-fshort-wchar",
-  ]
+  # Include the parent dir so that our code can use more qualified paths e.g.
+  # <host/foo.h>.
+  include_dirs = [ ".." ]
+  cflags = [ "-DGIGABOOT_HOST" ]
 }
 
 # This target provides replacements for device-only functionality, so that we

@@ -7,12 +7,9 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <zircon/compiler.h>
 
 #include <efi/protocol/graphics-output.h>
 #include <efi/system-table.h>
-
-__BEGIN_CDECLS
 
 #define PAGE_SIZE (4096)
 #define PAGE_MASK (PAGE_SIZE - 1)
@@ -44,31 +41,5 @@ size_t image_getsize(void* imageheader, size_t sz);
 // Where to start the kernel from
 extern size_t kernel_zone_size;
 extern efi_physical_addr kernel_zone_base;
-
-// Selection for how to boot the device.
-typedef enum {
-  kBootActionDefault,
-  kBootActionFastboot,
-  kBootActionNetboot,
-  kBootActionSlotA,
-  kBootActionSlotB,
-  kBootActionSlotR
-} BootAction;
-
-// Determines what boot action to take.
-//
-// Priority order goes:
-//   1. use the bootbyte if set (e.g. via `dm reboot-bootloader`)
-//   2. let the user select from a boot menu
-//   3. use "bootloader.default" commandline arg
-//
-// Args:
-//   have_network: true if we have a working network interface.
-//   have_fb: true if we have a framebuffer.
-//
-// Returns the chosen boot action.
-BootAction get_boot_action(bool have_network, bool have_fb);
-
-__END_CDECLS
 
 #endif  // SRC_FIRMWARE_GIGABOOT_SRC_OSBOOT_H_

@@ -7,22 +7,14 @@
 
 #include <lib/abr/abr.h>
 
-// Returns the current boot slot based on the ABR data.
-//
-// Args:
-//   update_metadata: true to update slot metadata; generally should be set
-//                    when we're planning to boot into the resulting slot
-//                    to properly decrement the attempt counter.
-AbrSlotIndex zircon_abr_get_boot_slot(bool update_metadata);
+// Returns the current boot slot based on the ABR data
+AbrSlotIndex zircon_abr_get_boot_slot(void);
 
 // Returns ABR slot info
-AbrResult zircon_abr_get_slot_info(AbrSlotIndex slot, AbrSlotInfo* info);
+AbrResult zircon_abr_get_slot_info(int slot_number, AbrSlotInfo* info);
 
-// Forces `slot` to be the active slot to be booted from
-AbrResult zircon_abr_set_slot_active(AbrSlotIndex slot);
-
-// Mark `slot` to be the active slot to be booted from
-AbrResult zircon_abr_mark_slot_unbootable(AbrSlotIndex slot);
+// Forces `slot_number` to be the active slot to be booted from
+AbrResult zircon_abr_set_slot_active(int slot_number);
 
 // Sets the oneshot recovery flag in the ABR metadata.
 AbrResult zircon_abr_set_oneshot_recovery(void);
