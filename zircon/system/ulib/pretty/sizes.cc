@@ -6,7 +6,36 @@
 #include <stdio.h>
 #include <zircon/assert.h>
 
+#include <pretty/cpp/sizes.h>
 #include <pretty/sizes.h>
+
+namespace pretty {
+
+std::string_view FormattedBytes::ToString(SizeUnit unit) {
+  using namespace std::string_view_literals;
+
+  switch (unit) {
+    case SizeUnit::kAuto:
+      break;
+    case SizeUnit::kBytes:
+      return "B"sv;
+    case SizeUnit::kKiB:
+      return "k"sv;
+    case SizeUnit::kMiB:
+      return "M"sv;
+    case SizeUnit::kGiB:
+      return "G"sv;
+    case SizeUnit::kTiB:
+      return "T"sv;
+    case SizeUnit::kPiB:
+      return "P"sv;
+    case SizeUnit::kEiB:
+      return "E"sv;
+  }
+  return {};
+}
+
+}  // namespace pretty
 
 // Calculate "n / d" as an integer, rounding any fractional part.
 //

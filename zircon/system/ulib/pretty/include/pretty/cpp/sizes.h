@@ -38,6 +38,10 @@ enum class SizeUnit : char {
 // See `format_size` and `format_size_fixed` in <pretty/sizes.h> for details.
 class FormattedBytes {
  public:
+  // Returns how the given SizeUnit will be formatted, except in the case of
+  // kAuto, for which the empty string is returned.
+  static std::string_view ToString(SizeUnit unit);
+
   // Construct an empty string.
   FormattedBytes() { buff_[0] = 0; }
 
@@ -68,6 +72,20 @@ class FormattedBytes {
 
   // Return the formatted string as a C-style NUL-terminated string.
   const char* c_str() const { return buff_; }
+
+  // Returns the formatted magnitude as a string.
+  std::string_view Magnitude() const {
+    auto sv = str();
+    sv.remove_suffix(std::min<size_t>(1, sv.size()));
+    return sv;
+  }
+
+  // Returns the associated SizeUnit. In the case of the empty string, kAuto
+  // is returned.
+  SizeUnit Unit() const {
+    auto sv = str();
+    return sv.empty() ? SizeUnit::kAuto : static_cast<SizeUnit>(sv.back());
+  }
 
  private:
   // The formatted string.
