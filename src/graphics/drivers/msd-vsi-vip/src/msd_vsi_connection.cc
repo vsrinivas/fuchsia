@@ -71,12 +71,6 @@ void msd_connection_release_buffer(msd_connection_t* abi_connection, msd_buffer_
       ->ReleaseBuffer(MsdVsiAbiBuffer::cast(abi_buffer)->ptr()->platform_buffer());
 }
 
-magma_status_t msd_connection_commit_buffer(msd_connection_t* abi_connection,
-                                            msd_buffer_t* abi_buffer, uint64_t page_offset,
-                                            uint64_t page_count) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
 void msd_connection_set_notification_callback(struct msd_connection_t* connection,
                                               msd_connection_notification_callback_t callback,
                                               void* token) {

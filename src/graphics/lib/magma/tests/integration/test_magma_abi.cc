@@ -264,9 +264,6 @@ class TestConnection {
                                                     size / page_size(), MAGMA_GPU_MAP_FLAG_READ));
     EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_error(connection_));
 
-    // Invalid page offset, page count local error
-    EXPECT_EQ(MAGMA_STATUS_MEMORY_ERROR, magma_commit_buffer(connection_, buffer, 100, 100));
-
     magma_release_buffer(connection_, buffer);
   }
 

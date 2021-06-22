@@ -205,25 +205,6 @@ magma::Status MagmaSystemConnection::UnmapBufferGpu(uint64_t id, uint64_t gpu_va
   return MAGMA_STATUS_OK;
 }
 
-magma::Status MagmaSystemConnection::CommitBuffer(uint64_t id, uint64_t page_offset,
-                                                  uint64_t page_count) {
-  auto iter = buffer_map_.find(id);
-  if (iter == buffer_map_.end())
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Attempting to commit invalid buffer id");
-  if (page_count + page_offset < page_count) {
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Offset overflows");
-  }
-  if (page_count + page_offset > iter->second.buffer->size() / magma::page_size()) {
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Page offset + length too large for buffer");
-  }
-  magma::Status status = msd_connection_commit_buffer(
-      msd_connection(), iter->second.buffer->msd_buf(), page_offset, page_count);
-  if (!status.ok())
-    return DRET_MSG(status.get(), "msd_connection_commit_buffer failed");
-
-  return MAGMA_STATUS_OK;
-}
-
 magma::Status MagmaSystemConnection::BufferRangeOp(uint64_t id, uint32_t op, uint64_t start,
                                                    uint64_t length) {
   auto iter = buffer_map_.find(id);

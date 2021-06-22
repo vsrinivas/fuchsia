@@ -157,7 +157,7 @@ class TestConnection : public magma::TestDeviceBase {
     magma_map_buffer_gpu(
         connection_, buffer, 0, 1, *job_va,
         MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | kMagmaArmMaliGpuMapFlagInnerShareable);
-    magma_commit_buffer(connection_, buffer, 0, 1);
+    magma_buffer_range_op(connection_, buffer, MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES, 0, magma::page_size());
     JobDescriptorHeader* header = static_cast<JobDescriptorHeader*>(vaddr);
     memset(header, 0, sizeof(*header));
     header->job_descriptor_size = 1;  // Next job address is 64-bit.

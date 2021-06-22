@@ -90,11 +90,6 @@ magma_status_t msd_connection_unmap_buffer_gpu(msd_connection_t* abi_connection,
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-magma_status_t msd_connection_commit_buffer(msd_connection_t* connection, msd_buffer_t* buffer,
-                                            uint64_t page_offset, uint64_t page_count) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
 void msd_connection_release_buffer(msd_connection_t* connection, msd_buffer_t* buffer) {
   MsdIntelAbiConnection::cast(connection)
       ->ptr()

@@ -216,17 +216,6 @@ void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer
   magma::PlatformConnectionClient::cast(connection)->UnmapBufferGpu(buffer_id, gpu_va);
 }
 
-magma_status_t magma_commit_buffer(magma_connection_t connection, magma_buffer_t buffer,
-                                   uint64_t page_offset, uint64_t page_count) {
-  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
-  uint64_t buffer_id = platform_buffer->id();
-  if (!platform_buffer->CommitPages(page_offset, page_count))
-    return DRET(MAGMA_STATUS_MEMORY_ERROR);
-  magma::PlatformConnectionClient::cast(connection)
-      ->CommitBuffer(buffer_id, page_offset, page_count);
-  return MAGMA_STATUS_OK;
-}
-
 magma_status_t magma_buffer_range_op(magma_connection_t connection, magma_buffer_t buffer,
                                      uint32_t options, uint64_t start_offset, uint64_t length) {
   auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
