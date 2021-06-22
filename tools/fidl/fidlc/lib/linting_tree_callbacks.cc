@@ -221,7 +221,8 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
         callback(element);
       }
     }
-    void OnOrdinaledLayoutMember(std::unique_ptr<raw::OrdinaledLayoutMember> const& element) override {
+    void OnOrdinaledLayoutMember(
+        std::unique_ptr<raw::OrdinaledLayoutMember> const& element) override {
       ProcessGapText(element->start_);
       for (auto& callback : callbacks_.ordinaled_layout_member_callbacks_) {
         callback(*element);
@@ -245,6 +246,14 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       DeclarationOrderTreeVisitor::OnValueLayoutMember(element);
       ProcessGapText(element->end_);
     }
+    void OnLayout(std::unique_ptr<raw::Layout> const& element) override {
+      ProcessGapText(element->start_);
+      for (auto& callback : callbacks_.layout_callbacks_) {
+        callback(*element);
+      }
+      DeclarationOrderTreeVisitor::OnLayout(element);
+      ProcessGapText(element->end_);
+    }
     void OnTypeDecl(std::unique_ptr<raw::TypeDecl> const& element) override {
       ProcessGapText(element->start_);
       for (auto& callback : callbacks_.type_decl_callbacks_) {
@@ -256,7 +265,8 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       }
       ProcessGapText(element->end_);
     }
-    void OnIdentifierLayoutParameter(std::unique_ptr<raw::IdentifierLayoutParameter> const& element) override {
+    void OnIdentifierLayoutParameter(
+        std::unique_ptr<raw::IdentifierLayoutParameter> const& element) override {
       // For the time being, the the first type parameter in a layout must either be a
       // TypeConstructor (like `vector<uint8>`), or else a reference to on (like `vector<Foo>`).
       // Because of this, we can treat an IdentifierLayoutParameter as a TypeConstructor for the

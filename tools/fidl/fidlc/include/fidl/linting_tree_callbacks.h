@@ -160,13 +160,17 @@ class LintingTreeCallbacks {
   void OnValueLayoutMember(fit::function<void(const raw::ValueLayoutMember&)> callback) {
     value_layout_member_callbacks_.push_back(std::move(callback));
   }
+  void OnLayout(fit::function<void(const raw::Layout&)> callback) {
+    layout_callbacks_.push_back(std::move(callback));
+  }
   void OnTypeDecl(fit::function<void(const raw::TypeDecl&)> callback) {
     type_decl_callbacks_.push_back(std::move(callback));
   }
   void OnExitTypeDecl(fit::function<void(const raw::TypeDecl&)> callback) {
     exit_type_decl_callbacks_.push_back(std::move(callback));
   }
-  void OnIdentifierLayoutParameter(fit::function<void(const raw::IdentifierLayoutParameter&)> callback) {
+  void OnIdentifierLayoutParameter(
+      fit::function<void(const raw::IdentifierLayoutParameter&)> callback) {
     identifier_layout_parameter_callbacks_.push_back(std::move(callback));
   }
   void OnTypeConstructorNew(fit::function<void(const raw::TypeConstructorNew&)> callback) {
@@ -229,10 +233,13 @@ class LintingTreeCallbacks {
 
   // --- start new syntax ---
   std::vector<fit::function<void(const raw::AttributeNew&)>> attribute_callbacks_;
-  std::vector<fit::function<void(const raw::OrdinaledLayoutMember&)>> ordinaled_layout_member_callbacks_;
+  std::vector<fit::function<void(const raw::OrdinaledLayoutMember&)>>
+      ordinaled_layout_member_callbacks_;
   std::vector<fit::function<void(const raw::StructLayoutMember&)>> struct_layout_member_callbacks_;
   std::vector<fit::function<void(const raw::ValueLayoutMember&)>> value_layout_member_callbacks_;
-  std::vector<fit::function<void(const raw::IdentifierLayoutParameter&)>> identifier_layout_parameter_callbacks_;
+  std::vector<fit::function<void(const raw::Layout&)>> layout_callbacks_;
+  std::vector<fit::function<void(const raw::IdentifierLayoutParameter&)>>
+      identifier_layout_parameter_callbacks_;
   std::vector<fit::function<void(const raw::TypeDecl&)>> type_decl_callbacks_;
   std::vector<fit::function<void(const raw::TypeDecl&)>> exit_type_decl_callbacks_;
   std::vector<fit::function<void(const raw::TypeConstructorNew&)>> type_constructor_callbacks_;

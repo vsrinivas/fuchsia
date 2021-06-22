@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <sstream>
 #include <random>
+#include <sstream>
 #include <utility>
 
 #include <fidl/findings.h>
@@ -109,6 +109,11 @@ class LintTest {
     return *this;
   }
 
+  LintTest& source_syntax(fidl::utils::Syntax syntax) {
+    source_syntax_ = syntax;
+    return *this;
+  }
+
   LintTest& message(std::string message) {
     default_message_ = std::move(message);
     return *this;
@@ -145,14 +150,15 @@ class LintTest {
     Substitutions with_rands_added;
     for (const auto& substitution : substitutions) {
       std::visit(fidl::utils::matchers{
-         [&](const std::string& str) -> void {
-           with_rands_added.insert(std::pair(substitution.first, SubstitutionWithRandom{str, random_string()}));
-         },
-         [&](const SubstitutionWithRandom& with_rand) -> void {
-           with_rands_added.insert(std::pair(substitution.first, with_rand));
-         },
-      },
-      substitution.second);
+                     [&](const std::string& str) -> void {
+                       with_rands_added.insert(std::pair(
+                           substitution.first, SubstitutionWithRandom{str, random_string()}));
+                     },
+                     [&](const SubstitutionWithRandom& with_rand) -> void {
+                       with_rands_added.insert(std::pair(substitution.first, with_rand));
+                     },
+                 },
+                 substitution.second);
     }
     substitutions_ = with_rands_added;
     return *this;
@@ -160,15 +166,15 @@ class LintTest {
 
   // Shorthand for the common occurrence of a single substitution variable.
   LintTest& substitute(const std::string& var_name, SubstitutionValue sub) {
-    return substitute({{var_name, std::visit(fidl::utils::matchers{
-       [&](const std::string& str) -> SubstitutionValue {
-         return SubstitutionWithRandom{str, random_string()};
-       },
-       [&](const SubstitutionWithRandom& with_rand) -> SubstitutionValue {
-         return with_rand;
-       },
-    },
-    sub)}});
+    return substitute(
+        {{var_name, std::visit(fidl::utils::matchers{
+                                   [&](const std::string& str) -> SubstitutionValue {
+                                     return SubstitutionWithRandom{str, random_string()};
+                                   },
+                                   [&](const SubstitutionWithRandom& with_rand)
+                                       -> SubstitutionValue { return with_rand; },
+                               },
+                               sub)}});
   }
 
   LintTest& include_checks(std::vector<std::string> included_check_ids) {
@@ -358,20 +364,27 @@ class LintTest {
   TemplateString& convert_template() {
     if (!converted_template_) {
       assert(!source_template_.str().empty() &&
-          "source_template() must be set before convert_template() is called");
-      TestLibrary
-          old_syntax_lib = WithLibraryZx(filename_, source_template_.SubstituteWithRandomized(substitutions_));
-      old_syntax_lib.Compile();
-      auto& source_file = old_syntax_lib.source_file();
+             "source_template() must be set before convert_template() is called");
+      // Don't perform the conversion for tests that have declared that their source is already in
+      // the new syntax.
+      if (source_syntax_ == fidl::utils::Syntax::kNew) {
+        converted_template_ = source_template_;
+        return converted_template_;
+      }
+
+      TestLibrary old_source_syntax_lib =
+          WithLibraryZx(filename_, source_template_.SubstituteWithRandomized(substitutions_));
+      old_source_syntax_lib.Compile();
+      auto& source_file = old_source_syntax_lib.source_file();
       fidl::ExperimentalFlags old_flags;
       old_flags.SetFlag(fidl::ExperimentalFlags::Flag::kOldSyntaxOnly);
-      fidl::Lexer lexer(source_file, old_syntax_lib.Reporter());
-      fidl::Parser parser(&lexer, old_syntax_lib.Reporter(), old_flags);
+      fidl::Lexer lexer(source_file, old_source_syntax_lib.Reporter());
+      fidl::Parser parser(&lexer, old_source_syntax_lib.Reporter(), old_flags);
       auto ast = parser.Parse();
       assert(parser.Success());
 
-      fidl::conv::ConvertingTreeVisitor converter =
-          fidl::conv::ConvertingTreeVisitor(fidl::utils::Syntax::kNew, old_syntax_lib.library());
+      fidl::conv::ConvertingTreeVisitor converter = fidl::conv::ConvertingTreeVisitor(
+          fidl::utils::Syntax::kNew, old_source_syntax_lib.library());
       converter.OnFile(ast);
 
       auto converted = converter.converted_output();
@@ -385,8 +398,7 @@ class LintTest {
       fidl::ExperimentalFlags flags;
       flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
       const auto subbed = convert_template().Substitute(substitutions_);
-      library_ =
-          std::make_unique<TestLibrary>(filename_, subbed, flags);
+      library_ = std::make_unique<TestLibrary>(filename_, subbed, flags);
     }
     return *library_;
   }
@@ -404,10 +416,88 @@ class LintTest {
   Findings expected_findings_;
   TemplateString source_template_;
   TemplateString converted_template_;
+  fidl::utils::Syntax source_syntax_ = fidl::utils::Syntax::kOld;
   Substitutions substitutions_;
 
   std::unique_ptr<TestLibrary> library_;
 };
+
+TEST(LintFindingsTests, ModifierOrder) {
+  LintTest test;
+  test.check_id("modifier-order").source_syntax(utils::Syntax::kNew).source_template(R"FIDL(
+library fidl.a;
+
+type MyUnion = ${TEST} union {
+  1: foo bool;
+};
+)FIDL");
+
+  test.substitute("TEST", "flexible");
+  ASSERT_NO_FINDINGS(test);
+
+  test.substitute("TEST", "strict");
+  ASSERT_NO_FINDINGS(test);
+
+  test.substitute("TEST", "flexible resource");
+  ASSERT_NO_FINDINGS(test);
+
+  test.substitute("TEST", "strict resource");
+  ASSERT_NO_FINDINGS(test);
+
+  test.substitute("TEST", "resource flexible")
+      .message("Strictness modifier on union must always precede the resource modifier")
+      .suggestion("move 'flexible' modifier before resource modifier for union");
+  ASSERT_FINDINGS(test);
+
+  test.substitute("TEST", "resource strict")
+      .message("Strictness modifier on union must always precede the resource modifier")
+      .suggestion("move 'strict' modifier before resource modifier for union");
+  ASSERT_FINDINGS(test);
+}
+
+TEST(LintFindingsTests, ExplicitFlexibleModifier) {
+  std::map<std::string, std::string> named_templates = {
+      {"bitfield", R"FIDL(
+library fidl.a;
+
+type MyBits = ${TEST}bits : uint32 {
+  VALUE = 1;
+};
+)FIDL"},
+      {"enum", R"FIDL(
+library fidl.a;
+
+type MyEnum = ${TEST}enum {
+  VALUE = 1;
+};
+)FIDL"},
+      {"union", R"FIDL(
+library fidl.a;
+
+type MyUnion = ${TEST}resource union {
+  1: member bool;
+};
+)FIDL"},
+  };
+
+  for (auto const& named_template : named_templates) {
+    LintTest test;
+    test.check_id("explicit-flexible-modifier")
+        .source_syntax(utils::Syntax::kNew)
+        .source_template(named_template.second);
+
+    test.substitute("TEST", "flexible ");
+    ASSERT_NO_FINDINGS(test);
+
+    test.substitute("TEST", "strict ");
+    ASSERT_NO_FINDINGS(test);
+
+    test.substitute("TEST", "")
+        .message(named_template.first + " must have an explicit 'flexible' modifier")
+        .suggestion("add 'flexible' modifier before " + named_template.first + " keyword");
+    ASSERT_FINDINGS(test);
+  }
+}
 
 TEST(LintFindingsTests, ConstantRepeatsEnclosingTypeName) {
   std::map<std::string, std::string> named_templates = {
