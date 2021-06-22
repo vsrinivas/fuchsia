@@ -23,23 +23,31 @@ import 'package:meta/meta.dart';
 class PointerInjector {
   final Registry _registry;
   final DeviceProxy _device;
-  bool _injectionFailed = false;
+
+  /// Callback when the injector encounters error during registration or when
+  /// injecting pointer events. Client code should call [dispose] and release
+  /// this instance. It may create another instance to continue injecting. Using
+  /// this instance after [onError] will result in undefined behavior.
+  final VoidCallback onError;
 
   /// Returns [true] if the PointerInjector is successfully registered.
   bool registered = false;
 
   /// Constructor used for injecting mocks during testing.
   @visibleForTesting
-  PointerInjector(Registry registry, DeviceProxy device)
-      : _registry = registry,
+  PointerInjector(
+    Registry registry,
+    DeviceProxy device, {
+    required this.onError,
+  })  : _registry = registry,
         _device = device;
 
   /// Construct PointerInjector from [/svc].
-  factory PointerInjector.fromSvcPath() {
+  factory PointerInjector.fromSvcPath({required VoidCallback onError}) {
     final registry = RegistryProxy();
     final device = DeviceProxy();
     Incoming.fromSvcPath().connectToService(registry);
-    return PointerInjector(registry, device);
+    return PointerInjector(registry, device, onError: onError);
   }
 
   /// Closes connections to services.
@@ -72,9 +80,10 @@ class PointerInjector {
     return _registry.register(config, _device.ctrl.request()).then((_) {
       registered = true;
     }).catchError((e) {
-      log.warning('Failed to register pointer injector: $e');
-      _injectionFailed = true;
-      throw e; // Registration failures are critical; higher-level code should handle them
+      log.warning('Failed to register pointer injector: $e.');
+      // Registration failures are critical; higher-level code should handle
+      // them.
+      onError();
     });
   }
 
@@ -84,13 +93,8 @@ class PointerInjector {
     required Rect? viewport,
   }) async {
     assert(viewport != null && pointer != null);
-    if (_injectionFailed) {
-      log.warning(
-          'Attempted pointer event dispatch after injection failed; dropping');
-      return;
-    }
-
     final events = <Event>[];
+
     if (viewport != null) {
       final timestamp = DateTime.now().microsecondsSinceEpoch * 1000;
       final injectorEvent = Event(
@@ -130,9 +134,8 @@ class PointerInjector {
     }
 
     return _device.inject(events).catchError((e) {
-      log.warning('Failed to dispatch pointer events: $e');
-      _injectionFailed = true;
-      throw e; // This will only throw on the first failed injection
+      log.warning('Failed to dispatch pointer events: $e.');
+      onError();
     });
   }
 

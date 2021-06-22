@@ -23,7 +23,7 @@ void main() {
   test('PointerInjector register', () async {
     final device = _mockDevice();
     final registry = _mockRegistry();
-    final injector = PointerInjector(registry, device);
+    final injector = PointerInjector(registry, device, onError: () {});
 
     final hostViewRef = _mockViewRef();
     final viewRef = _mockViewRef();
@@ -45,7 +45,7 @@ void main() {
   test('PointerInjector dispatchEvent', () async {
     MockDevice device = _mockDevice() as MockDevice;
     final registry = _mockRegistry();
-    final injector = PointerInjector(registry, device);
+    final injector = PointerInjector(registry, device, onError: () {});
     when(device.inject(any)).thenAnswer((_) => Future<void>.value());
 
     final rect = Rect.fromLTWH(0, 0, 100, 100);
@@ -67,36 +67,26 @@ void main() {
     expect(pointerEvent.data!.pointerSample!.positionInViewport, [10.0, 10.0]);
   });
 
-  test('PointerInjector dispatchEvent exception', () async {
+  test('PointerInjector dispatchEvent logs exception and onError', () async {
     MockDevice device = _mockDevice() as MockDevice;
     final registry = _mockRegistry();
-    final injector = PointerInjector(registry, device);
+    bool error = false;
+    final injector =
+        PointerInjector(registry, device, onError: () => error = true);
     when(device.inject(any)).thenAnswer((_) =>
         Future<void>.error(FidlStateException('Proxy<Device> is closed.')));
 
-    final rect = Rect.fromLTWH(0, 0, 100, 100);
-    final pointer = PointerDownEvent(position: Offset(10, 10));
-
     // Check for errors being thrown or logs being generated.
-    FidlError? caughtError;
     bool logsError = false;
     log.onRecord.listen((event) {
       logsError = true;
     });
 
-    // The first dispatch should throw an exception and log.
-    try {
-      await injector.dispatchEvent(pointer: pointer, viewport: rect);
-    } on FidlError catch (e) {
-      caughtError = e;
-    }
-    expect(caughtError, isNotNull);
-    expect(logsError, isTrue);
-
-    // The second dispatch should only log.
-    logsError = false;
+    final rect = Rect.fromLTWH(0, 0, 100, 100);
+    final pointer = PointerDownEvent(position: Offset(10, 10));
     await injector.dispatchEvent(pointer: pointer, viewport: rect);
     expect(logsError, isTrue);
+    expect(error, isTrue);
   });
 }
 

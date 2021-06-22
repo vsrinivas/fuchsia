@@ -30,8 +30,8 @@ class FuchsiaViewConnection extends FuchsiaViewController {
 
   /// Returns the [PointerInjector] instance used by this connection.
   @visibleForTesting
-  PointerInjector get pointerInjector =>
-      _pointerInjector ??= PointerInjector.fromSvcPath();
+  PointerInjector get pointerInjector => _pointerInjector ??=
+      PointerInjector.fromSvcPath(onError: onPointerInjectionError);
 
   /// Callback when the connection to child's view is connected to view tree.
   final FuchsiaViewConnectionCallback? _onViewConnected;
@@ -81,22 +81,10 @@ class FuchsiaViewConnection extends FuchsiaViewController {
       FuchsiaViewController controller, bool? state) async {
     FuchsiaViewConnection connection = controller as FuchsiaViewConnection;
     connection._onViewStateChanged?.call(controller, state);
-
-    if (connection.usePointerInjection &&
-        state == true &&
-        !connection.pointerInjector.registered) {
-      final hostViewRef = ScenicContext.hostViewRef();
-      final viewRefDup = ViewRef(
-          reference:
-              connection.viewRef!.reference.duplicate(ZX.RIGHT_SAME_RIGHTS));
-
-      await connection.pointerInjector.register(
-        hostViewRef: hostViewRef,
-        viewRef: viewRefDup,
-        viewport: controller.viewport!,
-      );
-    }
   }
+
+  @visibleForTesting
+  ViewRef get hostViewRef => ScenicContext.hostViewRef();
 
   static void _handleViewConnected(FuchsiaViewController controller) async {
     FuchsiaViewConnection connection = controller as FuchsiaViewConnection;
@@ -114,12 +102,48 @@ class FuchsiaViewConnection extends FuchsiaViewController {
   static Future<void> _handlePointerEvent(
       FuchsiaViewController controller, PointerEvent pointer) async {
     FuchsiaViewConnection connection = controller as FuchsiaViewConnection;
-    if (connection.usePointerInjection &&
-        connection.pointerInjector.registered) {
+    if (!connection.usePointerInjection) {
+      return;
+    }
+
+    // If we haven't made a pointerInjector for this View yet, or if the old one
+    // was torn down, we need to create one.
+    if (!connection.pointerInjector.registered) {
+      // The only valid pointer event to start an injector with is DOWN event.
+      if (!(pointer is PointerDownEvent)) {
+        return;
+      }
+
+      // An empty viewport is pointless. Nothing will go through.
+      if (connection.viewport == Rect.zero) {
+        return;
+      }
+
+      // Create the pointerInjector.
+      final viewRefDup = ViewRef(
+          reference:
+              connection.viewRef!.reference.duplicate(ZX.RIGHT_SAME_RIGHTS));
+
+      await connection.pointerInjector.register(
+        hostViewRef: connection.hostViewRef,
+        viewRef: viewRefDup,
+        viewport: connection.viewport!,
+      );
+    }
+
+    if (connection.pointerInjector.registered) {
       return connection.pointerInjector.dispatchEvent(
         pointer: pointer,
         viewport: connection.viewport,
       );
     }
+  }
+
+  @visibleForTesting
+  void onPointerInjectionError() {
+    // Dispose the current instance of pointer injector. It gets recreated on
+    // next viewStateChanged event.
+    pointerInjector.dispose();
+    _pointerInjector = null;
   }
 }

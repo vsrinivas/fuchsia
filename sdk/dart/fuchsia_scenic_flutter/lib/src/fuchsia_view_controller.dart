@@ -69,7 +69,7 @@ class FuchsiaViewController implements PlatformViewController {
   /// Connects to the platform view given it's [viewId].
   ///
   /// Called by [FuchsiaView] when the platform view is ready to be initialized
-  /// and should not be called directly.
+  /// and should not be called directly. This MUST NOT be called directly.
   Future<void> connect({
     bool hitTestable = true,
     bool focusable = true,
@@ -112,7 +112,7 @@ class FuchsiaViewController implements PlatformViewController {
   /// This should not be called in [onViewDisconnected] callback. The need to
   /// disconnect, without exiting the underlying component is rare. Most views
   /// are closed by first exiting their component, in which case the callback
-  /// [onViewDisconnect] is invoked.
+  /// [onViewDisconnect] is invoked.  This MUST NOT be called directly.
   Future<void> disconnect() async {
     fuchsiaViewsService.deregister(viewId);
     await fuchsiaViewsService.destroyView(viewId);
@@ -122,7 +122,8 @@ class FuchsiaViewController implements PlatformViewController {
   /// Updates properties on the platform view given it's [viewId].
   ///
   /// Called by [FuchsiaView] when the [focusable] or [hitTestable] or
-  /// [viewOcclusionHint] properties are changed.
+  /// [viewOcclusionHint] properties are changed.  This MUST NOT be called
+  /// directly.
   Future<void> update({
     bool focusable = true,
     bool hitTestable = true,
@@ -149,7 +150,8 @@ class FuchsiaViewController implements PlatformViewController {
   @override
   Future<void> clearFocus() async {}
 
-  /// Dispatch pointer events for the child view.
+  /// Dispatch pointer events for the child view. This MUST NOT be called
+  /// directly.
   @override
   Future<void> dispatchPointerEvent(PointerEvent event) async {
     return onPointerEvent?.call(this, event);
