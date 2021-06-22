@@ -7,3 +7,10 @@ library fuchsia.acpi;
 extend uint fuchsia.BIND_PROTOCOL {
   DEVICE = 30,
 };
+
+extend uint fuchsia.BIND_ACPI_BUS_TYPE {
+  UNKNOWN = 0xff,
+  PCI = 1,
+  SPI = 2,
+  I2C = 3,
+};

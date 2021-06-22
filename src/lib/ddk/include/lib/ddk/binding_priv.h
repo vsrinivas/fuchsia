@@ -99,6 +99,7 @@ __BEGIN_CDECLS
 // driver only publishes those that are valid HID values.
 #define BIND_ACPI_CID_0_3 0x0402  // char 0-3
 #define BIND_ACPI_CID_4_7 0x0403  // char 4-7
+#define BIND_ACPI_BUS_TYPE 0x0404
 
 // Intel HDA Codec binding variables at 0x05XX
 #define BIND_IHDA_CODEC_VID 0x0500

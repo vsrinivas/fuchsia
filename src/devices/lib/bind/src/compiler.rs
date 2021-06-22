@@ -333,6 +333,7 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     // driver only publishes those that are valid HID values.
     keys.push(("BIND_ACPI_CID_0_3".to_string(), 0x0402));
     keys.push(("BIND_ACPI_CID_4_7".to_string(), 0x0403));
+    keys.push(("BIND_ACPI_BUS_TYPE".to_string(), 0x0404));
 
     // Intel HDA Codec binding variables at 0x05XX
     keys.push(("BIND_IHDA_CODEC_VID".to_string(), 0x0500));

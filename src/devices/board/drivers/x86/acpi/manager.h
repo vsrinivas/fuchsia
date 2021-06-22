@@ -10,15 +10,17 @@
 #include <string>
 #include <unordered_map>
 
+#include <bind/fuchsia/acpi/cpp/fidl.h>
+
 #include "acpi.h"
 #include "device.h"
 namespace acpi {
 
 enum BusType {
-  kUnknown = 0xff,
-  kPci = 0x1,
-  kSpi = 0x2,
-  kI2c = 0x3,
+  kUnknown = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_UNKNOWN,
+  kPci = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_PCI,
+  kSpi = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_SPI,
+  kI2c = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_I2C,
 };
 
 // PCI topology in the ACPI format.

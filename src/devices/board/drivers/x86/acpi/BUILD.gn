@@ -12,6 +12,7 @@ group("tests") {
   }
 }
 
+shared_public_deps = [ "//src/devices/bind/fuchsia.acpi:bind.fuchsia.acpi" ]
 shared_deps = [
   "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
@@ -29,6 +30,7 @@ source_set("acpi") {
     "device.cc",
     "manager.cc",
   ]
+  public_deps = shared_public_deps
   deps = shared_deps + [
            "//src/lib/ddk",
            "//zircon/public/lib/fbl",
@@ -45,7 +47,7 @@ test("acpi-test") {
     "status-test.cc",
     "util-test.cc",
   ]
-  deps = shared_deps + [
+  deps = shared_deps + shared_public_deps + [
            "//zircon/public/lib/zxtest",
            "//src/devices/testing/fake_ddk",
            "test:mock-acpi",

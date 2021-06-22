@@ -1,5 +1,5 @@
 {
-  "pkg/ddk/include/lib/ddk/binding_priv.h": "2b04ffa2e43c309df4cd98ae65ca1630",
+  "pkg/ddk/include/lib/ddk/binding_priv.h": "f1ff2577e46d437f89b5bac8b088fcc3",
   "pkg/ddk/include/lib/ddk/debug.h": "5041b18b03dfa892759676c2215ab7a8",
   "pkg/ddk/include/lib/ddk/device.h": "4395c1beacccc2606203cace09c2a1e8",
   "pkg/ddk/include/lib/ddk/driver.h": "8ea9acfb2365f3e45079fde1d874d1b9",
