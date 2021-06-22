@@ -215,8 +215,8 @@ int process_await_termination(zx_handle_t process, zx_handle_t job, bool blockin
     if (status != ZX_OK)
         return status;
 
-    zx_info_process_v2_t proc_info;
-    status = zx_object_get_info(process, ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), NULL, NULL);
+    zx_info_process_t proc_info;
+    status = zx_object_get_info(process, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
     if (status != ZX_OK)
         return status;
 

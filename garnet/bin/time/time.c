@@ -37,8 +37,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  zx_info_process_v2_t proc_info;
-  status = zx_object_get_info(proc, ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), NULL, NULL);
+  zx_info_process_t proc_info;
+  status = zx_object_get_info(proc, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
   zx_handle_close(proc);
 
   if (status != ZX_OK) {

@@ -107,9 +107,9 @@ TEST(StdioTests, stdio_advanced_pipe_test) {
   ASSERT_EQ(r, ZX_OK, "zx_object_wait_one failed");
 
   // read the return code
-  zx_info_process_v2_t proc_info;
+  zx_info_process_t proc_info;
   size_t actual = 0;
-  zx_object_get_info(p, ZX_INFO_PROCESS_V2, &proc_info, sizeof(proc_info), &actual, NULL);
+  zx_object_get_info(p, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), &actual, NULL);
   ASSERT_EQ(actual, (size_t)1, "Must get one and only one process info");
   ASSERT_EQ(proc_info.return_code, 0, "lsusb must return 0");
 

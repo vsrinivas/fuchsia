@@ -41,9 +41,9 @@ CrashReportBuilder& CrashReportBuilder::SetProcess(const zx::process& process) {
   process_koid_ = fsl::GetKoid(process.get());
 
   // Get the crashed process uptime
-  zx_info_process_v2_t process_info;
-  if (const zx_status_t status = process.get_info(ZX_INFO_PROCESS_V2, &process_info,
-                                                  sizeof(process_info), nullptr, nullptr);
+  zx_info_process_t process_info;
+  if (const zx_status_t status =
+          process.get_info(ZX_INFO_PROCESS, &process_info, sizeof(process_info), nullptr, nullptr);
       status == ZX_OK) {
     if (!(process_info.flags & ZX_INFO_PROCESS_FLAG_STARTED)) {
       FX_LOGS(WARNING) << "Cannot get the start time from crashed process "
