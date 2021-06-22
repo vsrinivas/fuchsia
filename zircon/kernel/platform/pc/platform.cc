@@ -26,6 +26,7 @@
 #include <fbl/array.h>
 #include <kernel/cpu_distance_map.h>
 #include <ktl/algorithm.h>
+#include <phys/handoff.h>
 
 #include "platform_p.h"
 #if defined(WITH_KERNEL_PCIE)
@@ -140,11 +141,15 @@ static void platform_save_bootloader_data(void) {
   printf("Data ZBI: @ %p (%zu bytes)\n", data_zbi, size);
 
   // Handle individual ZBI items.
-  ktl::span<std::byte> zbi{reinterpret_cast<std::byte*>(data_zbi), size};
+  ktl::span<ktl::byte> zbi{reinterpret_cast<ktl::byte*>(data_zbi), size};
   zbitl::View view(zbi);
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
     switch (header->type) {
+      case ZBI_TYPE_STORAGE_KERNEL: {
+        gPhysHandoff = PhysHandoff::FromPayload(payload);
+        break;
+      }
       case ZBI_TYPE_PLATFORM_ID: {
         if (payload.size() >= sizeof(zbi_platform_id_t)) {
           memcpy(&bootloader.platform_id, payload.data(), sizeof(zbi_platform_id_t));
@@ -182,7 +187,7 @@ static void platform_save_bootloader_data(void) {
         if (payload.empty()) {
           break;
         }
-        payload.back() = std::byte{'\0'};
+        payload.back() = ktl::byte{'\0'};
         ParseBootOptions(
             ktl::string_view{reinterpret_cast<const char*>(payload.data()), payload.size()});
 
@@ -430,7 +435,7 @@ void platform_init_crashlog(void) {
   platform_enable_crashlog_uptime_updates = [](bool) {};
 }
 
-zx_status_t platform_append_mexec_data(ktl::span<std::byte> data_zbi) {
+zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) {
   zbitl::Image image(data_zbi);
   // The only possible storage error that can result from a span-backed Image
   // would be a failure to increase the capacity.

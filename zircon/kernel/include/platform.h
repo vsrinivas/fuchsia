@@ -112,6 +112,8 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+#include <lib/arch/ticks.h>
+
 #include <ktl/string_view.h>
 
 // TODO(53594): Eventually `gCmdline` will be entirely replaced by
@@ -129,6 +131,10 @@ class Ratio;  // Fwd decl.
 // source has been selected and characterized.
 void platform_set_ticks_to_time_ratio(const affine::Ratio& ticks_to_time);
 const affine::Ratio& platform_get_ticks_to_time_ratio(void);
+
+// Convert a sample taken early on to a proper zx_ticks_t, if possible.
+// This returns 0 if early samples are not convertible.
+zx_ticks_t platform_convert_early_ticks(arch::EarlyTicks sample);
 
 #endif  // __cplusplus
 

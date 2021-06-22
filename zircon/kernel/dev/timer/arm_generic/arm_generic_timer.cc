@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <lib/affine/ratio.h>
 #include <lib/arch/intrin.h>
+#include <lib/arch/ticks.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/counters.h>
 #include <lib/fit/defer.h>
@@ -28,6 +29,7 @@
 #include <ktl/limits.h>
 #include <lk/init.h>
 #include <pdev/driver.h>
+#include <phys/handoff.h>
 #include <platform/timer.h>
 
 #define LOCAL_TRACE 0
@@ -54,17 +56,8 @@
 #define TIMER_REG_CNTVCT "cntvct_el0"
 
 extern "C" {
-
-// Samples taken at the first instruction in the kernel.
-extern uint64_t kernel_entry_ticks[2];  // cntpct, cntvct
-// ... and at the entry to normal virtual-space kernel code.
-uint64_t kernel_virtual_entry_ticks[2];  // cntpct, cntvct
-
-}  // extern "C"
-
-// That value is published as a kcounter.
-KCOUNTER(timeline_zbi_entry, "boot.timeline.zbi")
-KCOUNTER(timeline_virtual_entry, "boot.timeline.virtual")
+arch::EarlyTicks kernel_virtual_entry_ticks;
+}
 
 KCOUNTER(platform_timer_set_counter, "platform.timer.set")
 KCOUNTER(platform_timer_cancel_counter, "platform.timer.cancel")
@@ -189,6 +182,7 @@ struct timer_reg_procs {
   void (*write_cval)(uint64_t val);
   void (*write_tval)(int32_t val);
   uint64_t (*read_ct)();
+  uint64_t arch::EarlyTicks::*early_ticks;
 };
 
 __UNUSED static const struct timer_reg_procs cntp_procs = {
@@ -196,6 +190,7 @@ __UNUSED static const struct timer_reg_procs cntp_procs = {
     .write_cval = write_cntp_cval,
     .write_tval = write_cntp_tval,
     .read_ct = read_cntpct,
+    .early_ticks = &arch::EarlyTicks::cntpct_el0,
 };
 
 __UNUSED static const struct timer_reg_procs cntp_procs_a73 = {
@@ -203,6 +198,7 @@ __UNUSED static const struct timer_reg_procs cntp_procs_a73 = {
     .write_cval = write_cntp_cval,
     .write_tval = write_cntp_tval,
     .read_ct = read_cntpct_a73,
+    .early_ticks = &arch::EarlyTicks::cntpct_el0,
 };
 
 __UNUSED static const struct timer_reg_procs cntv_procs = {
@@ -210,6 +206,7 @@ __UNUSED static const struct timer_reg_procs cntv_procs = {
     .write_cval = write_cntv_cval,
     .write_tval = write_cntv_tval,
     .read_ct = read_cntvct,
+    .early_ticks = &arch::EarlyTicks::cntvct_el0,
 };
 
 __UNUSED static const struct timer_reg_procs cntv_procs_a73 = {
@@ -217,6 +214,7 @@ __UNUSED static const struct timer_reg_procs cntv_procs_a73 = {
     .write_cval = write_cntv_cval,
     .write_tval = write_cntv_tval,
     .read_ct = read_cntvct_a73,
+    .early_ticks = &arch::EarlyTicks::cntvct_el0,
 };
 
 __UNUSED static const struct timer_reg_procs cntps_procs = {
@@ -224,6 +222,7 @@ __UNUSED static const struct timer_reg_procs cntps_procs = {
     .write_cval = write_cntps_cval,
     .write_tval = write_cntps_tval,
     .read_ct = read_cntpct,
+    .early_ticks = &arch::EarlyTicks::cntpct_el0,
 };
 
 __UNUSED static const struct timer_reg_procs cntps_procs_a73 = {
@@ -231,6 +230,7 @@ __UNUSED static const struct timer_reg_procs cntps_procs_a73 = {
     .write_cval = write_cntps_cval,
     .write_tval = write_cntps_tval,
     .read_ct = read_cntpct_a73,
+    .early_ticks = &arch::EarlyTicks::cntpct_el0,
 };
 
 #if (TIMER_ARM_GENERIC_SELECTED_CNTV)
@@ -259,6 +259,10 @@ static interrupt_eoi platform_tick(void* arg) {
 }
 
 zx_ticks_t platform_current_ticks() { return read_ct(); }
+
+zx_ticks_t platform_convert_early_ticks(arch::EarlyTicks sample) {
+  return sample.*reg_procs.early_ticks;
+}
 
 zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
   DEBUG_ASSERT(arch_ints_disabled());
@@ -428,7 +432,6 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
   uint32_t irq_phys = driver->irq_phys;
   uint32_t irq_virt = driver->irq_virt;
   uint32_t irq_sphys = driver->irq_sphys;
-  size_t entry_ticks_idx;
 
   if (irq_phys && irq_virt && arm64_get_boot_el() < 2) {
     // If we did not boot at EL2 or above, prefer the virtual timer.
@@ -440,26 +443,22 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
     timer_irq = irq_phys;
     timer_assignment = IRQ_PHYS;
     reg_procs = cntp_procs;
-    entry_ticks_idx = 0;
   } else if (irq_virt) {
     timer_str = "virt";
     timer_irq = irq_virt;
     timer_assignment = IRQ_VIRT;
     reg_procs = cntv_procs;
-    entry_ticks_idx = 1;
   } else if (irq_sphys) {
     timer_str = "sphys";
     timer_irq = irq_sphys;
     timer_assignment = IRQ_SPHYS;
     reg_procs = cntps_procs;
-    entry_ticks_idx = 0;
   } else {
     panic("no irqs set in arm_generic_timer_pdev_init\n");
   }
-  arch::ThreadMemoryBarrier();
+  ZX_ASSERT(reg_procs.early_ticks);
 
-  timeline_zbi_entry.Set(kernel_entry_ticks[entry_ticks_idx]);
-  timeline_virtual_entry.Set(kernel_virtual_entry_ticks[entry_ticks_idx]);
+  arch::ThreadMemoryBarrier();
 
   dprintf(INFO, "arm generic timer using %s timer, irq %d\n", timer_str, timer_irq);
 
@@ -484,8 +483,9 @@ static void late_update_reg_procs(uint) {
     } else {
       panic("no irqs set in late_update_reg_procs\n");
     }
+    ZX_ASSERT(reg_procs.early_ticks);
 
-    ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
+    arch::ThreadMemoryBarrier();
 
     dprintf(INFO, "arm generic timer applying A73 workaround\n");
   }

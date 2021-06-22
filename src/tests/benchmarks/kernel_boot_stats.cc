@@ -6,9 +6,11 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <iterator>
+#include <optional>
 #include <utility>
 
 #include <perftest/results.h>
@@ -17,8 +19,26 @@ namespace {
 
 constexpr const char* kTestSuiteName = "fuchsia.kernel.boot";
 
+// Each kcounter names a time point.  The corresponding "test result" names the
+// interval between that time point and the previous one.
+//
+// **NOTE** Code in //zircon/kernel/top/handoff.cc and other places in the the
+// kernel populate the "boot.timeline.*" kcounters with various time samples.
+// This table is responsible for listing all of those sampling points in their
+// intended chronological order and for giving appropriate names to each
+// interval between two samples.  (The total interval from boot.timeline.zbi
+// until boot.timeline.init is also published as "KernelBootTotal", below.)
+// When new sample points are added in the kernel, new entries should be made
+// here.  Take care in choosing the names for the intervals in this table, as
+// these go into historical data collection under the "fuchsia.kernel.boot"
+// test suite at https://chromeperf.appspot.com/report and changing these names
+// can risk losing the correlation between historical data and new data.
 constexpr std::pair<const char*, const char*> kTimelineSteps[] = {
     {"boot.timeline.zbi", "KernelBootLoader"},
+    {"boot.timeline.physboot-setup", "KernelBootPhysSetup"},
+    {"boot.timeline.decompress-start", "KernelBootPhysZbiScan"},
+    {"boot.timeline.decompress-end", "KernelBootDecompression"},
+    {"boot.timeline.physboot-handoff", "KernelBootPhysHandoff"},
     {"boot.timeline.virtual", "KernelBootPhysical"},
     {"boot.timeline.threading", "KernelBootThreads"},
     {"boot.timeline.userboot", "KernelBootUser"},
@@ -45,19 +65,40 @@ void WriteBootTimelineStats(perftest::ResultsSet& results, const inspect::Hierar
   ZX_ASSERT(node.properties().size() == std::size(kTimelineSteps));
 
   double ms_per_tick = 1000.0 / static_cast<double>(zx_ticks_per_second());
+  auto add_result = [ms_per_tick, &results](const char* result_name, zx_ticks_t before,
+                                            zx_ticks_t after) {
+    perftest::TestCaseResults* t = results.AddTestCase(kTestSuiteName, result_name, "milliseconds");
+    t->AppendValue(static_cast<double>(after - before) * ms_per_tick);
+  };
 
   // Export the difference in time between each stage of the timeline.
-  int64_t last_step_ticks = 0;
+  std::optional<zx_ticks_t> first_step_ticks;
+  zx_ticks_t last_step_ticks = 0;
+  size_t missing_steps = 0;
   for (auto [name, result_name] : kTimelineSteps) {
-    int64_t step_ticks = GetIntValueOrDie(node, name);
-    int64_t elapsed = step_ticks - last_step_ticks;
-    double elapsed_ms = static_cast<double>(elapsed) * ms_per_tick;
+    zx_ticks_t step_ticks = GetIntValueOrDie(node, name);
+    if (!first_step_ticks) {
+      first_step_ticks = step_ticks;
+    } else if (step_ticks == 0) {
+      // TODO(fxbug.dev/32414): With use_physboot=false the counters for the
+      // intermediate steps will read as zero because those steps weren't done.
+      // Omit those samples.
+      ++missing_steps;
+      continue;
+    }
+    add_result(result_name, last_step_ticks, step_ticks);
     last_step_ticks = step_ticks;
-
-    auto* t = results.AddTestCase(kTestSuiteName, result_name, "milliseconds");
-    t->AppendValue(elapsed_ms);
   }
-  ZX_ASSERT(results.results()->size() == std::size(kTimelineSteps));
+
+  // Collect the soup-to-nuts interval from boot loader handoff to completion.
+  ZX_ASSERT(first_step_ticks);
+  ZX_ASSERT(last_step_ticks > *first_step_ticks);
+  add_result("KernelBootTotal", *first_step_ticks, last_step_ticks);
+
+  size_t expected_steps = std::size(kTimelineSteps) - missing_steps + 1;
+  ZX_ASSERT_MSG(results.results()->size() == expected_steps,
+                "found %zu results from %zu steps and %zu missing", results.results()->size(),
+                std::size(kTimelineSteps), missing_steps);
 }
 
 // Add a test result recording the amount of free memory after kernel init.

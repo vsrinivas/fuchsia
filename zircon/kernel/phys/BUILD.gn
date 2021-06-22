@@ -72,8 +72,6 @@ if (current_toolchain == default_toolchain) {
 
     # Always enable frame pointers.
     configs += [ "//build/config/zircon:frame_pointers" ]
-
-    include_dirs = [ "include" ]
   }
 
   group("phys_config_deps") {
@@ -88,10 +86,6 @@ if (toolchain.environment == "kernel.phys" ||
   config("defines") {
     # Always enable tests and asserts in phys code.
     defines = [ "LK_DEBUGLEVEL=2" ]
-  }
-
-  config("includes") {
-    include_dirs = [ "include" ]
   }
 
   config("load-pic") {
@@ -280,6 +274,10 @@ if (toolchain.environment == "kernel.phys" ||
   }
 }
 
+config("includes") {
+  include_dirs = [ "include" ]
+}
+
 group("tests") {
   testonly = true
   deps = [
@@ -295,6 +293,7 @@ zbi_executable("physboot") {
   deps = [
     ":allocation",
     ":boot-zbi",
+    ":handoff",
     ":main",
     ":symbolize",
     ":zbitl-allocation",
@@ -309,4 +308,9 @@ zbi_executable("physboot") {
     deps += [ "//zircon/kernel/arch/x86/phys/boot-shim:trampoline-boot" ]
     include_dirs = [ "//zircon/kernel/arch/x86/phys/boot-shim" ]
   }
+}
+
+source_set("handoff") {
+  public = [ "include/phys/handoff.h" ]
+  public_configs = [ ":includes" ]
 }

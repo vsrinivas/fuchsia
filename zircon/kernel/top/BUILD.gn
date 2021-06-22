@@ -4,11 +4,12 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# For zircon_cpu definition.
-import("//build/unification/global_variables.gni")
+import("//build/unification/global_variables.gni")  # For zircon_cpu.
+
 source_set("top") {
   sources = [
     "debug.cc",
+    "handoff.cc",
     "init.cc",
     "main.cc",
   ]
@@ -24,6 +25,7 @@ source_set("top") {
     "//zircon/kernel/lib/lockup_detector",
     "//zircon/kernel/lib/userabi",
     "//zircon/kernel/lib/version",
+    "//zircon/kernel/phys:handoff",
     "//zircon/kernel/platform",
   ]
 }

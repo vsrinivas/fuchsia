@@ -46,6 +46,7 @@
 #include <ktl/span.h>
 #include <lk/init.h>
 #include <object/resource_dispatcher.h>
+#include <phys/handoff.h>
 #include <platform/crashlog.h>
 #include <vm/bootreserve.h>
 #include <vm/kstack.h>
@@ -316,6 +317,10 @@ void ProcessZbiEarly(zbi_header_t* zbi) {
     auto [header, payload] = *it;
     bool is_mexec_data = ZBI_TYPE_DRV_METADATA(header->type);
     switch (header->type) {
+      case ZBI_TYPE_STORAGE_KERNEL: {
+        gPhysHandoff = PhysHandoff::FromPayload(payload);
+        break;
+      }
       case ZBI_TYPE_KERNEL_DRIVER:
       case ZBI_TYPE_PLATFORM_ID:
         is_mexec_data = true;

@@ -17,6 +17,7 @@
 #include <ktl/optional.h>
 #include <phys/allocation.h>
 #include <phys/boot-zbi.h>
+#include <phys/handoff.h>
 #include <phys/main.h>
 #include <phys/symbolize.h>
 #include <phys/zbitl-allocation.h>
@@ -37,6 +38,8 @@ const char Symbolize::kProgramName_[] = "physboot";
 
 namespace {
 
+PhysBootTimes gBootTimes;
+
 // A guess about the upper bound on reserve_memory_size so we can do a single
 // allocation before decoding the header and probably not need to relocate.
 constexpr uint64_t kKernelBssEstimate = 1024 * 1024 * 2;
@@ -44,14 +47,13 @@ constexpr uint64_t kKernelBssEstimate = 1024 * 1024 * 2;
 struct LoadedZircon {
   Allocation buffer;
   ChainBoot boot;
-  arch::EarlyTicks decompress_ts;
 };
 
 LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kernel_item,
                         uint64_t reserve_memory_estimate) {
   fbl::AllocChecker ac;
-  const auto kernel_length = zbitl::UncompressedLength(*(*kernel_item).header);
-  auto buffer_sizes = BootZbi::SuggestedAllocation(kernel_length);
+  uint32_t kernel_length = zbitl::UncompressedLength(*kernel_item->header);
+  BootZbi::Size buffer_sizes = BootZbi::SuggestedAllocation(kernel_length);
 
   // That covers the uncompressed size of the image alone.  Preallocate enough
   // space after it that the bss and boot_alloc reserve are likely to fit.
@@ -65,6 +67,11 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
     abort();
   }
 
+  // This marks the interval from completing basic phys environment setup
+  // (kPhysSetup) to when the ZBI has been decoded enough to start accessing
+  // the real kernel payload (which is usually compressed).
+  gBootTimes.SampleNow(PhysBootTimes::kDecompressStart);
+
   if (auto result = zbi.CopyStorageItem(buffer.data(), kernel_item, ZbitlScratchAllocator);
       result.is_error()) {
     printf("physboot: Cannot load STORAGE_KERNEL item (uncompressed size %#x): ", kernel_length);
@@ -72,13 +79,14 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
     abort();
   }
 
-  auto decompress_ts = arch::EarlyTicks::Get();
+  // This marks just the decompression (or copying) time.
+  gBootTimes.SampleNow(PhysBootTimes::kDecompressEnd);
 
   BootZbi::InputZbi kernel_zbi(zbitl::AsBytes(buffer.data()));
 
   {
     printf("physboot: STORAGE_KERNEL decompressed %s -> %s\n",
-           pretty::FormattedBytes((*kernel_item).header->length).c_str(),
+           pretty::FormattedBytes(kernel_item->header->length).c_str(),
            pretty::FormattedBytes(kernel_zbi.size_bytes()).c_str());
   }
 
@@ -95,12 +103,11 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
     abort();
   }
 
-  return {std::move(buffer), std::move(boot), decompress_ts};
+  return {std::move(buffer), std::move(boot)};
 }
 
-[[noreturn]] void BootZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kernel_item,
-                             arch::EarlyTicks entry_ts) {
-  auto zircon = LoadZircon(zbi, kernel_item, kKernelBssEstimate);
+[[noreturn]] void BootZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kernel_item) {
+  LoadedZircon zircon = LoadZircon(zbi, kernel_item, kKernelBssEstimate);
   if (!zircon.boot.Relocating() &&  //
       (!zircon.boot.KernelCanLoadInPlace() ||
        zircon.buffer.size_bytes() < zircon.boot.KernelMemorySize())) {
@@ -114,7 +121,7 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
     printf("physboot: Repeating decompression with larger buffer...\n");
     zircon = LoadZircon(zbi, kernel_item, bss_size);
   }
-  auto& [buffer, boot, decompress_ts] = zircon;
+  auto& [buffer, boot] = zircon;
 
   ZX_ASSERT(boot.KernelCanLoadInPlace());
   ZX_ASSERT_MSG(buffer.size_bytes() >= boot.KernelMemorySize(),
@@ -122,8 +129,6 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
                 " bss %#" PRIx64 " + boot_alloc reserve %#" PRIx64 "\n",
                 buffer.size_bytes(), boot.KernelLoadSize(),
                 boot.KernelHeader()->reserve_memory_size, BootZbi::kKernelBootAllocReserve);
-
-  // TODO(mcgrathr): propagate timestamps
 
   // The kernel is now in place, but it will just use the original data ZBI.
   boot.DataZbi().storage() = {
@@ -153,6 +158,31 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
     boot.DataZbi().storage() = relocated_zbi.data();
   }
 
+  // Repurpose the storage item as a place to put the handoff payload.
+  // kernel_item is actually a pointer to what we already need, but it's the
+  // wrong type and there's no random-access way to recover the right iterator;
+  // and it's not the right pointer any more if we just relocated the data ZBI.
+  auto handoff_item = boot.DataZbi().begin();
+  while (handoff_item.item_offset() != kernel_item.item_offset()) {
+    ZX_ASSERT(handoff_item != boot.DataZbi().end());
+    ++handoff_item;
+  }
+  ZX_ASSERT(handoff_item->header->type == ZBI_TYPE_STORAGE_KERNEL);
+  auto handoff_payload = handoff_item->payload;
+  ZX_ASSERT(handoff_payload.size() >= sizeof(PhysHandoff));
+  static_assert(alignof(PhysHandoff) <= ZBI_ALIGNMENT);
+
+  // Initialize the handoff payload.  For now, it's just the boot timestamps.
+  //
+  // TODO(fxbug.dev/32414): There are no time samples taken in physboot after
+  // the decompression is done, since it's not doing much else yet.  The first
+  // sample taken by the kernel proper measures the interval containing all of
+  // physboot's "handoff" work.  Additional time samples for more substantial
+  // stages of pre-handoff setup work will be added as physboot starts doing
+  // more work for the kernel.
+  auto handoff = new (handoff_payload.data()) PhysHandoff;
+  handoff->times = gBootTimes;
+
   boot.Boot();
 }
 
@@ -165,7 +195,7 @@ void UnredactEntropyMixin(zbitl::ByteView payload) {
         reinterpret_cast<const char*>(payload.data()),
         payload.size(),
     };
-    for (auto word : WordView(cmdline)) {
+    for (ktl::string_view word : WordView(cmdline)) {
       if (ktl::starts_with(word, kPrefix)) {
         word.remove_prefix(kPrefix.size());
         memcpy(const_cast<char*>(word.data()), gBootOptions->entropy_mixin.hex.data(),
@@ -189,7 +219,7 @@ void UnredactEntropyMixin(zbitl::ByteView payload) {
   }
 
   for (auto [header, payload] : zbi) {
-    auto name = zbitl::TypeName(header->type);
+    ktl::string_view name = zbitl::TypeName(header->type);
     if (name.empty()) {
       name = "unknown!";
     }
@@ -209,6 +239,10 @@ void ZbiMain(void* zbi_ptr, arch::EarlyTicks ticks) {
   Symbolize::GetInstance()->Context();
 
   InitMemory(zbi_ptr);
+
+  // This marks the interval between handoff from the boot loader (kZbiEntry)
+  // and phys environment setup with identity-mapped memory management et al.
+  gBootTimes.Set(PhysBootTimes::kPhysSetup, ticks);
 
   auto zbi_header = static_cast<const zbi_header_t*>(zbi_ptr);
   BootZbi::InputZbi zbi(zbitl::StorageFromRawHeader(zbi_header));
@@ -241,5 +275,5 @@ void ZbiMain(void* zbi_ptr, arch::EarlyTicks ticks) {
   static const ktl::array<char, 512 * 1024> kPad{1};
   __asm__ volatile("" ::"m"(kPad), "r"(kPad.data()));
 
-  BootZircon(zbi, kernel_item, ticks);
+  BootZircon(zbi, kernel_item);
 }

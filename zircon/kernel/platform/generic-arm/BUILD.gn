@@ -34,6 +34,7 @@ source_set("generic-arm") {
     "//zircon/kernel/lib/memory_limit",
     "//zircon/kernel/lib/topology",
     "//zircon/kernel/object",
+    "//zircon/kernel/phys:handoff",
     "//zircon/kernel/vm",
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/zbitl",

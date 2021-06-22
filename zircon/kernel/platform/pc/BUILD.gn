@@ -50,6 +50,7 @@ zx_library("pc") {
     "//zircon/kernel/lib/pow2_range_allocator",
     "//zircon/kernel/lib/topology",
     "//zircon/kernel/lib/unittest",
+    "//zircon/kernel/phys:handoff",
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/smbios",
     "//zircon/system/ulib/zbitl",

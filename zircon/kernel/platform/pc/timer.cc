@@ -32,6 +32,7 @@
 #include <ktl/iterator.h>
 #include <ktl/limits.h>
 #include <lk/init.h>
+#include <phys/handoff.h>
 #include <platform/console.h>
 #include <platform/pc.h>
 #include <platform/pc/hpet.h>
@@ -48,10 +49,6 @@ uint64_t kernel_entry_ticks;
 uint64_t kernel_virtual_entry_ticks;
 
 }  // extern "C"
-
-// That value is published as a kcounter.
-KCOUNTER(timeline_zbi_entry, "boot.timeline.zbi")
-KCOUNTER(timeline_virtual_entry, "boot.timeline.virtual")
 
 KCOUNTER(platform_timer_set_counter, "platform.timer.set")
 KCOUNTER(platform_timer_cancel_counter, "platform.timer.cancel")
@@ -543,11 +540,6 @@ static void pc_init_timer(uint level) {
     // transformation from ticks to clock monotonic.
     platform_set_ticks_to_time_ratio(rdtsc_ticks_to_clock_monotonic);
     wall_clock = CLOCK_TSC;
-
-    // If not using TSC, these samples won't be available since they'd
-    // have to be converted from TSC ticks to prevailing ticks.
-    timeline_zbi_entry.Set(kernel_entry_ticks);
-    timeline_virtual_entry.Set(kernel_virtual_entry_ticks);
   } else {
     if (constant_tsc || invariant_tsc) {
       // Calibrate the TSC even though it's not as good as we want, so we
@@ -671,6 +663,10 @@ void platform_shutdown_timer(void) {
   if (x86_hypervisor_has_pv_clock() && arch_curr_cpu_num() == 0) {
     pv_clock_shutdown();
   }
+}
+
+zx_ticks_t platform_convert_early_ticks(arch::EarlyTicks sample) {
+  return wall_clock == CLOCK_TSC ? static_cast<zx_ticks_t>(sample.tsc) : 0;
 }
 
 // Currently, usermode can access our source of ticks only if we have chosen TSC
