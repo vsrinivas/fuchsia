@@ -18,7 +18,7 @@
 namespace {
 
 class TestFallbackDriver;
-using DeviceType = ddk::Device<TestFallbackDriver, ddk::Unbindable>;
+using DeviceType = ddk::Device<TestFallbackDriver>;
 
 class TestFallbackDriver : public DeviceType {
  public:
@@ -27,7 +27,6 @@ class TestFallbackDriver : public DeviceType {
   zx_status_t Bind() { return DdkAdd("ddk-fallback-test"); }
 
   // Device protocol implementation.
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 };
 

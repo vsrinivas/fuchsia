@@ -29,7 +29,7 @@
 namespace sdmmc {
 
 class AmlSdmmc;
-using AmlSdmmcType = ddk::Device<AmlSdmmc, ddk::Suspendable, ddk::Unbindable>;
+using AmlSdmmcType = ddk::Device<AmlSdmmc, ddk::Suspendable>;
 
 class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::base_protocol> {
  public:
@@ -43,7 +43,6 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   // Device protocol implementation
   void DdkRelease();
   void DdkSuspend(ddk::SuspendTxn txn);
-  void DdkUnbind(ddk::UnbindTxn txn);
 
   // Sdmmc Protocol implementation
   zx_status_t SdmmcHostInfo(sdmmc_host_info_t* out_info);

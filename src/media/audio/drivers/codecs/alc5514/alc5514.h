@@ -15,7 +15,7 @@ namespace audio {
 namespace alc5514 {
 
 class Alc5514Device;
-using DeviceType = ddk::Device<Alc5514Device, ddk::Unbindable>;
+using DeviceType = ddk::Device<Alc5514Device>;
 
 class Alc5514Device : public DeviceType {
  public:
@@ -27,7 +27,6 @@ class Alc5514Device : public DeviceType {
   zx_status_t Bind();
   zx_status_t Initialize();
 
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:

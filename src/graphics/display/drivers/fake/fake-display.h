@@ -41,8 +41,7 @@ struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> 
 class FakeDisplay;
 class ClampRgb;
 
-using DeviceType =
-    ddk::Device<FakeDisplay, ddk::GetProtocolable, ddk::Unbindable, ddk::ChildPreReleaseable>;
+using DeviceType = ddk::Device<FakeDisplay, ddk::GetProtocolable, ddk::ChildPreReleaseable>;
 
 class FakeDisplay : public DeviceType,
                     public ddk::DisplayControllerImplProtocol<FakeDisplay, ddk::base_protocol>,
@@ -98,7 +97,6 @@ class FakeDisplay : public DeviceType,
   zx_status_t DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb);
 
   // Required functions for DeviceType
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
   void DdkChildPreRelease(void* child_ctx) {

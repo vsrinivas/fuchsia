@@ -52,17 +52,17 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
       delete bus_device_;
       bus_device_ = nullptr;
 
-      // The SpiChild device's unbind hooks will be called after the
+      // The SpiChild device will be removed after the
       // Spi device has replied to its unbind.
       // We need to make a copy before iterating, as the SpiChild will be
-      // erased from this |children_| list when it replies to its unbind.
+      // erased from this |children_| list during DeviceRemove.
       fbl::Vector<SpiChild*> children_copy;
       for (size_t i = 0; i < children_.size(); i++) {
         children_copy.push_back(children_[i]);
       }
       for (size_t i = 0; i < children_copy.size(); i++) {
         zx_device_t* zxdev = reinterpret_cast<zx_device_t*>(children_copy[i]);
-        children_copy[i]->DdkUnbind(ddk::UnbindTxn(zxdev));
+        DeviceRemove(zxdev);
       }
       return ZX_OK;
     } else {

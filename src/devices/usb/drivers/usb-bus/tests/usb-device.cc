@@ -14,6 +14,7 @@
 #include <usb/request-cpp.h>
 #include <utf_conversion/utf_conversion.h>
 #include <zxtest/zxtest.h>
+#include "lib/ddk/driver.h"
 
 namespace usb_bus {
 
@@ -44,8 +45,6 @@ constexpr usb_speed_t kDeviceSpeed = MakeConstant<usb_speed_t, 4>("slow");
 
 class Binder : public fake_ddk::Bind {
  public:
-  void* get_context() { return op_ctx_; }
-
   bool get_remove_called() { return remove_called_; }
 };
 
@@ -267,11 +266,12 @@ class DeviceTest : public zxtest::Test {
                                                  ddk::UsbHciProtocolClient(hci_.proto()), kDeviceId,
                                                  kHubId, kDeviceSpeed, timer_);
     ASSERT_OK(device->Init());
-    device_ = static_cast<UsbDevice*>(ddk_.get_context());
+    device_ = device.get();
   }
 
   void TearDown() override {
-    device_->DdkUnbind(ddk::UnbindTxn{fake_ddk::kFakeDevice});
+    device_async_remove(fake_ddk::kFakeDevice);
+    ddk_.WaitUntilRemove();
     ASSERT_TRUE(ddk_.get_remove_called());
     device_->DdkRelease();
   }

@@ -21,13 +21,12 @@ using fuchsia_device::wire::DevicePowerStateInfo;
 using fuchsia_device_power_test::TestDevice;
 
 class TestPowerDriver;
-using DeviceType = ddk::Device<TestPowerDriver, ddk::Unbindable, ddk::Suspendable,
-                               ddk::Messageable<TestDevice>::Mixin>;
+using DeviceType =
+    ddk::Device<TestPowerDriver, ddk::Suspendable, ddk::Messageable<TestDevice>::Mixin>;
 class TestPowerDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_POWER_CHILD> {
  public:
   TestPowerDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
   void DdkSuspend(ddk::SuspendTxn txn) {
     current_power_state_ = static_cast<DevicePowerState>(txn.requested_state());

@@ -12,7 +12,7 @@
 namespace usb_harriet {
 
 class Harriet;
-using HarrietBase = ddk::Device<Harriet, ddk::Unbindable>;
+using HarrietBase = ddk::Device<Harriet>;
 
 class Harriet : public HarrietBase, public ddk::EmptyProtocol<ZX_PROTOCOL_MLG> {
  public:
@@ -22,7 +22,6 @@ class Harriet : public HarrietBase, public ddk::EmptyProtocol<ZX_PROTOCOL_MLG> {
   static zx_status_t Create(zx_device_t* parent);
 
   // Device protocol implementation.
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
  private:

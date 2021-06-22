@@ -27,7 +27,7 @@
 namespace serial {
 
 class AmlUart;
-using DeviceType = ddk::Device<AmlUart, ddk::Unbindable>;
+using DeviceType = ddk::Device<AmlUart>;
 
 class AmlUart : public DeviceType,
                 public ddk::SerialImplAsyncProtocol<AmlUart, ddk::base_protocol> {
@@ -36,7 +36,6 @@ class AmlUart : public DeviceType,
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() {
     SerialImplAsyncEnable(false);
     delete this;

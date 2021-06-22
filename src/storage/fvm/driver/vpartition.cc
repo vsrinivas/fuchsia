@@ -503,8 +503,6 @@ zx_off_t VPartition::DdkGetSize() {
   return sz;
 }
 
-void VPartition::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void VPartition::DdkRelease() { delete this; }
 
 zx_device_t* VPartition::GetParent() const { return mgr_->parent(); }

@@ -359,8 +359,6 @@ zx_status_t Display::Bind() {
   return DdkAdd("goldfish-display");
 }
 
-void Display::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void Display::DdkRelease() { delete this; }
 
 void Display::DisplayControllerImplSetDisplayControllerInterface(

@@ -22,8 +22,6 @@
 
 namespace i2c {
 
-void I2cDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void I2cDevice::DdkRelease() { delete this; }
 
 zx_status_t I2cDevice::Create(void* ctx, zx_device_t* parent) {

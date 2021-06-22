@@ -15,7 +15,7 @@
 namespace log_test_driver {
 
 class LogTester;
-using LogTesterType = ddk::Device<LogTester, ddk::Initializable, ddk::Unbindable,
+using LogTesterType = ddk::Device<LogTester, ddk::Initializable,
                                   ddk::Messageable<fuchsia_validate_logs::LogSinkPuppet>::Mixin>;
 
 // This is the main class for the log test driver.
@@ -33,7 +33,6 @@ class LogTester : public LogTesterType, public ddk::EmptyProtocol<ZX_PROTOCOL_VI
                      EmitPrintfLogCompleter::Sync& completer) override;
   void StopInterestListener(StopInterestListenerRequestView request,
                             StopInterestListenerCompleter::Sync& completer) override;
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:

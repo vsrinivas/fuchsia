@@ -196,8 +196,6 @@ zx_status_t MbrDevice::BlockPartitionGetName(char* out_name, size_t capacity) {
   return ZX_OK;
 }
 
-void MbrDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void MbrDevice::DdkRelease() { delete this; }
 
 zx_off_t MbrDevice::DdkGetSize() {

@@ -24,8 +24,8 @@ class ThermistorDeviceTest;
 
 namespace FidlTemperature = fuchsia_hardware_temperature;
 class ThermistorChannel;
-using DeviceType2 = ddk::Device<ThermistorChannel, ddk::Unbindable,
-                                ddk::Messageable<FidlTemperature::Device>::Mixin>;
+using DeviceType2 =
+    ddk::Device<ThermistorChannel, ddk::Messageable<FidlTemperature::Device>::Mixin>;
 
 class ThermistorChannel : public DeviceType2, public ddk::EmptyProtocol<ZX_PROTOCOL_TEMPERATURE> {
  public:
@@ -36,7 +36,6 @@ class ThermistorChannel : public DeviceType2, public ddk::EmptyProtocol<ZX_PROTO
   void GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
                              GetTemperatureCelsiusCompleter::Sync& completer) override;
   void DdkRelease() { delete this; }
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
  private:
   friend ThermistorDeviceTest;
@@ -48,8 +47,7 @@ class ThermistorChannel : public DeviceType2, public ddk::EmptyProtocol<ZX_PROTO
 
 namespace FidlAdc = fuchsia_hardware_adc;
 class RawChannel;
-using DeviceType3 =
-    ddk::Device<RawChannel, ddk::Unbindable, ddk::Messageable<FidlAdc::Device>::Mixin>;
+using DeviceType3 = ddk::Device<RawChannel, ddk::Messageable<FidlAdc::Device>::Mixin>;
 
 class RawChannel : public DeviceType3, public ddk::EmptyProtocol<ZX_PROTOCOL_ADC> {
  public:
@@ -62,7 +60,6 @@ class RawChannel : public DeviceType3, public ddk::EmptyProtocol<ZX_PROTOCOL_ADC
   void GetResolution(GetResolutionRequestView request,
                      GetResolutionCompleter::Sync& completer) override;
   void DdkRelease() { delete this; }
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
  private:
   const fbl::RefPtr<AmlSaradcDevice> adc_;

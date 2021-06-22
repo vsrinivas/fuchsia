@@ -234,8 +234,6 @@ zx_status_t PowerDevice::ReadPmicCtrlReg(uint64_t fragment_device_id, uint32_t r
   return power_impl_.ReadPmicCtrlReg(index_, reg_addr, out_value);
 }
 
-void PowerDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 zx_status_t PowerDevice::DdkOpenProtocolSessionMultibindable(uint32_t proto_id, void* out) {
   if (proto_id != ZX_PROTOCOL_POWER) {
     return ZX_ERR_NOT_SUPPORTED;

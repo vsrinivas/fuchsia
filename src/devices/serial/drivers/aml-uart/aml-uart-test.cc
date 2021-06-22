@@ -199,8 +199,6 @@ class AmlUartHarness : public zxtest::Test {
 
   void TearDown() override {
     auto device = device_.release();
-    ddk::UnbindTxn txn(device->zxdev());
-    device->DdkUnbind(std::move(txn));
     device->DdkRelease();
   }
 

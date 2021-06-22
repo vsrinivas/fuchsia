@@ -71,7 +71,7 @@ class ProtocolClient {
 };
 
 class Fragment;
-using FragmentBase = ddk::Device<Fragment, ddk::Rxrpcable, ddk::Unbindable, ddk::GetProtocolable>;
+using FragmentBase = ddk::Device<Fragment, ddk::Rxrpcable, ddk::GetProtocolable>;
 
 class Fragment : public FragmentBase {
  public:
@@ -118,7 +118,6 @@ class Fragment : public FragmentBase {
   static zx_status_t Bind(void* ctx, zx_device_t* parent);
 
   zx_status_t DdkRxrpc(zx_handle_t channel);
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
 

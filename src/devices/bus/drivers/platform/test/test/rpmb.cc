@@ -16,7 +16,7 @@
 namespace rpmb {
 
 class TestRpmbDevice;
-using DeviceType = ddk::Device<TestRpmbDevice, ddk::Unbindable>;
+using DeviceType = ddk::Device<TestRpmbDevice>;
 
 class TestRpmbDevice : public DeviceType,
                        public ddk::RpmbProtocol<TestRpmbDevice, ddk::base_protocol> {
@@ -25,7 +25,6 @@ class TestRpmbDevice : public DeviceType,
 
   explicit TestRpmbDevice(zx_device_t* parent) : DeviceType(parent) {}
 
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   void RpmbConnectServer(zx::channel server);
@@ -46,8 +45,6 @@ zx_status_t TestRpmbDevice::Create(void* ctx, zx_device_t* parent) {
 
   return ZX_OK;
 }
-
-void TestRpmbDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void TestRpmbDevice::DdkRelease() { delete this; }
 

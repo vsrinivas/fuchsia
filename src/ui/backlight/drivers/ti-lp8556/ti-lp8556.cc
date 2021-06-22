@@ -72,8 +72,6 @@ constexpr std::array<double, kTableSize> kEfficiencyTable = {
 // current values in the table are expressed in mA.
 constexpr std::array<double, 8> kMaxCurrentTable = {5.0, 10.0, 15.0, 20.0, 23.0, 25.0, 30.0, 50.0};
 
-void Lp8556Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void Lp8556Device::DdkRelease() { delete this; }
 
 zx_status_t Lp8556Device::GetBacklightState(bool* power, double* brightness) {

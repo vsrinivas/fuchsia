@@ -199,8 +199,6 @@ zx_status_t PipeDevice::CreateChildDevice(cpp20::span<const zx_device_prop_t> pr
   return status;
 }
 
-void PipeDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void PipeDevice::DdkRelease() { delete this; }
 
 zx_status_t PipeDevice::Create(int32_t* out_id, zx::vmo* out_vmo) {

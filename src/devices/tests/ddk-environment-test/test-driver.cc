@@ -23,8 +23,7 @@ namespace {
 using fuchsia_device_environment_test::TestDevice;
 
 class TestEnvironmentDriver;
-using DeviceType =
-    ddk::Device<TestEnvironmentDriver, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin>;
+using DeviceType = ddk::Device<TestEnvironmentDriver, ddk::Messageable<TestDevice>::Mixin>;
 
 class TestEnvironmentDriver : public DeviceType {
  public:
@@ -34,7 +33,6 @@ class TestEnvironmentDriver : public DeviceType {
   zx_status_t Bind() { return DdkAdd("ddk-environment-test"); }
 
   // Device protocol implementation.
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.

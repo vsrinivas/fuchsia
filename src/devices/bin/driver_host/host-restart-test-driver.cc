@@ -24,8 +24,7 @@ namespace {
 using fuchsia_device_restarttest::TestDevice;
 
 class TestHostRestartDriver;
-using DeviceType =
-    ddk::Device<TestHostRestartDriver, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin>;
+using DeviceType = ddk::Device<TestHostRestartDriver, ddk::Messageable<TestDevice>::Mixin>;
 
 class TestHostRestartDriver : public DeviceType {
  public:
@@ -34,7 +33,6 @@ class TestHostRestartDriver : public DeviceType {
   zx_status_t Bind() { return DdkAdd("driver-host-restart-driver"); }
 
   // Device protocol implementation.
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   void GetPid(GetPidRequestView request, GetPidCompleter::Sync& _completer) override;

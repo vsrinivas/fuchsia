@@ -35,7 +35,7 @@ using RegisterType =
 template <typename T>
 class RegistersDevice;
 template <typename T>
-using RegistersDeviceType = ddk::Device<RegistersDevice<T>, ddk::Unbindable>;
+using RegistersDeviceType = ddk::Device<RegistersDevice<T>>;
 
 struct MmioInfo {
   ddk::MmioBuffer mmio;
@@ -149,7 +149,6 @@ class RegistersDevice : public RegistersDeviceType<T> {
  public:
   static zx_status_t Create(zx_device_t* parent, Metadata metadata);
 
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
  private:

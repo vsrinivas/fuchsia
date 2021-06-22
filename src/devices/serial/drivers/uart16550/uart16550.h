@@ -27,7 +27,7 @@
 namespace uart16550 {
 
 class Uart16550;
-using DeviceType = ddk::Device<Uart16550, ddk::Unbindable>;
+using DeviceType = ddk::Device<Uart16550>;
 
 class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, ddk::base_protocol> {
  public:
@@ -73,9 +73,6 @@ class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, d
 
   // ddk::Releasable
   void DdkRelease();
-
-  // ddk::Unbindable
-  void DdkUnbind(ddk::UnbindTxn txn);
 
  private:
   bool SupportsAutomaticFlowControl() const;

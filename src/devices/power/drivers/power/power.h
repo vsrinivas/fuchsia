@@ -19,7 +19,7 @@
 namespace power {
 class PowerDeviceFragmentChild;
 class PowerDevice;
-using PowerDeviceType = ddk::Device<PowerDevice, ddk::Unbindable, ddk::Multibindable>;
+using PowerDeviceType = ddk::Device<PowerDevice, ddk::Multibindable>;
 
 // Each power domain is modelled to be a power device and the power device class talks to
 // a driver that implements ZX_PROTOCOL_POWER_IMPL, passing in the index of this power domain.
@@ -40,7 +40,6 @@ class PowerDevice : public PowerDeviceType, public ddk::EmptyProtocol<ZX_PROTOCO
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbind(ddk::UnbindTxn txn);
   zx_status_t DdkOpenProtocolSessionMultibindable(uint32_t proto_id, void* ctx);
   zx_status_t DdkCloseProtocolSessionMultibindable(void* child_ctx);
   void DdkRelease();

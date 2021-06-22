@@ -59,8 +59,7 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
 
 class TestRootDevice;
 using TestRootDeviceType =
-    ddk::Device<TestRootDevice, ddk::Messageable<fuchsia_device_test::RootDevice>::Mixin,
-                ddk::Unbindable>;
+    ddk::Device<TestRootDevice, ddk::Messageable<fuchsia_device_test::RootDevice>::Mixin>;
 
 class TestRootDevice : public TestRootDeviceType {
  public:
@@ -70,7 +69,6 @@ class TestRootDevice : public TestRootDeviceType {
 
   // Methods required by the ddk mixins
   void DdkRelease() { delete this; }
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
   void CreateDevice(CreateDeviceRequestView request, CreateDeviceCompleter::Sync& completer);
 

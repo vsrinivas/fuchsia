@@ -23,13 +23,11 @@ namespace virtualbus {
 constexpr auto kMaxPacketSize = 20;
 
 class TestFunction;
-using DeviceType = ddk::Device<TestFunction, ddk::Unbindable>;
+using DeviceType = ddk::Device<TestFunction>;
 class TestFunction : public DeviceType, public ddk::UsbFunctionInterfaceProtocol<TestFunction> {
  public:
   TestFunction(zx_device_t* parent) : DeviceType(parent), function_(parent) {}
   zx_status_t Bind();
-  // |ddk::Device|
-  void DdkUnbind(ddk::UnbindTxn txn);
   // |ddk::Device|
   void DdkRelease();
 

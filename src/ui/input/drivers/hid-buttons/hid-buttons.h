@@ -53,7 +53,7 @@ constexpr uint64_t kDebounceThresholdNs = 50'000'000;
 class HidButtonsDevice;
 using DeviceType = ddk::Device<HidButtonsDevice, ddk::Unbindable>;
 class HidButtonsHidBusFunction;
-using HidBusFunctionType = ddk::Device<HidButtonsHidBusFunction, ddk::Unbindable>;
+using HidBusFunctionType = ddk::Device<HidButtonsHidBusFunction>;
 class HidButtonsButtonsFunction;
 using ButtonsFunctionType = ddk::Device<HidButtonsButtonsFunction, ddk::Unbindable>;
 class ButtonsNotifyInterface;
@@ -155,7 +155,6 @@ class HidButtonsHidBusFunction
       : HidBusFunctionType(device), device_(peripheral) {}
   virtual ~HidButtonsHidBusFunction() = default;
 
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // Methods required by the ddk mixins.

@@ -105,8 +105,6 @@ void LogTester::EmitLog(EmitLogRequestView request, EmitLogCompleter::Sync& comp
   completer.Reply();
 }
 
-void LogTester::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void LogTester::DdkRelease() { delete this; }
 
 static zx_status_t log_test_driver_bind(void* ctx, zx_device_t* parent) {

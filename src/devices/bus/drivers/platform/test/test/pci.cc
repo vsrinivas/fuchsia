@@ -18,7 +18,7 @@
 namespace pci {
 
 class TestPciDevice;
-using DeviceType = ddk::Device<TestPciDevice, ddk::Unbindable>;
+using DeviceType = ddk::Device<TestPciDevice>;
 
 class TestPciDevice : public DeviceType, public FakePciProtocol {
  public:
@@ -26,7 +26,6 @@ class TestPciDevice : public DeviceType, public FakePciProtocol {
 
   explicit TestPciDevice(zx_device_t* parent) : DeviceType(parent) {}
 
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 };
 
@@ -46,8 +45,6 @@ zx_status_t TestPciDevice::Create(void* ctx, zx_device_t* parent) {
 
   return ZX_OK;
 }
-
-void TestPciDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void TestPciDevice::DdkRelease() { delete this; }
 

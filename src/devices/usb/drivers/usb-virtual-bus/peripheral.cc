@@ -122,8 +122,6 @@ zx_status_t TestFunction::Bind() {
   return ZX_OK;
 }
 
-void TestFunction::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void TestFunction::DdkRelease() { delete this; }
 
 zx_status_t Bind(void* ctx, zx_device_t* parent) {

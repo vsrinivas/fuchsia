@@ -29,7 +29,6 @@ class SpiChild : public SpiChildType,
            SpiDevice* spi_parent)
       : SpiChildType(parent), spi_(spi), cs_(channel->cs), spi_parent_(*spi_parent) {}
 
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   void TransmitVector(TransmitVectorRequestView request,

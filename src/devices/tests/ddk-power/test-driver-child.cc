@@ -28,9 +28,8 @@ using fuchsia_device_power_test::TestDevice;
 
 class TestPowerDriverChild;
 using DeviceType =
-    ddk::Device<TestPowerDriverChild, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin,
-                ddk::Suspendable, ddk::Resumable, ddk::PerformanceTunable, ddk::AutoSuspendable,
-                ddk::Initializable>;
+    ddk::Device<TestPowerDriverChild, ddk::Messageable<TestDevice>::Mixin, ddk::Suspendable,
+                ddk::Resumable, ddk::PerformanceTunable, ddk::AutoSuspendable, ddk::Initializable>;
 class TestPowerDriverChild : public DeviceType {
  public:
   TestPowerDriverChild(zx_device_t* parent) : DeviceType(parent) {
@@ -53,7 +52,6 @@ class TestPowerDriverChild : public DeviceType {
   void SetTestStatusInfo(SetTestStatusInfoRequestView request,
                          SetTestStatusInfoCompleter::Sync& completer) override;
 
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease() { delete this; }
   void DdkSuspend(ddk::SuspendTxn txn);

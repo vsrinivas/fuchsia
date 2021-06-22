@@ -17,8 +17,6 @@ zx_status_t MyDriverCpp::Bind() {
 
 void MyDriverCpp::DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
 
-void MyDriverCpp::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void MyDriverCpp::DdkRelease() { delete this; }
 
 static zx_driver_ops_t my_driver_cpp_driver_ops = []() -> zx_driver_ops_t {

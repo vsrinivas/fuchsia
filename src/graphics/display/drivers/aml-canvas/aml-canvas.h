@@ -28,7 +28,7 @@ namespace aml_canvas {
 constexpr size_t kNumCanvasEntries = 256;
 
 class AmlCanvas;
-using DeviceType = ddk::Device<AmlCanvas, ddk::Unbindable>;
+using DeviceType = ddk::Device<AmlCanvas>;
 
 struct CanvasEntry {
   CanvasEntry(CanvasEntry&&) = default;
@@ -75,7 +75,6 @@ class AmlCanvas : public DeviceType,
 
   // Required by ddk::Device
   void DdkRelease();
-  void DdkUnbind(ddk::UnbindTxn txn);
 
  private:
   inspect::Inspector inspector_;

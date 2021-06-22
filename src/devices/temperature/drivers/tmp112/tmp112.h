@@ -40,8 +40,7 @@ class Tmp112DeviceTest;
 
 namespace temperature_fidl = fuchsia_hardware_temperature;
 class Tmp112Device;
-using DdkDeviceType =
-    ddk::Device<Tmp112Device, ddk::Unbindable, ddk::Messageable<temperature_fidl::Device>::Mixin>;
+using DdkDeviceType = ddk::Device<Tmp112Device, ddk::Messageable<temperature_fidl::Device>::Mixin>;
 
 class Tmp112Device : public DdkDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEMPERATURE> {
  public:
@@ -53,7 +52,6 @@ class Tmp112Device : public DdkDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL
   float RegToTemperatureCelsius(uint16_t reg);
 
   // Ddk Hooks
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // FIDL calls

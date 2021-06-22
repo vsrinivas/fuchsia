@@ -122,8 +122,6 @@ void PartitionDevice::BlockImplQueue(block_op_t* bop, block_impl_queue_callback 
   block_impl_queue(&block_protocol_, bop, completion_cb, cookie);
 }
 
-void PartitionDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void PartitionDevice::DdkRelease() { delete this; }
 
 zx_off_t PartitionDevice::DdkGetSize() const { return info_.block_count * info_.block_size; }

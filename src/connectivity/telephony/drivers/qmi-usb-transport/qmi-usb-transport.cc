@@ -297,8 +297,6 @@ void Device::DdkRelease() {
   Release();
 }
 
-void Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 uint32_t Device::GetMacAddr(uint8_t* buffer, uint32_t buffer_length) {
   if (buffer == nullptr) {
     return 0;

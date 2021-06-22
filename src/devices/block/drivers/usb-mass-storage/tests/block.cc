@@ -27,6 +27,7 @@ class Binder : public fake_ddk::Bind {
   zx_status_t DeviceRemove(zx_device_t* dev) {
     Context* context = reinterpret_cast<Context*>(dev);
     context->dev->DdkRelease();
+    fake_ddk::Bind::DeviceRemove(dev);
     return ZX_OK;
   }
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
@@ -71,7 +72,8 @@ TEST(UmsBlock, AddTest) {
               "Parameters must be set to user-provided values.");
   dev.Adopt();
   EXPECT_EQ(ZX_OK, dev.Add(), "Expected Add to succeed");
-  dev.DdkUnbind(ddk::UnbindTxn(fake_zxdev));
+  dev.DdkAsyncRemove();
+  ddk.WaitUntilRemove();
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
 }
 
@@ -95,7 +97,8 @@ TEST(UmsBlock, GetSizeTest) {
   context.info.block_count = params.total_blocks;
   dev.SetBlockDeviceParameters(params);
   EXPECT_EQ(params.block_size * params.total_blocks, dev.DdkGetSize());
-  dev.DdkUnbind(ddk::UnbindTxn(fake_zxdev));
+  dev.DdkAsyncRemove();
+  ddk.WaitUntilRemove();
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
 }
 
@@ -112,7 +115,8 @@ TEST(UmsBlock, NotSupportedTest) {
   txn.op.command = BLOCK_OP_MASK;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, context.status);
-  dev.DdkUnbind(ddk::UnbindTxn(fake_zxdev));
+  dev.DdkAsyncRemove();
+  ddk.WaitUntilRemove();
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
 }
 
@@ -128,7 +132,8 @@ TEST(UmsBlock, ReadTest) {
   ums::Transaction txn;
   txn.op.command = BLOCK_OP_READ;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
-  dev.DdkUnbind(ddk::UnbindTxn(fake_zxdev));
+  dev.DdkAsyncRemove();
+  ddk.WaitUntilRemove();
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
 }
 
@@ -145,7 +150,8 @@ TEST(UmsBlock, WriteTest) {
   txn.op.command = BLOCK_OP_WRITE;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
   EXPECT_EQ(&txn, context.txn);
-  dev.DdkUnbind(ddk::UnbindTxn(fake_zxdev));
+  dev.DdkAsyncRemove();
+  ddk.WaitUntilRemove();
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
 }
 
@@ -162,7 +168,8 @@ TEST(UmsBlock, FlushTest) {
   txn.op.command = BLOCK_OP_FLUSH;
   dev.BlockImplQueue(&txn.op, BlockCallback, &context);
   EXPECT_EQ(&txn, context.txn);
-  dev.DdkUnbind(ddk::UnbindTxn(fake_zxdev));
+  dev.DdkAsyncRemove();
+  ddk.WaitUntilRemove();
   EXPECT_TRUE(dev.Release(), "Expected to free the device");
 }
 

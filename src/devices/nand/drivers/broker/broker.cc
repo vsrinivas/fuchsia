@@ -58,8 +58,7 @@ class Operation {
 };
 
 class Broker;
-using DeviceType =
-    ddk::Device<Broker, ddk::Unbindable, ddk::Messageable<fuchsia_nand::Broker>::Mixin>;
+using DeviceType = ddk::Device<Broker, ddk::Messageable<fuchsia_nand::Broker>::Mixin>;
 
 // Exposes a control device (nand-broker) for a nand protocol device.
 class Broker : public DeviceType {
@@ -69,9 +68,6 @@ class Broker : public DeviceType {
 
   zx_status_t Bind();
   void DdkRelease() { delete this; }
-
-  // Device protocol implementation.
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
   // fidl interface.
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {

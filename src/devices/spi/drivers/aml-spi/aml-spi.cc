@@ -36,8 +36,6 @@ constexpr size_t kReset6RegisterOffset = 0x1c;
 constexpr uint32_t kSpi0ResetMask = 1 << 1;
 constexpr uint32_t kSpi1ResetMask = 1 << 6;
 
-void AmlSpi::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void AmlSpi::DdkRelease() { delete this; }
 
 #define dump_reg(reg) zxlogf(ERROR, "%-21s (+%02x): %08x", #reg, reg, mmio_.Read32(reg))

@@ -37,7 +37,7 @@ struct PageRange {
 };
 
 class SkipBlockDevice;
-using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Unbindable,
+using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable,
                                ddk::Messageable<fuchsia_hardware_skipblock::SkipBlock>::Mixin>;
 
 class SkipBlockDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_SKIP_BLOCK> {
@@ -49,7 +49,6 @@ class SkipBlockDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL
 
   // Device protocol implementation.
   zx_off_t DdkGetSize();
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // skip-block fidl implementation.

@@ -294,8 +294,6 @@ zx_status_t FakeDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   return ZX_OK;
 }
 
-void FakeDisplay::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void FakeDisplay::DisplayCaptureImplSetDisplayCaptureInterface(
     const display_capture_interface_protocol_t* intf) {
   fbl::AutoLock lock(&capture_lock_);

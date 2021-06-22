@@ -26,8 +26,6 @@
 
 namespace spi {
 
-void DwSpi::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void DwSpi::DdkRelease() { delete this; }
 
 zx_status_t DwSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t txdata_size,

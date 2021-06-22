@@ -36,9 +36,8 @@ class UsbWaiterInterface : public fbl::RefCounted<UsbWaiterInterface> {
 };
 
 class UsbDevice;
-using UsbDeviceType =
-    ddk::Device<UsbDevice, ddk::GetProtocolable,
-                ddk::Messageable<fuchsia_hardware_usb_device::Device>::Mixin, ddk::Unbindable>;
+using UsbDeviceType = ddk::Device<UsbDevice, ddk::GetProtocolable,
+                                  ddk::Messageable<fuchsia_hardware_usb_device::Device>::Mixin>;
 
 class UsbDevice : public UsbDeviceType,
                   public ddk::UsbProtocol<UsbDevice, ddk::base_protocol>,
@@ -60,7 +59,6 @@ class UsbDevice : public UsbDeviceType,
 
   // Device protocol implementation.
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // USB protocol implementation.

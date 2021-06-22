@@ -74,7 +74,6 @@ void DsiDwBase::SendCmd(SendCmdRequestView request, SendCmdCompleter::Sync& _com
   _completer.ReplySuccess(std::move(rsp_data));
 }
 
-void DsiDwBase::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 void DsiDwBase::DdkRelease() { delete this; }
 
 zx_status_t DsiDw::DsiImplWriteReg(uint32_t reg, uint32_t val) {
@@ -860,8 +859,6 @@ zx_status_t DsiDw::SendCommand(const mipi_dsi_cmd_t& cmd) {
 
   return status;
 }
-
-void DsiDw::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void DsiDw::DdkRelease() { delete this; }
 

@@ -1438,8 +1438,6 @@ void AmlSdmmc::ShutDown() {
   }
 }
 
-void AmlSdmmc::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void AmlSdmmc::DdkSuspend(ddk::SuspendTxn txn) {
   ShutDown();
 

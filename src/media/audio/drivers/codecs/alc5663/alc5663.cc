@@ -384,8 +384,6 @@ void Alc5663Device::Shutdown() {
   }
 }
 
-void Alc5663Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void Alc5663Device::DdkRelease() { delete this; }
 
 zx_status_t Alc5663Device::AddChildToParent(std::unique_ptr<Alc5663Device> device) {

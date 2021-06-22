@@ -148,8 +148,6 @@ zx_status_t SyncDevice::Bind() {
   return DdkAdd(ddk::DeviceAddArgs("goldfish-sync").set_proto_id(ZX_PROTOCOL_GOLDFISH_SYNC));
 }
 
-void SyncDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void SyncDevice::DdkRelease() { delete this; }
 
 zx_status_t SyncDevice::GoldfishSyncCreateTimeline(zx::channel request) {

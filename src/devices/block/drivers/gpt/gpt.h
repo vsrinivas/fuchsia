@@ -28,8 +28,7 @@ namespace gpt {
 class PartitionTable;
 class PartitionDevice;
 using TableRef = fbl::RefPtr<PartitionTable>;
-using DeviceType =
-    ddk::Device<PartitionDevice, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable>;
+using DeviceType = ddk::Device<PartitionDevice, ddk::GetProtocolable, ddk::GetSizable>;
 
 class PartitionDevice : public DeviceType,
                         public ddk::BlockImplProtocol<PartitionDevice, ddk::base_protocol>,
@@ -55,7 +54,6 @@ class PartitionDevice : public DeviceType,
   void BlockImplQueue(block_op_t* bop, block_impl_queue_callback completion_cb, void* cookie);
 
   // Device protocol.
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_off_t DdkGetSize() const;
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);

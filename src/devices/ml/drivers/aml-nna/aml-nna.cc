@@ -184,8 +184,6 @@ zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
   return status;
 }
 
-void AmlNnaDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void AmlNnaDevice::DdkRelease() { delete this; }
 
 static constexpr zx_driver_ops_t driver_ops = []() {

@@ -15,8 +15,6 @@
 
 namespace temperature {
 
-void Tmp112Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void Tmp112Device::DdkRelease() { delete this; }
 
 zx_status_t Tmp112Device::Init() {

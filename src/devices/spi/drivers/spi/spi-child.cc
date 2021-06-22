@@ -170,8 +170,6 @@ void SpiChild::SpiConnectServer(zx::channel server) {
   spi_parent_.ConnectServer(std::move(server), this);
 }
 
-void SpiChild::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void SpiChild::DdkRelease() { __UNUSED bool dummy = Release(); }
 
 }  // namespace spi

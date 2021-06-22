@@ -45,7 +45,7 @@ namespace {
 
 using storage_metrics::BlockDeviceMetrics;
 using BlockDeviceType = ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::MessageableManual,
-                                    ddk::Unbindable, ddk::Readable, ddk::Writable, ddk::GetSizable>;
+                                    ddk::Readable, ddk::Writable, ddk::GetSizable>;
 
 struct StatsCookie {
   zx::ticks start_tick;
@@ -78,7 +78,6 @@ class BlockDevice : public BlockDeviceType,
     return Transaction::OperationSize(parent_op_size_);
   }
 
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
   void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
@@ -341,8 +340,6 @@ zx_status_t BlockDevice::DdkWrite(const void* buf, size_t buf_len, zx_off_t off,
 }
 
 zx_off_t BlockDevice::DdkGetSize() { return device_get_size(parent()); }
-
-void BlockDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void BlockDevice::DdkRelease() { delete this; }
 

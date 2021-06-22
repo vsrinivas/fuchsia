@@ -63,8 +63,8 @@ class AmlogicDisplay;
 class ClampRgb;
 
 // AmlogicDisplay will implement only a few subset of Device.
-using DeviceType = ddk::Device<AmlogicDisplay, ddk::GetProtocolable, ddk::Unbindable,
-                               ddk::Suspendable, ddk::Resumable, ddk::ChildPreReleaseable>;
+using DeviceType = ddk::Device<AmlogicDisplay, ddk::GetProtocolable, ddk::Suspendable,
+                               ddk::Resumable, ddk::ChildPreReleaseable>;
 class AmlogicDisplay
     : public DeviceType,
       public ddk::DisplayControllerImplProtocol<AmlogicDisplay, ddk::base_protocol>,
@@ -125,7 +125,6 @@ class AmlogicDisplay
   // Required functions for DeviceType
   void DdkSuspend(ddk::SuspendTxn txn);
   void DdkResume(ddk::ResumeTxn txn);
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
   void DdkChildPreRelease(void* child_ctx) {

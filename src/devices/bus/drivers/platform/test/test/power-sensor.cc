@@ -16,7 +16,7 @@
 namespace power_sensor {
 
 class TestPowerSensorDevice;
-using DeviceType = ddk::Device<TestPowerSensorDevice, ddk::Unbindable>;
+using DeviceType = ddk::Device<TestPowerSensorDevice>;
 
 class TestPowerSensorDevice
     : public DeviceType,
@@ -26,7 +26,6 @@ class TestPowerSensorDevice
 
   explicit TestPowerSensorDevice(zx_device_t* parent) : DeviceType(parent) {}
 
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t PowerSensorConnectServer(zx::channel server);
@@ -47,8 +46,6 @@ zx_status_t TestPowerSensorDevice::Create(void* ctx, zx_device_t* parent) {
 
   return ZX_OK;
 }
-
-void TestPowerSensorDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void TestPowerSensorDevice::DdkRelease() { delete this; }
 

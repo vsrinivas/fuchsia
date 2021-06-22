@@ -18,8 +18,7 @@
 #include "src/devices/tests/device-watcher/test-driver-bind.h"
 
 class TestDriver;
-using DeviceType =
-    ddk::Device<TestDriver, ddk::Unbindable, ddk::Messageable<fuchsia_driver_test::Logger>::Mixin>;
+using DeviceType = ddk::Device<TestDriver, ddk::Messageable<fuchsia_driver_test::Logger>::Mixin>;
 
 class TestDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_USB_DEVICE> {
  public:
@@ -28,7 +27,6 @@ class TestDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_USB_
   zx_status_t Bind() { return DdkAdd("test-driver"); }
 
   // Device protocol implementation.
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   void LogMessage(LogMessageRequestView request, LogMessageCompleter::Sync& completer) override {}

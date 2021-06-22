@@ -77,8 +77,6 @@ zx_status_t PhyDevice::ConfigPhy(const uint8_t mac[MAC_ARRAY_LENGTH]) {
   return ZX_OK;
 }
 
-void PhyDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void PhyDevice::DdkRelease() { delete this; }
 
 zx_status_t PhyDevice::Create(void* ctx, zx_device_t* device) {

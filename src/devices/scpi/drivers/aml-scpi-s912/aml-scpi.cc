@@ -249,8 +249,6 @@ zx_status_t AmlSCPI::ScpiGetSensor(const char* name, uint32_t* sensor_value) {
   return ZX_OK;
 }
 
-void AmlSCPI::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void AmlSCPI::DdkRelease() { delete this; }
 
 zx_status_t AmlSCPI::Bind() {

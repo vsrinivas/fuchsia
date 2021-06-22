@@ -16,13 +16,12 @@
 #include "src/devices/tests/isolateddevmgr/metadata-test-bind.h"
 
 class IsolatedDevMgrTestDriver;
-using DeviceType = ddk::Device<IsolatedDevMgrTestDriver, ddk::Unbindable,
+using DeviceType = ddk::Device<IsolatedDevMgrTestDriver,
                                ddk::Messageable<fuchsia_device_manager_test::Metadata>::Mixin>;
 class IsolatedDevMgrTestDriver : public DeviceType {
  public:
   IsolatedDevMgrTestDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer);

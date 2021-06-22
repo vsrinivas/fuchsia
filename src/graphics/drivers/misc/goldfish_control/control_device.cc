@@ -618,8 +618,6 @@ void Control::GetBufferHandleInfo(GetBufferHandleInfoRequestView request,
       ControlDeviceGetBufferHandleInfoResult::WithResponse(allocator, std::move(response)));
 }
 
-void Control::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void Control::DdkRelease() { delete this; }
 
 zx_status_t Control::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {

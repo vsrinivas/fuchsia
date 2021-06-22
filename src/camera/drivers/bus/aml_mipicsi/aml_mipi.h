@@ -30,7 +30,7 @@ namespace camera {
 // This class provides the ZX_PROTOCOL_MIPICSI ops for all of it's
 // children.
 class AmlMipiDevice;
-using DeviceType = ddk::Device<AmlMipiDevice, ddk::Unbindable>;
+using DeviceType = ddk::Device<AmlMipiDevice>;
 
 class AmlMipiDevice : public DeviceType,
                       public ddk::MipiCsiProtocol<AmlMipiDevice, ddk::base_protocol> {
@@ -45,7 +45,6 @@ class AmlMipiDevice : public DeviceType,
 
   // Methods required by the ddk.
   void DdkRelease();
-  void DdkUnbind(ddk::UnbindTxn txn);
 
   // Methods for ZX_PROTOCOL_MIPI_CSI.
   zx_status_t MipiCsiInit(const mipi_info_t* mipi_info, const mipi_adap_info_t* adap_info);

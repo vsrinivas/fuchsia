@@ -23,8 +23,8 @@
 namespace nand {
 
 class NandPartDevice;
-using DeviceType = ddk::Device<NandPartDevice, ddk::GetSizable, ddk::GetProtocolable,
-                               ddk::Unbindable, ddk::Initializable>;
+using DeviceType =
+    ddk::Device<NandPartDevice, ddk::GetSizable, ddk::GetProtocolable, ddk::Initializable>;
 
 class NandPartDevice : public DeviceType,
                        public ddk::NandProtocol<NandPartDevice, ddk::base_protocol>,
@@ -43,7 +43,6 @@ class NandPartDevice : public DeviceType,
   }
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* protocol);
   void DdkInit(ddk::InitTxn txn);
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // nand protocol implementation.

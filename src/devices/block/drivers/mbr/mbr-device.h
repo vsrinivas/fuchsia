@@ -26,7 +26,7 @@
 namespace mbr {
 
 class MbrDevice;
-using DeviceType = ddk::Device<MbrDevice, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable>;
+using DeviceType = ddk::Device<MbrDevice, ddk::GetProtocolable, ddk::GetSizable>;
 
 class MbrDevice final : public DeviceType,
                         public ddk::BlockImplProtocol<MbrDevice, ddk::base_protocol>,
@@ -62,7 +62,6 @@ class MbrDevice final : public DeviceType,
   // DDK mixin implementation.
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   zx_off_t DdkGetSize();
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // Block protocol implementation.

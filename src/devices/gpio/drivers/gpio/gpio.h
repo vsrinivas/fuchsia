@@ -20,7 +20,7 @@ namespace gpio {
 class GpioDevice;
 using fuchsia_hardware_gpio::Gpio;
 using fuchsia_hardware_gpio::wire::GpioFlags;
-using GpioDeviceType = ddk::Device<GpioDevice, ddk::Unbindable, ddk::Messageable<Gpio>::Mixin>;
+using GpioDeviceType = ddk::Device<GpioDevice, ddk::Messageable<Gpio>::Mixin>;
 
 static_assert(GPIO_PULL_DOWN == static_cast<uint32_t>(GpioFlags::kPullDown),
               "ConfigIn PULL_DOWN flag doesn't match.");
@@ -38,7 +38,6 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t GpioConfigIn(uint32_t flags);

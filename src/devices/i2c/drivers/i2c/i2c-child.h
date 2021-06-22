@@ -24,8 +24,7 @@ namespace fidl_i2c = fuchsia_hardware_i2c;
 
 class I2cChild;
 
-using I2cChildType =
-    ddk::Device<I2cChild, ddk::Unbindable, ddk::Messageable<fidl_i2c::Device2>::Mixin>;
+using I2cChildType = ddk::Device<I2cChild, ddk::Messageable<fidl_i2c::Device2>::Mixin>;
 
 class I2cChild : public I2cChildType, public ddk::I2cProtocol<I2cChild, ddk::base_protocol> {
  public:
@@ -34,7 +33,6 @@ class I2cChild : public I2cChildType, public ddk::I2cProtocol<I2cChild, ddk::bas
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // FIDL methods.

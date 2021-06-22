@@ -417,8 +417,6 @@ void AmlogicDisplay::DdkResume(ddk::ResumeTxn txn) {
   txn.Reply(ZX_OK, DEV_POWER_STATE_D0, txn.requested_state());
 }
 
-void AmlogicDisplay::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void AmlogicDisplay::DdkRelease() {
   vsync_irq_.destroy();
   thrd_join(vsync_thread_, nullptr);

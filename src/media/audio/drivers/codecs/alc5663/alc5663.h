@@ -21,7 +21,7 @@
 namespace audio::alc5663 {
 
 class Alc5663Device;
-using DeviceType = ddk::Device<Alc5663Device, ddk::Unbindable>;
+using DeviceType = ddk::Device<Alc5663Device>;
 
 // ALC5663 uses 16-bit register addresses.
 using Alc5663Client = I2cClient<uint16_t>;
@@ -52,8 +52,6 @@ class Alc5663Device : public DeviceType {
   // Shutdown the hardware.
   void Shutdown();
 
-  // Implementation of |ddk::Unbindable|.
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:

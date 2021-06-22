@@ -153,8 +153,6 @@ zx_status_t UsbInterface::DdkGetProtocol(uint32_t proto_id, void* protocol) {
   }
 }
 
-void UsbInterface::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void UsbInterface::DdkRelease() {
   // Release the reference now that devmgr no longer has a pointer to this object.
   __UNUSED bool dummy = Release();

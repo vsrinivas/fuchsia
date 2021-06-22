@@ -41,8 +41,6 @@ zx_status_t ClockDevice::ClockGetRate(uint64_t* out_current_rate) {
   return clock_.GetRate(id_, out_current_rate);
 }
 
-void ClockDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void ClockDevice::DdkRelease() { delete this; }
 
 zx_status_t ClockDevice::Create(void* ctx, zx_device_t* parent) {

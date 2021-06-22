@@ -22,8 +22,7 @@ using fuchsia_device_instancelifecycle_test::Lifecycle;
 using fuchsia_device_instancelifecycle_test::TestDevice;
 
 class TestLifecycleDriver;
-using DeviceType =
-    ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin>;
+using DeviceType = ddk::Device<TestLifecycleDriver, ddk::Messageable<TestDevice>::Mixin>;
 
 class TestLifecycleDriver : public DeviceType {
  public:
@@ -31,7 +30,6 @@ class TestLifecycleDriver : public DeviceType {
   ~TestLifecycleDriver() {}
 
   // Device protocol implementation.
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.

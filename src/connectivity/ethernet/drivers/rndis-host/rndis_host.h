@@ -19,7 +19,7 @@
 
 class RndisHost;
 
-using RndisHostType = ddk::Device<RndisHost, ddk::Initializable, ddk::Unbindable>;
+using RndisHostType = ddk::Device<RndisHost, ddk::Initializable>;
 
 class RndisHost : public RndisHostType,
                   public ddk::EthernetImplProtocol<RndisHost, ddk::base_protocol> {
@@ -28,7 +28,6 @@ class RndisHost : public RndisHostType,
                      uint8_t bulk_out_addr, const usb::UsbDevice& usb);
 
   void DdkInit(ddk::InitTxn txn);
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   zx_status_t InitBuffers();

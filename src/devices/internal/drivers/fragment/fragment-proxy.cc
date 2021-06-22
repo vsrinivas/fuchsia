@@ -112,8 +112,6 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
   }
 }
 
-void FragmentProxy::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void FragmentProxy::DdkRelease() { delete this; }
 
 zx_status_t FragmentProxy::Rpc(const ProxyRequest* req, size_t req_length, ProxyResponse* resp,

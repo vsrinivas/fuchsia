@@ -15,8 +15,6 @@ zx_status_t {{pascal_case PROJECT_NAME}}::Bind() {
 
 void {{pascal_case PROJECT_NAME}}::DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
 
-void {{pascal_case PROJECT_NAME}}::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void {{pascal_case PROJECT_NAME}}::DdkRelease() { delete this; }
 
 static zx_driver_ops_t {{snake_case PROJECT_NAME}}_driver_ops = []() -> zx_driver_ops_t {

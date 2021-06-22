@@ -17,7 +17,7 @@
 namespace aml_pwm_regulator {
 
 class AmlPwmRegulator;
-using AmlPwmRegulatorType = ddk::Device<AmlPwmRegulator, ddk::Unbindable>;
+using AmlPwmRegulatorType = ddk::Device<AmlPwmRegulator>;
 using fuchsia_hardware_vreg::wire::PwmVregMetadataEntry;
 
 class AmlPwmRegulator : public AmlPwmRegulatorType,
@@ -33,7 +33,6 @@ class AmlPwmRegulator : public AmlPwmRegulatorType,
 
   // Device Protocol Implementation
   void DdkRelease() { delete this; }
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
   // Vreg Implementation.
   zx_status_t VregSetVoltageStep(uint32_t step);

@@ -24,7 +24,7 @@ namespace pwm {
 
 class AmlPwm;
 class AmlPwmDevice;
-using AmlPwmDeviceType = ddk::Device<AmlPwmDevice, ddk::Unbindable>;
+using AmlPwmDeviceType = ddk::Device<AmlPwmDevice>;
 
 class AmlPwm {
  public:
@@ -84,7 +84,6 @@ class AmlPwmDevice : public AmlPwmDeviceType,
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   zx_status_t PwmImplGetConfig(uint32_t idx, pwm_config_t* out_config);

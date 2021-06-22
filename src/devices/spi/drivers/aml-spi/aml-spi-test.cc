@@ -139,6 +139,8 @@ class FakeDdkSpi : public fake_ddk::Bind {
       if (it->device == spi_device) {
         if (it->unbind_op) {
           it->unbind_op(spi_device);
+        } else {
+          DeviceRemove(device);
         }
         return;
       }

@@ -38,8 +38,8 @@ namespace goldfish {
 namespace sync {
 
 class SyncDevice;
-using SyncDeviceType = ddk::Device<SyncDevice, ddk::Unbindable,
-                                   ddk::Messageable<fuchsia_hardware_goldfish::SyncDevice>::Mixin>;
+using SyncDeviceType =
+    ddk::Device<SyncDevice, ddk::Messageable<fuchsia_hardware_goldfish::SyncDevice>::Mixin>;
 
 class SyncTimeline;
 
@@ -54,7 +54,6 @@ class SyncDevice : public SyncDeviceType,
   zx_status_t Bind();
 
   // Device protocol implementation.
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // |ddk.protocol.goldfish.sync|

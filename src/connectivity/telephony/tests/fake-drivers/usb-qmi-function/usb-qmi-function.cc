@@ -213,8 +213,6 @@ zx_status_t FakeUsbQmiFunction::Bind() {
   return ZX_OK;
 }
 
-void FakeUsbQmiFunction::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void FakeUsbQmiFunction::DdkRelease() {
   if (usb_int_req_) {
     usb_request_release(usb_int_req_.value());

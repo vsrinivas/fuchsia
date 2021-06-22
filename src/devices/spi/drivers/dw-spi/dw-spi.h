@@ -12,7 +12,7 @@
 namespace spi {
 
 class DwSpi;
-using DeviceType = ddk::Device<DwSpi, ddk::Unbindable>;
+using DeviceType = ddk::Device<DwSpi>;
 
 class DwSpi : public DeviceType, public ddk::SpiImplProtocol<DwSpi, ddk::base_protocol> {
  public:
@@ -20,7 +20,6 @@ class DwSpi : public DeviceType, public ddk::SpiImplProtocol<DwSpi, ddk::base_pr
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   uint32_t SpiImplGetChipSelectCount() { return 4; }

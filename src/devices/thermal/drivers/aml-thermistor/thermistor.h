@@ -16,7 +16,7 @@
 namespace thermal {
 
 class AmlThermistor;
-using DeviceType = ddk::Device<AmlThermistor, ddk::Initializable, ddk::Unbindable>;
+using DeviceType = ddk::Device<AmlThermistor, ddk::Initializable>;
 
 class AmlThermistor : public DeviceType {
  public:
@@ -29,7 +29,6 @@ class AmlThermistor : public DeviceType {
 
   void DdkInit(ddk::InitTxn txn);
 
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   fbl::RefPtr<AmlSaradcDevice> saradc_;

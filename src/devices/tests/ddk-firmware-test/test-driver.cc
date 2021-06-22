@@ -24,8 +24,7 @@ constexpr const char TEST_FIRMWARE_CONTENTS[] = "this is some firmware\n";
 using fuchsia_device_firmware_test::TestDevice;
 
 class TestFirmwareDriver;
-using DeviceType =
-    ddk::Device<TestFirmwareDriver, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin>;
+using DeviceType = ddk::Device<TestFirmwareDriver, ddk::Messageable<TestDevice>::Mixin>;
 
 class TestFirmwareDriver : public DeviceType {
  public:
@@ -34,7 +33,6 @@ class TestFirmwareDriver : public DeviceType {
   zx_status_t Bind() { return DdkAdd("ddk-firmware-test"); }
 
   // Device protocol implementation.
-  void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.

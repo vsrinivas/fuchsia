@@ -283,8 +283,6 @@ zx_status_t AmlThermal::SetFanLevel(uint32_t fan_level, fidl_txn_t* txn) {
   return fuchsia_hardware_thermal_DeviceSetFanLevel_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
-void AmlThermal::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void AmlThermal::DdkRelease() { delete this; }
 
 zx_status_t AmlThermal::PopulateClusterDvfsTable(

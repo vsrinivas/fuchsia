@@ -444,8 +444,6 @@ zx_status_t Imx227Device::Create(zx_device_t* parent, std::unique_ptr<Imx227Devi
 
 void Imx227Device::ShutDown() {}
 
-void Imx227Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void Imx227Device::DdkRelease() {
   ShutDown();
   delete this;

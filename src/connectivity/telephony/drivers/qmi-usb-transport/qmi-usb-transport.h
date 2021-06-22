@@ -117,8 +117,8 @@ struct IpPktHdr {
 constexpr std::array<uint8_t, kMacAddrLen> kFakeMacAddr = {0x02, 0x47, 0x4f, 0x4f, 0x47, 0x4c};
 
 class Device;
-using DeviceType = ddk::Device<Device, ddk::Unbindable,
-                               ddk::Messageable<fuchsia_hardware_telephony_transport::Qmi>::Mixin>;
+using DeviceType =
+    ddk::Device<Device, ddk::Messageable<fuchsia_hardware_telephony_transport::Qmi>::Mixin>;
 class Device : public DeviceType {
  public:
   explicit Device(zx_device_t* parent);
@@ -166,7 +166,6 @@ class Device : public DeviceType {
   void EthTxListNodeInit();
 
   // DDK Mixin methods
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // DDK ethernet_impl_protocol_ops methods

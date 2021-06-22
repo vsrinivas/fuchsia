@@ -51,7 +51,7 @@ class DsiDw;
 namespace fidl_dsi = fuchsia_hardware_dsi;
 
 using DeviceTypeBase =
-    ddk::Device<DsiDwBase, ddk::Unbindable, ddk::Messageable<fuchsia_hardware_dsi::DsiBase>::Mixin>;
+    ddk::Device<DsiDwBase, ddk::Messageable<fuchsia_hardware_dsi::DsiBase>::Mixin>;
 class DsiDwBase : public DeviceTypeBase, public ddk::EmptyProtocol<ZX_PROTOCOL_DSI_BASE> {
  public:
   DsiDwBase(zx_device_t* parent, DsiDw* dsidw) : DeviceTypeBase(parent), dsidw_(dsidw) {}
@@ -60,14 +60,13 @@ class DsiDwBase : public DeviceTypeBase, public ddk::EmptyProtocol<ZX_PROTOCOL_D
   // FIDL
   void SendCmd(SendCmdRequestView request, SendCmdCompleter::Sync& _completer) override;
 
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:
   DsiDw* dsidw_;
 };
 
-using DeviceType = ddk::Device<DsiDw, ddk::Unbindable>;
+using DeviceType = ddk::Device<DsiDw>;
 
 class DsiDw : public DeviceType, public ddk::DsiImplProtocol<DsiDw, ddk::base_protocol> {
  public:
@@ -94,7 +93,6 @@ class DsiDw : public DeviceType, public ddk::DsiImplProtocol<DsiDw, ddk::base_pr
   zx_status_t DsiImplReadReg(uint32_t reg, uint32_t* val);
   zx_status_t DsiImplEnableBist(uint32_t pattern);
 
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:

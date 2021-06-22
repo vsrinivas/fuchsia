@@ -77,8 +77,6 @@ zx_status_t Max98927Device::FidlSetEnabled(bool enable) {
   return ZX_OK;
 }
 
-void Max98927Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-
 void Max98927Device::DdkRelease() { delete this; }
 
 void Max98927Device::Test() {
