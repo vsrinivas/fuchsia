@@ -16,36 +16,51 @@ namespace zxdb {
 
 namespace {
 
-// Reads a DWARF 5 counted location description from the given data extractor, and appends it
-// for the given range to the given output vector. Returns true on success.
-bool ExtractCountedLocationDescription(TargetPointer begin, TargetPointer end, DataExtractor& ext,
-                                       std::vector<VariableLocation::Entry>& output_list,
-                                       const UncachedLazySymbol& source) {
+// Reads a DWARF 5 counted location description from the given data extractor. Returns nullopt on
+// failure.
+std::optional<DwarfExpr> ExtractCountedLocationDescription(DataExtractor& ext,
+                                                           const UncachedLazySymbol& source) {
   // A counted location description consists of a ULEB128 integer giving the byte length of the
   // following location description.
   auto length_or = ext.ReadUleb128();
   if (!length_or)
-    return false;
+    return std::nullopt;
 
-  // Empty expressions are valid and just mean to skip this entry, so we don't bother adding it.
+  // Empty expressions are valid and just mean to skip this entry.
   if (*length_or == 0)
-    return true;
+    return DwarfExpr({}, source);
 
   // Expression data.
   std::vector<uint8_t> expression;
   expression.resize(*length_or);
   if (!ext.ReadBytes(*length_or, expression.data()))
+    return std::nullopt;
+
+  return DwarfExpr(std::move(expression), source);
+}
+
+// Reads a DWARF 5 counted location description from the given data extractor, and appends it
+// for the given range to the given output vector. Returns true on success.
+bool AppendCountedLocationDescriptionEntry(TargetPointer begin, TargetPointer end,
+                                           DataExtractor& ext,
+                                           std::vector<VariableLocation::Entry>& output_list,
+                                           const UncachedLazySymbol& source) {
+  std::optional<DwarfExpr> expr = ExtractCountedLocationDescription(ext, source);
+  if (!expr)
     return false;
 
-  // Don't bother adding empty ranges or empty expressions. Check this after reading the expression
-  // to advance the data extractor.
-  if (begin == end)
+  // Empty expressions are valid and just mean to skip this entry, so we don't bother adding it.
+  if (expr->data().empty())
+    return true;
+
+  // Skip invalid ranges and don't bother adding empty ranges. Check this after reading the
+  // expression to advance the data extractor.
+  if (begin >= end)
     return true;
 
   VariableLocation::Entry& dest = output_list.emplace_back();
-  dest.begin = begin;
-  dest.end = end;
-  dest.expression = DwarfExpr(std::move(expression), source);
+  dest.range = AddressRange(begin, end);
+  dest.expression = std::move(*expr);
   return true;
 }
 
@@ -155,7 +170,7 @@ VariableLocation DecodeVariableLocation(llvm::DWARFUnit* unit, const llvm::DWARF
     // validity range for this so assume the expression is valid as long as the variable is in
     // scope.
     llvm::ArrayRef<uint8_t> block = *form.getAsBlock();
-    return VariableLocation(block.data(), block.size(), source);
+    return VariableLocation(DwarfExpr(std::vector<uint8_t>(block.begin(), block.end()), source));
   }
 
   if (unit->getVersion() < 5) {
@@ -218,12 +233,11 @@ VariableLocation DecodeDwarf4LocationList(TargetPointer unit_base_addr,
     if (!ext.ReadBytes(*expression_len, expression.data()))
       return VariableLocation();
 
-    if (*begin == *end)
-      continue;  // Empty range, don't bother adding.
+    if (*begin >= *end)
+      continue;  // Invalid or empty range, don't add/
 
     VariableLocation::Entry& dest = entries.emplace_back();
-    dest.begin = base_address + *begin;
-    dest.end = base_address + *end;
+    dest.range = AddressRange(base_address + *begin, base_address + *end);
     dest.expression = DwarfExpr(std::move(expression), source);
   }
 
@@ -243,6 +257,9 @@ VariableLocation DecodeDwarf5LocationList(
   // This value tracks the current applicable base address.
   TargetPointer base_address = unit_base_addr;
 
+  // The default location expression, if found.
+  std::optional<DwarfExpr> default_expr;
+
   while (!ext.done()) {
     // The first byte of the location list entry is the entry kind.
     auto type_or = ext.Read<uint8_t>();
@@ -251,7 +268,7 @@ VariableLocation DecodeDwarf5LocationList(
 
     switch (*type_or) {
       case llvm::dwarf::DW_LLE_end_of_list: {
-        return VariableLocation(std::move(entries));
+        return VariableLocation(std::move(entries), std::move(default_expr));
       }
 
       case llvm::dwarf::DW_LLE_base_address: {
@@ -286,7 +303,7 @@ VariableLocation DecodeDwarf5LocationList(
         auto start_or = ext.Read<TargetPointer>();
         auto end_or = ext.Read<TargetPointer>();
         if (!start_or || !end_or ||
-            !ExtractCountedLocationDescription(*start_or, *end_or, ext, entries, source))
+            !AppendCountedLocationDescriptionEntry(*start_or, *end_or, ext, entries, source))
           return VariableLocation();
         break;
       }
@@ -304,7 +321,7 @@ VariableLocation DecodeDwarf5LocationList(
         auto end_or = index_to_addr(*end_i_or);
 
         if (!start_or || !end_or ||
-            !ExtractCountedLocationDescription(*start_or, *end_or, ext, entries, source))
+            !AppendCountedLocationDescriptionEntry(*start_or, *end_or, ext, entries, source))
           return VariableLocation();
         break;
       }
@@ -315,8 +332,8 @@ VariableLocation DecodeDwarf5LocationList(
         auto start_or = ext.Read<TargetPointer>();
         auto length_or = ext.ReadUleb128();
         if (!start_or || !length_or ||
-            !ExtractCountedLocationDescription(*start_or, *start_or + *length_or, ext, entries,
-                                               source))
+            !AppendCountedLocationDescriptionEntry(*start_or, *start_or + *length_or, ext, entries,
+                                                   source))
           return VariableLocation();
         break;
       }
@@ -332,8 +349,8 @@ VariableLocation DecodeDwarf5LocationList(
 
         auto length_or = ext.ReadUleb128();
         if (!start_or || !length_or ||
-            !ExtractCountedLocationDescription(*start_or, *start_or + *length_or, ext, entries,
-                                               source))
+            !AppendCountedLocationDescriptionEntry(*start_or, *start_or + *length_or, ext, entries,
+                                                   source))
           return VariableLocation();
         break;
       }
@@ -344,16 +361,17 @@ VariableLocation DecodeDwarf5LocationList(
         auto start_off_or = ext.ReadUleb128();
         auto end_off_or = ext.ReadUleb128();
         if (!start_off_or || !end_off_or ||
-            !ExtractCountedLocationDescription(base_address + *start_off_or,
-                                               base_address + *end_off_or, ext, entries, source))
+            !AppendCountedLocationDescriptionEntry(
+                base_address + *start_off_or, base_address + *end_off_or, ext, entries, source))
           return VariableLocation();
         break;
       }
 
       case llvm::dwarf::DW_LLE_default_location: {
         // A counted location description that applies when no other ranges do.
-
-        // TODO(fxbug.dev/77316) Support default location descriptions in VariableLocation.
+        default_expr = ExtractCountedLocationDescription(ext, source);
+        if (!default_expr)
+          return VariableLocation();  // Default expression was corrupt.
         break;
       }
     }

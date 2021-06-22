@@ -31,8 +31,8 @@ TEST(DwarfLocation, Dwarf4UnitRelative) {
   EXPECT_FALSE(result.is_null());
   ASSERT_EQ(1u, result.locations().size());  // Only the last range was nonempty.
 
-  EXPECT_EQ(kUnitBaseAddress + 0xdf8, result.locations()[0].begin);
-  EXPECT_EQ(kUnitBaseAddress + 0x1051, result.locations()[0].end);
+  EXPECT_EQ(AddressRange(kUnitBaseAddress + 0xdf8, kUnitBaseAddress + 0x1051),
+            result.locations()[0].range);
   std::vector<uint8_t> expected_expr{0x7f, 0xd8, 0x75};
   EXPECT_EQ(expected_expr, result.locations()[0].expression.data());
 }
@@ -57,13 +57,11 @@ TEST(DwarfLocation, Dwarf4NewBaseAddress) {
   EXPECT_FALSE(result.is_null());
   ASSERT_EQ(2u, result.locations().size());
 
-  EXPECT_EQ(0x2206au, result.locations()[0].begin);
-  EXPECT_EQ(0x22e16u, result.locations()[0].end);
+  EXPECT_EQ(AddressRange(0x2206au, 0x22e16u), result.locations()[0].range);
   std::vector<uint8_t> expected_expr{0x7f, 0xd8, 0x75};
   EXPECT_EQ(expected_expr, result.locations()[0].expression.data());
 
-  EXPECT_EQ(0x22e18u, result.locations()[1].begin);
-  EXPECT_EQ(0x23071u, result.locations()[1].end);
+  EXPECT_EQ(AddressRange(0x22e18u, 0x23071u), result.locations()[1].range);
   EXPECT_EQ(expected_expr, result.locations()[1].expression.data());
 
   // Now test a truncated list.
@@ -126,26 +124,24 @@ TEST(DwarfLocation, Dwarf5NonSplit) {
   ASSERT_EQ(4u, result.locations().size());
 
   // [0] entry uses offset-pair which is relative to the unit's kUnitOffset.
-  EXPECT_EQ(kUnitOffset + 0x0f, result.locations()[0].begin);
-  EXPECT_EQ(kUnitOffset + 0x53, result.locations()[0].end);
+  EXPECT_EQ(AddressRange(kUnitOffset + 0x0f, kUnitOffset + 0x53), result.locations()[0].range);
   std::vector<uint8_t> expected_expr0{0x76, 0xb0, 0x7f, 0x06};
   EXPECT_EQ(expected_expr0, result.locations()[0].expression.data());
 
   // [1] entry uses absolute start + length.
-  EXPECT_EQ(0x0807060504030201ull, result.locations()[1].begin);
-  EXPECT_EQ(0x0807060504030281ull, result.locations()[1].end);
+  EXPECT_EQ(AddressRange(0x0807060504030201ull, 0x0807060504030281ull),
+            result.locations()[1].range);
   std::vector<uint8_t> expected_expr1{0x74, 0x00};
   EXPECT_EQ(expected_expr1, result.locations()[1].expression.data());
 
   // [2] entry uses offset pair which is relative to the DW_LLE_base_address, same expr as [1].
   const uint64_t kNewBaseAddress = 0xa0;
-  EXPECT_EQ(kNewBaseAddress + 0x53, result.locations()[2].begin);
-  EXPECT_EQ(kNewBaseAddress + 0x5f, result.locations()[2].end);
+  EXPECT_EQ(AddressRange(kNewBaseAddress + 0x53, kNewBaseAddress + 0x5f),
+            result.locations()[2].range);
   EXPECT_EQ(expected_expr1, result.locations()[2].expression.data());
 
   // [3] entry uses absolute start/end.
-  EXPECT_EQ(0x200ull, result.locations()[3].begin);
-  EXPECT_EQ(0x300ull, result.locations()[3].end);
+  EXPECT_EQ(AddressRange(0x200ull, 0x300ull), result.locations()[3].range);
   EXPECT_EQ(expected_expr1, result.locations()[3].expression.data());
 }
 
@@ -171,6 +167,8 @@ TEST(DwarfLocation, Dwarf5AddrLookup) {
                             0x04,              //   Start address index = 4.
                             0x05,              //   End address index = 5;
                             0x02, 0x74, 0x00,  //   Counted location (2 bytes).
+                            0x05,              // DW_LLE_default_location             [3]
+                            0x02, 0xaa, 0xbb,  //   Counted location (2 bytes).
                             0x00};             // DW_LLE_end_of_list.
 
   // The address indices above index into this table.
@@ -198,24 +196,24 @@ TEST(DwarfLocation, Dwarf5AddrLookup) {
   ASSERT_EQ(3u, result.locations().size());
 
   // [0] entry uses startx/length.
-  EXPECT_EQ(address_table[3], result.locations()[0].begin);
-  EXPECT_EQ(address_table[3] + 0x80, result.locations()[0].end);
+  EXPECT_EQ(AddressRange(address_table[3], address_table[3] + 0x80), result.locations()[0].range);
   std::vector<uint8_t> expected_expr0{0x74, 0x00};
   EXPECT_EQ(expected_expr0, result.locations()[0].expression.data());
 
   // [1] entry uses offset-pair which is relative to the previous base.
   const uint64_t kNewBaseAddress = address_table[2];
-  EXPECT_EQ(kNewBaseAddress + 0x53, result.locations()[1].begin);
-  EXPECT_EQ(kNewBaseAddress + 0x5f, result.locations()[1].end);
+  EXPECT_EQ(AddressRange(kNewBaseAddress + 0x53, kNewBaseAddress + 0x5f),
+            result.locations()[1].range);
   EXPECT_EQ(expected_expr0, result.locations()[1].expression.data());
 
   // [2] entry uses absolute start + end.
-  EXPECT_EQ(address_table[4], result.locations()[2].begin);
-  EXPECT_EQ(address_table[5], result.locations()[2].end);
+  EXPECT_EQ(AddressRange(address_table[4], address_table[5]), result.locations()[2].range);
   EXPECT_EQ(expected_expr0, result.locations()[2].expression.data());
 
-  // TODO(fxbug.dev/77316) Test default locations descriptions here when they are supported.
-  // DW_LLE_default_location (= 0x05) followed by expression.
+  // Default location.
+  std::vector<uint8_t> expected_default_expr{0xaa, 0xbb};
+  ASSERT_TRUE(result.default_expr());
+  EXPECT_EQ(expected_default_expr, result.default_expr()->data());
 }
 
 TEST(DwarfLocation, Dwarf5UnterminatedTable) {

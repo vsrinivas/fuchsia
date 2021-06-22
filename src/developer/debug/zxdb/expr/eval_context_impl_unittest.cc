@@ -259,7 +259,8 @@ TEST_F(EvalContextImplTest, IntOnStack) {
 
   constexpr uint8_t kOffset = 8;
   auto type = MakeInt32Type();
-  auto var = MakeUint64VariableForTest("i", 0, 0, DwarfExpr({llvm::dwarf::DW_OP_fbreg, kOffset}));
+  auto var = MakeUint64VariableForTest(
+      "i", VariableLocation(DwarfExpr({llvm::dwarf::DW_OP_fbreg, kOffset})));
   var->set_type(type);
 
   constexpr uint64_t kBp = 0x1000;
@@ -302,7 +303,7 @@ TEST_F(EvalContextImplTest, IntOnStack) {
 TEST_F(EvalContextImplTest, ConstantVariable) {
   auto type = MakeInt32Type();
   auto var = MakeUint64VariableForTest(
-      "i", 0, 0, DwarfExpr({llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_stack_value}));
+      "i", VariableLocation(DwarfExpr({llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_stack_value})));
   var->set_type(type);
 
   ValueResult result;
@@ -330,8 +331,8 @@ TEST_F(EvalContextImplTest, ExternVariable) {
   // The non-extern declaration for the variable (0, 0 means always valid). The little-endian
   // module-relative address follows DW_OP_addr in the expression.
   auto real_variable = MakeUint64VariableForTest(
-      kValName, 0, 0,
-      DwarfExpr({llvm::dwarf::DW_OP_addr, kRelativeValAddress, 0, 0, 0, 0, 0, 0, 0}));
+      kValName, VariableLocation(DwarfExpr(
+                    {llvm::dwarf::DW_OP_addr, kRelativeValAddress, 0, 0, 0, 0, 0, 0, 0})));
 
   // The variable needs to have a unit that references the module to provide the symbol context
   // in which to evaluate the location expression. This will convert the kRelativeValAddress to
@@ -595,11 +596,11 @@ TEST_F(EvalContextImplTest, DataResult) {
   // Tests that composite variable locations are properly converted to values.
   const char kVarName[] = "var";
   auto variable = MakeUint64VariableForTest(
-      kVarName, 0, 0,
-      DwarfExpr({llvm::dwarf::DW_OP_reg0,            // Low bytes in reg0.
-                 llvm::dwarf::DW_OP_piece, 0x04,     // Pick low 4 bytes of reg0.
-                 llvm::dwarf::DW_OP_reg1,            // High bytes in reg1.
-                 llvm::dwarf::DW_OP_piece, 0x04}));  // Pick low 4 of reg1.
+      kVarName,
+      VariableLocation(DwarfExpr({llvm::dwarf::DW_OP_reg0,             // Low bytes in reg0.
+                                  llvm::dwarf::DW_OP_piece, 0x04,      // Pick low 4 bytes of reg0.
+                                  llvm::dwarf::DW_OP_reg1,             // High bytes in reg1.
+                                  llvm::dwarf::DW_OP_piece, 0x04})));  // Pick low 4 of reg1.
   provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_x0, true, 1);
   provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_x1, true, 2);
 

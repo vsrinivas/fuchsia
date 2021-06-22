@@ -21,12 +21,20 @@ namespace zxdb {
 //    auto var = MakeVariableForTest(
 //        "var", my_type, 0x1000, 0x2000, { llvm::dwarf::DW_OP_reg0 });
 //
-// Use 0's for the begin_ip_range and end_ip_range for a variable that's always valid.
+// For a type that's always valid use the VariableLocation() variant:
+//
+//    auto var = MakeVariableForTest(
+//        "var", my_type, VariableLocation(DwarfExpr({ llvm::dwarf::DW_OP_reg0 })));
+//
+// This variant also allows all of the more complex variants like multiple valid ranges.
+fxl::RefPtr<Variable> MakeVariableForTest(const std::string& name, fxl::RefPtr<Type> type,
+                                          VariableLocation loc);
 fxl::RefPtr<Variable> MakeVariableForTest(const std::string& name, fxl::RefPtr<Type> type,
                                           uint64_t begin_ip_range, uint64_t end_ip_range,
                                           DwarfExpr location_expression);
 
 // Like above but marks the variable as having an unsigned 64-bit int type.
+fxl::RefPtr<Variable> MakeUint64VariableForTest(const std::string& name, VariableLocation loc);
 fxl::RefPtr<Variable> MakeUint64VariableForTest(const std::string& name, uint64_t begin_ip_range,
                                                 uint64_t end_ip_range,
                                                 DwarfExpr location_expression);

@@ -246,9 +246,9 @@ bool FrameImpl::EnsureBasePointer() {
   }
 
   const Function* function = loc.symbol().Get()->As<Function>();
-  const VariableLocation::Entry* location_entry = nullptr;
+  const DwarfExpr* location_expr = nullptr;
   if (!function ||
-      !(location_entry = function->frame_base().EntryForIP(loc.symbol_context(), GetAddress()))) {
+      !(location_expr = function->frame_base().ExprForIP(loc.symbol_context(), GetAddress()))) {
     // No frame base declared for this function.
     computed_base_pointer_ = 0;
     return true;
@@ -279,7 +279,7 @@ bool FrameImpl::EnsureBasePointer() {
   };
 
   auto eval_result = base_pointer_eval_->Eval(GetSymbolDataProvider(), loc.symbol_context(),
-                                              location_entry->expression, std::move(save_result));
+                                              *location_expr, std::move(save_result));
 
   // In the common case this will complete synchronously and the above callback will have put the
   // result into base_pointer_requests_ before this code is executed.

@@ -15,21 +15,13 @@ TEST(VariableLocation, EntryInRange) {
 
   SymbolContext context = SymbolContext::ForRelativeAddresses();
 
-  // Default should be 0 beginning and end which always in range.
-  EXPECT_TRUE(entry.InRange(context, 0));
-  EXPECT_TRUE(entry.InRange(context, 1));
-  EXPECT_TRUE(entry.InRange(context, static_cast<uint64_t>(-1)));
-
-  // Empty range not starting at 0 is never valid.
-  entry.begin = 1;
-  entry.end = 1;
+  // Default should be 0 beginning and end which never in range.
   EXPECT_FALSE(entry.InRange(context, 0));
   EXPECT_FALSE(entry.InRange(context, 1));
-  EXPECT_FALSE(entry.InRange(context, 2));
+  EXPECT_FALSE(entry.InRange(context, static_cast<uint64_t>(-1)));
 
   // Normal range. Beginning is inclusive, ending is exclusive.
-  entry.begin = 0x10;
-  entry.end = 0x20;
+  entry.range = AddressRange(0x10, 0x20);
   EXPECT_FALSE(entry.InRange(context, 0));
   EXPECT_FALSE(entry.InRange(context, 0xf));
   EXPECT_TRUE(entry.InRange(context, 0x10));
@@ -52,39 +44,62 @@ TEST(VariableLocation, EntryInRange) {
 }
 
 TEST(VariableLocation, EntryForIP) {
+  // These fake DWARF expressions define each location. They're just random data rather than a valid
+  // expression.
+  std::vector<uint8_t> expr1{0x01};
+  std::vector<uint8_t> expr2{0x02};
+  std::vector<uint8_t> expr3{0x03};
+
   // Valid from 0x10-0x20 and 0x30-0x40
   std::vector<VariableLocation::Entry> entries;
   entries.resize(2);
-  entries[0].begin = 0x10;
-  entries[0].end = 0x20;
-  entries[1].begin = 0x30;
-  entries[1].end = 0x40;
+  entries[0].range = AddressRange(0x10, 0x20);
+  entries[0].expression = DwarfExpr(expr1);
+  entries[1].range = AddressRange(0x30, 0x40);
+  entries[1].expression = DwarfExpr(expr2);
 
   VariableLocation loc(entries);
 
   SymbolContext context = SymbolContext::ForRelativeAddresses();
 
-  const VariableLocation::Entry* entry = loc.EntryForIP(context, 0);
-  EXPECT_FALSE(entry);  // Not found.
+  const DwarfExpr* expr = loc.ExprForIP(context, 0);
+  EXPECT_FALSE(expr);  // Not found.
 
-  entry = loc.EntryForIP(context, 0x10);
-  EXPECT_TRUE(entry);
-  EXPECT_EQ(0x10u, entry->begin);
-  EXPECT_EQ(0x20u, entry->end);
+  expr = loc.ExprForIP(context, 0x10);
+  ASSERT_TRUE(expr);
+  EXPECT_EQ(expr1, expr->data());
 
-  entry = loc.EntryForIP(context, 0x1f);
-  EXPECT_TRUE(entry);
+  expr = loc.ExprForIP(context, 0x1f);
+  EXPECT_TRUE(expr);
 
-  entry = loc.EntryForIP(context, 0x20);
-  EXPECT_FALSE(entry);
+  expr = loc.ExprForIP(context, 0x20);
+  EXPECT_FALSE(expr);
 
-  entry = loc.EntryForIP(context, 0x30);
-  EXPECT_TRUE(entry);
-  EXPECT_EQ(0x30u, entry->begin);
-  EXPECT_EQ(0x40u, entry->end);
+  expr = loc.ExprForIP(context, 0x30);
+  ASSERT_TRUE(expr);
+  EXPECT_EQ(expr2, expr->data());
 
-  entry = loc.EntryForIP(context, 0x40);
-  EXPECT_FALSE(entry);
+  expr = loc.ExprForIP(context, 0x40);
+  EXPECT_FALSE(expr);
+
+  // Test assignment and now provide a VariableLocation with a default.
+  loc = VariableLocation(entries, DwarfExpr(expr3));
+
+  // The found ranges should still be found.
+  expr = loc.ExprForIP(context, 0x10);
+  ASSERT_TRUE(expr);
+  EXPECT_EQ(expr1, expr->data());
+
+  // But now previously-unmatched ranges will return the default.
+  expr = loc.ExprForIP(context, 0x28);
+  ASSERT_TRUE(expr);
+  EXPECT_EQ(expr3, expr->data());
+
+  // Test the single-default-location constructor.
+  loc = VariableLocation(DwarfExpr(expr3));
+  expr = loc.ExprForIP(context, 0x28);
+  ASSERT_TRUE(expr);
+  EXPECT_EQ(expr3, expr->data());
 }
 
 }  // namespace zxdb

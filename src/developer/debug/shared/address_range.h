@@ -12,11 +12,22 @@
 
 namespace debug_ipc {
 
+// Represents a range of addresses with common operations.
+//
+// Since end() is one-past-the-end, we technically can't represent the last byte in the address
+// space. It might be better to change this class to be (begin, size) to avoid this problem but
+// that's a difficult change.
 class AddressRange {
  public:
   constexpr AddressRange() = default;
   constexpr AddressRange(uint64_t begin, uint64_t end) : begin_(begin), end_(end) {
     FX_DCHECK(end_ >= begin_);
+  }
+
+  // Returns an address range covering the entire address space. Since our end() is one-past-the
+  // end, it won't technically cover the last byte.
+  static constexpr AddressRange Everything() {
+    return AddressRange(0, std::numeric_limits<uint64_t>::max());
   }
 
   constexpr uint64_t begin() const { return begin_; }

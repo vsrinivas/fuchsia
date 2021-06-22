@@ -11,35 +11,30 @@
 namespace zxdb {
 
 bool VariableLocation::Entry::InRange(const SymbolContext& symbol_context, uint64_t ip) const {
-  if (begin == 0 && end == 0)
-    return true;
-  return ip >= symbol_context.RelativeToAbsolute(begin) &&
-         ip < symbol_context.RelativeToAbsolute(end);
+  return symbol_context.RelativeToAbsolute(range).InRange(ip);
 }
 
 VariableLocation::VariableLocation() = default;
 
-VariableLocation::VariableLocation(const uint8_t* data, size_t size,
-                                   const UncachedLazySymbol& source) {
-  locations_.emplace_back();
-  Entry& entry = locations_.back();
+VariableLocation::VariableLocation(DwarfExpr expr) : default_expr_(std::move(expr)) {}
 
-  entry.begin = 0;
-  entry.end = 0;
-  entry.expression = DwarfExpr(std::vector<uint8_t>(data, &data[size]), source);
-}
-
-VariableLocation::VariableLocation(std::vector<Entry> locations)
-    : locations_(std::move(locations)) {}
+VariableLocation::VariableLocation(std::vector<Entry> locations,
+                                   std::optional<DwarfExpr> default_expr)
+    : locations_(std::move(locations)), default_expr_(std::move(default_expr)) {}
 
 VariableLocation::~VariableLocation() = default;
 
-const VariableLocation::Entry* VariableLocation::EntryForIP(const SymbolContext& symbol_context,
-                                                            uint64_t ip) const {
+const DwarfExpr* VariableLocation::ExprForIP(const SymbolContext& symbol_context,
+                                             uint64_t ip) const {
   for (const auto& entry : locations_) {
     if (entry.InRange(symbol_context, ip))
-      return &entry;
+      return &entry.expression;
   }
+
+  // Fall back to the default expression if nothing else matches.
+  if (default_expr_)
+    return &*default_expr_;
+
   return nullptr;
 }
 

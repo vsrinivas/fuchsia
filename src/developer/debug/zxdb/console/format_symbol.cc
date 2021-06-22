@@ -219,6 +219,29 @@ class ArchDataProvider : public SymbolDataProvider {
   debug_ipc::Arch arch_;
 };
 
+// Format the given DwarfExpr, does not include a newline at the end.
+OutputBuffer FormatDwarfExpr(debug_ipc::Arch arch, FormatSymbolOptions::DwarfExpr what,
+                             const SymbolContext& symbol_context, const DwarfExpr& expr) {
+  if (what == FormatSymbolOptions::DwarfExpr::kBytes) {
+    // Dump the raw DWARF expression bytes.
+    std::string result;
+    bool first = true;
+    for (uint8_t byte : expr.data()) {
+      if (first) {
+        first = false;
+      } else {
+        result.push_back(' ');  // Separator between bytes.
+      }
+      result += to_hex_string(byte, 2);
+    }
+    return result;
+  }
+
+  DwarfExprEval eval;
+  return eval.ToString(fxl::MakeRefCounted<ArchDataProvider>(arch), symbol_context, expr,
+                       what == FormatSymbolOptions::DwarfExpr::kPretty);
+}
+
 OutputBuffer FormatVariableLocation(int indent, const std::string& title,
                                     const SymbolContext& symbol_context,
                                     const VariableLocation& loc, const FormatSymbolOptions& opts) {
@@ -234,27 +257,17 @@ OutputBuffer FormatVariableLocation(int indent, const std::string& title,
   out.Append(Syntax::kHeading, indent_str + title);
   out.Append(Syntax::kComment, " (address range + DWARF expression):\n");
   for (const auto& entry : loc.locations()) {
-    // Address range.
-    if (entry.begin == 0 && entry.end == 0) {
-      out.Append(Syntax::kComment, indent_str + "  <always valid>:");
-    } else {
-      out.Append(indent_str + fxl::StringPrintf("  [0x%" PRIx64 ", 0x%" PRIx64 "):",
-                                                symbol_context.RelativeToAbsolute(entry.begin),
-                                                symbol_context.RelativeToAbsolute(entry.end)));
-    }
+    out.Append(indent_str +
+               fxl::StringPrintf("  [0x%" PRIx64 ", 0x%" PRIx64 "): ",
+                                 symbol_context.RelativeToAbsolute(entry.range.begin()),
+                                 symbol_context.RelativeToAbsolute(entry.range.end())));
+    out.Append(FormatDwarfExpr(opts.arch, opts.dwarf_expr, symbol_context, entry.expression));
+    out.Append("\n");
+  }
 
-    if (opts.dwarf_expr == FormatSymbolOptions::DwarfExpr::kBytes) {
-      // Dump the raw DWARF expression bytes.
-      for (uint8_t byte : entry.expression.data())
-        out.Append(fxl::StringPrintf(" 0x%02x", byte));
-    } else {
-      out.Append(" ");
-
-      DwarfExprEval eval;
-      out.Append(eval.ToString(fxl::MakeRefCounted<ArchDataProvider>(opts.arch), symbol_context,
-                               entry.expression,
-                               opts.dwarf_expr == FormatSymbolOptions::DwarfExpr::kPretty));
-    }
+  if (const DwarfExpr* default_expr = loc.default_expr()) {
+    out.Append(Syntax::kComment, indent_str + "  <default>: ");
+    out.Append(FormatDwarfExpr(opts.arch, opts.dwarf_expr, symbol_context, *default_expr));
     out.Append("\n");
   }
 

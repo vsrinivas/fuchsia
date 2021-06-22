@@ -410,9 +410,7 @@ TEST_F(StackTest, InlineVars) {
   inline_func->set_code_ranges(AddressRanges(AddressRange(kInlineAddr, kInlineAddr + 8)));
 
   // The inline function has a local variable ("var") that always evaluates to 3.
-  VariableLocation::Entry loc_entry;
-  loc_entry.expression = DwarfExpr({llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_stack_value});
-  VariableLocation var_loc({loc_entry});
+  VariableLocation var_loc(DwarfExpr({llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_stack_value}));
 
   auto int32_type = MakeInt32Type();
   auto inline_var =

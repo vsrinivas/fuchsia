@@ -9,6 +9,7 @@
 
 #include <vector>
 
+#include "src/developer/debug/zxdb/common/address_range.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr.h"
 
 namespace zxdb {
@@ -32,10 +33,7 @@ class VariableLocation {
   struct Entry {
     // These addresses are relative to the module that generated the symbol. A symbol context is
     // required to compare to physical addresses.
-    //
-    // These will be 0,0 for a range that's always valid.
-    uint64_t begin = 0;  // First address.
-    uint64_t end = 0;    // First address past end.
+    AddressRange range;
 
     // Returns whether this entry matches the given physical IP.
     bool InRange(const SymbolContext& symbol_context, uint64_t ip) const;
@@ -46,27 +44,36 @@ class VariableLocation {
 
   VariableLocation();
 
-  // Constructs a Location with a single location valid for all address ranges, with the program
-  // contained in the given buffer.
-  VariableLocation(const uint8_t* data, size_t size, const UncachedLazySymbol& source);
+  // Constructs a Location with a single default expression.
+  explicit VariableLocation(DwarfExpr expr);
 
-  // Constructs with an extracted array of Entries.
-  VariableLocation(std::vector<Entry> locations);
+  // Constructs with an extracted array of Entries and an optional default expression that applies
+  // when no other one does.
+  explicit VariableLocation(std::vector<Entry> locations,
+                            std::optional<DwarfExpr> default_expr = std::nullopt);
 
   ~VariableLocation();
 
   // Returns whether this location lacks any actual locations.
-  bool is_null() const { return locations_.empty(); }
+  bool is_null() const { return locations_.empty() && !default_expr_; }
 
   const std::vector<Entry>& locations() const { return locations_; }
 
-  // Returns the Entry that corresponds to the given IP, or nullptr if none matched.
-  const Entry* EntryForIP(const SymbolContext& symbol_context, uint64_t ip) const;
+  // DWARF can express a "default" location that applies when none of the other location ranges
+  // match. The return value will be null if there is no default.
+  const DwarfExpr* default_expr() const { return default_expr_ ? &*default_expr_ : nullptr; }
+
+  // Returns the expression that applies to the given IP, or nullptr if none matched.
+  const DwarfExpr* ExprForIP(const SymbolContext& symbol_context, uint64_t ip) const;
 
  private:
   // The location list. The DWARF spec explicitly allows for ranges to overlap which means the value
-  // can be retrieved from either location.
+  // can be retrieved from either location. This may be empty but there could still be a "default"
+  // location.
   std::vector<Entry> locations_;
+
+  // Set if there is a default location, see default_expr() above.
+  std::optional<DwarfExpr> default_expr_;
 };
 
 }  // namespace zxdb

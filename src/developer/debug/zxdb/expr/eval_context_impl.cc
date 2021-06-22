@@ -234,8 +234,8 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, EvalCallbac
     return cb(Err("No location available."));
   memcpy(&ip, &(*ip_data)[0], ip_data->size());
 
-  const VariableLocation::Entry* loc_entry = var->location().EntryForIP(symbol_context, ip);
-  if (!loc_entry) {
+  const DwarfExpr* loc_expr = var->location().ExprForIP(symbol_context, ip);
+  if (!loc_expr) {
     // No DWARF location applies to the current instruction pointer.
     const char* err_str;
     if (var->location().is_null()) {
@@ -250,7 +250,7 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, EvalCallbac
 
   // Schedule the expression to be evaluated.
   auto evaluator = fxl::MakeRefCounted<AsyncDwarfExprEval>(std::move(cb), std::move(type));
-  evaluator->Eval(RefPtrTo(this), symbol_context, loc_entry->expression);
+  evaluator->Eval(RefPtrTo(this), symbol_context, *loc_expr);
 }
 
 const ProcessSymbols* EvalContextImpl::GetProcessSymbols() const {

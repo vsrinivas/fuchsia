@@ -19,14 +19,12 @@ TEST(FormatSymbol, Variable) {
 
   std::vector<VariableLocation::Entry> loc_entries;
   loc_entries.resize(2);
-  loc_entries[0].begin = 0x1000;
-  loc_entries[0].end = 0x2000;
+  loc_entries[0].range = AddressRange(0x1000, 0x2000);
   loc_entries[0].expression = DwarfExpr({0x30,  // DW_OP_lit0
                                          0x71,  // DW_OP_breg1
                                          1});   // 1 (param for breg).
 
-  loc_entries[1].begin = 0x3000;
-  loc_entries[1].end = 0x4000;
+  loc_entries[1].range = AddressRange(0x3000, 0x4000);
   loc_entries[1].expression = DwarfExpr({0x31});  // DW_OP_lit1
 
   auto var = fxl::MakeRefCounted<Variable>(DwarfTag::kVariable, "my_var", int32_type,
