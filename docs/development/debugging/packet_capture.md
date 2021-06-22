@@ -212,7 +212,7 @@ workflows. The following table lists noteworthy signatures.
 
 
 ## How do I test if `netdump` is broken?
-You can run some sanity checks locally.
+You can run some checks locally.
 
 ```shell
 [host] $ fx set core.x64 --with //src/connectivity:tests,//src/connectivity/network/netdump:netdump_unit_tests
