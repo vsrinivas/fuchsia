@@ -91,6 +91,22 @@ kernel_cmdline("virtcon.keep-log-visible--true") {
   args = [ "virtcon.keep-log-visible=true" ]
 }
 
+kernel_cmdline("virtcon.rounded-corners--true") {
+  args = [ "virtcon.rounded_corners=true" ]
+}
+
+kernel_cmdline("virtcon.display-rotation--90") {
+  args = [ "virtcon.display_rotation=90" ]
+}
+
+kernel_cmdline("virtcon.animation--true") {
+  args = [ "virtcon.animation=true" ]
+}
+
+kernel_cmdline("virtcon.dpi--240-360-480") {
+  args = [ "virtcon.dpi=240,360,480" ]
+}
+
 kernel_cmdline("ktrace.grpmask-0") {
   args = [ "ktrace.grpmask=0" ]
 }
