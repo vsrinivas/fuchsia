@@ -41,6 +41,7 @@ serve_flags=()
 verbose=false
 auto_config=true
 clean_first=false
+config_format="2"
 persist="--no-persist"
 while (($#)); do
   case "$1" in
@@ -50,8 +51,8 @@ while (($#)); do
       serve_flags+=(-l "$1")
       ;;
     -c)
+      config_format=("$2")
       shift
-      serve_flags+=(-c "$1")
       ;;
     --no-persist)
       ;;
@@ -75,6 +76,7 @@ while (($#)); do
   esac
   shift
 done
+serve_flags+=("-c" "${config_format}")
 
 if fx-is-bringup; then
   fx-error "$0 is not supported in the bringup build configuration, as there are no package features in bringup."
