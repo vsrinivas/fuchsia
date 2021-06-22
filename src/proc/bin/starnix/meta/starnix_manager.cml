@@ -9,7 +9,7 @@
         {
             name: "playground",
             environment: "#starnix-env",
-            durability: "transient",
+            durability: "single_run",
         },
     ],
     offer: [

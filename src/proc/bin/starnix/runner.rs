@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, format_err, Context, Error};
-use fidl::endpoints::{self, ServerEnd};
+use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component_runner::{
     self as fcrunner, ComponentControllerMarker, ComponentStartInfo,
@@ -297,15 +297,8 @@ async fn start(url: String) -> Result<(), Error> {
         .create_child(&mut collection_ref, child_decl)
         .await?
         .map_err(|e| format_err!("failed to create child: {:?}", e))?;
-    let mut child_ref =
-        fsys::ChildRef { name: child_name.clone(), collection: Some(COLLECTION.into()) };
-    let (_, server) = endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
-    let () = realm
-        .bind_child(&mut child_ref, server)
-        .await?
-        .map_err(|e| format_err!("failed to bind to child: {:?}", e))?;
-    // We currently don't track the instance so we will never terminate it. Eventually, we'll keep
-    // track of all the running instances and be able to stop them.
+    // The component is run in a `SingleRun` collection instance, and will be automatically
+    // deleted when it exits.
     Ok(())
 }
 
