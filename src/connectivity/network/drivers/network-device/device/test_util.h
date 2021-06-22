@@ -349,6 +349,7 @@ class TestSession {
   uint64_t canonical_offset(uint16_t index) const { return buffer_length_ * index; }
 
   const zx::fifo& tx_fifo() const { return fifos_.tx; }
+  const zx::fifo& rx_fifo() const { return fifos_.rx; }
   const zx::channel& channel() const { return session_.channel(); }
 
  private:

@@ -156,7 +156,9 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
       __TA_REQUIRES(parent_->rx_lock());
   // Completes rx by copying the data from another session into one of this session's available rx
   // buffers.
-  void CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info)
+  //
+  // Returns true iff the frame information was enqueued in the session rx queue.
+  bool CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info)
       __TA_REQUIRES_SHARED(parent_->control_lock()) __TA_REQUIRES(parent_->rx_lock());
   // Marks a single rx space buffer as complete, but does not consume it as it was unfulfilled.
   // Returns true iff the session is active and space buffers can be reused.

@@ -8,6 +8,7 @@
 #include <lib/syslog/global.h>
 
 #include <future>
+#include <iomanip>
 
 #include <gtest/gtest.h>
 
@@ -46,6 +47,15 @@ zx::status<zx_status_t> WaitClosedAndReadEpitaph(const zx::channel& channel) {
   }
   return zx::ok(epitaph.error);
 }
+
+std::string toHexString(fbl::Span<const uint8_t> data) {
+  std::stringstream ss;
+  for (const uint8_t& b : data) {
+    ss << std::setw(2) << std::setfill('0') << std::hex << static_cast<int>(b);
+  }
+  return ss.str();
+}
+
 }  // namespace
 
 namespace network {
@@ -1663,6 +1673,14 @@ TEST_P(RxTxBufferReturnTest, TestRaceFramesWithDeviceStop) {
   }
 }
 
+INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, RxTxBufferReturnTest,
+                         ::testing::Combine(::testing::Values(RxTxSwitch::Rx, RxTxSwitch::Tx),
+                                            ::testing::Values(BufferReturnMethod::NoReturn,
+                                                              BufferReturnMethod::ManualReturn,
+                                                              BufferReturnMethod::ImmediateReturn),
+                                            ::testing::Bool()),
+                         rxTxBufferReturnTestToString);
+
 TEST_F(NetworkDeviceTest, PortGetInfo) {
   // Test Port.GetInfo FIDL implementation.
   ASSERT_OK(CreateDeviceWithPort0());
@@ -2239,13 +2257,161 @@ INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, BadDescriptorTest,
                                            DescriptorSource::TxChain),
                          badDescriptorTestToString);
 
-INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, RxTxBufferReturnTest,
-                         ::testing::Combine(::testing::Values(RxTxSwitch::Rx, RxTxSwitch::Tx),
-                                            ::testing::Values(BufferReturnMethod::NoReturn,
-                                                              BufferReturnMethod::ManualReturn,
-                                                              BufferReturnMethod::ImmediateReturn),
-                                            ::testing::Bool()),
-                         rxTxBufferReturnTestToString);
+TEST_F(NetworkDeviceTest, SecondarySessionWithRxOffsetAndChaining) {
+  constexpr uint32_t kBufferLength = 32;
+  ASSERT_OK(CreateDeviceWithPort0());
+  struct {
+    TestSession session;
+    const char* const name;
+    const netdev::wire::SessionFlags flags;
+    const uint16_t descriptor_count;
+  } sessions[] = {
+      {
+          .name = "primary",
+          .flags = netdev::wire::SessionFlags::kPrimary,
+          .descriptor_count = 1,
+      },
+      {
+          .name = "alt_a",
+          .descriptor_count = 2,
+      },
+      {
+          .name = "alt_b",
+          .descriptor_count = 4,
+      },
+  };
+
+  struct {
+    const uint32_t offset;
+    const uint32_t length;
+    std::vector<uint8_t> reference_data;
+  } buffers[] = {
+      {.offset = 0, .length = kBufferLength},
+      {.offset = 3, .length = kBufferLength / 4},
+      {.offset = kBufferLength / 4, .length = kBufferLength / 2},
+  };
+
+  for (auto& s : sessions) {
+    SCOPED_TRACE(s.name);
+    ASSERT_OK(OpenSession(&s.session, s.flags, kDefaultDescriptorCount, kBufferLength, s.name));
+    for (uint16_t desc = 0; desc < std::size(buffers) * s.descriptor_count; desc++) {
+      buffer_descriptor_t* d = s.session.ResetDescriptor(desc);
+      d->data_length = kBufferLength / s.descriptor_count;
+      ASSERT_OK(s.session.SendRx(desc));
+    }
+    ASSERT_OK(s.session.AttachPort(port0_));
+  }
+
+  ASSERT_OK(WaitRxAvailable());
+  RxReturnTransaction txn(&impl_);
+  for (auto& b : buffers) {
+    b.reference_data.reserve(b.length);
+    for (uint32_t i = 0; i < b.length; i++) {
+      b.reference_data.push_back(static_cast<uint8_t>(i ^ b.offset));
+    }
+    std::unique_ptr rx_space = impl_.PopRxBuffer();
+    ASSERT_TRUE(rx_space);
+    ASSERT_GE(rx_space->space().region.length, b.length + b.offset);
+    rx_space->space().region.offset += b.offset;
+    ASSERT_OK(rx_space->WriteData(b.reference_data, impl_.VmoGetter()));
+    rx_space->return_part() = {
+        .id = rx_space->return_part().id,
+        .offset = b.offset,
+        .length = b.length,
+    };
+    txn.Enqueue(std::move(rx_space));
+  }
+  txn.Commit();
+
+  for (auto& s : sessions) {
+    SCOPED_TRACE(s.name);
+    for (auto& b : buffers) {
+      std::stringstream ss;
+      ss << "offset:" << b.offset << ",length:" << b.length;
+      SCOPED_TRACE(ss.str());
+
+      uint16_t desc_idx;
+      ASSERT_OK(s.session.FetchRx(&desc_idx));
+      buffer_descriptor_t* desc = s.session.descriptor(desc_idx);
+      if (s.flags & netdev::wire::SessionFlags::kPrimary) {
+        ASSERT_EQ(desc->chain_length, 0);
+      } else {
+        ASSERT_EQ(desc->chain_length,
+                  std::max(static_cast<uint8_t>(b.length * s.descriptor_count / kBufferLength),
+                           static_cast<uint8_t>(1)) -
+                      1);
+      }
+      uint8_t received[kBufferLength];
+      auto wr = std::begin(received);
+      for (;;) {
+        ASSERT_LE(static_cast<size_t>(std::distance(std::begin(received), wr)) + desc->data_length,
+                  std::size(received));
+        wr = std::copy_n(s.session.buffer(desc->offset + desc->head_length), desc->data_length, wr);
+        if (desc->chain_length == 0) {
+          break;
+        }
+        desc = s.session.descriptor(desc->nxt);
+      }
+      ASSERT_EQ(static_cast<size_t>(std::distance(std::begin(received), wr)),
+                b.reference_data.size());
+      ASSERT_EQ(toHexString(fbl::Span(received, b.reference_data.size())),
+                toHexString(fbl::Span(b.reference_data.data(), b.reference_data.size())));
+    }
+  }
+}
+
+TEST_F(NetworkDeviceTest, BufferChainingOnListenTx) {
+  ASSERT_OK(CreateDeviceWithPort0());
+  TestSession primary;
+  ASSERT_OK(OpenSession(&primary, netdev::wire::SessionFlags::kPrimary, kDefaultDescriptorCount,
+                        kDefaultBufferLength, "primary"));
+  ASSERT_OK(primary.AttachPort(port0_));
+  TestSession listen;
+  ASSERT_OK(OpenSession(&listen, netdev::wire::SessionFlags::kListenTx, kDefaultDescriptorCount,
+                        kDefaultBufferLength, "listen"));
+  ASSERT_OK(listen.AttachPort(port0_));
+
+  constexpr uint32_t kRxDescriptorLen = 30;
+  constexpr uint16_t kRxDescriptorCount = 3;
+  constexpr uint16_t kTxHeadLen = 10;
+  constexpr uint32_t kTxLen = kRxDescriptorLen * kRxDescriptorCount - 4;
+  constexpr uint16_t kTxDescriptor = 0;
+
+  for (uint16_t i = 0; i < kRxDescriptorCount; i++) {
+    buffer_descriptor_t* desc = listen.ResetDescriptor(i);
+    desc->data_length = kRxDescriptorLen;
+    ASSERT_OK(listen.SendRx(i));
+  }
+
+  buffer_descriptor_t* tx_desc = primary.ResetDescriptor(kTxDescriptor);
+  tx_desc->data_length = kTxLen;
+  tx_desc->head_length = kTxHeadLen;
+  uint8_t b = 0;
+  fbl::Span tx_data(primary.buffer(tx_desc->offset + kTxHeadLen), kTxLen);
+  for (uint8_t& d : tx_data) {
+    d = b++;
+  }
+  ASSERT_OK(primary.SendTx(kTxDescriptor));
+
+  ASSERT_OK(listen.rx_fifo().wait_one(ZX_FIFO_READABLE, TEST_DEADLINE, nullptr));
+  uint16_t rx_desc_index;
+  ASSERT_OK(listen.FetchRx(&rx_desc_index));
+
+  uint32_t offset = 0;
+  uint8_t expect_chain_length = kRxDescriptorCount - 1;
+  for (uint16_t i = 0; i < kRxDescriptorCount; i++) {
+    SCOPED_TRACE(i);
+    buffer_descriptor_t* rx_desc = listen.descriptor(rx_desc_index);
+    ASSERT_EQ(rx_desc->chain_length, expect_chain_length--);
+    fbl::Span data(listen.buffer(rx_desc->offset), rx_desc->data_length);
+    ASSERT_EQ(data.size(), std::min(kRxDescriptorLen, kTxLen - offset));
+    ASSERT_EQ(toHexString(fbl::Span(data.begin(), data.size())),
+              toHexString(tx_data.subspan(offset, data.size())));
+    rx_desc_index = rx_desc->nxt;
+    offset += rx_desc->data_length;
+  }
+  ASSERT_EQ(offset, kTxLen);
+}
 
 INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, RxTxParamTest,
                          ::testing::Values(RxTxSwitch::Rx, RxTxSwitch::Tx), rxTxParamTestToString);

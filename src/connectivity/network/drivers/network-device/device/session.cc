@@ -833,15 +833,15 @@ bool Session::CompleteRx(const RxFrameInfo& frame_info) {
   return allow_reuse;
 }
 
-void Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info) {
+bool Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info) {
   // Shouldn't call CompleteRxWith where owner is self. Assertion enforces that
   // DeviceInterface::CopySessionData does the right thing.
   ZX_ASSERT(&owner != this);
   if (!IsSubscribedToFrameType(frame_info.meta.port,
                                static_cast<netdev::wire::FrameType>(frame_info.meta.frame_type)) ||
-      paused_.load()) {
+      IsPaused()) {
     // Don't do anything if we're paused or not subscribed to this frame type.
-    return;
+    return false;
   }
 
   // Allocate enough descriptors to fit all the data that we want to copy from the other session.
@@ -857,13 +857,13 @@ void Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info
           "network-device(%s): failed to allocate %d bytes with %ld buffer parts (%d bytes "
           "remaining); frame dropped",
           name(), frame_info.total_length, parts_storage.size(), remaining);
-      return;
+      return false;
     }
     if (rx_avail_queue_count_ == 0) {
       // We allow a fetch attempt only once, which gives the session a chance to have returned
       // enough descriptors for this chained case.
       if (attempted_fetch) {
-        return;
+        return false;
       }
       attempted_fetch = true;
 
@@ -872,7 +872,7 @@ void Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info
       // TODO(https://fxbug.dev/74434): Log here sparingly as part of "no buffers available"
       // strategy.
       if (FetchRxDescriptors() != ZX_OK) {
-        return;
+        return false;
       }
 
       // FetchRxDescriptors modifies the available rx queue, we need to build the parts again.
@@ -888,7 +888,7 @@ void Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info
       LOGF_TRACE("network-device(%s): descriptor %d out of range %d", name(),
                  session_buffer.descriptor, descriptor_count_);
       Kill();
-      return;
+      return false;
     }
     buffer_descriptor_t& desc = *desc_ptr;
     uint32_t desc_length = desc.data_length + desc.head_length + desc.tail_length;
@@ -916,39 +916,48 @@ void Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info
   // passing it down to the device.
   // Also, we know that our own descriptor is valid, because we already pre-loaded the
   // information by calling LoadRxInfo above.
-  const buffer_descriptor_t* owner_desc_iter =
-      &owner.descriptor(frame_info.buffers.begin()->descriptor);
+  // The rx information from the owner session has not yet been loaded into its descriptor at this
+  // point; iteration over buffer parts and offset/length information must be retrieved from
+  // |frame_info|. The owner's descriptors provides only the original vmo offset to use, dictated by
+  // the owner session's client.
+  auto owner_rx_iter = frame_info.buffers.begin();
+  auto get_vmo_owner_offset = [&owner](uint16_t index) -> uint64_t {
+    const buffer_descriptor_t& desc = owner.descriptor(index);
+    return desc.offset + desc.head_length;
+  };
+  uint64_t owner_vmo_offset = get_vmo_owner_offset(owner_rx_iter->descriptor);
+
   buffer_descriptor_t* desc_iter = &descriptor(first_descriptor);
 
   remaining = frame_info.total_length;
   uint32_t owner_off = 0;
   uint32_t self_off = 0;
   for (;;) {
-    const buffer_descriptor_t& owner_desc = *owner_desc_iter;
     buffer_descriptor_t& desc = *desc_iter;
-    auto owner_len = owner_desc.data_length - owner_off;
-    auto self_len = desc.data_length - self_off;
-    auto copy_len = owner_len >= self_len ? self_len : owner_len;
-    auto target = data_at(desc.offset + desc.head_length + self_off, copy_len);
-    auto src = owner.data_at(owner_desc.offset + owner_desc.head_length + owner_off, copy_len);
+    const SessionRxBuffer& owner_rx_buffer = *owner_rx_iter;
+    uint32_t owner_len = owner_rx_buffer.length - owner_off;
+    uint32_t self_len = desc.data_length - self_off;
+    uint32_t copy_len = owner_len >= self_len ? self_len : owner_len;
+    fbl::Span target = data_at(desc.offset + desc.head_length + self_off, copy_len);
+    fbl::Span src = owner.data_at(owner_vmo_offset + owner_rx_buffer.offset + owner_off, copy_len);
     std::copy_n(src.begin(), std::min(target.size(), src.size()), target.begin());
 
     owner_off += copy_len;
     self_off += copy_len;
-    ZX_ASSERT(owner_off <= owner_desc.data_length);
+    ZX_ASSERT(owner_off <= owner_rx_iter->length);
     ZX_ASSERT(self_off <= desc.data_length);
 
     remaining -= copy_len;
     if (remaining == 0) {
-      break;
+      return true;
     }
 
     if (self_off == desc.data_length) {
       desc_iter = &descriptor(desc.nxt);
       self_off = 0;
     }
-    if (owner_off == owner_desc.data_length) {
-      owner_desc_iter = &owner.descriptor(owner_desc.nxt);
+    if (owner_off == owner_rx_buffer.length) {
+      owner_vmo_offset = get_vmo_owner_offset((++owner_rx_iter)->descriptor);
       owner_off = 0;
     }
   }
@@ -960,10 +969,6 @@ bool Session::CompleteUnfulfilledRx() {
 }
 
 bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
-  // TODO(https://fxbug.dev/77868): This function is still using the old semantics where we expected
-  // rx space buffer to be provided as chained by the application. During that update this was left
-  // behind and is incorrect. It'd be nice to figure out a way to unify the code paths to prevent
-  // this from happening again.
   ZX_ASSERT(&owner != this);
   if (IsPaused()) {
     // Do nothing if we're paused.
@@ -972,107 +977,62 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
 
   // NB: This method is called before the tx frame is operated on for regular tx flow. We can't
   // assume that descriptors have already been validated.
-  const buffer_descriptor_t* owner_desc_ptr = owner.checked_descriptor(owner_index);
-  if (!owner_desc_ptr) {
+  const buffer_descriptor_t* owner_desc_iter = owner.checked_descriptor(owner_index);
+  if (!owner_desc_iter) {
     // Stop the listen short, validation will happen again on regular tx flow.
     return false;
   }
-  const buffer_descriptor_t& owner_desc = *owner_desc_ptr;
+  const buffer_descriptor_t& owner_desc = *owner_desc_iter;
+  // Bail early if not interested in frame type.
   if (!IsSubscribedToFrameType(owner_desc.port_id,
                                static_cast<netdev::wire::FrameType>(owner_desc.frame_type))) {
     return false;
   }
 
-  if (rx_avail_queue_count_ == 0) {
-    // Can't do much if we can't fetch more descriptors.
-    if (FetchRxDescriptors() != ZX_OK) {
-      LOGF_TRACE("network-device(%s): Failed to fetch rx descriptors for Tx listening", name());
+  BufferParts<SessionRxBuffer> parts;
+  auto parts_iter = parts.begin();
+  uint32_t total_length = 0;
+  for (;;) {
+    const buffer_descriptor_t& owner_part = *owner_desc_iter;
+    *parts_iter++ = {
+        .descriptor = owner_index,
+        .length = owner_part.data_length,
+    };
+    total_length += owner_part.data_length;
+    if (owner_part.chain_length == 0) {
+      break;
+    }
+    owner_desc_iter = owner.checked_descriptor(owner_part.nxt);
+    if (!owner_desc_iter) {
+      // Let regular tx validation punish the owner session.
       return false;
     }
   }
-  // Shouldn't get here without available descriptors.
-  ZX_ASSERT(rx_avail_queue_count_ > 0);
-  rx_avail_queue_count_--;
-  uint16_t target_desc = rx_avail_queue_[rx_avail_queue_count_];
-  auto return_descriptor = fit::defer([this, &target_desc]() {
-    []() __TA_ASSERT(parent_->rx_lock_) {}();
-    rx_avail_queue_[rx_avail_queue_count_] = target_desc;
-    rx_avail_queue_count_++;
-  });
 
-  buffer_descriptor_t* desc_iter = checked_descriptor(target_desc);
-  if (!desc_iter) {
-    LOGF_TRACE("network-device(%s): descriptor %d out of range %d", name(), target_desc,
-               descriptor_count_);
-    Kill();
-    return false;
+  auto info_type = static_cast<netdev::wire::InfoType>(owner_desc.info_type);
+  switch (info_type) {
+    case netdev::wire::InfoType::kNoInfo:
+      break;
+    default:
+      LOGF_WARN("network-device(%s): info type (%d) not recognized, discarding information", name(),
+                owner_desc.info_type);
+      info_type = netdev::wire::InfoType::kNoInfo;
+      break;
   }
-  {
-    buffer_descriptor_t& desc = *desc_iter;
-    // NOTE(brunodalbo) Do we want to listen on info as well?
-    desc.info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
-    desc.frame_type = owner_desc.frame_type;
-    desc.return_flags = static_cast<uint32_t>(netdev::wire::RxFlags::kRxEchoedTx);
-    desc.port_id = owner_desc.port_id;
-  }
+  // Build frame information as if this had been received from any other session and call into
+  // common routine to commit the descriptor.
+  const buffer_metadata_t frame_meta = {
+      .port = owner_desc.port_id,
+      .info_type = static_cast<uint32_t>(info_type),
+      .flags = static_cast<uint32_t>(netdev::wire::RxFlags::kRxEchoedTx),
+      .frame_type = owner_desc.frame_type,
+  };
 
-  const buffer_descriptor_t* owner_part_iter = &owner_desc;
-  uint64_t my_offset = 0;
-  uint64_t owner_offset = 0;
-
-  // Start copying the data over:
-  for (;;) {
-    buffer_descriptor_t& part = *desc_iter;
-    const buffer_descriptor_t& owner_part = *owner_part_iter;
-    uint64_t me_avail = part.data_length - my_offset;
-    uint64_t owner_avail = owner_part.data_length - owner_offset;
-    uint64_t copy = me_avail < owner_avail ? me_avail : owner_avail;
-
-    fbl::Span target = data_at(part.offset + part.head_length + my_offset, copy);
-    fbl::Span src = owner.data_at(owner_part.offset + owner_part.head_length + owner_offset, copy);
-    std::copy_n(src.begin(), std::min(target.size(), src.size()), target.begin());
-
-    my_offset += copy;
-    owner_offset += copy;
-
-    if (owner_offset == owner_part.data_length) {
-      owner_offset = 0;
-      if (owner_part.chain_length != 0) {
-        owner_part_iter = owner.checked_descriptor(owner_part.nxt);
-        if (!owner_part_iter) {
-          // Bad owner descriptor, stop copy. Owner session will be checked again on regular tx
-          // flow.
-          return false;
-        }
-      } else {
-        // Set length in last buffer.
-        part.data_length = static_cast<uint32_t>(my_offset);
-        break;
-      }
-    }
-    if (my_offset == part.data_length) {
-      my_offset = 0;
-      if (part.chain_length != 0) {
-        desc_iter = checked_descriptor(part.nxt);
-        if (!desc_iter) {
-          LOGF_TRACE("network-device(%s): descriptor %d out of range %d", name(), part.nxt,
-                     descriptor_count_);
-          Kill();
-          return false;
-        }
-      } else {
-        LOGF_TRACE("network-device(%s): Failed to copy data from tx listen", name());
-        return false;
-      }
-    }
-  }
-
-  return_descriptor.cancel();
-  // Add the descriptor to the return queue.
-  rx_return_queue_[rx_return_queue_count_] = target_desc;
-  rx_return_queue_count_++;
-
-  return true;
+  return CompleteRxWith(owner, RxFrameInfo{
+                                   .meta = frame_meta,
+                                   .buffers = fbl::Span(parts.begin(), parts_iter),
+                                   .total_length = total_length,
+                               });
 }
 
 zx_status_t Session::LoadRxInfo(const RxFrameInfo& info) {
