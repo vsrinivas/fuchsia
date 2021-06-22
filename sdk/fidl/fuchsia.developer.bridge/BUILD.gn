@@ -14,6 +14,7 @@ fidl("fuchsia.developer.bridge") {
     "mdns.fidl",
     "repo.fidl",
     "target.fidl",
+    "tracing.fidl",
     "version.fidl",
   ]
   public_deps = [
@@ -21,6 +22,7 @@ fidl("fuchsia.developer.bridge") {
     "//sdk/fidl/fuchsia.developer.remotecontrol",
     "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.net",
+    "//sdk/fidl/fuchsia.tracing.controller",
     "//zircon/vdso/zx",
   ]
 

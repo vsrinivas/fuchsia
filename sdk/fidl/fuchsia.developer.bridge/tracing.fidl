@@ -1,0 +1,39 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Covers the FFX tracing service, which is for running trace readouts
+// on a Fuchsia target.
+// For more information/usage examples, see the FFX trace plugin.
+library fuchsia.developer.bridge;
+
+using fuchsia.device;
+using fuchsia.tracing.controller;
+
+/// This covers erorr from using the `Tracing` protocol below (specifically
+/// trace recording errors).
+enum RecordingError {
+    /// Error encountered when opening the proxy to the target.
+    TARGET_PROXY_OPEN = 0;
+
+    /// This is a general error when starting a trace.
+    RECORDING_START = 1;
+
+    /// An error encountered if a trace recording has already been started.
+    RECORDING_ALREADY_STARTED = 2;
+
+    /// An error encountered when attempting to stop a trace. This causes an
+    /// immediate termination of the client channel, so the user should not
+    /// attempt to run `StopRecording` again.
+    RECORDING_STOP = 3;
+};
+
+[Discoverable]
+protocol Tracing {
+    StartRecording(string:fuchsia.device.DEVICE_NAME_MAX? target_query,
+                   string:255 output_file,
+                   fuchsia.tracing.controller.TraceConfig config)
+        -> () error RecordingError;
+
+    StopRecording(string:255 output_file) -> () error RecordingError;
+};

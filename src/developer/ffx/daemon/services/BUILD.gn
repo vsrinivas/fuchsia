@@ -12,6 +12,7 @@ if (is_host) {
       "//src/developer/ffx/daemon/services/echo:ffx_daemon_service_echo",
       "//src/developer/ffx/daemon/services/mdns:ffx_daemon_service_mdns",
       "//src/developer/ffx/daemon/services/repo:ffx_daemon_service_repo",
+      "//src/developer/ffx/daemon/services/tracing:ffx_daemon_service_tracing",
     ]
   }
 }
@@ -23,5 +24,6 @@ group("tests") {
     "echo:tests($host_toolchain)",
     "mdns:tests($host_toolchain)",
     "repo:tests($host_toolchain)",
+    "tracing:tests($host_toolchain)",
   ]
 }

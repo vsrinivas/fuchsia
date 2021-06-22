@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -17,7 +17,8 @@ pub struct TraceCommand {
 #[argh(subcommand)]
 pub enum TraceSubCommand {
     ListProviders(ListProviders),
-    Record(Record),
+    Start(Start),
+    Stop(Stop),
     // More commands including `record` and `convert` to follow.
 }
 
@@ -37,8 +38,17 @@ static DEFAULT_CATEGORIES: &str = "app,audio,benchmark,blobfs,gfx,input,kernel:m
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Record a trace
-#[argh(subcommand, name = "record")]
-pub struct Record {
+#[argh(subcommand, name = "stop")]
+pub struct Stop {
+    /// name of output trace file.  Defaults to trace.fxt.
+    #[argh(option, default = "String::from(\"trace.fxt\")")]
+    pub output: String,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Record a trace
+#[argh(subcommand, name = "start")]
+pub struct Start {
     /// size of per-provider trace buffer in MB.  Defaults to 4.
     #[argh(option, default = "4")]
     pub buffer_size: u32,

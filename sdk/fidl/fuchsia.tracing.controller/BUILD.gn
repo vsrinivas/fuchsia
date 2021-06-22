@@ -5,6 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.tracing.controller") {
+  sdk_category = "internal"
   sources = [ "trace_controller.fidl" ]
 
   # TODO(fxbug.dev/68950): 10% rollout of API summary generation.
