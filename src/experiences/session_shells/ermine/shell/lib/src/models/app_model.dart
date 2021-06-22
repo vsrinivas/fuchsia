@@ -244,10 +244,12 @@ class AppModel {
     _inspect.onDemand('ermine', _onInspect);
 
     // Handle commands from Flutter Driver.
-    _flutterDriverHandler = MethodChannel('flutter_driver/handler');
-    _flutterDriverHandler.setMockMethodCallHandler((call) async {
-      actions[call.method]?.call();
-    });
+    if (TestDefaultBinaryMessengerBinding.instance != null) {
+      _flutterDriverHandler = MethodChannel('flutter_driver/handler');
+      _flutterDriverHandler.setMockMethodCallHandler((call) async {
+        actions[call.method]?.call();
+      });
+    }
   }
 
   // Map key shortcuts to corresponding actions.
