@@ -263,43 +263,71 @@ void Tas58xx::SetGainState(GainState gain_state) {
   TRACE_DURATION_BEGIN("tas58xx", "SetGainState", "Enable AGL",
                        gain_state.agc_enabled != last_agc_);
   fbl::AutoLock lock(&lock_);
-  float gain = std::clamp(gain_state.gain, kMinGain, kMaxGain);
-  uint8_t gain_reg = static_cast<uint8_t>(48 - gain * 2);
-  zx_status_t status = WriteReg(kRegDigitalVol, gain_reg);
-  if (status != ZX_OK) {
-    return;
-  }
+  zx_status_t status;
   if (gain_state.agc_enabled != last_agc_) {
     // TODO(77042): Move to the signal processing API, for now use the AGC bit.
-    uint8_t agl_change[] = {kRegAgl, 0x40, 0x00, 0x00, 0x00};
-    if (gain_state.agc_enabled) {
-      agl_change[1] |= kRegAglEnableBitByte0;
-    }
-    status = WriteReg(kRegSelectBook, 0x8c);
-    if (status != ZX_OK) {
-      return;
-    }
-    status = WriteReg(kRegSelectPage, 0x2c);
-    if (status != ZX_OK) {
-      return;
-    }
-    status = WriteRegs(agl_change, countof(agl_change));
-    if (status != ZX_OK) {
-      return;
-    }
-    status = WriteReg(kRegSelectPage, 0);
-    if (status != ZX_OK) {
-      return;
-    }
-    status = WriteReg(kRegSelectBook, 0);
-    if (status != ZX_OK) {
-      return;
-    }
+    const uint8_t agl_value = 0x40 | (gain_state.agc_enabled ? kRegAglEnableBitByte0 : 0);
+
+    // clang-format off
+    const uint8_t buffer[] = {
+        kRegSelectBook, 0x8c,
+        kRegSelectPage, 0x2c,
+        kRegAgl, agl_value, 0x00, 0x00, 0x00,
+        kRegSelectPage, 0x00,
+        kRegSelectBook, 0x00,
+    };
+    // clang-format on
+
+    i2c_op_t ops[5] = {};
+
+    ops[0].data_buffer = &buffer[0];
+    ops[0].data_size = 2;
+    ops[0].is_read = false;
+    ops[0].stop = true;
+
+    ops[1].data_buffer = &buffer[2];
+    ops[1].data_size = 2;
+    ops[1].is_read = false;
+    ops[1].stop = true;
+
+    ops[2].data_buffer = &buffer[4];
+    ops[2].data_size = 5;
+    ops[2].is_read = false;
+    ops[2].stop = true;
+
+    ops[3].data_buffer = &buffer[9];
+    ops[3].data_size = 2;
+    ops[3].is_read = false;
+    ops[3].stop = true;
+
+    ops[4].data_buffer = &buffer[11];
+    ops[4].data_size = 2;
+    ops[4].is_read = false;
+    ops[4].stop = true;
+
+    sync_completion_t completion;
+    sync_completion_reset(&completion);
+
+    i2c_.Transact(
+        ops, countof(ops),
+        [](void* ctx, zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
+          sync_completion_signal(reinterpret_cast<sync_completion_t*>(ctx));
+        },
+        &completion);
+
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
     last_agc_ = gain_state.agc_enabled;
   }
   // Report the time at which AGL was enabled. This along with the brownout protection driver trace
   // will let us calculate the total latency.
   TRACE_DURATION_END("tas58xx", "SetGainState", "timestamp", zx::clock::get_monotonic().get());
+
+  float gain = std::clamp(gain_state.gain, kMinGain, kMaxGain);
+  uint8_t gain_reg = static_cast<uint8_t>(48 - gain * 2);
+  status = WriteReg(kRegDigitalVol, gain_reg);
+  if (status != ZX_OK) {
+    return;
+  }
   gain_state_ = gain_state;
   static_cast<void>(UpdateReg(kRegDeviceCtrl2, 0x08, gain_state.muted ? 0x08 : 0x00));
 }

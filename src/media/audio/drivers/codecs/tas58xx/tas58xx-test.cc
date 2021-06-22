@@ -326,12 +326,12 @@ TEST(Tas58xxTest, SetGainAgc) {
   // AGC enabled.
   {
     mock_i2c
-        .ExpectWriteStop({0x4c, 0x60})                    // digital vol -24dB.
         .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
         .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
         .ExpectWriteStop({0x68, 0xc0, 0x00, 0x00, 0x00})  // Enable AGL.
         .ExpectWriteStop({0x00, 0x00})                    // page 0.
         .ExpectWriteStop({0x7f, 0x00})                    // book 0.
+        .ExpectWriteStop({0x4c, 0x60})                    // digital vol -24dB.
         .ExpectWrite({0x03})
         .ExpectReadStop({0x00})
         .ExpectWriteStop({0x03, 0x08});  // Muted = true.
@@ -349,12 +349,12 @@ TEST(Tas58xxTest, SetGainAgc) {
   // AGC disabled.
   {
     mock_i2c
-        .ExpectWriteStop({0x4c, 0x60})                    // digital vol -24dB.
         .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
         .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
         .ExpectWriteStop({0x68, 0x40, 0x00, 0x00, 0x00})  // Disable AGL.
         .ExpectWriteStop({0x00, 0x00})                    // page 0.
         .ExpectWriteStop({0x7f, 0x00})                    // book 0.
+        .ExpectWriteStop({0x4c, 0x60})                    // digital vol -24dB.
         .ExpectWrite({0x03})
         .ExpectReadStop({0x00})
         .ExpectWriteStop({0x03, 0x08});  // Muted = true.
