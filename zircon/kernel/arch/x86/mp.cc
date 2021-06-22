@@ -34,6 +34,7 @@
 #include <dev/hw_rng.h>
 #include <dev/interrupt.h>
 #include <hwreg/x86msr.h>
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/cpu.h>
 #include <kernel/event.h>
 #include <kernel/timer.h>
@@ -403,6 +404,7 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
     }
   } else {
     for (;;) {
+      AutoPreemptDisabler preempt_disabled;
       // Set the halt_interlock flag and spin for a little bit, in case a wakeup happens very
       // shortly before we decide to go to sleep. If the halt_interlock flag is changed, another CPU
       // has woken us, avoid the halt instruction.
@@ -410,17 +412,20 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
       constexpr int kPauseIterations = 3000;
       uint32_t halt_interlock_spinning = 1;
       percpu->halt_interlock.store(1, ktl::memory_order_relaxed);
-      for (int i = 0; i < kPauseIterations; i++) {
+      for (int i = 0; i < kPauseIterations &&
+           !Thread::Current::preemption_state().preempts_pending(); i++) {
         arch::Yield();
         if (percpu->halt_interlock.load(ktl::memory_order_relaxed) != 1) {
           break;
         }
       }
+      // Compare-exchange halt_interlock from 1 -> 2, to indicate we are no longer spinning.
       // If the halt_interlock flag was changed, another CPU must have done it; avoid HLT and
-      // switch to a new runnable thread.
+      // switch to a new runnable thread. Otherwise, setting it to '2' re-enables reschedule
+      // IPIs.
       bool no_fast_wakeup =
           percpu->halt_interlock.compare_exchange_strong(halt_interlock_spinning, 2);
-      if (no_fast_wakeup) {
+      if (no_fast_wakeup && !Thread::Current::preemption_state().preempts_pending()) {
         arch_disable_ints();
         if (!Thread::Current::preemption_state().preempts_pending()) {
           x86_enable_ints_and_hlt();
@@ -430,7 +435,8 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
           arch_enable_ints();
         }
       }
-      Thread::Current::Preempt();
+      Thread::Current::Reschedule();
+      // Pending preemptions handled here as preempt_disabled goes out of scope.
     }
   }
 }
