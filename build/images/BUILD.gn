@@ -472,7 +472,8 @@ pm_build("system_image_prime.meta") {
 # Used to populate image_paths.sh with the right values to point to the QEMU kernel.
 group("qemu-kernel") {
   if (target_cpu == "x64") {
-    _qemu_kernel_target = "//zircon/kernel/target/pc/multiboot"
+    _qemu_kernel_target =
+        "//zircon/kernel/arch/x86/phys/boot-shim:multiboot-shim"
     _qemu_kernel_file = "$root_build_dir/multiboot.bin"
   } else if (target_cpu == "arm64") {
     _qemu_kernel_target = "//zircon/kernel/target/arm64/boot-shim:qemu"

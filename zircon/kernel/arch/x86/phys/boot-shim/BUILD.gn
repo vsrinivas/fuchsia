@@ -4,6 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/images/args.gni")
 import("//build/test.gni")
 import("//build/testing/zbi_test.gni")
 import("//build/unification/global_variables.gni")
@@ -193,6 +194,17 @@ if (toolchain.environment == "kernel.phys32") {
       "..:multiboot",
       "//zircon/kernel/phys:symbolize",
     ]
+
+    # This marks it as the official default boot shim for using QEMU.
+    images_metadata = {
+      name = "qemu-kernel"
+      archive = add_qemu_to_build_archives
+    }
+
+    # Everything should find this via the //:images build API.
+    # But some things might still look for "out/.../multiboot.bin" directly.
+    output_dir = root_build_dir
+    output_name = "multiboot"
   }
 
   phys_executable("depthcharge-multiboot-shim") {
