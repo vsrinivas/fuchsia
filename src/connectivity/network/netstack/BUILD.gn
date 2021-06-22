@@ -212,7 +212,6 @@ go_library("netstack_lib") {
     "routes/routes.go",
     "routes/routes_test.go",
     "socket_conv.go",
-    "socket_encode.go",
     "testutil/packet_buffer.go",
     "time/time.go",
     "time/time_test.go",

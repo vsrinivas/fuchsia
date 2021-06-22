@@ -1208,43 +1208,6 @@ struct BaseSocket {
     *optlen = static_cast<socklen_t>(copy_len);
   }
 
-  zx_status_t getsockopt(int level, int optname, void* optval, socklen_t* optlen,
-                         int16_t* out_code) {
-    auto response = client().GetSockOpt(static_cast<int16_t>(level), static_cast<int16_t>(optname));
-    zx_status_t status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto const& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
-      return ZX_OK;
-    }
-    *out_code = 0;
-    auto const& out = result.response().optval;
-    getsockopt_inner(out, level, optname, optval, optlen, out_code);
-    return ZX_OK;
-  }
-
-  zx_status_t setsockopt(int level, int optname, const void* optval, socklen_t optlen,
-                         int16_t* out_code) {
-    auto response =
-        client().SetSockOpt(static_cast<int16_t>(level), static_cast<int16_t>(optname),
-                            fidl::VectorView<uint8_t>::FromExternal(
-                                static_cast<uint8_t*>(const_cast<void*>(optval)), optlen));
-    zx_status_t status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto const& result = response.Unwrap()->result;
-    if (result.is_err()) {
-      *out_code = static_cast<int16_t>(result.err());
-      return ZX_OK;
-    }
-    *out_code = 0;
-    return ZX_OK;
-  }
-
   zx_status_t shutdown(int how, int16_t* out_code) {
     using fsocket::wire::ShutdownMode;
     ShutdownMode mode;
@@ -1472,21 +1435,6 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
   }
 }
 
-// TODO(https://fxbug.dev/44347): Remove after ABI transition.
-bool use_legacy_sockopt_fidl() {
-  static std::once_flag once;
-  static bool legacy;
-
-  std::call_once(once, [&]() {
-    legacy = []() {
-      constexpr char kLegacySockoptFIDL[] = "LEGACY_SOCKOPT_FIDL";
-      const char* const legacy_env = getenv(kLegacySockoptFIDL);
-      return legacy_env && strcmp(legacy_env, "1") == 0;
-    }();
-  });
-  return legacy;
-}
-
 // TODO(https://fxbug.dev/78129): Remove after ABI transition.
 bool use_legacy_stream_socket_shutdown() {
   static std::once_flag once;
@@ -1595,10 +1543,6 @@ struct datagram_socket : public zxio {
 
   zx_status_t getsockopt(int level, int optname, void* optval, socklen_t* optlen,
                          int16_t* out_code) override {
-    if (use_legacy_sockopt_fidl()) {
-      return BaseSocket(zxio_datagram_socket().client)
-          .getsockopt(level, optname, optval, optlen, out_code);
-    }
     SockOptResult result =
         BaseSocket(zxio_datagram_socket().client).getsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
@@ -1607,10 +1551,6 @@ struct datagram_socket : public zxio {
 
   zx_status_t setsockopt(int level, int optname, const void* optval, socklen_t optlen,
                          int16_t* out_code) override {
-    if (use_legacy_sockopt_fidl()) {
-      return BaseSocket(zxio_datagram_socket().client)
-          .setsockopt(level, optname, optval, optlen, out_code);
-    }
     SockOptResult result =
         BaseSocket(zxio_datagram_socket().client).setsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
@@ -2015,10 +1955,6 @@ struct stream_socket : public pipe {
 
   zx_status_t getsockopt(int level, int optname, void* optval, socklen_t* optlen,
                          int16_t* out_code) override {
-    if (use_legacy_sockopt_fidl()) {
-      return BaseSocket(zxio_stream_socket().client)
-          .getsockopt(level, optname, optval, optlen, out_code);
-    }
     SockOptResult result =
         BaseSocket(zxio_stream_socket().client).getsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
@@ -2027,10 +1963,6 @@ struct stream_socket : public pipe {
 
   zx_status_t setsockopt(int level, int optname, const void* optval, socklen_t optlen,
                          int16_t* out_code) override {
-    if (use_legacy_sockopt_fidl()) {
-      return BaseSocket(zxio_stream_socket().client)
-          .setsockopt(level, optname, optval, optlen, out_code);
-    }
     SockOptResult result =
         BaseSocket(zxio_stream_socket().client).setsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;

@@ -10,11 +10,9 @@ package netstack
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"math"
-	"reflect"
 	"runtime"
 	"sort"
 	"strings"
@@ -47,22 +45,17 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-// TODO(https://fxbug.dev/44347) We shouldn't need any of this includes after we remove
-// C structs from the wire.
-
-/*
-#cgo CFLAGS: -D_GNU_SOURCE
-#include <errno.h>
-#include <fcntl.h>
-#include <net/if.h>
-#include <netinet/in.h>
-*/
-import "C"
-
 const (
 	// NB: these constants are defined in gVisor as well, but not exported.
 	ccReno  = "reno"
 	ccCubic = "cubic"
+
+	// Max values for sockopt TCP_KEEPIDLE and TCP_KEEPINTVL in Linux.
+	//
+	// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/include/net/tcp.h#L156-L158
+	maxTCPKeepIdle  = 32767
+	maxTCPKeepIntvl = 32767
+	maxTCPKeepCnt   = 127
 )
 
 func optionalUint8ToInt(v socket.OptionalUint8, unset int) (int, tcpip.Error) {
@@ -471,65 +464,6 @@ func (ep *endpoint) GetPeerName(fidl.Context) (socket.BaseSocketGetPeerNameResul
 	}), nil
 }
 
-// TODO(https://fxbug.dev/44347) Remove after ABI transition.
-func (ep *endpoint) SetSockOpt(_ fidl.Context, level, optName int16, optVal []uint8) (socket.BaseSocketSetSockOptResult, error) {
-	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
-		if len(optVal) < sizeOfInt32 {
-			return socket.BaseSocketSetSockOptResultWithErr(tcpipErrorToCode(&tcpip.ErrInvalidOptionValue{})), nil
-		}
-
-		v := binary.LittleEndian.Uint32(optVal)
-		ep.mu.Lock()
-		ep.mu.sockOptTimestamp = v != 0
-		ep.mu.Unlock()
-	} else {
-		if err := SetSockOpt(ep.ep, ep.ns, level, optName, optVal); err != nil {
-			return socket.BaseSocketSetSockOptResultWithErr(tcpipErrorToCode(err)), nil
-		}
-	}
-	_ = syslog.DebugTf("setsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ep, level, optName, len(optVal), optVal)
-
-	return socket.BaseSocketSetSockOptResultWithResponse(socket.BaseSocketSetSockOptResponse{}), nil
-}
-
-// TODO(https://fxbug.dev/44347) Remove after ABI transition.
-func (ep *endpoint) GetSockOpt(_ fidl.Context, level, optName int16) (socket.BaseSocketGetSockOptResult, error) {
-	var val interface{}
-	if level == C.SOL_SOCKET && optName == C.SO_TIMESTAMP {
-		ep.mu.Lock()
-		if ep.mu.sockOptTimestamp {
-			val = int32(1)
-		} else {
-			val = int32(0)
-		}
-		ep.mu.Unlock()
-	} else {
-		var err tcpip.Error
-		val, err = GetSockOpt(ep.ep, ep.ns, &ep.terminal, ep.netProto, ep.transProto, level, optName)
-		if level == C.SOL_SOCKET && optName == C.SO_ERROR {
-			ep.pending.mustUpdate()
-		}
-		if err != nil {
-			return socket.BaseSocketGetSockOptResultWithErr(tcpipErrorToCode(err)), nil
-		}
-	}
-	if val, ok := val.([]byte); ok {
-		return socket.BaseSocketGetSockOptResultWithResponse(socket.BaseSocketGetSockOptResponse{
-			Optval: val,
-		}), nil
-	}
-	b := make([]byte, reflect.TypeOf(val).Size())
-	n := copyAsBytes(b, val)
-	if n < len(b) {
-		panic(fmt.Sprintf("short %T: %d/%d", val, n, len(b)))
-	}
-	_ = syslog.DebugTf("getsockopt", "%p: level=%d, optName=%d, optVal[%d]=%v", ep, level, optName, len(b), b)
-
-	return socket.BaseSocketGetSockOptResultWithResponse(socket.BaseSocketGetSockOptResponse{
-		Optval: b,
-	}), nil
-}
-
 func (ep *endpoint) GetTimestamp(fidl.Context) (socket.BaseSocketGetTimestampResult, error) {
 	ep.mu.Lock()
 	value := ep.mu.sockOptTimestamp
@@ -834,7 +768,8 @@ func (ep *endpoint) GetIpTtl(fidl.Context) (socket.BaseSocketGetIpTtlResult, err
 		return socket.BaseSocketGetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	if value == 0 {
-		value = DefaultTTL
+		// This is Linux's default TTL.
+		value = 64
 	}
 	return socket.BaseSocketGetIpTtlResultWithResponse(socket.BaseSocketGetIpTtlResponse{Value: uint8(value)}), nil
 }

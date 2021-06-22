@@ -37,17 +37,6 @@ fn with_tcp_stream(f: impl FnOnce(std::net::TcpStream) -> ()) {
                             ))
                             .expect("send Describe response");
                     }
-                    fidl_fuchsia_posix_socket::StreamSocketRequest::GetSockOpt {
-                        level,
-                        optname,
-                        responder,
-                    } => {
-                        let () = assert_eq!(i32::from(level), libc::IPPROTO_TCP);
-                        let () = assert_eq!(i32::from(optname), libc::TCP_USER_TIMEOUT);
-                        let () = responder
-                            .send(&mut Ok(TCP_USER_TIMEOUT_OPTION_VALUE.to_le_bytes().to_vec()))
-                            .expect("send GetSockOpt response");
-                    }
                     fidl_fuchsia_posix_socket::StreamSocketRequest::GetTcpUserTimeout {
                         responder,
                     } => {

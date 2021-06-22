@@ -21,7 +21,7 @@ use fidl_fuchsia_posix_socket::{
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, prelude::HandleBased, Peered};
 use futures::{StreamExt, TryFutureExt};
-use log::{debug, error, trace, warn};
+use log::{debug, error, trace};
 use net_types::ip::{Ip, IpVersion, Ipv4, Ipv6};
 use netstack3_core::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
@@ -435,23 +435,6 @@ where
                                 responder,
                                 &mut self.make_handler().await.get_peer_name()
                             );
-                        }
-                        psocket::DatagramSocketRequest::SetSockOpt {
-                            level,
-                            optname,
-                            optval: _,
-                            responder,
-                        } => {
-                            warn!("UDP setsockopt {} {} not implemented", level, optname);
-                            responder_send!(responder, &mut Err(Errno::Enoprotoopt))
-                        }
-                        psocket::DatagramSocketRequest::GetSockOpt {
-                            level,
-                            optname,
-                            responder,
-                        } => {
-                            warn!("UDP getsockopt {} {} not implemented", level, optname);
-                            responder_send!(responder, &mut Err(Errno::Enoprotoopt))
                         }
                         DatagramSocketRequest::Shutdown { mode, responder } => responder_send!(
                             responder,
