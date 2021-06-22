@@ -1001,6 +1001,9 @@ void VmMapping::TryMergeRightNeighborLocked(VmMapping* right_candidate) {
   DEBUG_ASSERT(right_candidate->ref_count_debug() > 1);
   AssertHeld(parent_->lock_ref());
   parent_->subregions_.RemoveRegion(right_candidate);
+  if (aspace_->last_fault_ == right_candidate) {
+    aspace_->last_fault_ = nullptr;
+  }
 
   // Mark it as dead.
   right_candidate->parent_ = nullptr;
