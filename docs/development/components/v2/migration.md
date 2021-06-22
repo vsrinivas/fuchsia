@@ -581,10 +581,6 @@ the advice in [Troubleshooting components][troubleshooting-components].
 
 ## Add the new component {#add-component-to-topology}
 
-Note: This section assumes that your component is not in `apps` or
-`startup_services`. If it is, reach out to [component-framework-dev][cf-dev-list]
-for guidance.
-
 Now you're ready to add your new component to the
 [v2 component topology][components-topology]. This defines the relationship
 between your component and the rest of the system.
@@ -607,7 +603,70 @@ component’s "exposed services".
 ```
 
 ### Add the component to core {#add-component-to-core}
+-    [Add a core realm shard](#add-core-shard): Your component is **not**
+     present in *all* products (eg. maybe it is present on workstation,
+     but not terminal). Using a [core realm shard][core-realm-rfc] allows the
+     component to be safely excluded where it isn't available.
+-    [Add directly to core](#add-core-direct): Your component is present on all
+     product and test build configurations. In this case you can add the
+     component directly to `core.cml`.
 
+
+#### Add a core realm shard {#add-core-shard}
+1.  Create a [manifest shard][manifests-shard]. A manifest shard uses generally
+    the syntax as a manifest, but *may* reference objects that don't exist within
+    the manifest itself. In this case we reference the `appmgr` child which is
+    not defined here, but we know is defined in `core`'s manifest.
+
+    ```json5
+    // component.core_shard.cml
+    {
+        children: [
+            {
+                name: "font_provider",
+                url: "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cm",
+            },
+        ],
+        offer: [
+            {
+                protocol: "fuchsia.fonts.Provider",
+                from: "#font_provider",
+                to: [ "#appmgr" ],
+            },
+        ],
+    }
+    ```
+
+1.  Create a target in your `BUILD.gn` that defines the `core_shard`.
+
+    ```gn
+    # font_provider/BUILD.gn
+
+    import("//src/sys/core/build/core_shard.gni")
+
+    core_shard("font_provider_shard") {
+      shard_file = "component.core_shard.cml"
+    }
+    ```
+
+1.  Add the core realm shard to the appropriate products. For example, you can
+    add the component to the workstation product by modifying
+    `//products/workstation.gni` by adding the build target path to the
+    `core_realm_shards` array. If your component is present on all products that
+    derive from core and you are adding it via a shard, modify
+    `//products/core.gni`.
+
+    ```gn
+    # //products/workstation.gni
+    ...
+    core_realm_shards += [
+        ...
+        //path/to/font_provider:font_provider_shard",
+    ]
+    ...
+    ```
+
+#### Add directly to core {#add-core-direct}
 Add your component as a child instance of the [`core.cml`][cs-core-cml]
 component, and offer its exposed services to appmgr. You need to choose
 a name for your component instance and identify its component URL (you should
@@ -910,7 +969,7 @@ shard:
 
 #### Component moniker for selectors
 
-As [explained previously][component-moniker], it's possible to infer the
+As [explained previously](#component-moniker), it's possible to infer the
 component moniker using `ffx component list`. Alternatively you can
 use `fx iquery list` to see available components for querying inspect data. Your
 component moniker should appear in the `iquery` output up after adding the
@@ -1180,6 +1239,39 @@ When [adding your component](#add-component-to-topology), assign the shared
   ],
 }
 ```
+
+### Start on boot {#start-on-boot}
+
+Note: Starting component on boot is an area of active development. It is highly
+recommended that you reach out to [component-framework-dev][cf-dev-list] before
+migrating this behavior.
+
+If your component appears in a sysmgr config `startup_services` or `apps` block
+you should make your component an `eager` component in its parent's manifest.
+
+```json5
+// parent.cml
+{
+    children: [
+        ...
+        {
+            name: "font_provider",
+            url: "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cm",
+            startup: "eager",
+        },
+    ],
+}
+```
+
+Additionally you need to ensure that all your component's ancestors up to
+`/core` are `eager` components. If your component is present on *all* products
+that derive from the `core` you can [add it to core directly](#add-core-direct),
+otherwise you need to use [core realm variability](#add-core-shard) to allow
+products without your component to continue to boot.
+
+Please see other documentation for additional detail on how eager impacts
+[lifecycle][eager-lifecycle] and is used in the [manifest][eager-manifest] more
+generally.
 
 ### Shell binaries
 
@@ -1807,6 +1899,7 @@ using the directory capability `build-info` and path `/config/build-info`.
 [components-topology]: /docs/concepts/components/v2/topology.md
 [components-migration-status]: /docs/contribute/open_projects/components/migration.md
 [config-data]: /docs/development/components/data.md#product-specific_configuration_with_config_data
+[core-realm-rfc]: /docs/contribute/governance/rfcs/0089_core_realm_variations.md
 [cs-appmgr-cml]: /src/sys/appmgr/meta/appmgr.cml
 [cs-appmgr-allowlist]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/appmgr/main.cc;l=125;drc=ddf6d10ce8cf63268e21620638ea02e9b2b7cd20
 [cs-core-cml]: /src/sys/core/meta/core.cml
@@ -1816,6 +1909,8 @@ using the directory capability `build-info` and path `/config/build-info`.
 [device-model]: /docs/concepts/drivers/device_driver_model/device-model.md
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
 [emulatortest]: /tools/emulator/emulatortest
+[eager-lifecyle]: /docs/concepts/components/v2/lifecycle.md#eager
+[eager-manifest]: /docs/concepts/components/v2/component_manifests.md#children
 [event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
 [event-scopes]: /docs/concepts/components/v2/capabilities/event.md#using-events
 [example-component-id-index]: /src/sys/appmgr/config/core_component_id_index.json5
@@ -1837,9 +1932,10 @@ using the directory capability `build-info` and path `/config/build-info`.
 [logs]: /docs/development/diagnostics/logs/README.md
 [manifests-capabilities]: /docs/concepts/components/v2/component_manifests.md#capabilities
 [manifests-expose]: /docs/concepts/components/v2/component_manifests.md#expose
-[manifests-program]: /docs/concepts/components/v2/component_manifests.md#program
-[manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
 [manifests-include]: /docs/concepts/components/v2/component_manifests.md#include
+[manifests-program]: /docs/concepts/components/v2/component_manifests.md#program
+[manifests-shard]: /docs/development/components/build.md#component-manifest-shards
+[manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
 [moniker]: /docs/concepts/components/v2/monikers.md
 [protocol-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md
 [storage-capabilities]: /docs/concepts/components/v2/capabilities/storage.md
