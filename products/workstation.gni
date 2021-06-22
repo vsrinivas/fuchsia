@@ -67,6 +67,12 @@ universe_package_labels -= [ "//src/tests/end_to_end/perf:test" ]
 product_bootfs_labels += [
   # hide the virtual console on boot
   "//products/kernel_cmdline:virtcon.hide-on-boot",
+
+  # enable boot animation
+  "//products/kernel_cmdline:virtcon.animation--true",
+
+  # enable DPI based scale factors, 2x above 240 DPI, 3x above 360, etc.
+  "//products/kernel_cmdline:virtcon.dpi--240-360-480",
 ]
 
 # End to end (E2E) product test runtime dependencies. Must be added to cache,
