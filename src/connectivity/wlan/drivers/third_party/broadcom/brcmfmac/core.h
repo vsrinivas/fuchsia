@@ -269,7 +269,7 @@ struct net_device {
   uint64_t scan_txn_id;   // The txn_id provided by SME to identify the scan
   uint16_t scan_sync_id;  // The sync_id in the FW request to identify the scan
   uint32_t scan_num_results;
-  std::mutex scan_sync_id_mutex; // Used to ensure that sync_id is stored before processing results
+  std::mutex scan_sync_id_mutex;  // Used to ensure that sync_id is stored before processing results
   std::shared_mutex if_proto_lock;  // Used as RW-lock for if_proto.
   wlanif_impl_ifc_protocol_t if_proto;
   uint8_t dev_addr[ETH_ALEN];
