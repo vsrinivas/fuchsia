@@ -110,9 +110,9 @@ impl RsnCapabilities {
         !self.contains_unsupported_capability()
     }
 
-    pub fn is_wpa3_compatible(&self, is_mixed: bool) -> bool {
+    pub fn is_wpa3_compatible(&self, wpa2_compatibility_mode: bool) -> bool {
         self.mgmt_frame_protection_cap()
-            && (self.mgmt_frame_protection_req() || is_mixed)
+            && (self.mgmt_frame_protection_req() || wpa2_compatibility_mode)
             && !self.contains_unsupported_capability()
     }
 
@@ -170,9 +170,9 @@ impl Rsne {
 
     pub fn wpa2_wpa3_rsne_with_extra_caps(rsn_capabilities: RsnCapabilities) -> Self {
         let rsne = Self::wpa2_wpa3_rsne();
-        let wpa3_mixed_minimum_rsn_capabilities = rsne.rsn_capabilities.as_ref().unwrap().clone();
+        let wpa2_wpa3_minimum_rsn_capabilities = rsne.rsn_capabilities.as_ref().unwrap().clone();
         rsne.with_caps(RsnCapabilities(
-            wpa3_mixed_minimum_rsn_capabilities.raw() | rsn_capabilities.raw(),
+            wpa2_wpa3_minimum_rsn_capabilities.raw() | rsn_capabilities.raw(),
         ))
     }
 
@@ -497,14 +497,16 @@ impl Rsne {
             .pairwise_cipher_suites
             .iter()
             .any(|c| c.has_known_usage() && c.suite_type == cipher::CCMP_128);
-        let akm_supported =
+        let sae_supported =
             self.akm_suites.iter().any(|a| a.has_known_algorithm() && a.suite_type == akm::SAE);
-        let is_mixed =
+        let wpa2_compatibility_mode =
             self.akm_suites.iter().any(|a| a.has_known_algorithm() && a.suite_type == akm::PSK);
-        let caps_supported =
-            self.rsn_capabilities.as_ref().map_or(false, |caps| caps.is_wpa3_compatible(is_mixed));
+        let caps_supported = self
+            .rsn_capabilities
+            .as_ref()
+            .map_or(false, |caps| caps.is_wpa3_compatible(wpa2_compatibility_mode));
 
-        group_data_supported && pairwise_supported && akm_supported && caps_supported
+        group_data_supported && pairwise_supported && sae_supported && caps_supported
     }
 
     fn with_caps(mut self, rsn_capabilities: RsnCapabilities) -> Self {
@@ -754,10 +756,10 @@ mod tests {
         let caps = wpa3_caps.clone().with_extended_key_id(true);
         assert!(!caps.is_wpa3_compatible(false));
 
-        let wpa3_mixed_caps = RsnCapabilities(0).with_mgmt_frame_protection_cap(true);
-        assert!(wpa3_mixed_caps.is_wpa3_compatible(true));
+        let wpa2_wpa3_caps = RsnCapabilities(0).with_mgmt_frame_protection_cap(true);
+        assert!(wpa2_wpa3_caps.is_wpa3_compatible(true));
 
-        let caps = wpa3_mixed_caps.clone().with_extended_key_id(true);
+        let caps = wpa2_wpa3_caps.clone().with_extended_key_id(true);
         assert!(!caps.is_wpa3_compatible(true));
     }
 
@@ -1092,7 +1094,7 @@ mod tests {
     }
 
     #[test]
-    fn test_compatible_wpa3_mixed_rsne() {
+    fn test_compatible_wpa2_wpa3_rsne() {
         let rsne = Rsne::wpa2_wpa3_rsne();
         assert!(rsne.is_wpa2_rsn_compatible());
         assert!(rsne.is_wpa3_rsn_compatible());
@@ -1128,7 +1130,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mixed_mode() {
+    fn test_ccmp_tkip_mode() {
         let a_rsne = Rsne {
             group_data_cipher_suite: Some(CIPHER_CCMP_128),
             pairwise_cipher_suites: vec![CIPHER_CCMP_128, CIPHER_TKIP],
