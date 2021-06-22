@@ -29,7 +29,9 @@
 namespace nand {
 namespace {
 
-constexpr size_t kNandReadRetries = 3;
+// If we're going to experience device level failures that result in data loss
+// or curruption, let's be very sure.
+constexpr size_t kNandReadRetries = 8;
 
 }  // namespace
 
