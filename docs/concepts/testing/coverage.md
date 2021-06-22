@@ -49,9 +49,6 @@ infrastructure. When sending a change to CQ (Commit-Queue+1), you can click
 this tryjob is complete, your patch set should have absolute coverage (|Cov.|)
 and incremental coverage (ΔCov.)
 
-See for instance the following example:
-[499602: [forensics] No write limit for the first 1 minutes of log recording][fxr499602]
-
 Maintaining high incremental test coverage for changes affecting a project helps
 keep test coverage high continuously. Particularly, it prevents introducing new
 untested code into a project. Change authors can review incremental coverage
@@ -261,7 +258,6 @@ Areas for future work:
 [fuchsia-coverage-ci]: https://ci.chromium.org/p/fuchsia/builders/ci/fuchsia-coverage
 [fuzz-testing]: /docs/concepts/testing/fuzz_testing.md
 [fx-smoke-test]: https://fuchsia.dev/reference/tools/fx/cmd/smoke-test
-[fxr499602]: https://fuchsia-review.googlesource.com/c/fuchsia/+/499602/12
 [fxr541525]: https://fuchsia-review.googlesource.com/c/fuchsia/+/541525
 [gerrit]: https://fuchsia-review.googlesource.com/
 [llvm-cov]: https://llvm.org/docs/CommandGuide/llvm-cov.html
