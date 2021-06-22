@@ -155,7 +155,7 @@ void main(List<String> args) {
 
     // Poll for the server to have started listening for client
     // connection on the expected port.
-    for (var i = 0; i < 5; i++) {
+    for (var i = 0; i < 15; i++) {
       await Future.delayed(Duration(seconds: 1));
       final inspect = Inspect(helper.sl4fDriver);
       final results =
