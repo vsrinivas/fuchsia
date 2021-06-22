@@ -37,6 +37,12 @@ static int bootstrap2(void* arg);
 KCOUNTER(timeline_threading, "boot.timeline.threading")
 KCOUNTER(timeline_init, "boot.timeline.init")
 
+static bool lk_global_constructors_called_flag = false;
+
+bool lk_global_constructors_called() {
+  return lk_global_constructors_called_flag;
+}
+
 static void call_constructors() {
   extern void (*const __init_array_start[])();
   extern void (*const __init_array_end[])();
@@ -44,6 +50,8 @@ static void call_constructors() {
   for (void (*const* a)() = __init_array_start; a != __init_array_end; a++) {
     (*a)();
   }
+
+  lk_global_constructors_called_flag = true;
 }
 
 // called from arch code

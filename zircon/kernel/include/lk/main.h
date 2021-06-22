@@ -18,6 +18,9 @@ void lk_main(void) __NO_RETURN __EXTERNALLY_VISIBLE;
 void lk_secondary_cpu_entry(void);
 void lk_init_secondary_cpus(uint secondary_cpu_count);
 
+// Returns true if global ctors have been called.
+bool lk_global_constructors_called(void);
+
 __END_CDECLS
 
 #endif  // ZIRCON_KERNEL_INCLUDE_LK_MAIN_H_

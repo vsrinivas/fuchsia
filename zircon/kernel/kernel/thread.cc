@@ -53,6 +53,7 @@
 #include <kernel/timer.h>
 #include <ktl/algorithm.h>
 #include <ktl/atomic.h>
+#include <lk/main.h>
 #include <lockdep/lockdep.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
@@ -1202,8 +1203,15 @@ void thread_construct_first(Thread* t, const char* name) {
 
   arch_thread_construct_first(t);
 
-  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-  thread_list->push_front(t);
+  // Take care not to touch any locks when invoked by early init code that runs
+  // before global ctors are called. The thread_list is safe to mutate before
+  // global ctors are run.
+  if (lk_global_constructors_called()) {
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+    thread_list->push_front(t);
+  } else {
+    [t]() TA_NO_THREAD_SAFETY_ANALYSIS { thread_list->push_front(t); }();
+  }
 }
 
 /**
