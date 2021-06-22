@@ -1274,7 +1274,7 @@ mod tests {
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
-        // Ensure the mixed network was selected for connection and a connect request is sent to
+        // Ensure the WPA2/WPA3 network was selected for connection and a connect request is sent to
         // the SME.
         let sme_fut = sme_req_stream.into_future();
         pin_mut!(sme_fut);

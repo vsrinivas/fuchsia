@@ -2293,7 +2293,7 @@ mod tests {
             Some(fidl_common::ScanType::Passive),
         ));
 
-        let mixed_scan_results = vec![types::ScanResult {
+        let wpa2_scan_result = types::ScanResult {
             ssid: ssid,
             security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
             entries: vec![types::Bss {
@@ -2302,9 +2302,9 @@ mod tests {
                 ..generate_random_bss()
             }],
             compatibility: types::Compatibility::Supported,
-        }];
+        };
         let mut updater = network_selector.generate_scan_result_updater();
-        exec.run_singlethreaded(updater.update_scan_results(&mixed_scan_results));
+        exec.run_singlethreaded(updater.update_scan_results(&vec![wpa2_scan_result.clone()]));
 
         // Set the scan cache's "updated_at" field to the future so that a scan won't be triggered.
         {
@@ -2325,9 +2325,9 @@ mod tests {
                     // The network ID should match network config for recording connect results.
                     network: wpa_network_id.clone(),
                     credential,
-                    bss: mixed_scan_results[0].entries[0].bss_desc.clone(),
+                    bss: wpa2_scan_result.entries[0].bss_desc.clone(),
                     observed_in_passive_scan: Some(
-                        mixed_scan_results[0].entries[0].observed_in_passive_scan
+                        wpa2_scan_result.entries[0].observed_in_passive_scan
                     ),
                     multiple_bss_candidates: Some(false),
                 };
