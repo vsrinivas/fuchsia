@@ -46,7 +46,6 @@
 #include <zircon/compiler.h>
 
 #include <arch/aspace.h>
-
 #include <arch/x86/ioport.h>
 
 void x86_set_tss_io_bitmap(IoBitmap& bitmap);

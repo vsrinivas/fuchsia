@@ -7,6 +7,7 @@
 #include <lib/arch/nop.h>
 #include <lib/arch/x86/boot-cpuid.h>
 #include <lib/arch/x86/bug.h>
+#include <lib/arch/x86/descriptor.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/console.h>
 #include <lib/unittest/unittest.h>
@@ -402,6 +403,24 @@ static bool test_mds_taa_mitigation() {
   END_TEST;
 }
 
+static bool test_gdt_mapping() {
+  BEGIN_TEST;
+
+  arch::GdtRegister64 gdtr;
+  __asm__ volatile("sgdt %0" : "=m"(gdtr));
+  ASSERT_EQ(gdtr.limit, 0xffff);
+
+  uint64_t* gdt = reinterpret_cast<uint64_t*>(gdtr.base);
+
+  // Force a read of each page of the GDT.
+  for (size_t i = 0; i < (gdtr.limit + 1) / sizeof(uint64_t); i += PAGE_SIZE / sizeof(uint64_t)) {
+    uint64_t output;
+    __asm__ volatile("mov %[entry], %0" : "=r"(output) : [entry] "m"(gdt[i]));
+  }
+
+  END_TEST;
+}
+
 }  // anonymous namespace
 
 UNITTEST_START_TESTCASE(x64_platform_tests)
@@ -415,4 +434,5 @@ UNITTEST("test pkg power limit change", test_x64_power_limits)
 UNITTEST("test amd_platform_init", test_amd_platform_init)
 UNITTEST("test spectre v2 mitigation building blocks", test_spectre_v2_mitigations)
 UNITTEST("test mds mitigation building blocks", test_mds_taa_mitigation)
+UNITTEST("test gdt is mapped", test_gdt_mapping)
 UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "")

@@ -38,6 +38,7 @@
 #include <kernel/cpu.h>
 #include <kernel/event.h>
 #include <kernel/timer.h>
+#include <lib/arch/x86/descriptor-regs.h>
 
 #define LOCAL_TRACE 0
 
@@ -211,6 +212,11 @@ void x86_init_percpu(cpu_num_t cpu_num) {
   x86_set_extended_register_pt_state(false);
 
   gdt_load(gdt_get());
+
+  // Disable the LDT so userspace cannot make
+  // segment selectors that point to it.
+  // See fxbug.dev/79060
+  arch::DisableLdt();
 
   x86_initialize_percpu_tss();
 

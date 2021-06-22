@@ -52,6 +52,7 @@ group("tests") {
     "//zircon/system/ulib/zxtest/test:zxtest-bootfs-test",
     "//zircon/system/utest/blobfs-bench:blobfs-bench-bootfs-test",
     "//zircon/system/utest/channel-fatal:channel-fatal-bootfs-test",
+    "//zircon/system/utest/core:core-bad-segsel-bootfs-test",
     "//zircon/system/utest/core:core-c11-condvar-bootfs-test",
     "//zircon/system/utest/core:core-c11-mutex-bootfs-test",
     "//zircon/system/utest/core:core-c11-thread-bootfs-test",
