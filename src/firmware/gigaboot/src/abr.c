@@ -39,9 +39,9 @@ static bool write_abr_metadata(void* context, const uint8_t* buffer, size_t size
   return true;
 }
 
-AbrSlotIndex zircon_abr_get_boot_slot(void) {
+AbrSlotIndex zircon_abr_get_boot_slot(bool update_metadata) {
   AbrOps ops = {.read_abr_metadata = read_abr_metadata, .write_abr_metadata = write_abr_metadata};
-  return AbrGetBootSlot(&ops, false, NULL);
+  return AbrGetBootSlot(&ops, update_metadata, NULL);
 }
 
 AbrResult zircon_abr_set_oneshot_recovery(void) {
@@ -63,19 +63,31 @@ void zircon_abr_update_boot_slot_metadata(void) {
   cmdline_append(slot_info, strlen(slot_info));
 }
 
-AbrResult zircon_abr_set_slot_active(int slot_number) {
+AbrResult zircon_abr_set_slot_active(AbrSlotIndex slot) {
   AbrOps ops = {.read_abr_metadata = read_abr_metadata, .write_abr_metadata = write_abr_metadata};
 
-  AbrResult ret = AbrMarkSlotActive(&ops, slot_number);
+  AbrResult ret = AbrMarkSlotActive(&ops, slot);
   if (ret != kAbrResultOk) {
     printf("Fail to get slot info\n");
     return ret;
   }
 
-  return 0;
+  return kAbrResultOk;
 }
 
-AbrResult zircon_abr_get_slot_info(int slot_number, AbrSlotInfo* info) {
+AbrResult zircon_abr_mark_slot_unbootable(AbrSlotIndex slot) {
   AbrOps ops = {.read_abr_metadata = read_abr_metadata, .write_abr_metadata = write_abr_metadata};
-  return AbrGetSlotInfo(&ops, slot_number, info);
+
+  AbrResult ret = AbrMarkSlotUnbootable(&ops, slot);
+  if (ret != kAbrResultOk) {
+    printf("Fail to mark slot unbootable\n");
+    return ret;
+  }
+
+  return kAbrResultOk;
+}
+
+AbrResult zircon_abr_get_slot_info(AbrSlotIndex slot, AbrSlotInfo* info) {
+  AbrOps ops = {.read_abr_metadata = read_abr_metadata, .write_abr_metadata = write_abr_metadata};
+  return AbrGetSlotInfo(&ops, slot, info);
 }

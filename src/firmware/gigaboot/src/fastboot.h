@@ -8,6 +8,10 @@
 #define FB_SERVER_PORT 5554
 
 #include <inttypes.h>
+#include <stdlib.h>
+#include <zircon/compiler.h>
+
+__BEGIN_CDECLS
 
 typedef struct {
   void *kernel_start;
@@ -27,5 +31,7 @@ typedef enum {
 // |img| will be populated with the image to boot when return value is BOOT_FROM_RAM.
 fb_poll_next_action fb_poll(fb_bootimg_t *img);
 void fb_recv(void *data, size_t len, void *saddr, uint16_t sport, uint16_t dport);
+
+__END_CDECLS
 
 #endif  // SRC_FIRMWARE_GIGABOOT_SRC_FASTBOOT_H_

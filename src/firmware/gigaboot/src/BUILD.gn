@@ -55,25 +55,34 @@ if (!is_mac) {
     # Once we have enough functionality stubbed out host-side we can just depend
     # on ":src" directly instead.
     sources = [
+      "abr.c",
       "avb.c",
       "avb_test.cc",
+      "bootbyte_fake.cc",
+      "cmdline.c",
       "compression.c",
       "compression_test.cc",
       "diskio.c",
       "diskio_test.cc",
+      "fastboot_stubs.cc",
       "mdns.c",
       "mdns_test.cc",
+      "osboot.c",
+      "osboot_test.cc",
+      "pci.c",
       "utf_conversion.c",
     ]
     include_dirs = [ "." ]
     deps = [
       "../host",
+      "//src/firmware/lib/abr",
       "//src/firmware/lib/zbi",
       "//src/lib/fxl/test:gtest_main",
       "//third_party/android/platform/external/avb",
       "//third_party/googletest:gmock",
       "//zircon/kernel/lib/efi",
       "//zircon/kernel/lib/efi/testing",
+      "//zircon/third_party/ulib/cksum",
       "//zircon/third_party/ulib/lz4",
     ]
   }

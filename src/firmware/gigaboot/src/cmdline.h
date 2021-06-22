@@ -7,6 +7,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
+
+__BEGIN_CDECLS
 
 // append a commandline string to the commandline
 void cmdline_append(const char* str, size_t len);
@@ -24,5 +27,10 @@ size_t cmdline_to_string(char* ptr, size_t max);
 
 // append any load option arguments to the command line
 void cmdline_append_load_options(void);
+
+// Clears the commandline.
+void cmdline_clear(void);
+
+__END_CDECLS
 
 #endif  // SRC_FIRMWARE_GIGABOOT_SRC_CMDLINE_H_

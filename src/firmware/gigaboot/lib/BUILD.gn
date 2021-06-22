@@ -11,11 +11,9 @@ import("//build/test.gni")
 if (is_efi_toolchain) {
   source_set("lib") {
     sources = [
-      "cmdline.c",
       "console-printf.c",
       "ctype.c",
       "inet.c",
-      "loadfile.c",
       "printf.c",
       "stdlib.c",
       "string.c",
@@ -32,7 +30,9 @@ if (is_efi_toolchain) {
 # Shared code used by both the device-side lib and the host unittests.
 source_set("shared") {
   sources = [
+    "cmdline.c",
     "efi/guids.c",
+    "loadfile.c",
     "xefi.c",
   ]
 
