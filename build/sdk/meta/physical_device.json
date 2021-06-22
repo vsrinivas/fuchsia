@@ -27,6 +27,11 @@
                         {
                             "$ref": "hardware.json#/definitions/requirements"
                         }
+                    ],
+                    "required": [
+                        "hardware",
+                        "kind",
+                        "name"
                     ]
                 }
             },

@@ -14,7 +14,7 @@
                 "format": "tgz"
             }
         ],
-        "kind": "product_bundle",
+        "kind": "product_bundle-02",
         "manifests": {
             "flash": {
                 "hw_revision": "x64",

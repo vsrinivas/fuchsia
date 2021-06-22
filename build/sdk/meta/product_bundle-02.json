@@ -53,10 +53,10 @@
                             "minItems": 1,
                             "type": "array"
                         },
-                        "type": {
+                        "kind": {
                             "allOf": [
                                 {
-                                    "$ref": "common.json#/definitions/type"
+                                    "$ref": "common.json#/definitions/kind"
                                 },
                                 {
                                     "enum": [
@@ -70,6 +70,8 @@
                         "device_refs",
                         "manifests",
                         "images",
+                        "kind",
+                        "name",
                         "packages"
                     ],
                     "type": "object"

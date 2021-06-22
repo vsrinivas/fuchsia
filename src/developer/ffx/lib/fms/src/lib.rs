@@ -40,6 +40,7 @@ impl Entries {
     pub fn new() -> Self {
         let mut schemata = HashMap::new();
 
+        // TODO(fxbug.dev/79133): eliminate the chain of "../".
         let input: Value =
             from_str(include_str!("../../../../../../build/sdk/meta/physical_device.json"))
                 .expect("unicode string");
