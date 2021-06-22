@@ -1121,7 +1121,6 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
   struct wireless_dev* wdev = ndev_to_wdev(ndev);
   struct brcmf_cfg80211_vif* vif = containerof(wdev, struct brcmf_cfg80211_vif, wdev);
   if (!check_vif_up(vif)) {
-    BRCMF_DBG(TEMP, "Vif not up");
     return ZX_ERR_IO;
   }
 
