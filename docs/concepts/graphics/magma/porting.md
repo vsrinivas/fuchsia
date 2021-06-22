@@ -194,10 +194,9 @@ may only reference libc.so and libzircon.so. At this stage you can stub out
 all other references as necessary. The ICD must also link to
 [libmagma][libmagma], which provides the Magma runtime.
 
-After the ICD is built, the Fuchsia GN build must store it into the system
-image. You also need to create some config_data with a manifest JSON file to
-identify the ICD to the Vulkan loader. See [intel's GN file][intelgn] for an
-example of this.
+The Vulkan loader service retrieves the ICDs from packages and advertises them
+to Vulkan clients. The ICD must be packaged with metadata and manifest JSON
+files, as described in the [loader service documentation][loader-readme].
 
 The ICD must export a certain set of symbols - see
 [the Vulkan ABI definition][icdabi]. You should implement them at this point.
@@ -206,7 +205,9 @@ Testing at this stage:
 
 * `readelf -d` on the shared library to ensure it has no dependencies besides
   libc.so and libzircon.so.
-* Checking `/system/lib` on the device for presence of the ICD.
+* Launching the vulkan loader using `fx shell cat
+  /svc/fuchsia.vulkan.loader.Loader` and checking `fx iquery core/vulkan_loader`
+  to see if it's loaded. Errors will go to syslog.
 * Run the [icd_load][icd_load] test. This test will check if any ICD on the
   system works, so ensure no other ICDs are on the system before running it.
 
@@ -330,3 +331,4 @@ the system driver using the Zircon DDK.
 [l0]: /docs/concepts/graphics/magma/contributing.md#l0
 [l1]: /docs/concepts/graphics/magma/contributing.md#l1
 [teststrategy]: /docs/concepts/graphics/magma/test_strategy.md
+[loader-readme]: /src/graphics/bin/vulkan_loader/README.md
