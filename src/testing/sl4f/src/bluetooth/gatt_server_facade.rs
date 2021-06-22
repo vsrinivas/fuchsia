@@ -213,7 +213,7 @@ impl GattServerFacade {
                 } else if value.len() < offset as usize {
                     let _result = responder.send(gatt::ErrorCode::InvalidOffset);
                 } else {
-                    &mut GattServerFacade::write_and_extend(value, value_to_write, offset as usize);
+                    GattServerFacade::write_and_extend(value, value_to_write, offset as usize);
                     let _result = responder.send(gatt::ErrorCode::NoError);
                 }
             }
@@ -240,7 +240,7 @@ impl GattServerFacade {
         );
         if let Some(v) = value_in_mapping {
             let (value, _enforce_initial_attribute_length) = v;
-            &mut GattServerFacade::write_and_extend(value, value_to_write, offset as usize);
+            GattServerFacade::write_and_extend(value, value_to_write, offset as usize);
         }
     }
 
