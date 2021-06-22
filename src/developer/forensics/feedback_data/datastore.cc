@@ -25,18 +25,20 @@
 namespace forensics {
 namespace feedback_data {
 
-Datastore::Datastore(async_dispatcher_t* dispatcher,
-                     std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
-                     const AnnotationKeys& annotation_allowlist,
-                     const AttachmentKeys& attachment_allowlist, PreviousBootFile boot_id_file,
-                     PreviousBootFile build_version_file, InspectDataBudget* inspect_data_budget)
+Datastore::Datastore(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    cobalt::Logger* cobalt, const AnnotationKeys& annotation_allowlist,
+    const AttachmentKeys& attachment_allowlist, const ErrorOr<std::string>& current_boot_id,
+    const ErrorOr<std::string>& previous_boot_id, const ErrorOr<std::string>& current_build_version,
+    const ErrorOr<std::string>& previous_build_version, InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
       services_(services),
       cobalt_(cobalt),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
-      static_annotations_(feedback_data::GetStaticAnnotations(annotation_allowlist_, boot_id_file,
-                                                              build_version_file)),
+      static_annotations_(feedback_data::GetStaticAnnotations(
+          annotation_allowlist_, current_boot_id, previous_boot_id, current_build_version,
+          previous_build_version)),
       static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
       reusable_annotation_providers_(GetReusableProviders(dispatcher_, services_, cobalt_)),
       inspect_data_budget_(inspect_data_budget) {

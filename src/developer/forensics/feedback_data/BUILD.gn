@@ -100,7 +100,6 @@ source_set("data_provider") {
     "//src/developer/forensics/utils/fit",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/uuid",
     "//third_party/libpng",
   ]
 }
@@ -214,6 +213,7 @@ source_set("main_service") {
     ":data_register",
     ":datastore",
     ":device_id_provider",
+    ":errors",
     ":inspect_manager",
     "//sdk/fidl/fuchsia.process.lifecycle",
     "//src/developer/forensics/utils/cobalt",
@@ -227,9 +227,6 @@ source_set("main_service") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
-    "//src/developer/forensics/feedback_data/system_log_recorder:reader",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:version",
     "//src/developer/forensics/utils:previous_boot_file",
     "//src/lib/files",
     "//src/lib/fxl",
@@ -301,14 +298,35 @@ source_set("main") {
 
   deps = [
     ":main_service",
+    ":namespace_init",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils/component",
+    "//src/lib/uuid",
     "//zircon/public/lib/zx",
   ]
 
   visibility += [ "//src/developer/forensics/*" ]
+}
+
+source_set("namespace_init") {
+  sources = [
+    "namespace_init.cc",
+    "namespace_init.h",
+  ]
+
+  public_deps = [ "//src/developer/forensics/utils/cobalt" ]
+
+  deps = [
+    ":constants",
+    "//sdk/lib/fit",
+    "//src/developer/forensics/feedback_data/system_log_recorder:reader",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:version",
+    "//src/lib/files",
+    "//src/lib/fxl",
+  ]
 }
 
 ###############################################################################

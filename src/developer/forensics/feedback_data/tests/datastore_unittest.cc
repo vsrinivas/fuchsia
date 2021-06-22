@@ -84,28 +84,16 @@ class DatastoreTest : public UnitTestFixture {
         "non-existent_path", inspect_node_manager_.get(), cobalt_.get());
   }
 
-  void TearDown() override {
-    FX_CHECK(files::DeletePath(kCurrentLogsDir, /*recursive=*/true));
-    files::DeletePath(files::JoinPath("/data/", kBootIdFileName), /*recursive=*/true);
-    files::DeletePath(files::JoinPath("/tmp/", kBootIdFileName), /*recursive=*/true);
-    files::DeletePath(files::JoinPath("/data/", kBuildVersionFileName), /*recursive=*/true);
-    files::DeletePath(files::JoinPath("/tmp/", kBuildVersionFileName), /*recursive=*/true);
-  }
+  void TearDown() override { FX_CHECK(files::DeletePath(kCurrentLogsDir, /*recursive=*/true)); }
 
  protected:
   void SetUpDatastore(const AnnotationKeys& annotation_allowlist,
                       const AttachmentKeys& attachment_allowlist) {
-    FX_CHECK(files::WriteFile(files::JoinPath("/data/", kBootIdFileName), "previous_boot_id"));
-    FX_CHECK(files::WriteFile(files::JoinPath("/data/", kBuildVersionFileName),
-                              "previous_build_version"));
     datastore_ = std::make_unique<Datastore>(
         dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
-        PreviousBootFile::FromData(/*is_first_instance=*/true, kBootIdFileName),
-        PreviousBootFile::FromData(/*is_first_instance=*/true, kBuildVersionFileName),
-        inspect_data_budget_.get());
-    FX_CHECK(files::WriteFile(files::JoinPath("/data/", kBootIdFileName), "current_boot_id"));
-    FX_CHECK(files::WriteFile(files::JoinPath("/data/", kBuildVersionFileName),
-                              "current_build_version"));
+        ErrorOr<std::string>("current_boot_id"), ErrorOr<std::string>("previous_boot_id"),
+        ErrorOr<std::string>("current_build_version"),
+        ErrorOr<std::string>("previous_build_version"), inspect_data_budget_.get());
   }
 
   void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {

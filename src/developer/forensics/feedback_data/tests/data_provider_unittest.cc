@@ -151,8 +151,7 @@ class DataProviderTest : public UnitTestFixture {
                          const AttachmentKeys& attachment_allowlist = kDefaultAttachments) {
     datastore_ = std::make_unique<Datastore>(
         dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
-        PreviousBootFile::FromData(/*is_first_instance=*/true, "empty_boot_id.txt"),
-        PreviousBootFile::FromData(/*is_first_instance=*/true, "empty_build_version.txt"),
+        Error::kMissingValue, Error::kMissingValue, Error::kMissingValue, Error::kMissingValue,
         inspect_data_budget_.get());
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), &clock_, /*is_first_instance=*/true, annotation_allowlist,

@@ -42,8 +42,11 @@ class Datastore {
  public:
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
             cobalt::Logger* cobalt, const AnnotationKeys& annotation_allowlist,
-            const AttachmentKeys& attachment_allowlist, PreviousBootFile boot_id_file,
-            PreviousBootFile build_version_file, InspectDataBudget* inspect_data_budget);
+            const AttachmentKeys& attachment_allowlist, const ErrorOr<std::string>& current_boot_id,
+            const ErrorOr<std::string>& previous_boot_id,
+            const ErrorOr<std::string>& current_build_version,
+            const ErrorOr<std::string>& previous_build_version,
+            InspectDataBudget* inspect_data_budget);
 
   ::fit::promise<Annotations> GetAnnotations(zx::duration timeout);
   ::fit::promise<Attachments> GetAttachments(zx::duration timeout);

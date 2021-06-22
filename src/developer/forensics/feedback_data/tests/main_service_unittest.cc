@@ -14,16 +14,12 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/feedback_data/constants.h"
-#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
-#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/version.h"
-#include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
-#include "src/developer/forensics/testing/log_message.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
-#include "src/developer/forensics/utils/log_format.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/timekeeper/async_test_clock.h"
 
 namespace forensics {
@@ -43,169 +39,41 @@ using inspect::testing::NodeMatches;
 using inspect::testing::PropertyList;
 using inspect::testing::StringIs;
 using inspect::testing::UintIs;
-using testing::BuildLogMessage;
 using ::testing::Contains;
 using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAreArray;
 
-std::string MakeFilepath(const std::string& dir, const size_t file_num) {
-  return files::JoinPath(dir, std::to_string(file_num));
-}
-
-const std::vector<std::string> kCurrentLogFilePaths = {
-    MakeFilepath(kCurrentLogsDir, 0), MakeFilepath(kCurrentLogsDir, 1),
-    MakeFilepath(kCurrentLogsDir, 2), MakeFilepath(kCurrentLogsDir, 3),
-    MakeFilepath(kCurrentLogsDir, 4), MakeFilepath(kCurrentLogsDir, 5),
-    MakeFilepath(kCurrentLogsDir, 6), MakeFilepath(kCurrentLogsDir, 7),
-};
-
 class MainServiceTest : public UnitTestFixture {
  public:
-  MainServiceTest() : clock_(dispatcher()) {
-    FX_CHECK(files::CreateDirectory(kCurrentLogsDir));
+  MainServiceTest() : clock_(dispatcher()), cobalt_(dispatcher(), services(), &clock_) {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     RunLoopUntilIdle();
   }
 
-  void TearDown() override {
-    FX_CHECK(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/true));
-    FX_CHECK(files::DeletePath(kCurrentLogsDir, /*recursive=*/true));
-    FX_CHECK(files::DeletePath(files::JoinPath("/data/", kBootIdFileName), /*recursive=*/true));
-    FX_CHECK(files::DeletePath(files::JoinPath("/tmp/", kBootIdFileName), /*recursive=*/true));
-  }
-
  protected:
   void CreateMainService(const bool is_first_instance) {
-    main_service_ = MainService::TryCreate(dispatcher(), services(), &InspectRoot(), &clock_,
-                                           is_first_instance);
-  }
-
-  void WriteFile(const std::string& filepath, const std::string& content) {
-    FX_CHECK(files::WriteFile(filepath, content.c_str(), content.size()));
-  }
-
-  std::string ReadFile(const std::string& filepath) {
-    std::string content;
-    FX_CHECK(files::ReadFileToString(filepath, &content));
-    return content;
+    main_service_ = std::make_unique<MainService>(
+        dispatcher(), services(), &cobalt_, &InspectRoot(), &clock_, Config{}, Error::kMissingValue,
+        Error::kMissingValue, Error::kMissingValue, Error::kMissingValue, is_first_instance);
   }
 
   timekeeper::AsyncTestClock clock_;
+  cobalt::Logger cobalt_;
   std::unique_ptr<MainService> main_service_;
 };
 
-MATCHER_P2(MatchesCobaltEvent, expected_type, expected_metric_id, "") {
-  return arg.type == expected_type && arg.metric_id == expected_metric_id;
-}
-
-TEST_F(MainServiceTest, MovesPreviousBootLogs) {
-  std::string previous_log_contents = "";
-  for (const auto& filepath : kCurrentLogFilePaths) {
-    auto encoder = system_log_recorder::ProductionEncoder();
-    const std::string str = Format(BuildLogMessage(FX_LOG_INFO, "Log for file: " + filepath));
-    previous_log_contents = previous_log_contents + str;
-    WriteFile(filepath, encoder.Encode(str));
-  }
-
-  CreateMainService(/*is_first_instance=*/true);
-  RunLoopUntilIdle();
-
-  EXPECT_FALSE(files::IsDirectory(kCurrentLogsDir));
-  EXPECT_EQ(previous_log_contents, ReadFile(kPreviousLogsFilePath));
-
-  // Verify the event type and metric_id.
-  EXPECT_THAT(
-      ReceivedCobaltEvents(),
-      UnorderedElementsAreArray({
-          MatchesCobaltEvent(cobalt::EventType::kInteger,
-                             cobalt_registry::kPreviousBootLogCompressionRatioMigratedMetricId),
-      }));
-}
-
 TEST_F(MainServiceTest, DeletesUsedPreviousBootLogsAfterOneHours) {
-  std::string previous_log_contents = "";
-  for (const auto& filepath : kCurrentLogFilePaths) {
-    auto encoder = system_log_recorder::ProductionEncoder();
-    const std::string str = Format(BuildLogMessage(FX_LOG_INFO, "Log for file: " + filepath));
-    previous_log_contents = previous_log_contents + str;
-    WriteFile(filepath, encoder.Encode(str));
-  }
-
-  CreateMainService(/*is_first_instance=*/true);
-  RunLoopUntilIdle();
-
-  EXPECT_FALSE(files::IsDirectory(kCurrentLogsDir));
-  EXPECT_EQ(previous_log_contents, ReadFile(kPreviousLogsFilePath));
-
-  RunLoopFor(zx::hour(1));
-  EXPECT_FALSE(files::IsFile(kPreviousLogsFilePath));
-}
-
-TEST_F(MainServiceTest, NoMovesPreviousBootLogsAfterFirstInstance) {
-  std::string previous_log_contents = "";
-  for (const auto& filepath : kCurrentLogFilePaths) {
-    auto encoder = system_log_recorder::ProductionEncoder();
-    const std::string str = Format(BuildLogMessage(FX_LOG_INFO, "Log for file: " + filepath));
-    previous_log_contents = previous_log_contents + str;
-    WriteFile(filepath, encoder.Encode(str));
-  }
-
-  CreateMainService(/*is_first_instance=*/false);
-  RunLoopUntilIdle();
-
-  EXPECT_TRUE(files::IsDirectory(kCurrentLogsDir));
-  // We check that nothing has been moved to /tmp.
-  EXPECT_FALSE(files::IsFile(kPreviousLogsFilePath));
-
-  // We check that the content of /cache is still the same.
-  for (const auto& filepath : kCurrentLogFilePaths) {
-    auto encoder = system_log_recorder::ProductionEncoder();
-    const std::string str = Format(BuildLogMessage(FX_LOG_INFO, "Log for file: " + filepath));
-    EXPECT_EQ(encoder.Encode(str), ReadFile(filepath));
-  }
-
-  // Verify no event was sent to cobalt.
-  EXPECT_THAT(ReceivedCobaltEvents(), IsEmpty());
-}
-
-TEST_F(MainServiceTest, MovesPreviousBootIdAndCreatesCurrentBootId) {
-  const std::string previous_boot_id = "previous_boot_id";
-  WriteFile(files::JoinPath("/data/", kBootIdFileName), previous_boot_id);
-
-  CreateMainService(/*is_first_instance=*/true);
-
-  EXPECT_EQ(ReadFile(files::JoinPath("/tmp/", kBootIdFileName)), previous_boot_id);
-  EXPECT_THAT(ReadFile(files::JoinPath("/data/", kBootIdFileName)), Not(IsEmpty()));
-  EXPECT_NE(ReadFile(files::JoinPath("/data/", kBootIdFileName)), previous_boot_id);
-}
-
-TEST_F(MainServiceTest, NoMovesPreviousIdAfterFirstInstance) {
-  const std::string previous_boot_id = "previous_boot_id";
-  WriteFile(files::JoinPath("/data/", kBootIdFileName), previous_boot_id);
-
   CreateMainService(/*is_first_instance=*/false);
 
-  EXPECT_EQ(ReadFile(files::JoinPath("/data/", kBootIdFileName)), previous_boot_id);
-}
+  files::ScopedTempDir temp_dir;
 
-TEST_F(MainServiceTest, MovesPreviousBuildVersionAndCopiesCurrentBuildVersion) {
-  const std::string previous_build_version = "previous_build_version";
-  WriteFile(files::JoinPath("/data/", kBuildVersionFileName), previous_build_version);
+  std::string previous_boot_logs_file;
+  ASSERT_TRUE(temp_dir.NewTempFileWithData("previous boot logs", &previous_boot_logs_file));
 
-  CreateMainService(/*is_first_instance=*/true);
+  main_service_->DeletePreviousBootLogsAt(zx::min(10), previous_boot_logs_file);
 
-  EXPECT_EQ(ReadFile(files::JoinPath("/tmp/", kBuildVersionFileName)), previous_build_version);
-  EXPECT_EQ(ReadFile(files::JoinPath("/data/", kBuildVersionFileName)),
-            ReadFile("/config/build-info/version"));
-}
-
-TEST_F(MainServiceTest, NoMovesPreviousBuildVersionAfterFirstInstance) {
-  const std::string previous_build_version = "previous_build_version";
-  WriteFile(files::JoinPath("/data/", kBuildVersionFileName), previous_build_version);
-
-  CreateMainService(/*is_first_instance=*/false);
-
-  EXPECT_EQ(ReadFile(files::JoinPath("/data/", kBuildVersionFileName)), previous_build_version);
+  RunLoopFor(zx::min(10));
+  EXPECT_FALSE(files::IsFile(previous_boot_logs_file));
 }
 
 TEST_F(MainServiceTest, CheckInspect) {
