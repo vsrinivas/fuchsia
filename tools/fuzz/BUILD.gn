@@ -43,8 +43,10 @@ go_library("lib") {
   ]
 }
 
-# This tool can only be built on the host
-if (is_host) {
+# This tool can only be built on the host.
+# Also, only the Linux build is used by ClusterFuzz, so others are disabled to
+# work around a flake on macOS (see fxbug.dev/79219).
+if (is_linux) {
   go_library("main") {
     name = "main"
     source_dir = "cmd"
