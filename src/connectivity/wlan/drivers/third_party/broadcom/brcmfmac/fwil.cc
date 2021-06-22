@@ -51,6 +51,8 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
   zx_status_t err;
   bcme_status_t fwerr = BCME_OK;
 
+  BRCMF_DBG(FIL, "%s iovar cmd %u len %u", set ? "set" : "get", cmd, len);
+
   if (drvr->bus_if->state != BRCMF_BUS_UP) {
     BRCMF_ERR("bus is down. we have nothing to do.");
     return ZX_ERR_IO;
@@ -67,10 +69,11 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
     err = brcmf_proto_query_dcmd(drvr, ifp->ifidx, cmd, data, len, &fwerr);
   }
 
-  if (err != ZX_OK) {
-    BRCMF_DBG(FIL, "Failed: %s", zx_status_get_string(err));
-  } else if (fwerr != 0) {
-    BRCMF_DBG(FIL, "Firmware error: %s (%d)", brcmf_fil_get_errstr(fwerr), fwerr);
+  if (err != ZX_OK || fwerr != BCME_OK) {
+    BRCMF_DBG(FIL, "%s iovar cmd %u error: %s, fwerr %s", set ? "set" : "get", cmd,
+              zx_status_get_string(err), brcmf_fil_get_errstr(fwerr));
+  }
+  if (err == ZX_OK && fwerr != BCME_OK) {
     if (fwerr == BCME_UNSUPPORTED) {
       err = ZX_ERR_NOT_SUPPORTED;
     } else if (fwerr == BCME_BUSY) {
@@ -78,6 +81,7 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
     } else {
       err = ZX_ERR_IO_REFUSED;
     }
+    BRCMF_DBG(FIL, "Overwrote ZX_OK with %s", zx_status_get_string(err));
   }
 
   if (fwerr_ptr != nullptr) {
@@ -183,12 +187,12 @@ zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, const char* name, con
     }
 
     if (err != ZX_OK) {
-      BRCMF_DBG(FIL, "Failed to set iovar %s: %s, fw err %s", name, zx_status_get_string(err),
+      BRCMF_DBG(FIL, "set iovar %s error: %s, fw err %s", name, zx_status_get_string(err),
                 brcmf_fil_get_errstr(fwerr));
     }
   } else {
     err = ZX_ERR_BUFFER_TOO_SMALL;
-    BRCMF_ERR("Failed to create iovar %s: %s", name, zx_status_get_string(err));
+    BRCMF_ERR("create iovar %s error: %s", name, zx_status_get_string(err));
   }
 
   drvr->proto_block.unlock();
@@ -214,7 +218,7 @@ zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, const char* name, voi
     if (err == ZX_OK) {
       memcpy(data, drvr->proto_buf, len);
     } else {
-      BRCMF_DBG(FIL, "Failed to get iovar %s: %s, fw err %s", name, zx_status_get_string(err),
+      BRCMF_DBG(FIL, "get iovar %s error: %s, fw err %s", name, zx_status_get_string(err),
                 brcmf_fil_get_errstr(fwerr));
     }
   } else {
@@ -310,7 +314,7 @@ zx_status_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, const char* name, co
     err = brcmf_fil_cmd_data(ifp, BRCMF_C_SET_VAR, drvr->proto_buf, buflen, true, nullptr);
   } else {
     err = ZX_ERR_BUFFER_TOO_SMALL;
-    BRCMF_ERR("Creating bsscfg failed");
+    BRCMF_ERR("create bsscfg error: %s", zx_status_get_string(err));
   }
 
   drvr->proto_block.unlock();
@@ -334,7 +338,7 @@ zx_status_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, const char* name, vo
     }
   } else {
     err = ZX_ERR_BUFFER_TOO_SMALL;
-    BRCMF_ERR("Creating bsscfg failed");
+    BRCMF_ERR("create bsscfg error: %s", zx_status_get_string(err));
   }
   BRCMF_DBG(FIL, "ifidx=%d, bsscfgidx=%d, name=%s, len=%d", ifp->ifidx, ifp->bsscfgidx, name, len);
   BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, std::min<uint>(len, MAX_HEX_DUMP_LEN), "data");

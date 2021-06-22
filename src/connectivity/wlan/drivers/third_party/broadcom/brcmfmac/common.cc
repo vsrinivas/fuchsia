@@ -333,7 +333,7 @@ zx_status_t brcmf_clear_country(brcmf_pub* drvr) {
 // This function applies configured platform specific iovars to the firmware
 static void brcmf_set_init_cfg_params(brcmf_if* ifp) {
   int i;
-  bcme_status_t fw_err;
+  bcme_status_t fwerr;
   zx_status_t err;
   wifi_config_t config;
 
@@ -343,36 +343,38 @@ static void brcmf_set_init_cfg_params(brcmf_if* ifp) {
   }
   // Go through the table until a null entry is found
   for (i = 0; i < MAX_IOVAR_ENTRIES; i++) {
-    switch (config.iovar_table[i].iovar_type) {
+    iovar_entry_t iovar_entry = config.iovar_table[i];
+    switch (iovar_entry.iovar_type) {
       case IOVAR_STR_TYPE: {
         uint32_t cur_val;
+        char* iovar_str = iovar_entry.iovar_str;
+        uint32_t new_val = iovar_entry.val;
 
         // First, get the current value (for debugging)
-        err = brcmf_fil_iovar_int_get(ifp, config.iovar_table[i].iovar_str, &cur_val, &fw_err);
+        err = brcmf_fil_iovar_int_get(ifp, iovar_str, &cur_val, &fwerr);
         if (err != ZX_OK) {
-          BRCMF_ERR("iovar get error: %s, fw err %s", config.iovar_table[i].iovar_str,
-                    brcmf_fil_get_errstr(fw_err));
-        } else {
-          BRCMF_DBG(INFO, "iovar %s get: %d new: %d", config.iovar_table[i].iovar_str, cur_val,
-                    config.iovar_table[i].val);
-          err = brcmf_fil_iovar_int_set(ifp, config.iovar_table[i].iovar_str,
-                                        config.iovar_table[i].val, &fw_err);
-          if (err != ZX_OK) {
-            BRCMF_ERR("iovar set error: %s, fw err %s", config.iovar_table[i].iovar_str,
-                      brcmf_fil_get_errstr(fw_err));
-          }
+          BRCMF_ERR("get iovar %s error: %s, fwerr %s", iovar_str, zx_status_get_string(err),
+                    brcmf_fil_get_errstr(fwerr));
+          break;
+        }
+        BRCMF_DBG(FIL, "set iovar %s: cur %d, new %d", iovar_str, cur_val, new_val);
+        err = brcmf_fil_iovar_int_set(ifp, iovar_str, new_val, &fwerr);
+        if (err != ZX_OK) {
+          BRCMF_ERR("set iovar %s error: %s, fwerr %s", iovar_str, zx_status_get_string(err),
+                    brcmf_fil_get_errstr(fwerr));
+          break;
         }
         break;
       }
       case IOVAR_CMD_TYPE: {
-        BRCMF_DBG(INFO, "set iovar cmd %d new: %d", config.iovar_table[i].iovar_cmd,
-                  config.iovar_table[i].val);
-        err =
-            brcmf_fil_cmd_data_set(ifp, config.iovar_table[i].iovar_cmd, &config.iovar_table[i].val,
-                                   sizeof(config.iovar_table[i].val), &fw_err);
+        uint32_t iovar_cmd = iovar_entry.iovar_cmd;
+        uint32_t new_val = iovar_entry.val;
+
+        BRCMF_DBG(FIL, "set iovar cmd %u: new %u", iovar_cmd, new_val);
+        err = brcmf_fil_cmd_data_set(ifp, iovar_cmd, &new_val, sizeof(new_val), &fwerr);
         if (err != ZX_OK) {
-          BRCMF_ERR("iovar cmd set error: %d, fw err %s", config.iovar_table[i].iovar_cmd,
-                    brcmf_fil_get_errstr(fw_err));
+          BRCMF_ERR("set iovar cmd %d error: %s, fwerr %s", iovar_cmd, zx_status_get_string(err),
+                    brcmf_fil_get_errstr(fwerr));
         }
         break;
       }
