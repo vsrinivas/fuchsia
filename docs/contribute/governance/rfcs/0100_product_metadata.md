@@ -237,7 +237,7 @@ an omission.
       "description": "A versioned envelope.",
       "type": "object",
       "properties": {
-        "version": {"$ref": "#/definitions/version},
+        "version": {"$ref": "#/definitions/version"},
         "data": {
           "description": "The payload."
          }
@@ -528,7 +528,7 @@ installed on a device.
            "$ref": "#/definitions/bundle_uri"
          },
          "format": {
-           "description": "Bundle format: files - a directory layout; tgz - a gzipped tarball. In case of the 'files' format, the base base path points to a directory. The manifest paths is relative to the directory. To get a full path append a path inside the manifest to base_uri. In case of the 'tgz' format, the base path points to the archive. The manifest path is relative within the archive.
+           "description": "Bundle format: files - a directory layout; tgz - a gzipped tarball. In case of the 'files' format, the base base path points to a directory. The manifest paths is relative to the directory. To get a full path append a path inside the manifest to base_uri. In case of the 'tgz' format, the base path points to the archive. The manifest path is relative within the archive."
            "enum": [
              "files",
              "tgz"
@@ -727,7 +727,7 @@ Below is an example of device hardware specifications.
   "data": {
     "type": "physical_device",
     "name": "generic-x64",
-    "description": "A generic x64 device ",
+    "description": "A generic x64 device.",
     "hardware": {
       "cpu": {
         "arch": "x64"
