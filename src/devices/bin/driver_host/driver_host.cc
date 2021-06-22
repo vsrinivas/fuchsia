@@ -336,9 +336,10 @@ zx_status_t DriverHostContext::DriverManagerRemove(fbl::RefPtr<zx_device_t> dev)
   // handle that gracefully.
   dev->conn.store(nullptr);
 
-  // Drop the device vnode, since no one should be able to open connections anymore.
-  // This will break the reference cycle between the DevfsVnode and the zx_device.
-  dev->vnode.reset();
+  // Close all connections to the device vnode and drop it, since no one should be able to
+  // open connections anymore. This will break the reference cycle between the DevfsVnode
+  // and the zx_device.
+  vfs_.CloseAllConnectionsForVnode(*(dev->vnode), [dev]() { dev->vnode.reset(); });
 
   // respond to the remove fidl call
   dev->removal_cb(ZX_OK);
