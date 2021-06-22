@@ -4,78 +4,67 @@
 
 use {
     crate::ConfigLevel,
-    anyhow::{anyhow, Context, Result},
+    anyhow::{Context, Result},
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,
         fmt,
-        fs::{File, OpenOptions},
-        io::{BufReader, BufWriter, Read, Write},
-        path::PathBuf,
+        fs::File,
+        io::{BufReader, Write},
+        path::{Path, PathBuf},
         sync::Mutex,
     },
 };
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct Environment {
     pub user: Option<String>,
     pub build: Option<HashMap<String, String>>,
     pub global: Option<String>,
 }
 
+// This lock protects from concurrent [Environment]s from modifying the same underlying file.
+// While in the normal case we typically only have one [Environment], it's possible to have
+// multiple instances during tests. If we're not careful, it's possible concurrent [Environment]s
+// could stomp on each other if they happen to use the same underlying file. To protect against
+// this, we hold a lock while we read or write to the underlying file.
+//
+// It is inefficient to hold the lock for all [Environment] files, since we only need it when
+// we're reading and writing to the same file. We could be more efficient if we a global map to
+// control access to individual files, but we only encounter multiple [Environment]s in tests, so
+// it's probably not worth the overhead.
 lazy_static::lazy_static! {
     static ref ENV_MUTEX: Mutex<Option<String>> = Mutex::new(None);
 }
 
 impl Environment {
-    fn load_from_reader<R: Read>(reader: R) -> Result<Self> {
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let path = path.as_ref();
+
+        // Grab the lock because we're reading from the environment file.
         let _e = ENV_MUTEX.lock().unwrap();
-        serde_json::from_reader::<R, Environment>(reader).context("reading environment from disk")
+        let file = File::open(path).context("opening file for read")?;
+
+        serde_json::from_reader(BufReader::new(file)).context("reading environment from disk")
     }
 
-    fn save_to_writer<W: Write>(&self, mut writer: W) -> Result<()> {
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        let path = path.as_ref();
+
+        // First save the config to a temp file in the same location as the file, then atomically
+        // rename the file to the final location to avoid partially written files.
+        let parent = path.parent().unwrap_or_else(|| Path::new("."));
+        let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
+
+        // Grab the lock because we're writing to the environment file.
         let _e = ENV_MUTEX.lock().unwrap();
-        serde_json::to_writer_pretty(&mut writer, &self)
-            .context("writing environment to disk")
-            .and_then(|_| writer.flush().map_err(|e| anyhow!("Could not flush writer: {}", e)))
-    }
+        serde_json::to_writer_pretty(&mut tmp, &self).context("writing environment to disk")?;
 
-    pub(crate) fn try_load(file: Option<&String>) -> Self {
-        file.map_or_else(
-            || Self { user: None, build: None, global: None },
-            |f| {
-                let reader = Environment::reader(f);
-                if reader.is_err() {
-                    Self { user: None, build: None, global: None }
-                } else {
-                    Environment::load_from_reader(reader.expect("environment file reader"))
-                        .context("reading environment")
-                        .unwrap_or_else(|_| Self { user: None, build: None, global: None })
-                }
-            },
-        )
-    }
+        tmp.flush().context("flushing environment")?;
 
-    pub fn load(file: &str) -> Result<Self> {
-        Environment::load_from_reader(Environment::reader(file)?)
-    }
+        let _ = tmp.persist(path)?;
 
-    fn reader(path: &str) -> Result<BufReader<File>> {
-        File::open(path).context("opening file for read").map(BufReader::new)
-    }
-
-    fn writer(path: &str) -> Result<BufWriter<File>> {
-        OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .create(true)
-            .open(path)
-            .context("opening file for write")
-            .map(BufWriter::new)
-    }
-
-    pub fn save(&self, file: &str) -> Result<()> {
-        self.save_to_writer(Environment::writer(file)?)
+        Ok(())
     }
 
     fn display_user(&self) -> String {
@@ -145,7 +134,7 @@ impl fmt::Display for Environment {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use {super::*, std::fs, tempfile::NamedTempFile};
 
     const ENVIRONMENT: &'static str = r#"
         {
@@ -157,21 +146,26 @@ mod test {
         }"#;
 
     #[test]
-    fn test_loading_and_saving_environment() -> Result<()> {
-        let mut env_file = String::from(ENVIRONMENT);
-        let environment = Environment::load_from_reader(BufReader::new(env_file.as_bytes()))?;
-        let mut env_file_out = String::new();
+    fn test_loading_and_saving_environment() {
+        let env: Environment = serde_json::from_str(ENVIRONMENT).unwrap();
 
-        unsafe {
-            environment.save_to_writer(BufWriter::new(env_file_out.as_mut_vec()))?;
-        }
+        // Write out the initial test environment.
+        let mut tmp_load = NamedTempFile::new().unwrap();
+        serde_json::to_writer(&mut tmp_load, &env).unwrap();
+        tmp_load.flush().unwrap();
 
-        // Remove whitespace
-        env_file.retain(|c| !c.is_whitespace());
-        env_file_out.retain(|c| !c.is_whitespace());
+        // Load the environment back in, and make sure it's correct.
+        let env_load = Environment::load(tmp_load.path()).unwrap();
+        assert_eq!(env, env_load);
 
-        assert_eq!(env_file, env_file_out);
+        // Save the environment, then read the saved file and make sure it's correct.
+        let mut tmp_save = NamedTempFile::new().unwrap();
+        env.save(tmp_save.path()).unwrap();
+        tmp_save.flush().unwrap();
 
-        Ok(())
+        let env_file = fs::read(tmp_save.path()).unwrap();
+        let env_save: Environment = serde_json::from_slice(&env_file).unwrap();
+
+        assert_eq!(env, env_save);
     }
 }

@@ -150,15 +150,26 @@ async fn load_config_with_instant(
                     .map_or(true, |item| is_cache_item_expired(item, now));
                 if write {
                     let runtime = RUNTIME.lock().unwrap().as_ref().map(|v| v.clone());
+
+                    let env = match ENV_FILE.lock().unwrap().as_ref() {
+                        Some(path) => match Environment::load(path) {
+                            Ok(env) => env,
+                            Err(err) => {
+                                log::error!(
+                                    "failed to load environment, reverting to default: {}",
+                                    err
+                                );
+                                Environment::default()
+                            }
+                        },
+                        None => Environment::default(),
+                    };
+
                     (*write_guard).insert(
                         build_dir.as_ref().cloned(),
                         CacheItem {
                             created: now,
-                            config: Arc::new(RwLock::new(Config::new(
-                                &Environment::try_load(ENV_FILE.lock().unwrap().as_ref()),
-                                build_dir,
-                                runtime,
-                            )?)),
+                            config: Arc::new(RwLock::new(Config::new(&env, build_dir, runtime)?)),
                         },
                     );
                 }
@@ -261,7 +272,7 @@ mod test {
         let item = CacheItem {
             created: later,
             config: Arc::new(RwLock::new(Config::new(
-                &Environment::try_load(None),
+                &Environment::default(),
                 &build_dirs[0],
                 None,
             )?)),
