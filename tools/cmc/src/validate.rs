@@ -3453,7 +3453,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Parse { err, .. }) if &err == "unknown variant `zzz`, expected `persistent` or `transient`"
+            Err(Error::Parse { err, .. }) if &err == "unknown variant `zzz`, expected one of `persistent`, `transient`, `single_run`"
         ),
 
         // capabilities

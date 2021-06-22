@@ -31,4 +31,7 @@ enum Durability {
     /// An instance exists until either its parent instance is stopped
     /// or it is explicitly destroyed.
     TRANSIENT = 2;
+    /// An instance is started upon creation and is immediately destroyed when
+    /// it stops.
+    SINGLE_RUN = 3;
 };

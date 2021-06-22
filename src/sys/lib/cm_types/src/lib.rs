@@ -556,9 +556,11 @@ pub enum Durability {
     /// The instance exists until its containing realm is stopped or it is
     /// explicitly destroyed.
     Transient,
+    /// An instance is started on creation and exists until it stops.
+    SingleRun,
 }
 
-symmetrical_enums!(Durability, fsys::Durability, Persistent, Transient);
+symmetrical_enums!(Durability, fsys::Durability, Persistent, Transient, SingleRun);
 
 /// A component instance's startup mode. See [`StartupMode`].
 ///

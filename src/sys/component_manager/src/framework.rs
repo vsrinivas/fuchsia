@@ -167,12 +167,27 @@ impl RealmCapabilityHost {
             return Err(fcomponent::Error::InvalidArguments);
         }
         let child_decl = child_decl.fidl_into_native();
-        component.add_dynamic_child(collection.name, &child_decl).await.map_err(|e| match e {
-            ModelError::InstanceAlreadyExists { .. } => fcomponent::Error::InstanceAlreadyExists,
-            ModelError::CollectionNotFound { .. } => fcomponent::Error::CollectionNotFound,
-            ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
-            _ => fcomponent::Error::Internal,
-        })
+        match component.add_dynamic_child(collection.name.clone(), &child_decl).await {
+            Ok(fsys::Durability::SingleRun) => {
+                // Creating a child in a `SingleRun` collection automatically starts it, so
+                // start the component.
+                let child_ref =
+                    fsys::ChildRef { name: child_decl.name, collection: Some(collection.name) };
+                let (_client_end, server_end) =
+                    fidl::endpoints::create_endpoints::<DirectoryMarker>().unwrap();
+                let weak_component = WeakComponentInstance::new(&component);
+                RealmCapabilityHost::bind_child(&weak_component, child_ref, server_end).await
+            }
+            Ok(_) => Ok(()),
+            Err(e) => match e {
+                ModelError::InstanceAlreadyExists { .. } => {
+                    Err(fcomponent::Error::InstanceAlreadyExists)
+                }
+                ModelError::CollectionNotFound { .. } => Err(fcomponent::Error::CollectionNotFound),
+                ModelError::Unsupported { .. } => Err(fcomponent::Error::Unsupported),
+                _ => Err(fcomponent::Error::Internal),
+            },
+        }
     }
 
     async fn bind_child(
@@ -1011,6 +1026,63 @@ mod tests {
         let expected_urls = &["test:///root_resolved", "test:///system_resolved"];
         test.mock_runner.wait_for_urls(expected_urls).await;
         assert_eq!("(coll:system)", test.hook.print());
+    }
+
+    #[fuchsia::test]
+    async fn dynamic_single_run_child() {
+        // Set up model and realm service.
+        let test = RealmCapabilityTest::new(
+            vec![
+                ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
+                ("system", ComponentDeclBuilder::new().add_single_run_collection("coll").build()),
+                ("a", component_decl_with_test_runner()),
+            ],
+            vec!["system:0"].into(),
+        )
+        .await;
+
+        let (_event_source, mut event_stream) = test
+            .new_event_stream(
+                vec![EventType::Started.into(), EventType::Purged.into()],
+                EventMode::Sync,
+            )
+            .await;
+
+        // Create child "a" in collection. Expect a Started event.
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let create_a = fasync::Task::spawn(
+            test.realm_proxy.create_child(&mut collection_ref, child_decl("a")),
+        );
+        let event_a = event_stream
+            .wait_until(EventType::Started, vec!["system:0", "coll:a:1"].into())
+            .await
+            .unwrap();
+
+        // Started action completes.
+        // Unblock Started and wait for requests to complete.
+        event_a.resume();
+        let _ = create_a.await.unwrap().unwrap();
+
+        let child = {
+            let state = test.component().lock_resolved_state().await.unwrap();
+            let child = state.all_children().iter().next().unwrap();
+            assert_eq!("a", child.0.name());
+            child.1.clone()
+        };
+
+        // The stop should trigger a delete/purge.
+        child.stop_instance(false).await.unwrap();
+
+        let event_a = event_stream
+            .wait_until(EventType::Purged, vec!["system:0", "coll:a:1"].into())
+            .await
+            .unwrap();
+        event_a.resume();
+
+        // Verify that the component topology matches expectations.
+        let actual_children = get_live_children(test.component()).await;
+        let expected_children: HashSet<PartialChildMoniker> = HashSet::new();
+        assert_eq!(actual_children, expected_children);
     }
 
     #[fuchsia::test]

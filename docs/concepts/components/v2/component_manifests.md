@@ -372,6 +372,8 @@ properties:
 -   `durability`: The duration of child component instances in the collection.
     -   `transient`: The instance exists until its parent is stopped or it is
         explicitly destroyed.
+    -   `single_run`: The instance is started when it is created, and destroyed
+        when it is stopped.
 -   `environment` _(optional)_: If present, the environment that will be
     assigned to instances in this collection, one of
     [`environments`](#environments). If omitted, instances in this collection

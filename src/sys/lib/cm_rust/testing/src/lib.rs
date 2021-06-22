@@ -62,6 +62,11 @@ impl ComponentDeclBuilder {
         self.add_collection(CollectionDeclBuilder::new_transient_collection(name))
     }
 
+    /// Add a single run collection.
+    pub fn add_single_run_collection(self, name: &str) -> Self {
+        self.add_collection(CollectionDeclBuilder::new_single_run_collection(name))
+    }
+
     /// Add a "program" clause, using the given runner.
     pub fn add_program(mut self, runner: &str) -> Self {
         assert!(self.result.program.is_none(), "tried to add program twice");
@@ -211,6 +216,11 @@ impl CollectionDeclBuilder {
     /// Creates a new builder initialized with a transient collection.
     pub fn new_transient_collection(name: &str) -> Self {
         Self::new().name(name).durability(fsys::Durability::Transient)
+    }
+
+    /// Creates a new builder initialized with a single run collection.
+    pub fn new_single_run_collection(name: &str) -> Self {
+        Self::new().name(name).durability(fsys::Durability::SingleRun)
     }
 
     /// Sets the CollectionDecl's name.

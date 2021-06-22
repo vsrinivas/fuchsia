@@ -401,11 +401,13 @@ impl ComponentInstance {
 
     /// Adds the dynamic child defined by `child_decl` to the given `collection_name`. Once
     /// added, the component instance exists but is not bound.
+    ///
+    /// Returns the collection durability of the collection the child was added to.
     pub async fn add_dynamic_child(
         self: &Arc<Self>,
         collection_name: String,
         child_decl: &ChildDecl,
-    ) -> Result<(), ModelError> {
+    ) -> Result<fsys::Durability, ModelError> {
         let res = {
             match child_decl.startup {
                 fsys::StartupMode::Lazy => {}
@@ -421,18 +423,22 @@ impl ComponentInstance {
                 .clone();
             match collection_decl.durability {
                 fsys::Durability::Transient => {}
+                fsys::Durability::SingleRun => {}
                 fsys::Durability::Persistent => {
                     return Err(ModelError::unsupported("Persistent durability"));
                 }
-            }
-            state.add_child(self, child_decl, Some(&collection_decl)).await
+            };
+            (
+                state.add_child(self, child_decl, Some(&collection_decl)).await,
+                collection_decl.durability,
+            )
         };
         match res {
-            Some(discover_nf) => {
+            (Some(discover_nf), durability) => {
                 discover_nf.await?;
-                Ok(())
+                Ok(durability)
             }
-            None => {
+            (None, _) => {
                 let partial_moniker =
                     PartialChildMoniker::new(child_decl.name.clone(), Some(collection_name));
                 Err(ModelError::instance_already_exists(self.abs_moniker.clone(), partial_moniker))
@@ -519,10 +525,68 @@ impl ComponentInstance {
         };
         // When the component is stopped, any child instances in transient collections must be
         // destroyed.
-        self.destroy_transient_children().await?;
+        self.destroy_non_persistent_children().await?;
         if was_running {
             let event = Event::new(self, Ok(EventPayload::Stopped { status: stop_result }));
             self.hooks.dispatch(&event).await?;
+        }
+        if let ExtendedInstance::Component(parent) = self.try_get_parent()? {
+            let child_moniker = self.child_moniker().unwrap();
+            parent.destroy_child_if_single_run(&child_moniker).await?;
+        }
+        Ok(())
+    }
+
+    async fn destroy_child_if_single_run(
+        self: &Arc<Self>,
+        child_moniker: &ChildMoniker,
+    ) -> Result<(), ModelError> {
+        let single_run_colls = {
+            let state = self.lock_state().await;
+            let state = match *state {
+                InstanceState::Resolved(ref s) => s,
+                _ => {
+                    // Component instance was not resolved, so no dynamic children.
+                    return Ok(());
+                }
+            };
+            let single_run_colls: HashSet<_> = state
+                .decl()
+                .collections
+                .iter()
+                .filter_map(|c| match c.durability {
+                    fsys::Durability::SingleRun => Some(c.name.clone()),
+                    fsys::Durability::Persistent => None,
+                    fsys::Durability::Transient => None,
+                })
+                .collect();
+            single_run_colls
+        };
+        if let Some(coll) = child_moniker.collection() {
+            if single_run_colls.contains(coll) {
+                let component = self.clone();
+                let child_moniker = child_moniker.clone();
+                fasync::Task::spawn(async move {
+                    match ActionSet::register(
+                        component.clone(),
+                        DestroyChildAction::new(child_moniker.to_partial()),
+                    )
+                    .await
+                    {
+                        Ok(_) => {}
+                        Err(e) => {
+                            warn!(
+                                "component {} was not destroyed when stopped in single run collection: {}",
+                                component.abs_moniker, e
+                            );
+                        }
+                    }
+                    let mut actions = component.lock_actions().await;
+                    let _ = actions
+                        .register_no_wait(&component, PurgeChildAction::new(child_moniker.clone()));
+                })
+                .detach();
+            }
         }
         Ok(())
     }
@@ -552,9 +616,9 @@ impl ComponentInstance {
         Ok(())
     }
 
-    /// Registers actions to destroy all children of this instance that live in transient
+    /// Registers actions to destroy all children of this instance that live in non-persistent
     /// collections.
-    async fn destroy_transient_children(self: &Arc<Self>) -> Result<(), ModelError> {
+    async fn destroy_non_persistent_children(self: &Arc<Self>) -> Result<(), ModelError> {
         let (transient_colls, child_monikers) = {
             let state = self.lock_state().await;
             let state = match *state {
@@ -571,6 +635,7 @@ impl ComponentInstance {
                 .filter_map(|c| match c.durability {
                     fsys::Durability::Transient => Some(c.name.clone()),
                     fsys::Durability::Persistent => None,
+                    fsys::Durability::SingleRun => Some(c.name.clone()),
                 })
                 .collect();
             let child_monikers: Vec<_> = state.all_children().keys().map(|m| m.clone()).collect();

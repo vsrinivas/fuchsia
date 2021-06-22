@@ -134,7 +134,7 @@ A *collection* is a container for [dynamic children](#dynamic-children) that
 may be created and destroyed at runtime using the
 [Realm](#realm-framework-protocol) framework service.
 
-Collections support two modes of *durability*:
+Collections support three modes of *durability*:
 
 -   *Transient*: The instances in a *transient* collection are automatically
     destroyed when the instance containing the collection is stopped.
@@ -142,6 +142,9 @@ Collections support two modes of *durability*:
     are explicitly destroyed or the entire collection is removed.
     [storage capability][glossary.storage capability] must be offered to
     the component for this option to be available.
+-   *Single Run*: The instances in a *single run* collection are started when
+    they are created, and destroyed when they are stopped. This means that the
+    instances in a single run collection can only be run once.
 
 For more information about component execution and persistence, see
 [lifecycle][lifecycle].

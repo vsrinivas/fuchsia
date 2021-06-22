@@ -76,6 +76,8 @@ protocol Realm {
     ///   is not a valid declaration.
     /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
     /// - `INSTANCE_ALREADY_EXISTS`: `decl.name` already exists in `collection`.
+    /// - `INSTANCE_CANNOT_RESOLVE`: `child`'s component declaration failed to resolve
+    ///   in a `SingleRun` collection.
     /// - `NO_SPACE`: Could not allocate storage for the new instance.
     /// - `INSTANCE_DIED`: This realm no longer exists.
     CreateChild(CollectionRef collection, ChildDecl decl) -> () error fuchsia.component.Error;
