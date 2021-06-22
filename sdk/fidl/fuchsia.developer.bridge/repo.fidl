@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.developer.bridge;
 
 using fuchsia.device;
@@ -15,9 +14,16 @@ const uint64 MAX_ALIASES = 32;
 
 flexible union RepositorySpec {
     1: FileSystemRepositorySpec filesystem;
+    2: PmRepositorySpec pm;
 };
 
 table FileSystemRepositorySpec {
+    1: string:MAX_PATH path;
+};
+
+/// [PmRepositorySpec] describes a TUF repository created by pm found on the local filesystem.
+table PmRepositorySpec {
+    /// File system path to the location of the pm repository.
     1: string:MAX_PATH path;
 };
 

@@ -6,13 +6,13 @@ use {argh::FromArgs, ffx_core::ffx_command, std::path::PathBuf};
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "add", description = "")]
-pub struct AddCommand {
+#[argh(subcommand, name = "add-from-pm", description = "")]
+pub struct AddFromPmCommand {
     /// repositories will be named `NAME`. Defaults to `devhost`.
-    #[argh(option, default = "\"devhost\".to_string()")]
+    #[argh(positional)]
     pub name: String,
 
-    /// path to the package repository.
+    /// path to the pm-built package repository.
     #[argh(positional)]
-    pub repo_path: PathBuf,
+    pub pm_repo_path: PathBuf,
 }

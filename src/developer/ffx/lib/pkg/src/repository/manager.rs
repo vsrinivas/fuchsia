@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    super::{file_system::FileSystemRepository, Error, Repository, RepositoryBackend},
+    super::{
+        file_system::FileSystemRepository, pm::PmRepository, Error, Repository, RepositoryBackend,
+    },
     anyhow::Result,
     parking_lot::RwLock,
     serde::{Deserialize, Serialize},
@@ -21,6 +23,9 @@ type ArcRepository = Arc<Repository>;
 pub enum RepositorySpec {
     #[serde(rename = "fs")]
     FileSystem { path: std::path::PathBuf },
+
+    #[serde(rename = "pm")]
+    Pm { path: std::path::PathBuf },
 }
 
 /// RepositoryManager is responsible for managing all the repositories in use by ffx.
@@ -43,6 +48,7 @@ impl RepositoryManager {
         let spec = serde_json::from_value(spec).map_err(|e| anyhow::anyhow!(e))?;
         match spec {
             RepositorySpec::FileSystem { path } => Ok(Box::new(FileSystemRepository::new(path))),
+            RepositorySpec::Pm { path } => Ok(Box::new(PmRepository::new(path))),
         }
     }
 

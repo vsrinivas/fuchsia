@@ -53,6 +53,7 @@ rustc_library("pkg") {
     "src/repository/file_system.rs",
     "src/repository/http_repository.rs",
     "src/repository/manager.rs",
+    "src/repository/pm.rs",
     "src/repository/server.rs",
   ]
 }

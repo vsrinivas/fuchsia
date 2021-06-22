@@ -13,8 +13,8 @@ use {
     fidl_fuchsia_pkg_rewrite::{EngineMarker, LiteralRule, Rule},
     fuchsia_async::{self as fasync, futures::StreamExt as _},
     pkg::repository::{
-        FileSystemRepository, Repository, RepositoryManager, RepositoryServer, RepositorySpec,
-        LISTEN_PORT,
+        FileSystemRepository, PmRepository, Repository, RepositoryManager, RepositoryServer,
+        RepositorySpec, LISTEN_PORT,
     },
     serde_json,
     services::prelude::*,
@@ -273,6 +273,49 @@ impl FidlService for Repo {
                             );
                         }
                     }
+                    bridge::RepositorySpec::Pm(path) => {
+                        if let Some(path) = path.path {
+                            let err = ffx_config::set(
+                                (
+                                    format!("repository_server.repositories.{}.type", name)
+                                        .as_str(),
+                                    ConfigLevel::User,
+                                ),
+                                "pm".to_owned().into(),
+                            )
+                            .await
+                            .err();
+                            let err = if err.is_some() {
+                                err
+                            } else {
+                                ffx_config::set(
+                                    (
+                                        format!("repository_server.repositories.{}.path", name)
+                                            .as_str(),
+                                        ConfigLevel::User,
+                                    ),
+                                    path.clone().into(),
+                                )
+                                .await
+                                .err()
+                            };
+
+                            if let Some(err) = err {
+                                log::warn!("Could not save repository info to config: {}", err);
+                            }
+
+                            self.manager.add(Arc::new(
+                                Repository::new(&name, Box::new(PmRepository::new(path.into())))
+                                    .await
+                                    .map_err(|x| anyhow!("{:?}", x))?,
+                            ));
+                        } else {
+                            log::warn!(
+                                "Could not save repository info to config: \
+                                        Malformed FileSystemRepositorySpec did not contain a path."
+                            );
+                        }
+                    }
                     bridge::RepositorySpecUnknown!() => {
                         log::error!("Unknown RepositorySpec format.");
                     }
@@ -305,6 +348,12 @@ impl FidlService for Repo {
                                         ..bridge::FileSystemRepositorySpec::EMPTY
                                     },
                                 )
+                            }
+                            RepositorySpec::Pm { path } => {
+                                bridge::RepositorySpec::Pm(bridge::PmRepositorySpec {
+                                    path: path.as_os_str().to_str().map(|x| x.to_owned()),
+                                    ..bridge::PmRepositorySpec::EMPTY
+                                })
                             }
                         },
                     })

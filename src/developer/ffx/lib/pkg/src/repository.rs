@@ -29,13 +29,16 @@ use {
 };
 
 mod file_system;
-pub mod http_repository;
 mod manager;
+mod pm;
 mod server;
+
+pub mod http_repository;
 
 pub use file_system::FileSystemRepository;
 pub use http_repository::package_download;
 pub use manager::{RepositoryManager, RepositorySpec};
+pub use pm::PmRepository;
 pub use server::{RepositoryServer, RepositoryServerBuilder, LISTEN_PORT};
 
 /// A unique ID which is given to every repository.

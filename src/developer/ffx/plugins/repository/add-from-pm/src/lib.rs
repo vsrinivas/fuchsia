@@ -5,17 +5,17 @@
 use {
     anyhow::Result,
     ffx_core::ffx_plugin,
-    ffx_repository_add_args::AddCommand,
-    fidl_fuchsia_developer_bridge::{FileSystemRepositorySpec, RepositoriesProxy, RepositorySpec},
+    ffx_repository_add_from_pm_args::AddFromPmCommand,
+    fidl_fuchsia_developer_bridge::{PmRepositorySpec, RepositoriesProxy, RepositorySpec},
 };
 
 #[ffx_plugin(RepositoriesProxy = "daemon::service")]
-pub async fn add(cmd: AddCommand, repos: RepositoriesProxy) -> Result<()> {
+pub async fn add_from_pm(cmd: AddFromPmCommand, repos: RepositoriesProxy) -> Result<()> {
     repos.add(
         &cmd.name,
-        &mut RepositorySpec::Filesystem(FileSystemRepositorySpec {
-            path: Some(cmd.repo_path.as_os_str().to_str().unwrap().to_owned()),
-            ..FileSystemRepositorySpec::EMPTY
+        &mut RepositorySpec::Pm(PmRepositorySpec {
+            path: Some(cmd.pm_repo_path.as_os_str().to_str().unwrap().to_owned()),
+            ..PmRepositorySpec::EMPTY
         }),
     )?;
 
@@ -26,15 +26,13 @@ pub async fn add(cmd: AddCommand, repos: RepositoriesProxy) -> Result<()> {
 mod test {
     use super::*;
     use {
-        fidl_fuchsia_developer_bridge::{
-            FileSystemRepositorySpec, RepositoriesRequest, RepositorySpec,
-        },
+        fidl_fuchsia_developer_bridge::{PmRepositorySpec, RepositoriesRequest, RepositorySpec},
         fuchsia_async as fasync,
         futures::channel::oneshot::channel,
     };
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_add() {
+    async fn test_add_from_pm() {
         let (sender, receiver) = channel();
         let mut sender = Some(sender);
         let repos = setup_fake_repos(move |req| match req {
@@ -43,17 +41,20 @@ mod test {
             }
             other => panic!("Unexpected request: {:?}", other),
         });
-        add(AddCommand { name: "MyRepo".to_owned(), repo_path: "a/b".into() }, repos)
-            .await
-            .unwrap();
+        add_from_pm(
+            AddFromPmCommand { name: "MyRepo".to_owned(), pm_repo_path: "a/b".into() },
+            repos,
+        )
+        .await
+        .unwrap();
         let got = receiver.await.unwrap();
         assert_eq!(
             got,
             (
                 "MyRepo".to_owned(),
-                RepositorySpec::Filesystem(FileSystemRepositorySpec {
+                RepositorySpec::Pm(PmRepositorySpec {
                     path: Some("a/b".to_owned()),
-                    ..FileSystemRepositorySpec::EMPTY
+                    ..PmRepositorySpec::EMPTY
                 })
             )
         );
