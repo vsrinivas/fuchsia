@@ -198,24 +198,27 @@ foreach(test, fidl_compatibility_tests) {
   test_labels += [ ":${test_label}" ]
 
   ## Generate a CMX
-  generated_file(generate_label) {
+  fuchsia_test_component_manifest(generate_label) {
+    deps = [ ":fidl_compatibility_test_executable" ]
     visibility = [ ":*" ]
-    testonly = true
+    v2 = false
 
-    outputs = [ generate_output ]
-    output_conversion = "json"
-    contents = {
-      include = [ "//sdk/lib/diagnostics/syslog/client.shard.cmx" ]
-      program = {
-        binary = "bin/fidl_compatibility_test"
-        args =
-            [ "--gtest_filter=${test.filter}" ] + fidl_compatibilty_test_servers
-      }
-      sandbox = {
-        services = [ "fuchsia.sys.Launcher" ]
-      }
+    metadata = {
+      test_component_manifest_cmx = [
+        {
+          program = {
+            args = [ "--gtest_filter=${test.filter}" ] +
+                   fidl_compatibilty_test_servers
+          }
+          sandbox = {
+            services = [ "fuchsia.sys.Launcher" ]
+          }
+        },
+      ]
     }
   }
+  generate_output = get_target_outputs(":$generate_label")
+  generate_output = generate_output[0]
 
   ## The test component
   fuchsia_component(component_label) {
@@ -223,11 +226,8 @@ foreach(test, fidl_compatibility_tests) {
     testonly = true
 
     component_name = component_name
-    manifest = rebase_path(generate_output)
-    deps = [
-      ":${generate_label}",
-      ":fidl_compatibility_test_executable",
-    ]
+    manifest = generate_output
+    deps = [ ":$generate_label" ]
   }
 
   ## The test declaration
