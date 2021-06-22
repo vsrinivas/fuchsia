@@ -209,10 +209,8 @@ config("relative_paths") {
     ]
   }
 
-  rustflags = [
-    "--remap-path-prefix",
-    rebase_path("//") + "=" + rebase_path("//", root_build_dir),
-  ]
+  # Do not pass --remap-path-prefix because its absolute path argument causes
+  # object difference when built from different environments.
 }
 
 config("debug") {
