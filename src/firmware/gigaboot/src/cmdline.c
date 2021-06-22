@@ -220,5 +220,10 @@ uint32_t cmdline_get_uint32(const char* key, uint32_t _default) {
   if (val == NULL) {
     return _default;
   }
-  return atol(val);
+  return (uint32_t)atol(val);
+}
+
+void cmdline_clear(void) {
+  buffer_next = 0;
+  entry_count = 0;
 }
