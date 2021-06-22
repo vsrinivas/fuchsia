@@ -51,7 +51,7 @@ impl FakeObject {
         if our_buf.len() < required_len {
             our_buf.resize(required_len, 0);
         }
-        &our_buf[offset as usize..offset as usize + buf.len()].copy_from_slice(buf.as_slice());
+        our_buf[offset as usize..offset as usize + buf.len()].copy_from_slice(buf.as_slice());
         Ok(())
     }
 

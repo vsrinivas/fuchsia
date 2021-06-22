@@ -123,7 +123,7 @@ impl BlockClient for FakeBlockClient {
             BufferSlice::Memory(slice) => {
                 let len = slice.len();
                 ensure!(device_offset + len <= inner.data.len(), "Invalid range");
-                &mut inner.data[device_offset..device_offset + len].copy_from_slice(slice);
+                inner.data[device_offset..device_offset + len].copy_from_slice(slice);
                 Ok(())
             }
         }
