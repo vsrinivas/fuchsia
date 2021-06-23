@@ -90,12 +90,7 @@ pub struct SkipListLayer<K, V> {
     // These are the head pointers for the list.
     pointers: PointerList<K, V>,
 
-    // The writer needs to synchronize with the readers and this is done by keeping track of read
-    // counts.  We could, in theory, remove the mutex and make this atomic (and thus make reads
-    // truly lock free) but it's simpler and easier to reason about with a mutex and what matters
-    // most is that we avoid using a futures::lock::Mutex for readers because that can be blocked
-    // for relatively long periods of time.
-    read_counts: std::sync::Mutex<ReadCounts<K, V>>,
+    inner: std::sync::Mutex<Inner<K, V>>,
 
     // Writes are locked using this lock.
     writer_lock: futures::lock::Mutex<()>,
@@ -106,7 +101,12 @@ pub struct SkipListLayer<K, V> {
     close_event: Mutex<Option<Event>>,
 }
 
-struct ReadCounts<K, V> {
+// The writer needs to synchronize with the readers and this is done by keeping track of read
+// counts.  We could, in theory, remove the mutex and make the read counts atomic (and thus make
+// reads truly lock free) but it's simpler and easier to reason about with a mutex and what matters
+// most is that we avoid using a futures::lock::Mutex for readers because that can be blocked for
+// relatively long periods of time.
+struct Inner<K, V> {
     // After a write, if there are nodes that need to be freed, and existing readers, the epoch
     // changes and new readers will be in a new epoch.  When all the old readers finish, the nodes
     // can be freed.
@@ -121,18 +121,22 @@ struct ReadCounts<K, V> {
 
     // A list of nodes to be freed once the read counts have reached zero.
     erase_list: Range<*mut SkipListNode<K, V>>,
+
+    // The number of items in the skip-list.
+    item_count: usize,
 }
 
 // Required because of `erase_list` which holds pointers.
-unsafe impl<K, V> Send for ReadCounts<K, V> {}
+unsafe impl<K, V> Send for Inner<K, V> {}
 
-impl<K, V> ReadCounts<K, V> {
+impl<K, V> Inner<K, V> {
     fn new() -> Self {
-        ReadCounts {
+        Inner {
             epoch: 0,
             counts: [0, 0],
             waker: None,
             erase_list: std::ptr::null_mut()..std::ptr::null_mut(),
+            item_count: 0,
         }
     }
 
@@ -153,7 +157,7 @@ impl<K, V> SkipListLayer<K, V> {
     pub fn new(max_item_count: usize) -> Arc<SkipListLayer<K, V>> {
         Arc::new(SkipListLayer {
             pointers: PointerList::new((max_item_count as f32).log2() as usize + 1),
-            read_counts: std::sync::Mutex::new(ReadCounts::new()),
+            inner: std::sync::Mutex::new(Inner::new()),
             writer_lock: futures::lock::Mutex::new(()),
             allocated: AtomicU32::new(0),
             close_event: Mutex::new(Some(Event::new())),
@@ -270,6 +274,10 @@ impl<K: Eq + Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer
     async fn lock_writes(&self) -> futures::lock::MutexGuard<'_, ()> {
         self.writer_lock.lock().await
     }
+
+    fn len(&self) -> usize {
+        self.inner.lock().unwrap().item_count
+    }
 }
 
 // -- SkipListLayerIter --
@@ -287,10 +295,10 @@ struct SkipListLayerIter<'a, K, V> {
 impl<'a, K: OrdUpperBound, V> SkipListLayerIter<'a, K, V> {
     fn new(skip_list: &'a SkipListLayer<K, V>, bound: Bound<&K>) -> Self {
         let epoch = {
-            let mut read_counts = skip_list.read_counts.lock().unwrap();
-            let index = (read_counts.epoch & 1) as usize;
-            read_counts.counts[index] += 1;
-            read_counts.epoch
+            let mut inner = skip_list.inner.lock().unwrap();
+            let index = (inner.epoch & 1) as usize;
+            inner.counts[index] += 1;
+            inner.epoch
         };
         let (included, key) = match bound {
             Bound::Unbounded => {
@@ -327,12 +335,12 @@ impl<'a, K: OrdUpperBound, V> SkipListLayerIter<'a, K, V> {
 
 impl<K, V> Drop for SkipListLayerIter<'_, K, V> {
     fn drop(&mut self) {
-        let mut read_counts = self.skip_list.read_counts.lock().unwrap();
+        let mut inner = self.skip_list.inner.lock().unwrap();
         let index = (self.epoch & 1) as usize;
-        read_counts.counts[index] -= 1;
-        if read_counts.counts[index] == 0 && read_counts.epoch != self.epoch {
-            read_counts.free_erase_list(self.skip_list);
-            if let Some(waker) = read_counts.waker.take() {
+        inner.counts[index] -= 1;
+        if inner.counts[index] == 0 && inner.epoch != self.epoch {
+            inner.free_erase_list(self.skip_list);
+            if let Some(waker) = inner.waker.take() {
                 waker.wake();
             }
         }
@@ -382,6 +390,9 @@ struct SkipListLayerIterMut<'a, K, V> {
     // why Rust thinks this is unused.
     #[allow(dead_code)]
     write_guard: futures::lock::MutexGuard<'a, ()>,
+
+    // The change in item count as a result of this mutation.
+    item_delta: isize,
 }
 
 impl<K: OrdUpperBound, V> SkipListLayerIterMut<'_, K, V> {
@@ -394,11 +405,11 @@ impl<K: OrdUpperBound, V> SkipListLayerIterMut<'_, K, V> {
 
         // Before we proceed, we should wait for any old readers on the other epoch to finish.
         poll_fn(|cx| {
-            let mut read_counts = skip_list.read_counts.lock().unwrap();
-            if read_counts.counts[(read_counts.epoch & 1 ^ 1) as usize] == 0 {
+            let mut inner = skip_list.inner.lock().unwrap();
+            if inner.counts[(inner.epoch & 1 ^ 1) as usize] == 0 {
                 Poll::Ready(())
             } else {
-                read_counts.waker = Some(cx.waker().clone());
+                inner.waker = Some(cx.waker().clone());
                 Poll::Pending
             }
         })
@@ -447,6 +458,7 @@ impl<K: OrdUpperBound, V> SkipListLayerIterMut<'_, K, V> {
             insertion_point: None,
             insertion_nodes: PointerList::new(len),
             write_guard,
+            item_delta: 0,
         }
     }
 }
@@ -484,24 +496,25 @@ impl<K, V> SkipListLayerIterMut<'_, K, V> {
         }
 
         // Switch the epoch so that we can track when existing readers have finished.
-        let mut read_counts = self.skip_list.read_counts.lock().unwrap();
-        let has_readers = read_counts.counts[(read_counts.epoch & 1) as usize] > 0;
+        let mut inner = self.skip_list.inner.lock().unwrap();
+        inner.item_count = inner.item_count.wrapping_add(self.item_delta as usize);
+        let has_readers = inner.counts[(inner.epoch & 1) as usize] > 0;
         if let Some(start) = maybe_erase {
             let end = self.prev_pointers[0].get_ptr(0);
             if start as *mut _ != end {
-                read_counts.erase_list = start..end;
+                inner.erase_list = start..end;
                 if has_readers {
-                    read_counts.epoch = read_counts.epoch.wrapping_add(1);
-                    return Some(read_counts.epoch);
+                    inner.epoch = inner.epoch.wrapping_add(1);
+                    return Some(inner.epoch);
                 } else {
-                    read_counts.free_erase_list(self.skip_list);
+                    inner.free_erase_list(self.skip_list);
                 }
             }
         }
         if force_epoch_change && has_readers {
-            read_counts.erase_list = std::ptr::null_mut()..std::ptr::null_mut();
-            read_counts.epoch = read_counts.epoch.wrapping_add(1);
-            return Some(read_counts.epoch);
+            inner.erase_list = std::ptr::null_mut()..std::ptr::null_mut();
+            inner.epoch = inner.epoch.wrapping_add(1);
+            return Some(inner.epoch);
         }
         None
     }
@@ -578,6 +591,7 @@ impl<K: Key + Clone, V: Value + Clone> LayerIteratorMut<K, V> for SkipListLayerI
             // The iterator should point at the node following the new node i.e. the existing node.
             self.prev_pointers[i] = &node.pointers;
         }
+        self.item_delta += 1;
     }
 
     fn erase(&mut self) {
@@ -603,14 +617,15 @@ impl<K: Key + Clone, V: Value + Clone> LayerIteratorMut<K, V> for SkipListLayerI
                 pointers[i].set(i, next.pointers.get(i));
             }
         }
+        self.item_delta -= 1;
     }
 
     async fn commit_and_wait(&mut self) {
         if let Some(epoch) = self.commit(true) {
             poll_fn(|cx| {
-                let mut read_counts = self.skip_list.read_counts.lock().unwrap();
-                if read_counts.counts[(epoch & 1 ^ 1) as usize] > 0 {
-                    read_counts.waker = Some(cx.waker().clone());
+                let mut inner = self.skip_list.inner.lock().unwrap();
+                if inner.counts[(epoch & 1 ^ 1) as usize] > 0 {
+                    inner.waker = Some(cx.waker().clone());
                     Poll::Pending
                 } else {
                     Poll::Ready(())
@@ -752,7 +767,11 @@ mod tests {
         skip_list.insert(items[1].clone()).await;
         skip_list.insert(items[0].clone()).await;
 
+        assert_eq!(skip_list.len(), 2);
+
         skip_list.erase(items[1].as_item_ref()).await;
+
+        assert_eq!(skip_list.len(), 1);
 
         {
             let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
@@ -763,6 +782,8 @@ mod tests {
         }
 
         skip_list.erase(items[0].as_item_ref()).await;
+
+        assert_eq!(skip_list.len(), 0);
 
         {
             let iter = skip_list.seek(Bound::Unbounded).await.unwrap();
@@ -1051,12 +1072,18 @@ mod tests {
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2), Item::new(TestKey(3), 3)];
         skip_list.insert(items[1].clone()).await;
         skip_list.insert(items[2].clone()).await;
+
+        assert_eq!(skip_list.len(), 2);
+
         {
             let mut iter = SkipListLayerIterMut::new(&skip_list, std::ops::Bound::Unbounded).await;
             iter.insert(items[0].clone());
             iter.advance().await.expect("advance failed");
             iter.erase();
         }
+
+        assert_eq!(skip_list.len(), 2);
+
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
         let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));

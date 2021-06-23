@@ -237,6 +237,9 @@ pub trait MutableLayer<K, V>: Layer<K, V> {
 
     /// Locks the layer, blocking writes but not reads.
     async fn lock_writes(&self) -> futures::lock::MutexGuard<'_, ()>;
+
+    /// Returns the number of items in the layer.
+    fn len(&self) -> usize;
 }
 
 /// Something that implements LayerIterator is returned by the seek function.
