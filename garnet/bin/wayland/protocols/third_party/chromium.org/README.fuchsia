@@ -1,0 +1,5 @@
+Name: chromium/src
+URL: https://chromium.googlesource.com/chromium/src/+/master/third_party/wayland-protocols
+License File: LICENSE
+
+This directory contains wayland protocol files. No modifications have been made.

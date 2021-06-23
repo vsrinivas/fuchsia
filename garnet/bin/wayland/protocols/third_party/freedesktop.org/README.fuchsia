@@ -1,0 +1,6 @@
+Name: wayland-protocols
+URL: https://wayland.freedesktop.org/
+License File: COPYING
+
+This directory wayland extension protocols that provide functionality not
+available in the core protocol.

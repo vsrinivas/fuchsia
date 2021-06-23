@@ -5,10 +5,44 @@
 import("//garnet/bin/wayland/protocol.gni")
 
 group("protocols") {
-  testonly = true
-  deps = [ ":wayland" ]
+  deps = [
+    ":wayland",
+    ":wp_viewporter",
+    ":zaura_shell",
+    ":zcr_alpha_compositing_v1",
+    ":zcr_secure_output_v1",
+    ":zwp_linux_dmabuf_v1",
+    ":zxdg_shell_v6",
+  ]
 }
 
 wayland_protocol("wayland") {
   protocol = "//third_party/wayland/protocol/wayland.xml"
+}
+
+wayland_protocol("wp_viewporter") {
+  protocol = "third_party/freedesktop.org/stable/viewporter/viewporter.xml"
+}
+
+wayland_protocol("zxdg_shell_v6") {
+  protocol =
+      "third_party/freedesktop.org/unstable/xdg-shell/xdg-shell-unstable-v6.xml"
+}
+
+wayland_protocol("zwp_linux_dmabuf_v1") {
+  protocol = "third_party/freedesktop.org/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
+  deps = [ ":wayland" ]
+}
+
+wayland_protocol("zaura_shell") {
+  protocol = "third_party/chromium.org/aura-shell/aura-shell.xml"
+}
+
+wayland_protocol("zcr_alpha_compositing_v1") {
+  protocol = "third_party/chromium.org/alpha-compositing/alpha-compositing-unstable-v1.xml"
+}
+
+wayland_protocol("zcr_secure_output_v1") {
+  protocol =
+      "third_party/chromium.org/secure-output/secure-output-unstable-v1.xml"
 }

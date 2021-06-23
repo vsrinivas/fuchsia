@@ -5,11 +5,14 @@
 import("//build/components.gni")
 
 group("wayland") {
+  deps = [ "bridge" ]
+}
+
+group("tests") {
   testonly = true
   deps = [
     ":wayland_tests",
-    "core",
-    "protocols",
+    "bridge:tests",
   ]
 }
 
