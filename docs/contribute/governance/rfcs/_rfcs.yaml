@@ -1261,7 +1261,7 @@
   status: 'Accepted'
   reviewers: ['jeremymanson@google.com', 'mkember@google.com', 'shayba@google.com']
   submitted: '2021-04-27'
-  reviewed: '2021-MM-DD'
+  reviewed: '2021-05-26'
 
 - name: 'RFC-0098'
   title: 'Component Framework RFC Criteria'
