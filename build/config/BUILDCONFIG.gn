@@ -403,8 +403,8 @@ if (zircon_toolchain == false) {
     "//build/config/zircon:machine",
     "//build/config/zircon:relative_paths",
     "//build/config/zircon:default_assert_level",
-    "//build/config/zircon:default_warnings",
     "//build/config/zircon:default_icf",
+    "//build/config/zircon:default_warnings",
     "//build/config/zircon:default_include_dirs",
     "//build/config/zircon:default_frame_pointers",
     "//build/config/zircon:default_template_backtrace_limit",
@@ -421,20 +421,6 @@ if (zircon_toolchain == false) {
       "//build/config/zircon:shared_library_config",
       "//build/config/zircon:no_undefined_symbols",
     ]
-  }
-
-  # Fuzzing and sanitizing variants have remove_common_configs entries that point
-  # to //build/config:foo, and need to be translated into //build/config/zircon:foo
-  # until build unification completes and the latter can be removed.
-  # TODO(fxbug.dev/60410): Remove this after build unification.
-  _remove_common_configs = toolchain_variant.remove_common_configs
-  foreach(_config, [ "icf" ]) {
-    _config_label = "//build/config:" + _config
-    if (_remove_common_configs + [ _config_label ] - [ _config_label ] !=
-        _remove_common_configs) {
-      _remove_common_configs -= [ _config_label ]
-      _remove_common_configs += [ "//build/config/zircon:" + _config ]
-    }
   }
 
   # To the same for remove_shared_configs
@@ -454,7 +440,7 @@ if (zircon_toolchain == false) {
   # toolchains want to move certain configs to the end of the list to ensure
   # that kernel-provided ones are listed first.
 
-  default_common_binary_configs -= _remove_common_configs
+  default_common_binary_configs -= toolchain_variant.remove_common_configs
   default_common_binary_configs += toolchain_variant.configs
 
   default_shared_library_configs -= _remove_shared_configs

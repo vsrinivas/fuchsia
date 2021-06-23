@@ -315,7 +315,7 @@ config("default_icf") {
   if (optimize != "none" && optimize != "debug") {
     # Our code should never rely on C's unique function pointer semantics,
     # which is broken by --icf=all for sometimes substantial space savings.
-    configs = [ ":icf" ]
+    configs = [ "//build/config:icf" ]
   }
 }
 
@@ -466,16 +466,6 @@ config("warn-implicit-fallthrough") {
 
 config("default_template_backtrace_limit") {
   cflags_cc = [ "-ftemplate-backtrace-limit=0" ]
-}
-
-config("icf") {
-  # This changes C/C++ semantics and might be incompatible with third-party
-  # code that relies on function pointers comparison.
-  if (current_os == "win" && (linker == "lld" || !is_gcc)) {
-    ldflags = [ "-Wl,/opt:icf=all" ]
-  } else if (linker == "gold" || linker == "lld") {
-    ldflags = [ "-Wl,--icf=all" ]
-  }
 }
 
 config("no_threadsafe_statics") {
