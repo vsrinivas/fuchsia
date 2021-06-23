@@ -3,12 +3,17 @@
 # found in the LICENSE file.
 
 group("bin") {
+  # Remove this once linux_runner no longer sets "linux_runner_extras_tests" to
+  # "true" by default.
+  testonly = true
+
   deps = [
     "guest",
     "guest_manager",
     "guest_runner",
     "vmm",
     "vmm/device:packages",
+    "//src/virtualization/packages/biscotti_guest/linux_runner",
   ]
 }
 
