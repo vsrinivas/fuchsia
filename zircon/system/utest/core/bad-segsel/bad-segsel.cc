@@ -67,13 +67,11 @@ TEST(BadSegselTest, TestAllGDTSelectors) {
 template <int N>
 inline void TestInterrupt();
 
-template <>
-inline void TestInterrupt<-1>() {}
-
 template <int N>
 inline void TestInterrupt() {
   ASSERT_DEATH([]() { __asm__ volatile("int %0" ::"i"(N)); });
-  TestInterrupt<N - 1>();
+  if constexpr (N > 0)
+    TestInterrupt<N - 1>();
 }
 
 // Test that executing "int x" crashes for all numbers in [0, 255].
