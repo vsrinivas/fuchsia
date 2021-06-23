@@ -73,8 +73,8 @@ impl PackageBuilder {
     }
 
     pub fn add_entry(&mut self, blob_path: String, hash: Hash, source_path: PathBuf, size: u64) {
-        &self.contents.insert(blob_path, hash);
-        &self.blobs.insert(hash, BlobEntry { path: source_path, size });
+        self.contents.insert(blob_path, hash);
+        self.blobs.insert(hash, BlobEntry { path: source_path, size });
     }
 
     pub fn build(self) -> Result<Package, MetaContentsError> {
