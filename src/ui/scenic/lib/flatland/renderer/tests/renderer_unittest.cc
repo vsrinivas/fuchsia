@@ -1130,9 +1130,10 @@ VK_TEST_F(VulkanRendererTest, MultiplyColorTest) {
           }
         }
 
-// The sRGB values are different on the amlogic platforms than on other platforms and
-// so we define different uncompressed linear rgb values to compare against depending
-// on the platform.
+// The sRGB values are different on different platforms and so the uncompressed values
+// will likewise be different. Specifically, it is the AMLOGIC platforms (astro, sherlock,
+// vim3) that have a different compressed value. So we define different uncompressed linear
+// rgb values to depending on whether or not we are running on AMLOGIC.
 #ifdef PLATFORM_AMLOGIC
         const uint32_t kCompVal = 128;
 #else

@@ -6,7 +6,8 @@ import("//build/board.gni")
 
 config("renderer_test_config") {
   defines = []
-  if (board_name == "astro" || board_name == "sherlock") {
+  if (board_name == "astro" || board_name == "sherlock" ||
+      board_name == "vim3") {
     defines += [ "PLATFORM_AMLOGIC" ]
   }
 }
