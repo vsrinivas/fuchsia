@@ -250,13 +250,10 @@ window system integration. The driver must implement Fuchsia-specific Vulkan
 extensions. The client driver library should provide a conformant
 implementation of Vulkan 1.0/1.1/1.2.
 
- These are currently WIP and subject to change, but can be found in the
- Fuchsia internal [Vulkan header][vulkanheader].
-
 ### VK_FUCHSIA_external_memory
 
  This extension is similar to VK_KHR_external_memory_fd and allows
- importing/exporting VkDeviceMemory from/to VMOs.
+ importing/exporting VkDeviceMemory from/to VMOs. This extension has been upstreamed to the [Vulkan specification][extmemoryspec].
 
 Testing at this stage:
 
@@ -265,10 +262,7 @@ Testing at this stage:
 ### VK_FUCHSIA_external_semaphore
 
  This extension is similar to VK_KHR_external_semaphore_fd and allows
- importing/exporting binary semaphores to/from zircon events. These imports
- have reference transference, unlike
- `VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR` which have copy
- transference.
+ importing/exporting binary semaphores to/from zircon events. This extension has been upstreamed to the [Vulkan specification][extsemaphorespec].
 
 Testing at this stage:
 
@@ -279,6 +273,9 @@ Testing at this stage:
 
 This extension interacts with sysmem and allows clients to negotiate image
 formats and allocate memory. See the [sysmem][sysmem] documentation for more details.
+
+ This extension is currently WIP and subject to change, but can be found in the
+ Fuchsia internal [Vulkan header][vulkanheader].
 
 Testing at this stage:
 
@@ -332,3 +329,5 @@ the system driver using the Zircon DDK.
 [l1]: /docs/concepts/graphics/magma/contributing.md#l1
 [teststrategy]: /docs/concepts/graphics/magma/test_strategy.md
 [loader-readme]: /src/graphics/bin/vulkan_loader/README.md
+[extmemoryspec]: https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VK_FUCHSIA_external_memory.html
+[extsemaphorespec]: https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VK_FUCHSIA_external_semaphore.html
