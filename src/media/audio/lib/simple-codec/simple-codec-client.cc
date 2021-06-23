@@ -41,7 +41,7 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
     return status;
   }
 
-  codec_.Bind(std::move(channel_local), dispatcher_);
+  codec_ = fidl::Client(std::move(channel_local), dispatcher_);
 
   if (!created_with_dispatcher_ && !thread_started_) {
     status = loop_.StartThread("SimpleCodecClient thread");

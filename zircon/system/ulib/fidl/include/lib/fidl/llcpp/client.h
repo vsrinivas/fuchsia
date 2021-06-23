@@ -91,7 +91,6 @@ fidl::internal::AnyTeardownObserver ShareUntilTeardown(std::shared_ptr<T> object
 // FIDL method calls. However, those operations must be synchronized with
 // operations that consume or mutate the |Client| itself:
 //
-// - Binding the client to a new endpoint.
 // - Assigning a new value to the |Client| variable.
 // - Moving the |Client| to a different location.
 // - Destroying the |Client| variable.
@@ -155,8 +154,8 @@ class Client final {
   Client(Client&& other) noexcept = default;
   Client& operator=(Client&& other) noexcept = default;
 
-  // Bind the |client_end| endpoint to the dispatcher. If Client is already
-  // initialized, destroys the previous binding, releasing its channel.
+  // Initializes the client by binding the |client_end| endpoint to the
+  // dispatcher.
   //
   // It is a logic error to invoke |Bind| on a dispatcher that is shutting down
   // or already shut down. Doing so will result in a panic.
@@ -164,9 +163,9 @@ class Client final {
   // When other errors occur during binding, the |event_handler->on_fidl_error|
   // handler will be asynchronously invoked with the reason, if specified.
   //
-  // Re-binding a |Client| to a different channel is equivalent to replacing
-  // the |Client| with a new instance. TODO(fxbug.dev/78361): Disallow this
-  // re-binding behavior.
+  // It is not allowed to call |Bind| on an initialized client. To rebind a
+  // |Client| to a different endpoint, simply replace the |Client| variable with
+  // a new instance.
   //
   // TODO(fxbug.dev/75485): Take a raw pointer to the event handler.
   void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
@@ -349,7 +348,6 @@ Client(fidl::ClientEnd<Protocol>, async_dispatcher_t*) -> Client<Protocol>;
 // FIDL method calls. However, those operations must be synchronized with
 // operations that consume or mutate the |WireSharedClient| itself:
 //
-// - Binding the client to a new endpoint.
 // - Assigning a new value to the |WireSharedClient| variable.
 // - Moving the |WireSharedClient| to a different location.
 // - Destroying the |WireSharedClient| variable.
@@ -443,19 +441,19 @@ class WireSharedClient final {
   WireSharedClient(WireSharedClient&& other) noexcept = default;
   WireSharedClient& operator=(WireSharedClient&& other) noexcept = default;
 
-  // Bind the |client_end| endpoint to the dispatcher. If |WireSharedClient| is already
-  // initialized, destroys the previous binding, releasing its channel.
+  // Initializes the client by binding the |client_end| endpoint to the dispatcher.
   //
   // It is a logic error to invoke |Bind| on a dispatcher that is shutting down
   // or already shut down. Doing so will result in a panic.
+  //
+  // It is not allowed to call |Bind| on an initialized client. To rebind a
+  // |WireSharedClient| to a different endpoint, simply replace the
+  // |WireSharedClient| variable with a new instance.
   //
   // When other error occurs during binding, the |event_handler->on_fidl_error|
   // handler will be asynchronously invoked with the reason, if specified.
   //
   // |event_handler| will be destroyed when teardown completes.
-  //
-  // Re-binding a |WireSharedClient| to a different channel is equivalent to replacing
-  // the |WireSharedClient| with a new instance.
   void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
             std::unique_ptr<fidl::WireAsyncEventHandler<Protocol>> event_handler) {
     auto event_handler_raw = event_handler.get();

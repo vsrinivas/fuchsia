@@ -134,14 +134,7 @@ zx::channel ChannelRefTracker::WaitForChannel() {
 void ClientController::Bind(std::shared_ptr<ClientBase>&& client_impl, zx::channel client_end,
                             async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
                             AnyTeardownObserver&& teardown_observer) {
-  if (client_impl_) {
-    // This way, the current |Client| will effectively start from a clean slate.
-    // If this |Client| were the only instance for that particular channel,
-    // destroying |control_| would trigger unbinding automatically.
-    control_.reset();
-    client_impl_.reset();
-  }
-
+  ZX_ASSERT(!client_impl_);
   client_impl_ = std::move(client_impl);
   client_impl_->Bind(client_impl_, std::move(client_end), dispatcher, event_handler,
                      std::move(teardown_observer));

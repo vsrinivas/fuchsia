@@ -20,6 +20,7 @@ test("fidl_llcpp_dispatcher_tests_bin") {
   public = [ "mock_client_impl.h" ]
   sources = [
     "bind_server_overloads_test.cc",
+    "client_controller_test.cc",
     "client_test.cc",
     "server_test.cc",
     "shared_client_test.cc",

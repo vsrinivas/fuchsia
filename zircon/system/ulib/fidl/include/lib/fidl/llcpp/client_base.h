@@ -300,6 +300,8 @@ class ClientController {
 
   // Binds the client implementation to the |dispatcher| and |client_end|.
   // Takes ownership of |client_impl| and starts managing its lifetime.
+  //
+  // It is an error to call |Bind| more than once on the same controller.
   void Bind(std::shared_ptr<ClientBase>&& client_impl, zx::channel client_end,
             async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
             fidl::internal::AnyTeardownObserver&& teardown_observer);
