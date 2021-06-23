@@ -109,30 +109,6 @@ VirtioPci::VirtioPci(VirtioDeviceConfig* device_config, std::string_view name)
                       zx_status_get_string(status));
 }
 
-zx_status_t VirtioPci::ReadBar(uint8_t bar, uint64_t offset, IoValue* value) const {
-  TRACE_DURATION("machina", "pci_readbar", "bar", bar, "offset", offset, "access_size",
-                 value->access_size);
-  switch (bar) {
-    case kVirtioPciBar:
-      return ConfigBarRead(offset, value);
-  }
-  FX_LOGS(ERROR) << "Unhandled read of BAR " << bar;
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t VirtioPci::WriteBar(uint8_t bar, uint64_t offset, const IoValue& value) {
-  TRACE_DURATION("machina", "pci_writebar", "bar", bar, "offset", offset, "access_size",
-                 value.access_size);
-  switch (bar) {
-    case kVirtioPciBar:
-      return ConfigBarWrite(offset, value);
-    case kVirtioPciNotifyBar:
-      return NotifyBarWrite(offset, value);
-  }
-  FX_LOGS(ERROR) << "Unhandled write to BAR " << bar;
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 bool VirtioPci::HasPendingInterrupt() const {
   std::lock_guard<std::mutex> lock(mutex_);
   return isr_status_ > 0;
@@ -486,7 +462,7 @@ zx_status_t VirtioPci::SetupCaps() {
 
   // Notify configuration.
   size_t notify_size = device_config_->num_queues * kQueueNotifyMultiplier;
-  bar_[kVirtioPciNotifyBar] = PciBar(this, kVirtioPciNotifyBar, notify_size, TrapType::MMIO_BELL);
+  bar_[kVirtioPciNotifyBar] = PciBar(this, notify_size, TrapType::MMIO_BELL, &notify_bar_callback_);
   status = AddCapability(virtio_pci_notify_cap_t{
       .cap =
           {
@@ -533,9 +509,8 @@ zx_status_t VirtioPci::SetupCaps() {
   // This one is more complex since it is writable and doesn't seem to be
   // used by Linux or Zircon.
 
-  bar_[kVirtioPciBar] =
-      PciBar(this, kVirtioPciBar, kVirtioPciDeviceCfgBase + device_config_->config_size,
-             TrapType::MMIO_SYNC);
+  bar_[kVirtioPciBar] = PciBar(this, kVirtioPciDeviceCfgBase + device_config_->config_size,
+                               TrapType::MMIO_SYNC, &config_bar_callback_);
 
   return ZX_OK;
 }
@@ -552,4 +527,18 @@ zx_status_t VirtioPci::NotifyBarWrite(uint64_t offset, const IoValue& value) {
 
   auto queue = static_cast<uint16_t>(offset / kQueueNotifyMultiplier);
   return device_config_->notify_queue(queue);
+}
+
+zx_status_t VirtioPci::ConfigBarCallback::Read(uint64_t addr, IoValue* value) {
+  return parent_->ConfigBarRead(addr, value);
+}
+
+zx_status_t VirtioPci::ConfigBarCallback::Write(uint64_t addr, const IoValue& value) {
+  return parent_->ConfigBarWrite(addr, value);
+}
+
+zx_status_t VirtioPci::NotifyBarCallback::Read(uint64_t addr, IoValue* value) { return ZX_ERR_IO; }
+
+zx_status_t VirtioPci::NotifyBarCallback::Write(uint64_t addr, const IoValue& value) {
+  return parent_->NotifyBarWrite(addr, value);
 }

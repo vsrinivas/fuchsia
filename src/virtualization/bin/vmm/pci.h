@@ -71,11 +71,17 @@ class PciDevice;
 // Thread compatible.
 class PciBar : public IoHandler {
  public:
+  class Callback {
+   public:
+    virtual zx_status_t Read(uint64_t offset, IoValue* value) = 0;
+    virtual zx_status_t Write(uint64_t offset, const IoValue& value) = 0;
+  };
+
   // Construct an empty BAR, with both registers set to 0.
   PciBar();
 
-  // Construct a BAR of the given size and type.
-  PciBar(PciDevice* device, uint8_t bar, uint64_t size, TrapType trap_type);
+  // Construct a BAR of the given type, size, and ID.
+  PciBar(PciDevice* device, uint64_t size, TrapType trap_type, Callback* callback);
 
   // Get the size / type of the region.
   uint64_t size() const { return size_; }
@@ -110,10 +116,10 @@ class PciBar : public IoHandler {
   // Pointer to the owning device.
   PciDevice* device_;
 
-  // Index of this BAR in the parent.
+  // Callback used for read/write accesses.
   //
-  // Passed as an identifier in the Read/Write callbacks
-  uint8_t bar_;
+  // Owned elsewhere.
+  Callback* callback_;
 
   // Base address.
   //
@@ -146,16 +152,6 @@ class PciDevice {
     // class, subclass, prog_if, and revision id.
     uint32_t device_class;
   };
-
-  // Read from a region mapped by a BAR register.
-  virtual zx_status_t ReadBar(uint8_t bar, uint64_t addr, IoValue* value) const {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  // Write to a region mapped by a BAR register.
-  virtual zx_status_t WriteBar(uint8_t bar, uint64_t addr, const IoValue& value) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
 
   // Handle accesses to this device config space.
   zx_status_t ReadConfig(uint64_t reg, IoValue* value) const;
@@ -191,6 +187,9 @@ class PciDevice {
                   "Type T should not contain implicit padding.");
     return AddCapability(fbl::Span(reinterpret_cast<const uint8_t*>(&capability), sizeof(T)));
   }
+
+  // Return static device attributes.
+  const Attributes& attrs() const { return attrs_; }
 
  protected:
   explicit PciDevice(const Attributes& attrs);
@@ -258,7 +257,7 @@ class PciEcamHandler : public IoHandler {
 
 class PciRootComplex : public PciDevice {
  public:
-  explicit PciRootComplex(const Attributes attrs) : PciDevice(attrs) {}
+  explicit PciRootComplex(const Attributes& attrs);
 
  private:
   bool HasPendingInterrupt() const override { return false; }

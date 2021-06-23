@@ -6,6 +6,7 @@
 
 #include <endian.h>
 #include <lib/pci/hw.h>
+#include <lib/trace/event.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -100,14 +101,31 @@ constexpr uint64_t kPciMmioBarSize     = 0x100000;
 constexpr uint32_t kPciGlobalIrqAssigments[kPciMaxDevices] = {32, 33, 34, 35, 36, 37, 38, 39,
                                                               40, 41, 42, 43, 44, 45, 46, 47};
 
+// A PciBar::Callback that simply returns "ZX_ERR_NOT_SUPPORTED".
+//
+// Thread safe.
+class UnsupportedPciBarCallback : public PciBar::Callback {
+ public:
+  constexpr UnsupportedPciBarCallback() = default;
+  zx_status_t Read(uint64_t offset, IoValue* value) override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t Write(uint64_t offset, const IoValue& value) override { return ZX_ERR_NOT_SUPPORTED; }
+};
+
+// Singleton instance of UnsupportedPciBarCallback that can be shared by multiple users.
+UnsupportedPciBarCallback unsupported_callback;
+
 }  // namespace
 
-PciBar::PciBar(PciDevice* device, uint8_t bar, uint64_t size, TrapType trap_type)
-    : device_(device), bar_(bar), addr_(0), size_(align(size, PAGE_SIZE)), trap_type_(trap_type) {
+PciBar::PciBar(PciDevice* device, uint64_t size, TrapType trap_type, Callback* callback)
+    : device_(device),
+      callback_(callback),
+      addr_(0),
+      size_(align(size, PAGE_SIZE)),
+      trap_type_(trap_type) {
   set_addr(0);  // Initialise the `pci_config_reg_` registers.
 }
 
-PciBar::PciBar() : PciBar(nullptr, /*bar=*/0, /*size=*/0, TrapType::PIO_SYNC) {}
+PciBar::PciBar() : PciBar(nullptr, /*size=*/0, TrapType::PIO_SYNC, &unsupported_callback) {}
 
 uint32_t PciBar::AspaceType() const {
   switch (trap_type_) {
@@ -145,11 +163,17 @@ void PciBar::set_pci_config_reg(size_t slot, uint32_t value) {
 }
 
 zx_status_t PciBar::Read(uint64_t addr, IoValue* value) const {
-  return device_->ReadBar(bar_, addr, value);
+  TRACE_DURATION("machina", "pci_readbar", "vendor_id", TA_UINT32(device_->attrs().vendor_id),
+                 "device_id", TA_UINT32(device_->attrs().device_id), "offset", TA_UINT64(addr),
+                 "access_size", TA_UINT32(value->access_size));
+  return callback_->Read(addr, value);
 }
 
 zx_status_t PciBar::Write(uint64_t addr, const IoValue& value) {
-  return device_->WriteBar(bar_, addr, value);
+  TRACE_DURATION("machina", "pci_writebar", "vendor_id", TA_UINT32(device_->attrs().vendor_id),
+                 "device_id", TA_UINT32(device_->attrs().device_id), "offset", TA_UINT64(addr),
+                 "access_size", TA_UINT32(value.access_size));
+  return callback_->Write(addr, value);
 }
 
 std::string_view PciBar::Name() const { return device_->name(); }
@@ -183,6 +207,10 @@ static constexpr PciDevice::Attributes kRootComplexAttributes = {
     .device_class = (PCI_CLASS_BRIDGE_HOST << 16),
 };
 
+PciRootComplex::PciRootComplex(const Attributes& attrs) : PciDevice(attrs) {
+  bar_[0] = PciBar(this, /*size=*/0x10, TrapType::MMIO_SYNC, &unsupported_callback);
+}
+
 PciBus::PciBus(Guest* guest, InterruptController* interrupt_controller)
     : guest_(guest),
       ecam_handler_(this),
@@ -192,7 +220,6 @@ PciBus::PciBus(Guest* guest, InterruptController* interrupt_controller)
       mmio_base_(kPciMmioBarPhysBase) {}
 
 zx_status_t PciBus::Init(async_dispatcher_t* dispatcher) {
-  root_complex_.bar_[0] = PciBar(&root_complex_, /*bar=*/0, /*size=*/0x10, TrapType::MMIO_SYNC);
   zx_status_t status = Connect(&root_complex_, dispatcher, false);
   if (status != ZX_OK) {
     return status;

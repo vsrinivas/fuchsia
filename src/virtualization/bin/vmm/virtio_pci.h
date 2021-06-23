@@ -115,11 +115,6 @@ class VirtioPci : public PciDevice {
  public:
   explicit VirtioPci(VirtioDeviceConfig* device_config, std::string_view name);
 
-  // Read a value at |bar| and |offset| from this device.
-  zx_status_t ReadBar(uint8_t bar, uint64_t offset, IoValue* value) const override;
-  // Write a value at |bar| and |offset| to this device.
-  zx_status_t WriteBar(uint8_t bar, uint64_t offset, const IoValue& value) override;
-
   // ISR flag values.
   enum IsrFlags : uint8_t {
     // Interrupt is caused by a queue.
@@ -150,6 +145,28 @@ class VirtioPci : public PciDevice {
   }
 
  private:
+  // Routes callbacks from the configuration PCI BAR.
+  class ConfigBarCallback : public PciBar::Callback {
+   public:
+    explicit ConfigBarCallback(VirtioPci* parent) : parent_(parent) {}
+    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Write(uint64_t addr, const IoValue& value) override;
+
+   private:
+    VirtioPci* parent_;
+  };
+
+  // Routes callbacks from the notification PCI BAR.
+  class NotifyBarCallback : public PciBar::Callback {
+   public:
+    explicit NotifyBarCallback(VirtioPci* parent) : parent_(parent) {}
+    zx_status_t Read(uint64_t addr, IoValue* value) override;
+    zx_status_t Write(uint64_t addr, const IoValue& value) override;
+
+   private:
+    VirtioPci* parent_;
+  };
+
   bool HasPendingInterrupt() const override;
 
   // Handle accesses to the general configuration BAR.
@@ -170,6 +187,10 @@ class VirtioPci : public PciDevice {
   VirtioDeviceConfig* const device_config_;
 
   mutable std::mutex mutex_;
+
+  // Callback objects for BAR accesses.
+  ConfigBarCallback config_bar_callback_{this};
+  NotifyBarCallback notify_bar_callback_{this};
 
   // Device feature bits.
   //
