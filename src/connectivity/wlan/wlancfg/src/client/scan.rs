@@ -6,7 +6,7 @@
 use {
     crate::{
         client::types,
-        config_management::{SavedNetworksManager, SavedNetworksManagerApi, ScanResultType},
+        config_management::{SavedNetworksManagerApi, ScanResultType},
         mode_management::iface_manager_api::IfaceManagerApi,
     },
     anyhow::{format_err, Error},
@@ -119,7 +119,7 @@ async fn sme_scan(
 /// - Network Selection Module
 pub(crate) async fn perform_scan<F>(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    saved_networks_manager: Arc<SavedNetworksManager>,
+    saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
     mut output_iterator: Option<fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>>,
     mut network_selector: impl ScanResultUpdate,
     mut location_sensor_updater: impl ScanResultUpdate,
@@ -252,7 +252,7 @@ pub(crate) async fn perform_directed_active_scan(
 async fn record_directed_scan_results(
     target_ids: Vec<types::NetworkIdentifier>,
     scan_results: &Vec<fidl_sme::BssInfo>,
-    saved_networks_manager: Arc<SavedNetworksManager>,
+    saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
 ) {
     let ids = scan_results
         .iter()
@@ -505,7 +505,10 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm,
-            config_management::network_config::{Credential, PROB_HIDDEN_DEFAULT},
+            config_management::{
+                network_config::{Credential, PROB_HIDDEN_DEFAULT},
+                SavedNetworksManager,
+            },
             util::testing::{
                 generate_random_bss_desc, generate_random_bss_info, set_logger_for_test,
                 validate_sme_scan_request_and_send_results,
@@ -2368,7 +2371,9 @@ mod tests {
         panic!("Need to reach into location sensor and check it got data")
     }
 
-    fn create_saved_networks_manager(exec: &mut fasync::TestExecutor) -> Arc<SavedNetworksManager> {
+    fn create_saved_networks_manager(
+        exec: &mut fasync::TestExecutor,
+    ) -> Arc<dyn SavedNetworksManagerApi> {
         let saved_networks_manager = exec
             .run_singlethreaded(SavedNetworksManager::new_for_test())
             .expect("failed to create saved networks manager");

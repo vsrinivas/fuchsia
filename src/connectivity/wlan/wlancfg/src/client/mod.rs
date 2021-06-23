@@ -8,7 +8,7 @@ use {
         client::types as client_types,
         config_management::{
             self, Credential, NetworkConfigError, NetworkIdentifier, SaveError,
-            SavedNetworksManager, SavedNetworksManagerApi,
+            SavedNetworksManagerApi,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
         util::listener,
@@ -42,7 +42,7 @@ const MAX_CONFIGS_PER_RESPONSE: usize = 100;
 const MAX_CONCURRENT_LISTENERS: usize = 1000;
 
 type ClientRequests = fidl::endpoints::ServerEnd<fidl_policy::ClientControllerMarker>;
-type SavedNetworksPtr = Arc<SavedNetworksManager>;
+type SavedNetworksPtr = Arc<dyn SavedNetworksManagerApi>;
 
 /// Serves the ClientProvider protocol.
 /// Only one ClientController can be active. Additional requests to register ClientControllers
@@ -68,7 +68,7 @@ pub(crate) async fn serve_provider_requests(
                     let fut = handle_provider_request(
                         Arc::clone(&iface_manager),
                         update_sender.clone(),
-                        Arc::clone(&saved_networks),
+                        saved_networks.clone(),
                         Arc::clone(&network_selector),
                         client_provider_guard,
                         req
@@ -156,7 +156,7 @@ async fn handle_client_requests(
             fidl_policy::ClientControllerRequest::Connect { id, responder, .. } => {
                 match handle_client_request_connect(
                     Arc::clone(&iface_manager),
-                    Arc::clone(&saved_networks),
+                    saved_networks.clone(),
                     &id,
                 )
                 .await
@@ -200,7 +200,7 @@ async fn handle_client_requests(
                     Arc::clone(&iface_manager),
                     iterator,
                     Arc::clone(&network_selector),
-                    Arc::clone(&saved_networks),
+                    saved_networks.clone(),
                 );
                 // The scan handler is infallible and should not block handling of further request.
                 // Detach the future here so we continue responding to other requests.
@@ -209,7 +209,7 @@ async fn handle_client_requests(
             fidl_policy::ClientControllerRequest::SaveNetwork { config, responder } => {
                 // If there is an error saving the network, log it and convert to a FIDL value.
                 let mut response = handle_client_request_save_network(
-                    Arc::clone(&saved_networks),
+                    saved_networks.clone(),
                     config,
                     Arc::clone(&iface_manager),
                 )
@@ -222,7 +222,7 @@ async fn handle_client_requests(
             }
             fidl_policy::ClientControllerRequest::RemoveNetwork { config, responder } => {
                 let mut err = handle_client_request_remove_network(
-                    Arc::clone(&saved_networks),
+                    saved_networks.clone(),
                     config,
                     iface_manager.clone(),
                 )
@@ -232,7 +232,7 @@ async fn handle_client_requests(
                 responder.send(&mut err)?;
             }
             fidl_policy::ClientControllerRequest::GetSavedNetworks { iterator, .. } => {
-                handle_client_request_get_networks(Arc::clone(&saved_networks), iterator).await?;
+                handle_client_request_get_networks(saved_networks.clone(), iterator).await?;
             }
         }
     }
@@ -483,7 +483,9 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm,
-            config_management::{Credential, NetworkConfig, SecurityType, WPA_PSK_BYTE_LEN},
+            config_management::{
+                Credential, NetworkConfig, SavedNetworksManager, SecurityType, WPA_PSK_BYTE_LEN,
+            },
             util::testing::{create_mock_cobalt_sender, set_logger_for_test},
         },
         async_trait::async_trait,
@@ -742,7 +744,7 @@ mod tests {
     ) -> TestValues {
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
         ));
@@ -1338,7 +1340,7 @@ mod tests {
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks = Arc::new(saved_networks);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
         ));
@@ -1352,7 +1354,7 @@ mod tests {
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             update_sender,
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             network_selector,
             test_values.client_provider_lock,
             requests,
@@ -1410,7 +1412,7 @@ mod tests {
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks = Arc::new(saved_networks);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
         ));
@@ -1424,7 +1426,7 @@ mod tests {
         let serve_fut = serve_provider_requests(
             test_values.iface_manager.clone(),
             update_sender,
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             network_selector,
             test_values.client_provider_lock,
             requests,
@@ -1496,7 +1498,7 @@ mod tests {
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks = Arc::new(saved_networks);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
         ));
@@ -1517,7 +1519,7 @@ mod tests {
         let serve_fut = serve_provider_requests(
             iface_manager,
             update_sender,
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             network_selector,
             Arc::new(Mutex::new(())),
             requests,
@@ -1584,7 +1586,7 @@ mod tests {
         );
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
         ));
@@ -1598,7 +1600,7 @@ mod tests {
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             update_sender,
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             network_selector,
             test_values.client_provider_lock,
             requests,
@@ -1654,7 +1656,7 @@ mod tests {
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks = Arc::new(saved_networks);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
         ));
@@ -1675,7 +1677,7 @@ mod tests {
         let serve_fut = serve_provider_requests(
             iface_manager,
             update_sender,
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             network_selector,
             Arc::new(Mutex::new(())),
             requests,
@@ -1818,7 +1820,7 @@ mod tests {
             .expect("Failed to create a KnownEssStore"),
         );
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
         ));
@@ -1832,7 +1834,7 @@ mod tests {
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             update_sender,
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             network_selector,
             test_values.client_provider_lock,
             requests,
@@ -2160,7 +2162,7 @@ mod tests {
         let stash_id = "no_client_interface";
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
-            Arc::clone(&saved_networks),
+            saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
         ));
@@ -2206,7 +2208,7 @@ mod tests {
     // If there are more than one configs saved for the same SSID, security type, and credential,
     // the function will panic.
     async fn get_config(
-        saved_networks: Arc<SavedNetworksManager>,
+        saved_networks: Arc<dyn SavedNetworksManagerApi>,
         id: NetworkIdentifier,
         cred: Credential,
     ) -> Option<NetworkConfig> {
@@ -2254,7 +2256,7 @@ mod tests {
         assert_eq!(
             Some(cfg),
             get_config(
-                Arc::clone(&saved_networks),
+                saved_networks.clone(),
                 network_id,
                 Credential::Password(b"password".to_vec())
             )
@@ -2263,7 +2265,7 @@ mod tests {
         assert_eq!(
             None,
             get_config(
-                Arc::clone(&saved_networks),
+                saved_networks.clone(),
                 NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2),
                 Credential::Password(b"not-saved".to_vec())
             )

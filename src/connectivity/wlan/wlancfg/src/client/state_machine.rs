@@ -5,7 +5,7 @@
 use {
     crate::{
         client::{network_selection, sme_credential_from_policy, types},
-        config_management::{SavedNetworksManager, SavedNetworksManagerApi},
+        config_management::SavedNetworksManagerApi,
         util::{
             listener::{
                 ClientListenerMessageSender, ClientNetworkState, ClientStateUpdate,
@@ -117,7 +117,7 @@ pub async fn serve(
     sme_event_stream: fidl_sme::ClientSmeEventStream,
     req_stream: mpsc::Receiver<ManualRequest>,
     update_sender: ClientListenerMessageSender,
-    saved_networks_manager: Arc<SavedNetworksManager>,
+    saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
     connect_request: Option<(types::ConnectRequest, oneshot::Sender<()>)>,
     network_selector: Arc<network_selection::NetworkSelector>,
     cobalt_api: CobaltSender,
@@ -168,7 +168,7 @@ struct CommonStateOptions {
     proxy: fidl_sme::ClientSmeProxy,
     req_stream: ReqStream,
     update_sender: ClientListenerMessageSender,
-    saved_networks_manager: Arc<SavedNetworksManager>,
+    saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
     network_selector: Arc<network_selection::NetworkSelector>,
     cobalt_api: CobaltSender,
 }
@@ -727,7 +727,10 @@ mod tests {
     use {
         super::*,
         crate::{
-            config_management::network_config::{self, Credential, FailureReason},
+            config_management::{
+                network_config::{self, Credential, FailureReason},
+                SavedNetworksManager,
+            },
             util::{
                 listener,
                 testing::{

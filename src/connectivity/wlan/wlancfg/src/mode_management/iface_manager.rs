@@ -8,7 +8,7 @@ use {
         client::{
             network_selection::NetworkSelector, state_machine as client_fsm, types as client_types,
         },
-        config_management::{SavedNetworksManager, SavedNetworksManagerApi},
+        config_management::SavedNetworksManagerApi,
         mode_management::{
             iface_manager_api::IfaceManagerApi,
             iface_manager_types::*,
@@ -70,7 +70,7 @@ async fn create_client_state_machine(
     iface_id: u16,
     dev_svc_proxy: &mut fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
     client_update_sender: listener::ClientListenerMessageSender,
-    saved_networks: Arc<SavedNetworksManager>,
+    saved_networks: Arc<dyn SavedNetworksManagerApi>,
     network_selector: Arc<NetworkSelector>,
     connect_req: Option<(client_types::ConnectRequest, oneshot::Sender<()>)>,
     cobalt_api: CobaltSender,
@@ -121,7 +121,7 @@ pub(crate) struct IfaceManagerService {
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
     clients: Vec<ClientIfaceContainer>,
     aps: Vec<ApIfaceContainer>,
-    saved_networks: Arc<SavedNetworksManager>,
+    saved_networks: Arc<dyn SavedNetworksManagerApi>,
     network_selector: Arc<NetworkSelector>,
     fsm_futures:
         FuturesUnordered<future_with_metadata::FutureWithMetadata<(), StateMachineMetadata>>,
@@ -135,7 +135,7 @@ impl IfaceManagerService {
         client_update_sender: listener::ClientListenerMessageSender,
         ap_update_sender: listener::ApListenerMessageSender,
         dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
-        saved_networks: Arc<SavedNetworksManager>,
+        saved_networks: Arc<dyn SavedNetworksManagerApi>,
         network_selector: Arc<NetworkSelector>,
         cobalt_api: CobaltSender,
     ) -> Self {
@@ -1204,7 +1204,9 @@ mod tests {
         crate::{
             access_point::types,
             client::{scan::ScanResultUpdate, types as client_types},
-            config_management::{Credential, NetworkIdentifier, SecurityType},
+            config_management::{
+                Credential, NetworkIdentifier, SavedNetworksManager, SecurityType,
+            },
             mode_management::phy_manager::{self, PhyManagerError},
             regulatory_manager::REGION_CODE_LEN,
             util::testing::{
@@ -1283,7 +1285,7 @@ mod tests {
         pub client_update_receiver: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
         pub ap_update_sender: listener::ApListenerMessageSender,
         pub ap_update_receiver: mpsc::UnboundedReceiver<listener::ApMessage>,
-        pub saved_networks: Arc<SavedNetworksManager>,
+        pub saved_networks: Arc<dyn SavedNetworksManagerApi>,
         pub network_selector: Arc<NetworkSelector>,
         pub node: inspect::Node,
         pub cobalt_api: CobaltSender,

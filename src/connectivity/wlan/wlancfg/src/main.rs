@@ -57,7 +57,7 @@ async fn serve_fidl(
     configurator: legacy::deprecated_configuration::DeprecatedConfigurator,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     legacy_client_ref: IfaceRef,
-    saved_networks: Arc<SavedNetworksManager>,
+    saved_networks: Arc<dyn SavedNetworksManagerApi>,
     network_selector: Arc<NetworkSelector>,
     client_sender: util::listener::ClientListenerMessageSender,
     client_listener_msgs: mpsc::UnboundedReceiver<util::listener::ClientListenerMessage>,
@@ -165,7 +165,7 @@ async fn serve_fidl(
 }
 
 /// Calls the metric recording function immediately and every 24 hours.
-async fn saved_networks_manager_metrics_loop(saved_networks: Arc<SavedNetworksManager>) {
+async fn saved_networks_manager_metrics_loop(saved_networks: Arc<dyn SavedNetworksManagerApi>) {
     loop {
         saved_networks.record_periodic_metrics().await;
         fasync::Timer::new(24.hours().after_now()).await;
@@ -174,7 +174,7 @@ async fn saved_networks_manager_metrics_loop(saved_networks: Arc<SavedNetworksMa
 
 /// Runs the recording and sending of metrics to Cobalt.
 async fn serve_metrics(
-    saved_networks: Arc<SavedNetworksManager>,
+    saved_networks: Arc<dyn SavedNetworksManagerApi>,
     cobalt_fut: impl Future<Output = ()>,
 ) -> Result<(), Error> {
     let record_metrics_fut = saved_networks_manager_metrics_loop(saved_networks);
@@ -250,7 +250,7 @@ async fn run_all_futures() -> Result<(), Error> {
 
     let saved_networks = Arc::new(SavedNetworksManager::new(cobalt_api.clone()).await?);
     let network_selector = Arc::new(NetworkSelector::new(
-        Arc::clone(&saved_networks),
+        saved_networks.clone(),
         cobalt_api.clone(),
         component::inspector().root().create_child("network_selector"),
     ));

@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        client::network_selection::NetworkSelector, config_management::SavedNetworksManager,
+        client::network_selection::NetworkSelector, config_management::SavedNetworksManagerApi,
         util::listener,
     },
     anyhow::Error,
@@ -24,7 +24,7 @@ pub(crate) fn create_iface_manager(
     client_update_sender: listener::ClientListenerMessageSender,
     ap_update_sender: listener::ApListenerMessageSender,
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
-    saved_networks: Arc<SavedNetworksManager>,
+    saved_networks: Arc<dyn SavedNetworksManagerApi>,
     network_selector: Arc<NetworkSelector>,
     cobalt_api: CobaltSender,
 ) -> (Arc<Mutex<iface_manager_api::IfaceManager>>, impl Future<Output = Result<Void, Error>>) {

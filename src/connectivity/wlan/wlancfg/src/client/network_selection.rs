@@ -9,8 +9,7 @@ use {
             types,
         },
         config_management::{
-            self, ConnectFailure, Credential, Disconnect, FailureReason, SavedNetworksManager,
-            SavedNetworksManagerApi,
+            self, ConnectFailure, Credential, Disconnect, FailureReason, SavedNetworksManagerApi,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
     },
@@ -68,7 +67,7 @@ const SHORT_CONNECT_DURATION: zx::Duration = zx::Duration::from_seconds(7 * 60);
 const INSPECT_EVENT_LIMIT_FOR_NETWORK_SELECTIONS: usize = 10;
 
 pub struct NetworkSelector {
-    saved_network_manager: Arc<SavedNetworksManager>,
+    saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
     scan_result_cache: Arc<Mutex<ScanResultCache>>,
     cobalt_api: Arc<Mutex<CobaltSender>>,
     hasher: WlanHasher,
@@ -214,7 +213,7 @@ impl<'a> WriteInspect for InternalBss<'a> {
 
 impl NetworkSelector {
     pub fn new(
-        saved_network_manager: Arc<SavedNetworksManager>,
+        saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
         cobalt_api: CobaltSender,
         inspect_node: InspectNode,
     ) -> Self {
@@ -390,7 +389,7 @@ impl NetworkSelector {
 /// Merge the saved networks and scan results into a vector of BSSs that correspond to a saved
 /// network.
 async fn merge_saved_networks_and_scan_data<'a>(
-    saved_network_manager: &SavedNetworksManager,
+    saved_network_manager: &Arc<dyn SavedNetworksManagerApi>,
     scan_results: &'a Vec<types::ScanResult>,
     hasher: &WlanHasher,
 ) -> Vec<InternalBss<'a>> {
@@ -431,7 +430,7 @@ async fn merge_saved_networks_and_scan_data<'a>(
 
 pub struct NetworkSelectorScanUpdater {
     scan_result_cache: Arc<Mutex<ScanResultCache>>,
-    saved_network_manager: Arc<SavedNetworksManager>,
+    saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
     cobalt_api: Arc<Mutex<CobaltSender>>,
     hasher: WlanHasher,
 }
@@ -644,6 +643,7 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm,
+            config_management::SavedNetworksManager,
             util::{
                 testing::set_logger_for_test,
                 testing::{
@@ -676,7 +676,7 @@ mod tests {
 
     struct TestValues {
         network_selector: Arc<NetworkSelector>,
-        saved_network_manager: Arc<SavedNetworksManager>,
+        saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
         cobalt_events: mpsc::Receiver<CobaltEvent>,
         iface_manager: Arc<Mutex<FakeIfaceManager>>,
         sme_stream: fidl_sme::ClientSmeRequestStream,
@@ -692,11 +692,8 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("net_select_test");
 
-        let network_selector = Arc::new(NetworkSelector::new(
-            Arc::clone(&saved_network_manager),
-            cobalt_api,
-            inspect_node,
-        ));
+        let network_selector =
+            Arc::new(NetworkSelector::new(saved_network_manager.clone(), cobalt_api, inspect_node));
         let (client_sme, remote) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
         let iface_manager = Arc::new(Mutex::new(FakeIfaceManager::new(client_sme)));
