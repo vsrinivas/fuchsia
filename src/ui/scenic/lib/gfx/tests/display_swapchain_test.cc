@@ -38,6 +38,10 @@ using scheduling::test::MockFrameScheduler;
 
 using Fixture = gtest::RealLoopFixture;
 
+namespace {
+constexpr zx::duration kVsyncTimeout = zx::msec(1000);
+}  // namespace
+
 class DisplaySwapchainTest : public Fixture {
  public:
   std::unique_ptr<DisplaySwapchain> CreateSwapchain(display::Display* display) {
@@ -187,14 +191,13 @@ VK_TEST_F(DisplaySwapchainTest, RenderStress) {
     timings[i] = MakeTimings(i);
     timings[i]->RegisterSwapchains(1);
     DrawAndPresentFrame(swapchain.get(), timings[i], 0, *layer.get());
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([t = timings[i]]() { return t->finalized(); },
-                                          /*timeout=*/zx::msec(50)));
+    EXPECT_TRUE(
+        RunLoopWithTimeoutOrUntil([t = timings[i]]() { return t->finalized(); }, kVsyncTimeout));
   }
   RunLoopUntilIdle();
   // Last frame is left up on the display, so look for presentation.
-  EXPECT_TRUE(
-      RunLoopWithTimeoutOrUntil([this]() { return frame_presented_call_count() == kNumFrames; },
-                                /*timeout=*/zx::msec(50)));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this]() { return frame_presented_call_count() == kNumFrames; }, kVsyncTimeout));
 }
 
 VK_TEST_F(DisplaySwapchainTest, RenderProtectedStress) {
@@ -217,14 +220,13 @@ VK_TEST_F(DisplaySwapchainTest, RenderProtectedStress) {
     timings[i] = MakeTimings(i);
     timings[i]->RegisterSwapchains(1);
     DrawAndPresentFrame(swapchain.get(), timings[i], 0, *layer.get());
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([t = timings[i]]() { return t->finalized(); },
-                                          /*timeout=*/zx::msec(50)));
+    EXPECT_TRUE(
+        RunLoopWithTimeoutOrUntil([t = timings[i]]() { return t->finalized(); }, kVsyncTimeout));
   }
   RunLoopUntilIdle();
   // Last frame is left up on the display, so look for presentation.
-  EXPECT_TRUE(
-      RunLoopWithTimeoutOrUntil([this]() { return frame_presented_call_count() == kNumFrames; },
-                                /*timeout=*/zx::msec(50)));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this]() { return frame_presented_call_count() == kNumFrames; }, kVsyncTimeout));
 }
 
 VK_TEST_F(DisplaySwapchainTest, InitializesFramebuffers) {
