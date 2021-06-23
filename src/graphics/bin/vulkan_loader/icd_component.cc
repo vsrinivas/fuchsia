@@ -27,11 +27,41 @@ const char* kSchema = R"(
  "type": "object",
  "properties": {
    "version": {"type":"number", "maximum": 1, "minimum": 1},
-   "library_path": {"type":"string"},
    "file_path": {"type":"string"},
    "manifest_path": {"type":"string"}
  },
- "required": ["version", "library_path", "file_path", "manifest_path"]
+ "required": ["version", "file_path", "manifest_path"]
+}
+)";
+
+const char* kManifestSchema = R"(
+{
+  "$schema":"http://json-schema.org/schema#",
+  "type":"object",
+  "properties":{
+    "file_format_version":{
+      "type":"string"
+    },
+    "ICD":{
+      "type":"object",
+      "properties":{
+        "library_path":{
+          "type":"string"
+        },
+        "api_version":{
+          "type":"string"
+        }
+      },
+      "required":[
+        "library_path",
+        "api_version"
+      ]
+    }
+  },
+  "required":[
+    "file_format_version",
+    "ICD"
+  ]
 }
 )";
 
@@ -150,6 +180,23 @@ bool IcdComponent::ValidateMetadataJson(const std::string& component_url,
   }
   return true;
 }
+bool IcdComponent::ValidateManifestJson(const std::string& component_url,
+                                        const rapidjson::GenericDocument<rapidjson::UTF8<>>& doc) {
+  rapidjson::Document schema_doc;
+  schema_doc.Parse(kManifestSchema);
+  FX_CHECK(!schema_doc.HasParseError()) << schema_doc.GetParseError();
+
+  rapidjson::SchemaDocument schema(schema_doc);
+  rapidjson::SchemaValidator validator(schema);
+  if (!doc.Accept(validator)) {
+    rapidjson::StringBuffer sb;
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> w(sb);
+    validator.GetError().Accept(w);
+    FX_LOGS(ERROR) << component_url << " manifest.json failed validation " << sb.GetString();
+    return false;
+  }
+  return true;
+}
 
 zx::status<zx::vmo> IcdComponent::CloneVmo() const {
   std::lock_guard lock(vmo_lock_);
@@ -217,9 +264,7 @@ void IcdComponent::ReadFromComponent(fit::deferred_callback failure_callback,
   }
   node_.CreateUint("version", doc["version"].GetInt(), &value_list_);
   std::string file_path = doc["file_path"].GetString();
-  std::string library_path = doc["library_path"].GetString();
   node_.CreateString("file_path", file_path, &value_list_);
-  node_.CreateString("library_path", library_path, &value_list_);
   initialization_status_.Set("opening manifest");
   std::string manifest_result;
   std::string manifest_path = doc["manifest_path"].GetString();
@@ -228,6 +273,18 @@ void IcdComponent::ReadFromComponent(fit::deferred_callback failure_callback,
     FX_LOGS(ERROR) << component_url_ << " Failed to read manifest path " << manifest_path;
     return;
   }
+  json_parser::JSONParser manifest_parser;
+  auto manifest_doc =
+      manifest_parser.ParseFromString(manifest_result, doc["manifest_path"].GetString());
+  if (manifest_parser.HasError()) {
+    FX_LOGS(ERROR) << component_url_ << " JSON parser had error " << manifest_parser.error_str();
+    return;
+  }
+  if (!ValidateManifestJson(component_url_, manifest_doc)) {
+    return;
+  }
+  std::string library_path = manifest_doc["ICD"].GetObject()["library_path"].GetString();
+  node_.CreateString("library_path", library_path, &value_list_);
   node_.CreateString("manifest_contents", manifest_result, &value_list_);
   manifest_file_ =
       fbl::MakeRefCounted<fs::BufferedPseudoFile>([manifest_result](fbl::String* out_string) {
@@ -243,7 +300,7 @@ void IcdComponent::ReadFromComponent(fit::deferred_callback failure_callback,
                            fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE,
                            fd.reset_and_get_address());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << component_url_ << " Could not open path " << library_path << ":" << status;
+    FX_LOGS(ERROR) << component_url_ << " Could not open path " << file_path << ":" << status;
     return;
   }
   zx::vmo vmo;

@@ -19,7 +19,7 @@ TEST(VulkanLoader, ManifestLoad) {
 
   zx::vmo vmo_out;
   // manifest.json remaps this to bin/pkg-server.
-  EXPECT_EQ(ZX_OK, loader->Get("pkg-server2", &vmo_out));
+  EXPECT_EQ(ZX_OK, loader->Get("libvulkan_fake.so", &vmo_out));
   EXPECT_TRUE(vmo_out.is_valid());
   zx_info_handle_basic_t handle_info;
   EXPECT_EQ(ZX_OK, vmo_out.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
@@ -39,7 +39,7 @@ TEST(VulkanLoader, VmosIndependent) {
 
   zx::vmo vmo_out;
   // manifest.json remaps this to bin/pkg-server.
-  EXPECT_EQ(ZX_OK, loader->Get("pkg-server2", &vmo_out));
+  EXPECT_EQ(ZX_OK, loader->Get("libvulkan_fake.so", &vmo_out));
   EXPECT_TRUE(vmo_out.is_valid());
 
   fzl::VmoMapper mapper;
@@ -63,7 +63,7 @@ TEST(VulkanLoader, VmosIndependent) {
 
   // Ensure that the new clone is unaffected.
   zx::vmo vmo2;
-  EXPECT_EQ(ZX_OK, loader->Get("pkg-server2", &vmo2));
+  EXPECT_EQ(ZX_OK, loader->Get("libvulkan_fake.so", &vmo2));
   EXPECT_TRUE(vmo2.is_valid());
 
   fzl::VmoMapper mapper2;
@@ -81,7 +81,7 @@ TEST(VulkanLoader, DeviceFs) {
 
   zx::vmo vmo_out;
   // Waiting for this will ensure that the device exists.
-  EXPECT_EQ(ZX_OK, loader->Get("pkg-server2", &vmo_out));
+  EXPECT_EQ(ZX_OK, loader->Get("libvulkan_fake.so", &vmo_out));
 
   fuchsia::gpu::magma::DeviceSyncPtr device_ptr;
   EXPECT_EQ(ZX_OK, fdio_service_connect_at(dir.channel().get(), "class/gpu/000",
@@ -120,7 +120,7 @@ TEST(VulkanLoader, ManifestFs) {
   EXPECT_EQ(ZX_OK, fdio_fd_create(dir.TakeChannel().release(), &dir_fd));
 
   // "0" is because this is the first ICD loaded.
-  int manifest_fd = openat(dir_fd, "0pkg-server2.json", O_RDONLY);
+  int manifest_fd = openat(dir_fd, "0libvulkan_fake.so.json", O_RDONLY);
 
   EXPECT_LE(0, manifest_fd);
 
@@ -143,7 +143,7 @@ TEST(VulkanLoader, GoldfishSyncDeviceFs) {
 
   zx::vmo vmo_out;
   // Waiting for this will ensure that the device exists.
-  EXPECT_EQ(ZX_OK, loader->Get("pkg-server2", &vmo_out));
+  EXPECT_EQ(ZX_OK, loader->Get("libvulkan_fake.so", &vmo_out));
 
   const char* kDeviceClassList[] = {
       "class/goldfish-sync",

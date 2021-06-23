@@ -145,11 +145,10 @@ TEST_F(LoaderUnittest, GoldfishDevice) {
   EXPECT_EQ(0u, goldfish_device.GetBindingsSize());
 }
 
-TEST(Icd, BadManifest) {
+TEST(Icd, BadMetadata) {
   json::JSONParser parser;
   auto good_doc = parser.ParseFromString(R"({
     "file_path": "bin/pkg-server",
-    "library_path": "pkg-server2",
     "version": 1,
     "manifest_path": "data"
 })",
@@ -158,7 +157,6 @@ TEST(Icd, BadManifest) {
 
   auto bad_doc1 = parser.ParseFromString(R"({
     "file_path": "bin/pkg-server",
-    "library_path": "pkg-server2",
     "version": 2,
     "manifest_path": "data"
 })",
@@ -166,7 +164,6 @@ TEST(Icd, BadManifest) {
   EXPECT_FALSE(IcdComponent::ValidateMetadataJson("b", bad_doc1));
 
   auto bad_doc2 = parser.ParseFromString(R"({
-    "library_path": "pkg-server2",
     "version": 1,
     "manifest_path": "data"
 })",
@@ -174,13 +171,36 @@ TEST(Icd, BadManifest) {
   EXPECT_FALSE(IcdComponent::ValidateMetadataJson("c", bad_doc2));
 
   auto bad_doc3 = parser.ParseFromString(R"({
-    "file_path": "bin/pkg-server",
-    "library_path": 1,
+    "file_path": 1,
     "version": 1,
     "manifest_path": "data"
 })",
                                          "tests4");
   EXPECT_FALSE(IcdComponent::ValidateMetadataJson("d", bad_doc3));
+}
+
+TEST(Icd, BadManifest) {
+  json::JSONParser parser;
+  auto good_doc = parser.ParseFromString(R"(
+{
+    "ICD": {
+        "api_version": "1.1.0",
+        "library_path": "libvulkan_fake.so"
+    },
+    "file_format_version": "1.0.0"
+})",
+                                         "test1");
+  EXPECT_TRUE(IcdComponent::ValidateManifestJson("a", good_doc));
+
+  auto bad_doc1 = parser.ParseFromString(R"(
+{
+    "ICD": {
+        "api_version": "1.1.0",
+    },
+    "file_format_version": "1.0.0"
+})",
+                                         "test1");
+  EXPECT_FALSE(IcdComponent::ValidateManifestJson("a", bad_doc1));
 }
 
 class FakeMemoryPressureProvider : public fuchsia::memorypressure::testing::Provider_TestBase {

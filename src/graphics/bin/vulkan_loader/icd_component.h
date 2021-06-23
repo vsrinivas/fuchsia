@@ -46,6 +46,11 @@ class IcdComponent : public std::enable_shared_from_this<IcdComponent> {
   // only when logging errors.
   static bool ValidateMetadataJson(const std::string& component_url,
                                    const rapidjson::GenericDocument<rapidjson::UTF8<>>& doc);
+
+  // Validate that the manifest json matches the schema. |component_url| is used
+  // only when logging errors.
+  static bool ValidateManifestJson(const std::string& component_url,
+                                   const rapidjson::GenericDocument<rapidjson::UTF8<>>& doc);
   zx::status<zx::vmo> CloneVmo() const;
 
   // library_path is essentially an arbitrary string given by `library_path` from the ICD.
