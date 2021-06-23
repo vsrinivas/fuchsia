@@ -81,9 +81,6 @@ const char Config::kSandboxDecompression[] = "sandbox-decompression";
 // Use the default loader rather than a custom one.
 const char Config::kUseDefaultLoader[] = "use-default-loader";
 
-// Use syslog rather than debug-log.
-const char Config::kUseSyslog[] = "use-syslog";
-
 // Wait for data before launching pkgfs.
 const char Config::kWaitForData[] = "wait-for-data";
 

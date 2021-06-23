@@ -41,7 +41,7 @@ func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType, zbi_na
 	i.WaitForLogMessage("initializing platform")
 
 	// Make sure the shell is ready to accept commands over serial, and wait for fshost to start.
-	i.WaitForLogMessages([]string{"console.shell: enabled", "fshost.cm"})
+	i.WaitForLogMessages([]string{"console.shell: enabled", "fshost"})
 
 	if arch == emulator.X64 {
 		// Ensure the ACPI driver comes up in case our command will need to interact with the platform

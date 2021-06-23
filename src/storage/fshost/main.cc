@@ -43,7 +43,6 @@
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/storage/fshost/deprecated-loader-service.h"
-#include "src/storage/lib/utils/use_debug_log.h"
 
 namespace fio = fuchsia_io;
 
@@ -227,9 +226,6 @@ std::shared_ptr<loader::LoaderServiceBase> SetUpLoaderService(const async::Loop&
 int Main(bool disable_block_watcher) {
   auto boot_args = FshostBootArgs::Create();
   Config config = GetConfig(*boot_args);
-
-  if (!config.is_set(Config::kUseSyslog))
-    storage::UseDebugLog("fshost");
 
   FX_LOGS(INFO) << "Config: " << config;
 

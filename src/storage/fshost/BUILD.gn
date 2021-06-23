@@ -229,7 +229,6 @@ executable("fshost") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_c",
     "//src/lib/storage/fs_management",
-    "//src/storage/lib/utils:use_debug_log",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/ramdevice-client",

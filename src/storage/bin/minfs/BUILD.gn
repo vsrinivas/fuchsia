@@ -13,7 +13,6 @@ executable("minfs") {
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/vfs/cpp",
-    "//src/storage/lib/utils:use_debug_log",
     "//src/storage/minfs",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",

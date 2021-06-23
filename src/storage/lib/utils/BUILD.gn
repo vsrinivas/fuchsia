@@ -19,22 +19,3 @@ source_set("topological_path") {
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
-
-source_set("use_debug_log") {
-  sources = [
-    "use_debug_log.cc",
-    "use_debug_log.h",
-  ]
-  deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/syslog",
-  ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-}

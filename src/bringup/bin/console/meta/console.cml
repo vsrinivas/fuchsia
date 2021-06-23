@@ -18,11 +18,11 @@
             "--deny-log-tag",
             "klog",
             "--allow-log-tag",
-            "fshost.cm",
+            "fshost",
             "--allow-log-tag",
-            "/boot/bin/blobfs",
+            "blobfs",
             "--allow-log-tag",
-            "/boot/bin/minfs",
+            "minfs",
 
             // LogListener has a maxmimum number of tags that can be filtered, so adding
             // more here may not work.

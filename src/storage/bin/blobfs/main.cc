@@ -8,6 +8,7 @@
 #include <fuchsia/kernel/llcpp/fidl.h>
 #include <getopt.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
@@ -35,7 +36,6 @@
 #include "src/storage/blobfs/fsck.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/mount.h"
-#include "src/storage/lib/utils/use_debug_log.h"
 
 namespace {
 
@@ -325,9 +325,7 @@ zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
 }  // namespace
 
 int main(int argc, char** argv) {
-  // TODO(fxbug.dev/66476)
-  storage::UseDebugLog("blobfs");
-
+  syslog::SetLogSettings({}, {"blobfs"});
   CommandFunction func = nullptr;
   auto options_or = ProcessArgs(argc, argv, &func);
   if (options_or.is_error()) {
