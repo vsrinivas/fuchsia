@@ -14,7 +14,9 @@ use {
     fidl_fuchsia_developer_bridge::{
         DaemonDiagnosticsStreamParameters, DaemonProxy, DiagnosticsStreamError, StreamMode,
     },
-    fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, ArchiveIteratorMarker},
+    fidl_fuchsia_developer_remotecontrol::{
+        ArchiveIteratorError, ArchiveIteratorMarker, DiagnosticsData,
+    },
     fuchsia_async::Timer,
     std::{
         iter::Iterator,
@@ -110,9 +112,7 @@ pub async fn exec_log_cmd(
     )
     .await?
     .map_err(|e| match e {
-        DiagnosticsStreamError::NoStreamForTarget => {
-            anyhow!(ffx_error!("{}", NO_STREAM_ERROR))
-        }
+        DiagnosticsStreamError::NoStreamForTarget => anyhow!(ffx_error!("{}", NO_STREAM_ERROR)),
         _ => anyhow!("failure setting up diagnostics stream: {:?}", e),
     })?;
 
@@ -127,10 +127,16 @@ pub async fn exec_log_cmd(
                 continue;
             }
 
-            let entries = result.unwrap().into_iter().filter_map(|e| e.data);
+            let entries =
+                result.unwrap().into_iter().filter_map(|e| e.diagnostics_data).filter_map(
+                    |diagnostics_data| match diagnostics_data {
+                        DiagnosticsData::Inline(inline) => Some(inline),
+                        _ => None,
+                    },
+                );
 
             for entry in entries {
-                let parsed: LogEntry = serde_json::from_str(&entry)?;
+                let parsed: LogEntry = serde_json::from_str(&entry.data)?;
 
                 match (&parsed.data, params.target_to_bound) {
                     (LogData::TargetLog(log_data), Some(t)) => {

@@ -9,7 +9,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorRequest,
-        BridgeStreamParameters, RemoteDiagnosticsBridgeRequest,
+        BridgeStreamParameters, DiagnosticsData, InlineData, RemoteDiagnosticsBridgeRequest,
         RemoteDiagnosticsBridgeRequestStream, StreamError,
     },
     fidl_fuchsia_diagnostics::{DataType, StreamMode},
@@ -85,8 +85,10 @@ pub trait ArchiveReaderManager {
                         };
 
                         let response = vec![ArchiveIteratorEntry {
-                            data: Some(serde_json::to_string(&truncated_logs)?),
-                            truncated_chars: Some(truncated_chars),
+                            diagnostics_data: Some(DiagnosticsData::Inline(InlineData {
+                                data: serde_json::to_string(&truncated_logs)?,
+                                truncated_chars: truncated_chars,
+                            })),
                             ..ArchiveIteratorEntry::EMPTY
                         }];
                         responder.send(&mut Ok(response))?;
@@ -261,6 +263,7 @@ mod test {
         },
         fuchsia_async as fasync,
         futures::stream::iter,
+        matches::assert_matches,
         std::cell::Cell,
     };
 
@@ -498,14 +501,22 @@ mod test {
 
         assert_eq!(entries.len(), 1);
         let entry = entries.get(0).unwrap();
-        assert_eq!(entry.truncated_chars.unwrap(), 0);
-        assert_eq!(entry.data.clone().unwrap(), serde_json::to_string(&make_short_log(1)).unwrap());
+        let diagnostics_data = entry.diagnostics_data.as_ref().unwrap();
+        assert_matches!(diagnostics_data, DiagnosticsData::Inline(_));
+        if let DiagnosticsData::Inline(inline) = diagnostics_data {
+            assert_eq!(inline.truncated_chars, 0);
+            assert_eq!(inline.data, serde_json::to_string(&make_short_log(1)).unwrap());
+        }
 
         let entries = iterator.get_next().await.unwrap().expect("get next should not error");
         assert_eq!(entries.len(), 1);
         let entry = entries.get(0).unwrap();
-        assert_eq!(entry.truncated_chars.unwrap(), 0);
-        assert_eq!(entry.data.clone().unwrap(), serde_json::to_string(&make_short_log(2)).unwrap());
+        let diagnostics_data = entry.diagnostics_data.as_ref().unwrap();
+        assert_matches!(diagnostics_data, DiagnosticsData::Inline(_));
+        if let DiagnosticsData::Inline(inline) = diagnostics_data {
+            assert_eq!(inline.truncated_chars, 0);
+            assert_eq!(inline.data, serde_json::to_string(&make_short_log(2)).unwrap());
+        }
 
         let empty_entries = iterator.get_next().await.unwrap().expect("get next should not error");
         assert!(empty_entries.is_empty());
@@ -537,8 +548,12 @@ mod test {
         let entries = iterator.get_next().await.unwrap().expect("get next should not error");
         assert_eq!(entries.len(), 1);
         let entry = entries.get(0).unwrap();
-        assert_eq!(entry.truncated_chars.unwrap(), 0);
-        assert_eq!(entry.data.clone().unwrap(), serde_json::to_string(&make_short_log(1)).unwrap());
+        let diagnostics_data = entry.diagnostics_data.as_ref().unwrap();
+        assert_matches!(diagnostics_data, DiagnosticsData::Inline(_));
+        if let DiagnosticsData::Inline(inline) = diagnostics_data {
+            assert_eq!(inline.truncated_chars, 0);
+            assert_eq!(inline.data.clone(), serde_json::to_string(&make_short_log(1)).unwrap());
+        }
 
         let empty_entries = iterator.get_next().await.unwrap().expect("get next should not error");
         assert!(empty_entries.is_empty());
@@ -583,11 +598,14 @@ mod test {
         let entries = iterator.get_next().await.unwrap().expect("get next should not error");
         assert_eq!(entries.len(), 1);
         let entry = entries.get(0).unwrap();
-
-        let data: LogsData = serde_json::from_str(entry.data.as_ref().unwrap()).unwrap();
-        let expected_data = make_long_log(1, MAX_DATAGRAM_LEN_BYTES);
-        assert_eq!(entry.truncated_chars.unwrap(), MAX_DATAGRAM_LEN_BYTES as u32);
-        assert_eq!(data, expected_data);
+        let diagnostics_data = entry.diagnostics_data.as_ref().unwrap();
+        assert_matches!(diagnostics_data, DiagnosticsData::Inline(_));
+        if let DiagnosticsData::Inline(inline) = diagnostics_data {
+            let data: LogsData = serde_json::from_str(inline.data.as_ref()).unwrap();
+            let expected_data = make_long_log(1, MAX_DATAGRAM_LEN_BYTES);
+            assert_eq!(inline.truncated_chars, MAX_DATAGRAM_LEN_BYTES);
+            assert_eq!(data, expected_data);
+        }
 
         let empty_entries = iterator.get_next().await.unwrap().expect("get next should not error");
         assert!(empty_entries.is_empty());

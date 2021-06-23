@@ -6,7 +6,9 @@ use {
     anyhow::{format_err, Error},
     diagnostics_data::LogsData,
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorMarker, ArchiveIteratorProxy},
+    fidl_fuchsia_developer_remotecontrol::{
+        ArchiveIteratorMarker, ArchiveIteratorProxy, DiagnosticsData,
+    },
     fidl_fuchsia_test_manager as ftest_manager, fuchsia_async as fasync,
     futures::Stream,
     futures::{channel::mpsc, stream::BoxStream, SinkExt, StreamExt},
@@ -173,11 +175,20 @@ impl ArchiveLogStream {
                     break;
                 }
 
-                for data_str in entries.into_iter().map(|e| e.data).filter_map(|data| data) {
-                    let _ = match serde_json::from_str(&data_str) {
-                        Ok(data) => sender.send(Ok(data)).await,
-                        Err(e) => sender.send(Err(format_err!("Malformed json: {:?}", e))).await,
-                    };
+                for diagnostics_data in
+                    entries.into_iter().map(|e| e.diagnostics_data).filter_map(|data| data)
+                {
+                    match diagnostics_data {
+                        DiagnosticsData::Inline(inline) => {
+                            let _ = match serde_json::from_str(&inline.data) {
+                                Ok(data) => sender.send(Ok(data)).await,
+                                Err(e) => {
+                                    sender.send(Err(format_err!("Malformed json: {:?}", e))).await
+                                }
+                            };
+                        }
+                        _ => {}
+                    }
                 }
             }
         });
@@ -295,7 +306,7 @@ mod tests {
             super::*,
             fidl_fuchsia_developer_remotecontrol::{
                 ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker,
-                ArchiveIteratorRequest,
+                ArchiveIteratorRequest, DiagnosticsData, InlineData,
             },
             matches::assert_matches,
         };
@@ -327,7 +338,10 @@ mod tests {
                         }
                         let json_data = get_json_data(value);
                         let result = ArchiveIteratorEntry {
-                            data: Some(json_data),
+                            diagnostics_data: Some(DiagnosticsData::Inline(InlineData {
+                                data: json_data,
+                                truncated_chars: 0,
+                            })),
                             ..ArchiveIteratorEntry::EMPTY
                         };
                         responder.send(&mut Ok(vec![result])).expect("send response");

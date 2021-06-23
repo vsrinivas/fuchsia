@@ -224,9 +224,7 @@ impl<'a> LogFormatter for DefaultLogFormatter<'_> {
                     },
                 }
             }
-            Err(e) => {
-                format!("got an error fetching next log: {:?}", e)
-            }
+            Err(e) => format!("got an error fetching next log: {:?}", e),
         };
         s.push('\n');
 

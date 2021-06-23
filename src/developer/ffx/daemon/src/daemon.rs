@@ -28,7 +28,8 @@ use {
         DiagnosticsStreamError, RepositoriesMarker, StreamMode,
     },
     fidl_fuchsia_developer_remotecontrol::{
-        ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, RemoteControlMarker,
+        ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, DiagnosticsData,
+        InlineData, RemoteControlMarker,
     },
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_protocol::NodeId,
@@ -855,11 +856,14 @@ impl Daemon {
                                 let res = log_iterator.iter().await?;
                                 match res {
                                     Some(Ok(entry)) => {
-                                        // TODO(jwing): implement truncation or migrate to a socket-based
-                                        // API.
+                                        // TODO(fxbug.dev/78742): migrate to the socket-based API.
                                         responder.send(&mut Ok(vec![ArchiveIteratorEntry {
-                                            data: Some(serde_json::to_string(&entry)?),
-                                            truncated_chars: Some(0),
+                                            diagnostics_data: Some(DiagnosticsData::Inline(
+                                                InlineData {
+                                                    data: serde_json::to_string(&entry)?,
+                                                    truncated_chars: 0,
+                                                },
+                                            )),
                                             ..ArchiveIteratorEntry::EMPTY
                                         }]))?;
                                     }

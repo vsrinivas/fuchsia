@@ -7,6 +7,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorRequest,
+        DiagnosticsData, InlineData,
     },
     futures::TryStreamExt,
     std::sync::Arc,
@@ -57,10 +58,11 @@ pub fn setup_fake_archive_iterator(
                             } else {
                                 responder
                                     .send(&mut Ok(values
-                                        .iter()
+                                        .into_iter()
                                         .map(|s| ArchiveIteratorEntry {
-                                            data: Some(s.clone()),
-                                            truncated_chars: Some(0),
+                                            diagnostics_data: Some(DiagnosticsData::Inline(
+                                                InlineData { data: s.clone(), truncated_chars: 0 },
+                                            )),
                                             ..ArchiveIteratorEntry::EMPTY
                                         })
                                         .collect()))

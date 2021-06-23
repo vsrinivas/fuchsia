@@ -16,7 +16,8 @@ use {
     fidl::endpoints::create_proxy,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::{
-        ArchiveIteratorMarker, BridgeStreamParameters, RemoteDiagnosticsBridgeMarker,
+        ArchiveIteratorMarker, BridgeStreamParameters, DiagnosticsData,
+        RemoteDiagnosticsBridgeMarker,
     },
     futures::{StreamExt, TryFutureExt},
     selectors::parse_selector,
@@ -147,14 +148,18 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
                     r.ok()
                 })
                 .flatten()
-                .filter_map(|l| l.data.clone())
-                .map(|s| {
-                    let data: LogData = match serde_json::from_str::<LogsData>(&s) {
+                .filter_map(|l| l.diagnostics_data)
+                .filter_map(|diagnostics_data| match diagnostics_data {
+                    DiagnosticsData::Inline(inline) => Some(inline),
+                    _ => None,
+                })
+                .map(|inline| {
+                    let data: LogData = match serde_json::from_str::<LogsData>(&inline.data) {
                         Ok(data) => LogData::TargetLog(data),
-                        Err(_) => LogData::MalformedTargetLog(s.clone()),
+                        Err(_) => LogData::MalformedTargetLog(inline.data),
                     };
 
-                    LogEntry { data: data, timestamp: ts, version: 1 }
+                    LogEntry { data, timestamp: ts, version: 1 }
                 })
                 .filter(|log| {
                     // TODO(jwing): use a monotonic ID instead of timestamp

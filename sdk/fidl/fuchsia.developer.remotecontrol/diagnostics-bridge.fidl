@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.developer.remotecontrol;
 
+using fuchsia.io2 as io2;
 using fuchsia.logger as logger;
 using fuchsia.diagnostics as diagnostics;
+using zx;
 
 const int32 MAX_ENTRIES = 1;
 
@@ -24,12 +25,22 @@ enum StreamError : uint32 {
 table BridgeStreamParameters {
     1: diagnostics.StreamMode stream_mode;
     2: diagnostics.DataType data_type;
+    3: diagnostics.ClientSelectorConfiguration client_selector_configuration;
+    4: io2.Path accessor_path;
 };
 
-// `resource` prefix added in the event we decide to migrate this to a socket-based API.
 resource table ArchiveIteratorEntry {
-    1: string:logger.MAX_DATAGRAM_LEN_BYTES data;
-    2: uint32 truncated_chars;
+    1: DiagnosticsData diagnostics_data;
+};
+
+struct InlineData {
+    string:logger.MAX_DATAGRAM_LEN_BYTES data;
+    uint32 truncated_chars;
+};
+
+resource union DiagnosticsData {
+    1: InlineData inline;
+    2: zx.handle:SOCKET socket;
 };
 
 enum ArchiveIteratorError : uint32 {
