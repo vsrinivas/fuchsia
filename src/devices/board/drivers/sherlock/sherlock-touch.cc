@@ -21,11 +21,6 @@
 
 namespace sherlock {
 
-static const uint32_t device_id = FOCALTECH_DEVICE_FT5726;
-static const device_metadata_t ft5726_touch_metadata[] = {
-    {.type = DEVICE_METADATA_PRIVATE, .data = &device_id, .length = sizeof(device_id)},
-};
-
 static const zx_device_prop_t sherlock_touch_props[] = {
     {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
     {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SHERLOCK},
@@ -86,16 +81,6 @@ static constexpr device_fragment_t luis_fragments[] = {
     {"gpio-reset", std::size(gpio_reset_fragment), gpio_reset_fragment},
 };
 
-static const composite_device_desc_t sherlock_comp_desc = {
-    .props = sherlock_touch_props,
-    .props_count = countof(sherlock_touch_props),
-    .fragments = sherlock_fragments,
-    .fragments_count = countof(sherlock_fragments),
-    .coresident_device_index = UINT32_MAX,
-    .metadata_list = ft5726_touch_metadata,
-    .metadata_count = std::size(ft5726_touch_metadata),
-};
-
 static const composite_device_desc_t luis_comp_desc = {
     .props = luis_touch_props,
     .props_count = countof(luis_touch_props),
@@ -109,6 +94,26 @@ zx_status_t Sherlock::TouchInit() {
   if (pid_ == PDEV_PID_LUIS) {
     status = DdkAddComposite("ft8201-touch", &luis_comp_desc);
   } else {
+    static const FocaltechMetadata device_info = {
+        .device_id = FOCALTECH_DEVICE_FT5726,
+        // TODO(fxbug.dev/75032): Populate these fields.
+        .needs_firmware = false,
+        .display_vendor = 0,
+        .ddic_version = 0,
+    };
+    static const device_metadata_t ft5726_touch_metadata[] = {
+        {.type = DEVICE_METADATA_PRIVATE, .data = &device_info, .length = sizeof(device_info)},
+    };
+    static const composite_device_desc_t sherlock_comp_desc = {
+        .props = sherlock_touch_props,
+        .props_count = countof(sherlock_touch_props),
+        .fragments = sherlock_fragments,
+        .fragments_count = countof(sherlock_fragments),
+        .coresident_device_index = UINT32_MAX,
+        .metadata_list = ft5726_touch_metadata,
+        .metadata_count = std::size(ft5726_touch_metadata),
+    };
+
     status = DdkAddComposite("ft5726-touch", &sherlock_comp_desc);
   }
 

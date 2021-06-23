@@ -21,9 +21,12 @@
 
 namespace nelson {
 
-static const uint32_t device_id = FOCALTECH_DEVICE_FT3X27;
+static const FocaltechMetadata device_info = {
+    .device_id = FOCALTECH_DEVICE_FT3X27,
+    .needs_firmware = false,
+};
 static const device_metadata_t ft3x27_touch_metadata[] = {
-    {.type = DEVICE_METADATA_PRIVATE, .data = &device_id, .length = sizeof(device_id)},
+    {.type = DEVICE_METADATA_PRIVATE, .data = &device_info, .length = sizeof(device_info)},
 };
 
 // Composite binding rules for focaltech touch driver.

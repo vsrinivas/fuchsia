@@ -105,22 +105,22 @@ zx_status_t FtDevice::Init() {
   }
 
   size_t actual;
-  uint32_t device_id;
-  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &device_id, sizeof(device_id),
+  FocaltechMetadata device_info;
+  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &device_info, sizeof(device_info),
                                &actual);
-  if (status != ZX_OK || sizeof(device_id) != actual) {
+  if (status != ZX_OK || sizeof(device_info) != actual) {
     zxlogf(ERROR, "focaltouch: failed to read metadata");
     return status == ZX_OK ? ZX_ERR_INTERNAL : status;
   }
 
-  if (device_id == FOCALTECH_DEVICE_FT3X27) {
+  if (device_info.device_id == FOCALTECH_DEVICE_FT3X27) {
     descriptor_len_ = get_ft3x27_report_desc(&descriptor_);
-  } else if (device_id == FOCALTECH_DEVICE_FT6336) {
+  } else if (device_info.device_id == FOCALTECH_DEVICE_FT6336) {
     descriptor_len_ = get_ft6336_report_desc(&descriptor_);
-  } else if (device_id == FOCALTECH_DEVICE_FT5726) {
+  } else if (device_info.device_id == FOCALTECH_DEVICE_FT5726) {
     descriptor_len_ = get_ft5726_report_desc(&descriptor_);
   } else {
-    zxlogf(ERROR, "focaltouch: unknown device ID %u", device_id);
+    zxlogf(ERROR, "focaltouch: unknown device ID %u", device_info.device_id);
     return ZX_ERR_INTERNAL;
   }
 

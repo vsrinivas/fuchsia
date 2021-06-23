@@ -85,6 +85,9 @@ class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
   zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) __TA_EXCLUDES(client_lock_);
   zx_status_t HidbusQuery(uint32_t options, hid_info_t* info) __TA_EXCLUDES(client_lock_);
 
+  // Visible for testing.
+  zx_status_t Init();
+
  private:
   /* Note: the focaltouch device is connected via i2c and is NOT a HID
       device.  This driver reads a collection of data from the data and
@@ -100,7 +103,6 @@ class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
 
   static constexpr size_t kMaxI2cTransferLength = 8;
 
-  zx_status_t Init();
   zx_status_t ShutDown() __TA_EXCLUDES(client_lock_);
 
   uint8_t Read(uint8_t addr);
