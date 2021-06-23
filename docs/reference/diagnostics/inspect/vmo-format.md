@@ -93,7 +93,7 @@ All blocks must be aligned on 16-byte boundaries, and addressing within
 the VMO is in terms of an Index, specifying a 16-byte offsets (`offset =
 index * 16`).
 
-We use 28 bits for indexes, so Inspect Files may be at most 4GiB.
+We use 24 bits for indexes, so Inspect Files may be at most 256MiB.
 
 A `block_header` consists of 16 bytes as follows:
 
