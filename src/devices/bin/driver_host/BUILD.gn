@@ -45,12 +45,10 @@ source_set("common") {
   deps = [ "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
-    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
     "//src/devices/lib/log",
@@ -71,6 +69,7 @@ source_set("common") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]

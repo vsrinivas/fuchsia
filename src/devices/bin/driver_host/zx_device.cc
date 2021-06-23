@@ -136,11 +136,11 @@ zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_sta
 
 zx_status_t zx_device::SetPerformanceStates(
     const device_performance_state_info_t* performance_states, uint8_t count) {
-  if (count < fuchsia_device_MIN_DEVICE_PERFORMANCE_STATES ||
-      count > fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES) {
+  if (count < fuchsia_device::wire::kMinDevicePerformanceStates ||
+      count > fuchsia_device::wire::kMaxDevicePerformanceStates) {
     return ZX_ERR_INVALID_ARGS;
   }
-  bool visited[fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES] = {false};
+  bool visited[fuchsia_device::wire::kMaxDevicePerformanceStates] = {false};
   for (uint8_t i = 0; i < count; i++) {
     const auto& info = performance_states[i];
     if (info.state_id >= std::size(visited)) {
@@ -155,7 +155,7 @@ zx_status_t zx_device::SetPerformanceStates(
     state->restore_latency = info.restore_latency;
     visited[info.state_id] = true;
   }
-  if (!(performance_states_[fuchsia_device_DEVICE_PERFORMANCE_STATE_P0].is_supported)) {
+  if (!(performance_states_[fuchsia_device::wire::kDevicePerformanceStateP0].is_supported)) {
     return ZX_ERR_INVALID_ARGS;
   }
   inspect_->set_performance_states(performance_states, count);
@@ -302,7 +302,7 @@ bool zx_device::is_composite() const { return is_composite_ && !!composite_; }
 fbl::RefPtr<CompositeDevice> zx_device::composite() { return composite_; }
 
 bool zx_device::IsPerformanceStateSupported(uint32_t requested_state) {
-  if (requested_state >= fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES) {
+  if (requested_state >= fuchsia_device::wire::kMaxDevicePerformanceStates) {
     return false;
   }
   return performance_states_[requested_state].is_supported;

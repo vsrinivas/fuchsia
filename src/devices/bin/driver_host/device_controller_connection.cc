@@ -4,7 +4,7 @@
 
 #include "device_controller_connection.h"
 
-#include <fuchsia/device/c/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
@@ -16,7 +16,6 @@
 #include "driver_host.h"
 #include "env.h"
 #include "fidl_txn.h"
-#include "fuchsia/device/llcpp/fidl.h"
 #include "log.h"
 #include "proxy_iostate.h"
 #include "zx_device.h"

@@ -5,7 +5,6 @@
 #include "driver_host.h"
 
 #include <dlfcn.h>
-#include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -593,7 +592,7 @@ void DevhostControllerConnection::CreateCompositeDevice(
   }
 
   fbl::RefPtr<zx_device_t> dev;
-  static_assert(fuchsia_device_manager_DEVICE_NAME_MAX + 1 >= sizeof(dev->name()));
+  static_assert(fuchsia_device_manager::wire::kDeviceNameMax + 1 >= sizeof(dev->name()));
   zx_status_t status = zx_device::Create(driver_host_context_,
                                          std::string(request->name.data(), request->name.size()),
                                          driver.get(), &dev);

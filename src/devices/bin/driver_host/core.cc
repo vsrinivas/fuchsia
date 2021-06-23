@@ -727,8 +727,7 @@ zx_status_t DriverHostContext::DeviceClose(fbl::RefPtr<zx_device_t> dev, uint32_
 
 void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, uint32_t flags) {
   if (dev->auto_suspend_configured()) {
-    dev->ops()->configure_auto_suspend(dev->ctx, false,
-                                       fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
+    dev->ops()->configure_auto_suspend(dev->ctx, false, DEV_POWER_STATE_D0);
     LOGF(INFO, "System suspend overriding auto suspend for device %p '%s'", dev.get(), dev->name());
   }
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
@@ -763,8 +762,7 @@ void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, u
 void DriverHostContext::DeviceSystemResume(const fbl::RefPtr<zx_device>& dev,
                                            uint32_t target_system_state) {
   if (dev->auto_suspend_configured()) {
-    dev->ops()->configure_auto_suspend(dev->ctx, false,
-                                       fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
+    dev->ops()->configure_auto_suspend(dev->ctx, false, DEV_POWER_STATE_D0);
     LOGF(INFO, "System resume overriding auto suspend for device %p '%s'", dev.get(), dev->name());
   }
 

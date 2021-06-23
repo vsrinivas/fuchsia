@@ -33,11 +33,18 @@
 
 namespace internal {
 
-static_assert(fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0 == DEV_POWER_STATE_D0);
-static_assert(fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D1 == DEV_POWER_STATE_D1);
-static_assert(fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D2 == DEV_POWER_STATE_D2);
-static_assert(fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D3HOT == DEV_POWER_STATE_D3HOT);
-static_assert(fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D3COLD == DEV_POWER_STATE_D3COLD);
+static_assert(static_cast<uint8_t>(fuchsia_device::wire::DevicePowerState::kDevicePowerStateD0) ==
+              DEV_POWER_STATE_D0);
+static_assert(static_cast<uint8_t>(fuchsia_device::wire::DevicePowerState::kDevicePowerStateD1) ==
+              DEV_POWER_STATE_D1);
+static_assert(static_cast<uint8_t>(fuchsia_device::wire::DevicePowerState::kDevicePowerStateD2) ==
+              DEV_POWER_STATE_D2);
+static_assert(
+    static_cast<uint8_t>(fuchsia_device::wire::DevicePowerState::kDevicePowerStateD3Hot) ==
+    DEV_POWER_STATE_D3HOT);
+static_assert(
+    static_cast<uint8_t>(fuchsia_device::wire::DevicePowerState::kDevicePowerStateD3Cold) ==
+    DEV_POWER_STATE_D3COLD);
 
 const device_power_state_info_t kDeviceDefaultPowerStates[2] = {
     {.state_id = DEV_POWER_STATE_D0}, {.state_id = DEV_POWER_STATE_D3COLD}};

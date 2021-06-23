@@ -19,9 +19,9 @@ namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 
 // The path might get truncated if too long, which isn't a problem because it should just result in
 // the driver not being found.
-fbl::StringBuffer<fuchsia_device_MAX_DRIVER_PATH_LEN> GetFullDriverPath(
+fbl::StringBuffer<fuchsia_device::wire::kMaxDriverPathLen> GetFullDriverPath(
     const fidl::StringView& driver_path) {
-  fbl::StringBuffer<fuchsia_device_MAX_DRIVER_PATH_LEN> buffer;
+  fbl::StringBuffer<fuchsia_device::wire::kMaxDriverPathLen> buffer;
   if (!driver_path.empty() && driver_path[0] != '/') {
     buffer.Append(std::string_view(internal::ContextForApi()->root_driver_path()));
   }
@@ -133,10 +133,10 @@ void DevfsVnode::Bind(BindRequestView request, BindCompleter::Sync& completer) {
 void DevfsVnode::GetDevicePerformanceStates(GetDevicePerformanceStatesRequestView request,
                                             GetDevicePerformanceStatesCompleter::Sync& completer) {
   auto& perf_states = dev_->GetPerformanceStates();
-  ZX_DEBUG_ASSERT(perf_states.size() == fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES);
+  ZX_DEBUG_ASSERT(perf_states.size() == fuchsia_device::wire::kMaxDevicePerformanceStates);
 
   ::fidl::Array<fuchsia_device::wire::DevicePerformanceStateInfo, 20> states{};
-  for (size_t i = 0; i < fuchsia_device_MAX_DEVICE_PERFORMANCE_STATES; i++) {
+  for (size_t i = 0; i < fuchsia_device::wire::kMaxDevicePerformanceStates; i++) {
     states[i] = perf_states[i];
   }
   completer.Reply(states, ZX_OK);
@@ -213,7 +213,7 @@ void DevfsVnode::GetDeviceName(GetDeviceNameRequestView request,
 
 void DevfsVnode::GetTopologicalPath(GetTopologicalPathRequestView request,
                                     GetTopologicalPathCompleter::Sync& completer) {
-  char buf[fuchsia_device_MAX_DEVICE_PATH_LEN + 1];
+  char buf[fuchsia_device::wire::kMaxDevicePathLen + 1];
   size_t actual;
   zx_status_t status = dev_->driver_host_context()->GetTopoPath(dev_, buf, sizeof(buf), &actual);
   if (status != ZX_OK) {
@@ -232,11 +232,11 @@ void DevfsVnode::GetEventHandle(GetEventHandleRequestView request,
                                 GetEventHandleCompleter::Sync& completer) {
   zx::eventpair event;
   zx_status_t status = dev_->event.duplicate(ZX_RIGHTS_BASIC, &event);
-  static_assert(fuchsia_device_DEVICE_SIGNAL_READABLE == DEV_STATE_READABLE);
-  static_assert(fuchsia_device_DEVICE_SIGNAL_WRITABLE == DEV_STATE_WRITABLE);
-  static_assert(fuchsia_device_DEVICE_SIGNAL_ERROR == DEV_STATE_ERROR);
-  static_assert(fuchsia_device_DEVICE_SIGNAL_HANGUP == DEV_STATE_HANGUP);
-  static_assert(fuchsia_device_DEVICE_SIGNAL_OOB == DEV_STATE_OOB);
+  static_assert(fuchsia_device::wire::kDeviceSignalReadable == DEV_STATE_READABLE);
+  static_assert(fuchsia_device::wire::kDeviceSignalWritable == DEV_STATE_WRITABLE);
+  static_assert(fuchsia_device::wire::kDeviceSignalError == DEV_STATE_ERROR);
+  static_assert(fuchsia_device::wire::kDeviceSignalHangup == DEV_STATE_HANGUP);
+  static_assert(fuchsia_device::wire::kDeviceSignalOob == DEV_STATE_OOB);
   // TODO(teisenbe): The FIDL definition erroneously describes this as an event rather than
   // eventpair.
   completer.Reply(status, zx::event(event.release()));
@@ -284,8 +284,8 @@ void DevfsVnode::GetDevicePowerCaps(GetDevicePowerCapsRequestView request,
   fuchsia_device::wire::ControllerGetDevicePowerCapsResponse response{};
   auto& states = dev_->GetPowerStates();
 
-  ZX_DEBUG_ASSERT(states.size() == fuchsia_device_MAX_DEVICE_POWER_STATES);
-  for (size_t i = 0; i < fuchsia_device_MAX_DEVICE_POWER_STATES; i++) {
+  ZX_DEBUG_ASSERT(states.size() == fuchsia_device::wire::kMaxDevicePowerStates);
+  for (size_t i = 0; i < fuchsia_device::wire::kMaxDevicePowerStates; i++) {
     response.dpstates[i] = states[i];
   }
   completer.Reply(fuchsia_device::wire::ControllerGetDevicePowerCapsResult::WithResponse(
