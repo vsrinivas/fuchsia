@@ -14,6 +14,8 @@ __BEGIN_CDECLS;
 #include <libfdt.h>
 __END_CDECLS;
 
+namespace {
+
 // PCI ECAM address manipulation.
 constexpr uint8_t pci_ecam_bus(uint64_t addr) { return bits_shift(addr, 27, 20); }
 
@@ -29,36 +31,36 @@ constexpr uint16_t pci_ecam_register_etc(uint64_t addr) { return bits_shift(addr
 //
 // When creating an ECAM address for a PCI configuration register, the bus
 // value must be relative to the starting bus number for that ECAM region.
-static inline constexpr uint64_t pci_ecam_size(uint64_t start_bus, uint64_t end_bus) {
+inline constexpr uint64_t pci_ecam_size(uint64_t start_bus, uint64_t end_bus) {
   return (end_bus - start_bus) << 20;
 }
 
 // PCI command register bits.
-static constexpr uint16_t kPciCommandIoEnable = 1 << 0;
-static constexpr uint16_t kPciCommandMemEnable = 1 << 1;
-static constexpr uint16_t kPciCommandIntEnable = 1 << 10;
+constexpr uint16_t kPciCommandIoEnable = 1 << 0;
+constexpr uint16_t kPciCommandMemEnable = 1 << 1;
+constexpr uint16_t kPciCommandIntEnable = 1 << 10;
 
 constexpr bool pci_irq_enabled(uint16_t command_register) {
   return (command_register & kPciCommandIntEnable) == 0;
 }
 
 // PCI config relative IO port addresses (typically at 0xcf8).
-static constexpr uint16_t kPciConfigAddrPortBase = 0;
-static constexpr uint16_t kPciConfigAddrPortTop = 3;
-static constexpr uint16_t kPciConfigDataPortBase = 4;
-static constexpr uint16_t kPciConfigDataPortTop = 7;
+constexpr uint16_t kPciConfigAddrPortBase = 0;
+constexpr uint16_t kPciConfigAddrPortTop = 3;
+constexpr uint16_t kPciConfigDataPortBase = 4;
+constexpr uint16_t kPciConfigDataPortTop = 7;
 
 // PCI base address registers.
-static constexpr uint8_t kPciRegisterBar0 = 0x10;
-static constexpr uint8_t kPciRegisterBar1 = 0x14;
-static constexpr uint8_t kPciRegisterBar2 = 0x18;
-static constexpr uint8_t kPciRegisterBar3 = 0x1c;
-static constexpr uint8_t kPciRegisterBar4 = 0x20;
-static constexpr uint8_t kPciRegisterBar5 = 0x24;
+constexpr uint8_t kPciRegisterBar0 = 0x10;
+constexpr uint8_t kPciRegisterBar1 = 0x14;
+constexpr uint8_t kPciRegisterBar2 = 0x18;
+constexpr uint8_t kPciRegisterBar3 = 0x1c;
+constexpr uint8_t kPciRegisterBar4 = 0x20;
+constexpr uint8_t kPciRegisterBar5 = 0x24;
 
 // PCI capabilities registers.
-static constexpr uint8_t kPciRegisterCapBase = 0xa4;
-static constexpr uint8_t kPciRegisterCapTop = UINT8_MAX;
+constexpr uint8_t kPciRegisterCapBase = 0xa4;
+constexpr uint8_t kPciRegisterCapTop = UINT8_MAX;
 
 // Size of the PCI capability space in bytes.
 constexpr uint8_t kPciRegisterCapMaxBytes = kPciRegisterCapTop - kPciRegisterCapBase + 1;
@@ -71,20 +73,20 @@ constexpr uint8_t kPciCapNextOffset = 1;
 // PCI memory ranges.
 #if __aarch64__
 
-static constexpr uint64_t kPciEcamPhysBase    = 0x808100000;
-static constexpr uint64_t kPciMmioBarPhysBase = 0x808200000;
+constexpr uint64_t kPciEcamPhysBase    = 0x808100000;
+constexpr uint64_t kPciMmioBarPhysBase = 0x808200000;
 
 #elif __x86_64__
 
-static constexpr uint64_t kPciEcamPhysBase    = 0xf8100000;
-static constexpr uint64_t kPciMmioBarPhysBase = 0xf8200000;
-static constexpr uint64_t kPciConfigPortBase  = 0xcf8;
-static constexpr uint64_t kPciConfigPortSize  = 0x8;
+constexpr uint64_t kPciEcamPhysBase    = 0xf8100000;
+constexpr uint64_t kPciMmioBarPhysBase = 0xf8200000;
+constexpr uint64_t kPciConfigPortBase  = 0xcf8;
+constexpr uint64_t kPciConfigPortSize  = 0x8;
 
 #endif
 
-static constexpr uint64_t kPciEcamSize        = pci_ecam_size(0, 1);
-static constexpr uint64_t kPciMmioBarSize     = 0x100000;
+constexpr uint64_t kPciEcamSize        = pci_ecam_size(0, 1);
+constexpr uint64_t kPciMmioBarSize     = 0x100000;
 
 // clang-format on
 
@@ -95,8 +97,10 @@ static constexpr uint64_t kPciMmioBarSize     = 0x100000;
 //
 // The device tree and DSDT define interrupts for 12 devices (IRQ 32-47).
 // Adding  additional devices beyond that will require updates to both.
-static constexpr uint32_t kPciGlobalIrqAssigments[kPciMaxDevices] = {
-    32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47};
+constexpr uint32_t kPciGlobalIrqAssigments[kPciMaxDevices] = {32, 33, 34, 35, 36, 37, 38, 39,
+                                                              40, 41, 42, 43, 44, 45, 46, 47};
+
+}  // namespace
 
 uint64_t PciBar::aspace() const {
   switch (trap_type) {
@@ -370,7 +374,7 @@ zx_status_t PciBus::ConfigureDtb(void* dtb) const {
   return ZX_OK;
 }
 
-PciDevice::PciDevice(const Attributes attrs) : attrs_(attrs) {}
+PciDevice::PciDevice(const Attributes& attrs) : attrs_(attrs) {}
 
 zx_status_t PciDevice::AddCapability(fbl::Span<const uint8_t> payload) {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -607,7 +611,8 @@ zx_status_t PciDevice::SetupBarTraps(Guest* guest, bool skip_bell, async_dispatc
     PciBar* bar = &bar_[i];
     if (!is_bar_implemented(i)) {
       break;
-    } else if (skip_bell && bar->trap_type == TrapType::MMIO_BELL) {
+    }
+    if (skip_bell && bar->trap_type == TrapType::MMIO_BELL) {
       continue;
     }
 

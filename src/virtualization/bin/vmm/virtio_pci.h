@@ -161,7 +161,7 @@ class VirtioPci : public PciDevice {
   zx_status_t CommonCfgWrite(uint64_t addr, const IoValue& value);
 
   // Handle writes to the notify BAR.
-  zx_status_t NotifyBarWrite(uint64_t addr, const IoValue& value);
+  zx_status_t NotifyBarWrite(uint64_t offset, const IoValue& value);
 
   zx_status_t SetupCaps();
 

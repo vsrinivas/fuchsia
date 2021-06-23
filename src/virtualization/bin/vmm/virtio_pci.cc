@@ -15,16 +15,17 @@
 #include "src/virtualization/bin/vmm/device/config.h"
 #include "src/virtualization/bin/vmm/virtio_device.h"
 
-static constexpr uint8_t kPciBar64BitMultiplier = 2;
+namespace {
 
-static constexpr uint8_t kPciCapTypeVendorSpecific = 0x9;
-static constexpr uint16_t kPciVendorIdVirtio = 0x1af4;
+constexpr uint8_t kPciBar64BitMultiplier = 2;
+
+constexpr uint8_t kPciCapTypeVendorSpecific = 0x9;
+constexpr uint16_t kPciVendorIdVirtio = 0x1af4;
 
 // Common configuration.
-static constexpr size_t kVirtioPciCommonCfgBase = 0;
-static constexpr size_t kVirtioPciCommonCfgSize = 0x38;
-static constexpr size_t kVirtioPciCommonCfgTop =
-    kVirtioPciCommonCfgBase + kVirtioPciCommonCfgSize - 1;
+constexpr size_t kVirtioPciCommonCfgBase = 0;
+constexpr size_t kVirtioPciCommonCfgSize = 0x38;
+constexpr size_t kVirtioPciCommonCfgTop = kVirtioPciCommonCfgBase + kVirtioPciCommonCfgSize - 1;
 static_assert(kVirtioPciCommonCfgSize == sizeof(virtio_pci_common_cfg_t),
               "virtio_pci_common_cfg_t has unexpected size");
 // Virtio 1.0 Section 4.1.4.3.1: offset MUST be 4-byte aligned.
@@ -32,30 +33,30 @@ static_assert(is_aligned(kVirtioPciCommonCfgBase, 4),
               "Virtio PCI common config has illegal alignment");
 
 // Notification configuration.
-static constexpr size_t kVirtioPciNotifyCfgBase = 0;
+constexpr size_t kVirtioPciNotifyCfgBase = 0;
 // Virtio 1.0 Section 4.1.4.4.1: offset MUST be 2-byte aligned.
 static_assert(is_aligned(kVirtioPciNotifyCfgBase, 2),
               "Virtio PCI notify config has illegal alignment");
 
 // Interrupt status configuration.
-static constexpr size_t kVirtioPciIsrCfgBase = 0x38;
-static constexpr size_t kVirtioPciIsrCfgSize = 1;
-static constexpr size_t kVirtioPciIsrCfgTop = kVirtioPciIsrCfgBase + kVirtioPciIsrCfgSize - 1;
+constexpr size_t kVirtioPciIsrCfgBase = 0x38;
+constexpr size_t kVirtioPciIsrCfgSize = 1;
+constexpr size_t kVirtioPciIsrCfgTop = kVirtioPciIsrCfgBase + kVirtioPciIsrCfgSize - 1;
 // Virtio 1.0 Section 4.1.4.5: The offset for the ISR status has no alignment
 // requirements.
 
 // Device-specific configuration.
-static constexpr size_t kVirtioPciDeviceCfgBase = 0x3c;
+constexpr size_t kVirtioPciDeviceCfgBase = 0x3c;
 // Virtio 1.0 Section 4.1.4.6.1: The offset for the device-specific
 // configuration MUST be 4-byte aligned.
 static_assert(is_aligned(kVirtioPciDeviceCfgBase, 4),
               "Virtio PCI notify config has illegal alignment");
 
-static constexpr uint16_t virtio_pci_id(uint16_t virtio_id) {
+constexpr uint16_t virtio_pci_id(uint16_t virtio_id) {
   return static_cast<uint16_t>(virtio_id + 0x1040u);
 }
 
-static constexpr uint32_t virtio_pci_class_code(uint16_t virtio_id) {
+constexpr uint32_t virtio_pci_class_code(uint16_t virtio_id) {
   // See PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section D.
   switch (virtio_id) {
     case VIRTIO_ID_BALLOON:
@@ -84,11 +85,13 @@ static constexpr uint32_t virtio_pci_class_code(uint16_t virtio_id) {
 
 // Virtio 1.0 Section 4.1.2.1: Non-transitional devices SHOULD have a PCI
 // Revision ID of 1 or higher.
-static constexpr uint32_t kVirtioPciRevisionId = 1;
+constexpr uint32_t kVirtioPciRevisionId = 1;
 
-static constexpr uint32_t virtio_pci_device_class(uint16_t virtio_id) {
+constexpr uint32_t virtio_pci_device_class(uint16_t virtio_id) {
   return virtio_pci_class_code(virtio_id) | kVirtioPciRevisionId;
 }
+
+}  // namespace
 
 VirtioPci::VirtioPci(VirtioDeviceConfig* device_config, std::string_view name)
     : PciDevice({

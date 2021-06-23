@@ -141,7 +141,7 @@ class PciDevice {
   }
 
  protected:
-  PciDevice(const Attributes attrs);
+  explicit PciDevice(const Attributes& attrs);
   virtual ~PciDevice() = default;
 
   // Base address registers.
@@ -184,7 +184,7 @@ class PciDevice {
 
 class PciPortHandler : public IoHandler {
  public:
-  PciPortHandler(PciBus* bus);
+  explicit PciPortHandler(PciBus* bus);
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "PCI Bus"; }
@@ -195,7 +195,7 @@ class PciPortHandler : public IoHandler {
 
 class PciEcamHandler : public IoHandler {
  public:
-  PciEcamHandler(PciBus* bus);
+  explicit PciEcamHandler(PciBus* bus);
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "PCI Bus"; }
@@ -206,7 +206,7 @@ class PciEcamHandler : public IoHandler {
 
 class PciRootComplex : public PciDevice {
  public:
-  PciRootComplex(const Attributes attrs) : PciDevice(attrs) {}
+  explicit PciRootComplex(const Attributes attrs) : PciDevice(attrs) {}
 
  private:
   bool HasPendingInterrupt() const override { return false; }

@@ -14,8 +14,8 @@
 
 namespace {
 
-static constexpr uint16_t kPciConfigAddrPortBase = 0;
-static constexpr uint16_t kPciConfigDataPortBase = 4;
+constexpr uint16_t kPciConfigAddrPortBase = 0;
+constexpr uint16_t kPciConfigDataPortBase = 4;
 
 // A simple 4-byte PCI capability containing the id/next fields,
 // and 2 bytes of data.
