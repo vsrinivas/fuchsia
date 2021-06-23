@@ -11,6 +11,8 @@
 #include <string>
 #include <thread>
 
+#include <rapidjson/prettywriter.h>
+#include <rapidjson/stringbuffer.h>
 #include <src/lib/fsl/vmo/strings.h>
 #include <src/lib/fxl/strings/join_strings.h>
 
@@ -45,6 +47,30 @@ void EmplaceDiagnostics(rapidjson::Document document, std::vector<DiagnosticsDat
 }
 
 namespace {
+
+bool AllDigits(const std::string& value) {
+  for (char c : value) {
+    if (!std::isdigit(c)) {
+      return false;
+    }
+  }
+  return !value.empty();
+}
+
+void SortObject(rapidjson::Value* object) {
+  std::sort(object->MemberBegin(), object->MemberEnd(),
+            [](const rapidjson::Value::Member& lhs, const rapidjson::Value::Member& rhs) {
+              auto lhs_name = lhs.name.GetString();
+              auto rhs_name = rhs.name.GetString();
+              if (AllDigits(lhs_name) && AllDigits(rhs_name)) {
+                uint64_t lhs_val = atoll(lhs_name);
+                uint64_t rhs_val = atoll(rhs_name);
+                return lhs_val < rhs_val;
+              } else {
+                return strcmp(lhs_name, rhs_name) < 0;
+              }
+            });
+}
 
 void InnerReadBatches(fuchsia::diagnostics::BatchIteratorPtr ptr,
                       fit::bridge<std::vector<DiagnosticsData>, std::string> done,
@@ -136,6 +162,29 @@ const rapidjson::Value& DiagnosticsData::GetByPath(const std::vector<std::string
   }
 
   return *cur;
+}
+
+std::string DiagnosticsData::PrettyJson() {
+  rapidjson::StringBuffer buffer;
+  rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+  document_.Accept(writer);
+  return buffer.GetString();
+}
+
+void DiagnosticsData::Sort() {
+  std::vector<rapidjson::Value*> pending;
+  auto& object = document_;
+  pending.push_back(&object);
+  while (!pending.empty()) {
+    rapidjson::Value* pending_object = pending.back();
+    pending.pop_back();
+    SortObject(pending_object);
+    for (auto m = pending_object->MemberBegin(); m != pending_object->MemberEnd(); ++m) {
+      if (m->value.IsObject()) {
+        pending.push_back(&m->value);
+      }
+    }
+  }
 }
 
 ArchiveReader::ArchiveReader(fuchsia::diagnostics::ArchiveAccessorPtr archive,

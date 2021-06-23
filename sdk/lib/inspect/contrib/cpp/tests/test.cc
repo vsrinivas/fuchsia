@@ -7,6 +7,8 @@
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
+#include <regex>
+
 #include <gmock/gmock.h>
 #include <rapidjson/pointer.h>
 
@@ -25,6 +27,51 @@ constexpr char kTestComponent1[] =
 constexpr char kTestComponent2[] =
     "fuchsia-pkg://fuchsia.com/archive_reader_integration_tests#meta/"
     "archive_reader_test_app_2.cmx";
+
+const char CMX1_EXPECTED_DATA[] = R"JSON({
+    "data_source": "Inspect",
+    "metadata": {
+        "component_url": "fuchsia-pkg://fuchsia.com/archive_reader_integration_tests#meta/archive_reader_test_app.cmx",
+        "errors": null,
+        "filename": "fuchsia.inspect.Tree",
+        "timestamp": TIMESTAMP
+    },
+    "moniker": "test/archive_reader_test_app.cmx",
+    "payload": {
+        "root": {
+            "option_a": {
+                "value": 10
+            },
+            "option_b": {
+                "value": 20
+            },
+            "version": "v1"
+        }
+    },
+    "version": 1
+})JSON";
+const char CMX2_EXPECTED_DATA[] = R"JSON({
+    "data_source": "Inspect",
+    "metadata": {
+        "component_url": "fuchsia-pkg://fuchsia.com/archive_reader_integration_tests#meta/archive_reader_test_app_2.cmx",
+        "errors": null,
+        "filename": "fuchsia.inspect.Tree",
+        "timestamp": TIMESTAMP
+    },
+    "moniker": "test/archive_reader_test_app_2.cmx",
+    "payload": {
+        "root": {
+            "option_a": {
+                "value": 10
+            },
+            "option_b": {
+                "value": 20
+            },
+            "version": "v1"
+        }
+    },
+    "version": 1
+})JSON";
 
 class ArchiveReaderTest : public sys::testing::TestWithEnvironment {
  protected:
@@ -131,6 +178,35 @@ TEST_F(ArchiveReaderTest, ReadHierarchyWithAlternativeDispatcher) {
 
   EXPECT_STREQ("v1", value[0].content()["root"]["version"].GetString());
   EXPECT_STREQ("v1", value[1].content()["root"]["version"].GetString());
+}
+
+TEST_F(ArchiveReaderTest, Sort) {
+  inspect::contrib::ArchiveReader reader(
+      real_services()->Connect<fuchsia::diagnostics::ArchiveAccessor>(),
+      {cmx1_selector, cmx2_selector});
+
+  ResultType result;
+  executor_.schedule_task(reader
+                              .SnapshotInspectUntilPresent(
+                                  {"archive_reader_test_app.cmx", "archive_reader_test_app_2.cmx"})
+                              .then([&](ResultType& r) { result = std::move(r); }));
+  RunLoopUntil([&] { return !!result; });
+
+  ASSERT_TRUE(result.is_ok()) << "Error: " << result.error();
+
+  auto value = result.take_value();
+  ASSERT_EQ(2lu, value.size());
+
+  std::sort(value.begin(), value.end(),
+            [](auto& a, auto& b) { return a.component_name() < b.component_name(); });
+  value[0].Sort();
+  value[1].Sort();
+
+  std::regex reg("\"timestamp\": \\d+");
+  EXPECT_EQ(CMX1_EXPECTED_DATA,
+            regex_replace(value[0].PrettyJson(), reg, "\"timestamp\": TIMESTAMP"));
+  EXPECT_EQ(CMX2_EXPECTED_DATA,
+            regex_replace(value[1].PrettyJson(), reg, "\"timestamp\": TIMESTAMP"));
 }
 
 }  // namespace

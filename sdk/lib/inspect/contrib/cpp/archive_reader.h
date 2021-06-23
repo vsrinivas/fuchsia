@@ -39,6 +39,19 @@ class DiagnosticsData {
   // Returns the value at the given path in the data contents.
   const rapidjson::Value& GetByPath(const std::vector<std::string>& path) const;
 
+  // Returns the data formatted in json.
+  std::string PrettyJson();
+
+  // Sort properties and children of this node by name, and recursively sort each child.
+  //
+  // This method imposes a canonical ordering on every child value in the hierarchy for purposes of
+  // comparison and output. It does not optimize operations in any way.
+  //
+  // The sorting rule for each of children and property values is as follows:
+  // - If and only if all names match non-negative integral strings, sort numerically.
+  // - Otherwise, sort lexicographically.
+  void Sort();
+
  private:
   // The document wrapped by this container.
   rapidjson::Document document_;
