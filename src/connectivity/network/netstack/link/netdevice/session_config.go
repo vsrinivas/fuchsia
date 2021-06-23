@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netdevice
@@ -47,8 +48,11 @@ type SimpleSessionConfigFactory struct {
 // MakeSessionConfig implements SessionConfigFactory.
 func (c *SimpleSessionConfigFactory) MakeSessionConfig(deviceInfo *network.DeviceInfo) (SessionConfig, error) {
 	bufferLength := DefaultBufferLength
-	if deviceInfo.MaxBufferLength < bufferLength {
+	if bufferLength > deviceInfo.MaxBufferLength {
 		bufferLength = deviceInfo.MaxBufferLength
+	}
+	if bufferLength < deviceInfo.MinRxBufferLength {
+		bufferLength = deviceInfo.MinRxBufferLength
 	}
 
 	config := SessionConfig{

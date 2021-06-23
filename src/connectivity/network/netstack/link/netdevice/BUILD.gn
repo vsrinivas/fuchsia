@@ -30,6 +30,7 @@ go_library("netdevice") {
     "client_test.go",
     "mac_client.go",
     "session_config.go",
+    "session_config_test.go",
   ]
 }
 
