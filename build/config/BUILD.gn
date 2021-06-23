@@ -300,6 +300,9 @@ config("optimize_debug") {
     cflags = [ "-Og" ]
     ldflags = cflags
     rustflags = [ "-Copt-level=1" ]
+  } else if (zircon_toolchain != false) {
+    cflags = [ "-Og" ]
+    ldflags = cflags
   } else {
     configs = [ ":optimize_none" ]
   }
@@ -349,15 +352,29 @@ config("optimize_sanitizer") {
 }
 
 config("optimize_profile") {
-  cflags = [ "-O1" ]
-  ldflags = cflags
-  rustflags = [ "-Copt-level=1" ]
+  if (zircon_toolchain != false) {
+    # For Zircon artifacts, this must always enable optimizations
+    # to ensure userboot.so is compiled with -O2
+    # See https://fxbug.dev/67467 for more context.
+    configs = [ ":optimize_default" ]
+  } else {
+    cflags = [ "-O1" ]
+    ldflags = cflags
+    rustflags = [ "-Copt-level=1" ]
+  }
 }
 
 config("optimize_coverage") {
-  cflags = [ "-O1" ]
-  ldflags = cflags
-  rustflags = [ "-Copt-level=1" ]
+  if (zircon_toolchain != false) {
+    # For Zircon artifacts, this must always enable optimizations
+    # to ensure userboot.so is compiled with -O2
+    # See https://fxbug.dev/67467 for more context.
+    configs = [ ":optimize_default" ]
+  } else {
+    cflags = [ "-O1" ]
+    ldflags = cflags
+    rustflags = [ "-Copt-level=1" ]
+  }
 }
 
 config("default_optimize") {

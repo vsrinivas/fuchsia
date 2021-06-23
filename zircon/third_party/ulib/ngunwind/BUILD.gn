@@ -125,7 +125,7 @@ zx_library("ngunwind") {
 
   if (optimize == "none" || optimize == "debug") {
     # Force -O2 since the library doesn't build with -Og.
-    configs -= [ "//build/config/zircon:default_optimize" ]
+    configs -= [ "//build/config:default_optimize" ]
     configs += [ "//build/config/zircon:optimize_default" ]
   }
 

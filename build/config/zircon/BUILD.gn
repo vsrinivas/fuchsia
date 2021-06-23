@@ -326,67 +326,6 @@ group("default_assert_level_deps") {
   # Implicit dependencies for 'default_assert_level' config.
 }
 
-config("linker_string_merging") {
-  if (current_os == "win") {
-    ldflags = [ "-Wl,/opt:lldtailmerge" ]
-  } else if (current_os != "mac") {
-    ldflags = [ "-Wl,-O2" ]
-  }
-}
-
-# IMPORTANT: //build/config/BUILD.gn also defines a list of optimize_${level}
-# configs, but some of them have slightly different values. Until build
-# unification completes, the configs below should match the Zircon build
-# values instead.
-config("optimize_none") {
-  configs = [ "//build/config:optimize_none" ]
-}
-
-# NOTE: //build/config:optimize_debug is slightly different.
-config("optimize_debug") {
-  cflags = [ "-Og" ]
-  ldflags = cflags
-  rustflags = [ "-Copt-level=1" ]
-}
-
-config("optimize_default") {
-  configs = [ "//build/config:optimize_default" ]
-}
-
-config("optimize_size") {
-  configs = [ "//build/config:optimize_size" ]
-}
-
-# NOTE: //build/config:optimize_speed is slightly different.
-config("optimize_speed") {
-  cflags = [ "-O3" ]
-  ldflags = cflags
-  rustflags = [ "-Copt-level=3" ]
-  configs = [ ":linker_string_merging" ]
-}
-
-config("optimize_sanitizer") {
-  configs = [ "//build/config:optimize_sanitizer" ]
-}
-
-config("optimize_profile") {
-  # NOTE: Unlike //build/config:optimize_profile", this must always enable
-  # optimizations to ensure userboot.so is compiled with -O2
-  # See https://fxbug.dev/67467 for more context.
-  configs = [ "//build/config:optimize_default" ]
-}
-
-config("optimize_coverage") {
-  # NOTE: Unlike //build/config:optimize_coverage", this must always enable
-  # optimizations to ensure userboot.so is compiled with -O2
-  # See https://fxbug.dev/67467 for more context.
-  configs = [ "//build/config:optimize_default" ]
-}
-
-config("default_optimize") {
-  configs = [ ":optimize_${optimize}" ]
-}
-
 config("linker_gc_none") {
   # No linker GC when wholly unoptimized.
 }

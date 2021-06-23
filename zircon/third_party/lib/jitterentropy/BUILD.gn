@@ -17,10 +17,10 @@ zx_library("jitterentropy") {
   # levels. If there is a significant difference in entropy quality,
   # replace the relevant C code by assembly code to protect against future
   # compiler changes.
-  configs -= [ "//build/config/zircon:default_optimize" ]
+  configs -= [ "//build/config:default_optimize" ]
   configs += [
     ":config",
-    "//build/config/zircon:optimize_none",
+    "//build/config:optimize_none",
   ]
 }
 
