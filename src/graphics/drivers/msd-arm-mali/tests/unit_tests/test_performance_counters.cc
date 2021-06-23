@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "address_manager.h"
+#include "fake_connection_owner_base.h"
 #include "mock/mock_bus_mapper.h"
 #include "mock/mock_mmio.h"
 #include "performance_counters.h"
@@ -22,7 +23,7 @@ class FakeOwner : public AddressManager::Owner {
   magma::RegisterIo* register_io_;
 };
 
-class TestConnectionOwner : public MsdArmConnection::Owner {
+class TestConnectionOwner : public FakeConnectionOwnerBase {
  public:
   TestConnectionOwner(AddressManager* manager) : manager_(manager) {}
 

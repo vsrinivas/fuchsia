@@ -20,6 +20,7 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "magma_vendor_queries.h"
+#include "msd_defs.h"
 #include "platform_barriers.h"
 #include "platform_logger.h"
 #include "platform_port.h"
@@ -258,6 +259,7 @@ void MsdArmDevice::InitInspect() {
   last_hang_timeout_ns_ = inspect_.CreateUint("last_hang_timeout_ns", 0);
   events_ = inspect_.CreateChild("events");
   protected_mode_supported_property_ = inspect_.CreateBool("protected_mode_supported", false);
+  memory_pressure_level_property_ = inspect_.CreateUint("memory_pressure_level", 0);
 }
 
 void MsdArmDevice::UpdateProtectedModeSupported() {
@@ -297,6 +299,29 @@ void MsdArmDevice::DeregisterConnection() {
   connection_list_.erase(std::remove_if(connection_list_.begin(), connection_list_.end(),
                                         [](auto& connection) { return connection.expired(); }),
                          connection_list_.end());
+}
+
+void MsdArmDevice::SetMemoryPressureLevel(MagmaMemoryPressureLevel level) {
+  std::vector<std::weak_ptr<MsdArmConnection>> connection_list_copy;
+  {
+    std::lock_guard<std::mutex> lock(connection_list_mutex_);
+    current_memory_pressure_level_ = level;
+    memory_pressure_level_property_.Set(level);
+    connection_list_copy = connection_list_;
+  }
+  // connection_list_mutex_ must be unlocked here because OnMemoryPressureLevelChanged might acquire
+  // it again.
+  size_t released_size = 0;
+  for (auto& connection : connection_list_copy) {
+    auto locked = connection.lock();
+    if (!locked)
+      continue;
+    released_size += locked->OnMemoryPressureLevelChanged();
+  }
+
+  if ((released_size > 0) && (level == MAGMA_MEMORY_PRESSURE_LEVEL_CRITICAL)) {
+    MAGMA_LOG(INFO, "Transitioned to critical, released %ld bytes", released_size);
+  }
 }
 
 void MsdArmDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
@@ -1496,6 +1521,10 @@ magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id
 
 void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {
   MsdArmDevice::cast(device)->DumpStatusToLog();
+}
+
+void msd_device_set_memory_pressure_level(msd_device_t* device, MagmaMemoryPressureLevel level) {
+  MsdArmDevice::cast(device)->SetMemoryPressureLevel(level);
 }
 
 magma_status_t msd_device_get_icd_list(struct msd_device_t* abi_device, uint64_t count,
