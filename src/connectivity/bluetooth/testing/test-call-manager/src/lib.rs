@@ -103,11 +103,13 @@ impl Default for ManagerState {
 }
 
 /// State associated with a single Peer HF device.
-#[derive(Derivative, Default)]
-#[derivative(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug, Default)]
 struct PeerState {
     reported_network: Option<NetworkInformation>,
     network_responder: Option<PeerHandlerWatchNetworkInformationResponder>,
+    // nrec is enabled by default when a peer connects
+    #[derivative(Default(value = "true"))]
     nrec_enabled: bool,
     battery_level: u8,
     speaker_gain: u8,
