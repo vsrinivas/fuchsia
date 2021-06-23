@@ -257,6 +257,15 @@ protocol Flatland {
 
     /// This event is fired whenever a set of one or more [`Present`]s are
     /// presented simultaneously, and are therefore no longer in flight.
+    ///
+    /// This event signifies that the commands enqueued before the [`Present`]
+    /// have taken effect in the scene graph, and are globally visible.
+    ///
+    /// Clients do NOT have to implement a handler for this event for basic
+    /// frame scheduling, unless they explicitly want feedback on prior frame
+    /// presentation. All future frame information is given in the [`OnPresentProcessed`]
+    /// event.
+    ///
     /// TODO(fxbug.dev/63305): remove `num_presents_allowed` from this event.
     -> OnFramePresented(fuchsia.scenic.scheduling.FramePresentedInfo frame_presented_info);
 
