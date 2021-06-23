@@ -131,6 +131,14 @@ zx_status_t zxio_default_isatty(zxio_t* io, bool* tty) {
   return ZX_OK;
 }
 
+zx_status_t zxio_default_get_window_size(zxio_t* io, uint32_t* width, uint32_t* height) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t zxio_default_set_window_size(zxio_t* io, uint32_t width, uint32_t height) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 static constexpr zxio_ops_t zxio_null_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.readv = [](zxio_t* io, const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,

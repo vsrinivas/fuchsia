@@ -398,3 +398,22 @@ zx_status_t zxio_isatty(zxio_t* io, bool* tty) {
   zxio_internal_t* zio = to_internal(io);
   return zio->ops->isatty(io, tty);
 }
+
+zx_status_t zxio_get_window_size(zxio_t* io, uint32_t* width, uint32_t* height) {
+  if (!zxio_is_valid(io)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+  if (width == nullptr || height == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  zxio_internal_t* zio = to_internal(io);
+  return zio->ops->get_window_size(io, width, height);
+}
+
+zx_status_t zxio_set_window_size(zxio_t* io, uint32_t width, uint32_t height) {
+  if (!zxio_is_valid(io)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+  zxio_internal_t* zio = to_internal(io);
+  return zio->ops->set_window_size(io, width, height);
+}

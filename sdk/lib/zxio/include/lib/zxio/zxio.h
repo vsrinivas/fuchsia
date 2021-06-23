@@ -372,9 +372,21 @@ zx_status_t zxio_dirent_iterator_next(zxio_dirent_iterator_t* iterator, zxio_dir
 // the corresponding directory.
 void zxio_dirent_iterator_destroy(zxio_dirent_iterator_t* iterator);
 
+// Terminals
+
 // Return in |tty| whether or not |io| represents a TTY object (should
 // line buffer for stdio, etc).
 zx_status_t zxio_isatty(zxio_t* io, bool* tty);
+
+// Gets the window size in characters for the tty in |io|.
+//
+// Returns ZX_ERR_NOT_SUPPORTED if |io| does not support setting the window size.
+zx_status_t zxio_get_window_size(zxio_t* io, uint32_t* width, uint32_t* height);
+
+// Sets the window size in characters for the tty in |io|.
+//
+// Returns ZX_ERR_NOT_SUPPORTED if |io| does not support setting the window size.
+zx_status_t zxio_set_window_size(zxio_t* io, uint32_t width, uint32_t height);
 
 __END_CDECLS
 

@@ -78,6 +78,8 @@ struct remote : public zxio {
   static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node, zx::eventpair event);
   static zx::status<fdio_ptr> create(zx::vmo vmo, zx::stream stream);
 
+  Errno posix_ioctl(int request, va_list va) override;
+
   zx::status<fdio_ptr> open(const char* path, uint32_t flags, uint32_t mode) override;
   zx_status_t borrow_channel(zx_handle_t* out_borrowed) override;
   void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* signals) override;
@@ -107,17 +109,6 @@ struct dir : public remote {
 
   dir() = default;
   ~dir() override = default;
-};
-
-struct pty : public remote {
-  Errno posix_ioctl(int request, va_list va) override;
-
- protected:
-  friend class fbl::internal::MakeRefCountedHelper<pty>;
-  friend class fbl::RefPtr<pty>;
-
-  pty() = default;
-  ~pty() override = default;
 };
 
 }  // namespace fdio_internal

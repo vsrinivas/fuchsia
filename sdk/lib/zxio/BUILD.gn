@@ -41,6 +41,7 @@ static_library("zxio") {
   ]
   public_deps = [ ":headers" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
     "//zircon/public/lib/fbl",

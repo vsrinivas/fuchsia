@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/zx/channel.h>
@@ -195,6 +196,15 @@ class Remote {
       zx_handle_close(rio_->stream);
       rio_->stream = ZX_HANDLE_INVALID;
     }
+  }
+
+  zx::status<bool> IsATty() {
+    fidl::WireResult result =
+        fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control())).Describe();
+    if (result.status() != ZX_OK) {
+      return zx::error(result.status());
+    }
+    return zx::ok(result.Unwrap()->info.is_tty());
   }
 
  private:
@@ -855,11 +865,62 @@ void zxio_remote_dirent_iterator_destroy(zxio_t* io, zxio_dirent_iterator_t* ite
 
 zx_status_t zxio_remote_isatty(zxio_t* io, bool* tty) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(rio.control())).Describe();
-  if (result.status() != ZX_OK) {
-    return result.status();
+  zx::status result = rio.IsATty();
+  if (!result.is_ok()) {
+    return result.status_value();
   }
-  *tty = result.Unwrap()->info.is_tty();
+  *tty = *result;
+  return ZX_OK;
+}
+
+zx_status_t zxio_remote_get_window_size(zxio_t* io, uint32_t* width, uint32_t* height) {
+  Remote rio(io);
+  zx::status tty_result = rio.IsATty();
+  if (!tty_result.is_ok()) {
+    return tty_result.status_value();
+  }
+  if (!*tty_result) {
+    // Not a tty.
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  fidl::UnownedClientEnd<fuchsia_hardware_pty::Device> device(rio.control());
+  if (!device.is_valid()) {
+    return ZX_ERR_BAD_STATE;
+  }
+  fidl::WireResult result = fidl::WireCall(device).GetWindowSize();
+  if (result.status() != ZX_OK || result->status != ZX_OK) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  *width = result->size.width;
+  *height = result->size.height;
+  return ZX_OK;
+}
+
+zx_status_t zxio_remote_set_window_size(zxio_t* io, uint32_t width, uint32_t height) {
+  Remote rio(io);
+  auto tty_result = rio.IsATty();
+  if (!tty_result.is_ok()) {
+    return tty_result.status_value();
+  }
+  if (!*tty_result) {
+    // Not a tty.
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  fidl::UnownedClientEnd<fuchsia_hardware_pty::Device> device(rio.control());
+  if (!device.is_valid()) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  fuchsia_hardware_pty::wire::WindowSize size = {
+      .width = width,
+      .height = height,
+  };
+
+  auto result = fidl::WireCall(device).SetWindowSize(size);
+  if (result.status() != ZX_OK || result->status != ZX_OK) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   return ZX_OK;
 }
 
@@ -894,6 +955,8 @@ static constexpr zxio_ops_t zxio_remote_ops = []() {
   ops.dirent_iterator_next = zxio_remote_dirent_iterator_next;
   ops.dirent_iterator_destroy = zxio_remote_dirent_iterator_destroy;
   ops.isatty = zxio_remote_isatty;
+  ops.get_window_size = zxio_remote_get_window_size;
+  ops.set_window_size = zxio_remote_set_window_size;
   return ops;
 }();
 

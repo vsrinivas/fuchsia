@@ -65,6 +65,8 @@ zx_status_t zxio_default_dirent_iterator_next(zxio_t* io, zxio_dirent_iterator_t
                                               zxio_dirent_t** out_entry);
 void zxio_default_dirent_iterator_destroy(zxio_t* io, zxio_dirent_iterator_t* iterator);
 zx_status_t zxio_default_isatty(zxio_t* io, bool* tty);
+zx_status_t zxio_default_get_window_size(zxio_t* io, uint32_t* width, uint32_t* height);
+zx_status_t zxio_default_set_window_size(zxio_t* io, uint32_t width, uint32_t height);
 
 // An ops table filled with the default implementations.
 //
@@ -101,6 +103,8 @@ static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .dirent_iterator_next = zxio_default_dirent_iterator_next,
     .dirent_iterator_destroy = zxio_default_dirent_iterator_destroy,
     .isatty = zxio_default_isatty,
+    .get_window_size = zxio_default_get_window_size,
+    .set_window_size = zxio_default_set_window_size,
 };
 
 // Null ------------------------------------------------------------------------

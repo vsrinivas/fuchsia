@@ -313,40 +313,27 @@ uint32_t dir::convert_to_posix_mode(zxio_node_protocols_t protocols, zxio_abilit
          zxio_abilities_to_posix_permissions_for_directory(abilities);
 }
 
-Errno pty::posix_ioctl(int request, va_list va) {
+Errno remote::posix_ioctl(int request, va_list va) {
   switch (request) {
     case TIOCGWINSZ: {
-      fidl::UnownedClientEnd<fpty::Device> device(zxio_remote().control);
-      if (!device.is_valid()) {
+      uint32_t width, height;
+      zx_status_t status = zxio_get_window_size(&zxio_storage().io, &width, &height);
+      if (status != ZX_OK) {
         return Errno(ENOTTY);
       }
-
-      auto result = fidl::WireCall(device).GetWindowSize();
-      if (result.status() != ZX_OK || result->status != ZX_OK) {
-        return Errno(ENOTTY);
-      }
-
       struct winsize size = {
-          .ws_row = static_cast<uint16_t>(result->size.height),
-          .ws_col = static_cast<uint16_t>(result->size.width),
+          .ws_row = static_cast<uint16_t>(height),
+          .ws_col = static_cast<uint16_t>(width),
       };
       struct winsize* out_size = va_arg(va, struct winsize*);
       *out_size = size;
       return Errno(Errno::Ok);
     }
     case TIOCSWINSZ: {
-      fidl::UnownedClientEnd<fpty::Device> device(zxio_remote().control);
-      if (!device.is_valid()) {
-        return Errno(ENOTTY);
-      }
-
       const struct winsize* in_size = va_arg(va, const struct winsize*);
-      fpty::wire::WindowSize size = {};
-      size.width = in_size->ws_col;
-      size.height = in_size->ws_row;
-
-      auto result = fidl::WireCall(device).SetWindowSize(size);
-      if (result.status() != ZX_OK || result->status != ZX_OK) {
+      zx_status_t status =
+          zxio_set_window_size(&zxio_storage().io, in_size->ws_col, in_size->ws_row);
+      if (status != ZX_OK) {
         return Errno(ENOTTY);
       }
       return Errno(Errno::Ok);
