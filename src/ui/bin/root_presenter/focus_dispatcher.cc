@@ -29,13 +29,14 @@ FocusDispatcher::FocusDispatcher(const std::shared_ptr<ServiceDirectory>& svc) {
 
   // Connect to `fuchsia.ui.focus.FocusChainListenerRegistry`, then send it
   // a client-side handle to `fuchsia.ui.focus.FocusChainListener`.
-  focus_chain_listener_registry_ = svc->Connect<FocusChainListenerRegistry>();
-  focus_chain_listener_registry_.set_error_handler([](zx_status_t status) {
+  fidl::InterfacePtr<fuchsia::ui::focus::FocusChainListenerRegistry> registry =
+      svc->Connect<FocusChainListenerRegistry>();
+  registry.set_error_handler([](zx_status_t status) {
     FX_LOGS(WARNING) << "Unable to connect to fuchsia.ui.focus.FocusChainListenerRegistry: "
                      << zx_status_get_string(status);
   });
   auto handle = focus_chain_listeners_.AddBinding(this);
-  focus_chain_listener_registry_->Register(handle.Bind());
+  registry->Register(handle.Bind());  // No longer need the registry, drop the connection.
 }
 
 void FocusDispatcher::OnFocusChange(FocusChain new_focus_chain,

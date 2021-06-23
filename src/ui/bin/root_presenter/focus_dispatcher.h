@@ -39,9 +39,6 @@ class FocusDispatcher : public fuchsia::ui::focus::FocusChainListener {
   // A client-side connection to Controller.
   fidl::InterfacePtr<fuchsia::ui::keyboard::focus::Controller> keyboard_focus_ctl_;
 
-  // A client-side connection to FocusChainListenerRegistry.
-  fidl::InterfacePtr<fuchsia::ui::focus::FocusChainListenerRegistry> focus_chain_listener_registry_;
-
   // A server-side binding to FocusChainListener.
   fidl::BindingSet<fuchsia::ui::focus::FocusChainListener> focus_chain_listeners_;
 };
