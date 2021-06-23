@@ -230,6 +230,7 @@ set up the `--includepath` flag in [`cmc`][cmc] accordingly in IT and OOT
 builds.
 
 For instance, the syslog shard used as an example above might be:
+
 *   Included as follows: `include: [ "syslog/client.shard.cml" ]`.
 *   Found IT under `//sdk/lib/syslog/client.shard.cml`, hence we would configure
     `cmc` IT with `--includepath $FUCHSIA_CHECKOUT/sdk/lib/`.
