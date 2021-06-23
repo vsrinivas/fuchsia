@@ -72,12 +72,12 @@ std::unique_ptr<FilesystemInstance> FxfsFilesystem::Create(RamDevice device,
 
 zx::status<std::unique_ptr<FilesystemInstance>> FxfsFilesystem::Open(
     const TestFilesystemOptions& options) const {
-  auto result = OpenRamNand(options);
+  auto result = OpenRamDevice(options);
   if (result.is_error()) {
     return result.take_error();
   }
-  auto [ram_nand, device_path] = std::move(result).value();
-  return zx::ok(std::make_unique<FxfsInstance>(std::move(ram_nand), std::move(device_path)));
+  auto [ram_device, device_path] = std::move(result).value();
+  return zx::ok(std::make_unique<FxfsInstance>(std::move(ram_device), std::move(device_path)));
 }
 
 }  // namespace fs_test

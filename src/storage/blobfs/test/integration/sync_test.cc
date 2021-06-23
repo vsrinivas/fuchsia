@@ -78,7 +78,7 @@ TEST(SyncNandTest, Sync) {
 
   auto options = BlobfsWithFvmTestParam();
   options.use_ram_nand = true;
-  options.ram_nand_vmo = vmo.vmo().borrow();
+  options.vmo = vmo.vmo().borrow();
   options.device_block_count = 0;  // Uses VMO size.
   options.device_block_size = 8192;
 

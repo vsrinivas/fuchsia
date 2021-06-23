@@ -5,6 +5,7 @@
 #include "ramdisk.h"
 
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
@@ -188,6 +189,7 @@ void Ramdisk::Wake(WakeRequestView request, WakeCompleter::Sync& completer) {
                                              block * block_size_);
         memset(addr, 0xaf, block_size_);
       }
+      zxlogf(INFO, "Discarded blocks: %lu", blocks_written_since_last_flush_.size());
       blocks_written_since_last_flush_.clear();
     }
 

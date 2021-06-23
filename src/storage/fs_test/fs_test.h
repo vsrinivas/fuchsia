@@ -46,10 +46,10 @@ struct TestFilesystemOptions {
 
   std::string description;
   bool use_ram_nand = false;
-  // If use_ram_nand is true, specifies a VMO to be used to back the device.  If supplied, its size
-  // must match the device size (if device_block_count is non-zero), including the extra required
-  // for OOB.
-  zx::unowned_vmo ram_nand_vmo;
+  // If set specifies a VMO to be used to back the device.  If used for ram-nand, Its size must
+  // match the device size (if device_block_count is non-zero), including the extra required for
+  // OOB.
+  zx::unowned_vmo vmo;
   bool use_fvm = false;
 
   // If non-zero, create a dummy FVM partition which has the effect of moving the location of the
@@ -73,6 +73,10 @@ struct TestFilesystemOptions {
 
   // If using ram_nand, the number of writes after which writes should fail.
   uint32_t fail_after;
+
+  // If true, when the ram-disk is disconnected it will discard random writes performed since the
+  // last flush (which is all that any device will guarantee).
+  bool ram_disk_discard_random_after_last_flush = false;
 };
 
 std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options);
@@ -293,8 +297,7 @@ zx::status<> FsMount(const std::string& device_path, const std::string& mount_pa
 // Unmounts using fs/Admin.Shutdown.
 zx::status<> FsAdminUnmount(const std::string& mount_path, const zx::channel& outgoing_directory);
 
-zx::status<std::pair<ramdevice_client::RamNand, std::string>> OpenRamNand(
-    const TestFilesystemOptions& options);
+zx::status<std::pair<RamDevice, std::string>> OpenRamDevice(const TestFilesystemOptions& options);
 
 }  // namespace fs_test
 

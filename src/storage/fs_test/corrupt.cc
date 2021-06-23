@@ -38,7 +38,7 @@ TEST_P(CorruptTest, CorruptTest) {
     options.device_block_size = 8192;
     options.device_block_count = 0;  // Use VMO size.
     options.use_ram_nand = true;
-    options.ram_nand_vmo = zx::unowned_vmo(vmo.vmo());
+    options.vmo = zx::unowned_vmo(vmo.vmo());
     if (options.use_fvm) {
       // Create a dummy FVM partition that shifts the location of the minfs partition such that the
       // offsets being used will hit the second half of the FTL's 8 KiB map pages.
@@ -101,6 +101,67 @@ TEST_P(CorruptTest, CorruptTest) {
     EXPECT_EQ(fs.Unmount().status_value(), ZX_OK);
     EXPECT_EQ(fs.Fsck().status_value(), ZX_OK);
   }
+}
+
+TEST_P(CorruptTest, OutOfOrderWrites) {
+  constexpr int kSize = 768 * 64 * 4096;
+  fzl::OwnedVmoMapper vmo;
+  ASSERT_EQ(vmo.CreateAndMap(kSize, "corrupt-test-vmo"), ZX_OK);
+  memset(vmo.start(), 0xff, kSize);
+
+  TestFilesystemOptions options = GetParam();
+  options.device_block_size = 8192;
+  options.device_block_count = 0;  // Use VMO size.
+  options.vmo = zx::unowned_vmo(vmo.vmo());
+  if (options.use_fvm) {
+    // Create a dummy FVM partition that shifts the location of the minfs partition such that the
+    // offsets being used will hit the second half of the FTL's 8 KiB map pages.
+    options.dummy_fvm_partition_size = 8'388'608;
+  } else {
+    options.use_fvm = true;
+    options.fvm_slice_size = 32'768;
+    options.initial_fvm_slice_count = 5120;  // Leaves 32 MiB for FVM & FTL metadata.
+  }
+  std::random_device random;
+  std::uniform_int_distribution distribution(1300, 2300);
+  options.fail_after = distribution(random);
+  options.ram_disk_discard_random_after_last_flush = true;
+
+  {
+    auto fs_or = TestFilesystem::Create(options);
+    ASSERT_TRUE(fs_or.is_ok()) << fs_or.status_string();
+    TestFilesystem fs = std::move(fs_or).value();
+
+    const std::string file1 = fs.mount_path() + "/file1";
+    const std::string file2 = fs.mount_path() + "/file2";
+    for (;;) {
+      {
+        fbl::unique_fd fd(open(file1.c_str(), O_RDWR | O_CREAT, 0644));
+        if (!fd || write(fd.get(), "hello", 5) != 5 || ftruncate(fd.get(), 0) != 0 ||
+            fsync(fd.get()) != 0 || unlink(file1.c_str()) != 0) {
+          break;
+        }
+      }
+      {
+        fbl::unique_fd fd(open(file2.c_str(), O_RDWR | O_CREAT, 0644));
+        if (!fd || write(fd.get(), "hello", 5) != 5 || ftruncate(fd.get(), 0) != 0 ||
+            fsync(fd.get()) != 0 || unlink(file2.c_str()) != 0) {
+          break;
+        }
+      }
+    }
+
+    ASSERT_EQ(fs.Unmount().status_value(), ZX_OK);
+    ASSERT_EQ(fs.GetRamDisk()->Wake().status_value(), ZX_OK);
+  }
+
+  std::cout << "Remounting" << std::endl;
+  options.fail_after = 0;
+  auto fs_or = TestFilesystem::Open(options);
+  ASSERT_TRUE(fs_or.is_ok()) << fs_or.status_string();
+  TestFilesystem fs = std::move(fs_or).value();
+  EXPECT_EQ(fs.Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs.Fsck().status_value(), ZX_OK);
 }
 
 INSTANTIATE_TEST_SUITE_P(

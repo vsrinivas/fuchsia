@@ -26,6 +26,7 @@ static_library("fs_test") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.fs",
+    "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/storage/fuchsia-fatfs:fatfs",
