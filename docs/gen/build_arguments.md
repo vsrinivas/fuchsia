@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/211acf6eb46ae23d53ddd29537a3b9ca25710c31/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/e04418c829fb146c0d7d893da46b96ab2e91c4f1/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/211acf6eb46ae23d53ddd29537a3b9ca25710c31/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/e04418c829fb146c0d7d893da46b96ab2e91c4f1/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -333,7 +333,7 @@ From //build/board.gni:7
 A list of package labels to include in the 'base' package set. Used by the
 board definition rather than the product definition.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/hwinfo:default_board_config", "//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support"]`
 
 From //boards/arm64.gni:30
 
@@ -1892,13 +1892,13 @@ built and mounted inside the container at /mnt/chromeos.
 
 **Current value (from the default):** `true`
 
-From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:29
+From //src/virtualization/bin/linux_runner/BUILD.gn:29
 
 ### linux_runner_gateway
 
 **Current value (from the default):** `"10.0.0.1"`
 
-From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:24
+From //src/virtualization/bin/linux_runner/BUILD.gn:24
 
 ### linux_runner_ip
 Default values for the guest network configuration.
@@ -1910,27 +1910,27 @@ See //src/virtualization/bin/vmm/device/virtio_net.cc for more details.
 
 **Current value (from the default):** `"10.0.0.2"`
 
-From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:23
+From //src/virtualization/bin/linux_runner/BUILD.gn:23
 
 ### linux_runner_netmask
 
 **Current value (from the default):** `"255.255.255.0"`
 
-From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:25
+From //src/virtualization/bin/linux_runner/BUILD.gn:25
 
 ### linux_runner_stateful_image_path
 Point this to the location of a prebuilt stateful image
 
 **Current value (from the default):** `""`
 
-From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:40
+From //src/virtualization/bin/linux_runner/BUILD.gn:40
 
 ### linux_runner_user_extras
 Point this to the location of external files to be included as extras
 
 **Current value (from the default):** `[]`
 
-From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:37
+From //src/virtualization/bin/linux_runner/BUILD.gn:37
 
 ### linux_runner_volatile_block
 If `true`, all block devices that would normally load as READ_WRITE will
@@ -1939,7 +1939,7 @@ the linux kernel as crashes and panics can sometimes corrupt the images.
 
 **Current value (from the default):** `false`
 
-From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:34
+From //src/virtualization/bin/linux_runner/BUILD.gn:34
 
 ### local_bench
 Used to enable local benchmarking/fine-tuning when running benchmarks
@@ -2058,7 +2058,7 @@ Maximum allowable size for fuchsia.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:36
+From //boards/arm64.gni:37
 
 **Overridden from the default:** `"0"`
 
@@ -2093,7 +2093,7 @@ Maximum allowable size for zedboot.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:37
+From //boards/arm64.gni:38
 
 **Overridden from the default:** `"0"`
 
