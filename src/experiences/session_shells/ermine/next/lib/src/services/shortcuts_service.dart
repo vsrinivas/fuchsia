@@ -6,12 +6,14 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart';
 
 /// Defines a service to manage keyboard shortcuts.
 class ShortcutsService {
+  /// A command handler used by [FlutterDriverExtension] to allow invoking
+  /// custom commands during testing.
+  static Future<String> Function(String?)? flutterDriverHandler;
+
   final ViewRef hostViewRef;
 
   ShortcutsService(this.hostViewRef);
@@ -32,12 +34,10 @@ class ShortcutsService {
     );
 
     // Hook up actions to flutter driver handler.
-    if (TestDefaultBinaryMessengerBinding.instance != null) {
-      MethodChannel('flutter_driver/handler')
-          .setMockMethodCallHandler((call) async {
-        actions[call.method]?.call();
-      });
-    }
+    flutterDriverHandler = (command) async {
+      actions[command]?.call();
+      return '';
+    };
   }
 
   void dispose() {
