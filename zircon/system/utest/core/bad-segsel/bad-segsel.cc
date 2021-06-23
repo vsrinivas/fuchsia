@@ -61,6 +61,24 @@ TEST(BadSegselTest, TestAllGDTSelectors) {
     __asm__ volatile("larl %[selector], %[access]" : [access] "=r"(access) : [selector] "rm"(i));
   }
 }
+
+// The int instruction takes an immediate value, so we have to generate
+// all possible 256 instructions combinations.
+template <int N>
+inline void TestInterrupt();
+
+template <>
+inline void TestInterrupt<-1>() {}
+
+template <int N>
+inline void TestInterrupt() {
+  ASSERT_DEATH([]() { __asm__ volatile("int %0" ::"i"(N)); });
+  TestInterrupt<N - 1>();
+}
+
+// Test that executing "int x" crashes for all numbers in [0, 255].
+TEST(TestInterrupt, TestIntCrashes) { TestInterrupt<255>(); }
+
 }  // namespace
 
 #endif  // defined(__x86_64__)
