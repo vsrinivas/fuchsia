@@ -184,6 +184,7 @@ impl ClientMlme {
             MlmeMsg::StartScan { req } => Ok(self.on_sme_scan(req)),
             MlmeMsg::JoinReq { req } => self.on_sme_join(req),
             MlmeMsg::StatsQueryReq {} => self.on_sme_stats_query(),
+            MlmeMsg::QueryDeviceInfo { tx_id } => self.on_sme_query_device_info(tx_id),
             other_message => match &mut self.sta {
                 None => Err(Error::Status(format!("No client sta."), zx::Status::BAD_STATE)),
                 Some(sta) => Ok(sta
@@ -273,6 +274,14 @@ impl ClientMlme {
         // TODO(fxbug.dev/43456): Implement stats
         let mut resp = stats::empty_stats_query_response();
         self.ctx.device.access_sme_sender(|sender| sender.send_stats_query_resp(&mut resp))
+    }
+
+    fn on_sme_query_device_info(&self, txid: fidl::client::Txid) -> Result<(), Error> {
+        let wlanmac_info = self.ctx.device.wlanmac_info();
+        let mut info = crate::ddk_converter::device_info_from_wlanmac_info(wlanmac_info)?;
+        self.ctx
+            .device
+            .access_sme_sender(|sender| sender.send_query_device_info_response(txid, &mut info))
     }
 
     pub fn on_eth_frame<B: ByteSlice>(&mut self, bytes: B) -> Result<(), Error> {

@@ -129,8 +129,6 @@ zx_status_t Dispatcher::HandleAnyMlmeMessage(fbl::Span<uint8_t> span) {
 
   // TODO(fxbug.dev/44480): Rust MLME message handler does not support transaction ID.
   switch (ordinal) {
-    case fuchsia::wlan::mlme::internal::kMLME_QueryDeviceInfo_Ordinal:
-      return HandleQueryDeviceInfo(hdr->txid);
     case fuchsia::wlan::mlme::internal::kMLME_ListMinstrelPeers_Ordinal:
       return HandleMinstrelPeerList(ordinal, hdr->txid);
     case fuchsia::wlan::mlme::internal::kMLME_GetMinstrelStats_Ordinal:
@@ -158,97 +156,6 @@ zx_status_t Dispatcher::HandleMlmeMessage(fbl::Span<uint8_t> span, uint64_t ordi
     return ZX_ERR_INVALID_ARGS;
   }
   return mlme_->HandleMlmeMsg(*msg);
-}
-
-zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
-  debugfn();
-
-  wlan_mlme::DeviceInfo resp;
-  const wlanmac_info_t& info = device_->GetWlanMacInfo();
-
-  memcpy(resp.mac_addr.data(), info.mac_addr, ETH_MAC_SIZE);
-
-  // mac_role is a bitfield, but only a single value is supported for an
-  // interface
-  switch (info.mac_role) {
-    case WLAN_INFO_MAC_ROLE_CLIENT:
-      resp.role = wlan_mlme::MacRole::CLIENT;
-      break;
-    case WLAN_INFO_MAC_ROLE_AP:
-      resp.role = wlan_mlme::MacRole::AP;
-      break;
-    case WLAN_INFO_MAC_ROLE_MESH:
-      resp.role = wlan_mlme::MacRole::MESH;
-      break;
-    default:
-      // TODO(fxbug.dev/28723): return an error!
-      break;
-  }
-
-  resp.bands.resize(0);
-  for (uint8_t band_idx = 0; band_idx < info.bands_count; band_idx++) {
-    const wlan_info_band_info_t& band_info = info.bands[band_idx];
-    wlan_mlme::BandCapabilities band;
-    band.band_id = wlan::common::BandToFidl(band_info.band);
-    band.rates.resize(0);
-    for (size_t rate_idx = 0; rate_idx < sizeof(band_info.rates); rate_idx++) {
-      if (band_info.rates[rate_idx] != 0) {
-        band.rates.push_back(band_info.rates[rate_idx]);
-      }
-    }
-    const wlan_info_channel_list_t& chan_list = band_info.supported_channels;
-    band.base_frequency = chan_list.base_freq;
-    band.channels.resize(0);
-    for (size_t chan_idx = 0; chan_idx < sizeof(chan_list.channels); chan_idx++) {
-      if (chan_list.channels[chan_idx] != 0) {
-        band.channels.push_back(chan_list.channels[chan_idx]);
-      }
-    }
-
-    band.cap = CapabilityInfo::FromDdk(info.caps).val();
-
-    if (band_info.ht_supported) {
-      auto ht_cap = HtCapabilities::FromDdk(band_info.ht_caps);
-      band.ht_cap = wlan_internal::HtCapabilities::New();
-      static_assert(sizeof(band.ht_cap->bytes) == sizeof(ht_cap));
-      memcpy(band.ht_cap->bytes.data(), &ht_cap, sizeof(ht_cap));
-    }
-    if (band_info.vht_supported) {
-      auto vht_cap = VhtCapabilities::FromDdk(band_info.vht_caps);
-      band.vht_cap = wlan_internal::VhtCapabilities::New();
-      static_assert(sizeof(band.vht_cap->bytes) == sizeof(vht_cap));
-      memcpy(band.vht_cap->bytes.data(), &vht_cap, sizeof(vht_cap));
-    }
-
-    resp.bands.push_back(std::move(band));
-  }
-
-  resp.driver_features.resize(0);
-  if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD) {
-    resp.driver_features.push_back(wlan_common::DriverFeature::SCAN_OFFLOAD);
-  }
-  if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION) {
-    resp.driver_features.push_back(wlan_common::DriverFeature::RATE_SELECTION);
-  }
-  if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
-    resp.driver_features.push_back(wlan_common::DriverFeature::SYNTH);
-  }
-  if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT) {
-    resp.driver_features.push_back(wlan_common::DriverFeature::TX_STATUS_REPORT);
-  }
-  if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_DFS) {
-    resp.driver_features.push_back(wlan_common::DriverFeature::DFS);
-  }
-  if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD) {
-    resp.driver_features.push_back(wlan_common::DriverFeature::PROBE_RESP_OFFLOAD);
-  }
-  resp.driver_features.push_back(wlan_common::DriverFeature::SAE_SME_AUTH);
-  // TODO(fxbug.dev/41640): Remove this flag once FullMAC drivers no longer needs SME.
-  // This flag tells SME that SoftMAC drivers need SME to derive association capabilities.
-  resp.driver_features.push_back(wlan_common::DriverFeature::TEMP_SOFTMAC);
-
-  return SendServiceMsg(device_, &resp,
-                        fuchsia::wlan::mlme::internal::kMLME_QueryDeviceInfo_Ordinal, txid);
 }
 
 zx_status_t Dispatcher::HandleMinstrelPeerList(uint64_t ordinal, zx_txid_t txid) const {

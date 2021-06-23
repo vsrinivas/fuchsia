@@ -40,7 +40,6 @@ class Dispatcher {
  private:
   template <typename Message>
   zx_status_t HandleMlmeMessage(fbl::Span<uint8_t> span, uint64_t ordinal);
-  zx_status_t HandleQueryDeviceInfo(zx_txid_t txid);
   zx_status_t HandleMinstrelPeerList(uint64_t ordinal, zx_txid_t txid) const;
   zx_status_t HandleMinstrelTxStats(fbl::Span<uint8_t> span, uint64_t ordinal,
                                     zx_txid_t txid) const;

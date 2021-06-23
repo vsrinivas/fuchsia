@@ -8,6 +8,7 @@ use {
         SequenceControl, StatusCode,
     },
     crate::TimeUnit,
+    banjo_ddk_hw_wlan_wlaninfo as banjo_ddk_wlaninfo,
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };
@@ -33,6 +34,26 @@ use {
 #[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy, Hash)]
 #[repr(C)]
 pub struct CapabilityInfo(pub u16);
+
+impl From<banjo_ddk_wlaninfo::WlanInfoHardwareCapability> for CapabilityInfo {
+    fn from(info: banjo_ddk_wlaninfo::WlanInfoHardwareCapability) -> Self {
+        let mut cap_info = Self(0);
+        cap_info.set_short_preamble(
+            (info & banjo_ddk_wlaninfo::WlanInfoHardwareCapability::SHORT_PREAMBLE).0 != 0,
+        );
+        cap_info.set_spectrum_mgmt(
+            (info & banjo_ddk_wlaninfo::WlanInfoHardwareCapability::SPECTRUM_MGMT).0 != 0,
+        );
+        cap_info.set_qos((info & banjo_ddk_wlaninfo::WlanInfoHardwareCapability::QOS).0 != 0);
+        cap_info.set_short_slot_time(
+            (info & banjo_ddk_wlaninfo::WlanInfoHardwareCapability::SHORT_SLOT_TIME).0 != 0,
+        );
+        cap_info.set_radio_measurement(
+            (info & banjo_ddk_wlaninfo::WlanInfoHardwareCapability::RADIO_MSMT).0 != 0,
+        );
+        cap_info
+    }
+}
 
 // IEEE Std 802.11-2016, 9.4.1.11, Table Table 9-47
 #[derive(AsBytes, FromBytes, Clone, Copy, Debug, PartialEq, Eq)]
@@ -274,4 +295,24 @@ pub struct DelbaHdr {
     // GCR Group Address element
     // Multi-band
     // TCLAS
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_convert_capability_info() {
+        let info = banjo_ddk_wlaninfo::WlanInfoHardwareCapability::SHORT_PREAMBLE
+            | banjo_ddk_wlaninfo::WlanInfoHardwareCapability::SPECTRUM_MGMT
+            | banjo_ddk_wlaninfo::WlanInfoHardwareCapability::QOS
+            | banjo_ddk_wlaninfo::WlanInfoHardwareCapability::SHORT_SLOT_TIME
+            | banjo_ddk_wlaninfo::WlanInfoHardwareCapability::RADIO_MSMT;
+        let converted_info = CapabilityInfo::from(info);
+        assert!(converted_info.short_preamble());
+        assert!(converted_info.spectrum_mgmt());
+        assert!(converted_info.qos());
+        assert!(converted_info.short_slot_time());
+        assert!(converted_info.radio_measurement());
+    }
 }

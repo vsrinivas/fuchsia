@@ -216,12 +216,23 @@ impl Ap {
         }
     }
 
+    pub fn handle_mlme_query_device_info(&self, txid: fidl::client::Txid) -> Result<(), Error> {
+        let wlanmac_info = self.ctx.device.wlanmac_info();
+        let mut info = crate::ddk_converter::device_info_from_wlanmac_info(wlanmac_info)?;
+        self.ctx
+            .device
+            .access_sme_sender(|sender| sender.send_query_device_info_response(txid, &mut info))
+    }
+
     #[allow(deprecated)] // Allow until main message loop is in Rust.
     pub fn handle_mlme_msg(&mut self, msg: fidl_mlme::MlmeRequestMessage) -> Result<(), Error> {
         match msg {
             fidl_mlme::MlmeRequestMessage::StartReq { req } => self.handle_mlme_start_req(req),
             fidl_mlme::MlmeRequestMessage::StopReq { req } => self.handle_mlme_stop_req(req),
             fidl_mlme::MlmeRequestMessage::SetKeysReq { req } => self.handle_mlme_setkeys_req(req),
+            fidl_mlme::MlmeRequestMessage::QueryDeviceInfo { tx_id } => {
+                self.handle_mlme_query_device_info(tx_id)
+            }
             fidl_mlme::MlmeRequestMessage::AuthenticateResp { resp } => {
                 self.bss.as_mut().ok_or_bss_err()?.handle_mlme_auth_resp(&mut self.ctx, resp)
             }
