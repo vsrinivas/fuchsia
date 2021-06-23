@@ -887,3 +887,13 @@ variant("static-pie-link") {
     "-Wl,--no-dynamic-linker",
   ]
 }
+
+# Disallow C++ static initializers in functions that require runtime init.
+config("forbid-guard-variables") {
+  if (!is_gcc) {
+    cflags_cc = [
+      "-Xclang",
+      "-fforbid-guard-variables",
+    ]
+  }
+}
