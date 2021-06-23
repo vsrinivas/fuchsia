@@ -32,7 +32,7 @@ use {
     std::convert::TryInto,
     std::fmt::Debug,
     std::sync::Arc,
-    tracing::{info, warn},
+    tracing::{error, info, warn},
 };
 
 // This lets us mock out the ArchiveReader in tests
@@ -341,7 +341,12 @@ pub async fn exec_server() -> Result<()> {
     fs.dir("svc").add_fidl_service(move |req| {
         let sc = sc1.clone();
         fasync::Task::local(async move {
-            sc.clone().serve_stream(req).map(|_| ()).await;
+            match sc.clone().serve_stream(req).await {
+                Ok(()) => {}
+                Err(e) => {
+                    error!(%e, "error encountered while serving stream");
+                }
+            }
         })
         .detach();
     });

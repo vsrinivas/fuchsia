@@ -19,6 +19,7 @@ use {
         ArchiveIteratorMarker, BridgeStreamParameters, DiagnosticsData,
         RemoteDiagnosticsBridgeMarker,
     },
+    fidl_fuchsia_diagnostics::ClientSelectorConfiguration,
     futures::{StreamExt, TryFutureExt},
     selectors::parse_selector,
     std::convert::TryInto,
@@ -375,6 +376,7 @@ impl Logger {
         let params = BridgeStreamParameters {
             stream_mode: Some(fidl_fuchsia_diagnostics::StreamMode::SnapshotThenSubscribe),
             data_type: Some(fidl_fuchsia_diagnostics::DataType::Logs),
+            client_selector_configuration: Some(ClientSelectorConfiguration::SelectAll(true)),
             ..BridgeStreamParameters::EMPTY
         };
         let _ = log_proxy
