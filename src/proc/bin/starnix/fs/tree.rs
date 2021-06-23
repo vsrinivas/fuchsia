@@ -106,14 +106,14 @@ impl FsNode {
         Ok(node)
     }
 
-    fn component_lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+    pub fn component_lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
         let node = self.get_or_create_empty_child(name.to_vec());
         node.initialize(|name| self.ops().lookup(name))?;
         Ok(node)
     }
 
     #[cfg(test)]
-    fn mkdir(self: &FsNodeHandle, name: FsString) -> Result<FsNodeHandle, Errno> {
+    pub fn mkdir(self: &FsNodeHandle, name: FsString) -> Result<FsNodeHandle, Errno> {
         let node = self.get_or_create_empty_child(name);
         let exists = node.initialize(|name| self.ops().mkdir(name))?;
         if exists {
@@ -193,27 +193,17 @@ impl Drop for FsNode {
     }
 }
 
-struct TmpfsDirectory;
-
-impl FsNodeOps for TmpfsDirectory {
-    fn mkdir(&self, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
-        Ok(Box::new(Self))
-    }
-    fn open(&self) -> Result<Box<dyn FileOps>, Errno> {
-        Err(ENOSYS)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
 
     use crate::devices::*;
+    use crate::fs::tmp::TmpfsDirectory;
 
     #[test]
     fn test_tmpfs() {
         let tmpfs = AnonNodeDevice::new(0);
-        let root = FsNode::new_root(TmpfsDirectory {}, tmpfs);
+        let root = FsNode::new_root(TmpfsDirectory, tmpfs);
         let usr = root.mkdir(b"usr".to_vec()).unwrap();
         let _etc = root.mkdir(b"etc".to_vec()).unwrap();
         let _usr_bin = usr.mkdir(b"bin".to_vec()).unwrap();

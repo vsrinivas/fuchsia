@@ -6,12 +6,14 @@ mod anon_node;
 mod fd;
 mod file_system;
 mod fuchsia;
-pub mod pipe;
-pub mod syscalls;
+mod namespace;
 mod tree;
-
 pub use self::fuchsia::*;
 pub use anon_node::*;
 pub use fd::*;
 pub use file_system::*;
 pub use tree::*;
+
+pub mod pipe;
+pub mod syscalls;
+pub mod tmp;
