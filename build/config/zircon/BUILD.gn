@@ -478,22 +478,6 @@ config("icf") {
   }
 }
 
-config("exceptions") {
-  configs = [ "//build/config:exceptions" ]
-}
-
-config("no_exceptions") {
-  configs = [ "//build/config:no_exceptions" ]
-}
-
-config("rtti") {
-  configs = [ "//build/config:rtti" ]
-}
-
-config("no_rtti") {
-  configs = [ "//build/config:no_rtti" ]
-}
-
 config("no_threadsafe_statics") {
   cflags_cc = [ "-fno-threadsafe-statics" ]
   cflags_objcc = cflags_cc
@@ -820,7 +804,7 @@ config("standalone") {
     ]
   }
 
-  configs = [ "//build/config/zircon:no_exceptions" ]
+  configs = [ "//build/config:no_exceptions" ]
 }
 
 # Statically linked posititon independent executable.

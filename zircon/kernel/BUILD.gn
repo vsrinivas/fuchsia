@@ -300,7 +300,7 @@ if (is_kernel) {
       ]
     }
 
-    configs = [ "//build/config/zircon:no_exceptions" ]
+    configs = [ "//build/config:no_exceptions" ]
   }
 
   config("warnings") {

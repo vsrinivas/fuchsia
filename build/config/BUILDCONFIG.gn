@@ -396,6 +396,8 @@ if (zircon_toolchain == false) {
     "//build/config:default_debuginfo",
     "//build/config:default_linker_gc",
     "//build/config:default_optimize",
+    "//build/config:no_exceptions",
+    "//build/config:no_rtti",
     "//build/config/zircon:compiler",
     "//build/config/zircon:language",
     "//build/config/zircon:machine",
@@ -406,8 +408,6 @@ if (zircon_toolchain == false) {
     "//build/config/zircon:default_include_dirs",
     "//build/config/zircon:default_frame_pointers",
     "//build/config/zircon:default_template_backtrace_limit",
-    "//build/config/zircon:no_exceptions",
-    "//build/config/zircon:no_rtti",
     "//build/config/zircon:thread_safety_annotations",
     "//build/config/zircon:warn-implicit-fallthrough",
     "//build/config/zircon:visibility_hidden",
@@ -428,11 +428,7 @@ if (zircon_toolchain == false) {
   # until build unification completes and the latter can be removed.
   # TODO(fxbug.dev/60410): Remove this after build unification.
   _remove_common_configs = toolchain_variant.remove_common_configs
-  foreach(_config,
-          [
-            "icf",
-            "no_rtti",
-          ]) {
+  foreach(_config, [ "icf" ]) {
     _config_label = "//build/config:" + _config
     if (_remove_common_configs + [ _config_label ] - [ _config_label ] !=
         _remove_common_configs) {
