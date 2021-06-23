@@ -18,7 +18,6 @@ go_library("netdevice") {
     "//src/connectivity/network/netstack:gen/netstack",
     "//src/connectivity/network/netstack/link",
     "//src/connectivity/network/netstack/link/fifo",
-    "//src/connectivity/network/netstack/link/fifo/testutil",
     "//src/connectivity/network/netstack/testutil",
     "//src/lib/component",
     "//src/lib/syslog/go",

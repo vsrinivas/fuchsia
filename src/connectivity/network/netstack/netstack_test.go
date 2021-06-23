@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
@@ -32,7 +33,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo/testutil"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth/testutil"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 	"go.fuchsia.dev/fuchsia/src/lib/component"

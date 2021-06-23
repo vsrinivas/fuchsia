@@ -11,12 +11,12 @@ go_library("eth") {
   name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 
   deps = [
+    "testutil",
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",
     "//src/connectivity/network/netstack:gen/netstack",
     "//src/connectivity/network/netstack/link",
     "//src/connectivity/network/netstack/link/fifo",
-    "//src/connectivity/network/netstack/link/fifo/testutil",
     "//src/connectivity/network/netstack/testutil",
     "//src/lib/syslog/go",
     "//third_party/golibs:github.com/google/go-cmp",

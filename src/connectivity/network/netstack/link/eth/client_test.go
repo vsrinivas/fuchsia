@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package eth_test
@@ -19,8 +20,8 @@ import (
 	eth_gen "gen/netstack/link/eth"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
+	fifotestutil "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth/testutil"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
-	fifotestutil "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo/testutil"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/testutil"
 
 	fidlethernet "fidl/fuchsia/hardware/ethernet"

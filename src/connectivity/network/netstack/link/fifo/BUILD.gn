@@ -10,7 +10,6 @@ go_library("fifo") {
   name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
 
   deps = [
-    "testutil",
     "//third_party/golibs:go.uber.org/multierr",
     "//third_party/golibs:gvisor.dev/gvisor",
   ]
