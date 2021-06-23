@@ -16,7 +16,6 @@
 #include "zxio.h"
 
 namespace fio = fuchsia_io;
-namespace fpty = fuchsia_hardware_pty;
 namespace fsocket = fuchsia_posix_socket;
 namespace fdevice = fuchsia_device;
 

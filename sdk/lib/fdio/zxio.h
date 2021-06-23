@@ -5,7 +5,6 @@
 #ifndef LIB_FDIO_ZXIO_H_
 #define LIB_FDIO_ZXIO_H_
 
-#include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <lib/zxio/inception.h>
 
 #include "internal.h"

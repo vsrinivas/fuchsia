@@ -4,7 +4,6 @@
 
 #include "zxio.h"
 
-#include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
@@ -24,7 +23,6 @@
 #include "fdio_unistd.h"
 
 namespace fio = fuchsia_io;
-namespace fpty = fuchsia_hardware_pty;
 
 namespace fdio_internal {
 

@@ -5,7 +5,6 @@
 #ifndef LIB_FDIO_INTERNAL_H_
 #define LIB_FDIO_INTERNAL_H_
 
-#include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
