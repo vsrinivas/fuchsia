@@ -195,7 +195,7 @@ group("package_deps") {
     "//src/experiences/benchmarks/bin/scroll_flutter:scroll-flutter",
 
     # This is used by storage_benchmarks_test
-    "//garnet/bin/odu:odu",
+    "//src/storage/bin/odu:odu",
   ]
 }
 

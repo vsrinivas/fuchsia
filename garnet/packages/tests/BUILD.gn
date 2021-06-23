@@ -27,8 +27,6 @@ group("all") {
     "//garnet/bin/insntrace/tests",
     "//garnet/bin/ktrace_provider:ktrace_provider_tests",
     "//garnet/bin/log_listener:tests",
-    "//garnet/bin/odu:odu_tests",
-    "//garnet/bin/odu:odu_tests($host_toolchain)",
     "//garnet/bin/perfcompare:tests",
     "//garnet/bin/run/test",
     "//garnet/bin/run_test_component:tests",
