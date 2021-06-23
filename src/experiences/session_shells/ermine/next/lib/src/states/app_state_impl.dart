@@ -142,12 +142,12 @@ class AppStateImpl with Disposable implements AppState {
   String get buildVersion => startupService.buildVersion;
 
   void setFocusToShellView() {
-    focusService.moveFocus(startupService.hostView);
+    setFocus(startupService.hostView);
   }
 
   void setFocusToChildView() {
     if (views.isNotEmpty) {
-      focusService.moveFocus(topView.value.view);
+      setFocus(topView.value.view);
     }
   }
 
@@ -232,27 +232,35 @@ class AppStateImpl with Disposable implements AppState {
 
   late final Observable<ViewHandle> _focusedView;
   void _onFocusMoved(ViewHandle viewHandle) {
-    // Only host and child view refs are valid.
-    if (viewHandle == startupService.hostView ||
-        views.any((view) => viewHandle == view.view)) {
-      runInAction(() {
-        _focusedView.value = viewHandle;
+    runInAction(() {
+      _focusedView.value = viewHandle;
 
-        if (viewHandle == startupService.hostView) {
-          // Start SettingsState refresh.
-          settingsState.start();
-        } else {
-          overlayVisibility.value = false;
+      if (viewHandle == startupService.hostView) {
+        // Start SettingsState refresh.
+        settingsState.start();
+      } else {
+        overlayVisibility.value = false;
 
-          // Stop SettingsState refresh.
-          settingsState.stop();
+        // Stop SettingsState refresh.
+        settingsState.stop();
 
-          // If an app view has focus, bring it to the top.
-          final view = views.firstWhere((view) => viewHandle == view.view);
-          topView.value = view;
+        // If an app view has focus, bring it to the top.
+        for (final view in views) {
+          if (viewHandle == view.view) {
+            topView.value = view;
+            break;
+          }
         }
-      });
-    }
+      }
+    });
+    //}
+  }
+
+  void setFocus(ViewHandle view) async {
+    focusService.moveFocus(view);
+    // TODO(http://fxb/79463): Immediately update the local UI state because
+    // linux based apps do not respond to requestFocus correctly.
+    _onFocusMoved(view);
   }
 
   bool _onViewPresented(ViewState viewState) {
@@ -266,7 +274,7 @@ class AppStateImpl with Disposable implements AppState {
     // Focus on view when it is ready.
     view.reactions.add(reaction<bool>((_) => view.ready.value, (ready) {
       if (ready && view == topView.value) {
-        focusService.moveFocus(view.view);
+        setFocus(view.view);
       }
     }));
 
@@ -292,6 +300,12 @@ class AppStateImpl with Disposable implements AppState {
       views.remove(view);
       focusService.removeView(view.view);
       view.dispose();
+
+      // TODO(http://fxb/79463): If there are no more views, set focus to host
+      // view. Linux views, when closed, don't cause updates to the focus chain.
+      if (views.isEmpty) {
+        setFocusToShellView();
+      }
     });
   }
 
