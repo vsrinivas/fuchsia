@@ -1795,7 +1795,7 @@ mod tests {
         ActionSet::register(a_info.component.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        &a_info.check_is_shut_down(&test.runner).await;
+        a_info.check_is_shut_down(&test.runner).await;
     }
 
     #[fuchsia::test]
