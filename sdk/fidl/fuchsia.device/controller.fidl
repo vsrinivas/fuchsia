@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.device;
 
 using zx;
+using fuchsia.io;
 using fuchsia.hardware.power.statecontrol;
 
 /// Maxmium length for a device name
@@ -25,20 +25,20 @@ const uint32 MIN_DEVICE_PERFORMANCE_STATES = 1; // Fully performant state
 
 /// Signal that will be active on a device event handle if the device's read() method
 /// will return data.
-const uint32 DEVICE_SIGNAL_READABLE = 0x01000000; // ZX_USER_SIGNAL_0
+const uint32 DEVICE_SIGNAL_READABLE = fuchsia.io.DEVICE_SIGNAL_READABLE;
 /// Signal that will be active on a device event handle if the device has some out-of-band
 /// mechanism that needs attention.
 /// This is primarily used by the PTY support.
-const uint32 DEVICE_SIGNAL_OOB = 0x02000000; // ZX_USER_SIGNAL_1
+const uint32 DEVICE_SIGNAL_OOB = fuchsia.io.DEVICE_SIGNAL_OOB;
 /// Signal that will be active on a device event handle if the device's write() method
 /// will accept data.
-const uint32 DEVICE_SIGNAL_WRITABLE = 0x04000000; // ZX_USER_SIGNAL_2
+const uint32 DEVICE_SIGNAL_WRITABLE = fuchsia.io.DEVICE_SIGNAL_WRITABLE;
 /// Signal that will be active on a device event handle if the device has encountered an error.
 /// This is primarily used by the PTY support.
-const uint32 DEVICE_SIGNAL_ERROR = 0x08000000; // ZX_USER_SIGNAL_3
+const uint32 DEVICE_SIGNAL_ERROR = fuchsia.io.DEVICE_SIGNAL_ERROR;
 /// Signal that will be active on a device event handle if the device has been disconnected.
 /// This is primarily used by the PTY support.
-const uint32 DEVICE_SIGNAL_HANGUP = 0x10000000; // ZX_USER_SIGNAL_4
+const uint32 DEVICE_SIGNAL_HANGUP = fuchsia.io.DEVICE_SIGNAL_HANGUP;
 
 enum DevicePowerState : uint8 {
     /// Mandatory Working state. Device is fully functional, can take I/O,

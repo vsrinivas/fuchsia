@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
@@ -17,19 +16,12 @@
 
 namespace fio = fuchsia_io;
 namespace fsocket = fuchsia_posix_socket;
-namespace fdevice = fuchsia_device;
 
 static_assert(FDIO_CHUNK_SIZE >= PATH_MAX, "FDIO_CHUNK_SIZE must be large enough to contain paths");
 
 static_assert(fio::wire::kVmoFlagRead == ZX_VM_PERM_READ, "Vmar / Vmo flags should be aligned");
 static_assert(fio::wire::kVmoFlagWrite == ZX_VM_PERM_WRITE, "Vmar / Vmo flags should be aligned");
 static_assert(fio::wire::kVmoFlagExec == ZX_VM_PERM_EXECUTE, "Vmar / Vmo flags should be aligned");
-
-static_assert(fio::wire::kDeviceSignalReadable == fdevice::wire::kDeviceSignalReadable);
-static_assert(fio::wire::kDeviceSignalOob == fdevice::wire::kDeviceSignalOob);
-static_assert(fio::wire::kDeviceSignalWritable == fdevice::wire::kDeviceSignalWritable);
-static_assert(fio::wire::kDeviceSignalError == fdevice::wire::kDeviceSignalError);
-static_assert(fio::wire::kDeviceSignalHangup == fdevice::wire::kDeviceSignalHangup);
 
 zx_status_t fdio_validate_path(const char* path, size_t* out_length) {
   if (path == nullptr) {
