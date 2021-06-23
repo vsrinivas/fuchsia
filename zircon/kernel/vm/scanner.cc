@@ -62,7 +62,7 @@ KCOUNTER(zero_scan_pages_deduped, "vm.scanner.zero_scan.pages_deduped")
 void scanner_print_stats(zx_duration_t time_till_queue_rotate) {
   uint64_t zero_pages = VmObject::ScanAllForZeroPages(false);
   printf("[SCAN]: Found %lu zero pages across all of memory\n", zero_pages);
-  PageQueues::Counts queue_counts = pmm_page_queues()->DebugQueueCounts();
+  PageQueues::Counts queue_counts = pmm_page_queues()->QueueCounts();
   for (size_t i = 0; i < PageQueues::kNumPagerBacked; i++) {
     printf("[SCAN]: Found %lu user-pager backed pages in queue %zu\n", queue_counts.pager_backed[i],
            i);

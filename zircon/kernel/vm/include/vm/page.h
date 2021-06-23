@@ -13,6 +13,7 @@
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
 
+#include <fbl/atomic_ref.h>
 #include <ktl/atomic.h>
 #include <ktl/type_traits.h>
 #include <vm/page_state.h>
@@ -41,30 +42,21 @@ struct vm_page {
 
       // offset 0x28
 
-      // The rotation generation where the page would be in the oldest pager-backed queue when
-      // merging occurs. It is only significant for pages in pager-backed queues to determine which
-      // page counter to update after a rotation.
-      uint32_t pager_queue_merge_rotation_priv;
-
-      // offset 0x2c
-
-      // Identifies which queue this page was last added to. This value might be incorrect for pages
-      // that are in the oldest pager-backed queue when queue merging occurrs. This can be detected
-      // by comparing the page's merge rotation to the current rotation generation.
+      // Identifies which queue this page is in.
       uint8_t page_queue_priv;
 
-      // offset 0x2d
+      // offset 0x29
 
       void* get_object() const { return object_priv; }
       void set_object(void* obj) { object_priv = obj; }
       uint64_t get_page_offset() const { return page_offset_priv; }
       void set_page_offset(uint64_t page_offset) { page_offset_priv = page_offset; }
-      uint32_t get_pager_queue_merge_rotation() const { return pager_queue_merge_rotation_priv; }
-      void set_pager_queue_merge_rotation(uint32_t pager_queue_merge_rotation) {
-        pager_queue_merge_rotation_priv = pager_queue_merge_rotation;
+      fbl::atomic_ref<uint8_t> get_page_queue_ref() {
+        return fbl::atomic_ref<uint8_t>(page_queue_priv);
       }
-      uint8_t get_page_queue() const { return page_queue_priv; }
-      void set_page_queue(uint8_t page_queue) { page_queue_priv = page_queue; }
+      fbl::atomic_ref<const uint8_t> get_page_queue_ref() const {
+        return fbl::atomic_ref<const uint8_t>(page_queue_priv);
+      }
 
 #define VM_PAGE_OBJECT_PIN_COUNT_BITS 5
 #define VM_PAGE_OBJECT_MAX_PIN_COUNT ((1ul << VM_PAGE_OBJECT_PIN_COUNT_BITS) - 1)
@@ -88,16 +80,16 @@ struct vm_page {
     } __PACKED object;  // attached to a vm object
   };
 
-  // offset 0x2e
+  // offset 0x2a
 
   // logically private; use |state()| and |set_state()|
   ktl::atomic<vm_page_state> state_priv;
 
-  // offset 0x2f
+  // offset 0x2b
 
   // This padding is inserted here to make sizeof(vm_page) a multiple of 8 and help validate that
   // all commented offsets were indeed correct.
-  char padding;
+  char padding[5];
 
   // helper routines
   bool is_free() const { return state() == vm_page_state::FREE; }

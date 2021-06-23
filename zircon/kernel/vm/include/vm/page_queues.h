@@ -40,13 +40,41 @@ class PageQueues {
   // slightly old and very old is more pronounced.
   static constexpr size_t kNumPagerBacked = 4;
 
-  static_assert(fbl::is_pow2(kNumPagerBacked), "kNumPagerBacked must be a power of 2!");
-  static_assert(kNumPagerBacked > 2, "kNumPagerBacked must be greater than 2!");
+  // Currently define a single queue, the MRU, as active. This needs to be increased to at least 2
+  // in the future when we want to track ratios of active and inactive sets.
+  static constexpr size_t kNumActiveQueues = 1;
+
+  static_assert(kNumPagerBacked > kNumActiveQueues, "Needs to be at least one non-active queue");
 
   PageQueues();
   ~PageQueues();
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(PageQueues);
+
+  void MarkAccessed(vm_page_t* page) {
+    auto queue_ref = page->object.get_page_queue_ref();
+    uint8_t old_gen = queue_ref.load(fbl::memory_order_relaxed);
+    // Between loading the mru_gen and finally storing it in the queue_ref it's possible for our
+    // calculated target_queue to become invalid. This is extremely unlikely as it would require
+    // us to stall for long enough for the lru_gen to pass this point, but if it does happen then
+    // ProcessLruQueues will notice our queue is invalid and correct our age to be that of lru_gen.
+    const uint32_t target_queue = mru_gen_to_queue();
+    do {
+      // If we ever find old_gen to not be in the pager backed range then this means the page has
+      // either been racily removed from, or was never in, the pager backed queue. In which case we
+      // can return as there's nothing to be marked accessed.
+      // We check against the the Inactive queue and not the base queue so that accessing a page can
+      // move it from the inactive list into the LRU queues. To keep this case efficient we require
+      // that the inactive queue be directly before the LRU queues.
+      static_assert(PageQueuePagerBackedInactive + 1 == PageQueuePagerBackedBase);
+      if (old_gen < PageQueuePagerBackedInactive) {
+        return;
+      }
+    } while (!queue_ref.compare_exchange_weak(old_gen, static_cast<uint8_t>(target_queue),
+                                              fbl::memory_order_relaxed));
+    page_queue_counts_[old_gen].fetch_sub(1, ktl::memory_order_relaxed);
+    page_queue_counts_[target_queue].fetch_add(1, ktl::memory_order_relaxed);
+  }
 
   // Place page in the wired queue. Must not already be in a page queue.
   void SetWired(vm_page_t* page);
@@ -90,13 +118,12 @@ class PageQueues {
   // when needed.
   Lock<CriticalMutex>* get_lock() TA_RET_CAP(lock_) { return &lock_; }
 
-  // Rotates the pager backed queues such that all the pages in queue J get moved to queue J+1.
-  // This leaves queue 0 empty and the last queue (kNumPagerBacked - 1) has both its old contents
-  // and gains the contents of the queue before it.
-  // That is given 4 queues each with one page:
-  // {[a], [b], [c], [d]}
-  // After rotation they will be
-  // {[], [a], [b], [d,c]}
+  // Rotates the pager backed queues to perform aging. Every existing queue is now considered to be
+  // one epoch older. To achieve these two things are done:
+  //   1. A new queue, representing the current epoch, needs to be allocated to put pages that get
+  //      accessed from here into. This just involves incrementing the MRU generation.
+  //   2. As there is a limited number of page queues 'allocating' one might involve cleaning up an
+  //      old queue. See the description of ProcessLruQueue for how this process works.
   void RotatePagerBackedQueues();
 
   // Used to represent and return page backlink information acquired whilst holding the page queue
@@ -117,12 +144,14 @@ class PageQueues {
   // (see VmoBacklink for more details).
   ktl::optional<VmoBacklink> PopUnswappableZeroFork();
 
-  // Looks at the pager_backed queues from highest down to |lowest_queue| and returns backlink
-  // information of the first page found. If no page was found a nullopt is returned, otherwise if
+  // Looks at the pager_backed queues and returns backlink information of the first page found. The
+  // queues themselves are walked from the current LRU queue up to the queue that is at most
+  // |lowest_queue| epochs from the most recent. |lowest_queue| therefore represents the youngest
+  // age that would be accepted. If no page was found a nullopt is returned, otherwise if
   // it has_value the vmo field may be null to indicate that the vmo is running its destructor (see
   // VmoBacklink for more details). If a page is returned its location in the pager_backed queue is
   // not modified.
-  ktl::optional<VmoBacklink> PeekPagerBacked(size_t lowest_queue) const;
+  ktl::optional<VmoBacklink> PeekPagerBacked(size_t lowest_queue);
 
   // Helper struct to group pager-backed queue length counts returned by GetPagerQueueCounts.
   struct PagerCounts {
@@ -131,11 +160,10 @@ class PageQueues {
     size_t oldest = 0;
   };
 
-  // Returns pager-backed queue counts. Called from the zx_object_get_info() syscall.
-  // Performs O(n) traversal of the pager-backed queues.
+  // Returns just the pager-backed queue counts. Called from the zx_object_get_info() syscall.
   PagerCounts GetPagerQueueCounts() const;
 
-  // Helper struct to group queue length counts returned by DebugQueueCounts.
+  // Helper struct to group queue length counts returned by QueueCounts.
   struct Counts {
     ktl::array<size_t, kNumPagerBacked> pager_backed = {0};
     size_t pager_backed_inactive = 0;
@@ -152,10 +180,11 @@ class PageQueues {
     bool operator!=(const Counts& other) const { return !(*this == other); }
   };
 
-  // These functions are marked debug as they perform O(n) traversals of the queues and will hold
-  // the lock for the entire time. As such they should only be used for tests or instrumented
-  // debugging.
-  Counts DebugQueueCounts() const;
+  Counts QueueCounts() const;
+
+  // These query functions are marked Debug as it is generally a racy way to determine a pages state
+  // and these are exposed for the purpose of writing tests or asserts against the pagequeue.
+
   // This takes an optional output parameter that, if the function returns true, will contain the
   // index of the queue that the page was in.
   bool DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue = nullptr) const;
@@ -166,102 +195,145 @@ class PageQueues {
   bool DebugPageIsWired(const vm_page_t* page) const;
 
  private:
-  static constexpr size_t kNewestIndex = 0;
-  static constexpr size_t kOldestIndex = kNumPagerBacked - 1;
-  static constexpr size_t kPagerQueueIndexMask = kNumPagerBacked - 1;
-
-  // Specifies the indices of the page queue counters.
-  enum PageQueue : uint8_t {
+  // Specifies the indices for both the page_queues_ and the page_queue_counts_
+  enum PageQueue : uint32_t {
     PageQueueNone = 0,
     PageQueueUnswappable,
     PageQueueWired,
     PageQueueUnswappableZeroFork,
     PageQueuePagerBackedInactive,
     PageQueuePagerBackedBase,
-    PageQueueEntries = PageQueuePagerBackedBase + kNumPagerBacked,
+    PageQueuePagerBackedLast = PageQueuePagerBackedBase + kNumPagerBacked - 1,
+    PageQueueNumQueues,
   };
 
   // Ensure that the pager-backed queue counts are always at the end.
-  static_assert(PageQueuePagerBackedBase + kNumPagerBacked == PageQueueEntries);
+  static_assert(PageQueuePagerBackedLast + 1 == PageQueueNumQueues);
 
-  static constexpr bool is_pager_backed(PageQueue value) {
-    return value >= PageQueuePagerBackedBase;
+  // The page queue index, unlike the full generation count, needs to be able to fit inside a
+  // uint8_t in the vm_page_t.
+  static_assert(PageQueueNumQueues < 256);
+
+  // Converts free running generation to pager backed queue.
+  static constexpr PageQueue gen_to_queue(uint64_t gen) {
+    return static_cast<PageQueue>((gen % kNumPagerBacked) + PageQueuePagerBackedBase);
   }
-  static constexpr bool is_pager_backed(uint8_t value) {
-    return is_pager_backed(static_cast<PageQueue>(value));
+
+  // Checks if a candidate pager backed page queue would be valid given a specific lru and mru
+  // queue.
+  static constexpr bool queue_is_valid(PageQueue page_queue, PageQueue lru, PageQueue mru) {
+    DEBUG_ASSERT(page_queue >= PageQueuePagerBackedBase);
+    if (lru <= mru) {
+      return page_queue >= lru && page_queue <= mru;
+    } else {
+      return page_queue <= mru || page_queue >= lru;
+    }
   }
 
-  // Returns the pager queue index adjusted for the current rotation.
-  inline size_t rotated_index(size_t index) const TA_REQ(lock_);
+  PageQueue mru_gen_to_queue() const {
+    return gen_to_queue(mru_gen_.load(ktl::memory_order_relaxed));
+  }
 
-  // Returns the PageQueue index for the pager queue index adjusted for the current rotation.
-  inline PageQueue GetPagerBackedQueueLocked(size_t index) const TA_REQ(lock_);
+  PageQueue lru_gen_to_queue() const {
+    return gen_to_queue(lru_gen_.load(ktl::memory_order_relaxed));
+  }
 
-  // Returns the list node for the pager queue index adjusted for the current rotation.
-  inline list_node_t* GetPagerBackedQueueHeadLocked(size_t index) TA_REQ(lock_);
-  inline const list_node_t* GetPagerBackedQueueHeadLocked(size_t index) const TA_REQ(lock_);
+  // This processes the LRU queue with the aim to make the lru_gen_ be the passed in target_gen. It
+  // achieves this by walking all the pages in the current LRU queue and either
+  //   1. For pages that have a newest accessed time and are in the wrong queue, are moved into the
+  //      correct queue.
+  //   2. For pages that are in the correct queue, they are either returned (if |peek| is true) or
+  //      have their age effectively decreased by being moved to the next queue.
+  // In the second case, pages get moved into the next queue so that the LRU queue can become empty,
+  // allowing the gen to be incremented to eventually reach the |target_gen|. The mechanism of
+  // freeing up the LRU queue is necessary to make room for new MRU queues.
+  // When |peek| is false, this always returns a nullopt and guarantees that it moved lru_gen_ to
+  // at least target_gen. If |peek| is true, then the first time it hits a page in case (2), it
+  // returns it instead of decreasing its age.
+  ktl::optional<PageQueues::VmoBacklink> ProcessLruQueue(uint64_t target_gen, bool peek);
 
-  // Returns a reference to the page count for the pager queue adjusted for the current rotation.
-  inline ssize_t& GetPagerBackedQueueCountLocked(size_t index) TA_REQ(lock_);
-  inline ssize_t GetPagerBackedQueueCountLocked(size_t index) const TA_REQ(lock_);
+  // Helpers for adding and removing to the queues. All of the public Set/Move/Remove operations
+  // are convenience wrappers around these.
+  void RemoveLocked(vm_page_t* page) TA_REQ(lock_);
+  void SetQueueLocked(vm_page_t* page, PageQueue queue) TA_REQ(lock_);
+  void MoveToQueueLocked(vm_page_t* page, PageQueue queue) TA_REQ(lock_);
+  void SetQueueBacklinkLocked(vm_page_t* page, void* object, uintptr_t page_offset, PageQueue queue)
+      TA_REQ(lock_);
+  void MoveToQueueBacklinkLocked(vm_page_t* page, void* object, uintptr_t page_offset,
+                                 PageQueue queue) TA_REQ(lock_);
 
-  // Updates the source and destination counters of the given page and records the destination queue
-  // in the page.
-  inline void UpdateCountsLocked(vm_page_t* page, PageQueue destination) TA_REQ(lock_);
-
+  // The lock_ is needed to protect the linked lists queues as these cannot be implemented with
+  // atomics.
   DECLARE_CRITICAL_MUTEX(PageQueues) mutable lock_;
-  // pager_backed_ denotes pages that both have a user level pager associated with them, and could
-  // be evicted such that the pager could re-create the page.
-  //
-  // Pages in these queues are periodically aged by circularly rotating which entries represent the
-  // newest, intermediate, and oldest pages. When performing a rotation, the list in the current
-  // oldest entry is appended to the next oldest list, preserving the chronological order of the
-  // pages and emptying the list that will become the new earliest list.
-  //
-  //    Oldest        Newest       Newest  Oldest                Newest  Oldest
-  //         |        |                 |  |                          |  |
-  //         |        |                 |  |                          |  V
-  //         |        |                 |  V                          |  a
-  //         V        V    Rotation     V  a          Rotation        V  b
-  //        [a][b][c][d]  ---------->  [ ][b][c][d]  ---------->  [e][ ][c][d]
-  //
-  list_node_t pager_backed_[kNumPagerBacked] TA_GUARDED(lock_) = {LIST_INITIAL_CLEARED_VALUE};
-  // tracks pager backed pages that are inactive, kept separate from pager_backed_ to opt out of
-  // page queue rotations. Pages are moved into this queue explicitly when they need to be marked
-  // inactive, and moved out to pager_backed_[0] on a subsequent access, or evicted under memory
-  // pressure before the last pager_backed_ queue.
-  list_node_t pager_backed_inactive_ TA_GUARDED(lock_) = LIST_INITIAL_CLEARED_VALUE;
-  // unswappable_ pages have no user level mechanism to swap/evict them, but are modifiable by the
-  // kernel and could have compression etc applied to them.
-  list_node_t unswappable_ TA_GUARDED(lock_) = LIST_INITIAL_CLEARED_VALUE;
-  // wired pages include kernel data structures or memory pinned for devices and these pages must
-  // not be touched in any way, removing both eviction and other strategies such as compression.
-  list_node_t wired_ TA_GUARDED(lock_) = LIST_INITIAL_CLEARED_VALUE;
-  // these are a subset of the unswappable_ pages that were forked from the zero pages. Pages being
-  // in this list is purely a hint, and it is correct for pages to at any point be moved between the
-  // unswappable_ and unswappabe_zero_fork_ lists.
-  list_node_t unswappable_zero_fork_ TA_GUARDED(lock_) = LIST_INITIAL_CLEARED_VALUE;
 
-  // Offset to apply to the pager-backed queues and corresponding subset of the page count array
-  // when rotating pager-backed queues. Rotation happens once every 10 seconds, resulting integer
-  // overflow in about 1,360 years.
-  uint32_t pager_queue_rotation_ TA_GUARDED(lock_) = 0;
+  // The page queues are placed into an array, indexed by page queue, for consistency and uniformity
+  // of access. This does mean that the list for PageQueueNone does not actually have any pages in
+  // it, and should always be empty.
+  // The pager backed queues are the more complicated as, unlike the other categories, pages can be
+  // in one of the queues, and can move around. The pager backed queues themselves store pages that
+  // are roughly grouped by their last access time. The relationship is not precise as pages are not
+  // moved between queues unless it becomes strictly necessary. This is in contrast to the queue
+  // counts that are always up to date.
+  //
+  // What this means is that the vm_page::page_queue index is always up to do date, and the
+  // page_queue_counts_ represent an accurate count of pages with that vm_page::page_queue index,
+  // but counting the pages actually in the linked list may not yield the correct number.
+  //
+  // New pager backed pages are always placed into the queue associated with the MRU generation. If
+  // they get accessed the vm_page_t::page_queue gets updated along with the counts. At some point
+  // the LRU queue will get processed (see |ProcessLruQueue|) and this will cause pages to get
+  // relocated to their correct list.
+  //
+  // Consider the following example:
+  //
+  //  LRU  MRU            LRU  MRU            LRU   MRU            LRU   MRU        MRU  LRU
+  //    |  |                |  |                |     |              |     |            |  |
+  //    |  |    Insert A    |  |    Age         |     |  Touch A     |     |  Age       |  |
+  //    V  v    Queue=2     v  v    Queue=2     v     v  Queue=3     v     v  Queue=3   v  v
+  // [][ ][ ][] -------> [][ ][a][] -------> [][ ][a][ ] -------> [][ ][a][ ] -------> [ ][ ][a][]
+  //
+  // At this point page A, in its vm_page_t, has its queue marked as 3, and the page_queue_counts
+  // are {0,0,1,0}, but the page itself remains in the linked list for queue 2. If the LRU queue is
+  // then processed to increment it we would do.
+  //
+  //  MRU  LRU             MRU  LRU            MRU    LRU
+  //    |  |                 |    |              |      |
+  //    |  |       Move LRU  |    |    Move LRU  |      |
+  //    V  v       Queue=3   v    v    Queue=3   v      v
+  //   [ ][ ][a][] -------> [ ][][a][] -------> [][ ][][a]
+  //
+  // In the second processing of the LRU queue it gets noticed that the page, based on
+  // vm_page_t::page_queue, is in the wrong queue and gets moved into the correct one.
+  //
+  // For specifics on how LRU and MRU generations map to LRU and MRU queues, see comments on
+  // |lru_gen_| and |mru_gen_|.
+  ktl::array<list_node_t, PageQueueNumQueues> page_queues_ TA_GUARDED(lock_);
+
+  // The generation counts are monotonic increasing counters and used to represent the effective age
+  // of the oldest and newest pager backed queues. The page queues themselves are treated as a fixed
+  // size circular buffer that the generations map onto (see definition of |gen_to_queue|).This
+  // means all pages in the system have an age somewhere in [lru_gen_, mru_gen_] and so the lru and
+  // mru generations cannot drift apart by more than kNumPagerBacked, otherwise there would not be
+  // enough queues.
+  // A pages age being between [lru_gen_, mru_gen_] is not an invariant as MarkAccessed can race and
+  // mark pages as being in an invalid queue. This race will get noticed by ProcessLruQueues and
+  // the page will get updated at that point to have a valid queue. Importantly, whilst pages can
+  // think they are in a queue that is invalid, only valid linked lists in the page_queues_ will
+  // ever have pages in them. This invariant is easy to enforce as the page_queues_ are updated
+  // under a lock.
+  ktl::atomic<uint64_t> lru_gen_ = 0;
+  ktl::atomic<uint64_t> mru_gen_ = kNumPagerBacked - 1;
 
   // Tracks the counts of pages in each queue in O(1) time complexity. As pages are moved between
   // queues, the corresponding source and destination counts are decremented and incremented,
   // respectively.
   //
-  // The first entry of the array is special: it logically represents pages not in any queue.
+  // The first entry of the array is left special: it logically represents pages not in any queue.
   // For simplicity, it is initialized to zero rather than the total number of pages in the system.
   // Consequently, the value of this entry is a negative number with absolute value equal to the
   // total number of pages in all queues. This approach avoids unnecessary branches when updating
   // counts.
-  ktl::array<ssize_t, PageQueueEntries> page_queue_counts_ TA_GUARDED(lock_) = {};
-
-  void RemoveLocked(vm_page_t* page) TA_REQ(lock_);
-
-  bool DebugPageInList(const list_node_t* list, const vm_page_t* page) const;
-  bool DebugPageInListLocked(const list_node_t* list, const vm_page_t* page) const TA_REQ(lock_);
+  ktl::array<ktl::atomic<size_t>, PageQueueNumQueues> page_queue_counts_ = {};
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_

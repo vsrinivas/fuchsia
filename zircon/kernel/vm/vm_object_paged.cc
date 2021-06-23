@@ -138,16 +138,7 @@ void VmObjectPaged::HarvestAccessedBits() {
       // page table reclamation though.
       return must_harvest;
     }
-    // Use GetPageLocked to perform page lookup. Pass neither software fault, hardware fault or
-    // write to prevent any committing or copy-on-write behavior. This will just cause the page to
-    // be looked up, and its location in any pager_backed queues updated.
-    __UNUSED vm_page_t* out;
-    __UNUSED zx_status_t result = GetPageLocked(offset, 0, nullptr, nullptr, &out, nullptr);
-    // We are in this callback because there is a physical page mapped into the hardware page table
-    // attributed to this vmo. If we cannot find it, or it isn't the page we expect, then something
-    // has gone horribly wrong.
-    DEBUG_ASSERT(result == ZX_OK);
-    DEBUG_ASSERT(out == p);
+    pmm_page_queues()->MarkAccessed(p);
     return true;
   };
   for (auto& m : mapping_list_) {

@@ -1509,25 +1509,7 @@ void VmCowPages::UpdateOnAccessLocked(vm_page_t* page, uint64_t offset) {
   if (page == vm_get_zero_page()) {
     return;
   }
-  // Check if we have a page_source_. If we don't have one then none of our pages can be pager
-  // backed, so we can abort.
-  if (!page_source_) {
-    return;
-  }
-  // We know there is a page source and so most of the pages will be in the pager backed queue, with
-  // the exception of any pages that are pinned, those will be in the wired queue and so we need to
-  // skip them.
-  if (page->object.pin_count != 0) {
-    return;
-  }
-
-  // These asserts are for sanity, the above checks should have caused us to abort if these aren't
-  // true.
-  DEBUG_ASSERT(page->object.get_object() == reinterpret_cast<void*>(this));
-  DEBUG_ASSERT(page->object.get_page_offset() == offset);
-  // Although the page is already in the pager backed queue, this move causes it be moved to the
-  // front of the first queue, representing it was recently accessed.
-  pmm_page_queues()->MoveToPagerBacked(page, this, offset);
+  pmm_page_queues()->MarkAccessed(page);
 }
 
 // Looks up the page at the requested offset, faulting it in if requested and necessary.  If
