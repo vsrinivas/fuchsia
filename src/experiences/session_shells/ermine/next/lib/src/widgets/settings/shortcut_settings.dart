@@ -25,6 +25,7 @@ class ShortcutSettings extends StatelessWidget {
                   title: Text(e.key),
                   subtitle: Text(e.value.join(', ')),
                   leading: Icon(Icons.keyboard_hide_outlined),
+                  onTap: () {},
                 ))
             .toList(),
       ),

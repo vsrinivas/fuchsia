@@ -20,31 +20,33 @@ class SettingDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        AppBar(
-          elevation: 0,
-          leading: IconButton(
-            onPressed: onBack,
-            icon: Icon(Icons.arrow_back),
-          ),
-          title: Text(
-            title,
-            style: Theme.of(context).appBarTheme.titleTextStyle,
-          ),
-          actions: trailing == null ? null : [trailing!],
-        ),
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border(
-                  top: BorderSide(color: Theme.of(context).indicatorColor)),
-              color: Theme.of(context).bottomAppBarColor,
+    return FocusScope(
+      child: Column(
+        children: [
+          AppBar(
+            elevation: 0,
+            leading: IconButton(
+              autofocus: true,
+              onPressed: onBack,
+              icon: Icon(Icons.arrow_back),
             ),
-            child: child,
+            title: Text(
+              title,
+              style: Theme.of(context).appBarTheme.titleTextStyle,
+            ),
+            actions: trailing == null ? null : [trailing!],
           ),
-        ),
-      ],
+          Expanded(
+            child: Material(
+              type: MaterialType.canvas,
+              color: Theme.of(context).bottomAppBarColor,
+              shape: Border(
+                  top: BorderSide(color: Theme.of(context).indicatorColor)),
+              child: child,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

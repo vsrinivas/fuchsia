@@ -47,8 +47,7 @@ class QuickSettings extends StatelessWidget {
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (state.allSettingsPageVisible.value)
-                    _ListSettings(appState),
+                  _ListSettings(appState),
                   if (state.shortcutsPageVisible.value) ShortcutSettings(state),
                   if (state.timezonesPageVisible.value)
                     TimezoneSettings(
