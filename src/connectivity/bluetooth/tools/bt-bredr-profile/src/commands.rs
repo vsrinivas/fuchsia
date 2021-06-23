@@ -109,6 +109,7 @@ gen_commands! {
         DisconnectRfcommSession = ("disconnect-rfcomm-session", ["peer-id"],
                            "\n\t\tDisconnect the RFCOMM Session with the connected remote device `peer-id`.\n\
                             \t\tExample: disconnect-rfcomm-session 028565803f1368b2"),
+        SendRls = ("send-remote-line-status", ["peer-id", "server-channel"], "\n\t\tSend a Remote Line Status update for the `server-channel`"),
         WriteL2cap = ("write-l2cap", ["channel-id", "data"],
                 "\n\t\tWrite 'data' on the L2CAP socket/channel represented by 'channel-id'\n\n\
                  \t\tExample: write 0 0123456789abcd"),

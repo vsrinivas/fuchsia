@@ -140,6 +140,20 @@ Write data on the RFCOMM channel identified by `server-channel`.
   `connect-rfcomm` command.
 - `data` is a string of characters that will be written on the channel.
 
+### send-remote-line-status
+Send a remote line status update to the remote peer on the RFCOMM channel identified
+by `server-channel`. By default, a Framing Error status will be sent.
+
+#### Usage
+`send-remote-line-status <peer-id> <server-channel>`
+
+##### Arguments
+- `peer-id` maps to the `PeerId` of the peer.
+- `server-channel` is the integer Server Channel identifying the RFCOMM channel. For
+  channels that were established by the peer, use the identifier printed in the REPL.
+  For channels that were initiated by the tool, use the same identifier as used in the
+  `connect-rfcomm` command.
+
 ### advertise
 Targets `Profile.Advertise`.
 

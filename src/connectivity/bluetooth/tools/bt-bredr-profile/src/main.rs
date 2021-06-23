@@ -371,6 +371,23 @@ fn disconnect_rfcomm_session(
     Ok(())
 }
 
+fn send_rls(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
+    if args.len() != 2 {
+        return Err(anyhow!("Invalid number of arguments"));
+    }
+
+    let peer_id: PeerId = args[0].parse()?;
+    let server_channel =
+        args[1].parse::<u8>().map_err(|_| anyhow!("Server channel must be a u8"))?;
+    let server_channel = ServerChannel::try_from(server_channel)?;
+
+    match state.write().rfcomm.send_rls(peer_id, server_channel) {
+        Ok(_) => println!("Sent RLS to peer {:?}", peer_id),
+        Err(e) => println!("Error sending RLS to peer {:?}: {:?}", peer_id, e),
+    }
+    Ok(())
+}
+
 fn write_l2cap(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
     if args.len() != 2 {
         return Err(anyhow!("Invalid number of arguments"));
@@ -442,6 +459,7 @@ async fn handle_cmd(
         Cmd::DisconnectRfcomm => disconnect_rfcomm(state.clone(), &args)?,
         Cmd::DisconnectRfcommSession => disconnect_rfcomm_session(state.clone(), &args)?,
         Cmd::SetupRfcomm => setup_rfcomm(profile_svc, state.clone())?,
+        Cmd::SendRls => send_rls(state.clone(), &args)?,
         Cmd::WriteL2cap => write_l2cap(state.clone(), &args)?,
         Cmd::WriteRfcomm => write_rfcomm(state.clone(), &args)?,
         Cmd::Help => println!("{}", Cmd::help_msg()),

@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, Error},
     bt_rfcomm::ServerChannel,
     fidl_fuchsia_bluetooth_bredr::{ChannelMode, ChannelParameters},
-    fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestProxy,
+    fidl_fuchsia_bluetooth_rfcomm_test::{RfcommTestProxy, Status},
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
     fuchsia_zircon as zx,
@@ -138,6 +138,14 @@ impl RfcommState {
 
     pub fn close_session(&self, id: PeerId) -> Result<(), Error> {
         self.rfcomm_test.disconnect(&mut id.into()).map_err(Into::into)
+    }
+
+    pub fn send_rls(&self, id: PeerId, server_channel: ServerChannel) -> Result<(), Error> {
+        // Fixed status.
+        let status = Status::FramingError;
+        self.rfcomm_test
+            .remote_line_status(&mut id.into(), server_channel.into(), status)
+            .map_err(Into::into)
     }
 
     /// Removes the RFCOMM channel for the provided `server_channel`. Returns true if
