@@ -222,7 +222,7 @@ pub struct FvmConfig {
     pub slice_size: u64,
 
     /// The number of slices reserved in the FVM for internal usage.
-    #[serde(default = "default_fvm_reserved_slices")]
+    #[serde(default)]
     pub reserved_slices: u64,
 
     /// The list of filesystems to add to the FVM.
@@ -232,10 +232,6 @@ pub struct FvmConfig {
 
 fn default_fvm_slice_size() -> u64 {
     8388608
-}
-
-fn default_fvm_reserved_slices() -> u64 {
-    1
 }
 
 /// A filesystem to add to the FVM.

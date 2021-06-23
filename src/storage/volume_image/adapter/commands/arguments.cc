@@ -202,7 +202,7 @@ fit::result<std::vector<PartitionParams>, std::string> PartitionParams::FromArgu
     return result.take_error_result();
   }
 
-  if (reserved_slices.has_value()) {
+  if (reserved_slices.has_value() && *reserved_slices > 0) {
     PartitionParams empty_metadata_partition;
     empty_metadata_partition.format = PartitionImageFormat::kEmptyPartition;
     empty_metadata_partition.label = "internal";

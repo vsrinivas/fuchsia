@@ -55,10 +55,8 @@ declare_args() {
 
   # Number of slices reserved by FVM for internal usage. A reservation
   # partition will be added to the FVM image, containing this many slices.
-  # If set to the empty string, then no reservation partition will be added.
-  # Set to 1 by default so that we exercise this feature on all product
-  # configurations.
-  fvm_reserved_slices = 1
+  # If set to 0, then no reservation partition will be added.
+  fvm_reserved_slices = 0
 
   # The following blobfs_* and minfs_* arguments are used to determine the
   # initial dimensions of the blobfs and minfs partitions added to an FVM
@@ -169,7 +167,7 @@ template("generate_fvm") {
     if (defined(invoker.with_empty_minfs) && invoker.with_empty_minfs) {
       args += [ "--with-empty-minfs" ]
     }
-    if (fvm_reserved_slices != false) {
+    if (fvm_reserved_slices > 0) {
       args += [
         "--reserve-slices",
         "$fvm_reserved_slices",
