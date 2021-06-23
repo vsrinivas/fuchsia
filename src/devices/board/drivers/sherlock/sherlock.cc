@@ -20,6 +20,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
+#include "src/devices/board/drivers/sherlock/sherlock-gpios.h"
+
 #if IS_LUIS
 #include "src/devices/board/drivers/sherlock/luis-bind.h"
 #else
@@ -66,6 +68,28 @@ zx_status_t Sherlock::Create(void* ctx, zx_device_t* parent) {
     __UNUSED auto* dummy = board.release();
   }
   return status;
+}
+
+uint8_t Sherlock::GetDisplayVendor() {
+  if (!display_vendor_) {
+    uint8_t value;
+    gpio_impl_.ConfigIn(GPIO_PANEL_DETECT, GPIO_NO_PULL);
+    gpio_impl_.Read(GPIO_PANEL_DETECT, &value);
+    display_vendor_.emplace(value);
+  }
+
+  return *display_vendor_;
+}
+
+uint8_t Sherlock::GetDdicVersion() {
+  if (!ddic_version_) {
+    uint8_t value;
+    gpio_impl_.ConfigIn(GPIO_DDIC_DETECT, GPIO_NO_PULL);
+    gpio_impl_.Read(GPIO_DDIC_DETECT, &value);
+    ddic_version_.emplace(value);
+  }
+
+  return *ddic_version_;
 }
 
 int Sherlock::Thread() {

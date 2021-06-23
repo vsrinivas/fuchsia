@@ -86,6 +86,9 @@ class Sherlock : public SherlockType {
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Sherlock);
 
+  uint8_t GetDisplayVendor();
+  uint8_t GetDdicVersion();
+
   zx_status_t Start();
   zx_status_t SysmemInit();
   zx_status_t GpioInit();
@@ -139,6 +142,9 @@ class Sherlock : public SherlockType {
   thrd_t thread_;
 
   const uint32_t pid_;
+
+  std::optional<uint8_t> display_vendor_;
+  std::optional<uint8_t> ddic_version_;
 };
 
 }  // namespace sherlock

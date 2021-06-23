@@ -96,10 +96,9 @@ zx_status_t Sherlock::TouchInit() {
   } else {
     static const FocaltechMetadata device_info = {
         .device_id = FOCALTECH_DEVICE_FT5726,
-        // TODO(fxbug.dev/75032): Populate these fields.
-        .needs_firmware = false,
-        .display_vendor = 0,
-        .ddic_version = 0,
+        .needs_firmware = true,
+        .display_vendor = GetDisplayVendor(),
+        .ddic_version = GetDdicVersion(),
     };
     static const device_metadata_t ft5726_touch_metadata[] = {
         {.type = DEVICE_METADATA_PRIVATE, .data = &device_info, .length = sizeof(device_info)},
