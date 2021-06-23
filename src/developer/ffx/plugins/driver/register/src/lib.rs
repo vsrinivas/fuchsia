@@ -12,7 +12,7 @@ use {
 
 #[ffx_plugin(
     "driver_enabled",
-    DriverRegistrarProxy = "core/appmgr:out:fuchsia.driver.registrar.DriverRegistrar"
+    DriverRegistrarProxy = "bootstrap/driver_manager:expose:fuchsia.driver.registrar.DriverRegistrar"
 )]
 pub async fn register(
     driver_registrar_proxy: DriverRegistrarProxy,

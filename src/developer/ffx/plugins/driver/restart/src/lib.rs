@@ -11,7 +11,7 @@ use {
 
 #[ffx_plugin(
     "driver_enabled",
-    DriverHostDevelopmentProxy = "core/appmgr:out:fuchsia.device.manager.DriverHostDevelopment"
+    DriverHostDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.device.manager.DriverHostDevelopment"
 )]
 pub async fn register(
     driver_host_dev_proxy: DriverHostDevelopmentProxy,
