@@ -90,8 +90,6 @@
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
                 "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
-                "fuchsia.fshost.Filesystems",
-                "fuchsia.fshost.Registry",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hardware.pty.Device",
                 "fuchsia.kernel.Counter",

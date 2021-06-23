@@ -68,8 +68,6 @@
                 "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.NameProvider",
-                "fuchsia.fshost.Filesystems",
-                "fuchsia.fshost.Registry",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hardware.pty.Device",
                 "fuchsia.kernel.Counter",

@@ -44,7 +44,6 @@
 
                 // Services from fshost
                 "fuchsia.fshost.BlockWatcher",
-                "fuchsia.fshost.Registry",
 
                 // Builtin service
                 "fuchsia.process.Launcher",
