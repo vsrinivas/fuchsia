@@ -84,18 +84,6 @@ func TestMetadataMonitor(t *testing.T) {
 		}
 	})
 
-	t.Run("writing with same version does not send an event", func(t *testing.T) {
-		if err := ioutil.WriteFile(metadataPath, makeTestMetadata(1), 0o600); err != nil {
-			t.Fatal(err)
-		}
-
-		select {
-		case metadata := <-monitor.Events:
-			t.Fatalf("Unexpected event: %#v", metadata)
-		case <-time.After(time.Millisecond):
-		}
-	})
-
 	t.Run("writing with different version does send an event", func(t *testing.T) {
 		if err := ioutil.WriteFile(metadataPath, makeTestMetadata(2), 0o600); err != nil {
 			t.Fatal(err)
@@ -104,6 +92,18 @@ func TestMetadataMonitor(t *testing.T) {
 		metadata := <-monitor.Events
 		if metadata.Version != 2 {
 			t.Fatalf("got %v, want 2", metadata.Version)
+		}
+	})
+
+	t.Run("writing with same version does not send an event", func(t *testing.T) {
+		if err := ioutil.WriteFile(metadataPath, makeTestMetadata(2), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		select {
+		case metadata := <-monitor.Events:
+			t.Fatalf("Unexpected event: %#v", metadata)
+		case <-time.After(time.Millisecond):
 		}
 	})
 
