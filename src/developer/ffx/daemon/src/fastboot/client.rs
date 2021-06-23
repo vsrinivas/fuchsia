@@ -87,38 +87,44 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
         match self.target.netsvc_address() {
             Some(addr) => {
                 reboot_to_bootloader(addr).await?;
-                self.target
-                    .events
-                    .wait_for(Some(Duration::from_secs(30)), |e| e == TargetEvent::Rediscovered)
-                    .await?;
-                match self.target.get_connection_state() {
-                    ConnectionState::Fastboot(_) => Ok(()),
-                    _ => bail!("Could not reboot device to fastboot - state does not match"),
-                }
+                self.check_for_fastboot().await
             }
             None => bail!("Could not determine address to send Zedboot Reboot command"),
         }
     }
 
+    fn is_target_in_fastboot(&self) -> bool {
+        match self.target.get_connection_state() {
+            ConnectionState::Fastboot(_) => true,
+            _ => false,
+        }
+    }
+
+    async fn check_for_fastboot(&self) -> Result<()> {
+        for _ in 0..2 {
+            if self.is_target_in_fastboot() {
+                return Ok(());
+            }
+            // Even if it times out, just check if it's in fastboot.
+            let _ = self
+                .target
+                .events
+                .wait_for(Some(Duration::from_secs(10)), |e| e == TargetEvent::Rediscovered)
+                .await;
+
+            if self.is_target_in_fastboot() {
+                return Ok(());
+            }
+        }
+        bail!("Timed out checking for fastboot.")
+    }
+
     async fn reboot_from_product(&self, listener: &RebootListenerProxy) -> Result<()> {
         listener.on_reboot()?;
-        match try_join!(
-            async {
-                match self.get_admin_proxy().await?.reboot_to_bootloader().await {
-                    Ok(_) => Ok(()),
-                    Err(_e @ FidlError::ClientChannelClosed { .. }) => Ok(()),
-                    Err(e) => bail!(e),
-                }
-            },
-            self.target
-                .events
-                .wait_for(Some(Duration::from_secs(30)), |e| { e == TargetEvent::Rediscovered })
-        ) {
-            Ok(_) => match self.target.get_connection_state() {
-                ConnectionState::Fastboot(_) => Ok(()),
-                _ => bail!("Could not reboot device to fastboot - state does not match"),
-            },
-            Err(e) => Err(e),
+        match self.get_admin_proxy().await?.reboot_to_bootloader().await {
+            Ok(_) => self.check_for_fastboot().await,
+            Err(_e @ FidlError::ClientChannelClosed { .. }) => self.check_for_fastboot().await,
+            Err(e) => bail!(e),
         }
     }
 
@@ -219,7 +225,17 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                             }
                             Err(e) => {
                                 log::error!("Error rebooting and rediscovering target: {:?}", e);
-                                responder.send(&mut Err(e)).context("sending error response")?;
+                                // Check the target and see what state it's in.  Maybe we just
+                                // missed the event.
+                                match self.check_for_fastboot().await {
+                                    Ok(_) => {
+                                        log::debug!("Target in fastboot despite timeout.");
+                                        responder.send(&mut Ok(()))?;
+                                    }
+                                    _ => responder
+                                        .send(&mut Err(e))
+                                        .context("sending error response")?,
+                                }
                             }
                         }
                     }
