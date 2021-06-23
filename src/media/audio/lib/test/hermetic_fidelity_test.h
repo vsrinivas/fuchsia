@@ -71,8 +71,7 @@ class HermeticFidelityTest : public HermeticPipelineTest {
  protected:
   // Custom build-time flags
   //
-  // These could become cmdline flags.
-  // For normal CQ operation, only kDisplayInProgressResults should be set.
+  // These could become cmdline flags. For normal CQ operation, all should be false.
   //
   // Debug positioning and values of the renderer's input buffer, by showing certain locations.
   static constexpr bool kDebugInputBuffer = false;
@@ -81,7 +80,7 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   static constexpr bool kDebugOutputBuffer = false;
 
   // Show a frequency's result immediately. Helps correlate UNDERFLOW with affected frequency.
-  static constexpr bool kDisplayInProgressResults = true;
+  static constexpr bool kSuppressInProgressResults = false;
 
   // Retain and display the worst-case results in a multi-repeat run. Helpful for updating limits.
   static constexpr bool kRetainWorstCaseResults = false;
