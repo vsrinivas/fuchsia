@@ -33,48 +33,24 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
 
   ~MagmaSystemConnection() override;
 
-  // Create a buffer from the handle and add it to the map,
-  // on success |id_out| contains the id to be used to query the map
-  magma::Status ImportBuffer(uint32_t handle, uint64_t* id_out) override;
-  // This removes the reference to the shared_ptr in the map
-  // other instances remain valid until deleted
-  // Returns false if no buffer with the given |id| exists in the map
-  magma::Status ReleaseBuffer(uint64_t id) override;
-
   magma::Status ImportObject(uint32_t handle, magma::PlatformObject::Type object_type) override;
   magma::Status ReleaseObject(uint64_t object_id, magma::PlatformObject::Type object_type) override;
-
-  // Attempts to locate a buffer by |id| in the buffer map and return it.
-  // Returns nullptr if the buffer is not found
-  std::shared_ptr<MagmaSystemBuffer> LookupBuffer(uint64_t id);
-
-  // Returns the msd_semaphore for the given |id| if present in the semaphore map.
-  std::shared_ptr<MagmaSystemSemaphore> LookupSemaphore(uint64_t id);
-
+  magma::Status CreateContext(uint32_t context_id) override;
+  magma::Status DestroyContext(uint32_t context_id) override;
   magma::Status ExecuteCommandBufferWithResources(
       uint32_t context_id, std::unique_ptr<magma_system_command_buffer> command_buffer,
       std::vector<magma_system_exec_resource> resources, std::vector<uint64_t> semaphores) override;
-
-  magma::Status CreateContext(uint32_t context_id) override;
-  magma::Status DestroyContext(uint32_t context_id) override;
-  MagmaSystemContext* LookupContext(uint32_t context_id);
-
   magma::Status MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
                              uint64_t page_count, uint64_t flags) override;
   magma::Status UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override;
   magma::Status BufferRangeOp(uint64_t buffer_id, uint32_t op, uint64_t start,
                               uint64_t length) override;
-
-  void SetNotificationCallback(msd_connection_notification_callback_t callback,
-                               void* token) override;
-
-  uint32_t GetDeviceId();
-
-  msd_connection_t* msd_connection() { return msd_connection_.get(); }
-
   magma::Status ExecuteImmediateCommands(uint32_t context_id, uint64_t commands_size,
                                          void* commands, uint64_t semaphore_count,
                                          uint64_t* semaphore_ids) override;
+  MagmaSystemContext* LookupContext(uint32_t context_id);
+  void SetNotificationCallback(msd_connection_notification_callback_t callback,
+                               void* token) override;
   magma::Status AccessPerformanceCounters(
       std::unique_ptr<magma::PlatformHandle> access_token) override;
   bool IsPerformanceCounterAccessEnabled() override { return can_access_performance_counters_; }
@@ -90,6 +66,25 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
                                                        uint64_t buffer_id) override;
   magma::Status DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id) override;
   magma::Status ClearPerformanceCounters(const uint64_t* counters, uint64_t counter_count) override;
+
+  // Create a buffer from the handle and add it to the map,
+  // on success |id_out| contains the id to be used to query the map
+  magma::Status ImportBuffer(uint32_t handle, uint64_t* id_out);
+  // This removes the reference to the shared_ptr in the map
+  // other instances remain valid until deleted
+  // Returns false if no buffer with the given |id| exists in the map
+  magma::Status ReleaseBuffer(uint64_t id);
+
+  // Attempts to locate a buffer by |id| in the buffer map and return it.
+  // Returns nullptr if the buffer is not found
+  std::shared_ptr<MagmaSystemBuffer> LookupBuffer(uint64_t id);
+
+  // Returns the msd_semaphore for the given |id| if present in the semaphore map.
+  std::shared_ptr<MagmaSystemSemaphore> LookupSemaphore(uint64_t id);
+
+  uint32_t GetDeviceId();
+
+  msd_connection_t* msd_connection() { return msd_connection_.get(); }
 
   void set_can_access_performance_counters(bool can_access) {
     can_access_performance_counters_ = can_access;

@@ -456,11 +456,6 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
  public:
   TestDelegate(std::shared_ptr<SharedData> shared_data) : shared_data_(shared_data) {}
 
-  magma::Status ImportBuffer(uint32_t handle, uint64_t* buffer_id_out) override {
-    return MAGMA_STATUS_UNIMPLEMENTED;
-  }
-  magma::Status ReleaseBuffer(uint64_t buffer_id) override { return MAGMA_STATUS_UNIMPLEMENTED; }
-
   magma::Status ImportObject(uint32_t handle, magma::PlatformObject::Type object_type) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     switch (object_type) {

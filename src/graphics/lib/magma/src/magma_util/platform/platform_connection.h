@@ -42,9 +42,6 @@ class PlatformConnection {
   class Delegate {
    public:
     virtual ~Delegate() {}
-    virtual magma::Status ImportBuffer(uint32_t handle, uint64_t* buffer_id_out) = 0;
-    virtual magma::Status ReleaseBuffer(uint64_t buffer_id) = 0;
-
     virtual magma::Status ImportObject(uint32_t handle, PlatformObject::Type object_type) = 0;
     virtual magma::Status ReleaseObject(uint64_t object_id, PlatformObject::Type object_type) = 0;
 

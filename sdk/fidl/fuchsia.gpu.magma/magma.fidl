@@ -134,12 +134,6 @@ struct BufferOffset {
 /// If a system driver error occurs, the connection will be closed and a Status sent via epitaph.
 /// If negative, the Epitaph represents a Zircon error.
 protocol Primary {
-    /// Deprecated: Imports a buffer for use in the system driver.
-    ImportBuffer(zx.handle:VMO buffer);
-
-    /// Deprecated: Destroys the buffer with `buffer_id` within this connection.
-    ReleaseBuffer(zx.koid buffer_id);
-
     /// Imports an object for use in the system driver.
     ImportObject(zx.handle object, ObjectType object_type);
 

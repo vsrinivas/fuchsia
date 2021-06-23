@@ -160,29 +160,6 @@ void ZirconPlatformConnection::FlowControl(uint64_t size) {
   }
 }
 
-// Deprecated: TODO(fxbug.dev/76457) remove
-void ZirconPlatformConnection::ImportBuffer(ImportBufferRequestView request,
-                                            ImportBufferCompleter::Sync& completer) {
-  DLOG("ZirconPlatformConnection - ImportBuffer");
-  uint64_t size = 0;
-  request->buffer.get_size(&size);
-  FlowControl(size);
-
-  uint64_t buffer_id;
-  if (!delegate_->ImportBuffer(request->buffer.release(), &buffer_id))
-    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
-}
-
-// Deprecated: TODO(fxbug.dev/76457) remove
-void ZirconPlatformConnection::ReleaseBuffer(ReleaseBufferRequestView request,
-                                             ReleaseBufferCompleter::Sync& completer) {
-  DLOG("ZirconPlatformConnection: ReleaseBuffer");
-  FlowControl();
-
-  if (!delegate_->ReleaseBuffer(request->buffer_id))
-    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
-}
-
 void ZirconPlatformConnection::ImportObject(ImportObjectRequestView request,
                                             ImportObjectCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: ImportObject");
