@@ -20,6 +20,7 @@ sdk_molecule("test_sdks") {
   deps = [
     ":build_sdk",
     "fuchsia.element:test_sdks",
+    "fuchsia.hwinfo:test_sdks",
   ]
   testonly = true
 }
