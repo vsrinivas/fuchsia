@@ -12,7 +12,6 @@
 #include <kernel/cpu.h>
 #include <kernel/mutex.h>
 #include <ktl/move.h>
-#include <lk/init.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
@@ -154,13 +153,3 @@ zx_status_t free_vmid(uint8_t vmid) {
   }
   return ZX_OK;
 }
-
-LK_INIT_HOOK(
-    hypervisor_el2_state,
-    [](unsigned int) {
-      // Work around fxbug.dev/78920 by initialising the Mutex during boot.
-      //
-      // TODO(fxbug.dev/78920): Remove this once singleton mutexes are thread-safe on first use.
-      GuestMutex::Get();
-    },
-    LK_INIT_LEVEL_ARCH)
