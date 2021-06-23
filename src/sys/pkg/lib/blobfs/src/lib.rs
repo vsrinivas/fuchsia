@@ -20,6 +20,8 @@ use {
 };
 
 pub mod blob;
+pub mod mock;
+pub use mock::Mock;
 
 /// Blobfs client errors.
 #[derive(Debug, Error)]
@@ -73,6 +75,19 @@ impl Client {
             fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
 
         (Self { proxy }, stream)
+    }
+
+    /// Creates a new client backed by the returned mock. This constructor should not be used
+    /// outside of tests.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub fn new_mock() -> (Self, mock::Mock) {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+
+        (Self { proxy }, mock::Mock { stream })
     }
 
     /// Returns the list of known blobs in blobfs.

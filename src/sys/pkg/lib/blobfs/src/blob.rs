@@ -5,7 +5,7 @@
 //! Typesafe wrappers around writing blobs to blobfs.
 
 use {
-    fidl_fuchsia_io::{DirectoryProxy, FileProxy},
+    fidl_fuchsia_io::{DirectoryProxy, FileMarker, FileProxy, FileRequestStream},
     fuchsia_hash::Hash,
     fuchsia_zircon::Status,
     thiserror::Error,
@@ -192,6 +192,18 @@ impl Blob<NeedsTruncate> {
             0 => TruncateSuccess::Done(self.proxy),
             _ => TruncateSuccess::NeedsData(self.with_state(NeedsData { size, written: 0 })),
         })
+    }
+
+    /// Creates a new blob client backed by the returned request stream. This constructor should
+    /// not be used outside of tests.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub fn new_test() -> (Self, FileRequestStream) {
+        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+
+        (Blob { proxy, state: NeedsTruncate }, stream)
     }
 }
 

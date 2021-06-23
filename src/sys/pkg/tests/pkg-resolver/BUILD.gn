@@ -238,11 +238,11 @@ rustc_test("resolve_fails") {
   sources = [ "src/resolve_fails.rs" ]
 }
 
-rustc_test("resolve_propagates_pkgfs_failure") {
-  name = "resolve-propagates-pkgfs-failure"
+rustc_test("resolve_propagates_blobfs_failure") {
+  name = "resolve-propagates-blobfs-failure"
   edition = "2018"
 
-  source_root = "src/resolve_propagates_pkgfs_failure.rs"
+  source_root = "src/resolve_propagates_blobfs_failure.rs"
 
   deps = [
     ":lib",
@@ -260,12 +260,12 @@ rustc_test("resolve_propagates_pkgfs_failure") {
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-hyper",
     "//src/lib/fuchsia-url",
-    "//src/lib/storage/pseudo-fs",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -281,7 +281,7 @@ rustc_test("resolve_propagates_pkgfs_failure") {
     "//third_party/rust_crates:void",
   ]
 
-  sources = [ "src/resolve_propagates_pkgfs_failure.rs" ]
+  sources = [ "src/resolve_propagates_blobfs_failure.rs" ]
 }
 
 rustc_test("resolve_recovers_from_http_errors") {
@@ -602,10 +602,10 @@ fuchsia_test_component("pkg_resolve_inspect-component") {
   deps = [ ":pkg_resolve_inspect" ]
 }
 
-fuchsia_test_component("resolve_propagates_pkgfs_failure-component") {
-  component_name = "resolve-propagates-pkgfs-failure"
-  manifest = "meta/resolve-propagates-pkgfs-failure.cml"
-  deps = [ ":resolve_propagates_pkgfs_failure" ]
+fuchsia_test_component("resolve_propagates_blobfs_failure-component") {
+  component_name = "resolve-propagates-blobfs-failure"
+  manifest = "meta/resolve-propagates-blobfs-failure.cml"
+  deps = [ ":resolve_propagates_blobfs_failure" ]
 }
 
 fuchsia_test_component("resolve_recovers_from_http_errors-component") {
@@ -738,7 +738,7 @@ fuchsia_test_package("pkg-resolver-integration-tests") {
     ":persists_tuf_metadata-component",
     ":pkg_resolve_inspect-component",
     ":resolve_fails-component",
-    ":resolve_propagates_pkgfs_failure-component",
+    ":resolve_propagates_blobfs_failure-component",
     ":resolve_recovers_from_http_errors-component",
     ":resolve_resumes_blob_gets-component",
     ":resolve_succeeds-component",

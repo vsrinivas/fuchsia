@@ -35,6 +35,7 @@ rustc_library("blobfs") {
   sources = [
     "src/blob.rs",
     "src/lib.rs",
+    "src/mock.rs",
   ]
 }
 

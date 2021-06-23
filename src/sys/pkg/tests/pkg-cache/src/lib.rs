@@ -386,6 +386,74 @@ impl TestEnv<PkgfsRamdisk> {
     }
 }
 
+impl TestEnv<PkgfsRamdisk> {
+    fn builder(
+    ) -> TestEnvBuilder<fn() -> BoxFuture<'static, PkgfsRamdisk>, BoxFuture<'static, PkgfsRamdisk>>
+    {
+        TestEnvBuilder::new()
+    }
+
+    fn blobfs(&self) -> &BlobfsRamdisk {
+        self.pkgfs.blobfs()
+    }
+}
+
+impl<P: PkgFs> TestEnv<P> {
+    async fn inspect_hierarchy(&self) -> DiagnosticsHierarchy {
+        let nested_environment_label = format!(
+            "pkg_cache_integration_test/fuchsia_component_test_collection\\:{}",
+            self.apps.realm_instance.root.child_name()
+        );
+
+        get_inspect_hierarchy(&nested_environment_label, "pkg_cache").await
+    }
+
+    pub async fn open_package(&self, merkle: &str) -> Result<DirectoryProxy, zx::Status> {
+        let (package, server_end) = fidl::endpoints::create_proxy().unwrap();
+        let status_fut = self.proxies.package_cache.open(
+            &mut merkle.parse::<BlobId>().unwrap().into(),
+            &mut vec![].into_iter(),
+            server_end,
+        );
+
+        let () = status_fut.await.unwrap().map_err(zx::Status::from_raw)?;
+        Ok(package)
+    }
+
+    async fn block_until_started(&self) {
+        let (_, server_end) = fidl::endpoints::create_endpoints().unwrap();
+        // The fidl call should succeed, but the result of open doesn't matter.
+        let _ = self
+            .proxies
+            .package_cache
+            .open(
+                &mut "0000000000000000000000000000000000000000000000000000000000000000"
+                    .parse::<BlobId>()
+                    .unwrap()
+                    .into(),
+                &mut vec![].into_iter(),
+                server_end,
+            )
+            .await
+            .unwrap();
+
+        // Also, make sure the system-update-committer starts to prevent race conditions
+        // where the system-update-commiter drops before the paver.
+        let _ = self.proxies.commit_status_provider.is_current_system_committed().await.unwrap();
+    }
+
+    /// Wait until pkg-cache inspect state satisfies `desired_state`.
+    pub async fn wait_for_inspect_state(&self, desired_state: TreeAssertion<String>) {
+        while desired_state.run(&self.inspect_hierarchy().await).is_err() {
+            fasync::Timer::new(Duration::from_millis(10)).await;
+        }
+    }
+
+    pub fn client(&self) -> fidl_fuchsia_pkg_ext::cache::Client {
+        fidl_fuchsia_pkg_ext::cache::Client::from_proxy(self.proxies.package_cache.clone())
+    }
+}
+
 struct MockLogger {
     cobalt_events: Mutex<Vec<CobaltEvent>>,
 }
@@ -460,70 +528,6 @@ impl MockLoggerFactory {
             if events.len() >= n {
                 return events;
             }
-            fasync::Timer::new(Duration::from_millis(10)).await;
-        }
-    }
-}
-
-impl TestEnv<PkgfsRamdisk> {
-    fn builder(
-    ) -> TestEnvBuilder<fn() -> BoxFuture<'static, PkgfsRamdisk>, BoxFuture<'static, PkgfsRamdisk>>
-    {
-        TestEnvBuilder::new()
-    }
-
-    fn blobfs(&self) -> &BlobfsRamdisk {
-        self.pkgfs.blobfs()
-    }
-}
-
-impl<P: PkgFs> TestEnv<P> {
-    async fn inspect_hierarchy(&self) -> DiagnosticsHierarchy {
-        let nested_environment_label = format!(
-            "pkg_cache_integration_test/fuchsia_component_test_collection\\:{}",
-            self.apps.realm_instance.root.child_name()
-        );
-
-        get_inspect_hierarchy(&nested_environment_label, "pkg_cache").await
-    }
-
-    pub async fn open_package(&self, merkle: &str) -> Result<DirectoryProxy, zx::Status> {
-        let (package, server_end) = fidl::endpoints::create_proxy().unwrap();
-        let status_fut = self.proxies.package_cache.open(
-            &mut merkle.parse::<BlobId>().unwrap().into(),
-            &mut vec![].into_iter(),
-            server_end,
-        );
-
-        let () = status_fut.await.unwrap().map_err(zx::Status::from_raw)?;
-        Ok(package)
-    }
-
-    async fn block_until_started(&self) {
-        let (_, server_end) = fidl::endpoints::create_endpoints().unwrap();
-        // The fidl call should succeed, but the result of open doesn't matter.
-        let _ = self
-            .proxies
-            .package_cache
-            .open(
-                &mut "0000000000000000000000000000000000000000000000000000000000000000"
-                    .parse::<BlobId>()
-                    .unwrap()
-                    .into(),
-                &mut vec![].into_iter(),
-                server_end,
-            )
-            .await
-            .unwrap();
-
-        // Also, make sure the system-update-committer starts to prevent race conditions
-        // where the system-update-commiter drops before the paver.
-        let _ = self.proxies.commit_status_provider.is_current_system_committed().await.unwrap();
-    }
-
-    /// Wait until pkg-cache inspect state satisfies `desired_state`.
-    pub async fn wait_for_inspect_state(&self, desired_state: TreeAssertion<String>) {
-        while desired_state.run(&self.inspect_hierarchy().await).is_err() {
             fasync::Timer::new(Duration::from_millis(10)).await;
         }
     }

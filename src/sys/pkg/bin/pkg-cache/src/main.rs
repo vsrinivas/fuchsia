@@ -19,7 +19,6 @@ use {
 };
 
 mod blob_location;
-mod blobs;
 mod cache_service;
 mod gc_service;
 mod index;

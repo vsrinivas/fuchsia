@@ -8,6 +8,7 @@ use {
     fidl_fuchsia_io::{DirectoryMarker, FileMarker},
     fidl_fuchsia_pkg::{BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker},
     fidl_fuchsia_pkg_ext::BlobId,
+    fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
     fuchsia_zircon::Status,
     futures::prelude::*,
@@ -183,6 +184,90 @@ async fn unavailable_when_client_drops_needed_blobs_channel() {
     drop(needed_blobs);
 
     assert_eq!(get_fut.await.unwrap(), Err(Status::UNAVAILABLE));
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn recovers_from_inconsistent_pkgfs_state() {
+    let env = TestEnv::builder().build().await;
+    let pkgfs_root = env.pkgfs.root_dir_proxy().unwrap();
+    let pkgfs_install = pkgfs::install::Client::open_from_pkgfs_root(&pkgfs_root).unwrap();
+
+    let pkg = PackageBuilder::new("partially-written")
+        .add_resource_at("written-1", &b"some contents"[..])
+        .add_resource_at("not-written-1", &b"different contents"[..])
+        .build()
+        .await
+        .unwrap();
+
+    let meta_far_hash = *pkg.meta_far_merkle_root();
+    let meta_far_data = {
+        use std::io::Read as _;
+
+        let mut bytes = vec![];
+        pkg.meta_far().unwrap().read_to_end(&mut bytes).unwrap();
+        bytes
+    };
+
+    let meta_blob_info = BlobInfo { blob_id: BlobId::from(meta_far_hash).into(), length: 0 };
+
+    // Write the meta far through pkgfs.
+    {
+        let (blob, closer) = pkgfs_install
+            .create_blob(meta_far_hash.into(), pkgfs::install::BlobKind::Package)
+            .await
+            .unwrap();
+
+        let blob = blob.truncate(meta_far_data.len() as u64).await.unwrap();
+        assert_matches!(
+            blob.write(&meta_far_data).await.unwrap(),
+            pkgfs::install::BlobWriteSuccess::Done
+        );
+        closer.close().await;
+    }
+
+    // Write a content blob through pkgfs.
+    {
+        let data = &b"some contents"[..];
+        let hash = MerkleTree::from_reader(data).unwrap().root();
+        let (blob, closer) =
+            pkgfs_install.create_blob(hash, pkgfs::install::BlobKind::Data).await.unwrap();
+
+        let blob = blob.truncate(data.len() as u64).await.unwrap();
+        assert_matches!(blob.write(data).await.unwrap(), pkgfs::install::BlobWriteSuccess::Done);
+        closer.close().await;
+    }
+
+    // Perform a Get(), expecting to only write the 1 remaining content blob and for the package to
+    // activate in pkgfs as expected.
+    let dir = {
+        let data = &b"different contents"[..];
+        let hash = MerkleTree::from_reader(data).unwrap().root();
+
+        let pkg_cache = env.client();
+        let mut get = pkg_cache.get(meta_blob_info.into()).unwrap();
+
+        assert_matches!(get.open_meta_blob().await.unwrap(), None);
+        let missing = get.get_missing_blobs().await.unwrap();
+        assert_eq!(
+            missing,
+            vec![fidl_fuchsia_pkg_ext::BlobInfo { blob_id: hash.into(), length: 0 }]
+        );
+
+        let blob = get.open_blob(hash.into()).await.unwrap().unwrap();
+        let (blob, closer) = (blob.blob, blob.closer);
+        let blob = blob.truncate(data.len() as u64).await.unwrap();
+        assert_matches!(
+            blob.write(data).await.unwrap(),
+            fidl_fuchsia_pkg_ext::cache::BlobWriteSuccess::Done
+        );
+        closer.close().await;
+
+        get.finish().await.unwrap()
+    };
+
+    let () = pkg.verify_contents(&dir.into_proxy()).await.unwrap();
+
+    let () = env.stop().await;
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

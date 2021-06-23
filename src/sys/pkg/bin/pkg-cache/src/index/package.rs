@@ -140,12 +140,14 @@ pub async fn fulfill_meta_far_blob(
     index: &Arc<Mutex<PackageIndex>>,
     blobfs: &blobfs::Client,
     meta_hash: Hash,
-) -> Result<(), FulfillMetaFarError> {
+) -> Result<HashSet<Hash>, FulfillMetaFarError> {
     let (path, content_blobs) = crate::index::enumerate_package_blobs(blobfs, &meta_hash)
         .await?
         .ok_or_else(|| FulfillMetaFarError::BlobNotFound(meta_hash))?;
 
-    index.lock().await.fulfill_meta_far(meta_hash, path, content_blobs)
+    let () = index.lock().await.fulfill_meta_far(meta_hash, path, content_blobs.clone())?;
+
+    Ok(content_blobs)
 }
 
 /// Replaces the retained index with one that tracks the given meta far hashes.

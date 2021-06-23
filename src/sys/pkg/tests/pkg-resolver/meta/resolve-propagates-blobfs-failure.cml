@@ -4,6 +4,6 @@
 {
     include: [ "//src/sys/pkg/tests/pkg-resolver/meta/test-common.shard.cml" ],
     program: {
-        binary: "bin/resolve_propagates_pkgfs_failure",
+        binary: "bin/resolve_propagates_blobfs_failure",
     },
 }
