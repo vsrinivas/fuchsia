@@ -206,14 +206,17 @@ component's manifest is shipped as a blob in this package, usually in `meta/`.
 
 ## Notes
 
-\[^1\]: In the future, there is a high probability that manifests need to
-support some sort of parameterization feature to support variants and product
-configurability. When we do so, we should approach this in a way that avoids the
-common pitfalls associated with parameterizable configurations.
+[^1]:
+     In the future, there is a high probability that manifests need to
+     support some sort of parameterization feature to support variants and
+     product configurability. When we do so, we should approach this in a way
+     that avoids the common pitfalls associated with parameterizable
+     configurations.
 
-\[^2\]: For more context on this point, Kubernetes has extensive
-[documentation][k8s-declarative-configuration] explaining many of the downsides
-of non-declarative configuration.
+[^2]:
+     For more context on this point, Kubernetes has extensive
+     [documentation][k8s-declarative-configuration] explaining many of the
+     downsides of non-declarative configuration.
 
 [blobfs]: /docs/concepts/filesystems/blobfs.md
 [borgcfg]: https://storage.googleapis.com/pub-tools-public-publication-data/pdf/43438.pdf
