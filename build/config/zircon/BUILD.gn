@@ -272,22 +272,6 @@ config("data_sections") {
   ldflags = cflags
 }
 
-config("linker_gc") {
-  configs = [ ":data_sections" ]
-  cflags = [ "-ffunction-sections" ]
-  ldflags = cflags
-  if (current_os == "mac") {
-    ldflags += [ "-Wl,-dead_strip" ]
-  } else if (current_os == "win") {
-    ldflags += [ "-Wl,/opt:ref" ]
-  } else {
-    ldflags += [ "-Wl,--gc-sections" ]
-  }
-}
-
-group("linker_gc_deps") {
-}
-
 # The 'default_assert_level' will point to one of the assert_level_XXX values
 # below. This allows targets or toolchains to opt out from the default and
 # select a specific value.
@@ -324,39 +308,6 @@ config("default_assert_level") {
 
 group("default_assert_level_deps") {
   # Implicit dependencies for 'default_assert_level' config.
-}
-
-config("linker_gc_none") {
-  # No linker GC when wholly unoptimized.
-}
-
-# Linker GC is a good default for most cases.
-config("linker_gc_debug") {
-  configs = [ ":linker_gc" ]
-}
-
-config("linker_gc_default") {
-  configs = [ ":linker_gc" ]
-}
-
-config("linker_gc_size") {
-  configs = [ ":linker_gc" ]
-}
-
-config("linker_gc_speed") {
-  configs = [ ":linker_gc" ]
-}
-
-config("linker_gc_sanitizer") {
-  configs = [ ":linker_gc" ]
-}
-
-config("linker_gc_profile") {
-  # TODO(fxbug.dev/51509): See if we can enable linker GC for profile.
-}
-
-config("default_linker_gc") {
-  configs = [ ":linker_gc_${optimize}" ]
 }
 
 # This is separate from default_optimize so it can be removed.

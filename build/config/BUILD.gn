@@ -267,6 +267,10 @@ config("linker_gc") {
   }
 }
 
+group("linker_gc_deps") {
+  # Implicit dependencies for linker_gc config.
+}
+
 config("linker_string_merging") {
   if (current_os == "win") {
     ldflags = [ "-Wl,/opt:lldtailmerge" ]
@@ -407,7 +411,11 @@ config("linker_gc_sanitizer") {
 }
 
 config("linker_gc_profile") {
-  configs = [ ":linker_gc" ]
+  if (zircon_toolchain != false) {
+    # TODO(fxbug.dev/51509): See if we can enable linker GC for profile.
+  } else {
+    configs = [ ":linker_gc" ]
+  }
 }
 
 config("linker_gc_coverage") {

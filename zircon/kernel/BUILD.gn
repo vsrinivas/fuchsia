@@ -115,8 +115,8 @@ if (current_toolchain == default_toolchain) {
         # because of crufty acpica code, and some compiler instrumentation
         # is broken wrt --gc-sections semantics.
         exclude_variant_tags += [ "breaks-gc-sections" ]
-        remove_common_configs += [ "//build/config/zircon:default_linker_gc" ]
-        configs += [ "//build/config/zircon:linker_gc" ]
+        remove_common_configs += [ "//build/config:default_linker_gc" ]
+        configs += [ "//build/config:linker_gc" ]
       }
 
       # As a special case, kernel assertions are controlled by the kernel_debug_level
