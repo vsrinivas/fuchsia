@@ -55,14 +55,21 @@ if (target_cpu == "x64") {
     outputs = [ "data/metadata.json" ]
   }
 
-  fuchsia_package_with_single_component("libvulkan_intel_gen") {
-    component_name = "vulkan"
-    deps = [
-      ":magma-intel-gen-config-resource",
-      ":vulkan_metadata",
-      "//third_party/mesa:magma_vulkan",
-    ]
-    manifest = "meta/vulkan.cml"
+  if (bootfs_only) {
+    # Don't package ICD on bringup builds, because it wastes space and the loader service doesn't
+    # support loading it from bootfs.
+    group("libvulkan_intel_gen") {
+    }
+  } else {
+    fuchsia_package_with_single_component("libvulkan_intel_gen") {
+      component_name = "vulkan"
+      deps = [
+        ":magma-intel-gen-config-resource",
+        ":vulkan_metadata",
+        "//third_party/mesa:magma_vulkan",
+      ]
+      manifest = "meta/vulkan.cml"
+    }
   }
 
   icd_config_data("magma-intel-gen-config") {
