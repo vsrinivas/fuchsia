@@ -5,6 +5,17 @@
 import("//build/components.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//src/connectivity/network/netstack/gentool/generated.gni")
+
+generated_go("entries_gen_test") {
+  definitions = [
+    {
+      src = "test_entries.json"
+      package = "entries"
+      template = "gen/entries.tmpl"
+    },
+  ]
+}
 
 go_library("fifo") {
   name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
@@ -27,8 +38,8 @@ go_test("link_fifo_test") {
       [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo" ]
 
   deps = [
+    ":entries_gen_test",
     ":fifo",
-    "//src/connectivity/network/netstack:entries_gen_test",
   ]
 }
 

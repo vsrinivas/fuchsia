@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package eth
 
-// #include <zircon/device/ethernet.h>
-// #include <zircon/types.h>
-import "C"
 import (
 	"fmt"
+
+	// #include <zircon/device/ethernet.h>
+	// #include <zircon/types.h>
+	"C"
 )
 
 const FifoRXOK = C.ETH_FIFO_RX_OK

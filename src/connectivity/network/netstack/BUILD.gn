@@ -160,16 +160,6 @@ go_library("lib") {
   ]
 }
 
-generated_go("entries_gen_test") {
-  definitions = [
-    {
-      src = "link/fifo/test_entries.json"
-      package = "entries"
-      template = "link/fifo/gen/entries.tmpl"
-    },
-  ]
-}
-
 go_test("netstack_test") {
   gopackages = [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack" ]
   deps = [ ":lib" ]
