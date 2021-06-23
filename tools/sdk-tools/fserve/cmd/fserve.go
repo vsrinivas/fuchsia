@@ -65,8 +65,6 @@ type sdkProvider interface {
 		verbose bool, sshArgs []string) (string, error)
 }
 
-var persistFlag = flag.Bool("persist", false, "Persist repository metadata to allow serving resolved packages across reboot.")
-
 func main() {
 	var (
 		err error
@@ -87,6 +85,7 @@ func main() {
 	cleanFlag := flag.Bool("clean", false, "Cleans the package repository first.")
 	prepareFlag := flag.Bool("prepare", false, "Downloads any dependencies but does not start the package server.")
 	versionFlag := flag.String("version", sdk.GetSDKVersion(), "SDK Version to use for prebuilt packages.")
+	persistFlag := flag.Bool("persist", false, "Persist repository metadata to allow serving resolved packages across reboot.")
 	flag.Var(&level, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
 
 	// target related options
@@ -182,7 +181,7 @@ func main() {
 	}
 
 	// connect the device to the package server
-	if err := setPackageSource(ctx, sdk, *repoPortFlag, *nameFlag, deviceConfig.DeviceIP, *sshConfigFlag, *privateKeyFlag, sshPort); err != nil {
+	if err := setPackageSource(ctx, sdk, *repoPortFlag, *nameFlag, deviceConfig.DeviceIP, *sshConfigFlag, *privateKeyFlag, *persistFlag, sshPort); err != nil {
 		log.Fatalf("Could set package server source on device: %v\n", err)
 	}
 
@@ -460,7 +459,7 @@ func downloadImageIfNeeded(ctx context.Context, sdk sdkProvider, version string,
 
 // setPackageSource sets the URL for the package server on the target device.
 func setPackageSource(ctx context.Context, sdk sdkProvider, repoPort string, name string,
-	targetAddress string, sshConfig string, privateKey string, sshPort string) error {
+	targetAddress string, sshConfig string, privateKey string, persist bool, sshPort string) error {
 
 	var (
 		err error
@@ -484,11 +483,12 @@ func setPackageSource(ctx context.Context, sdk sdkProvider, repoPort string, nam
 		hostIP = fmt.Sprintf("[%s]", hostIP)
 	}
 
+	// TODO(fxbug.dev/74493): Use pkgctl instead of amber_ctl.
 	sshArgs := []string{"amber_ctl", "add_src", "-n", name, "-f",
 		fmt.Sprintf("http://%v:%v/config.json", hostIP, repoPort)}
 
-	if *persistFlag {
-		sshArgs = append(sshArgs, "-persist")
+	if persist {
+		sshArgs = append(sshArgs, "-p")
 	}
 
 	verbose := level == logger.DebugLevel || level == logger.TraceLevel

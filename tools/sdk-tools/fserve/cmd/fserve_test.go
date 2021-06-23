@@ -90,6 +90,10 @@ func (testSDK testSDKProperties) RunSSHCommand(targetAddress string, sshConfig s
 				ok = expected == sshArgs[i]
 			}
 		}
+		if !ok {
+			return "", fmt.Errorf("unexpected ssh args[%v]  %v expected[%v] %v",
+				len(sshArgs), sshArgs, len(expectedArgs), expectedArgs)
+		}
 	}
 	if sshArgs[0] == "echo" {
 		return fmt.Sprintf("%v 54545 fe80::c00f:f0f0:eeee:cccc 22\n", hostaddr), nil
@@ -396,6 +400,7 @@ func TestSetPackageSource(t *testing.T) {
 		name            string
 		privateKey      string
 		sshPort         string
+		persist         bool
 		expectedSSHArgs [][]string
 	}{
 		{
@@ -443,6 +448,19 @@ func TestSetPackageSource(t *testing.T) {
 				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
 			},
 		},
+		{
+			repoPort:      "8083",
+			targetAddress: resolvedAddr,
+			sshConfig:     "",
+			privateKey:    "",
+			name:          "devhost",
+			sshPort:       "1022",
+			persist:       true,
+			expectedSSHArgs: [][]string{
+				{"echo", "$SSH_CONNECTION"},
+				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json", "-p"},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -451,7 +469,7 @@ func TestSetPackageSource(t *testing.T) {
 			expectPrivateKey:      test.privateKey != "",
 			expectSSHPort:         test.sshPort != ""}
 
-		if err := setPackageSource(ctx, testSDK, test.repoPort, test.name, test.targetAddress, test.sshConfig, test.privateKey, test.sshPort); err != nil {
+		if err := setPackageSource(ctx, testSDK, test.repoPort, test.name, test.targetAddress, test.sshConfig, test.privateKey, test.persist, test.sshPort); err != nil {
 			t.Fatal(err)
 		}
 	}
