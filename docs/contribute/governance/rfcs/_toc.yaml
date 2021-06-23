@@ -223,3 +223,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0104_relative_urls.md
 - title: "RFC-0105: Regular expression libraries"
   path: /docs/contribute/governance/rfcs/0105_regular_expression_libraries.md
+- title: "RFC-0106: Component manifest includes in the Fuchsia SDK"
+  path: /docs/contribute/governance/rfcs/0106_manifest_includes_in_sdk.md
