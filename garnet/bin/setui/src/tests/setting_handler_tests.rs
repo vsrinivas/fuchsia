@@ -16,6 +16,7 @@ use {
         Handler, IntoHandlerResult, Payload, SettingHandlerResult, State,
     },
     crate::message::base::{Audience, MessengerType},
+    crate::message::MessageHubUtil,
     crate::service,
     crate::tests::message_utils::verify_payload,
     crate::EnvironmentBuilder,
@@ -121,7 +122,7 @@ async fn test_spawn() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_write_notify() {
-    let delegate = service::message::create_hub();
+    let delegate = service::MessageHub::create_hub();
     let (handler_messenger, handler_receptor) =
         delegate.create(MessengerType::Unbound).await.unwrap();
     let signature = delegate
@@ -304,7 +305,7 @@ impl controller::Handle for BlankController {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_event_propagation() {
-    let delegate = service::message::create_hub();
+    let delegate = service::MessageHub::create_hub();
     let setting_type = SettingType::Unknown;
 
     let (messenger, receptor) = delegate.create(MessengerType::Unbound).await.unwrap();
@@ -377,7 +378,7 @@ async fn test_event_propagation() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_rebroadcast() {
-    let delegate = service::message::create_hub();
+    let delegate = service::MessageHub::create_hub();
     let setting_type = SettingType::Unknown;
 
     // This messenger represents the outside client for the setting controller, which would be
@@ -437,7 +438,7 @@ async fn test_rebroadcast() {
 
 // Test that the controller state is entered [n] times.
 async fn verify_controller_state(state: State, n: u8) {
-    let delegate = service::message::create_hub();
+    let delegate = service::MessageHub::create_hub();
     let setting_type = SettingType::Audio;
 
     let (messenger, receptor) = delegate.create(MessengerType::Unbound).await.unwrap();
@@ -538,7 +539,7 @@ impl controller::Handle for StubController {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_unimplemented_error() {
     for setting_type in get_all_setting_types() {
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
 
         let (messenger, receptor) = delegate.create(MessengerType::Unbound).await.unwrap();
         let (handler_messenger, handler_receptor) =

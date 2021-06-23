@@ -31,6 +31,7 @@ use {
     crate::job::manager::Manager,
     crate::job::source::Seeder,
     crate::light::light_controller::LightController,
+    crate::message::MessageHubUtil,
     crate::monitor::base as monitor_base,
     crate::night_mode::night_mode_controller::NightModeController,
     crate::policy::policy_handler,
@@ -405,7 +406,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         }
 
         // Define top level MessageHub for service communication.
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
 
         let (agent_types, fidl_interfaces, policies, flags) = match self.configuration {
             Some(configuration) => (

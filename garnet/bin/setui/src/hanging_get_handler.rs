@@ -385,6 +385,7 @@ mod tests {
     use crate::base::SettingInfo;
     use crate::display::types::{DisplayInfo, LowLightMode};
     use crate::message::base::MessengerType;
+    use crate::message::MessageHubUtil;
 
     use super::*;
 
@@ -583,7 +584,7 @@ mod tests {
     /// Ensures errors are gracefully handed back by the hanging_get
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_error_resolution() {
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
         let setting_type = SettingType::Display;
         let _ = TestSettingHandlerBuilder::new(delegate.clone(), setting_type)
             .set_always_fail(true)
@@ -620,7 +621,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_change_after_watch() {
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
         let setting_type = SettingType::Display;
 
         let setting_handler_handle = TestSettingHandlerBuilder::new(delegate.clone(), setting_type)
@@ -663,7 +664,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_watch_after_change() {
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
         let setting_type = SettingType::Display;
 
         let setting_handler_handle = TestSettingHandlerBuilder::new(delegate.clone(), setting_type)
@@ -706,7 +707,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch_with_change_function() {
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
         let setting_type = SettingType::Display;
         let setting_handler_handle = TestSettingHandlerBuilder::new(delegate.clone(), setting_type)
             .set_initial_id(ID1)
@@ -783,7 +784,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_watch_with_change_function_multiple() {
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
         let setting_type = SettingType::Display;
 
         let setting_handler_handle = TestSettingHandlerBuilder::new(delegate.clone(), setting_type)

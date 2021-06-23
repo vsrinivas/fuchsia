@@ -243,6 +243,7 @@ mod tests {
     use super::*;
     use crate::audio::default_audio_info;
     use crate::message::base::MessengerType;
+    use crate::message::MessageHubUtil;
     use crate::service_context::ServiceContext;
     use futures::lock::Mutex;
     use std::sync::Arc;
@@ -273,7 +274,7 @@ mod tests {
     async fn test_changed_streams() {
         let (fake_streams, old_timestamps, new_timestamps, expected_changed_streams) =
             fake_values();
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
         let publisher = event::Publisher::create(&delegate, MessengerType::Unbound).await;
         let mut last_user_volumes = HashMap::new();
         last_user_volumes.insert(AudioStreamType::Media, 1.0);

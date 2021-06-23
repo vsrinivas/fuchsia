@@ -108,7 +108,8 @@ where
 mod tests {
     use super::*;
     use crate::message::base::MessengerType;
-    use crate::service::{message, Address};
+    use crate::message::MessageHubUtil;
+    use crate::service::{Address, MessageHub};
     use fuchsia_async as fasync;
     use futures::channel::oneshot::Sender;
     use matches::assert_matches;
@@ -132,7 +133,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_request_basic_functionality() {
         // Create MessageHub for communication between components.
-        let message_hub_delegate = message::create_hub();
+        let message_hub_delegate = MessageHub::create_hub();
 
         // Create mock handler endpoint to receive request.
         let mut handler_receiver = message_hub_delegate
@@ -182,7 +183,7 @@ mod tests {
     async fn test_error_propagation() {
         // Create MessageHub for communication between components. Do not create any handler for the
         // test SettingType address.
-        let message_hub_delegate = message::create_hub();
+        let message_hub_delegate = MessageHub::create_hub();
 
         let (response_tx, response_rx) = futures::channel::oneshot::channel::<Response>();
 

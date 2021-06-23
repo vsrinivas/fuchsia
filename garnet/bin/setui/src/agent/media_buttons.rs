@@ -158,6 +158,7 @@ mod tests {
     use crate::event;
     use crate::input::common::MediaButtonsEventBuilder;
     use crate::message::base::{MessageEvent, MessengerType};
+    use crate::message::MessageHubUtil;
     use crate::service;
     use crate::service_context::ServiceContext;
     use crate::tests::fakes::service_registry::ServiceRegistry;
@@ -168,7 +169,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn initialization_lifespan_is_unhandled() {
         // Setup messengers needed to construct the agent.
-        let service_message_hub = service::message::create_hub();
+        let service_message_hub = service::MessageHub::create_hub();
         let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
 
         // Construct the agent.
@@ -197,7 +198,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn when_media_buttons_inaccessible_returns_err() {
         // Setup messengers needed to construct the agent.
-        let service_message_hub = service::message::create_hub();
+        let service_message_hub = service::MessageHub::create_hub();
         let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
 
         // Construct the agent.
@@ -226,7 +227,7 @@ mod tests {
     // Tests that events can be sent to the intended recipients.
     #[fuchsia_async::run_until_stalled(test)]
     async fn event_handler_proxies_event() {
-        let service_message_hub = service::message::create_hub();
+        let service_message_hub = service::MessageHub::create_hub();
         let target_setting_type = SettingType::Unknown;
 
         // Get the messenger's signature and the receptor for agents. We need
@@ -337,7 +338,7 @@ mod tests {
     // Tests that events are not sent to unavailable settings.
     #[fuchsia_async::run_until_stalled(test)]
     async fn event_handler_sends_no_events_if_no_settings_available() {
-        let service_message_hub = service::message::create_hub();
+        let service_message_hub = service::MessageHub::create_hub();
         let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
 
         // Create messenger to represent unavailable setting handler.

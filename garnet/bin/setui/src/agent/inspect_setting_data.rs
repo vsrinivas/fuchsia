@@ -235,13 +235,14 @@ mod tests {
     use crate::agent::Invocation;
     use crate::base::{SettingInfo, SettingType, UnknownInfo};
     use crate::message::base::Status;
-    use crate::service::message::create_hub;
+    use crate::message::MessageHubUtil;
+    use crate::service::MessageHub;
     use crate::service_context::ServiceContext;
 
     use super::*;
 
     async fn create_context() -> Context {
-        let hub = create_hub();
+        let hub = MessageHub::create_hub();
         Context::new(
             hub.create(MessengerType::Unbound).await.expect("should be present").1,
             hub,

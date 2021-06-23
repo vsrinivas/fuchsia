@@ -148,6 +148,7 @@ mod tests {
     use super::*;
     use crate::event;
     use crate::message::base::{MessageEvent, MessengerType};
+    use crate::message::MessageHubUtil;
     use crate::service_context::ServiceContext;
     use crate::tests::fakes::service_registry::ServiceRegistry;
     use futures::StreamExt;
@@ -159,7 +160,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn initialization_lifespan_is_unhandled() {
         // Setup messengers needed to construct the agent.
-        let service_message_hub = service::message::create_hub();
+        let service_message_hub = service::MessageHub::create_hub();
         let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
 
         let (messenger, _) = service_message_hub
@@ -186,7 +187,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn when_camera3_inaccessible_returns_err() {
         // Setup messengers needed to construct the agent.
-        let service_message_hub = service::message::create_hub();
+        let service_message_hub = service::MessageHub::create_hub();
         let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
 
         let (messenger, _) = service_message_hub
@@ -213,7 +214,7 @@ mod tests {
     // Tests that events can be sent to the intended recipients.
     #[fuchsia_async::run_until_stalled(test)]
     async fn event_handler_proxies_event() {
-        let service_message_hub = service::message::create_hub();
+        let service_message_hub = service::MessageHub::create_hub();
 
         // Get the messenger's signature and the receptor for agents. We need
         // a different messenger below because a broadcast would not send a message
@@ -298,7 +299,7 @@ mod tests {
     // Tests that events are not sent to unavailable settings.
     #[fuchsia_async::run_until_stalled(test)]
     async fn event_handler_sends_no_events_if_no_settings_available() {
-        let service_message_hub = service::message::create_hub();
+        let service_message_hub = service::MessageHub::create_hub();
         let publisher = Publisher::create(&service_message_hub, MessengerType::Unbound).await;
         let handler_address = service::Address::Handler(SettingType::Unknown);
         let verification_request = Request::Get;

@@ -120,8 +120,8 @@ pub(crate) mod testing {
 
     use crate::agent::Context;
     use crate::message::base::{filter, MessengerType};
-    use crate::service;
-    use crate::service::message::create_hub;
+    use crate::message::MessageHubUtil;
+    use crate::service::{self, MessageHub};
     use crate::tests::message_utils::verify_payload;
 
     use serde::Deserialize;
@@ -134,8 +134,12 @@ pub(crate) mod testing {
 
     async fn create_context() -> Context {
         Context::new(
-            create_hub().create(MessengerType::Unbound).await.expect("should be present").1,
-            create_hub(),
+            MessageHub::create_hub()
+                .create(MessengerType::Unbound)
+                .await
+                .expect("should be present")
+                .1,
+            MessageHub::create_hub(),
             HashSet::new(),
             HashSet::new(),
             None,

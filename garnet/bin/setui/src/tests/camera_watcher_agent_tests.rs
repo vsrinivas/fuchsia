@@ -6,6 +6,7 @@ use crate::agent::camera_watcher::CameraWatcherAgent;
 use crate::agent::{Context, Invocation, Lifespan, Payload};
 use crate::event::{self, Event};
 use crate::message::base::{Audience, MessengerType};
+use crate::message::MessageHubUtil;
 use crate::service;
 use crate::service_context::ServiceContext;
 use crate::tests::fakes::camera3_service::Camera3Service;
@@ -30,7 +31,7 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_camera_agent_proxy() {
-    let service_hub = service::message::create_hub();
+    let service_hub = service::MessageHub::create_hub();
 
     // Create the agent receptor for use by the agent.
     let agent_receptor = service_hub

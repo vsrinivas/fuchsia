@@ -247,6 +247,7 @@ mod tests {
     use crate::ingress::registration::Registrant;
     use crate::job::source::Seeder;
     use crate::message::base::MessengerType;
+    use crate::message::MessageHubUtil;
     use crate::service;
     use fidl_fuchsia_settings::PrivacyMarker;
     use fuchsia_async as fasync;
@@ -259,7 +260,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_fidl_bringup() {
         let mut fs = ServiceFs::new();
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
         let job_manager_signature = delegate
             .create(MessengerType::Unbound)
             .await

@@ -9,6 +9,7 @@ use crate::agent::{Context, Payload};
 use crate::event::{self, Event};
 use crate::input::{ButtonType, VolumeGain};
 use crate::message::base::{Audience, MessengerType};
+use crate::message::MessageHubUtil;
 use crate::service;
 use crate::service_context::ServiceContext;
 use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
@@ -36,7 +37,7 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_media_buttons_proxied() {
-    let service_hub = service::message::create_hub();
+    let service_hub = service::MessageHub::create_hub();
     // Create the agent receptor for use by the agent.
     let agent_receptor = service_hub
         .create(MessengerType::Unbound)

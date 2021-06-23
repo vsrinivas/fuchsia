@@ -12,6 +12,7 @@ use crate::config::base::AgentType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::ingress::fidl::Interface;
 use crate::message::base::{Audience, MessengerType};
+use crate::message::MessageHubUtil;
 use crate::policy::response;
 use crate::policy::{Payload, PolicyInfo, PolicyType, Request};
 use crate::service;
@@ -209,7 +210,7 @@ async fn remove_policy(env: &TestEnvironment, policy_id: u32) {
 // properly.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_policy_message_hub() {
-    let delegate = service::message::create_hub();
+    let delegate = service::MessageHub::create_hub();
     let policy_handler_address = service::Address::PolicyHandler(PolicyType::Audio);
 
     // Create messenger to send request.

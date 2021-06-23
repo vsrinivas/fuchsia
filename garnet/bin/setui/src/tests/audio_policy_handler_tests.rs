@@ -20,7 +20,7 @@ use crate::handler::device_storage::{
     DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
 };
 use crate::message::base::{filter, Audience, MessageEvent, MessengerType, Status};
-use crate::message_hub_definition;
+use crate::message::{MessageHubDefinition, MessageHubUtil};
 use crate::policy::policy_handler::{ClientProxy, Create, PolicyHandler, RequestTransform};
 use crate::policy::response::{Error as PolicyError, Payload};
 use crate::policy::{PolicyInfo, PolicyType, Request};
@@ -42,7 +42,12 @@ pub(crate) enum TestEnvironmentPayload {
     Serve(AudioInfo),
 }
 
-message_hub_definition!(TestEnvironmentPayload);
+struct MessageHub;
+impl MessageHubDefinition for MessageHub {
+    type Payload = TestEnvironmentPayload;
+    type Address = crate::message::base::default::Address;
+    type Role = crate::message::base::default::Role;
+}
 
 struct TestEnvironment {
     /// Device storage handle.
@@ -52,9 +57,9 @@ struct TestEnvironment {
     handler: AudioPolicyHandler,
 
     /// Factory for internal message hub.
-    internal_delegate: message::Delegate,
+    internal_delegate: <MessageHub as MessageHubUtil>::Delegate,
 
-    setting_handler_signature: message::Signature,
+    setting_handler_signature: <MessageHub as MessageHubUtil>::Signature,
 
     delegate: service::message::Delegate,
 }
@@ -73,11 +78,11 @@ impl TestEnvironment {
 
     async fn new_with_store(storage_factory: Arc<InMemoryStorageFactory>) -> Self {
         let store = storage_factory.get_store().await;
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
         let (messenger, _) =
             delegate.create(MessengerType::Unbound).await.expect("core messenger created");
 
-        let test_delegate = message::create_hub();
+        let test_delegate = MessageHub::create_hub();
 
         let handler_signature =
             TestEnvironment::spawn_setting_handler(&delegate, &test_delegate).await;
@@ -143,7 +148,7 @@ impl TestEnvironment {
             .send()
     }
 
-    async fn create_request_observer(&self) -> message::Receptor {
+    async fn create_request_observer(&self) -> <MessageHub as MessageHubUtil>::Receptor {
         self.internal_delegate
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(move |message| {
@@ -157,8 +162,8 @@ impl TestEnvironment {
 
     async fn spawn_setting_handler(
         service_delegate: &service::message::Delegate,
-        test_delegate: &message::Delegate,
-    ) -> message::Signature {
+        test_delegate: &<MessageHub as MessageHubUtil>::Delegate,
+    ) -> <MessageHub as MessageHubUtil>::Signature {
         let cmd_receptor = test_delegate
             .create(MessengerType::Unbound)
             .await
@@ -379,7 +384,10 @@ async fn set_and_verify_media_volume(
     .await;
 }
 
-async fn verify_stream_set(receptor: &mut message::Receptor, stream: AudioStream) {
+async fn verify_stream_set(
+    receptor: &mut <MessageHub as MessageHubUtil>::Receptor,
+    stream: AudioStream,
+) {
     while let Some(message_event) = receptor.next().await {
         if let MessageEvent::Message(incoming_payload, mut client) = message_event {
             client.acknowledge().await;
@@ -400,7 +408,10 @@ async fn verify_stream_set(receptor: &mut message::Receptor, stream: AudioStream
 }
 
 /// Verifies that the setting proxy in the test environment received a set request for media volume.
-async fn verify_media_volume_set(receptor: &mut message::Receptor, volume_level: f32) {
+async fn verify_media_volume_set(
+    receptor: &mut <MessageHub as MessageHubUtil>::Receptor,
+    volume_level: f32,
+) {
     verify_stream_set(receptor, create_media_stream(volume_level, false)).await;
 }
 

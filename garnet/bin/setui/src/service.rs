@@ -30,12 +30,35 @@ use crate::job;
 use crate::message::base::role;
 #[cfg(test)]
 use crate::message::base::MessengerType;
-use crate::message_hub_definition;
+use crate::message::MessageHubDefinition;
 use crate::monitor;
 use crate::policy::{self, PolicyType};
 use crate::storage;
 
-message_hub_definition!(Payload, Address, Role);
+pub struct MessageHub;
+impl MessageHubDefinition for MessageHub {
+    type Payload = Payload;
+    type Address = Address;
+    type Role = Role;
+}
+
+pub(crate) mod message {
+    use super::MessageHub;
+    use crate::message::MessageHubUtil;
+
+    pub(crate) type Audience = <MessageHub as MessageHubUtil>::Audience;
+    pub(crate) type Delegate = <MessageHub as MessageHubUtil>::Delegate;
+    pub(crate) type MessageClient = <MessageHub as MessageHubUtil>::MessageClient;
+    pub(crate) type MessageError = <MessageHub as MessageHubUtil>::MessageError;
+    pub(crate) type MessageEvent = <MessageHub as MessageHubUtil>::MessageEvent;
+    pub(crate) type Messenger = <MessageHub as MessageHubUtil>::Messenger;
+    pub(crate) type MessengerType = <MessageHub as MessageHubUtil>::MessengerType;
+    pub(crate) type Receptor = <MessageHub as MessageHubUtil>::Receptor;
+    pub(crate) type Signature = <MessageHub as MessageHubUtil>::Signature;
+
+    #[cfg(test)]
+    pub(crate) type TargetedMessenger = <MessageHub as MessageHubUtil>::TargetedMessenger;
+}
 
 /// The `Address` enumeration defines a namespace for entities that can be
 /// reached by a predefined name. Care should be taken when adding new child

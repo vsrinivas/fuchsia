@@ -272,8 +272,8 @@ impl Handler {
 mod tests {
     use super::*;
     use crate::job::execution;
-    use crate::service::message;
-    use crate::service::test;
+    use crate::message::MessageHubUtil;
+    use crate::service::{test, MessageHub};
     use crate::tests::scaffold::workload::{Sequential, StubWorkload, Workload};
     use rand::Rng;
 
@@ -290,7 +290,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_seeding() {
         // Create delegate for communication between components.
-        let message_hub_delegate = message::create_hub();
+        let message_hub_delegate = MessageHub::create_hub();
 
         // Create a top-level receptor to receive sources.
         let mut receptor = message_hub_delegate
@@ -315,7 +315,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_handling() {
         // Create delegate for communication between components.
-        let mut message_hub_delegate = message::create_hub();
+        let mut message_hub_delegate = MessageHub::create_hub();
 
         let results: Vec<i64> = (0..10).collect();
 
@@ -365,7 +365,7 @@ mod tests {
         let (execution_tx, mut execution_rx) = futures::channel::mpsc::unbounded::<job::Info>();
 
         // Create delegate for communication between components.
-        let mut message_hub_delegate = message::create_hub();
+        let mut message_hub_delegate = MessageHub::create_hub();
 
         let mut handler = Handler::new();
 
@@ -464,7 +464,7 @@ mod tests {
         let (result_tx, mut result_rx) = futures::channel::mpsc::unbounded::<usize>();
 
         // Create delegate for communication between components.
-        let mut message_hub_delegate = message::create_hub();
+        let mut message_hub_delegate = MessageHub::create_hub();
 
         let mut handler = Handler::new();
 

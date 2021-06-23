@@ -134,6 +134,7 @@ mod tests {
         BoxedController, ClientImpl, ControllerError, ControllerStateResult, SettingHandlerResult,
     };
     use crate::message::base::{filter, Message, MessageType};
+    use crate::message::MessageHubUtil;
     use crate::service;
     use crate::service_context::ServiceContext;
     use fuchsia_async as fasync;
@@ -168,7 +169,7 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn ensure_startup_is_awaited() {
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
         let mut factory_impl = SettingHandlerFactoryImpl::new(
             {
                 let mut settings = HashSet::new();

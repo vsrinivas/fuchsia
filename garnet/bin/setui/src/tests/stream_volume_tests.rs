@@ -7,6 +7,7 @@ use crate::audio::types::AudioStreamType;
 use crate::audio::{create_default_audio_stream, StreamVolumeControl};
 use crate::event;
 use crate::message::base::MessengerType;
+use crate::message::MessageHubUtil;
 use crate::service;
 use crate::service_context::ServiceContext;
 use crate::tests::fakes::audio_core_service;
@@ -29,7 +30,7 @@ async fn create_service() -> Arc<Mutex<ServiceRegistry>> {
 // Tests that the volume event stream thread exits when the StreamVolumeControl is deleted.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_drop_thread() {
-    let delegate = service::message::create_hub();
+    let delegate = service::MessageHub::create_hub();
 
     let mut receptor = service::build_event_listener(&delegate).await;
 

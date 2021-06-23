@@ -121,6 +121,7 @@ mod tests {
     use crate::base::{Dependency, Entity, SettingType};
     use crate::job::source::Seeder;
     use crate::message::base::MessengerType;
+    use crate::message::MessageHubUtil;
     use crate::service;
     use fuchsia_component::server::ServiceFs;
     use matches::assert_matches;
@@ -140,7 +141,7 @@ mod tests {
         // Verify added dependency.
         assert!(registrant.get_dependencies().contains(&dependency));
 
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
         let job_manager_signature = delegate
             .create(MessengerType::Unbound)
             .await
@@ -150,7 +151,7 @@ mod tests {
         let job_seeder = Seeder::new(&delegate, job_manager_signature).await;
 
         // Register and consume Registrant.
-        registrant.register(&service::message::create_hub(), &job_seeder, &mut fs.root_dir());
+        registrant.register(&service::MessageHub::create_hub(), &job_seeder, &mut fs.root_dir());
 
         // Verify registration occurred.
         assert_matches!(rx.await, Ok(()));

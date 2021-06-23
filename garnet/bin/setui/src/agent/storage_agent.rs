@@ -291,6 +291,7 @@ mod tests {
     use crate::display::types::LightData;
     use crate::handler::device_storage::testing::InMemoryStorageFactory;
     use crate::message::base::Audience;
+    use crate::message::MessageHubUtil;
 
     enum Setting {
         Info(SettingInfo),
@@ -329,7 +330,7 @@ mod tests {
             StorageManagement { storage_factory: Arc::new(InMemoryStorageFactory::new()) };
 
         // This section is just to get a responder. We don't need it to actually respond to anything.
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
         let (messenger, _) =
             delegate.create(MessengerType::Unbound).await.expect("messenger created");
         let (_, mut receptor) =

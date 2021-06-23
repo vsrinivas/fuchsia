@@ -9,6 +9,7 @@ use crate::message::base::{
 };
 use crate::message::messenger::TargetedMessengerClient;
 use crate::message::receptor::Receptor;
+use crate::message::MessageHubUtil;
 use crate::tests::message_utils::verify_payload;
 use fuchsia_zircon::DurationNum;
 use futures::future::BoxFuture;
@@ -67,21 +68,31 @@ static REPLY: TestMessage = TestMessage::Bar;
 
 mod test {
     use super::*;
-    use crate::message_hub_definition;
+    use crate::message::MessageHubDefinition;
 
-    message_hub_definition!(TestMessage, TestAddress, TestRole);
+    pub(super) struct MessageHub;
+    impl MessageHubDefinition for MessageHub {
+        type Payload = TestMessage;
+        type Address = TestAddress;
+        type Role = TestRole;
+    }
 }
 
 mod num_test {
-    use crate::message_hub_definition;
+    use crate::message::MessageHubDefinition;
 
-    message_hub_definition!(u64, u64);
+    pub(super) struct MessageHub;
+    impl MessageHubDefinition for MessageHub {
+        type Payload = u64;
+        type Address = u64;
+        type Role = crate::message::base::default::Role;
+    }
 }
 
 /// Tests message client creation results in unique ids.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_message_client_equality() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
     let (messenger, _) = delegate.create(MessengerType::Unbound).await.unwrap();
     let (_, mut receptor) = delegate.create(MessengerType::Unbound).await.unwrap();
 
@@ -99,7 +110,7 @@ async fn test_message_client_equality() {
 /// Tests messenger creation and address space collision.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_messenger_creation() {
-    let delegate = num_test::message::create_hub();
+    let delegate = num_test::MessageHub::create_hub();
     let address = 1;
 
     let messenger_1_result = delegate.create(MessengerType::Addressable(address)).await;
@@ -111,7 +122,7 @@ async fn test_messenger_creation() {
 /// Tests whether the client is reported as present after being created.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_messenger_presence() {
-    let delegate = num_test::message::create_hub();
+    let delegate = num_test::MessageHub::create_hub();
 
     // Create unbound messenger
     let (_, receptor) =
@@ -125,7 +136,7 @@ async fn test_messenger_presence() {
     {
         assert_eq!(
             delegate
-                .contains(num_test::message::Signature::Address(1))
+                .contains(<num_test::MessageHub as MessageHubUtil>::Signature::Address(1))
                 .await
                 .expect("check should complete"),
             false
@@ -136,7 +147,7 @@ async fn test_messenger_presence() {
 /// Tests messenger creation and address space collision.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_messenger_deletion() {
-    let delegate = num_test::message::create_hub();
+    let delegate = num_test::MessageHub::create_hub();
     let address = 1;
 
     {
@@ -164,7 +175,7 @@ async fn test_messenger_deletion() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_messenger_deletion_with_fingerprint() {
-    let delegate = num_test::message::create_hub();
+    let delegate = num_test::MessageHub::create_hub();
     let address = 1;
     let (_, mut receptor) =
         delegate.create(MessengerType::Addressable(address)).await.expect("should get receptor");
@@ -176,7 +187,7 @@ async fn test_messenger_deletion_with_fingerprint() {
 /// are properly delivered.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_end_to_end_messaging() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     let (messenger_client_1, _) =
         delegate.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
@@ -204,7 +215,7 @@ async fn test_end_to_end_messaging() {
 /// the client does nothing with it.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_implicit_forward() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     let (messenger_client_1, _) =
         delegate.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
@@ -240,7 +251,7 @@ async fn test_implicit_forward() {
 /// reply.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_observe_addressable() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     let (messenger_client_1, _) =
         delegate.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
@@ -290,7 +301,7 @@ fn test_timeout() {
     let timeout_ms = 1000;
 
     let fut = async move {
-        let delegate = test::message::create_hub();
+        let delegate = test::MessageHub::create_hub();
         let (messenger_client_1, _) =
             delegate.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
         let (_, mut receptor_2) =
@@ -336,7 +347,7 @@ fn test_timeout() {
 /// messengers receive a broadcast message.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_broadcast() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     let (messenger_client_1, _) =
         delegate.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
@@ -354,7 +365,7 @@ async fn test_broadcast() {
 /// Verifies delivery statuses are properly relayed back to the original sender.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_delivery_status() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
     let known_receiver_address = TestAddress::Foo(2);
     let unknown_address = TestAddress::Foo(3);
     let (messenger_client_1, _) =
@@ -384,7 +395,7 @@ async fn test_delivery_status() {
 /// after.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_send_delete() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
     let (_, mut receptor_2) = delegate
         .create(MessengerType::Addressable(TestAddress::Foo(2)))
         .await
@@ -402,7 +413,7 @@ async fn test_send_delete() {
 /// Verifies beacon returns error when receptor goes out of scope.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_beacon_error() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     let (messenger_client, _) =
         delegate.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
@@ -428,7 +439,7 @@ async fn test_beacon_error() {
 /// Verifies Acknowledge is fully passed back.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_acknowledge() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     let (_, mut receptor) =
         delegate.create(MessengerType::Addressable(TestAddress::Foo(1))).await.unwrap();
@@ -457,7 +468,7 @@ async fn test_messenger_behavior() {
 async fn verify_messenger_behavior(
     messenger_type: MessengerType<TestMessage, TestAddress, TestRole>,
 ) {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Messenger to receive message.
     let (target_client, mut target_receptor) =
@@ -501,7 +512,7 @@ async fn verify_messenger_behavior(
 /// Ensures unbound messengers operate properly
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_unbound_messenger() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     let (unbound_messenger_1, _) = delegate.create(MessengerType::Unbound).await.unwrap();
 
@@ -530,7 +541,7 @@ async fn test_unbound_messenger() {
 /// Ensures next_payload returns the correct values.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_next_payload() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
     let (unbound_messenger_1, _) = delegate.create(MessengerType::Unbound).await.unwrap();
 
     let (_, mut unbound_receptor_2) =
@@ -604,7 +615,7 @@ async fn test_chained_action_fuse() {
 /// Exercises timestamp value.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_message_timestamp() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     let (messenger, _) = delegate.create(MessengerType::Unbound).await.unwrap();
     let (_, mut receptor) = delegate.create(MessengerType::Unbound).await.unwrap();
@@ -636,7 +647,7 @@ async fn test_message_timestamp() {
 /// Verifies that the proper signal is fired when a receptor disappears.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_bind_to_recipient() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<()>();
 
     let (_, mut receptor) =
@@ -672,7 +683,7 @@ async fn test_bind_to_recipient() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_reply_propagation() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Create messenger to send source message.
     let (sending_messenger, _) =
@@ -725,7 +736,7 @@ async fn test_reply_propagation() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_propagation() {
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Create messenger to send source message.
     let (sending_messenger, sending_receptor) =
@@ -800,7 +811,7 @@ async fn test_propagation() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_broker_filter_audience_broadcast() {
     // Prepare a message hub with a sender, broker, and target.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Messenger to send broadcast message and targeted message.
     let (messenger, _) = delegate
@@ -835,7 +846,7 @@ async fn test_broker_filter_audience_broadcast() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_broker_filter_audience_messenger() {
     // Prepare a message hub with a sender, broker, and target.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Messenger to send broadcast message and targeted message.
     let (messenger, _) = delegate
@@ -872,7 +883,7 @@ async fn test_broker_filter_audience_messenger() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_broker_filter_audience_address() {
     // Prepare a message hub with a sender, broker, and target.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Messenger to send broadcast message and targeted message.
     let (messenger, _) = delegate
@@ -911,7 +922,7 @@ async fn test_broker_filter_audience_address() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_broker_filter_author() {
     // Prepare a message hub with a sender, broker, and target.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Messenger to send targeted message.
     let author_address = TestAddress::Foo(1);
@@ -929,7 +940,7 @@ async fn test_broker_filter_author() {
 
     // Filter to target only messages with a particular author.
     let filter = filter::Builder::single(filter::Condition::Author(
-        test::message::Signature::Address(author_address),
+        <test::MessageHub as MessageHubUtil>::Signature::Address(author_address),
     ));
 
     // Broker that should only target messages for a given author.
@@ -949,7 +960,7 @@ async fn test_broker_filter_author() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_broker_filter_custom() {
     // Prepare a message hub with a sender, broker, and target.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Messenger to send broadcast message and targeted message.
     let (messenger, _) = delegate
@@ -981,7 +992,7 @@ async fn test_broker_filter_custom() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_broker_filter_caputring_closure() {
     // Prepare a message hub with a sender, broker, and target.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Messenger to send broadcast message and targeted message.
     let (messenger, _) = delegate
@@ -1012,7 +1023,7 @@ async fn test_broker_filter_caputring_closure() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_broker_filter_combined_any() {
     // Prepare a message hub with a sender, broker, and target.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Messenger to send broadcast message and targeted message.
     let (messenger, _) = delegate
@@ -1060,7 +1071,7 @@ async fn test_broker_filter_combined_any() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_broker_filter_combined_all() {
     // Prepare a message hub with a sender, broker, and target.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Messenger to send broadcast message and targeted message.
     let (messenger, _) =
@@ -1104,7 +1115,7 @@ async fn test_broker_filter_combined_all() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_group_message() {
     // Prepare a message hub with a sender and multiple targets.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Messenger to send message.
     let (messenger, _) = delegate.create(MessengerType::Unbound).await.unwrap();
@@ -1137,7 +1148,7 @@ async fn test_group_message() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_group_message_redundant_targets() {
     // Prepare a message hub with a sender, broker, and target.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Messenger to send broadcast message and targeted message.
     let (messenger, _) = delegate.create(MessengerType::Unbound).await.unwrap();
@@ -1226,7 +1237,7 @@ async fn test_audience_matching() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_roles_membership() {
     // Prepare a message hub.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Create messengers who participate in roles
     let (_, mut foo_role_receptor) = delegate
@@ -1262,7 +1273,7 @@ async fn test_roles_membership() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_roles_exclusivity() {
     // Prepare a message hub.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Create messengers who participate in roles
     let (_, mut foo_role_receptor) = delegate
@@ -1308,7 +1319,7 @@ async fn test_roles_exclusivity() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_roles_audience() {
     // Prepare a message hub.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Create messenger who participate in a role
     let (_, mut foo_role_receptor) = delegate
@@ -1359,7 +1370,7 @@ async fn test_roles_audience() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_anonymous_roles() {
     // Prepare a message hub.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Create anonymous role.
     let role = delegate.create_role().await.expect("Role should be returned");
@@ -1394,7 +1405,7 @@ async fn test_targeted_messenger_client() {
     let test_message = TestMessage::Foo;
 
     // Prepare a message hub for sender and target.
-    let delegate = test::message::create_hub();
+    let delegate = test::MessageHub::create_hub();
 
     // Create target messenger.
     let (_, mut target_receptor) = delegate

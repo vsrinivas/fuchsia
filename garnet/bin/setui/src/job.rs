@@ -396,7 +396,9 @@ pub(super) mod execution {
 mod tests {
     use super::*;
     use crate::message::base::MessengerType;
+    use crate::message::MessageHubUtil;
     use crate::service::test::Payload;
+    use crate::service::MessageHub;
     use crate::tests::scaffold::workload::Workload;
 
     use matches::assert_matches;
@@ -412,7 +414,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_job_functionality() {
         // Create delegate for communication between components.
-        let message_hub_delegate = message::create_hub();
+        let message_hub_delegate = MessageHub::create_hub();
 
         // Create a top-level receptor to receive communication from the workload.
         let mut receptor = message_hub_delegate

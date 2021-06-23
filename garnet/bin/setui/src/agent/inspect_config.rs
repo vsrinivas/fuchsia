@@ -182,6 +182,7 @@ mod tests {
     use crate::agent::Context;
     use crate::event;
     use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
+    use crate::message::MessageHubUtil;
 
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_zircon::Time;
@@ -195,7 +196,7 @@ mod tests {
         clock::mock::set(Time::from_nanos(NANOS));
 
         // Create the messenger and agent context.
-        let messenger_factory = service::message::create_hub();
+        let messenger_factory = service::MessageHub::create_hub();
         let context = Context::new(
             messenger_factory
                 .clone()

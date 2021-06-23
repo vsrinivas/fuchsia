@@ -255,9 +255,6 @@ mod tests {
     use futures::future::BoxFuture;
     use futures::StreamExt;
 
-    use crate::service;
-    use crate::service::message::{create_hub, Audience};
-
     use crate::agent::inspect_policy::{InspectPolicyAgent, INSPECT_NODE_NAME};
     use crate::agent::Context;
     use crate::audio::policy as audio_policy;
@@ -265,15 +262,22 @@ mod tests {
     use crate::audio::types::AudioStreamType;
     use crate::clock;
     use crate::message::base::{role, MessageEvent, MessengerType, Status};
+    use crate::message::MessageHubUtil;
     use crate::policy::{self as policy_base, Payload, PolicyInfo, Role, UnknownInfo};
+    use crate::service::message::Audience;
+    use crate::service::{self, MessageHub};
     use crate::tests::message_utils::verify_payload;
 
     const GET_REQUEST: Payload = Payload::Request(policy_base::Request::Get);
 
     async fn create_context() -> Context {
         Context::new(
-            create_hub().create(MessengerType::Unbound).await.expect("should be present").1,
-            create_hub(),
+            MessageHub::create_hub()
+                .create(MessengerType::Unbound)
+                .await
+                .expect("should be present")
+                .1,
+            MessageHub::create_hub(),
             HashSet::new(),
             HashSet::new(),
             None,

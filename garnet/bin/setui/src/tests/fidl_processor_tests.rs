@@ -4,6 +4,7 @@
 
 use crate::fidl_processor::processor::{BaseFidlProcessor, ProcessingUnit, RequestResultCreator};
 use crate::message::base::MessengerType;
+use crate::message::MessageHubUtil;
 use crate::service;
 use crate::ExitSender;
 use anyhow::format_err;
@@ -57,7 +58,7 @@ async fn create_processor(
 ) -> PrivacyProxy {
     let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<PrivacyMarker>().unwrap();
 
-    let service_delegate = service::message::create_hub();
+    let service_delegate = service::MessageHub::create_hub();
     let (service_messenger, _) =
         service_delegate.create(MessengerType::Unbound).await.expect("should create messenger");
 

@@ -7,6 +7,7 @@ use crate::handler::base::{Payload, Request, Response as SettingResponse};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::SettingHandlerResult;
 use crate::message::base::{Audience, MessengerType};
+use crate::message::MessageHubUtil;
 use crate::policy::policy_handler::{PolicyHandler, RequestTransform, ResponseTransform};
 use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
 use crate::policy::policy_proxy::PolicyProxy;
@@ -198,7 +199,7 @@ async fn test_policy_proxy_creation() {
                 )))
                 .build(),
         ),
-        service::message::create_hub(),
+        service::MessageHub::create_hub(),
     )
     .await;
 
@@ -213,7 +214,7 @@ async fn test_policy_messages_passed_to_handler() {
     let policy_request = policy_base::Request::Get;
     let policy_payload = policy_base::response::Payload::PolicyInfo(UnknownInfo(true).into());
 
-    let service_delegate = service::message::create_hub();
+    let service_delegate = service::MessageHub::create_hub();
     // Initialize the policy proxy and a messenger to communicate with it.
     PolicyProxy::create(
         POLICY_TYPE,
@@ -251,7 +252,7 @@ async fn test_policy_messages_passed_to_handler() {
 /// continue on to its intended destination without interference.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_message_pass_through() {
-    let delegate = service::message::create_hub();
+    let delegate = service::MessageHub::create_hub();
     let (_, mut setting_proxy_receptor) = delegate
         .create(MessengerType::Addressable(service::Address::Handler(SETTING_TYPE)))
         .await
@@ -305,7 +306,7 @@ async fn test_setting_message_pass_through() {
 /// given result is provided back to the requestor without reaching the setting handler.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_message_result_replacement() {
-    let delegate = service::message::create_hub();
+    let delegate = service::MessageHub::create_hub();
 
     let (_, mut setting_proxy_receptor) = delegate
         .create(MessengerType::Addressable(service::Address::Handler(SETTING_TYPE)))
@@ -388,7 +389,7 @@ async fn test_setting_message_payload_replacement() {
     let setting_request_2 = Request::Restore;
     let setting_request_2_payload = Payload::Request(setting_request_2.clone());
 
-    let delegate = service::message::create_hub();
+    let delegate = service::MessageHub::create_hub();
 
     let setting_handler_address = service::Address::Handler(SETTING_TYPE);
 
@@ -441,7 +442,7 @@ async fn test_setting_message_payload_replacement() {
 /// continue on to its intended destination without interference.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_response_pass_through() {
-    let delegate = service::message::create_hub();
+    let delegate = service::MessageHub::create_hub();
 
     let (setting_proxy_messenger, _) = delegate
         .create(MessengerType::Addressable(service::Address::Handler(SETTING_TYPE)))
@@ -477,7 +478,7 @@ async fn test_setting_response_pass_through() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setting_response_replace() {
-    let delegate = service::message::create_hub();
+    let delegate = service::MessageHub::create_hub();
     let (setting_proxy_messenger, _) = delegate
         .create(MessengerType::Addressable(service::Address::Handler(SETTING_TYPE)))
         .await
@@ -527,7 +528,7 @@ async fn test_multiple_messages() {
     let policy_request = policy_base::Request::Get;
     let policy_payload = policy_base::response::Payload::PolicyInfo(UnknownInfo(true).into());
 
-    let delegate = service::message::create_hub();
+    let delegate = service::MessageHub::create_hub();
 
     let (_, _setting_proxy_receptor) = delegate
         .create(MessengerType::Addressable(service::Address::Handler(SETTING_TYPE)))

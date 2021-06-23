@@ -7,6 +7,7 @@ use crate::agent::{
     AgentError, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan, Payload,
 };
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::message::MessageHubUtil;
 use crate::service;
 use crate::service_context::ServiceContext;
 use crate::tests::scaffold;
@@ -190,7 +191,7 @@ async fn test_environment_startup() {
 }
 
 async fn create_authority() -> Authority {
-    Authority::create(service::message::create_hub(), HashSet::new(), HashSet::new(), None)
+    Authority::create(service::MessageHub::create_hub(), HashSet::new(), HashSet::new(), None)
         .await
         .unwrap()
 }

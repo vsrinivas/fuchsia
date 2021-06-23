@@ -231,8 +231,9 @@ mod tests {
     use super::*;
     use crate::job::Payload;
     use crate::message::base::Audience;
-    use crate::service::message;
+    use crate::message::MessageHubUtil;
     use crate::service::test;
+    use crate::service::MessageHub;
     use crate::tests::scaffold::workload::Workload;
 
     use async_trait::async_trait;
@@ -247,7 +248,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_manager_job_processing_multiple_jobs_one_source() {
         // Create delegate for communication between components.
-        let message_hub_delegate = message::create_hub();
+        let message_hub_delegate = MessageHub::create_hub();
 
         let results = 0..10;
 
@@ -300,7 +301,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_manager_job_processing_handles_errored_conversions() {
         // Create delegate for communication between components.
-        let message_hub_delegate = message::create_hub();
+        let message_hub_delegate = MessageHub::create_hub();
 
         const RESULT: i64 = 1;
 
@@ -375,7 +376,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_manager_job_processing_multiple_sources() {
         // Create delegate for communication between components.
-        let message_hub_delegate = message::create_hub();
+        let message_hub_delegate = MessageHub::create_hub();
 
         let manager_signature = Manager::spawn(&message_hub_delegate).await;
 

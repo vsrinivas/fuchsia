@@ -223,6 +223,7 @@ mod tests {
     use super::*;
     use crate::display::types::SetDisplayInfo;
     use crate::intl::types::{IntlInfo, LocaleId, TemperatureUnit};
+    use crate::message::MessageHubUtil;
     use crate::service;
 
     use fuchsia_inspect::assert_data_tree;
@@ -265,12 +266,12 @@ mod tests {
 
     async fn create_context() -> Context {
         Context::new(
-            service::message::create_hub()
+            service::MessageHub::create_hub()
                 .create(MessengerType::Unbound)
                 .await
                 .expect("should be present")
                 .1,
-            service::message::create_hub(),
+            service::MessageHub::create_hub(),
             HashSet::new(),
             HashSet::new(),
             None,

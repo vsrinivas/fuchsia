@@ -26,7 +26,7 @@
 //!
 //! async fn message_example() {
 //!     // Create monitor message hub.
-//!     let delegate = service::message::create_hub();
+//!     let delegate = service::MessageHub::create_hub();
 //!
 //!     // Create a messenger for watchdog.
 //!     let (watchdog_client, _) = delegate
@@ -154,13 +154,14 @@ payload_convert!(Monitor, Payload);
 #[cfg(test)]
 mod tests {
     use crate::message::base::{role, Audience, MessengerType};
+    use crate::message::MessageHubUtil;
     use crate::monitor;
     use crate::service;
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_messaging() {
         // Create monitor message hub.
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
 
         // Create a messenger for watchdog.
         let (watchdog_client, _) = delegate

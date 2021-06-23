@@ -14,6 +14,7 @@
 //! directed. The separation of this responsibility from the main
 //! resource-watching component promotes code reshare and modularity.
 
+use crate::message::MessageHubUtil;
 use crate::monitor::base::monitor as base_monitor;
 #[cfg(test)]
 use crate::monitor::base::Error;
@@ -85,7 +86,7 @@ impl Builder {
 
     /// Constructs the configuration.
     pub(crate) fn build(self) -> Actor {
-        let monitor_delegate = service::message::create_hub();
+        let monitor_delegate = service::MessageHub::create_hub();
         Actor { delegate: monitor_delegate, monitors: self.monitors }
     }
 }

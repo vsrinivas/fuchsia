@@ -230,6 +230,7 @@ mod tests {
     use crate::base::SettingType;
     use crate::handler::base::{Payload as HandlerPayload, Request};
     use crate::message::base::MessengerType;
+    use crate::message::MessageHubUtil;
     use crate::policy::PolicyType;
     use crate::service;
     use crate::tests::message_utils::verify_payload;
@@ -240,7 +241,7 @@ mod tests {
         let setting_request = Request::Get;
         let target_setting_type = SettingType::Unknown;
 
-        let service_delegate = service::message::create_hub();
+        let service_delegate = service::MessageHub::create_hub();
         let (_, mut setting_proxy_receptor) = service_delegate
             .create(MessengerType::Addressable(service::Address::Handler(
                 policy_type.setting_type(),
@@ -270,7 +271,7 @@ mod tests {
     async fn test_client_proxy_request_rebroadcast() {
         let setting_type = SettingType::Unknown;
 
-        let service_delegate = service::message::create_hub();
+        let service_delegate = service::MessageHub::create_hub();
 
         let (_, mut receptor) = service_delegate
             .create(MessengerType::Addressable(service::Address::Handler(setting_type)))

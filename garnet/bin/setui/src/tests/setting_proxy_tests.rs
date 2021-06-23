@@ -28,6 +28,7 @@ use crate::handler::setting_handler::{
 };
 use crate::handler::setting_proxy::SettingProxy;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
+use crate::message::MessageHubUtil;
 use crate::service::{self, message, TryFromWithClient};
 
 const TEARDOWN_TIMEOUT: Duration = Duration::from_seconds(5);
@@ -228,7 +229,7 @@ impl TestEnvironmentBuilder {
     }
 
     async fn build(self) -> TestEnvironment {
-        let delegate = service::message::create_hub();
+        let delegate = service::MessageHub::create_hub();
 
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new(delegate.clone())));
 
