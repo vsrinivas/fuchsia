@@ -42,12 +42,7 @@ void DumpLog(const char* log_tag, const char* str) {
 
 class Watchdog : public WatchdogInterface {
  public:
-  explicit Watchdog(const Options& options = {})
-      : enabled_(options.enabled), sleep_(options.sleep), severity_(options.severity) {
-    log_tag_ = options.log_tag;
-    log_buffer_ = std::make_unique<char[]>(options.log_buffer_size);
-    out_stream_ = fmemopen(log_buffer_.get(), options.log_buffer_size, "r+");
-  }
+  explicit Watchdog(const Options& options = {}) : options_(options) {}
 
   Watchdog(const Watchdog&) = delete;
   Watchdog(Watchdog&&) = delete;
@@ -72,18 +67,6 @@ class Watchdog : public WatchdogInterface {
   // Protects access to the state of the watchdog.
   std::mutex lock_;
 
-  // True if watchdog is active and running.
-  const bool enabled_;
-
-  // The current implementation sleeps for fixed duration of time between two
-  // scans. And when woken up, it scans *all* trackers to see if they have
-  // timed out. This works well when there are few trackers registered but
-  // becomes expensive when we have hundreds of operations to track. We can
-  // optimize to sleep until next timeout and scan a list of operation sorted
-  // by time to timeout.
-  std::chrono::nanoseconds sleep_;
-  [[maybe_unused]] fx_log_severity_t severity_;
-
   // Map that contains all in-flight healthy(non-timed-out) operations.
   // When watchdog is enabled, we do not want IO paths to get impacted.
   // map is not the ideal, as it allocates and frees entries, but is convenient.
@@ -97,26 +80,14 @@ class Watchdog : public WatchdogInterface {
   // thread is torn-down.
   bool running_ __TA_GUARDED(lock_) = false;
 
-  // User's tag for the log messages.
-  std::string log_tag_;
-
-  // Staging buffer log messages. Writing to log can
-  // be slow especially when log is over serial device or permanent subsystem.
-  // To keep the lock contention minimum, logs are written to this buffer under
-  // lock and then the contents of this buffer are sent to logging subsystem
-  // outside of this lock.
-  // TODO(fxbug.dev/58179)
-  std::unique_ptr<char[]> log_buffer_;
-
-  // FILE stream on top of log_buffer that is used to get stack traces.
-  FILE* out_stream_ = nullptr;
+  const Options options_;
 
   sync_completion_t completion_;
 };
 
 zx::status<> Watchdog::Track(OperationTracker* tracker) {
   std::lock_guard<std::mutex> lock(lock_);
-  if (!enabled_) {
+  if (!options_.enabled) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
 
@@ -161,20 +132,31 @@ zx::status<> Watchdog::Untrack(OperationTrackerId id) {
   }
   auto now = std::chrono::steady_clock::now();
   auto time_elapsed = now - tracker->StartTime();
-  FX_LOGF(INFO, log_tag_.c_str(), "Timeout(%lluns) exceeded operation:%s id:%lu completed(%lluns).",
+  FX_LOGF(INFO, options_.log_tag.c_str(),
+          "Timeout(%lluns) exceeded operation:%s id:%lu completed(%lluns).",
           tracker->Timeout().count(), tracker->Name().data(), tracker->GetId(),
           time_elapsed.count());
   return zx::ok();
 }
 
 void Watchdog::Run() {
+  // TODO(fxbug.dev/58179)
+  // Inspect debug printer only accepts a FILE stream for output, but we don't
+  // want to hold the lock while actually flushing out to log. This buffer is
+  // used as a temporary destination to queue lines and thread information so it
+  // can be sent to the log after releasing the lock.
+  std::unique_ptr<char[]> log_buffer = std::make_unique<char[]>(options_.log_buffer_size);
+  // FILE stream on top of log_buffer that is used to get stack traces.
+  std::unique_ptr<FILE, decltype(&fclose)> out_stream(
+      fmemopen(log_buffer.get(), options_.log_buffer_size, "r+"), &fclose);
+
   while (true) {
     // Right now we periodically wakeup and scan all the trackers for timeout.
     // This is OK as long as few operations are in flight. The code needs to
     // sort and scan only entries that have timed out. Also, sleep can be for a
     // duration till next potential timeout.
     auto should_terminate =
-        sync_completion_wait(&completion_, zx_duration_from_nsec(sleep_.count())) == ZX_OK;
+        sync_completion_wait(&completion_, zx_duration_from_nsec(options_.sleep.count())) == ZX_OK;
 
     bool log = false;
     {
@@ -187,7 +169,7 @@ void Watchdog::Run() {
       }
       auto now = std::chrono::steady_clock::now();
       std::map<OperationTrackerId, OperationTracker*>::iterator iter;
-      rewind(out_stream_);
+      rewind(out_stream.get());
       for (iter = healthy_operations_.begin(); iter != healthy_operations_.end();) {
         auto tracker = iter->second;
         std::chrono::nanoseconds time_elapsed = now - tracker->StartTime();
@@ -199,17 +181,17 @@ void Watchdog::Run() {
         }
         iter = healthy_operations_.erase(iter);
         timed_out_operations_.insert({tracker->GetId(), tracker});
-        fprintf(out_stream_, "Operation:%s id:%lu exceeded timeout(%lluns < %lluns)",
+        fprintf(out_stream.get(), "Operation:%s id:%lu exceeded timeout(%lluns < %lluns)",
                 tracker->Name().data(), tracker->GetId(), tracker->Timeout().count(),
                 time_elapsed.count());
         log = true;
-        tracker->OnTimeOut(out_stream_);
+        tracker->OnTimeOut(out_stream.get());
       }
     }
     if (log) {
-      inspector_print_debug_info_for_all_threads(out_stream_, zx_process_self());
-      fflush(out_stream_);
-      DumpLog(log_tag_.c_str(), log_buffer_.get());
+      inspector_print_debug_info_for_all_threads(out_stream.get(), zx_process_self());
+      fflush(out_stream.get());
+      DumpLog(options_.log_tag.c_str(), log_buffer.get());
     }
   }
 }
@@ -217,7 +199,7 @@ void Watchdog::Run() {
 zx::status<> Watchdog::Start() {
   {
     std::lock_guard<std::mutex> lock(lock_);
-    if (!enabled_ || running_) {
+    if (!options_.enabled || running_) {
       return zx::error(ZX_ERR_BAD_STATE);
     }
     healthy_operations_.clear();
@@ -235,7 +217,7 @@ zx::status<> Watchdog::ShutDown() {
   }
   {
     std::lock_guard<std::mutex> lock(lock_);
-    if (!enabled_ || !running_) {
+    if (!options_.enabled || !running_) {
       return zx::error(ZX_ERR_BAD_STATE);
     }
     sync_completion_signal(&completion_);
