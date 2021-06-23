@@ -368,30 +368,6 @@ config("default_icf") {
   }
 }
 
-# Each of the debuginfo_$debuginfo configs below corresponds to a single setting
-# that controls the amount of debugging information used and is controlled by
-# the debuginfo argument. The default_debuginfo level is set to
-# debuginfo_$debuginfo for convenience, but individual targets can override
-# their debuginfo level by manually applying one of the configs below.
-
-# Keep in sync with //build/config/BUILD.gn
-
-config("debuginfo_none") {
-  configs = [ "//build/config:debuginfo_none" ]
-}
-
-config("debuginfo_backtrace") {
-  configs = [ "//build/config:debuginfo_backtrace" ]
-}
-
-config("debuginfo_debug") {
-  configs = [ "//build/config:debuginfo_debug" ]
-}
-
-config("default_debuginfo") {
-  configs = [ "//build/config:default_debuginfo" ]
-}
-
 config("werror") {
   cflags = [
     "-Werror",

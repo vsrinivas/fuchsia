@@ -393,13 +393,13 @@ if (zircon_toolchain == false) {
   # intermediate configs.
   #
   default_common_binary_configs += [
+    "//build/config:default_debuginfo",
     "//build/config:default_optimize",
     "//build/config/zircon:compiler",
     "//build/config/zircon:language",
     "//build/config/zircon:machine",
     "//build/config/zircon:relative_paths",
     "//build/config/zircon:default_assert_level",
-    "//build/config/zircon:default_debuginfo",
     "//build/config/zircon:default_warnings",
     "//build/config/zircon:default_icf",
     "//build/config/zircon:default_include_dirs",
