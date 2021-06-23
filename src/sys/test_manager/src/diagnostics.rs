@@ -5,8 +5,9 @@
 use {
     crate::TEST_ROOT_REALM_NAME,
     anyhow::Error,
+    async_trait::async_trait,
     diagnostics_bridge::ArchiveReaderManager,
-    diagnostics_data::LogsData,
+    diagnostics_data::{Data, LogsData},
     diagnostics_reader as reader,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::StreamError,
@@ -59,8 +60,15 @@ impl Deref for IsolatedLogsProvider {
     }
 }
 
+#[async_trait]
 impl ArchiveReaderManager for IsolatedLogsProvider {
     type Error = reader::Error;
+
+    async fn snapshot<D: diagnostics_data::DiagnosticsData + 'static>(
+        &self,
+    ) -> Result<Vec<Data<D>>, StreamError> {
+        unimplemented!("This functionality is not yet needed.");
+    }
 
     fn start_log_stream(
         &mut self,
