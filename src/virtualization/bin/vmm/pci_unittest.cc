@@ -112,7 +112,7 @@ TEST(PciDeviceTest, ReadBarSize) {
   EXPECT_EQ(reg & ~kPciBarMmioAddrMask, kPciBarMmioType64Bit | kPciBarMmioAccessSpace);
   const PciBar* bar = device->bar(0);
   EXPECT_TRUE(bar != nullptr);
-  EXPECT_EQ(~(reg & kPciBarMmioAddrMask) + 1, bar->size);
+  EXPECT_EQ(~(reg & kPciBarMmioAddrMask) + 1, bar->size());
 }
 
 // Verify stats & cap registers correctly show present capabilities and that

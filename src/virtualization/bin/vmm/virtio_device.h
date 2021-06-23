@@ -208,7 +208,7 @@ class VirtioComponentDevice : public VirtioDevice<DeviceId, NumQueues, ConfigTyp
       return ZX_ERR_UNAVAILABLE;
     }
     const PciBar* bar = this->pci_.bar(kVirtioPciNotifyBar);
-    start_info->trap = {.addr = bar->addr, .size = align(bar->size, PAGE_SIZE)};
+    start_info->trap = {.addr = bar->addr(), .size = align(bar->size(), PAGE_SIZE)};
     status = guest.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE, &start_info->guest);
     if (status != ZX_OK) {
       return status;

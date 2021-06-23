@@ -102,8 +102,15 @@ constexpr uint32_t kPciGlobalIrqAssigments[kPciMaxDevices] = {32, 33, 34, 35, 36
 
 }  // namespace
 
-uint64_t PciBar::aspace() const {
-  switch (trap_type) {
+PciBar::PciBar(PciDevice* device, uint8_t bar, uint64_t size, TrapType trap_type)
+    : device_(device), bar_(bar), addr_(0), size_(align(size, PAGE_SIZE)), trap_type_(trap_type) {
+  set_addr(0);  // Initialise the `pci_config_reg_` registers.
+}
+
+PciBar::PciBar() : PciBar(nullptr, /*bar=*/0, /*size=*/0, TrapType::PIO_SYNC) {}
+
+uint32_t PciBar::AspaceType() const {
+  switch (trap_type_) {
     case TrapType::MMIO_SYNC:
     case TrapType::MMIO_BELL:
       return kPciBarMmioType64Bit | kPciBarMmioAccessSpace;
@@ -112,25 +119,40 @@ uint64_t PciBar::aspace() const {
   }
 }
 
-uint64_t PciBar::base() const {
-  switch (trap_type) {
-    case TrapType::MMIO_SYNC:
-    case TrapType::MMIO_BELL:
-      return addr & kPciBarMmioAddrMask;
-    default:
-      return 0;
+uint32_t PciBar::pci_config_reg(size_t slot) const {
+  ZX_DEBUG_ASSERT(slot < kNumBarSlots);
+  return pci_config_reg_[slot];
+}
+
+void PciBar::set_addr(uint64_t value) {
+  addr_ = value;
+  set_pci_config_reg(0, static_cast<uint32_t>(value >> 0));
+  set_pci_config_reg(1, static_cast<uint32_t>(value >> 32));
+}
+
+void PciBar::set_pci_config_reg(size_t slot, uint32_t value) {
+  ZX_DEBUG_ASSERT(slot < kNumBarSlots);
+
+  // We zero bits in the BAR in order to set the size.
+  if (slot == 0) {
+    pci_config_reg_[0] = value;
+    pci_config_reg_[0] &= ~(size_ - 1);
+    pci_config_reg_[0] |= AspaceType();
+  } else {
+    pci_config_reg_[1] = value;
+    pci_config_reg_[1] &= ~((size_ - 1) >> 32);
   }
 }
 
 zx_status_t PciBar::Read(uint64_t addr, IoValue* value) const {
-  return device->ReadBar(n, addr, value);
+  return device_->ReadBar(bar_, addr, value);
 }
 
 zx_status_t PciBar::Write(uint64_t addr, const IoValue& value) {
-  return device->WriteBar(n, addr, value);
+  return device_->WriteBar(bar_, addr, value);
 }
 
-std::string_view PciBar::Name() const { return device->name(); }
+std::string_view PciBar::Name() const { return device_->name(); }
 
 PciPortHandler::PciPortHandler(PciBus* bus) : bus_(bus) {}
 
@@ -170,8 +192,7 @@ PciBus::PciBus(Guest* guest, InterruptController* interrupt_controller)
       mmio_base_(kPciMmioBarPhysBase) {}
 
 zx_status_t PciBus::Init(async_dispatcher_t* dispatcher) {
-  root_complex_.bar_[0].size = 0x10;
-  root_complex_.bar_[0].trap_type = TrapType::MMIO_SYNC;
+  root_complex_.bar_[0] = PciBar(&root_complex_, /*bar=*/0, /*size=*/0x10, TrapType::MMIO_SYNC);
   zx_status_t status = Connect(&root_complex_, dispatcher, false);
   if (status != ZX_OK) {
     return status;
@@ -221,17 +242,16 @@ zx_status_t PciBus::Connect(PciDevice* device, async_dispatcher_t* dispatcher, b
       break;
     }
 
-    device->bus_ = this;
     PciBar* bar = &device->bar_[bar_num];
-    bar->size = align(bar->size, PAGE_SIZE);
-    bar->addr = mmio_base_;
-    mmio_base_ += bar->size;
+    bar->set_addr(mmio_base_);
+    mmio_base_ += align(bar->size(), PAGE_SIZE);
   }
   if (mmio_base_ >= kPciMmioBarPhysBase + kPciMmioBarSize) {
     FX_LOGS(ERROR) << "No PCI MMIO address space available";
     return ZX_ERR_NO_RESOURCES;
   }
 
+  device->bus_ = this;
   device->command_ = kPciCommandIoEnable | kPciCommandMemEnable;
   device->global_irq_ = kPciGlobalIrqAssigments[slot];
   device_[slot] = device;
@@ -485,18 +505,13 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     case kPciRegisterBar5: {
       const uint64_t pci_reg = (reg - kPciRegisterBar0) / 4;
       const uint64_t bar_num = pci_reg / 2;
-      const bool high_word = pci_reg % 2;
+      const size_t index = pci_reg % 2;
       if (bar_num >= kPciMaxBars) {
         return pci_read_unimplemented_register(value);
       }
 
       std::lock_guard<std::mutex> lock(mutex_);
-      const PciBar* bar = &bar_[bar_num];
-      if (!high_word) {
-        *value = bar->addr | bar->aspace();
-      } else {
-        *value = bar->addr >> 32;
-      }
+      *value = bar_[bar_num].pci_config_reg(index);
       return ZX_OK;
     }
     //  -------------------------------------------------------------
@@ -583,22 +598,13 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
       }
       const uint64_t pci_reg = (reg - kPciRegisterBar0) / 4;
       const uint64_t bar_num = pci_reg / 2;
-      const bool high_word = pci_reg % 2;
+      const size_t slot = pci_reg % 2;
       if (bar_num >= kPciMaxBars) {
         return pci_write_unimplemented_register();
       }
 
       std::lock_guard<std::mutex> lock(mutex_);
-      PciBar* bar = &bar_[bar_num];
-      auto addr = reinterpret_cast<uint32_t*>(&bar->addr);
-      // We zero bits in the BAR in order to set the size.
-      if (!high_word) {
-        addr[0] = value.u32;
-        addr[0] &= ~(bar->size - 1);
-      } else {
-        addr[1] = value.u32;
-        addr[1] &= ~((bar->size - 1) >> 32);
-      }
+      bar_[bar_num].set_pci_config_reg(slot, value.u32);
       return ZX_OK;
     }
     default:
@@ -612,14 +618,12 @@ zx_status_t PciDevice::SetupBarTraps(Guest* guest, bool skip_bell, async_dispatc
     if (!is_bar_implemented(i)) {
       break;
     }
-    if (skip_bell && bar->trap_type == TrapType::MMIO_BELL) {
+    if (skip_bell && bar->trap_type() == TrapType::MMIO_BELL) {
       continue;
     }
 
-    bar->n = i;
-    bar->device = this;
     zx_status_t status =
-        guest->CreateMapping(bar->trap_type, bar->base(), bar->size, 0, bar, dispatcher);
+        guest->CreateMapping(bar->trap_type(), bar->addr(), bar->size(), 0, bar, dispatcher);
     if (status != ZX_OK) {
       return status;
     }

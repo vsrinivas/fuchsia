@@ -486,8 +486,7 @@ zx_status_t VirtioPci::SetupCaps() {
 
   // Notify configuration.
   size_t notify_size = device_config_->num_queues * kQueueNotifyMultiplier;
-  bar_[kVirtioPciNotifyBar].size = notify_size;
-  bar_[kVirtioPciNotifyBar].trap_type = TrapType::MMIO_BELL;
+  bar_[kVirtioPciNotifyBar] = PciBar(this, kVirtioPciNotifyBar, notify_size, TrapType::MMIO_BELL);
   status = AddCapability(virtio_pci_notify_cap_t{
       .cap =
           {
@@ -534,8 +533,9 @@ zx_status_t VirtioPci::SetupCaps() {
   // This one is more complex since it is writable and doesn't seem to be
   // used by Linux or Zircon.
 
-  bar_[kVirtioPciBar].size = kVirtioPciDeviceCfgBase + device_config_->config_size;
-  bar_[kVirtioPciBar].trap_type = TrapType::MMIO_SYNC;
+  bar_[kVirtioPciBar] =
+      PciBar(this, kVirtioPciBar, kVirtioPciDeviceCfgBase + device_config_->config_size,
+             TrapType::MMIO_SYNC);
 
   return ZX_OK;
 }

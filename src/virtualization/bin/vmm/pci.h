@@ -8,6 +8,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <mutex>
 
 #include <fbl/array.h>
@@ -58,26 +59,77 @@ constexpr uint8_t pci_type1_register(uint64_t addr) {
 class PciBus;
 class PciDevice;
 
-struct PciBar : public IoHandler {
-  // Register value.
-  uint64_t addr;
-  // Size of this BAR.
-  uint64_t size;
-  // The type of trap to create for this region.
-  TrapType trap_type;
+// 64-bit PCI Base Address Register (BAR)
+//
+// PCI BARs indicate a region in memory or (for x86) the IO Port space
+// that is used to interact with the device.
+//
+// This class tracks the size/region/type of such a region and implements
+// logic to call back into the device to handle reads and writes as
+// necessary.
+//
+// Thread compatible.
+class PciBar : public IoHandler {
+ public:
+  // Construct an empty BAR, with both registers set to 0.
+  PciBar();
 
-  // Pointer to the owning device.
-  PciDevice* device;
-  // Bar number.
-  uint8_t n;
+  // Construct a BAR of the given size and type.
+  PciBar(PciDevice* device, uint8_t bar, uint64_t size, TrapType trap_type);
+
+  // Get the size / type of the region.
+  uint64_t size() const { return size_; }
+  TrapType trap_type() const { return trap_type_; }
+
+  // Get/set base address.
+  //
+  // Setting the address overwrites any guest-configured value of the register.
+  uint64_t addr() const { return addr_; }
+  void set_addr(uint64_t value);
+
+  // Get/set the high/low 32-bits of the BAR registers in the PCI config space.
+  //
+  // Each 64-bit BAR occupies two 32-bit slots in the config space,
+  // so `slot` must be 0 or 1.
+  uint32_t pci_config_reg(size_t slot) const;
+  void set_pci_config_reg(size_t slot, uint32_t value);
 
   // IoHandler interface.
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override;
 
-  uint64_t aspace() const;
-  uint64_t base() const;
+ private:
+  // Number of 32-bit registers this BAR occupies.
+  static constexpr size_t kNumBarSlots = 2;
+
+  // Calculate the low bits of the BAR containing the type of address space
+  // this BAR represents.
+  uint32_t AspaceType() const;
+
+  // Pointer to the owning device.
+  PciDevice* device_;
+
+  // Index of this BAR in the parent.
+  //
+  // Passed as an identifier in the Read/Write callbacks
+  uint8_t bar_;
+
+  // Base address.
+  //
+  // This is the real base address of the BAR. The value in the PCI
+  // configuration registers can be modified by the guest, but don't actually
+  // cause the location of the BAR to change.
+  uint64_t addr_;
+
+  // Size of region, in bytes.
+  uint64_t size_;
+
+  // The type of trap to create for this region.
+  TrapType trap_type_;
+
+  // Raw registers exposed in the PCI config space.
+  std::array<uint32_t, kNumBarSlots> pci_config_reg_;
 };
 
 /* Stores the state of PCI devices. */
@@ -118,7 +170,7 @@ class PciDevice {
 
   // Determines if the given base address register is implemented for this
   // device.
-  bool is_bar_implemented(size_t bar) const { return bar < kPciMaxBars && bar_[bar].size > 0; }
+  bool is_bar_implemented(size_t bar) const { return bar < kPciMaxBars && bar_[bar].size() > 0; }
 
   // Returns a pointer to a base address register for this device.
   //
