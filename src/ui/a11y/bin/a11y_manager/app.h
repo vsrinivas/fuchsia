@@ -191,10 +191,6 @@ class App {
   // Focuser.
   fuchsia::ui::views::accessibility::FocuserRegistryPtr focuser_registry_;
 
-  // Interface between a11y manager and Scenic to register a
-  // Focus Chain Listener.
-  fuchsia::ui::focus::FocusChainListenerRegistryPtr focus_chain_listener_registry_;
-
   // Interface between Setui and a11y manager to get updates when user settings change.
   fuchsia::settings::AccessibilityPtr setui_settings_;
 

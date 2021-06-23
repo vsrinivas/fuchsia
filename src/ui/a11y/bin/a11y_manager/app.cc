@@ -61,15 +61,15 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
 
   // |focus_chain_manager_| listens for Focus Chain updates. Connects to the listener registry and
   // start listening.
-  focus_chain_listener_registry_ =
+  fuchsia::ui::focus::FocusChainListenerRegistryPtr focus_chain_listener_registry =
       context->svc()->Connect<fuchsia::ui::focus::FocusChainListenerRegistry>();
-  focus_chain_listener_registry_.set_error_handler([](zx_status_t status) {
+  focus_chain_listener_registry.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Error from fuchsia::ui::focus::FocusChainListenerRegistry"
                    << zx_status_get_string(status);
   });
   auto focus_chain_listener_handle =
       focus_chain_listener_bindings_.AddBinding(focus_chain_manager_.get());
-  focus_chain_listener_registry_->Register(focus_chain_listener_handle.Bind());
+  focus_chain_listener_registry->Register(focus_chain_listener_handle.Bind());
 
   // Connect to setui.
   setui_settings_ = context->svc()->Connect<fuchsia::settings::Accessibility>();
