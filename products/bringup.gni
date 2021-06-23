@@ -25,7 +25,6 @@ product_bootfs_labels +=
 product_bootfs_labels += [
   "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT",
   "//products/kernel_cmdline:console.shell--true",
-  "//products/kernel_cmdline:devmgr.log-to-debuglog--true",
   "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true",
   "//products/kernel_cmdline:kernel.enable-serial-syscalls--true",
   "//products/kernel_cmdline:kernel.oom.behavior--jobkill",
