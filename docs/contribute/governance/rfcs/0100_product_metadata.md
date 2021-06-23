@@ -172,12 +172,11 @@ parsing of JSON. A parsing tool can read the version field while ignoring the
 rest of the JSON document. This allows the tool to choose a correct parser for
 each supported version of the schema.
 
-We propose to version each schema file independently using the MD5 sum of the
-schema file as its version. Since the version of the schema is included in the
-schema ID, we update the version string after computing the MD5 sum. The
-version string used for MD5 computation may be an old version or an empty
-string. It is important to note that due to this circular dependency the
-generated MD5 is not a true hash.
+We propose to version each schema file independently using a randomly generated
+8 digit hexadecimal number. The number must be unique across all [existing
+schema files][schemata]. To guard against collisions, it is advisable to
+implement a build-time collision detection to prevent accidental duplicate
+submissions.
 
 Since a schema may include other schemas via the `$ref` facility, we propose
 to append the version of the schema to the schema file name. This will not only
@@ -298,10 +297,10 @@ definition below combines the envelope schema with the `sdk_element` schema[^1].
 [^1]: All metadata is distributed as SDK elements.
 
 ```
-/** build/sdk/meta/physical_device-b8d425a3052e3e3f6998978d0b497b91.json */
+/** build/sdk/meta/physical_device-c906d79c.json */
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "id": "http://fuchsia.com/schemas/sdk/physical_device-b8d425a3052e3e3f6998978d0b497b91.json",
+  "id": "http://fuchsia.com/schemas/sdk/physical_device-c906d79c.json",
   "description": "A physical device specification.",
   "type": "object",
   "allOf": [
@@ -339,7 +338,7 @@ tools to ensure that the device hardware matches the artifacts we will use for
 provisioning.  Currently, it only describes the CPU architecture.
 
 ```
-/** build/sdk/meta/hardware-5d7269b02f884f7376de1ac3d8ec6131.json */
+/** build/sdk/meta/hardware-c0a116ca.json */
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "definitions": {
@@ -370,7 +369,7 @@ provisioning.  Currently, it only describes the CPU architecture.
         },
     },
     "description": "Hardware requirements for running a product image.",
-    "id": "http://fuchsia.com/schemas/sdk/hardware-5d7269b02f884f7376de1ac3d8ec6131.json"
+    "id": "http://fuchsia.com/schemas/sdk/hardware-c0a116ca.json"
 }
 ```
 
@@ -382,10 +381,10 @@ developed further to configure the emulator. For the sake of an example, the
 schema definition below uses a newly defined `versioned_sdk_element` schema.
 
 ```
-/** build/sdk/meta/virtual_device-486b1023e0230480876a572502b0a67d.json */
+/** build/sdk/meta/virtual_device-8a8e2ba9.json */
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "id": "http://fuchsia.com/schemas/sdk/virtual_device-486b1023e0230480876a572502b0a67d.json",
+  "id": "http://fuchsia.com/schemas/sdk/virtual_device-8a8e2ba9.json",
   "description": "A virtual device specification for launching emulators.",
   "type": "object",
   "allOf": [
@@ -403,7 +402,7 @@ schema definition below uses a newly defined `versioned_sdk_element` schema.
                ]
              },
              "description": {"type": "string"},
-             "virtual": {"$ref": "virtual_hardware-91bcc6620154e9d3fdbea67668a2f90a.json#/definitions/spec"}
+             "virtual": {"$ref": "virtual_hardware-4c5d1a5d.json#/definitions/spec"}
           },
           "required": ["virtual"]
         }
@@ -419,10 +418,10 @@ The virtual hardware specification is used for selecting the appropriate
 product bundle when launching the emulator.
 
 ```
-/** build/sdk/meta/virtual_hardware-91bcc6620154e9d3fdbea67668a2f90a.json */
+/** build/sdk/meta/virtual_hardware-4c5d1a5d.json */
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "id": "http://fuchsia.com/schemas/sdk/virtual_hardware-91bcc6620154e9d3fdbea67668a2f90a.json",
+  "id": "http://fuchsia.com/schemas/sdk/virtual_hardware-4c5d1a5d.json",
   "description": "A virtual device specification for launching emulators.",
   "definitions": {
     "spec": {
@@ -458,10 +457,10 @@ The images and packages bundle provides access to the software artifacts
 installed on a device.
 
 ```
-/** build/sdk/meta/product_bundle-bbeb7ec91a003b492e02d3a1cec33d5a.json */
+/** build/sdk/meta/product_bundle-514c2856.json */
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "id": "http://fuchsia.com/schemas/sdk/product_bundle-bbeb7ec91a003b492e02d3a1cec33d5a.json",
+  "id": "http://fuchsia.com/schemas/sdk/product_bundle-514c2856.json",
   "description": "Artifacts required to boot and run software on a device.",
   "type": "object",
    "allOf": [
@@ -497,8 +496,8 @@ installed on a device.
              },
              "manifests": {
                "description": "Manifests describing how to boot the product on a device.",
-               "flash": {"$ref": "flash_manifest-e1ae5ccac7d871b08d4c13ac66009e0a.json#/definitions/manifest"},
-               "emu": {"$ref": "emu_manifest-924c8a833777bfec838617a3dbd493f3.json#/definitions/manifest"}
+               "flash": {"$ref": "flash_manifest-c85dbd8e.json#/definitions/manifest"},
+               "emu": {"$ref": "emu_manifest-b0708439.json#/definitions/manifest"}
              },
              "images": {
                "description": "A list of system image bundles. Each image bundle must be equivalent to all others. I.e., all image bundle URIs are effectively mirrors of each other. Their formats may vary. Pick an entry that best suits your needs.",
@@ -583,18 +582,17 @@ the device. The manifest matches the existing flash.json produced by the
 build. The flash metadata will be embedded in the product bundle SDK element.
 
 ```
-/** build/sdk/meta/flash_manifest-e1ae5ccac7d871b08d4c13ac66009e0a.json */
+/** build/sdk/meta/flash_manifest-c85dbd8e.json */
 {
 
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "id": "http://fuchsia.com/schemas/sdk/flash_manifest-e1ae5ccac7d871b08d4c13ac66009e0a.json",
+  "id": "http://fuchsia.com/schemas/sdk/flash_manifest-c85dbd8e.json",
   "description": "A manifest that describes how to flash a device.",
   "type": "object",
   "properties": {
-    "version": {"$ref": "common.json#/definitions/version"},
     "manifest": {"$ref": "#/definitions/manifest"}
   },
-  "required": ["version", "manifest"],
+  "required": ["manifest"],
   "additionalProperties": false,
   "definitions": {
     "manifest": {
@@ -648,10 +646,10 @@ The emulator schema specifies image artifacts necessary to boot the product on
 the emulator.
 
 ```
-/** build/sdk/meta/emu_manifest-924c8a833777bfec838617a3dbd493f3.json */
+/** build/sdk/meta/emu_manifest-b0708439.json */
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "id": "http://fuchsia.com/schemas/sdk/emu_manifest-924c8a833777bfec838617a3dbd493f3.json",
+  "id": "http://fuchsia.com/schemas/sdk/emu_manifest-b0708439.json",
   "definitions": {
     "manifest": {
       "description": "A manifest that describes how to boot an emulator.",
@@ -723,7 +721,7 @@ Below is an example of device hardware specifications.
 
 ```
 {
-  "version": "f9928aa4391e2ae3644ce712074a1ef7",
+  "version": "c906d79c",
   "data": {
     "type": "physical_device",
     "name": "generic-x64",
@@ -747,7 +745,7 @@ via `gs` and `https` based URIs respectively.
 
 ```
 {
-  "version": "bbeb7ec91a003b492e02d3a1cec33d5a",
+  "version": "514c2856",
   "data": {
     "type": "product_bundle",
     "name": "generic-x64",
@@ -805,7 +803,7 @@ emulator. Both images and packages are accessible directly from GCS.
 
 ```
 {
-  "version": "bbeb7ec91a003b492e02d3a1cec33d5a",
+  "version": "514c2856",
   "data": {
     "type": "product_bundle",
     "name": "generic-x64",
@@ -922,3 +920,4 @@ schema can be found there][prior-art].
 [ffx]: /docs/development/tools/ffx/overview.md
 [json-schema]: http://json-schema.org/draft-07/schema#
 [prior-art]: https://fuchsia.googlesource.com/fuchsia/+/545a693eabe7c282de7e1560a3ee64f24f6988d1/build/images/BUILD.gn#177701
+[schemata]: /build/sdk/meta
