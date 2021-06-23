@@ -7,12 +7,9 @@
 use crate::{
     drawing::path_for_corner_knockouts,
     render::{BlendMode, Context as RenderContext, FillRule, Layer, Raster},
-    Coord, Point, Rect, Size,
+    Coord, Rect, Size,
 };
-use std::{
-    collections::BTreeMap,
-    sync::atomic::{AtomicUsize, Ordering},
-};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Individual bits of UI
 pub mod facets;
@@ -22,8 +19,6 @@ pub mod group;
 pub mod layout;
 /// Rendering facets
 pub mod scene;
-
-use facets::{FacetId, FacetPtr};
 
 struct Rendering {
     size: Size,
@@ -64,13 +59,6 @@ impl Iterator for IdGenerator {
         }
     }
 }
-
-struct FacetEntry {
-    facet: FacetPtr,
-    location: Point,
-}
-
-type FacetMap = BTreeMap<FacetId, FacetEntry>;
 
 /// Group of layers created and modified by facets.
 pub struct LayerGroup(Vec<Layer>);

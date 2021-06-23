@@ -13,7 +13,8 @@ use carnelian::{
         facets::{
             Facet, FacetId, TextFacetOptions, TextHorizontalAlignment, TextVerticalAlignment,
         },
-        layout::{Alignment, CrossAxisAlignment, MainAxisAlignment, MainAxisSize},
+        group::GroupMemberData,
+        layout::{Alignment, CrossAxisAlignment, FlexMemberData, MainAxisAlignment, MainAxisSize},
         scene::{Scene, SceneBuilder},
         LayerGroup,
     },
@@ -74,6 +75,7 @@ enum Mode {
     Stack(usize),
     Flex(usize, usize, usize),
     Button,
+    OneThirdTwoThird,
 }
 
 impl Default for Mode {
@@ -109,7 +111,7 @@ impl LayoutsViewAssistant {
             }
             _ => (),
         }
-        self.scene_details = None;
+        self.refresh();
     }
 
     fn cycle2(&mut self) {
@@ -119,7 +121,7 @@ impl LayoutsViewAssistant {
             }
             _ => (),
         }
-        self.scene_details = None;
+        self.refresh();
     }
 
     fn cycle3(&mut self) {
@@ -129,15 +131,20 @@ impl LayoutsViewAssistant {
             }
             _ => (),
         }
-        self.scene_details = None;
+        self.refresh();
     }
 
     fn cycle_mode(&mut self) {
         self.mode = match self.mode {
             Mode::Stack(..) => Mode::Flex(0, 0, 0),
             Mode::Flex(..) => Mode::Button,
-            Mode::Button => Mode::Stack(0),
+            Mode::Button => Mode::OneThirdTwoThird,
+            Mode::OneThirdTwoThird => Mode::Stack(0),
         };
+        self.refresh();
+    }
+
+    fn refresh(&mut self) {
         self.scene_details = None;
     }
 
@@ -174,6 +181,7 @@ impl ViewAssistant for LayoutsViewAssistant {
                         MAIN_SIZES[main_size], MAIN_ALIGNS[main_align], CROSS_ALIGNS[cross_align],
                     ),
                     Mode::Button => String::from("button"),
+                    Mode::OneThirdTwoThird => String::from("one_third_two_third"),
                 }
                 .to_lowercase();
                 builder.text(
@@ -197,6 +205,7 @@ impl ViewAssistant for LayoutsViewAssistant {
                         CROSS_ALIGNS[cross_align],
                     ),
                     Mode::Button => make_fake_button(builder),
+                    Mode::OneThirdTwoThird => make_one_third_two_third(builder),
                 }
             });
             let mut scene = builder.build();
@@ -221,6 +230,7 @@ impl ViewAssistant for LayoutsViewAssistant {
         const TWO: u32 = 50;
         const THREE: u32 = 51;
         const D: u32 = 100;
+        const R: u32 = 114;
         if let Some(code_point) = keyboard_event.code_point {
             if keyboard_event.phase == input::keyboard::Phase::Pressed {
                 match code_point {
@@ -229,6 +239,7 @@ impl ViewAssistant for LayoutsViewAssistant {
                     THREE => self.cycle3(),
                     M => self.cycle_mode(),
                     D => self.dump_bounds(),
+                    R => self.refresh(),
                     _ => println!("code_point = {}", code_point),
                 }
             }
@@ -297,14 +308,23 @@ impl Facet for TestFacet {
         Ok(())
     }
 
-    fn get_size(&self) -> Size {
+    fn calculate_size(&self, _available: Size) -> Size {
         self.size
     }
 }
 
-fn build_test_facet(builder: &mut SceneBuilder, size: Size, color: Option<Color>) -> FacetId {
+fn build_test_facet_with_member_data(
+    builder: &mut SceneBuilder,
+    size: Size,
+    color: Option<Color>,
+    member_data: Option<GroupMemberData>,
+) -> FacetId {
     let facet = TestFacet::new(size, color);
-    builder.facet(Box::new(facet))
+    builder.facet_with_data(Box::new(facet), member_data)
+}
+
+fn build_test_facet(builder: &mut SceneBuilder, size: Size, color: Option<Color>) -> FacetId {
+    build_test_facet_with_member_data(builder, size, color, None)
 }
 
 const OUTER_FACET_SIZE: Size = size2(300.0, 100.0);
@@ -353,6 +373,31 @@ fn make_fake_button(builder: &mut SceneBuilder) {
         builder.group().stack().center().contents(|builder| {
             let _ = build_test_facet(builder, INNER_FACET_SIZE, Some(Color::white()));
             let _ = build_test_facet(builder, OUTER_FACET_SIZE, Some(Color::fuchsia()));
+        });
+    });
+}
+
+fn make_one_third_two_third(builder: &mut SceneBuilder) {
+    builder.group().column().max_size().space_evenly().contents(|builder| {
+        builder.group().row().max_size().space_evenly().contents(|builder| {
+            let mut indicator_size = INDICATOR_FACET_SIZE;
+            builder
+                .group()
+                .column_with_member_data(FlexMemberData::new(1))
+                .cross_align(CrossAxisAlignment::End)
+                .space_evenly()
+                .contents(|builder| {
+                    let _ = build_test_facet(builder, indicator_size, Some(Color::new()));
+                });
+            indicator_size += INDICATOR_FACET_DELTA;
+            builder
+                .group()
+                .column_with_member_data(FlexMemberData::new(2))
+                .space_evenly()
+                .cross_align(CrossAxisAlignment::Start)
+                .contents(|builder| {
+                    let _ = build_test_facet(builder, indicator_size, Some(Color::red()));
+                });
         });
     });
 }
@@ -636,6 +681,29 @@ mod test {
         });
         let mut scene = builder.build();
         scene.layout(BUTTON_TEST_LAYOUT_SIZE);
+        let bounds = scene.all_facet_bounds();
+        assert_equal(bounds, expected_bounds.bounds);
+    }
+
+    const ONE_THIRD_TWO_THIRDS_TEST_LAYOUT_SIZE: Size = size2(1024.0, 600.0);
+
+    #[test]
+    fn one_third_two_thirds() {
+        let expected_text = r#"[[bounds]]
+        origin = [291.33334, 280.0]
+        size = [80.0, 40.0]
+
+        [[bounds]]
+        origin = [371.33334, 275.0]
+        size = [70.0, 50.0]
+        "#;
+        let expected_bounds: BoundsHolder = toml::from_str(expected_text).unwrap();
+        let mut builder = SceneBuilder::new();
+        builder.group().stack().expand().align(Alignment::top_center()).contents(|builder| {
+            make_one_third_two_third(builder);
+        });
+        let mut scene = builder.build();
+        scene.layout(ONE_THIRD_TWO_THIRDS_TEST_LAYOUT_SIZE);
         let bounds = scene.all_facet_bounds();
         assert_equal(bounds, expected_bounds.bounds);
     }

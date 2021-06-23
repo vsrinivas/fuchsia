@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use super::{
-    facets::{FacetId, FacetPtr, RectangleFacet, SpacingFacet, TextFacet, TextFacetOptions},
-    group::{GroupId, GroupMap, GroupMember},
+    facets::{
+        FacetEntry, FacetId, FacetMap, FacetPtr, RectangleFacet, SpacingFacet, TextFacet,
+        TextFacetOptions,
+    },
+    group::{GroupId, GroupMap, GroupMember, GroupMemberData},
     layout::{ArrangerPtr, Axis, Flex, FlexBuilder, StackBuilder},
-    raster_for_corner_knockouts, BlendMode, FacetEntry, FacetMap, FillRule, IdGenerator,
-    LayerGroup, Rendering,
+    raster_for_corner_knockouts, BlendMode, FillRule, IdGenerator, LayerGroup, Rendering,
 };
 use crate::{
     color::Color,
@@ -18,7 +20,7 @@ use crate::{
     Coord, IntPoint, Point, Rect, Size, ViewAssistantContext,
 };
 use anyhow::{bail, Error};
-use euclid::vec2;
+use euclid::{size2, vec2};
 use fuchsia_zircon::{AsHandleRef, Event, Signals};
 use std::{
     any::Any,
@@ -131,7 +133,8 @@ impl Scene {
     /// Add a facet to the scene, returning its ID.
     pub fn add_facet(&mut self, facet: FacetPtr) -> FacetId {
         let facet_id = FacetId::new(&mut self.id_generator);
-        self.facets.insert(facet_id, FacetEntry { facet, location: Point::zero() });
+        self.facets
+            .insert(facet_id, FacetEntry { facet, location: Point::zero(), size: Size::zero() });
         self.facet_order.push(facet_id);
         facet_id
     }
@@ -179,8 +182,13 @@ impl Scene {
     }
 
     /// Add a facet to a group, removing it from any group it might already belong to.
-    pub fn add_facet_to_group(&mut self, facet_id: FacetId, group_id: GroupId) {
-        self.groups.add_facet_to_group(facet_id, group_id);
+    pub fn add_facet_to_group(
+        &mut self,
+        facet_id: FacetId,
+        group_id: GroupId,
+        member_data: Option<GroupMemberData>,
+    ) {
+        self.groups.add_facet_to_group(facet_id, group_id, member_data);
     }
 
     /// Remove a facet from a group.
@@ -337,6 +345,13 @@ impl Scene {
         }
     }
 
+    /// Set the size of a facet.
+    pub fn set_facet_size(&mut self, target: &FacetId, size: Size) {
+        if let Some(facet_entry) = self.facets.get_mut(target) {
+            facet_entry.size = size;
+        }
+    }
+
     /// Get the absolute position of a facet.
     pub fn get_facet_location(&self, target: &FacetId) -> Point {
         self.facets
@@ -349,29 +364,20 @@ impl Scene {
     pub fn get_facet_size(&self, target: &FacetId) -> Size {
         self.facets
             .get(target)
-            .and_then(|facet_entry| Some(facet_entry.facet.get_size()))
+            .and_then(|facet_entry| Some(facet_entry.size))
             .expect("get_facet_size")
+    }
+
+    pub(crate) fn calculate_facet_size(&self, target: &FacetId, available: Size) -> Size {
+        self.facets
+            .get(target)
+            .and_then(|facet_entry| Some(facet_entry.facet.calculate_size(available)))
+            .expect("calculate_facet_size")
     }
 
     /// Get a rectangle created from the absolute position and size of a facet.
     pub fn get_facet_bounds(&self, target: &FacetId) -> Rect {
         Rect::new(self.get_facet_location(target), self.get_facet_size(target))
-    }
-
-    /// Calculate the size of a group.
-    pub fn caculate_group_size(
-        &self,
-        target: &GroupId,
-        target_size: &Size,
-        member_sizes: &[Size],
-    ) -> Size {
-        self.groups
-            .group_arranger(*target)
-            .and_then(|arranger| Some(arranger.calculate_size(*target_size, member_sizes)))
-            .unwrap_or_else(|| {
-                println!("no arranger");
-                Size::zero()
-            })
     }
 
     fn position_group(
@@ -390,6 +396,9 @@ impl Scene {
             for (pos, member_id) in positions.iter().zip(member_ids.iter()) {
                 match member_id {
                     GroupMember::Facet(facet_id) => {
+                        let size =
+                            size_map.get(member_id).map_or_else(|| size2(10.0, 10.0), |size| *size);
+                        self.set_facet_size(facet_id, size);
                         self.set_facet_location(facet_id, *pos + origin.to_vector())
                     }
                     GroupMember::Group(member_group_id) => {
@@ -413,9 +422,9 @@ impl Scene {
         self.facet_order
             .iter()
             .filter_map(|facet_id| {
-                self.facets.get(facet_id).and_then(|facet_entry| {
-                    Some(Rect::new(facet_entry.location, facet_entry.facet.get_size()))
-                })
+                self.facets
+                    .get(facet_id)
+                    .and_then(|facet_entry| Some(Rect::new(facet_entry.location, facet_entry.size)))
             })
             .collect()
     }
@@ -445,14 +454,24 @@ impl<'a> GroupBuilder<'a> {
         self
     }
 
+    /// Create a row-oriented flex builder with member data.
+    pub fn row_with_member_data(self, member_data: Option<GroupMemberData>) -> FlexBuilder<'a> {
+        FlexBuilder::new(self, Axis::Horizontal, member_data)
+    }
+
     /// Create a row-oriented flex builder.
     pub fn row(self) -> FlexBuilder<'a> {
-        FlexBuilder::new(self, Axis::Horizontal)
+        self.row_with_member_data(None)
+    }
+
+    /// Create a column-oriented flex builder with member data.
+    pub fn column_with_member_data(self, member_data: Option<GroupMemberData>) -> FlexBuilder<'a> {
+        FlexBuilder::new(self, Axis::Vertical, member_data)
     }
 
     /// Create a column-oriented flex builder.
     pub fn column(self) -> FlexBuilder<'a> {
-        FlexBuilder::new(self, Axis::Vertical)
+        self.column_with_member_data(None)
     }
 
     /// Create a stack builder.
@@ -467,6 +486,25 @@ impl<'a> GroupBuilder<'a> {
         F: FnMut(&mut SceneBuilder),
     {
         self.builder.start_group(&self.label, self.arranger.unwrap_or(Flex::new_ptr()));
+        f(self.builder);
+        self.builder.end_group()
+    }
+
+    /// Create the stack group, with contents provided by
+    /// `f` and member data for the group
+    pub fn contents_with_member_data<F>(
+        self,
+        member_data: Option<GroupMemberData>,
+        mut f: F,
+    ) -> GroupId
+    where
+        F: FnMut(&mut SceneBuilder),
+    {
+        self.builder.start_group_with_member_data(
+            &self.label,
+            self.arranger.unwrap_or(Flex::new_ptr()),
+            member_data,
+        );
         f(self.builder);
         self.builder.end_group()
     }
@@ -519,23 +557,28 @@ impl SceneBuilder {
         FacetId::new(&mut self.id_generator)
     }
 
-    fn push_facet(&mut self, facet: FacetPtr, location: Point) -> FacetId {
+    fn push_facet(
+        &mut self,
+        facet: FacetPtr,
+        location: Point,
+        member_data: Option<GroupMemberData>,
+    ) -> FacetId {
         let facet_id = self.allocate_facet_id();
-        self.facets.insert(facet_id.clone(), FacetEntry { facet, location });
+        self.facets.insert(facet_id.clone(), FacetEntry { facet, location, size: Size::zero() });
         if let Some(group_id) = self.group_stack.last() {
-            self.groups.add_facet_to_group(facet_id, *group_id);
+            self.groups.add_facet_to_group(facet_id, *group_id, member_data);
         }
         facet_id
     }
 
     /// Add a rectangle facet of size and color to the scene.
     pub fn rectangle(&mut self, size: Size, color: Color) -> FacetId {
-        self.push_facet(RectangleFacet::new(size, color), Point::zero())
+        self.push_facet(RectangleFacet::new(size, color), Point::zero(), None)
     }
 
     /// Add a spacing facet of size.
     pub fn space(&mut self, size: Size) -> FacetId {
-        self.push_facet(Box::new(SpacingFacet::new(size)), Point::zero())
+        self.push_facet(Box::new(SpacingFacet::new(size)), Point::zero(), None)
     }
 
     /// Add a horizontal line to the scene.
@@ -549,6 +592,7 @@ impl SceneBuilder {
         self.push_facet(
             RectangleFacet::h_line(width, thickness, color),
             location.unwrap_or(Point::zero()),
+            None,
         )
     }
 
@@ -563,6 +607,7 @@ impl SceneBuilder {
         self.push_facet(
             RectangleFacet::v_line(height, thickness, color),
             location.unwrap_or(Point::zero()),
+            None,
         )
     }
 
@@ -575,26 +620,47 @@ impl SceneBuilder {
         location: Point,
         options: TextFacetOptions,
     ) -> FacetId {
-        self.push_facet(TextFacet::with_options(face, text, size, options), location)
+        self.push_facet(TextFacet::with_options(face, text, size, options), location, None)
+    }
+
+    /// Add an object that implements the Facet trait to the scene, along with
+    /// some data for the group arranger.
+    pub fn facet_with_data(
+        &mut self,
+        facet: FacetPtr,
+        member_data: Option<GroupMemberData>,
+    ) -> FacetId {
+        self.push_facet(facet, Point::zero(), member_data)
     }
 
     /// Add an object that implements the Facet trait to the scene.
     pub fn facet(&mut self, facet: FacetPtr) -> FacetId {
-        self.push_facet(facet, Point::zero())
+        self.push_facet(facet, Point::zero(), None)
     }
 
     /// Add an object that implements the Facet trait to the scene and set
     /// its location.
     pub fn facet_at_location(&mut self, facet: FacetPtr, location: Point) -> FacetId {
-        self.push_facet(facet, location)
+        self.push_facet(facet, location, None)
+    }
+
+    /// Start a facet group with member data. Any facets added to the scene or
+    // groups started will become members of this group.
+    pub fn start_group_with_member_data(
+        &mut self,
+        label: &str,
+        arranger: ArrangerPtr,
+        member_data: Option<GroupMemberData>,
+    ) {
+        let group_id = GroupId::new(&mut self.id_generator);
+        self.groups.start_group(group_id, label, arranger, self.group_stack.last(), member_data);
+        self.group_stack.push(group_id);
     }
 
     /// Start a facet group. Any facets added to the scene or groups started will become
     // members of this group.
     pub fn start_group(&mut self, label: &str, arranger: ArrangerPtr) {
-        let group_id = GroupId::new(&mut self.id_generator);
-        self.groups.start_group(group_id, label, arranger, self.group_stack.last());
-        self.group_stack.push(group_id);
+        self.start_group_with_member_data(label, arranger, None);
     }
 
     /// End the current group, returning its group ID.

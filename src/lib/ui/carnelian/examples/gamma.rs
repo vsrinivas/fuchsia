@@ -120,7 +120,7 @@ impl Facet for GammaFacet {
         Ok(())
     }
 
-    fn get_size(&self) -> Size {
+    fn calculate_size(&self, _available: Size) -> Size {
         self.size
     }
 }

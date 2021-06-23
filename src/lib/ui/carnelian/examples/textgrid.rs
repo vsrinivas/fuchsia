@@ -211,7 +211,7 @@ impl Facet for TextGridFacet {
         }
     }
 
-    fn get_size(&self) -> Size {
+    fn calculate_size(&self, _available: Size) -> Size {
         self.size
     }
 }

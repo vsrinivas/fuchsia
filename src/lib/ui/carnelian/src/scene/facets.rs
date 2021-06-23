@@ -10,16 +10,24 @@ use crate::{
         rive::RenderCache as RiveRenderCache, BlendMode, Context as RenderContext, Fill, FillRule,
         Layer, Raster, Shed, Style,
     },
-    Coord, Rect, Size, ViewAssistantContext,
+    Coord, Point, Rect, Size, ViewAssistantContext,
 };
 use anyhow::Error;
 use euclid::{default::Transform2D, size2, vec2};
 use rive_rs::{self as rive};
-use std::{any::Any, path::PathBuf};
+use std::{any::Any, collections::BTreeMap, path::PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Identifier for a Facet
 pub struct FacetId(usize);
+
+pub(crate) struct FacetEntry {
+    pub facet: FacetPtr,
+    pub location: Point,
+    pub size: Size,
+}
+
+pub(crate) type FacetMap = BTreeMap<FacetId, FacetEntry>;
 
 impl FacetId {
     pub(crate) fn new(id_generator: &mut IdGenerator) -> Self {
@@ -68,7 +76,7 @@ pub trait Facet {
     }
 
     /// Should return the current size needed by this facet.
-    fn get_size(&self) -> Size;
+    fn calculate_size(&self, available: Size) -> Size;
 }
 
 /// A reference to a struct implementing Facet.
@@ -132,7 +140,7 @@ impl Facet for RectangleFacet {
         }
     }
 
-    fn get_size(&self) -> Size {
+    fn calculate_size(&self, _available: Size) -> Size {
         self.size
     }
 }
@@ -304,7 +312,7 @@ impl Facet for TextFacet {
         }
     }
 
-    fn get_size(&self) -> Size {
+    fn calculate_size(&self, _available: Size) -> Size {
         self.size
     }
 }
@@ -339,7 +347,7 @@ impl Facet for RasterFacet {
         Ok(())
     }
 
-    fn get_size(&self) -> Size {
+    fn calculate_size(&self, _available: Size) -> Size {
         self.size
     }
 }
@@ -402,7 +410,7 @@ impl Facet for ShedFacet {
         Ok(())
     }
 
-    fn get_size(&self) -> Size {
+    fn calculate_size(&self, _available: Size) -> Size {
         self.size
     }
 }
@@ -430,7 +438,7 @@ impl Facet for SpacingFacet {
         Ok(())
     }
 
-    fn get_size(&self) -> Size {
+    fn calculate_size(&self, _available: Size) -> Size {
         self.size
     }
 }
@@ -485,7 +493,7 @@ impl Facet for RiveFacet {
         Ok(())
     }
 
-    fn get_size(&self) -> Size {
+    fn calculate_size(&self, _available: Size) -> Size {
         self.size
     }
 

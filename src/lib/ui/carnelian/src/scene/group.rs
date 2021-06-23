@@ -7,7 +7,7 @@ use crate::{
     scene::{facets::FacetId, layout::ArrangerPtr, scene::Scene},
     Size,
 };
-use std::collections::HashMap;
+use std::{any::Any, collections::HashMap};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Identifier for a group.
@@ -27,6 +27,10 @@ pub(crate) enum GroupMember {
     Group(GroupId),
 }
 
+/// Dynamic type for data an arranger might want to keep per group
+/// member.
+pub type GroupMemberData = Box<dyn Any>;
+
 impl GroupMember {
     fn is_facet(&self, facet_id: FacetId) -> bool {
         match self {
@@ -37,10 +41,16 @@ impl GroupMember {
 }
 
 #[derive(Debug)]
+pub(crate) struct GroupEntry {
+    member: GroupMember,
+    member_data: Option<GroupMemberData>,
+}
+
+#[derive(Debug)]
 pub(crate) struct Group {
     pub id: GroupId,
     pub label: String,
-    pub members: Vec<GroupMember>,
+    pub members: Vec<GroupEntry>,
     pub arranger: Option<ArrangerPtr>,
 }
 
@@ -60,19 +70,42 @@ impl GroupMap {
         self.root_group_id.expect("root_group_id")
     }
 
-    pub fn add_facet_to_group(&mut self, facet_id: FacetId, group_id: GroupId) {
+    pub fn add_facet_to_group(
+        &mut self,
+        facet_id: FacetId,
+        group_id: GroupId,
+        member_data: Option<GroupMemberData>,
+    ) {
         let group = self.map.get_mut(&group_id).expect("group");
 
-        group.members.push(GroupMember::Facet(facet_id));
+        group.members.push(GroupEntry { member: GroupMember::Facet(facet_id), member_data });
     }
 
     pub fn remove_facet_from_group(&mut self, facet_id: FacetId, group_id: GroupId) {
         let group = self.map.get_mut(&group_id).expect("group");
-        group.members.retain(|member| member.is_facet(facet_id));
+        group.members.retain(|entry| entry.member.is_facet(facet_id));
     }
 
     pub fn group_members(&self, group_id: GroupId) -> Vec<GroupMember> {
-        self.map.get(&group_id).expect("group_id").members.clone()
+        self.map
+            .get(&group_id)
+            .expect("group_id")
+            .members
+            .iter()
+            .map(|entry| entry.member)
+            .collect()
+    }
+
+    pub(crate) fn group_member_data(&self, group_id: GroupId) -> Vec<&Option<GroupMemberData>> {
+        let member_data = self
+            .map
+            .get(&group_id)
+            .expect("group_id")
+            .members
+            .iter()
+            .map(|entry| &entry.member_data)
+            .collect();
+        member_data
     }
 
     pub fn group_arranger(&self, group_id: GroupId) -> Option<&ArrangerPtr> {
@@ -90,6 +123,7 @@ impl GroupMap {
         label: &str,
         arranger: ArrangerPtr,
         parent: Option<&GroupId>,
+        member_data: Option<GroupMemberData>,
     ) {
         if self.root_group_id.is_none() {
             self.root_group_id = Some(group_id);
@@ -103,7 +137,7 @@ impl GroupMap {
         self.map.insert(group_id, group);
         if let Some(parent) = parent {
             let group = self.map.get_mut(&parent).expect("group");
-            group.members.push(GroupMember::Group(group_id));
+            group.members.push(GroupEntry { member: GroupMember::Group(group_id), member_data });
         }
     }
 
@@ -116,7 +150,7 @@ impl GroupMap {
     ) -> Size {
         let group_members = self.group_members(*group_id);
         let mut member_sizes = Vec::new();
-        for member in group_members {
+        for member in group_members.iter() {
             match member {
                 GroupMember::Group(member_group_id) => {
                     let size = self.calculate_size_map_internal(
@@ -125,19 +159,29 @@ impl GroupMap {
                         &member_group_id,
                         size_map,
                     );
-                    size_map.insert(member, size);
+                    size_map.insert(*member, size);
                     member_sizes.push(size);
                 }
                 GroupMember::Facet(member_facet_id) => {
-                    let size = scene.get_facet_size(&member_facet_id);
+                    let size = scene.calculate_facet_size(&member_facet_id, *target_size);
                     member_sizes.push(size);
-                    size_map.insert(member, size);
+                    size_map.insert(*member, size);
                 }
             }
         }
         let optional_arranger = self.group_arranger(*group_id);
         if let Some(arranger) = optional_arranger {
-            arranger.calculate_size(*target_size, &member_sizes)
+            let member_data = self.group_member_data(*group_id);
+            let mut mut_sizes = member_sizes.clone();
+            let arranged_size = arranger.calculate_size(*target_size, &mut mut_sizes, &member_data);
+            for ((member_id, member_size), new_member_size) in
+                group_members.iter().zip(member_sizes.iter()).zip(mut_sizes.iter())
+            {
+                if member_size != new_member_size {
+                    size_map.insert(*member_id, *new_member_size);
+                }
+            }
+            arranged_size
         } else {
             panic!("need an arranger");
         }

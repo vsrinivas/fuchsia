@@ -4,7 +4,7 @@
 
 use crate::{
     scene::{
-        group::GroupId,
+        group::{GroupId, GroupMemberData},
         scene::{GroupBuilder, SceneBuilder},
     },
     Coord, Point, Rect, Size,
@@ -16,7 +16,12 @@ use std::ops::Deref;
 pub trait Arranger: std::fmt::Debug {
     /// Calculate the size of a group, based on the available size and the sizes
     /// of the members of the group.
-    fn calculate_size(&self, group_size: Size, member_sizes: &[Size]) -> Size;
+    fn calculate_size(
+        &self,
+        group_size: Size,
+        member_sizes: &mut [Size],
+        member_data: &[&Option<GroupMemberData>],
+    ) -> Size;
     /// Return the group-relative positions of the members of this group, based
     /// on the sizes of the members.
     fn arrange(&self, group_size: Size, member_sizes: &[Size]) -> Vec<Point>;
@@ -133,7 +138,12 @@ impl Stack {
 }
 
 impl Arranger for Stack {
-    fn calculate_size(&self, group_size: Size, member_sizes: &[Size]) -> Size {
+    fn calculate_size(
+        &self,
+        group_size: Size,
+        member_sizes: &mut [Size],
+        _member_data: &[&Option<GroupMemberData>],
+    ) -> Size {
         if self.expand {
             group_size
         } else {
@@ -245,6 +255,14 @@ impl Axis {
             Self::Vertical => point2(cross_axis, axis),
         }
     }
+
+    /// Create a size based on this direction.
+    pub fn size2(&self, axis: Coord, cross_axis: Coord) -> Size {
+        match self {
+            Self::Horizontal => size2(axis, cross_axis),
+            Self::Vertical => size2(cross_axis, axis),
+        }
+    }
 }
 
 impl Default for Axis {
@@ -352,6 +370,25 @@ impl FlexOptions {
     }
 }
 
+#[derive(Clone)]
+/// Member data for the Flex arranger.
+pub struct FlexMemberData {
+    flex: usize,
+}
+
+impl FlexMemberData {
+    /// Create new member data for a member of a flex group.
+    pub fn new(flex: usize) -> Option<GroupMemberData> {
+        Some(Box::new(FlexMemberData { flex }))
+    }
+
+    pub(crate) fn from(data: &Option<GroupMemberData>) -> Option<FlexMemberData> {
+        data.as_ref()
+            .and_then(|has_data| has_data.downcast_ref::<FlexMemberData>())
+            .map(|has_data| has_data.clone())
+    }
+}
+
 #[derive(Debug)]
 /// Flex group arranger.
 pub struct Flex {
@@ -389,8 +426,24 @@ impl Flex {
 }
 
 impl Arranger for Flex {
-    fn calculate_size(&self, group_size: Size, member_sizes: &[Size]) -> Size {
-        let axis_size = if self.main_size == MainAxisSize::Max {
+    fn calculate_size(
+        &self,
+        group_size: Size,
+        member_sizes: &mut [Size],
+        member_data: &[&Option<GroupMemberData>],
+    ) -> Size {
+        let group_main_span = self.direction.span(&group_size);
+        let weights: Vec<usize> = member_data
+            .iter()
+            .map(|member_data| {
+                FlexMemberData::from(member_data).and_then(|md| Some(md.flex)).unwrap_or(0)
+            })
+            .collect();
+        let total_size: f32 =
+            member_sizes.iter().map(|facet_size| self.direction.span(facet_size)).sum();
+        let sum_of_weights: usize = weights.iter().sum();
+        let weighed_extra = (group_main_span - total_size) / sum_of_weights as f32;
+        let axis_size = if self.main_size == MainAxisSize::Max || sum_of_weights > 0 {
             self.direction.span(&group_size)
         } else {
             member_sizes.iter().map(|s| self.direction.span(s)).sum()
@@ -400,6 +453,11 @@ impl Arranger for Flex {
             .map(|s| self.direction.cross_span(s))
             .max_by(|a, b| a.partial_cmp(b).expect("partial_cmp"))
             .unwrap_or(0.0);
+        for (index, weight) in weights.iter().enumerate() {
+            if *weight > 0 {
+                member_sizes[index] += self.direction.size2(weighed_extra * (*weight as f32), 0.0);
+            }
+        }
         match self.direction {
             Axis::Vertical => size2(cross_axis_size, axis_size),
             Axis::Horizontal => size2(axis_size, cross_axis_size),
@@ -450,12 +508,17 @@ impl Arranger for Flex {
 pub struct FlexBuilder<'a> {
     builder: GroupBuilder<'a>,
     flex_options: FlexOptions,
+    member_data: Option<GroupMemberData>,
 }
 
 impl<'a> FlexBuilder<'a> {
-    pub(crate) fn new(builder: GroupBuilder<'a>, direction: Axis) -> Self {
+    pub(crate) fn new(
+        builder: GroupBuilder<'a>,
+        direction: Axis,
+        member_data: Option<GroupMemberData>,
+    ) -> Self {
         let flex_options = FlexOptions { direction, ..FlexOptions::default() };
-        Self { builder, flex_options }
+        Self { builder, flex_options, member_data }
     }
 
     /// Use MainAxisSize::Min for main size.
@@ -501,7 +564,7 @@ impl<'a> FlexBuilder<'a> {
         F: FnMut(&mut SceneBuilder),
     {
         self.builder.arranger = Some(Flex::with_options_ptr(self.flex_options));
-        self.builder.contents(f)
+        self.builder.contents_with_member_data(self.member_data, f)
     }
 }
 

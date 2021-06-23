@@ -170,7 +170,7 @@ impl<T: 'static> Facet for TextGridFacet<T> {
         }
     }
 
-    fn get_size(&self) -> Size {
+    fn calculate_size(&self, _: Size) -> Size {
         self.size
     }
 }
