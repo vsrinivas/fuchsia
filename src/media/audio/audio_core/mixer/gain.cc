@@ -226,6 +226,9 @@ Gain::AScale Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
   if (source_ramp_duration_.get() > 0) {
     AScale start_source_scale = start_source_scale_;
     AScale end_source_scale = end_source_scale_;
+    if (end_source_scale <= kMinScale) {
+      end_source_scale = kMuteScale;
+    }
     const float kInverseSourceRampDuration =
         1.0f / static_cast<float>(source_ramp_duration_.to_nsecs());
 
@@ -235,13 +238,17 @@ Gain::AScale Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
         scale_arr[idx] = end_source_scale;
       } else {
         auto ramp_fraction = static_cast<float>(frame_time.to_nsecs()) * kInverseSourceRampDuration;
-        scale_arr[idx] =
+        auto scale_factor =
             start_source_scale + (end_source_scale - start_source_scale) * ramp_fraction;
+        scale_arr[idx] = (scale_factor <= kMinScale) ? kMuteScale : scale_factor;
       }
     }
   } else {
     // ...otherwise, the source contribution to our array is constant
     auto source_scale = DbToScale(current_source_gain_db_);
+    if (source_scale <= kMinScale) {
+      source_scale = kMuteScale;
+    }
     for (int64_t idx = 0; idx < num_frames; ++idx) {
       scale_arr[idx] = source_scale;
     }
@@ -251,6 +258,9 @@ Gain::AScale Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
   if (dest_ramp_duration_.get() > 0) {
     AScale start_dest_scale = start_dest_scale_;
     AScale end_dest_scale = end_dest_scale_;
+    if (end_dest_scale <= kMinScale) {
+      end_dest_scale = kMuteScale;
+    }
     const float kInverseDestRampDuration =
         1.0f / static_cast<float>(dest_ramp_duration_.to_nsecs());
 
@@ -260,12 +270,17 @@ Gain::AScale Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
         scale_arr[idx] *= end_dest_scale;
       } else {
         auto ramp_fraction = static_cast<float>(frame_time.to_nsecs()) * kInverseDestRampDuration;
-        scale_arr[idx] *= (start_dest_scale + (end_dest_scale - start_dest_scale) * ramp_fraction);
+        auto scale_factor =
+            (start_dest_scale + (end_dest_scale - start_dest_scale) * ramp_fraction);
+        scale_arr[idx] *= (scale_factor <= kMinScale) ? kMuteScale : scale_factor;
       }
     }
   } else {
     // ...otherwise, the dest contribution to our array is constant
     AScale dest_scale = DbToScale(current_dest_gain_db_);
+    if (dest_scale <= kMinScale) {
+      dest_scale = kMuteScale;
+    }
     for (int64_t idx = 0; idx < num_frames; ++idx) {
       scale_arr[idx] *= dest_scale;
     }

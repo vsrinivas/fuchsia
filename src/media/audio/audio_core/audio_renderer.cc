@@ -128,8 +128,7 @@ void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
   cleanup.cancel();
 }
 
-// To eliminate audible pops from discontinuity-on-instant-start, ramp up from a very low level.
-// This isn't MUTED_GAIN_DB: the first mix might be erroneously skipped (despite ramping).
+// To eliminate audible pops from discontinuity-on-immediate-start, ramp up from a very low level.
 constexpr bool kEnableRampUpOnPlay = true;
 constexpr float kInitialRampUpGainDb = -120.0f;
 constexpr zx::duration kRampUpOnPlayDuration = zx::msec(5);

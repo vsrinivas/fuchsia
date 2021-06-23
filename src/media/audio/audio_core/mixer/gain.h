@@ -44,7 +44,9 @@ class Gain {
   // Note: multiply-by-.05 equals divide-by-20 -- and is faster on most
   // builds. Note: 0.05 must be double (not float) for the required precision.
   static AScale DbToScale(float gain_db) { return static_cast<AScale>(pow(10.0f, gain_db * 0.05)); }
-  static float ScaleToDb(AScale scale) { return std::log10(scale) * 20.0f; }
+  static float ScaleToDb(AScale scale) {
+    return std::clamp(std::log10(scale) * 20.0f, kMinGainDb, kMaxGainDb);
+  }
   // Higher-precision (but slower) version currently used only by fidelity tests
   static double DoubleToDb(double val) { return std::log10(val) * 20.0; }
   static inline float CombineGains(float gain_db_a, float gain_db_b,
@@ -116,7 +118,7 @@ class Gain {
   AScale GetScaleArray(AScale* scale_arr, int64_t num_frames, const TimelineRate& rate);
 
   // Calculate the gain-scale, then convert it to decibels-full-scale.
-  float GetGainDb() { return ScaleToDb(GetGainScale()); }
+  float GetGainDb() { return std::max(ScaleToDb(GetGainScale()), kMinGainDb); }
 
   // Return the partial components of a stream's gain_db, including mute effects. Note that this
   // uses the latest source or dest gain_db values that have been set, but it does not automatically

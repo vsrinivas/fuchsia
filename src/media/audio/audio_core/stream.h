@@ -21,6 +21,8 @@ namespace media::audio {
 
 class BaseStream {
  public:
+  static constexpr bool kLogPresentationDelay = false;
+
   BaseStream(Format format) : format_(format) {}
   virtual ~BaseStream() = default;
 

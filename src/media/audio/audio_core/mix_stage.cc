@@ -4,6 +4,7 @@
 
 #include "src/media/audio/audio_core/mix_stage.h"
 
+#include <fuchsia/media/audio/cpp/fidl.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
@@ -186,6 +187,13 @@ void MixStage::SetPresentationDelay(zx::duration external_delay) {
   TRACE_DURATION("audio", "MixStage::SetPresentationDelay");
   ReadableStream::SetPresentationDelay(external_delay);
 
+  if constexpr (kLogPresentationDelay) {
+    FX_LOGS(WARNING) << "    (" << this << ") " << __FUNCTION__ << " given external_delay "
+                     << external_delay.to_nsecs() << "ns";
+  }
+
+  ReadableStream::SetPresentationDelay(external_delay);
+
   // Propagate time to our sources.
   std::lock_guard<std::mutex> lock(stream_lock_);
   for (const auto& holder : streams_) {
@@ -193,6 +201,15 @@ void MixStage::SetPresentationDelay(zx::duration external_delay) {
     FX_DCHECK(holder.mixer);
 
     zx::duration mixer_lead_time = LeadTimeForMixer(holder.stream->format(), *holder.mixer);
+
+    if constexpr (kLogPresentationDelay) {
+      FX_LOGS(WARNING) << "Adding LeadTimeForMixer " << mixer_lead_time.to_nsecs()
+                       << "ns to external_delay " << external_delay.to_nsecs() << "ns";
+      FX_LOGS(WARNING) << "    (" << this << ") " << __FUNCTION__
+                       << " setting child stream total delay "
+                       << (external_delay + mixer_lead_time).to_nsecs() << "ns";
+    }
+
     holder.stream->SetPresentationDelay(external_delay + mixer_lead_time);
   }
 }
@@ -431,12 +448,12 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // a partial underflow when realigning, so just complete the packet and move on to the next.
     consumed_source = true;
   } else {
-    float local_gain_db;
     auto prev_dest_offset = dest_offset;
     auto dest_ref_clock_to_integral_dest_frame =
         ReferenceClockToIntegralFrames(cur_mix_job_.dest_ref_clock_to_frac_dest_frame);
 
     // Check whether we are still ramping
+    float local_gain_db;
     bool ramping = bookkeeping.gain.IsRamping();
     if (ramping) {
       auto scale_arr_max = bookkeeping.gain.GetScaleArray(
