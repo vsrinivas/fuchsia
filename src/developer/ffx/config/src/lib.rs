@@ -236,19 +236,24 @@ pub async fn print_config<W: Write>(mut writer: W, build_dir: &Option<String>) -
 }
 
 pub async fn get_sdk() -> Result<sdk::Sdk> {
-    if let Ok(manifest) = get("sdk.root").await {
-        if get("sdk.type").await.unwrap_or("".to_string()) == "in-tree" {
-            sdk::Sdk::from_build_dir(manifest)
-        } else {
-            sdk::Sdk::from_sdk_dir(manifest)
+    match get("sdk.root").await {
+        Ok(manifest) => {
+            if get("sdk.type").await.unwrap_or("".to_string()) == "in-tree" {
+                sdk::Sdk::from_build_dir(manifest)
+            } else {
+                sdk::Sdk::from_sdk_dir(manifest)
+            }
         }
-    } else {
-        errors::ffx_bail!(
-            "SDK directory could not be found. Please set with \
+        Err(e) => {
+            errors::ffx_bail!(
+                "SDK directory could not be found. Please set with \
              `ffx sdk set root <PATH_TO_SDK_DIR>`\n\
              If you are developing in the fuchsia tree, use the Fuchsia build directory, and \
-             also run `ffx config set sdk.type in-tree`"
-        );
+             also run `ffx config set sdk.type in-tree`.\
+             \n\nError was: {:?}",
+                e
+            );
+        }
     }
 }
 
