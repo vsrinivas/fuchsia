@@ -40,17 +40,27 @@ zx_status_t NandDevice::ReadPage(uint8_t* data, uint8_t* oob, uint32_t nand_page
   zx_status_t status = ZX_ERR_INTERNAL;
 
   size_t retry = 0;
+  bool ecc_failure = false;
   for (; status != ZX_OK && retry < retries; retry++) {
     status = raw_nand_.ReadPageHwecc(nand_page, data, nand_info_.page_size, nullptr, oob,
                                      nand_info_.oob_size, nullptr, corrected_bits);
+    if (status == ZX_ERR_IO_DATA_INTEGRITY) {
+      ecc_failure = true;
+    }
     if (status != ZX_OK) {
       zxlogf(WARNING, "%s: Retrying Read@%u", __func__, nand_page);
     }
   }
+
   if (status != ZX_OK) {
     zxlogf(WARNING, "%s: Read error %d, exhausted all retries", __func__, status);
   } else if (retry > 1) {
     zxlogf(INFO, "%s: Successfully read@%u on retry %zd", __func__, nand_page, retry - 1);
+  }
+  // If we get a failed ECC from the nand device, report up the stack that
+  // things are going badly, in case the repeated read goes inexplicably better.
+  if (ecc_failure) {
+    *corrected_bits = nand_info_.ecc_bits;
   }
   return status;
 }
