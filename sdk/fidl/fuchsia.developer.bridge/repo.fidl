@@ -12,12 +12,15 @@ const uint64 MAX_PATH = 4095;
 const uint64 MAX_REPOS = 512;
 const uint64 MAX_ALIASES = 32;
 
+/// Describes all the possible repositories that could be managed by this service.
 flexible union RepositorySpec {
-    1: FileSystemRepositorySpec filesystem;
+    1: FileSystemRepositorySpec file_system;
     2: PmRepositorySpec pm;
 };
 
+/// [FileSystemRepositorySpec] describes a TUF repository found on the local filesystem.
 table FileSystemRepositorySpec {
+    /// File system path to the location of the repository.
     1: string:MAX_PATH path;
 };
 
@@ -33,9 +36,12 @@ protocol Repositories {
     /// Starts the server listening on the given port.
     Serve(fuchsia.net.IpAddress addr, uint16 port) -> (bool success);
 
+    /// Add a repository named `name` that has the following [RepositorySpec].
     // FIXME(76201): Should return a RepoError
     Add(string:MAX_NAME name, RepositorySpec repository);
 
+    /// Returns true if the repository was removed, or false if there is no
+    /// repository named `name`.
     // FIXME(76201): Should return a RepoError
     Remove(string:MAX_NAME name) -> (bool found);
 

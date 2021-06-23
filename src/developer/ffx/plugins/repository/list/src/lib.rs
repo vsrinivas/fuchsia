@@ -68,7 +68,7 @@ mod test {
                                                 &mut vec![
                                                     &mut RepositoryConfig {
                                                         name: "Test1".to_owned(),
-                                                        spec: RepositorySpec::Filesystem(
+                                                        spec: RepositorySpec::FileSystem(
                                                             FileSystemRepositorySpec {
                                                                 path: Some("a/b".to_owned()),
                                                                 ..FileSystemRepositorySpec::EMPTY
@@ -77,7 +77,7 @@ mod test {
                                                     },
                                                     &mut RepositoryConfig {
                                                         name: "Test2".to_owned(),
-                                                        spec: RepositorySpec::Filesystem(
+                                                        spec: RepositorySpec::FileSystem(
                                                             FileSystemRepositorySpec {
                                                                 path: Some("c/d".to_owned()),
                                                                 ..FileSystemRepositorySpec::EMPTY

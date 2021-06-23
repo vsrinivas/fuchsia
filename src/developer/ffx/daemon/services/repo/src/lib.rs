@@ -215,7 +215,7 @@ impl FidlService for Repo {
                 log::info!("Adding repository {} {:?}", name, repository);
 
                 match repository {
-                    bridge::RepositorySpec::Filesystem(path) => {
+                    bridge::RepositorySpec::FileSystem(path) => {
                         if let Some(path) = path.path {
                             let err = ffx_config::set(
                                 (
@@ -342,7 +342,7 @@ impl FidlService for Repo {
                         name: x.name().to_owned(),
                         spec: match x.spec() {
                             RepositorySpec::FileSystem { path } => {
-                                bridge::RepositorySpec::Filesystem(
+                                bridge::RepositorySpec::FileSystem(
                                     bridge::FileSystemRepositorySpec {
                                         path: path.as_os_str().to_str().map(|x| x.to_owned()),
                                         ..bridge::FileSystemRepositorySpec::EMPTY
@@ -562,7 +562,7 @@ mod tests {
 
     async fn add_repo(daemon: &FakeDaemon) -> bridge::RepositoriesProxy {
         let proxy = daemon.open_proxy::<bridge::RepositoriesMarker>().await;
-        let spec = bridge::RepositorySpec::Filesystem(bridge::FileSystemRepositorySpec {
+        let spec = bridge::RepositorySpec::FileSystem(bridge::FileSystemRepositorySpec {
             path: Some("test_path/bar".to_owned()),
             ..bridge::FileSystemRepositorySpec::EMPTY
         });
@@ -575,7 +575,7 @@ mod tests {
     async fn test_add_remove() {
         let daemon = FakeDaemonBuilder::new().register_fidl_service::<Repo>().build();
         let proxy = daemon.open_proxy::<bridge::RepositoriesMarker>().await;
-        let spec = bridge::RepositorySpec::Filesystem(bridge::FileSystemRepositorySpec {
+        let spec = bridge::RepositorySpec::FileSystem(bridge::FileSystemRepositorySpec {
             path: Some("test_path/bar".to_owned()),
             ..bridge::FileSystemRepositorySpec::EMPTY
         });
