@@ -5,7 +5,7 @@
             "--test.benchmem",
             "--test.cpuprofile=/data/netstack_bench_profile"
         ],
-        "binary": "test/netstack_bench_test"
+        "binary": "test/bench_test"
     },
     "sandbox": {
         "features": [

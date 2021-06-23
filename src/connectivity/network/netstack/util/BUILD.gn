@@ -3,18 +3,34 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
-go_test("netstack_util_test") {
+go_library("util") {
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
+
+  deps = [
+    "//third_party/golibs:github.com/google/go-cmp",
+    "//third_party/golibs:gvisor.dev/gvisor",
+  ]
+
+  sources = [
+    "circular_logs.go",
+    "circular_logs_test.go",
+    "parse.go",
+    "parse_test.go",
+  ]
+}
+
+go_test("util_test") {
   gopackages =
       [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util" ]
 
-  deps = [ "../:netstack_lib" ]
+  deps = [ ":util" ]
 }
 
 fuchsia_unittest_package("netstack-util-gotests") {
-  deps = [ ":netstack_util_test" ]
-  manifest = "meta/netstack_util_test.cmx"
+  deps = [ ":util_test" ]
 }
 
 group("tests") {

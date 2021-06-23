@@ -1,0 +1,40 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
+
+go_library("fidlconv") {
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
+
+  deps = [
+    "//sdk/fidl/fuchsia.net($go_toolchain)",
+    "//sdk/fidl/fuchsia.net.stack($go_toolchain)",
+    "//src/connectivity/network/netstack/util",
+    "//third_party/golibs:gvisor.dev/gvisor",
+  ]
+
+  sources = [
+    "fidlconv.go",
+    "fidlconv_test.go",
+  ]
+}
+
+go_test("fidlconv_test") {
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv" ]
+
+  deps = [ ":fidlconv" ]
+}
+
+fuchsia_unittest_package("netstack-fidlconv-gotests") {
+  deps = [ ":fidlconv_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":netstack-fidlconv-gotests" ]
+}

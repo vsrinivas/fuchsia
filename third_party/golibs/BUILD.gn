@@ -242,6 +242,7 @@ golib("google.golang.org/protobuf") {
 golib("gvisor.dev/gvisor") {
   deps = [
     ":github.com/golang/protobuf",
+    ":github.com/google/btree",
     ":golang.org/x/sys",
     ":golang.org/x/time",
   ]

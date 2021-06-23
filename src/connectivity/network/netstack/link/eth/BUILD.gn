@@ -1,0 +1,46 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
+
+go_library("eth") {
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
+
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
+    "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",
+    "//src/connectivity/network/netstack:gen/netstack",
+    "//src/connectivity/network/netstack/link",
+    "//src/connectivity/network/netstack/link/fifo",
+    "//src/connectivity/network/netstack/link/fifo/testutil",
+    "//src/connectivity/network/netstack/testutil",
+    "//src/lib/syslog/go",
+    "//third_party/golibs:github.com/google/go-cmp",
+    "//third_party/golibs:gvisor.dev/gvisor",
+  ]
+
+  sources = [
+    "client.go",
+    "client_test.go",
+  ]
+}
+
+go_test("link_eth_test") {
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth" ]
+
+  deps = [ ":eth" ]
+}
+
+fuchsia_unittest_package("netstack-link-eth-gotests") {
+  deps = [ ":link_eth_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":netstack-link-eth-gotests" ]
+}

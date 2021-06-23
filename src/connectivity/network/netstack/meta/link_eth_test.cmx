@@ -4,6 +4,6 @@
             "--test.timeout",
             "2m"
         ],
-        "binary": "test/netstack_link_eth_test"
+        "binary": "test/link_eth_test"
     }
 }

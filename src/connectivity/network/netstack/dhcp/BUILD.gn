@@ -3,16 +3,41 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
-go_test("netstack_dhcp_test") {
+go_library("dhcp") {
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
+
+  deps = [
+    "//src/connectivity/network/netstack/time",
+    "//src/connectivity/network/netstack/util",
+    "//src/lib/syslog/go",
+    "//third_party/golibs:github.com/google/go-cmp",
+    "//third_party/golibs:gvisor.dev/gvisor",
+  ]
+
+  sources = [
+    "client.go",
+    "dhcp.go",
+    "dhcp_string.go",
+    "dhcp_test.go",
+    "server.go",
+  ]
+}
+
+go_test("dhcp_test") {
   gopackages =
       [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp" ]
 
-  deps = [ "../:netstack_lib" ]
+  deps = [ ":dhcp" ]
 }
 
 fuchsia_unittest_package("netstack-dhcp-gotests") {
-  deps = [ ":netstack_dhcp_test" ]
-  manifest = "meta/netstack_dhcp_test.cmx"
+  deps = [ ":dhcp_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":netstack-dhcp-gotests" ]
 }

@@ -2,12 +2,12 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/netstack-gotests#meta/network-tun.cmx"
+                "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/netstack-link-netdevice-gotests#meta/network-tun.cmx"
             }
         }
     },
     "program": {
-        "binary": "test/netstack_link_netdevice_test"
+        "binary": "test/link_netdevice_test"
     },
     "sandbox": {
         "services": [

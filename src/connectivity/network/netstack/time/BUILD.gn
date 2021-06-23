@@ -3,15 +3,30 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
-go_test("netstack_time_test") {
+go_library("time") {
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
+
+  sources = [
+    "time.go",
+    "time_test.go",
+  ]
+}
+
+go_test("time_test") {
   gopackages =
       [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time" ]
 
-  deps = [ "../:netstack_lib" ]
+  deps = [ ":time" ]
 }
 
 fuchsia_unittest_package("netstack-time-gotests") {
-  deps = [ ":netstack_time_test" ]
+  deps = [ ":time_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":netstack-time-gotests" ]
 }

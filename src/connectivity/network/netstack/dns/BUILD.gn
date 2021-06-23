@@ -8,19 +8,22 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 
 go_library("dns") {
-  sources = [
-    "servers_config.go",
-    "servers_config_test.go",
-  ]
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
+
   deps = [
     "//sdk/fidl/fuchsia.net.name($go_toolchain)",
     "//src/lib/syslog/go",
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:gvisor.dev/gvisor",
   ]
+
+  sources = [
+    "servers_config.go",
+    "servers_config_test.go",
+  ]
 }
 
-go_test("netstack_dns_test") {
+go_test("dns_test") {
   gopackages =
       [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns" ]
 
@@ -28,6 +31,10 @@ go_test("netstack_dns_test") {
 }
 
 fuchsia_unittest_package("netstack-dns-gotests") {
-  deps = [ ":netstack_dns_test" ]
-  manifest = "meta/netstack_dns_test.cmx"
+  deps = [ ":dns_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":netstack-dns-gotests" ]
 }

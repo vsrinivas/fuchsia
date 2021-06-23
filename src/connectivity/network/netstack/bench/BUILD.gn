@@ -1,0 +1,31 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("bench") {
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/bench"
+
+  deps = [ "//src/connectivity/network/netstack/util" ]
+
+  sources = [ "bench_test.go" ]
+}
+
+go_test("bench_test") {
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/bench" ]
+  deps = [ ":bench" ]
+}
+
+fuchsia_unittest_package("netstack-bench-gotests") {
+  deps = [ ":bench_test" ]
+  manifest = "meta/bench_test.cmx"
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":netstack-bench-gotests" ]
+}

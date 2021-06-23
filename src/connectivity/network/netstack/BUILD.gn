@@ -64,33 +64,6 @@ fuchsia_shell_package("tools") {
   deps = [ "ifconfig" ]
 }
 
-tests = []
-foreach(name,
-        [
-          "netstack_bench_test",
-          "netstack_fidlconv_test",
-          "netstack_filter_test",
-          "netstack_link_bridge_test",
-          "netstack_link_eth_test",
-          "netstack_link_fifo_test",
-          "netstack_link_netdevice_test",
-          "netstack_test",
-        ]) {
-  component_name = "$name-component"
-  fuchsia_unittest_component(component_name) {
-    component_name = name
-    deps = [ ":$name" ]
-    manifest = "meta/$name.cmx"
-  }
-  tests += [ ":$component_name" ]
-}
-
-fuchsia_test_package("netstack-gotests") {
-  deps = [ "//src/connectivity/network/tun/network-tun:component" ]
-
-  test_components = tests
-}
-
 generated_go("gen/netstack") {
   definitions = [
     {
@@ -117,13 +90,23 @@ generated_go("gen/netstack") {
   ]
 }
 
-go_library("netstack_lib") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/..."
+go_library("lib") {
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
 
   deps = [
-    ":gen/netstack",
+    "dhcp",
     "dns",
+    "fidlconv",
     "fidlext/fuchsia/hardware/ethernet",
+    "filter",
+    "inspect",
+    "link",
+    "link/bridge",
+    "link/eth",
+    "link/netdevice",
+    "routes",
+    "time",
+    "util",
     "//sdk/fidl/fuchsia.device($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",
@@ -145,29 +128,12 @@ go_library("netstack_lib") {
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component",
     "//src/lib/syslog/go",
-    "//third_party/golibs:github.com/google/btree",
     "//third_party/golibs:github.com/google/go-cmp",
-    "//third_party/golibs:go.uber.org/multierr",
-    "//third_party/golibs:golang.org/x/net",
-    "//third_party/golibs:golang.org/x/time",
     "//third_party/golibs:gvisor.dev/gvisor",
   ]
 
   sources = [
-    "bench/bench_test.go",
-    "dhcp/client.go",
-    "dhcp/dhcp.go",
-    "dhcp/dhcp_string.go",
-    "dhcp/dhcp_test.go",
-    "dhcp/server.go",
     "errors.go",
-    "fidlconv/fidlconv.go",
-    "fidlconv/fidlconv_test.go",
-    "filter/filter.go",
-    "filter/filter_service.go",
-    "filter/filter_service_test.go",
-    "filter/filter_test.go",
-    "filter/matchers.go",
     "fuchsia_inspect_inspect.go",
     "fuchsia_inspect_inspect_test.go",
     "fuchsia_net_dhcp.go",
@@ -181,25 +147,6 @@ go_library("netstack_lib") {
     "fuchsia_net_stack.go",
     "fuchsia_net_stack_test.go",
     "fuchsia_posix_socket.go",
-    "ifconfig/ifconfig.go",
-    "ifconfig/ifconfig_test.go",
-    "inspect/validator/main.go",
-    "inspect/writer.go",
-    "link/bridge/bridge.go",
-    "link/bridge/bridge_test.go",
-    "link/bridge/bridgeable.go",
-    "link/controller.go",
-    "link/eth/client.go",
-    "link/eth/client_test.go",
-    "link/fifo/entries_test.go",
-    "link/fifo/gen/fifo_entry.go",
-    "link/fifo/mapped_vmo.go",
-    "link/fifo/stats.go",
-    "link/fifo/testutil/fifo_util.go",
-    "link/netdevice/client.go",
-    "link/netdevice/client_test.go",
-    "link/netdevice/mac_client.go",
-    "link/netdevice/session_config.go",
     "main.go",
     "ndp.go",
     "ndp_test.go",
@@ -209,48 +156,8 @@ go_library("netstack_lib") {
     "netstack_test.go",
     "noop_endpoint_test.go",
     "pprof/export.go",
-    "routes/routes.go",
-    "routes/routes_test.go",
     "socket_conv.go",
-    "testutil/packet_buffer.go",
-    "time/time.go",
-    "time/time_test.go",
-    "util/circular_logs.go",
-    "util/circular_logs_test.go",
-    "util/parse.go",
-    "util/parse_test.go",
   ]
-}
-
-go_test("netstack_bench_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/bench" ]
-  deps = [ ":netstack_lib" ]
-}
-
-go_test("netstack_fidlconv_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv" ]
-  deps = [ ":netstack_lib" ]
-}
-
-go_test("netstack_filter_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter" ]
-  deps = [ ":netstack_lib" ]
-}
-
-go_test("netstack_link_bridge_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/bridge" ]
-
-  deps = [ ":netstack_lib" ]
-}
-
-go_test("netstack_link_eth_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth" ]
-  deps = [ ":netstack_lib" ]
 }
 
 generated_go("entries_gen_test") {
@@ -263,38 +170,34 @@ generated_go("entries_gen_test") {
   ]
 }
 
-go_test("netstack_link_fifo_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo" ]
-  deps = [
-    ":entries_gen_test",
-    ":netstack_lib",
-  ]
-}
-
-go_test("netstack_link_netdevice_test") {
-  gopackages = [
-    "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice",
-  ]
-  deps = [ ":netstack_lib" ]
-}
-
 go_test("netstack_test") {
   gopackages = [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack" ]
-  deps = [ ":netstack_lib" ]
+  deps = [ ":lib" ]
+}
+
+fuchsia_unittest_package("netstack-gotests") {
+  deps = [ ":netstack_test" ]
+  manifest = "meta/netstack_test.cmx"
 }
 
 group("tests") {
   testonly = true
   deps = [
     ":netstack-gotests",
-    "dhcp:netstack-dhcp-gotests",
-    "dns:netstack-dns-gotests",
+    "bench:tests",
+    "dhcp:tests",
+    "dns:tests",
+    "fidlconv:tests",
+    "filter:tests",
     "ifconfig:netstack-ifconfig-gotests",
-    "inspect/validator:tests",
-    "routes:netstack-routes-gotests",
+    "inspect:tests",
+    "link/bridge:tests",
+    "link/eth:tests",
+    "link/fifo:tests",
+    "link/netdevice:tests",
+    "routes:tests",
     "tests",
-    "time:netstack-time-gotests",
+    "time:tests",
     "util:tests",
   ]
 }

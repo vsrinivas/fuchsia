@@ -8,14 +8,16 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//src/go/grand_unified_binary/gub.gni")
 
-go_library("ifconfig_lib") {
-  name = "ifconfig_lib"
+go_library("lib") {
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/ifconfig"
 
   deps = [
-    "../:netstack_lib",
+    "//sdk/fidl/fuchsia.net($go_toolchain)",
+    "//sdk/fidl/fuchsia.net.dhcp($go_toolchain)",
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
-    "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//src/connectivity/network/netstack/fidlconv",
     "//src/lib/component",
+    "//third_party/golibs:gvisor.dev/gvisor",
   ]
 
   sources = [
@@ -24,16 +26,21 @@ go_library("ifconfig_lib") {
   ]
 }
 
-go_test("netstack_ifconfig_test") {
+go_test("ifconfig_test") {
   gopackages =
       [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/ifconfig" ]
-  deps = [ ":ifconfig_lib" ]
+  deps = [ ":lib" ]
 }
 
 fuchsia_unittest_package("netstack-ifconfig-gotests") {
-  deps = [ ":netstack_ifconfig_test" ]
-  manifest = "meta/netstack_ifconfig_test.cmx"
+  deps = [ ":ifconfig_test" ]
+  manifest = "meta/ifconfig_test.cmx"
 }
 
 grand_unified_binary("ifconfig") {
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":netstack-ifconfig-gotests" ]
 }

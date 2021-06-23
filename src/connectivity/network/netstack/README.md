@@ -4,6 +4,7 @@ Netstack is a userspace TCP/IP network stack and interfaces with zircon
 network drivers.
 Netstack serves as a back-end for fdio socket API.
 
+```
      +-----------+           +-----------+
      | FIDL app  |           | POSIX app |
      +--+--------+           +-----+-----+
@@ -15,7 +16,7 @@ Netstack serves as a back-end for fdio socket API.
         |                          |
         |   +----------------------v---------+
         |   |         BSD socket API         |
-        |   |  (//sdk/lib/fdio)   |
+        |   |  (//sdk/lib/fdio)              |
         |   +---------+----------------------+
         |             |
      +--v-------------v----------------------+
@@ -27,17 +28,16 @@ Netstack serves as a back-end for fdio socket API.
      |         Ethernet driver          |
      | (//zircon/system/udev/ethernet)  |
      +----------------------------------+
+```
 
 ## Benchmarking
-
-netstack microbenchmarks are in package netstack/bench; they can be run via the target netstack_bench_test.
 
 To run the benchmarks and obtain profiling data:
 
     REALM=bench
-    PROFILE_PATH=/data/r/sys/r/$REALM/fuchsia.com:netstack-gotests:0#meta:netstack_bench_test.cmx/profile
-    fx build netstack-gotests \
-      && fx test -o -R=$REALM netstack_bench_test \
+    PROFILE_PATH=/data/r/sys/r/$REALM/fuchsia.com:netstack-bench-gotests:0#meta:bench_test.cmx/profile
+    fx build netstack-bench-gotests \
+      && fx test -o -R=$REALM bench_test \
       && fx scp "[$(fx get-device-addr)]:$PROFILE_PATH" out/profile \
       && go tool pprof -http=:8080 out/profile
 

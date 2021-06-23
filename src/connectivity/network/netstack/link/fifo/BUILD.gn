@@ -1,0 +1,43 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("fifo") {
+  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
+
+  deps = [
+    "testutil",
+    "//third_party/golibs:go.uber.org/multierr",
+    "//third_party/golibs:gvisor.dev/gvisor",
+  ]
+
+  sources = [
+    "entries_test.go",
+    "gen/fifo_entry.go",
+    "mapped_vmo.go",
+    "stats.go",
+  ]
+}
+
+go_test("link_fifo_test") {
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo" ]
+
+  deps = [
+    ":fifo",
+    "//src/connectivity/network/netstack:entries_gen_test",
+  ]
+}
+
+fuchsia_unittest_package("netstack-link-fifo-gotests") {
+  deps = [ ":link_fifo_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":netstack-link-fifo-gotests" ]
+}
