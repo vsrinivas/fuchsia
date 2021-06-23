@@ -180,6 +180,25 @@ template("foo") {
 }
 ```
 
+### Third party may be out of scope
+
+Fuchsia uses a lot of third party code, that is code that is outside the scope
+of the Fuchsia project. As a rule of thumb it's often fine to enter a blanket
+allowlist for all third party code for opinionated changes or policy decisions.
+
+```gn
+group("bar_allowlist") {
+  ...
+  visibility = [
+    "//third_party/*",
+    ...
+  ]
+}
+```
+
+Depending on the nature of your change and the third party code in question,
+it may be possible to make changes upstream. Use your best judgement.
+
 [bash-style]: https://google.github.io/styleguide/shellguide.html
 [python-style]: https://google.github.io/styleguide/pyguide.html
 [shellcheck]: https://www.shellcheck.net/
