@@ -39,6 +39,6 @@ group("linux_runner") {
   testonly = true
   public_deps = [
     ":termina_guest",
-    "//src/virtualization/packages/biscotti_guest/linux_runner",
+    "//src/virtualization/bin/linux_runner",
   ]
 }

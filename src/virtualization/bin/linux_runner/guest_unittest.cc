@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/packages/biscotti_guest/linux_runner/guest.h"
+#include "src/virtualization/bin/linux_runner/guest.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -22,7 +22,7 @@
 
 #include <unordered_map>
 
-#include "src/virtualization/packages/biscotti_guest/linux_runner/ports.h"
+#include "src/virtualization/bin/linux_runner/ports.h"
 
 namespace linux_runner {
 namespace {

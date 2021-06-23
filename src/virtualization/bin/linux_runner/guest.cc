@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/packages/biscotti_guest/linux_runner/guest.h"
+#include "src/virtualization/bin/linux_runner/guest.h"
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -19,10 +19,10 @@
 
 #include <memory>
 
+#include "src/virtualization/bin/linux_runner/ports.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 #include "src/virtualization/lib/guest_config/guest_config.h"
-#include "src/virtualization/packages/biscotti_guest/linux_runner/ports.h"
-#include "src/virtualization/packages/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
+#include "src/virtualization/third_party/vm_tools/vm_guest.grpc.pb.h"
 
 #include <grpc++/grpc++.h>
 #include <grpc++/server_posix.h>

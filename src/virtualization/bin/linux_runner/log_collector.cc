@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/packages/biscotti_guest/linux_runner/log_collector.h"
+#include "src/virtualization/bin/linux_runner/log_collector.h"
 
 #include <iostream>
 

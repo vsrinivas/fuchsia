@@ -11,9 +11,9 @@ group("bin") {
     "guest",
     "guest_manager",
     "guest_runner",
+    "linux_runner",
     "vmm",
     "vmm/device:packages",
-    "//src/virtualization/packages/biscotti_guest/linux_runner",
   ]
 }
 

@@ -7,7 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 
-#include "src/virtualization/packages/biscotti_guest/linux_runner/linux_runner.h"
+#include "src/virtualization/bin/linux_runner/linux_runner.h"
 
 void PrintUsage();
 

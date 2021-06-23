@@ -82,7 +82,7 @@ source_set("lib") {
     "//src/lib/storage/vfs/cpp",
     "//src/virtualization/lib/grpc",
     "//src/virtualization/lib/guest_config",
-    "//src/virtualization/packages/biscotti_guest/third_party/protos:vm_cc_proto",
+    "//src/virtualization/third_party/vm_tools:vm_cc_proto",
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_lite",
     "//zircon/public/lib/async-cpp",

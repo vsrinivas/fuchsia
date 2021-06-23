@@ -6,7 +6,7 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "src/virtualization/packages/biscotti_guest/third_party/protos/vsh.pb.h"
+#include "src/virtualization/third_party/vm_tools/vsh.pb.h"
 
 namespace {
 

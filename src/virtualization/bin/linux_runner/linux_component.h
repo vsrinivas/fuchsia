@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_PACKAGES_BISCOTTI_GUEST_LINUX_RUNNER_LINUX_COMPONENT_H_
-#define SRC_VIRTUALIZATION_PACKAGES_BISCOTTI_GUEST_LINUX_RUNNER_LINUX_COMPONENT_H_
+#ifndef SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_LINUX_COMPONENT_H_
+#define SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_LINUX_COMPONENT_H_
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -58,4 +58,4 @@ class LinuxComponent : public fuchsia::sys::ComponentController,
 
 }  // namespace linux_runner
 
-#endif  // SRC_VIRTUALIZATION_PACKAGES_BISCOTTI_GUEST_LINUX_RUNNER_LINUX_COMPONENT_H_
+#endif  // SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_LINUX_COMPONENT_H_

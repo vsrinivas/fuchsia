@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_PACKAGES_BISCOTTI_GUEST_LINUX_RUNNER_PORTS_H_
-#define SRC_VIRTUALIZATION_PACKAGES_BISCOTTI_GUEST_LINUX_RUNNER_PORTS_H_
+#ifndef SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_PORTS_H_
+#define SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_PORTS_H_
 
 namespace linux_runner {
 
@@ -17,4 +17,4 @@ static constexpr uint32_t kLogCollectorPort = 9999;
 
 }  // namespace linux_runner
 
-#endif  // SRC_VIRTUALIZATION_PACKAGES_BISCOTTI_GUEST_LINUX_RUNNER_PORTS_H_
+#endif  // SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_PORTS_H_

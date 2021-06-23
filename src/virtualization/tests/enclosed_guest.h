@@ -14,11 +14,11 @@
 
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/lib/vsh/command_runner.h"
-#include "src/virtualization/packages/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
-#include "src/virtualization/packages/biscotti_guest/third_party/protos/vm_host.grpc.pb.h"
 #include "src/virtualization/tests/fake_netstack.h"
 #include "src/virtualization/tests/fake_scenic.h"
 #include "src/virtualization/tests/guest_console.h"
+#include "src/virtualization/third_party/vm_tools/vm_guest.grpc.pb.h"
+#include "src/virtualization/third_party/vm_tools/vm_host.grpc.pb.h"
 
 static constexpr char kZirconGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cmx";

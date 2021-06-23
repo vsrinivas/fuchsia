@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/packages/biscotti_guest/linux_runner/linux_component.h"
+#include "src/virtualization/bin/linux_runner/linux_component.h"
 
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>

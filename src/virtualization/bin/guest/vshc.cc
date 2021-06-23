@@ -22,7 +22,7 @@
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/virtualization/bin/guest/services.h"
 #include "src/virtualization/lib/vsh/util.h"
-#include "src/virtualization/packages/biscotti_guest/third_party/protos/vsh.pb.h"
+#include "src/virtualization/third_party/vm_tools/vsh.pb.h"
 
 namespace fpty = fuchsia_hardware_pty;
 

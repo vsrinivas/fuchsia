@@ -184,7 +184,7 @@ source_set("lib") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/virtualization/lib/grpc",
     "//src/virtualization/lib/vsh:client",
-    "//src/virtualization/packages/biscotti_guest/third_party/protos:vm_cc_proto",
+    "//src/virtualization/third_party/vm_tools:vm_cc_proto",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
