@@ -175,6 +175,7 @@ bool Tas27xx::ValidGain(float gain) { return (gain <= kMaxGain) && (gain >= kMin
 
 zx_status_t Tas27xx::SetRate(uint32_t rate) {
   if (rate != 48000 && rate != 96000) {
+    zxlogf(ERROR, "tas27xx: rate not supported %u", rate);
     return ZX_ERR_NOT_SUPPORTED;
   }
   // Note: autorate is enabled below, so changine the codec rate is not strictly required.
@@ -185,6 +186,19 @@ zx_status_t Tas27xx::SetRate(uint32_t rate) {
   return WriteReg(
       TDM_CFG0, static_cast<uint8_t>((0 << 5) | (0 << 4) | (((rate == 96000) ? 0x04 : 0x03) << 1) |
                                      (1 << 0)));
+}
+
+zx_status_t Tas27xx::SetTdmSlots(uint64_t channels_to_use_bitmask) {
+  // bit[5:4] - RX_SCFG, 01b Mono, Right channel or 10b = Mono, Left channel.
+  // bit[3:2] - RX_WLEN, 00b = 16-bits word length
+  // bit[0:1] - RX_SLEN, 10b = 32-bit slot length
+  if (channels_to_use_bitmask != 1 && channels_to_use_bitmask != 2) {
+    zxlogf(ERROR, "tas27xx: channels to use not supported %lu", channels_to_use_bitmask);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  channels_to_use_bitmask_ = channels_to_use_bitmask;
+  uint8_t rx_scfg = channels_to_use_bitmask_ == 1 ? 0x02 : 0x01;
+  return WriteReg(TDM_CFG2, (rx_scfg << 4) | (0x00 << 2) | 0x02);
 }
 
 zx::status<DriverIds> Tas27xx::Initialize() {
@@ -242,10 +256,7 @@ zx_status_t Tas27xx::Reinitialize() {
     return status;
   }
 
-  // bit[5:4] - RX_SCFG, 01b = Mono, Right channel
-  // bit[3:2] - RX_WLEN, 00b = 16-bits word length
-  // bit[0:1] - RX_SLEN, 10b = 32-bit slot length
-  status = WriteReg(TDM_CFG2, (0x02 << 4) | (0x00 << 2) | 0x02);
+  status = SetTdmSlots(channels_to_use_bitmask_);
   if (status != ZX_OK) {
     return status;
   }
@@ -360,8 +371,12 @@ void Tas27xx::SetBridgedMode(bool enable_bridged_mode) {
 DaiSupportedFormats Tas27xx::GetDaiFormats() { return kSupportedDaiFormats; }
 
 zx_status_t Tas27xx::SetDaiFormat(const DaiFormat& format) {
-  ZX_ASSERT(format.channels_to_use_bitmask == 1);  // Use right channel.
-  return SetRate(format.frame_rate);
+  zx_status_t status = SetRate(format.frame_rate);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return SetTdmSlots(format.channels_to_use_bitmask);
 }
 
 zx_status_t Tas27xx::WriteReg(uint8_t reg, uint8_t value) {

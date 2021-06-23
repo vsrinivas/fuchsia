@@ -190,15 +190,17 @@ zx_status_t Nelson::AudioInit() {
   metadata.bus = metadata::AmlBus::TDM_B;
   metadata.version = metadata::AmlVersion::kS905D3G;
   metadata.dai.type = metadata::DaiType::I2s;
+
+  // We expose a mono ring buffer to clients. However we still use a 2 channels DAI to the codec
+  // so we configure the audio engine to only take the one channel and put it in the left slot
+  // going out to the codec via I2S.
   metadata.ring_buffer.number_of_channels = 1;
-
-  // Get the one ring buffer channel to output in the *left* I2S slot.
-  metadata.swaps = 0x10;
-  metadata.lanes_enable_mask[0] = 2;
-
+  metadata.swaps = 0x10;              // One ring buffer channel goes into the left I2S slot.
+  metadata.lanes_enable_mask[0] = 2;  // One ring buffer channel goes into the left I2S slot.
   metadata.codecs.number_of_codecs = 1;
   metadata.codecs.types[0] = metadata::CodecType::Tas58xx;
-  metadata.codecs.channels_to_use_bitmask[0] = 3;
+  metadata.codecs.channels_to_use_bitmask[0] = 2;  // Codec must use the left I2S slot.
+
   pbus_metadata_t tdm_metadata[] = {
       {
           .type = DEVICE_METADATA_PRIVATE,

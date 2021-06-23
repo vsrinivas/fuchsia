@@ -356,9 +356,15 @@ zx_status_t Astro::AudioInit() {
     metadata.bus = metadata::AmlBus::TDM_B;
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.dai.type = metadata::DaiType::I2s;
+
+    // We expose a mono ring buffer to clients. However we still use a 2 channels DAI to the codec
+    // so we configure the audio engine to only take the one channel and put it in the right slot
+    // going out to the codec via I2S.
     metadata.ring_buffer.number_of_channels = 1;
-    metadata.lanes_enable_mask[0] = 1;
+    metadata.lanes_enable_mask[0] = 1;  // One ring buffer channel goes into the right I2S slot.
     metadata.codecs.number_of_codecs = 1;
+    metadata.codecs.channels_to_use_bitmask[0] = 1;  // Codec must use the right I2S slot.
+
     metadata.codecs.types[0] = metadata::CodecType::Tas27xx;
     // Report our external delay based on the chosen frame rate.  Note that these
     // delays were measured on Astro hardware, and should be pretty good, but they

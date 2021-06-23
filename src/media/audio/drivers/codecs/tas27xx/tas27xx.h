@@ -106,6 +106,7 @@ class Tas27xx : public SimpleCodecServer {
   int Thread();
   void DelayMs(uint32_t ms) { zx_nanosleep(zx_deadline_after(ZX_MSEC(ms))); }
   zx_status_t SetRate(uint32_t rate);
+  zx_status_t SetTdmSlots(uint64_t channels_to_use_bitmask);
   bool ValidGain(float gain);
   zx_status_t UpdatePowerControl();
   zx_status_t GetTemperature(float* temperature);
@@ -116,6 +117,7 @@ class Tas27xx : public SimpleCodecServer {
   thrd_t thread_;
   metadata::ti::TasConfig metadata_ = {};
 
+  uint8_t channels_to_use_bitmask_ = 1;  // Right channel if I2S.
   inspect::IntProperty status_time_;
   inspect::UintProperty codec_status_;
 };

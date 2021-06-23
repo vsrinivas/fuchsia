@@ -20,7 +20,7 @@ namespace audio {
 audio::DaiFormat GetDefaultDaiFormat() {
   return {
       .number_of_channels = 2,
-      .channels_to_use_bitmask = 1,  // Use one channel in this mono codec.
+      .channels_to_use_bitmask = 1,  // Use one channel (right) in this mono codec.
       .sample_format = SampleFormat::PCM_SIGNED,
       .frame_format = FrameFormat::I2S,
       .frame_rate = 24'000,
@@ -255,8 +255,11 @@ TEST_F(Tas27xxTest, CodecDaiFormat) {
   client.SetProtocol(&codec_proto);
 
   // We complete all i2c mock setup before executing server methods in a different thread.
-  mock_i2c.ExpectWriteStop({0x0a, 0x07});
-  mock_i2c.ExpectWriteStop({0x0a, 0x09});
+  mock_i2c
+      .ExpectWriteStop({0x0a, 0x07})   // SetRate 48k.
+      .ExpectWriteStop({0x0c, 0x22})   // SetTdmSlots right.
+      .ExpectWriteStop({0x0a, 0x09})   // SetRate 96k.
+      .ExpectWriteStop({0x0c, 0x12});  // SetTdmSlots left.
 
   // Check getting DAI formats.
   {
@@ -305,6 +308,7 @@ TEST_F(Tas27xxTest, CodecDaiFormat) {
   {
     DaiFormat format = GetDefaultDaiFormat();
     format.frame_rate = 96'000;
+    format.channels_to_use_bitmask = 2;  // Use one channel (left) in this mono codec.
     auto formats = client.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
     ASSERT_OK(client.SetDaiFormat(std::move(format)));
