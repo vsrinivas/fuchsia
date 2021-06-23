@@ -304,18 +304,19 @@ SecureVmoReadTester::SecureVmoReadTester(zx::vmo secure_vmo) : secure_vmo_(std::
   // VMAR that isn't letting something else get mapped there yet.
   zx_vaddr_t child_vaddr;
   zx_status_t status = zx::vmar::root_self()->allocate(
-      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, 0, ZX_PAGE_SIZE,
-      &child_vmar_, &child_vaddr);
+      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, 0,
+      zx_system_get_page_size(), &child_vmar_, &child_vaddr);
   ZX_ASSERT(status == ZX_OK);
 
   uintptr_t map_addr_raw;
   status = child_vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC | ZX_VM_MAP_RANGE, 0,
-                           secure_vmo_, 0, ZX_PAGE_SIZE, &map_addr_raw);
+                           secure_vmo_, 0, zx_system_get_page_size(), &map_addr_raw);
   ZX_ASSERT(status == ZX_OK);
   map_addr_ = reinterpret_cast<uint8_t*>(map_addr_raw);
   ZX_ASSERT(reinterpret_cast<uint8_t*>(child_vaddr) == map_addr_);
 
-  status = secure_vmo_.op_range(ZX_VMO_OP_CACHE_INVALIDATE, 0, ZX_PAGE_SIZE, nullptr, 0);
+  status =
+      secure_vmo_.op_range(ZX_VMO_OP_CACHE_INVALIDATE, 0, zx_system_get_page_size(), nullptr, 0);
   ZX_ASSERT(status == ZX_OK);
 
   // But currently the read doesn't visibly fault while the vaddr is mapped to
@@ -346,7 +347,8 @@ SecureVmoReadTester::SecureVmoReadTester(zx::vmo secure_vmo) : secure_vmo_(std::
     // syscall docs aren't completely clear on whether zx_vmar_unmap() might
     // make the vaddr page available for other uses.
     zx_status_t status;
-    status = child_vmar_.protect(0, reinterpret_cast<uintptr_t>(map_addr_), ZX_PAGE_SIZE);
+    status =
+        child_vmar_.protect(0, reinterpret_cast<uintptr_t>(map_addr_), zx_system_get_page_size());
     ZX_ASSERT(status == ZX_OK);
   });
 
@@ -380,7 +382,7 @@ void SecureVmoReadTester::AttemptReadFromSecure(bool expect_read_success) {
   //
   // The loop is mainly for the benefit of debugging/fixing the test should the very first write,
   // flush, read not force and fence a fault.
-  for (uint32_t i = 0; i < ZX_PAGE_SIZE; ++i) {
+  for (uint32_t i = 0; i < zx_system_get_page_size(); ++i) {
     map_addr_[i] = 0xF0;
     zx_status_t status = zx_cache_flush((const void*)&map_addr_[i], 1,
                                         ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
@@ -2984,7 +2986,7 @@ TEST(Sysmem, HeapAmlogicSecureVdec) {
               fuchsia_sysmem::wire::HeapType::kAmlogicSecureVdec, "");
     EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
 
-    auto expected_size = fbl::round_up(kBufferSizeBytes, ZX_PAGE_SIZE);
+    auto expected_size = fbl::round_up(kBufferSizeBytes, zx_system_get_page_size());
     for (uint32_t i = 0; i < 64; ++i) {
       if (i < kBufferCount) {
         EXPECT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
@@ -3234,7 +3236,7 @@ TEST(Sysmem, TooManyBuffers) {
 
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.min_size_bytes = PAGE_SIZE;
+  constraints.buffer_memory_constraints.min_size_bytes = zx_system_get_page_size();
   constraints.min_buffer_count =
       1024 * 1024 * 1024 / constraints.buffer_memory_constraints.min_size_bytes;
   constraints.buffer_memory_constraints.cpu_domain_supported = true;

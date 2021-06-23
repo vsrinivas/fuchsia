@@ -117,7 +117,7 @@ TEST(Device, GuardPageCommandLine) {
   setenv(kInternalName, "", true);
   EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
                                                         &crash_on_fail));
-  EXPECT_EQ(ZX_PAGE_SIZE, guard_bytes);
+  EXPECT_EQ(zx_system_get_page_size(), guard_bytes);
   EXPECT_TRUE(internal_guard_pages);
   EXPECT_FALSE(crash_on_fail);
   unsetenv(kInternalName);
@@ -125,14 +125,14 @@ TEST(Device, GuardPageCommandLine) {
   setenv(kName, "fasfas", true);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, Device::GetContiguousGuardParameters(
                                      &guard_bytes, &internal_guard_pages, &crash_on_fail));
-  EXPECT_EQ(ZX_PAGE_SIZE, guard_bytes);
+  EXPECT_EQ(zx_system_get_page_size(), guard_bytes);
   EXPECT_FALSE(internal_guard_pages);
   EXPECT_FALSE(crash_on_fail);
 
   setenv(kName, "", true);
   EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
                                                         &crash_on_fail));
-  EXPECT_EQ(ZX_PAGE_SIZE, guard_bytes);
+  EXPECT_EQ(zx_system_get_page_size(), guard_bytes);
   EXPECT_FALSE(internal_guard_pages);
   EXPECT_FALSE(crash_on_fail);
 
@@ -140,7 +140,7 @@ TEST(Device, GuardPageCommandLine) {
   setenv(kInternalName, "", true);
   EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
                                                         &crash_on_fail));
-  EXPECT_EQ(ZX_PAGE_SIZE * 2, guard_bytes);
+  EXPECT_EQ(zx_system_get_page_size() * 2, guard_bytes);
   EXPECT_TRUE(internal_guard_pages);
   EXPECT_FALSE(crash_on_fail);
 
@@ -148,7 +148,7 @@ TEST(Device, GuardPageCommandLine) {
   setenv(kFatalName, "", true);
   EXPECT_EQ(ZX_OK, Device::GetContiguousGuardParameters(&guard_bytes, &internal_guard_pages,
                                                         &crash_on_fail));
-  EXPECT_EQ(ZX_PAGE_SIZE * 2, guard_bytes);
+  EXPECT_EQ(zx_system_get_page_size() * 2, guard_bytes);
   EXPECT_TRUE(internal_guard_pages);
   EXPECT_TRUE(crash_on_fail);
 
@@ -363,14 +363,14 @@ TEST_F(FakeDdkSysmem, NamedAllocatorToken) {
 }
 
 TEST_F(FakeDdkSysmem, MaxSize) {
-  sysmem_.set_settings(sysmem_driver::Settings{.max_allocation_size = PAGE_SIZE});
+  sysmem_.set_settings(sysmem_driver::Settings{.max_allocation_size = zx_system_get_page_size()});
 
   auto collection_client = AllocateNonSharedCollection();
 
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
   constraints.min_buffer_count = 1;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.min_size_bytes = PAGE_SIZE * 2;
+  constraints.buffer_memory_constraints.min_size_bytes = zx_system_get_page_size() * 2;
   constraints.buffer_memory_constraints.cpu_domain_supported = true;
   constraints.usage.cpu = fuchsia_sysmem_cpuUsageRead;
 
@@ -389,7 +389,7 @@ TEST_F(FakeDdkSysmem, TeardownLeak) {
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
   constraints.min_buffer_count = 1;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.min_size_bytes = PAGE_SIZE;
+  constraints.buffer_memory_constraints.min_size_bytes = zx_system_get_page_size();
   constraints.buffer_memory_constraints.cpu_domain_supported = true;
   constraints.usage.cpu = fuchsia_sysmem_cpuUsageRead;
 
@@ -415,7 +415,7 @@ TEST_F(FakeDdkSysmem, AuxBufferLeak) {
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
   constraints.min_buffer_count = 1;
   constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.min_size_bytes = PAGE_SIZE;
+  constraints.buffer_memory_constraints.min_size_bytes = zx_system_get_page_size();
   constraints.buffer_memory_constraints.cpu_domain_supported = true;
   constraints.usage.cpu = fuchsia_sysmem_cpuUsageRead;
 

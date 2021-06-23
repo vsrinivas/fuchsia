@@ -98,7 +98,7 @@ void ContiguousPooledMemoryAllocator::InitGuardRegion(size_t guard_region_size,
     return;
   }
   ZX_DEBUG_ASSERT(is_cpu_accessible_);
-  ZX_DEBUG_ASSERT(guard_region_size % ZX_PAGE_SIZE == 0);
+  ZX_DEBUG_ASSERT(guard_region_size % zx_system_get_page_size() == 0);
   has_internal_guard_regions_ = internal_guard_regions;
   guard_region_data_.resize(guard_region_size);
   guard_region_copy_.resize(guard_region_size);
@@ -135,6 +135,10 @@ ContiguousPooledMemoryAllocator::~ContiguousPooledMemoryAllocator() {
 
 zx_status_t ContiguousPooledMemoryAllocator::Init(uint32_t alignment_log2) {
   zx::vmo local_contiguous_vmo;
+  const long system_page_alignment = __builtin_ctzl(zx_system_get_page_size());
+  if (alignment_log2 < system_page_alignment) {
+    alignment_log2 = system_page_alignment;
+  }
   zx_status_t status = zx::vmo::create_contiguous(parent_device_->bti(), size_, alignment_log2,
                                                   &local_contiguous_vmo);
   if (status != ZX_OK) {
@@ -256,7 +260,8 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
   // TODO(fxbug.dev/43184): Use a fragmentation-reducing allocator (such as best fit).
   //
   // The "region" param is an out ref.
-  zx_status_t status = region_allocator_.GetRegion(allocation_size, ZX_PAGE_SIZE, region);
+  zx_status_t status =
+      region_allocator_.GetRegion(allocation_size, zx_system_get_page_size(), region);
   if (status != ZX_OK) {
     LOG(WARNING, "GetRegion failed (out of space?) - size: %zu status: %d", size, status);
     DumpPoolStats();

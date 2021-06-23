@@ -27,8 +27,9 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
 
   ~ContiguousPooledMemoryAllocator();
 
-  // Default to page alignment.
-  zx_status_t Init(uint32_t alignment_log2 = ZX_PAGE_SHIFT);
+  // Alignment gets rounded up to system page alignment, so any low number will default to system
+  // page alignment.
+  zx_status_t Init(uint32_t alignment_log2 = 0);
 
   // Initializes the guard regions. Must be called after Init. If
   // internal_guard_regions is not set, there will be only guard regions at the

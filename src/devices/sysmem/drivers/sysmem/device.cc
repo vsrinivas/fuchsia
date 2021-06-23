@@ -140,7 +140,7 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
                             // sysmem clients rely on contiguous allocations having their initial
                             // zero-fill already flushed to RAM (at least for the RAM coherency
                             // domain, this should probably remain true).
-                            /*need_clear=*/false , /*need_flush=*/true)),
+                            /*need_clear=*/false, /*need_flush=*/true)),
         parent_device_(parent_device) {
     node_ = parent_device_->heap_node()->CreateChild("ContiguousSystemRamMemoryAllocator");
     node_.CreateUint("id", id(), &properties_);
@@ -238,7 +238,7 @@ zx_status_t Device::OverrideSizeFromCommandLine(const char* name, int64_t* memor
 zx_status_t Device::GetContiguousGuardParameters(uint64_t* guard_bytes_out,
                                                  bool* internal_guard_pages_out,
                                                  bool* crash_on_fail_out) {
-  constexpr uint64_t kDefaultGuardBytes = ZX_PAGE_SIZE;
+  const uint64_t kDefaultGuardBytes = zx_system_get_page_size();
   *guard_bytes_out = kDefaultGuardBytes;
   *internal_guard_pages_out = false;
   *crash_on_fail_out = false;
@@ -268,7 +268,7 @@ zx_status_t Device::GetContiguousGuardParameters(uint64_t* guard_bytes_out,
     return ZX_ERR_INVALID_ARGS;
   }
   DRIVER_INFO("Flag %s setting guard page count to %ld", kName, page_count);
-  *guard_bytes_out = ZX_PAGE_SIZE * page_count;
+  *guard_bytes_out = zx_system_get_page_size() * page_count;
 
   return ZX_OK;
 }
@@ -373,9 +373,10 @@ zx_status_t Device::Bind() {
   }
 
   constexpr int64_t kMinProtectedAlignment = 64 * 1024;
-  static_assert(kMinProtectedAlignment % ZX_PAGE_SIZE == 0);
+  assert(kMinProtectedAlignment % zx_system_get_page_size() == 0);
   protected_memory_size = AlignUp(protected_memory_size, kMinProtectedAlignment);
-  contiguous_memory_size = AlignUp(contiguous_memory_size, static_cast<int64_t>(ZX_PAGE_SIZE));
+  contiguous_memory_size =
+      AlignUp(contiguous_memory_size, static_cast<int64_t>(zx_system_get_page_size()));
 
   allocators_[fuchsia_sysmem2::wire::HeapType::kSystemRam] =
       std::make_unique<SystemRamMemoryAllocator>(this);

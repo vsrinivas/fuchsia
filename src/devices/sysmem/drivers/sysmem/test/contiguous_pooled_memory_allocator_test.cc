@@ -199,7 +199,7 @@ TEST_F(ContiguousPooledSystem, SetReady) {
 
 TEST_F(ContiguousPooledSystem, GuardPages) {
   async::TestLoop loop;
-  constexpr uint32_t kGuardRegionSize = ZX_PAGE_SIZE;
+  const uint32_t kGuardRegionSize = zx_system_get_page_size();
   EXPECT_OK(allocator_.Init());
   allocator_.InitGuardRegion(kGuardRegionSize, true, false, loop.dispatcher());
   allocator_.set_ready();
@@ -233,7 +233,7 @@ TEST_F(ContiguousPooledSystem, GuardPages) {
 
 TEST_F(ContiguousPooledSystem, ExternalGuardPages) {
   async::TestLoop loop;
-  constexpr uint32_t kGuardRegionSize = ZX_PAGE_SIZE;
+  const uint32_t kGuardRegionSize = zx_system_get_page_size();
   EXPECT_OK(allocator_.Init());
   allocator_.InitGuardRegion(kGuardRegionSize, false, false, loop.dispatcher());
   allocator_.set_ready();

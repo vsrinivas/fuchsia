@@ -11,7 +11,6 @@
 #include <lib/image-format/image_format.h>
 #include <lib/sysmem-version/sysmem-version.h>
 #include <lib/zx/clock.h>
-#include <limits.h>  // PAGE_SIZE
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -1801,8 +1800,9 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
     LogError(FROM_HERE, "non-power-of-2 start_offset_divisor not supported");
     return false;
   }
-  if (constraints.start_offset_divisor() > PAGE_SIZE) {
-    LogError(FROM_HERE, "support for start_offset_divisor > PAGE_SIZE not yet implemented");
+  if (constraints.start_offset_divisor() > zx_system_get_page_size()) {
+    LogError(FROM_HERE,
+             "support for start_offset_divisor > zx_system_get_page_size() not yet implemented");
     return false;
   }
   if (!IsNonZeroPowerOf2(constraints.display_width_divisor())) {
@@ -2687,7 +2687,8 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   zx::vmo child_vmo;
   // Physical VMOs only support slices where the size (and offset) are page_size aligned,
   // so we should also round up when allocating.
-  size_t rounded_size_bytes = fbl::round_up(settings.buffer_settings().size_bytes(), ZX_PAGE_SIZE);
+  size_t rounded_size_bytes =
+      fbl::round_up(settings.buffer_settings().size_bytes(), zx_system_get_page_size());
   if (rounded_size_bytes < settings.buffer_settings().size_bytes()) {
     LogError(FROM_HERE, "size_bytes overflows when rounding to multiple of page_size");
     return fit::error();
@@ -2753,7 +2754,8 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
       offset += bytes_to_write;
     }
   }
-  if (heap_properties.need_clear() || (heap_properties.has_need_flush() && heap_properties.need_flush())) {
+  if (heap_properties.need_clear() ||
+      (heap_properties.has_need_flush() && heap_properties.need_flush())) {
     // Flush out the zeroes written above, or the zeroes that are already in the pages (but not
     // flushed yet) thanks to zx_vmo_create_contiguous(), or zeroes that are already in the pages
     // (but not necessarily flushed yet) thanks to whatever other allocator strategy.  The barrier
@@ -2761,7 +2763,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
     status = raw_parent_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, info.size_bytes, nullptr, 0);
     if (status != ZX_OK) {
       LogError(FROM_HERE, "raw_parent_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN) failed - status: %d",
-                status);
+               status);
       return fit::error();
     }
   }
