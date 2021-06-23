@@ -2,49 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::io::{Error, ErrorKind, Write};
+use std::io::{Error, Write};
 use vte::{Parser, Perform};
 
-/// A trait for objects that write line delimited strings.
-pub trait WriteLine {
-    /// Writes a string and terminates it will a line break.
-    fn write_line(&mut self, s: &str) -> Result<(), Error> {
-        self.write_line_segments(&[s])
-    }
-
-    /// Write a series of segments, and terminate it with a line break.
-    fn write_line_segments(&mut self, segments: &[&str]) -> Result<(), Error>;
-}
-
-impl<W: Write> WriteLine for W {
-    fn write_line_segments(&mut self, segments: &[&str]) -> Result<(), Error> {
-        for segment in segments {
-            self.write_all(segment.as_bytes())?;
-        }
-        writeln!(self)
-    }
-}
-
-impl WriteLine for Box<dyn WriteLine + Send + Sync> {
-    fn write_line_segments(&mut self, segments: &[&str]) -> Result<(), Error> {
-        self.as_mut().write_line_segments(segments)
-    }
-}
-
 /// A writer that writes to two writers.
-pub struct MultiplexedWriter<A: WriteLine, B: WriteLine> {
+pub struct MultiplexedWriter<A: Write, B: Write> {
     a: A,
     b: B,
 }
 
-impl<A: WriteLine, B: WriteLine> WriteLine for MultiplexedWriter<A, B> {
-    fn write_line_segments(&mut self, segments: &[&str]) -> Result<(), Error> {
-        self.a.write_line_segments(segments)?;
-        self.b.write_line_segments(segments)
+impl<A: Write, B: Write> Write for MultiplexedWriter<A, B> {
+    fn write(&mut self, bytes: &[u8]) -> Result<usize, Error> {
+        let bytes_written = self.a.write(bytes)?;
+        // Since write is allowed to only write a portion of the data,
+        // we force a and b to write the same number of bytes.
+        self.b.write_all(&bytes[..bytes_written])?;
+        Ok(bytes_written)
+    }
+
+    fn flush(&mut self) -> Result<(), Error> {
+        self.a.flush()?;
+        self.b.flush()
     }
 }
 
-impl<A: WriteLine, B: WriteLine> MultiplexedWriter<A, B> {
+impl<A: Write, B: Write> MultiplexedWriter<A, B> {
     pub fn new(a: A, b: B) -> Self {
         Self { a, b }
     }
@@ -52,85 +34,82 @@ impl<A: WriteLine, B: WriteLine> MultiplexedWriter<A, B> {
 
 /// A wrapper around a `Write` that filters out ANSI escape sequences before writing to the
 /// wrapped object.
-pub struct AnsiFilterWriter<W: WriteLine> {
+/// AnsiFilterWriter assumes the bytes are valid UTF8, and clears its state on newline in an
+/// attempt to recover from malformed inputs.
+pub struct AnsiFilterWriter<W: Write> {
     inner: W,
+    parser: Parser,
 }
 
-impl<W: WriteLine> AnsiFilterWriter<W> {
+impl<W: Write> AnsiFilterWriter<W> {
     pub fn new(inner: W) -> Self {
-        Self { inner }
+        Self { inner, parser: Parser::new() }
     }
 }
 
-impl<W: WriteLine> WriteLine for AnsiFilterWriter<W> {
-    fn write_line_segments(&mut self, segments: &[&str]) -> Result<(), Error> {
-        match segments.len() {
-            1 => self.write_line(segments[0]),
-            // It's possible to do this without this copy. This is currently unused as the ansi
-            // filter is always top of the chain, but if this needs to be nested lower in a chain
-            // of filters we should implement it properly.
-            _ => self.write_line(&segments.join("")),
-        }
-    }
-
-    fn write_line(&mut self, s: &str) -> Result<(), Error> {
-        let bytes = s.as_bytes();
-        let mut parser = Parser::new();
-        let mut segments = vec![];
-
-        // Contains range [x1, x2) for the last known chunk of non-ANSI characters
-        let mut last_known_printable_chunk: Option<(usize, usize)> = None;
+impl<W: Write> Write for AnsiFilterWriter<W> {
+    fn write(&mut self, bytes: &[u8]) -> Result<usize, Error> {
+        // Per Rust docs write does not need to consume all the bytes, and
+        // each call to write should represent at most a single attempt to write.
+        // To be as close as possible to "a single attempt to write" we write only
+        // the first chunk of writable bytes.
+        let mut printable_range: Option<(usize, usize)> = None;
 
         for (idx, byte) in bytes.iter().enumerate() {
-            let mut new_printable_bytes = 0;
-            parser.advance(&mut PrintableBytes(&mut new_printable_bytes), *byte);
-            let new_char_start_idx = match new_printable_bytes {
-                0 => None,
-                num_bytes => Some(idx + 1 - num_bytes),
-            };
+            let mut found = FoundChars::Nothing;
+            self.parser.advance(&mut found, *byte);
+            if let &FoundChars::Newline(_) = &found {
+                self.parser = Parser::new();
+            }
 
-            match (last_known_printable_chunk, new_char_start_idx) {
-                // new char is part of old chunk
-                (Some(prev_chunk), Some(new_char_idx)) if new_char_idx <= prev_chunk.1 => {
-                    last_known_printable_chunk = Some((prev_chunk.0, idx + 1));
+            match found {
+                FoundChars::Nothing => (),
+                FoundChars::PrintableChars(num_bytes) | FoundChars::Newline(num_bytes) => {
+                    match printable_range {
+                        None => {
+                            printable_range = Some((idx + 1 - num_bytes, idx + 1));
+                        }
+                        Some(mut range) if range.1 == idx + 1 - num_bytes => {
+                            range.1 = idx + 1;
+                        }
+                        Some(_) => break,
+                    }
                 }
-                // new char is part of a new chunk
-                (Some(prev_chunk), Some(new_char_idx)) => {
-                    let new_segment = std::str::from_utf8(&bytes[prev_chunk.0..prev_chunk.1])
-                        .map_err(|_| ErrorKind::InvalidData)?;
-                    segments.push(new_segment);
-                    last_known_printable_chunk = Some((new_char_idx, idx + 1));
-                }
-                (Some(_), None) => (),
-                (None, Some(new_char_idx)) => {
-                    last_known_printable_chunk = Some((new_char_idx, idx + 1));
-                }
-                (None, None) => (),
             }
         }
-        if let Some(chunk) = last_known_printable_chunk {
-            let new_segment = std::str::from_utf8(&bytes[chunk.0..chunk.1])
-                .map_err(|_| ErrorKind::InvalidData)?;
-            segments.push(new_segment);
+        match printable_range {
+            None => Ok(bytes.len()),
+            Some(range) => {
+                self.inner.write_all(&bytes[range.0..range.1])?;
+                Ok(range.1)
+            }
         }
-        self.inner.write_line_segments(&segments)
+    }
+
+    fn flush(&mut self) -> Result<(), Error> {
+        self.inner.flush()
     }
 }
 
-/// A `Perform` implementation that tracks how many previous bytes constitute a valid UTF-8
-/// character. This relies on strings in rust always being UTF-8 encoded.
-struct PrintableBytes<'a>(&'a mut usize);
+/// An implementation of |Perform| that reports the characters found by the parser.
+enum FoundChars {
+    Nothing,
+    PrintableChars(usize),
+    Newline(usize),
+}
 
-const PRINTABLE_COMMAND_CHARS: [u8; 3] = ['\n' as u8, '\r' as u8, '\t' as u8];
+const PRINTABLE_COMMAND_CHARS: [u8; 2] = ['\r' as u8, '\t' as u8];
 
-impl<'a> Perform for PrintableBytes<'a> {
+impl Perform for FoundChars {
     fn print(&mut self, c: char) {
-        *self.0 = c.len_utf8();
+        *self = Self::PrintableChars(c.len_utf8());
     }
 
     fn execute(&mut self, code: u8) {
-        if PRINTABLE_COMMAND_CHARS.contains(&code) {
-            *self.0 = 1;
+        if code == b'\n' {
+            *self = Self::Newline(1);
+        } else if PRINTABLE_COMMAND_CHARS.contains(&code) {
+            *self = Self::PrintableChars(1);
         }
     }
     fn hook(&mut self, _: &[i64], _: &[u8], _: bool) {}
@@ -149,15 +128,14 @@ mod test {
     #[test]
     fn multiplexed_writer() {
         const WRITTEN: &str = "test output";
-        const EXPECTED: &str = "test output\n";
 
         let mut buf_1: Vec<u8> = vec![];
         let mut buf_2: Vec<u8> = vec![];
         let mut multiplexed_writer = MultiplexedWriter::new(&mut buf_1, &mut buf_2);
 
-        multiplexed_writer.write_line(WRITTEN).expect("write_line failed");
-        assert_eq!(std::str::from_utf8(&buf_1).unwrap(), EXPECTED);
-        assert_eq!(std::str::from_utf8(&buf_2).unwrap(), EXPECTED);
+        multiplexed_writer.write_all(WRITTEN.as_bytes()).expect("write_all failed");
+        assert_eq!(std::str::from_utf8(&buf_1).unwrap(), WRITTEN);
+        assert_eq!(std::str::from_utf8(&buf_2).unwrap(), WRITTEN);
     }
 
     #[test]
@@ -174,39 +152,38 @@ mod test {
         for case in cases {
             let mut output: Vec<u8> = vec![];
             let mut filter_writer = AnsiFilterWriter::new(&mut output);
-            filter_writer.write_line(case).expect("write_line failed");
+            filter_writer.write_all(case.as_bytes()).expect("write_all failed");
+            drop(filter_writer);
 
-            assert_eq!(
-                format!("{}\n", case),
-                String::from_utf8(output).expect("Failed to parse UTF8"),
-            );
+            assert_eq!(case, String::from_utf8(output).expect("Failed to parse UTF8"),);
         }
     }
 
     #[test]
     fn ansi_filtered() {
         let cases = vec![
-            (format!("{}", Color::Blue.paint("blue string")), "blue string\n"),
-            (format!("{}", Color::Blue.bold().paint("newline\nstr")), "newline\nstr\n"),
-            (format!("{}", Color::Blue.bold().paint("tab\tstr")), "tab\tstr\n"),
-            (format!("{}", Style::new().bold().paint("bold")), "bold\n"),
+            (format!("{}", Color::Blue.paint("blue string")), "blue string"),
+            (format!("{}", Color::Blue.bold().paint("newline\nstr")), "newline\nstr"),
+            (format!("{}", Color::Blue.bold().paint("tab\tstr")), "tab\tstr"),
+            (format!("{}", Style::new().bold().paint("bold")), "bold"),
             (
                 format!(
                     "{} {}",
                     Style::new().bold().paint("bold"),
                     Style::new().bold().paint("bold-2")
                 ),
-                "bold bold-2\n",
+                "bold bold-2",
             ),
-            (format!("{}", Style::new().bold().paint("")), "\n"),
-            (format!("no format, {}", Color::Blue.paint("format")), "no format, format\n"),
+            (format!("{}", Style::new().bold().paint("")), ""),
+            (format!("no format, {}", Color::Blue.paint("format")), "no format, format"),
         ];
 
         for (case, expected) in cases {
             let mut output: Vec<u8> = vec![];
             let mut filter_writer = AnsiFilterWriter::new(&mut output);
-            filter_writer.write_line(&case).expect("write_line failed");
+            write!(filter_writer, "{}", case).expect("write failed");
 
+            drop(filter_writer);
             assert_eq!(expected, String::from_utf8(output).expect("Couldn't parse utf8"));
         }
     }
@@ -222,23 +199,62 @@ mod test {
         let mut filter_writer = AnsiFilterWriter::new(&mut output);
 
         for s in split {
-            filter_writer.write_line(&s).expect("write_line failed");
+            writeln!(filter_writer, "{}", s).expect("write failed");
         }
 
+        drop(filter_writer);
         assert_eq!("multiline\nstring\n", String::from_utf8(output).expect("Couldn't parse utf8"));
     }
 
     #[test]
     fn malformed_ansi_contained() {
         // Ensure malformed ansi is contained to a single line
-        let malformed = "\u{1b}[31mmalformed\u{1b}";
-        let okay = format!("{}", Color::Blue.paint("okay"));
+        let malformed = "\u{1b}[31mmalformed\u{1b}\n";
+        let okay = format!("{}\n", Color::Blue.paint("okay"));
 
         let mut output: Vec<u8> = vec![];
         let mut filter_writer = AnsiFilterWriter::new(&mut output);
 
-        filter_writer.write_line(malformed).expect("write_line failed");
-        filter_writer.write_line(&okay).expect("write_line failed");
+        filter_writer.write_all(malformed.as_bytes()).expect("write_all failed");
+        filter_writer.write_all(okay.as_bytes()).expect("write_all failed");
+        drop(filter_writer);
         assert_eq!("malformed\nokay\n", String::from_utf8(output).expect("Couldn't parse utf8"));
+    }
+
+    /// A |Write| implementation that only partially writes a buffer on write().
+    struct PartialWriter<W: Write>(W);
+    const PARTIAL_WRITE_BYTES: usize = 3;
+
+    impl<W: Write> Write for PartialWriter<W> {
+        fn write(&mut self, bytes: &[u8]) -> Result<usize, Error> {
+            let slice_to_write = if bytes.len() < PARTIAL_WRITE_BYTES {
+                bytes
+            } else {
+                &bytes[..PARTIAL_WRITE_BYTES]
+            };
+            self.0.write_all(slice_to_write)?;
+            Ok(slice_to_write.len())
+        }
+
+        fn flush(&mut self) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn ansi_filter_inner_partial_write() {
+        let cases = vec![
+            (format!("{}", Color::Blue.paint("multiline\nstring")), "multiline\nstring"),
+            ("simple no ansi".to_string(), "simple no ansi"),
+            ("a\nb\nc\nd".to_string(), "a\nb\nc\nd"),
+        ];
+
+        for (unfiltered, filtered) in cases.iter() {
+            let mut output: Vec<u8> = vec![];
+            let mut filter_writer = AnsiFilterWriter::new(PartialWriter(&mut output));
+            filter_writer.write_all(unfiltered.as_bytes()).expect("write all");
+            drop(filter_writer);
+            assert_eq!(&String::from_utf8(output).expect("couldn't parse UTF8"), filtered);
+        }
     }
 }

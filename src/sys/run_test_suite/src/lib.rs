@@ -21,7 +21,7 @@ use {
     std::collections::{HashMap, HashSet},
     std::convert::TryInto,
     std::fmt,
-    std::io,
+    std::io::{self, Write},
     std::path::PathBuf,
     std::time::Duration,
 };
@@ -32,7 +32,7 @@ pub mod output;
 
 use {
     artifact::{Artifact, ArtifactSender},
-    output::{AnsiFilterWriter, ArtifactType, RunReporter, SuiteReporter, WriteLine},
+    output::{AnsiFilterWriter, ArtifactType, RunReporter, SuiteReporter},
 };
 
 /// Duration after which to emit an excessive duration log.
@@ -240,7 +240,7 @@ async fn collect_results_for_suite(
                                                     test_case_name, e
                                                 )
                                             });
-                                        stdout.write_line(&msg)?;
+                                        writeln!(stdout, "{}", msg)?;
                                     }
                                     t.await?;
                                     Result::Ok::<(), anyhow::Error>(())
@@ -472,7 +472,7 @@ async fn collect_results_for_suite(
 type SuiteResults<'a> = LocalBoxStream<'a, Result<SuiteRunResult, anyhow::Error>>;
 
 /// Runs the test `count` number of times, and writes logs to writer.
-pub async fn run_test<'a, W: output::WriteLine>(
+pub async fn run_test<'a, W: Write>(
     test_params: TestParams,
     count: u16,
     log_opts: diagnostics::LogCollectionOptions,
@@ -492,7 +492,7 @@ pub async fn run_test<'a, W: output::WriteLine>(
         log_iterator: Some(diagnostics::get_type()),
     };
 
-    struct FoldArgs<'a, W: output::WriteLine> {
+    struct FoldArgs<'a, W: Write> {
         current_count: u16,
         count: u16,
         builder: Box<dyn BuilderConnector>,
@@ -548,16 +548,13 @@ pub async fn run_test<'a, W: output::WriteLine>(
             while let Some(artifact) = recv.next().await {
                 match artifact {
                     Artifact::SuiteStdoutMessage(msg) => {
-                        writer
-                            .write_line(&msg)
+                        writeln!(writer, "{}", msg)
                             .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
                     }
                     Artifact::SuiteLogMessage(log) => {
-                        writer
-                            .write_line(&log)
+                        writeln!(writer, "{}", log)
                             .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
-                        syslog_writer
-                            .write_line(&log)
+                        writeln!(syslog_writer, "{}", log)
                             .unwrap_or_else(|e| error!("Cannot write logs to reporter: {:?}", e));
                     }
                 }
@@ -668,7 +665,7 @@ pub async fn run_tests_and_get_outcome(
     let test_url = test_params.test_url.clone();
     println!("\nRunning test '{}'", &test_url);
 
-    let mut stdout_for_results: Box<dyn WriteLine + Send + Sync> = match filter_ansi {
+    let mut stdout_for_results: Box<dyn Write + Send + Sync> = match filter_ansi {
         true => Box::new(AnsiFilterWriter::new(io::stdout())),
         false => Box::new(io::stdout()),
     };

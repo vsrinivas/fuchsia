@@ -327,22 +327,20 @@ mod test {
                 suite_reporter.new_case(&format!("case-1-{:?}", case_no)).expect("create new case");
             let mut artifact =
                 case_reporter.new_artifact(&ArtifactType::Stdout).expect("create case artifact");
-            artifact
-                .write_line(format!("stdout from case {:?}", case_no).as_str())
-                .expect("write to artifact");
+            writeln!(artifact, "stdout from case {:?}", case_no).expect("write to artifact");
             case_reporter.outcome(&ReportedOutcome::Passed).expect("report case outcome");
         }
 
         let mut suite_artifact =
             suite_reporter.new_artifact(&ArtifactType::Stdout).expect("create suite artifact");
-        suite_artifact.write_line("stdout from suite").expect("write to artifact");
+        writeln!(suite_artifact, "stdout from suite").expect("write to artifact");
         suite_reporter.outcome(&ReportedOutcome::Passed).expect("report suite outcome");
         suite_reporter.record().expect("record suite");
         drop(suite_artifact); // want to flush contents
 
         let mut run_artifact =
             run_reporter.new_artifact(&ArtifactType::Stdout).expect("create run artifact");
-        run_artifact.write_line("stdout from run").expect("write to artifact");
+        writeln!(run_artifact, "stdout from run").expect("write to artifact");
         run_reporter.outcome(&ReportedOutcome::Passed).expect("record run outcome");
         run_reporter.record().expect("record run");
         drop(run_artifact); // want to flush contents
@@ -384,7 +382,7 @@ mod test {
         success_suite_reporter
             .new_artifact(&ArtifactType::Stdout)
             .expect("create new artifact")
-            .write_line("stdout from passed suite")
+            .write_all(b"stdout from passed suite\n")
             .expect("write to artifact");
         success_suite_reporter.record().expect("record suite");
 

@@ -693,6 +693,7 @@ async fn test_stdout_filter_ansi() {
         assert_eq!(results.len(), 1, "{:?}", results);
         results.pop().unwrap().unwrap()
     };
+    drop(ansi_filter);
 
     let expected_output = "[RUNNING]	stdout_ansi_test
 red stdout

@@ -9,14 +9,14 @@ use std::sync::Arc;
 mod directory;
 mod line;
 mod noop;
-pub use line::{AnsiFilterWriter, MultiplexedWriter, WriteLine};
+pub use line::{AnsiFilterWriter, MultiplexedWriter};
 
 use directory::DirectoryReporter;
 use fidl_fuchsia_test_manager as ftest_manager;
 use noop::NoopReporter;
 
 type DynReporter = dyn 'static + Reporter + Send + Sync;
-type DynArtifact = dyn 'static + WriteLine + Send + Sync;
+type DynArtifact = dyn 'static + Write + Send + Sync;
 type NewArtifactFn =
     dyn Fn(&EntityId, &ArtifactType) -> Result<Box<DynArtifact>, Error> + Send + Sync;
 
@@ -93,9 +93,6 @@ impl RunReporter {
     pub fn new_artifact(&self, artifact_type: &ArtifactType) -> Result<Box<DynArtifact>, Error> {
         (self.artifact_fn)(&EntityId::TestRun, artifact_type)
     }
-
-    // TODO(fxbug.dev/75134): WriteLine isn't suitable for non-text formats, or non-line delimited
-    // formats like json. Provide another method for dumping these data.
 
     /// Record the outcome of the test run.
     pub fn outcome(&self, outcome: &ReportedOutcome) -> Result<(), Error> {
