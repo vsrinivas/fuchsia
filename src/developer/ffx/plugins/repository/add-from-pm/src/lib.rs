@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_developer_bridge::{PmRepositorySpec, RepositoriesProxy, RepositorySpec},
 };
 
-#[ffx_plugin(RepositoriesProxy = "daemon::service")]
+#[ffx_plugin("ffx_repository", RepositoriesProxy = "daemon::service")]
 pub async fn add_from_pm(cmd: AddFromPmCommand, repos: RepositoriesProxy) -> Result<()> {
     repos.add(
         &cmd.name,

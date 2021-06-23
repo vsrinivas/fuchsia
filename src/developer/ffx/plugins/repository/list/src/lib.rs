@@ -11,7 +11,7 @@ use {
     std::io::{stdout, Write},
 };
 
-#[ffx_plugin(RepositoriesProxy = "daemon::service")]
+#[ffx_plugin("ffx_repository", RepositoriesProxy = "daemon::service")]
 pub async fn list(cmd: ListCommand, repos: RepositoriesProxy) -> Result<()> {
     list_impl(cmd, repos, stdout()).await
 }

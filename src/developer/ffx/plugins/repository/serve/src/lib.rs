@@ -12,7 +12,7 @@ use {
     std::net,
 };
 
-#[ffx_plugin(RepositoriesProxy = "daemon::service")]
+#[ffx_plugin("ffx_repository", RepositoriesProxy = "daemon::service")]
 pub async fn serve(cmd: ServeCommand, repo: RepositoriesProxy) -> Result<()> {
     let mut ip = match cmd.listen_address.ip() {
         net::IpAddr::V4(addr) => IpAddress::Ipv4(Ipv4Address { addr: addr.octets() }),
