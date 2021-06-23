@@ -28,6 +28,7 @@ board_system_image_deps = [
 ]
 
 board_package_labels = [
+  "//src/hwinfo:default_board_config",
   "//src/power/thermd",
   "//src/power/thermd:config",
   "//garnet/packages/prod:drivers-support",

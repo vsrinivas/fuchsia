@@ -31,6 +31,8 @@ TEST_F(HwinfoTest, BoardInfoTest) {
   EXPECT_TRUE(false);
 #endif
 
+  EXPECT_TRUE(info.has_name());
+  EXPECT_TRUE(info.has_revision());
   // TODO(78784): Expand to check `name` and `revision`.
 }
 
