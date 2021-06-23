@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.8
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -102,7 +102,7 @@ def extract_defines(header, guard):
                 continue
             # ignore function-like macros
             if not re.match(r'#define\s+[A-Za-z0-9_]+\(', line):
-                print 'Unrecognized line: %s in %s' % (line, header)
+                print('Unrecognized line: %s in %s' % (line, header))
                 sys.exit(1)
 
     # quadratic time is best time
