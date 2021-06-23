@@ -23,14 +23,6 @@ group("rfb_layer") {
   ]
 }
 
-group("biscotti_guest") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:guest_runner",
-    "//src/virtualization/packages/biscotti_guest",
-  ]
-}
-
 group("dev_escher_linux") {
   testonly = true
   public_deps = [
