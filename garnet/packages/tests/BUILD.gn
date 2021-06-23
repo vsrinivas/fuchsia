@@ -45,7 +45,6 @@ group("all") {
     "//garnet/bin/trace_stress",
     "//garnet/bin/traceutil:zedmon_test($host_toolchain)",
     "//garnet/bin/vsock_service:vsock_service-tests",
-    "//garnet/bin/wayland:wayland_tests",
     "//garnet/examples/intl/manager:tests",
     "//garnet/examples/intl/wisdom:tests",
     "//garnet/lib/perfmon:tests",

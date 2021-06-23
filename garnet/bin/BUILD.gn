@@ -39,6 +39,5 @@ group("bin") {
     "ui",
     "uname",
     "vsock_service",
-    "wayland",
   ]
 }

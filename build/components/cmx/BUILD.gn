@@ -84,7 +84,6 @@ group("cmx_allowlist") {
     "//garnet/bin/ui/benchmarks/image_grid_cpp/*",
     "//garnet/bin/ui/benchmarks/transparency_benchmark/*",
     "//garnet/bin/vsock_service/*",
-    "//garnet/bin/wayland/*",
     "//garnet/examples/benchmark/*",
     "//garnet/examples/components/*",
     "//garnet/examples/fidl/*",

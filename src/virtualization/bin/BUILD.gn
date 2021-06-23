@@ -14,6 +14,7 @@ group("bin") {
     "linux_runner",
     "vmm",
     "vmm/device:packages",
+    "wayland",
   ]
 }
 
@@ -23,5 +24,6 @@ group("tests") {
   deps = [
     "guest_manager:tests",
     "vmm:tests",
+    "wayland:tests",
   ]
 }

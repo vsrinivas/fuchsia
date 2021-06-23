@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/bin/wayland/protocol.gni")
+import("//src/virtualization/bin/wayland/protocol.gni")
 
 group("protocols") {
   deps = [

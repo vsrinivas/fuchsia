@@ -36,7 +36,7 @@ template("wayland_protocol") {
 
   # Generate the rust sources using the scanner.
   compiled_action("gen_${target_name}_source") {
-    tool = "//garnet/bin/wayland/scanner"
+    tool = "//src/virtualization/bin/wayland/scanner"
     sources = [ invoker.protocol ]
     outputs = [ target_crate_root ]
     args = [
@@ -58,9 +58,9 @@ template("wayland_protocol") {
     edition = "2018"
     non_rust_deps = [ ":gen_${target_name}_source" ]
     deps = [
-      "//garnet/bin/wayland/core",
       "//src/lib/trace/rust:trace",
       "//src/lib/zircon/rust:fuchsia-zircon",
+      "//src/virtualization/bin/wayland/core",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:bitflags",
     ]

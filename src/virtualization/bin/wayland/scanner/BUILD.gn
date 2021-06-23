@@ -5,7 +5,7 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//garnet/bin/wayland/protocol.gni")
+import("//src/virtualization/bin/wayland/protocol.gni")
 
 rustc_library("lib") {
   edition = "2018"
@@ -52,9 +52,9 @@ rustc_test("wayland_scanner_back_end_test") {
   deps = [
     ":lib",
     ":test_protocol",
-    "//garnet/bin/wayland/core",
     "//src/lib/zerocopy",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/virtualization/bin/wayland/core",
   ]
   source_root = "tests/back_end_test.rs"
 
