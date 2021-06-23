@@ -36,10 +36,10 @@ class VkReadbackTest {
 
   // Constructor for a self contained instance or an instance that exports
   // its external memory handle.
-  explicit VkReadbackTest(Extension ext = NONE, bool use_temp_external_memory = true);
+  explicit VkReadbackTest(Extension ext = NONE);
 
   // Constructor for an instance that imports an external memory handle.
-  VkReadbackTest(uint32_t exported_memory_handle, bool use_temp_external_memory);
+  explicit VkReadbackTest(uint32_t exported_memory_handle);
 
   virtual ~VkReadbackTest();
 
@@ -81,10 +81,6 @@ class VkReadbackTest {
   vk::DeviceMemory imported_device_memory_;
   uint32_t exported_memory_handle_ = 0;
   ImportExport import_export_;
-
-  // TODO(fxbug.dev/73025): remove this temp logic when it's time.
-  bool use_temp_external_memory_;
-  VkExternalMemoryHandleTypeFlagBits external_memory_handle_type_;
 
   vk::UniqueCommandPool command_pool_;
   std::vector<vk::UniqueCommandBuffer> command_buffers_;

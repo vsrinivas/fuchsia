@@ -53,30 +53,4 @@ DebugUtilsTestCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                        VkDebugUtilsMessageTypeFlagsEXT messageTypes,
                        const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
 
-// TODO(fxbug.dev/73025): remove this condition block when it's time.
-#if VK_HEADER_VERSION < 174
-constexpr VkExternalMemoryHandleTypeFlagBits VK_EXTERNAL_MEMORY_HANDLE_TYPE_ZIRCON_VMO_BIT_FUCHSIA =
-    static_cast<VkExternalMemoryHandleTypeFlagBits>(0x00000800);
-constexpr VkExternalSemaphoreHandleTypeFlagBits
-    VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_ZIRCON_EVENT_BIT_FUCHSIA =
-        static_cast<VkExternalSemaphoreHandleTypeFlagBits>(0x00000080);
-constexpr uint32_t VK_STRUCTURE_TYPE_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA = 1000364000;
-constexpr uint32_t VK_STRUCTURE_TYPE_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA = 1000364001;
-constexpr uint32_t VK_STRUCTURE_TYPE_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA = 1000364002;
-constexpr uint32_t VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA = 1000365000;
-constexpr uint32_t VK_STRUCTURE_TYPE_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA = 1000365001;
-#else
-constexpr VkExternalMemoryHandleTypeFlagBits
-    VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA =
-        static_cast<VkExternalMemoryHandleTypeFlagBits>(0x00100000);
-constexpr VkExternalSemaphoreHandleTypeFlagBits
-    VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA =
-        static_cast<VkExternalSemaphoreHandleTypeFlagBits>(0x00100000);
-constexpr uint32_t VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA = 1001005000;
-constexpr uint32_t VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA = 1001005001;
-constexpr uint32_t VK_STRUCTURE_TYPE_TEMP_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA = 1001005002;
-constexpr uint32_t VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA = 1001006000;
-constexpr uint32_t VK_STRUCTURE_TYPE_TEMP_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA = 1001006001;
-#endif
-
 #endif  // SRC_GRAPHICS_TESTS_COMMON_UTILS_H_

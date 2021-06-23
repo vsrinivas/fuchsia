@@ -9,12 +9,10 @@
 #include "src/graphics/tests/vkreadback/vkreadback.h"
 
 TEST(VulkanExtension, ExternalMemoryFuchsia) {
-  VkReadbackTest exported_test(VkReadbackTest::VK_FUCHSIA_EXTERNAL_MEMORY,
-                               false /* use_temp_external_memory */);
+  VkReadbackTest exported_test(VkReadbackTest::VK_FUCHSIA_EXTERNAL_MEMORY);
   ASSERT_TRUE(exported_test.Initialize(VK_API_VERSION_1_1));
 
-  VkReadbackTest imported_test(exported_test.get_exported_memory_handle(),
-                               false /* use_temp_external_memory */);
+  VkReadbackTest imported_test(exported_test.get_exported_memory_handle());
   ASSERT_TRUE(imported_test.Initialize(VK_API_VERSION_1_1));
   ASSERT_TRUE(exported_test.Exec());
   ASSERT_TRUE(imported_test.Readback());
