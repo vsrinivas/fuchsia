@@ -111,13 +111,13 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
   }
 
   // Prepare the response packet buffer if the command requires a response.
-  struct iwl_rx_packet* resp_pkt = reinterpret_cast<struct iwl_rx_packet*>(resp_buf_);
+  struct iwl_rx_packet* resp_pkt = reinterpret_cast<struct iwl_rx_packet*>(resp_buf_.data());
+  ZX_ASSERT(sizeof(*resp_pkt) + resp.size() <= resp_buf_.size());  // avoid overflow
   if (cmd->flags & CMD_WANT_SKB) {
     resp_pkt->len_n_flags = cpu_to_le32(resp.size());
     resp_pkt->hdr.cmd = opcode;
     resp_pkt->hdr.group_id = group_id;
     resp_pkt->hdr.sequence = 0;
-    ZX_ASSERT(resp.size() <= sizeof(resp_buf_));  // avoid overflow
     memcpy(resp_pkt->data, resp.data(), resp.size());
     cmd->resp_pkt = resp_pkt;
   } else {

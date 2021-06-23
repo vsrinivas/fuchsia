@@ -5,11 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SIM_MVM_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SIM_MVM_H_
 
+#include <memory>
 #include <vector>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-nvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim.h"
@@ -18,7 +18,9 @@ namespace wlan::testing {
 
 class SimMvm : public ::wlan::simulation::StationIfc {
  public:
-  explicit SimMvm(::wlan::simulation::Environment* env) : env_(env) { env->AddStation(this); }
+  explicit SimMvm(::wlan::simulation::Environment* env) : env_(env), resp_buf_(kNvmAccessCmdSize) {
+    env->AddStation(this);
+  }
   ~SimMvm() {
     if (env_ != nullptr) {
       env_->RemoveStation(this);
@@ -49,8 +51,7 @@ class SimMvm : public ::wlan::simulation::StationIfc {
   //
   // Since this buffer is used only when CMD_WANT_SKB is set, which means it is protected
   // by STATUS_SYNC_HCMD_ACTIVE in trans->status when CMD_ASYNC is de-assserted in cmd->flags.
-  //
-  uint8_t resp_buf_[kNvmAccessCmdSize];
+  std::vector<char> resp_buf_;
 };
 
 }  // namespace wlan::testing
