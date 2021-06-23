@@ -430,12 +430,12 @@ zx_status_t Session::FetchTx() {
       return ZX_ERR_IO_INVALID;
     }
 
-    auto info_type = static_cast<netdev::wire::InfoType>(buffer->meta.info_type);
+    auto info_type = static_cast<netdev::wire::InfoType>(desc.info_type);
     switch (info_type) {
       case netdev::wire::InfoType::kNoInfo:
         break;
       default:
-        LOGF_WARN("network-device(%s): info type (%d) not recognized, discarding information",
+        LOGF_ERROR("network-device(%s): info type (%d) not recognized, discarding information",
                   name(), buffer->meta.info_type);
         info_type = netdev::wire::InfoType::kNoInfo;
         break;
@@ -1014,7 +1014,7 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
     case netdev::wire::InfoType::kNoInfo:
       break;
     default:
-      LOGF_WARN("network-device(%s): info type (%d) not recognized, discarding information", name(),
+      LOGF_ERROR("network-device(%s): info type (%d) not recognized, discarding information", name(),
                 owner_desc.info_type);
       info_type = netdev::wire::InfoType::kNoInfo;
       break;
@@ -1077,7 +1077,7 @@ zx_status_t Session::LoadRxInfo(const RxFrameInfo& info) {
         case netdev::wire::InfoType::kNoInfo:
           break;
         default:
-          LOGF_WARN("network-device(%s): info type (%d) not recognized, discarding information",
+          LOGF_ERROR("network-device(%s): info type (%d) not recognized, discarding information",
                     name(), info.meta.info_type);
           info_type = netdev::wire::InfoType::kNoInfo;
           break;
