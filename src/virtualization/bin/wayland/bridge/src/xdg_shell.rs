@@ -142,7 +142,7 @@ impl XdgSurface {
     /// Concludes a surface configuration sequence.
     ///
     /// Each concrete `XdgSurface` role configuration sequence is concluded and
-    /// commited by a xdg_surface::configure event.
+    /// committed by a xdg_surface::configure event.
     pub fn configure(this: ObjectRef<Self>, client: &Client) -> Result<(), Error> {
         ftrace::duration!("wayland", "XdgSurface::configure");
         let serial = client.event_queue().next_serial();

@@ -618,7 +618,7 @@ impl Surface {
                     ftrace::flow_end!("gfx", "present_callback", info.presentation_time);
                     if !callbacks.is_empty() {
                         // If we have a frame callback, invoke it and provide
-                        // the presentation time recevied in the present
+                        // the presentation time received in the present
                         // callback.
                         task_queue.post(move |client| {
                             // If the underlying surface has been destroyed then
@@ -676,7 +676,7 @@ impl RequestReceiver<WlSurface> for Surface {
                             // We're a sync subsurface. We don't want to commit
                             // self yet. Rather we extract the current pending
                             // commands and defer them to be applied when our
-                            // parent is comitted.
+                            // parent is committed.
                             let commands = {
                                 let surface = this.get_mut(client)?;
                                 mem::replace(&mut surface.pending_commands, Vec::new())
@@ -686,7 +686,7 @@ impl RequestReceiver<WlSurface> for Surface {
                         }
                     }
 
-                    // If we're not a sync subsurface, we proceed with commiting our
+                    // If we're not a sync subsurface, we proceed with committing our
                     // state.
                     let task_queue = client.task_queue();
                     let surface = this.get_mut(client)?;
@@ -718,12 +718,12 @@ impl RequestReceiver<WlSurface> for Surface {
                 // return a boolean indicating if the role needs a present. For example,
                 // an xdg_toplevel will need a Present to get its newly updated state
                 // onto the screen, but a sync wl_subsurface wants to defer a present
-                // until its parent state is comitted.
+                // until its parent state is committed.
                 let needs_present = role
                     .map(|role| role.finalize_commit(client, &mut callbacks))
                     .unwrap_or(Ok(false))?;
 
-                // We trigger a present if explictly requested of if there are any
+                // We trigger a present if explicitly requested of if there are any
                 // remaining frame callbacks.
                 if needs_present || !callbacks.is_empty() {
                     Self::present(this, client, callbacks)?;

@@ -133,7 +133,7 @@ impl Image {
 pub struct Buffer {
     // The scenic `Memory` object that will back this buffer.
     memory: Option<Rc<Memory>>,
-    /// The offest into `memory` that this image is located.
+    /// The offset into `memory` that this image is located.
     offset: u32,
     // The scenic `Image` object that will back this buffer.
     image: Option<Rc<Image>>,
