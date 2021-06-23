@@ -1,0 +1,21 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_driver_register") {
+  version = "0.1.0"
+  edition = "2020"
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+  ]
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
+}

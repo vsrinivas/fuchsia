@@ -32,6 +32,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin",
       "//src/developer/ffx/plugins/debug:ffx_debug_plugin",
       "//src/developer/ffx/plugins/doctor:ffx_doctor",
+      "//src/developer/ffx/plugins/driver:ffx_driver",
       "//src/developer/ffx/plugins/efi:ffx_efi",
       "//src/developer/ffx/plugins/emulator:ffx_emulator",
       "//src/developer/ffx/plugins/flutter:ffx_flutter",
