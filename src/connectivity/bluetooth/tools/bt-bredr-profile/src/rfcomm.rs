@@ -129,6 +129,7 @@ pub async fn handle_profile_events(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestMarker;
     use futures::task::Poll;
 
     #[test]
@@ -136,7 +137,9 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
         let server_channel = ServerChannel::try_from(5).expect("valid server channel number");
-        let state = Arc::new(RwLock::new(ProfileState::new()));
+        let (rfcomm_test, _rfcomm_test_server) =
+            fidl::endpoints::create_proxy_and_stream::<RfcommTestMarker>().unwrap();
+        let state = Arc::new(RwLock::new(ProfileState::new(rfcomm_test)));
         let (local, remote) = Channel::create();
         let receiver = state.write().rfcomm.create_channel(server_channel);
 
@@ -173,7 +176,9 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
         let server_channel = ServerChannel::try_from(5).expect("valid server channel number");
-        let state = Arc::new(RwLock::new(ProfileState::new()));
+        let (rfcomm_test, _rfcomm_test_server) =
+            fidl::endpoints::create_proxy_and_stream::<RfcommTestMarker>().unwrap();
+        let state = Arc::new(RwLock::new(ProfileState::new(rfcomm_test)));
         let (local, _remote) = Channel::create();
         let receiver = state.write().rfcomm.create_channel(server_channel);
 

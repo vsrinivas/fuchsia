@@ -9,6 +9,7 @@ use {
     bt_rfcomm::ServerChannel,
     fidl::{encoding::Decodable, endpoints::create_request_stream},
     fidl_fuchsia_bluetooth_bredr::*,
+    fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestMarker,
     fuchsia_async::{self as fasync, futures::select},
     fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
     fuchsia_component::client::connect_to_protocol,
@@ -354,6 +355,22 @@ fn disconnect_rfcomm(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Re
     Ok(())
 }
 
+fn disconnect_rfcomm_session(
+    state: Arc<RwLock<ProfileState>>,
+    args: &Vec<String>,
+) -> Result<(), Error> {
+    if args.len() != 1 {
+        return Err(anyhow!("Invalid number of arguments"));
+    }
+
+    let peer_id: PeerId = args[0].parse()?;
+    match state.write().rfcomm.close_session(peer_id) {
+        Ok(_) => println!("Closed RFCOMM Session with peer {:?}", peer_id),
+        Err(e) => println!("Error closing RFCOMM Session with peer {:?}: {:?}", peer_id, e),
+    }
+    Ok(())
+}
+
 fn write_l2cap(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
     if args.len() != 2 {
         return Err(anyhow!("Invalid number of arguments"));
@@ -423,6 +440,7 @@ async fn handle_cmd(
         Cmd::ConnectRfcomm => connect_rfcomm(profile_svc, state.clone(), &args).await?,
         Cmd::DisconnectL2cap => disconnect_l2cap(state.clone(), &args)?,
         Cmd::DisconnectRfcomm => disconnect_rfcomm(state.clone(), &args)?,
+        Cmd::DisconnectRfcommSession => disconnect_rfcomm_session(state.clone(), &args)?,
         Cmd::SetupRfcomm => setup_rfcomm(profile_svc, state.clone())?,
         Cmd::WriteL2cap => write_l2cap(state.clone(), &args)?,
         Cmd::WriteRfcomm => write_rfcomm(state.clone(), &args)?,
@@ -520,8 +538,10 @@ async fn run_repl(
 async fn main() -> Result<(), Error> {
     let profile_svc = connect_to_protocol::<ProfileMarker>()
         .context("failed to connect to bluetooth profile service")?;
+    let rfcomm_test_svc = connect_to_protocol::<RfcommTestMarker>()
+        .context("failed to connect to RFCOMM Test protocol")?;
 
-    let state = Arc::new(RwLock::new(ProfileState::new()));
+    let state = Arc::new(RwLock::new(ProfileState::new(rfcomm_test_svc)));
 
     run_repl(profile_svc, state.clone()).await
 }
@@ -532,7 +552,12 @@ mod tests {
 
     #[test]
     fn disconnect_l2cap_channel_succeeds() {
-        let state = Arc::new(RwLock::new(ProfileState::new()));
+        let _exec = fasync::TestExecutor::new().unwrap();
+
+        let (rfcomm_test, _rfcomm_test_server) =
+            fidl::endpoints::create_proxy_and_stream::<RfcommTestMarker>().unwrap();
+        let state = Arc::new(RwLock::new(ProfileState::new(rfcomm_test)));
+
         let (s, _) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
         assert_eq!(
             0,
@@ -554,7 +579,12 @@ mod tests {
 
     #[test]
     fn disconnect_rfcomm_channel_succeeds() {
-        let state = Arc::new(RwLock::new(ProfileState::new()));
+        let _exec = fasync::TestExecutor::new().unwrap();
+
+        let (rfcomm_test, _rfcomm_test_server) =
+            fidl::endpoints::create_proxy_and_stream::<RfcommTestMarker>().unwrap();
+        let state = Arc::new(RwLock::new(ProfileState::new(rfcomm_test)));
+
         let server_channel = ServerChannel::try_from(10).expect("valid server channel number");
         let _receiver = state.write().rfcomm.create_channel(server_channel);
         let args = vec!["10".to_string()];

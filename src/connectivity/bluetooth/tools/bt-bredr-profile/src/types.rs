@@ -6,7 +6,10 @@ use {
     anyhow::{anyhow, Error},
     bt_rfcomm::ServerChannel,
     fidl_fuchsia_bluetooth_bredr::{ChannelMode, ChannelParameters},
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestProxy,
+    fuchsia_async as fasync,
+    fuchsia_bluetooth::types::PeerId,
+    fuchsia_zircon as zx,
     futures::channel::{mpsc, oneshot},
     std::{
         cmp::PartialEq,
@@ -83,11 +86,11 @@ pub struct ProfileState {
 }
 
 impl ProfileState {
-    pub fn new() -> ProfileState {
+    pub fn new(rfcomm_test: RfcommTestProxy) -> ProfileState {
         ProfileState {
             l2cap_channels: IncrementedIdMap::new(),
             services: IncrementedIdMap::new(),
-            rfcomm: RfcommState::new(),
+            rfcomm: RfcommState::new(rfcomm_test),
         }
     }
 
@@ -100,7 +103,8 @@ impl ProfileState {
 
         // Resetting the RFCOMM state will cancel any active service advertisement &
         // search and disconnect the channels.
-        self.rfcomm = RfcommState::new();
+        let proxy = self.rfcomm.rfcomm_test.clone();
+        self.rfcomm = RfcommState::new(proxy);
     }
 }
 
@@ -108,6 +112,9 @@ impl ProfileState {
 type UserData = Vec<u8>;
 /// Tracks the state local to the command line tool.
 pub struct RfcommState {
+    /// The client connection to the RfcommTest protocol - used to initiate
+    /// out-of-band commands.
+    rfcomm_test: RfcommTestProxy,
     /// The task representing the RFCOMM service advertisement and search.
     pub service: Option<fasync::Task<()>>,
     /// The currently connected and active RFCOMM channels. Each channel
@@ -117,8 +124,8 @@ pub struct RfcommState {
 }
 
 impl RfcommState {
-    pub fn new() -> Self {
-        Self { active_channels: HashMap::new(), service: None }
+    pub fn new(rfcomm_test: RfcommTestProxy) -> Self {
+        Self { rfcomm_test, active_channels: HashMap::new(), service: None }
     }
 
     /// Creates a new RFCOMM channel for the provided `server_channel`. Returns a
@@ -127,6 +134,10 @@ impl RfcommState {
         let (sender, receiver) = mpsc::channel(USER_DATA_BUFFER_SIZE);
         self.active_channels.insert(server_channel, sender);
         receiver
+    }
+
+    pub fn close_session(&self, id: PeerId) -> Result<(), Error> {
+        self.rfcomm_test.disconnect(&mut id.into()).map_err(Into::into)
     }
 
     /// Removes the RFCOMM channel for the provided `server_channel`. Returns true if
@@ -153,6 +164,7 @@ impl RfcommState {
 mod tests {
     use super::*;
 
+    use fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestMarker;
     use futures::{task::Poll, StreamExt};
     use matches::assert_matches;
     use std::convert::TryFrom;
@@ -171,8 +183,10 @@ mod tests {
     #[test]
     fn send_rfcomm_data_is_received_by_peer() {
         let mut exec = fasync::TestExecutor::new().unwrap();
+        let (rfcomm_test, _rfcomm_test_server) =
+            fidl::endpoints::create_proxy_and_stream::<RfcommTestMarker>().unwrap();
 
-        let mut state = ProfileState::new();
+        let mut state = ProfileState::new(rfcomm_test);
         assert!(state.rfcomm.active_channels.is_empty());
 
         // Registering channel is OK.

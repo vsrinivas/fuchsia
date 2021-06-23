@@ -91,6 +91,15 @@ channel.
 ##### Arguments
 - `server-channel` is the Server Channel number assigned to the RFCOMM channel.
 
+### disconnect-rfcomm-session
+Closes the RFCOMM Session with the remote peer identified by `peer-id`.
+
+#### Usage
+`disconnect-rfcomm-session <peer-id>`
+
+##### Arguments
+- `peer-id` maps to the `PeerId` of the peer.
+
 ### channels
 Prints the assigned Ids of connected L2CAP channels. These Ids are local to the REPL
 and are only used for indicating which channel to perform operations on in other commands.
