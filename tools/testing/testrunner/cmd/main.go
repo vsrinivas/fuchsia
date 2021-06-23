@@ -359,8 +359,11 @@ func runTestOnce(
 	outDir string,
 ) (*testrunner.TestResult, error) {
 	parentCtx := ctx
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
 
 	// The test case parser specifically uses stdout, so we need to have a
 	// dedicated stdout buffer.
