@@ -826,20 +826,15 @@ func (n *testNDPDispatcher) OnDuplicateAddressDetectionResult(nicID tcpip.NICID,
 }
 
 // OnDefaultRouterDiscovered implements ipv6.NDPDispatcher.
-//
-// Adds the event to the event queue and returns true so Stack remembers the
-// discovered default router.
-func (*testNDPDispatcher) OnDefaultRouterDiscovered(tcpip.NICID, tcpip.Address) bool {
-	return false
+func (*testNDPDispatcher) OnOffLinkRouteUpdated(tcpip.NICID, tcpip.Subnet, tcpip.Address, header.NDPRoutePreference) {
 }
 
 // OnDefaultRouterInvalidated implements ipv6.NDPDispatcher.
-func (*testNDPDispatcher) OnDefaultRouterInvalidated(tcpip.NICID, tcpip.Address) {
+func (*testNDPDispatcher) OnOffLinkRouteInvalidated(tcpip.NICID, tcpip.Subnet, tcpip.Address) {
 }
 
 // OnOnLinkPrefixDiscovered implements ipv6.NDPDispatcher.
-func (*testNDPDispatcher) OnOnLinkPrefixDiscovered(tcpip.NICID, tcpip.Subnet) bool {
-	return false
+func (*testNDPDispatcher) OnOnLinkPrefixDiscovered(tcpip.NICID, tcpip.Subnet) {
 }
 
 // OnOnLinkPrefixInvalidated implements ipv6.NDPDispatcher.
@@ -847,8 +842,7 @@ func (*testNDPDispatcher) OnOnLinkPrefixInvalidated(tcpip.NICID, tcpip.Subnet) {
 }
 
 // OnAutoGenAddress implements ipv6.NDPDispatcher.
-func (*testNDPDispatcher) OnAutoGenAddress(tcpip.NICID, tcpip.AddressWithPrefix) bool {
-	return false
+func (*testNDPDispatcher) OnAutoGenAddress(tcpip.NICID, tcpip.AddressWithPrefix) {
 }
 
 // OnAutoGenAddressDeprecated implements ipv6.NDPDispatcher.

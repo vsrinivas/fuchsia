@@ -755,9 +755,9 @@ func (e *endpoint) WritePacket(r *stack.Route, params stack.NetworkHeaderParams,
 	// based on destination address and do not send the packet to link
 	// layer.
 	//
-	// TODO(gvisor.dev/issue/170): We should do this for every
-	// packet, rather than only NATted packets, but removing this check
-	// short circuits broadcasts before they are sent out to other hosts.
+	// We should do this for every packet, rather than only NATted packets, but
+	// removing this check short circuits broadcasts before they are sent out to
+	// other hosts.
 	if pkt.NatDone {
 		netHeader := header.IPv6(pkt.NetworkHeader().View())
 		if ep := e.protocol.findEndpointWithAddress(netHeader.DestinationAddress()); ep != nil {
@@ -927,10 +927,6 @@ func (e *endpoint) WriteHeaderIncludedPacket(r *stack.Route, pkt *stack.PacketBu
 	if ipH.SourceAddress() == header.IPv6Any {
 		ipH.SetSourceAddress(r.LocalAddress())
 	}
-
-	// Set the destination. If the packet already included a destination, it will
-	// be part of the route anyways.
-	ipH.SetDestinationAddress(r.RemoteAddress())
 
 	// Populate the packet buffer's network header and don't allow an invalid
 	// packet to be sent.
@@ -1128,6 +1124,10 @@ func (e *endpoint) handleLocalPacket(pkt *stack.PacketBuffer, canSkipRXChecksum 
 }
 
 func (e *endpoint) handleValidatedPacket(h header.IPv6, pkt *stack.PacketBuffer, inNICName string) {
+	// Raw socket packets are delivered based solely on the transport protocol
+	// number. We only require that the packet be valid IPv6.
+	e.dispatcher.DeliverRawPacket(h.TransportProtocol(), pkt)
+
 	pkt.NICID = e.nic.ID()
 	stats := e.stats.ip
 	stats.ValidPacketsReceived.Increment()

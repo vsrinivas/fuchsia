@@ -201,7 +201,7 @@ func TestNDPInvalidateUnknownIPv6Router(t *testing.T) {
 
 	// Invalidate the router with IP testLinkLocalV6Addr1 from eth (even
 	// though we do not yet know about it).
-	ndpDisp.OnDefaultRouterInvalidated(ifs.nicid, testLinkLocalV6Addr1)
+	ndpDisp.OnOffLinkRouteInvalidated(ifs.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr1)
 	waitForEmptyQueue(ndpDisp)
 	if rt, rts := defaultV6Route(ifs.nicid, testLinkLocalV6Addr1), ns.stack.GetRouteTable(); containsRoute(rts, rt) {
 		t.Fatalf("should not have route = %s in the route table, got = %s", rt, rts)
@@ -230,10 +230,7 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	}
 
 	// Test discovering a new default router on eth1.
-	accept := ndpDisp.OnDefaultRouterDiscovered(ifs1.nicid, testLinkLocalV6Addr1)
-	if !accept {
-		t.Fatalf("got OnDefaultRouterDiscovered(%d, %s) = false, want = true", ifs1.nicid, testLinkLocalV6Addr1)
-	}
+	ndpDisp.OnOffLinkRouteUpdated(ifs1.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr1, header.MediumRoutePreference)
 	waitForEmptyQueue(ndpDisp)
 	nic1Rtr1Rt := defaultV6Route(ifs1.nicid, testLinkLocalV6Addr1)
 	if rts := ns.stack.GetRouteTable(); !containsRoute(rts, nic1Rtr1Rt) {
@@ -242,10 +239,7 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 
 	// Test discovering a new default router on eth2 (with the same
 	// link-local IP as the one discovered as eth1).
-	accept = ndpDisp.OnDefaultRouterDiscovered(ifs2.nicid, testLinkLocalV6Addr1)
-	if !accept {
-		t.Fatalf("got OnDefaultRouterDiscovered(%d, %s) = false, want = true", ifs2.nicid, testLinkLocalV6Addr1)
-	}
+	ndpDisp.OnOffLinkRouteUpdated(ifs2.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr1, header.MediumRoutePreference)
 	waitForEmptyQueue(ndpDisp)
 	nic2Rtr1Rt := defaultV6Route(ifs2.nicid, testLinkLocalV6Addr1)
 	rts := ns.stack.GetRouteTable()
@@ -258,10 +252,7 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	}
 
 	// Test discovering another default router on eth2.
-	accept = ndpDisp.OnDefaultRouterDiscovered(ifs2.nicid, testLinkLocalV6Addr2)
-	if !accept {
-		t.Fatalf("got OnDefaultRouterDiscovered(%d, %s) = false, want = true", ifs2.nicid, testLinkLocalV6Addr1)
-	}
+	ndpDisp.OnOffLinkRouteUpdated(ifs2.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr2, header.MediumRoutePreference)
 	waitForEmptyQueue(ndpDisp)
 	nic2Rtr2Rt := defaultV6Route(ifs2.nicid, testLinkLocalV6Addr2)
 	rts = ns.stack.GetRouteTable()
@@ -277,7 +268,7 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	}
 
 	// Invalidate the router with IP testLinkLocalV6Addr1 from eth2.
-	ndpDisp.OnDefaultRouterInvalidated(ifs2.nicid, testLinkLocalV6Addr1)
+	ndpDisp.OnOffLinkRouteInvalidated(ifs2.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr1)
 	waitForEmptyQueue(ndpDisp)
 	rts = ns.stack.GetRouteTable()
 	if containsRoute(rts, nic2Rtr1Rt) {
@@ -293,7 +284,7 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	}
 
 	// Invalidate the router with IP testLinkLocalV6Addr1 from eth1.
-	ndpDisp.OnDefaultRouterInvalidated(ifs1.nicid, testLinkLocalV6Addr1)
+	ndpDisp.OnOffLinkRouteInvalidated(ifs1.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr1)
 	waitForEmptyQueue(ndpDisp)
 	rts = ns.stack.GetRouteTable()
 	if containsRoute(rts, nic1Rtr1Rt) {
@@ -309,7 +300,7 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	}
 
 	// Invalidate the router with IP testLinkLocalV6Addr2 from eth2.
-	ndpDisp.OnDefaultRouterInvalidated(ifs2.nicid, testLinkLocalV6Addr2)
+	ndpDisp.OnOffLinkRouteInvalidated(ifs2.nicid, header.IPv6EmptySubnet, testLinkLocalV6Addr2)
 	waitForEmptyQueue(ndpDisp)
 	rts = ns.stack.GetRouteTable()
 	if containsRoute(rts, nic2Rtr2Rt) {
@@ -371,10 +362,7 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	}
 
 	// Test discovering a new on-link prefix on eth1.
-	accept := ndpDisp.OnOnLinkPrefixDiscovered(ifs1.nicid, subnet1)
-	if !accept {
-		t.Fatalf("got OnOnLinkPrefixDiscovered(%d, %s) = false, want = true", ifs1.nicid, subnet1)
-	}
+	ndpDisp.OnOnLinkPrefixDiscovered(ifs1.nicid, subnet1)
 	waitForEmptyQueue(ndpDisp)
 	nic1Sub1Rt := onLinkV6Route(ifs1.nicid, subnet1)
 	if rts := ns.stack.GetRouteTable(); !containsRoute(rts, nic1Sub1Rt) {
@@ -382,10 +370,7 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	}
 
 	// Test discovering the same on-link prefix on eth2.
-	accept = ndpDisp.OnOnLinkPrefixDiscovered(ifs2.nicid, subnet1)
-	if !accept {
-		t.Fatalf("got OnOnLinkPrefixDiscovered(%d, %s) = false, want = true", ifs2.nicid, subnet1)
-	}
+	ndpDisp.OnOnLinkPrefixDiscovered(ifs2.nicid, subnet1)
 	waitForEmptyQueue(ndpDisp)
 	nic2Sub1Rt := onLinkV6Route(ifs2.nicid, subnet1)
 	rts := ns.stack.GetRouteTable()
@@ -398,10 +383,7 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	}
 
 	// Test discovering another on-link prefix on eth2.
-	accept = ndpDisp.OnOnLinkPrefixDiscovered(ifs2.nicid, subnet2)
-	if !accept {
-		t.Fatalf("got OnOnLinkPrefixDiscovered(%d, %s) = false, want = true", ifs2.nicid, subnet2)
-	}
+	ndpDisp.OnOnLinkPrefixDiscovered(ifs2.nicid, subnet2)
 	waitForEmptyQueue(ndpDisp)
 	nic2Sub2Rt := onLinkV6Route(ifs2.nicid, subnet2)
 	rts = ns.stack.GetRouteTable()
@@ -693,12 +675,6 @@ func TestRecursiveDNSServers(t *testing.T) {
 }
 
 func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
-	const newInfiniteLifetime = time.Second
-	const newInfiniteLifetimeTimeout = 2 * time.Second
-	saved := header.NDPInfiniteLifetime
-	defer func() { header.NDPInfiniteLifetime = saved }()
-	header.NDPInfiniteLifetime = newInfiniteLifetime
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -727,7 +703,7 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 		Port: 53,
 		NIC:  ifs.nicid,
 	}
-	ndpDisp.OnRecursiveDNSServerOption(ifs.nicid, []tcpip.Address{addr1.Addr, addr2.Addr, addr3.Addr}, newInfiniteLifetime)
+	ndpDisp.OnRecursiveDNSServerOption(ifs.nicid, []tcpip.Address{addr1.Addr, addr2.Addr, addr3.Addr}, header.NDPInfiniteLifetime)
 	waitForEmptyQueue(ndpDisp)
 	{
 		want := []tcpip.FullAddress{addr1, addr2, addr3}
@@ -739,33 +715,29 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 
 	// All addresses to expire after middleLifetime.
 	ndpDisp.OnRecursiveDNSServerOption(ifs.nicid, []tcpip.Address{addr1.Addr, addr2.Addr, addr3.Addr}, middleLifetime)
-	// Update addr2 and addr3 to be valid forever.
-	ndpDisp.OnRecursiveDNSServerOption(ifs.nicid, []tcpip.Address{addr2.Addr, addr3.Addr}, newInfiniteLifetime)
 	waitForEmptyQueue(ndpDisp)
-	for elapsedTime := time.Duration(0); elapsedTime <= middleLifetimeTimeout; elapsedTime += incrementalTimeout {
-		clock.Advance(incrementalTimeout)
-		want := []tcpip.FullAddress{addr2, addr3}
-		got := ns.dnsConfig.GetServersCache()
-		if diff := cmp.Diff(want, got, dnsServerTcpIpFullAddressOpts...); diff != "" {
-			if elapsedTime < middleLifetimeTimeout {
-				continue
-			}
-
-			t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
-		}
-
-		break
+	if diff := cmp.Diff([]tcpip.FullAddress{addr1, addr2, addr3}, ns.dnsConfig.GetServersCache(), dnsServerTcpIpFullAddressOpts...); diff != "" {
+		t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
 	}
 
-	// addr2 and addr3 should not expire after newInfiniteLifetime (since it
-	// represents infinity).
-	for elapsedTime := time.Duration(0); elapsedTime <= newInfiniteLifetimeTimeout; elapsedTime += incrementalTimeout {
-		clock.Advance(incrementalTimeout)
-		want := []tcpip.FullAddress{addr2, addr3}
-		got := ns.dnsConfig.GetServersCache()
-		if diff := cmp.Diff(want, got, dnsServerTcpIpFullAddressOpts...); diff != "" {
-			t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
-		}
+	// Update addr2 and addr3 to be valid forever.
+	ndpDisp.OnRecursiveDNSServerOption(ifs.nicid, []tcpip.Address{addr2.Addr, addr3.Addr}, header.NDPInfiniteLifetime)
+	waitForEmptyQueue(ndpDisp)
+	if diff := cmp.Diff([]tcpip.FullAddress{addr1, addr2, addr3}, ns.dnsConfig.GetServersCache(), dnsServerTcpIpFullAddressOpts...); diff != "" {
+		t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
+	}
+
+	// addr1 should expire after middleLifetime.
+	clock.Advance(middleLifetimeTimeout)
+	if diff := cmp.Diff([]tcpip.FullAddress{addr2, addr3}, ns.dnsConfig.GetServersCache(), dnsServerTcpIpFullAddressOpts...); diff != "" {
+		t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
+	}
+
+	// addr2 and addr3 should not expire after header.NDPInfiniteLifetime (since
+	// it represents infinity).
+	clock.Advance(header.NDPInfiniteLifetime)
+	if diff := cmp.Diff([]tcpip.FullAddress{addr2, addr3}, ns.dnsConfig.GetServersCache(), dnsServerTcpIpFullAddressOpts...); diff != "" {
+		t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
 	}
 }
 

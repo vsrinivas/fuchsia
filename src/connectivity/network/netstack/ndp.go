@@ -172,30 +172,38 @@ func (n *ndpDispatcher) OnDuplicateAddressDetectionResult(nicID tcpip.NICID, add
 	})
 }
 
-// OnDefaultRouterDiscovered implements ipv6.NDPDispatcher.
+// OnOffLinkRouteUpdated implements ipv6.NDPDispatcher.
 //
 // Adds the event to the event queue and returns true so Stack remembers the
 // discovered default router.
-func (n *ndpDispatcher) OnDefaultRouterDiscovered(nicID tcpip.NICID, addr tcpip.Address) bool {
-	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDefaultRouterDiscovered(%d, %s)", nicID, addr)
-	n.addEvent(&ndpDiscoveredRouterEvent{ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{nicID: nicID, addr: addr}})
-	return true
+func (n *ndpDispatcher) OnOffLinkRouteUpdated(nicID tcpip.NICID, dest tcpip.Subnet, router tcpip.Address, prf header.NDPRoutePreference) {
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnOffLinkRouteUpdated(%d, %s, %s, %d)", nicID, dest, router, prf)
+
+	if dest == header.IPv6EmptySubnet {
+		n.addEvent(&ndpDiscoveredRouterEvent{ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{nicID: nicID, addr: router}})
+	} else {
+		// TODO(https://fxbug.dev/79015): Support more specific routes.
+	}
 }
 
-// OnDefaultRouterInvalidated implements ipv6.NDPDispatcher.
-func (n *ndpDispatcher) OnDefaultRouterInvalidated(nicID tcpip.NICID, addr tcpip.Address) {
-	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDefaultRouterInvalidated(%d, %s)", nicID, addr)
-	n.addEvent(&ndpInvalidatedRouterEvent{ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{nicID: nicID, addr: addr}})
+// OnOffLinkRouteInvalidated implements ipv6.NDPDispatcher.
+func (n *ndpDispatcher) OnOffLinkRouteInvalidated(nicID tcpip.NICID, dest tcpip.Subnet, router tcpip.Address) {
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnOffLinkRouteInvalidated(%d, %s, %s)", nicID, dest, router)
+
+	if dest == header.IPv6EmptySubnet {
+		n.addEvent(&ndpInvalidatedRouterEvent{ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{nicID: nicID, addr: router}})
+	} else {
+		// TODO(https://fxbug.dev/79015): Support more specific routes.
+	}
 }
 
 // OnOnLinkPrefixDiscovered implements ipv6.NDPDispatcher.
 //
 // Adds the event to the event queue and returns true so Stack remembers the
 // discovered on-link prefix.
-func (n *ndpDispatcher) OnOnLinkPrefixDiscovered(nicID tcpip.NICID, prefix tcpip.Subnet) bool {
+func (n *ndpDispatcher) OnOnLinkPrefixDiscovered(nicID tcpip.NICID, prefix tcpip.Subnet) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnOnLinkPrefixDiscovered(%d, %s)", nicID, prefix)
 	n.addEvent(&ndpDiscoveredPrefixEvent{ndpPrefixEventCommon: ndpPrefixEventCommon{nicID: nicID, prefix: prefix}})
-	return true
 }
 
 // OnOnLinkPrefixInvalidated implements ipv6.NDPDispatcher.
@@ -208,7 +216,7 @@ func (n *ndpDispatcher) OnOnLinkPrefixInvalidated(nicID tcpip.NICID, prefix tcpi
 //
 // Adds the event to the event queue and returns true so Stack adds the
 // auto-generated address.
-func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) bool {
+func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnAutoGenAddress(%d, %s)", nicID, addrWithPrefix)
 	n.addEvent(&ndpGeneratedAutoGenAddrEvent{ndpAutoGenAddrEventCommon: ndpAutoGenAddrEventCommon{nicID: nicID, addrWithPrefix: addrWithPrefix}})
 
@@ -217,8 +225,6 @@ func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip
 	if !header.IsV6LinkLocalUnicastAddress(addrWithPrefix.Address) {
 		n.dynamicAddressSourceTracker.incGlobalSLAAC(nicID)
 	}
-
-	return true
 }
 
 // OnAutoGenAddressDeprecated implements ipv6.NDPDispatcher.
