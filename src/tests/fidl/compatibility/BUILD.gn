@@ -186,7 +186,6 @@ fidl_compatibilty_test_servers = [
 ]
 
 test_component_labels = []
-test_labels = []
 foreach(test, fidl_compatibility_tests) {
   component_name = "fidl_compatibility_test_${test.name}"
   component_label = "${component_name}_component"
@@ -250,5 +249,5 @@ fuchsia_test_package("fidl_compatibility_test_package") {
 
 group("compatibility") {
   testonly = true
-  deps = test_labels
+  deps = [ ":fidl_compatibility_test_package" ]
 }
