@@ -10,5 +10,5 @@ use std::collections::HashMap;
 
 #[fuzz]
 fn bind_rules_bytecode_fuzzer(bytes: &[u8]) {
-    let _ = match_bytecode(bytes.to_vec(), HashMap::new());
+    let _ = match_bytecode(bytes.to_vec(), &HashMap::new());
 }

@@ -29,24 +29,16 @@ pub enum PropertyKey {
 
 pub type DeviceProperties = HashMap<PropertyKey, Symbol>;
 
-pub struct DeviceMatcher {
-    properties: DeviceProperties,
-    symbol_table: HashMap<u32, String>,
-    iter: BytecodeIter,
+pub struct DeviceMatcher<'a> {
+    properties: &'a DeviceProperties,
+    symbol_table: &'a HashMap<u32, String>,
+    iter: BytecodeIter<'a>,
 }
 
-impl DeviceMatcher {
-    pub fn new(bind_rules: DecodedBindRules, properties: DeviceProperties) -> DeviceMatcher {
-        DeviceMatcher {
-            properties: properties,
-            symbol_table: bind_rules.symbol_table,
-            iter: bind_rules.instructions.into_iter(),
-        }
-    }
-
+impl<'a> DeviceMatcher<'a> {
     pub fn match_bind(mut self) -> Result<bool, BytecodeError> {
         while let Some(byte) = self.iter.next() {
-            let op_byte = FromPrimitive::from_u8(byte).ok_or(BytecodeError::InvalidOp(byte))?;
+            let op_byte = FromPrimitive::from_u8(*byte).ok_or(BytecodeError::InvalidOp(*byte))?;
             match op_byte {
                 RawOp::EqualCondition | RawOp::InequalCondition => {
                     if !self.evaluate_condition_inst(op_byte)? {
@@ -93,7 +85,7 @@ impl DeviceMatcher {
         }
 
         // Verify that the next instruction is a jump pad.
-        if next_u8(&mut self.iter)? != RawOp::JumpLandPad as u8 {
+        if *next_u8(&mut self.iter)? != RawOp::JumpLandPad as u8 {
             return Err(BytecodeError::InvalidJumpLocation);
         }
 
@@ -121,7 +113,7 @@ impl DeviceMatcher {
     // Read in the next u8 as the value type and the next u32 as the value. Convert the value
     // into a Symbol.
     fn read_next_value(&mut self) -> Result<Symbol, BytecodeError> {
-        let value_type = next_u8(&mut self.iter)?;
+        let value_type = *next_u8(&mut self.iter)?;
         let value_type = FromPrimitive::from_u8(value_type)
             .ok_or(BytecodeError::InvalidValueType(value_type))?;
 
@@ -169,12 +161,25 @@ fn compare_symbols(
     })
 }
 
-// Return true if the bind rules matches the device properties.
+// Return true if the bytecode matches the device properties.
 pub fn match_bytecode(
     bytecode: Vec<u8>,
-    properties: DeviceProperties,
+    properties: &DeviceProperties,
 ) -> Result<bool, BytecodeError> {
-    DeviceMatcher::new(DecodedBindRules::new(bytecode)?, properties).match_bind()
+    match_bind(&DecodedBindRules::new(bytecode)?, &properties)
+}
+
+// Return true if the bind rules matches the device properties.
+pub fn match_bind(
+    bind_rules: &DecodedBindRules,
+    properties: &DeviceProperties,
+) -> Result<bool, BytecodeError> {
+    let matcher = DeviceMatcher {
+        properties: &properties,
+        symbol_table: &bind_rules.symbol_table,
+        iter: bind_rules.instructions.iter(),
+    };
+    matcher.match_bind()
 }
 
 #[cfg(test)]
@@ -263,9 +268,15 @@ mod test {
     fn verify_match_result(
         expected_result: Result<bool, BytecodeError>,
         bind_rules: DecodedBindRules,
-        device_properties: DeviceProperties,
+        device_properties: &DeviceProperties,
     ) {
-        assert_eq!(expected_result, DeviceMatcher::new(bind_rules, device_properties).match_bind());
+        let matcher = DeviceMatcher {
+            properties: device_properties,
+            symbol_table: &bind_rules.symbol_table,
+            iter: bind_rules.instructions.iter(),
+        };
+
+        assert_eq!(expected_result, matcher.match_bind());
     }
 
     #[test]
@@ -273,7 +284,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: vec![] },
-            HashMap::new(),
+            &HashMap::new(),
         );
     }
 
@@ -293,7 +304,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
 
         // The condition should fail since the device property has a different value.
@@ -306,7 +317,7 @@ mod test {
         verify_match_result(
             Ok(false),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
 
         // The condition should fail since the property is missing from device properties.
@@ -319,7 +330,7 @@ mod test {
         verify_match_result(
             Ok(false),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
     }
 
@@ -346,7 +357,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
 
         // The condition should fail since the string device property has a different value.
@@ -359,7 +370,7 @@ mod test {
         verify_match_result(
             Ok(false),
             DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
 
         // The condition should fail since the property is missing from string device properties.
@@ -372,7 +383,7 @@ mod test {
         verify_match_result(
             Ok(false),
             DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
     }
 
@@ -392,7 +403,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
 
         // The condition should match since the device properties doesn't contain the property.
@@ -405,7 +416,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
 
         // The condition should fail since the device properties matches the value.
@@ -418,7 +429,7 @@ mod test {
         verify_match_result(
             Ok(false),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
     }
 
@@ -444,7 +455,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
 
         // The condition should match since the string device properties doesn't contain the
@@ -458,7 +469,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
 
         // The condition should fail since the string device properties matches the value.
@@ -471,7 +482,7 @@ mod test {
         verify_match_result(
             Ok(false),
             DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
     }
 
@@ -482,7 +493,7 @@ mod test {
         verify_match_result(
             Ok(false),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            HashMap::new(),
+            &HashMap::new(),
         );
     }
 
@@ -504,7 +515,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
 
         let mut instructions: Vec<u8> = vec![];
@@ -516,7 +527,7 @@ mod test {
         verify_match_result(
             Ok(false),
             DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
     }
 
@@ -534,7 +545,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
 
         let mut instructions: Vec<u8> = vec![];
@@ -546,7 +557,7 @@ mod test {
         verify_match_result(
             Ok(false),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            device_properties.clone(),
+            &device_properties,
         );
     }
 
@@ -565,7 +576,7 @@ mod test {
         verify_match_result(
             Err(BytecodeError::MissingEntryInSymbolTable(10)),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            HashMap::new(),
+            &HashMap::new(),
         );
 
         let mut instructions: Vec<u8> = vec![];
@@ -577,7 +588,7 @@ mod test {
         verify_match_result(
             Err(BytecodeError::MissingEntryInSymbolTable(15)),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            HashMap::new(),
+            &HashMap::new(),
         );
     }
 
@@ -593,7 +604,7 @@ mod test {
         verify_match_result(
             Err(BytecodeError::InvalidOp(0xFF)),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            HashMap::new(),
+            &HashMap::new(),
         );
     }
 
@@ -603,7 +614,7 @@ mod test {
         verify_match_result(
             Err(BytecodeError::InvalidValueType(0x05)),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            HashMap::new(),
+            &HashMap::new(),
         );
     }
 
@@ -619,7 +630,7 @@ mod test {
         verify_match_result(
             Err(BytecodeError::InvalidBoolValue(15)),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            HashMap::new(),
+            &HashMap::new(),
         );
     }
 
@@ -635,7 +646,7 @@ mod test {
         verify_match_result(
             Err(BytecodeError::InvalidKeyType),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            HashMap::new(),
+            &HashMap::new(),
         );
     }
 
@@ -662,7 +673,7 @@ mod test {
         verify_match_result(
             Err(BytecodeError::MismatchValueTypes),
             DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
-            device_properties,
+            &device_properties,
         );
     }
 
@@ -672,7 +683,7 @@ mod test {
         verify_match_result(
             Err(BytecodeError::UnexpectedEnd),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            HashMap::new(),
+            &HashMap::new(),
         );
     }
 
@@ -710,7 +721,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
-            device_properties,
+            &device_properties,
         );
     }
 
@@ -748,7 +759,7 @@ mod test {
         verify_match_result(
             Ok(false),
             DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
-            device_properties,
+            &device_properties,
         );
     }
 
@@ -767,7 +778,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            HashMap::new(),
+            &HashMap::new(),
         );
     }
 
@@ -796,7 +807,7 @@ mod test {
                 symbol_table: symbol_table.clone(),
                 instructions: instructions.clone(),
             },
-            device_properties,
+            &device_properties,
         );
 
         let mut device_properties: DeviceProperties = HashMap::new();
@@ -805,7 +816,7 @@ mod test {
         verify_match_result(
             Ok(false),
             DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
-            device_properties,
+            &device_properties,
         );
     }
 
@@ -827,7 +838,7 @@ mod test {
         verify_match_result(
             Ok(false),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions.clone() },
-            device_properties,
+            &device_properties,
         );
 
         let mut device_properties: DeviceProperties = HashMap::new();
@@ -835,7 +846,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            device_properties,
+            &device_properties,
         );
     }
 
@@ -856,7 +867,7 @@ mod test {
         verify_match_result(
             Err(BytecodeError::InvalidJumpLocation),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            device_properties,
+            &device_properties,
         );
     }
 
@@ -877,7 +888,7 @@ mod test {
         verify_match_result(
             Err(BytecodeError::UnexpectedEnd),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            device_properties,
+            &device_properties,
         );
     }
 
@@ -901,7 +912,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions.clone() },
-            device_properties,
+            &device_properties,
         );
 
         let mut device_properties: DeviceProperties = HashMap::new();
@@ -913,7 +924,7 @@ mod test {
         verify_match_result(
             Ok(false),
             DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
-            device_properties,
+            &device_properties,
         );
     }
 
@@ -970,7 +981,7 @@ mod test {
         verify_match_result(
             Ok(true),
             DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
-            device_properties,
+            &device_properties,
         );
     }
 }

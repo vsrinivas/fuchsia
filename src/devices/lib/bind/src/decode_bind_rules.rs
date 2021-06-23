@@ -201,7 +201,7 @@ fn read_string(iter: &mut BytecodeIter) -> Result<String, BytecodeError> {
     // Read in the bytes for the string until a zero terminator is reached.
     // If the number of bytes exceed the maximum string length, return an error.
     loop {
-        let byte = next_u8(iter)?;
+        let byte = *next_u8(iter)?;
         if byte == 0 {
             break;
         }
@@ -220,7 +220,7 @@ fn read_string(iter: &mut BytecodeIter) -> Result<String, BytecodeError> {
 }
 
 fn read_symbol_table(bytecode: Vec<u8>) -> Result<HashMap<u32, String>, BytecodeError> {
-    let mut iter = bytecode.into_iter();
+    let mut iter = bytecode.iter();
 
     let mut symbol_table = HashMap::new();
     let mut expected_key = SYMB_TBL_START_KEY;

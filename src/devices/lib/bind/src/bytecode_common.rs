@@ -39,16 +39,16 @@ impl fmt::Display for BytecodeError {
     }
 }
 
-pub type BytecodeIter = std::vec::IntoIter<u8>;
+pub type BytecodeIter<'a> = std::slice::Iter<'a, u8>;
 
-pub fn next_u8(iter: &mut BytecodeIter) -> Result<u8, BytecodeError> {
+pub fn next_u8<'a>(iter: &mut BytecodeIter<'a>) -> Result<&'a u8, BytecodeError> {
     iter.next().ok_or(BytecodeError::UnexpectedEnd)
 }
 
-pub fn next_u32(iter: &mut BytecodeIter) -> Result<u32, BytecodeError> {
+pub fn next_u32<'a>(iter: &mut BytecodeIter<'a>) -> Result<u32, BytecodeError> {
     let mut bytes: [u8; 4] = [0; 4];
     for i in 0..4 {
-        bytes[i] = next_u8(iter)?;
+        bytes[i] = *next_u8(iter)?;
     }
 
     Ok(byteorder::LittleEndian::read_u32(&bytes))
@@ -59,13 +59,13 @@ pub fn next_u32(iter: &mut BytecodeIter) -> Result<u32, BytecodeError> {
 pub fn try_next_u32(iter: &mut BytecodeIter) -> Result<Option<u32>, BytecodeError> {
     let mut bytes: [u8; 4] = [0; 4];
     if let Some(byte) = iter.next() {
-        bytes[0] = byte;
+        bytes[0] = *byte;
     } else {
         return Ok(None);
     }
 
     for i in 1..4 {
-        bytes[i] = next_u8(iter)?;
+        bytes[i] = *next_u8(iter)?;
     }
 
     Ok(Some(byteorder::LittleEndian::read_u32(&bytes)))

@@ -22,7 +22,7 @@ fn symbol_table_section_fuzzer(bytes: &[u8]) {
     bytecode.extend_from_slice(&INSTRUCTION_MAGIC_NUM.to_be_bytes());
     bytecode.extend_from_slice(&[0, 0, 0, 0]);
 
-    let _ = match_bytecode(bytecode, HashMap::new());
+    let _ = match_bytecode(bytecode, &HashMap::new());
 }
 
 #[fuzz]
@@ -36,5 +36,5 @@ fn instruction_section_fuzzer(bytes: &[u8]) {
     bytecode.extend_from_slice(&bytes.len().to_be_bytes());
     bytecode.extend_from_slice(bytes);
 
-    let _ = match_bytecode(bytecode, HashMap::new());
+    let _ = match_bytecode(bytecode, &HashMap::new());
 }

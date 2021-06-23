@@ -162,7 +162,7 @@ pub extern "C" fn match_bind_rules(
     let bytecode = unsafe { std::slice::from_raw_parts(bytecode_c, bytecode_sz).to_vec() };
 
     // TODO(fxb/73943): Return the error instead of returning false.
-    match_bytecode(bytecode, device_properties).unwrap_or_else(|e| {
+    match_bytecode(bytecode, &device_properties).unwrap_or_else(|e| {
         println!("Error evaluating the bytecode: {}", e);
         false
     })

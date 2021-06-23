@@ -43,11 +43,9 @@ struct Driver {
 impl Driver {
     fn matches(
         &self,
-        properties: bind::match_bind::DeviceProperties,
+        properties: &bind::match_bind::DeviceProperties,
     ) -> Result<bool, bind::bytecode_common::BytecodeError> {
-        // TODO(fxbug.dev/77377): This needs to be updated when DeviceMatcher no longer consumes
-        // the bind program.
-        bind::match_bind::DeviceMatcher::new(self.bind_rules.clone(), properties).match_bind()
+        bind::match_bind::match_bind(&self.bind_rules, properties)
     }
 
     fn create(
@@ -89,7 +87,7 @@ impl Indexer {
         let properties = args.properties.unwrap();
         let properties = node_to_device_property(&properties)?;
         for driver in &self.drivers {
-            match driver.matches(properties.clone()) {
+            match driver.matches(&properties) {
                 Ok(true) => {
                     return Ok(fdf::MatchedDriver {
                         url: Some(driver.url.clone()),
