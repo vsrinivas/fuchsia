@@ -1206,6 +1206,51 @@ pub const SYNC_FILE_RANGE_WAIT_BEFORE: u32 = 1;
 pub const SYNC_FILE_RANGE_WRITE: u32 = 2;
 pub const SYNC_FILE_RANGE_WAIT_AFTER: u32 = 4;
 pub const SYNC_FILE_RANGE_WRITE_AND_WAIT: u32 = 7;
+pub const FUTEX_WAIT: u32 = 0;
+pub const FUTEX_WAKE: u32 = 1;
+pub const FUTEX_FD: u32 = 2;
+pub const FUTEX_REQUEUE: u32 = 3;
+pub const FUTEX_CMP_REQUEUE: u32 = 4;
+pub const FUTEX_WAKE_OP: u32 = 5;
+pub const FUTEX_LOCK_PI: u32 = 6;
+pub const FUTEX_UNLOCK_PI: u32 = 7;
+pub const FUTEX_TRYLOCK_PI: u32 = 8;
+pub const FUTEX_WAIT_BITSET: u32 = 9;
+pub const FUTEX_WAKE_BITSET: u32 = 10;
+pub const FUTEX_WAIT_REQUEUE_PI: u32 = 11;
+pub const FUTEX_CMP_REQUEUE_PI: u32 = 12;
+pub const FUTEX_PRIVATE_FLAG: u32 = 128;
+pub const FUTEX_CLOCK_REALTIME: u32 = 256;
+pub const FUTEX_CMD_MASK: i32 = -385;
+pub const FUTEX_WAIT_PRIVATE: u32 = 128;
+pub const FUTEX_WAKE_PRIVATE: u32 = 129;
+pub const FUTEX_REQUEUE_PRIVATE: u32 = 131;
+pub const FUTEX_CMP_REQUEUE_PRIVATE: u32 = 132;
+pub const FUTEX_WAKE_OP_PRIVATE: u32 = 133;
+pub const FUTEX_LOCK_PI_PRIVATE: u32 = 134;
+pub const FUTEX_UNLOCK_PI_PRIVATE: u32 = 135;
+pub const FUTEX_TRYLOCK_PI_PRIVATE: u32 = 136;
+pub const FUTEX_WAIT_BITSET_PRIVATE: u32 = 137;
+pub const FUTEX_WAKE_BITSET_PRIVATE: u32 = 138;
+pub const FUTEX_WAIT_REQUEUE_PI_PRIVATE: u32 = 139;
+pub const FUTEX_CMP_REQUEUE_PI_PRIVATE: u32 = 140;
+pub const FUTEX_WAITERS: u32 = 2147483648;
+pub const FUTEX_OWNER_DIED: u32 = 1073741824;
+pub const FUTEX_TID_MASK: u32 = 1073741823;
+pub const ROBUST_LIST_LIMIT: u32 = 2048;
+pub const FUTEX_BITSET_MATCH_ANY: u32 = 4294967295;
+pub const FUTEX_OP_SET: u32 = 0;
+pub const FUTEX_OP_ADD: u32 = 1;
+pub const FUTEX_OP_OR: u32 = 2;
+pub const FUTEX_OP_ANDN: u32 = 3;
+pub const FUTEX_OP_XOR: u32 = 4;
+pub const FUTEX_OP_OPARG_SHIFT: u32 = 8;
+pub const FUTEX_OP_CMP_EQ: u32 = 0;
+pub const FUTEX_OP_CMP_NE: u32 = 1;
+pub const FUTEX_OP_CMP_LT: u32 = 2;
+pub const FUTEX_OP_CMP_LE: u32 = 3;
+pub const FUTEX_OP_CMP_GT: u32 = 4;
+pub const FUTEX_OP_CMP_GE: u32 = 5;
 pub const MAP_32BIT: u32 = 64;
 pub const MAP_GROWSDOWN: u32 = 256;
 pub const MAP_DENYWRITE: u32 = 2048;
@@ -1936,6 +1981,28 @@ pub struct fsxattr {
     pub fsx_pad: [crate::x86_64_types::c_uchar; 8usize],
 }
 pub type __kernel_rwf_t = crate::x86_64_types::c_int;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct robust_list {
+    pub next: *mut robust_list,
+}
+impl Default for robust_list {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct robust_list_head {
+    pub list: robust_list,
+    pub futex_offset: crate::x86_64_types::c_long,
+    pub list_op_pending: *mut robust_list,
+}
+impl Default for robust_list_head {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct prctl_mm_map {
