@@ -236,7 +236,7 @@ where
                 .value_name(&to_string_min_max(BLOCK_SIZE_RANGE))
                 .default_value(&block_size_default_str)
                 .validator(block_size_validator)
-                .help("Maximum number of outstanding IOs per thread.")
+                .help("Sets block size, in bytes, of odu operations.")
                 .takes_value(true),
         )
         .arg(
@@ -246,7 +246,7 @@ where
                 .value_name(&to_string_min_max(MAX_IO_SIZE_RANGE))
                 .default_value(&max_io_size_default_str)
                 .validator(max_io_size_validator)
-                .help("Maximum number of outstanding IOs per thread.")
+                .help("Maximum number bytes for an operation.")
                 .takes_value(true),
         )
         .arg(
@@ -255,7 +255,7 @@ where
                 .long("align")
                 .possible_values(&["true", "false"])
                 .default_value(&align_default_str)
-                .help("Maximum number of outstanding IOs per thread.")
+                .help("If set to true, IOs are aligned to block_size.")
                 .takes_value(true),
         )
         .arg(
@@ -265,7 +265,7 @@ where
                 .value_name(&to_string_min_max(MAX_IO_COUNT_RANGE))
                 .default_value(&max_io_count_default_str)
                 .validator(max_io_count_validator)
-                .help("Maximum number of outstanding IOs per thread.")
+                .help("Maximum number operations to generate per thread.")
                 .takes_value(true),
         )
         .arg(
@@ -274,7 +274,7 @@ where
                 .long("target_length")
                 .value_name(&to_string_min_max(0..=std::u64::MAX))
                 .default_value(&target_size_default_str)
-                .help("Maximum number of outstanding IOs per thread.")
+                .help("Sets the range [0, target_length] for the operation to issue IOs on.")
                 .takes_value(true),
         )
         .arg(
@@ -284,7 +284,7 @@ where
                 .value_name(&to_string_min_max(THREAD_COUNT_RANGE))
                 .default_value(&thread_count_default_str)
                 .validator(thread_count_validator)
-                .help("Maximum number of outstanding IOs per thread.")
+                .help("Number of IO issuing threads.")
                 .takes_value(true),
         )
         .arg(
@@ -307,7 +307,7 @@ where
                 .long("target_type")
                 .possible_values(&AvailableTargets::friendly_names()[..])
                 .default_value(&target_type_default_str)
-                .help("Maximum number of outstanding IOs per thread.")
+                .help("Type of the target to operate on.")
                 .takes_value(true),
         )
         .arg(
@@ -316,7 +316,7 @@ where
                 .long("sequential")
                 .possible_values(&["true", "false"])
                 .default_value(&sequential_default_str)
-                .help("Maximum number of outstanding IOs per thread.")
+                .help("If true, the IOs issued will be sequential w.r.t the file offset.")
                 .takes_value(true),
         )
         .arg(
@@ -325,7 +325,7 @@ where
                 .long("output_config_file")
                 .value_name("FILE")
                 .default_value(&output_config_file_default_str)
-                .help("Maximum number of outstanding IOs per thread.")
+                .help("Writes passed options to given file so as to make it re-runnable.")
                 .takes_value(true),
         )
         .arg(
@@ -334,7 +334,7 @@ where
                 .long("target")
                 .value_name("FILE")
                 .required(true)
-                .help("Maximum number of outstanding IOs per thread.")
+                .help("The target on which operations will be performed.")
                 .takes_value(true),
         )
         .arg(
