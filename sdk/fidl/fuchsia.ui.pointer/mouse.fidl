@@ -111,22 +111,18 @@ table MousePointerSample {
     /// Required.
     1: uint32 device_id;
 
-    /// The state of this event in the mouse event stream's state machine.
-    /// Required.
-    2: EventPhase phase;
-
     /// The position of this event, in the viewport's coordinate system.
     /// Required.
-    3: Point2 position_in_viewport;
+    2: Point2 position_in_viewport;
 
     /// Relative vertical scrolling displacement.
-    4: int64 scroll_v;
+    3: int64 scroll_v;
 
     /// Relative horizontal scrolling displacement.
-    5: int64 scroll_h;
+    4: int64 scroll_h;
 
     /// Identifiers of currently pressed buttons.
-    6: vector<uint8>:device.MOUSE_MAX_NUM_BUTTONS pressed_buttons;
+    5: vector<uint8>:device.MOUSE_MAX_NUM_BUTTONS pressed_buttons;
 };
 
 /// The status of a mouse event stream, sent from server to client.
@@ -134,9 +130,6 @@ table MousePointerSample {
 /// Invariant: a client's mouse events are bracketed by
 /// [`MouseViewStatus.ENTERED`] and [`MouseViewStatus.EXITED`].
 ///
-/// This information is provided separately from the EventPhase state machine,
-/// because it is a property of the event stream interacting with the scene,
-/// instead of a property of the mouse device.
 struct MouseEventStreamInfo {
     /// An identifier for the mouse device that issues a mouse event stream.
     uint32 device_id;

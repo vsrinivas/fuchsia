@@ -30,11 +30,7 @@ library fuchsia.ui.pointer;
 /// an open interaction.
 ///
 /// For example, touch events are typically observed as a succession of
-/// interactions, as fingers engage and disengage with the display. In contrast,
-/// mouse events are typically observed as just one open interaction: the stream
-/// starts with the `ADD` event (when it is connected), and movements are
-/// represented as `CHANGE` events. As a result, in the context of mouse, we
-/// talk about a stream or interaction interchangeably.
+/// interactions, as fingers engage and disengage with the display.
 enum EventPhase {
     /// The device has started tracking the pointer.
     ADD = 1;
