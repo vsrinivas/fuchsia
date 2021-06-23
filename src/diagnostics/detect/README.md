@@ -30,7 +30,7 @@ explicitly enabled as explained in
 
 Snapshot triggers live in .triage files in the
 `//src/diagnostics/config/triage/detect` directory. Files added to that
-directory must also be added to `detect_files` in
+directory must also be added to `detect_unconditional_files` in
 `//src/diagnostics/config/triage/BUILD.gn`.
 
 The .triage files are standard [Triage](fuchsia-mirror/src/diagnostics/triage/config.md)
@@ -60,6 +60,21 @@ The .triage files are standard [Triage](fuchsia-mirror/src/diagnostics/triage/co
       by each action will be identical. `repeat` throttling will be applied
       per-signature not per-action, using the value from the action that
       triggered.
+
+## Conditional file inclusion
+
+Detect configuration files can be included in only a subset of builds or
+products. This can be done in `//src/diagnostics/config/triage/BUILD.gn` by:
+
+1. Adding the file to `detect_conditional_files` rather
+than `detect_unconditional_files`
+1. Creating a new `config_data()` entry; by convention its target name should
+be the same as the file name
+1. Adding that target to the appropriate group so the file is included along
+with whatever component(s) it should be analyzing
+
+
+See [here for examples](https://fuchsia-review.googlesource.com/c/fuchsia/+/542996).
 
 ## The fine print
 
