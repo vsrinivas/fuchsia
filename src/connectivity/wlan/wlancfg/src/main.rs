@@ -15,7 +15,7 @@ mod util;
 use {
     crate::{
         client::network_selection::NetworkSelector,
-        config_management::SavedNetworksManager,
+        config_management::{SavedNetworksManager, SavedNetworksManagerApi},
         legacy::{device, IfaceRef},
         mode_management::{
             create_iface_manager, iface_manager_api::IfaceManagerApi, phy_manager::PhyManager,

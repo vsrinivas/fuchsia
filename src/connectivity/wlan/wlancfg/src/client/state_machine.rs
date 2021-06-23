@@ -5,7 +5,7 @@
 use {
     crate::{
         client::{network_selection, sme_credential_from_policy, types},
-        config_management::SavedNetworksManager,
+        config_management::{SavedNetworksManager, SavedNetworksManagerApi},
         util::{
             listener::{
                 ClientListenerMessageSender, ClientNetworkState, ClientStateUpdate,

@@ -8,7 +8,7 @@ use {
         client::{
             network_selection::NetworkSelector, state_machine as client_fsm, types as client_types,
         },
-        config_management::SavedNetworksManager,
+        config_management::{SavedNetworksManager, SavedNetworksManagerApi},
         mode_management::{
             iface_manager_api::IfaceManagerApi,
             iface_manager_types::*,

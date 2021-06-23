@@ -6,7 +6,7 @@
 use {
     crate::{
         client::types,
-        config_management::{SavedNetworksManager, ScanResultType},
+        config_management::{SavedNetworksManager, SavedNetworksManagerApi, ScanResultType},
         mode_management::iface_manager_api::IfaceManagerApi,
     },
     anyhow::{format_err, Error},

@@ -8,7 +8,7 @@ use {
         client::types as client_types,
         config_management::{
             self, Credential, NetworkConfigError, NetworkIdentifier, SaveError,
-            SavedNetworksManager,
+            SavedNetworksManager, SavedNetworksManagerApi,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
         util::listener,

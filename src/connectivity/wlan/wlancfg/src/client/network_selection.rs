@@ -10,6 +10,7 @@ use {
         },
         config_management::{
             self, ConnectFailure, Credential, Disconnect, FailureReason, SavedNetworksManager,
+            SavedNetworksManagerApi,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
     },

@@ -15,6 +15,7 @@ use {
         legacy::known_ess_store::{self, EssJsonRead, KnownEss, KnownEssStore},
     },
     anyhow::format_err,
+    async_trait::async_trait,
     fidl_fuchsia_wlan_common::ScanType,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_cobalt::CobaltSender,
@@ -59,6 +60,80 @@ pub enum ScanResultType {
     #[allow(dead_code)]
     Undirected,
     Directed(Vec<types::NetworkIdentifier>), // Contains list of target SSIDs
+}
+
+#[async_trait]
+pub trait SavedNetworksManagerApi: Send + Sync {
+    /// Attempt to remove the NetworkConfig described by the specified NetworkIdentifier and
+    /// Credential. Return true if a NetworkConfig is remove and false otherwise.
+    async fn remove(
+        &self,
+        network_id: NetworkIdentifier,
+        credential: Credential,
+    ) -> Result<bool, NetworkConfigError>;
+
+    /// Get the count of networks in store, including multiple values with same SSID
+    async fn known_network_count(&self) -> usize;
+
+    /// Return a list of network configs that match the given SSID.
+    async fn lookup(&self, id: NetworkIdentifier) -> Vec<NetworkConfig>;
+
+    /// Return a list of network configs that could be used with the security type seen in a scan.
+    /// This includes configs that have a lower security type that can be upgraded to match the
+    /// provided detailed security type.
+    async fn lookup_compatible(
+        &self,
+        ssid: &types::Ssid,
+        scan_security: types::SecurityTypeDetailed,
+    ) -> Vec<NetworkConfig>;
+
+    /// Save a network by SSID and password. If the SSID and password have been saved together
+    /// before, do not modify the saved config. Update the legacy storage to keep it consistent
+    /// with what it did before the new version. If a network is pushed out because of the newly
+    /// saved network, this will return the removed config.
+    async fn store(
+        &self,
+        network_id: NetworkIdentifier,
+        credential: Credential,
+    ) -> Result<Option<NetworkConfig>, NetworkConfigError>;
+
+    /// Update the specified saved network with the result of an attempted connect.  If the
+    /// specified network could have been connected to with a different security type and we
+    /// do not find the specified config, we will check the other possible security type. For
+    /// example if a WPA3 network is specified, we will check WPA2 if it isn't found. If the
+    /// specified network is not saved, this function does not save it.
+    async fn record_connect_result(
+        &self,
+        id: NetworkIdentifier,
+        credential: &Credential,
+        bssid: types::Bssid,
+        connect_result: fidl_sme::ConnectResultCode,
+        discovered_in_scan: Option<ScanType>,
+    );
+
+    /// Record the disconnect from a network, to be used for things such as avoiding connections
+    /// that drop soon after starting.
+    async fn record_disconnect(
+        &self,
+        id: &NetworkIdentifier,
+        credential: &Credential,
+        bssid: types::Bssid,
+        uptime: zx::Duration,
+        curr_time: zx::Time,
+    );
+
+    async fn record_periodic_metrics(&self);
+
+    /// Update hidden networks probabilities based on scan results. Record either results of a
+    /// passive scan or a directed active scan.
+    async fn record_scan_result(
+        &self,
+        scan_type: ScanResultType,
+        results: Vec<types::NetworkIdentifierDetailed>,
+    );
+
+    // Return a list of every network config that has been saved.
+    async fn get_networks(&self) -> Vec<NetworkConfig>;
 }
 
 impl SavedNetworksManager {
@@ -264,9 +339,18 @@ impl SavedNetworksManager {
         Ok(saved_networks)
     }
 
-    /// Attempt to remove the NetworkConfig described by the specified NetworkIdentifier and
-    /// Credential. Return true if a NetworkConfig is remove and false otherwise.
-    pub async fn remove(
+    /// Clear the in memory storage and the persistent storage. Also clear the legacy storage.
+    #[cfg(test)]
+    pub async fn clear(&self) -> Result<(), anyhow::Error> {
+        self.saved_networks.lock().await.clear();
+        self.stash.lock().await.clear().await?;
+        self.legacy_store.clear()
+    }
+}
+
+#[async_trait]
+impl SavedNetworksManagerApi for SavedNetworksManager {
+    async fn remove(
         &self,
         network_id: NetworkIdentifier,
         credential: Credential,
@@ -301,28 +385,15 @@ impl SavedNetworksManager {
         Ok(false)
     }
 
-    /// Clear the in memory storage and the persistent storage. Also clear the legacy storage.
-    #[cfg(test)]
-    pub async fn clear(&self) -> Result<(), anyhow::Error> {
-        self.saved_networks.lock().await.clear();
-        self.stash.lock().await.clear().await?;
-        self.legacy_store.clear()
-    }
-
-    /// Get the count of networks in store, including multiple values with same SSID
-    pub async fn known_network_count(&self) -> usize {
+    async fn known_network_count(&self) -> usize {
         self.saved_networks.lock().await.values().into_iter().flatten().count()
     }
 
-    /// Return a list of network configs that match the given SSID.
-    pub async fn lookup(&self, id: NetworkIdentifier) -> Vec<NetworkConfig> {
+    async fn lookup(&self, id: NetworkIdentifier) -> Vec<NetworkConfig> {
         self.saved_networks.lock().await.entry(id).or_default().iter().map(Clone::clone).collect()
     }
 
-    /// Return a list of network configs that could be used with the security type seen in a scan.
-    /// This includes configs that have a lower security type that can be upgraded to match the
-    /// provided detailed security type.
-    pub async fn lookup_compatible(
+    async fn lookup_compatible(
         &self,
         ssid: &types::Ssid,
         scan_security: types::SecurityTypeDetailed,
@@ -344,11 +415,7 @@ impl SavedNetworksManager {
         matching_configs
     }
 
-    /// Save a network by SSID and password. If the SSID and password have been saved together
-    /// before, do not modify the saved config. Update the legacy storage to keep it consistent
-    /// with what it did before the new version. If a network is pushed out because of the newly
-    /// saved network, this will return the removed config.
-    pub async fn store(
+    async fn store(
         &self,
         network_id: NetworkIdentifier,
         credential: Credential,
@@ -393,12 +460,7 @@ impl SavedNetworksManager {
         Ok(evicted_config)
     }
 
-    /// Update the specified saved network with the result of an attempted connect.  If the
-    /// specified network could have been connected to with a different security type and we
-    /// do not find the specified config, we will check the other possible security type. For
-    /// example if a WPA3 network is specified, we will check WPA2 if it isn't found. If the
-    /// specified network is not saved, this function does not save it.
-    pub async fn record_connect_result(
+    async fn record_connect_result(
         &self,
         id: NetworkIdentifier,
         credential: &Credential,
@@ -457,9 +519,7 @@ impl SavedNetworksManager {
         error!("Failed to find matching network to record result of connect attempt.");
     }
 
-    /// Record the disconnect from a network, to be used for things such as avoiding connections
-    /// that drop soon after starting.
-    pub async fn record_disconnect(
+    async fn record_disconnect(
         &self,
         id: &NetworkIdentifier,
         credential: &Credential,
@@ -482,15 +542,13 @@ impl SavedNetworksManager {
         }
     }
 
-    pub async fn record_periodic_metrics(&self) {
+    async fn record_periodic_metrics(&self) {
         let saved_networks = self.saved_networks.lock().await;
         let mut cobalt_api = self.cobalt_api.lock().await;
         log_cobalt_metrics(&*saved_networks, &mut cobalt_api);
     }
 
-    /// Update hidden networks probabilities based on scan results. Record either results of a
-    /// passive scan or a directed active scan.
-    pub async fn record_scan_result(
+    async fn record_scan_result(
         &self,
         scan_type: ScanResultType,
         results: Vec<types::NetworkIdentifierDetailed>,
@@ -549,8 +607,7 @@ impl SavedNetworksManager {
         }
     }
 
-    // Return a list of every network config that has been saved.
-    pub async fn get_networks(&self) -> Vec<NetworkConfig> {
+    async fn get_networks(&self) -> Vec<NetworkConfig> {
         self.saved_networks
             .lock()
             .await
