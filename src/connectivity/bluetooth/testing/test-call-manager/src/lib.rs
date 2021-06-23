@@ -64,6 +64,7 @@ impl Dialer {
         .to_owned();
 
         let result = self.dial_result.get(&number).cloned().unwrap_or(zx::Status::NOT_FOUND);
+        fx_log_info!("Dial action result: {:?} - {:?}", action, result);
         if result == zx::Status::OK {
             self.last_dialed = Some(number.clone());
             Ok(number)
@@ -649,10 +650,15 @@ impl TestCallManager {
                         None => drop(responder.send(&mut Err(zx::Status::NOT_FOUND.into_raw()))),
                     };
                 } else {
-                    let mut inner = self.inner.lock().await;
                     // Simulate dialing action and then respond to any outstanding WatchForCall
                     // requests.
-                    let mut result = match inner.manager.dialer.dial(action) {
+                    let mut result = match {
+                        // Only hold onto the lock while using it to "dial" the number.
+                        // Holding the lock past this point would cause a deadlock when
+                        // calling `outgoing_call`.
+                        let mut inner = self.inner.lock().await;
+                        inner.manager.dialer.dial(action)
+                    } {
                         Ok(number) => match self.outgoing_call(&number).await {
                             Ok(id) => {
                                 fx_log_info!(
@@ -669,6 +675,7 @@ impl TestCallManager {
                         },
                         Err(status) => Err(status.into_raw()),
                     };
+                    fx_log_info!("sending result to peer: {:?}", result);
 
                     // Once dialing and hanging gets have been handled, send response.
                     let _ = responder.send(&mut result);
@@ -1051,5 +1058,36 @@ impl TestCallManager {
     /// Cleanup any HFP related objects.
     pub async fn cleanup(&self) {
         *self.inner.lock().await = TestCallManagerInner::default();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fidl_fuchsia_bluetooth_hfp::PeerHandlerMarker;
+
+    #[fuchsia::test]
+    async fn outgoing_call_does_not_deadlock() {
+        let manager = TestCallManager::new();
+
+        // set up the dial result so that an outgoing call request will be a success.
+        manager.set_dial_result("123".to_string(), zx::Status::OK).await;
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
+
+        // Create a background task to manage a peer channel.
+        fasync::Task::local({
+            let manager = manager.clone();
+            async move {
+                manager.manage_peer(PeerId { value: 1 }, stream).await;
+            }
+        })
+        .detach();
+
+        // requesting an outgoing call should complete successfully
+        let result =
+            proxy.request_outgoing_call(&mut CallAction::DialFromNumber("123".to_string())).await;
+        assert!(result.is_ok());
     }
 }
