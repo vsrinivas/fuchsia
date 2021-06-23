@@ -8,6 +8,7 @@
 #include <lib/pci/hw.h>
 #include <stdio.h>
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
 
 __BEGIN_CDECLS;
 #include <libfdt.h>
@@ -59,8 +60,10 @@ static constexpr uint8_t kPciRegisterBar5 = 0x24;
 static constexpr uint8_t kPciRegisterCapBase = 0xa4;
 static constexpr uint8_t kPciRegisterCapTop = UINT8_MAX;
 
+// Size of the PCI capability space in bytes.
+constexpr uint8_t kPciRegisterCapMaxBytes = kPciRegisterCapTop - kPciRegisterCapBase + 1;
+
 // PCI capabilities register layout.
-constexpr uint8_t kPciCapTypeOffset = 0;
 constexpr uint8_t kPciCapNextOffset = 1;
 
 // clang-format off
@@ -367,72 +370,66 @@ zx_status_t PciBus::ConfigureDtb(void* dtb) const {
   return ZX_OK;
 }
 
-// PCI Local Bus Spec v3.0 Section 6.7: Each capability must be DWORD aligned.
-static inline uint8_t pci_cap_len(const pci_cap_t* cap) { return align(cap->len, 4); }
-
 PciDevice::PciDevice(const Attributes attrs) : attrs_(attrs) {}
 
-const pci_cap_t* PciDevice::FindCapability(uint8_t addr, uint8_t* cap_index,
-                                           uint32_t* cap_base) const {
-  uint32_t base = kPciRegisterCapBase;
-  for (uint8_t i = 0; i < num_capabilities_; ++i) {
-    const pci_cap_t* cap = &capabilities_[i];
-    uint8_t cap_len = pci_cap_len(cap);
-    if (addr >= base + cap_len) {
-      base += cap_len;
-      continue;
-    }
-    *cap_index = i;
-    *cap_base = base;
-    return cap;
+zx_status_t PciDevice::AddCapability(fbl::Span<const uint8_t> payload) {
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  // PCI Local Bus Spec v3.0 Section 6.7: Each capability must be DWORD aligned.
+  //
+  // Invariant: We keep capabilities_.size() DWORD (4 byte) aligned by adding
+  // padding if neccessary. This means any new data appened to the end of the
+  // buffer will be aligned by default.
+  ZX_DEBUG_ASSERT(is_aligned(capabilities_.size(), sizeof(uint32_t)));
+  size_t padding = align(payload.size(), sizeof(uint32_t)) - payload.size();
+
+  // Ensure we won't exceeded the capability space.
+  if (capabilities_.size() + payload.size() + padding > kPciRegisterCapMaxBytes) {
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  // Given address doesn't lie within the range of addresses occupied by
-  // capabilities.
-  return nullptr;
+  // Copy the payload and padding into the buffer.
+  size_t cap_start = capabilities_.size();
+  capabilities_.insert(capabilities_.end(), payload.begin(), payload.end());
+  capabilities_.insert(capabilities_.end(), padding, 0);
+
+  // Set the "next" pointer of this cap to 0, indicating this is the last cap.
+  //
+  //   PCI Local Bus Spec v3.0 Section 6.7: A pointer value of 00h is
+  //   used to indicate the last capability in the list.
+  capabilities_.at(cap_start + kPciCapNextOffset) = 0;
+
+  // If we have a previous capability, patch its next pointer to point to
+  // this capability.
+  //
+  //   PCI Local Bus Spec v3.0 Section 6.7: Each capability in the list
+  //   consists of an 8-bit ID field assigned by the PCI SIG, an 8 bit
+  //   pointer in configuration space to the next capability, and some
+  //   number of additional registers immediately following the pointer
+  //   to implement that capability.
+  if (last_cap_offset_.has_value()) {
+    capabilities_[*last_cap_offset_ + kPciCapNextOffset] = cap_start + kPciRegisterCapBase;
+  }
+
+  // Track the beginning of this cap.
+  last_cap_offset_ = cap_start;
+
+  return ZX_OK;
 }
 
-zx_status_t PciDevice::ReadCapability(uint8_t addr, uint32_t* out) const {
-  uint8_t cap_index;
-  uint32_t cap_base;
-  const pci_cap_t* cap = FindCapability(addr, &cap_index, &cap_base);
-  if (cap == nullptr) {
+zx_status_t PciDevice::ReadCapability(size_t offset, uint32_t* out) const {
+  // Ensure our read is aligned.
+  if (!is_aligned(offset, sizeof(uint32_t))) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Ensure we are not reading beyond the capability size.
+  if (static_cast<size_t>(offset) + sizeof(uint32_t) > capabilities_.size()) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  uint32_t word = 0;
-  uint32_t cap_offset = addr - cap_base;
-  for (uint8_t byte = 0; byte < sizeof(word); ++byte, ++cap_offset) {
-    // In the case of padding bytes, return 0.
-    if (cap_offset >= cap->len) {
-      break;
-    }
-
-    // PCI Local Bus Spec v3.0 Section 6.7:
-    // Each capability in the list consists of an 8-bit ID field assigned
-    // by the PCI SIG, an 8 bit pointer in configuration space to the next
-    // capability, and some number of additional registers immediately
-    // following the pointer to implement that capability.
-    uint32_t val = 0;
-    switch (cap_offset) {
-      case kPciCapTypeOffset:
-        val = cap->id;
-        break;
-      case kPciCapNextOffset:
-        // PCI Local Bus Spec v3.0 Section 6.7: A pointer value of 00h is
-        // used to indicate the last capability in the list.
-        if (cap_index + 1u < num_capabilities_) {
-          val = cap_base + pci_cap_len(cap);
-        }
-        break;
-      default:
-        val = cap->data[cap_offset];
-        break;
-    }
-    word |= val << (byte * 8);
-  }
-
-  *out = word;
+  // Read the given word.
+  memcpy(out, capabilities_.data() + offset, sizeof(uint32_t));
   return ZX_OK;
 }
 
@@ -456,7 +453,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
       *value = command_;
 
       uint16_t status = PCI_STATUS_INTERRUPT;
-      if (capabilities_ != nullptr) {
+      if (!capabilities_.empty()) {
         status |= PCI_STATUS_NEW_CAPS;
       }
       *value |= status << 16;
@@ -519,16 +516,20 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     // |     (31..8)     |         (7..0)         |
     // |     Reserved    |  capabilities_pointer  |
     //  ------------------------------------------
-    case PCI_CONFIG_CAPABILITIES:
+    case PCI_CONFIG_CAPABILITIES: {
       *value = 0;
-      if (capabilities_ != nullptr) {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (!capabilities_.empty()) {
         *value |= kPciRegisterCapBase;
       }
       return ZX_OK;
-    case kPciRegisterCapBase ... kPciRegisterCapTop:
-      if (ReadCapability(reg, value) != ZX_ERR_NOT_FOUND) {
+    }
+    case kPciRegisterCapBase ... kPciRegisterCapTop: {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (ReadCapability(/*offset=*/(reg - kPciRegisterCapBase), value) != ZX_ERR_NOT_FOUND) {
         return ZX_OK;
       }
+    }
     // Fall-through if the capability is not-implemented.
     default:
       return pci_read_unimplemented_register(value);

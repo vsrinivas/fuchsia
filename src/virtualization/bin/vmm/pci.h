@@ -10,6 +10,9 @@
 
 #include <mutex>
 
+#include <fbl/array.h>
+#include <fbl/span.h>
+
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/interrupt_controller.h"
@@ -29,6 +32,7 @@ class Guest;
 
 static constexpr size_t kPciMaxDevices = 16;
 static constexpr size_t kPciMaxBars = 2;
+static constexpr uint8_t kPciCapMinSize = 2;  // Minimum size of a PCI capability, in bytes.
 
 static constexpr uint64_t kPciBarMmioAccessSpace = 0;
 static constexpr uint64_t kPciBarMmioType64Bit = 0b10 << 1;
@@ -53,24 +57,6 @@ constexpr uint8_t pci_type1_register(uint64_t addr) {
 
 class PciBus;
 class PciDevice;
-
-// PCI capability structure.
-//
-// The 1-byte next pointer will be computed dynamically while traversing the
-// capabilities list.
-typedef struct pci_cap {
-  // PCI capability ID as defined in PCI LOCAL BUS SPECIFICATION, REV. 3.0
-  // Appendix H.
-  uint8_t id;
-  // Data for this capability. Must be at least |len| bytes. The first two bytes
-  // will be ignored (id and next) as these will be populated dynamically.
-  // They're skipped over in the data pointer to allow common structures to be
-  // used for read/write where the id/next pointers are embedded in the
-  // structure.
-  uint8_t* data;
-  // Size of |data|.
-  uint8_t len;
-} pci_cap_t;
 
 struct PciBar : public IoHandler {
   // Register value.
@@ -139,10 +125,19 @@ class PciDevice {
   // Returns nullptr if the register is not implemented.
   const PciBar* bar(size_t n) const { return is_bar_implemented(n) ? &bar_[n] : nullptr; }
 
-  // Install a capability list.
-  void set_capabilities(const pci_cap_t* caps, size_t num_caps) {
-    capabilities_ = caps;
-    num_capabilities_ = num_caps;
+  // Install the given POD type as a PCI capability.
+  //
+  // Capabilities types must have a size aligned to 32-bits.
+  //
+  // The "next" pointer in cap header (byte 2) will be overwritten by
+  // the function, and need not contain any particular value.
+  template <typename T>
+  zx_status_t AddCapability(const T& capability) {
+    static_assert(sizeof(T) >= kPciCapMinSize, "Caps must be at least kPciCapMinSize bytes.");
+    static_assert(std::is_pod<T>::value, "Type T should be POD.");
+    static_assert(std::has_unique_object_representations<T>::value,
+                  "Type T should not contain implicit padding.");
+    return AddCapability(fbl::Span(reinterpret_cast<const uint8_t*>(&capability), sizeof(T)));
   }
 
  protected:
@@ -155,14 +150,16 @@ class PciDevice {
  private:
   friend class PciBus;
 
+  // Install a capability from the given payload.
+  zx_status_t AddCapability(fbl::Span<const uint8_t> payload);
+
   // Setup traps and handlers for accesses to BAR regions.
   zx_status_t SetupBarTraps(Guest* guest, bool skip_bell, async_dispatcher_t* dispatcher);
 
   zx_status_t ReadConfigWord(uint8_t reg, uint32_t* value) const;
 
-  zx_status_t ReadCapability(uint8_t addr, uint32_t* out) const;
-
-  const pci_cap_t* FindCapability(uint8_t addr, uint8_t* cap_index, uint32_t* cap_base) const;
+  // Read 32-bit from the capability area of the device's config space.
+  zx_status_t ReadCapability(size_t offset, uint32_t* out) const __TA_REQUIRES(mutex_);
 
   // Returns true when an interrupt is active.
   virtual bool HasPendingInterrupt() const = 0;
@@ -173,14 +170,16 @@ class PciDevice {
   const Attributes attrs_;
   // Command register.
   uint16_t command_ __TA_GUARDED(mutex_) = 0;
-  // Array of capabilities for this device.
-  const pci_cap_t* capabilities_ = nullptr;
-  // Size of |capabilities|.
-  size_t num_capabilities_ = 0;
   // PCI bus this device is connected to.
   PciBus* bus_ = nullptr;
   // IRQ vector assigned by the bus.
   uint32_t global_irq_ = 0;
+
+  // Capability section of the config space.
+  std::vector<uint8_t> capabilities_ __TA_GUARDED(mutex_);
+
+  // Offset to the beginning of the final capability in the config space.
+  std::optional<uint8_t> last_cap_offset_ __TA_GUARDED(mutex_);
 };
 
 class PciPortHandler : public IoHandler {

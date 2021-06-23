@@ -4,6 +4,7 @@
 
 #include "src/virtualization/bin/vmm/pci.h"
 
+#include <endian.h>
 #include <lib/async/default.h>
 #include <lib/pci/hw.h>
 
@@ -15,6 +16,14 @@ namespace {
 
 static constexpr uint16_t kPciConfigAddrPortBase = 0;
 static constexpr uint16_t kPciConfigDataPortBase = 4;
+
+// A simple 4-byte PCI capability containing the id/next fields,
+// and 2 bytes of data.
+struct SimplePciCap {
+  uint8_t id;
+  uint8_t next;
+  uint8_t data[2];
+};
 
 constexpr uint64_t pci_type1_addr(uint8_t bus, uint8_t device, uint8_t function, uint8_t reg) {
   return 0x80000000 | (bus << 16) | (device << 11) | (function << 8) | pci_type1_register(reg);
@@ -114,15 +123,6 @@ TEST(PciDeviceTest, ReadCapability) {
   bus.Init(async_get_default_dispatcher());
   PciDevice* device = bus.root_complex();
 
-  // Create and install a simple capability. First two bytes are ignored.
-  uint8_t cap_data[] = {0, 0, 0xf, 0xa};
-  pci_cap_t cap = {
-      .id = 0x9,
-      .data = cap_data,
-      .len = sizeof(cap_data),
-  };
-  device->set_capabilities(&cap, 1);
-
   // PCI Local Bus Spec 3.0 Table 6-2: Status Register Bits
   //
   // This optional read-only bit indicates whether or not this device
@@ -131,27 +131,30 @@ TEST(PciDeviceTest, ReadCapability) {
   // available. A value of one indicates that the value read at offset 34h is
   // a pointer in Configuration Space to a linked list of new capabilities.
   // Refer to Section 6.7 for details on New Capabilities.
-  IoValue status;
-  status.access_size = 2;
-  status.u16 = 0;
+  //
+  // Initially expect the bit to be 0, as we have no caps.
+  IoValue status = IoValue::FromU16(0);
+  EXPECT_EQ(device->ReadConfig(PCI_CONFIG_STATUS, &status), ZX_OK);
+  EXPECT_FALSE(status.u16 & PCI_STATUS_NEW_CAPS);
+
+  // Create and install a simple capability.
+  EXPECT_EQ(device->AddCapability(SimplePciCap{.id = 0x9, .next = 0, .data = {0x11, 0x22}}), ZX_OK);
+
+  // The PCI_STATUS_NEW_CAPS bit should now be set.
   EXPECT_EQ(device->ReadConfig(PCI_CONFIG_STATUS, &status), ZX_OK);
   EXPECT_TRUE(status.u16 & PCI_STATUS_NEW_CAPS);
 
   // Read the cap pointer from config space. Here just verify it points to
   // some location beyond the pre-defined header.
-  IoValue cap_ptr;
-  cap_ptr.access_size = 1;
-  cap_ptr.u8 = 0;
+  IoValue cap_ptr = IoValue::FromU8(0);
   EXPECT_EQ(device->ReadConfig(PCI_CONFIG_CAPABILITIES, &cap_ptr), ZX_OK);
   EXPECT_LT(0x40u, cap_ptr.u8);
 
-  // Read the capability. This will be the Cap ID, next pointer (0), followed
+  // Read the capability. This will be the Cap ID (9), next pointer (0), followed
   // by data bytes (starting at index 2).
-  IoValue cap_value;
-  cap_value.access_size = 4;
-  cap_value.u32 = 0;
+  IoValue cap_value = IoValue::FromU32(0);
   EXPECT_EQ(device->ReadConfig(cap_ptr.u8, &cap_value), ZX_OK);
-  EXPECT_EQ(0x0a0f0009u, cap_value.u32);
+  EXPECT_EQ(be32toh(0x09'00'11'22), cap_value.u32);
 }
 
 // Build a list of capabilities with no data (only the required ID/next
@@ -164,22 +167,15 @@ TEST(PciDeviceTest, ReadChainedCapability) {
   PciDevice* device = bus.root_complex();
 
   // Build list of caps.
-  pci_cap_t caps[5];
-  size_t num_caps = sizeof(caps) / sizeof(caps[0]);
-  for (uint8_t i = 0; i < num_caps; ++i) {
-    caps[i].id = i;
-    caps[i].len = 2;
+  const int kNumCaps = 5;
+  for (uint8_t i = 0; i < kNumCaps; i++) {
+    EXPECT_EQ(device->AddCapability(SimplePciCap{.id = i}), ZX_OK);
   }
-  device->set_capabilities(caps, num_caps);
 
-  IoValue cap_ptr;
-  cap_ptr.access_size = 1;
-  cap_ptr.u8 = 0;
+  IoValue cap_ptr = IoValue::FromU8(0);
   EXPECT_EQ(device->ReadConfig(PCI_CONFIG_CAPABILITIES, &cap_ptr), ZX_OK);
-  for (uint8_t i = 0; i < num_caps; ++i) {
-    IoValue cap_header;
-    cap_header.access_size = 4;
-    cap_header.u32 = 0;
+  for (uint8_t i = 0; i < kNumCaps; ++i) {
+    IoValue cap_header = IoValue::FromU32(0);
 
     // Read the current capability.
     EXPECT_EQ(device->ReadConfig(cap_ptr.u8, &cap_header), ZX_OK);

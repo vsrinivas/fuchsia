@@ -40,8 +40,6 @@ static constexpr uint8_t kVirtioPciNotifyBar = 1;
 static_assert(kVirtioPciBar < kPciMaxBars && kVirtioPciNotifyBar < kPciMaxBars,
               "Not enough BAR registers available");
 
-static constexpr size_t kVirtioPciNumCapabilities = 4;
-
 // We initialize Virtio devices with a ring size so that a sensible size is set,
 // even if they do not configure one themselves.
 static constexpr uint16_t kDefaultVirtioQueueSize = 128;
@@ -165,19 +163,11 @@ class VirtioPci : public PciDevice {
   // Handle writes to the notify BAR.
   zx_status_t NotifyBarWrite(uint64_t addr, const IoValue& value);
 
-  void SetupCaps();
+  zx_status_t SetupCaps();
 
   uint16_t queue_sel() const;
 
   VirtioDeviceConfig* const device_config_;
-
-  // We need one of these for every virtio_pci_cap_t structure we expose.
-  pci_cap_t capabilities_[kVirtioPciNumCapabilities];
-  // Virtio PCI capabilities.
-  virtio_pci_cap_t common_cfg_cap_;
-  virtio_pci_cap_t device_cfg_cap_;
-  virtio_pci_notify_cap_t notify_cfg_cap_;
-  virtio_pci_cap_t isr_cfg_cap_;
 
   mutable std::mutex mutex_;
 
