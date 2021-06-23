@@ -65,5 +65,4 @@ rustc_library("wlan-mlme") {
 
 fuchsia_unittest_package("wlan-mlme-tests") {
   deps = [ ":wlan-mlme_test" ]
-  manifest = "meta/wlan_mlme_lib_test.cmx"
 }

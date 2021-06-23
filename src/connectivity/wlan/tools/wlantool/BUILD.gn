@@ -48,5 +48,4 @@ fuchsia_shell_package("wlan") {
 
 fuchsia_unittest_package("wlantool-tests") {
   deps = [ ":bin_test" ]
-  manifest = "meta/wlan_bin_test.cmx"
 }

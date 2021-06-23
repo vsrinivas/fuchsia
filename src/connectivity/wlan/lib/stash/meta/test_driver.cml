@@ -1,0 +1,17 @@
+{
+    include: [
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/wlan_stash_lib_test",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.stash.SecureStore",
+                "fuchsia.stash.Store",
+            ],
+        },
+    ],
+}

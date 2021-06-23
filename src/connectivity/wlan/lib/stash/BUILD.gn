@@ -44,9 +44,24 @@ rustc_library("wlan-stash-constants") {
   sources = [ "src/constants.rs" ]
 }
 
-fuchsia_unittest_package("wlan-stash-tests") {
+fuchsia_component("test_driver") {
+  testonly = true
+  manifest = "meta/test_driver.cml"
   deps = [ ":wlan-stash_test" ]
-  manifest = "meta/wlan_stash_lib_test.cmx"
+}
+
+fuchsia_component("wlan_stash_lib_test") {
+  testonly = true
+  manifest = "meta/wlan_stash_lib_test.cml"
+}
+
+fuchsia_test_package("wlan-stash-tests") {
+  test_components = [ ":wlan_stash_lib_test" ]
+  deps = [
+    ":test_driver",
+    "//src/sys/stash:stash_secure_v2",
+    "//src/sys/stash:stash_v2",
+  ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

@@ -225,7 +225,6 @@ foreach(test, tests) {
   fuchsia_unittest_component("${name}_component") {
     component_name = name
     deps = [ ":${name}s" ]
-    manifest = "meta/wlan_${test}_unittest.cmx"
   }
 }
 

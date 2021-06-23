@@ -19,5 +19,4 @@ rustc_library("wlan-bitfield-wrapper") {
 
 fuchsia_unittest_package("wlan-bitfield-tests") {
   deps = [ ":wlan-bitfield-wrapper_test" ]
-  manifest = "meta/wlan_bitfield_wrapper_lib_test.cmx"
 }

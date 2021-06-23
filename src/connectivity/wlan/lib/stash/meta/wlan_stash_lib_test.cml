@@ -1,0 +1,53 @@
+{
+    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/wlan-stash-tests#meta/test_driver.cm",
+        },
+        {
+            name: "stash_secure",
+            url: "fuchsia-pkg://fuchsia.com/wlan-stash-tests#meta/stash_secure.cm",
+            startup: "eager",
+        },
+        {
+            name: "stash",
+            url: "fuchsia-pkg://fuchsia.com/wlan-stash-tests#meta/stash.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#stash",
+                "#stash_secure",
+            ],
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: [
+                "#stash",
+                "#stash_secure",
+            ],
+        },
+        {
+            protocol: "fuchsia.stash.SecureStore",
+            from: "#stash_secure",
+            to: "#test_driver",
+        },
+        {
+            protocol: "fuchsia.stash.Store",
+            from: "#stash",
+            to: "#test_driver",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test_driver",
+        },
+    ],
+}

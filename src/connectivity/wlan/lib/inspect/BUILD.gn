@@ -29,5 +29,4 @@ rustc_library("wlan-inspect") {
 
 fuchsia_unittest_package("wlan-inspect-tests") {
   deps = [ ":wlan-inspect_test" ]
-  manifest = "meta/wlan_inspect_lib_test.cmx"
 }

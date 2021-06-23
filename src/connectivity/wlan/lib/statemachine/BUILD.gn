@@ -21,5 +21,4 @@ rustc_library("wlan-statemachine") {
 
 fuchsia_unittest_package("wlan-statemachine-tests") {
   deps = [ ":wlan-statemachine_test" ]
-  manifest = "meta/wlan_statemachine_lib_test.cmx"
 }

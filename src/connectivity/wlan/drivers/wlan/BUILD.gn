@@ -71,7 +71,6 @@ test("wlan_minstrel_unittest") {
 
 fuchsia_unittest_package("wlan_drivers_tests") {
   deps = [ ":wlan_minstrel_unittest" ]
-  manifest = "meta/wlan_minstrel_unittest.cmx"
 }
 
 fuchsia_system_package("wlan") {

@@ -72,7 +72,6 @@ test("wlanphy_convert_unittest") {
 
 fuchsia_unittest_package("wlanphy-unittests") {
   deps = [ ":wlanphy_convert_unittest" ]
-  manifest = "meta/wlanphy_convert_unittest.cmx"
 }
 
 group("tests") {
