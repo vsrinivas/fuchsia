@@ -185,7 +185,6 @@ BaseStream::TimelineFunctionSnapshot MixStage::ref_time_to_frac_presentation_fra
 
 void MixStage::SetPresentationDelay(zx::duration external_delay) {
   TRACE_DURATION("audio", "MixStage::SetPresentationDelay");
-  ReadableStream::SetPresentationDelay(external_delay);
 
   if constexpr (kLogPresentationDelay) {
     FX_LOGS(WARNING) << "    (" << this << ") " << __FUNCTION__ << " given external_delay "
