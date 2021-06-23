@@ -237,6 +237,24 @@ pub fn safe_float_to_int(float: f64) -> Option<i64> {
     Some(float as i64)
 }
 
+fn first_usable_value(values: impl Iterator<Item = MetricValue>) -> MetricValue {
+    let mut found_empty = false;
+    for value in values {
+        match value {
+            MetricValue::Problem(Problem::Missing(_)) => {}
+            MetricValue::Vector(ref v)
+                if v.len() == 1 && matches!(v[0], MetricValue::Problem(Problem::Missing(_))) => {}
+            MetricValue::Vector(v) if v.len() == 0 => found_empty = true,
+            value => return value,
+        }
+    }
+    if found_empty {
+        return MetricValue::Vector(vec![]);
+    }
+    // This will be improved when we get structured output and structured errors.
+    return missing("Every value was missing");
+}
+
 impl<'a> MetricState<'a> {
     /// Create an initialized MetricState.
     pub fn new(metrics: &'a Metrics, fetcher: Fetcher<'a>, now: Option<i64>) -> MetricState<'a> {
@@ -312,16 +330,9 @@ impl<'a> MetricState<'a> {
                         )))
                     }
                     Some(metric) => match metric {
-                        Metric::Selector(selectors) => {
-                            selectors.iter().fold(MetricValue::Vector(vec![]), |acc, next| {
-                                if let MetricValue::Vector(ref vals) = acc {
-                                    if vals.len() == 0 {
-                                        return fetcher.fetch(next);
-                                    }
-                                }
-                                acc
-                            })
-                        }
+                        Metric::Selector(selectors) => first_usable_value(
+                            selectors.iter().map(|selector| fetcher.fetch(selector)),
+                        ),
                         Metric::Eval(expression) => {
                             self.evaluate_value(real_namespace, &expression)
                         }
@@ -471,19 +482,7 @@ impl<'a> MetricState<'a> {
     }
 
     fn option(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
-        let mut found_empty = false;
-        for op in operands.iter() {
-            match self.evaluate(namespace, op) {
-                MetricValue::Problem(Problem::Missing(_)) => {}
-                MetricValue::Vector(v) if v.len() == 0 => found_empty = true,
-                value => return value,
-            }
-        }
-        if found_empty {
-            return MetricValue::Vector(vec![]);
-        }
-        // This will be improved when we get structured output and structured errors.
-        return missing("Every value was missing");
+        first_usable_value(operands.iter().map(|expression| self.evaluate(namespace, expression)))
     }
 
     fn now(&self, operands: &'a [Expression]) -> MetricValue {

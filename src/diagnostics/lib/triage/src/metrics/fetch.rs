@@ -495,6 +495,8 @@ mod test {
             SelectorString::try_from("INSPECT:bar.cmx:root:bar".to_owned()).unwrap();
         static ref NEW_BAR_SELECTOR: SelectorString =
             SelectorString::try_from("INSPECT:bar2.cmx:root:bar".to_owned()).unwrap();
+        static ref BAD_COMPONENT_SELECTOR: SelectorString =
+            SelectorString::try_from("INSPECT:bad_component.cmx:root:bar".to_owned()).unwrap();
         static ref WRONG_SELECTOR: SelectorString =
             SelectorString::try_from("INSPECT:bar.cmx:root:oops".to_owned()).unwrap();
         static ref LOCAL_DUPLICATES_F: Vec<DiagnosticData> = {
@@ -585,6 +587,10 @@ mod test {
                 BAR_SELECTOR.clone(),
             ]),
         );
+        file_map.insert(
+            "bad_component_or_bar".to_owned(),
+            Metric::Selector(vec![BAD_COMPONENT_SELECTOR.clone(), BAR_SELECTOR.clone()]),
+        );
         let mut other_file_map = HashMap::new();
         other_file_map.insert("bar".to_owned(), Metric::Eval("42".to_owned()));
         let mut metrics = HashMap::new();
@@ -628,6 +634,10 @@ mod test {
         assert_eq!(
             file_state.evaluate_variable("bar_file", variable!("wrong_or_new_bar_or_bar")),
             MetricValue::Vector(vec![MetricValue::Int(90)])
+        );
+        assert_eq!(
+            file_state.evaluate_variable("bar_file", variable!("bad_component_or_bar")),
+            MetricValue::Vector(vec![MetricValue::Int(99)])
         );
         require_missing(
             file_state.evaluate_variable("other_file", variable!("bar_plus_one")),
