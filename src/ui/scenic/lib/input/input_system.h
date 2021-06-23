@@ -150,10 +150,9 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   Mat3ColumnMajorArray GetDestinationFromViewportTransform(const InternalPointerEvent& event,
                                                            zx_koid_t destination) const;
 
-  // For a view hierarchy where context is an ancestor of target, returns
-  // target's ancestor hierarchy below context: (context, target].
-  std::vector<zx_koid_t> GetAncestorChainUpToButExcludingContext(zx_koid_t target,
-                                                                 zx_koid_t context) const;
+  // For a view hierarchy where |top| is an ancestor of |bottom|, returns |bottom|'s ancestor
+  // hierarchy starting at |top| and ending at |bottom|.
+  std::vector<zx_koid_t> GetAncestorChainTopToBottom(zx_koid_t bottom, zx_koid_t top) const;
 
   // TODO(fxbug.dev/64206): Remove when we no longer have any legacy clients.
   fxl::WeakPtr<gfx::SceneGraph> scene_graph_;

@@ -500,25 +500,30 @@ static bool IsRootOrDirectChildOfRoot(zx_koid_t koid, const view_tree::Snapshot&
   return snapshot.view_tree.at(koid).parent == snapshot.root;
 }
 
-std::vector<zx_koid_t> InputSystem::GetAncestorChainUpToButExcludingContext(
-    zx_koid_t target, zx_koid_t context) const {
-  // Get ancestors from closest to furthest.
-  std::vector<zx_koid_t> ancestors = view_tree_snapshot_->GetAncestorsOf(target);
-  FX_DCHECK(ancestors.empty() ||
-            std::any_of(ancestors.begin(), ancestors.end(),
-                        [context](const zx_koid_t koid) { return koid == context; }));
+std::vector<zx_koid_t> InputSystem::GetAncestorChainTopToBottom(zx_koid_t bottom,
+                                                                zx_koid_t top) const {
+  if (bottom == top) {
+    return {bottom};
+  }
 
-  // Remove all ancestors from the context and up.
+  // Get ancestors bottom closest to furthest.
+  std::vector<zx_koid_t> ancestors = view_tree_snapshot_->GetAncestorsOf(bottom);
+  FX_DCHECK(ancestors.empty() || std::any_of(ancestors.begin(), ancestors.end(),
+                                             [top](const zx_koid_t koid) { return koid == top; }))
+      << "|top| must be an ancestor of |bottom|";
+
+  // Remove all ancestors after |top|.
   for (auto it = ancestors.begin(); it != ancestors.end(); ++it) {
-    if (*it == context) {
-      ancestors.erase(it, ancestors.end());
+    if (*it == top) {
+      ancestors.erase(++it, ancestors.end());
       break;
     }
   }
 
-  // Reverse the list and add |target| to the end.
+  // Reverse the list and add |bottom| to the end.
   std::reverse(ancestors.begin(), ancestors.end());
-  ancestors.emplace_back(target);
+  ancestors.emplace_back(bottom);
+  FX_DCHECK(ancestors.front() == top);
 
   return ancestors;
 }
@@ -539,8 +544,7 @@ std::vector<ContenderId> InputSystem::CollectContenders(StreamId stream_id,
     const zx_koid_t top_koid = hits.front();
 
     // Find TouchSource contenders in priority order from furthest (valid) ancestor to top hit view.
-    std::vector<zx_koid_t> ancestors =
-        GetAncestorChainUpToButExcludingContext(top_koid, event.context);
+    std::vector<zx_koid_t> ancestors = GetAncestorChainTopToBottom(top_koid, event.target);
     for (auto koid : ancestors) {
       const auto it = touch_contenders_.find(koid);
       // If a touch contender doesn't exist it means the client didn't provide a TouchSource

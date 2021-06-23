@@ -2,252 +2,303 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/pointer/cpp/fidl.h>
+#include <lib/async-testing/test_loop.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 #include <gtest/gtest.h>
 
-#include "src/ui/scenic/lib/input/tests/util.h"
+#include "lib/gtest/test_loop_fixture.h"
+#include "src/ui/scenic/lib/input/input_system.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 // These tests exercise input event delivery under different dispatch policies.
 // Setup:
 // - Injection done in context View Space, with fuchsia.ui.pointerinjector
-// - Target(s) specified by View (using view ref koids)
-// - Dispatch done in fuchsia.ui.scenic.SessionListener (legacy)
+// - Target(s) specified by ViewRef
+// - Dispatch done in fuchsia.ui.pointer
 
-namespace lib_ui_input_tests {
-namespace {
+// All tests in this suite uses the following ViewTree layout:
+//  Root
+//    |
+// Client1
+//    |
+// Client2
+//    |     \
+// Client4 Client3
 
-using fuchsia::ui::input::PointerEventPhase;
+namespace input::test {
 
-struct TestScene {
-  SessionWrapper root_session;
-  ResourceGraph root_resources;
-  SessionWrapper client_session1;
-  SessionWrapper client_session2;
-  SessionWrapper client_session3;
-  SessionWrapper client_session4;
-};
+using scenic_impl::input::Phase;
+using scenic_impl::input::TouchSource;
 
-// Sets up a 9x9 "display".
-class DispatchPolicyTest : public InputSystemTest {
- protected:
-  static constexpr fuchsia::ui::gfx::ViewProperties k5x5x1000 = {
-      .bounding_box = {.min = {0, 0, -1000}, .max = {5, 5, 0}}};
+constexpr float kDisplayWidth = 9.f;
+constexpr float kDisplayHeight = 9.f;
 
-  // Creates a Scene Graph with layout:
+class DispatchPolicyTest : public gtest::TestLoopFixture {
+ public:
+  DispatchPolicyTest()
+      : input_system_(
+            scenic_impl::SystemContext(context_provider_.context(), inspect::Node(), [] {}),
+            fxl::WeakPtr<scenic_impl::gfx::SceneGraph>(), /*request_focus*/ [](auto...) {}) {}
+
+  void SetUp() override {
+    root_vrp_ = scenic::ViewRefPair::New();
+    client1_vrp_ = scenic::ViewRefPair::New();
+    client2_vrp_ = scenic::ViewRefPair::New();
+    client3_vrp_ = scenic::ViewRefPair::New();
+    client4_vrp_ = scenic::ViewRefPair::New();
+
+    client1_ptr_.set_error_handler([](auto) { FAIL() << "Client1's channel closed"; });
+    client2_ptr_.set_error_handler([](auto) { FAIL() << "Client2's channel closed"; });
+    client3_ptr_.set_error_handler([](auto) { FAIL() << "Client3's channel closed"; });
+    client4_ptr_.set_error_handler([](auto) { FAIL() << "Client4's channel closed"; });
+
+    input_system_.RegisterTouchSource(client1_ptr_.NewRequest(), Client1Koid());
+    input_system_.RegisterTouchSource(client2_ptr_.NewRequest(), Client2Koid());
+    input_system_.RegisterTouchSource(client3_ptr_.NewRequest(), Client3Koid());
+    input_system_.RegisterTouchSource(client4_ptr_.NewRequest(), Client4Koid());
+  }
+
+  void RegisterInjector(fuchsia::ui::views::ViewRef context_view_ref,
+                        fuchsia::ui::views::ViewRef target_view_ref,
+                        fuchsia::ui::pointerinjector::DispatchPolicy dispatch_policy,
+                        fuchsia::ui::pointerinjector::DeviceType type) {
+    fuchsia::ui::pointerinjector::Config config;
+    config.set_device_id(1);
+    config.set_device_type(type);
+    config.set_dispatch_policy(dispatch_policy);
+    {
+      fuchsia::ui::pointerinjector::Viewport viewport;
+      viewport.set_extents({{/*min*/ {0.f, 0.f}, /*max*/ {kDisplayWidth, kDisplayHeight}}});
+      viewport.set_viewport_to_context_transform(
+          // clang-format off
+      {
+        1.f, 0.f, 0.f, // first column
+        0.f, 1.f, 0.f, // second column
+        0.f, 0.f, 1.f, // third column
+      }  // clang-format on
+      );
+      config.set_viewport(std::move(viewport));
+    }
+    {
+      fuchsia::ui::pointerinjector::Context context;
+      context.set_view(std::move(context_view_ref));
+      config.set_context(std::move(context));
+    }
+    {
+      fuchsia::ui::pointerinjector::Target target;
+      target.set_view(std::move(target_view_ref));
+      config.set_target(std::move(target));
+    }
+
+    bool error_callback_fired = false;
+    injector_.set_error_handler([&error_callback_fired](zx_status_t) {
+      FX_LOGS(ERROR) << "Channel closed.";
+      error_callback_fired = true;
+    });
+    bool register_callback_fired = false;
+    input_system_.RegisterPointerinjector(
+        std::move(config), injector_.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
+    RunLoopUntilIdle();
+    ASSERT_TRUE(register_callback_fired);
+    ASSERT_FALSE(error_callback_fired);
+  }
+
+  // Creates a new snapshot with a hit test that returns |hits|, and a ViewTree with layout:
   // Root
   //   |
-  // View1
+  // Client1
   //   |
-  // View2
+  // Client2
   //   |  \
-  // View4 View3
-  //
-  // Scene Graph layout:
-  // All views are exactly overlapping. Each view sets up an identical rectangle,
-  // but at different z positions.
-  // Z ordering of rectangles:
-  // -----View4 Rect----
-  // -----View3 Rect----
-  // -----View2 Rect----
-  // -----View1 Rect----
-  //
-  TestScene CreateTestScene() {
-    auto [v1, vh1] = scenic::ViewTokenPair::New();
-    auto [v2, vh2] = scenic::ViewTokenPair::New();
-    auto [v3, vh3] = scenic::ViewTokenPair::New();
-    auto [v4, vh4] = scenic::ViewTokenPair::New();
+  // Client4 Client3
+  std::shared_ptr<view_tree::Snapshot> NewSnapshot(std::vector<zx_koid_t> hits) {
+    auto snapshot = std::make_shared<view_tree::Snapshot>();
+    auto& [root, view_tree, _1, _2] = *snapshot;
+    root = RootKoid();
+    view_tree[RootKoid()] = {.children = {Client1Koid()}};
+    view_tree[Client1Koid()] = {.parent = RootKoid(), .children = {Client2Koid()}};
+    view_tree[Client2Koid()] = {.parent = Client1Koid(),
+                                .children = {Client3Koid(), Client4Koid()}};
+    view_tree[Client3Koid()] = {.parent = Client2Koid()};
+    view_tree[Client4Koid()] = {.parent = Client2Koid()};
 
-    // Set up a scene with two ViewHolders, one a child of the other.
-    auto [root_session, root_resources] = CreateScene();
-    scenic::ViewHolder holder_1(root_session.session(), std::move(vh1), "holder_1");
-    {
-      holder_1.SetViewProperties(k5x5x1000);
-      root_resources.scene.AddChild(holder_1);
-      RequestToPresent(root_session.session());
-    }
+    snapshot->hit_testers.emplace_back([hits = std::move(hits)](auto...) mutable {
+      return view_tree::SubtreeHitTestResult{.hits = std::move(hits)};
+    });
 
-    SessionWrapper client_1 = CreateClient("view_1", std::move(v1));
-    {
-      scenic::ViewHolder holder_2(client_1.session(), std::move(vh2), "holder_2");
-      holder_2.SetViewProperties(k5x5x1000);
-      client_1.view()->AddChild(holder_2);
-
-      scenic::ShapeNode shape(client_1.session());
-      shape.SetTranslation(2.5f, 2.5f, 0);  // Center the shape within the View.
-      client_1.view()->AddChild(shape);
-      scenic::Rectangle rec(client_1.session(), 5, 5);  // Size of the view.
-      shape.SetShape(rec);
-
-      RequestToPresent(client_1.session());
-    }
-
-    SessionWrapper client_2 = CreateClient("view_2", std::move(v2));
-    {
-      scenic::ViewHolder holder_3(client_2.session(), std::move(vh3), "holder_3");
-      holder_3.SetViewProperties(k5x5x1000);
-      client_2.view()->AddChild(holder_3);
-
-      scenic::ViewHolder holder_4(client_2.session(), std::move(vh4), "holder_4");
-      holder_4.SetViewProperties(k5x5x1000);
-      client_2.view()->AddChild(holder_4);
-
-      scenic::ShapeNode shape(client_2.session());
-      shape.SetTranslation(2.5f, 2.5f, -1);  // Center the shape within the View.
-      client_2.view()->AddChild(shape);
-      scenic::Rectangle rec(client_2.session(), 5, 5);  // Size of the view.
-      shape.SetShape(rec);
-
-      RequestToPresent(client_2.session());
-    }
-
-    SessionWrapper client_3 = CreateClient("view_3", std::move(v3));
-    {
-      scenic::ShapeNode shape(client_3.session());
-      shape.SetTranslation(2.5f, 2.5f, -2);  // Center the shape within the View.
-      client_3.view()->AddChild(shape);
-      scenic::Rectangle rec(client_3.session(), 5, 5);  // Size of the view.
-      shape.SetShape(rec);
-
-      RequestToPresent(client_3.session());
-    }
-
-    SessionWrapper client_4 = CreateClient("view_4", std::move(v4));
-    {
-      scenic::ShapeNode shape(client_4.session());
-      shape.SetTranslation(2.5f, 2.5f, -3);  // Center the shape within the View.
-      client_4.view()->AddChild(shape);
-      scenic::Rectangle rec(client_4.session(), 5, 5);  // Size of the view.
-      shape.SetShape(rec);
-
-      RequestToPresent(client_4.session());
-    }
-
-    return {
-        .root_session = std::move(root_session),
-        .root_resources = std::move(root_resources),
-        .client_session1 = std::move(client_1),
-        .client_session2 = std::move(client_2),
-        .client_session3 = std::move(client_3),
-        .client_session4 = std::move(client_4),
-    };
+    return snapshot;
   }
 
-  uint32_t test_display_width_px() const override { return 9; }
-  uint32_t test_display_height_px() const override { return 9; }
+  void Inject(fuchsia::ui::pointerinjector::EventPhase phase) {
+    FX_CHECK(injector_);
+    std::vector<fuchsia::ui::pointerinjector::Event> events;
+    {
+      fuchsia::ui::pointerinjector::Event event;
+      event.set_timestamp(0);
+      fuchsia::ui::pointerinjector::PointerSample pointer_sample;
+      pointer_sample.set_pointer_id(1);
+      pointer_sample.set_phase(phase);
+      pointer_sample.set_position_in_viewport({kDisplayWidth / 2.f, kDisplayHeight / 2.f});
+      fuchsia::ui::pointerinjector::Data data;
+      data.set_pointer_sample(std::move(pointer_sample));
+      event.set_data(std::move(data));
+      events.emplace_back(std::move(event));
+    }
+
+    bool inject_callback_fired = false;
+    injector_->Inject(std::move(events),
+                      [&inject_callback_fired] { inject_callback_fired = true; });
+    RunLoopUntilIdle();
+    ASSERT_TRUE(inject_callback_fired);
+  }
+
+  fuchsia::ui::views::ViewRef RootViewRef() { return fidl::Clone(root_vrp_.view_ref); }
+  fuchsia::ui::views::ViewRef Client1ViewRef() { return fidl::Clone(client1_vrp_.view_ref); }
+  fuchsia::ui::views::ViewRef Client2ViewRef() { return fidl::Clone(client2_vrp_.view_ref); }
+  fuchsia::ui::views::ViewRef Client3ViewRef() { return fidl::Clone(client3_vrp_.view_ref); }
+  fuchsia::ui::views::ViewRef Client4ViewRef() { return fidl::Clone(client4_vrp_.view_ref); }
+
+  zx_koid_t RootKoid() { return utils::ExtractKoid(root_vrp_.view_ref); }
+  zx_koid_t Client1Koid() { return utils::ExtractKoid(client1_vrp_.view_ref); }
+  zx_koid_t Client2Koid() { return utils::ExtractKoid(client2_vrp_.view_ref); }
+  zx_koid_t Client3Koid() { return utils::ExtractKoid(client3_vrp_.view_ref); }
+  zx_koid_t Client4Koid() { return utils::ExtractKoid(client4_vrp_.view_ref); }
+
+ private:
+  // Must be initialized before |input_system_|.
+  sys::testing::ComponentContextProvider context_provider_;
+
+ protected:
+  scenic_impl::input::InputSystem input_system_;
+  fuchsia::ui::pointerinjector::DevicePtr injector_;
+  fuchsia::ui::pointer::TouchSourcePtr client1_ptr_;
+  fuchsia::ui::pointer::TouchSourcePtr client2_ptr_;
+  fuchsia::ui::pointer::TouchSourcePtr client3_ptr_;
+  fuchsia::ui::pointer::TouchSourcePtr client4_ptr_;
+
+ private:
+  scenic::ViewRefPair root_vrp_;
+  scenic::ViewRefPair client1_vrp_;
+  scenic::ViewRefPair client2_vrp_;
+  scenic::ViewRefPair client3_vrp_;
+  scenic::ViewRefPair client4_vrp_;
 };
 
-TEST_F(DispatchPolicyTest, ExclusiveMode_ShouldOnlyDeliverToTarget) {
-  TestScene test_scene = CreateTestScene();
+TEST_F(DispatchPolicyTest, ExclusiveMode_ShouldDeliverTo_OnlyTarget) {
+  input_system_.OnNewViewTreeSnapshot(NewSnapshot(/*hits*/ {Client4Koid()}));
 
-  // Scene is set up. Inject and check output.
-  {
+  {  // Scene is set up. Inject with Client2 as exclusive target.
     RegisterInjector(
-        /*context=*/test_scene.client_session1.view_ref(),
-        /*target=*/test_scene.client_session2.view_ref(),
-        fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET,
-        fuchsia::ui::pointerinjector::DeviceType::TOUCH,
-        /*extents*/
-        {{/*min*/ {0.f, 0.f}, /*max*/ {static_cast<float>(test_display_width_px()),
-                                       static_cast<float>(test_display_height_px())}}});
-    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::ADD);
-    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
-    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+        /*context=*/RootViewRef(),
+        /*target=*/Client2ViewRef(), fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET,
+        fuchsia::ui::pointerinjector::DeviceType::TOUCH);
+    Inject(fuchsia::ui::pointerinjector::EventPhase::ADD);
+    Inject(fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(fuchsia::ui::pointerinjector::EventPhase::REMOVE);
     RunLoopUntilIdle();
   }
 
-  {  // Target should receive events.
-    const std::vector<fuchsia::ui::input::InputEvent>& events = test_scene.client_session2.events();
-    ASSERT_EQ(events.size(), 5u);
-    EXPECT_EQ(events[0].pointer().phase, PointerEventPhase::ADD);
-    EXPECT_EQ(events[1].pointer().phase, PointerEventPhase::DOWN);
-    EXPECT_EQ(events[2].pointer().phase, PointerEventPhase::MOVE);
-    EXPECT_EQ(events[3].pointer().phase, PointerEventPhase::UP);
-    EXPECT_EQ(events[4].pointer().phase, PointerEventPhase::REMOVE);
-  }
-
-  {  // No other client should receive any events.
-    EXPECT_TRUE(test_scene.client_session1.events().empty());
-    EXPECT_TRUE(test_scene.client_session3.events().empty());
-    EXPECT_TRUE(test_scene.client_session4.events().empty());
-  }
-}
-
-TEST_F(DispatchPolicyTest, TopHitMode_OnLeafTarget_ShouldOnlyDeliverToTopHit) {
-  TestScene test_scene = CreateTestScene();
-
-  // Inject with View3 as target. Top hit should be View3.
   {
-    RegisterInjector(/*context=*/test_scene.client_session1.view_ref(),
-                     /*target=*/test_scene.client_session3.view_ref(),
-                     fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET,
-                     fuchsia::ui::pointerinjector::DeviceType::TOUCH,
-                     /*extents*/
-                     {{/*min*/ {0.f, 0.f},
-                       /*max*/ {static_cast<float>(test_display_width_px()),
-                                static_cast<float>(test_display_height_px())}}});
-    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::ADD);
-    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
-    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+    std::vector<fuchsia::ui::pointer::TouchEvent> events;
+    client2_ptr_->Watch({}, [&events](auto in_events) { events = std::move(in_events); });
     RunLoopUntilIdle();
+    EXPECT_EQ(events.size(), 3u);
   }
 
-  {  // Target should receive events.
-    const std::vector<fuchsia::ui::input::InputEvent>& events = test_scene.client_session3.events();
-    ASSERT_EQ(events.size(), 6u);
-    EXPECT_EQ(events[0].pointer().phase, PointerEventPhase::ADD);
-    EXPECT_TRUE(events[1].is_focus());
-    EXPECT_EQ(events[2].pointer().phase, PointerEventPhase::DOWN);
-    EXPECT_EQ(events[3].pointer().phase, PointerEventPhase::MOVE);
-    EXPECT_EQ(events[4].pointer().phase, PointerEventPhase::UP);
-    EXPECT_EQ(events[5].pointer().phase, PointerEventPhase::REMOVE);
-  }
-
-  {  // No other client should receive any events.
-    EXPECT_TRUE(test_scene.client_session1.events().empty());
-    EXPECT_TRUE(test_scene.client_session2.events().empty());
-    EXPECT_TRUE(test_scene.client_session4.events().empty());
-  }
-}
-
-TEST_F(DispatchPolicyTest, TopHitMode_OnMidTreeTarget_ShouldOnlyDeliverToTopHit) {
-  TestScene test_scene = CreateTestScene();
-
-  // Inject with View2 as target. Top hit should be View4.
   {
-    RegisterInjector(/*context=*/test_scene.client_session1.view_ref(),
-                     /*target=*/test_scene.client_session2.view_ref(),
+    bool client1_callback_fired = false;
+    client1_ptr_->Watch({}, [&client1_callback_fired](auto) { client1_callback_fired = true; });
+    bool client3_callback_fired = false;
+    client3_ptr_->Watch({}, [&client3_callback_fired](auto) { client3_callback_fired = true; });
+    bool client4_callback_fired = false;
+    client4_ptr_->Watch({}, [&client4_callback_fired](auto) { client4_callback_fired = true; });
+
+    RunLoopUntilIdle();
+    EXPECT_FALSE(client1_callback_fired);
+    EXPECT_FALSE(client3_callback_fired);
+    EXPECT_FALSE(client4_callback_fired);
+  }
+}
+
+TEST_F(DispatchPolicyTest, TopHitMode_OnLeafTarget_ShouldDeliverTo_OnlyTarget) {
+  input_system_.OnNewViewTreeSnapshot(NewSnapshot(/*hits*/ {Client3Koid()}));
+
+  {  // Inject with Client3 as target. Top hit is Client3.
+    RegisterInjector(/*context=*/RootViewRef(),
+                     /*target=*/Client3ViewRef(),
                      fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET,
-                     fuchsia::ui::pointerinjector::DeviceType::TOUCH,
-                     /*extents*/
-                     {{/*min*/ {0.f, 0.f},
-                       /*max*/ {static_cast<float>(test_display_width_px()),
-                                static_cast<float>(test_display_height_px())}}});
-    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::ADD);
-    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
-    Inject(2.5f, 2.5f, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+                     fuchsia::ui::pointerinjector::DeviceType::TOUCH);
+    Inject(fuchsia::ui::pointerinjector::EventPhase::ADD);
+    Inject(fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(fuchsia::ui::pointerinjector::EventPhase::REMOVE);
     RunLoopUntilIdle();
   }
 
   {  // Target should receive events.
-    const std::vector<fuchsia::ui::input::InputEvent>& events = test_scene.client_session4.events();
-    ASSERT_EQ(events.size(), 6u);
-    EXPECT_EQ(events[0].pointer().phase, PointerEventPhase::ADD);
-    EXPECT_TRUE(events[1].is_focus());
-    EXPECT_EQ(events[2].pointer().phase, PointerEventPhase::DOWN);
-    EXPECT_EQ(events[3].pointer().phase, PointerEventPhase::MOVE);
-    EXPECT_EQ(events[4].pointer().phase, PointerEventPhase::UP);
-    EXPECT_EQ(events[5].pointer().phase, PointerEventPhase::REMOVE);
+    std::vector<fuchsia::ui::pointer::TouchEvent> events;
+    client3_ptr_->Watch({}, [&events](auto in_events) { events = std::move(in_events); });
+    RunLoopUntilIdle();
+    EXPECT_EQ(events.size(), 3u);
   }
 
   {  // No other client should receive any events.
-    EXPECT_TRUE(test_scene.client_session1.events().empty());
-    EXPECT_TRUE(test_scene.client_session2.events().empty());
-    EXPECT_TRUE(test_scene.client_session3.events().empty());
+    bool client1_callback_fired = false;
+    client1_ptr_->Watch({}, [&client1_callback_fired](auto) { client1_callback_fired = true; });
+    bool client2_callback_fired = false;
+    client2_ptr_->Watch({}, [&client2_callback_fired](auto) { client2_callback_fired = true; });
+    bool client4_callback_fired = false;
+    client4_ptr_->Watch({}, [&client4_callback_fired](auto) { client4_callback_fired = true; });
+
+    RunLoopUntilIdle();
+    EXPECT_FALSE(client1_callback_fired);
+    EXPECT_FALSE(client2_callback_fired);
+    EXPECT_FALSE(client4_callback_fired);
   }
 }
 
-}  // namespace
-}  // namespace lib_ui_input_tests
+TEST_F(DispatchPolicyTest,
+       TopHitMode_OnMidTreeTarget_ShouldDeliverTo_TopHitAndAncestorsUpToTarget) {
+  input_system_.OnNewViewTreeSnapshot(NewSnapshot(/*hits*/ {Client4Koid()}));
+
+  {  // Inject with Client2 as target. Top hit is Client4.
+    RegisterInjector(/*context=*/RootViewRef(),
+                     /*target=*/Client2ViewRef(),
+                     fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET,
+                     fuchsia::ui::pointerinjector::DeviceType::TOUCH);
+    Inject(fuchsia::ui::pointerinjector::EventPhase::ADD);
+    Inject(fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+    RunLoopUntilIdle();
+  }
+
+  {  // Top hit should receive events.
+    std::vector<fuchsia::ui::pointer::TouchEvent> events;
+    client4_ptr_->Watch({}, [&events](auto in_events) { events = std::move(in_events); });
+    RunLoopUntilIdle();
+    EXPECT_EQ(events.size(), 3u);
+  }
+  {  // Target should receive events, since it's the only ancestor of top hit.
+    std::vector<fuchsia::ui::pointer::TouchEvent> events;
+    client2_ptr_->Watch({}, [&events](auto in_events) { events = std::move(in_events); });
+    RunLoopUntilIdle();
+    EXPECT_EQ(events.size(), 3u);
+  }
+
+  {  // No other client should receive any events.
+    bool client1_callback_fired = false;
+    client1_ptr_->Watch({}, [&client1_callback_fired](auto) { client1_callback_fired = true; });
+    bool client3_callback_fired = false;
+    client3_ptr_->Watch({}, [&client3_callback_fired](auto) { client3_callback_fired = true; });
+
+    RunLoopUntilIdle();
+    EXPECT_FALSE(client1_callback_fired);
+    EXPECT_FALSE(client3_callback_fired);
+  }
+}
+
+}  // namespace input::test
