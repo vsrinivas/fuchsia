@@ -16,7 +16,7 @@ namespace forensics::feedback::migration_shell::internal {
 template <typename DirectoryMigrationProtocol>
 int main() {
   component::Component component;
-  MainService<DirectoryMigrationProtocol> main_service;
+  MainService<DirectoryMigrationProtocol> main_service(component.Dispatcher());
 
   component.AddPublicService(::fidl::InterfaceRequestHandler<DirectoryMigrationProtocol>(
       [&main_service](::fidl::InterfaceRequest<DirectoryMigrationProtocol> request) {
