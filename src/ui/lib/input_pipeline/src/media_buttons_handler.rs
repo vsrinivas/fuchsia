@@ -15,14 +15,19 @@ use {
     std::sync::Arc,
 };
 
+pub type MediaButtonsListeners = Arc<Mutex<Vec<fidl_ui_policy::MediaButtonsListenerProxy>>>;
+pub type MediaButtonsLastEvent = Arc<Mutex<Option<fidl_ui_input::MediaButtonsEvent>>>;
+
 /// A [`MediaButtonsHandler`] tracks MediaButtonListeners and sends media button events to them.
+/// It can be freely cloned since its data is thread-safely shared.
+#[derive(Clone, Debug)]
 pub struct MediaButtonsHandler {
     /// The media button listeners.
-    listeners: Arc<Mutex<Vec<fidl_ui_policy::MediaButtonsListenerProxy>>>,
+    pub listeners: MediaButtonsListeners,
 
     /// The last MediaButtonsEvent sent to all listeners.
     /// This is used to send new listeners the state of the media buttons.
-    last_event: Arc<Mutex<Option<fidl_ui_input::MediaButtonsEvent>>>,
+    pub last_event: MediaButtonsLastEvent,
 }
 
 #[async_trait]
@@ -69,13 +74,10 @@ impl MediaButtonsHandler {
     /// error the error will be returned in the Result.
     ///
     /// # Parameters
-    /// - `listeners`: The media button listeners to send events to.
-    /// - `last_event`: The last event sent to the listeners.
     /// - `stream`: The stream of DeviceListenerRegistryRequestStream.
     pub async fn handle_device_listener_registry_request_stream(
+        &self,
         mut stream: fidl_ui_policy::DeviceListenerRegistryRequestStream,
-        listeners: Arc<Mutex<Vec<fidl_ui_policy::MediaButtonsListenerProxy>>>,
-        last_event: Arc<Mutex<Option<fidl_ui_input::MediaButtonsEvent>>>,
     ) -> Result<(), Error> {
         while let Some(request) = stream
             .try_next()
@@ -89,11 +91,11 @@ impl MediaButtonsHandler {
                 } => {
                     if let Ok(proxy) = listener.into_proxy() {
                         // Add the listener to the registry.
-                        let mut listeners_locked = listeners.lock().await;
+                        let mut listeners_locked = self.listeners.lock().await;
                         listeners_locked.push(proxy.clone());
 
                         // Send the listener the last media button event.
-                        if let Some(event) = last_event.lock().await.clone() {
+                        if let Some(event) = self.last_event.lock().await.clone() {
                             if !is_empty_media_buttons_event(&event) {
                                 let _ = proxy.on_event(event).await;
                             }
@@ -185,20 +187,16 @@ mod tests {
     };
 
     fn spawn_device_listener_registry_server(
-        listeners: Arc<Mutex<Vec<fidl_ui_policy::MediaButtonsListenerProxy>>>,
-        last_event: Arc<Mutex<Option<fidl_ui_input::MediaButtonsEvent>>>,
+        handler: MediaButtonsHandler,
     ) -> fidl_ui_policy::DeviceListenerRegistryProxy {
         let (device_listener_proxy, device_listener_stream) =
             create_proxy_and_stream::<fidl_ui_policy::DeviceListenerRegistryMarker>()
                 .expect("Failed to create DeviceListenerRegistry proxy and stream.");
 
         fasync::Task::spawn(async move {
-            let _ = MediaButtonsHandler::handle_device_listener_registry_request_stream(
-                device_listener_stream,
-                listeners,
-                last_event,
-            )
-            .await;
+            let _ = handler
+                .handle_device_listener_registry_request_stream(device_listener_stream)
+                .await;
         })
         .detach();
 
@@ -225,13 +223,14 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn register_media_buttons_listener() {
         // Set up DeviceListenerRegistry.
-        let listeners: Arc<Mutex<Vec<fidl_ui_policy::MediaButtonsListenerProxy>>> =
-            Arc::new(Mutex::new(vec![]));
-        let last_event: Arc<Mutex<Option<fidl_ui_input::MediaButtonsEvent>>> = Arc::new(
-            Mutex::new(Some(create_ui_input_media_buttons_event(Some(1), None, None, None))),
-        );
+        let listeners: MediaButtonsListeners = Arc::new(Mutex::new(vec![]));
+        let last_event: MediaButtonsLastEvent = Arc::new(Mutex::new(Some(
+            create_ui_input_media_buttons_event(Some(1), None, None, None),
+        )));
+        let media_buttons_handler =
+            MediaButtonsHandler { listeners: listeners.clone(), last_event: last_event.clone() };
         let device_listener_proxy =
-            spawn_device_listener_registry_server(listeners.clone(), last_event.clone());
+            spawn_device_listener_registry_server(media_buttons_handler.clone());
 
         // Register a listener.
         let (listener, mut listener_stream) =
@@ -263,10 +262,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn listener_receives_all_buttons() {
         let mut media_buttons_handler = MediaButtonsHandler::new();
-        let device_listener_proxy = spawn_device_listener_registry_server(
-            media_buttons_handler.listeners.clone(),
-            media_buttons_handler.last_event.clone(),
-        );
+        let device_listener_proxy =
+            spawn_device_listener_registry_server(media_buttons_handler.clone());
 
         // Register a listener.
         let (listener, listener_stream) =
@@ -304,10 +301,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn multiple_listeners_receive_event() {
         let mut media_buttons_handler = MediaButtonsHandler::new();
-        let device_listener_proxy = spawn_device_listener_registry_server(
-            media_buttons_handler.listeners.clone(),
-            media_buttons_handler.last_event.clone(),
-        );
+        let device_listener_proxy =
+            spawn_device_listener_registry_server(media_buttons_handler.clone());
 
         // Register two listeners.
         let (first_listener, first_listener_stream) =

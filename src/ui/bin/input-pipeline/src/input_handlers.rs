@@ -11,14 +11,12 @@ use {
     },
 };
 
-pub async fn create() -> Vec<Box<dyn input_pipeline_lib::input_handler::InputHandler>> {
+pub async fn create(
+    media_buttons_handler: MediaButtonsHandler,
+) -> Vec<Box<dyn input_pipeline_lib::input_handler::InputHandler>> {
     let scenic = connect_to_protocol::<fidl_fuchsia_ui_scenic::ScenicMarker>()
         .expect("Failed to connect to Scenic.");
-    vec![make_media_buttons_handler(), make_touch_injector_handler(&scenic).await]
-}
-
-fn make_media_buttons_handler() -> Box<dyn input_pipeline_lib::input_handler::InputHandler> {
-    Box::new(MediaButtonsHandler::new())
+    vec![Box::new(media_buttons_handler), make_touch_injector_handler(&scenic).await]
 }
 
 async fn make_touch_injector_handler(

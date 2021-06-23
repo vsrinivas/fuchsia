@@ -4,14 +4,17 @@
 
 use {
     anyhow::Error, fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
+    fidl_fuchsia_ui_policy::DeviceListenerRegistryRequestStream as MediaButtonsListenerRegistryRequestStream,
     fuchsia_async as fasync, fuchsia_component::server::ServiceFs, fuchsia_syslog::fx_log_warn,
     futures::StreamExt, input_pipeline as input_pipeline_lib, input_pipeline::input_device,
+    input_pipeline::media_buttons_handler::MediaButtonsHandler,
 };
 
 mod input_handlers;
 
 enum ExposedServices {
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
+    MediaButtonsListenerRegistry(MediaButtonsListenerRegistryRequestStream),
 }
 
 #[fasync::run_singlethreaded]
@@ -21,6 +24,7 @@ async fn main() -> Result<(), Error> {
     // Expose InputDeviceRegistry to allow input injection for testing.
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(ExposedServices::InputDeviceRegistry);
+    fs.dir("svc").add_fidl_service(ExposedServices::MediaButtonsListenerRegistry);
     fs.take_and_serve_directory_handle()?;
 
     // Declare the types of input to support.
@@ -28,7 +32,8 @@ async fn main() -> Result<(), Error> {
         vec![input_device::InputDeviceType::Touch, input_device::InputDeviceType::ConsumerControls];
 
     // Create a new input pipeline.
-    let input_handlers = input_handlers::create().await;
+    let media_buttons_handler = MediaButtonsHandler::new();
+    let input_handlers = input_handlers::create(media_buttons_handler.clone()).await;
     let input_pipeline = input_pipeline_lib::input_pipeline::InputPipeline::new(
         device_types.clone(),
         input_handlers,
@@ -57,6 +62,12 @@ async fn main() -> Result<(), Error> {
 
                 fasync::Task::local(input_device_registry_fut).detach();
                 injected_device_id -= 1;
+            }
+            ExposedServices::MediaButtonsListenerRegistry(stream) => {
+                let device_listener_registry_fut =
+                    handle_media_buttons_listener_registry(media_buttons_handler.clone(), stream);
+
+                fasync::Task::local(device_listener_registry_fut).detach();
             }
         }
     }
@@ -89,6 +100,18 @@ async fn handle_input_device_registry_request_stream(
                      will continue serving other clients",
                 e
             );
+        }
+    }
+}
+
+async fn handle_media_buttons_listener_registry(
+    media_buttons_handler: MediaButtonsHandler,
+    stream: MediaButtonsListenerRegistryRequestStream,
+) {
+    match media_buttons_handler.handle_device_listener_registry_request_stream(stream).await {
+        Ok(()) => (),
+        Err(e) => {
+            fx_log_warn!("failure while serving DeviceListenerRegistry: {}", e);
         }
     }
 }
