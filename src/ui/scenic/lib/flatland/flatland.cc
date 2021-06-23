@@ -31,6 +31,7 @@ using fuchsia::ui::scenic::internal::GraphLink;
 using fuchsia::ui::scenic::internal::GraphLinkToken;
 using fuchsia::ui::scenic::internal::ImageProperties;
 using fuchsia::ui::scenic::internal::LinkProperties;
+using fuchsia::ui::scenic::internal::OnPresentProcessedValues;
 using fuchsia::ui::scenic::internal::Orientation;
 
 namespace flatland {
@@ -964,8 +965,11 @@ void Flatland::OnPresentProcessed(uint32_t num_presents_returned,
                                   FuturePresentationInfos presentation_infos) {
   num_presents_remaining_ += num_presents_returned;
   if (binding_.is_bound()) {
-    binding_.events().OnPresentProcessed(Error::NO_ERROR, num_presents_returned,
-                                         std::move(presentation_infos));
+    OnPresentProcessedValues values;
+    values.set_num_presents_returned(num_presents_returned);
+    values.set_future_presentation_infos(std::move(presentation_infos));
+
+    binding_.events().OnPresentProcessed(std::move(values), Error::NO_ERROR);
   }
 }
 
@@ -1001,8 +1005,7 @@ void Flatland::ReportLinkProtocolError(const std::string& error_log) {
 
 void Flatland::CloseConnection(Error error) {
   // Send the error to the client before closing the connection.
-  binding_.events().OnPresentProcessed(error, /*num_presents_returned=*/0,
-                                       FuturePresentationInfos());
+  binding_.events().OnPresentProcessed({}, error);
 
   // Cancel the async::Wait before closing the connection, or it will assert on destruction.
   zx_status_t status = peer_closed_waiter_.Cancel();

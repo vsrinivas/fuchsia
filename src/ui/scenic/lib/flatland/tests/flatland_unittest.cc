@@ -65,6 +65,7 @@ using fuchsia::ui::scenic::internal::GraphLinkToken;
 using fuchsia::ui::scenic::internal::ImageProperties;
 using fuchsia::ui::scenic::internal::LayoutInfo;
 using fuchsia::ui::scenic::internal::LinkProperties;
+using fuchsia::ui::scenic::internal::OnPresentProcessedValues;
 using fuchsia::ui::scenic::internal::Orientation;
 using fuchsia::ui::scenic::internal::TransformId;
 
@@ -503,8 +504,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
   void RegisterPresentError(fuchsia::ui::scenic::internal::FlatlandPtr& flatland_channel,
                             scheduling::SessionId session_id) {
     flatland_channel.events().OnPresentProcessed =
-        [this, session_id](Error error, uint32_t num_presents_returned,
-                           flatland::Flatland::FuturePresentationInfos future_presentation_infos) {
+        [this, session_id](OnPresentProcessedValues values, Error error) {
           flatland_errors_[session_id] = error;
         };
   }

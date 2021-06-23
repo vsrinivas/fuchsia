@@ -199,6 +199,18 @@ resource table PresentArgs {
 /// future presentation counts is enough for the current usage of these APIs.
 alias FuturePresentationInfos = vector<fuchsia.scenic.scheduling.PresentationInfo>:8;
 
+/// Fields that a client needs in order to produce its next frame, returned in
+/// [`OnPresentProcessed`]. For a non-error case, each field is guaranteed to be
+/// set and contain valid information.
+table OnPresentProcessedValues {
+    /// the number of additional [`Present`] calls allowed to
+    /// the client so that they can call [`Present`] further times.
+    1: uint32 num_presents_returned;
+    /// information about future presentation and latch times that a client may
+    /// aim for for precise scheduling behavior.
+    2: FuturePresentationInfos future_presentation_infos;
+};
+
 /// Each Flatland instance contains a Graph, which consists of a set of objects, and the
 /// relationships between those objects. The client can specify a subset of those objects
 /// (specifically, the directed acyclic graph starting at the root transform) to be presented as
@@ -246,14 +258,15 @@ protocol Flatland {
     /// This event is fired when clients should expect minimal resource
     /// contention. Clients may use the timing of this event to begin their
     /// rendering work, using the information returned to inform their
-    /// scheduling decsisions.
+    /// scheduling decisions.
     ///
-    /// - response `num_presents_returned` the number of additional [`Present`] calls allowed to
-    /// the client so that they can call [`Present`] further times.
-    /// - response `future_presentation_infos` information about future
-    /// presentation and latch times.
-    -> OnPresentProcessed(Error error, uint32 num_presents_returned,
-                          FuturePresentationInfos future_presentation_infos);
+    /// - response `values` the table of information a client needs to produce
+    /// its next frame. See [`OnPresentProcessedValues`] for more information.
+    ///
+    /// - response `error` the error a client may receive after performing some
+    /// invalid operations. If there is an `error`, then `values` is not
+    /// guaranteed to hold any valid fields.
+    -> OnPresentProcessed(OnPresentProcessedValues values, Error error);
 
     /// This event is fired whenever a set of one or more [`Present`]s are
     /// presented simultaneously, and are therefore no longer in flight.

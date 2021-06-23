@@ -25,6 +25,7 @@ using flatland::MockFlatlandPresenter;
 using flatland::UberStructSystem;
 using fuchsia::ui::scenic::internal::Error;
 using fuchsia::ui::scenic::internal::Flatland;
+using fuchsia::ui::scenic::internal::OnPresentProcessedValues;
 
 // These macros works like functions that check a variety of conditions, but if those conditions
 // fail, the line number for the failure will appear in-line rather than in a function.
@@ -274,11 +275,10 @@ TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens = 0;
-  flatland.events().OnPresentProcessed =
-      [&returned_tokens](Error error, uint32_t num_presents_returned,
-                         Flatland::FuturePresentationInfos future_presentation_infos) {
-        returned_tokens = num_presents_returned;
-      };
+  flatland.events().OnPresentProcessed = [&returned_tokens](OnPresentProcessedValues values,
+                                                            Error error) {
+    returned_tokens = values.num_presents_returned();
+  };
 
   // Run until the instance receives the initial allotment of tokens.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&returned_tokens]() { return returned_tokens != 0; }));
@@ -292,23 +292,21 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
   const scheduling::SessionId id1 = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens1 = 0;
-  flatland1.events().OnPresentProcessed =
-      [&returned_tokens1](Error error, uint32_t num_presents_returned,
-                          Flatland::FuturePresentationInfos future_presentation_infos) {
-        returned_tokens1 = num_presents_returned;
-        EXPECT_FALSE(future_presentation_infos.empty());
-      };
+  flatland1.events().OnPresentProcessed = [&returned_tokens1](OnPresentProcessedValues values,
+                                                              Error error) {
+    returned_tokens1 = values.num_presents_returned();
+    EXPECT_FALSE(values.future_presentation_infos().empty());
+  };
 
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2 = CreateFlatland();
   const scheduling::SessionId id2 = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens2 = 0;
-  flatland2.events().OnPresentProcessed =
-      [&returned_tokens2](Error error, uint32_t num_presents_returned,
-                          Flatland::FuturePresentationInfos future_presentation_infos) {
-        returned_tokens2 = num_presents_returned;
-        EXPECT_FALSE(future_presentation_infos.empty());
-      };
+  flatland2.events().OnPresentProcessed = [&returned_tokens2](OnPresentProcessedValues values,
+                                                              Error) {
+    returned_tokens2 = values.num_presents_returned();
+    EXPECT_FALSE(values.future_presentation_infos().empty());
+  };
 
   // Both instances receive their initial allotment of tokens, then forget those tokens.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&returned_tokens1]() { return returned_tokens1 != 0; }));
@@ -385,12 +383,11 @@ TEST_F(FlatlandManagerTest, ConsecutiveUpdateSessions_ReturnsCorrectPresentToken
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens = 0;
-  flatland.events().OnPresentProcessed =
-      [&returned_tokens](Error error, uint32_t num_presents_returned,
-                         Flatland::FuturePresentationInfos future_presentation_infos) {
-        returned_tokens = num_presents_returned;
-        EXPECT_FALSE(future_presentation_infos.empty());
-      };
+  flatland.events().OnPresentProcessed = [&returned_tokens](OnPresentProcessedValues values,
+                                                            Error error) {
+    returned_tokens = values.num_presents_returned();
+    EXPECT_FALSE(values.future_presentation_infos().empty());
+  };
 
   // Receive the initial allotment of tokens, then forget those tokens.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&returned_tokens]() { return returned_tokens != 0; }));
@@ -436,13 +433,11 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
 
   Error error_returned = Error::NO_ERROR;
   uint32_t tokens_remaining = 1;
-  flatland.events().OnPresentProcessed =
-      [&error_returned, &tokens_remaining](
-          Error error, uint32_t num_presents_returned,
-          Flatland::FuturePresentationInfos future_presentation_infos) {
-        error_returned = error;
-        tokens_remaining += num_presents_returned;
-      };
+  flatland.events().OnPresentProcessed = [&error_returned, &tokens_remaining](
+                                             OnPresentProcessedValues values, Error error) {
+    error_returned = error;
+    tokens_remaining += (error == Error::NO_ERROR) ? values.num_presents_returned() : 0;
+  };
 
   // Run until the instance receives the initial allotment of tokens.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&tokens_remaining]() { return tokens_remaining > 1; }));
@@ -473,13 +468,11 @@ TEST_F(FlatlandManagerTest, ErrorClosesSession) {
 
   Error error_returned = Error::NO_ERROR;
   uint32_t tokens_remaining = 1;
-  flatland.events().OnPresentProcessed =
-      [&error_returned, &tokens_remaining](
-          Error error, uint32_t num_presents_returned,
-          Flatland::FuturePresentationInfos future_presentation_infos) {
-        error_returned = error;
-        tokens_remaining += num_presents_returned;
-      };
+  flatland.events().OnPresentProcessed = [&error_returned, &tokens_remaining](
+                                             OnPresentProcessedValues values, Error error) {
+    error_returned = error;
+    tokens_remaining += (error == Error::NO_ERROR) ? values.num_presents_returned() : 0;
+  };
 
   // Run until the instance receives the initial allotment of tokens.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&tokens_remaining]() { return tokens_remaining > 1; }));
@@ -503,11 +496,10 @@ TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t tokens_remaining = 1;
-  flatland.events().OnPresentProcessed =
-      [&tokens_remaining](Error error, uint32_t num_presents_returned,
-                          Flatland::FuturePresentationInfos future_presentation_infos) {
-        tokens_remaining += num_presents_returned;
-      };
+  flatland.events().OnPresentProcessed = [&tokens_remaining](OnPresentProcessedValues values,
+                                                             Error error) {
+    tokens_remaining += values.num_presents_returned();
+  };
 
   // Run until the instance receives the initial allotment of tokens.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&tokens_remaining]() { return tokens_remaining > 1; }));
