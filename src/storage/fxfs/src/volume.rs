@@ -51,7 +51,7 @@ impl RootVolume {
         self.volume_directory
             .add_child_volume(&mut transaction, volume_name, store.store_object_id())
             .await?;
-        transaction.commit().await;
+        transaction.commit().await?;
 
         Ok(store)
     }
@@ -100,7 +100,7 @@ pub async fn root_volume(fs: &Arc<FxFilesystem>) -> Result<RootVolume, Error> {
                     let directory = root_directory
                         .create_child_dir(&mut transaction, VOLUMES_DIRECTORY)
                         .await?;
-                    transaction.commit().await;
+                    transaction.commit().await?;
                     break directory;
                 } else {
                     transaction = Some(
@@ -172,7 +172,7 @@ mod tests {
                 .create_child_file(&mut transaction, "foo")
                 .await
                 .expect("create_child_file failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
             filesystem.sync(SyncOptions::default()).await.expect("sync failed");
         };
         {

@@ -15,7 +15,7 @@ use {
             transaction::{self, Transaction},
         },
     },
-    anyhow::{bail, Error},
+    anyhow::{anyhow, bail, Error},
     async_trait::async_trait,
     interval_tree::utils::RangeOps,
     std::{cmp::min, ops::Range, sync::Arc},
@@ -58,7 +58,10 @@ impl Handle {
                 if self.extents.is_empty() {
                     self.start_offset = range.start;
                 } else if range.start != self.size {
-                    bail!(FxfsError::Inconsistent);
+                    bail!(anyhow!(FxfsError::Inconsistent).context(format!(
+                        "Unexpected journal extent {:?}, expected start: {}",
+                        range, self.size
+                    )));
                 }
                 self.extents.push(*device_offset..*device_offset + range.length());
                 self.size = range.end;

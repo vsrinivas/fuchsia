@@ -334,10 +334,13 @@ impl TransactionHandler for FxFilesystem {
         Ok(transaction)
     }
 
-    async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>) {
+    async fn commit_transaction(
+        self: Arc<Self>,
+        transaction: &mut Transaction<'_>,
+    ) -> Result<(), Error> {
         trace_duration!("FxFilesystem::commit_transaction");
         debug_assert_not_too_long!(self.lock_manager.commit_prepare(transaction));
-        self.journal.commit(transaction).await;
+        self.journal.commit(transaction).await?;
         let mut compaction_task = self.compaction_task.lock().unwrap();
         if compaction_task.is_none()
             && !self.closed.load(atomic::Ordering::SeqCst)
@@ -345,6 +348,7 @@ impl TransactionHandler for FxFilesystem {
         {
             *compaction_task = Some(fasync::Task::spawn(self.clone().compact()));
         }
+        Ok(())
     }
 
     fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
@@ -415,7 +419,7 @@ mod tests {
                 .create_child_file(&mut transaction, &format!("{}", i))
                 .await
                 .expect("create_child_file failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
             tasks.push(fasync::Task::spawn(async move {
                 const TEST_DATA: &[u8] = b"hello";
                 let mut buf = handle.allocate_buffer(TEST_DATA.len());

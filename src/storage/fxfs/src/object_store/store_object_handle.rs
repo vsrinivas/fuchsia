@@ -959,7 +959,7 @@ mod tests {
                 .expect("write failed");
         }
         object.truncate(&mut transaction, TEST_OBJECT_SIZE).await.expect("truncate failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         (fs, object)
     }
 
@@ -1041,7 +1041,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         object.truncate(&mut transaction, 3).await.expect("truncate failed"); // This deletes 512..1024.
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         let data = b"foo";
         let offset = 1500u64;
         let align = (offset % MIN_BLOCK_SIZE as u64) as usize;
@@ -1084,7 +1084,7 @@ mod tests {
             ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
                 .await
                 .expect("create_object failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         let mut ef_buffer = object.allocate_buffer(512);
         ef_buffer.as_mut_slice().fill(0xef);
         object2.write(0, ef_buffer.as_ref()).await.expect("write failed");
@@ -1094,7 +1094,7 @@ mod tests {
         object.write(512, buffer.as_ref()).await.expect("write failed");
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         object.truncate(&mut transaction, 1536).await.expect("truncate failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         object2.write(512, ef_buffer.as_ref()).await.expect("write failed");
 
         let mut buffer = object.allocate_buffer(2048);
@@ -1117,14 +1117,14 @@ mod tests {
             .preallocate_range(&mut transaction, 0..MIN_BLOCK_SIZE as u64)
             .await
             .expect("preallocate_range failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         assert!(object.get_size() < 1048576);
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         object
             .preallocate_range(&mut transaction, 0..1048576)
             .await
             .expect("preallocate_range failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         assert_eq!(object.get_size(), 1048576);
         // Check that it didn't reallocate the space for the existing extent
         let allocated_after = allocator.get_allocated_bytes();
@@ -1180,7 +1180,7 @@ mod tests {
             .preallocate_range(&mut transaction, offset..offset + MIN_BLOCK_SIZE as u64)
             .await
             .expect("preallocate_range failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         // Check that it didn't reallocate any new space.
         assert_eq!(allocator.get_allocated_bytes(), allocated_before);
         fs.close().await.expect("Close failed");
@@ -1215,7 +1215,7 @@ mod tests {
             .await
             .expect("create_object failed");
         handle.extend(&mut transaction, 0..5 * MIN_BLOCK_SIZE as u64).await.expect("extend failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         let mut buf = handle.allocate_buffer(5 * MIN_BLOCK_SIZE as usize);
         buf.as_mut_slice().fill(123);
         handle.write(0, buf.as_ref()).await.expect("write failed");
@@ -1240,7 +1240,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         object.truncate(&mut transaction, MIN_BLOCK_SIZE as u64).await.expect("truncate failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         let allocated_after = allocator.get_allocated_bytes();
         assert!(
             allocated_after < allocated_before,
@@ -1267,7 +1267,7 @@ mod tests {
                 .expect("adjust_refs failed"),
             false
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let allocator = fs.allocator();
         let allocated_before = allocator.get_allocated_bytes();
@@ -1283,7 +1283,7 @@ mod tests {
                 .expect("adjust_refs failed"),
             true
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         assert_eq!(allocator.get_allocated_bytes(), allocated_before);
 
@@ -1341,7 +1341,7 @@ mod tests {
                 // This is a halting problem so all we can do is sleep.
                 fasync::Timer::new(Duration::from_millis(100)).await;
                 assert!(!*done.lock().unwrap());
-                t.commit().await;
+                t.commit().await.expect("commit failed");
             },
             async {
                 recv1.await.unwrap();
@@ -1385,7 +1385,7 @@ mod tests {
                 .await
                 .expect("create_object failed"),
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         for _ in 0..100 {
             let cloned_object = object.clone();
             let writer = fasync::Task::spawn(async move {
@@ -1413,7 +1413,7 @@ mod tests {
             reader.await;
             let mut transaction = object.new_transaction().await.expect("new_transaction failed");
             object.truncate(&mut transaction, 0).await.expect("truncate failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
         }
         fs.close().await.expect("Close failed");
     }
@@ -1441,7 +1441,7 @@ mod tests {
             .extend(&mut transaction, offset..offset + MIN_BLOCK_SIZE as u64)
             .await
             .expect("extend failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         let after = object.get_allocated_size().await.expect("get_allocated_size failed");
         assert_eq!(after, before + MIN_BLOCK_SIZE as u64);
 
@@ -1453,7 +1453,7 @@ mod tests {
             .truncate(&mut transaction, size - MIN_BLOCK_SIZE as u64)
             .await
             .expect("extend failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         let after = object.get_allocated_size().await.expect("get_allocated_size failed");
         assert_eq!(after, before - MIN_BLOCK_SIZE as u64);
 
@@ -1464,7 +1464,7 @@ mod tests {
             .preallocate_range(&mut transaction, offset..offset + MIN_BLOCK_SIZE as u64)
             .await
             .expect("extend failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         let after = object.get_allocated_size().await.expect("get_allocated_size failed");
         assert_eq!(after, before + MIN_BLOCK_SIZE as u64);
         fs.close().await.expect("Close failed");
@@ -1476,7 +1476,7 @@ mod tests {
         let expected_size = object.get_size();
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         object.zero(&mut transaction, 0..MIN_BLOCK_SIZE as u64 * 10).await.expect("zero failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         assert_eq!(object.get_size(), expected_size);
         let mut buf = object.allocate_buffer(MIN_BLOCK_SIZE as usize * 10);
         assert_eq!(object.read(0, buf.as_mut()).await.expect("read failed") as u64, expected_size);
@@ -1498,7 +1498,7 @@ mod tests {
             .update_timestamps(Some(&mut transaction), Some(CRTIME), Some(MTIME))
             .await
             .expect("update_timestamps failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let properties = object.get_properties().await.expect("get_properties failed");
         assert_matches!(

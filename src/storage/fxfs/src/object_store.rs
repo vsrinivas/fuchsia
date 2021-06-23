@@ -373,7 +373,7 @@ impl ObjectStore {
         loop {
             let mut transaction = fs.clone().new_transaction(&[], txn_options).await?;
             let next_key = self.delete_some(&mut transaction, &search_key).await?;
-            transaction.commit().await;
+            transaction.commit().await?;
             search_key = if let Some(next_key) = next_key {
                 next_key
             } else {
@@ -753,7 +753,7 @@ impl Mutations for ObjectStore {
         let object_id = object_handle.object_id();
         graveyard.add(&mut transaction, parent_store.store_object_id(), object_id);
         transaction.add(self.store_object_id(), Mutation::BeginFlush);
-        transaction.commit().await;
+        transaction.commit().await?;
 
         // This size can't be too big because we've been called to flush in-memory data in order to
         // relieve space in the journal, so if it's too large, we could end up exhausting the
@@ -809,7 +809,11 @@ impl Mutations for ObjectStore {
                 Box::new(merger.seek(Bound::Unbounded).await?)
             };
             self.tree
-                .compact_with_iterator(iter, Writer::new(&object_handle, txn_options))
+                .compact_with_iterator(
+                    iter,
+                    Writer::new(&object_handle, txn_options),
+                    object_handle.block_size(),
+                )
                 .await
                 .context("ObjectStore::flush")?;
         }
@@ -848,10 +852,13 @@ impl Mutations for ObjectStore {
             .await?;
         transaction.add(self.store_object_id(), Mutation::EndFlush);
         graveyard.remove(&mut transaction, parent_store.store_object_id(), object_id);
-        *self.store_info.lock().unwrap() = Some(new_store_info);
 
-        self.tree.set_layers(layers);
-        transaction.commit().await;
+        transaction
+            .commit_with_callback(|| {
+                *self.store_info.lock().unwrap() = Some(new_store_info);
+                self.tree.set_layers(layers);
+            })
+            .await?;
 
         // Now close the layers and purge them.
         for layer in layer_set.layers {
@@ -922,7 +929,7 @@ mod tests {
                 .await
                 .expect("create_object failed"),
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -933,7 +940,7 @@ mod tests {
                 .await
                 .expect("create_object failed"),
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         fs.sync(SyncOptions::default()).await.expect("sync failed");
 
@@ -947,7 +954,7 @@ mod tests {
                 .await
                 .expect("create_object failed"),
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let layer_set = store.tree.layer_set();
         let mut merger = layer_set.merger();
@@ -984,7 +991,7 @@ mod tests {
                 .create_child_store(&mut transaction)
                 .await
                 .expect("create_child_store failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
 
             child_store.store_object_id()
         };
@@ -1012,7 +1019,7 @@ mod tests {
                 .create_child_store_with_id(&mut transaction, 555u64)
                 .await
                 .expect("create_child_store failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
             child_store.store_object_id()
         };
 
@@ -1052,7 +1059,7 @@ mod tests {
                 .await
                 .expect("create_object failed"),
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         store.flush().await.expect("flush failed");
 
@@ -1107,7 +1114,7 @@ mod tests {
                 ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
                     .await
                     .expect("create_child failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
 
             // Allocate an extent in the file.
             let mut buffer = child.allocate_buffer(8192);
@@ -1151,7 +1158,7 @@ mod tests {
                 ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
                     .await
                     .expect("create_child failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
 
             // Allocate an extent in the file.
             let mut buffer = child.allocate_buffer(8192);

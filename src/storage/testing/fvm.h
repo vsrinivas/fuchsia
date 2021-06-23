@@ -19,6 +19,8 @@ struct FvmOptions {
 
   // If not set, a test GUID type is used.
   std::optional<std::array<uint8_t, BLOCK_GUID_LEN>> type;
+
+  uint64_t initial_fvm_slice_count = 1;
 };
 
 // Formats the given block device to be managed by FVM, and start up an FVM instance.

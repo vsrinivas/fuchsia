@@ -81,11 +81,15 @@ impl TransactionHandler for FakeFilesystem {
         Ok(Transaction::new(self, reservation, &[], locks).await)
     }
 
-    async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>) {
+    async fn commit_transaction(
+        self: Arc<Self>,
+        transaction: &mut Transaction<'_>,
+    ) -> Result<(), Error> {
         let checkpoint =
             JournalCheckpoint { file_offset: self.num_syncs.load(Ordering::Relaxed), checksum: 0 };
         self.lock_manager.commit_prepare(transaction).await;
         self.object_manager.apply_transaction(transaction, &checkpoint).await;
+        Ok(())
     }
 
     fn drop_transaction(&self, transaction: &mut Transaction<'_>) {

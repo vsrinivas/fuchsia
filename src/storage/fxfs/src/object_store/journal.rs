@@ -162,6 +162,9 @@ struct Inner {
 
     // The offset that we can zero the journal up to now that it is no longer needed.
     zero_offset: Option<u64>,
+
+    // If the device has been flushed recently, the journal offset when it occurred.
+    device_flushed: Option<u64>,
 }
 
 impl Journal {
@@ -179,6 +182,7 @@ impl Journal {
                 super_block_to_write: SuperBlockCopy::A,
                 reclaim_event: None,
                 zero_offset: None,
+                device_flushed: None,
             }),
             extension_mutex: futures::lock::Mutex::new(()),
             sync_mutex: futures::lock::Mutex::new(()),
@@ -489,6 +493,8 @@ impl Journal {
         const INIT_ROOT_STORE_OBJECT_ID: u64 = 4;
         const INIT_ALLOCATOR_OBJECT_ID: u64 = 5;
 
+        log::info!("Formatting fxfs device-size: {})", filesystem.device().size());
+
         let checkpoint = self.writer.lock().await.journal_file_checkpoint();
 
         let root_parent =
@@ -558,7 +564,7 @@ impl Journal {
             .context("create root directory")?;
         root_store.set_root_directory_object_id(&mut transaction, root_directory.object_id());
 
-        transaction.commit().await;
+        transaction.commit().await?;
 
         // Cache the super-block.
         {
@@ -582,13 +588,12 @@ impl Journal {
     }
 
     /// Commits a transaction.
-    pub async fn commit(&self, transaction: &mut Transaction<'_>) {
+    pub async fn commit(&self, transaction: &mut Transaction<'_>) -> Result<(), Error> {
         if transaction.is_empty() {
-            return;
+            return Ok(());
         }
-        // TODO(csuter): handle the case where we are unable to extend the journal file.
         if !transaction.skip_journal_extension {
-            self.maybe_extend_journal_file().await.unwrap();
+            self.maybe_extend_journal_file().await?;
         }
         // TODO(csuter): writing to the journal here can be asynchronous.
         let mut writer = self.writer.lock().await;
@@ -603,9 +608,13 @@ impl Journal {
             if let Err(e) = writer.flush_buffer(handle).await {
                 // TODO(csuter): if writes to the journal start failing then we should prevent the
                 // creation of new transactions.
+                // It's not safe to return an error here because we have written and applied the
+                // transaction.
                 log::warn!("journal write failed: {}", e);
             }
         }
+
+        Ok(())
     }
 
     async fn maybe_extend_journal_file(&self) -> Result<(), Error> {
@@ -616,7 +625,7 @@ impl Journal {
             Some(x) => x,
         };
 
-        let (size, zero_offset) = loop {
+        let (size, zero_offset, device_flushed) = loop {
             // TODO(csuter): we could maybe use self.objects.last_end_offset() instead here.
             let file_offset = debug_assert_not_too_long!(self.writer.lock())
                 .journal_file_checkpoint()
@@ -624,16 +633,33 @@ impl Journal {
             let size = handle.get_size();
 
             let size = if file_offset + self.chunk_size() > size { Some(size) } else { None };
-            let zero_offset = self.inner.lock().unwrap().zero_offset.clone();
 
-            if size.is_none() && zero_offset.is_none() {
-                return Ok(());
+            {
+                let inner = self.inner.lock().unwrap();
+
+                if size.is_none() && inner.zero_offset.is_none() && inner.device_flushed.is_none() {
+                    return Ok(());
+                }
+                if extension_guard.is_some() {
+                    break (size, inner.zero_offset, inner.device_flushed);
+                }
             }
-            if extension_guard.is_some() {
-                break (size, zero_offset);
-            }
+
             extension_guard = Some(debug_assert_not_too_long!(self.extension_mutex.lock()));
         };
+
+        if let Some(device_flushed) = device_flushed {
+            {
+                let mut writer = self.writer.lock().await;
+                serialize_into(&mut *writer, &JournalRecord::DidFlushDevice(device_flushed))?;
+            }
+            {
+                let mut inner = self.inner.lock().unwrap();
+                if inner.device_flushed == Some(device_flushed) {
+                    inner.device_flushed = None;
+                }
+            }
+        }
 
         let mut transaction = handle
             .new_transaction_with_options(Options {
@@ -650,7 +676,7 @@ impl Journal {
         if let Some(zero_offset) = zero_offset {
             handle.zero(&mut transaction, 0..zero_offset).await?;
         }
-        transaction.commit().await;
+        transaction.commit().await?;
 
         // TODO(csuter): See if we can add an assertion that checks we managed to fit the
         // transaction that extends the journal within the old space.  It's tricky at this point
@@ -753,6 +779,7 @@ impl Journal {
         // TODO(csuter): We should optimize for the case where nothing needs to be done.
         let (checkpoint, borrowed) = {
             let mut writer = debug_assert_not_too_long!(self.writer.lock());
+
             serialize_into(&mut *writer, &JournalRecord::EndBlock)?;
             writer.pad_to_block()?;
             (
@@ -762,15 +789,14 @@ impl Journal {
         };
         if options.flush_device {
             self.handle.get().unwrap().flush_device().await?;
-            // If we are about to write a super-block, we could skip writing this record since it is
-            // implicit, but it is probably not worth that optimisation.
-            {
-                let mut writer = self.writer.lock().await;
-                serialize_into(
-                    &mut *writer,
-                    &JournalRecord::DidFlushDevice(checkpoint.file_offset),
-                )?;
-            }
+            // We need to write a DidFlushDevice record at some point, but if we are in the process
+            // of shutting down the filesystem, we want to leave to journal clean to avoid there
+            // being log messages complaining about unwritten journal data, so we queue it up so
+            // that the next transaction will trigger this record to be written.  If we are shutting
+            // down, that will never happen but since the DidFlushDevice message is purely advisory
+            // (it reduces the number of checksums we have to verify during replay), it doesn't
+            // matter if it isn't written.
+            self.inner.lock().unwrap().device_flushed = Some(checkpoint.file_offset);
             // Tell the allocator that we flushed the device so that it can now start using space
             // that was deallocated.
             self.objects.allocator().did_flush_device(checkpoint.file_offset).await;
@@ -895,7 +921,7 @@ mod tests {
             ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
                 .await
                 .expect("create_object failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
         }
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
@@ -932,7 +958,7 @@ mod tests {
                 .await
                 .expect("create_child_file failed");
 
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
             handle.write(0, buf.as_ref()).await.expect("write failed");
@@ -983,7 +1009,7 @@ mod tests {
                 .create_child_file(&mut transaction, "test")
                 .await
                 .expect("create_child_file failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
             handle.write(0, buf.as_ref()).await.expect("write failed");
@@ -1002,7 +1028,7 @@ mod tests {
                     .create_child_file(&mut transaction, &format!("{}", i))
                     .await
                     .expect("create_child_file failed");
-                transaction.commit().await;
+                transaction.commit().await.expect("commit failed");
                 let mut buf = handle.allocate_buffer(TEST_DATA.len());
                 buf.as_mut_slice().copy_from_slice(TEST_DATA);
                 handle.write(0, buf.as_ref()).await.expect("write failed");
@@ -1044,7 +1070,7 @@ mod tests {
                 .create_child_file(&mut transaction, "test2")
                 .await
                 .expect("create_child_file failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
             handle.write(0, buf.as_ref()).await.expect("write failed");

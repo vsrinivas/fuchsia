@@ -221,7 +221,9 @@ zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
 
   // Create an FVM partition if requested.
   if (options.use_fvm) {
-    auto fvm_partition_or = storage::CreateFvmPartition(device_path, options.fvm_slice_size);
+    storage::FvmOptions fvm_options = {.initial_fvm_slice_count = options.initial_fvm_slice_count};
+    auto fvm_partition_or =
+        storage::CreateFvmPartition(device_path, options.fvm_slice_size, fvm_options);
     if (fvm_partition_or.is_error()) {
       return fvm_partition_or.take_error();
     }
@@ -424,7 +426,7 @@ std::vector<TestFilesystemOptions> AllTestFilesystems() {
     TestFilesystemOptions::DefaultMinfs(), TestFilesystemOptions::MinfsWithoutFvm(),
         TestFilesystemOptions::DefaultMemfs(), TestFilesystemOptions::DefaultFatfs(),
 #if 0  // Change to 1 to enable testing for Fxfs
-      DefaultFxfsTestOptions()
+        DefaultFxfsTestOptions()
 #endif
   };
 }

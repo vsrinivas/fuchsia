@@ -66,7 +66,7 @@ impl FxFile {
         let mut buf = self.handle.allocate_buffer(align + content.len());
         buf.as_mut_slice()[align..].copy_from_slice(content);
         self.handle.txn_write(&mut transaction, offset, buf.subslice(align..)).await?;
-        transaction.commit().await;
+        transaction.commit().await?;
         Ok((content.len() as u64, offset + content.len() as u64))
     }
 }
@@ -171,7 +171,7 @@ impl File for FxFile {
             .await
             .map_err(map_to_status)?;
         self.handle.truncate(&mut transaction, length).await.map_err(map_to_status)?;
-        transaction.commit().await;
+        transaction.commit().await.map_err(map_to_status)?;
         Ok(())
     }
 
@@ -236,7 +236,7 @@ impl File for FxFile {
             .await
             .map_err(map_to_status)?;
         if let Some(t) = transaction {
-            t.commit().await;
+            t.commit().await.map_err(map_to_status)?;
         }
         Ok(())
     }

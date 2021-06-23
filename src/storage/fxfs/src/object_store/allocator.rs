@@ -405,7 +405,7 @@ impl SimpleAllocator {
                 HandleOptions::default(),
             )
             .await?;
-            transaction.commit().await;
+            transaction.commit().await?;
         } else {
             let handle =
                 ObjectStore::open_object(&root_store, self.object_id, HandleOptions::default())
@@ -433,7 +433,8 @@ impl SimpleAllocator {
                     inner.allocated_bytes += amount;
                     if inner.allocated_bytes < 0 || inner.allocated_bytes as u64 > self.device_size
                     {
-                        bail!(FxfsError::Inconsistent);
+                        bail!(anyhow!(FxfsError::Inconsistent)
+                            .context("Allocated bytes inconsistent"));
                     }
                     inner.info = info;
                 }
@@ -652,8 +653,7 @@ impl Allocator for SimpleAllocator {
         // an extent that covers the first byte of the range we're deallocating.
         let mut iter = merger
             .seek(Bound::Included(&AllocatorKey { device_range: 0..dealloc_range.start + 1 }))
-            .await
-            .unwrap();
+            .await?;
         let mut deallocated = 0;
         let mut mutation = None;
         while let Some(ItemRef {
@@ -664,7 +664,8 @@ impl Allocator for SimpleAllocator {
         {
             if device_range.start > dealloc_range.start {
                 // We expect the entire range to be allocated.
-                bail!(FxfsError::Inconsistent);
+                bail!(anyhow!(FxfsError::Inconsistent)
+                    .context("Attempt to deallocate unallocated range"));
             }
             let end = std::cmp::min(device_range.end, dealloc_range.end);
             if *delta == 1 {
@@ -969,7 +970,7 @@ impl Mutations for SimpleAllocator {
         // which mutations are applied whilst committing), in which case they'd get lost on replay
         // because the journal will only send mutations that follow this transaction.
         transaction.add(self.object_id(), Mutation::BeginFlush);
-        transaction.commit().await;
+        transaction.commit().await?;
 
         let layer_set = self.tree.immutable_layer_set();
         {
@@ -978,6 +979,7 @@ impl Mutations for SimpleAllocator {
                 .compact_with_iterator(
                     CoalescingIterator::new(Box::new(merger.seek(Bound::Unbounded).await?)).await?,
                     Writer::new(&layer_object_handle, txn_options),
+                    layer_object_handle.block_size(),
                 )
                 .await?;
         }
@@ -1012,8 +1014,8 @@ impl Mutations for SimpleAllocator {
         graveyard.remove(&mut transaction, root_store.store_object_id(), object_id);
 
         // TODO(csuter): what if this fails.
-        self.tree.set_layers(layers_from_handles(Box::new([layer_object_handle])).await?);
-        transaction.commit().await;
+        let layers = layers_from_handles(Box::new([layer_object_handle])).await?;
+        transaction.commit_with_callback(|| self.tree.set_layers(layers)).await?;
 
         // Now close the layers and purge them.
         for layer in layer_set.layers {
@@ -1232,7 +1234,7 @@ mod tests {
         );
         assert_eq!(device_ranges.last().unwrap().length(), MIN_BLOCK_SIZE as u64);
         assert_eq!(overlap(&device_ranges[0], &device_ranges[1]), 0);
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         device_ranges.push(
@@ -1244,7 +1246,7 @@ mod tests {
         assert_eq!(device_ranges[2].length(), MIN_BLOCK_SIZE as u64);
         assert_eq!(overlap(&device_ranges[0], &device_ranges[2]), 0);
         assert_eq!(overlap(&device_ranges[1], &device_ranges[2]), 0);
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         check_allocations(&allocator, &device_ranges).await;
     }
@@ -1264,12 +1266,12 @@ mod tests {
             .await
             .expect("allocate failed");
         assert_eq!(device_range1.length(), MIN_BLOCK_SIZE as u64);
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         allocator.deallocate(&mut transaction, device_range1).await.expect("deallocate failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         check_allocations(&allocator, &[]).await;
     }
@@ -1298,7 +1300,7 @@ mod tests {
         );
         assert_eq!(device_ranges.last().unwrap().length(), MIN_BLOCK_SIZE as u64);
         assert_eq!(overlap(&device_ranges[0], &device_ranges[1]), 0);
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         check_allocations(&allocator, &device_ranges).await;
     }
@@ -1335,7 +1337,7 @@ mod tests {
                 .await
                 .expect("allocate failed"),
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         allocator.flush().await.expect("flush failed");
 
@@ -1356,7 +1358,7 @@ mod tests {
         for r in &device_ranges[..3] {
             assert_eq!(overlap(r, device_ranges.last().unwrap()), 0);
         }
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         check_allocations(&allocator, &device_ranges).await;
     }
 
@@ -1419,7 +1421,7 @@ mod tests {
                 .allocate(&mut transaction, ALLOCATED_BYTES)
                 .await
                 .expect("allocate failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
             assert_eq!(allocator.get_allocated_bytes(), ALLOCATED_BYTES);
             range
         };
@@ -1451,7 +1453,7 @@ mod tests {
         // Before committing, there should be no change.
         assert_eq!(allocator.get_allocated_bytes(), ALLOCATED_BYTES);
 
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         // After committing, all but 40 bytes should remain allocated.
         assert_eq!(allocator.get_allocated_bytes(), 40);

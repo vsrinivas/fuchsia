@@ -28,19 +28,16 @@ use {
 };
 
 const SKIP_LIST_LAYER_ITEMS: usize = 512;
-const SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE: u32 = 4096;
 
 pub async fn layers_from_handles<K: Key, V: Value>(
     handles: Box<[impl ObjectHandle + 'static]>,
 ) -> Result<Vec<Arc<dyn Layer<K, V>>>, Error> {
     let mut layers = Vec::new();
     for handle in Vec::from(handles) {
+        let block_size = handle.block_size();
         layers.push(
-            simple_persistent_layer::SimplePersistentLayer::open(
-                handle,
-                SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE,
-            )
-            .await? as Arc<dyn Layer<K, V>>,
+            simple_persistent_layer::SimplePersistentLayer::open(handle, block_size).await?
+                as Arc<dyn Layer<K, V>>,
         );
     }
     Ok(layers)
@@ -136,7 +133,7 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
     pub fn new_writer<'a>(object_handle: &'a dyn ObjectHandle) -> impl LayerWriter + 'a {
         SimplePersistentLayerWriter::new(
             Writer::new(object_handle, transaction::Options::default()),
-            SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE,
+            object_handle.block_size(),
         )
     }
 
@@ -147,10 +144,10 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
         &self,
         mut iterator: impl LayerIterator<K, V>,
         writer: impl WriteBytes + Send,
+        block_size: u32,
     ) -> Result<(), Error> {
         trace_duration!("LSMTree::compact_with_iterator");
-        let mut writer =
-            SimplePersistentLayerWriter::new(writer, SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE);
+        let mut writer = SimplePersistentLayerWriter::new(writer, block_size);
         while let Some(item_ref) = iterator.get() {
             log::debug!("compact: writing {:?}", item_ref);
             writer.write(item_ref).await?;
@@ -167,6 +164,7 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
         self.compact_with_iterator(
             iter,
             Writer::new(object_handle, transaction::Options::default()),
+            object_handle.block_size(),
         )
         .await
     }

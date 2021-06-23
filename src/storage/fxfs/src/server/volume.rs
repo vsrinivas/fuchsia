@@ -224,34 +224,30 @@ impl FilesystemRename for FxVolume {
         .await
         .map_err(map_to_status)?;
 
-        // This must be done immediately before committing the transaction, since we don't want to
-        // have to unwind it if something fails before then.
-        moved_node.set_parent(dst_dir.clone());
+        transaction
+            .commit_with_callback(|| {
+                moved_node.set_parent(dst_dir.clone());
+                src_dir.did_remove(src);
 
-        src_dir.did_remove(src);
+                match replace_result {
+                    ReplacedChild::None => dst_dir.did_add(dst),
+                    ReplacedChild::FileWithRemainingLinks(..) | ReplacedChild::File(_) => {
+                        dst_dir.did_remove(dst);
+                        dst_dir.did_add(dst);
+                    }
+                    ReplacedChild::Directory(id) => {
+                        dst_dir.did_remove(dst);
+                        dst_dir.did_add(dst);
+                        self.mark_directory_deleted(id, dst);
+                    }
+                }
+            })
+            .await
+            .map_err(map_to_status)?;
 
-        match replace_result {
-            ReplacedChild::None => {
-                dst_dir.did_add(dst);
-                transaction.commit().await
-            }
-            ReplacedChild::FileWithRemainingLinks(..) => {
-                dst_dir.did_remove(dst);
-                dst_dir.did_add(dst);
-                transaction.commit().await
-            }
-            ReplacedChild::File(id) => {
-                dst_dir.did_remove(dst);
-                dst_dir.did_add(dst);
-                transaction.commit().await;
-                self.maybe_purge_file(id).await.map_err(map_to_status)?;
-            }
-            ReplacedChild::Directory(id) => {
-                dst_dir.did_remove(dst);
-                dst_dir.did_add(dst);
-                transaction.commit_with_callback(|| self.mark_directory_deleted(id, dst)).await
-            }
-        };
+        if let ReplacedChild::File(id) = replace_result {
+            self.maybe_purge_file(id).await.map_err(map_to_status)?;
+        }
 
         Ok(())
     }

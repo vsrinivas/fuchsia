@@ -275,7 +275,7 @@ mod tests {
             .mark_allocated(&mut transaction, offset..offset + TEST_DEVICE_BLOCK_SIZE as u64)
             .await
             .expect("mark_allocated failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         let error = format!("{}", fsck(&fs).await.expect_err("fsck succeeded"));
         assert!(error.contains("found extra allocation"), "{}", error);
     }
@@ -304,7 +304,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         allocator.add_ref(&mut transaction, range);
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         let error = format!("{}", fsck(&fs).await.expect_err("fsck succeeded"));
         assert!(error.contains("mismatch"), "{}", error);
     }
@@ -371,7 +371,7 @@ mod tests {
             .insert_child(&mut transaction, "test", child_file.object_id(), ObjectDescriptor::File)
             .await
             .expect("insert_child failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let error = format!("{}", fsck(&fs).await.expect_err("fsck succeeded"));
         assert!(error.contains("reference count mismatch"), "{}", error);
@@ -398,7 +398,7 @@ mod tests {
         ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
             .await
             .expect("create_object failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let error = format!("{}", fsck(&fs).await.expect_err("fsck succeeded"));
         assert!(error.contains("reference count mismatch"), "{}", error);

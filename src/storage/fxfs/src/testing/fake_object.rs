@@ -70,8 +70,12 @@ impl TransactionHandler for FakeObject {
         Ok(Transaction::new(self, MetadataReservation::Borrowed, &[], locks).await)
     }
 
-    async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>) {
+    async fn commit_transaction(
+        self: Arc<Self>,
+        transaction: &mut Transaction<'_>,
+    ) -> Result<(), Error> {
         std::mem::take(&mut transaction.mutations);
+        Ok(())
     }
 
     fn drop_transaction(&self, transaction: &mut Transaction<'_>) {

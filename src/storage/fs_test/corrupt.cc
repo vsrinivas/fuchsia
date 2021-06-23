@@ -15,13 +15,17 @@
 #include <gtest/gtest.h>
 
 #include "src/storage/fs_test/fs_test.h"
+#include "src/storage/fs_test/fxfs.h"
 
 namespace fs_test {
 namespace {
 
 namespace device = fuchsia_device;
 
-TEST(CorruptTest, CorruptTest) {
+class CorruptTest : public testing::Test,
+                    public testing::WithParamInterface<TestFilesystemOptions> {};
+
+TEST_P(CorruptTest, CorruptTest) {
   // 768 blocks containing 64 pages of 4 KiB with 8 bytes OOB
   constexpr int kSize = 768 * 64 * (4096 + 8);
 
@@ -30,11 +34,20 @@ TEST(CorruptTest, CorruptTest) {
     ASSERT_EQ(vmo.CreateAndMap(kSize, "corrupt-test-vmo"), ZX_OK);
     memset(vmo.start(), 0xff, kSize);
 
-    TestFilesystemOptions options = TestFilesystemOptions::DefaultMinfs();
+    TestFilesystemOptions options = GetParam();
     options.device_block_size = 8192;
     options.device_block_count = 0;  // Use VMO size.
     options.use_ram_nand = true;
     options.ram_nand_vmo = zx::unowned_vmo(vmo.vmo());
+    if (options.use_fvm) {
+      // Create a dummy FVM partition that shifts the location of the minfs partition such that the
+      // offsets being used will hit the second half of the FTL's 8 KiB map pages.
+      options.dummy_fvm_partition_size = 8'388'608;
+    } else {
+      options.use_fvm = true;
+      options.fvm_slice_size = 32'768;
+      options.initial_fvm_slice_count = 5120;  // Leaves 32 MiB for FVM & FTL metadata.
+    }
     std::random_device random;
 
     if (pass == 0) {
@@ -53,10 +66,6 @@ TEST(CorruptTest, CorruptTest) {
       std::uniform_int_distribution distribution(1300, 2300);
       options.fail_after = distribution(random);
     }
-
-    // Create a dummy FVM partition that shifts the location of the minfs partition such that the
-    // offsets being used will hit the second half of the FTL's 8 KiB map pages.
-    options.dummy_fvm_partition_size = 8'388'608;
 
     {
       auto fs_or = TestFilesystem::Create(options);
@@ -93,6 +102,15 @@ TEST(CorruptTest, CorruptTest) {
     EXPECT_EQ(fs.Fsck().status_value(), ZX_OK);
   }
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    /*no prefix*/, CorruptTest,
+    testing::Values(
+#if 0  // Change to 1 to enable testing for Fxfs
+        DefaultFxfsTestOptions(),
+#endif
+        TestFilesystemOptions::DefaultMinfs()),
+    testing::PrintToStringParamName());
 
 }  // namespace
 }  // namespace fs_test

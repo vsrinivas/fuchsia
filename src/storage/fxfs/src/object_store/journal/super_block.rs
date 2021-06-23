@@ -220,7 +220,7 @@ impl SuperBlock {
                         next_extent_offset..next_extent_offset + SUPER_BLOCK_CHUNK_SIZE,
                     )
                     .await?;
-                transaction.commit().await;
+                transaction.commit().await?;
                 for device_range in allocated {
                     next_extent_offset += device_range.end - device_range.start;
                     serialize_into(&mut writer, &SuperBlockRecord::Extent(device_range))?;
@@ -328,7 +328,7 @@ mod tests {
             .await
             .expect("extend failed");
 
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         (fs, handle_a, handle_b)
     }
@@ -353,7 +353,7 @@ mod tests {
             )
             .await
             .expect("create_object failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
         }
 
         let super_block_a = SuperBlock::new(

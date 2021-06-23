@@ -309,7 +309,7 @@ mod tests {
             Graveyard::create(&mut transaction, &root_store).await.expect("create failed");
         graveyard.add(&mut transaction, 2, 3);
         graveyard.add(&mut transaction, 3, 4);
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         // Reopen the graveyard and check that we see the objects we added.
         let graveyard =
@@ -332,7 +332,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         graveyard.remove(&mut transaction, 3, 4);
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         // Check that the graveyard has been updated as expected.
         let layer_set = graveyard.store().tree().layer_set();
@@ -358,7 +358,7 @@ mod tests {
             .create_child_store(&mut transaction)
             .await
             .expect("create_child_store failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let graveyard = fs.object_manager().graveyard().unwrap();
 
@@ -369,7 +369,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         graveyard.add(&mut transaction, root_store.store_object_id(), 1234);
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         fs.sync(SyncOptions::default()).await.expect("sync failed");
 
@@ -382,7 +382,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         graveyard.add(&mut transaction, child_store.store_object_id(), 5678);
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         // Ensure the objects have a monotonically increasing sequence.
         let graveyard =

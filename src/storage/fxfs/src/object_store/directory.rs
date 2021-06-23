@@ -507,7 +507,7 @@ mod tests {
             dir.add_child_volume(&mut transaction, "corge", 100)
                 .await
                 .expect("add_child_volume failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
             fs.sync(SyncOptions::default()).await.expect("sync failed");
             dir.object_id()
         };
@@ -562,7 +562,7 @@ mod tests {
             Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
 
         dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let mut transaction = fs
             .clone()
@@ -575,7 +575,7 @@ mod tests {
                 .expect("replace_child failed"),
             ReplacedChild::File(..)
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
         fs.close().await.expect("Close failed");
@@ -596,7 +596,7 @@ mod tests {
         let child =
             dir.create_child_dir(&mut transaction, "foo").await.expect("create_child_dir failed");
         child.create_child_file(&mut transaction, "bar").await.expect("create_child_file failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let mut transaction = fs
             .clone()
@@ -623,7 +623,7 @@ mod tests {
                 .expect("replace_child failed"),
             ReplacedChild::File(..)
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let mut transaction = fs
             .clone()
@@ -636,7 +636,7 @@ mod tests {
                 .expect("replace_child failed"),
             ReplacedChild::Directory(..)
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
         fs.close().await.expect("Close failed");
@@ -655,7 +655,7 @@ mod tests {
             Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
 
         dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let mut transaction = fs
             .clone()
@@ -668,7 +668,7 @@ mod tests {
                 .expect("replace_child failed"),
             ReplacedChild::File(..)
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let mut transaction = fs
             .clone()
@@ -676,7 +676,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         dir.lookup("foo").await.expect("lookup failed");
         fs.close().await.expect("Close failed");
@@ -696,7 +696,7 @@ mod tests {
                 Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
 
             dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
             dir.lookup("foo").await.expect("lookup failed");
 
             let mut transaction = fs
@@ -710,7 +710,7 @@ mod tests {
                     .expect("replace_child failed"),
                 ReplacedChild::File(..)
             );
-            transaction.commit().await;
+            transaction.commit().await.expect("commit failed");
 
             fs.sync(SyncOptions::default()).await.expect("sync failed");
             dir.object_id()
@@ -745,7 +745,7 @@ mod tests {
             .create_child_file(&mut transaction, "foo")
             .await
             .expect("create_child_file failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let mut transaction = fs
             .clone()
@@ -758,7 +758,7 @@ mod tests {
                 .expect("replace_child failed"),
             ReplacedChild::None
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         assert_eq!(child_dir1.lookup("foo").await.expect("lookup failed"), None);
         child_dir2.lookup("bar").await.expect("lookup failed");
@@ -789,7 +789,7 @@ mod tests {
             .create_child_file(&mut transaction, "bar")
             .await
             .expect("create_child_file failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         {
             let mut buf = foo.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
@@ -812,7 +812,7 @@ mod tests {
                 .expect("replace_child failed"),
             ReplacedChild::File(..)
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         assert_eq!(child_dir1.lookup("foo").await.expect("lookup failed"), None);
 
@@ -857,7 +857,7 @@ mod tests {
             .create_child_file(&mut transaction, "baz")
             .await
             .expect("create_child_file failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let mut transaction = fs
             .clone()
@@ -887,7 +887,7 @@ mod tests {
         let dir =
             Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
         dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         let mut transaction = fs
             .clone()
@@ -900,7 +900,7 @@ mod tests {
                 .expect("replace_child failed"),
             ReplacedChild::None
         );
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
         dir.lookup("bar").await.expect("lookup new name failed");
@@ -930,7 +930,7 @@ mod tests {
             .expect("create_child_file failed");
         let _dog =
             dir.create_child_file(&mut transaction, "dog").await.expect("create_child_file failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -939,7 +939,7 @@ mod tests {
         replace_child(&mut transaction, None, (&dir, "apple"))
             .await
             .expect("rereplace_child failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         let layer_set = dir.store().tree().layer_set();
         let mut merger = layer_set.merger();
         let mut iter = dir.iter(&mut merger).await.expect("iter failed");
@@ -965,7 +965,7 @@ mod tests {
             Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
         let child_dir =
             dir.create_child_dir(&mut transaction, "foo").await.expect("create_child_dir failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
         assert_eq!(dir.get_properties().await.expect("get_properties failed").sub_dirs, 1);
 
         // Moving within the same directory should not change the sub_dir count.
@@ -977,7 +977,7 @@ mod tests {
         replace_child(&mut transaction, Some((&dir, "foo")), (&dir, "bar"))
             .await
             .expect("replace_child failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         assert_eq!(dir.get_properties().await.expect("get_properties failed").sub_dirs, 1);
         assert_eq!(child_dir.get_properties().await.expect("get_properties failed").sub_dirs, 0);
@@ -992,7 +992,7 @@ mod tests {
             .create_child_dir(&mut transaction, "baz")
             .await
             .expect("create_child_dir failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         assert_eq!(child_dir.get_properties().await.expect("get_properties failed").sub_dirs, 1);
 
@@ -1004,7 +1004,7 @@ mod tests {
         replace_child(&mut transaction, Some((&child_dir, "baz")), (&dir, "foo"))
             .await
             .expect("replace_child failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         assert_eq!(dir.get_properties().await.expect("get_properties failed").sub_dirs, 2);
         assert_eq!(child_dir.get_properties().await.expect("get_properties failed").sub_dirs, 0);
@@ -1018,7 +1018,7 @@ mod tests {
         replace_child(&mut transaction, Some((&dir, "bar")), (&dir, "foo"))
             .await
             .expect("replace_child failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         assert_eq!(dir.get_properties().await.expect("get_properties failed").sub_dirs, 1);
 
@@ -1029,7 +1029,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         replace_child(&mut transaction, None, (&dir, "foo")).await.expect("replace_child failed");
-        transaction.commit().await;
+        transaction.commit().await.expect("commit failed");
 
         assert_eq!(dir.get_properties().await.expect("get_properties failed").sub_dirs, 0);
         fs.close().await.expect("Close failed");

@@ -64,7 +64,10 @@ pub trait TransactionHandler: Send + Sync {
     /// Implementations should perform any required journaling and then apply the mutations via
     /// ObjectManager's apply_mutation method.  Any mutations within the transaction should be
     /// removed so that drop_transaction can tell that the transaction was committed.
-    async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>);
+    async fn commit_transaction(
+        self: Arc<Self>,
+        transaction: &mut Transaction<'_>,
+    ) -> Result<(), Error>;
 
     /// Drops a transaction (rolling back if not committed).  Committing a transaction should have
     /// removed the mutations.  This is called automatically when Transaction is dropped, which is
@@ -493,15 +496,16 @@ impl<'a> Transaction<'a> {
     }
 
     /// Commits a transaction.
-    pub async fn commit(mut self) {
+    pub async fn commit(mut self) -> Result<(), Error> {
         log::debug!("Commit {:?}", &self);
-        self.handler.clone().commit_transaction(&mut self).await;
+        self.handler.clone().commit_transaction(&mut self).await
     }
 
     /// Commits and then runs the callback whilst locks are held.
-    pub async fn commit_with_callback<R>(mut self, f: impl FnOnce() -> R) -> R {
-        self.handler.clone().commit_transaction(&mut self).await;
-        f()
+    pub async fn commit_with_callback<R>(mut self, f: impl FnOnce() -> R) -> Result<R, Error> {
+        self.handler.clone().commit_transaction(&mut self).await?;
+        // The locks are still held here until self is dropped.
+        Ok(f())
     }
 }
 
@@ -872,7 +876,7 @@ mod tests {
                     .expect("new_transaction failed");
                 send1.send(()).unwrap(); // Tell the next future to continue.
                 recv2.await.unwrap();
-                t.commit().await;
+                t.commit().await.expect("commit failed");
                 *done.lock().unwrap() = true;
             },
             async {
@@ -916,7 +920,7 @@ mod tests {
                     .await
                     .expect("new_transaction failed");
                 send2.send(()).unwrap(); // Tell the first future to continue;
-                t.commit().await;
+                t.commit().await.expect("commit failed");
                 *done.lock().unwrap() = true;
             },
         );

@@ -40,6 +40,8 @@ pub trait ObjectHandle: Send + Sync + 'static {
     /// object is contained in, but not necessarily unique within the entire system.
     fn object_id(&self) -> u64;
 
+    /// Returns the filesystem block size, which should be at least as big as the device block size,
+    /// but not necessarily the same.
     fn block_size(&self) -> u32;
 
     /// Allocates a buffer for doing I/O (read and write) for the object.
@@ -138,7 +140,7 @@ pub trait ObjectHandleExt: ObjectHandle {
     async fn write(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
         let mut transaction = self.new_transaction().await?;
         self.txn_write(&mut transaction, offset, buf).await?;
-        transaction.commit().await;
+        transaction.commit().await?;
         Ok(())
     }
 }
@@ -179,7 +181,7 @@ impl WriteBytes for Writer<'_> {
             self.handle
                 .txn_write(&mut transaction, self.offset, self.buffer.subslice(..to_do))
                 .await?;
-            transaction.commit().await;
+            transaction.commit().await?;
             self.offset += to_do as u64;
             buf = &buf[to_do..];
         }
