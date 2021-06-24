@@ -89,6 +89,7 @@ class OtRadioDevice : public DeviceType {
   zx_status_t GetNCPVersion();
   zx_status_t DriverUnitTestGetNCPVersion();
   zx_status_t DriverUnitTestGetResetEvent();
+  void SetMaxInboundAllowance();
 
   zx::port port_;
   zx::interrupt interrupt_;

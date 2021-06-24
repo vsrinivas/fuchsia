@@ -307,9 +307,13 @@ bool OtRadioDevice::IsInterruptAsserted() {
 
 zx_status_t OtRadioDevice::DriverUnitTestGetNCPVersion() { return GetNCPVersion(); }
 
-zx_status_t OtRadioDevice::GetNCPVersion() {
+void OtRadioDevice::SetMaxInboundAllowance() {
   spinel_framer_->SetInboundAllowanceStatus(true);
   inbound_allowance_ = kOutboundAllowanceInit;
+}
+
+zx_status_t OtRadioDevice::GetNCPVersion() {
+  SetMaxInboundAllowance();
   uint8_t get_ncp_version_cmd[] = {0x80, 0x02, 0x02};  // HEADER, CMD ID, PROPERTY ID
   // populate TID (lower 4 bits in header)
   get_ncp_version_cmd[0] = (get_ncp_version_cmd[0] & 0xf0) | (kGetNcpVersionTID & 0x0f);
@@ -317,8 +321,7 @@ zx_status_t OtRadioDevice::GetNCPVersion() {
 }
 
 zx_status_t OtRadioDevice::DriverUnitTestGetResetEvent() {
-  spinel_framer_->SetInboundAllowanceStatus(true);
-  inbound_allowance_ = kOutboundAllowanceInit;
+  SetMaxInboundAllowance();
   return Reset();
 }
 
@@ -557,8 +560,7 @@ zx_status_t OtRadioDevice::CheckFWUpdateRequired(bool* update_fw) {
     // Simply update the allowance for each attempt. Radio will send
     // response to GetNCPVersion to us eventually. Ignore any response to
     // earlier commands.
-    spinel_framer_->SetInboundAllowanceStatus(true);
-    inbound_allowance_ = kOutboundAllowanceInit;
+    SetMaxInboundAllowance();
 
     // Wait for response to arrive, signaled by spi_rx_complete_
     status = sync_completion_wait(&spi_rx_complete_, ZX_SEC(10));
