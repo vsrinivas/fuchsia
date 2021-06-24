@@ -24,6 +24,7 @@ board_recovery_bootfs_labels += _common_bootfs_deps
 
 board_system_image_deps = [
   "//garnet/packages/prod:drivers-system",
+  "//garnet/packages/prod:wlan_drivers",
   "//src/media/audio/bundles:virtual_audio_driver",
 ]
 
