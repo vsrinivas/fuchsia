@@ -17,7 +17,7 @@ pub mod syscalls;
 
 use crate::auth::{Credentials, ShellJobControl};
 use crate::devices::DeviceRegistry;
-use crate::fs::{FdTable, FileSystem};
+use crate::fs::{FdTable, FsContext};
 use crate::loader::*;
 use crate::logging::*;
 use crate::mm::MemoryManager;
@@ -323,7 +323,7 @@ pub struct Task {
     pub mm: Arc<MemoryManager>,
 
     /// The file system for this task.
-    pub fs: Arc<FileSystem>,
+    pub fs: Arc<FsContext>,
 
     /// The security credentials for this task.
     pub creds: Credentials,
@@ -367,7 +367,7 @@ impl Task {
         thread: zx::Thread,
         files: Arc<FdTable>,
         mm: Arc<MemoryManager>,
-        fs: Arc<FileSystem>,
+        fs: Arc<FsContext>,
         creds: Credentials,
         sjc: ShellJobControl,
         exit_signal: Option<Signal>,
@@ -404,7 +404,7 @@ impl Task {
         name: &CString,
         parent: pid_t,
         files: Arc<FdTable>,
-        fs: Arc<FileSystem>,
+        fs: Arc<FsContext>,
         creds: Credentials,
         exit_signal: Option<Signal>,
     ) -> Result<TaskOwner, Errno> {
@@ -453,7 +453,7 @@ impl Task {
     pub fn create_thread(
         &self,
         files: Arc<FdTable>,
-        fs: Arc<FileSystem>,
+        fs: Arc<FsContext>,
         creds: Credentials,
     ) -> Result<TaskOwner, Errno> {
         let thread = self

@@ -229,7 +229,7 @@ async fn start_component(
         &binary_path,
         0,
         files,
-        FileSystem::new(root),
+        FsContext::new(root),
         Credentials::new(3),
         None,
     )?;

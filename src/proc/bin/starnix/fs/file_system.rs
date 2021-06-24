@@ -10,48 +10,44 @@ use crate::fs::*;
 use crate::types::*;
 
 #[derive(Debug, Clone)]
-struct FileSystemState {
+struct FsContextState {
     // See <https://man7.org/linux/man-pages/man2/umask.2.html>
     umask: mode_t,
 }
 
-impl Default for FileSystemState {
-    fn default() -> FileSystemState {
-        FileSystemState { umask: 0o022 }
+impl Default for FsContextState {
+    fn default() -> FsContextState {
+        FsContextState { umask: 0o022 }
     }
 }
 
-pub struct FileSystem {
+pub struct FsContext {
     pub namespace: Arc<Namespace>,
     pub root_node: NamespaceNode,
 
     // TODO: Add cwd and other state here. Some of this state should
-    // be copied in FileSystem::fork below.
-    state: RwLock<FileSystemState>,
+    // be copied in FsContext::fork below.
+    state: RwLock<FsContextState>,
 }
 
-impl FileSystem {
-    pub fn new(root_remote: fio::DirectorySynchronousProxy) -> Arc<FileSystem> {
+impl FsContext {
+    pub fn new(root_remote: fio::DirectorySynchronousProxy) -> Arc<FsContext> {
         let root_node = new_remote_filesystem(
             syncio::directory_clone(&root_remote, fio::CLONE_FLAG_SAME_RIGHTS).unwrap(),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         );
         let namespace = Namespace::new(root_node);
         let root_node = namespace.root();
-        Arc::new(FileSystem {
-            namespace,
-            root_node,
-            state: RwLock::new(FileSystemState::default()),
-        })
+        Arc::new(FsContext { namespace, root_node, state: RwLock::new(FsContextState::default()) })
     }
 
-    pub fn fork(&self) -> Arc<FileSystem> {
+    pub fn fork(&self) -> Arc<FsContext> {
         // A child process created via fork(2) inherits its parent's umask.
         // The umask is left unchanged by execve(2).
         //
         // See <https://man7.org/linux/man-pages/man2/umask.2.html>
 
-        Arc::new(FileSystem {
+        Arc::new(FsContext {
             namespace: self.namespace.clone(),
             root_node: self.root_node.clone(),
             state: RwLock::new(self.state.read().clone()),

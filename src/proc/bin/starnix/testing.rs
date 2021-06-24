@@ -16,14 +16,14 @@ use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::*;
 
-/// Create a FileSystem for use in testing.
+/// Create an FsContext for use in testing.
 ///
-/// Open "/pkg" and returns a FileSystem rooted in that directory.
-pub fn create_test_file_system() -> Arc<FileSystem> {
+/// Open "/pkg" and returns an FsContext rooted in that directory.
+pub fn create_test_file_system() -> Arc<FsContext> {
     let root =
         directory::open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE)
             .expect("failed to open /pkg");
-    return FileSystem::new(fio::DirectorySynchronousProxy::new(
+    return FsContext::new(fio::DirectorySynchronousProxy::new(
         root.into_channel().unwrap().into_zx_channel(),
     ));
 }
