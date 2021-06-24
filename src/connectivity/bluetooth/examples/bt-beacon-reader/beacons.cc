@@ -76,7 +76,7 @@ void TiltDetection::Read(const std::unique_ptr<IBeaconDetection>& beacon) {
   color_string_ = colors[color_ % 9];
 
   // negative gravities are just expressed as their value % 1000.
-  // Since a specific gravity of beer at 1.5 is crazy, we'll draw the line
+  // Since a specific gravity of beer at 1.5 is unreasonable, we'll draw the line
   // there.
   gravity_ = beacon->minor_ / 1000.0;
   if (beacon->minor_ < 500) {
