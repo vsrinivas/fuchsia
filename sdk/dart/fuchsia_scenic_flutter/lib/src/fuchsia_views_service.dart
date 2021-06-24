@@ -22,7 +22,7 @@ class FuchsiaViewsService {
   );
 
   /// The [MethodChannel] used to communicate with Flutter Embedder.
-  @visibleForTesting
+  @internal
   MethodChannel get platformViewChannel => _platformViewChannel;
 
   /// Holds the method call handlers registered by the view id.
@@ -32,10 +32,6 @@ class FuchsiaViewsService {
   // view.
   FuchsiaViewsService._() {
     platformViewChannel.setMethodCallHandler((call) async {
-      if (_callHandlers.isEmpty) {
-        return;
-      }
-
       // Guard against invalid or missing arguments.
       try {
         // Call the method call handler registered for viewId.

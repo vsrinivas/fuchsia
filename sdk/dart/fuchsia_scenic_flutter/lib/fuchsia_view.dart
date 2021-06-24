@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 /// Utilities for working with Scenic Views through Flutter.
+export 'src/focus_state.dart';
 export 'src/fuchsia_view.dart';
 export 'src/fuchsia_view_connection.dart';
 export 'src/fuchsia_view_controller.dart';
