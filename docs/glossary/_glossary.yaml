@@ -935,7 +935,7 @@ environment to form a full SDK."
   full_description: "<p>In <a href=\"/docs/glossary#components-v1\">components v1</a>, a component may access a protocol (called a
   service in v1) from its <a href=\"/docs/glossary#environment\">environment</a> through its
   <a href=\"/docs/glossary#namespace\">namespace</a>by naming the protocol in its services
-  whitelist.</p>
+  allowlist.</p>
   <p>In <a href=\"/docs/glossary#components-v2\">components v2</a>, a protocol is used and routed to other
   components as a <a href=\"/docs/glossary#protocol-capability\">protocol capability</a>.</p>"
   see_also: [""]
