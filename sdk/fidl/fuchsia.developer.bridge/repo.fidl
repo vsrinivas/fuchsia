@@ -37,12 +37,10 @@ protocol Repositories {
     Serve(fuchsia.net.IpAddress addr, uint16 port) -> (bool success);
 
     /// Add a repository named `name` that has the following [RepositorySpec].
-    // FIXME(76201): Should return a RepoError
-    Add(string:MAX_NAME name, RepositorySpec repository);
+    Add(string:MAX_NAME name, RepositorySpec repository) -> () error RepositoryError;
 
     /// Returns true if the repository was removed, or false if there is no
     /// repository named `name`.
-    // FIXME(76201): Should return a RepoError
     Remove(string:MAX_NAME name) -> (bool found);
 
     List(request<RepositoryIterator> iterator);
@@ -88,4 +86,8 @@ enum RepositoryError : uint32 {
     UNKNOWN_REPOSITORY_SPEC = 6;
     /// Repository spec is missing a required field.
     MISSING_REPOSITORY_SPEC_FIELD = 7;
+    /// Some unspecified error occurred during I/O.
+    IO_ERROR = 8;
+    /// Some unspecified internal error occurred.
+    INTERNAL_ERROR = 9;
 };

@@ -78,6 +78,12 @@ pub enum RepositoryError {
 
     #[error("repository spec is missing a required field")]
     MissingRepositorySpecField,
+
+    #[error("some unspecified error during I/O")]
+    IoError,
+
+    #[error("some unspecified internal error")]
+    InternalError,
 }
 
 impl From<fidl::RepositoryError> for RepositoryError {
@@ -94,6 +100,8 @@ impl From<fidl::RepositoryError> for RepositoryError {
             fidl::RepositoryError::RewriteEngineError => RepositoryError::RewriteEngineError,
             fidl::RepositoryError::UnknownRepositorySpec => RepositoryError::UnknownRepositorySpec,
             fidl::RepositoryError::MissingRepositorySpecField => RepositoryError::MissingRepositorySpecField,
+            fidl::RepositoryError::IoError => RepositoryError::IoError,
+            fidl::RepositoryError::InternalError => RepositoryError::InternalError,
         }
     }
 }
@@ -112,6 +120,8 @@ impl From<RepositoryError> for fidl::RepositoryError {
             RepositoryError::RewriteEngineError => fidl::RepositoryError::RewriteEngineError,
             RepositoryError::UnknownRepositorySpec => fidl::RepositoryError::UnknownRepositorySpec,
             RepositoryError::MissingRepositorySpecField => fidl::RepositoryError::MissingRepositorySpecField,
+            RepositoryError::IoError => fidl::RepositoryError::IoError,
+            RepositoryError::InternalError => fidl::RepositoryError::InternalError,
         }
     }
 }

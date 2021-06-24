@@ -2,23 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    anyhow::{anyhow, Result},
+    anyhow::Result,
     async_lock::RwLock,
     async_trait::async_trait,
     ffx_config::{self, ConfigLevel},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_bridge_ext::RepositorySpec,
     fidl_fuchsia_net::IpAddress,
     fidl_fuchsia_pkg::RepositoryManagerMarker,
     fidl_fuchsia_pkg_rewrite::{EngineMarker, LiteralRule, Rule},
     fuchsia_async::{self as fasync, futures::StreamExt as _},
-    pkg::repository::{
-        FileSystemRepository, PmRepository, Repository, RepositoryManager, RepositoryServer,
-        LISTEN_PORT,
-    },
+    pkg::repository::{Repository, RepositoryManager, RepositoryServer, LISTEN_PORT},
     serde_json,
     services::prelude::*,
-    std::{net, sync::Arc},
+    std::{convert::TryInto, net, sync::Arc},
 };
 
 const REPOSITORY_MANAGER_SELECTOR: &str = "core/appmgr:out:fuchsia.pkg.RepositoryManager";
@@ -68,6 +66,43 @@ impl Repo {
                 }
             }
         }
+    }
+
+    async fn add_repository(
+        &self,
+        name: String,
+        repo_spec: bridge::RepositorySpec,
+    ) -> std::result::Result<(), bridge::RepositoryError> {
+        log::info!("Adding repository {} {:?}", name, repo_spec);
+
+        let repo_spec: RepositorySpec = repo_spec.try_into()?;
+
+        let json_repo_spec = serde_json::to_value(repo_spec.clone()).map_err(|err| {
+            log::error!("unable to serialize repository spec {:?}: {}", repo_spec, err);
+            bridge::RepositoryError::InternalError
+        })?;
+
+        // Create the repository.
+        let repo = Repository::from_repository_spec(&name, repo_spec).await.map_err(|err| {
+            log::error!("unable to create repository: {}", err);
+            bridge::RepositoryError::IoError
+        })?;
+
+        // Save the filesystem configuration.
+        ffx_config::set(
+            (format!("repository_server.repositories.{}", name).as_str(), ConfigLevel::User),
+            json_repo_spec,
+        )
+        .await
+        .map_err(|err| {
+            log::error!("failed to save repository: {}", err);
+            bridge::RepositoryError::IoError
+        })?;
+
+        // Finally add the repository.
+        self.manager.add(Arc::new(repo));
+
+        Ok(())
     }
 
     async fn register_target(
@@ -211,116 +246,8 @@ impl FidlService for Repo {
                 responder.send(self.start_server(addr).await)?;
                 Ok(())
             }
-            bridge::RepositoriesRequest::Add { name, repository, .. } => {
-                log::info!("Adding repository {} {:?}", name, repository);
-
-                match repository {
-                    bridge::RepositorySpec::FileSystem(path) => {
-                        if let Some(path) = path.path {
-                            let err = ffx_config::set(
-                                (
-                                    format!("repository_server.repositories.{}.type", name)
-                                        .as_str(),
-                                    ConfigLevel::User,
-                                ),
-                                "fs".to_owned().into(),
-                            )
-                            .await
-                            .err();
-                            let err = if err.is_some() {
-                                err
-                            } else {
-                                ffx_config::set(
-                                    (
-                                        format!("repository_server.repositories.{}.path", name)
-                                            .as_str(),
-                                        ConfigLevel::User,
-                                    ),
-                                    path.clone().into(),
-                                )
-                                .await
-                                .err()
-                            };
-
-                            if let Some(err) = err {
-                                log::warn!("Could not save repository info to config: {}", err);
-                            }
-
-                            match () {
-                                #[cfg(test)]
-                                () if path.starts_with("test_path") => {
-                                    use pkg::repository::RepositoryMetadata;
-
-                                    self.manager.add(Arc::new(Repository::new_with_metadata(
-                                        &name,
-                                        Box::new(FileSystemRepository::new(path.into())),
-                                        RepositoryMetadata::new(Vec::new(), 1),
-                                    )))
-                                }
-                                _ => self.manager.add(Arc::new(
-                                    Repository::new(
-                                        &name,
-                                        Box::new(FileSystemRepository::new(path.into())),
-                                    )
-                                    .await
-                                    .map_err(|x| anyhow!("{:?}", x))?,
-                                )),
-                            }
-                        } else {
-                            log::warn!(
-                                "Could not save repository info to config: \
-                                        Malformed FileSystemRepositorySpec did not contain a path."
-                            );
-                        }
-                    }
-                    bridge::RepositorySpec::Pm(path) => {
-                        if let Some(path) = path.path {
-                            let err = ffx_config::set(
-                                (
-                                    format!("repository_server.repositories.{}.type", name)
-                                        .as_str(),
-                                    ConfigLevel::User,
-                                ),
-                                "pm".to_owned().into(),
-                            )
-                            .await
-                            .err();
-                            let err = if err.is_some() {
-                                err
-                            } else {
-                                ffx_config::set(
-                                    (
-                                        format!("repository_server.repositories.{}.path", name)
-                                            .as_str(),
-                                        ConfigLevel::User,
-                                    ),
-                                    path.clone().into(),
-                                )
-                                .await
-                                .err()
-                            };
-
-                            if let Some(err) = err {
-                                log::warn!("Could not save repository info to config: {}", err);
-                            }
-
-                            self.manager.add(Arc::new(
-                                Repository::new(&name, Box::new(PmRepository::new(path.into())))
-                                    .await
-                                    .map_err(|x| anyhow!("{:?}", x))?,
-                            ));
-                        } else {
-                            log::warn!(
-                                "Could not save repository info to config: \
-                                        Malformed FileSystemRepositorySpec did not contain a path."
-                            );
-                        }
-                    }
-                    bridge::RepositorySpecUnknown!() => {
-                        log::error!("Unknown RepositorySpec format.");
-                    }
-                }
-
+            bridge::RepositoriesRequest::Add { name, repository, responder } => {
+                responder.send(&mut self.add_repository(name, repository).await)?;
                 Ok(())
             }
             bridge::RepositoriesRequest::Remove { name, responder } => {
@@ -432,14 +359,35 @@ mod tests {
     use {
         super::*,
         fidl,
-        fidl_fuchsia_pkg::{MirrorConfig, RepositoryConfig, RepositoryManagerRequest},
+        fidl_fuchsia_pkg::{
+            MirrorConfig, RepositoryConfig, RepositoryKeyConfig, RepositoryManagerRequest,
+        },
         fidl_fuchsia_pkg_rewrite::{EditTransactionRequest, EngineMarker, EngineRequest},
         services::testing::{FakeDaemon, FakeDaemonBuilder},
     };
 
     const REPO_NAME: &str = "some_repo";
+    const EMPTY_REPO_PATH: &str = "host_x64/test_data/ffx_daemon_service_repo/empty-repo";
+
     #[derive(Default)]
     struct FakeRepositoryManager {}
+
+    fn test_repo_config() -> RepositoryConfig {
+        RepositoryConfig {
+            mirrors: Some(vec![MirrorConfig {
+                mirror_url: Some(format!("http://localhost:8085/{}", REPO_NAME)),
+                subscribe: Some(true),
+                ..MirrorConfig::EMPTY
+            }]),
+            repo_url: Some(format!("fuchsia-pkg://{}", REPO_NAME)),
+            root_keys: Some(vec![RepositoryKeyConfig::Ed25519Key(vec![
+                29, 76, 86, 76, 184, 70, 108, 73, 249, 127, 4, 47, 95, 63, 36, 35, 101, 255, 212,
+                33, 10, 154, 26, 130, 117, 157, 125, 88, 175, 214, 109, 113,
+            ])]),
+            root_version: Some(1),
+            ..RepositoryConfig::EMPTY
+        }
+    }
 
     #[async_trait(?Send)]
     impl FidlService for FakeRepositoryManager {
@@ -449,23 +397,7 @@ mod tests {
         async fn handle(&self, _cx: &Context, req: RepositoryManagerRequest) -> Result<()> {
             match req {
                 RepositoryManagerRequest::Add { repo, responder } => {
-                    assert_eq!(
-                        repo,
-                        RepositoryConfig {
-                            repo_url: Some(format!("fuchsia-pkg://{}", REPO_NAME)),
-                            mirrors: Some(vec![MirrorConfig {
-                                mirror_url: Some(format!(
-                                    "http://localhost:{}/{}",
-                                    LISTEN_PORT, REPO_NAME
-                                )),
-                                subscribe: Some(true),
-                                ..MirrorConfig::EMPTY
-                            }]),
-                            root_keys: Some(vec![]),
-                            root_version: Some(1),
-                            ..RepositoryConfig::EMPTY
-                        }
-                    );
+                    assert_eq!(repo, test_repo_config(),);
                     responder.send(&mut Ok(())).unwrap()
                 }
                 _ => {
@@ -487,23 +419,7 @@ mod tests {
         async fn handle(&self, _cx: &Context, req: RepositoryManagerRequest) -> Result<()> {
             match req {
                 RepositoryManagerRequest::Add { repo, responder } => {
-                    assert_eq!(
-                        repo,
-                        RepositoryConfig {
-                            repo_url: Some(format!("fuchsia-pkg://{}", REPO_NAME)),
-                            mirrors: Some(vec![MirrorConfig {
-                                mirror_url: Some(format!(
-                                    "http://localhost:{}/{}",
-                                    LISTEN_PORT, REPO_NAME
-                                )),
-                                subscribe: Some(true),
-                                ..MirrorConfig::EMPTY
-                            }]),
-                            root_keys: Some(vec![]),
-                            root_version: Some(1),
-                            ..RepositoryConfig::EMPTY
-                        }
-                    );
+                    assert_eq!(repo, test_repo_config(),);
 
                     responder.send(&mut Err(1)).unwrap()
                 }
@@ -561,24 +477,32 @@ mod tests {
 
     async fn add_repo(daemon: &FakeDaemon) -> bridge::RepositoriesProxy {
         let proxy = daemon.open_proxy::<bridge::RepositoriesMarker>().await;
-        let spec = bridge::RepositorySpec::FileSystem(bridge::FileSystemRepositorySpec {
-            path: Some("test_path/bar".to_owned()),
-            ..bridge::FileSystemRepositorySpec::EMPTY
-        });
-        proxy.add(REPO_NAME, &mut spec.clone()).unwrap();
+        let spec = RepositorySpec::FileSystem { path: EMPTY_REPO_PATH.into() };
+        proxy
+            .add(REPO_NAME, &mut spec.into())
+            .await
+            .expect("communicated with proxy")
+            .expect("adding repository to succeed");
 
         proxy
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_remove() {
+        ffx_config::init_config_test().unwrap();
+
         let daemon = FakeDaemonBuilder::new().register_fidl_service::<Repo>().build();
+
         let proxy = daemon.open_proxy::<bridge::RepositoriesMarker>().await;
         let spec = bridge::RepositorySpec::FileSystem(bridge::FileSystemRepositorySpec {
-            path: Some("test_path/bar".to_owned()),
+            path: Some(EMPTY_REPO_PATH.to_owned()),
             ..bridge::FileSystemRepositorySpec::EMPTY
         });
-        proxy.add(REPO_NAME, &mut spec.clone()).unwrap();
+        proxy
+            .add(REPO_NAME, &mut spec.clone())
+            .await
+            .expect("communicated with proxy")
+            .expect("adding repository to succeed");
 
         let (client, server) = fidl::endpoints::create_endpoints().unwrap();
         proxy.list(server).unwrap();
@@ -604,6 +528,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_register() {
+        ffx_config::init_config_test().unwrap();
+
         let daemon = FakeDaemonBuilder::new()
             .register_fidl_service::<FakeRepositoryManager>()
             .register_fidl_service::<FakeEngine>()
@@ -619,12 +545,14 @@ mod tests {
                 ..bridge::RepositoryTarget::EMPTY
             })
             .await
-            .unwrap()
-            .unwrap();
+            .expect("communicated with proxy")
+            .expect("target registration to succeed");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_register_empty_aliases() {
+        ffx_config::init_config_test().unwrap();
+
         let daemon = FakeDaemonBuilder::new()
             .register_fidl_service::<FakeRepositoryManager>()
             .register_fidl_service::<FakeEngine>()
@@ -646,6 +574,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_register_none_aliases() {
+        ffx_config::init_config_test().unwrap();
+
         let daemon = FakeDaemonBuilder::new()
             .register_fidl_service::<FakeRepositoryManager>()
             .register_fidl_service::<FakeEngine>()
@@ -667,6 +597,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_register_repo_manager_error() {
+        ffx_config::init_config_test().unwrap();
+
         let daemon = FakeDaemonBuilder::new()
             .register_fidl_service::<ErroringRepositoryManager>()
             .register_fidl_service::<FakeEngine>()

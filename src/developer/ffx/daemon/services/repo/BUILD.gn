@@ -3,8 +3,22 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/testing/host_test_data.gni")
 
 if (is_host) {
+  host_test_data("empty-repo") {
+    sources = [
+      "//src/sys/pkg/tests/pkg-resolver/template/repository/1.root.json",
+      "//src/sys/pkg/tests/pkg-resolver/template/repository/1.snapshot.json",
+      "//src/sys/pkg/tests/pkg-resolver/template/repository/1.targets.json",
+      "//src/sys/pkg/tests/pkg-resolver/template/repository/root.json",
+      "//src/sys/pkg/tests/pkg-resolver/template/repository/snapshot.json",
+      "//src/sys/pkg/tests/pkg-resolver/template/repository/targets.json",
+      "//src/sys/pkg/tests/pkg-resolver/template/repository/timestamp.json",
+    ]
+    outputs = [ "$root_out_dir/test_data/ffx_daemon_service_repo/empty-repo/{{source_file_part}}" ]
+  }
+
   rustc_library("ffx_daemon_service_repo") {
     version = "0.1.0"
     edition = "2018"
@@ -27,6 +41,7 @@ if (is_host) {
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:serde_json",
     ]
+    test_deps = [ ":empty-repo" ]
 
     sources = [ "src/lib.rs" ]
   }
