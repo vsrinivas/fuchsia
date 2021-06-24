@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <string>
 #include <vector>
 
 #include "src/developer/debug/ipc/register_desc.h"
@@ -115,6 +116,8 @@ struct AutomationOperand {
 
   AutomationOperandKind kind() const { return kind_; }
 
+  std::string ToString();
+
  private:
   AutomationOperandKind kind_ = AutomationOperandKind::kZero;
   uint32_t index_ = 0;
@@ -175,6 +178,8 @@ struct AutomationCondition {
     mask_ = mask;
   }
 
+  std::string ToString();
+
   AutomationOperand operand() const { return operand_; }
   uint64_t constant() const { return constant_; }
   uint64_t mask() const { return mask_; }
@@ -206,7 +211,8 @@ enum AutomationInstructionKind : uint32_t {
   //  item_size (in value_) is the uint32_t size of the structs in the array in bytes.
   // First it preloads the array of structs (loading length * item_size bytes from address_).
   // Next it iterates through each of the structs, preloading the number of bytes specified at
-  // address[index] + struct_size_offset from the address at address[index] + struct_pointer_offset
+  // address[index] + struct_size_offset from the address at address[index] +
+  // struct_pointer_offset
   // It also takes a vector of conditions and only executes if it has no false conditions.
   kLoopLoadMemory = 2,
 
@@ -290,6 +296,8 @@ struct AutomationInstruction {
 
   std::vector<AutomationCondition> conditions() const { return conditions_; }
   AutomationInstructionKind kind() const { return kind_; }
+
+  std::string ToString();
 
  private:
   AutomationInstructionKind kind_ = AutomationInstructionKind::kNop;

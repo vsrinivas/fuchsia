@@ -17,6 +17,7 @@ group("ipc") {
 static_library("shared") {
   visibility = [ ":*" ]
   sources = [
+    "automation_instruction.cc",
     "automation_instruction.h",
     "decode_exception.cc",
     "decode_exception.h",
@@ -67,6 +68,7 @@ static_library("client") {
 source_set("tests") {
   testonly = true
   sources = [
+    "automation_instruction_unittests.cc",
     "decode_exception_unittests.cc",
     "message_unittests.cc",
     "protocol_unittests.cc",
