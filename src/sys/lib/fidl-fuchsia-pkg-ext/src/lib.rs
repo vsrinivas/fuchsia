@@ -22,3 +22,6 @@ mod measure;
 pub use crate::measure::Measurable;
 
 pub mod cache;
+
+mod serve_fidl_iterator;
+pub use serve_fidl_iterator::serve_fidl_iterator;

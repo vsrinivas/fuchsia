@@ -52,8 +52,12 @@ pub struct BlobFile {
     pub file: File,
 }
 
+/// Contents of a Blob.
 pub struct BlobContents {
+    /// Merkle hash of the blob.
     pub merkle: fuchsia_merkle::Hash,
+
+    /// Binary contents of the blob.
     pub contents: Vec<u8>,
 }
 

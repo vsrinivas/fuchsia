@@ -7,7 +7,7 @@
 #![deny(missing_docs)]
 
 mod package;
-pub use crate::package::{Package, PackageBuilder, PackageDir, VerificationError};
+pub use crate::package::{BlobContents, Package, PackageBuilder, PackageDir, VerificationError};
 
 mod repo;
 pub use crate::repo::{PackageEntry, Repository, RepositoryBuilder};

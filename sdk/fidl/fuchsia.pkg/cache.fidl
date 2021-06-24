@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.pkg;
 
 using fuchsia.io;
@@ -197,14 +196,20 @@ protocol PackageIndexIterator {
 /// aren't fully present. There is only a single set active at once, and the
 /// provided APIs for configuring the set atomically replace that set. On boot,
 /// the retained package set is always initialized to the empty set.
+/// Documentation on [garbage collection](
+/// https://fuchsia.dev/fuchsia-src/concepts/packages/garbage_collection) contains
+/// details on various types of package indexes (static, retained, etc) and
+/// describes when a package will be garbage collected or retained.
 [Discoverable]
 protocol RetainedPackages {
     /// Atomically clear the retained package set, releasing any previously
     /// retained packages.
     Clear() -> ();
 
-    /// Atomically replace the retained package set with the package blob IDs
+    /// Atomically replace the retained package set with the [package hashes](
+    /// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url?hl=en#package-hash)
     /// provided by the given iterator.
+    /// Duplicate IDs provided will be merged and processed as a single one.
     ///
     /// + request `iterator` an iterator of package blob IDs that should be
     ///   retained.

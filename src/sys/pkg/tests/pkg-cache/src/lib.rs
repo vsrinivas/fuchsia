@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_io2::Operations,
     fidl_fuchsia_pkg::{
         BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker, NeededBlobsProxy, PackageCacheMarker,
-        PackageCacheProxy,
+        PackageCacheProxy, RetainedPackagesMarker, RetainedPackagesProxy,
     },
     fidl_fuchsia_pkg_ext::BlobId,
     fidl_fuchsia_space::{ManagerMarker as SpaceManagerMarker, ManagerProxy as SpaceManagerProxy},
@@ -27,11 +27,13 @@ use {
     fuchsia_inspect::{reader::DiagnosticsHierarchy, testing::TreeAssertion},
     fuchsia_merkle::Hash,
     fuchsia_pkg::{MetaContents, PackagePath},
-    fuchsia_pkg_testing::{get_inspect_hierarchy, Package, SystemImageBuilder},
+    fuchsia_pkg_testing::{get_inspect_hierarchy, BlobContents, Package, SystemImageBuilder},
     fuchsia_zircon as zx,
+    fuchsia_zircon::Status,
     futures::{future::BoxFuture, prelude::*},
     io_util::file::*,
     maplit::{btreemap, hashmap},
+    matches::assert_matches,
     mock_paver::{MockPaverService, MockPaverServiceBuilder},
     mock_verifier::MockVerifierService,
     parking_lot::Mutex,
@@ -53,6 +55,7 @@ mod cobalt;
 mod get;
 mod inspect;
 mod open;
+mod retained_packages;
 mod space;
 mod sync;
 
@@ -103,17 +106,27 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) -> Directory
         .map_ok(|res| res.map_err(zx::Status::from_raw));
 
     let (meta_far, contents) = pkg.contents();
+
+    write_meta_far(&needed_blobs, meta_far).await;
+    write_needed_blobs(&needed_blobs, contents).await;
+
+    let () = get_fut.await.unwrap().unwrap();
+    let () = pkg.verify_contents(&dir).await.unwrap();
+    dir
+}
+
+pub async fn write_meta_far(needed_blobs: &NeededBlobsProxy, meta_far: BlobContents) {
+    let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
+    write_blob(&meta_far.contents, meta_blob).await.unwrap();
+}
+
+pub async fn write_needed_blobs(needed_blobs: &NeededBlobsProxy, contents: Vec<BlobContents>) {
+    let missing_blobs = get_missing_blobs(&needed_blobs).await;
     let mut contents = contents
         .into_iter()
         .map(|blob| (BlobId::from(blob.merkle), blob.contents))
         .collect::<HashMap<_, Vec<u8>>>();
-
-    let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
-    assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
-
-    write_blob(&meta_far.contents, meta_blob).await.unwrap();
-
-    let missing_blobs = get_missing_blobs(&needed_blobs).await;
     for mut blob in missing_blobs {
         let buf = contents.remove(&blob.blob_id.into()).unwrap();
 
@@ -128,10 +141,6 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) -> Directory
         let () = write_blob(&buf, content_blob).await.unwrap();
     }
     assert_eq!(contents, Default::default());
-
-    let () = get_fut.await.unwrap().unwrap();
-    let () = pkg.verify_contents(&dir).await.unwrap();
-    dir
 }
 
 async fn verify_fetches_succeed(proxy: &PackageCacheProxy, packages: &[Package]) {
@@ -139,6 +148,84 @@ async fn verify_fetches_succeed(proxy: &PackageCacheProxy, packages: &[Package])
         .for_each_concurrent(None, move |pkg| do_fetch(proxy, pkg).map(|_| {}))
         .await;
 }
+
+async fn verify_package_cached(proxy: &PackageCacheProxy, pkg: &Package) {
+    let mut meta_blob_info =
+        BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
+
+    let (needed_blobs, needed_blobs_server_end) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+
+    let get_fut = proxy
+        .get(
+            &mut meta_blob_info,
+            &mut std::iter::empty(),
+            needed_blobs_server_end,
+            Some(dir_server_end),
+        )
+        .map_ok(|res| res.map_err(Status::from_raw));
+
+    let (_meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+
+    // If the package is fully cached, server will close the channel with a `ZX_OK` epitaph.
+    // In some cases, server will reply with `Ok(false)`, meaning that the metadata
+    // blob is cached, and the content blobs need to be validated.
+    let channel_closed = match needed_blobs.open_meta_blob(meta_blob_server_end).await {
+        Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. }) => true,
+        Ok(Ok(false)) => false,
+        Ok(r) => {
+            panic!("Meta blob not cached: unexpected response {:?}", r)
+        }
+        Err(e) => {
+            panic!("Meta blob not cached: unexpected FIDL error {:?}", e)
+        }
+    };
+
+    let (blob_iterator, blob_iterator_server_end) =
+        fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
+    let missing_blobs_response = needed_blobs.get_missing_blobs(blob_iterator_server_end);
+
+    if channel_closed {
+        // Since `get_missing_blobs()` FIDL protocol method has no return value, on
+        // the call the client writes to the channel and doesn't wait for a response.
+        // As a result, it's possible for server reply to race with channel closure,
+        // and client can receive a reply containing a channel after the channel was closed.
+        // Sending a channel through a closed channel closes the end of the channel sent
+        // through the channel.
+        match missing_blobs_response {
+            // The package is already cached and server closed the channel with with a `ZX_OK`
+            // epitaph.
+            Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. }) => {}
+            Ok(()) => {
+                // As a result of race condition, iterator channel is closed.
+                assert_matches!(
+                    blob_iterator.next().await,
+                    Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+                );
+            }
+            Err(e) => {
+                panic!("Content blobs not cached: unexpected error {:?}", e)
+            }
+        }
+    } else {
+        // Expect empty iterator returned to ensure content blobs are cached.
+        assert!(blob_iterator.next().await.unwrap().is_empty());
+    }
+
+    let () = get_fut.await.unwrap().unwrap();
+
+    // `dir` is resolved to package directory.
+    let () = pkg.verify_contents(&dir).await.unwrap();
+}
+
+async fn verify_packages_cached(proxy: &PackageCacheProxy, packages: &[Package]) {
+    let () = futures::stream::iter(packages)
+        .for_each_concurrent(None, move |pkg| verify_package_cached(proxy, pkg))
+        .await;
+}
+
 trait PkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
 
@@ -318,6 +405,11 @@ where
                 targets: vec![ RouteEndpoint::AboveRoot ],
             }).unwrap()
             .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.RetainedPackages"),
+                source: RouteEndpoint::component("pkg_cache"),
+                targets: vec![ RouteEndpoint::AboveRoot ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
                 capability: Capability::protocol("fuchsia.space.Manager"),
                 source: RouteEndpoint::component("pkg_cache"),
                 targets: vec![ RouteEndpoint::AboveRoot ],
@@ -338,6 +430,10 @@ where
                 .root
                 .connect_to_protocol_at_exposed_dir::<PackageCacheMarker>()
                 .expect("connect to package cache"),
+            retained_packages: realm_instance
+                .root
+                .connect_to_protocol_at_exposed_dir::<RetainedPackagesMarker>()
+                .expect("connect to retained packages"),
         };
 
         TestEnv {
@@ -357,6 +453,7 @@ struct Proxies {
     commit_status_provider: CommitStatusProviderProxy,
     space_manager: SpaceManagerProxy,
     package_cache: PackageCacheProxy,
+    retained_packages: RetainedPackagesProxy,
 }
 
 pub struct Mocks {

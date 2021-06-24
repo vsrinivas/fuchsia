@@ -24,6 +24,8 @@ mod gc_service;
 mod index;
 mod pkgfs_inspect;
 
+mod retained_packages_service;
+
 #[cfg(test)]
 mod test_utils;
 
@@ -114,6 +116,7 @@ async fn main_inner() -> Result<(), Error> {
 
     enum IncomingService {
         PackageCache(fidl_fuchsia_pkg::PackageCacheRequestStream),
+        RetainedPackages(fidl_fuchsia_pkg::RetainedPackagesRequestStream),
         SpaceManager(fidl_fuchsia_space::ManagerRequestStream),
     }
 
@@ -122,6 +125,7 @@ async fn main_inner() -> Result<(), Error> {
     fs.take_and_serve_directory_handle().context("while serving directory handle")?;
     fs.dir("svc")
         .add_fidl_service(IncomingService::PackageCache)
+        .add_fidl_service(IncomingService::RetainedPackages)
         .add_fidl_service(IncomingService::SpaceManager);
 
     let package_index = Arc::new(Mutex::new(package_index));
@@ -143,6 +147,14 @@ async fn main_inner() -> Result<(), Error> {
                         cobalt_sender.clone(),
                     )
                     .map(|res| res.context("while serving fuchsia.pkg.PackageCache")),
+                ),
+                IncomingService::RetainedPackages(stream) => Task::spawn(
+                    retained_packages_service::serve(
+                        stream,
+                        blobfs.clone(),
+                        Arc::clone(&package_index),
+                    )
+                    .map(|res| res.context("while serving fuchsia.pkg.RetainedPackages")),
                 ),
                 IncomingService::SpaceManager(stream) => Task::spawn(
                     gc_service::serve(

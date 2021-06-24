@@ -66,6 +66,7 @@ rustc_binary("bin") {
     "src/index/retained.rs",
     "src/main.rs",
     "src/pkgfs_inspect.rs",
+    "src/retained_packages_service.rs",
     "src/test_utils.rs",
   ]
 }
