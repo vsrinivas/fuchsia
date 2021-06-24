@@ -114,7 +114,7 @@ zx_status_t FragmentProxy::PciEnableBusMaster(bool enable) {
 zx_status_t FragmentProxy::PciResetDevice() { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t FragmentProxy::PciAckInterrupt() {
-#ifdef USERSPACE_PCI
+#ifdef ENABLE_USER_PCI
   PciRpcRequest req{};
   PciRpcResponse resp{};
   return PciRpc(pci::PCI_OP_ACK_INTERRUPT, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr,

@@ -16,6 +16,11 @@ driver_module("fragment") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
+
+  if (platform_enable_user_pci) {
+    defines = [ "ENABLE_USER_PCI" ]
+  }
+
   sources = [
     "fragment-pci.cc",
     "fragment.cc",

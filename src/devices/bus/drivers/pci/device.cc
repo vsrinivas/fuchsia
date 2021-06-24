@@ -36,6 +36,14 @@
 
 namespace pci {
 
+static const zx_bind_inst_t sysmem_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
+};
+
+static const device_fragment_part_t sysmem_fragment[] = {
+    {countof(sysmem_match), sysmem_match},
+};
+
 namespace {  // anon namespace.  Externals do not need to know about DeviceImpl
 
 class DeviceImpl : public Device {
@@ -131,9 +139,9 @@ Device::~Device() {
 }
 
 zx_status_t Device::CreateProxy() {
-  // TODO(cja): Workaround due to fxbug.dev/33674
-  char proxy_arg[2] = ",";
-  zx_device_prop_t device_props[] = {
+  auto pci_bind_topo = static_cast<uint32_t>(BIND_PCI_TOPO_PACK(bus_id(), dev_id(), func_id()));
+  // clang-format off
+  zx_device_prop_t pci_device_props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},
       {BIND_PCI_VID, 0, vendor_id_},
       {BIND_PCI_DID, 0, device_id_},
@@ -141,16 +149,52 @@ zx_status_t Device::CreateProxy() {
       {BIND_PCI_SUBCLASS, 0, subclass_},
       {BIND_PCI_INTERFACE, 0, prog_if_},
       {BIND_PCI_REVISION, 0, rev_id_},
-      {BIND_PCI_TOPO, 0, static_cast<uint32_t>(BIND_PCI_TOPO_PACK(bus_id(), dev_id(), func_id()))},
+      {BIND_PCI_TOPO, 0, pci_bind_topo},
   };
+  // clang-format on
 
   // Create an isolated devhost to load the proxy pci driver containing the PciProxy
   // instance which will talk to this device.
-  return DdkAdd(ddk::DeviceAddArgs(cfg_->addr())
-                    .set_flags(DEVICE_ADD_MUST_ISOLATE)
-                    .set_props(device_props)
-                    .set_proto_id(ZX_PROTOCOL_PCI)
-                    .set_proxy_args(proxy_arg));
+  zx_status_t status = DdkAdd(
+      ddk::DeviceAddArgs(cfg_->addr()).set_props(pci_device_props).set_proto_id(ZX_PROTOCOL_PCI));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to create pci fragment %s: %s", cfg_->addr(),
+           zx_status_get_string(status));
+  }
+
+  const zx_bind_inst_t pci_fragment_match[] = {
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
+      BI_ABORT_IF(NE, BIND_PCI_VID, vendor_id_),
+      BI_ABORT_IF(NE, BIND_PCI_DID, device_id_),
+      BI_ABORT_IF(NE, BIND_PCI_CLASS, class_id_),
+      BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, subclass_),
+      BI_ABORT_IF(NE, BIND_PCI_INTERFACE, prog_if_),
+      BI_ABORT_IF(NE, BIND_PCI_REVISION, rev_id_),
+      BI_ABORT_IF(EQ, BIND_COMPOSITE, 1),
+      BI_MATCH_IF(EQ, BIND_PCI_TOPO, pci_bind_topo),
+
+  };
+
+  const device_fragment_part_t pci_fragment[] = {
+      {countof(pci_fragment_match), pci_fragment_match},
+  };
+
+  const device_fragment_t fragments[] = {
+      {"sysmem", countof(sysmem_fragment), sysmem_fragment},
+      {"pci", countof(pci_fragment), pci_fragment},
+  };
+
+  composite_device_desc_t composite_desc = {
+      .props = pci_device_props,
+      .props_count = countof(pci_device_props),
+      .fragments = fragments,
+      .fragments_count = countof(fragments),
+      .coresident_device_index = UINT32_MAX,  // create a new devhost
+  };
+
+  char composite_name[ZX_DEVICE_NAME_MAX];
+  snprintf(composite_name, sizeof(composite_name), "pci-%s", cfg_->addr());
+  return DdkAddComposite(composite_name, &composite_desc);
 }
 
 zx_status_t Device::Create(zx_device_t* parent, std::unique_ptr<Config>&& config,

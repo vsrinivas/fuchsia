@@ -21,6 +21,10 @@ source_set("user_pci") {
     "test/:*",
   ]
 
+  if (userspace_pci_enable_msi_x) {
+    defines = [ "ENABLE_MSIX" ]
+  }
+
   sources = [
     "allocation.cc",
     "bridge.cc",
@@ -97,10 +101,6 @@ if (platform_enable_user_pci) {
     ]
     if (is_fuchsia) {
       configs += [ "//build/unification/config:zircon-migrated" ]
-    }
-
-    if (userspace_pci_enable_msi_x) {
-      defines = [ "ENABLE_MSIX" ]
     }
 
     sources = [
