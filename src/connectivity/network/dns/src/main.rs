@@ -58,7 +58,7 @@ impl<T> SharedResolver<T> {
     }
 }
 
-const STAT_WINDOW_DURATION: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_seconds(60);
+const STAT_WINDOW_DURATION: zx::Duration = zx::Duration::from_seconds(60);
 const STAT_WINDOW_COUNT: usize = 30;
 
 /// Stats about queries during the last `STAT_WINDOW_COUNT` windows of
@@ -155,8 +155,8 @@ struct QueryWindow {
     start: fasync::Time,
     success_count: u64,
     failure_count: u64,
-    success_elapsed_time: fuchsia_zircon::Duration,
-    failure_elapsed_time: fuchsia_zircon::Duration,
+    success_elapsed_time: zx::Duration,
+    failure_elapsed_time: zx::Duration,
     failure_stats: FailureStats,
 }
 
@@ -166,13 +166,13 @@ impl QueryWindow {
             start,
             success_count: 0,
             failure_count: 0,
-            success_elapsed_time: fuchsia_zircon::Duration::from_nanos(0),
-            failure_elapsed_time: fuchsia_zircon::Duration::from_nanos(0),
+            success_elapsed_time: zx::Duration::from_nanos(0),
+            failure_elapsed_time: zx::Duration::from_nanos(0),
             failure_stats: FailureStats::default(),
         }
     }
 
-    fn succeed(&mut self, elapsed_time: fuchsia_zircon::Duration) {
+    fn succeed(&mut self, elapsed_time: zx::Duration) {
         let QueryWindow {
             success_count,
             success_elapsed_time,
@@ -185,7 +185,7 @@ impl QueryWindow {
         *success_elapsed_time += elapsed_time;
     }
 
-    fn fail(&mut self, elapsed_time: fuchsia_zircon::Duration, error: &ResolveErrorKind) {
+    fn fail(&mut self, elapsed_time: zx::Duration, error: &ResolveErrorKind) {
         let QueryWindow {
             failure_count,
             failure_elapsed_time,
@@ -534,7 +534,7 @@ async fn sort_preferred_addresses(
                         debug!(
                             "fuchsia.net.routes/State.resolve({}) failed {}",
                             fidl_fuchsia_net_ext::IpAddress::from(addr),
-                            fuchsia_zircon::Status::from_raw(e)
+                            zx::Status::from_raw(e)
                         );
                         None
                     }
@@ -996,7 +996,7 @@ fn add_query_stats_inspect(
                 }
                 let () = child.record_uint("successful_queries", *success_count);
                 let () = child.record_uint("failed_queries", *failure_count);
-                let record_average = |name: &str, total: fuchsia_zircon::Duration, count: u64| {
+                let record_average = |name: &str, total: zx::Duration, count: u64| {
                     // Don't record an average if there are no stats.
                     if count == 0 {
                         return;
@@ -1784,7 +1784,7 @@ mod tests {
         exec: &mut fasync::TestExecutor,
         stats: Arc<QueryStats>,
         error: Option<ResolveErrorKind>,
-        delay: fuchsia_zircon::Duration,
+        delay: zx::Duration,
     ) {
         let start_time = fasync::Time::now();
         let () = exec.set_fake_time(fasync::Time::after(delay));
@@ -1810,15 +1810,10 @@ mod tests {
         let _query_stats_inspect_node =
             add_query_stats_inspect(inspector.root(), env.stats.clone());
         const SUCCESSFUL_QUERY_COUNT: u64 = 10;
-        const SUCCESSFUL_QUERY_DURATION: fuchsia_zircon::Duration =
-            fuchsia_zircon::Duration::from_seconds(30);
+        const SUCCESSFUL_QUERY_DURATION: zx::Duration = zx::Duration::from_seconds(30);
         for _ in 0..SUCCESSFUL_QUERY_COUNT / 2 {
-            let () = run_fake_lookup(
-                &mut exec,
-                env.stats.clone(),
-                None,
-                fuchsia_zircon::Duration::from_nanos(0),
-            );
+            let () =
+                run_fake_lookup(&mut exec, env.stats.clone(), None, zx::Duration::from_nanos(0));
             let () = run_fake_lookup(&mut exec, env.stats.clone(), None, SUCCESSFUL_QUERY_DURATION);
             let () = exec.set_fake_time(fasync::Time::after(
                 STAT_WINDOW_DURATION - SUCCESSFUL_QUERY_DURATION,
@@ -1862,8 +1857,7 @@ mod tests {
         let _query_stats_inspect_node =
             add_query_stats_inspect(inspector.root(), env.stats.clone());
         const FAILED_QUERY_COUNT: u64 = 10;
-        const FAILED_QUERY_DURATION: fuchsia_zircon::Duration =
-            fuchsia_zircon::Duration::from_millis(500);
+        const FAILED_QUERY_DURATION: zx::Duration = zx::Duration::from_millis(500);
         for _ in 0..FAILED_QUERY_COUNT {
             let () = run_fake_lookup(
                 &mut exec,
@@ -1905,7 +1899,7 @@ mod tests {
         let inspector = fuchsia_inspect::Inspector::new();
         let _query_stats_inspect_node =
             add_query_stats_inspect(inspector.root(), env.stats.clone());
-        const DELAY: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_millis(100);
+        const DELAY: zx::Duration = zx::Duration::from_millis(100);
         for _ in 0..STAT_WINDOW_COUNT {
             let () = run_fake_lookup(
                 &mut exec,
@@ -2267,7 +2261,7 @@ mod tests {
                             None
                         }
                     })
-                    .ok_or(fuchsia_zircon::Status::ADDRESS_UNREACHABLE.into_raw());
+                    .ok_or(zx::Status::ADDRESS_UNREACHABLE.into_raw());
                 futures::future::ready(
                     responder.send(&mut result).context("failed to send Resolve response"),
                 )
@@ -2310,7 +2304,7 @@ mod tests {
                         },
                     ))
                 } else {
-                    Err(fuchsia_zircon::Status::ADDRESS_UNREACHABLE.into_raw())
+                    Err(zx::Status::ADDRESS_UNREACHABLE.into_raw())
                 };
                 let () =
                     responder.send(&mut response).expect("failed to send Resolve FIDL response");
