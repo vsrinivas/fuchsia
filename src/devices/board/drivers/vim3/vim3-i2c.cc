@@ -12,9 +12,11 @@
 #include <soc/aml-a311d/a311d-gpio.h>
 #include <soc/aml-a311d/a311d-hw.h>
 
+#include "src/devices/lib/fidl-metadata/i2c.h"
 #include "vim3.h"
 
 namespace vim3 {
+using i2c_channel_t = fidl_metadata::i2c::Channel;
 
 // Only the AO and EE_M3 i2c busses are used on VIM3
 
@@ -86,11 +88,6 @@ static const i2c_channel_t i2c_channels[] = {
 #endif
 };
 
-static const pbus_metadata_t i2c_metadata[] = {{
-    .type = DEVICE_METADATA_I2C_CHANNELS,
-    .data_buffer = reinterpret_cast<const uint8_t*>(&i2c_channels),
-    .data_size = sizeof(i2c_channels),
-}};
 zx_status_t Vim3::I2cInit() {
   pbus_dev_t i2c_dev = {};
   i2c_dev.name = "i2c";
@@ -101,8 +98,22 @@ zx_status_t Vim3::I2cInit() {
   i2c_dev.mmio_count = countof(i2c_mmios);
   i2c_dev.irq_list = i2c_irqs;
   i2c_dev.irq_count = countof(i2c_irqs);
-  i2c_dev.metadata_list = i2c_metadata;
-  i2c_dev.metadata_count = countof(i2c_metadata);
+
+  auto i2c_status = fidl_metadata::i2c::I2CChannelsToFidl(i2c_channels);
+  if (i2c_status.is_error()) {
+    zxlogf(ERROR, "I2cInit: Failed to fidl encode i2c channels: %d", i2c_status.error_value());
+    return i2c_status.error_value();
+  }
+
+  auto& data = i2c_status.value();
+
+  pbus_metadata_t i2c_metadata = {
+      .type = DEVICE_METADATA_I2C_CHANNELS,
+      .data_buffer = data.data(),
+      .data_size = data.size(),
+  };
+  i2c_dev.metadata_list = &i2c_metadata;
+  i2c_dev.metadata_count = 1;
 
   // AO
   gpio_impl_.SetAltFunction(A311D_GPIOAO(2), A311D_GPIOAO_2_M0_SCL_FN);

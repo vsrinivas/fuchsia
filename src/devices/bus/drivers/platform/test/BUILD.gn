@@ -63,6 +63,7 @@ driver_module("test-board") {
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
+    "//src/devices/lib/fidl-metadata",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
 

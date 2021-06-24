@@ -79,6 +79,7 @@ driver_module("astro") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/broadcom",
     "//src/devices/lib/driver",
+    "//src/devices/lib/fidl-metadata",
     "//src/devices/lib/focaltech",
     "//src/devices/lib/metadata:llcpp",
     "//src/devices/lib/mmio",

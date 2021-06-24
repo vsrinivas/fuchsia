@@ -4,15 +4,16 @@
 
 #include "i2c.h"
 
+#include <fuchsia/hardware/i2c/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/types.h>
 
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/mutex.h>
@@ -90,31 +91,39 @@ void I2cDevice::AddChildren() {
     zxlogf(ERROR, "%s: device_get_metadata_size failed %d", __func__, status);
     return;
   }
-  auto channel_count = metadata_size / sizeof(i2c_channel_t);
 
-  fbl::AllocChecker ac;
-  std::unique_ptr<i2c_channel_t[]> channels(new (&ac) i2c_channel_t[channel_count]);
-  if (!ac.check()) {
-    zxlogf(ERROR, "%s: out of memory", __func__);
-    return;
-  }
+  auto buffer_deleter = std::make_unique<uint8_t[]>(metadata_size);
+  auto buffer = buffer_deleter.get();
 
   size_t actual;
-  status = device_get_metadata(zxdev(), DEVICE_METADATA_I2C_CHANNELS, channels.get(), metadata_size,
-                               &actual);
+  status =
+      device_get_metadata(zxdev(), DEVICE_METADATA_I2C_CHANNELS, buffer, metadata_size, &actual);
   if (status != ZX_OK || actual != metadata_size) {
     zxlogf(ERROR, "%s: device_get_metadata failed %d", __func__, status);
     return;
   }
 
-  for (uint32_t i = 0; i < channel_count; i++) {
-    const auto& channel = channels[i];
-    const auto bus_id = channel.bus_id;
-    const auto address = channel.address;
-    const auto i2c_class = channel.i2c_class;
-    const auto vid = channel.vid;
-    const auto pid = channel.pid;
-    const auto did = channel.did;
+  fidl::DecodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> decoded(buffer, metadata_size);
+  if (!decoded.ok()) {
+    zxlogf(ERROR, "%s: Failed to deserialize metadata.", __func__);
+    return;
+  }
+
+  fuchsia_hardware_i2c::wire::I2CBusMetadata* metadata = decoded.PrimaryObject();
+  if (!metadata->has_channels()) {
+    zxlogf(INFO, "%s: no channels supplied.", __func__);
+    return;
+  }
+
+  zxlogf(INFO, "%s: %zu channels supplied.", __func__, metadata->channels().count());
+
+  for (auto& channel : metadata->channels()) {
+    const uint32_t bus_id = channel.has_bus_id() ? channel.bus_id() : 0;
+    const uint16_t address = channel.has_address() ? channel.address() : 0;
+    const uint32_t i2c_class = channel.has_i2c_class() ? channel.i2c_class() : 0;
+    const uint32_t vid = channel.has_vid() ? channel.vid() : 0;
+    const uint32_t pid = channel.has_pid() ? channel.pid() : 0;
+    const uint32_t did = channel.has_did() ? channel.did() : 0;
 
     if (bus_id >= i2c_buses_.size()) {
       zxlogf(ERROR, "%s: bus_id %u out of range", __func__, bus_id);
@@ -122,7 +131,7 @@ void I2cDevice::AddChildren() {
     }
 
     fbl::AllocChecker ac;
-    std::unique_ptr<I2cChild> dev(new (&ac) I2cChild(zxdev(), i2c_buses_[bus_id], channel.address));
+    std::unique_ptr<I2cChild> dev(new (&ac) I2cChild(zxdev(), i2c_buses_[bus_id], address));
     if (!ac.check()) {
       zxlogf(ERROR, "%s: out of memory", __func__);
       return;

@@ -6,16 +6,19 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"
+#include "src/devices/lib/fidl-metadata/i2c.h"
 
 namespace sherlock {
+
+using i2c_channel_t = fidl_metadata::i2c::Channel;
 
 static const pbus_mmio_t i2c_mmios[] = {
     {
@@ -203,27 +206,6 @@ static const i2c_channel_t sherlock_i2c_channels[] = {
     },
 };
 
-static const pbus_metadata_t sherlock_i2c_metadata[] = {
-    {
-        .type = DEVICE_METADATA_I2C_CHANNELS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&sherlock_i2c_channels),
-        .data_size = sizeof(sherlock_i2c_channels),
-    },
-};
-
-static const pbus_metadata_t luis_ernie_i2c_metadata[] = {
-    {
-        .type = DEVICE_METADATA_I2C_CHANNELS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&luis_ernie_i2c_channels),
-        .data_size = sizeof(luis_ernie_i2c_channels),
-    },
-    {
-        .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&luis_i2c_clock_delays),
-        .data_size = sizeof(luis_i2c_clock_delays),
-    },
-};
-
 zx_status_t Sherlock::I2cInit() {
   // setup pinmux for our I2C busses
   // i2c_ao_0
@@ -250,13 +232,39 @@ zx_status_t Sherlock::I2cInit() {
   dev.irq_list = i2c_irqs;
   dev.irq_count = countof(i2c_irqs);
 
+  const i2c_channel_t* channels;
+  size_t channel_count;
+  std::vector<pbus_metadata_t> metadata;
   if (pid_ == PDEV_PID_SHERLOCK) {
-    dev.metadata_list = sherlock_i2c_metadata;
-    dev.metadata_count = countof(sherlock_i2c_metadata);
+    channels = sherlock_i2c_channels;
+    channel_count = countof(sherlock_i2c_channels);
   } else {
-    dev.metadata_list = luis_ernie_i2c_metadata;
-    dev.metadata_count = countof(luis_ernie_i2c_metadata);
+    channels = luis_ernie_i2c_channels;
+    channel_count = countof(luis_ernie_i2c_channels);
+    metadata.emplace_back(pbus_metadata_t{
+        .type = DEVICE_METADATA_PRIVATE,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&luis_i2c_clock_delays),
+        .data_size = sizeof(luis_i2c_clock_delays),
+    });
   };
+
+  auto i2c_status = fidl_metadata::i2c::I2CChannelsToFidl(
+      cpp20::span<const i2c_channel_t>(channels, channel_count));
+  if (i2c_status.is_error()) {
+    zxlogf(ERROR, "%s: failed to fidl encode i2c channels: %d", __func__, i2c_status.error_value());
+    return i2c_status.error_value();
+  }
+
+  auto& data = i2c_status.value();
+
+  metadata.emplace_back(pbus_metadata_t{
+      .type = DEVICE_METADATA_I2C_CHANNELS,
+      .data_buffer = data.data(),
+      .data_size = data.size(),
+  });
+
+  dev.metadata_count = metadata.size();
+  dev.metadata_list = metadata.data();
 
   zx_status_t status = pbus_.DeviceAdd(&dev);
   if (status != ZX_OK) {

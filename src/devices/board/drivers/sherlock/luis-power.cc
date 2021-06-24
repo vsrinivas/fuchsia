@@ -5,9 +5,9 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
 #include <ddk/metadata/power.h>
 #include <soc/aml-common/aml-power.h>
@@ -16,9 +16,10 @@
 #include <soc/aml-t931/t931-pwm.h>
 
 #include "sherlock.h"
+#include "src/devices/lib/fidl-metadata/i2c.h"
 
 namespace sherlock {
-
+using i2c_channel_t = fidl_metadata::i2c::Channel;
 namespace {
 
 constexpr uint32_t kPwmDFn = 3;
@@ -46,7 +47,6 @@ const pbus_metadata_t power_impl_metadata[] = {
         .data_size = sizeof(kT931PwmPeriodNs),
     },
 };
-
 
 constexpr zx_bind_inst_t power_impl_driver_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
@@ -165,16 +165,24 @@ zx_status_t Sherlock::LuisPowerPublishBuck(const char* name, uint32_t bus_id, ui
       {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SILERGY_SYBUCK},
   };
 
-  const i2c_channel_t i2c_channels = {
+  const i2c_channel_t i2c_channels[] = {{
       .bus_id = bus_id,
       .address = address,
-  };
+  }};
+
+  auto i2c_status = fidl_metadata::i2c::I2CChannelsToFidl(i2c_channels);
+  if (i2c_status.is_error()) {
+    zxlogf(ERROR, "%s: failed to fidl encode i2c channels: %d", __func__, i2c_status.error_value());
+    return i2c_status.error_value();
+  }
+
+  auto& data = i2c_status.value();
 
   const device_metadata_t metadata[] = {
       {
           .type = DEVICE_METADATA_I2C_CHANNELS,
-          .data = &i2c_channels,
-          .length = sizeof(i2c_channels),
+          .data = data.data(),
+          .length = data.size(),
       },
   };
 

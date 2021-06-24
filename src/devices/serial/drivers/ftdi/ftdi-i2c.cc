@@ -5,16 +5,17 @@
 #include "ftdi-i2c.h"
 
 #include <fuchsia/hardware/ftdi/llcpp/fidl.h>
+#include <fuchsia/hardware/i2c/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include <vector>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
 
 #include "ftdi.h"
@@ -71,18 +72,29 @@ zx_status_t FtdiI2c::Enable() {
 zx_status_t FtdiI2c::Bind() { return DdkAdd("ftdi-i2c"); }
 
 void FtdiI2c::DdkInit(ddk::InitTxn txn) {
-  std::vector<i2c_channel_t> i2c_channels(i2c_devices_.size());
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<fuchsia_hardware_i2c::wire::I2CChannel> i2c_channels(allocator,
+                                                                        i2c_devices_.size());
   for (size_t i = 0; i < i2c_devices_.size(); i++) {
-    i2c_channel_t& chan = i2c_channels[i];
+    auto& chan = i2c_channels[i];
     I2cDevice& dev = i2c_devices_[i];
-    chan.bus_id = 0;
-    chan.address = static_cast<uint16_t>(dev.address);
-    chan.vid = dev.vid;
-    chan.pid = dev.pid;
-    chan.did = dev.did;
+    chan.Allocate(allocator);
+    chan.set_bus_id(allocator, 0);
+    chan.set_address(allocator, static_cast<uint16_t>(dev.address));
+    chan.set_vid(allocator, dev.vid);
+    chan.set_pid(allocator, dev.pid);
+    chan.set_did(allocator, dev.did);
   }
-  zx_status_t status = DdkAddMetadata(DEVICE_METADATA_I2C_CHANNELS, i2c_channels.data(),
-                                      i2c_channels.size() * sizeof(i2c_channel_t));
+  fuchsia_hardware_i2c::wire::I2CBusMetadata metadata(allocator);
+  metadata.set_channels(allocator, i2c_channels);
+  fidl::OwnedEncodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> encoded(&metadata);
+  if (!encoded.ok()) {
+    zxlogf(ERROR, "encoding device metadata failed: %s\n", encoded.status_string());
+    txn.Reply(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto message = encoded.GetOutgoingMessage().CopyBytes();
+  zx_status_t status = DdkAddMetadata(DEVICE_METADATA_I2C_CHANNELS, message.data(), message.size());
   if (status != ZX_OK) {
     txn.Reply(status);
     return;

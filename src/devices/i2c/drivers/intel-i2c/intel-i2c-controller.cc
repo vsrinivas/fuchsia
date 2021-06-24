@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/i2c/c/fidl.h>
+#include <fuchsia/hardware/i2c/llcpp/fidl.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/ddk/debug.h>
@@ -36,6 +37,7 @@
 #include <fbl/auto_lock.h>
 
 #include "binding.h"
+#include "lib/fidl/llcpp/object_view.h"
 #include "src/devices/i2c/drivers/intel-i2c/intel_i2c_bind.h"
 
 namespace intel_i2c {
@@ -205,28 +207,42 @@ void IntelI2cController::DdkInit(ddk::InitTxn txn) {
 
   fbl::AutoLock lock(&mutex_);
 
-  std::vector<i2c_channel_t> i2c_channels(subordinates_.size());
+  // TODO(fxbug.dev/78833): we should stop publishing this from here, and instead use information
+  // from ACPI to configure our children.
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<fuchsia_hardware_i2c::wire::I2CChannel> i2c_channels(allocator,
+                                                                        subordinates_.size());
   size_t i = 0;
   for (auto const& it : subordinates_) {
-    i2c_channel_t& chan = i2c_channels[i++];
+    auto& chan = i2c_channels[i++];
     auto& subordinate = it.second;
+    chan.Allocate(allocator);
 
-    chan.bus_id = 0;
-    chan.vid = subordinate->vendor_id();
-    chan.pid = 0;
-    chan.did = subordinate->device_id();
-    chan.address = subordinate->GetChipAddress();
-    chan.i2c_class = subordinate->GetI2cClass();
+    chan.set_vid(allocator, subordinate->vendor_id());
+    chan.set_did(allocator, subordinate->device_id());
+    chan.set_address(allocator, subordinate->GetChipAddress());
+    chan.set_i2c_class(allocator, subordinate->GetI2cClass());
   }
-  status = DdkAddMetadata(DEVICE_METADATA_I2C_CHANNELS, i2c_channels.data(),
-                          i2c_channels.size() * sizeof(i2c_channel_t));
+  fuchsia_hardware_i2c::wire::I2CBusMetadata metadata(allocator);
+  metadata.set_channels(allocator, i2c_channels);
 
+  fidl::OwnedEncodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> encoded(&metadata);
+  if (!encoded.ok()) {
+    zxlogf(ERROR, "encoding device metadata failed: %s\n", encoded.status_string());
+    txn.Reply(ZX_ERR_INTERNAL);
+    return;
+  }
+
+  auto message = encoded.GetOutgoingMessage().CopyBytes();
+
+  status = DdkAddMetadata(DEVICE_METADATA_I2C_CHANNELS, message.data(), message.size());
   if (status != ZX_OK) {
     zxlogf(ERROR, "adding device metadata failed: %s\n", zx_status_get_string(status));
     txn.Reply(status);
     return;
   }
 
+  zxlogf(INFO, "i2c published %lu subordinates", subordinates_.size());
   txn.Reply(ZX_OK);
 }
 
@@ -789,6 +805,7 @@ zx_status_t IntelI2cController::AddSubordinates() {
     // nothing, but it might be a good idea to (someday) put the hardware into a
     // low power state if we can, and perhaps even unload the driver at that
     // point.
+    zxlogf(INFO, "i2c: failed to fetch metadata (%s)", zx_status_get_string(status));
     return ZX_OK;
   }
 

@@ -4,16 +4,18 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "nelson.h"
+#include "src/devices/lib/fidl-metadata/i2c.h"
 
 namespace nelson {
+using i2c_channel_t = fidl_metadata::i2c::Channel;
 
 static const pbus_mmio_t i2c_mmios[] = {
     {
@@ -109,20 +111,7 @@ static const i2c_channel_t i2c_channels[] = {
     },
 };
 
-static const pbus_metadata_t i2c_metadata[] = {
-    {
-        .type = DEVICE_METADATA_I2C_CHANNELS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&i2c_channels),
-        .data_size = sizeof(i2c_channels),
-    },
-    {
-        .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&i2c_clock_delays),
-        .data_size = sizeof(i2c_clock_delays),
-    },
-};
-
-static const pbus_dev_t i2c_dev = []() {
+static pbus_dev_t i2c_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "i2c";
   dev.vid = PDEV_VID_AMLOGIC;
@@ -132,8 +121,6 @@ static const pbus_dev_t i2c_dev = []() {
   dev.mmio_count = countof(i2c_mmios);
   dev.irq_list = i2c_irqs;
   dev.irq_count = countof(i2c_irqs);
-  dev.metadata_list = i2c_metadata;
-  dev.metadata_count = countof(i2c_metadata);
   return dev;
 }();
 
@@ -151,6 +138,24 @@ zx_status_t Nelson::I2cInit() {
   // i2c3
   gpio_impl_.SetAltFunction(S905D2_GPIOA(14), 2);
   gpio_impl_.SetAltFunction(S905D2_GPIOA(15), 2);
+
+  auto i2c_status = fidl_metadata::i2c::I2CChannelsToFidl(i2c_channels);
+  if (i2c_status.is_error()) {
+    zxlogf(ERROR, "%s: failed to fidl encode i2c channels: %d", __func__, i2c_status.error_value());
+    return i2c_status.error_value();
+  }
+
+  auto& data = i2c_status.value();
+  pbus_metadata_t i2c_metadata[] = {
+      {.type = DEVICE_METADATA_I2C_CHANNELS, .data_buffer = data.data(), .data_size = data.size()},
+      {
+          .type = DEVICE_METADATA_PRIVATE,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&i2c_clock_delays),
+          .data_size = sizeof(i2c_clock_delays),
+      },
+  };
+  i2c_dev.metadata_list = i2c_metadata;
+  i2c_dev.metadata_count = countof(i2c_metadata);
 
   zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
   if (status != ZX_OK) {

@@ -9,6 +9,7 @@ using zx;
 
 const uint32 MAX_TRANSFER_SIZE = 8196; // More than enough for I2C
 const uint32 MAX_COUNT_SEGMENTS = 8; // Enough for all known transfer configurations.
+const uint32 MAX_I2C_CHANNEL = 128; // Enough for every address to be used in 7-bit mode.
 
 enum SegmentType {
     /// Flags the end of a serialized list of segments.
@@ -17,6 +18,37 @@ enum SegmentType {
     READ = 2;
     /// Segment to be written to the I2C device.
     WRITE = 3;
+};
+
+/// Used to inform the i2c driver about an attached i2c device.
+table I2CChannel {
+    /// ID of the bus that this device is on.
+    1: uint32 bus_id;
+    /// Adress of the device.
+    2: uint16 address;
+    /// Class of the device.
+    /// TODO(fxbug.dev/78198): remove this once x86 uses ACPI properly.
+    3: uint32 i2c_class;
+
+    /// Vendor ID. Used when binding via platform bus device IDs.
+    4: uint32 vid;
+    /// Product ID. Used when binding via platform bus device IDs.
+    5: uint32 pid;
+    /// Device ID. Used when binding via platform bus device IDs.
+    6: uint32 did;
+
+    // Bus configuration.
+    /// Are we in charge of the bus?
+    7: bool is_bus_controller;
+    /// Is this device using 10-bit addressing mode (if false, use 7-bit).
+    8: bool is_ten_bit;
+    /// Speed of the bus.
+    9: uint32 bus_speed;
+};
+
+/// Passed to the i2c driver in metadata as DEVICE_METADATA_I2C_CHANNELS.
+table I2CBusMetadata {
+    1: vector<I2CChannel>:MAX_I2C_CHANNEL channels;
 };
 
 /// Segment header for a serialized SubordinateTransfer.
