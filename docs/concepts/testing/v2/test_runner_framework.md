@@ -291,12 +291,66 @@ fuchsia_unittest_package("foo-tests") {
 ## Hermeticity
 
 A test is *hermetic* if it [uses][manifests-use] or [offers][manifests-offer] no
-capabilities from the [test root](#tests-as-components)'s parent. As a rule of
+capabilities from the [test root's](#tests-as-components) parent. As a rule of
 thumb, tests should be hermetic, but sometimes a test requires a capability that
 cannot be injected in the test realm.
 
 In the context of hermetic tests, a capability that originates from outside of
 the test's realm is called a *system capability*.
+
+There are some capabilities which all tests can use which do not violate test
+hermeticity:
+
+| Protocol | Description |
+| -----------| ------------|
+| `fuchsia.boot.WriteOnlyLog` | Write to kernel log |
+| `fuchsia.logger.LogSink` | Write to syslog |
+| `fuchsia.process.Launcher` | Launch a child process from the test package |
+| `fuchsia.sys2.EventSource` | Access to event protocol |
+
+To use these capabilities, there should be a use declaration added to test's
+manifest file:
+
+```json5
+// my_test.cml
+{
+    use: [
+        ...
+        {
+            protocol: [
+              "{{ '<var label="protocol">fuchsia.logger.LogSink</var>' }}"
+            ],
+        },
+    ],
+}
+```
+
+Tests are also provided with some default storage capabilities which are
+destroyed after the test finishes execution.
+
+| Storage Capability | Description | Path |
+| ------------------ | ----------- | ---- |
+|  `data` | Isolated data storage directory | `/data` |
+|  `cache` | Isolated cache storage directory | `/cache` |
+|  `temp` | Isolated in-memory [temporary storage directory](#temporary_storage) | `/tmp` |
+
+Add a use declaration in test's manifest file to use these capabilities.
+
+```json5
+// my_test.cml
+{
+    use: [
+        ...
+        {
+            storage: "{{ '<var label="storage">data</var>' }}",
+            path: "{{ '<var label="storage path">/data</var>' }}",
+        },
+    ],
+}
+```
+
+The framework also provides some [capabilities][framework-capabilities] to all the
+components and can be used by test components if required.
 
 ## Performance
 
@@ -347,3 +401,4 @@ Components in the test realm may play various roles in the test, as follows:
 [unit-tests]: /docs/development/components/build.md#unit_tests_with_generated_manifests
 [loader-service]: /docs/concepts/booting/program_loading.md#the_loader_service
 [caching-loader-service]: /src/sys/test_runners/src/elf/elf_component.rs
+[framework-capabilities]: /docs/concepts/components/v2/component_manifests.md#framework-protocols

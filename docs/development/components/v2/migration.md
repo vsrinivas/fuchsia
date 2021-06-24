@@ -363,6 +363,9 @@ realm with the following services:
 | `fuchsia.sysmem.Allocator` | Allocates system memory buffers |
 | `fuchsia.tracing.provider.Registry` | Register to trace provider |
 | `fuchsia.vulkan.loader.Loader` | Vulkan library provider |
+| `fuchsia.sys.Loader` | CFv1 loader service to help with migration. |
+| `fuchsia.sys.Environment` | CFv1 environment service to help with migration. |
+
 
 Consider the following example test component that uses a single system service,
 `fuchsia.sysmem.Allocator`:
