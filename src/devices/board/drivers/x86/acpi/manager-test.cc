@@ -15,6 +15,7 @@
 
 #include "src/devices/board/drivers/x86/acpi/acpi.h"
 #include "src/devices/board/drivers/x86/acpi/test/mock-acpi.h"
+#include "src/devices/board/drivers/x86/acpi/test/mock-pci.h"
 
 using acpi::test::Device;
 
@@ -144,6 +145,30 @@ TEST_F(AcpiManagerTest, TestDevicesOnPciBus) {
   // Check the PCI bus's type was set correctly.
   acpi::DeviceBuilder* builder = manager_.LookupDevice(pci_bus);
   ASSERT_EQ(builder->GetBusType(), acpi::BusType::kPci);
+  ASSERT_TRUE(builder->HasBusId());
+  ASSERT_EQ(builder->GetBusId(), 0);
+
+  // Check that pci_init was called with the correct bus:device.function.
+  std::vector<pci_bdf_t> bdfs = acpi::test::GetAcpiBdfs();
+  ASSERT_EQ(bdfs.size(), 1);
+  ASSERT_EQ(bdfs[0].bus_id, 0);
+  ASSERT_EQ(bdfs[0].device_id, 1);
+  ASSERT_EQ(bdfs[0].function_id, 2);
+}
+
+TEST_F(AcpiManagerTest, TestDeviceOnPciBusWithNoAdr) {
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  auto device = std::make_unique<Device>("PCI0");
+  device->SetHid("PNP0A08");
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::move(device)));
+
+  device = std::make_unique<Device>("TEST");
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_.PCI0", std::move(device)));
+
+  ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());
+  ASSERT_EQ(fake_ddk_.added_devices.size(), 3);
+
+  ASSERT_TRUE(acpi::test::GetAcpiBdfs().empty());
 }
 
 TEST_F(AcpiManagerTest, TestDeviceWithHidCid) {

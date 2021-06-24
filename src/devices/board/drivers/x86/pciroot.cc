@@ -52,6 +52,8 @@ zx_status_t x64Pciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
   *info = context_.info;
   info->irq_routing_list = context_.routing.data();
   info->irq_routing_count = context_.routing.size();
+  info->acpi_bdfs_list = acpi_bdfs_.data();
+  info->acpi_bdfs_count = acpi_bdfs_.size();
 
   return ZX_OK;
 }
@@ -87,14 +89,18 @@ zx_status_t x64Pciroot::PcirootConfigWrite32(const pci_bdf_t* address, uint16_t 
 }
 
 zx_status_t x64Pciroot::Create(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent,
-                               const char* name) {
-  auto pciroot = new x64Pciroot(root_host, std::move(ctx), parent, name);
+                               const char* name, std::vector<pci_bdf_t> acpi_bdfs) {
+  auto pciroot = new x64Pciroot(root_host, std::move(ctx), parent, name, std::move(acpi_bdfs));
   return pciroot->DdkAdd(name);
 }
 
 #else  // TODO(cja): remove after the switch to userspace pci
-static zx_status_t pciroot_op_get_pci_platform_info(void*, pci_platform_info_t*) {
-  return ZX_ERR_NOT_SUPPORTED;
+static zx_status_t pciroot_op_get_pci_platform_info(void* ctx, pci_platform_info_t* info) {
+  acpi::Device* device = static_cast<acpi::Device*>(ctx);
+  memset(info, 0, sizeof(*info));
+  info->acpi_bdfs_count = device->pci_bdfs().size();
+  info->acpi_bdfs_list = device->pci_bdfs().data();
+  return ZX_OK;
 }
 
 static bool pciroot_op_driver_should_proxy_config(void* /*ctx*/) { return false; }

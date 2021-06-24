@@ -15,6 +15,7 @@ group("tests") {
 shared_public_deps = [ "//src/devices/bind/fuchsia.acpi:bind.fuchsia.acpi" ]
 shared_deps = [
   "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
+  "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
   "//src/devices/lib/iommu",

@@ -5,7 +5,10 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEVICE_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEVICE_H_
 #include <fuchsia/hardware/acpi/cpp/banjo.h>
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/ddk/binding.h>
+
+#include <utility>
 
 #include <acpica/acpi.h>
 #include <ddktl/device.h>
@@ -70,8 +73,16 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
   Device(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus)
       : DeviceType{parent}, acpi_handle_{acpi_handle}, platform_bus_{platform_bus} {}
 
+  Device(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus,
+         std::vector<pci_bdf_t> pci_bdfs)
+      : DeviceType{parent},
+        acpi_handle_{acpi_handle},
+        platform_bus_{platform_bus},
+        pci_bdfs_{std::move(pci_bdfs)} {}
+
   // DDK mix-in impls.
   void DdkRelease() { delete this; }
+  void DdkInit(ddk::InitTxn txn);
 
   ACPI_HANDLE acpi_handle() const { return acpi_handle_; }
   zx_device_t* platform_bus() const { return platform_bus_; }
@@ -83,6 +94,8 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
   zx_status_t AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti);
   zx_status_t AcpiConnectSysmem(zx::channel connection);
   zx_status_t AcpiRegisterSysmemHeap(uint64_t heap, zx::channel connection);
+
+  std::vector<pci_bdf_t>& pci_bdfs() { return pci_bdfs_; }
 
  private:
   // Handle to the corresponding ACPI node
@@ -98,6 +111,8 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
   std::vector<DeviceMmioResource> mmio_resources_;
   std::vector<DeviceIrqResource> irqs_;
 
+  // TODO(fxbug.dev/32978): remove once kernel PCI is no longer used.
+  std::vector<pci_bdf_t> pci_bdfs_;
   zx_status_t ReportCurrentResources();
   ACPI_STATUS AddResource(ACPI_RESOURCE*);
 };

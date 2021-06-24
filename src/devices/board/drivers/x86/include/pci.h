@@ -19,6 +19,7 @@
 
 #include "acpi-private.h"
 #include "acpi/acpi.h"
+#include "acpi/pci.h"
 
 __BEGIN_CDECLS
 // It would be nice to use the hwreg library here, but these structs should be kept
@@ -42,9 +43,6 @@ struct acpi_legacy_irq {
   uint32_t options;  // Configuration for zx_interrupt_create
 };
 
-zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     acpi::Acpi* acpi);
-
 zx_status_t get_pci_init_arg(acpi::Acpi* acpi, zx_pci_init_arg_t** arg, uint32_t* size);
 zx_status_t pci_report_current_resources(acpi::Acpi* acpi, zx_handle_t root_resource_handle);
 
@@ -62,7 +60,7 @@ class x64Pciroot : public PcirootBase {
   };
 
   static zx_status_t Create(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent,
-                            const char* name);
+                            const char* name, std::vector<pci_bdf_t> acpi_bdfs);
   zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) final;
   zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) final;
   zx_status_t PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset, uint8_t* value) final;
@@ -74,8 +72,12 @@ class x64Pciroot : public PcirootBase {
 
  private:
   Context context_;
-  x64Pciroot(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent, const char* name)
-      : PcirootBase(root_host, parent, name), context_(std::move(ctx)) {}
+  std::vector<pci_bdf_t> acpi_bdfs_;
+  x64Pciroot(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent, const char* name,
+             std::vector<pci_bdf_t> acpi_bdfs)
+      : PcirootBase(root_host, parent, name),
+        context_(std::move(ctx)),
+        acpi_bdfs_(std::move(acpi_bdfs)) {}
 };
 
 namespace acpi {

@@ -10,8 +10,10 @@ source_set("mock-acpi") {
   sources = [
     "device.cc",
     "mock-acpi.cc",
+    "mock-pci.cc",
   ]
   deps = [
+    "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
     "//src/devices/testing/fake_ddk",
     "//third_party/acpica",
     "//zircon/system/ulib/zxc",

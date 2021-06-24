@@ -412,7 +412,8 @@ zx_status_t pci_root_host_init(acpi::Acpi* acpi) {
 
   zx_status_t st = read_mcfg_table(&RootHost->mcfgs());
   if (st != ZX_OK) {
-    zxlogf(WARNING, "Couldn't read MCFG table, PCI config MMIO will be unavailable: %s", zx_status_get_string(st));
+    zxlogf(WARNING, "Couldn't read MCFG table, PCI config MMIO will be unavailable: %s",
+           zx_status_get_string(st));
   }
 
   st = scan_acpi_tree_for_resources(acpi, get_root_resource());
@@ -426,7 +427,7 @@ zx_status_t pci_root_host_init(acpi::Acpi* acpi) {
 }
 
 zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     acpi::Acpi* acpi) {
+                     acpi::Acpi* acpi, std::vector<pci_bdf_t> acpi_bdfs) {
   zx_status_t status = pci_root_host_init(acpi);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Error initializing PCI root host: %s", zx_status_get_string(status));
@@ -463,7 +464,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   char name[ZX_DEVICE_NAME_MAX] = {0};
   memcpy(name, dev_ctx.name, ACPI_NAMESEG_SIZE);
 
-  status = x64Pciroot::Create(&*RootHost, std::move(dev_ctx), parent, name);
+  status = x64Pciroot::Create(&*RootHost, std::move(dev_ctx), parent, name, std::move(acpi_bdfs));
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to add pciroot device for '%s': %d", name, status);
   } else {
