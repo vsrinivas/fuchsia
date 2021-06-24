@@ -153,9 +153,23 @@ config_data("config") {
   }
 }
 
-fuchsia_unittest_package("wlancfg-tests") {
-  manifest = "meta/wlancfg_bin_test.cmx"
+fuchsia_component("test_driver") {
+  testonly = true
+  manifest = "meta/test_driver.cml"
   deps = [ ":bin_test" ]
+}
+
+fuchsia_component("wlancfg_bin_test") {
+  testonly = true
+  manifest = "meta/wlancfg_bin_test.cml"
+}
+
+fuchsia_test_package("wlancfg-tests") {
+  test_components = [ ":wlancfg_bin_test" ]
+  deps = [
+    ":test_driver",
+    "//src/sys/stash:stash_secure_v2",
+  ]
 }
 
 metrics_registry("wlan_metrics_registry") {

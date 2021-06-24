@@ -1,0 +1,41 @@
+{
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/wlancfg-tests#meta/test_driver.cm",
+        },
+        {
+            name: "stash",
+            url: "fuchsia-pkg://fuchsia.com/wlancfg-tests#meta/stash_secure.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#stash",
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: "#stash",
+        },
+        {
+            protocol: "fuchsia.stash.SecureStore",
+            from: "#stash",
+            to: "#test_driver",
+        },
+        {
+            storage: "temp",
+            from: "parent",
+            to: "#test_driver",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test_driver",
+        },
+    ],
+}
