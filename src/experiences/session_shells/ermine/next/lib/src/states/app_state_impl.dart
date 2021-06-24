@@ -141,6 +141,10 @@ class AppStateImpl with Disposable implements AppState {
   @override
   String get buildVersion => startupService.buildVersion;
 
+  @override
+  List<Map<String, String>> get appLaunchEntries =>
+      startupService.appLaunchEntries;
+
   void setFocusToShellView() {
     setFocus(startupService.hostView);
   }

@@ -1,0 +1,25 @@
+[
+    {
+        "icon": "images/SimpleBrowser-icon-2x.png",
+        "title": "Simple Browser",
+        "url": "fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx"
+    },
+    {
+        "icon": "images/SpinningSquareView-icon-2x.png",
+        "title": "Spinning Square View",
+        "url": "fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx"
+    },
+    {
+        "icon": "images/Terminal-icon-2x.png",
+        "title": "Terminal",
+        "url": "fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx"
+    },
+    {
+        "icon": "images/Chromium-icon-2x.png",
+        "title": "Chromium"
+    },
+    {
+        "icon": "images/Settings-icon-2x.png",
+        "title": "Settings"
+    }
+]

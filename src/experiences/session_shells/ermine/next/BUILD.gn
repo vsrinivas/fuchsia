@@ -18,6 +18,12 @@ group("shell") {
   ]
 }
 
+declare_args() {
+  # Build arg that allows overriding the default set of application entries
+  # using '--args=ermine_app_entries="config/app_launch_entries.json"'
+  ermine_app_entries = "config/app_launch_entries.json"
+}
+
 dart_library("lib") {
   package_name = "next"
   null_safe = true
@@ -161,6 +167,7 @@ static_icu_data("time_zone_list") {
 
 resource("resources") {
   sources = [
+    ermine_app_entries,
     "config/keyboard_shortcuts.json",
     rebase_path(tz_ids_path),
     rebase_path(

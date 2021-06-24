@@ -31,11 +31,7 @@ class SideBar extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // App Launcher.
-            Expanded(
-              child: AppLauncher(
-                onLaunch: (title, url) => appState.launch([title, url]),
-              ),
-            ),
+            Expanded(child: AppLauncher(appState)),
 
             // Status.
             Status(appState),

@@ -38,6 +38,7 @@ abstract class AppState with Store {
   ObservableList<ViewState> get views;
   ObservableStream<Locale> get localeStream;
   String get buildVersion;
+  List<Map<String, String>> get appLaunchEntries;
 
   SettingsState get settingsState;
 
