@@ -1,0 +1,20 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_inspect") {
+  version = "0.1.0"
+  edition = "2020"
+  plugin_deps = [
+    "list:ffx_inspect_list",
+    "list_accessors:ffx_inspect_list_accessors",
+    "selectors:ffx_inspect_selectors",
+    "show:ffx_inspect_show",
+  ]
+
+  args_deps = [ "//src/diagnostics/iquery:lib" ]
+
+  sources = [ "src/args.rs" ]
+}

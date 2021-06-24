@@ -1,0 +1,33 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("ffx_inspect_test_utils") {
+  name = "ffx_inspect_test_utils"
+  version = "0.1.0"
+  edition = "2020"
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/developer/ffx/lib/errors:lib",
+    "//src/developer/ffx/plugins/inspect/common:ffx_inspect_common",
+    "//src/diagnostics/iquery:lib",
+    "//src/lib/diagnostics/data/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}

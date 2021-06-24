@@ -1,0 +1,31 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_inspect_list_accessors") {
+  version = "0.1.0"
+  edition = "2020"
+  with_unit_tests = true
+  deps = [
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//src/developer/ffx/plugins/inspect/common:ffx_inspect_common",
+    "//src/diagnostics/iquery:lib",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  test_deps = [
+    "//src/developer/ffx/plugins/inspect/test_utils:ffx_inspect_test_utils",
+    "//third_party/rust_crates:serde_json",
+  ]
+
+  args_deps = [ "//src/diagnostics/iquery:lib" ]
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
+}
