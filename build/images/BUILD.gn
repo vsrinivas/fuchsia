@@ -1067,10 +1067,17 @@ compiled_action("data.blk") {
 
 default_image_deps += [ ":data.blk" ]
 
-# Record the maximum allowable FVM size in the build directory for later steps
-# to check against.
-max_fvm_size_file = "$root_build_dir/max_fvm_size.txt"
-write_file(max_fvm_size_file, max_fvm_size)
+# If the user set max_fvm_size instead of fvm_max_disk_size, then copy it over.
+# TODO(awolter): Remove after all clients have migrated to fvm_max_disk_size.
+if (fvm_max_disk_size == false && max_fvm_size != "0") {
+  fvm_max_disk_size = max_fvm_size
+}
+
+# Create a default value of zero for calculating filesystem sizes.
+fvm_max_disk_size_default_zero = 0
+if (fvm_max_disk_size != false) {
+  fvm_max_disk_size_default_zero = fvm_max_disk_size
+}
 
 fvm_blob_partition = {
   type = "blob"
@@ -1224,7 +1231,7 @@ filesystem_sizes_args += [
   "--minfs-tool",
   rebase_path(minfs_tool_path, root_build_dir),
   "--max-fvm-contents-size",
-  max_fvm_size,
+  "$fvm_max_disk_size_default_zero",
   "--max-blob-contents-size",
   max_blob_contents_size,
   "--max-blob-image-size",
@@ -1321,7 +1328,7 @@ if (supports_fastboot_fvm) {
       "--nand-block-count",
       "$fvm_ftl_nand_block_count",
       "--max-disk-size",
-      max_fvm_size,
+      "$fvm_max_disk_size",
 
       # Make sure to use fvm.blob.sparse.blk, which has an empty minfs
       # partition. This triggers the device to re-generate minfs at runtime

@@ -106,7 +106,7 @@ declare_args() {
   # Specifying these variables will generate a NAND FVM image suitable for
   # directly flashing via fastboot. The NAND characteristics are required
   # in order to properly initialize the FTL metadata in the OOB area.
-  # `max_fvm_size` should also be nonzero or else minfs will not have any
+  # `fvm_max_disk_size` should also be nonzero or else minfs will not have any
   # room to initialize on boot.
   fvm_ftl_nand_page_size = false
   fvm_ftl_nand_oob_size = false
