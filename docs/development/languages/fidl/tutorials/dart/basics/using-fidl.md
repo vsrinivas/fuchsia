@@ -83,7 +83,7 @@ Relative paths in the rest of the tutorial will be relative to this directory.
    fx test -vo fidl-example-dart-test
    ```
 
-   You should see test output for the dummy test that was added.
+   You should see test output for the sample test that was added.
 
 ## Add the Dart FIDL bindings as a dependency {#add-dependency}
 
