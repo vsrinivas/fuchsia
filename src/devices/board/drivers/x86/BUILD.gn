@@ -86,7 +86,6 @@ driver_module("platform-bus-x86") {
     "nhlt.cc",
     "pciroot.cc",
     "power.cc",
-    "resources.cc",
     "sysmem.cc",
     "util.cc",
     "x86-driver-tests.cc",

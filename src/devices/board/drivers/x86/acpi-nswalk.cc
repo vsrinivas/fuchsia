@@ -35,7 +35,7 @@
 #include "nhlt.h"
 #include "pci.h"
 #include "power.h"
-#include "resources.h"
+#include "src/devices/board/drivers/x86/acpi/resources.h"
 #include "src/devices/lib/iommu/iommu.h"
 #include "sysmem.h"
 #include "util.h"

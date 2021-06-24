@@ -30,6 +30,7 @@ source_set("acpi") {
     "acpi.cc",
     "device.cc",
     "manager.cc",
+    "resources.cc",
   ]
   public_deps = shared_public_deps
   deps = shared_deps + [
@@ -40,11 +41,11 @@ source_set("acpi") {
 
 test("acpi-test") {
   sources = [
-    "../resources.cc",
     "acpi.cc",
     "device.cc",
     "manager-test.cc",
     "manager.cc",
+    "resources.cc",
     "status-test.cc",
     "util-test.cc",
   ]

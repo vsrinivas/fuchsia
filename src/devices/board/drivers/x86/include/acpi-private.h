@@ -12,7 +12,7 @@
 
 #include "acpi/status.h"
 #include "acpi/util.h"
-#include "resources.h"
+#include "src/devices/board/drivers/x86/acpi/resources.h"
 
 #define MAX_NAMESPACE_DEPTH 100
 

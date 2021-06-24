@@ -19,7 +19,7 @@
 #include "acpi/status.h"
 #include "methods.h"
 #include "pci.h"
-#include "resources.h"
+#include "src/devices/board/drivers/x86/acpi/resources.h"
 
 #define PCI_HID ((char*)"PNP0A03")
 #define PCIE_HID ((char*)"PNP0A08")

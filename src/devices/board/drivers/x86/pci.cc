@@ -34,7 +34,7 @@
 #include "acpi/acpi.h"
 #include "errors.h"
 #include "methods.h"
-#include "resources.h"
+#include "src/devices/board/drivers/x86/acpi/resources.h"
 
 // This file contains the implementation for the code supporting the in-progress userland
 // pci bus driver.
