@@ -5,6 +5,7 @@ import("//sdk/cts/build/cts.gni")
 
 group("tests") {
   deps = [
+    "fuchsia.diagnostics:tests",
     "fuchsia.element:tests",
     "fuchsia.hwinfo:tests",
   ]
@@ -19,6 +20,7 @@ cts_copy_to_sdk("build") {
 sdk_molecule("test_sdks") {
   deps = [
     ":build_sdk",
+    "fuchsia.diagnostics:test_sdks",
     "fuchsia.element:test_sdks",
     "fuchsia.hwinfo:test_sdks",
   ]
