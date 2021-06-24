@@ -5,8 +5,8 @@
 import("//build/components/fuchsia_test_package.gni")
 import("//build/dart/dart_library.gni")
 import("//build/dart/dart_test_component.gni")
+import("//build/testing/host_test.gni")
 import("//build/testing/host_test_data.gni")
-import("//build/testing/test_spec.gni")
 
 dart_library("zircon") {
   package_name = "zircon"
@@ -55,45 +55,36 @@ fuchsia_test_package("zircon_unittests") {
 }
 
 if (is_linux || is_mac) {
-  _test_data_dir = "$root_out_dir/test_data/extract_zircon_constants"
   host_test_data("extract_zircon_constants_data") {
     sources = [
-      "//prebuilt/third_party/dart/$host_os-$host_cpu/bin/dart",
-      "//prebuilt/third_party/dart/$host_os-$host_cpu/bin/dartfmt",
+      "${dart_sdk}/bin/dart",
+      "${dart_sdk}/bin/dartfmt",
+      "${dart_sdk}/bin/snapshots/dartfmt.dart.snapshot",
       "//zircon/system/public/zircon/errors.h",
       "//zircon/system/public/zircon/rights.h",
       "//zircon/system/public/zircon/types.h",
       "extract-zircon-constants.py",
-      "lib/src/constants.dart",
     ]
-
-    outputs = [ "$_test_data_dir/{{source_file_part}}" ]
   }
 
-  host_test_data("extract_zircon_constants_snapshot_data") {
-    sources = [ "//prebuilt/third_party/dart/$host_os-$host_cpu/bin/snapshots/dartfmt.dart.snapshot" ]
-    outputs = [ "$_test_data_dir/snapshots/{{source_file_part}}" ]
-  }
-
-  _test = "$root_out_dir/test_extract_zircon_constants"
-  test_spec("test_extract_zircon_constants_spec") {
-    target =
-        get_label_info(":test_extract_zircon_constants", "label_with_toolchain")
-    path = _test
-
+  host_test("test_extract_zircon_constants") {
+    binary_path = python_exe_src
     deps = [
       ":extract_zircon_constants_data",
-      ":extract_zircon_constants_snapshot_data",
+      "//build/python:interpreter",
     ]
-  }
-
-  # TODO(fxb/62912): Move over the extract constants tests left out of this migration //topaz/public/dart/zircon.
-  # This is effectively a host test target.
-  copy("test_extract_zircon_constants") {
-    testonly = true
-    sources = [ "test-extract-zircon-constants.sh" ]
-    outputs = [ _test ]
-    deps = [ ":test_extract_zircon_constants_spec" ]
+    args = [
+      rebase_path("extract-zircon-constants.py", root_build_dir),
+      "--errors",
+      rebase_path("//zircon/system/public/zircon/errors.h", root_build_dir),
+      "--rights",
+      rebase_path("//zircon/system/public/zircon/rights.h", root_build_dir),
+      "--types",
+      rebase_path("//zircon/system/public/zircon/types.h", root_build_dir),
+      "--dartfmt",
+      rebase_path("${dart_sdk}/bin/dartfmt", root_build_dir),
+      "--dry-run",
+    ]
   }
 }
 

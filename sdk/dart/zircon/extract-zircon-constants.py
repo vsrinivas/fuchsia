@@ -149,7 +149,7 @@ class DartWriter(object):
             path = '/dev/null'
         dest = open(path, 'w')
         self.popen = subprocess.Popen(
-            [dartfmt], stdin=subprocess.PIPE, stdout=dest)
+            [dartfmt], stdin=subprocess.PIPE, stdout=dest, text=True)
 
     def write(self, string):
         self.popen.stdin.write(string)
