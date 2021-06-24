@@ -62,7 +62,7 @@ func ensure(e environment) (func(), error) {
 		}
 	}
 
-	tmpEnvVars := []string{"ANDROID_TMP", "TEMP", "TEMPDIR", "TMP"}
+	tmpEnvVars := []string{"ANDROID_TMP", "HOME", "TEMP", "TEMPDIR", "TMP", "XDG_HOME"}
 	for _, env := range tmpEnvVars {
 		if _, ok := e.lookupEnv(env); !ok {
 			if err := e.setenv(env, td); err != nil {
