@@ -15,6 +15,8 @@ PROJ_DIR defaults to the same directory run.py is contained in
 OUT_DIR defaults to ./out/default relative to the run.py
 """
 
+from __future__ import print_function
+
 import argparse
 import imp
 import os
@@ -83,18 +85,18 @@ class GnTester(object):
     def _generate_test(self):
         """Test generate.py via python test class."""
         self._run_unit_test(test_generate)
-        print "Generate tests passed."
+        print("Generate tests passed.")
 
     def _gen_fild_resp_file_unittest(self):
         self._run_unit_test(self.gen_fidl_response_file_unittest)
-        print "FIDL response file unit test passed."
+        print("FIDL response file unit test passed.")
 
     def _run_cmd(self, args, cwd=None):
         job = Popen(args, cwd=cwd, stdout=PIPE, stderr=PIPE)
         (stdoutdata, stderrdata) = job.communicate()
-        print stdoutdata
+        print(stdoutdata)
         if job.returncode:
-            print stderrdata
+            print(stderrdata)
             msg = 'Command returned non-zero exit code: %s' % job.returncode
             raise AssertionError(msg)
         return (stdoutdata, stderrdata)
@@ -103,7 +105,7 @@ class GnTester(object):
         try:
             getattr(self, test)(*args)
         except Exception as err:
-            print "ERROR Running test %s: %s" % (test, err)
+            print("ERROR Running test %s: %s" % (test, err))
             self._test_failed = True
             if not self.continue_on_error:
                 raise err
@@ -112,7 +114,7 @@ class GnTester(object):
         """Builds the test project for given architecture."""
         self._invoke_gn(arch)
         self._invoke_ninja(arch, explain=False)
-        print "Test project for %s built successfully" % arch
+        print("Test project for %s built successfully" % arch)
 
     def _invoke_gn(self, arch, additional_args=""):
         """Invokes GN targeting the given architecture.
@@ -129,7 +131,7 @@ class GnTester(object):
                 cpu=arch, clang=self.clang, buildidtool=self.buildidtool, additional_args=additional_args)
         ]
         # invoke command
-        print 'Running gn gen: "%s"' % ' '.join(invocation)
+        print('Running gn gen: "%s"' % ' '.join(invocation))
         self._run_cmd(invocation, cwd=self.proj_dir)
 
     def _invoke_ninja(self, arch, explain=True, targets=["default", "tests"]):
@@ -160,7 +162,7 @@ class GnTester(object):
             # Add output directory to command
             os.path.join(self.out_dir, arch)
         ] + targets
-        print 'Running ninja: "%s"' % ' '.join(invocation)
+        print('Running ninja: "%s"' % ' '.join(invocation))
         return self._run_cmd(invocation, cwd=self.proj_dir)
 
     def _verify_package_depfile(self, arch):
@@ -211,7 +213,7 @@ class GnTester(object):
             msg += 'Expected std out to contain "%s" but got:\n\n' % ninja_no_work_string
             msg += '"%s"' % stdout
             raise AssertionError(msg)
-        print "Test project rebuilt successfully"
+        print("Test project rebuilt successfully")
 
     def _verify_component_override(self, arch):
         """Checks that changing BUILD.gn properties of a component template triggers rebuild."""
@@ -294,7 +296,7 @@ class GnTester(object):
             os.path.join(SCRIPT_DIR, "tests", "e2e", "test.py"),
             os.path.join(SCRIPT_DIR, "third_party","fuchsia-sdk","bin"),
        ]
-       print 'Running devtool e2e tests: "%s"' % ' '.join(invocation)
+       print('Running devtool e2e tests: "%s"' % ' '.join(invocation))
        self._run_cmd(invocation, cwd=self.proj_dir)
 
     def _host_tests(self, arch):
@@ -302,14 +304,14 @@ class GnTester(object):
             HOST_TEST_PATH,
             os.path.join("out", arch, 'all_host_tests.txt')
         ]
-        print 'Running run-host-tests.sh: "%s"' % ' '.join(invocation)
+        print('Running run-host-tests.sh: "%s"' % ' '.join(invocation))
         self._run_cmd(invocation, cwd=self.proj_dir)
 
     def run(self):
         self._run_test("_generate_test")
         self._run_test("_gen_fild_resp_file_unittest")
         if platform.system() == 'Darwin':
-            print "The GN SDK does not support building on macOS."
+            print("The GN SDK does not support building on macOS.")
         else:
             self._run_build_tests()
             self._run_devtool_e2e_tests()
@@ -356,9 +358,9 @@ def main():
 
     tester.continue_on_error = not args.quit_on_error
     if tester.run():
-        print "ERROR: One or more tests failed."
+        print("ERROR: One or more tests failed.")
         return 1
-    print "SUCCESS: All tests passed."
+    print("SUCCESS: All tests passed.")
     return 0
 
 
