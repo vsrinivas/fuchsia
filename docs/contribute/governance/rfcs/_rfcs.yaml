@@ -1379,3 +1379,16 @@
   reviewers: ['crjohns@google.com', 'geb@google.com', 'ddorwin@google.com', 'gridman@google.com', 'jayzhuang@google.com']
   submitted: '2021-05-12'
   reviewed: '2021-06-23'
+
+- name: 'RFC-0107'
+  title: 'Dynamic Offers'
+  short_description: 'Allow creation of offers at runtime in CFv2.'
+  authors: ['hjfreyer@google.com']
+  file: '0107_dynamic_offers.md'
+  area: ['Component Framework']
+  issue: []
+  gerrit_change_id: ['534042']
+  status: 'Accepted'
+  reviewers: ['geb@google.com', 'ypomortsev@google.com', 'abdulla@google.com', 'surajmalhotra@google.com', 'bryanhenry@google.com', 'abarth@google.com', 'jsankey@google.com']
+  submitted: '2021-05-24'
+  reviewed: '2021-06-24'
