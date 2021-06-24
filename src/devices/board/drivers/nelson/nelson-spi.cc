@@ -9,7 +9,6 @@
 #include <lib/mmio/mmio.h>
 #include <lib/zx/time.h>
 
-#include <ddk/metadata/spi.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-common/aml-registers.h>
 #include <soc/aml-common/aml-spi.h>
@@ -18,6 +17,7 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
+#include "src/devices/lib/fidl-metadata/spi.h"
 
 #define HHI_SPICC_CLK_CNTL (0xf7 * 4)
 #define spicc1_clk_sel_fclk_div2 (4 << 23)
@@ -25,6 +25,7 @@
 #define spicc1_clk_div(x) (((x)-1) << 16)
 
 namespace nelson {
+using spi_channel_t = fidl_metadata::spi::Channel;
 
 // Approximate best-case time to read out one radar burst.
 constexpr zx::duration kSelinaCapacity = zx::usec(10'000);
@@ -64,19 +65,6 @@ static const amlspi_config_t spi_config = {
     .cs = {0},  // index into fragments list
 };
 
-static const pbus_metadata_t spi_metadata[] = {
-    {
-        .type = DEVICE_METADATA_SPI_CHANNELS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(spi_channels),
-        .data_size = sizeof spi_channels,
-    },
-    {
-        .type = DEVICE_METADATA_AMLSPI_CONFIG,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&spi_config),
-        .data_size = sizeof spi_config,
-    },
-};
-
 static pbus_dev_t spi_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "spi-1";
@@ -87,8 +75,6 @@ static pbus_dev_t spi_dev = []() {
   dev.mmio_count = countof(spi_mmios);
   dev.irq_list = spi_irqs;
   dev.irq_count = countof(spi_irqs);
-  dev.metadata_list = spi_metadata;
-  dev.metadata_count = countof(spi_metadata);
   return dev;
 }();
 
@@ -128,6 +114,30 @@ zx_status_t Nelson::SpiInit() {
   gpio_impl_.SetAltFunction(S905D2_GPIOH(7), 3);  // SCLK
   gpio_impl_.SetDriveStrength(S905D2_GPIOH(7), 2500, nullptr);
 
+  std::vector<pbus_metadata_t> spi_metadata;
+  spi_metadata.emplace_back(pbus_metadata_t{
+      .type = DEVICE_METADATA_AMLSPI_CONFIG,
+      .data_buffer = reinterpret_cast<const uint8_t*>(&spi_config),
+      .data_size = sizeof spi_config,
+  });
+
+  auto spi_status =
+      fidl_metadata::spi::SpiChannelsToFidl(spi_channels);
+  if (spi_status.is_error()) {
+    zxlogf(ERROR, "%s: failed to encode spi channels to fidl: %d", __func__, spi_status.error_value());
+    return spi_status.error_value();
+  }
+  auto& data = spi_status.value();
+
+  spi_metadata.emplace_back(pbus_metadata_t{
+      .type = DEVICE_METADATA_SPI_CHANNELS,
+      .data_buffer = data.data(),
+      .data_size = data.size(),
+  });
+
+  spi_dev.metadata_list = spi_metadata.data();
+  spi_dev.metadata_count = spi_metadata.size();
+
   // TODO(fxbug.dev/34010): fix this clock enable block when the clock driver can handle the
   // dividers
   {
@@ -151,7 +161,7 @@ zx_status_t Nelson::SpiInit() {
   }
 
   zx_status_t status = pbus_.CompositeDeviceAdd(&spi_dev, reinterpret_cast<uint64_t>(fragments),
-                                                std::size(fragments), UINT32_MAX);
+                                    std::size(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

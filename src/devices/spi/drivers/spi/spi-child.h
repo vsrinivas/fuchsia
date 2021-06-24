@@ -9,7 +9,6 @@
 #include <fuchsia/hardware/spi/llcpp/fidl.h>
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
 
-#include <ddk/metadata/spi.h>
 #include <ddktl/device.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
@@ -25,9 +24,9 @@ class SpiChild : public SpiChildType,
                  public fbl::RefCounted<SpiChild>,
                  public ddk::SpiProtocol<SpiChild, ddk::base_protocol> {
  public:
-  SpiChild(zx_device_t* parent, ddk::SpiImplProtocolClient spi, const spi_channel_t* channel,
+  SpiChild(zx_device_t* parent, ddk::SpiImplProtocolClient spi, uint32_t chip_select,
            SpiDevice* spi_parent)
-      : SpiChildType(parent), spi_(spi), cs_(channel->cs), spi_parent_(*spi_parent) {}
+      : SpiChildType(parent), spi_(spi), cs_(chip_select), spi_parent_(*spi_parent) {}
 
   void DdkRelease();
 

@@ -9,6 +9,45 @@ using fuchsia.hardware.sharedmemory;
 using zx;
 
 const uint32 MAX_TRANSFER_SIZE = 8196; // arbitrary - to be removed
+const uint32 MAX_SPI_CHANNEL = 32; // arbitrary.
+
+flexible enum SpiClockPhase {
+    CLOCK_PHASE_FIRST = 0;
+    CLOCK_PHASE_SECOND = 1;
+};
+
+/// Represents a single device on a SPI bus.
+table SpiChannel {
+    /// ID of the bus that this device is on.
+    1: uint32 bus_id;
+    /// Chip select number for the device.
+    2: uint32 cs;
+
+    /// Vendor ID. Used when binding via platform bus device IDs.
+    3: uint32 vid;
+    /// Product ID. Used when binding via platform bus device IDs.
+    4: uint32 pid;
+    /// Device ID. Used when binding via platform bus device IDs.
+    5: uint32 did;
+
+    // Bus configuration.
+    /// Chip select polarity: true == high, false == low.
+    6: bool cs_polarity_high;
+    /// Size in bits of a single word on the SPI bus.
+    7: uint8 word_length_bits;
+
+    /// Are we in charge of the bus?
+    8: bool is_bus_controller;
+    /// Clock polarity. true == high, false == low.
+    9: bool clock_polarity_high;
+    ///  Clock phase.
+    10: SpiClockPhase clock_phase;
+};
+
+/// Passed to the spi driver in metadata as DEVICE_METADATA_SPI_CHANNELS.
+table SpiBusMetadata {
+    1: vector<SpiChannel>:MAX_SPI_CHANNEL channels;
+};
 
 protocol Device {
     /// Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.

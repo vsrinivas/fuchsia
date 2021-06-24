@@ -5,16 +5,16 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
-#include <ddk/metadata/spi.h>
-
+#include "src/devices/lib/fidl-metadata/spi.h"
 #include "test.h"
 
 namespace board_test {
 
 namespace {
+using spi_channel_t = fidl_metadata::spi::Channel;
 
 static const spi_channel_t spi_channels[] = {{.bus_id = 0,
                                               .cs = 0,
@@ -22,12 +22,6 @@ static const spi_channel_t spi_channels[] = {{.bus_id = 0,
                                               .vid = 0,
                                               .pid = 0,
                                               .did = 0}};
-
-static const pbus_metadata_t spi_metadata[] = {{
-    .type = DEVICE_METADATA_SPI_CHANNELS,
-    .data_buffer = reinterpret_cast<const uint8_t*>(&spi_channels),
-    .data_size = sizeof(spi_channels),
-}};
 
 }  // namespace
 
@@ -37,8 +31,24 @@ zx_status_t TestBoard::SpiInit() {
   spi_dev.vid = PDEV_VID_TEST;
   spi_dev.pid = PDEV_PID_PBUS_TEST;
   spi_dev.did = PDEV_DID_TEST_SPI;
-  spi_dev.metadata_list = spi_metadata;
-  spi_dev.metadata_count = countof(spi_metadata);
+
+  auto spi_status =
+      fidl_metadata::spi::SpiChannelsToFidl(spi_channels);
+  if (spi_status.is_error()) {
+    zxlogf(ERROR, "%s: failed to encode spi channels to fidl: %d", __func__, spi_status.error_value());
+    return spi_status.error_value();
+  }
+  auto& data = spi_status.value();
+
+
+  pbus_metadata_t metadata{
+      .type = DEVICE_METADATA_SPI_CHANNELS,
+      .data_buffer = data.data(),
+      .data_size = data.size(),
+  };
+
+  spi_dev.metadata_list = &metadata;
+  spi_dev.metadata_count = 1;
 
   zx_status_t status = pbus_.DeviceAdd(&spi_dev);
   if (status != ZX_OK) {

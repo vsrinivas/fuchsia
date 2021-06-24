@@ -7,11 +7,15 @@ import("//build/test.gni")
 test("fidl-metadata-unittest") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
+    "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
     "//src/devices/lib/fidl-metadata",
     "//zircon/public/lib/zxtest",
   ]
 
-  sources = [ "i2c-test.cc" ]
+  sources = [
+    "i2c-test.cc",
+    "spi-test.cc",
+  ]
 }
 
 fuchsia_unittest_package("fidl-metadata-tests") {

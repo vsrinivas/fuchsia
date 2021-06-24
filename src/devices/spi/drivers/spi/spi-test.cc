@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl/llcpp/client.h>
@@ -14,10 +15,12 @@
 
 #include <map>
 
-#include <ddk/metadata/spi.h>
 #include <zxtest/zxtest.h>
 
+#include "src/devices/lib/fidl-metadata/spi.h"
+
 namespace spi {
+using spi_channel_t = fidl_metadata::spi::Channel;
 
 class FakeDdkSpiImpl;
 
@@ -27,10 +30,15 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
   explicit FakeDdkSpiImpl() {
     fake_ddk::Protocol proto = {&spi_impl_protocol_ops_, this};
     SetProtocol(ZX_PROTOCOL_SPI_IMPL, &proto);
-    SetMetadata(DEVICE_METADATA_SPI_CHANNELS, &kSpiChannels, sizeof(kSpiChannels));
+
+    auto result = fidl_metadata::spi::SpiChannelsToFidl(kSpiChannels);
+    ASSERT_OK(result.status_value());
+    data_ = std::move(result.value());
+    SetMetadata(DEVICE_METADATA_SPI_CHANNELS, data_.data(), data_.size());
     SetMetadata(DEVICE_METADATA_PRIVATE, &kTestBusId, sizeof(kTestBusId));
   }
 
+  std::vector<uint8_t> data_;
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) {
     if (parent == fake_ddk::kFakeParent) {

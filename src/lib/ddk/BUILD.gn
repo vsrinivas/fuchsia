@@ -82,7 +82,6 @@ library_headers("ddk-metadata-headers") {
     "ddk/metadata/nand.h",
     "ddk/metadata/power.h",
     "ddk/metadata/pwm.h",
-    "ddk/metadata/spi.h",
     "ddk/metadata/test.h",
     "ddk/usb-peripheral-config.h",
   ]

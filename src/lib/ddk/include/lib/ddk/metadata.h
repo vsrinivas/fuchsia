@@ -106,7 +106,7 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // type: FIDL fuchsia.hardware.i2c/I2CBusMetadata
 #define DEVICE_METADATA_I2C_CHANNELS 0x43433249  // I2CC
 
-// type: array of spi_channel_t
+// type: FIDL fuchsia.hardware.spi.SpiBusMetadata
 #define DEVICE_METADATA_SPI_CHANNELS 0x43495053  // SPIC
 
 // type: display_driver_t

@@ -8,7 +8,6 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 
-#include <ddk/metadata/spi.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-common/aml-registers.h>
 #include <soc/aml-common/aml-spi.h>
@@ -16,6 +15,7 @@
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"
+#include "src/devices/lib/fidl-metadata/spi.h"
 
 #define HHI_SPICC_CLK_CNTL (0xf7 * 4)
 #define spicc_0_clk_sel_fclk_div5 (5 << 7)
@@ -23,6 +23,7 @@
 #define spicc_0_clk_div(x) ((x)-1)
 
 namespace sherlock {
+using spi_channel_t = fidl_metadata::spi::Channel;
 
 static const pbus_mmio_t spi_mmios[] = {
     {
@@ -50,19 +51,6 @@ static const amlspi_config_t spi_config = {
     .cs = {0},  // index into fragments list
 };
 
-static const pbus_metadata_t spi_metadata[] = {
-    {
-        .type = DEVICE_METADATA_SPI_CHANNELS,
-        .data_buffer = reinterpret_cast<const uint8_t*>(spi_channels),
-        .data_size = sizeof spi_channels,
-    },
-    {
-        .type = DEVICE_METADATA_AMLSPI_CONFIG,
-        .data_buffer = reinterpret_cast<const uint8_t*>(&spi_config),
-        .data_size = sizeof spi_config,
-    },
-};
-
 static pbus_dev_t spi_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "spi-0";
@@ -71,8 +59,6 @@ static pbus_dev_t spi_dev = []() {
   dev.did = PDEV_DID_AMLOGIC_SPI;
   dev.mmio_list = spi_mmios;
   dev.mmio_count = countof(spi_mmios);
-  dev.metadata_list = spi_metadata;
-  dev.metadata_count = countof(spi_metadata);
   return dev;
 }();
 
@@ -99,6 +85,30 @@ zx_status_t Sherlock::SpiInit() {
   gpio_impl_.ConfigIn(T931_GPIOC(3), GPIO_PULL_DOWN);  // SCLK
   gpio_impl_.SetAltFunction(T931_GPIOC(3), 5);         // SCLK
 
+  std::vector<pbus_metadata_t> spi_metadata;
+  spi_metadata.emplace_back(pbus_metadata_t{
+      .type = DEVICE_METADATA_AMLSPI_CONFIG,
+      .data_buffer = reinterpret_cast<const uint8_t*>(&spi_config),
+      .data_size = sizeof spi_config,
+  });
+
+  auto spi_status =
+      fidl_metadata::spi::SpiChannelsToFidl(spi_channels);
+  if (spi_status.is_error()) {
+    zxlogf(ERROR, "%s: failed to encode spi channels to fidl: %d", __func__, spi_status.error_value());
+    return spi_status.error_value();
+  }
+  auto& data = spi_status.value();
+
+  spi_metadata.emplace_back(pbus_metadata_t{
+      .type = DEVICE_METADATA_SPI_CHANNELS,
+      .data_buffer = data.data(),
+      .data_size = data.size(),
+  });
+
+  spi_dev.metadata_list = spi_metadata.data();
+  spi_dev.metadata_count = spi_metadata.size();
+
   // TODO(fxbug.dev/34010): fix this clock enable block when the clock driver can handle the
   // dividers
   {
@@ -118,7 +128,7 @@ zx_status_t Sherlock::SpiInit() {
   }
 
   zx_status_t status = pbus_.CompositeDeviceAdd(&spi_dev, reinterpret_cast<uint64_t>(fragments),
-                                                std::size(fragments), UINT32_MAX);
+                                    std::size(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;
