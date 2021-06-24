@@ -148,6 +148,15 @@ template("gidl_c_conformance") {
   }
 }
 
+template("gidl_transformer_conformance") {
+  _gidl_cc_source_set(target_name) {
+    type = "conformance"
+    language = "transformer"
+    bindings_suffix = "_llcpp"
+    forward_variables_from(invoker, "*")
+  }
+}
+
 template("gidl_hlcpp_benchmarks") {
   _gidl_cc_source_set(target_name) {
     type = "benchmark"
