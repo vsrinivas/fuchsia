@@ -397,6 +397,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		if err != nil {
 			return fmt.Errorf("%v:\n%s", err, string(data))
 		}
+		logger.Debugf(ctx, "%s\n", string(data))
 	}
 
 	if reportDir != "" {
