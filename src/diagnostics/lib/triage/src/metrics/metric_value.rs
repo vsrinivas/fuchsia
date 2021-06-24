@@ -11,8 +11,7 @@ use {
 
 /// The calculated or selected value of a Metric.
 ///
-/// Missing means that the value could not be calculated; its String tells
-/// the reason.
+/// Problem means that the value could not be calculated.
 #[derive(Deserialize, Debug, Clone)]
 pub enum MetricValue {
     // Ensure every variant of MetricValue is tested in metric_value_traits().
@@ -25,14 +24,16 @@ pub enum MetricValue {
     Bytes(Vec<u8>),
     Problem(Problem),
     Lambda(Box<Lambda>),
-    /// An unknown (not supported yet) value that is present but cannot be used in computation.
-    Unhandled,
 }
 
 /// Some kind of problematic non-value. In most cases, this should be treated as a thrown error.
 #[derive(Deserialize, Clone)]
 pub enum Problem {
     Missing(String),
+    /// Multiple errors were encountered in evaluating the expression.
+    Multiple(Vec<Problem>),
+    /// An unknown (not supported yet) value that is present but cannot be used in computation.
+    Unhandled(String),
 }
 
 impl PartialEq for MetricValue {
@@ -62,9 +63,8 @@ impl std::fmt::Display for MetricValue {
             MetricValue::String(n) => write!(f, "String({})", n),
             MetricValue::Vector(n) => write!(f, "Vector({:?})", n),
             MetricValue::Bytes(n) => write!(f, "Bytes({:?})", n),
-            MetricValue::Problem(Problem::Missing(n)) => write!(f, "Missing({})", n),
+            MetricValue::Problem(p) => write!(f, "{:?}", p),
             MetricValue::Lambda(n) => write!(f, "Fn({:?})", n),
-            MetricValue::Unhandled => write!(f, "Unhandled"),
         }
     }
 }
@@ -102,8 +102,12 @@ impl From<DiagnosticProperty> for MetricValue {
             }
             DiagnosticProperty::DoubleArray(_name, ArrayContent::Buckets(_))
             | DiagnosticProperty::IntArray(_name, ArrayContent::Buckets(_))
-            | DiagnosticProperty::UintArray(_name, ArrayContent::Buckets(_)) => Self::Unhandled,
-            DiagnosticProperty::StringList(_name, _list) => Self::Unhandled,
+            | DiagnosticProperty::UintArray(_name, ArrayContent::Buckets(_)) => {
+                Self::Problem(Problem::Unhandled("Histogram is not supported".to_owned()))
+            }
+            DiagnosticProperty::StringList(_name, _list) => {
+                Self::Problem(Problem::Unhandled("StringList is not supported".to_owned()))
+            }
         }
     }
 }
@@ -117,7 +121,7 @@ impl From<JsonValue> for MetricValue {
             JsonValue::Array(values) => {
                 Self::Vector(values.into_iter().map(|v| Self::from(v)).collect())
             }
-            _ => Self::Problem(Problem::Missing("Unsupported JSON type".to_owned())),
+            _ => Self::Problem(Problem::Unhandled("Unsupported JSON type".to_owned())),
         }
     }
 }
@@ -135,13 +139,13 @@ impl From<&JsonValue> for MetricValue {
                 } else if value.is_f64() {
                     Self::Float(value.as_f64().unwrap())
                 } else {
-                    Self::Problem(Problem::Missing("Unable to convert JSON number".to_owned()))
+                    Self::Problem(Problem::Unhandled("Unable to convert JSON number".to_owned()))
                 }
             }
             JsonValue::Array(values) => {
                 Self::Vector(values.iter().map(|v| Self::from(v)).collect())
             }
-            _ => Self::Problem(Problem::Missing("Unsupported JSON type".to_owned())),
+            _ => Self::Problem(Problem::Unhandled("Unsupported JSON type".to_owned())),
         }
     }
 }
@@ -150,6 +154,14 @@ impl std::fmt::Debug for Problem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &*self {
             Problem::Missing(s) => write!(f, "Missing: {}", s),
+            Problem::Multiple(problems) => {
+                write!(f, "MultipleErrors: ")?;
+                for problem in problems.iter() {
+                    write!(f, "{:?}; ", problem)?;
+                }
+                write!(f, "]")
+            }
+            Problem::Unhandled(s) => write!(f, "Unhandled: {}", s),
         }
     }
 }
@@ -158,7 +170,7 @@ impl std::fmt::Debug for Problem {
 pub(crate) mod test {
     use {
         super::*,
-        crate::{assert_missing, assert_not_missing},
+        crate::assert_problem,
         diagnostics_hierarchy::ArrayFormat,
         serde_json::{json, Number as JsonNumber},
     };
@@ -213,13 +225,13 @@ pub(crate) mod test {
             ])
         );
 
-        // Missing should never be equal
+        // Problem should never be equal
         assert!(
             MetricValue::Problem(Problem::Missing("err".to_string()))
                 != MetricValue::Problem(Problem::Missing("err".to_string()))
         );
-        // Use assert_missing() macro to test error messages.
-        assert_missing!(MetricValue::Problem(Problem::Missing("err".to_string())), "err");
+        // Use assert_problem() macro to test error messages.
+        assert_problem!(MetricValue::Problem(Problem::Missing("err".to_string())), "Missing: err");
 
         // We don't have a contract for Lambda equality. We probably don't need one.
     }
@@ -269,7 +281,7 @@ pub(crate) mod test {
         assert_eq!(format!("{}", MetricValue::Bytes(vec![1u8, 2u8])), "Bytes([1, 2])");
         assert_eq!(
             format!("{}", MetricValue::Problem(Problem::Missing("Where is Waldo?".to_string()))),
-            "Missing(Where is Waldo?)"
+            "Missing: Where is Waldo?"
         );
     }
 
@@ -318,9 +330,9 @@ pub(crate) mod test {
         let json_vec = vec![json!(1), json!(2), json!(3)];
         let metric_vec = vec![MetricValue::Int(1), MetricValue::Int(2), MetricValue::Int(3)];
         test_from_to!(JsonValue::Array, MetricValue::Vector, json_vec, metric_vec);
-        assert_missing!(
+        assert_problem!(
             MetricValue::from(JsonValue::Object(serde_json::Map::new())),
-            "Unsupported JSON type"
+            "Unhandled: Unsupported JSON type"
         );
     }
 
@@ -390,22 +402,25 @@ pub(crate) mod test {
 
         let diagnostic_array = ArrayContent::new(vec![0, 1, 0, 0, 0], ArrayFormat::LinearHistogram)
             .expect("create histogram");
-        assert_not_missing!(
-            DiagnosticProperty::UintArray("foo".to_string(), diagnostic_array).into()
+        assert_problem!(
+            DiagnosticProperty::UintArray("foo".to_string(), diagnostic_array).into(),
+            "Unhandled: Histogram is not supported"
         );
 
         let diagnostic_array =
             ArrayContent::new(vec![-10, 1, 0, 0, 0], ArrayFormat::LinearHistogram)
                 .expect("create histogram");
-        assert_not_missing!(
-            DiagnosticProperty::IntArray("foo".to_string(), diagnostic_array).into()
+        assert_problem!(
+            DiagnosticProperty::IntArray("foo".to_string(), diagnostic_array).into(),
+            "Unhandled: Histogram is not supported"
         );
 
         let diagnostic_array =
             ArrayContent::new(vec![0., 0.1, 0., 0., 0.], ArrayFormat::LinearHistogram)
                 .expect("create histogram");
-        assert_not_missing!(
-            DiagnosticProperty::DoubleArray("foo".to_string(), diagnostic_array).into()
+        assert_problem!(
+            DiagnosticProperty::DoubleArray("foo".to_string(), diagnostic_array).into(),
+            "Unhandled: Histogram is not supported"
         );
     }
 }

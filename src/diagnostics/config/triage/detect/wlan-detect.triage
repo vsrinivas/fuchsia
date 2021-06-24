@@ -2,15 +2,15 @@
     select: {
         disconnects: [
             "INSPECT:core/wlanstack:root/client_stats/disconnect/*:@time",
-            "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:@time"
+            "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:@time",
         ],
         connected_durations: [
             "INSPECT:core/wlanstack:root/client_stats/disconnect/*:connected_duration",
-            "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:connected_duration"
+            "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:connected_duration",
         ],
         scan_failures: [
             "INSPECT:core/wlanstack:root/client_stats/scan_failures/*:@time",
-            "INSPECT:wlanstack.cmx:root/client_stats/scan_failures/*:@time"
+            "INSPECT:wlanstack.cmx:root/client_stats/scan_failures/*:@time",
         ],
     },
     eval: {
@@ -44,13 +44,13 @@
         },
         low_connected_duration: {
             type: "Snapshot",
-            trigger: "And(avg_connected_duration_today <= Hours(3), n_disconnects_today == 1)",
+            trigger: "And(n_disconnects_today == 1, avg_connected_duration_today <= Hours(3))",
             repeat: "Hours(24)",
             signature: "less-than-three-hours-connected-today",
         },
         low_avg_connected_duration: {
             type: "Snapshot",
-            trigger: "And(avg_connected_duration_today <= Hours(3), n_disconnects_today > 1)",
+            trigger: "And(n_disconnects_today > 1, avg_connected_duration_today <= Hours(3))",
             repeat: "Hours(24)",
             signature: "avg-less-than-three-hours-connected-today",
         },

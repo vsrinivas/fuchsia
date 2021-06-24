@@ -217,6 +217,7 @@ fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseErr
             function!("KlogHas", KlogHas),
             function!("BootlogHas", BootlogHas),
             function!("Missing", Missing),
+            function!("Problem", Problem),
             function!("Annotation", Annotation),
         )),
         alt((
@@ -451,7 +452,7 @@ mod test {
     use {
         super::*,
         crate::{
-            assert_missing,
+            assert_problem,
             metrics::{Expression, Fetcher, MathFunction, MetricState, TrialDataFetcher},
         },
         std::collections::HashMap,
@@ -825,15 +826,18 @@ mod test {
     fn parser_boolean_functions_args() -> Result<(), Error> {
         assert_eq!(eval!("And(2>1)"), MetricValue::Bool(true));
         assert_eq!(eval!("And(2>1, 2>1, 2>1)"), MetricValue::Bool(true));
-        assert_missing!(eval!("And()"), "No operands in boolean expression");
+        assert_problem!(eval!("And()"), "Missing: No operands in boolean expression");
         assert_eq!(eval!("Or(2>1)"), MetricValue::Bool(true));
         assert_eq!(eval!("Or(2>1, 2>1, 2>1)"), MetricValue::Bool(true));
-        assert_missing!(eval!("Or()"), "No operands in boolean expression");
-        assert_missing!(
+        assert_problem!(eval!("Or()"), "Missing: No operands in boolean expression");
+        assert_problem!(
             eval!("Not(2>1, 2>1)"),
-            "Wrong number of arguments (2) for unary bool operator"
+            "Missing: Wrong number of arguments (2) for unary bool operator"
         );
-        assert_missing!(eval!("Not()"), "Wrong number of arguments (0) for unary bool operator");
+        assert_problem!(
+            eval!("Not()"),
+            "Missing: Wrong number of arguments (0) for unary bool operator"
+        );
         Ok(())
     }
 
@@ -843,8 +847,8 @@ mod test {
         assert_eq!(eval!("Min(2, 5, 3, -1)"), MetricValue::Int(-1));
         assert_eq!(eval!("Min(2)"), MetricValue::Int(2));
         assert_eq!(eval!("Max(2)"), MetricValue::Int(2));
-        assert_missing!(eval!("Max()"), "No operands in math expression");
-        assert_missing!(eval!("Min()"), "No operands in math expression");
+        assert_problem!(eval!("Max()"), "Missing: No operands in math expression");
+        assert_problem!(eval!("Min()"), "Missing: No operands in math expression");
         Ok(())
     }
 
@@ -861,11 +865,12 @@ mod test {
         assert_eq!(eval!("Seconds(0.5)"), MetricValue::Int(500_000_000));
         // Negative values are fine.
         assert_eq!(eval!("Seconds(-0.5)"), MetricValue::Int(-500_000_000));
-        // Non-numeric or bad arg combinations return Missing.
-        assert_missing!(eval!("Hours()"), "Time conversion needs 1 numeric argument");
-        assert_missing!(eval!("Hours(2, 3)"), "Time conversion needs 1 numeric argument");
-        assert_missing!(eval!("Hours('a')"), "Time conversion needs 1 numeric argument");
-        assert_missing!(eval!("Hours(1.0/0.0)"), "Time conversion needs 1 numeric argument");
+        // Non-numeric or bad arg combinations return Problem.
+        assert_problem!(eval!("Hours()"), "Missing: Time conversion needs 1 numeric argument");
+        assert_problem!(eval!("Hours(2, 3)"), "Missing: Time conversion needs 1 numeric argument");
+        assert_problem!(eval!("Hours('a')"), "Missing: Time conversion needs 1 numeric argument");
+        assert_problem!(eval!("1.0/0.0"), "Missing: Division by zero");
+        assert_problem!(eval!("Hours(1.0/0.0)"), "Missing: Division by zero");
         Ok(())
     }
 
@@ -923,21 +928,26 @@ mod test {
         let time = state.evaluate_expression(&now_expression);
         let no_time = state.evaluate_expression(&parse_expression("Now(5)")?);
         assert_eq!(time, i(2000));
-        assert_missing!(no_time, "Now() requires no operands.");
+        assert_problem!(no_time, "Missing: Now() requires no operands.");
         Ok(())
     }
 
     #[test]
     fn test_option() {
-        assert_missing!(eval!("Option()"), "Every value was missing");
-        assert_missing!(eval!("Option(a, b, c, d)"), "Every value was missing");
+        // Should "Every value was missing" be a ValueError or a Missing?
+        assert_problem!(eval!("Option()"), "Missing: Every value was missing");
+        // Now() will return Problem::Missing.
+        assert_problem!(
+            eval!("Option(Now(), Now(), Now(), Now())"),
+            "Missing: Every value was missing"
+        );
         assert_eq!(eval!("Option(5)"), i(5));
-        assert_eq!(eval!("Option(5, a)"), i(5));
-        assert_eq!(eval!("Option(a, 5, a)"), i(5));
-        assert_eq!(eval!("Option(a, b, c, d, 5)"), i(5));
-        assert_eq!(eval!("Option(a, b, [], d)"), MetricValue::Vector(vec![]));
-        assert_eq!(eval!("Option(a, b, [], d, [5])"), MetricValue::Vector(vec![i(5)]));
-        assert_eq!(eval!("Option(a, b, 5, d, [5])"), i(5));
-        assert_eq!(eval!("Option(a, b, [5], d, 5)"), MetricValue::Vector(vec![i(5)]));
+        assert_eq!(eval!("Option(5, Now())"), i(5));
+        assert_eq!(eval!("Option(Now(), 5, Now())"), i(5));
+        assert_eq!(eval!("Option(Now(), Now(), Now(), Now(), 5)"), i(5));
+        assert_eq!(eval!("Option(Now(), Now(), [], Now())"), MetricValue::Vector(vec![]));
+        assert_eq!(eval!("Option(Now(), Now(), [], Now(), [5])"), MetricValue::Vector(vec![i(5)]));
+        assert_eq!(eval!("Option(Now(), Now(), 5, Now(), [5])"), i(5));
+        assert_eq!(eval!("Option(Now(), Now(), [5], Now(), 5)"), MetricValue::Vector(vec![i(5)]));
     }
 }

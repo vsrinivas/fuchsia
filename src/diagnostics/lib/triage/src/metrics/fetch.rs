@@ -458,7 +458,7 @@ mod test {
     use {
         super::*,
         crate::{
-            assert_missing,
+            assert_problem,
             metrics::{variable::VariableName, Metric, MetricState},
         },
         anyhow::Error,
@@ -559,9 +559,9 @@ mod test {
         assert!(!FOO_42_AB_7_TRIAL_FETCHER.has_entry("a:b"));
         assert!(!FOO_42_AB_7_TRIAL_FETCHER.has_entry("oops"));
         assert_eq!(FOO_42_AB_7_TRIAL_FETCHER.fetch("foo"), MetricValue::Int(42));
-        require_missing(
+        assert_problem!(
             FOO_42_AB_7_TRIAL_FETCHER.fetch("oops"),
-            "Trial fetcher found bogus selector",
+            "Missing: Value oops not overridden in test"
         );
     }
 
@@ -603,9 +603,9 @@ mod test {
             file_state.evaluate_variable("bar_file", variable!("bar_plus_one")),
             MetricValue::Int(100)
         );
-        require_missing(
+        assert_problem!(
             file_state.evaluate_variable("bar_file", variable!("oops_plus_one")),
-            "File found nonexistent name",
+            "Missing: Metric 'oops' Not Found in 'bar_file'"
         );
         assert_eq!(
             file_state.evaluate_variable("bar_file", variable!("bar")),
@@ -639,17 +639,17 @@ mod test {
             file_state.evaluate_variable("bar_file", variable!("bad_component_or_bar")),
             MetricValue::Vector(vec![MetricValue::Int(99)])
         );
-        require_missing(
+        assert_problem!(
             file_state.evaluate_variable("other_file", variable!("bar_plus_one")),
-            "Shouldn't have found bar_plus_one in other_file",
+            "Missing: Metric 'bar_plus_one' Not Found in 'other_file'"
         );
-        require_missing(
+        assert_problem!(
             file_state.evaluate_variable("missing_file", variable!("bar_plus_one")),
-            "Shouldn't have found bar_plus_one in missing_file",
+            "Missing: Bad namespace 'missing_file'"
         );
-        require_missing(
+        assert_problem!(
             file_state.evaluate_variable("bar_file", variable!("other_file::bar_plus_one")),
-            "Shouldn't have found other_file::bar_plus_one",
+            "Missing: Metric 'bar_plus_one' Not Found in 'other_file'"
         );
     }
 
@@ -745,10 +745,11 @@ mod test {
                 ($selector:expr, $error:expr) => {
                     let error = inspect.fetch_str($selector);
                     assert_eq!(error.len(), 1);
-                    assert_missing!(&error[0], &$error);
+                    assert_problem!(&error[0], $error);
                 };
             }
-            assert_wrong!("INSPET:*/foo/*:root:dataInt", "Bad selector INSPET:*/foo/*:root:dataInt: Invalid selector type \'INSPET\' - must be INSPECT");
+            assert_wrong!("INSPET:*/foo/*:root:dataInt",
+                "Missing: Bad selector INSPET:*/foo/*:root:dataInt: Invalid selector type \'INSPET\' - must be INSPECT");
             assert_eq!(
                 inspect.fetch_str("INSPECT:*/foo/*:root:dataInt"),
                 vec![MetricValue::Int(5)]
@@ -764,10 +765,10 @@ mod test {
             assert_eq!(inspect.fetch_str("INSPECT:*/foo/*:root.dataInt"), vec![]);
             assert_wrong!(
                 "INSPECT:*/fo/*:root.dataInt",
-                "No component found matching selector */fo/*:root.dataInt"
+                "Missing: No component found matching selector */fo/*:root.dataInt"
             );
             assert_wrong!("INSPECT:*/foo/*:root:data:Int",
-                "Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Selector format requires at least 2 subselectors delimited by a `:`.");
+                "Missing: Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Selector format requires at least 2 subselectors delimited by a `:`.");
             assert_eq!(inspect.fetch_str("INSPECT:*/foo/*:root/kid:dataInt"), vec![]);
             assert_eq!(inspect.fetch_str("INSPECT:*/bar/*:base/array:dataInt"), vec![]);
             assert_eq!(

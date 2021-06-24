@@ -99,6 +99,7 @@ pub enum Function {
     SyslogHas,
     BootlogHas,
     Missing,
+    Problem,
     Annotation,
     Lambda,
     Apply,
@@ -179,7 +180,7 @@ enum ShortCircuitBehavior {
 }
 
 /// Expression represents the parsed body of an Eval Metric. It applies
-/// a function to sub-expressions, or stores a Missing error, the name of a
+/// a function to sub-expressions, or holds a Problem, the name of a
 /// Metric, a vector of expressions, or a basic Value.
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum Expression {
@@ -428,6 +429,7 @@ impl<'a> MetricState<'a> {
                 self.log_contains(function, namespace, operands)
             }
             Function::Missing => self.is_missing(namespace, operands),
+            Function::Problem => self.is_problem(namespace, operands),
             Function::Annotation => self.annotation(namespace, operands),
             Function::Lambda => Lambda::as_metric_value(operands),
             Function::Apply => self.apply(namespace, operands),
@@ -716,6 +718,7 @@ impl<'a> MetricState<'a> {
                 None => missing("Time conversion needs 1 numeric argument"),
                 Some(value) => MetricValue::Int(value),
             },
+            MetricValue::Problem(oops) => return MetricValue::Problem(oops),
             _ => missing("Time conversion needs 1 numeric argument"),
         }
     }
@@ -880,19 +883,50 @@ impl<'a> MetricState<'a> {
         }
     }
 
-    // Returns Bool true if the given metric is Missing, false if the metric has a value.
+    // Returns Bool true if the given metric is Missing, false if the metric has a value. Propagates
+    // non-Missing errors.
     fn is_missing(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
         if operands.len() != 1 {
-            return MetricValue::Problem(Problem::Missing(format!("Bad operand")));
+            return MetricValue::Problem(Problem::Missing(format!(
+                "Wrong number of operands for Missing(): {}",
+                operands.len()
+            )));
         }
-        MetricValue::Bool(match self.evaluate(namespace, &operands[0]) {
+        let value = self.evaluate(namespace, &operands[0]);
+        MetricValue::Bool(match value {
             MetricValue::Problem(Problem::Missing(_)) => true,
+            MetricValue::Problem(Problem::Multiple(ref problems)) => {
+                if problems.iter().filter(|p| matches!(p, Problem::Missing(_))).count()
+                    == problems.len()
+                {
+                    true
+                } else {
+                    return value.clone();
+                }
+            }
+
             // TODO(fxbug.dev/58922): Well-designed errors and special cases, not hacks
             MetricValue::Vector(contents) if contents.len() == 0 => true,
             MetricValue::Vector(contents) if contents.len() == 1 => match contents[0] {
                 MetricValue::Problem(Problem::Missing(_)) => true,
                 _ => false,
             },
+            _ => false,
+        })
+    }
+
+    // Returns Bool true if the given metric is Missing, false if the metric has a value. Propagates
+    // non-Missing errors.
+    fn is_problem(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
+        if operands.len() != 1 {
+            return MetricValue::Problem(Problem::Missing(format!(
+                "Wrong number of operands for Problem(): {}",
+                operands.len()
+            )));
+        }
+        let value = self.evaluate(namespace, &operands[0]);
+        MetricValue::Bool(match value {
+            MetricValue::Problem(_) => true,
             _ => false,
         })
     }
@@ -912,6 +946,22 @@ pub(crate) mod test {
         anyhow::Error,
         lazy_static::lazy_static,
     };
+
+    /// Problem should never equal anything, even an identical Problem. Code (tests) can use
+    /// assert_problem!(MetricValue::Problem(_), "foo") to test error messages.
+    #[macro_export]
+    macro_rules! assert_problem {
+        ($missing:expr, $message:expr) => {
+            match $missing {
+                MetricValue::Problem(problem) => assert_eq!(format!("{:?}", problem), $message),
+                oops => {
+                    // TODO: Add $missing to println, it currently returns a generics error.
+                    println!("Non problem type {:?}", oops);
+                    assert!(false, "Non-Problem type");
+                }
+            }
+        };
+    }
 
     /// Missing should never equal anything, even an identical Missing. Code (tests) can use
     /// assert_missing!(MetricValue::Problem(Problem::Missing("foo".to_string())), "foo") to test error messages.

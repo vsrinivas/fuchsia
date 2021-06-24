@@ -31,6 +31,9 @@ pub fn calculate(function: &MathFunction, operands: &Vec<MetricValue>) -> Metric
             MathFunction::Add => operands[0] + operands[1],
             MathFunction::Sub => operands[0] - operands[1],
             MathFunction::Mul => operands[0] * operands[1],
+            MathFunction::FloatDiv | MathFunction::IntDiv if operands[1] == 0.0 => {
+                return super::missing("Division by zero")
+            }
             MathFunction::FloatDiv => operands[0] / operands[1],
             MathFunction::IntDiv => {
                 return match super::safe_float_to_int(operands[0] / operands[1]) {
@@ -49,6 +52,9 @@ pub fn calculate(function: &MathFunction, operands: &Vec<MetricValue>) -> Metric
             MathFunction::Add => operands[0] + operands[1],
             MathFunction::Sub => operands[0] - operands[1],
             MathFunction::Mul => operands[0] * operands[1],
+            MathFunction::FloatDiv | MathFunction::IntDiv if operands[1] == 0 => {
+                return super::missing("Division by zero")
+            }
             MathFunction::FloatDiv => {
                 return MetricValue::Float(operands[0] as f64 / operands[1] as f64)
             }
@@ -101,12 +107,10 @@ fn promote_type(operands: &Vec<MetricValue>) -> Result<PromotedOperands, MetricV
     if float_vec.len() == operands.len() {
         return Ok(PromotedOperands::Float(float_vec));
     }
-    let error_strings =
-        error_vec.iter().map(|Problem::Missing(string)| string.to_string()).collect::<Vec<_>>();
-    return Err(MetricValue::Problem(Problem::Missing(format!(
-        "Non-numeric operand: {}",
-        error_strings.join("; ")
-    ))));
+    if error_vec.len() == 1 {
+        return Err(MetricValue::Problem(error_vec.swap_remove(0)));
+    }
+    return Err(MetricValue::Problem(Problem::Multiple(error_vec)));
 }
 
 // Correct operation of this file is tested in parse.rs.

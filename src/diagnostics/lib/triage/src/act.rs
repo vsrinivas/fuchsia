@@ -241,7 +241,12 @@ impl ActionContext<'_> {
             MetricValue::Bool(false) => false,
             MetricValue::Problem(Problem::Missing(reason)) => {
                 self.action_results
-                    .add_warning(format!("[MISSING] In config '{}': {}", namespace, reason));
+                    .add_warning(format!("[MISSING] In config '{}': {:?}", namespace, reason));
+                false
+            }
+            MetricValue::Problem(problem) => {
+                self.action_results
+                    .add_warning(format!("[ERROR] In config '{}': {:?}", namespace, problem));
                 false
             }
             other => {
@@ -502,7 +507,7 @@ mod test {
         action_file.insert(
             "time_missing".to_string(),
             Action::Warning(Warning {
-                trigger: Metric::Eval("Missing(Now())".to_string()),
+                trigger: Metric::Eval("Problem(Now())".to_string()),
                 print: "missing".to_string(),
                 tag: None,
                 file_bug: None,
@@ -518,7 +523,7 @@ mod test {
         assert_eq!(&vec!["[WARNING] 1234.".to_string()], results_1234.get_warnings());
         assert!(results_no_time
             .get_warnings()
-            .contains(&"[MISSING] In config \'file\': No valid time available".to_string()));
+            .contains(&"[MISSING] In config \'file\': \"No valid time available\"".to_string()));
         assert!(results_no_time.get_warnings().contains(&"[WARNING] missing.".to_string()));
     }
 
