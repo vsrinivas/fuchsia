@@ -40,9 +40,15 @@ pub struct FlatSceneManager {
     /// The metrics for the display presenting the scene.
     pub display_metrics: DisplayMetrics,
 
-    /// The [`scenic::ViewHolder`], and their associated [`scenic::EntityNodes`], which have been
-    /// added to the Scene.
-    views: Vec<scenic::ViewHolder>,
+    /// The view holder [`scenic::EntityNodes`], which have been added to the Scene.
+    views: Vec<scenic::EntityNode>,
+
+    /// The proxy View/ViewHolder pair exists so that the a11y manager can insert its view into the
+    /// scene after SetRootView() has already been called.
+    a11y_proxy_view_holder: scenic::ViewHolder,
+
+    /// See comment for a11y_proxy_view_holder.
+    a11y_proxy_view: scenic::View,
 
     /// The node for the cursor. It is optional in case a scene doesn't render a cursor.
     cursor_node: Option<scenic::EntityNode>,
@@ -103,6 +109,24 @@ impl SceneManager for FlatSceneManager {
         let root_node = scenic::EntityNode::new(session.clone());
         scene.add_child(&root_node);
 
+        // Create proxy view/viewholder and add to the scene.
+        let proxy_token_pair = scenic::ViewTokenPair::new()?;
+        let a11y_proxy_viewref_pair = scenic::ViewRefPair::new()?;
+        let a11y_proxy_view_holder = FlatSceneManager::create_view_holder(
+            &session,
+            proxy_token_pair.view_holder_token,
+            display_metrics,
+            Some(String::from("a11y proxy view holder")),
+        );
+        let a11y_proxy_view = scenic::View::new3(
+            session.clone(),
+            proxy_token_pair.view_token,
+            a11y_proxy_viewref_pair.control_ref,
+            a11y_proxy_viewref_pair.view_ref,
+            Some(String::from("a11y proxy view")),
+        );
+        root_node.add_child(&a11y_proxy_view_holder);
+
         let compositor_id = compositor.id();
 
         let resources = ScenicResources {
@@ -125,6 +149,8 @@ impl SceneManager for FlatSceneManager {
             compositor_id,
             _resources: resources,
             views: vec![],
+            a11y_proxy_view_holder,
+            a11y_proxy_view,
             display_metrics,
             cursor_node: None,
             cursor_shape: None,
@@ -144,8 +170,7 @@ impl SceneManager for FlatSceneManager {
             &mut viewref_pair.control_ref,
             &mut viewref_pair.view_ref,
         )?;
-        let view_holder_node = self.create_view_holder_node(token_pair.view_holder_token, name);
-        self.root_node.add_child(&view_holder_node);
+        self.add_view(token_pair.view_holder_token, name);
 
         Ok(viewref_dup)
     }
@@ -162,11 +187,55 @@ impl SceneManager for FlatSceneManager {
             &mut viewref_pair.control_ref,
             &mut viewref_pair.view_ref,
         )?;
-        let view_holder_node =
-            self.create_view_holder_node(token_pair.view_holder_token, Some("root".to_string()));
-        self.root_node.add_child(&view_holder_node);
+        self.add_view(token_pair.view_holder_token, Some("root".to_string()));
 
         Ok(viewref_dup)
+    }
+
+    /// Creates an a11y view holder and attaches it to the scene. This method also deletes the
+    /// existing proxy view/viewholder pair, and creates a new proxy view. It then returns the
+    /// new proxy view holder token. The a11y manager is responsible for using this token to
+    /// create the new proxy view holder.
+    ///
+    /// # Parameters
+    /// - `a11y_view_ref`: The view ref of the a11y view.
+    /// - `a11y_view_holder_token`: The token used to create the a11y view holder.
+    fn insert_a11y_view(
+        &mut self,
+        a11y_view_holder_token: ui_views::ViewHolderToken,
+    ) -> Result<ui_views::ViewHolderToken, Error> {
+        // Create the new a11y view holder, and attach it as a child of the root node.
+        let a11y_view_holder = FlatSceneManager::create_view_holder(
+            &self.session,
+            a11y_view_holder_token,
+            self.display_metrics,
+            Some(String::from("a11y view holder")),
+        );
+        self.root_node.add_child(&a11y_view_holder);
+
+        // Disconnect the old proxy view/viewholder from the scene graph.
+        self.a11y_proxy_view_holder.detach();
+        for view_holder_node in self.views.iter_mut() {
+            self.a11y_proxy_view.detach_child(&*view_holder_node);
+        }
+
+        // Generate a new proxy view/viewholder token pair, and create a new proxy view.
+        let proxy_token_pair = scenic::ViewTokenPair::new()?;
+        let a11y_proxy_viewref_pair = scenic::ViewRefPair::new()?;
+        self.a11y_proxy_view = scenic::View::new3(
+            self.session.clone(),
+            proxy_token_pair.view_token,
+            a11y_proxy_viewref_pair.control_ref,
+            a11y_proxy_viewref_pair.view_ref,
+            Some(String::from("a11y proxy view")),
+        );
+
+        // Reconnect existing view holders to the new a11y proxy view.
+        for view_holder_node in self.views.iter_mut() {
+            self.a11y_proxy_view.add_child(&*view_holder_node);
+        }
+
+        Ok(proxy_token_pair.view_holder_token)
     }
 
     fn session(&self) -> scenic::SessionPtr {
@@ -309,24 +378,27 @@ impl FlatSceneManager {
         compositor
     }
 
-    /// Creates a view holder, stores it in [`self.views`], then wraps it in a view holder node.
+    /// Creates a view holder in the supplied session using the provided token and display metrics.
     ///
     /// # Parameters
+    /// - `session`: The scenic session in which to create the view holder.
     /// - `view_holder_token`: The view holder token used to create the view holder.
-    /// - `name`: The debugging name for the created view.
-    fn create_view_holder_node(
-        &mut self,
+    /// - `display_metrics`: The metrics for the display presenting the scene.
+    /// - `name`: The debug name of the view holder.
+    fn create_view_holder(
+        session: &scenic::SessionPtr,
         view_holder_token: ui_views::ViewHolderToken,
+        display_metrics: DisplayMetrics,
         name: Option<String>,
-    ) -> scenic::EntityNode {
-        let view_holder = scenic::ViewHolder::new(self.session.clone(), view_holder_token, name);
+    ) -> scenic::ViewHolder {
+        let view_holder = scenic::ViewHolder::new(session.clone(), view_holder_token, name);
 
         let view_properties = ui_gfx::ViewProperties {
             bounding_box: ui_gfx::BoundingBox {
                 min: ui_gfx::Vec3 { x: 0.0, y: 0.0, z: FlatSceneManager::VIEW_BOUNDS_DEPTH },
                 max: ui_gfx::Vec3 {
-                    x: self.display_metrics.width_in_pips(),
-                    y: self.display_metrics.height_in_pips(),
+                    x: display_metrics.width_in_pips(),
+                    y: display_metrics.height_in_pips(),
                     z: 0.0,
                 },
             },
@@ -337,13 +409,28 @@ impl FlatSceneManager {
         };
         view_holder.set_view_properties(view_properties);
 
+        view_holder
+    }
+
+    /// Creates a view holder, stores it in [`self.views`], then wraps it in a view holder node.
+    ///
+    /// # Parameters
+    /// - `view_holder_token`: The view holder token used to create the view holder.
+    /// - `name`: The debugging name for the created view.
+    fn add_view(&mut self, view_holder_token: ui_views::ViewHolderToken, name: Option<String>) {
+        let view_holder = FlatSceneManager::create_view_holder(
+            &self.session,
+            view_holder_token,
+            self.display_metrics,
+            name,
+        );
+
         let view_holder_node = scenic::EntityNode::new(self.session.clone());
         view_holder_node.attach(&view_holder);
         view_holder_node.set_translation(0.0, 0.0, 0.0);
 
-        self.views.push(view_holder);
-
-        view_holder_node
+        self.a11y_proxy_view.add_child(&view_holder_node);
+        self.views.push(view_holder_node);
     }
 
     /// Gets the `EntityNode` for the cursor or creates one if it doesn't exist yet.

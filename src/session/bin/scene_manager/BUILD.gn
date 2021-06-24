@@ -22,6 +22,7 @@ rustc_binary("scene_manager_bin") {
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.ui.accessibility.view:fuchsia.ui.accessibility.view-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",

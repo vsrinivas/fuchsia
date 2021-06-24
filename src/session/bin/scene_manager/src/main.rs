@@ -8,11 +8,13 @@ use {
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_input_keymap as fkeymap,
     fidl_fuchsia_session_scene::{ManagerRequest, ManagerRequestStream},
+    fidl_fuchsia_ui_accessibility_view::{RegistryRequest, RegistryRequestStream},
     fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy,
     fidl_fuchsia_ui_scenic::ScenicMarker,
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_syslog::fx_log_warn,
+    fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     scene_management::{self, SceneManager},
@@ -27,6 +29,7 @@ mod mouse_pointer_hack;
 mod touch_pointer_hack;
 
 enum ExposedServices {
+    AccessibilityViewRegistry(RegistryRequestStream),
     Manager(ManagerRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
     /// The requests for `fuchsia.input.keymap.Configuration`.
@@ -38,6 +41,7 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["scene_manager"]).expect("Failed to init syslog");
 
     let mut fs = ServiceFs::new_local();
+    fs.dir("svc").add_fidl_service(ExposedServices::AccessibilityViewRegistry);
     fs.dir("svc").add_fidl_service(ExposedServices::Manager);
     fs.dir("svc").add_fidl_service(ExposedServices::InputDeviceRegistry);
     fs.dir("svc").add_fidl_service(ExposedServices::TextSettingsConfig);
@@ -52,16 +56,24 @@ async fn main() -> Result<(), Error> {
     // It also listens to configuration.
     let text_handler = text_settings::Handler::new(None);
 
+    let scenic = connect_to_protocol::<ScenicMarker>()?;
+    let flat_scene_manager = scene_management::FlatSceneManager::new(scenic, None, None).await?;
+    let scene_manager = Arc::new(Mutex::new(flat_scene_manager));
+
     while let Some(service_request) = fs.next().await {
         match service_request {
+            ExposedServices::AccessibilityViewRegistry(request_stream) => {
+                fasync::Task::local(handle_accessibility_view_registry_request_stream(
+                    request_stream,
+                    Arc::clone(&scene_manager),
+                ))
+                .detach()
+            }
             ExposedServices::Manager(request_stream) => {
                 if let Some(input_receiver) = input_receiver {
-                    let scenic = connect_to_protocol::<ScenicMarker>()?;
-                    let scene_manager =
-                        scene_management::FlatSceneManager::new(scenic, None, None).await?;
                     fasync::Task::local(handle_manager_request_stream(
                         request_stream,
-                        scene_manager,
+                        Arc::clone(&scene_manager),
                         input_receiver,
                         // All text_handler clones share data, so it is OK to clone as needed.
                         text_handler.clone(),
@@ -118,13 +130,12 @@ async fn main() -> Result<(), Error> {
 
 pub async fn handle_manager_request_stream(
     mut request_stream: ManagerRequestStream,
-    scene_manager: scene_management::FlatSceneManager,
+    scene_manager: Arc<Mutex<scene_management::FlatSceneManager>>,
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
     text_handler: text_settings::Handler,
 ) {
-    let scene_manager = Arc::new(Mutex::new(scene_manager));
     let listeners: Vec<PointerCaptureListenerHackProxy> = vec![];
     let pointer_listeners = Arc::new(Mutex::new(listeners));
 
@@ -156,6 +167,34 @@ pub async fn handle_manager_request_stream(
             }
             ManagerRequest::CapturePointerEvents { listener, .. } => {
                 pointer_listeners.lock().await.push(listener.into_proxy().unwrap());
+            }
+        };
+    }
+}
+
+pub async fn handle_accessibility_view_registry_request_stream(
+    mut request_stream: RegistryRequestStream,
+    scene_manager: Arc<Mutex<scene_management::FlatSceneManager>>,
+) {
+    while let Ok(Some(request)) = request_stream.try_next().await {
+        match request {
+            RegistryRequest::CreateAccessibilityViewHolder {
+                a11y_view_ref: _,
+                a11y_view_token,
+                responder,
+                ..
+            } => {
+                let mut scene_manager = scene_manager.lock().await;
+                let r = scene_manager.insert_a11y_view(a11y_view_token);
+
+                let _ = match r {
+                    Ok(mut result) => {
+                        let _ = responder.send(&mut result);
+                    }
+                    Err(_) => {
+                        responder.control_handle().shutdown_with_epitaph(zx::Status::PEER_CLOSED);
+                    }
+                };
             }
         };
     }

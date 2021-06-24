@@ -71,6 +71,26 @@ pub trait SceneManager: Sized {
         view_provider: ui_app::ViewProviderProxy,
     ) -> Result<ui_views::ViewRef, Error>;
 
+    /// Inserts an a11y view into the scene.
+    ///
+    /// Removes the existing proxy view/viewholder pair, adds the a11y view/viewholder under the
+    /// root, and creates a new proxy view. Then, attaches any existing views to the new proxy
+    /// view.
+    ///
+    /// # Parameters
+    /// - `a11y_view_holder_token`: The [`ViewHolderToken`] used to create the a11y view holder.
+    ///
+    /// # Returns
+    /// The [`ViewHolderToken`] used to create the new a11y proxy view holder.
+    ///
+    /// # Errors
+    /// Returns an error if the a11y view holder or proxy view could not be created or added to the
+    /// scene.
+    fn insert_a11y_view(
+        &mut self,
+        a11y_view_holder_token: ui_views::ViewHolderToken,
+    ) -> Result<ui_views::ViewHolderToken, Error>;
+
     /// Requests the scenic session from the scene_manager.
     ///
     /// # Returns
