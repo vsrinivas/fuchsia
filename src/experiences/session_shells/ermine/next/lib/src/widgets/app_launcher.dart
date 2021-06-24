@@ -24,6 +24,9 @@ class AppLauncher extends StatelessWidget {
             autofocus: index == 0,
             leading: Image(
               image: AssetImage(item['icon']!),
+              color: (item['url'] != null)
+                  ? Theme.of(context).colorScheme.secondary
+                  : Theme.of(context).disabledColor,
               width: 32,
               height: 32,
             ),

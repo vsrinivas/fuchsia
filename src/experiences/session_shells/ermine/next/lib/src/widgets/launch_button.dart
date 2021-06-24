@@ -22,16 +22,17 @@ class LaunchButton extends StatelessWidget {
           width: 56,
           height: 56,
           decoration: ShapeDecoration(
-            color: Theme.of(context).selectedRowColor,
+            color: Colors.transparent,
             shape: CircleBorder(),
           ),
           child: IconButton(
             iconSize: 32,
             onPressed: appState.showOverlay,
             padding: EdgeInsets.all(12),
-            icon: appState.hasDarkTheme.value
-                ? Image.asset('images/Fuchsia-logo-dark-2x.png')
-                : Image.asset('images/Fuchsia-logo-light-2x.png'),
+            icon: Image.asset(
+              'images/Fuchsia-logo-2x.png',
+              color: Theme.of(context).colorScheme.secondary,
+            ),
             tooltip: 'Show App Launcher',
           ),
         ),

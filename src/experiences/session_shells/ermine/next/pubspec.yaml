@@ -9,9 +9,10 @@ environment:
 
 flutter:
   assets:
-    - images/Fuchsia-logo-dark-2x.png
-    - images/Fuchsia-logo-light-2x.png
     - images/Chromium-icon-2x.png
+    - images/Default-icon-2x.png
+    - images/Fuchsia-logo-2x.png
+    - images/Linux-icon-2x.png
     - images/Settings-icon-2x.png
     - images/SimpleBrowser-icon-2x.png
     - images/SpinningSquareView-icon-2x.png
