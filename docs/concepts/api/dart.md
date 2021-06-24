@@ -92,9 +92,7 @@ complicated package, developers should avoid a singular catch all top-level
 export file and rather expose a top level file per logical grouping of classes
 that make sense to be pulled under one import line. This allows users of the
 library the ability to have finer grained control over which sections of the
-library they import. An example is a package that contains functionality for
-both agents and modules. In this scenario, we could have one import for agents
-and one for modules but they could be in the same package.
+library they import.
 
 ## Comments/Documentation
 
