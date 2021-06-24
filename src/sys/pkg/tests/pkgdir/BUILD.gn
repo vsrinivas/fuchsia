@@ -30,6 +30,7 @@ rustc_test("driver") {
     "src/directory.rs",
     "src/file.rs",
     "src/lib.rs",
+    "src/node.rs",
   ]
 }
 

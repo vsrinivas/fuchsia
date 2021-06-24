@@ -11,6 +11,7 @@ use {
 
 mod directory;
 mod file;
+mod node;
 
 fn repeat_by_n(seed: char, n: usize) -> String {
     std::iter::repeat(seed).take(n).collect()
