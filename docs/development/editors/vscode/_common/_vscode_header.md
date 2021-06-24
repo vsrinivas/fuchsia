@@ -6,7 +6,9 @@
         display: block;
         margin: auto;
     }
-
+    .vscode-image-small{
+        width: 15rem;
+    }
     @media (min-width: 768px){
         .vscode-image{
             width: 35rem;
