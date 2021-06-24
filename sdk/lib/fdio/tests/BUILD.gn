@@ -40,7 +40,10 @@ group("tests") {
     "getaddrinfo:tests",
   ]
   if (host_os == "linux") {
-    deps += [ ":fdio-test($host_toolchain)" ]
+    deps += [
+      ":fdio-gtest($host_toolchain)",
+      ":fdio-test($host_toolchain)",
+    ]
   }
 }
 
@@ -107,13 +110,23 @@ test("fdio-test") {
 test("fdio-gtest") {
   configs += [ "//build/config:all_source" ]
 
-  sources = [ "fdio_socketpair.cc" ]
+  sources = [
+    "socketpair.cc",
+    "socketpair_test_helpers.h",
+  ]
 
   deps = [
-    "//src/lib/testing/predicates",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fbl",
   ]
+
+  if (is_fuchsia) {
+    sources += [ "fdio_socketpair.cc" ]
+    deps += [
+      "//sdk/lib/fdio",
+      "//src/lib/testing/predicates",
+    ]
+  }
 }
 
 executable("accept-child") {
