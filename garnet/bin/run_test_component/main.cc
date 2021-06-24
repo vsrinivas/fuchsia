@@ -448,7 +448,7 @@ int main(int argc, const char** argv) {
     }
 
     enclosing_env = sys::testing::EnclosingEnvironment::Create(
-        std::move(env_label), parent_env, std::move(test_env_services), std::move(env_opt));
+        env_label, parent_env, std::move(test_env_services), std::move(env_opt));
 
     if (collect_logs) {
       ZX_ASSERT(archivist_component != nullptr);
