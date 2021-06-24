@@ -1,0 +1,33 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Storage capability shard.
+// In this shard variant, persistent storage is restricted to components in the component id index.
+//
+// This shard may be selected using the core_realm() build rule or the
+// `core_realm_restrict_persistent_storage` build arg.
+{
+    capabilities: [
+        {
+            storage: "data",
+            from: "parent",
+            subdir: "persistent",
+            backing_dir: "minfs",
+            storage_id: "static_instance_id",
+        },
+        {
+            storage: "cache",
+            from: "parent",
+            subdir: "cache",
+            backing_dir: "minfs",
+            storage_id: "static_instance_id_or_moniker",
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            backing_dir: "tmp",
+            storage_id: "static_instance_id_or_moniker",
+        },
+    ],
+}

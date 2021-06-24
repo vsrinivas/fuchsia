@@ -142,26 +142,9 @@
         },
     ],
     capabilities: [
-        {
-            storage: "data",
-            from: "parent",
-            subdir: "persistent",
-            backing_dir: "minfs",
-            storage_id: "static_instance_id",
-        },
-        {
-            storage: "cache",
-            from: "parent",
-            subdir: "cache",
-            backing_dir: "minfs",
-            storage_id: "static_instance_id_or_moniker",
-        },
-        {
-            storage: "tmp",
-            from: "parent",
-            backing_dir: "tmp",
-            storage_id: "static_instance_id_or_moniker",
-        },
+        // Note: `data`, `cache`, and `temp` storage capabilities are defined in a shard and
+        // included as part of the build process. See restricted-storage.core_shard.cml or
+        // unrestricted-storage.core_shard.cml
         {
             protocol: [
                 "fuchsia.appmgr.Startup",

@@ -33,6 +33,7 @@ core_realm_shards = [
   "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
   "//src/developer/remote-control:laboratory-core-shard",
 ]
+core_realm_restrict_persistent_storage = false
 
 base_package_labels += [
   "//build/info:build-info",
@@ -81,8 +82,8 @@ base_package_labels += [
   "//src/sys/appmgr",
   "//src/sys/appmgr:appmgr_scheme_config",
 
-  # All components are allowed to use isolated-persistent-storage, even if
-  # they're not in the component ID index.
+  # All v1 components are allowed to use isolated-persistent-storage, even if
+  # they're not listed in the component ID index.
   "//src/sys/appmgr:component_id_index_no_restrict_storage",
   "//src/sys/appmgr:core_component_id_index",
 

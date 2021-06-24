@@ -19,8 +19,14 @@ import("//tools/cmc/build/cmc.gni")
 #
 #   package_name (required)
 #     The name of the package holding the core realm on this product. This
-#     package name should be unique across all products, and thus usually is set
-#     to "core-$PRODUCT_NAME", for example "core-workstation" or "core-core".
+#     package name should be unique across all products, and thus usually is
+#     set to "core-$PRODUCT_NAME", for example "core-workstation" or
+#     "core-core".
+#
+#   restrict_persistent_storage (optional)
+#     If true, only components listed in the component ID index may use the
+#     persistent `data` storage capability. If false, any component which is
+#     offered the `data` storage capability may use it. Default is true.
 #
 #   deps
 #   testonly
@@ -29,9 +35,26 @@ template("core_realm") {
   assert(defined(invoker.package_name),
          "The `package_name` argument is missing")
 
+  if (defined(invoker.deps)) {
+    shard_deps = invoker.deps
+  } else {
+    shard_deps = []
+  }
+
+  restrict_persistent_storage = true
+  if (defined(invoker.restrict_persistent_storage)) {
+    restrict_persistent_storage = invoker.restrict_persistent_storage
+  }
+
+  if (restrict_persistent_storage) {
+    shard_deps += [ "//src/sys/core:core-storage-restricted" ]
+  } else {
+    shard_deps += [ "//src/sys/core:core-storage-unrestricted" ]
+  }
+
   generated_file_target = "${target_name}_shard_list"
   generated_file(generated_file_target) {
-    forward_variables_from(invoker, [ "deps" ])
+    deps = shard_deps
     data_keys = [ "shard_files" ]
     outputs = [ "$target_out_dir/core_shard_list" ]
   }
@@ -48,6 +71,7 @@ template("core_realm") {
       deps = []
     }
     deps += [ ":${generated_file_target}" ]
+
     sources = [ "//src/sys/core/meta/core.cml" ]
     from_file = "$target_out_dir/core_shard_list"
 

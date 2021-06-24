@@ -3,9 +3,20 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//src/sys/core/build/core_shard.gni")
 
-# TODO(RFC-0089): a soft migration is being performed to remove this. Please do
-# not add any new dependencies on it.
-fuchsia_package_with_single_component("core") {
-  manifest = "meta/core.cml"
+# This shard declares 3 storage capabilities: data (persistent), cache, and
+# temp.
+#
+# The data (persistent) storage capability can only be used components listed
+# in the component ID index.
+core_shard("core-storage-restricted") {
+  shard_file = "meta/restricted-storage.core_shard.cml"
+}
+
+# This shard declares 3 storage capabilities: data (persistent), cache, and
+# temp. Any component may use these storage capabilities if they are routed to
+# them.
+core_shard("core-storage-unrestricted") {
+  shard_file = "meta/unrestricted-storage.core_shard.cml"
 }

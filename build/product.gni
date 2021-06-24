@@ -20,4 +20,5 @@ declare_args() {
   # TODO: redo comments
   core_realm_package_name = "core-generic"
   core_realm_shards = []
+  core_realm_restrict_persistent_storage = true
 }

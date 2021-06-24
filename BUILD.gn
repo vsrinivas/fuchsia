@@ -923,6 +923,7 @@ group("default") {
 core_realm("core") {
   package_name = core_realm_package_name
   deps = core_realm_shards
+  restrict_persistent_storage = core_realm_restrict_persistent_storage
 }
 
 # These groups exist at the root of the build so relative labels specified

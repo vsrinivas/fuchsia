@@ -20,6 +20,7 @@ core_name = "core-recovery"
 
 core_realm("core") {
   package_name = core_name
+  restrict_persistent_storage = false
 }
 
 root_realm("root") {
@@ -42,7 +43,6 @@ recovery_packages = [
   "//src/sys/appmgr",
   "//src/sys/appmgr:appmgr_scheme_config",
   "//src/sys/appmgr:component_id_index_no_restrict_storage",
-  "//src/sys/core",
   "//src/sys/pkg:recovery",
   "//src/sys/stash:pkg",
   "//src/sys/time:recovery",
