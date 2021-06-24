@@ -55,8 +55,9 @@ struct SharedIrqListTag {};
 // is fulfill the PCI protocol for the driver downstream operating the PCI
 // device this corresponds to.
 class Device;
-using PciDeviceType = ddk::Device<pci::Device, ddk::Rxrpcable>;
+using PciDeviceType = ddk::Device<pci::Device, ddk::Rxrpcable, ddk::GetProtocolable>;
 class Device : public PciDeviceType,
+               public ddk::PciProtocol<pci::Device>,
                public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
                public fbl::ContainableBaseClasses<
                    fbl::TaggedDoublyLinkedListable<Device*, DownstreamListTag>,
@@ -157,7 +158,35 @@ class Device : public PciDeviceType,
   zx_status_t RpcAckInterrupt(const zx::unowned_channel& ch);
   zx_status_t DdkRxrpc(zx_handle_t channel);
 
+  // Templated helpers to assist with differently sized protocol reads and writes.
+  template <typename V, typename R>
+  zx_status_t ConfigWrite(uint16_t offset, V value);
+  template <typename V, typename R>
+  zx_status_t ConfigRead(uint16_t offset, V* value);
+  // ddk::PciProtocol implementations.
+  zx_status_t PciGetBar(uint32_t bar_id, pci_bar_t* out_bar);
+  zx_status_t PciEnableBusMaster(bool enable);
+  zx_status_t PciResetDevice();
+  zx_status_t PciAckInterrupt();
+  zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle);
+  zx_status_t PciConfigureIrqMode(uint32_t requested_irq_count, pci_irq_mode_t* out_mode);
+  zx_status_t PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs);
+  zx_status_t PciSetIrqMode(pci_irq_mode_t mode, uint32_t requested_irq_count);
+  zx_status_t PciGetDeviceInfo(pcie_device_info_t* out_info);
+  zx_status_t PciConfigRead8(uint16_t offset, uint8_t* out_value);
+  zx_status_t PciConfigRead16(uint16_t offset, uint16_t* out_value);
+  zx_status_t PciConfigRead32(uint16_t offset, uint32_t* out_value);
+  zx_status_t PciConfigWrite8(uint16_t offset, uint8_t value);
+  zx_status_t PciConfigWrite16(uint16_t offset, uint16_t value);
+  zx_status_t PciConfigWrite32(uint16_t offset, uint32_t value);
+  zx_status_t PciGetFirstCapability(uint8_t cap_id, uint8_t* out_offset);
+  zx_status_t PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8_t* out_offset);
+  zx_status_t PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset);
+  zx_status_t PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset, uint16_t* out_offset);
+  zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti);
+
   // DDK mix-in impls
+  zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   void DdkRelease() { delete this; }
 
   // Create, but do not initialize, a device.
