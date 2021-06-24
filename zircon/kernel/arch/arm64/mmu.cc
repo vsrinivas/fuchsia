@@ -848,9 +848,9 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
 size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t vaddr,
                                                  vaddr_t vaddr_rel_in, size_t size,
                                                  const uint index_shift, const uint page_size_shift,
-                                                 volatile pte_t* page_table,
-                                                 const HarvestCallback& accessed_callback,
-                                                 ConsistencyManager& cm) {
+                                                 NonTerminalAction action,
+                                                 volatile pte_t* page_table, ConsistencyManager& cm,
+                                                 bool* unmapped_out) {
   const vaddr_t block_size = 1UL << index_shift;
   const vaddr_t block_mask = block_size - 1;
 
@@ -878,35 +878,63 @@ size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t va
       // if block simplifies the overall logic.
     } else if (index_shift > page_size_shift &&
                (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
+      const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
+      volatile pte_t* next_page_table =
+          static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
+
+      // Start with the assumption that we will unmap if we can.
+      bool do_unmap = action == NonTerminalAction::FreeUnaccessed;
       // Check for our emulated non-terminal AF so we can potentially skip the recursion.
       // TODO: make this optional when hardware AF is supported (see todo on
       // MMU_PTE_ATTR_RES_SOFTWARE_AF for details)
       if (pte & MMU_PTE_ATTR_RES_SOFTWARE_AF) {
-        const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
-        volatile pte_t* next_page_table =
-            static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
+        bool unmapped = false;
         chunk_size = HarvestAccessedPageTable(entry_limit, vaddr, vaddr_rem, chunk_size,
                                               index_shift - (page_size_shift - 3), page_size_shift,
-                                              next_page_table, accessed_callback, cm);
-      }
-    } else if (is_pte_valid(pte)) {
-      if (pte & MMU_PTE_ATTR_AF) {
-        const paddr_t pte_addr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
-        const paddr_t paddr = pte_addr + vaddr_rem;
-        const uint mmu_flags = MmuFlagsFromPte(pte);
-
-        // Invoke the callback to see if the accessed flag should be removed.
-        if (accessed_callback(paddr, vaddr, mmu_flags)) {
-          // Modifying the access flag does not require break-before-make for correctness and as we
-          // do not support hardware access flag setting at the moment we do not have to deal with
-          // potential concurrent modifications.
-          pte = (pte & ~MMU_PTE_ATTR_AF);
-          LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
+                                              action, next_page_table, cm, &unmapped);
+        // This was accessed so we don't necessarily want to unmap it, unless our recursive call
+        // caused the page table to be empty, in which case we are obligated to.
+        do_unmap = (unmapped && page_table_is_clear(next_page_table, page_size_shift));
+        // If we processed till the end of sub page table then we can clear the AF as we know we
+        // will not have to process entries from this one again.
+        if (!do_unmap && (vaddr_rel + chunk_size) >> index_shift != index) {
+          pte &= ~MMU_PTE_ATTR_RES_SOFTWARE_AF;
           update_pte(&page_table[index], pte);
-
-          cm.FlushEntry(vaddr, true);
         }
       }
+      if (do_unmap) {
+        UnmapPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
+                       page_size_shift, next_page_table, cm);
+        DEBUG_ASSERT(page_table_is_clear(next_page_table, page_size_shift));
+        update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
+
+        // We can safely defer TLB flushing as the consistency manager will not return the backing
+        // page to the PMM until after the tlb is flushed.
+        cm.FlushEntry(vaddr, false);
+        FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, page_size_shift, cm);
+        if (unmapped_out) {
+          *unmapped_out = true;
+        }
+      }
+    } else if (is_pte_valid(pte) && (pte & MMU_PTE_ATTR_AF)) {
+      const paddr_t pte_addr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
+      const paddr_t paddr = pte_addr + vaddr_rem;
+
+      vm_page_t* page = paddr_to_vm_page(paddr);
+      // Mappings for physical VMOs do not have pages associated with them and so there's no state
+      // to update on an access.
+      if (likely(page)) {
+        pmm_page_queues()->MarkAccessed(page);
+      }
+
+      // Modifying the access flag does not require break-before-make for correctness and as we
+      // do not support hardware access flag setting at the moment we do not have to deal with
+      // potential concurrent modifications.
+      pte = (pte & ~MMU_PTE_ATTR_AF);
+      LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
+      update_pte(&page_table[index], pte);
+
+      cm.FlushEntry(vaddr, true);
     }
     vaddr += chunk_size;
     vaddr_rel += chunk_size;
@@ -968,80 +996,6 @@ void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in,
     vaddr_rel += chunk_size;
     size -= chunk_size;
   }
-}
-
-bool ArmArchVmAspace::FreeUnaccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
-                                              uint index_shift, uint page_size_shift,
-                                              volatile pte_t* page_table, ConsistencyManager& cm) {
-  const vaddr_t block_size = 1UL << index_shift;
-  const vaddr_t block_mask = block_size - 1;
-
-  LTRACEF(
-      "vaddr 0x%lx, vaddr_rel 0x%lx, size 0x%lx, index shift %u, page_size_shift %u, page_table "
-      "%p\n",
-      vaddr, vaddr_rel, size, index_shift, page_size_shift, page_table);
-  bool have_accessed = false;
-
-  if (index_shift <= page_size_shift) {
-    // Do not bother processing the leaf nodes and just assume they have accessed pages. The only
-    // time this would not be true is in a race where the only accessed pages got manually
-    // unmapped.
-    return true;
-  }
-
-  while (size) {
-    const vaddr_t vaddr_rem = vaddr_rel & block_mask;
-    const size_t chunk_size = ktl::min(size, block_size - vaddr_rem);
-    const vaddr_t index = vaddr_rel >> index_shift;
-
-    pte_t pte = page_table[index];
-
-    if (index_shift > page_size_shift &&
-        (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
-      const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
-      volatile pte_t* next_page_table =
-          static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
-
-      bool accessed = false;
-      // Check for our software emulated non-terminal access flag.
-      // TODD: make this optional when hardware AF is supported (see todo on
-      // MMU_PTE_ATTR_RES_SOFTWARE_AF for details)
-      if (pte & MMU_PTE_ATTR_RES_SOFTWARE_AF) {
-        // This entry was accessed in the past, but there might be parts of the sub hierarchy that
-        // can be freed. Doing so could cause the page table to become empty, so we may still need
-        // to free it.
-        accessed = FreeUnaccessedPageTable(vaddr, vaddr_rem, chunk_size,
-                                           index_shift - (page_size_shift - 3), page_size_shift,
-                                           next_page_table, cm);
-      }
-      if (!accessed) {
-        UnmapPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
-                       page_size_shift, next_page_table, cm);
-        DEBUG_ASSERT(page_table_is_clear(next_page_table, page_size_shift));
-        update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
-
-        // We can safely defer TLB flushing as the consistency manager will not return the backing
-        // page to the PMM until after the tlb is flushed.
-        cm.FlushEntry(vaddr, false);
-        FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, page_size_shift, cm);
-      } else {
-        // The entry is staying around, so lets remove the accessed flag from it.
-        pte &= ~MMU_PTE_ATTR_RES_SOFTWARE_AF;
-        update_pte(&page_table[index], pte);
-        have_accessed = true;
-      }
-    } else if (is_pte_valid(pte)) {
-      // As we avoid processing leaf page tables, this case only happens if we found a large page
-      // mapping. We do not support harvesting accessed bits of large pages, so we just assume this
-      // is accessed, but we want to continue processing to find any other page table hierarchies
-      // to process.
-      have_accessed = true;
-    }
-    vaddr += chunk_size;
-    vaddr_rel += chunk_size;
-    size -= chunk_size;
-  }
-  return have_accessed;
 }
 
 ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
@@ -1388,7 +1342,7 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
 }
 
 zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
-                                             const HarvestCallback& accessed_callback) {
+                                             NonTerminalAction action) {
   canary_.Assert();
 
   if (!IS_PAGE_ALIGNED(vaddr) || !IsValidVaddr(vaddr)) {
@@ -1451,7 +1405,7 @@ zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
     size_t entry_limit = kMaxEntriesPerIteration;
     const size_t harvested_size =
         HarvestAccessedPageTable(&entry_limit, current_vaddr, current_vaddr_rel, remaining_size,
-                                 top_index_shift, page_size_shift, tt_virt_, accessed_callback, cm);
+                                 top_index_shift, page_size_shift, action, tt_virt_, cm, nullptr);
     DEBUG_ASSERT(harvested_size > 0);
     DEBUG_ASSERT(harvested_size <= remaining_size);
 
@@ -1499,53 +1453,6 @@ zx_status_t ArmArchVmAspace::MarkAccessed(vaddr_t vaddr, size_t count) {
 
   MarkAccessedPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_, cm);
 
-  return ZX_OK;
-}
-
-zx_status_t ArmArchVmAspace::HarvestNonTerminalAccessed(vaddr_t vaddr, size_t count,
-                                                        NonTerminalAction action) {
-  canary_.Assert();
-  LTRACEF("vaddr %#" PRIxPTR " count %zu\n", vaddr, count);
-
-  DEBUG_ASSERT(tt_virt_);
-
-  DEBUG_ASSERT(IsValidVaddr(vaddr));
-
-  // As ARM does not have non-terminal accessed flags, if not freeing then there's nothing to be
-  // done.
-  if (action == NonTerminalAction::Retain) {
-    return ZX_OK;
-  }
-
-  if (!IsValidVaddr(vaddr)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
-  if (!IS_PAGE_ALIGNED(vaddr)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  vaddr_t vaddr_base;
-  uint top_size_shift, top_index_shift, page_size_shift;
-  MmuParamsFromFlags(0, nullptr, &vaddr_base, &top_size_shift, &top_index_shift, &page_size_shift);
-
-  const vaddr_t vaddr_rel = vaddr - vaddr_base;
-  const vaddr_t vaddr_rel_max = 1UL << top_size_shift;
-  const size_t size = count * PAGE_SIZE;
-
-  LTRACEF("vaddr 0x%lx, size 0x%lx, asid 0x%x\n", vaddr, size, asid_);
-
-  if (vaddr_rel > vaddr_rel_max - size || size > vaddr_rel_max) {
-    TRACEF("vaddr 0x%lx, size 0x%lx out of range vaddr 0x%lx, size 0x%lx\n", vaddr, size,
-           vaddr_base, vaddr_rel_max);
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  Guard<Mutex> a{&lock_};
-  ConsistencyManager cm(*this);
-
-  FreeUnaccessedPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_, cm);
   return ZX_OK;
 }
 

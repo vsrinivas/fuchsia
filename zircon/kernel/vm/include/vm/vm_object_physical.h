@@ -64,8 +64,6 @@ class VmObjectPhysical final : public VmObject {
   uint32_t GetMappingCachePolicy() const override;
   zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
 
-  void HarvestAccessedBits() override;
-
  private:
   // private constructor (use Create())
   VmObjectPhysical(fbl::RefPtr<VmHierarchyState> state, paddr_t base, uint64_t size,

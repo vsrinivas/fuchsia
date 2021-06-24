@@ -89,34 +89,18 @@ class ArchVmAspaceInterface {
                            uint mmu_flags) = 0;
 
   // Walks the given range of pages and for any pages that are mapped and have their access bit set
-  //  * Calls the provided callback with the page information
-  //  * If callback returns true, clears the accessed bit
-  // The callback may be invoked whilst the aspace is holding arbitrary mutexes and spinlocks and
-  // the callback there must not
-  //  * Acquire additional mutexes
-  //  * Call any aspace functions
-  // TODO: It is possible that HarvestAccessed only gets called from a single code path, at which
-  // point we could consider removing the dynamic callback function pointer with a static global
-  // callback routine.
-  using HarvestCallback = fbl::Function<bool(paddr_t paddr, vaddr_t vaddr, uint mmu_flags)>;
-  virtual zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count,
-                                      const HarvestCallback& accessed_callback) = 0;
-
-  // Marks any pages in the given virtual address range as being accessed.
-  virtual zx_status_t MarkAccessed(vaddr_t vaddr, size_t count) = 0;
-
-  // Walks the page tables backing the given range and acts based on a combination of the passed in
-  // |NonTerminalAction| and the |HasNonTerminalAccessedFlag| property of the aspace. When |action|
-  // is set to |FreeUnaccessed| any unaccessed page tables will be freed, where the accessed bits
-  // examined to determine this is based on |HasNonTerminalAccessedFlag|. If the |action| is
-  // |Retain| and |HasNonTerminalAccessedFlag| is true then any non terminal accessed flags are
-  // cleared. To clear the accessed flags on terminal entries |HarvestAccessed| must be used.
+  //  * Tells the page queues it has been accessed via PageQueues::MarkAccessed
+  //  * Removes the accessed flag.
+  // For any non-terminal entries they will have any accessed information cleared, and will
+  // otherwise perform the provided NonTerminalAction
   enum class NonTerminalAction : bool {
     FreeUnaccessed,
     Retain,
   };
-  virtual zx_status_t HarvestNonTerminalAccessed(vaddr_t vaddr, size_t count,
-                                                 NonTerminalAction action) = 0;
+  virtual zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count, NonTerminalAction action) = 0;
+
+  // Marks any pages in the given virtual address range as being accessed.
+  virtual zx_status_t MarkAccessed(vaddr_t vaddr, size_t count) = 0;
 
   // Physical address of the backing data structure used for translation.
   //

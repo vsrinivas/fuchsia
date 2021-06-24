@@ -447,53 +447,6 @@ zx_status_t VmMapping::AspaceUnmapVmoRangeLocked(uint64_t offset, uint64_t len) 
   return aspace_->arch_aspace().Unmap(base, new_len / PAGE_SIZE, nullptr);
 }
 
-zx_status_t VmMapping::HarvestAccessVmoRangeLocked(
-    uint64_t offset, uint64_t len,
-    const fbl::Function<bool(vm_page*, uint64_t)>& accessed_callback) const {
-  canary_.Assert();
-
-  // NOTE: must be acquired with the vmo lock held, but doesn't need to take
-  // the address space lock, since it will not manipulate its location in the
-  // vmar tree. However, it must be held in the ALIVE state across this call.
-  //
-  // Avoids a race with DestroyLocked() since it removes ourself from the VMO's
-  // mapping list with the VMO lock held before dropping this state to DEAD. The
-  // VMO cant call back to us once we're out of their list.
-  DEBUG_ASSERT(state_ == LifeCycleState::ALIVE);
-
-  DEBUG_ASSERT(object_);
-
-  LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
-          this, object_offset_locked_object(), size_, offset, len);
-
-  // See if there's an intersect.
-  vaddr_t base;
-  uint64_t new_len;
-  if (!ObjectRangeToVaddrRange(offset, len, &base, &new_len)) {
-    return ZX_OK;
-  }
-
-  ArchVmAspace::HarvestCallback callback = [&accessed_callback, this](paddr_t paddr, vaddr_t vaddr,
-                                                                      uint) {
-    AssertHeld(object_->lock_ref());
-    vm_page_t* page = paddr_to_vm_page(paddr);
-    // It's possible page is invalid in the case of physical mappings that did not originate from
-    // a vm_page_t. We just let the accessed_callback deal with this.
-
-    // Turn the virtual address into an object offset. We know this will work as our virtual address
-    // range we are operating on was already determined from the object earlier in
-    // |ObjectRangeToVaddrRange|
-    uint64_t offset;
-    bool overflow = sub_overflow(vaddr, base_, &offset);
-    DEBUG_ASSERT(!overflow);
-    overflow = add_overflow(offset, object_offset_locked_object(), &offset);
-    DEBUG_ASSERT(!overflow);
-    return accessed_callback(page, offset);
-  };
-
-  return aspace_->arch_aspace().HarvestAccessed(base, new_len / PAGE_SIZE, callback);
-}
-
 zx_status_t VmMapping::AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const {
   LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
           this, object_offset_, size_, offset, len);

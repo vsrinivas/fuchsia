@@ -104,11 +104,7 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
   // fault method.
   zx_status_t MarkAccessed(vaddr_t vaddr, size_t count) override { return ZX_ERR_NOT_SUPPORTED; }
 
-  zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count,
-                              const HarvestCallback& accessed_callback) override;
-
-  zx_status_t HarvestNonTerminalAccessed(vaddr_t vaddr, size_t count,
-                                         NonTerminalAction action) override;
+  zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count, NonTerminalAction action) override;
 
   paddr_t arch_table_phys() const override { return pt_->phys(); }
   paddr_t pt_phys() const { return pt_->phys(); }
@@ -119,11 +115,6 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
   IoBitmap& io_bitmap() { return io_bitmap_; }
 
   static void ContextSwitch(X86ArchVmAspace* from, X86ArchVmAspace* to);
-
-  // X86 has accessed and dirty flags on intermediate page table mappings, and not just terminal
-  // page mappings. This means FreeUnaccessed is able to directly reclaim page tables without
-  // needing to harvest individual page mappings via HarvestAccessed.
-  static constexpr bool HasNonTerminalAccessedFlag() { return true; }
 
   static constexpr vaddr_t NextUserPageTableOffset(vaddr_t va) {
     // This logic only works for 'regular' page sizes that match the hardware page sizes.

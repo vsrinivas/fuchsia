@@ -202,52 +202,32 @@ static bool vmaspace_accessed_test() {
 
   ASSERT_EQ(ZX_OK, mem->CommitAndMap(PAGE_SIZE));
 
-  // Helpers for query the arch aspace.
-  auto harvest_take = [&mem, &page]() {
-    int found = 0;
-    ArchVmAspace::HarvestCallback harvest = [&found, &mem, &page](paddr_t paddr, vaddr_t vaddr,
-                                                                  uint mmu_flags) {
-      found++;
-      DEBUG_ASSERT(vaddr == mem->base());
-      DEBUG_ASSERT(paddr == page->paddr());
-      return true;
-    };
-    mem->aspace()->arch_aspace().HarvestAccessed(mem->base(), 1, harvest);
-    return found;
-  };
-  auto harvest_leave = [&mem, &page]() {
-    int found = 0;
-    ArchVmAspace::HarvestCallback harvest = [&found, &mem, &page](paddr_t paddr, vaddr_t vaddr,
-                                                                  uint mmu_flags) {
-      found++;
-      DEBUG_ASSERT(vaddr == mem->base());
-      DEBUG_ASSERT(paddr == page->paddr());
-      return false;
-    };
-    mem->aspace()->arch_aspace().HarvestAccessed(mem->base(), 1, harvest);
-    return found;
-  };
-
   // Initial accessed state is undefined, so harvest it away.
-  mem->vmo()->HarvestAccessedBits();
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::Retain);
 
-  // Reach into the arch aspace and check that the accessed bit is really gone.
-  EXPECT_EQ(0, harvest_take());
+  // Grab the current queue for the page and then rotate the page queues. This means any future,
+  // correct, access harvesting should result in a new page queue.
+  uint8_t current_queue = page->object.get_page_queue_ref().load();
+  pmm_page_queues()->RotatePagerBackedQueues();
 
   // Read from the mapping to (hopefully) set the accessed bit.
   asm volatile("" ::"r"(mem->get<int>(0)) : "memory");
+  // Harvest it to move it in the page queue.
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::Retain);
 
-  // Query the arch aspace and make sure we can leave and take the accessed bit.
-  EXPECT_EQ(1, harvest_leave());
-  EXPECT_EQ(1, harvest_leave());
-  EXPECT_EQ(1, harvest_take());
-  EXPECT_EQ(0, harvest_take());
+  EXPECT_NE(current_queue, page->object.get_page_queue_ref().load());
+  current_queue = page->object.get_page_queue_ref().load();
 
-  // Set the accessed bit again and see if the VMO can harvest it.
+  // Rotating and harvesting again should not make the queue change since we have not accessed it.
+  pmm_page_queues()->RotatePagerBackedQueues();
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::Retain);
+  EXPECT_EQ(current_queue, page->object.get_page_queue_ref().load());
+
+  // Set the accessed bit again, and make sure it does now harvest.
+  pmm_page_queues()->RotatePagerBackedQueues();
   asm volatile("" ::"r"(mem->get<int>(0)) : "memory");
-  EXPECT_EQ(1, harvest_leave());
-  mem->vmo()->HarvestAccessedBits();
-  EXPECT_EQ(0, harvest_take());
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::Retain);
+  EXPECT_NE(current_queue, page->object.get_page_queue_ref().load());
 
   END_TEST;
 }
@@ -278,7 +258,7 @@ static bool vmaspace_usercopy_accessed_fault_test() {
   mem->put<char>(42);
 
   // Harvest any accessed bits.
-  mem->vmo()->HarvestAccessedBits();
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::Retain);
 
   // Read from the VMO into the mapping that has been harvested.
   status = vmo->ReadUser(Thread::Current::Get()->aspace(), mem->user_out<char>(), 0, sizeof(char));
@@ -310,40 +290,22 @@ static bool vmaspace_free_unaccessed_page_tables_test() {
 
   mem->put<char>(42, kMiddleOffset);
   // Harvest the accessed information, this should not actually unmap it, even if we ask it to.
-  EXPECT_OK(mem->aspace()->arch_aspace().HarvestNonTerminalAccessed(
-      mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
-      ArchVmAspace::NonTerminalAction::FreeUnaccessed));
-  if constexpr (!ArchVmAspace::HasNonTerminalAccessedFlag()) {
-    vmo->HarvestAccessedBits();
-  }
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::FreeUnaccessed);
   EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
 
   mem->put<char>(42, kMiddleOffset);
   // Harvest the accessed information, then attempt to do it again so that it gets unmapped.
-  EXPECT_OK(mem->aspace()->arch_aspace().HarvestNonTerminalAccessed(
-      mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
-      ArchVmAspace::NonTerminalAction::FreeUnaccessed));
-  if constexpr (!ArchVmAspace::HasNonTerminalAccessedFlag()) {
-    vmo->HarvestAccessedBits();
-  }
-  EXPECT_OK(mem->aspace()->arch_aspace().HarvestNonTerminalAccessed(
-      mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
-      ArchVmAspace::NonTerminalAction::FreeUnaccessed));
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::FreeUnaccessed);
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::FreeUnaccessed);
   EXPECT_OK(mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
 
   // If we are not requesting a free, then we should be able to harvest repeatedly.
   EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
-  EXPECT_OK(mem->aspace()->arch_aspace().HarvestNonTerminalAccessed(
-      mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
-      ArchVmAspace::NonTerminalAction::Retain));
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::Retain);
   EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
-  EXPECT_OK(mem->aspace()->arch_aspace().HarvestNonTerminalAccessed(
-      mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
-      ArchVmAspace::NonTerminalAction::Retain));
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::Retain);
   EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
-  EXPECT_OK(mem->aspace()->arch_aspace().HarvestNonTerminalAccessed(
-      mem->aspace()->base(), mem->aspace()->size() / PAGE_SIZE,
-      ArchVmAspace::NonTerminalAction::Retain));
+  VmAspace::HarvestAllUserAccessedBits(VmAspace::NonTerminalAction::Retain);
 
   END_TEST;
 }

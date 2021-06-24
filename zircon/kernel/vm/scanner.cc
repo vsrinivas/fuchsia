@@ -156,26 +156,15 @@ int scanner_request_thread(void *) {
     }
     if (op & kScannerOpHarvestAccessed) {
       op &= ~kScannerOpHarvestAccessed;
-      // Determine if our architecture requires us to harvest the terminal accessed bits in order
-      // to perform page table reclamation.
-      const bool pt_reclaim_harvest_terminal =
-          !ArchVmAspace::HasNonTerminalAccessedFlag() &&
-          page_table_reclaim_policy != PageTableEvictionPolicy::kNever;
-      // Potentially reclaim any unaccessed user page tables. This must be done before the other
-      // accessed bit harvesting, otherwise if we do not have non-terminal accessed flags we will
-      // always reclaim everything.
-      if (page_table_reclaim_policy != PageTableEvictionPolicy::kNever) {
-        const VmAspace::NonTerminalAction action =
-            page_table_reclaim_policy == PageTableEvictionPolicy::kAlways || pt_eviction_enabled
-                ? VmAspace::NonTerminalAction::FreeUnaccessed
-                : VmAspace::NonTerminalAction::Retain;
-        VmAspace::HarvestAllUserPageTables(action);
-      }
-      // Accessed information for page mappings for VMOs impacts page eviction and page table
-      // reclamation. For page table reclamation it is only needed if we do not have non-terminal
-      // accessed flags.
-      if (pt_reclaim_harvest_terminal || pmm_evictor()->IsEvictionEnabled()) {
-        VmObject::HarvestAllAccessedBits();
+      const VmAspace::NonTerminalAction action =
+          page_table_reclaim_policy == PageTableEvictionPolicy::kAlways || pt_eviction_enabled
+              ? VmAspace::NonTerminalAction::FreeUnaccessed
+              : VmAspace::NonTerminalAction::Retain;
+      // If we neither have page eviction or page table eviction then we can skip harvesting
+      // accessed bits.
+      if (action == VmAspace::NonTerminalAction::FreeUnaccessed ||
+          pmm_evictor()->IsEvictionEnabled()) {
+        VmAspace::HarvestAllUserAccessedBits(action);
       }
     }
     if (current >= next_zero_scan_deadline || reclaim_all) {

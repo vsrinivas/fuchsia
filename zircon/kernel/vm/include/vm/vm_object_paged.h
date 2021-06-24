@@ -182,8 +182,6 @@ class VmObjectPaged final : public VmObject {
 
   uint32_t ScanForZeroPages(bool reclaim) override;
 
-  void HarvestAccessedBits() override;
-
   // Returns whether or not zero pages can be safely deduped from this VMO. Zero pages cannot be
   // deduped if the VMO is in use for kernel mappings, or if the pages cannot be accessed from the
   // physmap due to not being cached.

@@ -650,13 +650,6 @@ class VmMapping final : public VmAddressRegionOrMapping,
   zx_status_t AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const
       TA_REQ(object_->lock());
 
-  // Harvests accessed bits for any pages in the passed in vmo range and calls the provided callback
-  // for any pages with a bit to harvest.
-  zx_status_t HarvestAccessVmoRangeLocked(
-      uint64_t offset, uint64_t len,
-      const fbl::Function<bool(vm_page*, uint64_t vmo_offset)>& accessed_callback) const
-      TA_REQ(object_->lock());
-
   // Marks this mapping as being a candidate for merging, and will immediately attempt to merge with
   // any neighboring mappings. Making a mapping mergeable essentially indicates that you will no
   // longer use this specific VmMapping instance to refer to the referenced region, and will access

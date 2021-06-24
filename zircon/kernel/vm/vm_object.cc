@@ -60,32 +60,6 @@ uint32_t VmObject::ScanAllForZeroPages(bool reclaim) {
   return count;
 }
 
-void VmObject::HarvestAllAccessedBits() {
-  Guard<Mutex> guard{AllVmosLock::Get()};
-  {
-    Cursor cursor(AllVmosLock::Get(), all_vmos_, all_vmos_cursors_);
-    AssertHeld(cursor.lock_ref());
-
-    VmObject* vmo;
-    while ((vmo = cursor.Next())) {
-      fbl::RefPtr<VmObject> vmo_ref = fbl::MakeRefPtrUpgradeFromRaw(vmo, guard);
-      if (vmo_ref) {
-        // Call each harvest without the all vmos lock so we aren't monopolizing the lock. This is
-        // safe as we already acquired a refptr so we know the object will remain valid at least
-        // for calling HarvestAccessedBits, and our VmoCursor allows us to call .Next after having
-        // reacquired the lock. Additionally this provides us the chance to safely drop the refptr
-        // and potentially run the VMO destructor.
-        guard.CallUnlocked([vmo_ref = ktl::move(vmo_ref)]() mutable {
-          vmo_ref->HarvestAccessedBits();
-          // Explicitly reset the vmo_ref to force any destructor to run right now and not in the
-          // cleanup of the lambda, which might happen after the lock has been re-acquired.
-          vmo_ref.reset();
-        });
-      }
-    }
-  }
-}
-
 void VmObject::AddToGlobalList() {
   Guard<Mutex> guard{AllVmosLock::Get()};
   all_vmos_.push_back(this);

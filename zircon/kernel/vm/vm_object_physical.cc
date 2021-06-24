@@ -285,26 +285,3 @@ zx_status_t VmObjectPhysical::SetMappingCachePolicy(const uint32_t cache_policy)
   mapping_cache_flags_ = cache_policy;
   return ZX_OK;
 }
-
-void VmObjectPhysical::HarvestAccessedBits() {
-  canary_.Assert();
-
-  // If there are non-terminal access flags then we have no need to harvest individual accessed
-  // bits, as we do not actually do anything with them.
-  if constexpr (ArchVmAspace::HasNonTerminalAccessedFlag()) {
-    return;
-  }
-
-  Guard<Mutex> guard{lock()};
-
-  fbl::Function<bool(vm_page_t*, uint64_t)> f = [](vm_page_t* p, uint64_t offset) { return true; };
-  for (auto& m : mapping_list_) {
-    if (m.aspace()->is_user()) {
-      AssertHeld(*m.object_lock());
-      __UNUSED zx_status_t result = m.HarvestAccessVmoRangeLocked(0, size_, f);
-      // There's no way we should be harvesting an invalid range as that would imply that this
-      // mapping is invalid.
-      DEBUG_ASSERT(result == ZX_OK);
-    }
-  }
-}

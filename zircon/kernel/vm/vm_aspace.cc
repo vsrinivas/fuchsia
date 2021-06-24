@@ -693,7 +693,7 @@ bool VmAspace::IntersectsVdsoCode(vaddr_t base, size_t size) const {
          Intersects(vdso_code_mapping_->base(), vdso_code_mapping_->size(), base, size);
 }
 
-void VmAspace::HarvestAllUserPageTables(NonTerminalAction action) {
+void VmAspace::HarvestAllUserAccessedBits(NonTerminalAction action) {
   Guard<Mutex> guard{&aspace_list_lock};
 
   for (auto& a : aspaces) {
@@ -704,7 +704,7 @@ void VmAspace::HarvestAllUserPageTables(NonTerminalAction action) {
       // actual VmAspace has been destroyed, it is still completely safe to walk to the hardware
       // page tables, there just will not be anything there.
       zx_status_t __UNUSED result =
-          a.arch_aspace().HarvestNonTerminalAccessed(a.base(), a.size() / PAGE_SIZE, action);
+          a.arch_aspace().HarvestAccessed(a.base(), a.size() / PAGE_SIZE, action);
       DEBUG_ASSERT(result == ZX_OK);
     }
   }

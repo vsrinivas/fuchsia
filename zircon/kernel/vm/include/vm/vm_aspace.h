@@ -90,12 +90,13 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   static void DropAllUserPageTables();
   void DropUserPageTables();
 
-  // Harvests all used page tables based on the passed in action by calling the
-  // |HarvestUserPageTables| in every VmAspace. This requires holding the aspaces_list_lock_ over
-  // the entire duration and whilst not a commonly used lock this function should still only be
-  // called infrequently to avoid monopolizing the lock.
+  // Harvests all accessed information across all user mappings and updates any page age information
+  // for terminal mappings, and potentially harvests page tables depending on the passed in action.
+  // This requires holding the aspaces_list_lock_ over the entire duration and whilst not a commonly
+  // used lock this function should still only be called infrequently to avoid monopolizing the
+  // lock.
   using NonTerminalAction = ArchVmAspace::NonTerminalAction;
-  static void HarvestAllUserPageTables(NonTerminalAction action);
+  static void HarvestAllUserAccessedBits(NonTerminalAction action);
 
   // Traverses the VM tree rooted at this node, in depth-first pre-order. If
   // any methods of |ve| return false, the traversal stops and this method

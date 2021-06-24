@@ -716,19 +716,11 @@ zx_status_t X86ArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flag
 }
 
 zx_status_t X86ArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
-                                             const HarvestCallback& accessed_callback) {
+                                             NonTerminalAction action) {
   if (!IsValidVaddr(vaddr)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return pt_->HarvestAccessed(vaddr, count, accessed_callback);
-}
-
-zx_status_t X86ArchVmAspace::HarvestNonTerminalAccessed(vaddr_t vaddr, size_t count,
-                                                        NonTerminalAction action) {
-  if (!IsValidVaddr(vaddr)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  return pt_->HarvestNonTerminalAccessed(vaddr, count, action);
+  return pt_->HarvestAccessed(vaddr, count, action);
 }
 
 void x86_mmu_percpu_init(void) {
