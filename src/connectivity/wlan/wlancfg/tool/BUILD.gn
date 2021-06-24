@@ -45,7 +45,6 @@ rustc_binary("bin") {
 
 fuchsia_shell_package("donut") {
   deps = [ ":bin" ]
-  manifest = "meta/donut.cmx"
 }
 
 fuchsia_unittest_package("donut-tests") {
