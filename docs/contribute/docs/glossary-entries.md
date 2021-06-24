@@ -67,7 +67,7 @@ To add a glossary definition, you need to edit the
             </p>
             <p>For a link, use this format:</p>
             <aside class="note">
-            <b>Note:</b> Links to the glossary should use this link location format, <code>docs/glossary/README.md#<var>term</var></code>.
+            <b>Note:</b> Links to the glossary should use this link location format, <code>/docs/glossary/README.md#<var>term</var></code>.
             </aside>
                <pre class="prettyprint">
 {% htmlescape %}<a href="{% endhtmlescape %}<var>link_location</var>{% htmlescape %}">{% endhtmlescape %}<var>link_title</var>{% htmlescape %}</a>{% endhtmlescape %}
@@ -81,7 +81,7 @@ To add a glossary definition, you need to edit the
               to other terms or related documentation. You must use HTML syntax.
             </p>
             <aside class="note">
-            <b>Note:</b> Links to the glossary should use this link location format, <code>docs/glossary/README.md#<var>term</var></code>.
+            <b>Note:</b> Links to the glossary should use this link location format, <code>/docs/glossary/README.md#<var>term</var></code>.
             </aside>
             <ul>
               <li>For a single link, use this format:
