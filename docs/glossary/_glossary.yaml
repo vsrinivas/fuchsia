@@ -152,6 +152,15 @@
   related_guides: [""]
   area: ["FIDL", "Zircon"]
 
+- term: "Child component instance"
+  short_description: "A child component instance is a component instance that is owned by another instance,
+  the <a href=\"/docs/glossary#parent-component-instance\">parent</a>."
+  full_description: ""
+  see_also: ["<a href=\"/docs/glossary#component\">Component</a>",
+             "<a href=\"/docs/concepts/components/v2/README.md\">Components</a>"]
+  related_guides: [""]
+  area: ["Components"]
+
 - term: "Component"
   short_description: "A unit of executable software on Fuchsia."
   full_description: "A component is a unit of executable software on Fuchsia. Components support
@@ -901,6 +910,16 @@ environment to form a full SDK."
   related_guides: [""]
   area: ["System", "Components"]
 
+- term: "Parent component instance"
+  short_description: "A parent component instance is a component instance that
+  owns other instances called
+  <a href=\"/docs/glossary#child-component-instance\">child component instances</a>"
+  full_description: ""
+  see_also: ["<a href=\"/docs/glossary#component\">",
+             "<a href=\"/docs/concepts/components/v2/README.md\">Components</a>"]
+  related_guides: [""]
+  area: ["Components"]
+
 - term: "Paver"
   short_description: "A tool in Zircon that installs partition images to internal storage of a
   device."
@@ -964,7 +983,7 @@ environment to form a full SDK."
   component instances in the <a href=\"/docs/glossary#component-instance-tree\">component instance tree</a>.
   It acts as a container for component instances and capabilities in the subtree."
   full_description: ""
-  see_also: [""]
+  see_also: ["<a href=\"/docs/concepts/components/v2/realms.md\">Realms</a>"]
   related_guides: [""]
   area: ["Components"]
 
@@ -1100,6 +1119,14 @@ environment to form a full SDK."
   see_also: ["<a href=\"/docs/glossary#capability-routing\">Capability routing</a>", "<a href=\"/docs/concepts/components/v2/capabilities/storage.md\">Storage capabilities</a>"]
   related_guides: [""]
   area: ["General"]
+
+- term: "Sub-realm"
+  short_description: "A sub-realm is the <a href=\"/docs/glossary#realm\">realm</a>
+  corresponding to a child component instance."
+  full_description: ""
+  see_also: ["<a href=\"/docs/concepts/components/v2/realms.md\">Realms</a>"]
+  related_guides: [""]
+  area: ["Components"]
 
 - term: "Thread"
   short_description: "A <a href=\"/docs/glossary#kernel-object\">kernel object</a> that

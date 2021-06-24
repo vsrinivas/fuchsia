@@ -2,43 +2,38 @@
 
 <<../_v2_banner.md>>
 
-A *realm* is a subtree of the [component instance tree][topology-instance-tree].
-Every component instance is the root instance of a realm, known as the
-"component instance's realm", which is closely associated with the component
-instance.
+A [realm](/docs/glossary#realm) is a subtree of the
+[component instance tree][topology-instance-tree]. Every
+[component instance](/docs/glossary#component) is the root instance of a realm,
+known as the "component instance's realm", which is closely associated with the
+component instance.
 
 Component instances may contain [children](#child-component-instances). Each
-child component instance in turn defines its own sub-realm. The union of these
-sub-realms, along with the parent component instance, is equivalent to a
-subtree. Therefore, it is common to conceive of a realm as a component instance
-along with its set of children.
+[child component instance](/docs/glossary#child-component-instance) in turn
+defines its own [sub-realm](/docs/glossary#sub-realm). The union of these
+sub-realms, along with the
+[parent component instance](/docs/glossary#parent-component-instance), is
+equivalent to a subtree. Therefore, it is common to conceive of a realm as a
+component instance along with its set of children.
 
 Realms play a special role in the component framework. A realm is an
 *encapsulation boundary* for component instances. This means:
 
--   Realms act as a capability boundary. It's up to the realm to decide whether
-    a capability originating in the realm can be routed to component instances
+-   Realms act as a [capability](/docs/glossary#capability) boundary. It's up to
+    the realm to decide whether a capability originating in the realm can be
+    [routed](/docs/glossary#capability-routing) to component instances
     outside of the realm. This is accomplished through an [`expose`][expose]
     declaration in a [component manifest][component-manifests].
--   The internal structure of a [sub-realm](#definitions) is opaque to the
-    parent component instance. For example, the sub-realm could be structured
-    either as one or multiple component instances, and from the perspective of
-    the parent component instance this looks the same as long as the sub-realm
+-   The internal structure of a sub-realm is opaque to the parent component
+    instance. For example, the sub-realm could be structured either as one or
+    multiple component instances, and from the perspective of the parent
+    component instance this looks the same as long as the sub-realm
     [exposes][expose] the same set of capabilities.
 
 A realm also acts as an *ownership boundary*, that is, a child component
 instance is the root of a sub-realm that is owned by the parent, who controls
 its existence. See [Child component instances](#child-component-instances) for
 more information.
-
-## Definitions
-
-This section contains definitions for basic terminology about realms.
-
--   A *realm* is a subtree of the component instance tree.
--   A *child component instance* is a component instance that is owned by
-    another instance, the *parent*.
--   A *sub-realm* is the realm corresponding to a child component instance.
 
 ## Example
 
