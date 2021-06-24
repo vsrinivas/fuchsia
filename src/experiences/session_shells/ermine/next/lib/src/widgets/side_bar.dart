@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:next/src/states/app_state.dart';
 import 'package:next/src/widgets/app_launcher.dart';
 import 'package:next/src/widgets/quick_settings.dart';
+import 'package:next/src/widgets/status.dart';
 
 /// Defines a widget that represents the overlay on the right side of screen.
 class SideBar extends StatelessWidget {
@@ -35,6 +36,9 @@ class SideBar extends StatelessWidget {
                 onLaunch: (title, url) => appState.launch([title, url]),
               ),
             ),
+
+            // Status.
+            Status(appState),
 
             // Quick Settings.
             QuickSettings(appState),

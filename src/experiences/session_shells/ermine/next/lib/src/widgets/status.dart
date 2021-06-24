@@ -18,118 +18,130 @@ class Status extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = app.settingsState;
-    return Observer(builder: (_) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // IP Address, Build and Battery.
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: ListTile(
-                    minVerticalPadding: 0,
-                    title: Text(Strings.network),
-                    subtitle: settings.networkAddresses.isEmpty
-                        ? Text('--')
-                        : settings.networkAddresses.length == 1
-                            ? Text(
-                                settings.networkAddresses.first,
-                                maxLines: 2,
-                                style: TextStyle(
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              )
-                            : Tooltip(
-                                message: settings.networkAddresses.join('\n'),
-                                child: Text(
-                                  settings.networkAddresses.join('\n'),
-                                  maxLines: 2,
-                                  style: TextStyle(
-                                    overflow: TextOverflow.ellipsis,
+    return RepaintBoundary(
+      child: Container(
+        height: 208,
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: Theme.of(context).dividerColor),
+          ),
+        ),
+        padding: EdgeInsets.all(8),
+        child: Observer(builder: (_) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // IP Address, Build and Battery.
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: ListTile(
+                        minVerticalPadding: 0,
+                        title: Text(Strings.network),
+                        subtitle: settings.networkAddresses.isEmpty
+                            ? Text('--')
+                            : settings.networkAddresses.length == 1
+                                ? Text(
+                                    settings.networkAddresses.first,
+                                    maxLines: 2,
+                                    style: TextStyle(
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  )
+                                : Tooltip(
+                                    message:
+                                        settings.networkAddresses.join('\n'),
+                                    child: Text(
+                                      settings.networkAddresses.join('\n'),
+                                      maxLines: 2,
+                                      style: TextStyle(
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                  ),
-                ),
-                Expanded(
-                  child: ListTile(
-                    minVerticalPadding: 0,
-                    title: Text(Strings.build),
-                    subtitle: Text(
-                      app.buildVersion,
-                      maxLines: 2,
-                      style: TextStyle(overflow: TextOverflow.ellipsis),
+                      ),
                     ),
-                  ),
-                ),
-                Expanded(
-                  child: ListTile(
-                    minVerticalPadding: 0,
-                    title: Text(Strings.power),
-                    subtitle: Row(
-                      children: [
-                        if (settings.powerLevel.value != null) ...[
-                          Text('${settings.powerLevel.value!.toInt()}%'),
-                          SizedBox(width: 4),
-                        ],
-                        Icon(settings.powerIcon.value),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // CPU, Memory and Processes.
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Expanded(
-                  child: ListTile(
-                    minVerticalPadding: 0,
-                    title: Text(Strings.cpu),
-                    subtitle: Text('n/a'),
-                  ),
-                ),
-                Expanded(
-                  child: ListTile(
-                    minVerticalPadding: 0,
-                    title: Text(Strings.memory),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SizedBox(height: 8),
-                        if (settings.memPercentUsed.value != null) ...[
-                          LinearProgressIndicator(
-                            value: settings.memPercentUsed.value,
-                          ),
-                          SizedBox(height: 8),
-                        ],
-                        Text(
-                          '${settings.memUsed.value} / ${settings.memTotal.value}',
-                          textAlign: TextAlign.end,
+                    Expanded(
+                      child: ListTile(
+                        minVerticalPadding: 0,
+                        title: Text(Strings.build),
+                        subtitle: Text(
+                          app.buildVersion,
+                          maxLines: 2,
+                          style: TextStyle(overflow: TextOverflow.ellipsis),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    Expanded(
+                      child: ListTile(
+                        minVerticalPadding: 0,
+                        title: Text(Strings.power),
+                        subtitle: Row(
+                          children: [
+                            if (settings.powerLevel.value != null) ...[
+                              Text('${settings.powerLevel.value!.toInt()}%'),
+                              SizedBox(width: 4),
+                            ],
+                            Icon(settings.powerIcon.value),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                Expanded(
-                  child: ListTile(
-                    minVerticalPadding: 0,
-                    title: Text(Strings.processes),
-                    subtitle: Text('n/a'),
-                  ),
+              ),
+
+              // CPU, Memory and Processes.
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Expanded(
+                      child: ListTile(
+                        minVerticalPadding: 0,
+                        title: Text(Strings.cpu),
+                        subtitle: Text('n/a'),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListTile(
+                        minVerticalPadding: 0,
+                        title: Text(Strings.memory),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(height: 8),
+                            if (settings.memPercentUsed.value != null) ...[
+                              LinearProgressIndicator(
+                                value: settings.memPercentUsed.value,
+                              ),
+                              SizedBox(height: 8),
+                            ],
+                            Text(
+                              '${settings.memUsed.value} / ${settings.memTotal.value}',
+                              textAlign: TextAlign.end,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListTile(
+                        minVerticalPadding: 0,
+                        title: Text(Strings.processes),
+                        subtitle: Text('n/a'),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
-      );
-    });
+              ),
+            ],
+          );
+        }),
+      ),
+    );
   }
 }

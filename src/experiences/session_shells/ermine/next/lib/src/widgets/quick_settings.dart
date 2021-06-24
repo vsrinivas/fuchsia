@@ -9,7 +9,6 @@ import 'package:internationalization/strings.dart';
 import 'package:next/src/states/app_state.dart';
 import 'package:next/src/widgets/settings/shortcut_settings.dart';
 import 'package:next/src/widgets/settings/timezone_settings.dart';
-import 'package:next/src/widgets/status.dart';
 
 /// Defines a widget to display status and update system settings.
 class QuickSettings extends StatelessWidget {
@@ -20,44 +19,25 @@ class QuickSettings extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Status.
-          Container(
-            height: 208,
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: Theme.of(context).dividerColor),
-              ),
-            ),
-            padding: EdgeInsets.all(8),
-            child: Status(appState),
-          ),
-
-          // Quick Settings
-          Container(
-            height: MediaQuery.of(context).size.height / 2,
-            decoration: BoxDecoration(
-              border: Border(
-                  top: BorderSide(color: Theme.of(context).dividerColor)),
-            ),
-            child: Observer(builder: (_) {
-              final state = appState.settingsState;
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  _ListSettings(appState),
-                  if (state.shortcutsPageVisible.value) ShortcutSettings(state),
-                  if (state.timezonesPageVisible.value)
-                    TimezoneSettings(
-                        state: state,
-                        onChange: (tz) => state.updateTimezone([tz])),
-                ],
-              );
-            }),
-          ),
-        ],
+      child: Container(
+        height: MediaQuery.of(context).size.height / 2,
+        decoration: BoxDecoration(
+          border:
+              Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+        ),
+        child: Observer(builder: (_) {
+          final state = appState.settingsState;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              _ListSettings(appState),
+              if (state.shortcutsPageVisible.value) ShortcutSettings(state),
+              if (state.timezonesPageVisible.value)
+                TimezoneSettings(
+                    state: state, onChange: (tz) => state.updateTimezone([tz])),
+            ],
+          );
+        }),
       ),
     );
   }
