@@ -52,6 +52,14 @@ foreach(target_name, test_list) {
       # Runs on "main" builders (try and ci) in NUC environments.
       nuc_env,
     ]
+
+    # TODO(fxbug.dev/51799): Enable for all tests.
+    if (target_name == "kernel_boot_stats_test") {
+      environments += [
+        astro_env,
+        sherlock_env,
+      ]
+    }
   }
 }
 
