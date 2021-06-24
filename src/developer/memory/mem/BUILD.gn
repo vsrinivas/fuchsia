@@ -22,14 +22,5 @@ executable("bin") {
 
 fuchsia_package_with_single_component("mem") {
   manifest = "meta/mem.cmx"
-  deps = [
-    ":bin",
-    ":index",
-  ]
-}
-
-# Make `fx run mem ...` work
-add_to_component_index("index") {
-  package_name = "mem"
-  manifest = "meta/mem.cmx"
+  deps = [ ":bin" ]
 }
