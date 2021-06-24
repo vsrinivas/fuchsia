@@ -200,14 +200,15 @@ mod test {
     async fn test_tree() -> Result<(), anyhow::Error> {
         let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
         let root = io_util::directory::open_in_namespace("/pkg", rights)?;
-        let root = new_remote_filesystem(
+        let root = Namespace::new(new_remote_filesystem(
             DirectorySynchronousProxy::new(root.into_channel().unwrap().into_zx_channel()),
             rights,
-        );
-        assert_eq!(root.traverse(b"nib").err(), Some(ENOENT));
-        root.traverse(b"lib").unwrap();
+        ))
+        .root();
+        assert_eq!(root.lookup(b"nib").err(), Some(ENOENT));
+        root.lookup(b"lib").unwrap();
 
-        let _test_file = root.traverse(b"bin/hello_starnix")?.open()?;
+        let _test_file = root.lookup(b"bin/hello_starnix")?.node.open()?;
         Ok(())
     }
 }

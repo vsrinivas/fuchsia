@@ -144,7 +144,7 @@ pub fn load_executable(
         if interp.starts_with('/') {
             interp = &interp[1..];
         }
-        let interp_file = task.fs.traverse(interp.as_bytes())?.open()?;
+        let interp_file = task.fs.lookup_node(interp.as_bytes())?.open()?;
         let interp_vmo = interp_file.ops().get_vmo(
             &interp_file,
             task,

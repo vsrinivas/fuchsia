@@ -179,7 +179,7 @@ fn open_internal(
         mode
     );
     let path = &path[1..];
-    Ok(task.fs.traverse(path)?.open()?)
+    Ok(task.fs.lookup_node(path)?.open()?)
 }
 
 pub fn sys_openat(

@@ -76,8 +76,8 @@ impl FsNode {
     fn name(&self) -> &FsStr {
         &self.name
     }
-    fn parent<'a>(self: &'a FsNodeHandle) -> &'a FsNodeHandle {
-        self.parent.as_ref().unwrap_or(self)
+    pub fn parent<'a>(self: &'a FsNodeHandle) -> Option<&'a FsNodeHandle> {
+        self.parent.as_ref()
     }
 
     fn ops(&self) -> &dyn FsNodeOps {
@@ -88,22 +88,6 @@ impl FsNode {
 
     pub fn open(self: &FsNodeHandle) -> Result<FileHandle, Errno> {
         Ok(FileObject::new_from_box(self.ops().open()?, Arc::clone(self)))
-    }
-
-    pub fn traverse(self: &FsNodeHandle, path: &FsStr) -> Result<FsNodeHandle, Errno> {
-        // I'm a little disappointed in the number of refcount increments and decrements that happen
-        // here.
-        let mut node = Arc::clone(self);
-        for component in path.split(|c| *c == b'/') {
-            if component == b"." || component == b"" {
-                // ignore
-            } else if component == b".." {
-                node = Arc::clone(node.parent());
-            } else {
-                node = node.component_lookup(component)?;
-            }
-        }
-        Ok(node)
     }
 
     pub fn component_lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {

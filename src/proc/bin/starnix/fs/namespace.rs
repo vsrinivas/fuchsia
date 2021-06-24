@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)]
-#![allow(dead_code)]
-
+#[cfg(test)]
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
@@ -27,8 +25,8 @@ pub struct Namespace {
 }
 
 impl Namespace {
-    pub fn new(root: FsNodeHandle) -> Namespace {
-        Self { root_mount: Arc::new(Mount { parent: None, root }) }
+    pub fn new(root: FsNodeHandle) -> Arc<Namespace> {
+        Arc::new(Self { root_mount: Arc::new(Mount { mountpoint: None, root }) })
     }
     pub fn root(&self) -> NamespaceNode {
         self.root_mount.root()
@@ -36,7 +34,7 @@ impl Namespace {
 }
 
 pub struct Mount {
-    parent: Option<MountHandle>,
+    mountpoint: Option<NamespaceNode>,
     root: FsNodeHandle,
 }
 pub type MountHandle = Arc<Mount>;
@@ -50,20 +48,13 @@ impl Mount {
 /// A node in a mount namespace. This tree is a composite of the mount tree and the FsNode tree.
 #[derive(Clone)]
 pub struct NamespaceNode {
-    mount: MountHandle,
-    node: FsNodeHandle,
+    pub mount: MountHandle,
+    pub node: FsNodeHandle,
 }
 
 impl NamespaceNode {
-    pub fn node(&self) -> &FsNodeHandle {
-        &self.node
-    }
-
     pub fn lookup(&self, name: &FsStr) -> Result<NamespaceNode, Errno> {
-        let child = NamespaceNode {
-            mount: Arc::clone(&self.mount),
-            node: self.node.component_lookup(name)?,
-        };
+        let child = self.with_new_node(self.node.component_lookup(name)?);
         if let Some(mount) = MOUNT_POINTS.read().get(&child) {
             Ok(mount.root())
         } else {
@@ -71,18 +62,31 @@ impl NamespaceNode {
         }
     }
 
+    pub fn parent(&self) -> Option<NamespaceNode> {
+        let parent = if Arc::ptr_eq(&self.node, &self.mount.root) {
+            self.mount.mountpoint.as_ref()?.clone()
+        } else {
+            self.with_new_node(self.node.parent()?.clone())
+        };
+        Some(parent)
+    }
+
+    #[cfg(test)]
     pub fn mount(&self, node: &FsNodeHandle) -> Result<(), Errno> {
-        let mount = Mount { parent: Some(Arc::clone(&self.mount)), root: Arc::clone(node) };
         match MOUNT_POINTS.write().entry(self.clone()) {
             Entry::Occupied(_) => {
                 log::info!("mount shadowing is unimplemented");
                 Err(EBUSY)
             }
             Entry::Vacant(v) => {
-                v.insert(Arc::new(mount));
+                v.insert(Arc::new(Mount { mountpoint: Some(self.clone()), root: node.clone() }));
                 Ok(())
             }
         }
+    }
+
+    fn with_new_node(&self, node: FsNodeHandle) -> NamespaceNode {
+        NamespaceNode { mount: self.mount.clone(), node }
     }
 }
 

@@ -581,7 +581,7 @@ impl Task {
         argv: &Vec<CString>,
         environ: &Vec<CString>,
     ) -> Result<ThreadStartInfo, Errno> {
-        let executable_fd = self.fs.root_node.traverse(path.to_bytes())?.open()?;
+        let executable_fd = self.fs.lookup_node(path.to_bytes())?.open()?;
         let executable = executable_fd.ops().get_vmo(
             &executable_fd,
             self,

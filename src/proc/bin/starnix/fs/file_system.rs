@@ -22,7 +22,8 @@ impl Default for FileSystemState {
 }
 
 pub struct FileSystem {
-    pub root_node: FsNodeHandle,
+    pub namespace: Arc<Namespace>,
+    pub root_node: NamespaceNode,
 
     // TODO: Add cwd and other state here. Some of this state should
     // be copied in FileSystem::fork below.
@@ -35,7 +36,13 @@ impl FileSystem {
             syncio::directory_clone(&root_remote, fio::CLONE_FLAG_SAME_RIGHTS).unwrap(),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         );
-        Arc::new(FileSystem { root_node, state: RwLock::new(FileSystemState::default()) })
+        let namespace = Namespace::new(root_node);
+        let root_node = namespace.root();
+        Arc::new(FileSystem {
+            namespace,
+            root_node,
+            state: RwLock::new(FileSystemState::default()),
+        })
     }
 
     pub fn fork(&self) -> Arc<FileSystem> {
@@ -45,14 +52,26 @@ impl FileSystem {
         // See <https://man7.org/linux/man-pages/man2/umask.2.html>
 
         Arc::new(FileSystem {
-            root_node: Arc::clone(&self.root_node),
+            namespace: self.namespace.clone(),
+            root_node: self.root_node.clone(),
             state: RwLock::new(self.state.read().clone()),
         })
     }
 
     // This will eventually have the equivalent of a dir_fd parameter.
-    pub fn traverse(&self, path: &FsStr) -> Result<FsNodeHandle, Errno> {
-        self.root_node.traverse(path)
+    pub fn lookup_node(&self, path: &FsStr) -> Result<FsNodeHandle, Errno> {
+        let mut node = self.root_node.clone();
+        for component in path.split(|c| *c == b'/') {
+            if component == b"." || component == b"" {
+                // ignore
+            } else if component == b".." {
+                // TODO: make sure this can't escape a chroot
+                node = node.parent().unwrap_or(node);
+            } else {
+                node = node.lookup(component)?;
+            }
+        }
+        Ok(node.node)
     }
 
     #[cfg(test)]
