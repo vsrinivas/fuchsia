@@ -3,8 +3,84 @@
 This document contains tips for troubleshooting the following kinds of problems
 when using the [component framework][doc-intro]:
 
+- [Errors from the capability routing static analyzer] (#static-analyzer)
 - [Error when trying to use a capability from the namespace](#troubleshoot-use)
 - [Test does not start](#troubleshoot-test)
+
+## Errors from the capability routing static analyzer {#static-analyzer}
+
+You can run the capability routing static analyzer on a host with this command:
+
+```
+ffx scrutiny verify routes
+```
+
+The static analyzer will soon also run in CQ, so you may see CQ failures attributed
+to capability routing errors.
+
+The static analyzer currently supports [directory][doc-directory] and
+[protocol][doc-protocol] capabilities. For each `use` of one of these capabilities,
+the analyzer attempts to walk the [capability route][doc-routing] to its source via
+a chain of valid `offer` and `expose` declarations.
+
+If the walk fails, then the analyzer returns an error containing the following:
+
+-  The [moniker][doc-monikers] of the component instance which attempted to `use`
+   the capability.
+-  The name of the capability as stated in the `use` declaration.
+-  A description of the problem (e.g., a missing `offer`) and the moniker of the
+   component instance where the problem was detected.
+
+For example, this error indicates that the component instance `/core/system-metrics-logger`
+attempted to `use` the `config-data` capability from its parent instance `/core`, but
+`/core` did not offer the capability to `/core/system-metrics-logger`:
+
+```json5
+{
+     "capability": "config-data",
+     "error": "no offer declaration for `/core` with name `config-data`",
+     "using_node": "/core/system-metrics-logger"
+}
+```
+
+In this case, if you did want `/core/system-metrics-logger` to be able to use the `config-data`
+capability, you could fix the error by updating the `/core` component manifest to include
+an `offer` of the `config-data` capability to `/core/system-metrics-logger`. If the use was
+unnecessary, you could fix the error by removing the `use` declaration from
+`/core/system-metrics-logger`'s component manifest.
+
+For directory capabilities, the analyzer also reports an error if a component instance
+attempts to `use` a directory with broader rights than were offered. The error contains the
+moniker of the component instance which first (counting from the source of the capability)
+offered narrower rights. To fix such an error, you could either `use` the capability with
+the narrower rights, or loosen the restriction placed by the source component if that is
+appropriate.
+
+One particular type of routing failure is not reported as an error: if a capability
+route passes through a component instance which is not present in the build, then the
+CQ-blocking analyzer ignores the route. This situation is expected to occur in some
+cases. However, if you are trying to debug a problem and want to check if your capability
+route might be unintentionally broken, you can enter the Scrutiny shell with `ffx scrutiny`
+and then run
+
+```
+verify.capability_routes --capability_types directory protocol --response_level warning
+```
+
+(possibly omitting either `directory` or `protocol` depending on which capability type
+you'd like to analyze). In addition to any errors, you will see warnings like the following:
+
+```json5
+{
+     "capability": "fuchsia.sessionmanager.Startup",
+     "using_node": "/startup",
+     "warning": "failed to find component: `no node found with path `/core/session-manager`"
+}
+```
+
+This example warning indicates that the `/startup` component instance declared a `use` of the
+`fuchsia.sessionmanager.Startup` capability, but that this capability was routed through a
+component instance `/core/session-manager` that was not included in the build.
 
 ## Got an error when trying to use a capability from the namespace {#troubleshoot-use}
 
@@ -62,6 +138,10 @@ closure:
 
 - Check for an [epitaph][doc-epitaphs] on the closed channel.
 - Check the component manager logs with `fx log --only component_manager`
+- Run `ffx scrutiny verify routes` on the host in order to statically check
+  protocol and directory capability routes, and see
+  [Errors from the capability routing static analyzer](#static-analyzer)
+  for more information about the results.
 
 See [checking a closed channel](#troubleshoot-closed-channel) for details on
 how to check if a channel was closed and get an epitaph if there was one.
