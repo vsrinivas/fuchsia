@@ -60,8 +60,8 @@ See above for an example that follows these requirements.
 Several sections call for **English prose**. This means writing in proper
 sentences using English grammar with US English spelling (as opposed to British
 English or others). Use one space between sentences, and adhere to the "Oxford
-comma" style. E.g. the Description and Notes sections are written in English
-prose.
+comma" style. E.g. "The Description, Examples, and Notes sections are written in English
+prose."
 
 **Layout**
 
