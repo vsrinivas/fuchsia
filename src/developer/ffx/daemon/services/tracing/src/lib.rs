@@ -101,6 +101,11 @@ impl TraceTask {
                 output_file_clone,
                 res
             );
+            // async_fs files don't guarantee that the file is flushed on drop, so we need to
+            // explicitly flush the file after writing.
+            if let Err(err) = out_file.flush().await {
+                log::warn!("file error: {:#?}", err);
+            }
         };
         let shutdown_proxy = proxy.clone();
         Ok(Self {
