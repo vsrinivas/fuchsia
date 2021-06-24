@@ -152,7 +152,7 @@ Document the concurrency properties of APIs that have internal state.
      from multiple threads (e.g., it has implementation details that rely on
      unsynchronized access to static data behind the scenes, like strtok()).
      This should include documentation about thread affinity (e.g., it uses
-     TLS). It is only allowed in Fuchsia APIs by exception.
+     thread-local storage (TLS)). It is only allowed in Fuchsia APIs by exception.
    * **Special**: This means that the correct concurrent use of this API
      requires thought, please read the docs. This is especially relevant when
      entities need to be initialized and references to them published in a
