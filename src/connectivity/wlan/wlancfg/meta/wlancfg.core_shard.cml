@@ -1,0 +1,55 @@
+{
+    children: [
+        {
+            name: "wlancfg",
+            url: "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.stash.SecureStore",
+            from: "#stash_secure",
+            to: "#wlancfg",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#wlancfg",
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+                "fuchsia.location.sensor.WlanBaseStationWatcher",
+                "fuchsia.wlan.device.service.DeviceService",
+            ],
+            from: "#appmgr",
+            to: "#wlancfg",
+            dependency: "weak_for_migration",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#wlancfg",
+            subdir: "wlancfg",
+        },
+        {
+            protocol: [
+                "fuchsia.wlan.policy.AccessPointListener",
+                "fuchsia.wlan.policy.AccessPointProvider",
+                "fuchsia.wlan.policy.ClientListener",
+                "fuchsia.wlan.policy.ClientProvider",
+                "fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
+                "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
+            ],
+            from: "#wlancfg",
+            to: "#appmgr",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: "#wlancfg",
+        },
+    ],
+}

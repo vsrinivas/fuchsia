@@ -1,0 +1,57 @@
+{
+    include: [
+        "//sdk/lib/diagnostics/inspect/client.shard.cml",
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/wlancfg",
+        main_process_critical: "true",
+        lifecycle: { stop_event: "notify" },
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.wlan.policy.AccessPointListener",
+                "fuchsia.wlan.policy.AccessPointProvider",
+                "fuchsia.wlan.policy.ClientListener",
+                "fuchsia.wlan.policy.ClientProvider",
+                "fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
+                "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+                "fuchsia.location.sensor.WlanBaseStationWatcher",
+                "fuchsia.stash.SecureStore",
+                "fuchsia.wlan.device.service.DeviceService",
+            ],
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.wlan.policy.AccessPointListener",
+                "fuchsia.wlan.policy.AccessPointProvider",
+                "fuchsia.wlan.policy.ClientListener",
+                "fuchsia.wlan.policy.ClientProvider",
+                "fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
+                "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
+            ],
+            from: "self",
+        },
+    ],
+}

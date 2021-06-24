@@ -6,7 +6,6 @@
   ],
   "critical_components": [
     "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-    "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
     "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx"
   ],
   "services": {
@@ -23,22 +22,8 @@
     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
     "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
     "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
-    "fuchsia.wlan.device.service.DeviceService": "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx",
-    "fuchsia.wlan.policy.AccessPointListener": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
-    "fuchsia.wlan.policy.AccessPointProvider": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
-    "fuchsia.wlan.policy.ClientListener": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
-    "fuchsia.wlan.policy.ClientProvider": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
-    "fuchsia.wlan.product.deprecatedclient.DeprecatedClient": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
-    "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
+    "fuchsia.wlan.device.service.DeviceService": "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx"
   },
-  "startup_services": [
-    "fuchsia.wlan.policy.ClientProvider",
-    "fuchsia.wlan.policy.ClientListener",
-    "fuchsia.wlan.policy.AccessPointProvider",
-    "fuchsia.wlan.policy.AccessPointListener",
-    "fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
-    "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator"
-  ],
   "update_dependencies": [
     "fuchsia.posix.socket.Provider",
     "fuchsia.net.dhcpv6.ClientProvider",

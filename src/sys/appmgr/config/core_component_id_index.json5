@@ -67,13 +67,7 @@
         },
         {
             instance_id: "18f6b0d52208bab5e5dd65ef6021b7e47d7a6b3d09f6668dcea18f93161e9b1d",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
+            moniker: "/core/wlancfg"
         },
         {
             // TODO(fxbug.dev/73132): Entry needed to preserve /cache across the v2 migration.

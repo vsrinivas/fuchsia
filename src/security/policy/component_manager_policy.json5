@@ -10,6 +10,7 @@
                 "/bootstrap/fshost",
                 "/bootstrap/power_manager",
                 "/bootstrap/shutdown_shim",
+                "/core/wlancfg",
             ],
             create_raw_processes: [
                 "/core/starnix_manager/starnix_runner",

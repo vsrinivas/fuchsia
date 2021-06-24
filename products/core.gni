@@ -30,8 +30,9 @@ product_system_image_deps = [
 
 core_realm_package_name = "core"
 core_realm_shards = [
-  "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
+  "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
   "//src/developer/remote-control:laboratory-core-shard",
+  "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
 ]
 core_realm_restrict_persistent_storage = false
 

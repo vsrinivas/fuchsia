@@ -9,8 +9,6 @@ template("wlan_service_config") {
     for_pkg = "sysmgr"
     outputs = [ "wlan_${invoker.config}.config" ]
     sources = [ rebase_path("${invoker.config}") ]
-
-    deps = [ "//src/connectivity/wlan/wlancfg:config" ]
   }
 }
 

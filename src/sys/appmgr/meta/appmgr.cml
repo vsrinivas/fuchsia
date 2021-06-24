@@ -43,6 +43,8 @@
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.hwinfo.Device",
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+                "fuchsia.location.sensor.WlanBaseStationWatcher",
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.SessionAudioConsumerFactory",
@@ -81,6 +83,7 @@
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
                 "fuchsia.virtualization.Manager",
+                "fuchsia.wlan.device.service.DeviceService",
             ],
         },
 
@@ -469,6 +472,32 @@
             path: "/svc_for_sys/fuchsia.net.dhcp.Server",
         },
 
+        // From wlancfg
+        {
+            protocol: "fuchsia.wlan.policy.ClientProvider",
+            path: "/svc_for_sys/fuchsia.wlan.policy.ClientProvider",
+        },
+        {
+            protocol: "fuchsia.wlan.policy.ClientListener",
+            path: "/svc_for_sys/fuchsia.wlan.policy.ClientListener",
+        },
+        {
+            protocol: "fuchsia.wlan.policy.AccessPointProvider",
+            path: "/svc_for_sys/fuchsia.wlan.policy.AccessPointProvider",
+        },
+        {
+            protocol: "fuchsia.wlan.policy.AccessPointListener",
+            path: "/svc_for_sys/fuchsia.wlan.policy.AccessPointListener",
+        },
+        {
+            protocol: "fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
+            path: "/svc_for_sys/fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
+        },
+        {
+            protocol: "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
+            path: "/svc_for_sys/fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
+        },
+
         // From session_manager
         {
             protocol: "fuchsia.input.injection.InputDeviceRegistry",
@@ -518,6 +547,8 @@
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.hwinfo.Device",
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+                "fuchsia.location.sensor.WlanBaseStationWatcher",
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.SessionAudioConsumerFactory",
@@ -558,6 +589,7 @@
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
                 "fuchsia.virtualization.Manager",
+                "fuchsia.wlan.device.service.DeviceService",
             ],
             from: "self",
         },
