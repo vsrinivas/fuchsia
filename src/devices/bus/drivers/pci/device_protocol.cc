@@ -13,6 +13,7 @@
 #include <zircon/status.h>
 // TODO(fxbug.dev/33713): Stop depending on the types in this file.
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <zircon/syscalls/pci.h>
 #include <zircon/types.h>
 
@@ -25,6 +26,14 @@
 #define RPC_UNIMPLEMENTED \
   RPC_ENTRY;              \
   return RpcReply(ch, ZX_ERR_NOT_SUPPORTED)
+
+#define LOG_STATUS(level, status, format, ...)                                                   \
+  ({                                                                                             \
+    zx_status_t _status = (status);                                                              \
+    zxlogf(level, "[%s] %s(" format ") = %s", cfg_->addr(), __func__ __VA_OPT__(, ) __VA_ARGS__, \
+           zx_status_get_string(_status));                                                       \
+    _status;                                                                                     \
+  })
 
 namespace pci {
 
@@ -395,23 +404,17 @@ zx_status_t Device::ConfigRead(uint16_t offset, V* value) {
 
 zx_status_t Device::PciConfigRead8(uint16_t offset, uint8_t* out_value) {
   zx_status_t status = ConfigRead<uint8_t, PciReg8>(offset, out_value);
-  zxlogf(TRACE, "%s %s(offset = %#x) = %s", cfg_->addr(), __func__, offset,
-         zx_status_get_string(status));
-  return status;
+  return LOG_STATUS(TRACE, status, "%#x", offset);
 }
 
 zx_status_t Device::PciConfigRead16(uint16_t offset, uint16_t* out_value) {
   zx_status_t status = ConfigRead<uint16_t, PciReg16>(offset, out_value);
-  zxlogf(TRACE, "%s %s(offset = %#x) = %s", cfg_->addr(), __func__, offset,
-         _zx_status_get_string(status));
-  return status;
+  return LOG_STATUS(TRACE, status, "%#x", offset);
 }
 
 zx_status_t Device::PciConfigRead32(uint16_t offset, uint32_t* out_value) {
   zx_status_t status = ConfigRead<uint32_t, PciReg32>(offset, out_value);
-  zxlogf(TRACE, "%s %s(offset = %#x) = %s", cfg_->addr(), __func__, offset,
-         _zx_status_get_string(status));
-  return status;
+  return LOG_STATUS(TRACE, status, "%#x", offset);
 }
 
 template <typename V, typename R>
@@ -430,26 +433,31 @@ zx_status_t Device::ConfigWrite(uint16_t offset, V value) {
 }
 
 zx_status_t Device::PciConfigWrite8(uint16_t offset, uint8_t value) {
-  return ConfigWrite<uint8_t, PciReg8>(offset, value);
+  zx_status_t status = ConfigWrite<uint8_t, PciReg8>(offset, value);
+  return LOG_STATUS(TRACE, status, "%#x, %#x", offset, value);
 }
 
 zx_status_t Device::PciConfigWrite16(uint16_t offset, uint16_t value) {
-  return ConfigWrite<uint16_t, PciReg16>(offset, value);
+  zx_status_t status = ConfigWrite<uint16_t, PciReg16>(offset, value);
+  return LOG_STATUS(TRACE, status, "%#x, %#x", offset, value);
 }
 
 zx_status_t Device::PciConfigWrite32(uint16_t offset, uint32_t value) {
-  return ConfigWrite<uint32_t, PciReg32>(offset, value);
+  zx_status_t status = ConfigWrite<uint32_t, PciReg32>(offset, value);
+  return LOG_STATUS(TRACE, status, "%#x, %#x", offset, value);
 }
 
 zx_status_t Device::PciEnableBusMaster(bool enable) {
   fbl::AutoLock dev_lock(&dev_lock_);
-  return EnableBusMaster(enable);
+  zx_status_t status = EnableBusMaster(enable);
+  return LOG_STATUS(DEBUG, status, "%d", enable);
 }
 
 zx_status_t Device::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
+  zx_status_t status = ZX_OK;
   fbl::AutoLock dev_lock(&dev_lock_);
   if (bar_id >= bar_count_) {
-    return ZX_ERR_INVALID_ARGS;
+    return LOG_STATUS(DEBUG, ZX_ERR_INVALID_ARGS, "%u", bar_id);
   }
 
   // If this device supports MSIX then we need to deny access to the BARs it
@@ -460,14 +468,14 @@ zx_status_t Device::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
   // of that other space.
   auto& msix = caps_.msix;
   if (msix && (msix->table_bar() == bar_id || msix->pba_bar() == bar_id)) {
-    return ZX_ERR_ACCESS_DENIED;
+    return LOG_STATUS(DEBUG, ZX_ERR_ACCESS_DENIED, "%u", bar_id);
   }
 
   // Both unused BARs and BARs that are the second half of a 64 bit
   // BAR have a size of zero.
   auto& bar = bars_[bar_id];
   if (bar.size == 0) {
-    return ZX_ERR_NOT_FOUND;
+    return LOG_STATUS(DEBUG, ZX_ERR_NOT_FOUND, "%u", bar_id);
   }
 
   out_bar->id = bar_id;
@@ -478,7 +486,7 @@ zx_status_t Device::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
   // MMIO Bars have an associated VMO for the driver to map, whereas IO bars
   // have a Resource corresponding to an IO range for the driver to access.
   // These are mutually exclusive, so only one handle is ever needed.
-  zx_status_t status = ZX_ERR_INTERNAL;
+  status = ZX_ERR_INTERNAL;
   if (bar.is_mmio) {
     zx::vmo vmo = {};
     if ((status = bar.allocation->CreateVmObject(&vmo)) == ZX_OK) {
@@ -493,17 +501,18 @@ zx_status_t Device::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
   }
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to allocate %s [%#lx, %#lx) for BAR %u: %s",
-           (bar.is_mmio) ? "MMIO" : "IO", bar.address, bar.address + bar.size, bar.bar_id,
-           zx_status_get_string(status));
+    zxlogf(ERROR, "[%s] Failed to create %s for BAR %u (type = %s, range = [%#lx, %#lx)): %s",
+           cfg_->addr(), (bar.is_mmio) ? "VMO" : "resource", bar_id, (bar.is_mmio) ? "MMIO" : "IO",
+           bar.address, bar.address + bar.size, zx_status_get_string(status));
   }
 
-  return status;
+  return LOG_STATUS(DEBUG, status, "%u", bar_id);
 }
 
 zx_status_t Device::PciGetBti(uint32_t index, zx::bti* out_bti) {
   fbl::AutoLock dev_lock(&dev_lock_);
-  return bdi_->GetBti(this, index, out_bti);
+  zx_status_t status = bdi_->GetBti(this, index, out_bti);
+  return LOG_STATUS(DEBUG, status, "%u", index);
 }
 
 zx_status_t Device::PciGetDeviceInfo(pcie_device_info_t* out_info) {
@@ -516,7 +525,7 @@ zx_status_t Device::PciGetDeviceInfo(pcie_device_info_t* out_info) {
   out_info->bus_id = bus_id();
   out_info->dev_id = dev_id();
   out_info->func_id = func_id();
-  return ZX_OK;
+  return LOG_STATUS(DEBUG, ZX_OK, "");
 }
 
 namespace {
@@ -526,7 +535,6 @@ namespace {
 template <class T, class L>
 zx_status_t GetFirstOrNextCapability(const L& list, T cap_id, bool is_first,
                                      std::optional<T> scan_offset, T* out_offset) {
-  zxlogf(DEBUG, "Find cap id = %#x, first = %u", cap_id, is_first);
   // Scan for the capability type requested, returning the first capability
   // found after we've seen the capability owning the previous offset.  We
   // can't scan entirely based on offset being >= than a given base because
@@ -552,24 +560,29 @@ zx_status_t GetFirstOrNextCapability(const L& list, T cap_id, bool is_first,
 }  // namespace
 
 zx_status_t Device::PciGetFirstCapability(uint8_t cap_id, uint8_t* out_offset) {
-  return GetFirstOrNextCapability<uint8_t, CapabilityList>(
+  zx_status_t status = GetFirstOrNextCapability<uint8_t, CapabilityList>(
       capabilities().list, cap_id, /*is_first=*/true, std::nullopt, out_offset);
+  return LOG_STATUS(DEBUG, status, "%#x", cap_id);
 }
 
 zx_status_t Device::PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8_t* out_offset) {
-  return GetFirstOrNextCapability<uint8_t, CapabilityList>(capabilities().list, cap_id,
-                                                           /*is_first=*/false, offset, out_offset);
+  zx_status_t status =
+      GetFirstOrNextCapability<uint8_t, CapabilityList>(capabilities().list, cap_id,
+                                                        /*is_first=*/false, offset, out_offset);
+  return LOG_STATUS(DEBUG, status, "%#x, %#x", cap_id, offset);
 }
 
 zx_status_t Device::PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset) {
-  return GetFirstOrNextCapability<uint16_t, ExtCapabilityList>(capabilities().ext_list, cap_id,
-                                                               true, std::nullopt, out_offset);
+  zx_status_t status = GetFirstOrNextCapability<uint16_t, ExtCapabilityList>(
+      capabilities().ext_list, cap_id, true, std::nullopt, out_offset);
+  return LOG_STATUS(DEBUG, status, "%#x", cap_id);
 }
 
 zx_status_t Device::PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset,
                                                  uint16_t* out_offset) {
-  return GetFirstOrNextCapability<uint16_t, ExtCapabilityList>(capabilities().ext_list, cap_id,
-                                                               false, offset, out_offset);
+  zx_status_t status = GetFirstOrNextCapability<uint16_t, ExtCapabilityList>(
+      capabilities().ext_list, cap_id, false, offset, out_offset);
+  return LOG_STATUS(DEBUG, status, "%#x, %#x", cap_id, offset);
 }
 
 zx_status_t Device::PciConfigureIrqMode(uint32_t requested_irq_count, pci_irq_mode_t* out_mode) {
@@ -580,10 +593,10 @@ zx_status_t Device::PciConfigureIrqMode(uint32_t requested_irq_count, pci_irq_mo
       if (st == ZX_OK && out_mode) {
         *out_mode = mode;
       }
-      return st;
+      return LOG_STATUS(DEBUG, st, "%#x", requested_irq_count);
     }
   }
-  return ZX_ERR_NOT_SUPPORTED;
+  return LOG_STATUS(DEBUG, ZX_ERR_NOT_SUPPORTED, "%#x", requested_irq_count);
 }
 
 zx_status_t Device::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
@@ -592,11 +605,12 @@ zx_status_t Device::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs)
     *out_max_irqs = result.value();
   }
 
-  return result.status_value();
+  return LOG_STATUS(DEBUG, result.status_value(), "%u", mode);
 }
 
 zx_status_t Device::PciSetIrqMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
-  return SetIrqMode(mode, requested_irq_count);
+  zx_status_t status = SetIrqMode(mode, requested_irq_count);
+  return LOG_STATUS(DEBUG, status, "%u, %u", mode, requested_irq_count);
 }
 
 zx_status_t Device::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {
@@ -605,7 +619,7 @@ zx_status_t Device::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handl
     *out_handle = std::move(result.value());
   }
 
-  return result.status_value();
+  return LOG_STATUS(DEBUG, result.status_value(), "%u", which_irq);
 }
 
 zx_status_t Device::PciAckInterrupt() {
@@ -613,5 +627,6 @@ zx_status_t Device::PciAckInterrupt() {
   return AckLegacyIrq();
 }
 
-zx_status_t Device::PciResetDevice() { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Device::PciResetDevice() { return LOG_STATUS(DEBUG, ZX_ERR_NOT_SUPPORTED, ""); }
+
 }  // namespace pci
