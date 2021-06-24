@@ -1,190 +1,203 @@
 {
-  "type": "object",
-  "$id": "https://fuchsia.dev/schema/sys/lib/cm_json/cmx_schema.json",
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "required": [
-    "program"
-  ],
-  "additionalProperties": false,
-  "properties": {
-    "program": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "string"
-      },
-      "properties": {
-        "binary": {
-          "type": "string",
-          "title": "Program entry point for an Elf binary",
-          "examples": [
-            "bin/app"
-          ]
-        },
-        "args": {
-          "type": "array",
-          "title": "Arguments to provide to an Elf binary",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1,
-          "examples": [
-            "--verbose"
-          ]
-        },
-        "env_vars": {
-          "type": "array",
-          "title": "Environment variables to provide to an Elf binary",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1,
-          "examples": [
-            "RUST_BACKTRACE=1"
-          ]
-        },
-        "data": {
-          "type": "string",
-          "title": "Relative path for dart/flutter assets within /pkg/data",
-          "examples": [
-            "data/component"
-          ]
-        }
-      },
-      "oneOf": [
-        {
-          "required": [ "binary" ]
-        },
-        {
-          "required": [ "data" ]
-        }
-      ]
-    },
-    "sandbox": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
+    "$id": "https://fuchsia.dev/schema/sys/lib/cm_json/cmx_schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "properties": {
         "dev": {
-          "title": "Device directories to provide to the component",
-          "type": "array",
-          "uniqueItems": true
+            "items": {
+                "examples": [
+                    "class/wlanphy",
+                    "class/wlanif",
+                    "class/thermal"
+                ],
+                "title": "Device directories to provide",
+                "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
         },
-        "features": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "title": "Specific environment features",
-            "enum": [
-              "build-info",
-              "config-data",
-              "deprecated-misc-storage",
-              "deprecated-shell",
-              "durable-data",
-              "factory-data",
-              "hub",
-              "isolated-cache-storage",
-              "isolated-persistent-storage",
-              "shell-commands",
-              "root-ssl-certificates",
-              "isolated-temp",
-              "vulkan",
-              "deprecated-ambient-replace-as-executable"
-            ]
-          }
+        "facets": {
+            "title": "Extra information about this component",
+            "type": "object"
         },
-        "system": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "title": "Paths within the system package provided to the component",
-            "allOf": [
-              {
-                "not": {
-                  "pattern": "^/*data/"
+        "include": {
+            "items": {
+                "examples": [
+                    "syslog/client.shard.cmx"
+                ],
+                "type": "string"
+            },
+            "type": "array"
+        },
+        "program": {
+            "additionalProperties": {
+                "type": "string"
+            },
+            "oneOf": [
+                {
+                    "required": [
+                        "binary"
+                    ]
+                },
+                {
+                    "required": [
+                        "data"
+                    ]
                 }
-              },
-              {
-                "not": {
-                  "pattern": "^/*data$"
-                }
-              },
-              {
-                "not": {
-                  "pattern": "^/*deprecated-data/"
-                }
-              },
-              {
-                "not": {
-                  "pattern": "^/*deprecated-data$"
-                }
-              }
             ],
-            "examples": [
-              "data/build"
-            ]
-          }
+            "properties": {
+                "args": {
+                    "examples": [
+                        "--verbose"
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 1,
+                    "title": "Arguments to provide to an Elf binary",
+                    "type": "array"
+                },
+                "binary": {
+                    "examples": [
+                        "bin/app"
+                    ],
+                    "title": "Program entry point for an Elf binary",
+                    "type": "string"
+                },
+                "data": {
+                    "examples": [
+                        "data/component"
+                    ],
+                    "title": "Relative path for dart/flutter assets within /pkg/data",
+                    "type": "string"
+                },
+                "env_vars": {
+                    "examples": [
+                        "RUST_BACKTRACE=1"
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 1,
+                    "title": "Environment variables to provide to an Elf binary",
+                    "type": "array"
+                }
+            },
+            "type": "object"
         },
-        "pkgfs": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "title": "Paths within pkgfs provided to the component",
+        "runner": {
             "examples": [
-              "packages"
-            ]
-          }
+                "flutter_jit_runner",
+                "flutter_aot_runner"
+            ],
+            "title": "Runner required to launch the component",
+            "type": "string"
         },
-        "boot": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "title": "Paths within the boot package provided to the component",
-            "examples": [
-              "log"
-            ]
-          }
-        },
-        "services": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "title": "Services to provide",
-            "examples": [
-              "fuchsia.sys.Launcher",
-              "fuchsia.sys.Environment"
-            ]
-          }
+        "sandbox": {
+            "additionalProperties": false,
+            "properties": {
+                "boot": {
+                    "items": {
+                        "examples": [
+                            "log"
+                        ],
+                        "title": "Paths within the boot package provided to the component",
+                        "type": "string"
+                    },
+                    "type": "array",
+                    "uniqueItems": true
+                },
+                "dev": {
+                    "title": "Device directories to provide to the component",
+                    "type": "array",
+                    "uniqueItems": true
+                },
+                "features": {
+                    "items": {
+                        "enum": [
+                            "build-info",
+                            "config-data",
+                            "deprecated-misc-storage",
+                            "deprecated-shell",
+                            "durable-data",
+                            "factory-data",
+                            "hub",
+                            "isolated-cache-storage",
+                            "isolated-persistent-storage",
+                            "shell-commands",
+                            "root-ssl-certificates",
+                            "isolated-temp",
+                            "vulkan",
+                            "deprecated-ambient-replace-as-executable"
+                        ],
+                        "title": "Specific environment features",
+                        "type": "string"
+                    },
+                    "type": "array",
+                    "uniqueItems": true
+                },
+                "pkgfs": {
+                    "items": {
+                        "examples": [
+                            "packages"
+                        ],
+                        "title": "Paths within pkgfs provided to the component",
+                        "type": "string"
+                    },
+                    "type": "array",
+                    "uniqueItems": true
+                },
+                "services": {
+                    "items": {
+                        "examples": [
+                            "fuchsia.sys.Launcher",
+                            "fuchsia.sys.Environment"
+                        ],
+                        "title": "Services to provide",
+                        "type": "string"
+                    },
+                    "type": "array",
+                    "uniqueItems": true
+                },
+                "system": {
+                    "items": {
+                        "allOf": [
+                            {
+                                "not": {
+                                    "pattern": "^/*data/"
+                                }
+                            },
+                            {
+                                "not": {
+                                    "pattern": "^/*data$"
+                                }
+                            },
+                            {
+                                "not": {
+                                    "pattern": "^/*deprecated-data/"
+                                }
+                            },
+                            {
+                                "not": {
+                                    "pattern": "^/*deprecated-data$"
+                                }
+                            }
+                        ],
+                        "examples": [
+                            "data/build"
+                        ],
+                        "title": "Paths within the system package provided to the component",
+                        "type": "string"
+                    },
+                    "type": "array",
+                    "uniqueItems": true
+                }
+            },
+            "type": "object"
         }
-      }
     },
-    "dev": {
-      "type": "array",
-      "uniqueItems": true,
-      "items": {
-        "type": "string",
-        "title": "Device directories to provide",
-        "examples": [
-          "class/wlanphy",
-          "class/wlanif",
-          "class/thermal"
-        ]
-      }
-    },
-    "runner": {
-      "type": "string",
-      "title": "Runner required to launch the component",
-      "examples": [
-        "flutter_jit_runner",
-        "flutter_aot_runner"
-      ]
-    },
-    "facets": {
-      "type": "object",
-      "title": "Extra information about this component"
-    }
-  }
+    "required": [
+        "program"
+    ],
+    "type": "object"
 }
