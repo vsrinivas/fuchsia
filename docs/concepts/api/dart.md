@@ -360,7 +360,7 @@ specific call can fail and handle that appropriately when needed.
 
 ```
 final _proxy = fidl_myService.MyServiceProxy();
-connectToAgentService('fuchsia-pkg://fuchsia.com/my_service#meta/my_service.cmx', _proxy);
+connectToService('fuchsia-pkg://fuchsia.com/my_service#meta/my_service.cmx', _proxy);
 
 _proxy
   .doSomething()
