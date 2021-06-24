@@ -238,9 +238,9 @@ If the project requires importing a new external crate to handle
 functionality related to Unicode and internationalization, prefer crates from
 the [UNIC project](https://crates.io/crates/unic){: .external} when available.
 
-### Grandfathered non-UNIC crates
+### Exempted non-UNIC crates
 
-The following non-UNIC crates are already vendored and are grandfathered:
+The following non-UNIC crates are already vendored and are exempted:
 
 * `unicode-bidi`
 * `unicode-normalization`
