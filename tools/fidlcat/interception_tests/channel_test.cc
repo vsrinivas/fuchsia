@@ -131,6 +131,22 @@ CREATE_INTERLEAVED_DISPLAY_TEST(
     "out0: \x1B[32mhandle\x1B[0m = \x1B[31m12345678\x1B[0m, "
     "out1: \x1B[32mhandle\x1B[0m = \x1B[31m87654321\x1B[0m)\n");
 
+CREATE_AUTOMATION_TEST(ZxChannelCreateAutomation, "zx_channel_create", ZX_OK,
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = rsi\n"
+                       "  stored_value(1) = rdx\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  load_memory stored_value(1), 4\n"
+                       "  clear_stored_values\n",
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = x1\n"
+                       "  stored_value(1) = x2\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  load_memory stored_value(1), 4\n"
+                       "  clear_stored_values\n");
+
 // zx_channel_write_tests.
 
 std::unique_ptr<SystemCallTest> ZxChannelWrite(int64_t result, std::string_view result_name,

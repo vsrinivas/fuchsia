@@ -203,6 +203,11 @@ std::unique_ptr<fidl_codec::Value> SyscallInputOutputBase::GenerateValue(
   return std::make_unique<fidl_codec::InvalidValue>();
 }
 
+bool SyscallInputOutputBase::GetAutomationInstructions(
+    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_input, Syscall& syscall) {
+  return false;
+}
+
 void SyscallFidlMessageBase::LoadBytes(SyscallDecoderInterface* decoder, Stage stage) const {
   handle_->Load(decoder, stage);
   options_->Load(decoder, stage);
@@ -475,6 +480,33 @@ const fidl_codec::StructMember* Syscall::SearchOutlineMember(uint32_t id, bool i
 void Syscall::ComputeStatistics(const OutputEvent* event) const {
   if (compute_statistics_ != nullptr) {
     (*compute_statistics_)(event);
+  }
+}
+
+bool ComputeAutomation(const std::vector<debug_ipc::RegisterID>& argument_indexes,
+                       const std::vector<std::unique_ptr<SyscallInputOutputBase>>& fields,
+                       bool is_invoked, Syscall& syscall) {
+  bool fully_automated = true;
+  for (const auto& field : fields) {
+    if (!field->conditions()->empty() ||
+        !field->GetAutomationInstructions(argument_indexes, is_invoked, syscall)) {
+      fully_automated = false;
+    }
+  }
+  return fully_automated;
+}
+
+void Syscall::ComputeAutomation(const std::vector<debug_ipc::RegisterID>& argument_indexes) {
+  if (invoked_bp_instructions_.size() + exit_bp_instructions_.size() > 0) {
+    return;
+  }
+  bool initial_automated = fidlcat::ComputeAutomation(argument_indexes, inputs_, true, *this);
+  bool exit_automated = fidlcat::ComputeAutomation(argument_indexes, outputs_, false, *this);
+  fully_automated_ = initial_automated && exit_automated;
+  debug_ipc::AutomationInstruction clear_instr;
+  if (invoked_bp_instructions_.size() + exit_bp_instructions_.size() > 0) {
+    clear_instr.InitClearStoredValues(std::vector<debug_ipc::AutomationCondition>());
+    exit_bp_instructions_.emplace_back(clear_instr);
   }
 }
 

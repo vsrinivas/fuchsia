@@ -615,6 +615,39 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
   Replay replay_;
 };
 
+#define AUTOMATION_TEST_CONTENT(syscall_name, errno, expected)                                   \
+  ProcessController controller(this, session(), loop());                                         \
+  controller.Initialize(                                                                         \
+      session(),                                                                                 \
+      std::make_unique<SyscallDisplayDispatcherTest>(nullptr, decode_options_, display_options_, \
+                                                     result_, &controller, aborted_),            \
+      "");                                                                                       \
+  SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher();     \
+  Syscall* syscall = dispatcher->SearchSyscall(syscall_name);                                    \
+  ASSERT_NE(syscall, nullptr);                                                                   \
+  std::stringstream output_stream;                                                               \
+  if (syscall->invoked_bp_instructions().size() > 0) {                                           \
+    output_stream << "Invoked bp instructions:\n";                                               \
+    for (auto instr : syscall->invoked_bp_instructions()) {                                      \
+      output_stream << "  " << instr.ToString();                                                 \
+    }                                                                                            \
+  }                                                                                              \
+  if (syscall->exit_bp_instructions().size() > 0) {                                              \
+    output_stream << "Exit bp instructions:\n";                                                  \
+    for (auto instr : syscall->exit_bp_instructions()) {                                         \
+      output_stream << "  " << instr.ToString();                                                 \
+    }                                                                                            \
+  }                                                                                              \
+  ASSERT_EQ(output_stream.str(), expected);
+
+#define CREATE_AUTOMATION_TEST(test_name, syscall_name, errno, expected_x64, expected_arm) \
+  TEST_F(InterceptionWorkflowTestX64, test_name) {                                         \
+    AUTOMATION_TEST_CONTENT(syscall_name, errno, expected_x64);                            \
+  }                                                                                        \
+  TEST_F(InterceptionWorkflowTestArm, test_name) {                                         \
+    AUTOMATION_TEST_CONTENT(syscall_name, errno, expected_arm);                            \
+  }
+
 }  // namespace fidlcat
 
 #endif  // TOOLS_FIDLCAT_INTERCEPTION_TESTS_INTERCEPTION_WORKFLOW_TEST_H_

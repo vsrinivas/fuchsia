@@ -294,7 +294,7 @@ bool SyscallDecoder::StepToReturnAddress() {
 
   if (syscall_->return_type() != SyscallReturnType::kNoReturn) {
     thread_observer_->Register(fidlcat_thread()->koid(), this);
-    thread_observer_->AddExitBreakpoint(thread, syscall_->name(), return_address_);
+    thread_observer_->AddExitBreakpoint(thread, *syscall_, return_address_);
   }
 
   // Restarts the stopped thread. When the breakpoint will be reached (at the
