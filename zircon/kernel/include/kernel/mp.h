@@ -30,10 +30,6 @@ enum interrupt_eoi {
 typedef void (*mp_ipi_task_func_t)(void* context);
 typedef void (*mp_sync_task_t)(void* context);
 
-// by default, mp_reschedule does not signal to cpus that are running realtime
-// threads. Override this behavior.
-#define MP_RESCHEDULE_FLAG_REALTIME (0x1)
-
 typedef enum { MP_IPI_GENERIC, MP_IPI_RESCHEDULE, MP_IPI_INTERRUPT, MP_IPI_HALT } mp_ipi_t;
 
 // When sending inter processor interrupts (IPIs), apis will take a combination of
