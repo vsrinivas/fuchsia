@@ -40,10 +40,7 @@ func (gen FidlGenerator) generateTestFile(wr io.Writer, tree Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "GenerateTestFile", tree)
 }
 
-func writeFile(
-	generate func(io.Writer, Root) error, tree Root,
-	outputFilename string, dartfmt string) error {
-
+func writeFile(generate func(io.Writer, Root) error, tree Root, outputFilename string, dart string) error {
 	if err := os.MkdirAll(filepath.Dir(outputFilename), os.ModePerm); err != nil {
 		return err
 	}
@@ -53,7 +50,7 @@ func writeFile(
 	}
 	defer generated.Close()
 
-	generatedPipe, err := fidlgen.NewFormatter(dartfmt).FormatPipe(generated)
+	generatedPipe, err := fidlgen.NewFormatter(dart, "format", "-o", "show").FormatPipe(generated)
 	if err != nil {
 		return err
 	}
@@ -64,10 +61,10 @@ func writeFile(
 	return generatedPipe.Close()
 }
 
-func (gen FidlGenerator) GenerateAsyncFile(tree Root, path string, dartfmt string) error {
-	return writeFile(gen.generateAsyncFile, tree, path, dartfmt)
+func (gen FidlGenerator) GenerateAsyncFile(tree Root, path string, dart string) error {
+	return writeFile(gen.generateAsyncFile, tree, path, dart)
 }
 
-func (gen FidlGenerator) GenerateTestFile(tree Root, path string, dartfmt string) error {
-	return writeFile(gen.generateTestFile, tree, path, dartfmt)
+func (gen FidlGenerator) GenerateTestFile(tree Root, path string, dart string) error {
+	return writeFile(gen.generateTestFile, tree, path, dart)
 }

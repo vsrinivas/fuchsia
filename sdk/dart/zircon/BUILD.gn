@@ -58,8 +58,7 @@ if (is_linux || is_mac) {
   host_test_data("extract_zircon_constants_data") {
     sources = [
       "${dart_sdk}/bin/dart",
-      "${dart_sdk}/bin/dartfmt",
-      "${dart_sdk}/bin/snapshots/dartfmt.dart.snapshot",
+      "${dart_sdk}/bin/snapshots/dartdev.dart.snapshot",
       "//zircon/system/public/zircon/errors.h",
       "//zircon/system/public/zircon/rights.h",
       "//zircon/system/public/zircon/types.h",
@@ -81,8 +80,8 @@ if (is_linux || is_mac) {
       rebase_path("//zircon/system/public/zircon/rights.h", root_build_dir),
       "--types",
       rebase_path("//zircon/system/public/zircon/types.h", root_build_dir),
-      "--dartfmt",
-      rebase_path("${dart_sdk}/bin/dartfmt", root_build_dir),
+      "--dart",
+      rebase_path("${dart_sdk}/bin/dart", root_build_dir),
       "--dry-run",
     ]
   }

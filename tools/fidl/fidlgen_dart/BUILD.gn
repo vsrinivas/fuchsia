@@ -43,7 +43,12 @@ if (is_host) {
 
   golden_test("fidlgen_dart_golden_tests") {
     goldens_dir = "goldens"
-    reformat_goldens_bin = "${dart_sdk}/bin/dartfmt"
+    reformat_goldens_bin = "${dart_sdk}/bin/dart"
+    reformat_goldens_args = [
+      "format",
+      "-o",
+      "show",
+    ]
     deps = []
     entries = []
     foreach(info, fidl_testdata_info) {

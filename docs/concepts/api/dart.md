@@ -125,10 +125,10 @@ versions.
 
 ## Formatting
 
-Code should be formatted using the `dartfmt` tool. This is an opinionated tool
-that cannot be configured. Formatting all of our code with this tool will ensure
-consistency. In Fuchsia, you can use `fx format-code` will run `dartfmt` on all
-staged dart files.
+Code should be formatted using `dart format`. This is an opinionated tool that
+cannot be configured. Formatting all of our code with this tool will ensure
+consistency. In Fuchsia, you can use `fx format-code` will run `dart format` on
+all staged dart files.
 
 ## Files
 

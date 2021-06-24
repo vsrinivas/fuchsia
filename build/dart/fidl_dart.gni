@@ -67,8 +67,8 @@ template("fidl_dart") {
     deps = [ ":$main_target_name($fidl_toolchain)" ]
     if (host_cpu == target_cpu) {
       args += [
-        "--dartfmt",
-        rebase_path("$dart_sdk/bin/dartfmt"),
+        "--dart",
+        rebase_path("$dart_sdk/bin/dart"),
       ]
       deps += dart_sdk_deps
     }

@@ -190,14 +190,16 @@ TODO(fxbug.dev/27310): Document go vet once implementation details are finalized
 
 ## Dart
 
-Dart uses [`dartfmt`](https://github.com/dart-lang/dart_style) and [`dartanalyzer`](https://github.com/dart-lang/sdk/tree/HEAD/pkg/analyzer_cli). These are distributed as prebuilts from the Dart toolchain. The
-`dartanalyzer` is run as part of the build rather than as a check, as it performs type-checking and
-other assertive checks.
+Dart uses [`dart format`](https://github.com/dart-lang/dart_style) and
+[`dartanalyzer`](https://github.com/dart-lang/sdk/tree/HEAD/pkg/analyzer_cli).
+These are distributed as prebuilts from the Dart toolchain. The `dartanalyzer`
+is run as part of the build rather than as a check, as it performs
+type-checking and other assertive checks.
 
-`dartfmt` runs on source files as follows:
+`dart format` runs on source files as follows:
 
 ```sh
-prebuilt/third_party/dart/${HOST_PLATFORM}/bin/dartfmt -w $FILES
+prebuilt/third_party/dart/${HOST_PLATFORM}/bin/dart format $FILES
 ```
 
 The `dartanalyzer` is run as part of the build, triggered when the [`dart_library`](/build/dart/dart_library.gni) GN template is

@@ -19,7 +19,7 @@ type flagsDef struct {
 	jsonPath     *string
 	outAsyncPath *string
 	outTestPath  *string
-	dartfmt      *string
+	dart         *string
 
 	deprecatedOutputBase  *string
 	deprecatedIncludeBase *string
@@ -32,8 +32,8 @@ var flags = flagsDef{
 		"output path for the async bindings."),
 	outTestPath: flag.String("output-test", "",
 		"output path for the test bindings."),
-	dartfmt: flag.String("dartfmt", "",
-		"path to the dartfmt tool"),
+	dart: flag.String("dart", "",
+		"path to the dart tool"),
 }
 
 // valid returns true if the parsed flags are valid.
@@ -71,7 +71,7 @@ func main() {
 
 	outAsyncPath := *flags.outAsyncPath
 	if outAsyncPath != "" {
-		err := generator.GenerateAsyncFile(tree, outAsyncPath, *flags.dartfmt)
+		err := generator.GenerateAsyncFile(tree, outAsyncPath, *flags.dart)
 		if err != nil {
 			log.Fatalf("Error: %v", err)
 		}
@@ -79,7 +79,7 @@ func main() {
 
 	outTestPath := *flags.outTestPath
 	if outTestPath != "" {
-		err := generator.GenerateTestFile(tree, outTestPath, *flags.dartfmt)
+		err := generator.GenerateTestFile(tree, outTestPath, *flags.dart)
 		if err != nil {
 			log.Fatalf("Error: %v", err)
 		}

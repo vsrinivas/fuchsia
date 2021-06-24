@@ -20,7 +20,7 @@ parser.add_argument(
 parser.add_argument('--errors', help='Path to the zircon errors.h header file')
 parser.add_argument('--types', help='Path to the zircon types.h header file')
 parser.add_argument('--rights', help='Path to the zircon rights.h header file')
-parser.add_argument('--dartfmt', help='Path to the dartfmt tool')
+parser.add_argument('--dart', help='Path to the dart tool')
 parser.add_argument(
     '--dart-constants', help='Where to generate the dart constants file')
 parser.set_defaults(dry_run=False)
@@ -40,12 +40,12 @@ if not zircon_errors or not zircon_types or not zircon_rights:
     zircon_rights = zircon_rights or os.path.join(
         zircon_include_dir, 'rights.h')
 
-dartfmt = args.dartfmt
-if not dartfmt:
-    dartfmt_globs = glob.glob(
+dart = args.dart
+if not dart:
+    dart_globs = glob.glob(
         os.path.join(
-            source_dir, '../../../../prebuilt/third_party/dart/*/bin/dartfmt'))
-    dartfmt = dartfmt_globs[0]
+            source_dir, '../../../../prebuilt/third_party/dart/*/bin/dart'))
+    dart = dart_globs[0]
 
 dart_constants = args.dart_constants or os.path.join(
     source_dir, 'lib/src/constants.dart')
@@ -149,7 +149,10 @@ class DartWriter(object):
             path = '/dev/null'
         dest = open(path, 'w')
         self.popen = subprocess.Popen(
-            [dartfmt], stdin=subprocess.PIPE, stdout=dest, text=True)
+            [dart, 'format', '-o', 'show'],
+            stdin=subprocess.PIPE,
+            stdout=dest,
+            text=True)
 
     def write(self, string):
         self.popen.stdin.write(string)

@@ -728,22 +728,21 @@ build_api_module("tool_paths") {
 group("tool_paths.metadata") {
   visibility = [ ":tool_paths" ]
   prebuilt_tools = [
-    "//garnet/bin/perfcompare",
-    "//prebuilt/sdk/bazel/bazel",
     "$rustc_tool_dir/cargo",
     "$rustc_tool_dir/rustc",
     "$rustc_tool_dir/rustdoc",
-    "//prebuilt/third_party/rust_tools/$host_platform/bin/rustfmt",
+    "//garnet/bin/perfcompare",
+    "//prebuilt/sdk/bazel/bazel",
     "//prebuilt/third_party/clang/$host_platform/share/clang/clang-format-diff.py",
     "//prebuilt/third_party/clang/$host_platform/share/clang/clang-tidy-diff.py",
+    "//prebuilt/third_party/dart/$host_platform/bin/dart",
     "//prebuilt/third_party/gn/$host_platform/gn",
     "//prebuilt/third_party/go/$host_platform/bin/go",
     "//prebuilt/third_party/go/$host_platform/bin/gofmt",
-    "//prebuilt/third_party/dart/$host_platform/bin/dartfmt",
     "//prebuilt/third_party/goma/$host_platform/goma_ctl.py",
     "//prebuilt/third_party/ninja/$host_platform/ninja",
+    "//prebuilt/third_party/rust_tools/$host_platform/bin/rustfmt",
     "//prebuilt/third_party/yapf/yapf",
-    "//prebuilt/third_party/dart/$host_platform/bin/dart",
     "//third_party/catapult/tracing/bin/trace2html",
   ]
   metadata = {
