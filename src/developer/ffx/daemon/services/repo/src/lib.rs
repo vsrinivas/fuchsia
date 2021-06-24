@@ -14,7 +14,7 @@ use {
     fuchsia_async::{self as fasync, futures::StreamExt as _},
     pkg::repository::{
         FileSystemRepository, PmRepository, Repository, RepositoryManager, RepositoryServer,
-        RepositorySpec, LISTEN_PORT,
+        LISTEN_PORT,
     },
     serde_json,
     services::prelude::*,
@@ -340,22 +340,7 @@ impl FidlService for Repo {
                     .repositories()
                     .map(|x| bridge::RepositoryConfig {
                         name: x.name().to_owned(),
-                        spec: match x.spec() {
-                            RepositorySpec::FileSystem { path } => {
-                                bridge::RepositorySpec::FileSystem(
-                                    bridge::FileSystemRepositorySpec {
-                                        path: path.as_os_str().to_str().map(|x| x.to_owned()),
-                                        ..bridge::FileSystemRepositorySpec::EMPTY
-                                    },
-                                )
-                            }
-                            RepositorySpec::Pm { path } => {
-                                bridge::RepositorySpec::Pm(bridge::PmRepositorySpec {
-                                    path: path.as_os_str().to_str().map(|x| x.to_owned()),
-                                    ..bridge::PmRepositorySpec::EMPTY
-                                })
-                            }
-                        },
+                        spec: x.spec().into(),
                     })
                     .collect::<Vec<_>>();
                 let mut pos = 0;
@@ -407,9 +392,23 @@ impl FidlService for Repo {
         .await
         {
             for (name, entry) in repos.into_iter() {
-                if let Err(x) = self.manager.add_from_config(name.clone(), entry.clone()).await {
-                    log::warn!("While adding repository \"{}\": {:?}", name, x)
-                }
+                let repo_spec = match serde_json::from_value(entry) {
+                    Ok(repo_spec) => repo_spec,
+                    Err(err) => {
+                        log::warn!("failed to parse repository {:?}: {}", name, err);
+                        continue;
+                    }
+                };
+
+                let repo = match Repository::from_repository_spec(&name, repo_spec).await {
+                    Ok(repo) => repo,
+                    Err(err) => {
+                        log::warn!("failed to create repository {:?}: {}", name, err);
+                        continue;
+                    }
+                };
+
+                self.manager.add(Arc::new(repo));
             }
         }
 

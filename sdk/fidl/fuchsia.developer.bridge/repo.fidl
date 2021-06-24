@@ -84,4 +84,8 @@ enum RepositoryError : uint32 {
     REPOSITORY_MANAGER_ERROR = 4;
     /// There was a error from fuchsia.pkg.rewrite.Engine.
     REWRITE_ENGINE_ERROR = 5;
+    /// Unknown repository spec type.
+    UNKNOWN_REPOSITORY_SPEC = 6;
+    /// Repository spec is missing a required field.
+    MISSING_REPOSITORY_SPEC_FIELD = 7;
 };

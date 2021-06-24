@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    super::{manager::RepositorySpec, Error, RepositoryBackend, Resource},
+    super::{Error, RepositoryBackend, Resource},
     anyhow::Result,
     bytes::{Bytes, BytesMut},
+    fidl_fuchsia_developer_bridge_ext::RepositorySpec,
     futures::{
         ready,
         stream::{self, BoxStream},

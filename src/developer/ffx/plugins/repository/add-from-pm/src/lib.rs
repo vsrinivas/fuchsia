@@ -3,21 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
-    ffx_core::ffx_plugin,
-    ffx_repository_add_from_pm_args::AddFromPmCommand,
-    fidl_fuchsia_developer_bridge::{PmRepositorySpec, RepositoriesProxy, RepositorySpec},
+    anyhow::Result, ffx_core::ffx_plugin, ffx_repository_add_from_pm_args::AddFromPmCommand,
+    fidl_fuchsia_developer_bridge::RepositoriesProxy,
+    fidl_fuchsia_developer_bridge_ext::RepositorySpec,
 };
 
 #[ffx_plugin("ffx_repository", RepositoriesProxy = "daemon::service")]
 pub async fn add_from_pm(cmd: AddFromPmCommand, repos: RepositoriesProxy) -> Result<()> {
-    repos.add(
-        &cmd.name,
-        &mut RepositorySpec::Pm(PmRepositorySpec {
-            path: Some(cmd.pm_repo_path.as_os_str().to_str().unwrap().to_owned()),
-            ..PmRepositorySpec::EMPTY
-        }),
-    )?;
+    let repo_spec = RepositorySpec::Pm { path: cmd.pm_repo_path };
+    repos.add(&cmd.name, &mut repo_spec.into())?;
 
     Ok(())
 }

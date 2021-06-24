@@ -5,6 +5,7 @@
 use {
     anyhow::Context,
     bytes::Bytes,
+    fidl_fuchsia_developer_bridge_ext::RepositorySpec,
     fidl_fuchsia_pkg as pkg,
     futures::{
         future::ready,
@@ -37,7 +38,7 @@ pub mod http_repository;
 
 pub use file_system::FileSystemRepository;
 pub use http_repository::package_download;
-pub use manager::{RepositoryManager, RepositorySpec};
+pub use manager::RepositoryManager;
 pub use pm::PmRepository;
 pub use server::{RepositoryServer, RepositoryServerBuilder, LISTEN_PORT};
 
@@ -181,6 +182,20 @@ pub struct Repository {
 }
 
 impl Repository {
+    pub async fn new(
+        name: &str,
+        backend: Box<dyn RepositoryBackend + Send + Sync>,
+    ) -> Result<Self, Error> {
+        let metadata = Self::get_metadata(backend.get_tuf_repo()?).await?;
+        Ok(Self {
+            name: name.to_string(),
+            id: RepositoryId::new(),
+            backend,
+            metadata,
+            drop_handlers: Mutex::new(Vec::new()),
+        })
+    }
+
     /// This should only be used in tests.
     pub fn new_with_metadata(
         name: &str,
@@ -196,6 +211,16 @@ impl Repository {
         }
     }
 
+    /// Create a [Repository] from a [RepositorySpec].
+    pub async fn from_repository_spec(name: &str, spec: RepositorySpec) -> Result<Self, Error> {
+        let backend: Box<dyn RepositoryBackend + Send + Sync> = match spec {
+            RepositorySpec::FileSystem { path } => Box::new(FileSystemRepository::new(path.into())),
+            RepositorySpec::Pm { path } => Box::new(PmRepository::new(path.into())),
+        };
+
+        Self::new(name, backend).await
+    }
+
     pub fn id(&self) -> RepositoryId {
         self.id
     }
@@ -203,20 +228,6 @@ impl Repository {
     /// Stores the given function to be run when the repository is dropped.
     pub fn on_drop<F: FnOnce() + Send + Sync + 'static>(&self, f: F) {
         self.drop_handlers.lock().push(Box::new(f));
-    }
-
-    pub async fn new(
-        name: &str,
-        backend: Box<dyn RepositoryBackend + Send + Sync>,
-    ) -> Result<Self, Error> {
-        let metadata = Self::get_metadata(backend.get_tuf_repo()?).await?;
-        Ok(Self {
-            name: name.to_string(),
-            id: RepositoryId::new(),
-            backend,
-            metadata,
-            drop_handlers: Mutex::new(Vec::new()),
-        })
     }
 
     pub fn name(&self) -> &str {
