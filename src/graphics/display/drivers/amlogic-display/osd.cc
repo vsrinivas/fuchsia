@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <math.h>
 #include <stdint.h>
@@ -80,9 +81,15 @@ constexpr uint32_t kAfbcColorReorderA = 4;
 }  // namespace
 
 void Osd::WaitForRdmaIdle() {
+  zx::time dump_deadline = zx::deadline_after(zx::sec(2));
+  bool dumped = false;
   auto stat_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
   while (rdma_active_ &&
          (stat_reg.RequestLatched() || stat_reg.ChannelDone(kRdmaChannel))) {
+    if (!dumped && zx::clock::get_monotonic() > dump_deadline) {
+      dumped = true;
+      Dump();
+    }
     rdma_active_cnd_.Wait(&rdma_lock_);
     stat_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
   }
