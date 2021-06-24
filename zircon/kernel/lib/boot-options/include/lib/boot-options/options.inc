@@ -560,6 +560,11 @@ When `recovery`, will reboot the system into the recovery partition.
 When `shutdown`, will shutdown the system.
 )""")
 
+DEFINE_OPTION("kernel.root-job.notice", SmallString, root_job_notice, {}, R"""(
+The option allows a notice to be printed when the root job is either terminated, or has no jobs
+ and no processes.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

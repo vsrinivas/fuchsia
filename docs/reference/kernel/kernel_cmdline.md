@@ -286,11 +286,6 @@ jitterentropy, producing output data that looks closer to uniformly random. Note
 that even when set to false, the CPRNG will re-process the samples, so the
 processing inside of jitterentropy is somewhat redundant.
 
-## kernel.root-job.notice=\<string>
-
-The option allows a notice to be printed when the root job is either:
-terminated, or has no jobs and no processes.
-
 ## kernel.serial=\<string>
 
 This controls what serial port is used.  If provided, it overrides the serial

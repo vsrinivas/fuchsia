@@ -581,6 +581,11 @@ When `recovery`, will reboot the system into the recovery partition.
 
 When `shutdown`, will shutdown the system.
 
+### kernel.root-job.notice=\<string>
+
+The option allows a notice to be printed when the root job is either terminated, or has no jobs
+ and no processes.
+
 
 ## Options available only on arm64 machines
 

@@ -9,6 +9,7 @@
 #include <lib/cmdline.h>
 #include <lib/debuglog.h>
 #include <platform.h>
+#include <string.h>
 #include <zircon/boot/crash-reason.h>
 #include <zircon/compiler.h>
 
@@ -18,8 +19,8 @@
 namespace {
 
 __NO_RETURN void Halt() {
-  const char* notice = gCmdline.GetString(kernel_option::kRootJobNotice);
-  if (notice != nullptr) {
+  const char* notice = gBootOptions->root_job_notice.data();
+  if (strlen(notice) != 0) {
     printf("root-job: notice: %s\n", notice);
   }
 
