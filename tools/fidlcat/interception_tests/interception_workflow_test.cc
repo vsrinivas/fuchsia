@@ -492,6 +492,7 @@ void ProcessController::Detach() {
 TEST_F(InterceptionWorkflowTestX64, SyscallsAutomated) {
   std::stringstream actual;
   uint32_t actual_fully_automated = 0;
+  uint32_t actual_cant_be_automated = 0;
   uint32_t actual_partially_automated = 0;
   uint32_t actual_not_automated = 0;
   ProcessController controller(this, session(), loop());
@@ -503,17 +504,25 @@ TEST_F(InterceptionWorkflowTestX64, SyscallsAutomated) {
   SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher();
   for (const auto& syscall : dispatcher->syscalls()) {
     if (syscall.second->fully_automated()) {
-      actual << syscall.second->name() << " fully automated\n";
-      ++actual_fully_automated;
-    } else if ((!syscall.second->fully_automated()) &&
-               syscall.second->invoked_bp_instructions().size() +
-                       syscall.second->exit_bp_instructions().size() >
-                   0) {
-      actual << syscall.second->name() << " partially automated\n";
-      ++actual_partially_automated;
+      if (syscall.second->invoked_bp_instructions().size() +
+              syscall.second->exit_bp_instructions().size() >
+          0) {
+        actual << syscall.second->name() << " fully automated\n";
+        ++actual_fully_automated;
+      } else {
+        actual << syscall.second->name() << " doesn't need automation\n";
+        ++actual_cant_be_automated;
+      }
     } else {
-      actual << syscall.second->name() << " not automated\n";
-      ++actual_not_automated;
+      if (syscall.second->invoked_bp_instructions().size() +
+              syscall.second->exit_bp_instructions().size() >
+          0) {
+        actual << syscall.second->name() << " partially automated\n";
+        ++actual_partially_automated;
+      } else {
+        actual << syscall.second->name() << " not automated\n";
+        ++actual_not_automated;
+      }
     }
   }
   std::string expected =
@@ -521,8 +530,8 @@ TEST_F(InterceptionWorkflowTestX64, SyscallsAutomated) {
       "processargs_extract_handles not automated\n"
       "zx_bti_create fully automated\n"
       "zx_bti_pin partially automated\n"
-      "zx_bti_release_quarantine fully automated\n"
-      "zx_cache_flush fully automated\n"
+      "zx_bti_release_quarantine doesn't need automation\n"
+      "zx_cache_flush doesn't need automation\n"
       "zx_channel_call partially automated\n"
       "zx_channel_call_etc partially automated\n"
       "zx_channel_create fully automated\n"
@@ -530,12 +539,12 @@ TEST_F(InterceptionWorkflowTestX64, SyscallsAutomated) {
       "zx_channel_read_etc partially automated\n"
       "zx_channel_write not automated\n"
       "zx_channel_write_etc not automated\n"
-      "zx_clock_adjust fully automated\n"
+      "zx_clock_adjust doesn't need automation\n"
       "zx_clock_get fully automated\n"
-      "zx_clock_get_monotonic fully automated\n"
+      "zx_clock_get_monotonic doesn't need automation\n"
       "zx_cprng_add_entropy not automated\n"
       "zx_cprng_draw not automated\n"
-      "zx_deadline_after fully automated\n"
+      "zx_deadline_after doesn't need automation\n"
       "zx_debug_read not automated\n"
       "zx_debug_send_command not automated\n"
       "zx_debug_write not automated\n"
@@ -550,130 +559,132 @@ TEST_F(InterceptionWorkflowTestX64, SyscallsAutomated) {
       "zx_fifo_read not automated\n"
       "zx_fifo_write not automated\n"
       "zx_framebuffer_get_info fully automated\n"
-      "zx_framebuffer_set_range fully automated\n"
+      "zx_framebuffer_set_range doesn't need automation\n"
       "zx_futex_get_owner fully automated\n"
-      "zx_futex_requeue fully automated\n"
-      "zx_futex_requeue_single_owner fully automated\n"
-      "zx_futex_wait fully automated\n"
-      "zx_futex_wake fully automated\n"
-      "zx_futex_wake_handle_close_thread_exit fully automated\n"
-      "zx_futex_wake_single_owner fully automated\n"
+      "zx_futex_requeue doesn't need automation\n"
+      "zx_futex_requeue_single_owner doesn't need automation\n"
+      "zx_futex_wait doesn't need automation\n"
+      "zx_futex_wake doesn't need automation\n"
+      "zx_futex_wake_handle_close_thread_exit doesn't need automation\n"
+      "zx_futex_wake_single_owner doesn't need automation\n"
       "zx_guest_create fully automated\n"
-      "zx_guest_set_trap fully automated\n"
-      "zx_handle_close fully automated\n"
+      "zx_guest_set_trap doesn't need automation\n"
+      "zx_handle_close doesn't need automation\n"
       "zx_handle_close_many not automated\n"
       "zx_handle_duplicate fully automated\n"
       "zx_handle_replace fully automated\n"
-      "zx_interrupt_ack fully automated\n"
-      "zx_interrupt_bind fully automated\n"
-      "zx_interrupt_bind_vcpu fully automated\n"
+      "zx_interrupt_ack doesn't need automation\n"
+      "zx_interrupt_bind doesn't need automation\n"
+      "zx_interrupt_bind_vcpu doesn't need automation\n"
       "zx_interrupt_create fully automated\n"
-      "zx_interrupt_destroy fully automated\n"
-      "zx_interrupt_trigger fully automated\n"
+      "zx_interrupt_destroy doesn't need automation\n"
+      "zx_interrupt_trigger doesn't need automation\n"
       "zx_interrupt_wait fully automated\n"
       "zx_iommu_create partially automated\n"
-      "zx_ioports_release fully automated\n"
-      "zx_ioports_request fully automated\n"
+      "zx_ioports_release doesn't need automation\n"
+      "zx_ioports_request doesn't need automation\n"
       "zx_job_create fully automated\n"
       "zx_job_set_policy not automated\n"
       "zx_ktrace_control not automated\n"
       "zx_ktrace_read not automated\n"
-      "zx_ktrace_write fully automated\n"
+      "zx_ktrace_write doesn't need automation\n"
       "zx_mtrace_control not automated\n"
-      "zx_nanosleep fully automated\n"
+      "zx_nanosleep doesn't need automation\n"
       "zx_object_get_child fully automated\n"
       "zx_object_get_info not automated\n"
       "zx_object_get_property not automated\n"
-      "zx_object_set_profile fully automated\n"
+      "zx_object_set_profile doesn't need automation\n"
       "zx_object_set_property not automated\n"
-      "zx_object_signal fully automated\n"
-      "zx_object_signal_peer fully automated\n"
-      "zx_object_wait_async fully automated\n"
+      "zx_object_signal doesn't need automation\n"
+      "zx_object_signal_peer doesn't need automation\n"
+      "zx_object_wait_async doesn't need automation\n"
       "zx_object_wait_many not automated\n"
       "zx_object_wait_one fully automated\n"
       "zx_pager_create fully automated\n"
       "zx_pager_create_vmo fully automated\n"
-      "zx_pager_detach_vmo fully automated\n"
-      "zx_pager_supply_pages fully automated\n"
+      "zx_pager_detach_vmo doesn't need automation\n"
+      "zx_pager_supply_pages doesn't need automation\n"
       "zx_pc_firmware_tables fully automated\n"
-      "zx_pci_add_subtract_io_range fully automated\n"
+      "zx_pci_add_subtract_io_range doesn't need automation\n"
       "zx_pci_cfg_pio_rw not automated\n"
       "zx_pci_config_read fully automated\n"
-      "zx_pci_config_write fully automated\n"
-      "zx_pci_enable_bus_master fully automated\n"
+      "zx_pci_config_write doesn't need automation\n"
+      "zx_pci_enable_bus_master doesn't need automation\n"
       "zx_pci_get_bar partially automated\n"
       "zx_pci_get_nth_device partially automated\n"
       "zx_pci_init not automated\n"
       "zx_pci_map_interrupt fully automated\n"
       "zx_pci_query_irq_mode fully automated\n"
-      "zx_pci_reset_device fully automated\n"
-      "zx_pci_set_irq_mode fully automated\n"
-      "zx_pmt_unpin fully automated\n"
-      "zx_port_cancel fully automated\n"
+      "zx_pci_reset_device doesn't need automation\n"
+      "zx_pci_set_irq_mode doesn't need automation\n"
+      "zx_pmt_unpin doesn't need automation\n"
+      "zx_port_cancel doesn't need automation\n"
       "zx_port_create fully automated\n"
       "zx_port_queue not automated\n"
       "zx_port_wait not automated\n"
       "zx_process_create partially automated\n"
-      "zx_process_exit fully automated\n"
+      "zx_process_exit doesn't need automation\n"
       "zx_process_read_memory not automated\n"
-      "zx_process_start fully automated\n"
+      "zx_process_start doesn't need automation\n"
       "zx_process_write_memory partially automated\n"
       "zx_profile_create partially automated\n"
       "zx_resource_create partially automated\n"
       "zx_smc_call not automated\n"
       "zx_socket_create fully automated\n"
       "zx_socket_read not automated\n"
-      "zx_socket_shutdown fully automated\n"
+      "zx_socket_shutdown doesn't need automation\n"
       "zx_socket_write not automated\n"
-      "zx_system_get_dcache_line_size fully automated\n"
+      "zx_system_get_dcache_line_size doesn't need automation\n"
       "zx_system_get_event fully automated\n"
       "zx_system_get_features fully automated\n"
-      "zx_system_get_num_cpus fully automated\n"
-      "zx_system_get_physmem fully automated\n"
+      "zx_system_get_num_cpus doesn't need automation\n"
+      "zx_system_get_physmem doesn't need automation\n"
       "zx_system_get_version not automated\n"
-      "zx_system_mexec fully automated\n"
+      "zx_system_mexec doesn't need automation\n"
       "zx_system_mexec_payload_get not automated\n"
       "zx_system_powerctl not automated\n"
       "zx_task_create_exception_channel fully automated\n"
-      "zx_task_kill fully automated\n"
+      "zx_task_kill doesn't need automation\n"
       "zx_task_suspend fully automated\n"
       "zx_task_suspend_token fully automated\n"
       "zx_thread_create partially automated\n"
-      "zx_thread_exit fully automated\n"
+      "zx_thread_exit doesn't need automation\n"
       "zx_thread_read_state not automated\n"
-      "zx_thread_start fully automated\n"
+      "zx_thread_start doesn't need automation\n"
       "zx_thread_write_state not automated\n"
-      "zx_ticks_get fully automated\n"
-      "zx_ticks_per_second fully automated\n"
-      "zx_timer_cancel fully automated\n"
+      "zx_ticks_get doesn't need automation\n"
+      "zx_ticks_per_second doesn't need automation\n"
+      "zx_timer_cancel doesn't need automation\n"
       "zx_timer_create fully automated\n"
-      "zx_timer_set fully automated\n"
+      "zx_timer_set doesn't need automation\n"
       "zx_vcpu_create fully automated\n"
-      "zx_vcpu_interrupt fully automated\n"
+      "zx_vcpu_interrupt doesn't need automation\n"
       "zx_vcpu_read_state not automated\n"
       "zx_vcpu_resume not automated\n"
       "zx_vcpu_write_state not automated\n"
       "zx_vmar_allocate fully automated\n"
-      "zx_vmar_destroy fully automated\n"
+      "zx_vmar_destroy doesn't need automation\n"
       "zx_vmar_map fully automated\n"
-      "zx_vmar_protect fully automated\n"
-      "zx_vmar_unmap fully automated\n"
-      "zx_vmar_unmap_handle_close_thread_exit fully automated\n"
+      "zx_vmar_protect doesn't need automation\n"
+      "zx_vmar_unmap doesn't need automation\n"
+      "zx_vmar_unmap_handle_close_thread_exit doesn't need automation\n"
       "zx_vmo_create fully automated\n"
       "zx_vmo_create_child fully automated\n"
       "zx_vmo_create_contiguous fully automated\n"
       "zx_vmo_create_physical fully automated\n"
       "zx_vmo_get_size fully automated\n"
-      "zx_vmo_op_range fully automated\n"
+      "zx_vmo_op_range doesn't need automation\n"
       "zx_vmo_read not automated\n"
       "zx_vmo_replace_as_executable fully automated\n"
-      "zx_vmo_set_cache_policy fully automated\n"
-      "zx_vmo_set_size fully automated\n"
+      "zx_vmo_set_cache_policy doesn't need automation\n"
+      "zx_vmo_set_size doesn't need automation\n"
       "zx_vmo_write not automated\n";
-  uint32_t expected_fully_automated = 100;
+  uint32_t expected_fully_automated = 42;
+  uint32_t expected_cant_be_automated = 58;
   uint32_t expected_partially_automated = 13;
   uint32_t expected_not_automated = 40;
   EXPECT_EQ(actual_fully_automated, expected_fully_automated);
+  EXPECT_EQ(actual_cant_be_automated, expected_cant_be_automated);
   EXPECT_EQ(actual_partially_automated, expected_partially_automated);
   EXPECT_EQ(actual_not_automated, expected_not_automated);
   ASSERT_EQ(actual.str(), expected);
