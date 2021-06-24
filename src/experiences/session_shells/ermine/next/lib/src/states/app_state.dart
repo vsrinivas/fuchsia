@@ -55,6 +55,7 @@ abstract class AppState with Store {
   Action get restart;
   Action get shutdown;
   Action get launchFeedback;
+  Action get launchLicense;
 
   factory AppState.fromEnv() {
     return AppStateImpl(

@@ -185,10 +185,14 @@ class _ListSettings extends StatelessWidget {
                 ),
                 // Open Source
                 ListTile(
-                  enabled: false,
+                  enabled: true,
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
                   leading: Icon(Icons.info_outline),
                   title: Text(Strings.openSource),
+                  trailing: OutlinedButton(
+                    onPressed: appState.launchLicense,
+                    child: Text(Strings.open.toUpperCase()),
+                  ),
                 ),
               ],
             ),

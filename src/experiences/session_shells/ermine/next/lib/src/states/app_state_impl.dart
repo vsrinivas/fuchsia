@@ -36,6 +36,8 @@ class AppStateImpl with Disposable implements AppState {
 
   static const kFeedbackUrl =
       'fuchsia-pkg://fuchsia.com/feedback_settings#meta/feedback_settings.cmx';
+  static const kLicenseUrl =
+      'fuchsia-pkg://fuchsia.com/license_settings#meta/license_settings.cmx';
 
   AppStateImpl({
     required this.startupService,
@@ -220,6 +222,12 @@ class AppStateImpl with Disposable implements AppState {
   @override
   late final Action launchFeedback = () {
     launchService.launch(Strings.feedback, kFeedbackUrl);
+  }.asAction();
+
+  @override
+  late final Action launchLicense = () {
+    launchService.launch(
+        '${Strings.openSource} ${Strings.license}', kLicenseUrl);
   }.asAction();
 
   @override
