@@ -172,6 +172,11 @@ protocol Primary {
     /// Buffers will also be implicitly unmapped when released.
     UnmapBufferGpu(zx.koid buffer_id, uint64 gpu_va);
 
+    /// DEPRECATED and replaced by BufferOp.POPULATE_TABLES. Ensures that `page_count` pages
+    /// starting at `page_offset` from the beginning of the buffer are backed by physical memory.
+    [Deprecated]
+    CommitBuffer(zx.koid buffer_id, uint64 page_offset, uint64 page_count);
+
     /// Perform an operation on a range of the buffer, starting at `start_bytes` and `length` bytes
     /// long.
     BufferRangeOp(zx.koid buffer_id, BufferOp op, uint64 start_bytes, uint64 length);
