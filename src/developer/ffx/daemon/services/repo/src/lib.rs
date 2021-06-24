@@ -9,7 +9,6 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_bridge_ext::RepositorySpec,
-    fidl_fuchsia_net::IpAddress,
     fidl_fuchsia_pkg::RepositoryManagerMarker,
     fidl_fuchsia_pkg_rewrite::{EngineMarker, LiteralRule, Rule},
     fuchsia_async::{self as fasync, futures::StreamExt as _},
@@ -235,17 +234,6 @@ impl FidlService for Repo {
 
     async fn handle(&self, cx: &Context, req: bridge::RepositoriesRequest) -> Result<()> {
         match req {
-            bridge::RepositoriesRequest::Serve { addr, port, responder } => {
-                let addr = match addr {
-                    IpAddress::Ipv4(addr) => net::IpAddr::V4(addr.addr.into()),
-                    IpAddress::Ipv6(addr) => net::IpAddr::V6(addr.addr.into()),
-                };
-
-                let addr = net::SocketAddr::new(addr, port);
-
-                responder.send(self.start_server(addr).await)?;
-                Ok(())
-            }
             bridge::RepositoriesRequest::Add { name, repository, responder } => {
                 responder.send(&mut self.add_repository(name, repository).await)?;
                 Ok(())

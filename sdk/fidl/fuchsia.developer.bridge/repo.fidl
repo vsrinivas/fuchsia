@@ -5,7 +5,6 @@ deprecated_syntax;
 library fuchsia.developer.bridge;
 
 using fuchsia.device;
-using fuchsia.net;
 
 const uint64 MAX_NAME = 255;
 const uint64 MAX_PATH = 4095;
@@ -32,10 +31,6 @@ table PmRepositorySpec {
 
 [Discoverable]
 protocol Repositories {
-    // FIXME(76719): This will change semantics or be removed when service auto-starting lands
-    /// Starts the server listening on the given port.
-    Serve(fuchsia.net.IpAddress addr, uint16 port) -> (bool success);
-
     /// Add a repository named `name` that has the following [RepositorySpec].
     Add(string:MAX_NAME name, RepositorySpec repository) -> () error RepositoryError;
 

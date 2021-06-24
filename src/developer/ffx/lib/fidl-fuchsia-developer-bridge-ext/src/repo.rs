@@ -23,7 +23,8 @@ impl TryFrom<fidl::RepositorySpec> for RepositorySpec {
     fn try_from(repo: fidl::RepositorySpec) -> Result<Self, RepositoryError> {
         match repo {
             fidl::RepositorySpec::FileSystem(filesystem_spec) => {
-                let path = filesystem_spec.path.ok_or(RepositoryError::MissingRepositorySpecField)?;
+                let path =
+                    filesystem_spec.path.ok_or(RepositoryError::MissingRepositorySpecField)?;
                 Ok(RepositorySpec::FileSystem { path: path.into() })
             }
             fidl::RepositorySpec::Pm(pm_spec) => {
@@ -99,7 +100,9 @@ impl From<fidl::RepositoryError> for RepositoryError {
             }
             fidl::RepositoryError::RewriteEngineError => RepositoryError::RewriteEngineError,
             fidl::RepositoryError::UnknownRepositorySpec => RepositoryError::UnknownRepositorySpec,
-            fidl::RepositoryError::MissingRepositorySpecField => RepositoryError::MissingRepositorySpecField,
+            fidl::RepositoryError::MissingRepositorySpecField => {
+                RepositoryError::MissingRepositorySpecField
+            }
             fidl::RepositoryError::IoError => RepositoryError::IoError,
             fidl::RepositoryError::InternalError => RepositoryError::InternalError,
         }
@@ -119,7 +122,9 @@ impl From<RepositoryError> for fidl::RepositoryError {
             }
             RepositoryError::RewriteEngineError => fidl::RepositoryError::RewriteEngineError,
             RepositoryError::UnknownRepositorySpec => fidl::RepositoryError::UnknownRepositorySpec,
-            RepositoryError::MissingRepositorySpecField => fidl::RepositoryError::MissingRepositorySpecField,
+            RepositoryError::MissingRepositorySpecField => {
+                fidl::RepositoryError::MissingRepositorySpecField
+            }
             RepositoryError::IoError => fidl::RepositoryError::IoError,
             RepositoryError::InternalError => fidl::RepositoryError::InternalError,
         }

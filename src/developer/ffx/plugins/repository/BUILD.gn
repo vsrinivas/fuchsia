@@ -13,7 +13,6 @@ ffx_plugin("ffx_repository") {
     "add-from-pm:ffx_repository_add_from_pm",
     "list:ffx_repository_list",
     "remove:ffx_repository_remove",
-    "serve:ffx_repository_serve",
     "target:ffx_repository_target",
   ]
 
