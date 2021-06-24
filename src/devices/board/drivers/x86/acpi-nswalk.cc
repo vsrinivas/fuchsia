@@ -52,17 +52,6 @@ const std::string_view hid_from_acpi_devinfo(const ACPI_DEVICE_INFO& info) {
   return std::string_view{};
 }
 
-const std::string_view cid_from_acpi_devinfo(const ACPI_DEVICE_INFO& info) {
-  if ((info.Valid & ACPI_VALID_CID) && (info.CompatibleIdList.Count > 0) &&
-      (info.CompatibleIdList.Ids[0].Length > 0)) {
-    // ACPICA string lengths include the NULL terminator.
-    return std::string_view{info.CompatibleIdList.Ids[0].String,
-                            info.CompatibleIdList.Ids[0].Length - 1};
-  }
-
-  return std::string_view{};
-}
-
 void acpi_apply_workarounds(acpi::Acpi* acpi, ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
   // Slate workaround: Turn on the HID controller.
   if (!memcmp(&info->Name, "I2C0", 4)) {
@@ -90,24 +79,6 @@ void acpi_apply_workarounds(acpi::Acpi* acpi, ACPI_HANDLE object, ACPI_DEVICE_IN
     if (acpi_status.is_error()) {
       zxlogf(ERROR, "acpi: acpi error in I2C1._PS0: 0x%x", acpi_status.error_value());
     }
-  }
-}
-
-// A small lambda helper we will use in order to publish generic ACPI devices.
-zx_device_t* PublishAcpiDevice(zx_device_t* acpi_root, zx_device_t* platform_bus, const char* name,
-                               ACPI_HANDLE handle, ACPI_DEVICE_INFO* info) {
-  auto device = std::make_unique<acpi::Device>(acpi_root, handle, platform_bus);
-  std::array<zx_device_prop_t, 4> props;
-  if (zx_status_t status = device->DdkAdd(name, get_device_add_args(name, info, &props));
-      status != ZX_OK) {
-    zxlogf(ERROR, "acpi: error %d in DdkAdd, parent=%s(%p)", status, device_get_name(acpi_root),
-           acpi_root);
-    return nullptr;
-  } else {
-    zxlogf(INFO, "acpi: published device %s(%p), parent=%s(%p), handle=%p", name, device.get(),
-           device_get_name(acpi_root), acpi_root, device->acpi_handle());
-    // device_add takes ownership of device, but only on success.
-    return device.release()->zxdev();
   }
 }
 
@@ -397,7 +368,6 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
         // Extract pointers to the hardware ID and the compatible ID if present.
         // If there is no hardware ID, just skip the device.
         const std::string_view hid = hid_from_acpi_devinfo(*info);
-        const std::string_view cid = cid_from_acpi_devinfo(*info);
         if (hid.empty()) {
           return acpi::ok();
         }
@@ -427,16 +397,6 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
           cros_ec_lpc_init(acpi_root, object);
         } else if (hid == DPTF_THERMAL_HID_STRING) {
           thermal_init(acpi_root, info.get(), object);
-        } else if ((hid == I8042_HID_STRING) || (cid == I8042_HID_STRING)) {
-          PublishAcpiDevice(acpi_root, platform_bus, "i8042", object, info.get());
-        } else if ((hid == RTC_HID_STRING) || (cid == RTC_HID_STRING)) {
-          PublishAcpiDevice(acpi_root, platform_bus, "rtc", object, info.get());
-        } else if (hid == GOLDFISH_PIPE_HID_STRING) {
-          PublishAcpiDevice(acpi_root, platform_bus, "goldfish", object, info.get());
-        } else if (hid == GOLDFISH_SYNC_HID_STRING) {
-          PublishAcpiDevice(acpi_root, platform_bus, "goldfish-sync", object, info.get());
-        } else if (hid == SERIAL_HID_STRING) {
-          PublishAcpiDevice(acpi_root, platform_bus, "serial", object, info.get());
         }
         return acpi::ok();
       });

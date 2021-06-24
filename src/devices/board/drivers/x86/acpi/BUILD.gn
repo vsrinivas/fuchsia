@@ -18,6 +18,7 @@ shared_deps = [
   "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
   "//src/devices/lib/iommu",
+  "//src/lib/ddk:ddk-deprecated-binding-headers",
   "//third_party/acpica",
   "//zircon/system/ulib/zxc",
 ]

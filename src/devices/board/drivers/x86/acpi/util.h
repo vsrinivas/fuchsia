@@ -5,11 +5,34 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_UTIL_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_UTIL_H_
 
+#include <algorithm>
 #include <memory>
 
 #include <acpica/acpi.h>
 
 namespace acpi {
+namespace internal {
+
+static inline uint32_t ExtractPnpIdWord(const ACPI_PNP_DEVICE_ID& id, size_t offset) {
+  auto buf = reinterpret_cast<const unsigned char*>(id.String);
+  auto buf_len = static_cast<size_t>(id.Length);
+
+  if (offset >= buf_len) {
+    return 0;
+  }
+
+  size_t i;
+  size_t avail = buf_len - offset;
+  uint32_t ret = buf[offset];
+  for (i = 1; i < std::min(avail, sizeof(uint32_t)); ++i) {
+    ret = (ret << 8) | buf[offset + i];
+  }
+  ret <<= (sizeof(uint32_t) - i) * 8;
+
+  return ret;
+}
+
+}  // namespace internal
 
 // AcpiBuffer provides RAII memory management for ACPI_BUFFERs as well as range
 // based iterators for a specified ACPI_BUFFER type T.

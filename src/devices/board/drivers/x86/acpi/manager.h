@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_MANAGER_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_MANAGER_H_
 
+#include <lib/ddk/driver.h>
 #include <lib/zx/status.h>
 
 #include <string>
@@ -29,6 +30,50 @@ enum BusType {
 using PciTopo = uint64_t;
 // TODO(fxbug.dev/78198): support more child bus types.
 using DeviceChildData = std::variant<PciTopo>;
+
+// A helper class that takes ownership of the string value of a |zx_device_str_prop_t|.
+struct OwnedStringProp : zx_device_str_prop_t {
+  OwnedStringProp(const char* key, const char* value) : value_(value) {
+    this->key = key;
+    property_value = str_prop_str_val(value_.data());
+  }
+
+  OwnedStringProp(OwnedStringProp& other) : zx_device_str_prop_t(other), value_(other.value_) {
+    if (property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
+      property_value.value.str_val = value_.data();
+    }
+  }
+
+  OwnedStringProp(OwnedStringProp&& other) noexcept
+      : zx_device_str_prop_t(other), value_(std::move(other.value_)) {
+    if (property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
+      property_value.value.str_val = value_.data();
+    }
+  }
+
+  OwnedStringProp& operator=(const OwnedStringProp& other) {
+    key = other.key;
+    property_value = other.property_value;
+    value_ = other.value_;
+    if (property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
+      property_value.value.str_val = value_.data();
+    }
+    return *this;
+  }
+
+  OwnedStringProp& operator=(OwnedStringProp&& other) noexcept {
+    key = other.key;
+    property_value = other.property_value;
+    value_ = std::move(other.value_);
+    if (property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
+      property_value.value.str_val = value_.data();
+    }
+    return *this;
+  }
+
+ private:
+  std::string value_;
+};
 
 // Represents a device that's been discovered inside the ACPI tree.
 class DeviceBuilder {
@@ -59,6 +104,10 @@ class DeviceBuilder {
 
   BusType GetBusType() { return bus_type_; }
 
+  // For unit test use only.
+  std::vector<zx_device_prop_t>& GetDevProps() { return dev_props_; }
+  std::vector<OwnedStringProp>& GetStrProps() { return str_props_; }
+
  private:
   // Information about the device to be published.
   std::string name_;
@@ -68,6 +117,8 @@ class DeviceBuilder {
   zx_device_t* zx_device_ = nullptr;
 
   std::vector<DeviceChildData> bus_children_;
+  std::vector<OwnedStringProp> str_props_;
+  std::vector<zx_device_prop_t> dev_props_;
 };
 
 // Class that manages ACPI device discovery and publishing.

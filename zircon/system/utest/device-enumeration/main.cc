@@ -572,8 +572,8 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
 
       "sys/platform/acpi",
       "sys/platform/acpi/acpi-pwrbtn",
-      "sys/platform/acpi/i8042/i8042-keyboard",
-      "sys/platform/acpi/i8042/i8042-mouse",
+      "sys/platform/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/i8042-keyboard",
+      "sys/platform/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/i8042-mouse",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -588,14 +588,14 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
       "pci-00:02.0/virtio-input",
       "pci-00:0b.0/goldfish-address-space",
 
-      "sys/platform/acpi/goldfish",
+      "sys/platform/acpi/acpi-_SB_/acpi-GFPP",
       // Verify goldfish pipe root device created.
-      "sys/platform/acpi/goldfish/goldfish-pipe",
+      "sys/platform/acpi/acpi-_SB_/acpi-GFPP/goldfish-pipe",
       // Verify goldfish pipe child devices created.
-      "sys/platform/acpi/goldfish/goldfish-pipe/goldfish-pipe-control",
-      "sys/platform/acpi/goldfish/goldfish-pipe/goldfish-pipe-sensor",
-      "sys/platform/acpi/goldfish-sync",
-      "sys/platform/acpi/goldfish-sync/goldfish-sync",
+      "sys/platform/acpi/acpi-_SB_/acpi-GFPP/goldfish-pipe/goldfish-pipe-control",
+      "sys/platform/acpi/acpi-_SB_/acpi-GFPP/goldfish-pipe/goldfish-pipe-sensor",
+      "sys/platform/acpi/acpi-_SB_/acpi-GFSK",
+      "sys/platform/acpi/acpi-_SB_/acpi-GFSK/goldfish-sync",
 
       "goldfish-control-2",
       "goldfish-control-2/goldfish-control",

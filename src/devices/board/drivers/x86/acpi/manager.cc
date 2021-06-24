@@ -11,6 +11,7 @@
 #include <acpica/acpi.h>
 
 #include "src/devices/board/drivers/x86/acpi/acpi.h"
+#include "src/devices/board/drivers/x86/acpi/util.h"
 
 namespace acpi {
 
@@ -19,17 +20,61 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, InferBusTypeCallba
     // Skip the root device.
     return acpi::ok();
   }
+
+  // TODO(fxbug.dev/78565): Handle other resources like serial buses.
+  auto result = acpi->WalkResources(
+      handle_, "_CRS", [callback = std::move(callback)](ACPI_RESOURCE* res) { return acpi::ok(); });
+  if (result.is_error() && result.zx_status_value() != ZX_ERR_NOT_FOUND) {
+    return result.take_error();
+  }
+
+  auto info = acpi->GetObjectInfo(handle_);
+  if (info.is_error()) {
+    zxlogf(WARNING, "Failed to get object info: %d", info.status_value());
+    return info.take_error();
+  }
+
+  // PCI is special, and PCI devices don't have an explicit resource. Instead, we need to check
+  // _ADR for PCI addressing info.
   if (parent_ && parent_->bus_type_ == BusType::kPci) {
-    // Tell parent about our _ADR.
-    auto info = acpi->GetObjectInfo(handle_);
     if (info->Valid & ACPI_VALID_ADR) {
       callback(parent_->handle_, BusType::kPci, DeviceChildData(info->Address));
     }
   }
 
-  // TODO(fxbug.dev/78565): Handle other resources like serial buses.
-  auto result = acpi->WalkResources(
-      handle_, "_CRS", [callback = std::move(callback)](ACPI_RESOURCE* res) { return acpi::ok(); });
+  // Add HID and CID properties, if present.
+  if (info->Valid & ACPI_VALID_HID) {
+    str_props_.emplace_back(OwnedStringProp("acpi.hid", info->HardwareId.String));
+
+    // Only publish HID{0_3,4_7} props if the HID (excluding NULL terminator) fits in 8 bytes.
+    if (info->HardwareId.Length - 1 <= sizeof(uint64_t)) {
+      dev_props_.emplace_back(zx_device_prop_t{
+          .id = BIND_ACPI_HID_0_3,
+          .value = internal::ExtractPnpIdWord(info->HardwareId, 0),
+      });
+      dev_props_.emplace_back(zx_device_prop_t{
+          .id = BIND_ACPI_HID_4_7,
+          .value = internal::ExtractPnpIdWord(info->HardwareId, 4),
+      });
+    }
+  }
+
+  if (info->Valid & ACPI_VALID_CID && info->CompatibleIdList.Count > 0) {
+    auto& first = info->CompatibleIdList.Ids[0];
+    // We only expose the first CID.
+    // Only publish CID{0_3,4_7} props if the CID (excluding NULL terminator) fits in 8 bytes.
+    if (first.Length - 1 <= sizeof(uint64_t)) {
+      dev_props_.emplace_back(zx_device_prop_t{
+          .id = BIND_ACPI_CID_0_3,
+          .value = internal::ExtractPnpIdWord(first, 0),
+      });
+      dev_props_.emplace_back(zx_device_prop_t{
+          .id = BIND_ACPI_CID_4_7,
+          .value = internal::ExtractPnpIdWord(first, 4),
+      });
+    }
+  }
+
   if (result.status_value() == AE_NOT_FOUND) {
     return acpi::ok();
   }
@@ -48,8 +93,19 @@ zx::status<zx_device_t*> DeviceBuilder::Build(zx_device_t* platform_bus) {
   std::unique_ptr<Device> device =
       std::make_unique<Device>(parent_->zx_device_, handle_, platform_bus);
 
+  // Narrow our custom type down to zx_device_str_prop_t.
+  // Any strings in zx_device_str_prop_t will still point at their equivalents
+  // in the original str_props_ array.
+  std::vector<zx_device_str_prop_t> str_props_for_ddkadd;
+  for (auto& str_prop : str_props_) {
+    str_props_for_ddkadd.emplace_back(str_prop);
+  }
   device_add_args_t args = {
       .name = name_.data(),
+      .props = dev_props_.data(),
+      .prop_count = static_cast<uint32_t>(dev_props_.size()),
+      .str_props = str_props_for_ddkadd.data(),
+      .str_prop_count = static_cast<uint32_t>(str_props_for_ddkadd.size()),
   };
 
   zx_status_t result = device->DdkAdd(name_.data(), args);
