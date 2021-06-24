@@ -5,6 +5,7 @@
 import("//build/components/fuchsia_test_package.gni")
 import("//build/dart/dart_library.gni")
 import("//build/dart/dart_test_component.gni")
+import("//build/testing/host_test_data.gni")
 import("//build/testing/test_spec.gni")
 
 dart_library("zircon") {
@@ -55,7 +56,7 @@ fuchsia_test_package("zircon_unittests") {
 
 if (is_linux || is_mac) {
   _test_data_dir = "$root_out_dir/test_data/extract_zircon_constants"
-  copy("extract_zircon_constants_data") {
+  host_test_data("extract_zircon_constants_data") {
     sources = [
       "//prebuilt/third_party/dart/$host_os-$host_cpu/bin/dart",
       "//prebuilt/third_party/dart/$host_os-$host_cpu/bin/dartfmt",
@@ -67,26 +68,11 @@ if (is_linux || is_mac) {
     ]
 
     outputs = [ "$_test_data_dir/{{source_file_part}}" ]
-
-    metadata = {
-      test_runtime_deps = [
-        "$_test_data_dir/constants.dart",
-        "$_test_data_dir/dart",
-        "$_test_data_dir/dartfmt",
-        "$_test_data_dir/errors.h",
-        "$_test_data_dir/extract-zircon-constants.py",
-        "$_test_data_dir/rights.h",
-        "$_test_data_dir/types.h",
-      ]
-    }
   }
 
-  copy("extract_zircon_constants_snapshot_data") {
+  host_test_data("extract_zircon_constants_snapshot_data") {
     sources = [ "//prebuilt/third_party/dart/$host_os-$host_cpu/bin/snapshots/dartfmt.dart.snapshot" ]
-    outputs = [ "$_test_data_dir/snapshots/dartfmt.dart.snapshot" ]
-    metadata = {
-      test_runtime_deps = outputs
-    }
+    outputs = [ "$_test_data_dir/snapshots/{{source_file_part}}" ]
   }
 
   _test = "$root_out_dir/test_extract_zircon_constants"
