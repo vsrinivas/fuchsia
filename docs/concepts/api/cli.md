@@ -68,7 +68,7 @@ may be separate people. Some categories are:
 Consider which users may use a tool and cater the tool to the audience.
 
 Tools may have different integration expectations. For example, a developer
-doing mod development may expect tools to integrate with their Integrated
+doing component development may expect tools to integrate with their Integrated
 Development Environment (IDE), while a build integration tool may be called from
 a script.
 
