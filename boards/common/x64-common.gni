@@ -20,7 +20,6 @@ _bootfs_deps =
       "//src/devices/block/drivers/sdhci",
       "//src/devices/board/drivers/x86:platform-bus-x86",
       "//src/devices/bus/drivers/pci:bus-pci",
-      "//src/devices/bus/drivers/pci:bus-pci.proxy",
       "//src/devices/i2c/drivers/intel-i2c",
       "//src/devices/rtc/drivers/intel-rtc",
       "//src/devices/serial/drivers/uart16550",

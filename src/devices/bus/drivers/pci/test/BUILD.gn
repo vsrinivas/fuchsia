@@ -12,8 +12,6 @@ import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 # pci-driver-test: A binary to run the driver tests
 # pci_fake.so: A fake bus driver loaded by pci-driver-test to provide a bind
 #              point for pci_test.so
-# pci_fake.proxy.so: The corresponding proxy driver that binds to pci_fake.so
-#                    and loads pci_test.so
 # pci_test.so: A zxtest driver to test the PCI protocol
 test("pci-unit") {
   output_name = "pci-unit-test"
@@ -84,17 +82,6 @@ driver_module("pci_fake") {
   ]
 }
 
-driver_module("pci_fake.proxy") {
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  deps = [ "//src/devices/bus/drivers/pci:pci.proxy" ]
-}
-
 driver_module("pci_protocol_test_driver") {
   configs += [
     "//build/config:all_source",
@@ -129,7 +116,6 @@ isolated_devmgr_unittest_package("pci-driver-test") {
   deps = [
     ":pci-driver",
     ":pci_fake",
-    ":pci_fake.proxy",
     ":pci_protocol_test_driver",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/pci",

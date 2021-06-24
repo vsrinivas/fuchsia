@@ -6,9 +6,7 @@ group("drivers") {
   testonly = true
   deps = [
     "drivers/pci:bus-pci",
-    "drivers/pci:bus-pci.proxy",
     "drivers/pci/test:pci_fake",
-    "drivers/pci/test:pci_fake.proxy",
     "drivers/pci/test:pci_protocol_test_driver",
     "drivers/platform:platform-bus",
     "drivers/platform:platform-bus.proxy",

@@ -79,7 +79,6 @@ assemble_system("guest") {
     "//src/devices/block/drivers/virtio:virtio_scsi",
     "//src/devices/board/drivers/machina",
     "//src/devices/bundles:bootstrap-dev",
-    "//src/devices/bus/drivers/pci:bus-pci.proxy",
     "//src/devices/bus/drivers/pci:bus-pci",
     "//src/devices/misc/drivers/virtio-rng:virtio_rng",
     "//src/devices/misc/drivers/virtio-socket:virtio_socket",

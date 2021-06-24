@@ -10,7 +10,6 @@ board_name = "qemu-arm64"
 
 _common_bootfs_deps = [
   "//src/devices/bus/drivers/pci:bus-pci",
-  "//src/devices/bus/drivers/pci:bus-pci.proxy",
   "//src/devices/usb/drivers/xhci-rewrite:xhci",
   "//src/power/power-manager:base_config",
 ]

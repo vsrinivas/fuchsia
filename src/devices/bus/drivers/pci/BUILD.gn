@@ -7,10 +7,7 @@ import("//build/config/fuchsia/rules.gni")
 import("pci.gni")
 
 group("pci") {
-  deps = [
-    ":bus-pci",
-    ":bus-pci.proxy",
-  ]
+  deps = [ ":bus-pci" ]
 }
 
 # The userspace PCI bus driver uses this set, as well as the
@@ -60,26 +57,6 @@ source_set("user_pci") {
     # compiled for the test using the mock version.
     "//src/devices/lib/mmio",
   ]
-}
-
-source_set("pci.proxy") {
-  sources = [ "proxy.cc" ]
-  public_deps = [
-    ":pci_proxy_bind",
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
-    "//src/devices/lib/driver",
-    "//src/devices/pci/lib/pci",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/pretty",
-  ]
-}
-
-bind_rules("pci_proxy_bind") {
-  disable_autobind = true
-  output = "pci_proxy_bind.h"
 }
 
 bind_rules("pci_bind") {
@@ -140,23 +117,6 @@ if (platform_enable_user_pci) {
       "//zircon/public/lib/pretty",
     ]
   }
-}
-
-driver_module("bus-pci.proxy") {
-  if (platform_enable_user_pci) {
-    defines = [ "USERSPACE_PCI" ]
-  }
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  deps = [
-    ":pci.proxy",
-    ":pci_proxy_bind",
-  ]
 }
 
 group("tests") {

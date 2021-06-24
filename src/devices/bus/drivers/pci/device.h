@@ -55,7 +55,7 @@ struct SharedIrqListTag {};
 // is fulfill the PCI protocol for the driver downstream operating the PCI
 // device this corresponds to.
 class Device;
-using PciDeviceType = ddk::Device<pci::Device, ddk::Rxrpcable, ddk::GetProtocolable>;
+using PciDeviceType = ddk::Device<pci::Device, ddk::GetProtocolable>;
 class Device : public PciDeviceType,
                public ddk::PciProtocol<pci::Device>,
                public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
@@ -140,23 +140,6 @@ class Device : public PciDeviceType,
              (bdf1.function_id == bdf2.function_id);
     }
   };
-
-  // DDKTL PciProtocol methods that will be called by Rxrpc.
-  zx_status_t RpcConfigureIrqMode(const zx::unowned_channel& ch);
-  zx_status_t RpcConfigRead(const zx::unowned_channel& ch);
-  zx_status_t RpcConfigWrite(const zx::unowned_channel& ch);
-  zx_status_t RpcConnectSysmem(const zx::unowned_channel& ch, zx_handle_t channel);
-  zx_status_t RpcEnableBusMaster(const zx::unowned_channel& ch);
-  zx_status_t RpcGetBar(const zx::unowned_channel& ch);
-  zx_status_t RpcGetBti(const zx::unowned_channel& ch);
-  zx_status_t RpcGetDeviceInfo(const zx::unowned_channel& ch);
-  zx_status_t RpcGetNextCapability(const zx::unowned_channel& ch);
-  zx_status_t RpcMapInterrupt(const zx::unowned_channel& ch);
-  zx_status_t RpcQueryIrqMode(const zx::unowned_channel& ch);
-  zx_status_t RpcResetDevice(const zx::unowned_channel& ch);
-  zx_status_t RpcSetIrqMode(const zx::unowned_channel& ch);
-  zx_status_t RpcAckInterrupt(const zx::unowned_channel& ch);
-  zx_status_t DdkRxrpc(zx_handle_t channel);
 
   // Templated helpers to assist with differently sized protocol reads and writes.
   template <typename V, typename R>
@@ -344,8 +327,6 @@ class Device : public PciDeviceType,
   BusDeviceInterface* bdi() __TA_REQUIRES(dev_lock_) { return bdi_; }
 
  private:
-  zx_status_t RpcReply(const zx::unowned_channel& ch, zx_status_t st,
-                       zx_handle_t* handles = nullptr, uint32_t handle_cnt = 0);
   // Allow UpstreamNode implementations to Probe/Allocate/Configure/Disable.
   friend class UpstreamNode;
   friend class Bridge;
@@ -402,10 +383,6 @@ class Device : public PciDeviceType,
 
   Capabilities caps_ __TA_GUARDED(dev_lock_){};
   Irqs irqs_ __TA_GUARDED(dev_lock_){.mode = PCI_IRQ_MODE_DISABLED};
-
-  // Used for Rxrpc / RpcReply for protocol buffers.
-  PciRpcMsg request_;
-  PciRpcMsg response_;
 
   // Diagnostics
   mutable Inspect metrics_;
