@@ -701,4 +701,9 @@ class Strings {
         name: 'shortcuts',
         desc: 'The button label for displaying keyboard shortcuts',
       );
+  static String get open => Intl.message(
+        'Open',
+        name: 'open',
+        desc: 'The button label for the "open" text field.',
+      );
 }

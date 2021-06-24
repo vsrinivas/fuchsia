@@ -174,10 +174,14 @@ class _ListSettings extends StatelessWidget {
                 ),
                 // Feedback
                 ListTile(
-                  enabled: false,
+                  enabled: true,
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
                   leading: Icon(Icons.feedback_outlined),
                   title: Text(Strings.feedback),
+                  trailing: OutlinedButton(
+                    onPressed: appState.launchFeedback,
+                    child: Text(Strings.open.toUpperCase()),
+                  ),
                 ),
                 // Open Source
                 ListTile(

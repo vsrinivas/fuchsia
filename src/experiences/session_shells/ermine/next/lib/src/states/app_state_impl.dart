@@ -5,6 +5,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart' hide Action;
+import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
 
 import 'package:next/src/services/focus_service.dart';
@@ -32,6 +33,9 @@ class AppStateImpl with Disposable implements AppState {
   final ShortcutsService shortcutsService;
   final PreferencesService preferencesService;
   final PointerEventsService pointerEventsService;
+
+  static const kFeedbackUrl =
+      'fuchsia-pkg://fuchsia.com/feedback_settings#meta/feedback_settings.cmx';
 
   AppStateImpl({
     required this.startupService,
@@ -212,6 +216,11 @@ class AppStateImpl with Disposable implements AppState {
 
   @override
   late final launch = launchService.launch.asAction();
+
+  @override
+  late final Action launchFeedback = () {
+    launchService.launch(Strings.feedback, kFeedbackUrl);
+  }.asAction();
 
   @override
   late final setTheme = (bool darkTheme) {
