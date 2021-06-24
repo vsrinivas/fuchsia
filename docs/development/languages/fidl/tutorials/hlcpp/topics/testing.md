@@ -115,7 +115,7 @@ You should see the test output indicating a success.
   during a test. This is useful to e.g. provide specific capabilities to the
   a component.
 * The HLCPP bindings test scaffolding provides a test base for each protocol
-  class that has a dummy implementation for each method. This allows tests
+  class that has a placeholder implementation for each method. This allows tests
   to only implement the methods under test.
 
 <!-- xrefs -->
