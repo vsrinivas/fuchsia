@@ -28,7 +28,7 @@ class IfaceDevice {
 
   zx_status_t Query(uint32_t options, wlanmac_info_t* info);
   void Stop();
-  zx_status_t Start(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel);
+  zx_status_t Start(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel);
   zx_status_t SetChannel(uint32_t options, const wlan_channel_t* chan);
 
  private:

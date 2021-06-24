@@ -2319,7 +2319,7 @@ static zx_status_t ath10k_core_create_iface(void* ctx, const wlanphy_impl_create
   // We have to review this when we want to support mulitple interfaces.
   // TODO(fxbug.dev/29263): for support multiple.
   ar->mac_role = req->role;
-  ar->sme_channel = req->sme_channel;
+  ar->mlme_channel = req->mlme_channel;
 
   // Add MAC interface
   device_add_args_t mac_args = {

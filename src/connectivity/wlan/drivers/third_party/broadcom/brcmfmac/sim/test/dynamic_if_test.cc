@@ -393,7 +393,7 @@ TEST_F(DynamicIfTest, CreateClientWithRandomMac) {
   wireless_dev* wdev = nullptr;
   wlanphy_impl_create_iface_req_t req = {
       .role = WLAN_INFO_MAC_ROLE_CLIENT,
-      .sme_channel = client_ifc_.ch_mlme_,
+      .mlme_channel = client_ifc_.ch_mlme_,
       .has_init_mac_addr = false,
   };
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, kFakeClientName, nullptr, &req, &wdev));
@@ -414,7 +414,7 @@ TEST_F(DynamicIfTest, CreateIfaceMustProvideWdevOut) {
   EXPECT_EQ(ZX_OK, client_ifc_.Init(env_, client_role));
   wlanphy_impl_create_iface_req_t req = {
       .role = client_role,
-      .sme_channel = client_ifc_.ch_mlme_,
+      .mlme_channel = client_ifc_.ch_mlme_,
       .has_init_mac_addr = false,
   };
   EXPECT_EQ(ZX_ERR_INVALID_ARGS,
@@ -431,7 +431,7 @@ void DynamicIfTest::CheckAddIfaceWritesWdev(wlan_info_mac_role_t role, const cha
   EXPECT_EQ(ZX_OK, ifc.Init(env_, role));
   wlanphy_impl_create_iface_req_t req = {
       .role = role,
-      .sme_channel = ifc.ch_mlme_,
+      .mlme_channel = ifc.ch_mlme_,
       .has_init_mac_addr = false,
   };
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, iface_name, nullptr, &req, &wdev));
@@ -471,7 +471,7 @@ TEST_F(DynamicIfTest, CreateClientWithCustomName) {
 
   wlanphy_impl_create_iface_req_t req = {
       .role = client_role,
-      .sme_channel = client_ifc_.ch_mlme_,
+      .mlme_channel = client_ifc_.ch_mlme_,
       .has_init_mac_addr = false,
   };
   EXPECT_EQ(0, strcmp(brcmf_ifname(ifp), kPrimaryNetworkInterfaceName));
@@ -495,7 +495,7 @@ TEST_F(DynamicIfTest, CreateApWithCustomName) {
 
   wlanphy_impl_create_iface_req_t req = {
       .role = ap_role,
-      .sme_channel = softap_ifc_.ch_mlme_,
+      .mlme_channel = softap_ifc_.ch_mlme_,
       .has_init_mac_addr = false,
   };
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, kFakeApName, nullptr, &req, &wdev));
@@ -530,7 +530,7 @@ TEST_F(DynamicIfTest, CreateClientWithLongName) {
 
   wlanphy_impl_create_iface_req_t req = {
       .role = client_role,
-      .sme_channel = client_ifc_.ch_mlme_,
+      .mlme_channel = client_ifc_.ch_mlme_,
       .has_init_mac_addr = false,
   };
   EXPECT_EQ(ZX_OK, brcmf_cfg80211_add_iface(sim->drvr, really_long_name, nullptr, &req, &wdev));

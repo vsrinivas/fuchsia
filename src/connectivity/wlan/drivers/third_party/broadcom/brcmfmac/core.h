@@ -304,7 +304,7 @@ struct net_device {
     wlanif_mlme_stats_t mlme_stats;
     brcmf_pktcnt_le fw_pktcnt;
   } stats;
-  zx::channel sme_channel;
+  zx::channel mlme_channel;
   uint32_t features;
   uint32_t needed_headroom;
   void (*priv_destructor)(net_device*);

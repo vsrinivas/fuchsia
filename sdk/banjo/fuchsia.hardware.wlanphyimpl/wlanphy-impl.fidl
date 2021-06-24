@@ -15,8 +15,8 @@ resource struct WlanphyImplCreateIfaceReq {
     /// but an interface is instantiated with a single role.
     ddk.hw.wlan.wlaninfo.WlanInfoMacRole role;
 
-    /// A handle to the direct SME channel, if supported by the driver.
-    zx.handle:CHANNEL sme_channel;
+    /// A handle to the direct MLME channel, if supported by the driver.
+    zx.handle:CHANNEL mlme_channel;
 
     /// Whether this iface creation request come with an initial MAC address.
     bool has_init_mac_addr;

@@ -27,7 +27,7 @@
 //
 // Sme_channel
 //
-//   The steps below briefly describe how the 'sme_channel' is used and transferred. In short,
+//   The steps below briefly describe how the 'mlme_channel' is used and transferred. In short,
 //   the goal is to let SME and MLME have a channel to communicate with each other.
 //
 //   + After the devmgr (the device manager in wlanstack) detects a PHY device, the devmgr first
@@ -37,11 +37,11 @@
 //   + The devmgr requests the PHY device to create a MAC interface. In the request, the other end
 //     of channel is passed to the driver.
 //
-//   + The driver's phy_create_iface() gets called, and saves the 'sme_channel' handle in the newly
+//   + The driver's phy_create_iface() gets called, and saves the 'mlme_channel' handle in the newly
 //     created MAC context.
 //
 //   + Once the MAC device is added, its mac_start() will be called. Then it will transfer the
-//     'sme_channel' handle back to the MLME.
+//     'mlme_channel' handle back to the MLME.
 //
 //   + Now, both sides of channel (SME and MLME) can talk now.
 //
@@ -193,26 +193,26 @@ zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
   return ZX_OK;
 }
 
-zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel) {
+zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel) {
   struct iwl_mvm_vif* mvmvif = ctx;
 
-  if (!ctx || !ifc || !out_sme_channel) {
+  if (!ctx || !ifc || !out_mlme_channel) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   // Clear the output result first.
-  *out_sme_channel = ZX_HANDLE_INVALID;
+  *out_mlme_channel = ZX_HANDLE_INVALID;
 
   // The SME channel assigned in phy_create_iface() is gone.
-  if (mvmvif->sme_channel == ZX_HANDLE_INVALID) {
+  if (mvmvif->mlme_channel == ZX_HANDLE_INVALID) {
     IWL_ERR(mvmvif, "Invalid SME channel. The interface might have been bound already.\n");
     return ZX_ERR_ALREADY_BOUND;
   }
 
   // Transfer the handle to MLME. Also invalid the copy we hold to indicate that this interface has
   // been bound.
-  *out_sme_channel = mvmvif->sme_channel;
-  mvmvif->sme_channel = ZX_HANDLE_INVALID;
+  *out_mlme_channel = mvmvif->mlme_channel;
+  mvmvif->mlme_channel = ZX_HANDLE_INVALID;
 
   mvmvif->ifc = *ifc;
 
@@ -500,9 +500,9 @@ void mac_release(void* ctx) {
   struct iwl_mvm_vif* mvmvif = ctx;
 
   // Close the SME channel if it is NOT transferred to MLME yet.
-  if (mvmvif->sme_channel != ZX_HANDLE_INVALID) {
-    zx_handle_close(mvmvif->sme_channel);
-    mvmvif->sme_channel = ZX_HANDLE_INVALID;
+  if (mvmvif->mlme_channel != ZX_HANDLE_INVALID) {
+    zx_handle_close(mvmvif->mlme_channel);
+    mvmvif->mlme_channel = ZX_HANDLE_INVALID;
   }
 
   free(mvmvif);
@@ -547,7 +547,7 @@ zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* r
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (req->sme_channel == ZX_HANDLE_INVALID) {
+  if (req->mlme_channel == ZX_HANDLE_INVALID) {
     IWL_ERR(mvm, "the given sme channel is invalid\n");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -587,7 +587,7 @@ zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* r
 
   mvmvif->mvm = mvm;
   mvmvif->mac_role = req->role;
-  mvmvif->sme_channel = req->sme_channel;
+  mvmvif->mlme_channel = req->mlme_channel;
   ret = iwl_mvm_bind_mvmvif(mvm, idx, mvmvif);
   if (ret != ZX_OK) {
     IWL_ERR(ctx, "Cannot assign the new mvmvif to MVM: %s\n", zx_status_get_string(ret));

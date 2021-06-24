@@ -66,7 +66,7 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   // Create iface.
   auto [local, _remote] = make_channel();
   wlanphy_impl_create_iface_req_t create_iface_req{.role = WLAN_INFO_MAC_ROLE_CLIENT,
-                                                   .sme_channel = local.get()};
+                                                   .mlme_channel = local.get()};
   uint16_t iface_id;
   status = device->WlanphyImplCreateIface(&create_iface_req, &iface_id);
   ASSERT_EQ(status, ZX_OK);
@@ -77,17 +77,17 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   ASSERT_TRUE(iface.has_value());
   void* ctx = iface->dev_args.ctx;
   auto* iface_ops = static_cast<wlanif_impl_protocol_ops_t*>(iface->dev_args.proto_ops);
-  zx_handle_t sme_channel = ZX_HANDLE_INVALID;
+  zx_handle_t mlme_channel = ZX_HANDLE_INVALID;
   wlanif_impl_ifc_protocol_t ifc_ops{};
-  status = iface_ops->start(ctx, &ifc_ops, &sme_channel);
+  status = iface_ops->start(ctx, &ifc_ops, &mlme_channel);
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_EQ(sme_channel, local.get());
+  EXPECT_EQ(mlme_channel, local.get());
 
   // Verify calling start again will fail with proper error code.
-  sme_channel = ZX_HANDLE_INVALID;
-  status = iface_ops->start(ctx, &ifc_ops, &sme_channel);
+  mlme_channel = ZX_HANDLE_INVALID;
+  status = iface_ops->start(ctx, &ifc_ops, &mlme_channel);
   EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
-  EXPECT_EQ(sme_channel, ZX_HANDLE_INVALID);
+  EXPECT_EQ(mlme_channel, ZX_HANDLE_INVALID);
   ASSERT_EQ(device->WlanphyImplDestroyIface(iface_id), ZX_OK);
   EXPECT_EQ(dev_mgr->DeviceCount(), static_cast<size_t>(1));
 }

@@ -215,15 +215,15 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
       return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx::channel sme_channel = zx::channel(req->sme_channel);
-    if (!sme_channel.is_valid()) {
+    zx::channel mlme_channel = zx::channel(req->mlme_channel);
+    if (!mlme_channel.is_valid()) {
       return ZX_ERR_IO_INVALID;
     }
     std::lock_guard<std::mutex> guard(wlanmac_lock_);
     zx_status_t status = wlanmac_devices_.TryCreateNew(
         [&](uint16_t id, WlantapMac** out_dev) {
           return CreateWlantapMac(device_, dev_role, phy_config_.get(), id, this,
-                                  std::move(sme_channel), out_dev);
+                                  std::move(mlme_channel), out_dev);
         },
         out_iface_id);
     if (status != ZX_OK) {

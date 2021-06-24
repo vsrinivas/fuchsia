@@ -3168,9 +3168,9 @@ static zx_status_t ath10k_pci_mac_query(void* ctx, uint32_t options, wlanmac_inf
 }
 
 static zx_status_t ath10k_pci_start(void* ctx, const wlanmac_ifc_protocol_t* ifc,
-                                    zx_handle_t* out_sme_channel) {
+                                    zx_handle_t* out_mlme_channel) {
   struct ath10k* ar = ctx;
-  return ath10k_start(ar, ifc, out_sme_channel);
+  return ath10k_start(ar, ifc, out_mlme_channel);
 }
 
 static void ath10k_pci_stop(void* ctx) {

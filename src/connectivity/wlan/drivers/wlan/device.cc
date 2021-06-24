@@ -131,13 +131,13 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     return status;
   }
 
-  zx::channel sme_channel;
-  status = wlanmac_proxy_.Start(this, &wlanmac_ifc_ops, &sme_channel);
+  zx::channel mlme_channel;
+  status = wlanmac_proxy_.Start(this, &wlanmac_ifc_ops, &mlme_channel);
   if (status != ZX_OK) {
     errorf("failed to start wlanmac device: %s\n", zx_status_get_string(status));
     return status;
   }
-  ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
+  ZX_DEBUG_ASSERT(mlme_channel != ZX_HANDLE_INVALID);
 
   state_->set_address(common::MacAddr(wlanmac_info_.mac_addr));
 
@@ -182,7 +182,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   if (status != ZX_OK) {
     errorf("could not add eth device: %s\n", zx_status_get_string(status));
   } else {
-    status = Connect(std::move(sme_channel));
+    status = Connect(std::move(mlme_channel));
   }
 
   // Clean up if either device add failed.

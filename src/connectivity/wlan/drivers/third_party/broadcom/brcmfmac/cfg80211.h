@@ -542,7 +542,7 @@ zx_status_t brcmf_netdev_open(struct net_device* ndev);
 // Protocol ops implementations.
 
 zx_status_t brcmf_if_start(net_device* ndev, const wlanif_impl_ifc_protocol_t* ifc,
-                           zx_handle_t* out_sme_channel);
+                           zx_handle_t* out_mlme_channel);
 void brcmf_if_stop(net_device* ndev);
 void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info);
 void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req);

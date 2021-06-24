@@ -136,8 +136,8 @@ TEST(SmeChannel, Bound) {
 #define SME_DEV(c) static_cast<SmeChannelTestContext*>(c)
   wlanif_impl_protocol_ops_t proto_ops = EmptyProtoOps();
   proto_ops.start = [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
-                       zx_handle_t* out_sme_channel) -> zx_status_t {
-    *out_sme_channel = SME_DEV(ctx)->sme.release();
+                       zx_handle_t* out_mlme_channel) -> zx_status_t {
+    *out_mlme_channel = SME_DEV(ctx)->sme.release();
     return ZX_OK;
   };
 
@@ -184,8 +184,8 @@ TEST(SmeChannel, Bound) {
 TEST(SmeChannel, FailedBind) {
   wlanif_impl_protocol_ops_t proto_ops = EmptyProtoOps();
   proto_ops.start = [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
-                       zx_handle_t* out_sme_channel) -> zx_status_t {
-    *out_sme_channel = static_cast<SmeChannelTestContext*>(ctx)->sme.release();
+                       zx_handle_t* out_mlme_channel) -> zx_status_t {
+    *out_mlme_channel = static_cast<SmeChannelTestContext*>(ctx)->sme.release();
     return ZX_OK;
   };
 
@@ -238,8 +238,8 @@ TEST(AssocReqHandling, MultipleAssocReq) {
 
   wlanif_impl_protocol_ops_t proto_ops = EmptyProtoOps();
   proto_ops.start = [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
-                       zx_handle_t* out_sme_channel) -> zx_status_t {
-    *out_sme_channel = ASSOC_DEV(ctx)->sme.release();
+                       zx_handle_t* out_mlme_channel) -> zx_status_t {
+    *out_mlme_channel = ASSOC_DEV(ctx)->sme.release();
     // Substitute with our own ops to capture assoc conf
     ASSOC_DEV(ctx)->ifc.ops = &wlanif_impl_ifc_ops;
     ASSOC_DEV(ctx)->ifc.ctx = ctx;
@@ -328,10 +328,10 @@ struct EthernetTestFixture : public ::testing::Test {
 
 #define ETH_DEV(c) static_cast<EthernetTestFixture*>(c)
 static zx_status_t hook_start(void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
-                              zx_handle_t* out_sme_channel) {
+                              zx_handle_t* out_mlme_channel) {
   auto [new_sme, new_mlme] = make_channel();
   ETH_DEV(ctx)->mlme_ = std::move(new_mlme);
-  *out_sme_channel = new_sme.release();
+  *out_mlme_channel = new_sme.release();
   return ZX_OK;
 }
 static void hook_query(void* ctx, wlanif_query_info_t* info) { info->role = ETH_DEV(ctx)->role_; }

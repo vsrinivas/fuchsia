@@ -41,8 +41,8 @@ constexpr zx_protocol_device_t kWlanInterfaceDeviceOps = {
 
 wlanif_impl_protocol_ops_t wlan_interface_proto_ops = {
     .start =
-        [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel) {
-          return static_cast<WlanInterface*>(ctx)->Start(ifc, out_sme_channel);
+        [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel) {
+          return static_cast<WlanInterface*>(ctx)->Start(ifc, out_mlme_channel);
         },
     .stop = [](void* ctx) { return static_cast<WlanInterface*>(ctx)->Stop(); },
     .query =
@@ -237,12 +237,12 @@ zx_status_t WlanInterface::GetCountry(brcmf_pub* drvr, wlanphy_country_t* out_co
 zx_status_t WlanInterface::ClearCountry(brcmf_pub* drvr) { return brcmf_clear_country(drvr); }
 
 zx_status_t WlanInterface::Start(const wlanif_impl_ifc_protocol_t* ifc,
-                                 zx_handle_t* out_sme_channel) {
+                                 zx_handle_t* out_mlme_channel) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
-  return brcmf_if_start(wdev_->netdev, ifc, out_sme_channel);
+  return brcmf_if_start(wdev_->netdev, ifc, out_mlme_channel);
 }
 
 void WlanInterface::Stop() {

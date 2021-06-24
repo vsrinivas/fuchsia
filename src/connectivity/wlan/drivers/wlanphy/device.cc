@@ -156,7 +156,7 @@ void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallbac
   if (role != 0) {
     uint16_t iface_id;
     wlanphy_impl_create_iface_req_t create_req{.role = role,
-                                               .sme_channel = req.sme_channel.release()};
+                                               .mlme_channel = req.mlme_channel.release()};
     if (req.init_mac_addr.has_value()) {
       create_req.has_init_mac_addr = true;
       std::copy(req.init_mac_addr.value().begin(), req.init_mac_addr.value().end(),

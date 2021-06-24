@@ -607,7 +607,7 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       brcmf_cfg80211_update_proto_addr_mode(wdev);
       ndev = wdev->netdev;
       wdev->iftype = req->role;
-      ndev->sme_channel = zx::channel(req->sme_channel);
+      ndev->mlme_channel = zx::channel(req->mlme_channel);
 
       break;
     case WLAN_INFO_MAC_ROLE_CLIENT: {
@@ -641,7 +641,7 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
       }
       wdev = &drvr->iflist[bsscfgidx]->vif->wdev;
       wdev->iftype = req->role;
-      ndev->sme_channel = zx::channel(req->sme_channel);
+      ndev->mlme_channel = zx::channel(req->mlme_channel);
       ndev->needs_free_net_device = false;
 
       // Use input mac_addr if it's provided. Otherwise, fallback to the bootloader
@@ -3281,8 +3281,8 @@ static zx_status_t brcmf_notify_tdls_peer_event(struct brcmf_if* ifp,
 // Country is initialized to US by default. This should be retrieved from location services
 // when available.
 zx_status_t brcmf_if_start(net_device* ndev, const wlanif_impl_ifc_protocol_t* ifc,
-                           zx_handle_t* out_sme_channel) {
-  if (!ndev->sme_channel.is_valid()) {
+                           zx_handle_t* out_mlme_channel) {
+  if (!ndev->mlme_channel.is_valid()) {
     return ZX_ERR_ALREADY_BOUND;
   }
 
@@ -3294,8 +3294,8 @@ zx_status_t brcmf_if_start(net_device* ndev, const wlanif_impl_ifc_protocol_t* i
   brcmf_netdev_open(ndev);
   ndev->is_up = true;
 
-  ZX_DEBUG_ASSERT(out_sme_channel != nullptr);
-  *out_sme_channel = ndev->sme_channel.release();
+  ZX_DEBUG_ASSERT(out_mlme_channel != nullptr);
+  *out_mlme_channel = ndev->mlme_channel.release();
   return ZX_OK;
 }
 
@@ -6030,14 +6030,14 @@ zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wir
     case WLAN_INFO_MAC_ROLE_AP:
       // Stop the AP in an attempt to exit gracefully.
       brcmf_cfg80211_stop_ap(ndev);
-      ndev->sme_channel.reset();
+      ndev->mlme_channel.reset();
       return brcmf_cfg80211_del_ap_iface(cfg, wdev);
     case WLAN_INFO_MAC_ROLE_CLIENT:
       // Dissconnect the client in an attempt to exit gracefully.
       brcmf_link_down(ifp->vif, wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON, false);
       // The default client iface 0 is always assumed to exist by the driver, and is never
       // explicitly deleted.
-      ndev->sme_channel.reset();
+      ndev->mlme_channel.reset();
       ndev->needs_free_net_device = true;
       brcmf_write_net_device_name(ndev, kPrimaryNetworkInterfaceName);
       return ZX_OK;

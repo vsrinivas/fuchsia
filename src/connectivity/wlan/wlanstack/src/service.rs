@@ -82,7 +82,7 @@ pub async fn serve_device_requests(
                         let inspect_tree = inspect_tree.clone();
                         let iface_tree_holder = inspect_tree.create_iface_child(iface_id);
 
-                        let device_info = match new_iface.mlme_channel.query_device_info().await {
+                        let device_info = match new_iface.mlme_proxy.query_device_info().await {
                             Ok(device_info) => device_info,
                             Err(e) => {
                                 responder.send(zx::sys::ZX_ERR_PEER_CLOSED, None.as_mut())?;
@@ -94,7 +94,7 @@ pub async fn serve_device_requests(
                             cfg.clone(),
                             iface_id,
                             new_iface.phy_ownership,
-                            new_iface.mlme_channel,
+                            new_iface.mlme_proxy,
                             ifaces.clone(),
                             inspect_tree.clone(),
                             iface_tree_holder,
@@ -336,7 +336,7 @@ async fn create_iface<'a>(
     let phy_id = req.phy_id;
     let phy = phys.get(&req.phy_id).ok_or(zx::Status::NOT_FOUND)?;
 
-    let (mlme_channel, sme_channel) = create_proxy::<MlmeMarker>()
+    let (mlme_proxy, mlme_channel) = create_proxy::<MlmeMarker>()
         .map_err(|e| {
             error!("failed to create MlmeProxy: {}", e);
             zx::Status::INTERNAL
@@ -345,7 +345,7 @@ async fn create_iface<'a>(
 
     let mut phy_req = fidl_wlan_dev::CreateIfaceRequest {
         role: req.role,
-        sme_channel,
+        mlme_channel,
         init_mac_addr: req.mac_addr,
     };
     let r = phy.proxy.create_iface(&mut phy_req).await.map_err(move |e| {
@@ -357,7 +357,7 @@ async fn create_iface<'a>(
     Ok(NewIface {
         id: iface_counter.next_iface_id() as u16,
         phy_ownership: device::PhyOwnership { phy_id, phy_assigned_id: r.iface_id },
-        mlme_channel,
+        mlme_proxy,
     })
 }
 
@@ -1203,7 +1203,7 @@ mod tests {
         // Use the channel that is included in the CreateIfaceRequest to create an MLME request
         // stream.
         let mlme_channel =
-            phy_create_iface_req.sme_channel.expect("no mlme stream found in iface request");
+            phy_create_iface_req.mlme_channel.expect("no mlme stream found in iface request");
         let mut mlme_stream = ServerEnd::<fidl_mlme::MlmeMarker>::new(mlme_channel)
             .into_stream()
             .expect("could not create MLME event stream");

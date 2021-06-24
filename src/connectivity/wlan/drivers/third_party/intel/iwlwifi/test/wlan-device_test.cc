@@ -56,7 +56,8 @@ class WlanDeviceTest : public SingleApTest {
   ~WlanDeviceTest() {}
 
  protected:
-  static constexpr zx_handle_t sme_channel_ = 73939133;  // An arbitrary value not ZX_HANDLE_INVALID
+  static constexpr zx_handle_t mlme_channel_ =
+      73939133;  // An arbitrary value not ZX_HANDLE_INVALID
   static constexpr uint8_t kInvalidBandIdFillByte = 0xa5;
   static constexpr wlan_info_band_t kInvalidBandId = 0xa5a5a5a5;
   struct iwl_mvm_vif mvmvif_sta_;  // The mvm_vif settings for station role.
@@ -206,15 +207,15 @@ TEST_F(WlanDeviceTest, MacStart) {
       .recv = recv_wrapper,
   };
   wlanmac_ifc_protocol_t ifc = {.ops = &proto_ops};
-  zx_handle_t sme_channel;
-  ASSERT_EQ(wlanmac_ops.start(nullptr, &ifc, &sme_channel), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, nullptr, &sme_channel), ZX_ERR_INVALID_ARGS);
+  zx_handle_t mlme_channel;
+  ASSERT_EQ(wlanmac_ops.start(nullptr, &ifc, &mlme_channel), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, nullptr, &mlme_channel), ZX_ERR_INVALID_ARGS);
   ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, nullptr), ZX_ERR_INVALID_ARGS);
 
   // Test callback function
   recv_cb_t mock_recv;  // To mock up the wlanmac_ifc_t.recv().
-  mvmvif_sta_.sme_channel = sme_channel_;
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &sme_channel), ZX_OK);
+  mvmvif_sta_.mlme_channel = mlme_channel_;
+  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &mlme_channel), ZX_OK);
   // Expect the above line would copy the 'ifc'. Then set expectation below and fire test.
   mock_recv.ExpectCall(&mock_recv, 0, nullptr, 0, nullptr);
   mvmvif_sta_.ifc.ops->recv(&mock_recv, 0, nullptr, 0, nullptr);
@@ -223,19 +224,19 @@ TEST_F(WlanDeviceTest, MacStart) {
 
 TEST_F(WlanDeviceTest, MacStartSmeChannel) {
   // The normal case. A channel will be transferred to MLME.
-  constexpr zx_handle_t from_devmgr = sme_channel_;
-  mvmvif_sta_.sme_channel = from_devmgr;
+  constexpr zx_handle_t from_devmgr = mlme_channel_;
+  mvmvif_sta_.mlme_channel = from_devmgr;
   wlanmac_ifc_protocol_ops_t proto_ops = {
       .recv = recv_wrapper,
   };
   wlanmac_ifc_protocol_t ifc = {.ops = &proto_ops};
-  zx_handle_t sme_channel;
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &sme_channel), ZX_OK);
-  ASSERT_EQ(sme_channel, from_devmgr);                    // The channel handle is returned.
-  ASSERT_EQ(mvmvif_sta_.sme_channel, ZX_HANDLE_INVALID);  // Driver no longer holds the ownership.
+  zx_handle_t mlme_channel;
+  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &mlme_channel), ZX_OK);
+  ASSERT_EQ(mlme_channel, from_devmgr);                    // The channel handle is returned.
+  ASSERT_EQ(mvmvif_sta_.mlme_channel, ZX_HANDLE_INVALID);  // Driver no longer holds the ownership.
 
   // Since the driver no longer owns the handle, the start should fail.
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &sme_channel), ZX_ERR_ALREADY_BOUND);
+  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &mlme_channel), ZX_ERR_ALREADY_BOUND);
 }
 
 TEST_F(WlanDeviceTest, MacRelease) {
@@ -246,7 +247,7 @@ TEST_F(WlanDeviceTest, MacRelease) {
   // Create a channel. Let this test case holds one end while driver holds the other end.
   char dummy[1];
   zx_handle_t case_end;
-  ASSERT_EQ(zx_channel_create(0 /* option */, &case_end, &mvmvif->sme_channel), ZX_OK);
+  ASSERT_EQ(zx_channel_create(0 /* option */, &case_end, &mvmvif->mlme_channel), ZX_OK);
   ASSERT_EQ(zx_channel_write(case_end, 0 /* option */, dummy, sizeof(dummy), nullptr, 0), ZX_OK);
 
   // Call release and the sme channel should be closed so that we will get a peer-close error while
@@ -273,7 +274,7 @@ TEST_F(WlanDeviceTest, PhyQuery) {
 TEST_F(WlanDeviceTest, PhyPartialCreateCleanup) {
   wlanphy_impl_create_iface_req_t req = {
       .role = WLAN_INFO_MAC_ROLE_CLIENT,
-      .sme_channel = sme_channel_,
+      .mlme_channel = mlme_channel_,
   };
   uint16_t iface_id;
   struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
@@ -293,7 +294,7 @@ TEST_F(WlanDeviceTest, PhyPartialCreateCleanup) {
 TEST_F(WlanDeviceTest, PhyCreateDestroySingleInterface) {
   wlanphy_impl_create_iface_req_t req = {
       .role = WLAN_INFO_MAC_ROLE_CLIENT,
-      .sme_channel = sme_channel_,
+      .mlme_channel = mlme_channel_,
   };
   uint16_t iface_id;
 
@@ -327,7 +328,7 @@ TEST_F(WlanDeviceTest, PhyCreateDestroySingleInterface) {
 TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   wlanphy_impl_create_iface_req_t req = {
       .role = WLAN_INFO_MAC_ROLE_CLIENT,
-      .sme_channel = sme_channel_,
+      .mlme_channel = mlme_channel_,
   };
   uint16_t iface_id;
   struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
@@ -406,9 +407,9 @@ TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
 class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
  public:
   MacInterfaceTest() : ifc_{ .ops = &proto_ops_, } , proto_ops_{ .recv = recv_wrapper, } {
-    mvmvif_sta_.sme_channel = sme_channel_;
-    zx_handle_t sme_channel;
-    ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc_, &sme_channel), ZX_OK);
+    mvmvif_sta_.mlme_channel = mlme_channel_;
+    zx_handle_t mlme_channel;
+    ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc_, &mlme_channel), ZX_OK);
 
     // Add the interface to MVM instance.
     mvmvif_sta_.mvm->mvmvif[0] = &mvmvif_sta_;

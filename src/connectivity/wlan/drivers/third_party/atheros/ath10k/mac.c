@@ -4459,7 +4459,7 @@ enum { IEEE80211_AC_VO, IEEE80211_AC_VI, IEEE80211_AC_BE, IEEE80211_AC_BK };
 static int ath10k_conf_tx(struct ath10k* ar, uint16_t ac, struct wmi_wmm_params_arg* params);
 
 zx_status_t ath10k_start(struct ath10k* ar, const wlanmac_ifc_protocol_t* ifc,
-                         zx_handle_t* out_sme_channel) {
+                         zx_handle_t* out_mlme_channel) {
   zx_status_t ret = ZX_OK;
 
   mtx_lock(&ar->conf_mutex);
@@ -4640,8 +4640,8 @@ zx_status_t ath10k_start(struct ath10k* ar, const wlanmac_ifc_protocol_t* ifc,
     ath10k_thermal_set_throttling(ar);
 #endif  // NEEDS PORTING
 
-  *out_sme_channel = ar->sme_channel;
-  ar->sme_channel = ZX_HANDLE_INVALID;
+  *out_mlme_channel = ar->mlme_channel;
+  ar->mlme_channel = ZX_HANDLE_INVALID;
 
   mtx_unlock(&ar->conf_mutex);
   return ZX_OK;
@@ -4658,11 +4658,11 @@ err_off:
 #endif  // NEEDS PORTING
 
 err:
-  if (ar->sme_channel != ZX_HANDLE_INVALID) {
-    zx_handle_close(ar->sme_channel);
-    ar->sme_channel = ZX_HANDLE_INVALID;
+  if (ar->mlme_channel != ZX_HANDLE_INVALID) {
+    zx_handle_close(ar->mlme_channel);
+    ar->mlme_channel = ZX_HANDLE_INVALID;
   }
-  *out_sme_channel = ZX_HANDLE_INVALID;
+  *out_mlme_channel = ZX_HANDLE_INVALID;
   mtx_unlock(&ar->conf_mutex);
   return ret;
 }

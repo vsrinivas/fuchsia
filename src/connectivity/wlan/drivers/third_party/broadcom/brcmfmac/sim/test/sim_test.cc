@@ -451,7 +451,7 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
 
   wlanphy_impl_create_iface_req_t req = {
       .role = role,
-      .sme_channel = sim_ifc->ch_mlme_,
+      .mlme_channel = sim_ifc->ch_mlme_,
       .has_init_mac_addr = mac_addr ? true : false,
   };
   if (mac_addr)

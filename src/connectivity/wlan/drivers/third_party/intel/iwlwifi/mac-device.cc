@@ -19,8 +19,8 @@ zx_status_t MacDevice::WlanmacQuery(uint32_t options, wlanmac_info_t* out_info) 
 }
 
 zx_status_t MacDevice::WlanmacStart(const wlanmac_ifc_protocol_t* ifc,
-                                    zx::channel* out_sme_channel) {
-  return mac_start(mvmvif_, ifc, (zx_handle_t*)out_sme_channel);
+                                    zx::channel* out_mlme_channel) {
+  return mac_start(mvmvif_, ifc, (zx_handle_t*)out_mlme_channel);
 }
 
 void MacDevice::WlanmacStop() { mac_stop(mvmvif_); }

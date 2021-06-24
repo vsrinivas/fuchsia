@@ -39,7 +39,7 @@ void phy_create_iface_undo(struct iwl_trans* iwl_trans, uint16_t idx);
 
 // Mac protocol helpers
 zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info);
-zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel);
+zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel);
 void mac_stop(void* ctx);
 zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt);
 zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* chan);

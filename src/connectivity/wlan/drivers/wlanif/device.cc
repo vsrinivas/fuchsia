@@ -180,9 +180,9 @@ zx_status_t Device::Bind() {
 
   // The MLME interface has no start/stop commands, so we will start the wlanif_impl
   // device immediately
-  zx_handle_t sme_channel = ZX_HANDLE_INVALID;
-  zx_status_t status = wlanif_impl_start(&wlanif_impl_, this, &wlanif_impl_ifc_ops, &sme_channel);
-  ZX_DEBUG_ASSERT(sme_channel != ZX_HANDLE_INVALID);
+  zx_handle_t mlme_channel = ZX_HANDLE_INVALID;
+  zx_status_t status = wlanif_impl_start(&wlanif_impl_, this, &wlanif_impl_ifc_ops, &mlme_channel);
+  ZX_DEBUG_ASSERT(mlme_channel != ZX_HANDLE_INVALID);
   if (status != ZX_OK) {
     errorf("wlanif: call to wlanif-impl start() failed: %s\n", zx_status_get_string(status));
     return status;
@@ -203,7 +203,7 @@ zx_status_t Device::Bind() {
   if (status != ZX_OK) {
     errorf("wlanif: could not add ethernet_impl device: %s\n", zx_status_get_string(status));
   } else {
-    status = Connect(zx::channel(sme_channel));
+    status = Connect(zx::channel(mlme_channel));
     if (status != ZX_OK) {
       errorf("wlanif: unable to wait on SME channel: %s\n", zx_status_get_string(status));
       device_async_remove(ethdev_);

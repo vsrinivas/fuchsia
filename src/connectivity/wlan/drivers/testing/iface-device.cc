@@ -23,8 +23,8 @@ static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
     .query = [](void* ctx, uint32_t options, wlanmac_info_t* info) -> zx_status_t {
       return DEV(ctx)->Query(options, info);
     },
-    .start = [](void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel)
-        -> zx_status_t { return DEV(ctx)->Start(ifc, out_sme_channel); },
+    .start = [](void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel)
+        -> zx_status_t { return DEV(ctx)->Start(ifc, out_mlme_channel); },
     .stop = [](void* ctx) { DEV(ctx)->Stop(); },
     .queue_tx = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
       return ZX_OK;
@@ -133,10 +133,10 @@ void IfaceDevice::Stop() {
   ifc_.ctx = nullptr;
 }
 
-zx_status_t IfaceDevice::Start(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel) {
+zx_status_t IfaceDevice::Start(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel) {
   zxlogf(INFO, "wlan::testing::IfaceDevice::Start()");
   std::lock_guard<std::mutex> lock(lock_);
-  *out_sme_channel = ZX_HANDLE_INVALID;
+  *out_mlme_channel = ZX_HANDLE_INVALID;
   if (ifc_.ops != nullptr) {
     return ZX_ERR_ALREADY_BOUND;
   } else {

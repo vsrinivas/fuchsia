@@ -483,7 +483,7 @@ struct iwl_mvm_vif {
   /* Zircon objects */
   zx_device_t* zxdev;
   wlan_info_mac_role_t mac_role;
-  zx_handle_t sme_channel;  // Channel passed from devmgr. Will be passed to MLME at mac_start().
+  zx_handle_t mlme_channel;  // Channel passed from devmgr. Will be passed to MLME at mac_start().
   wlanmac_ifc_protocol_t ifc;
 
   // Merged from 'struct ieee80211_vif'

@@ -54,7 +54,7 @@ class WlanInterface {
   static zx_status_t ClearCountry(brcmf_pub* drvr);
 
   // ZX_PROTOCOL_WLANIF_IMPL operations.
-  zx_status_t Start(const wlanif_impl_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel);
+  zx_status_t Start(const wlanif_impl_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel);
   void Stop();
   void Query(wlanif_query_info_t* info);
   void StartScan(const wlanif_scan_req_t* req);

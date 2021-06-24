@@ -48,8 +48,8 @@ pub struct NewIface {
     pub id: u16,
     // Information about this iface's PHY.
     pub phy_ownership: PhyOwnership,
-    // A channel to communicate with the iface's underlying MLME.
-    pub mlme_channel: fidl_mlme::MlmeProxy,
+    // A proxy to communicate with the iface's underlying MLME.
+    pub mlme_proxy: fidl_mlme::MlmeProxy,
 }
 
 pub struct PhyDevice {
