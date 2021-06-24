@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 rustc_binary("bin") {
   output_name = "bt_a2dp"
@@ -109,6 +110,11 @@ fuchsia_package("bt-a2dp") {
     ":component",
     ":component-v2",
   ]
+}
+
+# The core realm shard to be used by product integrators.
+core_shard("bt-a2dp-core-shard") {
+  shard_file = "meta/bt-a2dp.core_shard.cml"
 }
 
 fuchsia_unittest_package("bt-a2dp-tests") {

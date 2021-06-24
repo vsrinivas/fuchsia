@@ -44,6 +44,11 @@
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.media.Audio",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.SessionAudioConsumerFactory",
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.sessions2.Publisher",
+                "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.memorypressure.Provider",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.NameLookup",
@@ -56,6 +61,7 @@
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.process.Resolver",
+                "fuchsia.settings.Audio",
                 "fuchsia.stash.SecureStore",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
@@ -394,6 +400,8 @@
             protocol: "fuchsia.vulkan.loader.Loader",
             path: "/svc_for_sys/fuchsia.vulkan.loader.Loader",
         },
+
+        // From v2 Bluetooth components
         {
             protocol: "fuchsia.bluetooth.avrcp.PeerManager",
             path: "/svc_for_sys/fuchsia.bluetooth.avrcp.PeerManager",
@@ -401,6 +409,14 @@
         {
             protocol: "fuchsia.bluetooth.avrcp.test.PeerManagerExt",
             path: "/svc_for_sys/fuchsia.bluetooth.avrcp.test.PeerManagerExt",
+        },
+        {
+            protocol: "fuchsia.bluetooth.a2dp.AudioMode",
+            path: "/svc_for_sys/fuchsia.bluetooth.a2dp.AudioMode",
+        },
+        {
+            protocol: "fuchsia.bluetooth.internal.a2dp.Controller",
+            path: "/svc_for_sys/fuchsia.bluetooth.internal.a2dp.Controller",
         },
 
         // From archivist
@@ -503,6 +519,11 @@
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.media.Audio",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.SessionAudioConsumerFactory",
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.sessions2.Publisher",
+                "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.memorypressure.Provider",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.NameLookup",
@@ -515,6 +536,7 @@
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.process.Resolver",
+                "fuchsia.settings.Audio",
                 "fuchsia.stash.SecureStore",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",

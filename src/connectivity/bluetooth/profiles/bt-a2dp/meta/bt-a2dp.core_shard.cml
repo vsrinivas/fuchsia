@@ -1,0 +1,50 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "bt-a2dp",
+            url: "fuchsia-pkg://fuchsia.com/bt-a2dp#meta/bt-a2dp.cm",
+            startup: "eager",
+            environment: "#universe-resolver-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.bluetooth.a2dp.AudioMode",
+                "fuchsia.bluetooth.internal.a2dp.Controller",
+            ],
+            from: "#bt-a2dp",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.bredr.Profile",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.SessionAudioConsumerFactory",
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.sessions2.Publisher",
+                "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.settings.Audio",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "#appmgr",
+            to: [ "#bt-a2dp" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#bt-a2dp" ],
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.avrcp.PeerManager" ],
+            from: "#bt-avrcp",
+            to: [ "#bt-a2dp" ],
+        },
+    ],
+}
