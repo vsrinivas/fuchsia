@@ -154,7 +154,7 @@ class _ListSettings extends StatelessWidget {
                 // Keyboard shortcuts
                 ListTile(
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.keyboard),
+                  leading: Icon(Icons.shortcut_outlined),
                   title: Text(Strings.shortcuts),
                   onTap: appState.settingsState.showShortcutSettings,
                 ),
