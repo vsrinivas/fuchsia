@@ -23,7 +23,7 @@ class AppLauncher extends StatelessWidget {
             contentPadding: EdgeInsets.symmetric(horizontal: 24),
             autofocus: index == 0,
             leading: Image(
-              image: AssetImage(item['icon']!),
+              image: AssetImage(item['icon'] ?? 'images/Default-icon-2x.png'),
               color: (item['url'] != null)
                   ? Theme.of(context).colorScheme.secondary
                   : Theme.of(context).disabledColor,

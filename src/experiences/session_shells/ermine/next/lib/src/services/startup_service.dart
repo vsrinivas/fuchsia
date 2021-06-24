@@ -89,7 +89,10 @@ class StartupService {
         }
       });
       try {
-        appLaunchEntries = entries;
+        // Filter out entries missing 'title', the minimum requirement.
+        appLaunchEntries = (entries as List<Map<String, String>>)
+            .where((e) => e.containsKey('title'))
+            .toList(growable: false);
         // ignore: avoid_catches_without_on_clauses
       } catch (e) {
         log.warning('$e: Failed to parse app_launch_entries.json. \n$data');
