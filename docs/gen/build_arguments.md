@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1602
+From //build/config/BUILDCONFIG.gn:1584
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -189,7 +189,7 @@ reserve few blocks required for its operations.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:101
+From //build/images/fvm.gni:99
 
 ### blobfs_board_minimum_data_bytes
 Number of bytes to reserve for data in the fs. This is in addition
@@ -200,7 +200,7 @@ required for the filesystem.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:88
+From //build/images/fvm.gni:86
 
 ### blobfs_board_minimum_inodes
 minimum_inodes is the number of inodes to reserve for the fs
@@ -209,7 +209,7 @@ required for the filesystem.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:78
+From //build/images/fvm.gni:76
 
 ### blobfs_enable_streaming_writes
 Set this to true when configuring gn args to enable blobfs streaming writes.
@@ -245,19 +245,19 @@ From //src/storage/blobfs/BUILD.gn:13
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:102
+From //build/images/fvm.gni:100
 
 ### blobfs_product_minimum_data_bytes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:89
+From //build/images/fvm.gni:87
 
 ### blobfs_product_minimum_inodes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:79
+From //build/images/fvm.gni:77
 
 ### board_bootfs_labels
 A list of binary labels to include in the ZBI.
@@ -335,7 +335,7 @@ board definition rather than the product definition.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/hwinfo:default_board_config", "//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support"]`
 
-From //boards/arm64.gni:30
+From //boards/arm64.gni:31
 
 **Overridden from the default:** `[]`
 
@@ -379,7 +379,7 @@ From //build/board.gni:19
 ### board_system_image_deps
 A list of binary labels to include in the system_image package.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:drivers-system", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:drivers-system", "//garnet/packages/prod:wlan_drivers", "//src/media/audio/bundles:virtual_audio_driver"]`
 
 From //boards/arm64.gni:25
 
@@ -554,7 +554,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:579
+From //build/config/BUILDCONFIG.gn:561
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -628,7 +628,7 @@ and compare the outputs' contents for reproducibility.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:583
+From //build/config/BUILDCONFIG.gn:565
 
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
@@ -998,6 +998,14 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 From //build/images/args.gni:60
 
+### ermine_app_entries
+Build arg that allows overriding the default set of application entries
+using '--args=ermine_app_entries="config/app_launch_entries.json"'
+
+**Current value (from the default):** `"config/app_launch_entries.json"`
+
+From //src/experiences/session_shells/ermine/next/BUILD.gn:24
+
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
 shaders on disk are up to date and reflect the current shader source code
@@ -1070,7 +1078,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1359
+From //build/config/BUILDCONFIG.gn:1341
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1298,36 +1306,36 @@ Possible values:
 
 **Current value (from the default):** `"default"`
 
-From //build/images/fvm.gni:123
+From //build/images/fvm.gni:121
 
 ### fvm_ftl_nand_block_count
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:116
+From //build/images/fvm.gni:114
 
 ### fvm_ftl_nand_oob_size
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:114
+From //build/images/fvm.gni:112
 
 ### fvm_ftl_nand_page_size
 Specifying these variables will generate a NAND FVM image suitable for
 directly flashing via fastboot. The NAND characteristics are required
 in order to properly initialize the FTL metadata in the OOB area.
-`max_fvm_size` should also be nonzero or else minfs will not have any
+`fvm_max_disk_size` should also be nonzero or else minfs will not have any
 room to initialize on boot.
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:113
+From //build/images/fvm.gni:111
 
 ### fvm_ftl_nand_pages_per_block
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:115
+From //build/images/fvm.gni:113
 
 ### fvm_image_size
 The size in bytes of the FVM partition image to create. Normally this is
@@ -1365,13 +1373,11 @@ From //build/images/args.gni:86
 ### fvm_reserved_slices
 Number of slices reserved by FVM for internal usage. A reservation
 partition will be added to the FVM image, containing this many slices.
-If set to the empty string, then no reservation partition will be added.
-Set to 1 by default so that we exercise this feature on all product
-configurations.
+If set to 0, then no reservation partition will be added.
 
-**Current value (from the default):** `1`
+**Current value (from the default):** `0`
 
-From //build/images/fvm.gni:61
+From //build/images/fvm.gni:59
 
 ### fvm_slice_size
 The size of the FVM partition images "slice size". The FVM slice size is a
@@ -1876,7 +1882,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1210
+From //build/config/BUILDCONFIG.gn:1192
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2058,7 +2064,7 @@ Maximum allowable size for fuchsia.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:37
+From //boards/arm64.gni:38
 
 **Overridden from the default:** `"0"`
 
@@ -2093,7 +2099,7 @@ Maximum allowable size for zedboot.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:38
+From //boards/arm64.gni:39
 
 **Overridden from the default:** `"0"`
 
@@ -2137,19 +2143,19 @@ From //build/images/args.gni:69
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:103
+From //build/images/fvm.gni:101
 
 ### minfs_board_minimum_data_bytes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:90
+From //build/images/fvm.gni:88
 
 ### minfs_board_minimum_inodes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:80
+From //build/images/fvm.gni:78
 
 ### minfs_enable_dirty_cache
 Set this to true when configuring gn args to enable minfs dirty cache.
@@ -2178,19 +2184,19 @@ From //src/storage/fshost/BUILD.gn:23
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:104
+From //build/images/fvm.gni:102
 
 ### minfs_product_minimum_data_bytes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:91
+From //build/images/fvm.gni:89
 
 ### minfs_product_minimum_inodes
 
 **Current value (from the default):** `false`
 
-From //build/images/fvm.gni:81
+From //build/images/fvm.gni:79
 
 ### mini_chromium_is_chromeos_ash
 
@@ -2951,7 +2957,7 @@ From //build/security.gni:36
 
 **Current value (from the default):** `false`
 
-From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/8fa6cf2c8cb4d611465d679f1ece4bb120e5609e/BUILD.gn#14)
+From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/2916d3cc5209ec247cc50dfe77488699727e41ab/BUILD.gn#14)
 
 ### rust_cap_lints
 Sets the maximum lint level.
@@ -3206,7 +3212,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1592
+From //build/config/BUILDCONFIG.gn:1574
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3215,7 +3221,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1597
+From //build/config/BUILDCONFIG.gn:1579
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3259,7 +3265,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1405
+From //build/config/BUILDCONFIG.gn:1387
 
 ### size_checker_input
 The input to the size checker.
@@ -3545,7 +3551,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1389
+From //build/config/BUILDCONFIG.gn:1371
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
