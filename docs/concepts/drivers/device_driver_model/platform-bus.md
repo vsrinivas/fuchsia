@@ -40,7 +40,7 @@ protocol implementation drivers. This is needed because the platform device driv
 different driver host process than the platform bus driver and the protocol implementation drivers.
 
 ![Fuchsia Platform Bus diagram](images/platform-bus.png)
-Source: [https://goto.google.com/zircon-platform-bus-diagram](https://goto.google.com/zircon-platform-bus-diagram)
+[Source](https://docs.google.com/drawings/d/1upwfaYnElEmoMss0s7Wzbbfg8UBsAsdk6W2OhI8MfgM/edit?usp=sharing)
 
 ## Platform Bus Initialization
 
