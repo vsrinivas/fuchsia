@@ -16,6 +16,7 @@ use {
         ExposeDeclCommon, ExposeSource, ExposeTarget, OfferDecl, OfferDeclCommon, OfferSource,
         OfferTarget, RegistrationDeclCommon, RegistrationSource, UseDecl, UseDeclCommon, UseSource,
     },
+    derivative::Derivative,
     from_enum::FromEnum,
     moniker::{AbsoluteMoniker, ChildMoniker, PartialChildMoniker},
     std::{marker::PhantomData, sync::Arc},
@@ -32,6 +33,8 @@ use {
 ///     .offer::<OfferProtocolDecl>()
 ///     .expose::<ExposeProtocolDecl>();
 /// ```
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""), Copy(bound = ""))]
 pub struct RoutingStrategy<Start = (), Offer = (), Expose = ()>(
     PhantomData<(Start, Offer, Expose)>,
 );
@@ -54,14 +57,6 @@ impl RoutingStrategy {
         RoutingStrategy(PhantomData)
     }
 }
-
-impl<S, O, E> Clone for RoutingStrategy<S, O, E> {
-    fn clone(&self) -> Self {
-        RoutingStrategy(PhantomData)
-    }
-}
-
-impl<S, O, E> Copy for RoutingStrategy<S, O, E> {}
 
 // Implement the Use routing strategy. In this strategy, there is neither no
 // Expose nor Offer. This strategy allows components to route capabilities to
@@ -485,6 +480,8 @@ pub trait Sources: Clone + Send + Sync {
 }
 
 /// Defines which capability source types are supported.
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""))]
 pub struct AllowedSourcesBuilder<CapabilityDecl = ()> {
     framework: Option<fn(CapabilityName) -> InternalCapability>,
     builtin: Option<fn(CapabilityName) -> InternalCapability>,
@@ -493,20 +490,6 @@ pub struct AllowedSourcesBuilder<CapabilityDecl = ()> {
     namespace: bool,
     component: bool,
     _decl: PhantomData<CapabilityDecl>,
-}
-
-impl<C> Clone for AllowedSourcesBuilder<C> {
-    fn clone(&self) -> Self {
-        Self {
-            framework: self.framework.clone(),
-            builtin: self.builtin.clone(),
-            capability: self.capability.clone(),
-            collection: self.collection.clone(),
-            namespace: self.namespace.clone(),
-            component: self.component.clone(),
-            _decl: self._decl.clone(),
-        }
-    }
 }
 
 impl<C> AllowedSourcesBuilder<C> {

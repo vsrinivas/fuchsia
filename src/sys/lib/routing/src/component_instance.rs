@@ -10,8 +10,8 @@ use {
     },
     async_trait::async_trait,
     cm_rust::ComponentDecl,
+    derivative::Derivative,
     moniker::{AbsoluteMoniker, ChildMoniker, PartialChildMoniker},
-    std::fmt,
     std::{
         clone::Clone,
         sync::{Arc, Weak},
@@ -68,7 +68,10 @@ pub trait ComponentInstanceInterface: Sized + Send + Sync {
 /// A wrapper for a weak reference to a type implementing `ComponentInstanceInterface`. Provides the
 /// absolute moniker of the component instance, which is useful for error reporting if the original
 /// component instance has been destroyed.
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""), Default(bound = ""), Debug)]
 pub struct WeakComponentInstanceInterface<C: ComponentInstanceInterface> {
+    #[derivative(Debug = "ignore")]
     inner: Weak<C>,
     pub moniker: AbsoluteMoniker,
 }
@@ -87,30 +90,9 @@ impl<C: ComponentInstanceInterface> WeakComponentInstanceInterface<C> {
     }
 }
 
-impl<C: ComponentInstanceInterface> Clone for WeakComponentInstanceInterface<C> {
-    fn clone(&self) -> Self {
-        Self { inner: self.inner.clone(), moniker: self.moniker.clone() }
-    }
-}
-
 impl<C: ComponentInstanceInterface> From<&Arc<C>> for WeakComponentInstanceInterface<C> {
     fn from(component: &Arc<C>) -> Self {
         Self { inner: Arc::downgrade(component), moniker: component.abs_moniker().clone() }
-    }
-}
-
-impl<C: ComponentInstanceInterface> fmt::Debug for WeakComponentInstanceInterface<C> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("WeakComponentInstanceInterface").field("moniker", &self.moniker).finish()
-    }
-}
-
-impl<C: ComponentInstanceInterface> Default for WeakComponentInstanceInterface<C> {
-    fn default() -> Self {
-        WeakComponentInstanceInterface::<C> {
-            inner: Weak::new(),
-            moniker: AbsoluteMoniker::default(),
-        }
     }
 }
 

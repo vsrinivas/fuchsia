@@ -20,6 +20,7 @@ use {
         StorageDecl, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl,
         UseSource, UseStorageDecl,
     },
+    derivative::Derivative,
     from_enum::FromEnum,
     std::{
         fmt,
@@ -38,7 +39,8 @@ pub enum Error {
 }
 
 /// Describes the source of a capability, as determined by `find_capability_source`
-#[derive(Debug)]
+#[derive(Debug, Derivative)]
+#[derivative(Clone(bound = ""))]
 pub enum CapabilitySourceInterface<C: ComponentInstanceInterface> {
     /// This capability originates from the component instance for the given Realm.
     /// point.
@@ -152,57 +154,10 @@ impl<C: ComponentInstanceInterface> fmt::Display for CapabilitySourceInterface<C
     }
 }
 
-impl<C: ComponentInstanceInterface> Clone for CapabilitySourceInterface<C> {
-    fn clone(&self) -> Self {
-        match self {
-            CapabilitySourceInterface::Component { capability, component } => {
-                CapabilitySourceInterface::Component {
-                    capability: capability.clone(),
-                    component: component.clone(),
-                }
-            }
-            CapabilitySourceInterface::Framework { capability, component } => {
-                CapabilitySourceInterface::Framework {
-                    capability: capability.clone(),
-                    component: component.clone(),
-                }
-            }
-            CapabilitySourceInterface::Builtin { capability, top_instance } => {
-                CapabilitySourceInterface::Builtin {
-                    capability: capability.clone(),
-                    top_instance: top_instance.clone(),
-                }
-            }
-            CapabilitySourceInterface::Namespace { capability, top_instance } => {
-                CapabilitySourceInterface::Namespace {
-                    capability: capability.clone(),
-                    top_instance: top_instance.clone(),
-                }
-            }
-            CapabilitySourceInterface::Capability { source_capability, component } => {
-                CapabilitySourceInterface::Capability {
-                    source_capability: source_capability.clone(),
-                    component: component.clone(),
-                }
-            }
-            CapabilitySourceInterface::Collection {
-                collection_name,
-                source_name,
-                capability_provider,
-                component,
-            } => CapabilitySourceInterface::Collection {
-                collection_name: collection_name.clone(),
-                source_name: source_name.clone(),
-                capability_provider: capability_provider.clone(),
-                component: component.clone(),
-            },
-        }
-    }
-}
-
 /// Information returned by the route_storage_capability function on the source of a storage
 /// capability.
-#[derive(Debug)]
+#[derive(Debug, Derivative)]
+#[derivative(Clone(bound = ""))]
 pub struct StorageCapabilitySource<C: ComponentInstanceInterface> {
     /// The component that's providing the backing directory capability for this storage
     /// capability. If None, then the backing directory comes from component_manager's namespace.
@@ -220,17 +175,6 @@ pub struct StorageCapabilitySource<C: ComponentInstanceInterface> {
     /// appended to backing_directory_path first, and component_manager will create this subdir if
     /// it doesn't exist but won't create backing_directory_subdir.
     pub storage_subdir: Option<PathBuf>,
-}
-
-impl<C: ComponentInstanceInterface> Clone for StorageCapabilitySource<C> {
-    fn clone(&self) -> Self {
-        Self {
-            storage_provider: self.storage_provider.clone(),
-            backing_directory_path: self.backing_directory_path.clone(),
-            backing_directory_subdir: self.backing_directory_subdir.clone(),
-            storage_subdir: self.storage_subdir.clone(),
-        }
-    }
 }
 
 /// A provider of a capability whose source originates from zero or more components

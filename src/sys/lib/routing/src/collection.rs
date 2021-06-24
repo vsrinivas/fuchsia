@@ -14,12 +14,15 @@ use {
     },
     async_trait::async_trait,
     cm_rust::{CapabilityName, ExposeDecl, ExposeDeclCommon, OfferDecl, OfferDeclCommon},
+    derivative::Derivative,
     from_enum::FromEnum,
     moniker::PartialChildMoniker,
     std::sync::Arc,
 };
 
 /// Routes an offer declaration to its sources within a collection.
+#[derive(Derivative)]
+#[derivative(Clone(bound = "O: Clone, S: Clone, V: Clone"))]
 pub(super) struct RouteOfferFromCollection<C: ComponentInstanceInterface, B, O, E, S, V> {
     pub router: RoutingStrategy<B, Offer<O>, Expose<E>>,
     pub collection_component: WeakComponentInstanceInterface<C>,
@@ -111,29 +114,9 @@ where
     }
 }
 
-// NOTE: Manual implementation of Clone is required, as the derived implementation
-// puts a Clone requirement on all generic params, which are used in PhantomData
-// and don't need to be Clone.
-impl<C, B, O, E, S, V> Clone for RouteOfferFromCollection<C, B, O, E, S, V>
-where
-    C: ComponentInstanceInterface,
-    O: Clone,
-    S: Clone,
-    V: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            router: self.router.clone(),
-            collection_component: self.collection_component.clone(),
-            collection_name: self.collection_name.clone(),
-            offer_decl: self.offer_decl.clone(),
-            sources: self.sources.clone(),
-            visitor: self.visitor.clone(),
-        }
-    }
-}
-
 /// Routes an expose declaration to its sources within a collection.
+#[derive(Derivative)]
+#[derivative(Clone(bound = "E: Clone, S: Clone, V: Clone"))]
 pub(super) struct RouteExposeFromCollection<C: ComponentInstanceInterface, B, O, E, S, V> {
     pub router: RoutingStrategy<B, O, Expose<E>>,
     pub collection_component: WeakComponentInstanceInterface<C>,
@@ -215,28 +198,6 @@ where
 
     fn clone_boxed(&self) -> Box<dyn CollectionCapabilityProvider<C>> {
         Box::new(self.clone())
-    }
-}
-
-// NOTE: Manual implementation of Clone is required, as the derived implementation
-// puts a Clone requirement on all generic params, which are used in PhantomData
-// and don't need to be Clone.
-impl<C, B, O, E, S, V> Clone for RouteExposeFromCollection<C, B, O, E, S, V>
-where
-    C: ComponentInstanceInterface,
-    E: Clone,
-    S: Clone,
-    V: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            router: self.router.clone(),
-            collection_component: self.collection_component.clone(),
-            collection_name: self.collection_name.clone(),
-            expose_decl: self.expose_decl.clone(),
-            sources: self.sources.clone(),
-            visitor: self.visitor.clone(),
-        }
     }
 }
 
