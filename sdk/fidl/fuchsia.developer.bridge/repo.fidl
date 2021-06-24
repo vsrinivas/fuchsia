@@ -30,15 +30,15 @@ table PmRepositorySpec {
 };
 
 [Discoverable]
-protocol Repositories {
+protocol RepositoryRegistry {
     /// Add a repository named `name` that has the following [RepositorySpec].
-    Add(string:MAX_NAME name, RepositorySpec repository) -> () error RepositoryError;
+    AddRepository(string:MAX_NAME name, RepositorySpec repository) -> () error RepositoryError;
 
     /// Returns true if the repository was removed, or false if there is no
     /// repository named `name`.
-    Remove(string:MAX_NAME name) -> (bool found);
+    RemoveRepository(string:MAX_NAME name) -> (bool found);
 
-    List(request<RepositoryIterator> iterator);
+    ListRepositories(request<RepositoryIterator> iterator);
 
     RegisterTarget(RepositoryTarget target_info) -> () error RepositoryError;
 };
@@ -73,7 +73,7 @@ enum RepositoryError : uint32 {
     /// TODO(fxbug.dev/77904) make this more specific when we have more specific
     /// errors from the underlying API.
     TARGET_COMMUNICATION_FAILURE = 3;
-    /// There was an error from the fuchsia.pkg.RepositoryManager.
+    /// There was an error from the fuchsia.pkg.RepositoryRegistry.
     REPOSITORY_MANAGER_ERROR = 4;
     /// There was a error from fuchsia.pkg.rewrite.Engine.
     REWRITE_ENGINE_ERROR = 5;

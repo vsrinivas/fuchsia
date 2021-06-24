@@ -25,7 +25,7 @@ use {
     fidl::endpoints::{ClientEnd, DiscoverableService, Proxy, RequestStream, ServiceMarker},
     fidl_fuchsia_developer_bridge::{
         self as bridge, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
-        DiagnosticsStreamError, RepositoriesMarker, StreamMode,
+        DiagnosticsStreamError, RepositoryRegistryMarker, StreamMode,
     },
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, DiagnosticsData,
@@ -305,7 +305,7 @@ impl Daemon {
 
     async fn start_services(&mut self) -> Result<()> {
         let cx = services::Context::new(self.clone());
-        self.service_register.start(RepositoriesMarker::SERVICE_NAME.to_string(), cx).await?;
+        self.service_register.start(RepositoryRegistryMarker::SERVICE_NAME.to_string(), cx).await?;
         Ok(())
     }
 

@@ -229,26 +229,26 @@ impl Default for Repo {
 
 #[async_trait(?Send)]
 impl FidlService for Repo {
-    type Service = bridge::RepositoriesMarker;
+    type Service = bridge::RepositoryRegistryMarker;
     type StreamHandler = FidlStreamHandler<Self>;
 
-    async fn handle(&self, cx: &Context, req: bridge::RepositoriesRequest) -> Result<()> {
+    async fn handle(&self, cx: &Context, req: bridge::RepositoryRegistryRequest) -> Result<()> {
         match req {
-            bridge::RepositoriesRequest::Add { name, repository, responder } => {
+            bridge::RepositoryRegistryRequest::AddRepository { name, repository, responder } => {
                 responder.send(&mut self.add_repository(name, repository).await)?;
                 Ok(())
             }
-            bridge::RepositoriesRequest::Remove { name, responder } => {
+            bridge::RepositoryRegistryRequest::RemoveRepository { name, responder } => {
                 log::info!("Removing repository {}", name);
 
                 responder.send(self.manager.remove(&name))?;
                 Ok(())
             }
-            bridge::RepositoriesRequest::RegisterTarget { target_info, responder } => {
+            bridge::RepositoryRegistryRequest::RegisterTarget { target_info, responder } => {
                 responder.send(&mut self.register_target(cx, target_info).await)?;
                 Ok(())
             }
-            bridge::RepositoriesRequest::List { iterator, .. } => {
+            bridge::RepositoryRegistryRequest::ListRepositories { iterator, .. } => {
                 let mut stream = iterator.into_stream()?;
                 let mut values = self
                     .manager
@@ -463,11 +463,11 @@ mod tests {
         }
     }
 
-    async fn add_repo(daemon: &FakeDaemon) -> bridge::RepositoriesProxy {
-        let proxy = daemon.open_proxy::<bridge::RepositoriesMarker>().await;
+    async fn add_repo(daemon: &FakeDaemon) -> bridge::RepositoryRegistryProxy {
+        let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
         let spec = RepositorySpec::FileSystem { path: EMPTY_REPO_PATH.into() };
         proxy
-            .add(REPO_NAME, &mut spec.into())
+            .add_repository(REPO_NAME, &mut spec.into())
             .await
             .expect("communicated with proxy")
             .expect("adding repository to succeed");
@@ -481,19 +481,19 @@ mod tests {
 
         let daemon = FakeDaemonBuilder::new().register_fidl_service::<Repo>().build();
 
-        let proxy = daemon.open_proxy::<bridge::RepositoriesMarker>().await;
+        let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
         let spec = bridge::RepositorySpec::FileSystem(bridge::FileSystemRepositorySpec {
             path: Some(EMPTY_REPO_PATH.to_owned()),
             ..bridge::FileSystemRepositorySpec::EMPTY
         });
         proxy
-            .add(REPO_NAME, &mut spec.clone())
+            .add_repository(REPO_NAME, &mut spec.clone())
             .await
             .expect("communicated with proxy")
             .expect("adding repository to succeed");
 
         let (client, server) = fidl::endpoints::create_endpoints().unwrap();
-        proxy.list(server).unwrap();
+        proxy.list_repositories(server).unwrap();
         let client = client.into_proxy().unwrap();
 
         let next = client.next().await.unwrap();
@@ -505,10 +505,10 @@ mod tests {
         assert_eq!(REPO_NAME, &got.name);
         assert_eq!(spec, got.spec);
 
-        assert!(proxy.remove(REPO_NAME).await.unwrap());
+        assert!(proxy.remove_repository(REPO_NAME).await.unwrap());
 
         let (client, server) = fidl::endpoints::create_endpoints().unwrap();
-        proxy.list(server).unwrap();
+        proxy.list_repositories(server).unwrap();
         let client = client.into_proxy().unwrap();
 
         assert_eq!(0, client.next().await.unwrap().len());
@@ -617,7 +617,7 @@ mod tests {
             .register_fidl_service::<Repo>()
             .build();
 
-        let proxy = daemon.open_proxy::<bridge::RepositoriesMarker>().await;
+        let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
         assert_eq!(
             proxy
                 .register_target(bridge::RepositoryTarget {

@@ -7,22 +7,22 @@ use {
     ffx_core::ffx_plugin,
     ffx_repository_list_args::ListCommand,
     fidl,
-    fidl_fuchsia_developer_bridge::{RepositoriesProxy, RepositoryIteratorMarker},
+    fidl_fuchsia_developer_bridge::{RepositoryIteratorMarker, RepositoryRegistryProxy},
     std::io::{stdout, Write},
 };
 
-#[ffx_plugin("ffx_repository", RepositoriesProxy = "daemon::service")]
-pub async fn list(cmd: ListCommand, repos: RepositoriesProxy) -> Result<()> {
+#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
+pub async fn list(cmd: ListCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     list_impl(cmd, repos, stdout()).await
 }
 
 async fn list_impl<W: Write>(
     _cmd: ListCommand,
-    repos_proxy: RepositoriesProxy,
+    repos_proxy: RepositoryRegistryProxy,
     mut writer: W,
 ) -> Result<()> {
     let (client, server) = fidl::endpoints::create_endpoints::<RepositoryIteratorMarker>()?;
-    repos_proxy.list(server)?;
+    repos_proxy.list_repositories(server)?;
     let client = client.into_proxy()?;
 
     loop {
@@ -43,8 +43,8 @@ mod test {
     use super::*;
     use {
         fidl_fuchsia_developer_bridge::{
-            FileSystemRepositorySpec, RepositoriesRequest, RepositoryConfig,
-            RepositoryIteratorRequest, RepositorySpec,
+            FileSystemRepositorySpec, RepositoryConfig, RepositoryIteratorRequest,
+            RepositoryRegistryRequest, RepositorySpec,
         },
         fuchsia_async as fasync,
         futures::StreamExt,
@@ -56,7 +56,7 @@ mod test {
             fasync::Task::spawn(async move {
                 let mut sent = false;
                 match req {
-                    RepositoriesRequest::List { iterator, .. } => {
+                    RepositoryRegistryRequest::ListRepositories { iterator, .. } => {
                         let mut iterator = iterator.into_stream().unwrap();
                         while let Some(Ok(req)) = iterator.next().await {
                             match req {

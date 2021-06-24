@@ -4,12 +4,13 @@
 
 use {
     anyhow::Result, errors::ffx_bail, ffx_core::ffx_plugin,
-    ffx_repository_remove_args::RemoveCommand, fidl_fuchsia_developer_bridge::RepositoriesProxy,
+    ffx_repository_remove_args::RemoveCommand,
+    fidl_fuchsia_developer_bridge::RepositoryRegistryProxy,
 };
 
-#[ffx_plugin("ffx_repository", RepositoriesProxy = "daemon::service")]
-pub async fn remove(cmd: RemoveCommand, repos: RepositoriesProxy) -> Result<()> {
-    if !repos.remove(&cmd.name).await? {
+#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
+pub async fn remove(cmd: RemoveCommand, repos: RepositoryRegistryProxy) -> Result<()> {
+    if !repos.remove_repository(&cmd.name).await? {
         ffx_bail!("No repository named \"{}\".", cmd.name);
     }
 
@@ -20,7 +21,7 @@ pub async fn remove(cmd: RemoveCommand, repos: RepositoriesProxy) -> Result<()> 
 mod test {
     use super::*;
     use {
-        fidl_fuchsia_developer_bridge::RepositoriesRequest, fuchsia_async as fasync,
+        fidl_fuchsia_developer_bridge::RepositoryRegistryRequest, fuchsia_async as fasync,
         futures::channel::oneshot::channel,
     };
 
@@ -29,7 +30,7 @@ mod test {
         let (sender, receiver) = channel();
         let mut sender = Some(sender);
         let repos = setup_fake_repos(move |req| match req {
-            RepositoriesRequest::Remove { name, responder } => {
+            RepositoryRegistryRequest::RemoveRepository { name, responder } => {
                 sender.take().unwrap().send(name).unwrap();
                 responder.send(true).unwrap()
             }
@@ -42,7 +43,9 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_remove_fail() {
         let repos = setup_fake_repos(move |req| match req {
-            RepositoriesRequest::Remove { responder, .. } => responder.send(false).unwrap(),
+            RepositoryRegistryRequest::RemoveRepository { responder, .. } => {
+                responder.send(false).unwrap()
+            }
             other => panic!("Unexpected request: {:?}", other),
         });
         assert!(remove(RemoveCommand { name: "NotMyRepo".to_owned() }, repos).await.is_err());

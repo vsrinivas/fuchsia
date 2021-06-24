@@ -8,11 +8,11 @@ use {
     ffx_config::get,
     ffx_core::ffx_plugin,
     ffx_repository_target_register_args::RegisterCommand,
-    fidl_fuchsia_developer_bridge::{RepositoriesProxy, RepositoryError, RepositoryTarget},
+    fidl_fuchsia_developer_bridge::{RepositoryError, RepositoryRegistryProxy, RepositoryTarget},
 };
 
-#[ffx_plugin("ffx_repository", RepositoriesProxy = "daemon::service")]
-pub async fn register_cmd(cmd: RegisterCommand, repos: RepositoriesProxy) -> Result<()> {
+#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
+pub async fn register_cmd(cmd: RegisterCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     register(get("target.default").await.context("getting default target from config")?, cmd, repos)
         .await
 }
@@ -20,7 +20,7 @@ pub async fn register_cmd(cmd: RegisterCommand, repos: RepositoriesProxy) -> Res
 async fn register(
     target_str: Option<String>,
     cmd: RegisterCommand,
-    repos: RepositoriesProxy,
+    repos: RepositoryRegistryProxy,
 ) -> Result<()> {
     if cmd.name.is_empty() {
         ffx_bail!("error: repository name must not be empty.")
@@ -48,16 +48,16 @@ async fn register(
 mod test {
     use super::*;
     use {
-        fidl_fuchsia_developer_bridge::RepositoriesRequest,
+        fidl_fuchsia_developer_bridge::RepositoryRegistryRequest,
         fuchsia_async as fasync,
         futures::channel::oneshot::{channel, Receiver},
     };
 
-    async fn setup_fake_server() -> (RepositoriesProxy, Receiver<RepositoryTarget>) {
+    async fn setup_fake_server() -> (RepositoryRegistryProxy, Receiver<RepositoryTarget>) {
         let (sender, receiver) = channel();
         let mut sender = Some(sender);
         let repos = setup_fake_repos(move |req| match req {
-            RepositoriesRequest::RegisterTarget { target_info, responder } => {
+            RepositoryRegistryRequest::RegisterTarget { target_info, responder } => {
                 sender.take().unwrap().send(target_info).unwrap();
                 responder.send(&mut Ok(())).unwrap();
             }
@@ -116,7 +116,7 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_register_returns_error() {
         let repos = setup_fake_repos(move |req| match req {
-            RepositoriesRequest::RegisterTarget { target_info: _, responder } => {
+            RepositoryRegistryRequest::RegisterTarget { target_info: _, responder } => {
                 responder.send(&mut Err(RepositoryError::TargetCommunicationFailure)).unwrap();
             }
             other => panic!("Unexpected request: {:?}", other),
