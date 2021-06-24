@@ -6,7 +6,7 @@
   "pkg/fit/include/lib/fit/function_traits.h": "4db000fe2c2daba6d1b999c21c851da9",
   "pkg/fit/include/lib/fit/nullable.h": "dff1ba0db70e1db407f5a5649305531f",
   "pkg/fit/include/lib/fit/storage_internal.h": "2487e966d949d93255d6cf420f31be3b",
-  "pkg/fit/include/lib/fit/thread_checker.h": "0ec76270ede15efbc0580c658654b1ca",
+  "pkg/fit/include/lib/fit/thread_checker.h": "bdb4403c6c9aa5fe5a404a8101c18c7d",
   "pkg/fit/include/lib/fit/thread_safety.h": "0df6c9f73fc6b7e13c9cedd8cdcac250",
   "pkg/fit/include/lib/fit/traits.h": "9c44c9dc039ba7316fed8db9baf8f7ce",
   "pkg/fit/include/lib/fit/utility_internal.h": "c0cb4fa324bae9d7b9c3a279fee02264"
