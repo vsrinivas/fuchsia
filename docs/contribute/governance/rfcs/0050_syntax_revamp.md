@@ -256,7 +256,7 @@ methods requests and responses rather than the current syntactic sugar for
 arguments borrowed from most programming languages. However, a competing design
 consideration is to help library authors in aggregate achieve consistency: in
 `enum` layout declaration, we prefer syntactic sugar over explicitly choosing a
-wrapped type, as having a sane default provides greater consistency for enums
+wrapped type, as having a sensible default provides greater consistency for enums
 across FIDL libraries. This in turn provides a migration path to switch enums
 down the road, e.g. should a library define a general purpose `ErrorStatus`
 enum, it could be replaced later by another 'better' general purpose
@@ -1190,7 +1190,7 @@ Or at least, not without a good understanding of the wire format and care, e.g.
 ##### Footnote2
 
 While it may seem odd to prefer syntactic conciseness over explicitly choosing a
-wrapped type, having a sane default provides greater consistency for enums
+wrapped type, having a sensible default provides greater consistency for enums
 across FIDL libraries. This in term provides a migration path to switch enums
 down the road, e.g. should a library define a general purpose `ErrorStatus`
 enum, it could be replaced later by another 'better' general purpose
