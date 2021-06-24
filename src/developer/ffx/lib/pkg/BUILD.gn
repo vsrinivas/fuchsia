@@ -44,6 +44,8 @@ rustc_library("pkg") {
   ]
 
   test_deps = [
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:tempfile",
   ]

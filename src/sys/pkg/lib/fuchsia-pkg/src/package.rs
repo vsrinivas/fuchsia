@@ -72,6 +72,10 @@ impl PackageBuilder {
         })
     }
 
+    pub fn from_meta_package(meta_package: MetaPackage) -> Self {
+        Self { contents: BTreeMap::new(), meta_package, blobs: BTreeMap::new() }
+    }
+
     pub fn add_entry(&mut self, blob_path: String, hash: Hash, source_path: PathBuf, size: u64) {
         self.contents.insert(blob_path, hash);
         self.blobs.insert(hash, BlobEntry { path: source_path, size });

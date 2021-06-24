@@ -16,7 +16,7 @@ mod package_manifest;
 mod path;
 
 pub use crate::{
-    build::build,
+    build::{build, build_with_file_system, FileSystem},
     creation_manifest::CreationManifest,
     errors::{
         BuildError, CreationManifestError, MetaContentsError, MetaPackageError,
@@ -25,7 +25,7 @@ pub use crate::{
     },
     meta_contents::MetaContents,
     meta_package::MetaPackage,
-    package::Package,
+    package::{BlobEntry, Package, PackageBuilder},
     package_directory::{LoadMetaContentsError, OpenRights, PackageDirectory, ReadHashError},
     package_manifest::PackageManifest,
     path::{check_package_name, check_package_variant, check_resource_path, PackagePath},
