@@ -57,6 +57,11 @@ resource struct PciPlatformInfo {
     zx.handle:VMO ecam_vmo;
     vector<PciLegacyIrq>:MAX legacy_irqs;
     vector<PciIrqRoutingEntry>:MAX irq_routing;
+    /// A vector of PciBdfs that are known to ACPI.
+    /// For each BDF in this list, the composite device published by the PCI bus
+    /// driver will bind to an ACPI device with ACPI_BUS_TYPE == PCI and a
+    /// matching PCI_BIND_TOPO.
+    vector<PciBdf>:MAX acpi_bdfs;
 };
 
 enum PciAddressSpace : uint8 {

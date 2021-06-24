@@ -29,6 +29,7 @@
 
 #include <memory>
 
+#include <bind/fuchsia/acpi/cpp/fidl.h>
 #include <bind/fuchsia/pci/cpp/fidl.h>
 #include <ddktl/device.h>
 
@@ -45,7 +46,7 @@ static const device_fragment_part_t sysmem_fragment[] = {
     {countof(sysmem_fragment_match), sysmem_fragment_match},
 };
 
-zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device) {
+zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device, bool uses_acpi) {
   auto pci_bind_topo = static_cast<uint32_t>(
       BIND_PCI_TOPO_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id));
   zx_device_prop_t fragment_props[] = {
@@ -82,9 +83,20 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device) 
       {countof(pci_fragment_match), pci_fragment_match},
   };
 
+  const zx_bind_inst_t acpi_fragment_match[] = {
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_ACPI),
+      BI_ABORT_IF(NE, BIND_ACPI_BUS_TYPE, bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_PCI),
+      BI_MATCH_IF(EQ, BIND_PCI_TOPO, pci_bind_topo),
+  };
+
+  const device_fragment_part_t acpi_fragment[] = {
+      {countof(acpi_fragment_match), acpi_fragment_match},
+  };
+
   const device_fragment_t fragments[] = {
       {"sysmem", countof(sysmem_fragment), sysmem_fragment},
       {"pci", countof(pci_fragment), pci_fragment},
+      {"acpi", countof(acpi_fragment), acpi_fragment},
   };
   zx_device_prop_t composite_props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},
@@ -101,7 +113,7 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device) 
       .props = composite_props,
       .props_count = countof(composite_props),
       .fragments = fragments,
-      .fragments_count = countof(fragments),
+      .fragments_count = uses_acpi ? countof(fragments) : countof(fragments) - 1,
       .coresident_device_index = UINT32_MAX,  // create a new devhost
   };
 
@@ -318,7 +330,8 @@ zx_status_t KernelPci::PciGetBti(uint32_t index, zx::bti* out_bti) {
 }
 
 // Initializes the upper half of a pci / pci.proxy devhost pair.
-static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
+static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index,
+                                  pci_platform_info_t* plat_info) {
   zx_pcie_device_info_t info;
   zx_handle_t handle;
 
@@ -343,9 +356,19 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
   device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &device.pciroot);
   device_get_protocol(parent, ZX_PROTOCOL_PDEV, &device.pdev);
 
+  bool uses_acpi = false;
+  for (size_t i = 0; i < plat_info->acpi_bdfs_count; i++) {
+    const pci_bdf_t* bdf = &plat_info->acpi_bdfs_list[i];
+    if (bdf->bus_id == device.info.bus_id && bdf->device_id == device.info.dev_id &&
+        bdf->function_id == device.info.func_id) {
+      uses_acpi = true;
+      break;
+    }
+  }
+
   snprintf(device.name, sizeof(device.name), "%02x:%02x.%1x", device.info.bus_id,
            device.info.dev_id, device.info.func_id);
-  status = KernelPci::CreateComposite(parent, device);
+  status = KernelPci::CreateComposite(parent, device, uses_acpi);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to create kPCI for %#02x:%#02x.%1x (%#04x:%#04x)", info.bus_id,
            info.dev_id, info.func_id, info.vendor_id, info.device_id);
@@ -356,9 +379,15 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
 }  // namespace pci
 
 static zx_status_t pci_drv_bind(void* ctx, zx_device_t* parent) {
+  pci_platform_info_t platform_info{};
+  pciroot_protocol_t pciroot;
+  zx_status_t result = device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &pciroot);
+  if (result == ZX_OK) {
+    result = pciroot_get_pci_platform_info(&pciroot, &platform_info);
+  }
   // Walk PCI devices to create their upper half devices until we hit the end
   for (uint32_t index = 0;; index++) {
-    if (pci_init_child(parent, index) != ZX_OK) {
+    if (pci_init_child(parent, index, &platform_info) != ZX_OK) {
       break;
     }
   }

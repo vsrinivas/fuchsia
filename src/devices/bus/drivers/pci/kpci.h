@@ -40,7 +40,7 @@ class KernelPci : public KernelPciType, public ddk::PciProtocol<pci::KernelPci> 
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   void DdkRelease();
 
-  static zx_status_t CreateComposite(zx_device_t* parent, kpci_device device);
+  static zx_status_t CreateComposite(zx_device_t* parent, kpci_device device, bool uses_acpi);
   // Pci Protocol
   zx_status_t PciGetBar(uint32_t bar_id, pci_bar_t* out_res);
   zx_status_t PciEnableBusMaster(bool enable);
