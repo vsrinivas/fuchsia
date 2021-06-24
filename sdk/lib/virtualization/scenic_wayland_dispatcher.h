@@ -13,7 +13,7 @@
 
 namespace guest {
 
-// Provides a |WaylandDispatcher| that will create scenic views for each
+// Provides a |WaylandDispatcher| that will create a scenic view for each
 // wayland shell surface.
 //
 // This class is not thread-safe.
@@ -33,7 +33,7 @@ class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatche
   void OnNewConnection(zx::channel channel);
 
   fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> NewBinding() {
-    return bindings_.NewBinding();
+    return binding_.NewBinding();
   }
 
  private:
@@ -46,13 +46,20 @@ class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatche
 
   fuchsia::virtualization::WaylandDispatcher* GetOrStartBridge();
 
-  sys::ComponentContext* context_;
+  sys::ComponentContext* context_ = nullptr;
 
+  // Constructor-defined behaviors.
   ViewListener listener_;
   ShutdownViewListener shutdown_listener_;
-  fidl::Binding<fuchsia::virtualization::WaylandDispatcher> bindings_{this};
+
+  // Receive a new Wayland channel to the virtio_wl device.
+  fidl::Binding<fuchsia::virtualization::WaylandDispatcher> binding_{this};
+
+  // Management of the `wayland_bridge` component.
   fuchsia::sys::ComponentControllerPtr bridge_;
+  // Client endpoint to `wayland_bridge`; for forwarding the Wayland channel.
   fuchsia::virtualization::WaylandDispatcherPtr dispatcher_;
+  // Client endpoint to `wayland_bridge`; receive Scenic view lifecycle events.
   fuchsia::wayland::ViewProducerPtr view_producer_;
 };
 
