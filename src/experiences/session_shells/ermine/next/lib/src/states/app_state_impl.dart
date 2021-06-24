@@ -260,11 +260,8 @@ class AppStateImpl with Disposable implements AppState {
     //}
   }
 
-  void setFocus(ViewHandle view) async {
+  void setFocus(ViewHandle view) {
     focusService.moveFocus(view);
-    // TODO(http://fxb/79463): Immediately update the local UI state because
-    // linux based apps do not respond to requestFocus correctly.
-    _onFocusMoved(view);
   }
 
   bool _onViewPresented(ViewState viewState) {
@@ -304,12 +301,6 @@ class AppStateImpl with Disposable implements AppState {
       views.remove(view);
       focusService.removeView(view.view);
       view.dispose();
-
-      // TODO(http://fxb/79463): If there are no more views, set focus to host
-      // view. Linux views, when closed, don't cause updates to the focus chain.
-      if (views.isEmpty) {
-        setFocusToShellView();
-      }
     });
   }
 

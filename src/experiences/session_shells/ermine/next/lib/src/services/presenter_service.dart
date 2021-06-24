@@ -7,9 +7,12 @@ import 'dart:ui';
 
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_session/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
+import 'package:zircon/zircon.dart';
 
+// ignore: directives_ordering
 import 'package:next/src/states/view_state.dart';
 import 'package:next/src/states/view_state_impl.dart';
 import 'package:next/src/utils/view_handle.dart';
@@ -51,18 +54,22 @@ class PresenterService extends GraphicalPresenter {
         ?.text;
 
     final viewHolderToken = viewSpec.viewHolderToken;
-    if (viewHolderToken != null) {
+    final viewRef = viewSpec.viewRef;
+    if (viewHolderToken != null && viewRef != null) {
       final viewConnection = FuchsiaViewConnection(
         viewHolderToken,
-        viewRef: viewSpec.viewRef,
+        viewRef: viewRef,
         onViewStateChanged: (_, state) {
           viewState.viewStateChanged(state: state ?? false);
         },
       );
 
+      final viewRefDup =
+          ViewRef(reference: viewRef.reference.duplicate(ZX.RIGHT_SAME_RIGHTS));
+
       viewState = ViewStateImpl(
         viewConnection: viewConnection,
-        view: ViewHandle(viewSpec.viewRef!),
+        view: ViewHandle(viewRefDup),
         id: id,
         title: name ?? id ?? url ?? '',
         url: url,
