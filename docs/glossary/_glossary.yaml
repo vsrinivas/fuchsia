@@ -1158,6 +1158,15 @@ environment to form a full SDK."
   related_guides: ["<a href=\"/docs/concepts/booting/userboot.md\">Zircon kernel to userspace bootstrapping (userboot)</a>"]
   area: ["Zircon"]
 
+- term: "View"
+  short_description: "A region of the Scenic scene graph and the reference frame of a Scenic
+  client."
+  full_description: "The region a Scenic client can draw in, and the coordinate system input events
+  are delivered in. <code>Views</code> can be referred to cross-process by their associated <a href=\"docs/glossary#viewref\">ViewRef</a>."
+  see_also: ["<a href=\"/docs/concepts/graphics/scenic/view_bounds\">View bounds</a"]
+  related_guides: [""]
+  area: ["Graphics","HCI"]
+
 - term: "ViewController"
   short_description: "Represents a handle to a remote View that was launched by calling
   <code>PresentView()</code> on a <a href=\"/docs/glossary#graphicalpresenter\"><code>GraphicalPresenter</code></a>."
@@ -1179,14 +1188,17 @@ environment to form a full SDK."
   area: ["FIDL", "Graphics"]
 
 - term: "ViewRef"
-  short_description: "A handle to a kernel object that identifies a unique View across
+  short_description: "A handle to a kernel object that identifies a unique <a href=\"docs/glossary#view\">View</a> across
   the system."
-  full_description: "A <a href=\"/docs/glossary#fidl\">FIDL</a> struct. Two
-  <code>ViewRef</code>`s to the same view have the same
-  <a href=\"/docs/glossary#koid\">KOID</a>."
-  see_also: ["<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.ui.views#ViewRef\"><code>fuchsia.ui.views.ViewRef</code></a>"]
+  full_description: "A <a href=\"/docs/glossary#fidl\">FIDL</a> struct. Two <code>ViewRef</code>`s
+  to the same view have the same <a href=\"/docs/glossary#koid\">KOID</a>. During cross-process
+  communications Scenic clients are referred to by ViewRef. This is common for Input, Accessibility
+  and Focus."
+  see_also: ["<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.ui.views#ViewRef\"><code>fuchsia.ui.views.ViewRef</code></a>",
+             "<a href=\"/docs/concepts/graphics/scenic/view_ref\">Scenic Views, view tree, and ViewRefs</a",
+             "<a href=\"/docs/concepts/graphics/scenic/focus_chain\">View focus</a"]
   related_guides: [""]
-  area: ["FIDL", "Graphics"]
+  area: ["FIDL", "Graphics","HCI"]
 
 - term: "ViewSpec"
   short_description: "A description of a view to be presented by a
