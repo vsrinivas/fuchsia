@@ -33,13 +33,13 @@ Relative paths in the rest of the tutorial will be relative to this directory.
 
 ## Write a Dart host test {#write-a-dart-test}
 
-1. Add a dummy test to `test/types_test.dart`:
+1. Add a sample test to `test/types_test.dart`:
 
    ```dart
    import 'package:test/test.dart';
 
    void main() {
-     test('dummy', () {
+     test('sample', () {
        expect(1 + 1, equals(2));
      });
    }
