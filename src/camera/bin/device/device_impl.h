@@ -91,6 +91,8 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
 
   // |fuchsia::ui::policy::MediaButtonsListener|
   void OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) override;
+  void OnEvent(fuchsia::ui::input::MediaButtonsEvent event,
+               fuchsia::ui::policy::MediaButtonsListener::OnEventCallback callback) override;
 
   // Represents a single client connection to the DeviceImpl class.
   class Client : public fuchsia::camera3::Device {

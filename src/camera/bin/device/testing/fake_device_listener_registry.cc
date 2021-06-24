@@ -30,11 +30,18 @@ void FakeDeviceListenerRegistry::OnNewRequest(
 
 void FakeDeviceListenerRegistry::RegisterMediaButtonsListener(
     fuchsia::ui::policy::MediaButtonsListenerHandle listener) {
+  RegisterListener(std::move(listener), [] {});
+}
+
+void FakeDeviceListenerRegistry::RegisterListener(
+    fuchsia::ui::policy::MediaButtonsListenerHandle listener,
+    fuchsia::ui::policy::DeviceListenerRegistry::RegisterListenerCallback callback) {
   fuchsia::ui::policy::MediaButtonsListenerPtr listener_ptr;
   listener_ptr.set_error_handler(
       [this, id = listener_id_next_](zx_status_t status) { listeners_.erase(id); });
   ZX_ASSERT(listener_ptr.Bind(std::move(listener), dispatcher_) == ZX_OK);
   listeners_[listener_id_next_++] = std::move(listener_ptr);
+  callback();
 }
 
 }  // namespace camera

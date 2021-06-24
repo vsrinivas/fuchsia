@@ -140,8 +140,7 @@ fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
         }
         // Bind the registry interface and register the device as a listener.
         ZX_ASSERT(device->registry_.Bind(std::move(registry)) == ZX_OK);
-        device->registry_->RegisterMediaButtonsListener(
-            device->button_listener_binding_.NewBinding());
+        device->registry_->RegisterListener(device->button_listener_binding_.NewBinding(), [] {});
 
         // Rebind the controller error handler.
         device->controller_.set_error_handler(
@@ -327,6 +326,11 @@ void DeviceImpl::OnBuffersRequested(uint32_t index,
 }
 
 void DeviceImpl::OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) {
+  OnEvent(std::move(event), [] {});
+}
+
+void DeviceImpl::OnEvent(fuchsia::ui::input::MediaButtonsEvent event,
+                         fuchsia::ui::policy::MediaButtonsListener::OnEventCallback callback) {
   if (event.has_mic_mute()) {
     mute_state_.hardware_muted = event.mic_mute();
     UpdateControllerStreamingState();
@@ -334,6 +338,7 @@ void DeviceImpl::OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event
       client.second->MuteUpdated(mute_state_);
     }
   }
+  callback();
 }
 
 }  // namespace camera
