@@ -932,11 +932,11 @@ environment to form a full SDK."
 - term: "Protocol"
   short_description: "In <a href=\"/docs/glossary#fidl\">FIDL</a>, a protocol groups methods
   and events to describe how one process interacts with another."
-  full_description: "<p>In <a href=\"/docs/glossary#components-v1\">components v1</a>[components v1](#components-v1), a component may access a protocol (called a
+  full_description: "<p>In <a href=\"/docs/glossary#components-v1\">components v1</a>, a component may access a protocol (called a
   service in v1) from its <a href=\"/docs/glossary#environment\">environment</a> through its
   <a href=\"/docs/glossary#namespace\">namespace</a>by naming the protocol in its services
   whitelist.</p>
-  <p>In <a href=\"/docs/glossary#components-v2\">components v2</a>[components v2](#components-v2), a protocol is used and routed to other
+  <p>In <a href=\"/docs/glossary#components-v2\">components v2</a>, a protocol is used and routed to other
   components as a <a href=\"/docs/glossary#protocol-capability\">protocol capability</a>.</p>"
   see_also: [""]
   related_guides: [""]
@@ -1125,7 +1125,7 @@ environment to form a full SDK."
   full_description: "It is loaded from the kernel image in the same way as the
   <a href=\"/docs/glossary#virtual-dynamic-shared-object\">vDSO</a>, instead of being loaded
   from a filesystem. Its primary purpose is to load the second process,
-  <a href=\"/docs/glossary#bootsvc\">bootsvc</a>[bootsvc](#bootsvc), from the
+  <a href=\"/docs/glossary#bootsvc\">bootsvc</a>, from the
   <a href=\"/docs/glossary#bootfs\">bootfs</a>."
   see_also: [""]
   related_guides: ["<a href=\"/docs/concepts/booting/userboot.md\">Zircon kernel to userspace bootstrapping (userboot)</a>"]
@@ -1231,7 +1231,7 @@ environment to form a full SDK."
   of drivers and services running used to bootstrap a complete Fuchsia system on a
   target device. Upon startup, Zedboot listens on the network for instructions
   from a bootserver that may instruct Zedboot to
-  <a href=\"/docs/glossary#paver\">install</a>[install](#paver) a new OS. Upon
+  <a href=\"/docs/glossary#paver\">install</a> a new OS. Upon
   completing the installation Zedboot will reboot into the newly installed system."
   see_also: [""]
   related_guides: [""]
