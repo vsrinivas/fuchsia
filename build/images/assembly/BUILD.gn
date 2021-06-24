@@ -24,6 +24,13 @@ import("//build/product.gni")
 import("//build/zbi/zbi.gni")
 
 ####
+# The following are required to be set in order for assembly to properly
+# determine how the product uses the zbi, bootfs, base images, etc.  This is
+# because the existing build doesn't have clearer flags for determining this
+# at this time.
+assert(build_info_product != "", "'build_info_product' must be set in args.gn")
+
+####
 #
 # Deal with "bringup" and other zbi-only builds.
 #
