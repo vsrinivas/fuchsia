@@ -242,7 +242,7 @@ but with a few extras:
 [11]     }
 [12]
 [13]     // driver manager is now in charge of the device.
-[14]     __UNUSED auto* dummy = dev.release();
+[14]     __UNUSED auto* unused = dev.release();
 [15]     return ZX_OK;
 [16] }
 ```
