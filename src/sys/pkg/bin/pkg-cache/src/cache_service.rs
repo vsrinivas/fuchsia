@@ -902,120 +902,6 @@ async fn serve_blob_info_iterator(
 }
 
 #[cfg(test)]
-mod iter_tests {
-    use {
-        super::*,
-        fidl_fuchsia_pkg::{BlobInfoIteratorMarker, PackageIndexIteratorMarker},
-        fuchsia_async::Task,
-        fuchsia_hash::HashRangeFull,
-        fuchsia_pkg::PackagePath,
-        proptest::prelude::*,
-    };
-
-    proptest! {
-        #[test]
-        fn blob_info_iterator_yields_expected_entries(items: Vec<BlobInfo>) {
-            let mut executor = fuchsia_async::TestExecutor::new().unwrap();
-            executor.run_singlethreaded(async move {
-                let (proxy, stream) =
-                    fidl::endpoints::create_proxy_and_stream::<BlobInfoIteratorMarker>().unwrap();
-                let mut actual_items = vec![];
-
-                let ((), ()) = future::join(
-                    async {
-                        let items = items
-                            .iter()
-                            .cloned()
-                            .map(fidl_fuchsia_pkg::BlobInfo::from)
-                            .collect::<Vec<_>>();
-                        serve_blob_info_iterator(items, stream).await
-                    },
-                    async {
-                        loop {
-                            let chunk = proxy.next().await.unwrap();
-                            if chunk.is_empty() {
-                                break;
-                            }
-                            let chunk = chunk.into_iter().map(BlobInfo::from);
-                            actual_items.extend(chunk);
-                        }
-                    },
-                )
-                .await;
-
-                assert_eq!(items, actual_items);
-            })
-        }
-    }
-
-    // FIXME(52297) This constant would ideally be exported by the `fidl` crate.
-    // sizeof(TransactionHeader) + sizeof(VectorHeader)
-    const FIDL_VEC_RESPONSE_OVERHEAD_BYTES: usize = 32;
-
-    const PACKAGE_INDEX_CHUNK_SIZE_MAX: usize = 818;
-    const PACKAGE_INDEX_CHUNK_SIZE_MIN: usize = 372;
-
-    #[test]
-    fn verify_fidl_vec_response_overhead() {
-        let vec_response_overhead = {
-            use fidl::encoding::{TransactionHeader, TransactionMessage};
-
-            let mut nop: Vec<()> = vec![];
-            let mut msg =
-                TransactionMessage { header: TransactionHeader::new(0, 0), body: &mut nop };
-
-            fidl::encoding::with_tls_encoded(&mut msg, |bytes, _handles| {
-                Result::<_, fidl::Error>::Ok(bytes.len())
-            })
-            .unwrap()
-        };
-        assert_eq!(vec_response_overhead, FIDL_VEC_RESPONSE_OVERHEAD_BYTES);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn base_package_index_iterator_paginates_shortest_entries() {
-        let names = ('a'..='z').cycle().map(|c| c.to_string());
-        let paths = names.map(|name| PackagePath::from_name_and_variant(name, "0").unwrap());
-
-        verify_base_package_iterator_pagination(paths, PACKAGE_INDEX_CHUNK_SIZE_MAX).await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn base_package_index_iterator_paginates_longest_entries() {
-        let names = ('a'..='z')
-            .map(|c| std::iter::repeat(c).take(PackagePath::MAX_NAME_BYTES).collect::<String>())
-            .cycle();
-        let paths = names.map(|name| PackagePath::from_name_and_variant(name, "0").unwrap());
-
-        verify_base_package_iterator_pagination(paths, PACKAGE_INDEX_CHUNK_SIZE_MIN).await;
-    }
-
-    async fn verify_base_package_iterator_pagination(
-        paths: impl Iterator<Item = PackagePath>,
-        expected_chunk_size: usize,
-    ) {
-        let static_packages =
-            paths.zip(HashRangeFull::default()).take(expected_chunk_size * 2).collect();
-        let static_packages = Arc::new(StaticPackages::from_entries(static_packages));
-
-        let (iter, stream) =
-            fidl::endpoints::create_proxy_and_stream::<PackageIndexIteratorMarker>().unwrap();
-        let task = Task::local(serve_base_package_index(static_packages, stream));
-
-        let chunk = iter.next().await.unwrap();
-        assert_eq!(chunk.len(), expected_chunk_size);
-
-        let chunk = iter.next().await.unwrap();
-        assert_eq!(chunk.len(), expected_chunk_size);
-
-        let chunk = iter.next().await.unwrap();
-        assert_eq!(chunk.len(), 0);
-
-        let () = task.await;
-    }
-}
-
-#[cfg(test)]
 mod serve_needed_blobs_tests {
     use {
         super::*,
@@ -2830,5 +2716,46 @@ mod serve_write_blob_tests {
                 Ok(())
             })?;
         }
+    }
+}
+
+#[cfg(test)]
+mod serve_base_package_index_tests {
+    use {super::*, fidl_fuchsia_pkg::PackageIndexIteratorMarker, fuchsia_pkg::PackagePath};
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn static_packages_entries_converted_correctly() {
+        let static_packages = StaticPackages::from_entries(vec![
+            (PackagePath::from_name_and_variant("name0", "0").unwrap(), Hash::from([0u8; 32])),
+            (PackagePath::from_name_and_variant("name1", "1").unwrap(), Hash::from([1u8; 32])),
+        ]);
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<PackageIndexIteratorMarker>().unwrap();
+        let task = Task::local(serve_base_package_index(Arc::new(static_packages), stream));
+
+        let entries = proxy.next().await.unwrap();
+        assert_eq!(
+            entries,
+            vec![
+                fidl_fuchsia_pkg::PackageIndexEntry {
+                    package_url: fidl_fuchsia_pkg::PackageUrl {
+                        url: "fuchsia-pkg://fuchsia.com/name0".to_string()
+                    },
+                    meta_far_blob_id: fidl_fuchsia_pkg::BlobId { merkle_root: [0u8; 32] }
+                },
+                fidl_fuchsia_pkg::PackageIndexEntry {
+                    package_url: fidl_fuchsia_pkg::PackageUrl {
+                        url: "fuchsia-pkg://fuchsia.com/name1".to_string()
+                    },
+                    meta_far_blob_id: fidl_fuchsia_pkg::BlobId { merkle_root: [1u8; 32] }
+                }
+            ]
+        );
+
+        let entries = proxy.next().await.unwrap();
+        assert_eq!(entries, vec![]);
+
+        let () = task.await;
     }
 }
