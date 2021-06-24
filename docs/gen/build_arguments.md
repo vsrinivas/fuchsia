@@ -742,6 +742,12 @@ TODO: redo comments
 
 From //build/product.gni:21
 
+### core_realm_restrict_persistent_storage
+
+**Current value (from the default):** `true`
+
+From //build/product.gni:23
+
 ### core_realm_shards
 
 **Current value (from the default):** `[]`
@@ -3933,7 +3939,7 @@ Selects the wlan configuration type to use. Choices:
 
 **Current value (from the default):** `"client"`
 
-From //src/connectivity/wlan/wlancfg/BUILD.gn:16
+From //src/connectivity/wlan/wlancfg/BUILD.gn:17
 
 ### zbi_compression
 Compression setting for ZBI "storage" items.
