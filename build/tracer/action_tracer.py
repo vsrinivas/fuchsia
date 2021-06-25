@@ -1027,6 +1027,8 @@ This may lead to a false assessment that the failed action is up-to-date.
 Found the following files with absolute paths in depfile {action.depfile} for {args.label}:
 
 {one_path_per_line}
+
+See: https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions#depfiles
 """,
                 file=sys.stderr)
 
