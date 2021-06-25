@@ -2225,6 +2225,9 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
                   size_t* out_actual) {
     return zxio_writev(&zxio_stream_socket(io).pipe.io, vector, vector_count, flags, out_actual);
   };
+  ops.get_read_buffer_available = [](zxio_t* io, size_t* out_available) {
+    return zxio_get_read_buffer_available(&zxio_stream_socket(io).pipe.io, out_available);
+  };
   return ops;
 }();
 

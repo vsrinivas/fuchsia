@@ -13,6 +13,7 @@
 #include <lib/fit/defer.h>
 #include <netinet/in.h>
 #include <poll.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -447,6 +448,21 @@ TEST_F(TcpSocketTest, WaitBeginEndConnected) {
 TEST_F(TcpSocketTest, Shutdown) {
   ASSERT_EQ(shutdown(client_fd().get(), SHUT_RD), 0, "%s", strerror(errno));
   ASSERT_EQ(server().ShutdownCount(), 1);
+}
+
+TEST_F(TcpSocketTest, GetReadBufferAvailable) {
+  int available = 0;
+  EXPECT_EQ(ioctl(client_fd().get(), FIONREAD, &available), 0, "%s", strerror(errno));
+  EXPECT_EQ(available, 0);
+
+  constexpr size_t data_size = 47;
+  std::array<char, data_size> data_buf;
+  size_t actual = 0;
+  EXPECT_OK(server_socket().write(0u, data_buf.data(), data_buf.size(), &actual));
+  EXPECT_EQ(actual, data_size);
+
+  EXPECT_EQ(ioctl(client_fd().get(), FIONREAD, &available), 0, "%s", strerror(errno));
+  EXPECT_EQ(available, data_size);
 }
 
 using UdpSocketTest = BaseTest<ZX_SOCKET_DATAGRAM>;
