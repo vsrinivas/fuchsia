@@ -139,6 +139,7 @@ assemble_system("recovery-fdr") {
   cmdline = []
 
   bootfs_labels = [
+    ":root",
     "//build/info:bootfs",
     "//build/input:recovery_bootfs",
     "//bundles:bootstrap",
