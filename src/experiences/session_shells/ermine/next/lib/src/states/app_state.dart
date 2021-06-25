@@ -48,6 +48,7 @@ abstract class AppState with Store {
   Action get showSideBar;
   Action get switchNext;
   Action get switchPrev;
+  Action get switchView;
   Action get cancel;
   Action get closeView;
   Action get launch;

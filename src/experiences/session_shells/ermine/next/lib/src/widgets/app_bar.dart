@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:next/src/states/app_state.dart';
+import 'package:next/src/widgets/app_chips.dart';
 import 'package:next/src/widgets/launch_button.dart';
 
 /// Defines a widget to display an entry for all running application views.
@@ -25,12 +26,15 @@ class AppBar extends StatelessWidget {
       ),
       child: Container(
         width: kWidth,
-        padding: EdgeInsets.all(8),
+        padding: EdgeInsets.symmetric(vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             LaunchButton(appState),
-            Spacer(),
+            Divider(),
+            Expanded(
+              child: AppChips(appState),
+            ),
           ],
         ),
       ),

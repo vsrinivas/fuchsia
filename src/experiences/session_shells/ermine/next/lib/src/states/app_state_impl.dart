@@ -206,6 +206,12 @@ class AppStateImpl with Disposable implements AppState {
   }.asAction();
 
   @override
+  late final switchView = (ViewState view) {
+    topView.value = view;
+    (view as ViewStateImpl).ready.value = false;
+  }.asAction();
+
+  @override
   late final cancel = hideOverlay;
 
   @override
@@ -312,8 +318,10 @@ class AppStateImpl with Disposable implements AppState {
   void _onViewDismissed(ViewState viewState) {
     runInAction(() {
       final view = viewState as ViewStateImpl;
-      // Switch to next view before closing this view.
-      switchNext();
+      // Switch to next view before closing the view if it was the top view.
+      if (view == topView.value) {
+        switchNext();
+      }
 
       views.remove(view);
       focusService.removeView(view.view);

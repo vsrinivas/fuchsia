@@ -66,6 +66,7 @@ dart_library("lib") {
   widgets = [
     "src/widgets/app.dart",
     "src/widgets/app_bar.dart",
+    "src/widgets/app_chips.dart",
     "src/widgets/app_launcher.dart",
     "src/widgets/app_view.dart",
     "src/widgets/launch_button.dart",
