@@ -277,6 +277,19 @@ is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
 is_efi_toolchain =
     toolchain_variant.tags + [ "efi" ] - [ "efi" ] != toolchain_variant.tags
 
+# Very unfortunately, GN never sets `current_toolchain` when executing
+# BUILDCONFIG.gn, so the logic below is used to detect when this file
+# is executed in the context of the default toolchain.
+#
+# It relies on any non-default toolchain to set toolchain_variant.base to
+# a value different from its default value. This should be enforce by any
+# toolchain() defining template, i.e. basic_toolchain(), clang_toolchain()
+# and zircon_toolchain().
+in_default_toolchain =
+    toolchain_variant.base == target_toolchain && current_cpu == target_cpu &&
+    current_os == target_os && toolchain_variant.name == "" &&
+    !toolchain_variant.is_pic_default
+
 # References should use `"label($shlib_toolchain)"` rather than
 # `"label(${target_toolchain}-shared)"` or anything else.
 shlib_toolchain = "${toolchain_variant.base}${toolchain_variant.suffix}-shared"
@@ -788,270 +801,6 @@ foreach(_target_type,
                   "--",
                   rebase_path(_invoker_script, root_build_dir),
                 ] + _args
-      }
-    }
-  }
-}
-
-# This wraps the GN built-in shared_library() target and adds a few more features:
-#
-# - Redirecting from the current toolchain to its shared-library-compatible
-#   companion.
-#
-#   On ELF systems, a toolchain like //toolchain:fuchsia_x64 may have a
-#   companion/secondary toolchain, like //toolchain:fuchsia_x64-shared, which
-#   will be used to build shared_library() targets and their dependencies.
-#
-#   This is useful because ELF requires the machine code in shared objects to
-#   be compiled and linked with the `-fPIC` flag. This however generates a kind
-#   of relocatable code that is slower and larger.
-#
-#   For performance reason, it is best to build executable() targets, and their
-#   static dependencies, in a non-PIC toolchain, while using a PIC-enabled one
-#   for shared_library() targets they depend on.
-#
-#   Note that these companion toolchains are named with a -shared suffix,
-#   applied to a "base" toolchain name. This also applies to variant toolchains,
-#   i.e. //toolchain:foo-asan-shared would be the companion for
-#   //toolchain:foo-asan, which is itself a variant of //toolchain:foo.
-#
-#   This templates detect when a shared_library() target is being built in a
-#   base toolchain, and in this case, it will create a redirection target to the
-#   same target in the companion toolchain. This is logically equivalent to:
-#
-#      if (_in_base_toolchain) {
-#        group("mylib") {
-#          public_deps = [ ":mylib(//toolchain:foo-shared" ]
-#        }
-#      } else {   # in -shared toolchain
-#        shared_library("mylib") {
-#          ....
-#        }
-#     }
-#
-#   Note that not all toolchains need a companion toolchain though (e.g. those
-#   for non-ELF systems, or even some Zircon-specific ones).
-#
-# - If not specified by the caller, will use `root_out_dir` as the default output
-#   directory. So building '//some/dir:mylib(//toolchain:tc)' will build
-#   `${BUILD_DIR}/tc-shared/libmylib.so` instead of
-#   `${BUILD_DIR}/tc/obj/some/dir/libmylib.so` as the built-in shared_library()
-#   would. Notice the `tc-shared` sub-directory, instead of `tc` due to the
-#   companion toolchain.
-#
-# - Builds both the unstripped and stripped version of the library. For example
-#   `//some/dir:mylib(//toolchain:tc)` will generate both:
-#
-#     `${BUILD_DIR}/tc/libmylib.so`
-#     `${BUILD_DIR}/tc/lib.unstripped/libmylib.so`
-#
-#   As a special case, when built with a Zircon-specific toolchain, the unstripped
-#   library will be `${BUILD_DIR}/tc/libmylib.so.debug` instead. The `.debug` prefix
-#   simply means that the library contains debug symbols.
-#
-# - Add an entry for the library to the `binaries.json` build API file.
-#
-# - Use metadata to add a distribution_manifest() entry that would install the
-#   stripped shared library binary to `lib/$output_name`, or
-#   `lib/<variant>/$output_name` if this is being built in a variant toolchain
-#   instance.
-#
-# - Add metadata entry for link_output_rspfile(). See its documentation for details.
-#
-# This takes the same arguments as the built-in shared_library(). as well as:
-#
-#   install_name (optional)
-#     [string] An alternative installation name for the library. This should only
-#     be used by the C library that needs to be installed as `ld.so.1` instead of
-#     `libc.so`.
-#
-if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
-  if (!toolchain_variant.is_pic_default) {
-    # In the main toolchain, shared_library just redirects to the same
-    # target in the -shared toolchain.
-    template("shared_library") {
-      group(target_name) {
-        public_deps = [ ":$target_name(${current_toolchain}-shared)" ]
-        forward_variables_from(invoker,
-                               [
-                                 "testonly",
-                                 "visibility",
-                               ])
-      }
-      not_needed(invoker, "*")
-    }
-  } else {
-    # In the -shared toolchain, shared_library is just its normal self,
-    # but if the invoker constrained the visibility, we must make sure
-    # the dependency from the main toolchain is still allowed.
-    template("shared_library") {
-      shared_library(target_name) {
-        # Save the target name here as it could be overridden by the calls
-        # to forward_variables_from below.
-        original_target_name = target_name
-
-        # Explicitly forward visibility, implicitly forward everything
-        # else.  Forwarding "*" doesn't recurse into nested scopes (to
-        # avoid copying all globals into each template invocation), so
-        # won't pick up file-scoped variables.  Normally this isn't too
-        # bad, but visibility is commonly defined at the file scope.
-        # Explicitly forwarding visibility and then excluding it from the
-        # "*" set works around this problem.  See http://crbug.com/594610
-        # for rationale on why this GN behavior is not considered a bug.
-        forward_variables_from(invoker, [ "visibility" ])
-        forward_variables_from(invoker,
-                               "*",
-                               [
-                                 "metadata",
-                                 "visibility",
-                               ])
-
-        # Restore the original target name.
-        target_name = original_target_name
-
-        if (defined(visibility)) {
-          visibility += [ ":$target_name" ]
-        }
-
-        if (!defined(output_dir)) {
-          output_dir = root_out_dir
-        }
-        if (!defined(output_name)) {
-          output_name = target_name
-        }
-
-        # Remove any "lib" prefix - this matches GN's behavior.
-        _prefixless = string_replace("###$output_name", "###lib", "")
-        if (_prefixless != "###$output_name") {
-          output_name = _prefixless
-        }
-        if (!defined(output_extension)) {
-          if (current_os == "mac") {
-            output_extension = "dylib"
-          } else if (current_os == "win") {
-            output_extension = "dll"
-          } else {
-            output_extension = "so"
-          }
-        }
-
-        output_file_name = "lib$output_name"
-        if (output_extension != "") {
-          output_file_name += ".$output_extension"
-        }
-        output_file = "$output_dir/$output_file_name"
-        rebased_output_file = rebase_path(output_file, root_build_dir)
-
-        install_name = output_file_name
-        if (defined(invoker.install_name)) {
-          install_name = invoker.install_name
-        }
-
-        # TODO(fxbug.dev/54322): Zircon toolchains must use a .debug suffix for non-stripped
-        # shared libraries, instead of putting them into exe.unstripped. This can be
-        # changed after build unification completes.
-        if (zircon_toolchain != false) {
-          link_output_file = output_file + zircon_toolchain.link_output_suffix
-        } else {
-          link_output_file = "$output_dir/lib.unstripped/$output_file_name"
-        }
-
-        # Note: the manifest-related metadata is added to the builder target as
-        # some targets (e.g. drivers) depend on it directly in the builder
-        # toolchain.
-        metadata = {
-          binaries = []
-
-          # Allow metadata to be specified to shared_library instances
-          # that come from a PIC-friendly toolchain too. This is required
-          # for the Zircon VDSO and C library.
-          if (defined(invoker.metadata)) {
-            forward_variables_from(invoker.metadata, "*")
-          }
-
-          # Used by link_output_rspfile(), see its documentation for details
-          link_output_path = [ rebase_path(link_output_file, root_build_dir) ]
-          link_output_barrier = []
-
-          # Used by the distribution_manifest template.
-          if (!defined(distribution_entries)) {
-            distribution_entries = [
-              {
-                source = rebased_output_file
-                destination = "lib/${toolchain_variant.libprefix}$install_name"
-                label = get_label_info(":$target_name", "label_with_toolchain")
-              },
-            ]
-          } else {
-            not_needed([ "install_name" ])
-          }
-
-          # Used by the //:binaries target.
-          binaries += [
-            {
-              type = "shared_library"
-              label = get_label_info(":$target_name", "label_with_toolchain")
-              cpu = current_cpu
-              os = current_os
-              debug = rebase_path(link_output_file, root_build_dir)
-              dist = rebased_output_file
-              if (current_os != "mac" && current_os != "win") {
-                elf_build_id = rebased_output_file + ".build-id.stamp"
-              }
-              if (output_breakpad_syms && current_os == "fuchsia") {
-                breakpad = rebased_output_file + ".sym"
-              }
-            },
-          ]
-        }
-
-        if (is_fuchsia) {
-          if (!defined(deps)) {
-            deps = []
-          }
-
-          if (zircon_toolchain == false) {
-            deps += [ "//zircon/public/sysroot:cpp_binary_deps" ]
-          }
-
-          # Add zircon dependency for the profile variant. TODO(fxbug.dev/61522): Remove this.
-          if (toolchain_variant.tags + [
-                "profile",
-                "coverage",
-              ] -
-              [
-                "profile",
-                "coverage",
-              ] != toolchain_variant.tags) {
-            deps += [ "//src/zircon/lib/zircon" ]
-          }
-          if (!defined(data_deps)) {
-            data_deps = []
-          }
-          if (zircon_toolchain == false) {
-            should_add_shared_cpp_runtime = true
-            if (defined(configs)) {
-              # Do not add runtime dependencies if compiling statically.
-              static_cpp_configs = [
-                "//build/config/fuchsia:static_cpp_standard_library",
-                "//build/config/zircon:static-libc++",
-              ]
-              if (configs + static_cpp_configs - static_cpp_configs !=
-                  configs) {
-                should_add_shared_cpp_runtime = false
-              }
-            }
-            if (should_add_shared_cpp_runtime) {
-              data_deps += [ "//build/toolchain/runtime:shared-libc++-deps" ]
-            } else {
-              # Even when compiling statically, some runtime dependencies might
-              # be needed when performing instrumented builds, because the
-              # compiler-generated machine code will contain imports to
-              # instrumentation-runtime-specific libraries.
-              data_deps += [ "//build/toolchain/runtime:static-libc++-deps" ]
-            }
-          }
-        }
       }
     }
   }
@@ -1597,19 +1346,6 @@ is_coverage = select_variant + [
                 "coverage-sdk",
                 "profile",
               ] != select_variant
-
-# Very unfortunately, GN nevers sets `current_toolchain` when executing
-# BUILDCONFIG.gn, so the logic below is used to detect when this file
-# is executed in the context of the default toolchain.
-#
-# It relies on any non-default toolchain to set toolchain_variant.base to
-# a value different from its default value. This should be enforce by any
-# toolchain() defining template, i.e. basic_toolchain(), clang_toolchain()
-# and zircon_toolchain().
-in_default_toolchain =
-    toolchain_variant.base == target_toolchain && current_cpu == target_cpu &&
-    current_os == target_os && toolchain_variant.name == "" &&
-    !toolchain_variant.is_pic_default
 
 # Do this only once, in the default toolchain context.    Then
 # clang_toolchain_suite will just pass the results through to every
@@ -2169,6 +1905,270 @@ template("variant_target") {
             copy_to = rebase_path(outputs[0], root_build_dir)
           },
         ]
+      }
+    }
+  }
+}
+
+# This wraps the GN built-in shared_library() target and adds a few more features:
+#
+# - Redirecting from the current toolchain to its shared-library-compatible
+#   companion.
+#
+#   On ELF systems, a toolchain like //toolchain:fuchsia_x64 may have a
+#   companion/secondary toolchain, like //toolchain:fuchsia_x64-shared, which
+#   will be used to build shared_library() targets and their dependencies.
+#
+#   This is useful because ELF requires the machine code in shared objects to
+#   be compiled and linked with the `-fPIC` flag. This however generates a kind
+#   of relocatable code that is slower and larger.
+#
+#   For performance reason, it is best to build executable() targets, and their
+#   static dependencies, in a non-PIC toolchain, while using a PIC-enabled one
+#   for shared_library() targets they depend on.
+#
+#   Note that these companion toolchains are named with a -shared suffix,
+#   applied to a "base" toolchain name. This also applies to variant toolchains,
+#   i.e. //toolchain:foo-asan-shared would be the companion for
+#   //toolchain:foo-asan, which is itself a variant of //toolchain:foo.
+#
+#   This templates detect when a shared_library() target is being built in a
+#   base toolchain, and in this case, it will create a redirection target to the
+#   same target in the companion toolchain. This is logically equivalent to:
+#
+#      if (_in_base_toolchain) {
+#        group("mylib") {
+#          public_deps = [ ":mylib(//toolchain:foo-shared" ]
+#        }
+#      } else {   # in -shared toolchain
+#        shared_library("mylib") {
+#          ....
+#        }
+#     }
+#
+#   Note that not all toolchains need a companion toolchain though (e.g. those
+#   for non-ELF systems, or even some Zircon-specific ones).
+#
+# - If not specified by the caller, will use `root_out_dir` as the default output
+#   directory. So building '//some/dir:mylib(//toolchain:tc)' will build
+#   `${BUILD_DIR}/tc-shared/libmylib.so` instead of
+#   `${BUILD_DIR}/tc/obj/some/dir/libmylib.so` as the built-in shared_library()
+#   would. Notice the `tc-shared` sub-directory, instead of `tc` due to the
+#   companion toolchain.
+#
+# - Builds both the unstripped and stripped version of the library. For example
+#   `//some/dir:mylib(//toolchain:tc)` will generate both:
+#
+#     `${BUILD_DIR}/tc/libmylib.so`
+#     `${BUILD_DIR}/tc/lib.unstripped/libmylib.so`
+#
+#   As a special case, when built with a Zircon-specific toolchain, the unstripped
+#   library will be `${BUILD_DIR}/tc/libmylib.so.debug` instead. The `.debug` prefix
+#   simply means that the library contains debug symbols.
+#
+# - Add an entry for the library to the `binaries.json` build API file.
+#
+# - Use metadata to add a distribution_manifest() entry that would install the
+#   stripped shared library binary to `lib/$output_name`, or
+#   `lib/<variant>/$output_name` if this is being built in a variant toolchain
+#   instance.
+#
+# - Add metadata entry for link_output_rspfile(). See its documentation for details.
+#
+# This takes the same arguments as the built-in shared_library(). as well as:
+#
+#   install_name (optional)
+#     [string] An alternative installation name for the library. This should only
+#     be used by the C library that needs to be installed as `ld.so.1` instead of
+#     `libc.so`.
+#
+if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
+  if (!toolchain_variant.is_pic_default) {
+    # In the main toolchain, shared_library just redirects to the same
+    # target in the -shared toolchain.
+    template("shared_library") {
+      group(target_name) {
+        public_deps = [ ":$target_name(${current_toolchain}-shared)" ]
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visibility",
+                               ])
+      }
+      not_needed(invoker, "*")
+    }
+  } else {
+    # In the -shared toolchain, shared_library is just its normal self,
+    # but if the invoker constrained the visibility, we must make sure
+    # the dependency from the main toolchain is still allowed.
+    template("shared_library") {
+      shared_library(target_name) {
+        # Save the target name here as it could be overridden by the calls
+        # to forward_variables_from below.
+        original_target_name = target_name
+
+        # Explicitly forward visibility, implicitly forward everything
+        # else.  Forwarding "*" doesn't recurse into nested scopes (to
+        # avoid copying all globals into each template invocation), so
+        # won't pick up file-scoped variables.  Normally this isn't too
+        # bad, but visibility is commonly defined at the file scope.
+        # Explicitly forwarding visibility and then excluding it from the
+        # "*" set works around this problem.  See http://crbug.com/594610
+        # for rationale on why this GN behavior is not considered a bug.
+        forward_variables_from(invoker, [ "visibility" ])
+        forward_variables_from(invoker,
+                               "*",
+                               [
+                                 "metadata",
+                                 "visibility",
+                               ])
+
+        # Restore the original target name.
+        target_name = original_target_name
+
+        if (defined(visibility)) {
+          visibility += [ ":$target_name" ]
+        }
+
+        if (!defined(output_dir)) {
+          output_dir = root_out_dir
+        }
+        if (!defined(output_name)) {
+          output_name = target_name
+        }
+
+        # Remove any "lib" prefix - this matches GN's behavior.
+        _prefixless = string_replace("###$output_name", "###lib", "")
+        if (_prefixless != "###$output_name") {
+          output_name = _prefixless
+        }
+        if (!defined(output_extension)) {
+          if (current_os == "mac") {
+            output_extension = "dylib"
+          } else if (current_os == "win") {
+            output_extension = "dll"
+          } else {
+            output_extension = "so"
+          }
+        }
+
+        output_file_name = "lib$output_name"
+        if (output_extension != "") {
+          output_file_name += ".$output_extension"
+        }
+        output_file = "$output_dir/$output_file_name"
+        rebased_output_file = rebase_path(output_file, root_build_dir)
+
+        install_name = output_file_name
+        if (defined(invoker.install_name)) {
+          install_name = invoker.install_name
+        }
+
+        # TODO(fxbug.dev/54322): Zircon toolchains must use a .debug suffix for non-stripped
+        # shared libraries, instead of putting them into exe.unstripped. This can be
+        # changed after build unification completes.
+        if (zircon_toolchain != false) {
+          link_output_file = output_file + zircon_toolchain.link_output_suffix
+        } else {
+          link_output_file = "$output_dir/lib.unstripped/$output_file_name"
+        }
+
+        # Note: the manifest-related metadata is added to the builder target as
+        # some targets (e.g. drivers) depend on it directly in the builder
+        # toolchain.
+        metadata = {
+          binaries = []
+
+          # Allow metadata to be specified to shared_library instances
+          # that come from a PIC-friendly toolchain too. This is required
+          # for the Zircon VDSO and C library.
+          if (defined(invoker.metadata)) {
+            forward_variables_from(invoker.metadata, "*")
+          }
+
+          # Used by link_output_rspfile(), see its documentation for details
+          link_output_path = [ rebase_path(link_output_file, root_build_dir) ]
+          link_output_barrier = []
+
+          # Used by the distribution_manifest template.
+          if (!defined(distribution_entries)) {
+            distribution_entries = [
+              {
+                source = rebased_output_file
+                destination = "lib/${toolchain_variant.libprefix}$install_name"
+                label = get_label_info(":$target_name", "label_with_toolchain")
+              },
+            ]
+          } else {
+            not_needed([ "install_name" ])
+          }
+
+          # Used by the //:binaries target.
+          binaries += [
+            {
+              type = "shared_library"
+              label = get_label_info(":$target_name", "label_with_toolchain")
+              cpu = current_cpu
+              os = current_os
+              debug = rebase_path(link_output_file, root_build_dir)
+              dist = rebased_output_file
+              if (current_os != "mac" && current_os != "win") {
+                elf_build_id = rebased_output_file + ".build-id.stamp"
+              }
+              if (output_breakpad_syms && current_os == "fuchsia") {
+                breakpad = rebased_output_file + ".sym"
+              }
+            },
+          ]
+        }
+
+        if (is_fuchsia) {
+          if (!defined(deps)) {
+            deps = []
+          }
+
+          if (zircon_toolchain == false) {
+            deps += [ "//zircon/public/sysroot:cpp_binary_deps" ]
+          }
+
+          # Add zircon dependency for the profile variant. TODO(fxbug.dev/61522): Remove this.
+          if (toolchain_variant.tags + [
+                "profile",
+                "coverage",
+              ] -
+              [
+                "profile",
+                "coverage",
+              ] != toolchain_variant.tags) {
+            deps += [ "//src/zircon/lib/zircon" ]
+          }
+          if (!defined(data_deps)) {
+            data_deps = []
+          }
+          if (zircon_toolchain == false) {
+            should_add_shared_cpp_runtime = true
+            if (defined(configs)) {
+              # Do not add runtime dependencies if compiling statically.
+              static_cpp_configs = [
+                "//build/config/fuchsia:static_cpp_standard_library",
+                "//build/config/zircon:static-libc++",
+              ]
+              if (configs + static_cpp_configs - static_cpp_configs !=
+                  configs) {
+                should_add_shared_cpp_runtime = false
+              }
+            }
+            if (should_add_shared_cpp_runtime) {
+              data_deps += [ "//build/toolchain/runtime:shared-libc++-deps" ]
+            } else {
+              # Even when compiling statically, some runtime dependencies might
+              # be needed when performing instrumented builds, because the
+              # compiler-generated machine code will contain imports to
+              # instrumentation-runtime-specific libraries.
+              data_deps += [ "//build/toolchain/runtime:static-libc++-deps" ]
+            }
+          }
+        }
       }
     }
   }
