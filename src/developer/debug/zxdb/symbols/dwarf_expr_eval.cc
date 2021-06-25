@@ -84,6 +84,7 @@ std::string DwarfExprEval::ToString(fxl::RefPtr<SymbolDataProvider> data_provide
                                     const SymbolContext& symbol_context, DwarfExpr expr,
                                     bool pretty) {
   SetUp(std::move(data_provider), symbol_context, expr, nullptr);
+  result_data_.clear();
 
   string_output_mode_ = pretty ? StringOutput::kPretty : StringOutput::kLiteral;
   string_output_.clear();
@@ -1033,11 +1034,22 @@ DwarfExprEval::Completion DwarfExprEval::OpPiece() {
   if (!ReadLEBUnsigned(&byte_size))
     return Completion::kSync;
 
+  // Upper-bound sanity check on the piece size to guard against corrupted or malicious data.
+  constexpr StackEntry kMaxPieceSize = 16384;
+  if (byte_size > kMaxPieceSize) {
+    ReportError(fxl::StringPrintf("DWARF expression listed a data size of %d which is too large.",
+                                  static_cast<int>(byte_size)));
+    return Completion::kSync;
+  }
+
   if (is_string_output())
     return AppendString("DW_OP_piece(" + ToString128(byte_size) + ")");
 
   if (stack_.empty()) {
-    ReportStackUnderflow();
+    // Defining a piece with no previous data on the stack means to write that many bytes that
+    // have no known value.
+    // TODO(fxbug.dev/79547) mark the undefined bytes rather than use 0's.
+    result_data_.resize(result_data_.size() + byte_size);
     return Completion::kSync;
   }
 
