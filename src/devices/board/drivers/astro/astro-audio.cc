@@ -76,7 +76,6 @@ static const pbus_bti_t tdm_btis[] = {
     },
 };
 
-
 static const zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, ASTRO_I2C_3),
@@ -378,7 +377,8 @@ zx_status_t Astro::AudioInit() {
     metadata.codecs.external_delays[0].nsecs = ZX_USEC(125);
     metadata.codecs.external_delays[1].frequency = 96'000;
     metadata.codecs.external_delays[1].nsecs = ZX_NSEC(83333);
-    metadata.codecs.channels_to_use_bitmask[0] = (1 << 0);
+    metadata.codecs.channels_to_use_bitmask[0] = 0x1;              // Single DAI right I2S channel.
+    metadata.codecs.ring_buffer_channels_to_use_bitmask[0] = 0x1;  // Single speaker uses index 0.
     metadata.codecs.delta_gains[0] = -1.5f;
     pbus_metadata_t tdm_metadata[] = {
         {

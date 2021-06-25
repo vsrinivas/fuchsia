@@ -37,9 +37,10 @@ audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
   return format;
 }
 
-struct CodecTest;
+class CodecTest;
 using DeviceType = ddk::Device<CodecTest>;
-struct CodecTest : public DeviceType, public SimpleCodecServer {
+class CodecTest : public DeviceType, public SimpleCodecServer {
+ public:
   explicit CodecTest(zx_device_t* device) : DeviceType(device), SimpleCodecServer(device) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 
@@ -88,7 +89,17 @@ struct CodecTest : public DeviceType, public SimpleCodecServer {
   }
   void DdkRelease() { delete this; }
 
-  uint32_t last_frame_rate_ = {};
+  void wait_for_set_gain_completion() {
+    sync_completion_wait(&set_gain_completion_, ZX_TIME_INFINITE);
+    sync_completion_reset(&set_gain_completion_);
+  }
+  uint32_t last_frame_rate() { return last_frame_rate_; };
+  bool started() { return started_; }
+  bool muted() { return muted_; }
+  float gain() { return gain_; }
+
+ private:
+  uint32_t last_frame_rate_ = 0;
   bool started_ = false;
   bool muted_ = false;
   float gain_ = 0.f;
@@ -100,8 +111,6 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
     metadata_.is_input = false;
     metadata_.mClockDivFactor = 10;
     metadata_.sClockDivFactor = 25;
-    metadata_.ring_buffer.number_of_channels = 2;
-    metadata_.lanes_enable_mask[0] = 3;
     metadata_.bus = metadata::AmlBus::TDM_C;
     metadata_.version = metadata::AmlVersion::kS905D2G;
     metadata_.dai.type = metadata::DaiType::I2s;
@@ -116,24 +125,30 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
     codecs_.push_back(SimpleCodecClient());
     codecs_[0].SetProtocol(codec_protocol);
     aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
+    metadata_.ring_buffer.number_of_channels = 2;
+    metadata_.lanes_enable_mask[0] = 3;
     metadata_.codecs.number_of_codecs = 1;
     metadata_.codecs.types[0] = metadata::CodecType::Tas27xx;
+    metadata_.codecs.ring_buffer_channels_to_use_bitmask[0] = 1;
   }
-  AmlG12I2sOutTest(codec_protocol_t* codec_protocol1, codec_protocol_t* codec_protocol2,
+  AmlG12I2sOutTest(const std::vector<codec_protocol_t*>& codec_protocols,
                    ddk_mock::MockMmioRegRegion& region, ddk::PDev pdev,
                    ddk::GpioProtocolClient enable_gpio)
       : AmlG12TdmStream(fake_ddk::kFakeParent, false, std::move(pdev), std::move(enable_gpio)) {
     SetCommonDefaults();
-    codecs_.push_back(SimpleCodecClient());
-    codecs_.push_back(SimpleCodecClient());
-    codecs_[0].SetProtocol(codec_protocol1);
-    codecs_[1].SetProtocol(codec_protocol2);
     aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
-    metadata_.codecs.number_of_codecs = 2;
-    metadata_.codecs.types[0] = metadata::CodecType::Tas27xx;
-    metadata_.codecs.types[1] = metadata::CodecType::Tas27xx;
-    metadata_.codecs.delta_gains[0] = kTestDeltaGain;
-    metadata_.codecs.delta_gains[1] = 0.f;
+    // Simply one ring buffer channel per codec.
+    metadata_.ring_buffer.number_of_channels = codec_protocols.size();
+    metadata_.codecs.number_of_codecs = codec_protocols.size();
+    for (size_t i = 0; i < codec_protocols.size(); ++i) {
+      codecs_.push_back(SimpleCodecClient());
+      codecs_[i].SetProtocol(codec_protocols[i]);
+      metadata_.lanes_enable_mask[i] = (1 << i);  // Simply one lane per codec.
+      metadata_.codecs.types[i] = metadata::CodecType::Tas27xx;
+      metadata_.codecs.delta_gains[i] = 0.f;
+      metadata_.codecs.ring_buffer_channels_to_use_bitmask[i] = (1 << i);
+    }
+    metadata_.codecs.delta_gains[0] = kTestDeltaGain;  // Only first one non-zero.
   }
 
   zx_status_t Init() __TA_REQUIRES(domain_token()) override {
@@ -389,8 +404,9 @@ TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
+  std::vector<codec_protocol_t*> codec_protocols = {&codec1_proto, &codec2_proto};
   auto controller = audio::SimpleAudioStream::Create<AmlG12I2sOutTest>(
-      &codec1_proto, &codec2_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
+      codec_protocols, unused_mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
@@ -413,14 +429,14 @@ TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
   ASSERT_OK(props.status());
 
   // Wait until codecs have received a SetGainState call.
-  sync_completion_wait(&codec1->set_gain_completion_, ZX_TIME_INFINITE);
-  sync_completion_wait(&codec2->set_gain_completion_, ZX_TIME_INFINITE);
+  codec1->wait_for_set_gain_completion();
+  codec2->wait_for_set_gain_completion();
 
   // Check we started (al least not stopped) both codecs and set them to muted.
-  ASSERT_TRUE(codec1->started_);
-  ASSERT_TRUE(codec2->started_);
-  ASSERT_TRUE(codec1->muted_);
-  ASSERT_TRUE(codec2->muted_);
+  ASSERT_TRUE(codec1->started());
+  ASSERT_TRUE(codec2->started());
+  ASSERT_TRUE(codec1->muted());
+  ASSERT_TRUE(codec2->muted());
 
   controller->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
@@ -443,8 +459,9 @@ TEST(AmlG12Tdm, I2sOutCodecsTurnOnDelay) {
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
+  std::vector<codec_protocol_t*> codec_protocols = {&codec1_proto, &codec2_proto};
   auto controller = audio::SimpleAudioStream::Create<AmlG12I2sOutTest>(
-      &codec1_proto, &codec2_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
+      codec_protocols, unused_mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
@@ -487,8 +504,9 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
+  std::vector<codec_protocol_t*> codec_protocols = {&codec1_proto, &codec2_proto};
   auto controller = audio::SimpleAudioStream::Create<AmlG12I2sOutTest>(
-      &codec1_proto, &codec2_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
+      codec_protocols, unused_mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
@@ -497,10 +515,8 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
   fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
 
   // Wait until codecs have received a SetGainState call.
-  sync_completion_wait(&codec1->set_gain_completion_, ZX_TIME_INFINITE);
-  sync_completion_wait(&codec2->set_gain_completion_, ZX_TIME_INFINITE);
-  sync_completion_reset(&codec1->set_gain_completion_);
-  sync_completion_reset(&codec2->set_gain_completion_);
+  codec1->wait_for_set_gain_completion();
+  codec2->wait_for_set_gain_completion();
 
   {
     {
@@ -514,10 +530,8 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     }
 
     // Wait until codecs have received a SetGainState call.
-    sync_completion_wait(&codec1->set_gain_completion_, ZX_TIME_INFINITE);
-    sync_completion_wait(&codec2->set_gain_completion_, ZX_TIME_INFINITE);
-    sync_completion_reset(&codec1->set_gain_completion_);
-    sync_completion_reset(&codec2->set_gain_completion_);
+    codec1->wait_for_set_gain_completion();
+    codec2->wait_for_set_gain_completion();
 
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
@@ -528,10 +542,10 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     ASSERT_TRUE(gain_state->gain_state.muted());
     ASSERT_EQ(gain_state->gain_state.gain_db(), kTestGain);
 
-    ASSERT_EQ(codec1->gain_, kTestGain + kTestDeltaGain);
-    ASSERT_EQ(codec2->gain_, kTestGain);
-    ASSERT_TRUE(codec1->muted_);
-    ASSERT_TRUE(codec2->muted_);
+    ASSERT_EQ(codec1->gain(), kTestGain + kTestDeltaGain);
+    ASSERT_EQ(codec2->gain(), kTestGain);
+    ASSERT_TRUE(codec1->muted());
+    ASSERT_TRUE(codec2->muted());
   }
 
   {
@@ -546,10 +560,8 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     }
 
     // Wait until codecs have received a SetGainState call.
-    sync_completion_wait(&codec1->set_gain_completion_, ZX_TIME_INFINITE);
-    sync_completion_wait(&codec2->set_gain_completion_, ZX_TIME_INFINITE);
-    sync_completion_reset(&codec1->set_gain_completion_);
-    sync_completion_reset(&codec2->set_gain_completion_);
+    codec1->wait_for_set_gain_completion();
+    codec2->wait_for_set_gain_completion();
 
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
@@ -561,10 +573,10 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     ASSERT_FALSE(gain_state->gain_state.muted());
     ASSERT_EQ(gain_state->gain_state.gain_db(), kTestGain);
 
-    ASSERT_EQ(codec1->gain_, kTestGain + kTestDeltaGain);
-    ASSERT_EQ(codec2->gain_, kTestGain);
-    ASSERT_TRUE(codec1->muted_);  // override_mute_ forces muted in the codec.
-    ASSERT_TRUE(codec2->muted_);  // override_mute_ forces muted in the codec.
+    ASSERT_EQ(codec1->gain(), kTestGain + kTestDeltaGain);
+    ASSERT_EQ(codec2->gain(), kTestGain);
+    ASSERT_TRUE(codec1->muted());  // override_mute_ forces muted in the codec.
+    ASSERT_TRUE(codec2->muted());  // override_mute_ forces muted in the codec.
   }
 
   {
@@ -584,10 +596,8 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     ASSERT_OK(start.status());
 
     // Wait until codecs have received a SetGainState call.
-    sync_completion_wait(&codec1->set_gain_completion_, ZX_TIME_INFINITE);
-    sync_completion_wait(&codec2->set_gain_completion_, ZX_TIME_INFINITE);
-    sync_completion_reset(&codec1->set_gain_completion_);
-    sync_completion_reset(&codec2->set_gain_completion_);
+    codec1->wait_for_set_gain_completion();
+    codec2->wait_for_set_gain_completion();
 
     {
       fidl::FidlAllocator allocator;
@@ -601,10 +611,8 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     }
 
     // Wait until codecs have received a SetGainState call.
-    sync_completion_wait(&codec1->set_gain_completion_, ZX_TIME_INFINITE);
-    sync_completion_wait(&codec2->set_gain_completion_, ZX_TIME_INFINITE);
-    sync_completion_reset(&codec1->set_gain_completion_);
-    sync_completion_reset(&codec2->set_gain_completion_);
+    codec1->wait_for_set_gain_completion();
+    codec2->wait_for_set_gain_completion();
 
     // To make sure we have initialized in the controller driver make a sync call
     // (we know the controller is single threaded, initialization is completed if received a reply).
@@ -617,12 +625,12 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     ASSERT_EQ(gain_state->gain_state.gain_db(), kTestGain);
 
     // We check the gain delta support in one codec.
-    ASSERT_EQ(codec1->gain_, kTestGain + kTestDeltaGain);
-    ASSERT_EQ(codec2->gain_, kTestGain);
+    ASSERT_EQ(codec1->gain(), kTestGain + kTestDeltaGain);
+    ASSERT_EQ(codec2->gain(), kTestGain);
 
     // And finally we check that we removed mute in the codecs.
-    ASSERT_FALSE(codec1->muted_);  // override_mute_ is cleared, we were able to set mute to false.
-    ASSERT_FALSE(codec2->muted_);  // override_mute_ is cleared, we were able to set mute to false.
+    ASSERT_FALSE(codec1->muted());  // override_mute_ is cleared, we were able to set mute to false.
+    ASSERT_FALSE(codec2->muted());  // override_mute_ is cleared, we were able to set mute to false.
 
     controller->DdkAsyncRemove();
     EXPECT_TRUE(tester.Ok());
@@ -657,8 +665,9 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantAgc) {
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
+  std::vector<codec_protocol_t*> codec_protocols = {&codec1_proto, &codec2_proto};
   auto controller = audio::SimpleAudioStream::Create<AmlG12I2sOutTest>(
-      &codec1_proto, &codec2_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
+      codec_protocols, unused_mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
@@ -704,8 +713,9 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantMute) {
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
+  std::vector<codec_protocol_t*> codec_protocols = {&codec1_proto, &codec2_proto};
   auto controller = audio::SimpleAudioStream::Create<AmlG12I2sOutTest>(
-      &codec1_proto, &codec2_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
+      codec_protocols, unused_mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
@@ -722,6 +732,131 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantMute) {
   controller->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   enable_gpio.VerifyAndClear();
+  controller->DdkRelease();
+}
+
+TEST(AmlG12Tdm, I2sOutCodecsStop) {
+  // Setup a system with 3 codecs.
+  fake_ddk::Bind tester;
+  auto codec1 = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
+  auto codec2 = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
+  auto codec3 = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
+  auto codec1_proto = codec1->GetProto();
+  auto codec2_proto = codec2->GetProto();
+  auto codec3_proto = codec3->GetProto();
+  constexpr size_t kRegSize = S905D2_EE_AUDIO_LENGTH / sizeof(uint32_t);  // in 32 bits chunks.
+  fbl::Array<ddk_mock::MockMmioReg> regs =
+      fbl::Array(new ddk_mock::MockMmioReg[kRegSize], kRegSize);
+  ddk_mock::MockMmioRegRegion unused_mock(regs.data(), sizeof(uint32_t), kRegSize);
+  ddk::PDev unused_pdev;
+  ddk::MockGpio enable_gpio;
+  enable_gpio.ExpectWrite(ZX_OK, 0);
+  std::vector<codec_protocol_t*> codec_protocols = {&codec1_proto, &codec2_proto, &codec3_proto};
+  auto controller = audio::SimpleAudioStream::Create<AmlG12I2sOutTest>(
+      codec_protocols, unused_mock, unused_pdev, enable_gpio.GetProto());
+  ASSERT_NOT_NULL(controller);
+
+  // Get a StreanConfig client.
+  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
+  ASSERT_EQ(channel_wrap.status(), ZX_OK);
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
+
+  // We stop the ring buffer and expect the codecs are stopped.
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = *std::move(endpoints);
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+  pcm_format.number_of_channels = 3;
+  pcm_format.channels_to_use_bitmask = 0x7;
+  format.set_pcm_format(allocator, std::move(pcm_format));
+  client.CreateRingBuffer(std::move(format), std::move(remote));
+
+  constexpr uint32_t kFramesRequested = 4096;
+  auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local).GetVmo(kFramesRequested, 0);
+  ASSERT_OK(vmo.status());
+
+  auto start = fidl::WireCall<audio_fidl::RingBuffer>(local).Start();
+  ASSERT_OK(start.status());
+
+  EXPECT_TRUE(codec1->started());
+  EXPECT_TRUE(codec2->started());
+  EXPECT_TRUE(codec3->started());
+
+  auto stop = fidl::WireCall<audio_fidl::RingBuffer>(local).Stop();
+  ASSERT_OK(stop.status());
+
+  EXPECT_FALSE(codec1->started());
+  EXPECT_FALSE(codec2->started());
+  EXPECT_FALSE(codec3->started());
+
+  controller->DdkAsyncRemove();
+  EXPECT_TRUE(tester.Ok());
+  controller->DdkRelease();
+}
+
+TEST(AmlG12Tdm, I2sOutCodecsChannelsToUseBitmask) {
+  // Setup a system with 3 codecs.
+  fake_ddk::Bind tester;
+  auto codec1 = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
+  auto codec2 = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
+  auto codec3 = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
+  auto codec1_proto = codec1->GetProto();
+  auto codec2_proto = codec2->GetProto();
+  auto codec3_proto = codec3->GetProto();
+  constexpr size_t kRegSize = S905D2_EE_AUDIO_LENGTH / sizeof(uint32_t);  // in 32 bits chunks.
+  fbl::Array<ddk_mock::MockMmioReg> regs =
+      fbl::Array(new ddk_mock::MockMmioReg[kRegSize], kRegSize);
+  ddk_mock::MockMmioRegRegion unused_mock(regs.data(), sizeof(uint32_t), kRegSize);
+  ddk::PDev unused_pdev;
+  ddk::MockGpio enable_gpio;
+  enable_gpio.ExpectWrite(ZX_OK, 0);
+  std::vector<codec_protocol_t*> codec_protocols = {&codec1_proto, &codec2_proto, &codec3_proto};
+  auto controller = audio::SimpleAudioStream::Create<AmlG12I2sOutTest>(
+      codec_protocols, unused_mock, unused_pdev, enable_gpio.GetProto());
+  ASSERT_NOT_NULL(controller);
+
+  // Get a StreanConfig client.
+  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
+  ASSERT_EQ(channel_wrap.status(), ZX_OK);
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
+
+  // We use partially enabled channels_to_use_bitmask and expect the corresponding codecs are
+  // stopped.
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = *std::move(endpoints);
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+  pcm_format.number_of_channels = 3;
+  pcm_format.channels_to_use_bitmask = 0x2;
+  format.set_pcm_format(allocator, std::move(pcm_format));
+  client.CreateRingBuffer(std::move(format), std::move(remote));
+
+  constexpr uint32_t kFramesRequested = 4096;
+  auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local).GetVmo(kFramesRequested, 0);
+  ASSERT_OK(vmo.status());
+
+  auto start = fidl::WireCall<audio_fidl::RingBuffer>(local).Start();
+  ASSERT_OK(start.status());
+
+  EXPECT_FALSE(codec1->started());  // This codec is stopped due to channels_to_use_bitmask.
+  EXPECT_TRUE(codec2->started());
+  EXPECT_FALSE(codec3->started());  // This codec is stopped due to channels_to_use_bitmask.
+
+  auto stop = fidl::WireCall<audio_fidl::RingBuffer>(local).Stop();
+  ASSERT_OK(stop.status());
+
+  EXPECT_FALSE(codec1->started());
+  EXPECT_FALSE(codec2->started());
+  EXPECT_FALSE(codec3->started());
+
+  controller->DdkAsyncRemove();
+  EXPECT_TRUE(tester.Ok());
   controller->DdkRelease();
 }
 
@@ -759,8 +894,9 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
+  std::vector<codec_protocol_t*> codec_protocols = {&codec1_proto, &codec2_proto};
   auto controller = audio::SimpleAudioStream::Create<AmlG12I2sOutTest>(
-      &codec1_proto, &codec2_proto, mock, unused_pdev, enable_gpio.GetProto());
+      codec_protocols, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
@@ -808,8 +944,8 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
   client.SetGain(audio_fidl::wire::GainState{});
 
   // Check that we set the codec to the new rate.
-  ASSERT_EQ(codec1->last_frame_rate_, 96'000);
-  ASSERT_EQ(codec2->last_frame_rate_, 96'000);
+  ASSERT_EQ(codec1->last_frame_rate(), 96'000);
+  ASSERT_EQ(codec2->last_frame_rate(), 96'000);
 
   mock.VerifyAll();
   controller->DdkAsyncRemove();

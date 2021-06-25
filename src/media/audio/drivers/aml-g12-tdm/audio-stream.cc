@@ -194,12 +194,6 @@ zx_status_t AmlG12TdmStream::InitPDev() {
       zxlogf(ERROR, "could not set DAI format %s", format_info.status_string());
       return format_info.status_value();
     }
-
-    codecs_[i].Start();
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "could not start codec %d", status);
-      return status;
-    }
   }
 
   zxlogf(INFO, "audio: %s initialized", metadata_.is_input ? "input" : "output");
@@ -350,13 +344,9 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
     }
   }
   if (req.frames_per_second != frame_rate_ || req.channels_to_use_bitmask != channels_to_use_) {
-    for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
-      // Put codecs in safe state for rate change
-      auto status = codecs_[i].Stop();
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "failed to stop the codec");
-        return status;
-      }
+    zx_status_t status = StopAllCodecs();  // Put codecs in safe state for rate change
+    if (status != ZX_OK) {
+      return status;
     }
 
     frame_rate_ = req.frames_per_second;
@@ -364,11 +354,12 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
       dai_formats_[i].frame_rate = frame_rate_;
     }
     channels_to_use_ = req.channels_to_use_bitmask;
-    auto status = aml_audio_->InitHW(metadata_, channels_to_use_, frame_rate_);
+    status = aml_audio_->InitHW(metadata_, channels_to_use_, frame_rate_);
     if (status != ZX_OK) {
       zxlogf(ERROR, "failed to reinitialize the HW");
       return status;
     }
+
     for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
       zx::status<CodecFormatInfo> format_info = codecs_[i].SetDaiFormat(dai_formats_[i]);
       if (!format_info.is_ok()) {
@@ -379,12 +370,10 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
         int64_t delay = format_info->turn_on_delay();
         codecs_turn_on_delay_nsec_ = std::max(codecs_turn_on_delay_nsec_, delay);
       }
-      // Restart codec
-      status = codecs_[i].Start();
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "failed to restart the codec");
-        return status;
-      }
+    }
+    status = StartAllEnabledCodecs();
+    if (status != ZX_OK) {
+      return status;
     }
   }
   SetTurnOnDelay(codecs_turn_on_delay_nsec_);
@@ -458,6 +447,11 @@ zx_status_t AmlG12TdmStream::GetBuffer(const audio_proto::RingBufGetBufferReq& r
 
 zx_status_t AmlG12TdmStream::Start(uint64_t* out_start_time) {
   *out_start_time = aml_audio_->Start();
+  zx_status_t status = StartAllEnabledCodecs();
+  if (status != ZX_OK) {
+    aml_audio_->Stop();
+    return status;
+  }
 
   uint32_t notifs = LoadNotificationsPerRing();
   if (notifs) {
@@ -472,12 +466,51 @@ zx_status_t AmlG12TdmStream::Start(uint64_t* out_start_time) {
   return ZX_OK;
 }
 
+// Enable codecs depending on the mapping provided by metadata_
+// metadata_.ring_buffer.number_of_channels are mapped into metadata_.codecs.number_of_codecs
+// The channels_to_use_ bitmask defines which ring buffer channels corresponding codecs to start
+// metadata_.codecs.ring_buffer_channels_to_use_bitmask[] specifies which channel in the ring buffer
+// a codec is associated with.
+zx_status_t AmlG12TdmStream::StartAllEnabledCodecs() {
+  for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
+    if (!metadata_.codecs.ring_buffer_channels_to_use_bitmask[i]) {
+      zxlogf(ERROR, "Codec %zu must configure ring_buffer_channels_to_use_bitmask", i);
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // If either:
+    // - The setting for channels_to_use_ is disabled or
+    // - The codecs ring_buffer_channels_to_use_bitmask intersects with channels_to_use_
+    // then start the codec.
+    if (channels_to_use_ == AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED ||
+        channels_to_use_ & metadata_.codecs.ring_buffer_channels_to_use_bitmask[i]) {
+      zx_status_t status = codecs_[i].Start();
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "Failed to restart the codec");
+        return status;
+      }
+    }
+  }
+  return ZX_OK;
+}
+
 zx_status_t AmlG12TdmStream::Stop() {
   override_mute_ = true;
   UpdateCodecsGainStateFromCurrent();
   notify_timer_.Cancel();
   us_per_notification_ = 0;
   aml_audio_->Stop();
+  return StopAllCodecs();
+}
+
+zx_status_t AmlG12TdmStream::StopAllCodecs() {
+  for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
+    auto status = codecs_[i].Stop();
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to stop the codec");
+      return status;
+    }
+  }
   return ZX_OK;
 }
 

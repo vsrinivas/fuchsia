@@ -200,6 +200,7 @@ zx_status_t Nelson::AudioInit() {
   metadata.codecs.number_of_codecs = 1;
   metadata.codecs.types[0] = metadata::CodecType::Tas58xx;
   metadata.codecs.channels_to_use_bitmask[0] = 2;  // Codec must use the left I2S slot.
+  metadata.codecs.ring_buffer_channels_to_use_bitmask[0] = 0x1;  // Single speaker uses index 0.
 
   pbus_metadata_t tdm_metadata[] = {
       {

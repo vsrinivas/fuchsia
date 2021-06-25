@@ -66,6 +66,8 @@ class AmlG12TdmStream : public SimpleAudioStream {
   void ProcessRingNotification();
   void UpdateCodecsGainState(GainState state) __TA_REQUIRES(domain_token());
   void UpdateCodecsGainStateFromCurrent() __TA_REQUIRES(domain_token());
+  zx_status_t StopAllCodecs();
+  zx_status_t StartAllEnabledCodecs();
   virtual bool AllowNonContiguousRingBuffer() { return false; }
   int Thread();
 
