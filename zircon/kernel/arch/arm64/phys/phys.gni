@@ -4,6 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/config/compiler.gni")
+
 # See //zircon/kernel/phys/BUILD.gn:kernel.phys.
 
 phys_configs = [
@@ -13,9 +15,6 @@ phys_configs = [
   # matched to exclude assembly code that does unaligned accesses.
   "//zircon/kernel/arch/arm64/phys:strict-align",
 
-  # All phys executables should be small enough for the tiny code model.
-  "//build/config/zircon:tiny",
-
   # Compile as a position-independent executable. The code will apply its own
   # fixups during initialization.
   "//build/config/zircon:static-pie-compile",
@@ -24,10 +23,15 @@ phys_configs = [
 
 phys_tags = [
   "strict-align",
-  "tiny",
   "static-pie",
 ]
 
 phys_exclude_variant_tags = []
 
 phys_zbi_configs = [ "//zircon/kernel/phys:load-pic" ]
+
+if (optimize != "none") {
+  # All phys executables should be small enough for the tiny code model.
+  phys_configs += [ "//build/config/zircon:tiny" ]
+  phys_tags += [ "tiny" ]
+}
