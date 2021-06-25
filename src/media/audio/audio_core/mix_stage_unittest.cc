@@ -570,10 +570,10 @@ TEST_F(MixStageTest, MixMultipleInputs) {
 }
 
 // When mixing streams, a buffer's gain_db is set, based on the largest of its inputs. Each input's
-// gain_db is determined by ITS input's gain_db, plus its individual gain (both source and dest).
+// gain_db is determined by ITS input's gain_db, plus its dest_gain.
 //
-// Validate that source_gain is appropriately incorporated and the correct (max) value is returned.
-TEST_F(MixStageTest, BufferGainDbIncludesSourceGain) {
+// Validate that source_gain is NOT incorporated in these calculations.
+TEST_F(MixStageTest, BufferGainDbDoesNotIncludeSourceGain) {
   // Set timeline rate to match our format.
   auto timeline_function = TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
@@ -604,8 +604,8 @@ TEST_F(MixStageTest, BufferGainDbIncludesSourceGain) {
                                      StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
                                      StreamUsage::WithRenderUsage(RenderUsage::COMMUNICATION),
                                  }));
-    // If the source gain is included in the calculation, then input2 should be the larger value.
-    EXPECT_FLOAT_EQ(buf->gain_db(), -15);
+    // Dest gain is unchanged for both inputs, so only input1|input2 gains are compared.
+    EXPECT_FLOAT_EQ(buf->gain_db(), 1.0);
   }
 }
 

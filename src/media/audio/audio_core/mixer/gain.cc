@@ -188,13 +188,12 @@ void Gain::Advance(int64_t num_frames, const TimelineRate& destination_frames_pe
   }
 }
 
-// Populate an array of gain scales, returning the max gain-scale value in the array.
-// Currently we handle only SCALE_LINEAR ramps
-Gain::AScale Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
-                                 const TimelineRate& destination_frames_per_reference_tick) {
+// Populate an array of gain scales. Currently we handle only SCALE_LINEAR ramps
+void Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
+                         const TimelineRate& destination_frames_per_reference_tick) {
   TRACE_DURATION("audio", "Gain::GetScaleArray");
   if (num_frames == 0) {
-    return GetGainScale();
+    return;
   }
 
   FX_CHECK(scale_arr != nullptr) << "Null pointer; cannot copy the array of scale values";
@@ -205,7 +204,7 @@ Gain::AScale Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
     for (int64_t idx = 0; idx < num_frames; ++idx) {
       scale_arr[idx] = scale;
     }
-    return scale;
+    return;
   }
 
   // If the output device's clock is not running, then it isn't possible to
@@ -266,18 +265,14 @@ Gain::AScale Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
     }
   }
 
-  AScale max_scale = kMuteScale;
-  // Apply gain limits; normalize sub-kMinScale values to kMuteScale; return the max scale value.
-  for (int64_t idx = 0; idx < num_frames; ++idx) {
-    if (scale_arr[idx] <= kMinScale) {
-      scale_arr[idx] = kMuteScale;
-    } else {
-      scale_arr[idx] = std::clamp(scale_arr[idx], min_gain_scale_, max_gain_scale_);
+  // Apply gain limits.
+  if (min_gain_db_ > kMinGainDb || max_gain_db_ < kMaxGainDb) {
+    for (int64_t idx = 0; idx < num_frames; ++idx) {
+      if (scale_arr[idx] > kMuteScale) {
+        scale_arr[idx] = std::clamp(scale_arr[idx], min_gain_scale_, max_gain_scale_);
+      }
     }
-    max_scale = std::max(max_scale, scale_arr[idx]);
   }
-
-  return max_scale;
 }
 
 // Calculate a stream's gain-scale multiplier from source and dest gains in

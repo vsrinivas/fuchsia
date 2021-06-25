@@ -655,11 +655,10 @@ void GainBase::TestGetScaleArrayNoRamp() {
   SetGain(-42.0f);
   SetOtherGain(-68.0f);
 
-  auto max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+  gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
   Gain::AScale expect_scale = gain_.GetGainScale();
 
   EXPECT_THAT(scale_arr, Each(FloatEq(expect_scale)));
-  EXPECT_FLOAT_EQ(max_gain_scale, expect_scale);
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsRamping());
@@ -674,10 +673,9 @@ void GainBase::TestGetScaleArray() {
   Gain::AScale expect_arr[6] = {1.0, 0.82, 0.64, 0.46, 0.28, 0.1};
 
   SetGainWithRamp(-20, zx::msec(5));
-  auto max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+  gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
-  EXPECT_FLOAT_EQ(max_gain_scale, expect_arr[0]);
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
@@ -692,10 +690,9 @@ void GainBase::TestScaleArrayLongRamp() {
   Gain::AScale expect_arr[4] = {1.0, 0.901, 0.802, 0.703};
 
   SetGainWithRamp(-40, zx::msec(10));
-  auto max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+  gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
-  EXPECT_FLOAT_EQ(max_gain_scale, expect_arr[0]);
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
@@ -710,10 +707,9 @@ void GainBase::TestScaleArrayShortRamp() {
   Gain::AScale expect_arr[9] = {1.0, 0.82, 0.64, 0.46, 0.28, 0.1, 0.1, 0.1, 0.1};
 
   SetGainWithRamp(-20, zx::msec(5));
-  auto max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+  gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
-  EXPECT_FLOAT_EQ(max_gain_scale, expect_arr[0]);
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
@@ -727,12 +723,10 @@ void GainBase::TestScaleArrayWithoutAdvance() {
   SetGainWithRamp(-123.45678, zx::msec(9));
 
   Gain::AScale scale_arr[10];
-  auto max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
-  EXPECT_FLOAT_EQ(max_gain_scale, Gain::kUnityScale);
+  gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
   Gain::AScale scale_arr2[10];
-  max_gain_scale = gain_.GetScaleArray(scale_arr2, std::size(scale_arr2), rate_1khz_output_);
-  EXPECT_FLOAT_EQ(max_gain_scale, Gain::kUnityScale);
+  gain_.GetScaleArray(scale_arr2, std::size(scale_arr2), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Pointwise(FloatEq(), scale_arr2));
 }
@@ -745,19 +739,17 @@ void GainBase::TestScaleArrayBigAdvance() {
   Gain::AScale expect = Gain::kUnityScale * 2;
 
   SetGainWithRamp(6.0205999, zx::msec(5));
-  auto max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+  gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Not(Each(FloatEq(expect))));
-  EXPECT_FLOAT_EQ(max_gain_scale, expect);
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsSilent());
 
   gain_.Advance(rate_1khz_output_.Scale(ZX_SEC(10)), rate_1khz_output_);
-  max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+  gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Each(FloatEq(expect)));
-  EXPECT_FLOAT_EQ(max_gain_scale, expect);
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsUnity());
@@ -776,9 +768,8 @@ void GainBase::TestRampCompletion() {
   // With a 5ms duration and 1 frame per ms, scale_arr will perfectly fit
   // each frame such that scale_arr[5] == target_gain_scale.
   SetGainWithRamp(target_gain_db, zx::msec(5));
-  auto max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+  gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
-  EXPECT_FLOAT_EQ(max_gain_scale, Gain::kUnityScale);
   for (size_t k = 0; k < std::size(scale_arr); k++) {
     const float diff = Gain::kUnityScale - target_gain_scale;
     const float want = Gain::kUnityScale - diff * static_cast<float>(k) / 5.0;
@@ -792,10 +783,9 @@ void GainBase::TestRampCompletion() {
 
   // After clearing the ramp, scale_arr should be constant.
   CompleteRamp();
-  max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+  gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Each(FloatEq(target_gain_scale)));
-  EXPECT_FLOAT_EQ(max_gain_scale, target_gain_scale);
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsUnity());
@@ -805,10 +795,9 @@ void GainBase::TestRampCompletion() {
 
   // Without a ramp, scale_arr should be constant even after Advance.
   gain_.Advance(10, rate_1khz_output_);
-  max_gain_scale = gain_.GetScaleArray(scale_arr2, std::size(scale_arr2), rate_1khz_output_);
+  gain_.GetScaleArray(scale_arr2, std::size(scale_arr2), rate_1khz_output_);
 
   EXPECT_THAT(scale_arr, Each(FloatEq(target_gain_scale)));
-  EXPECT_FLOAT_EQ(max_gain_scale, target_gain_scale);
   EXPECT_FALSE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());
@@ -825,13 +814,12 @@ void GainBase::TestAdvanceHalfwayThroughRamp() {
   Gain::AScale expect_arr[4];
 
   SetGainWithRamp(-20.0f, zx::msec(9));
-  auto max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+  gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
-  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kUnityScale);
-  EXPECT_FLOAT_EQ(max_gain_scale, Gain::kUnityScale);
+  Gain::AScale expect_scale = Gain::kUnityScale;
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), expect_scale);
 
   // When comparing buffers, do it within the tolerance of 32-bit float
-  Gain::AScale expect_scale = Gain::kUnityScale;
   for (auto& val : expect_arr) {
     val = expect_scale;
     expect_scale -= 0.1;
@@ -844,11 +832,11 @@ void GainBase::TestAdvanceHalfwayThroughRamp() {
   // Advance only partially through the duration of the ramp.
   const auto kFramesToAdvance = 2;
   gain_.Advance(kFramesToAdvance, rate_1khz_output_);
-  max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+  gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+  // DisplayScaleVals(scale_arr, std::size(scale_arr));
 
   expect_scale = expect_arr[kFramesToAdvance];
   EXPECT_FLOAT_EQ(expect_scale, gain_.GetGainScale());
-  EXPECT_FLOAT_EQ(max_gain_scale, expect_scale);
 
   for (auto& val : expect_arr) {
     val = expect_scale;
@@ -905,7 +893,7 @@ void GainBase::TestCombinedRamps() {
     // Two arbitrary ramps of the same length, starting at the same time
     SetGainWithRamp(-20, zx::msec(10));
     SetOtherGainWithRamp(+10, zx::msec(10));
-    auto max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+    gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
     // Source gain ramps linearly from 0 dB (scale 1.0) to -20 dB (0.1)
     // Dest gain ramps linearly from 0 dB (1.0) to 10 dB (3.16227766)
@@ -919,7 +907,6 @@ void GainBase::TestCombinedRamps() {
         1.0567886, 0.9300299, 0.7643502, 0.5597495, 0.3162278,
     };
     EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
-    EXPECT_FLOAT_EQ(max_gain_scale, expect_arr[3]);
   }
 
   {
@@ -932,7 +919,7 @@ void GainBase::TestCombinedRamps() {
     // At the source-ramp midpoint, source * dest contributions are 0.50005 * 0.01
     EXPECT_FLOAT_EQ(gain_.GetGainScale(), 0.005000501f);
     SetOtherGainWithRamp(15, zx::msec(7));
-    auto max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+    gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
     // source ramp continues onward, finalizing at 0.0001 on frame 5. dest ramp ends on frame 7 at
     // 5.6234133. They combine for 0.0005623413 which should be set for the remaining array.
@@ -941,7 +928,6 @@ void GainBase::TestCombinedRamps() {
         0.00048214971, 0.00056234133, 0.00056234133, 0.00056234133, 0.00056234133,
     };
     EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
-    EXPECT_FLOAT_EQ(max_gain_scale, expect_arr[2]);
   }
 }
 
@@ -967,7 +953,7 @@ void GainBase::TestCrossFades() {
     SetOtherGain(kInitialGainDb2);
     SetGainWithRamp(kInitialGainDb1 + kGainChangeDb, zx::msec(ramp_length));
     SetOtherGainWithRamp(kInitialGainDb2 - kGainChangeDb, zx::msec(ramp_length));
-    auto max_gain_scale = gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
+    gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
 
     // scale values are given below for the ramp_length = 4 case:
     // source 0.10000000  0.13779716  0.17559432  0.21339148  0.25118864  0.25118864 ...
@@ -979,7 +965,6 @@ void GainBase::TestCrossFades() {
     // * At either end of the ramps, the gains are equal
     EXPECT_FLOAT_EQ(scale_arr[0], Gain::DbToScale(kInitialGainDb1 + kInitialGainDb2));
     EXPECT_FLOAT_EQ(scale_arr[ramp_length], scale_arr[0]);
-    EXPECT_FLOAT_EQ(max_gain_scale, scale_arr[ramp_length / 2]);
 
     // * Gain increases monotonically to the midpoint of the ramps
     EXPECT_GT(scale_arr[ramp_length / 2 - 1], scale_arr[ramp_length / 2 - 2]);
@@ -1093,58 +1078,6 @@ TEST(GainLimitsTest, PreserveSourceMute) {
   EXPECT_FLOAT_EQ(gain.GetGainScale(), Gain::kMuteScale);
 }
 
-// A gain-limit range that includes unity gain should allow this, whether by default ctor or by
-// combination of source and dest gain values that may individually exceed gain limits.
-TEST(GainLimitsTest, PreserveIsUnity) {
-  Gain gain({
-      .min_gain_db = -4.0f,
-      .max_gain_db = 1.0f,
-  });
-
-  EXPECT_FLOAT_EQ(gain.GetGainScale(), Gain::kUnityScale);
-  EXPECT_FLOAT_EQ(gain.GetGainDb(), Gain::kUnityGainDb);
-  EXPECT_TRUE(gain.IsUnity());
-
-  // source below the limit, dest above the limit
-  gain.SetSourceGain(-6.0f);
-  gain.SetDestGain(6.0f);
-
-  EXPECT_FLOAT_EQ(gain.GetGainScale(), Gain::kUnityScale);
-  EXPECT_FLOAT_EQ(gain.GetGainDb(), Gain::kUnityGainDb);
-  EXPECT_TRUE(gain.IsUnity());
-
-  // source above the limit, dest below the limit
-  gain.SetSourceGain(12.0f);
-  gain.SetDestGain(-12.0f);
-
-  EXPECT_FLOAT_EQ(gain.GetGainScale(), Gain::kUnityScale);
-  EXPECT_FLOAT_EQ(gain.GetGainDb(), Gain::kUnityGainDb);
-  EXPECT_TRUE(gain.IsUnity());
-}
-
-// A gain-limit range that excludes unity gain should never return kUnityGainDb or kUnityScale,
-// whether by default ctor or combination of source and dest values.
-TEST(GainLimitsTest, PreventIsUnity) {
-  Gain gain({
-      .max_gain_db = -5.0f,
-  });
-
-  EXPECT_FLOAT_EQ(gain.GetGainDb(), -5.0f);
-  EXPECT_FALSE(gain.IsUnity());
-
-  gain.SetSourceGain(Gain::kUnityGainDb);
-  gain.SetDestGain(Gain::kUnityGainDb);
-
-  EXPECT_FLOAT_EQ(gain.GetGainDb(), -5.0f);
-  EXPECT_FALSE(gain.IsUnity());
-
-  gain.SetSourceGain(Gain::kUnityGainDb + 1.0f);
-  gain.SetDestGain(Gain::kUnityGainDb - 1.0f);
-
-  EXPECT_FLOAT_EQ(gain.GetGainDb(), -5.0f);
-  EXPECT_FALSE(gain.IsUnity());
-}
-
 TEST(GainLimitsTest, SourceRampUp) {
   Gain::AScale scale_arr[6];
   // Without limits, this is:  {0.1, 0.28, 0.46, 0.64, 0.82, 1.0};
@@ -1156,11 +1089,9 @@ TEST(GainLimitsTest, SourceRampUp) {
   });
   gain.SetSourceGain(-20);
   gain.SetSourceGainWithRamp(0, zx::msec(5));
-  auto max_gain_scale =
-      gain.GetScaleArray(scale_arr, std::size(scale_arr), TimelineRate(1000, ZX_SEC(1)));
+  gain.GetScaleArray(scale_arr, std::size(scale_arr), TimelineRate(1000, ZX_SEC(1)));
 
   EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
-  EXPECT_FLOAT_EQ(max_gain_scale, expect_arr[5]);
   EXPECT_TRUE(gain.IsRamping());
 }
 
@@ -1184,11 +1115,9 @@ TEST(GainLimitsTest, DestRampDown) {
       .max_gain_db = Gain::ScaleToDb(0.80),
   });
   gain.SetDestGainWithRamp(-20, zx::msec(5));
-  auto max_gain_scale =
-      gain.GetScaleArray(scale_arr, std::size(scale_arr), TimelineRate(1000, ZX_SEC(1)));
+  gain.GetScaleArray(scale_arr, std::size(scale_arr), TimelineRate(1000, ZX_SEC(1)));
 
   EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
-  EXPECT_FLOAT_EQ(max_gain_scale, expect_arr[0]);
   EXPECT_TRUE(gain.IsRamping());
 }
 
@@ -1211,11 +1140,9 @@ TEST(GainLimitsTest, GainScaleArrayRespectsMinWhenNotRamping) {
       .max_gain_db = Gain::ScaleToDb(0.80),
   });
   gain.SetSourceGain(Gain::ScaleToDb(0.1));
-  auto max_gain_scale =
-      gain.GetScaleArray(scale_arr, std::size(scale_arr), TimelineRate(1000, ZX_SEC(1)));
+  gain.GetScaleArray(scale_arr, std::size(scale_arr), TimelineRate(1000, ZX_SEC(1)));
 
   EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
-  EXPECT_FLOAT_EQ(max_gain_scale, expect_arr[0]);
   EXPECT_FALSE(gain.IsRamping());
 }
 
@@ -1228,11 +1155,9 @@ TEST(GainLimitsTest, GainScaleArrayRespectsMaxWhenNotRamping) {
       .max_gain_db = Gain::ScaleToDb(0.80),
   });
   gain.SetSourceGain(Gain::ScaleToDb(0.9));
-  auto max_gain_scale =
-      gain.GetScaleArray(scale_arr, std::size(scale_arr), TimelineRate(1000, ZX_SEC(1)));
+  gain.GetScaleArray(scale_arr, std::size(scale_arr), TimelineRate(1000, ZX_SEC(1)));
 
   EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
-  EXPECT_FLOAT_EQ(max_gain_scale, expect_arr[0]);
   EXPECT_FALSE(gain.IsRamping());
 }
 
