@@ -27,7 +27,8 @@ use {
     channel_listener::{ChannelListenerSource, ChannelListenerState},
     channel_scheduler::ChannelScheduler,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_minstrel as fidl_minstrel, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     log::{error, warn},
     scanner::Scanner,
     state::States,
@@ -185,6 +186,10 @@ impl ClientMlme {
             MlmeMsg::JoinReq { req } => self.on_sme_join(req),
             MlmeMsg::StatsQueryReq {} => self.on_sme_stats_query(),
             MlmeMsg::QueryDeviceInfo { tx_id } => self.on_sme_query_device_info(tx_id),
+            MlmeMsg::ListMinstrelPeers { tx_id } => self.on_sme_list_minstrel_peers(tx_id),
+            MlmeMsg::GetMinstrelStats { tx_id, req } => {
+                self.on_sme_get_minstrel_stats(tx_id, &req.mac_addr)
+            }
             other_message => match &mut self.sta {
                 None => Err(Error::Status(format!("No client sta."), zx::Status::BAD_STATE)),
                 Some(sta) => Ok(sta
@@ -282,6 +287,29 @@ impl ClientMlme {
         self.ctx
             .device
             .access_sme_sender(|sender| sender.send_query_device_info_response(txid, &mut info))
+    }
+
+    fn on_sme_list_minstrel_peers(&self, txid: fidl::client::Txid) -> Result<(), Error> {
+        // TODO(fxbug.dev/79543): Implement once Minstrel is in Rust.
+        error!("ListMinstrelPeers is not supported.");
+        let peers = fidl_minstrel::Peers { peers: vec![] };
+        let mut resp = fidl_mlme::MinstrelListResponse { peers };
+        self.ctx
+            .device
+            .access_sme_sender(|sender| sender.send_list_minstrel_peers_response(txid, &mut resp))
+    }
+
+    fn on_sme_get_minstrel_stats(
+        &self,
+        txid: fidl::client::Txid,
+        _addr: &[u8; 6],
+    ) -> Result<(), Error> {
+        // TODO(fxbug.dev/79543): Implement once Minstrel is in Rust.
+        error!("GetMinstrelStats is not supported.");
+        let mut resp = fidl_mlme::MinstrelStatsResponse { peer: None };
+        self.ctx
+            .device
+            .access_sme_sender(|sender| sender.send_get_minstrel_stats_response(txid, &mut resp))
     }
 
     pub fn on_eth_frame<B: ByteSlice>(&mut self, bytes: B) -> Result<(), Error> {

@@ -127,12 +127,7 @@ zx_status_t Dispatcher::HandleAnyMlmeMessage(fbl::Span<uint8_t> span) {
   uint64_t ordinal = hdr->ordinal;
   debughdr("service packet txid=%u ordinal=%lu\n", hdr->txid, ordinal);
 
-  // TODO(fxbug.dev/44480): Rust MLME message handler does not support transaction ID.
   switch (ordinal) {
-    case fuchsia::wlan::mlme::internal::kMLME_ListMinstrelPeers_Ordinal:
-      return HandleMinstrelPeerList(ordinal, hdr->txid);
-    case fuchsia::wlan::mlme::internal::kMLME_GetMinstrelStats_Ordinal:
-      return HandleMinstrelTxStats(span, ordinal, hdr->txid);
     // TODO(fxbug.dev/44485): Rust MLME does not support Mesh.
     case fuchsia::wlan::mlme::internal::kMLME_SendMpOpenAction_Ordinal:
       return HandleMlmeMessage<wlan_mlme::MeshPeeringOpenAction>(span, ordinal);
@@ -156,41 +151,6 @@ zx_status_t Dispatcher::HandleMlmeMessage(fbl::Span<uint8_t> span, uint64_t ordi
     return ZX_ERR_INVALID_ARGS;
   }
   return mlme_->HandleMlmeMsg(*msg);
-}
-
-zx_status_t Dispatcher::HandleMinstrelPeerList(uint64_t ordinal, zx_txid_t txid) const {
-  debugfn();
-  wlan_mlme::MinstrelListResponse resp{};
-  zx_status_t status = device_->GetMinstrelPeers(&resp.peers);
-  if (status != ZX_OK) {
-    errorf("cannot get minstrel peer list: %s\n", zx_status_get_string(status));
-    resp.peers.peers.resize(0);
-  }
-  return SendServiceMsg(device_, &resp,
-                        fuchsia::wlan::mlme::internal::kMLME_ListMinstrelPeers_Ordinal, txid);
-}
-
-zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::Span<uint8_t> span, uint64_t ordinal,
-                                              zx_txid_t txid) const {
-  debugfn();
-  wlan_mlme::MinstrelStatsResponse resp{};
-  auto req = MlmeMsg<wlan_mlme::MinstrelStatsRequest>::Decode(
-      span, fuchsia::wlan::mlme::internal::kMLME_GetMinstrelStats_Ordinal);
-  if (!req.has_value()) {
-    errorf("could not deserialize MLME primitive %lu\n", ordinal);
-    return ZX_ERR_INVALID_ARGS;
-  }
-  common::MacAddr addr(req->body()->mac_addr);
-
-  wlan_minstrel::Peer peer;
-  auto status = device_->GetMinstrelStats(addr, &peer);
-  if (status == ZX_OK) {
-    resp.peer = std::make_unique<wlan_minstrel::Peer>(std::move(peer));
-  } else {
-    errorf("could not get peer stats: %s\n", zx_status_get_string(status));
-  }
-  return SendServiceMsg(device_, &resp,
-                        fuchsia::wlan::mlme::internal::kMLME_GetMinstrelStats_Ordinal, txid);
 }
 
 void Dispatcher::HwIndication(uint32_t ind) {

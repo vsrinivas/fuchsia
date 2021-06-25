@@ -16,7 +16,8 @@ use {
         timer::{EventId, Scheduler, Timer},
     },
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_minstrel as fidl_minstrel, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     log::{error, info, log},
     std::fmt,
     wlan_common::{
@@ -224,6 +225,29 @@ impl Ap {
             .access_sme_sender(|sender| sender.send_query_device_info_response(txid, &mut info))
     }
 
+    fn handle_sme_list_minstrel_peers(&self, txid: fidl::client::Txid) -> Result<(), Error> {
+        // TODO(fxbug.dev/79543): Implement once Minstrel is in Rust.
+        error!("ListMinstrelPeers is not supported.");
+        let peers = fidl_minstrel::Peers { peers: vec![] };
+        let mut resp = fidl_mlme::MinstrelListResponse { peers };
+        self.ctx
+            .device
+            .access_sme_sender(|sender| sender.send_list_minstrel_peers_response(txid, &mut resp))
+    }
+
+    fn handle_sme_get_minstrel_stats(
+        &self,
+        txid: fidl::client::Txid,
+        _addr: &[u8; 6],
+    ) -> Result<(), Error> {
+        // TODO(fxbug.dev/79543): Implement once Minstrel is in Rust.
+        error!("GetMinstrelStats is not supported.");
+        let mut resp = fidl_mlme::MinstrelStatsResponse { peer: None };
+        self.ctx
+            .device
+            .access_sme_sender(|sender| sender.send_get_minstrel_stats_response(txid, &mut resp))
+    }
+
     #[allow(deprecated)] // Allow until main message loop is in Rust.
     pub fn handle_mlme_msg(&mut self, msg: fidl_mlme::MlmeRequestMessage) -> Result<(), Error> {
         match msg {
@@ -232,6 +256,12 @@ impl Ap {
             fidl_mlme::MlmeRequestMessage::SetKeysReq { req } => self.handle_mlme_setkeys_req(req),
             fidl_mlme::MlmeRequestMessage::QueryDeviceInfo { tx_id } => {
                 self.handle_mlme_query_device_info(tx_id)
+            }
+            fidl_mlme::MlmeRequestMessage::ListMinstrelPeers { tx_id } => {
+                self.handle_sme_list_minstrel_peers(tx_id)
+            }
+            fidl_mlme::MlmeRequestMessage::GetMinstrelStats { tx_id, req } => {
+                self.handle_sme_get_minstrel_stats(tx_id, &req.mac_addr)
             }
             fidl_mlme::MlmeRequestMessage::AuthenticateResp { resp } => {
                 self.bss.as_mut().ok_or_bss_err()?.handle_mlme_auth_resp(&mut self.ctx, resp)
