@@ -95,7 +95,7 @@ impl Display {
                  into the bridge.",
             )
             .control_handle()
-            .send_on_new_view2(view_provider, view_id)
+            .send_on_new_view(view_provider, view_id)
             .expect("Failed to emit OnNewView event");
     }
 

@@ -39,7 +39,6 @@ class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatche
  private:
   fuchsia::sys::LauncherPtr ConnectToLauncher() const;
 
-  void OnNewView1(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
   void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view, uint32_t id);
   void OnShutdownView(uint32_t id);
   void Reset(zx_status_t status);

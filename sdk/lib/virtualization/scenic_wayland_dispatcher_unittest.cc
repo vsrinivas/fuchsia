@@ -44,7 +44,7 @@ class FakeDispatcher : public fuchsia::virtualization::WaylandDispatcher,
     for (auto& binding : view_producer_bindings_.bindings()) {
       zx::channel c1, c2;
       zx::channel::create(0, &c1, &c2);
-      binding->events().OnNewView2(
+      binding->events().OnNewView(
           fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>(std::move(c1)),
           new_view_channels_.size());
       new_view_channels_.push_back(std::move(c2));
