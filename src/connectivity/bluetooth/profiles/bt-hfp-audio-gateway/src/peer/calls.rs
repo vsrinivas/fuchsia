@@ -421,9 +421,15 @@ impl Calls {
         Ok(())
     }
 
-    /// Returns true if the state of any calls requires ringing.
+    /// Returns true if the state of any calls requires ringing and there are no
+    /// ongoing calls.
     pub fn should_ring(&self) -> bool {
-        self.calls().any(|c| c.1.state == CallState::IncomingRinging)
+        !self.ongoing_call() && self.calls().any(|c| c.1.state == CallState::IncomingRinging)
+    }
+
+    /// Returns true if any calls are ongoing.
+    pub fn ongoing_call(&self) -> bool {
+        self.is_call_active() || self.calls().any(|c| c.1.state == CallState::OngoingHeld)
     }
 
     /// Get the current `CallIndicators` based on the state of all calls.
@@ -630,7 +636,7 @@ mod tests {
     fn calls_should_ring_succeeds() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
-        let (mut calls, _peer_handler, mut call_stream, _idx, _num) = setup_ongoing_call();
+        let (mut calls, mut peer_handler, mut call_stream, _idx, _num) = setup_ongoing_call();
         assert!(calls.should_ring());
 
         assert_calls_indicators(&mut exec, &mut calls);
@@ -640,6 +646,20 @@ mod tests {
 
         // Call is no longer ringing after call state has changed
         assert!(!calls.should_ring());
+
+        let _call2_stream = new_call(&mut exec, &mut peer_handler, "2", CallState::IncomingRinging);
+        poll_calls_until_pending(&mut exec, &mut calls);
+
+        // The calls state should not be ringing despite an IncomingRinging call because there
+        // is an ongoing call present.
+        assert!(!calls.should_ring());
+
+        // Remove the ongoing call
+        drop(call_stream);
+        poll_calls_until_pending(&mut exec, &mut calls);
+
+        // Call is ringing now that the ongoing call was removed.
+        assert!(calls.should_ring());
     }
 
     #[fasync::run_until_stalled(test)]
