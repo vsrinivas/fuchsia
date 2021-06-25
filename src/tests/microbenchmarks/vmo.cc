@@ -14,28 +14,60 @@
 
 namespace {
 
-// Measure the time taken to write or read a chunk of data to/from a VMO
-// using the zx_vmo_write() or zx_vmo_read() syscalls respectively.
-bool VmoReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size, bool do_write) {
+// Measure the time taken to write or read a chunk of data to/from a VMO using the zx_vmo_write() or
+// zx_vmo_read() syscalls respectively. If |do_write| and |zero_page| are true, this measures the
+// time to do a zx_vmo_write() that copies from a buffer that maps to the kernel's shared zero page
+// into the VMO. One reason for testing this case is that this uses a different code path in the
+// kernel than if non-zero pages were used. For multi-page buffers, it will also read fewer pages of
+// physical memory.
+bool VmoReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size, bool do_write,
+                        bool zero_page) {
+  if (zero_page) {
+    // This is the only meaningful combination. See comments where the test is registered below.
+    ZX_ASSERT(do_write);
+  }
+
   state->SetBytesProcessedPerRun(copy_size);
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(copy_size, 0, &vmo));
-  std::vector<char> buffer(copy_size);
 
-  // Write the buffer so that the pages are pre-committed. This matters
+  // Use a vmo as the buffer to read from / write to, so we can exactly control whether we're using
+  // distinct physical pages or the singleton zero page.
+  zx::vmo buffer_vmo;
+  ASSERT_OK(zx::vmo::create(copy_size, 0, &buffer_vmo));
+  zx_vaddr_t buffer_addr;
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, buffer_vmo, 0,
+                                       copy_size, &buffer_addr));
+
+  // If |zero_page| is not specified, memset to non-zero to make sure buffer_vmo's pages are
+  // populated and not eligible for zero page deduping, otherwise let the kernel fault in the zero
+  // page as required.
+  //
+  // This can alter the runtime of the vmo write below. If |zero_page| is true, for vmo
+  // write, the buffer is being read from, so we will just use the singleton zero page.
+  //
+  // Also when performing page lookups in the vmo to retrieve backing pages, the logic in the kernel
+  // for handling distinct physical pages differs from the zero page.
+  if (!zero_page) {
+    memset(reinterpret_cast<void*>(buffer_addr), 0xa, copy_size);
+  }
+
+  // Write the VMO so that the pages are pre-committed. This matters
   // more for the read case.
-  ASSERT_OK(vmo.write(buffer.data(), 0, copy_size));
+  ASSERT_OK(vmo.write(reinterpret_cast<void*>(buffer_addr), 0, copy_size));
 
   if (do_write) {
     while (state->KeepRunning()) {
-      ASSERT_OK(vmo.write(buffer.data(), 0, copy_size));
+      ASSERT_OK(vmo.write(reinterpret_cast<void*>(buffer_addr), 0, copy_size));
     }
   } else {
     while (state->KeepRunning()) {
-      ASSERT_OK(vmo.read(buffer.data(), 0, copy_size));
+      ASSERT_OK(vmo.read(reinterpret_cast<void*>(buffer_addr), 0, copy_size));
     }
   }
+
+  ASSERT_OK(zx::vmar::root_self()->unmap(buffer_addr, copy_size));
   return true;
 }
 
@@ -57,7 +89,7 @@ bool VmoReadOrWriteMapTestImpl(perftest::RepeatState* state, uint32_t copy_size,
     ASSERT_OK(zx::vmo::create(copy_size, 0, &vmo_buf));
   }
 
-  // Write the buffer so that the pages are pre-committed. This matters
+  // Write the VMO so that the pages are pre-committed. This matters
   // more for the read case.
   ASSERT_OK(vmo.write(buffer.data(), 0, copy_size));
 
@@ -99,9 +131,9 @@ bool VmoReadOrWriteMapRangeTest(perftest::RepeatState* state, uint32_t copy_size
   return VmoReadOrWriteMapTestImpl(state, copy_size, do_write, ZX_VM_MAP_RANGE, user_memcpy);
 }
 
-// Measure the time taken to clone a vmo and destroy it. If map_size is non zero,
-// then this function tests the case where the original vmo is mapped in chunks
-// of map_size; otherwise it tests the case where the original vmo is not mapped.
+// Measure the time taken to clone a vmo and destroy it. If map_size is non zero, then this function
+// tests the case where the original vmo is mapped in chunks of map_size; otherwise it tests the
+// case where the original vmo is not mapped.
 bool VmoCloneTest(perftest::RepeatState* state, uint32_t copy_size, uint32_t map_size) {
   if (map_size > 0) {
     state->DeclareStep("map");
@@ -143,6 +175,38 @@ bool VmoCloneTest(perftest::RepeatState* state, uint32_t copy_size, uint32_t map
       state->NextStep();
       ASSERT_OK(vmar.unmap(addr, copy_size));
     }
+  }
+
+  return true;
+}
+
+// Measure the time taken to create a clone, map, unmap and then destroy it.
+bool VmoMapCloneTest(perftest::RepeatState* state, uint32_t copy_size) {
+  state->DeclareStep("clone");
+  state->DeclareStep("map");
+  state->DeclareStep("unmap");
+  state->DeclareStep("close");
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(copy_size, 0, &vmo));
+  // Fully commit the parent vmo's pages, so that the clone mapping has backing pages to map in.
+  ASSERT_OK(vmo.op_range(ZX_VMO_OP_COMMIT, 0, copy_size, nullptr, 0));
+
+  while (state->KeepRunning()) {
+    zx::vmo clone;
+    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, copy_size, &clone));
+    state->NextStep();
+
+    zx_vaddr_t addr = 0;
+    // ZX_VM_MAP_RANGE will fully populate the mapping.
+    ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_MAP_RANGE | ZX_VM_PERM_READ, 0, clone, 0, copy_size,
+                                         &addr));
+    state->NextStep();
+
+    ASSERT_OK(zx::vmar::root_self()->unmap(addr, copy_size));
+    state->NextStep();
+
+    clone.reset();
   }
 
   return true;
@@ -214,15 +278,25 @@ void RegisterVmoTest(const char* name, Func fn, Args... args) {
 
 void RegisterTests() {
   for (bool do_write : {false, true}) {
-    const char* rw = do_write ? "Write" : "Read";
-    auto rw_name = fbl::StringPrintf("Vmo/%s", rw);
-    RegisterVmoTest(rw_name.c_str(), VmoReadOrWriteTest, do_write);
+    for (bool zero : {false, true}) {
+      // The zero case for vmo read is not meaningful since it will only operate on the zero page in
+      // the first iteration; the remaining iterations will use forked pages which is equivalent to
+      // the non-zero case. Skip this combo.
+      if (zero && !do_write) {
+        continue;
+      }
+      const char* rw = do_write ? "Write" : "Read";
+      const char* z = zero ? "/ZeroPage" : "";
+      auto rw_name = fbl::StringPrintf("Vmo/%s%s", rw, z);
+      RegisterVmoTest(rw_name.c_str(), VmoReadOrWriteTest, do_write, zero);
+    }
   }
 
   for (bool do_write : {false, true}) {
     for (bool user_memcpy : {false, true}) {
       const char* rw = do_write ? "Write" : "Read";
       const char* user_kernel = user_memcpy ? "" : "/Kernel";
+
       auto rw_name = fbl::StringPrintf("VmoMap/%s%s", rw, user_kernel);
       RegisterVmoTest(rw_name.c_str(), VmoReadOrWriteMapTest, do_write, user_memcpy);
 
@@ -232,17 +306,21 @@ void RegisterTests() {
   }
 
   for (bool map : {false, true}) {
-    auto clone_name = fbl::StringPrintf("Vmo/Clone%s", map ? "Map" : "");
+    auto clone_name = fbl::StringPrintf("Vmo/Clone%s", map ? "/MapParent" : "");
     RegisterVmoTest(clone_name.c_str(), [map](perftest::RepeatState* state, uint32_t size) {
       return VmoCloneTest(state, size, map ? size : 0);
     });
   }
+
   for (unsigned map_chunk_kb : {4, 64, 2048, 32768}) {
     constexpr uint32_t vmo_size_kb = 32768;
-    auto name = fbl::StringPrintf("Vmo/CloneMap%usegments/%ukbytes", vmo_size_kb / map_chunk_kb,
-                                  vmo_size_kb);
+    auto name = fbl::StringPrintf("Vmo/Clone/MapParent%usegments/%ukbytes",
+                                  vmo_size_kb / map_chunk_kb, vmo_size_kb);
     perftest::RegisterTest(name.c_str(), VmoCloneTest, vmo_size_kb * 1024, map_chunk_kb * 1024);
   }
+
+  auto name = fbl::StringPrintf("Vmo/MapClone");
+  RegisterVmoTest(name.c_str(), VmoMapCloneTest);
 
   for (bool do_write : {false, true}) {
     for (bool do_target_clone : {false, true}) {
