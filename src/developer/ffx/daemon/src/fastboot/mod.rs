@@ -57,13 +57,18 @@ pub(crate) struct Fastboot {
 
 impl Fastboot {
     pub(crate) fn new(target: Rc<Target>) -> Self {
-        match target.serial() {
+        // TODO(fxb/79631): handle NUC reboots.
+        // NUC Devices will now only work if they were discovered in fastboot first.
+        // We can't check for serial because it's possible to discover a target in the Product
+        // state without the serial number discovered (RCS connection hasn't happened).  This
+        // causes problems when you reboot but then can't connect to the fastboot address.
+        match target.fastboot_address() {
             Some(_) => Self {
-                usb: Some(FastbootImpl::new(target, Box::new(UsbFactory::default()))),
+                udp: Some(FastbootImpl::new(target, Box::new(NetworkFactory::new()))),
                 ..Default::default()
             },
             None => Self {
-                udp: Some(FastbootImpl::new(target, Box::new(NetworkFactory::new()))),
+                usb: Some(FastbootImpl::new(target, Box::new(UsbFactory::default()))),
                 ..Default::default()
             },
         }
