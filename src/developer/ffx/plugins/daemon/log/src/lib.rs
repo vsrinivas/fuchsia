@@ -107,6 +107,13 @@ impl<'a> LogFile<'a> {
     /// beginning of the file.
     fn write_all_tail(&mut self, out: &mut impl io::Write, line_count: usize) -> Result<()> {
         let (file, mut pos) = self.open_log()?;
+
+        // Exit early if we don't want to print out any lines.
+        if line_count == 0 {
+            self.len = file.metadata()?.len();
+            return Ok(());
+        }
+
         let mut reader = BufReader::new(file);
 
         // Read though the file line by line and push them into a deque of the `line_count` size.
@@ -209,6 +216,18 @@ mod tests {
         let mut expected = vec![];
         write_log(&mut expected, 10..20);
         assert_eq!(std::str::from_utf8(&actual).unwrap(), std::str::from_utf8(&expected).unwrap());
+    }
+
+    #[test]
+    fn display_0_most_recent_from_many_logs() {
+        let mut tmp = tempfile::NamedTempFile::new().unwrap();
+        write_log(&mut tmp, 1..20);
+
+        let mut log_file = LogFile::new(tmp.path());
+        let mut actual = vec![];
+        log_file.write_all_tail(&mut actual, 0).unwrap();
+
+        assert_eq!(std::str::from_utf8(&actual).unwrap(), "");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
