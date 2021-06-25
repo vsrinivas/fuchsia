@@ -104,13 +104,13 @@ impl ObjType {
         self as u32
     }
 
-    #[deprecated = "Strict enums should not use validate()"]
+    #[deprecated = "Strict enums should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, u32> {
         Ok(self)
     }
 
-    #[deprecated = "Strict enums should not use is_unknown()"]
+    #[deprecated = "Strict enums should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false

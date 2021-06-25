@@ -37,7 +37,7 @@ pub struct OnlyRust {
 }
 
 impl OnlyRust {
-    /// An empty table with every field set to None.
+    /// An empty table with every field set to `None`.
     #[allow(deprecated)]
     pub const EMPTY: Self = Self { unknown_data: None, __non_exhaustive: () };
 }

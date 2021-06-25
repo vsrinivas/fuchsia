@@ -10,12 +10,12 @@ const structTmpl = `
 //{{ . }}
 {{- end}}
 type {{ .Name }} struct {
-	_ struct{} ` + "`{{.Tags}}`" + `
+	_ struct{} {{ Backtick }}{{ .Tags }}{{ Backtick }}
 	{{- range .Members }}
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
-	{{ .Name }} {{ .Type -}} ` + "`{{.Tags}}`" + `
+	{{ .Name }} {{ .Type }} {{ Backtick }}{{ .Tags }}{{ Backtick }}
 	{{- end }}
 }
 

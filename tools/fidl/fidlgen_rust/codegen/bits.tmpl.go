@@ -22,13 +22,13 @@ bitflags! {
 
 impl {{ .Name }} {
 {{- if .IsStrict }}
-	#[deprecated = "Strict bits should not use has_unknown_bits()"]
+	#[deprecated = "Strict bits should not use {{ Backtick }}has_unknown_bits{{ Backtick }}"]
 	#[inline(always)]
 	pub fn has_unknown_bits(&self) -> bool {
 		false
 	}
 
-	#[deprecated = "Strict bits should not use get_unknown_bits()"]
+	#[deprecated = "Strict bits should not use {{ Backtick }}get_unknown_bits{{ Backtick }}"]
 	#[inline(always)]
 	pub fn get_unknown_bits(&self) -> {{ .Type }} {
 		0

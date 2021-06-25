@@ -33,13 +33,13 @@ bitflags! {
 }
 
 impl Rights {
-    #[deprecated = "Strict bits should not use has_unknown_bits()"]
+    #[deprecated = "Strict bits should not use `has_unknown_bits`"]
     #[inline(always)]
     pub fn has_unknown_bits(&self) -> bool {
         false
     }
 
-    #[deprecated = "Strict bits should not use get_unknown_bits()"]
+    #[deprecated = "Strict bits should not use `get_unknown_bits`"]
     #[inline(always)]
     pub fn get_unknown_bits(&self) -> u32 {
         0
@@ -74,13 +74,13 @@ impl ObjType {
         self as u32
     }
 
-    #[deprecated = "Strict enums should not use validate()"]
+    #[deprecated = "Strict enums should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, u32> {
         Ok(self)
     }
 
-    #[deprecated = "Strict enums should not use is_unknown()"]
+    #[deprecated = "Strict enums should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -116,13 +116,13 @@ impl ErrorEnum {
         self as u32
     }
 
-    #[deprecated = "Strict enums should not use validate()"]
+    #[deprecated = "Strict enums should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, u32> {
         Ok(self)
     }
 
-    #[deprecated = "Strict enums should not use is_unknown()"]
+    #[deprecated = "Strict enums should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false

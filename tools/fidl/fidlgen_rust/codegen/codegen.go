@@ -19,6 +19,9 @@ type Generator struct {
 
 func NewGenerator() *Generator {
 	tmpls := template.New("RustTemplates")
+	tmpls.Funcs(template.FuncMap{
+		"Backtick": func() string { return "`" },
+	})
 	template.Must(tmpls.Parse(sourceFileTmpl))
 	template.Must(tmpls.Parse(bitsTmpl))
 	template.Must(tmpls.Parse(constTmpl))

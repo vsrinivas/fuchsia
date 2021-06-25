@@ -33,13 +33,13 @@ pub enum PizzaOrPasta {
 }
 
 impl PizzaOrPasta {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -69,13 +69,13 @@ pub enum ExplicitPizzaOrPasta {
 }
 
 impl ExplicitPizzaOrPasta {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -109,7 +109,7 @@ pub enum FlexiblePizzaOrPasta {
         bytes: Vec<u8>,
     },
 }
-/// Pattern that matches an unknown FlexiblePizzaOrPasta member.
+/// Pattern that matches an unknown `FlexiblePizzaOrPasta` member.
 #[macro_export]
 macro_rules! FlexiblePizzaOrPastaUnknown {
     () => {
@@ -167,13 +167,13 @@ pub enum StrictPizzaOrPasta {
 }
 
 impl StrictPizzaOrPasta {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -204,13 +204,13 @@ pub enum Union {
 }
 
 impl Union {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -249,7 +249,7 @@ pub enum FlexibleUnion {
         bytes: Vec<u8>,
     },
 }
-/// Pattern that matches an unknown FlexibleUnion member.
+/// Pattern that matches an unknown `FlexibleUnion` member.
 #[macro_export]
 macro_rules! FlexibleUnionUnknown {
     () => {
@@ -312,13 +312,13 @@ pub enum StrictUnion {
 }
 
 impl StrictUnion {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -351,13 +351,13 @@ pub enum FieldCollision {
 }
 
 impl FieldCollision {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -383,13 +383,13 @@ pub enum ExplicitUnion {
 }
 
 impl ExplicitUnion {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -419,13 +419,13 @@ pub enum ReverseOrdinalUnion {
 }
 
 impl ReverseOrdinalUnion {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -459,7 +459,7 @@ pub enum FlexibleFoo {
         bytes: Vec<u8>,
     },
 }
-/// Pattern that matches an unknown FlexibleFoo member.
+/// Pattern that matches an unknown `FlexibleFoo` member.
 #[macro_export]
 macro_rules! FlexibleFooUnknown {
     () => {
@@ -517,13 +517,13 @@ pub enum StrictFoo {
 }
 
 impl StrictFoo {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -557,7 +557,7 @@ pub enum ExplicitFoo {
         bytes: Vec<u8>,
     },
 }
-/// Pattern that matches an unknown ExplicitFoo member.
+/// Pattern that matches an unknown `ExplicitFoo` member.
 #[macro_export]
 macro_rules! ExplicitFooUnknown {
     () => {
@@ -615,13 +615,13 @@ pub enum ExplicitStrictFoo {
 }
 
 impl ExplicitStrictFoo {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -655,7 +655,7 @@ pub enum OlderSimpleUnion {
         bytes: Vec<u8>,
     },
 }
-/// Pattern that matches an unknown OlderSimpleUnion member.
+/// Pattern that matches an unknown `OlderSimpleUnion` member.
 #[macro_export]
 macro_rules! OlderSimpleUnionUnknown {
     () => {
@@ -718,7 +718,7 @@ pub enum NewerSimpleUnion {
         bytes: Vec<u8>,
     },
 }
-/// Pattern that matches an unknown NewerSimpleUnion member.
+/// Pattern that matches an unknown `NewerSimpleUnion` member.
 #[macro_export]
 macro_rules! NewerSimpleUnionUnknown {
     () => {
@@ -781,13 +781,13 @@ pub enum StrictSimpleXUnion {
 }
 
 impl StrictSimpleXUnion {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -824,7 +824,7 @@ pub enum XUnionContainingEmptyStruct {
         bytes: Vec<u8>,
     },
 }
-/// Pattern that matches an unknown XUnionContainingEmptyStruct member.
+/// Pattern that matches an unknown `XUnionContainingEmptyStruct` member.
 #[macro_export]
 macro_rules! XUnionContainingEmptyStructUnknown {
     () => {
@@ -877,13 +877,13 @@ pub enum StrictBoundedXUnion {
 }
 
 impl StrictBoundedXUnion {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -913,7 +913,7 @@ pub enum ExplicitXUnion {
         bytes: Vec<u8>,
     },
 }
-/// Pattern that matches an unknown ExplicitXUnion member.
+/// Pattern that matches an unknown `ExplicitXUnion` member.
 #[macro_export]
 macro_rules! ExplicitXUnionUnknown {
     () => {

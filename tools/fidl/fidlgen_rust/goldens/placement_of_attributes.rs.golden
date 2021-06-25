@@ -32,13 +32,13 @@ bitflags! {
 }
 
 impl ExampleBits {
-    #[deprecated = "Strict bits should not use has_unknown_bits()"]
+    #[deprecated = "Strict bits should not use `has_unknown_bits`"]
     #[inline(always)]
     pub fn has_unknown_bits(&self) -> bool {
         false
     }
 
-    #[deprecated = "Strict bits should not use get_unknown_bits()"]
+    #[deprecated = "Strict bits should not use `get_unknown_bits`"]
     #[inline(always)]
     pub fn get_unknown_bits(&self) -> u32 {
         0
@@ -73,13 +73,13 @@ impl ExampleEnum {
         self as u32
     }
 
-    #[deprecated = "Strict enums should not use validate()"]
+    #[deprecated = "Strict enums should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, u32> {
         Ok(self)
     }
 
-    #[deprecated = "Strict enums should not use is_unknown()"]
+    #[deprecated = "Strict enums should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -99,13 +99,13 @@ pub enum ExampleUnion {
 }
 
 impl ExampleUnion {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -134,7 +134,7 @@ pub enum ExampleXUnion {
         bytes: Vec<u8>,
     },
 }
-/// Pattern that matches an unknown ExampleXUnion member.
+/// Pattern that matches an unknown `ExampleXUnion` member.
 #[macro_export]
 macro_rules! ExampleXUnionUnknown {
     () => {
@@ -216,7 +216,7 @@ pub struct ExampleTable {
 }
 
 impl ExampleTable {
-    /// An empty table with every field set to None.
+    /// An empty table with every field set to `None`.
     #[allow(deprecated)]
     pub const EMPTY: Self = Self { member: None, unknown_data: None, __non_exhaustive: () };
 }

@@ -30,13 +30,13 @@ pub enum UnionSmallArray {
 }
 
 impl UnionSmallArray {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -61,13 +61,13 @@ pub enum UnionLargeArray {
 }
 
 impl UnionLargeArray {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -144,7 +144,7 @@ pub struct TableSmallArray {
 }
 
 impl TableSmallArray {
-    /// An empty table with every field set to None.
+    /// An empty table with every field set to `None`.
     #[allow(deprecated)]
     pub const EMPTY: Self = Self { a: None, unknown_data: None, __non_exhaustive: () };
 }
@@ -174,7 +174,7 @@ pub struct TableLargeArray {
 }
 
 impl TableLargeArray {
-    /// An empty table with every field set to None.
+    /// An empty table with every field set to `None`.
     #[allow(deprecated)]
     pub const EMPTY: Self = Self { a: None, unknown_data: None, __non_exhaustive: () };
 }

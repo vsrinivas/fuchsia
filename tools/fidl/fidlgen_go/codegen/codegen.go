@@ -6,6 +6,7 @@ package codegen
 
 import (
 	"bytes"
+	"fmt"
 	"go/format"
 	"os"
 	"path/filepath"
@@ -20,6 +21,9 @@ type Generator struct {
 
 func NewGenerator() *Generator {
 	tmpls := template.New("GoTemplates")
+	tmpls.Funcs(template.FuncMap{
+		"Backtick": func() string { return "`" },
+	})
 	template.Must(tmpls.Parse(bitsTmpl))
 	template.Must(tmpls.Parse(enumTmpl))
 	template.Must(tmpls.Parse(protocolTmpl))
@@ -35,9 +39,13 @@ func NewGenerator() *Generator {
 func (gen *Generator) generateImplDotGo(tree Root) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	if err := gen.implDotGoTmpl.Execute(buf, tree); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("impl.go template failed: %w", err)
 	}
-	return format.Source(buf.Bytes())
+	formatted, err := format.Source(buf.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("impl.go formatting failed: %w", err)
+	}
+	return formatted, nil
 }
 
 func (gen *Generator) generateFile(dataFn func() ([]byte, error), filename string) error {

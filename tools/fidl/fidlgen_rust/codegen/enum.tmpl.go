@@ -23,14 +23,14 @@ pub enum {{ .Name }} {
 	{{ .Name }}{{ if $.IsStrict }} = {{ .Value }}{{ end }},
 	{{- end }}
 	{{- if .IsFlexible }}
-	#[deprecated = "Use ` + "`{{ .Name }}::unknown()` to construct and `{{ .Name }}Unknown!()`" + ` to exhaustively match."]
+	#[deprecated = "Use {{ Backtick }}{{ .Name }}::unknown(){{ Backtick }} to construct and {{ Backtick }}{{ .Name }}Unknown!(){{ Backtick }} to exhaustively match."]
 	#[doc(hidden)]
 	__Unknown({{ .Type }}),
 	{{- end }}
 }
 
 {{- if .IsFlexible }}
-/// Pattern that matches an unknown {{ .Name }} member.
+/// Pattern that matches an unknown {{ Backtick }}{{ .Name }}{{ Backtick }} member.
 #[macro_export]
 macro_rules! {{ .Name }}Unknown {
 	() => { _ };
@@ -54,13 +54,13 @@ impl {{ .Name }} {
 		self as {{ .Type }}
 	}
 
-	#[deprecated = "Strict enums should not use validate()"]
+	#[deprecated = "Strict enums should not use {{ Backtick }}validate{{ Backtick }}"]
 	#[inline]
 	pub fn validate(self) -> std::result::Result<Self, {{ .Type }}> {
 		Ok(self)
 	}
 
-	#[deprecated = "Strict enums should not use is_unknown()"]
+	#[deprecated = "Strict enums should not use {{ Backtick }}is_unknown{{ Backtick }}"]
 	#[inline]
 	pub fn is_unknown(&self) -> bool {
 		false

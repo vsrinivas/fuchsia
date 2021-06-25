@@ -897,9 +897,9 @@ pub struct {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 	ordinal: u64,
 }
 
-/// Set the the channel to be shutdown (see [` + "`{{ $protocol.Name }}ControlHandle::shutdown`" + `])
+/// Set the the channel to be shutdown (see [{{ Backtick }}{{ $protocol.Name }}ControlHandle::shutdown{{ Backtick }}])
 /// if the responder is dropped without sending a response, so that the client
-/// doesn't hang. To prevent this behavior, call ` + "`drop_without_shutdown`" + `.
+/// doesn't hang. To prevent this behavior, call {{ Backtick }}drop_without_shutdown{{ Backtick }}.
 impl std::ops::Drop for {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 	fn drop(&mut self) {
 		self.control_handle.shutdown();

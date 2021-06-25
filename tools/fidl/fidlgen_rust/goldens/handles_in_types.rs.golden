@@ -46,13 +46,13 @@ impl ObjType {
         self as u32
     }
 
-    #[deprecated = "Strict enums should not use validate()"]
+    #[deprecated = "Strict enums should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, u32> {
         Ok(self)
     }
 
-    #[deprecated = "Strict enums should not use is_unknown()"]
+    #[deprecated = "Strict enums should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -76,7 +76,7 @@ pub enum UnionWithHandle {
         data: fidl::UnknownData,
     },
 }
-/// Pattern that matches an unknown UnionWithHandle member.
+/// Pattern that matches an unknown `UnionWithHandle` member.
 #[macro_export]
 macro_rules! UnionWithHandleUnknown {
     () => {
@@ -206,7 +206,7 @@ pub struct TableWithHandle {
 }
 
 impl TableWithHandle {
-    /// An empty table with every field set to None.
+    /// An empty table with every field set to `None`.
     #[allow(deprecated)]
     pub const EMPTY: Self = Self { h: None, unknown_data: None, __non_exhaustive: () };
 }

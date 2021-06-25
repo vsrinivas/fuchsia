@@ -20,7 +20,7 @@ const (
 //{{ . }}
 {{- end}}
 type {{ .Name }} struct {
-	{{ .TagName }} ` + "`{{.Tags}}`" + `
+	{{ .TagName }} {{ Backtick }}{{ .Tags }}{{ Backtick }}
 	{{- if .IsFlexible }}
 	I_unknownData interface{}
 	{{- end }}
@@ -28,7 +28,7 @@ type {{ .Name }} struct {
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
-	{{ .Name }} {{ .Type }}  ` + "`{{.Tags}}`" + `
+	{{ .Name }} {{ .Type }}  {{ Backtick }}{{ .Tags }}{{ Backtick }}
 	{{- end }}
 }
 

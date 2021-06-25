@@ -35,7 +35,7 @@ pub struct EmptyTable {
 }
 
 impl EmptyTable {
-    /// An empty table with every field set to None.
+    /// An empty table with every field set to `None`.
     #[allow(deprecated)]
     pub const EMPTY: Self = Self { unknown_data: None, __non_exhaustive: () };
 }
@@ -62,7 +62,7 @@ pub struct SimpleTable {
 }
 
 impl SimpleTable {
-    /// An empty table with every field set to None.
+    /// An empty table with every field set to `None`.
     #[allow(deprecated)]
     pub const EMPTY: Self = Self { x: None, y: None, unknown_data: None, __non_exhaustive: () };
 }
@@ -96,7 +96,7 @@ pub struct OlderSimpleTable {
 }
 
 impl OlderSimpleTable {
-    /// An empty table with every field set to None.
+    /// An empty table with every field set to `None`.
     #[allow(deprecated)]
     pub const EMPTY: Self = Self { x: None, unknown_data: None, __non_exhaustive: () };
 }
@@ -128,7 +128,7 @@ pub struct NewerSimpleTable {
 }
 
 impl NewerSimpleTable {
-    /// An empty table with every field set to None.
+    /// An empty table with every field set to `None`.
     #[allow(deprecated)]
     pub const EMPTY: Self =
         Self { x: None, y: None, z: None, unknown_data: None, __non_exhaustive: () };
@@ -169,7 +169,7 @@ pub struct ReverseOrdinalTable {
 }
 
 impl ReverseOrdinalTable {
-    /// An empty table with every field set to None.
+    /// An empty table with every field set to `None`.
     #[allow(deprecated)]
     pub const EMPTY: Self =
         Self { z: None, y: None, x: None, unknown_data: None, __non_exhaustive: () };

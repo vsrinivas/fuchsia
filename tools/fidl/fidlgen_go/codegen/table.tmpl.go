@@ -10,13 +10,13 @@ const tableTmpl = `
 //{{ . }}
 {{- end}}
 type {{ .Name }} struct {
-	_ struct{} ` + "`{{.Tags}}`" + `
+	_ struct{} {{ Backtick }}{{ .Tags }}{{ Backtick }}
 	I_unknownData interface{}
 	{{- range .Members }}
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
-	{{ .DataField }} {{ .Type }} ` + "`{{.Tags}}`" + `
+	{{ .DataField }} {{ .Type }} {{ Backtick }}{{ .Tags }}{{ Backtick }}
 	{{ .PresenceField }} bool
 	{{- end }}
 }

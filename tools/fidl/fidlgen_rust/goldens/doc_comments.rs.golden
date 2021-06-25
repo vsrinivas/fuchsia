@@ -42,13 +42,13 @@ bitflags! {
 }
 
 impl MyStrictBits {
-    #[deprecated = "Strict bits should not use has_unknown_bits()"]
+    #[deprecated = "Strict bits should not use `has_unknown_bits`"]
     #[inline(always)]
     pub fn has_unknown_bits(&self) -> bool {
         false
     }
 
-    #[deprecated = "Strict bits should not use get_unknown_bits()"]
+    #[deprecated = "Strict bits should not use `get_unknown_bits`"]
     #[inline(always)]
     pub fn get_unknown_bits(&self) -> u32 {
         0
@@ -136,13 +136,13 @@ impl MyStrictEnum {
         self as u32
     }
 
-    #[deprecated = "Strict enums should not use validate()"]
+    #[deprecated = "Strict enums should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, u32> {
         Ok(self)
     }
 
-    #[deprecated = "Strict enums should not use is_unknown()"]
+    #[deprecated = "Strict enums should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -174,7 +174,7 @@ pub enum MyFlexibleEnum {
     #[doc(hidden)]
     __Unknown(u32),
 }
-/// Pattern that matches an unknown MyFlexibleEnum member.
+/// Pattern that matches an unknown `MyFlexibleEnum` member.
 #[macro_export]
 macro_rules! MyFlexibleEnumUnknown {
     () => {
@@ -251,13 +251,13 @@ pub enum StrictUnion {
 }
 
 impl StrictUnion {
-    #[deprecated = "Strict unions should not use validate()"]
+    #[deprecated = "Strict unions should not use `validate`"]
     #[inline]
     pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
         Ok(self)
     }
 
-    #[deprecated = "Strict unions should not use is_unknown()"]
+    #[deprecated = "Strict unions should not use `is_unknown`"]
     #[inline]
     pub fn is_unknown(&self) -> bool {
         false
@@ -289,7 +289,7 @@ pub enum FlexibleUnion {
     #[doc(hidden)]
     __Unknown { ordinal: u64, bytes: Vec<u8> },
 }
-/// Pattern that matches an unknown FlexibleUnion member.
+/// Pattern that matches an unknown `FlexibleUnion` member.
 #[macro_export]
 macro_rules! FlexibleUnionUnknown {
     () => {
@@ -383,7 +383,7 @@ pub struct Table {
 }
 
 impl Table {
-    /// An empty table with every field set to None.
+    /// An empty table with every field set to `None`.
     #[allow(deprecated)]
     pub const EMPTY: Self = Self { field: None, unknown_data: None, __non_exhaustive: () };
 }

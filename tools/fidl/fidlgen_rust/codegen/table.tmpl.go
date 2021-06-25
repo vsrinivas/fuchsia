@@ -18,9 +18,9 @@ pub struct {{ .Name }} {
 	pub {{ .Name }}: Option<{{ .Type }}>,
 	{{- end }}
 	/// (FIDL-generated) Unknown fields encountered during decoding, stored as a
-	/// map from ordinals to raw data. The ` + "`Some`" + ` case is always nonempty.
+	/// map from ordinals to raw data. The {{ Backtick }}Some{{ Backtick }} case is always nonempty.
 	pub unknown_data: Option<std::collections::BTreeMap<u64, {{ if .IsResourceType }}fidl::UnknownData{{ else }}Vec<u8>{{ end }}>>,
-	#[deprecated = "Use ` + "`..{{ .Name }}::EMPTY` to construct and `..`" + ` to match."]
+	#[deprecated = "Use {{ Backtick }}..{{ .Name }}::EMPTY{{ Backtick }} to construct and {{ Backtick }}..{{ Backtick }} to match."]
 	#[doc(hidden)]
 	pub __non_exhaustive: (),
 }
@@ -39,7 +39,7 @@ impl {{ .Name }} {
 		tables because overwiting heap allocated values (even when wrapped in
 		Option<_> and set to None) will first drop them, which is not const.
 	*/}}
-	/// An empty table with every field set to None.
+	/// An empty table with every field set to {{ Backtick }}None{{ Backtick }}.
 	#[allow(deprecated)]
 	pub const EMPTY: Self = Self {
 		{{- range .Members }}
