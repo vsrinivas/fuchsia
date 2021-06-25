@@ -201,7 +201,32 @@ type Metadata struct {
 	Expires time.Time `json:"expires"`
 }
 
+// fswatch notifies on write, but there may be more writes on the way.  Very
+// badly wait for the file to be fully written by trying to read/parse the
+// metadata until it works, or we give up trying.
 func readMetadata(path string) (*Metadata, error) {
+	var err error
+	var metadata *Metadata
+
+	// 15 attempts is a somewhat arbitrary value, chosen by slowing down the
+	// tests' metadata writes to write a single byte at a time, and increasing
+	// this number until a --test.count 100 test pass didn't flake.
+	//
+	// A more correct fix to this issue would be to have an event to consume
+	// when a file is modified and then closed by the writer.  This hack hopes
+	// to cheaply reduce the flake rate by adding a retry to the metadata
+	// reader until a more proper fix can be implemented, or pm is replaced
+	// with a different tool.
+	for i := 0; i < 15; i++ {
+		metadata, err = readMetadataAttempt(path)
+		if err == nil {
+			return metadata, nil
+		}
+	}
+	return nil, err
+}
+
+func readMetadataAttempt(path string) (*Metadata, error) {
 	contents, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read %q: %w", path, err)
