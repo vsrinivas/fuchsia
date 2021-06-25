@@ -672,13 +672,13 @@ The easiest way to to explicitly encode and decode is to use
 For example, you can encode a [`Color` struct](#types-structs):
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/main.rs" region_tag="simple_method_encode" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/lib.rs" region_tag="simple_method_encode" adjust_indentation="auto" %}
 ```
 
 And then decode it later:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/main.rs" region_tag="simple_method_decode" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/lib.rs" region_tag="simple_method_decode" adjust_indentation="auto" %}
 ```
 
 ### Separating the header
@@ -690,13 +690,13 @@ you can manage the header manually. For example, you can encode both a
 only one header instead of two:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/main.rs" region_tag="separate_header_encode" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/lib.rs" region_tag="separate_header_encode" adjust_indentation="auto" %}
 ```
 
 Then, you must first decode the header and use it to decode the other values:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/main.rs" region_tag="separate_header_decode" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/lib.rs" region_tag="separate_header_decode" adjust_indentation="auto" %}
 ```
 
 ## Appendix A: Derived traits {#derived-traits}
