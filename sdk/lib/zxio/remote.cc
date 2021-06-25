@@ -1116,20 +1116,12 @@ uint32_t zxio_node_protocols_to_posix_type(zxio_node_protocols_t protocols) {
   return ToIo1ModeFileType(protocols);
 }
 
-uint32_t zxio_abilities_to_posix_permissions_for_file(zxio_abilities_t abilities) {
-  return ToIo1ModePermissionsForFile()(abilities);
-}
-
-uint32_t zxio_abilities_to_posix_permissions_for_directory(zxio_abilities_t abilities) {
-  return ToIo1ModePermissionsForDirectory()(abilities);
-}
-
 uint32_t zxio_get_posix_mode(zxio_node_protocols_t protocols, zxio_abilities_t abilities) {
   uint32_t mode = zxio_node_protocols_to_posix_type(protocols);
   if (mode & S_IFDIR) {
-    mode |= zxio_abilities_to_posix_permissions_for_directory(abilities);
+    mode |= ToIo1ModePermissionsForDirectory()(abilities);
   } else {
-    mode |= zxio_abilities_to_posix_permissions_for_file(abilities);
+    mode |= ToIo1ModePermissionsForFile()(abilities);
   }
   return mode;
 }
