@@ -361,29 +361,11 @@ void SessionmgrImpl::InitializeSessionCtl() {
 void SessionmgrImpl::InitializeSessionShell(
     fuchsia::modular::session::AppConfig session_shell_config,
     fuchsia::ui::views::ViewToken view_token, scenic::ViewRefPair view_ref_pair) {
-  session_shell_url_ = session_shell_config.url();
-
-  // We setup our own view and make the fuchsia::modular::SessionShell a child
-  // of it.
-  auto scenic = sessionmgr_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-
-  scenic::ViewContext view_context = {
-      .session_and_listener_request =
-          scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-      .view_token = std::move(view_token),
-      .view_ref_pair = std::move(view_ref_pair),
-      .component_context = sessionmgr_context_,
-  };
-  session_shell_view_host_ = std::make_unique<ViewHost>(std::move(view_context));
-
-  RunSessionShell(std::move(session_shell_config));
-}
-
-void SessionmgrImpl::RunSessionShell(fuchsia::modular::session::AppConfig session_shell_config) {
   FX_DCHECK(session_environment_);
   FX_DCHECK(agent_runner_.get());
   FX_DCHECK(puppet_master_impl_);
-  FX_DCHECK(session_shell_view_host_);
+
+  session_shell_url_ = session_shell_config.url();
 
   ComponentContextInfo component_context_info{
       agent_runner_.get(), config_accessor_.sessionmgr_config().session_agents()};
@@ -449,14 +431,11 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::session::AppConfig sessio
       session_environment_->GetLauncher(), std::move(session_shell_config),
       /* data_origin = */ "", std::move(service_list));
 
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   fuchsia::ui::app::ViewProviderPtr view_provider;
   session_shell_app->services().ConnectToService(view_provider.NewRequest());
-  scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
   view_provider->CreateViewWithViewRef(std::move(view_token.value),
                                        std::move(view_ref_pair.control_ref),
                                        std::move(view_ref_pair.view_ref));
-  session_shell_view_host_->ConnectView(std::move(view_holder_token));
 
   agent_runner_->AddRunningAgent(session_shell_url_, std::move(session_shell_app));
 }

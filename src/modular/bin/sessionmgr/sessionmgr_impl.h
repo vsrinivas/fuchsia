@@ -14,6 +14,7 @@
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/sys/inspect/cpp/component.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
@@ -31,7 +32,6 @@
 #include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
-#include "src/modular/lib/fidl/view_host.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
 #include "src/modular/lib/scoped_tmpfs/scoped_tmpfs.h"
 
@@ -70,8 +70,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializePuppetMaster();
   void InitializeElementManager();
   void InitializeSessionCtl();
-
-  void RunSessionShell(fuchsia::modular::session::AppConfig session_shell_config);
 
   // |fuchsia::modular::SessionShellContext|
   void GetComponentContext(
@@ -148,8 +146,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   fidl::BindingSet<fuchsia::modular::SessionRestartController> session_restart_controller_bindings_;
 
   fuchsia::modular::internal::SessionContextPtr session_context_;
-
-  std::unique_ptr<ViewHost> session_shell_view_host_;
 
   std::unique_ptr<SessionStorage> session_storage_;
   AsyncHolder<StoryProviderImpl> story_provider_impl_;
