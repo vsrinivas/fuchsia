@@ -54,6 +54,8 @@ def expand_manifest_items_inner(
     """
     entries: List[Entry] = []
     extras: List[PartialEntry] = []
+    if manifest_items is None:
+        return entries, extras
     for item in manifest_items:
         if 'label' not in item and default_label is not None:
             item['label'] = default_label
