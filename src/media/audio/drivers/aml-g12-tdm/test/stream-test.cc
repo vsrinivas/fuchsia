@@ -70,9 +70,9 @@ struct CodecTest : public DeviceType, public SimpleCodecServer {
     formats.bits_per_sample.push_back(16);
     return formats;
   }
-  zx_status_t SetDaiFormat(const DaiFormat& format) override {
+  zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
     last_frame_rate_ = format.frame_rate;
-    return ZX_OK;
+    return zx::ok(CodecFormatInfo{});
   }
   GainFormat GetGainFormat() override {
     return {

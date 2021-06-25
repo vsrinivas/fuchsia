@@ -62,7 +62,7 @@ class SimpleCodecClient {
   zx::status<bool> IsBridgeable();
   zx_status_t SetBridgedMode(bool bridged);
   zx::status<DaiSupportedFormats> GetDaiFormats();
-  zx_status_t SetDaiFormat(DaiFormat format);
+  zx::status<CodecFormatInfo> SetDaiFormat(DaiFormat format);
   zx::status<GainFormat> GetGainFormat();
   zx::status<GainState> GetGainState();
   void SetGainState(GainState state);

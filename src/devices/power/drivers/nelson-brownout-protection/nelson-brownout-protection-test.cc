@@ -38,7 +38,9 @@ class FakeCodec : public audio::SimpleCodecServer {
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
   audio::DaiSupportedFormats GetDaiFormats() override { return {}; }
-  zx_status_t SetDaiFormat(const audio::DaiFormat& format) override { return ZX_ERR_NOT_SUPPORTED; }
+  zx::status<audio::CodecFormatInfo> SetDaiFormat(const audio::DaiFormat& format) override {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
   audio::GainFormat GetGainFormat() override { return {.min_gain = -103.0f}; }
   audio::GainState GetGainState() override { return gain_state; }
   void SetGainState(audio::GainState state) override { gain_state = state; }

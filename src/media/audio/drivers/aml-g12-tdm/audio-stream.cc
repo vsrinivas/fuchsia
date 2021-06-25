@@ -188,10 +188,10 @@ zx_status_t AmlG12TdmStream::InitPDev() {
       return ZX_ERR_NOT_SUPPORTED;
     }
 
-    status = codecs_[i].SetDaiFormat(dai_formats_[i]);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "could not set DAI format %d", status);
-      return status;
+    zx::status<CodecFormatInfo> format_info = codecs_[i].SetDaiFormat(dai_formats_[i]);
+    if (!format_info.is_ok()) {
+      zxlogf(ERROR, "could not set DAI format %s", format_info.status_string());
+      return format_info.status_value();
     }
 
     codecs_[i].Start();
@@ -365,10 +365,10 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
       return status;
     }
     for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
-      status = codecs_[i].SetDaiFormat(dai_formats_[i]);
-      if (status != ZX_OK) {
+      zx::status<CodecFormatInfo> format_info = codecs_[i].SetDaiFormat(dai_formats_[i]);
+      if (!format_info.is_ok()) {
         zxlogf(ERROR, "failed to set the DAI format");
-        return status;
+        return format_info.status_value();
       }
 
       // Restart codec

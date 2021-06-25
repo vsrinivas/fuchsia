@@ -119,12 +119,12 @@ void Tas5782::SetBridgedMode(bool enable_bridged_mode) {
 
 DaiSupportedFormats Tas5782::GetDaiFormats() { return kSupportedDaiFormats; }
 
-zx_status_t Tas5782::SetDaiFormat(const DaiFormat& format) {
+zx::status<CodecFormatInfo> Tas5782::SetDaiFormat(const DaiFormat& format) {
   if (!IsDaiFormatSupported(format, kSupportedDaiFormats)) {
     zxlogf(ERROR, "unsupported format");
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
-  return ZX_OK;
+  return zx::ok(CodecFormatInfo{});
 }
 
 GainFormat Tas5782::GetGainFormat() {

@@ -127,7 +127,7 @@ zx::status<DaiSupportedFormats> SimpleCodecClient::GetDaiFormats() {
   return zx::ok(formats);
 }
 
-zx_status_t SimpleCodecClient::SetDaiFormat(DaiFormat format) {
+zx::status<CodecFormatInfo> SimpleCodecClient::SetDaiFormat(DaiFormat format) {
   fidl::FidlAllocator allocator;
 
   fuchsia_hardware_audio::wire::DaiFormat format2;
@@ -142,14 +142,21 @@ zx_status_t SimpleCodecClient::SetDaiFormat(DaiFormat format) {
   format2.bits_per_slot = format.bits_per_slot;
   format2.bits_per_sample = format.bits_per_sample;
 
-  const auto response = codec_->SetDaiFormat_Sync(format2);
-  if (!response.ok()) {
-    return response.status();
+  const auto ret = codec_->SetDaiFormat_Sync(format2);
+  if (!ret.ok()) {
+    return zx::error(ret.status());
   }
-  if (response->result.is_err()) {
-    return response->result.err();
+  if (ret->result.is_err()) {
+    return zx::error(ret->result.err());
   }
-  return ZX_OK;
+  CodecFormatInfo format_info = {};
+  if (ret->result.response().state.has_external_delay()) {
+    format_info.set_external_delay(ret->result.response().state.external_delay());
+  }
+  if (ret->result.response().state.has_turn_on_delay()) {
+    format_info.set_turn_on_delay(ret->result.response().state.turn_on_delay());
+  }
+  return zx::ok(std::move(format_info));
 }
 
 zx::status<GainFormat> SimpleCodecClient::GetGainFormat() {

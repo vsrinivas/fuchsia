@@ -217,10 +217,10 @@ void Tas58xx::SetBridgedMode(bool enable_bridged_mode) {
 
 DaiSupportedFormats Tas58xx::GetDaiFormats() { return kSupportedDaiDaiFormats; }
 
-zx_status_t Tas58xx::SetDaiFormat(const DaiFormat& format) {
+zx::status<CodecFormatInfo> Tas58xx::SetDaiFormat(const DaiFormat& format) {
   if (!IsDaiFormatSupported(format, kSupportedDaiDaiFormats)) {
     zxlogf(ERROR, "unsupported format");
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // In bridged, only the left is channel supported, from the datasheet:
@@ -229,18 +229,18 @@ zx_status_t Tas58xx::SetDaiFormat(const DaiFormat& format) {
       (format.number_of_channels != 2 || (format.channels_to_use_bitmask != 2))) {
     zxlogf(ERROR, "DAI format channels to use not supported in bridged mode %u 0x%lX",
            format.number_of_channels, format.channels_to_use_bitmask);
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
   if (format.number_of_channels == 2 && format.channels_to_use_bitmask != 3) {
     zxlogf(ERROR, "DAI format channels to use not supported %u 0x%lX", format.number_of_channels,
            format.channels_to_use_bitmask);
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
   if (format.number_of_channels == 4 && format.channels_to_use_bitmask != 3 &&
       format.channels_to_use_bitmask != 0xc) {
     zxlogf(ERROR, "DAI format channels to use not supported %u 0x%lX", format.number_of_channels,
            format.channels_to_use_bitmask);
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   uint8_t reg_value =
@@ -250,12 +250,16 @@ zx_status_t Tas58xx::SetDaiFormat(const DaiFormat& format) {
   fbl::AutoLock lock(&lock_);
   auto status = WriteReg(kRegSapCtrl1, reg_value);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
-  return WriteReg(kRegSapCtrl2,
-                  (format.number_of_channels == 4 && format.channels_to_use_bitmask == 0xc)
-                      ? 2 * format.bits_per_slot
-                      : 0x00);
+  status = WriteReg(kRegSapCtrl2,
+                    (format.number_of_channels == 4 && format.channels_to_use_bitmask == 0xc)
+                        ? 2 * format.bits_per_slot
+                        : 0x00);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(CodecFormatInfo{});
 }
 
 GainFormat Tas58xx::GetGainFormat() {

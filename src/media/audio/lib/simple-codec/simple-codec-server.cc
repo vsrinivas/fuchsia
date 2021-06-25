@@ -199,20 +199,24 @@ void SimpleCodecServerInternal<T>::SetDaiFormat(audio_fidl::DaiFormat format,
     case FidlFrameFormat::TDM1:         thiz->frame_format_.Set("TDM1");         break;
   }
   // clang-format on
-  zx_status_t status = thiz->SetDaiFormat(std::move(format2));
-  if (status != ZX_OK) {
-    thiz->state_.Set(std::string("Set DAI format error: ") + std::to_string(status));
-  }
   audio_fidl::Codec_SetDaiFormat_Result result = {};
+  zx::status<CodecFormatInfo> format_info = thiz->SetDaiFormat(std::move(format2));
+  if (!format_info.is_ok()) {
+    thiz->state_.Set(std::string("Set DAI format error: ") + format_info.status_string());
+    result.set_err(format_info.status_value());
+    callback(std::move(result));
+    return;
+  }
   audio_fidl::Codec_SetDaiFormat_Response response = {};
   audio_fidl::CodecFormatInfo codec_state = {};
-  codec_state.set_external_delay(0);
-  codec_state.set_turn_on_delay(0);
+  if (format_info->has_external_delay()) {
+    codec_state.set_external_delay(format_info->external_delay());
+  }
+  if (format_info->has_turn_on_delay()) {
+    codec_state.set_turn_on_delay(format_info->turn_on_delay());
+  }
   response.state = std::move(codec_state);
   result.set_response(std::move(response));
-  if (status != ZX_OK) {
-    result.set_err(status);
-  }
   callback(std::move(result));
 }
 

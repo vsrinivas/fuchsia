@@ -86,7 +86,7 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   virtual bool IsBridgeable() = 0;
   void SetBridgedMode(bool enable_bridged_mode) override = 0;
   virtual DaiSupportedFormats GetDaiFormats() = 0;
-  virtual zx_status_t SetDaiFormat(const DaiFormat& format) = 0;
+  virtual zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) = 0;
   virtual GainFormat GetGainFormat() = 0;
   virtual GainState GetGainState() = 0;
   virtual void SetGainState(GainState state) = 0;

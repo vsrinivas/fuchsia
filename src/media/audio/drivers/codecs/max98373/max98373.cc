@@ -163,12 +163,12 @@ void Max98373::SetBridgedMode(bool enable_bridged_mode) {
 
 DaiSupportedFormats Max98373::GetDaiFormats() { return kSupportedDaiFormats; }
 
-zx_status_t Max98373::SetDaiFormat(const DaiFormat& format) {
+zx::status<CodecFormatInfo> Max98373::SetDaiFormat(const DaiFormat& format) {
   if (!IsDaiFormatSupported(format, kSupportedDaiFormats)) {
     zxlogf(ERROR, "unsupported format");
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
-  return ZX_OK;
+  return zx::ok(CodecFormatInfo{});
 }
 
 GainFormat Max98373::GetGainFormat() {

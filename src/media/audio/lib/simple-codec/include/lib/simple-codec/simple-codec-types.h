@@ -29,6 +29,7 @@ using SampleFormat = ::fuchsia::hardware::audio::DaiSampleFormat;
 using FrameFormat = ::fuchsia::hardware::audio::DaiFrameFormatStandard;
 using GainType = ::fuchsia::hardware::audio::GainType;
 using Info = ::fuchsia::hardware::audio::CodecInfo;
+using CodecFormatInfo = ::fuchsia::hardware::audio::CodecFormatInfo;
 
 struct DaiFormat final {
   uint32_t number_of_channels{};

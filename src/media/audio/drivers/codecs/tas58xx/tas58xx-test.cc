@@ -106,7 +106,8 @@ TEST(Tas58xxTest, BadSetDai) {
     audio::DaiFormat format = {};
     auto formats = client.GetDaiFormats();
     EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, client.SetDaiFormat(std::move(format)));
+    zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, format_info.status_value());
   }
 
   // Almost good format (wrong frame_format).
@@ -121,7 +122,8 @@ TEST(Tas58xxTest, BadSetDai) {
     format.bits_per_sample = 32;
     auto formats = client.GetDaiFormats();
     EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
+    zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 
   //   Almost good format (wrong channels).
@@ -136,7 +138,8 @@ TEST(Tas58xxTest, BadSetDai) {
     format.bits_per_sample = 32;
     auto formats = client.GetDaiFormats();
     EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
+    zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 
   // Almost good format (wrong rate).
@@ -151,7 +154,8 @@ TEST(Tas58xxTest, BadSetDai) {
     format.bits_per_sample = 32;
     auto formats = client.GetDaiFormats();
     EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
+    zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 
   codec->DdkAsyncRemove();

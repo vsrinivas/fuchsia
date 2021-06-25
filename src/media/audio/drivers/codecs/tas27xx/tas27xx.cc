@@ -370,13 +370,17 @@ void Tas27xx::SetBridgedMode(bool enable_bridged_mode) {
 
 DaiSupportedFormats Tas27xx::GetDaiFormats() { return kSupportedDaiFormats; }
 
-zx_status_t Tas27xx::SetDaiFormat(const DaiFormat& format) {
+zx::status<CodecFormatInfo> Tas27xx::SetDaiFormat(const DaiFormat& format) {
   zx_status_t status = SetRate(format.frame_rate);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
-  return SetTdmSlots(format.channels_to_use_bitmask);
+  status = SetTdmSlots(format.channels_to_use_bitmask);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(CodecFormatInfo{});
 }
 
 zx_status_t Tas27xx::WriteReg(uint8_t reg, uint8_t value) {

@@ -5,13 +5,13 @@
 #include "tas5720.h"
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/simple-codec/simple-codec-client.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/sync/completion.h>
 
-#include <lib/ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 namespace audio {
@@ -245,7 +245,9 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
     format.frame_rate = 48'000;
     auto formats = client.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-    ASSERT_OK(client.SetDaiFormat(std::move(format)));
+    zx::status<CodecFormatInfo> codec_format_info = client.SetDaiFormat(std::move(format));
+    ASSERT_OK(codec_format_info.status_value());
+    EXPECT_EQ(zx::msec(25).get() + zx::msec(33.3).get(), codec_format_info->turn_on_delay());
   }
 
   {
@@ -253,7 +255,9 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
     format.frame_rate = 96'000;
     auto formats = client.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-    ASSERT_OK(client.SetDaiFormat(std::move(format)));
+    zx::status<CodecFormatInfo> codec_format_info = client.SetDaiFormat(std::move(format));
+    ASSERT_OK(codec_format_info.status_value());
+    EXPECT_EQ(zx::msec(25).get() + zx::msec(16.7).get(), codec_format_info->turn_on_delay());
   }
 
   {

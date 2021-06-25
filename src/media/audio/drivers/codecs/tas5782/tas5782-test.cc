@@ -74,12 +74,14 @@ TEST(Tas5782Test, BadSetDai) {
   {
     DaiFormat format = GetDefaultDaiFormat();
     format.frame_format = FrameFormat::STEREO_LEFT;  // This must fail, only I2S supported.
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
+    zx::status<CodecFormatInfo> codec_state = client.SetDaiFormat(std::move(format));
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, codec_state.status_value());
   }
   {
     DaiFormat format = GetDefaultDaiFormat();
     format.number_of_channels = 1;  // Almost good format (wrong channels).
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
+    zx::status<CodecFormatInfo> codec_state = client.SetDaiFormat(std::move(format));
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, codec_state.status_value());
   }
 
   codec->DdkAsyncRemove();

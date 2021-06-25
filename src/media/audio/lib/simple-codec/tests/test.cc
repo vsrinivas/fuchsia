@@ -48,7 +48,9 @@ struct TestCodec : public SimpleCodecServer {
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
   DaiSupportedFormats GetDaiFormats() override { return {}; }
-  zx_status_t SetDaiFormat(const DaiFormat& format) override { return ZX_ERR_NOT_SUPPORTED; }
+  zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
   GainFormat GetGainFormat() override { return {}; }
   GainState GetGainState() override { return gain_state; }
   void SetGainState(GainState state) override { gain_state = state; }
@@ -127,7 +129,8 @@ TEST_F(SimpleCodecTest, SetDaiFormat) {
 
   DaiFormat format = {.sample_format = audio_fidl::DaiSampleFormat::PCM_SIGNED,
                       .frame_format = FrameFormat::I2S};
-  ASSERT_EQ(client.SetDaiFormat(std::move(format)), ZX_ERR_NOT_SUPPORTED);
+  zx::status<CodecFormatInfo> codec_format_info = client.SetDaiFormat(std::move(format));
+  ASSERT_EQ(codec_format_info.status_value(), ZX_ERR_NOT_SUPPORTED);
 
   codec->DdkAsyncRemove();
   ASSERT_TRUE(ddk_.Ok());

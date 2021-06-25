@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/zx/time.h>
 
 #include <algorithm>
 #include <memory>
@@ -222,17 +223,32 @@ void Tas5720::SetBridgedMode(bool enable_bridged_mode) {
 }
 DaiSupportedFormats Tas5720::GetDaiFormats() { return kSupportedDaiFormats; }
 
-zx_status_t Tas5720::SetDaiFormat(const DaiFormat& format) {
+zx::status<CodecFormatInfo> Tas5720::SetDaiFormat(const DaiFormat& format) {
   ZX_ASSERT(format.channels_to_use_bitmask == 1 ||
             format.channels_to_use_bitmask == 2);  // Mono codec, 2 channel TDM.
   tdm_slot_ = static_cast<uint8_t>(__builtin_ctzl(format.channels_to_use_bitmask));
   i2s_ = format.frame_format == FrameFormat::I2S;
   auto status = SetSlot(tdm_slot_);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
   rate_ = format.frame_rate;
-  return SetRateAndFormat();
+  status = SetRateAndFormat();
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  CodecFormatInfo state = {};
+  // Turn on delay is tACTIVE (25ms) + tVRAMP (ramp time from -100dB to 0dB).
+  if (rate_ >= 96'000) {
+    state.set_turn_on_delay(zx::msec(25).get() + zx::msec(16.7).get());
+  } else if (rate_ >= 88'200) {
+    state.set_turn_on_delay(zx::msec(25).get() + zx::msec(18.1).get());
+  } else if (rate_ >= 48'000) {
+    state.set_turn_on_delay(zx::msec(25).get() + zx::msec(33.3).get());
+  } else {
+    state.set_turn_on_delay(zx::msec(25).get() + zx::msec(36.3).get());
+  }
+  return zx::ok(std::move(state));
 }
 
 GainFormat Tas5720::GetGainFormat() {
