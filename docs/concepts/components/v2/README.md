@@ -13,7 +13,6 @@ For details on legacy components, see [Legacy components][legacy-components].
 - [Introduction](introduction.md): Understanding components and the component
   framework.
 - [Component manager](component_manager.md): The runtime.
-- [Declarations](declarations.md): Describe components themselves.
 - [Lifecycle](lifecycle.md): Component instance progression from creation to
   destruction.
 - [Topology](topology.md): The relationships among component instances.

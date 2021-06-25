@@ -182,7 +182,7 @@
   area: ["Components"]
 
 - term: "Component declaration"
-  short_description: "A FIDL table that inclues information about a component."
+  short_description: "A FIDL table that includes information about a component."
   full_description: "A component declaration is a <a href=\"/docs/glossary#fidl\">fidl</a>
   table (<a href=\"/sdk/fidl/fuchsia.sys2/decls/component_decl.fidl\">fuchsia.sys2.ComponentDecl</a>)
   that includes information about a <a href=\"/docs/glossary#component\">component</a>’s
@@ -242,19 +242,33 @@
   area: ["Components"]
 
 - term: "Component manifest"
-  short_description: "In components v1, this is a <code>.cmx</code> file. In components v2, this is
-  a <code>.cml</code> file."
-  full_description: "In <a href=\"/docs/glossary#components-v1\">components v1</a>, a
-  component manifest is a JSON file with a <code>.cmx</code> extension that contains information
-  about a <a href=\"/docs/glossary#component\">component</a>’s runtime configuration,
-  services and directories it receives in its <a href=\"/docs/glossary#namespace\">namespace</a>,
-  and <a href=\"/docs/glossary#component-manifest-facet\">facets</a>.
+  short_description: "A binary file ending in <code>.cm</code> that encodes a
+  <a href=\"/docs/glossary#component-declaration\">component declaration</a>,
+  often distributed as part of a <a href=\"/docs/glossary#package\">package</a>."
+  full_description: "A binary file ending in <code>.cm</code> that encodes a
+  <a href=\"/docs/glossary#component-declaration\">component declaration</a>,
+  often distributed as part of a <a href=\"/docs/glossary#package\">package</a>.
+  The <code>cmc</code> tool generates a component manifest from a
+  <a href=\"/docs/glossary#component-manifest-source\">component manifest source</a> file."
+  see_also: ["<a href=\"/docs/concepts/components/v2/component_manifests.md\">Component manifests</a>"]
+  related_guides: [""]
+  area: ["Components"]
 
-  <p>In <a href=\"/docs/glossary#components-v2\">components v2</a>, a component manifest is a
-  file with a <code>.cml</code> extension, that encodes a <a href=\"/docs/glossary#component-declaration\">component
-  declaration</a>.</p>"
-  see_also: ["<a href=\"/docs/concepts/components/v1/component_manifests.md\">Component manifests v1</a>",
-             "<a href=\"/docs/concepts/components/v2/component_manifests.md\">Component manifests v2</a>"]
+- term: "Component manifest source"
+  short_description: "A JSON5 file ending with a <code>.cml</code> extension
+  that describes a component and its capabilities. For legacy components,
+  this is a <code>.cmx</code> file."
+  full_description: "In <a href=\"/docs/glossary#components-v2\">components v2</a>,
+  a component manifest is a file with a <code>.cml</code> extension, that encodes
+  a <a href=\"/docs/glossary#component-declaration\">component declaration</a>.
+
+  <p>For <a href=\"/docs/glossary#components-v1\">legacy components</a>, this is
+  a JSON file with a <code>.cmx</code> extension that contains information about
+  a <a href=\"/docs/glossary#component\">component</a>’s runtime configuration,
+  services and directories it receives in its <a href=\"/docs/glossary#namespace\">namespace</a>,
+  and <a href=\"/docs/glossary#component-manifest-facet\">facets</a>.</p>"
+  see_also: ["<a href=\"/docs/concepts/components/v1/component_manifests.md\">Legacy component manifests</a>",
+             "<a href=\"/docs/concepts/components/v2/component_manifests.md\">Component manifests</a>"]
   related_guides: [""]
   area: ["Components"]
 
@@ -263,8 +277,8 @@
   full_description: "Additional metadata that is carried in a
   <a href=\"/docs/glossary#component-manifest\">component manifest</a>. This is an extension
   point to the <a href=\"/docs/glossary#component-framework\">framework</a>."
-  see_also: ["<a href=\"/docs/concepts/components/v1/component_manifests.md\">Component manifests v1</a>",
-             "<a href=\"/docs/concepts/components/v2/component_manifests.md\">Component manifests v2</a>"]
+  see_also: ["<a href=\"/docs/concepts/components/v1/component_manifests.md\">Legacy component manifests</a>",
+             "<a href=\"/docs/concepts/components/v2/component_manifests.md\">Component manifests</a>"]
   related_guides: [""]
   area: ["Components"]
 
@@ -290,10 +304,10 @@
   area: ["Components"]
 
 - term: "Components v1"
-  short_description: "First component architecture of Fuchsia."
-  full_description: "A shorthand for the
-  <a href=\"/docs/glossary#component\">component</a> architecture as first implemented on
-  Fuchsia. Includes a runtime as implemented by <a href=\"/docs/glossary#appmgr\">appmgr</a>
+  short_description: "The legacy component architecture of Fuchsia."
+  full_description: "A shorthand for the legacy
+  <a href=\"/docs/glossary#component\">component</a> architecture.
+  Includes a runtime as implemented by <a href=\"/docs/glossary#appmgr\">appmgr</a>
   and <a href=\"/docs/glossary#sysmgr\">sysmgr</a>, protocols and types as defined in
   <a href=\"/sdk/fidl/fuchsia.sys/\">fuchsia-sys</a>, build-time tools such as
   <a href=\"/tools/cmc\">cmc</a>, and IDK libraries such as
@@ -303,13 +317,13 @@
   area: ["Components"]
 
 - term: "Components v2"
-  short_description: "Second component architecture of Fuchsia."
+  short_description: "The modern component architecture of Fuchsia."
   full_description: "A shorthand for the
   <a href=\"/docs/glossary#component\">component</a> architecture in its modern
   implementation. Includes a runtime as implemented by
-  <a href=\"/docs/glossary#component-manager\">component_manager</a>, protocols and types
-  as defined in <a href=\"/sdk/fidl/fuchsia.sys2/\">fuchsia.sys2</a>, and build-time tools such as
-  <a href=\"/tools/cmc\">cmc</a>."
+  <a href=\"/docs/glossary#component-manager\">component_manager</a>, protocols
+  and types as defined in <a href=\"/sdk/fidl/fuchsia.sys2/\">fuchsia.sys2</a>,
+  and build-time tools such as <a href=\"/tools/cmc\">cmc</a>."
   see_also: ["<a href=\"/docs/glossary#components-v1\">Components v1</a>"]
   related_guides: [""]
   area: ["Components"]

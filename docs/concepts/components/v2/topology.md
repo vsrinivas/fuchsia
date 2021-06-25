@@ -129,6 +129,6 @@ information.
 [doc-monikers]: /docs/concepts/components/v2/monikers.md
 [doc-component-urls]: /docs/concepts/components/component_urls.md
 [doc-capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
-[doc-component-declaration]: /docs/concepts/components/v2/declarations.md
+[doc-component-declaration]: /docs/concepts/components/v2/component_manifests.md#component-declaration
 [wiki-least-privilege]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
 [wiki-object-composition]: https://en.wikipedia.org/wiki/Object_composition

@@ -12,8 +12,6 @@ toc:
   path: /docs/concepts/components/v2/introduction.md
 - title: "Component manager"
   path: /docs/concepts/components/v2/component_manager.md
-- title: "Declarations"
-  path: /docs/concepts/components/v2/declarations.md
 - title: "Component manifests"
   path: /docs/concepts/components/v2/component_manifests.md
 - title: "Lifecycle"

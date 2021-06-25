@@ -116,7 +116,6 @@ There are only a few exceptions, notably:
 ## Further Reading
 
 -   [Component manager][doc-component-manager]
--   [Component declarations][doc-declarations]
 -   [Component topology][doc-topology]
 -   [Component lifecycle][doc-lifecycle]
 -   [Design principles][doc-design-principles]
@@ -124,7 +123,7 @@ There are only a few exceptions, notably:
 [glossary.capability]: /docs/glossary/README.md#capability
 [doc-capability-routing]: /docs/concepts/components/v2/topology.md#capability-routing
 [doc-component-manager]: /docs/concepts/components/v2/component_manager.md
-[doc-declarations]: /docs/concepts/components/v2/declarations.md
+[doc-declarations]: /docs/concepts/components/v2/component_manifests.md#component-declaration
 [doc-design-principles]: /docs/concepts/components/v2/design_principles.md
 [doc-instances]: /docs/concepts/components/v2/topology.md#component-instances
 [doc-lifecycle]: /docs/concepts/components/v2/lifecycle.md

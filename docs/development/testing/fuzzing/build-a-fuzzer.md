@@ -19,7 +19,7 @@ templates.
 Each language has a specific fuzzer GN template. All of these templates support certain common
 parameters, as detailed in [fuzzer.gni]:
 
- * An optional [component manifest][glossary.component manifest] (cmx) file. A manifest for fuzzing is always generated. If a
+ * An optional [component manifest][glossary.component manifest source] (cmx) file. A manifest for fuzzing is always generated. If a
    `cmx` file is provided, it is combined with and overrides the generated file.
  * An optional [`dictionary`][dictionary]. If not provided, an empty dictionary file is created.
  * An optional list of libFuzzer [`options`]. These key-value pairs are written to a options file.
@@ -283,7 +283,7 @@ After running `fx set`, you can view the currently configured fuzzers with `fx f
 Additional `fx fuzz` commands can be used to [run a fuzzer](run-a-fuzzer.md).
 
 [glossary.package]: /docs/glossary/README.md#package
-[glossary.component manifest]: /docs/glossary/README.md#component-manifest
+[glossary.component manifest source]: /docs/glossary/README.md#component-manifest-source
 [asan]: https://clang.llvm.org/docs/AddressSanitizer.html
 [asan-hbo]: https://github.com/google/sanitizers/wiki/AddressSanitizerExampleHeapOutOfBounds
 [asan-sbo]: https://github.com/google/sanitizers/wiki/AddressSanitizerExampleStackOutOfBounds

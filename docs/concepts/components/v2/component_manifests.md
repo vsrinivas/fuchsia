@@ -21,22 +21,12 @@ Component declarations contain:
 This section explains the distinction between component manifests, component
 manifest sources, and component declarations.
 
-### Component manifest {#component-manifest}
-
-A *component manifest* is a file that encodes a
-[component declaration](#component-declaration), usually distributed as part of
-a [package][doc-packages]. The binary format is a persisted FIDL file mapping
-one-to-one onto the component declaration, typically ending in a `.cm`
-extension.
-
-A [fuchsia-pkg URL][doc-package-url] with a component manifest resource path
-identifies a component in a package.
-
 ### Component manifest source {#component-manifest-source}
 
-A *component manifest source* is a file that encodes part of a component
-manifest. Component manifest sources are written in *CML* (*component manifest
-language*), which is the developer-facing source format for component manifests.
+A [component manifest source][glossary.component manifest source]
+is a file that encodes part of a component manifest.
+Component manifest sources are written in component manifest language (CML),
+which is the developer-facing source format for component manifests.
 CML files are JSON5 files that end with a `.cml` extension. Descriptions and
 examples of the CML syntax are contained in this document: see
 [Syntax](#syntax).
@@ -44,11 +34,26 @@ examples of the CML syntax are contained in this document: see
 Component manifest sources are compiled to
 [component manifests](#component-manifest) by the [`cmc`][src-cmc] tool.
 
+### Component manifest {#component-manifest}
+
+A [component manifest][glossary.component manifest] is a file that encodes a
+[component declaration](#component-declaration), usually distributed as part of
+a [package][glossary.package]. The binary format is a persisted FIDL file mapping
+one-to-one onto the component declaration, typically ending in a `.cm`
+extension.
+
+A [fuchsia-pkg URL][doc-package-url] with a component manifest resource path
+identifies a component in a package.
+
 ### Component declaration {#component-declaration}
 
-The [`ComponentDecl`][fidl-component-decl] FIDL table is a *component
-declaration*. Component declarations are used by the component framework APIs to
-represent components and may be provided to components at runtime.
+A [component declaration][glossary.component declaration] describes what a
+component can do, the capabilities it uses and exposes, its children, and other
+information needed to run the component. Component declarations are represented
+using the [`ComponentDecl`][fidl-component-decl] FIDL table.
+
+A component [resolver][doc-resolvers] retrieves the component declaration and
+provides it to the component framework.
 
 ## Concepts {#concepts}
 
@@ -723,7 +728,11 @@ expect their facets to adhere to a particular schema.
 
 This section may be omitted.
 
+[glossary.component declaration]: /docs/glossary/README.md#component-declaration
+[glossary.component manifest]: /docs/glossary/README.md#component-manifest
+[glossary.component manifest source]: /docs/glossary/README.md#component-manifest-source
 [glossary.hub]: /docs/glossary/README.md#hub
+[glossary.package]: /docs/glossary/README.md#package
 [doc-children]: realms.md#child-component-instances
 [doc-collections]: realms.md#collections
 [doc-environments]: environments.md
