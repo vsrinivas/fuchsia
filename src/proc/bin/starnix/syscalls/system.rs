@@ -84,13 +84,11 @@ pub fn sys_gettimeofday(
     return Ok(SUCCESS);
 }
 
-fn get_time_from_timespec(ts: timespec) -> Result<zx::Time, Errno> {
+fn get_duration_from_timespec(ts: timespec) -> Result<zx::Duration, Errno> {
     if ts.tv_nsec >= NANOS_PER_SECOND {
         return Err(EINVAL);
     }
-    return Ok(zx::Time::ZERO
-        + zx::Duration::from_seconds(ts.tv_sec)
-        + zx::Duration::from_nanos(ts.tv_nsec));
+    return Ok(zx::Duration::from_seconds(ts.tv_sec) + zx::Duration::from_nanos(ts.tv_nsec));
 }
 
 pub fn sys_nanosleep(
@@ -100,7 +98,7 @@ pub fn sys_nanosleep(
 ) -> Result<SyscallResult, Errno> {
     let mut request = timespec::default();
     ctx.task.mm.read_object(user_request, &mut request)?;
-    let time = get_time_from_timespec(request)?;
+    let time = get_duration_from_timespec(request)?;
     // TODO: We should be waiting on an object that can wake us up if we get a signal.
     time.sleep();
     Ok(SUCCESS)
