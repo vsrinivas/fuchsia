@@ -9,7 +9,7 @@
 
 use {
     fidl_fuchsia_examples_services as fexamples, fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys2 as fsys2, fuchsia_component::client::connect_to_service_instance, log::*,
+    fidl_fuchsia_sys2 as fsys2, fuchsia_component::client as fclient, log::*,
 };
 
 const COLLECTION_NAME: &'static str = "account_providers";
@@ -23,24 +23,25 @@ async fn read_and_write_to_multiple_service_instances() {
     start_provider(&realm, "a", &format!("{}#meta/provider-a.cm", TEST_PACKAGE)).await;
     start_provider(&realm, "b", &format!("{}#meta/provider-b.cm", TEST_PACKAGE)).await;
 
+    let service_dir = fclient::open_service::<fexamples::BankAccountMarker>()
+        .expect("failed to open service dir");
+    let instances = files_async::readdir(&service_dir)
+        .await
+        .expect("failed to read entries from service_dir")
+        .into_iter()
+        .map(|dirent| dirent.name);
+
     // Debit both bank accounts by $5.
-    for (account, expected_owner) in &[("a", "A"), ("b", "B")] {
-        let proxy = connect_to_service_instance::<fexamples::BankAccountMarker>(&format!(
-            "{}/default",
-            account
-        ))
-        .expect("failed to connect to service instance");
+    for instance in instances {
+        let proxy = fclient::connect_to_service_instance::<fexamples::BankAccountMarker>(&instance)
+            .expect("failed to connect to service instance");
         let read_only_account = proxy.read_only().expect("read_only protocol");
         let owner = read_only_account.get_owner().await.expect("failed to get owner");
-        assert_eq!(owner, *expected_owner);
         let initial_balance = read_only_account.get_balance().await.expect("failed to get_balance");
         info!("retrieved account for owner '{}' with balance ${}", &owner, &initial_balance);
 
         let read_write_account = proxy.read_write().expect("read_write protocol");
-        assert_eq!(
-            read_write_account.get_owner().await.expect("failed to get_owner"),
-            *expected_owner
-        );
+        assert_eq!(read_write_account.get_owner().await.expect("failed to get_owner"), owner);
         assert_eq!(
             read_write_account.get_balance().await.expect("failed to get_balance"),
             initial_balance

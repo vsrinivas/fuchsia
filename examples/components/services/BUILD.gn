@@ -23,6 +23,7 @@ fidl("fuchsia.examples.services") {
 rustc_test("branch-bin") {
   deps = [
     ":fuchsia.examples.services-rustc",
+    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",

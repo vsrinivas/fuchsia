@@ -65,9 +65,10 @@ pub async fn serve_collection<'a>(
 
 /// A directory entry representing an instance of a service.
 /// Upon opening, performs capability routing and opens the instance at its source.
-/// The instance name at the source is always assumed to be "default".
 struct ServiceInstanceDirectoryEntry {
-    /// The name of the instance to route.
+    /// The name of the component instance to route.
+    component: String,
+    /// The name of the instance directory to open at the source.
     instance: String,
     /// The original target of the capability route (the component that opened this directory).
     target: WeakComponentInstance,
@@ -83,7 +84,7 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
         scope: ExecutionScope,
         flags: u32,
         mode: u32,
-        path: vfs::path::Path,
+        mut path: vfs::path::Path,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let mut server_end = server_end.into_channel();
@@ -96,7 +97,7 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
                 }
             };
 
-            let source = match self.provider.route_instance(&self.instance).await {
+            let source = match self.provider.route_instance(&self.component).await {
                 Ok(source) => source,
                 Err(err) => {
                     let _ = server_end.close_with_epitaph(err.as_zx_status());
@@ -104,18 +105,29 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
                         .log(
                             log::Level::Error,
                             format!(
-                                "failed to route instance `{}` from intermediate component {}: {}",
-                                &self.instance, &self.intermediate_component, err
+                                "failed to route component instance `{}` from intermediate component {}: {}",
+                                &self.component, &self.intermediate_component, err
                             ),
                         )
                         .await;
                     return;
                 }
             };
+
+            // Consume the next path segment, which is the "component,instance" portion we've already extracted.
+            let _ = path.next();
+
+            let mut relative_path = PathBuf::from(&self.instance);
+
+            // Path::join with an empty string adds a trailing slash, which some VFS implementations don't like.
+            if !path.is_empty() {
+                relative_path = relative_path.join(path.into_string());
+            }
+
             if let Err(err) = open_capability_at_source(OpenRequest {
                 flags,
                 open_mode: mode,
-                relative_path: PathBuf::from(path.into_string()),
+                relative_path,
                 source,
                 target: &target,
                 server_chan: &mut server_end,
@@ -166,8 +178,11 @@ struct ServiceCollectionDirectory {
 #[async_trait]
 impl lazy::LazyDirectory for ServiceCollectionDirectory {
     async fn get_entry(&self, name: String) -> Result<Arc<dyn DirectoryEntry>, Status> {
+        // Parse the entry name into its (component,instance) parts.
+        let (component, instance) = name.split_once(',').ok_or(Status::NOT_FOUND)?;
         Ok(Arc::new(ServiceInstanceDirectoryEntry {
-            instance: name,
+            component: component.to_string(),
+            instance: instance.to_string(),
             target: self.target.clone(),
             intermediate_component: self.collection_component.clone(),
             provider: self.provider.clone(),
@@ -179,23 +194,87 @@ impl lazy::LazyDirectory for ServiceCollectionDirectory {
         pos: &'a TraversalPosition,
         mut sink: Box<dyn dirents_sink::Sink>,
     ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status> {
-        // Bail out early when there is no work to do. This method is always called at least once
-        // with TraversalPosition::End.
-        let skip = match pos {
-            TraversalPosition::Start => 0,
-            TraversalPosition::Index(idx) => *idx as usize,
-            TraversalPosition::End => return Ok((TraversalPosition::End, sink.seal())),
-            TraversalPosition::Name(_) => return Err(Status::BAD_STATE),
+        let next_entry = match pos {
+            TraversalPosition::End => {
+                // Bail out early when there is no work to do.
+                // This method is always called at least once with TraversalPosition::End.
+                return Ok((TraversalPosition::End, sink.seal()));
+            }
+            TraversalPosition::Start => None,
+            TraversalPosition::Name(entry) => {
+                // All generated filenames are guaranteed to have the ',' separator.
+                entry.split_once(',')
+            }
+            TraversalPosition::Index(_) => panic!("TraversalPosition::Index is never used"),
         };
 
-        let instances = self.provider.list_instances().await.map_err(|_| Err(Status::INTERNAL))?;
-        for (idx, instance) in instances.into_iter().enumerate().skip(skip) {
-            sink = match sink
-                .append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY), &instance)
-            {
-                dirents_sink::AppendResult::Ok(sink) => sink,
-                dirents_sink::AppendResult::Sealed(sealed) => {
-                    return Ok((TraversalPosition::Index(idx as u64), sealed))
+        let target = self.target.upgrade().map_err(|e| e.as_zx_status())?;
+        let mut instances = self.provider.list_instances().await.map_err(|_| Status::INTERNAL)?;
+        if instances.is_empty() {
+            return Ok((TraversalPosition::End, sink.seal()));
+        }
+
+        // Sort to guarantee a stable iteration order.
+        instances.sort();
+
+        let (instances, mut next_instance) =
+            if let Some((next_component, next_instance)) = next_entry {
+                // Skip to the next entry. If the exact component is found, start there.
+                // Otherwise start at the next component and clear any assumptions about
+                // the next instance within that component.
+                match instances.binary_search_by(|i| i.as_str().cmp(next_component)) {
+                    Ok(idx) => (&instances[idx..], Some(next_instance)),
+                    Err(idx) => (&instances[idx..], None),
+                }
+            } else {
+                (&instances[0..], None)
+            };
+
+        for instance in instances {
+            if let Ok(source) = self.provider.route_instance(&instance).await {
+                let (proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+                    .map_err(|_| Status::INTERNAL)?;
+                if let Ok(()) = open_capability_at_source(OpenRequest {
+                    flags: fio::OPEN_RIGHT_READABLE,
+                    open_mode: fio::MODE_TYPE_DIRECTORY,
+                    relative_path: PathBuf::new(),
+                    source,
+                    target: &target,
+                    server_chan: &mut server.into_channel(),
+                })
+                .await
+                {
+                    if let Ok(mut dirents) = files_async::readdir(&proxy).await {
+                        // Sort to guarantee a stable iteration order.
+                        dirents.sort();
+
+                        let dirents = if let Some(next_instance) = next_instance.take() {
+                            // Skip to the next entry. If the exact instance is found, start there.
+                            // Otherwise start at the next instance, assuming the missing one was removed.
+                            match dirents.binary_search_by(|e| e.name.as_str().cmp(next_instance)) {
+                                Ok(idx) | Err(idx) => &dirents[idx..],
+                            }
+                        } else {
+                            &dirents[0..]
+                        };
+
+                        for dirent in dirents {
+                            // Encode the (component,instance) tuple so that it can be represented in a single
+                            // path segment.
+                            let entry_name = format!("{},{}", &instance, &dirent.name);
+                            sink = match sink.append(
+                                &EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY),
+                                &entry_name,
+                            ) {
+                                dirents_sink::AppendResult::Ok(sink) => sink,
+                                dirents_sink::AppendResult::Sealed(sealed) => {
+                                    // There is not enough space to return this entry. Record it as the next
+                                    // entry to start at for subsequent calls.
+                                    return Ok((TraversalPosition::Name(entry_name), sealed));
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -256,9 +335,8 @@ mod tests {
         }
     }
 
-    #[fuchsia::test]
-    async fn serve_collection_test() {
-        let components = vec![
+    fn create_test_component_decls() -> Vec<(&'static str, ComponentDecl)> {
+        vec![
             (
                 "root",
                 ComponentDeclBuilder::new()
@@ -310,7 +388,12 @@ mod tests {
                     })
                     .build(),
             ),
-        ];
+        ]
+    }
+
+    #[fuchsia::test]
+    async fn serve_collection_test() {
+        let components = create_test_component_decls();
 
         let mock_instance = pseudo_directory! {
             "default" => pseudo_directory! {
@@ -319,7 +402,12 @@ mod tests {
         };
 
         let test = RoutingTestBuilder::new("root", components)
-            .add_outgoing_path("foo", "/svc/my.service.Service".try_into().unwrap(), mock_instance)
+            .add_outgoing_path(
+                "foo",
+                "/svc/my.service.Service".try_into().unwrap(),
+                mock_instance.clone(),
+            )
+            .add_outgoing_path("bar", "/svc/my.service.Service".try_into().unwrap(), mock_instance)
             .build()
             .await;
 
@@ -375,13 +463,13 @@ mod tests {
             files_async::readdir(&service_proxy).await.expect("failed to read directory entries");
         let instance_names: HashSet<String> = entries.into_iter().map(|d| d.name).collect();
         assert_eq!(instance_names.len(), 2);
-        assert!(instance_names.contains("foo"));
-        assert!(instance_names.contains("bar"));
+        assert!(instance_names.contains("foo,default"));
+        assert!(instance_names.contains("bar,default"));
 
         // Open one of the entries.
         let collection_dir = io_util::directory::open_directory(
             &service_proxy,
-            "foo",
+            "foo,default",
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await
@@ -391,6 +479,102 @@ mod tests {
         let entries = files_async::readdir(&collection_dir)
             .await
             .expect("failed to read instances of collection dir");
-        assert!(entries.into_iter().find(|d| d.name == "default").is_some());
+        assert!(entries.into_iter().find(|d| d.name == "member").is_some());
+    }
+
+    #[fuchsia::test]
+    async fn test_collection_readdir() {
+        let components = create_test_component_decls();
+
+        let mock_instance_foo = pseudo_directory! {
+            "default" => pseudo_directory! {}
+        };
+
+        let mock_instance_bar = pseudo_directory! {
+            "default" => pseudo_directory! {},
+            "one" => pseudo_directory! {},
+        };
+
+        let test = RoutingTestBuilder::new("root", components)
+            .add_outgoing_path(
+                "foo",
+                "/svc/my.service.Service".try_into().unwrap(),
+                mock_instance_foo,
+            )
+            .add_outgoing_path(
+                "bar",
+                "/svc/my.service.Service".try_into().unwrap(),
+                mock_instance_bar,
+            )
+            .build()
+            .await;
+
+        test.create_dynamic_child(
+            AbsoluteMoniker::root(),
+            "coll",
+            ChildDeclBuilder::new_lazy_child("foo"),
+        )
+        .await;
+        test.create_dynamic_child(
+            AbsoluteMoniker::root(),
+            "coll",
+            ChildDeclBuilder::new_lazy_child("bar"),
+        )
+        .await;
+        let foo_component = test
+            .model
+            .look_up(&vec!["coll:foo:1"].into())
+            .await
+            .expect("failed to find foo instance");
+        let bar_component = test
+            .model
+            .look_up(&vec!["coll:bar:2"].into())
+            .await
+            .expect("failed to find bar instance");
+
+        let provider = MockCollectionCapabilityProvider {
+            instances: {
+                let mut instances = HashMap::new();
+                instances.insert("foo".to_string(), foo_component.as_weak());
+                instances.insert("bar".to_string(), bar_component.as_weak());
+                instances
+            },
+        };
+
+        let (service_proxy, server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+        let mut server_end = server_end.into_channel();
+        serve_collection(
+            test.model.root.as_weak(),
+            &test.model.root,
+            Box::new(provider),
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            PathBuf::new(),
+            &mut server_end,
+        )
+        .await
+        .expect("failed to serve");
+
+        // Choose a value such that there is only room for a single entry.
+        const MAX_BYTES: u64 = 30;
+
+        let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
+        assert_eq!(Status::from_raw(status), Status::OK);
+        let entries = files_async::parse_dir_entries(&buf);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].as_ref().expect("complete entry").name, "bar,default");
+
+        let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
+        assert_eq!(Status::from_raw(status), Status::OK);
+        let entries = files_async::parse_dir_entries(&buf);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].as_ref().expect("complete entry").name, "bar,one");
+
+        let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
+        assert_eq!(Status::from_raw(status), Status::OK);
+        let entries = files_async::parse_dir_entries(&buf);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].as_ref().expect("complete entry").name, "foo,default");
     }
 }

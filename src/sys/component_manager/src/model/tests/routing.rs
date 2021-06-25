@@ -2108,6 +2108,11 @@ async fn use_service_from_sibling_collection() {
         .add_outgoing_path(
             "foo",
             "/svc/my.service.Service/default".try_into().unwrap(),
+            instance_dir.clone(),
+        )
+        .add_outgoing_path(
+            "bar",
+            "/svc/my.service.Service/default".try_into().unwrap(),
             instance_dir,
         )
         .build()
@@ -2138,8 +2143,8 @@ async fn use_service_from_sibling_collection() {
         .map(|d| d.name)
         .collect();
     assert_eq!(entries.len(), 2);
-    assert!(entries.contains("foo"));
-    assert!(entries.contains("bar"));
+    assert!(entries.contains("foo,default"));
+    assert!(entries.contains("bar,default"));
     capability_util::add_dir_to_namespace(&namespace, "/svc", dir).await;
 
     join!(
@@ -2148,7 +2153,7 @@ async fn use_service_from_sibling_collection() {
                 target.clone(),
                 CheckUse::Service {
                     path: "/svc/my.service.Service".try_into().unwrap(),
-                    instance: "foo/default".to_string(),
+                    instance: "foo,default".to_string(),
                     member: "echo".to_string(),
                     expected_res: ExpectedResult::Ok,
                 },
