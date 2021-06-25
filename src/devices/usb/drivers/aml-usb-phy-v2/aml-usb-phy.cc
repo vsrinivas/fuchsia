@@ -138,8 +138,8 @@ zx_status_t AmlUsbPhy::InitPhy() {
 
     int count = 0;
     while (!u2p_r1.ReadFrom(usbctrl_mmio).phy_rdy()) {
-      // wait phy ready max 1ms, common is 100us
-      if (count > 200) {
+      // wait phy ready max 5ms, common is 100us
+      if (count > 1000) {
         zxlogf(WARNING, "AmlUsbPhy::InitPhy U2P_R1_PHY_RDY wait failed");
         break;
       }
