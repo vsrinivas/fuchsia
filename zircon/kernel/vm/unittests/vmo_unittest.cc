@@ -1111,7 +1111,7 @@ static bool vmo_attribution_clones_test() {
   EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 0u));
 
   // Commit the first two pages. This should increment the generation count by 2 (one per
-  // GetPageLocked() call that results in a page getting committed).
+  // LookupPagesLocked() call that results in a page getting committed).
   status = vmo->CommitRange(0, 2 * PAGE_SIZE);
   ASSERT_EQ(ZX_OK, status);
   expected_gen_count += 2;

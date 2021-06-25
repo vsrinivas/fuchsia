@@ -340,7 +340,7 @@ class VmCowPages final
                                                uint64_t* owner_offset_out, uint64_t* owner_length)
       TA_REQ(lock_);
 
-  // GetPageLocked helper function that 'forks' the page at |offset| of the current vmo. If
+  // LookupPagesLocked helper function that 'forks' the page at |offset| of the current vmo. If
   // this function successfully inserts a page into |offset| of the current vmo, it returns
   // a pointer to the corresponding vm_page_t struct. The only failure condition is memory
   // allocation failure, in which case this function returns null.

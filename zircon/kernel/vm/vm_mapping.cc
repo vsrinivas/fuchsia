@@ -429,9 +429,9 @@ zx_status_t VmMapping::AspaceUnmapVmoRangeLocked(uint64_t offset, uint64_t len) 
 
   // If we're currently faulting and are responsible for the vmo code to be calling
   // back to us, detect the recursion and abort here.
-  // The specific path we're avoiding is if the VMO calls back into us during vmo->GetPageLocked()
-  // via AspaceUnmapVmoRangeLocked(). If we set this flag we're short circuiting the unmap operation
-  // so that we don't do extra work.
+  // The specific path we're avoiding is if the VMO calls back into us during
+  // vmo->LookupPagesLocked() via AspaceUnmapVmoRangeLocked(). If we set this flag we're short
+  // circuiting the unmap operation so that we don't do extra work.
   if (unlikely(currently_faulting_)) {
     LTRACEF("recursing to ourself, abort\n");
     return ZX_OK;
@@ -756,9 +756,9 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
   Guard<Mutex> guard{object_->lock()};
 
   // set the currently faulting flag for any recursive calls the vmo may make back into us
-  // The specific path we're avoiding is if the VMO calls back into us during vmo->GetPageLocked()
-  // via AspaceUnmapVmoRangeLocked(). Since we're responsible for that page, signal to ourself to
-  // skip the unmap operation.
+  // The specific path we're avoiding is if the VMO calls back into us during
+  // vmo->LookupPagesLocked() via AspaceUnmapVmoRangeLocked(). Since we're responsible for that
+  // page, signal to ourself to skip the unmap operation.
   DEBUG_ASSERT(!currently_faulting_);
   currently_faulting_ = true;
   auto cleanup = fit::defer([&]() {
