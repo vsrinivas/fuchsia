@@ -103,11 +103,13 @@ void SimpleCodecServerInternal<T>::Stop(Codec::StopCallback callback,
                                         SimpleCodecServerInstance<T>* instance) {
   auto status = static_cast<T*>(this)->Stop();
   if (status != ZX_OK) {
+    static_cast<T*>(this)->state_.Set("stopped error");
     instance->binding_.Unbind();
     fbl::AutoLock lock(&instances_lock_);
     instances_.erase(*instance);
+  } else {
+    static_cast<T*>(this)->state_.Set("stopped");
   }
-  static_cast<T*>(this)->state_.Set("stopped");
   callback();
 }
 
@@ -116,13 +118,16 @@ void SimpleCodecServerInternal<T>::Start(Codec::StartCallback callback,
                                          SimpleCodecServerInstance<T>* instance) {
   auto status = static_cast<T*>(this)->Start();
   if (status != ZX_OK) {
+    static_cast<T*>(this)->state_.Set("start error");
     instance->binding_.Unbind();
     fbl::AutoLock lock(&instances_lock_);
     instances_.erase(*instance);
+  } else {
+    static_cast<T*>(this)->state_.Set("started");
   }
-  static_cast<T*>(this)->state_.Set("started");
-  static_cast<T*>(this)->start_time_.Set(zx::clock::get_monotonic().get());
-  callback();
+  int64_t start_time = zx::clock::get_monotonic().get();
+  static_cast<T*>(this)->start_time_.Set(start_time);
+  callback(start_time);
 }
 
 template <class T>
@@ -198,7 +203,17 @@ void SimpleCodecServerInternal<T>::SetDaiFormat(audio_fidl::DaiFormat format,
   if (status != ZX_OK) {
     thiz->state_.Set(std::string("Set DAI format error: ") + std::to_string(status));
   }
-  callback(status);
+  audio_fidl::Codec_SetDaiFormat_Result result = {};
+  audio_fidl::Codec_SetDaiFormat_Response response = {};
+  audio_fidl::CodecFormatInfo codec_state = {};
+  codec_state.set_external_delay(0);
+  codec_state.set_turn_on_delay(0);
+  response.state = std::move(codec_state);
+  result.set_response(std::move(response));
+  if (status != ZX_OK) {
+    result.set_err(status);
+  }
+  callback(std::move(result));
 }
 
 template <class T>

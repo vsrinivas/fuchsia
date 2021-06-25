@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 deprecated_syntax;
-
 library fuchsia.hardware.audio;
 
 using zx;
@@ -51,6 +50,21 @@ table GainFormat {
     6: bool can_agc;
 };
 
+/// Codec format information.
+table CodecFormatInfo {
+    /// The driver's best estimate of the external delay (in nanoseconds) present in the pipeline
+    /// for the chosen format. When precisely synchronizing presentation across multiple entities
+    /// (e.g. devices), the external delay should be taken into account. Optional.
+    1: zx.duration external_delay;
+
+    /// The driver's best estimate of the amount of time (in nanoseconds) it takes the hardware to
+    /// actually start playback/capture after a `Start` command is issued.
+    /// It may take some time for the hardware to get into fully operational mode, for example due
+    /// a power state change. This delay must be taken into account if not getting the initial audio
+    /// samples played or captured is not acceptable. Optional.
+    2: zx.duration turn_on_delay;
+};
+
 /// For an overview see
 /// [Audio Codec Interface](//docs/concepts/drivers/driver_interfaces/audio_codec.md)
 protocol Codec {
@@ -70,10 +84,14 @@ protocol Codec {
     Stop() -> ();
 
     /// Start/Re-start the codec operation.
-    /// `Start` returns when starting the codec is completed. If the driver can't successfully start
-    /// the codec it will close the codec protocol channel, in this case the client may obtain a new
-    /// codec protocol channel and retry.
-    Start() -> ();
+    /// `Start` returns when configuring the codec to start is completed but it does not wait for
+    /// the hardware to actually start playback/capture, i.e. `turn_on_delay` impact is not
+    /// taken into account to return from `Start`.
+    /// The `start_time` value (in the CLOCK_MONOTONIC timeline) indicates when when configuring
+    /// the codec to start is completed.
+    /// If the driver can't successfully start the codec it will close the codec protocol channel,
+    /// in this case the client may obtain a new codec protocol channel and retry.
+    Start() -> (zx.time start_time);
 
     /// Retrieves bridgeable mode from a codec.
     IsBridgeable() -> (bool supports_bridged_mode);
@@ -92,7 +110,7 @@ protocol Codec {
     /// Sets the DAI format to be used in the interface between the controller and codec, if
     /// the codec is not able to support the DAI format anymore, e.g. for a removable component
     /// then the function may return an error status.
-    SetDaiFormat(DaiFormat format) -> (zx.status status);
+    SetDaiFormat(DaiFormat format) -> (CodecFormatInfo state) error zx.status;
 
     /// Retrieves gain format.
     GetGainFormat() -> (GainFormat gain_format);

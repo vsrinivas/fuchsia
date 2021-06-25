@@ -143,10 +143,13 @@ zx_status_t SimpleCodecClient::SetDaiFormat(DaiFormat format) {
   format2.bits_per_sample = format.bits_per_sample;
 
   const auto response = codec_->SetDaiFormat_Sync(format2);
-  if (response.ok()) {
-    return response.value().status;
+  if (!response.ok()) {
+    return response.status();
   }
-  return response.status();
+  if (response->result.is_err()) {
+    return response->result.err();
+  }
+  return ZX_OK;
 }
 
 zx::status<GainFormat> SimpleCodecClient::GetGainFormat() {

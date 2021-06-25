@@ -118,6 +118,22 @@ TEST_F(SimpleCodecTest, GainState) {
   codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
+TEST_F(SimpleCodecTest, SetDaiFormat) {
+  auto codec = SimpleCodecServer::Create<TestCodec>();
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
+
+  DaiFormat format = {.sample_format = audio_fidl::DaiSampleFormat::PCM_SIGNED,
+                      .frame_format = FrameFormat::I2S};
+  ASSERT_EQ(client.SetDaiFormat(std::move(format)), ZX_ERR_NOT_SUPPORTED);
+
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(ddk_.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+}
+
 TEST_F(SimpleCodecTest, PlugState) {
   auto codec = SimpleCodecServer::Create<TestCodec>();
   ASSERT_NOT_NULL(codec);
