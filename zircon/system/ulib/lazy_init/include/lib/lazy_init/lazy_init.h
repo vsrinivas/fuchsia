@@ -120,7 +120,7 @@ class LazyInit<T, CheckType::None, Destructor::Disabled> {
   // ensure that initialization is not already performed.
   // Returns a reference to the newly constructed global.
   template <typename... Args>
-  std::enable_if_t<std::is_constructible_v<T, Args&&...>, T&> Initialize(Args&&... args) {
+  std::enable_if_t<std::is_constructible_v<T, Args...>, T&> Initialize(Args&&... args) {
     static_assert(alignof(LazyInit) >= alignof(T));
 
     new (&storage_) T(std::forward<Args>(args)...);
@@ -172,7 +172,7 @@ class LazyInit<T, CheckType::Basic, Destructor::Disabled> {
   // not already performed.
   // Returns a reference to the newly constructed global.
   template <typename... Args>
-  std::enable_if_t<std::is_constructible_v<T, Args&&...>, T&> Initialize(Args&&... args) {
+  std::enable_if_t<std::is_constructible_v<T, Args...>, T&> Initialize(Args&&... args) {
     static_assert(alignof(LazyInit) >= alignof(T));
 
     ZX_ASSERT(!*initialized_);
@@ -240,7 +240,7 @@ class LazyInit<T, CheckType::Atomic, Destructor::Disabled> {
   // not already performed.
   // Returns a reference to the newly constructed global.
   template <typename... Args>
-  std::enable_if_t<std::is_constructible_v<T, Args&&...>, T&> Initialize(Args&&... args) {
+  std::enable_if_t<std::is_constructible_v<T, Args...>, T&> Initialize(Args&&... args) {
     static_assert(alignof(LazyInit) >= alignof(T));
 
     TransitionState(State::Uninitialized, State::Constructing);
