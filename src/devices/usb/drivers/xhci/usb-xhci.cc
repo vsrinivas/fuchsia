@@ -445,7 +445,7 @@ zx_status_t UsbXhci::Create(void* ctx, zx_device_t* parent) {
   }
 
   // devmgr is now in charge of the device.
-  __UNUSED auto* dummy = dev.release();
+  __UNUSED auto* unused = dev.release();
   return ZX_OK;
 }
 
