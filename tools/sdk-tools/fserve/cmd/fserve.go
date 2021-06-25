@@ -86,6 +86,8 @@ func main() {
 	prepareFlag := flag.Bool("prepare", false, "Downloads any dependencies but does not start the package server.")
 	versionFlag := flag.String("version", sdk.GetSDKVersion(), "SDK Version to use for prebuilt packages.")
 	persistFlag := flag.Bool("persist", false, "Persist repository metadata to allow serving resolved packages across reboot.")
+	packageArchiveFlag := flag.String("package-archive", "",
+		"Specify the source package archive in .tgz or directory format. If specified, no packages are downloaded from GCS.")
 	flag.Var(&level, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
 
 	// target related options
@@ -148,7 +150,7 @@ func main() {
 		}
 	}
 
-	if *versionFlag == "" {
+	if *versionFlag == "" && *packageArchiveFlag == "" {
 		log.Fatalf("SDK version not known. Use --version to specify it manually.\n")
 	}
 
@@ -168,7 +170,15 @@ func main() {
 		log.Infof("Using repository: %v (without cleaning, use -clean to clean the package repository first).\n", *repoFlag)
 	}
 
-	if err = prepare(ctx, sdk, *versionFlag, *repoFlag, *bucketFlag, *imageFlag); err != nil {
+	if *packageArchiveFlag != "" {
+		absArchivePath, err := filepath.Abs(*packageArchiveFlag)
+		if err != nil {
+			log.Fatalf("Could not get absolute path of %v: %v\n", *packageArchiveFlag, err)
+		}
+		if err = prepareFromArchive(ctx, *repoFlag, absArchivePath); err != nil {
+			log.Fatalf("Could not prepare packages: %v\n", err)
+		}
+	} else if err = prepare(ctx, sdk, *versionFlag, *repoFlag, *bucketFlag, *imageFlag); err != nil {
 		log.Fatalf("Could not prepare packages: %v\n", err)
 	}
 	if *prepareFlag {
@@ -195,7 +205,36 @@ func usage() {
 	flag.PrintDefaults()
 }
 
-// prepare dowloads and untars the packages from GCS if needed.
+// copy or untar a package archive into the repo dir.
+func prepareFromArchive(ctx context.Context, repoPath string, archivePath string) error {
+	packageDir := filepath.Dir(repoPath)
+	log := logger.LoggerFromContext(ctx)
+
+	if sdkcommon.FileExists(archivePath) {
+		// untar it.
+		log.Debugf("processing package-archive %v", archivePath)
+		return processArchiveTarball(ctx, packageDir, archivePath)
+	}
+	if sdkcommon.DirectoryExists(archivePath) {
+		// if it is the same as the dest - a no op.
+		if archivePath == packageDir {
+			log.Infof("Package archive directory is the same as repo directory, using repo unchanged.")
+			return nil
+		}
+		// Always remove the existing directory when using a directory as the source.
+
+		logger.Debugf(context.Background(), "Removing directory %s\n", packageDir)
+		err := os.RemoveAll(packageDir)
+		if err != nil {
+			logger.Fatalf(ctx, "Could not remove directory %v: %v", packageDir, err)
+		}
+		// copy it to the repo.
+		return copyDir(ctx, archivePath, packageDir)
+	}
+	return fmt.Errorf("Invalid archive path: %v. Needs to be .tgz file or directory", archivePath)
+}
+
+// prepare method -  downloads and untars the packages from GCS if needed.
 func prepare(ctx context.Context, sdk sdkcommon.SDKProperties, version string, repoPath string, bucket string, image string) error {
 	log := logger.LoggerFromContext(ctx)
 	if image == "list" || image == "" {
@@ -394,57 +433,60 @@ func downloadImageIfNeeded(ctx context.Context, sdk sdkProvider, version string,
 	} else {
 		log.Debugf("Skipping download, packages tarball exists\n")
 	}
+	return processArchiveTarball(ctx, packageDir, localImagePath)
+}
+
+func processArchiveTarball(ctx context.Context, packageDir string, archiveFile string) error {
+	log := logger.LoggerFromContext(ctx)
 
 	// The checksum file contains the output from `md5`. This is used to detect content changes in the packages file.
+	isDifferent := false
 	checksumFile := filepath.Join(packageDir, "packages.md5")
-	removePackageDir := false
-	md5Hash, err := calculateMD5(localImagePath)
+	md5Hash, err := calculateMD5(archiveFile)
 	if err != nil {
-		return fmt.Errorf("could not checksum file %v: %v", localImagePath, err)
+		return fmt.Errorf("could not checksum file %v: %v", archiveFile, err)
 	}
 	if sdkcommon.FileExists(checksumFile) {
 		content, err := ioutil.ReadFile(checksumFile)
 		if err != nil {
 			log.Warningf("Could not read checksum file %v: %v\n", checksumFile, err)
-			removePackageDir = true
+			isDifferent = true
 		}
 		parts := strings.Fields(string(content))
-		removePackageDir = removePackageDir || md5Hash != parts[0]
+		isDifferent = isDifferent || md5Hash != parts[0]
 
 		// Look for old file name
 		if len(parts) > 1 {
 			oldFile := strings.TrimSpace(parts[1])
-			if sdkcommon.FileExists(oldFile) && oldFile != localImagePath {
+			if sdkcommon.FileExists(oldFile) && oldFile != archiveFile {
 				err = os.Remove(oldFile)
 				if err != nil {
 					logger.Errorf(ctx, "Could not remove old archive %v: %v\n", oldFile, err)
 				}
 			} else {
-				logger.Debugf(ctx, "%s does not exist or is the same as %s\n", oldFile, localImagePath)
+				logger.Debugf(ctx, "%s does not exist or is the same as %s\n", oldFile, archiveFile)
 			}
 		} else {
 			logger.Debugf(ctx, "Could not parse old file name from %v", parts)
 		}
 	} else {
 		logger.Debugf(ctx, "%s does not exist so can't check the checksum\n", checksumFile)
-		removePackageDir = true
+		isDifferent = true
 	}
-
-	if removePackageDir {
-		logger.Debugf(context.Background(), "Removing directory %s\n", packageDir)
+	if isDifferent {
+		log.Debugf("Removing directory %s\n", packageDir)
 		err := os.RemoveAll(packageDir)
 		if err != nil {
-			logger.Fatalf(ctx, "Could not remove directory %v: %v", packageDir, err)
+			return fmt.Errorf("Could not remove directory %v: %v", packageDir, err)
 		}
 
 		if err := os.MkdirAll(packageDir, 0755); err != nil {
-			logger.Fatalf(ctx, "Could not create directory %v: %v", packageDir, err)
+			return fmt.Errorf("Could not create directory %v: %v", packageDir, err)
 		}
 	}
-
 	if !sdkcommon.DirectoryExists(filepath.Join(packageDir, "amber-files")) {
-		if err = extractTar(ctx, localImagePath, packageDir); err != nil {
-			logger.Fatalf(ctx, "Could not create extract %v into %v: %v", localImagePath, packageDir, err)
+		if err = extractTar(ctx, archiveFile, packageDir); err != nil {
+			logger.Fatalf(ctx, "Could not create extract %v into %v: %v", archiveFile, packageDir, err)
 		}
 	}
 	md5File, err := os.Create(checksumFile)
@@ -452,9 +494,9 @@ func downloadImageIfNeeded(ctx context.Context, sdk sdkProvider, version string,
 		logger.Fatalf(ctx, "Could not write checksum file %v: %v\n", checksumFile, err)
 	}
 	defer md5File.Close()
-	md5File.WriteString(fmt.Sprintf("%v %v\n", md5Hash, localImagePath))
+	_, err = md5File.WriteString(fmt.Sprintf("%v %v\n", md5Hash, archiveFile))
 
-	return nil
+	return err
 }
 
 // setPackageSource sets the URL for the package server on the target device.
@@ -587,4 +629,65 @@ func calculateMD5(filename string) (string, error) {
 		return "", fmt.Errorf("Cannot calculate md5 for %v: %v", filename, err)
 	}
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+func copyDir(ctx context.Context, srcDir string, destDir string) error {
+	log := logger.LoggerFromContext(ctx)
+
+	log.Debugf("Copying directory %v to %v", srcDir, destDir)
+
+	srcDirFile, err := os.Open(srcDir)
+	if err != nil {
+		return fmt.Errorf("Error opening src dir: %v", err)
+	}
+	defer srcDirFile.Close()
+
+	srcDirStat, err := srcDirFile.Stat()
+	if err != nil {
+		return err
+	}
+	if !srcDirStat.IsDir() {
+		return fmt.Errorf("Source %v is not a directory", srcDir)
+	}
+
+	err = os.Mkdir(destDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	// Process the contents of srcDir
+	contents, err := ioutil.ReadDir(srcDir)
+	if err != nil {
+		return err
+	}
+	for _, item := range contents {
+		if item.IsDir() {
+			// recurse
+			err := copyDir(ctx, filepath.Join(srcDir, item.Name()), filepath.Join(destDir, item.Name()))
+			if err != nil {
+				return err
+			}
+		} else {
+			srcName := filepath.Join(srcDir, item.Name())
+			destName := filepath.Join(destDir, item.Name())
+			log.Debugf("Copying file %v to %v", srcName, destName)
+
+			srcFile, err := os.Open(srcName)
+			if err != nil {
+				return err
+			}
+			defer srcFile.Close()
+			destFile, err := os.Create(destName)
+			if err != nil {
+				return err
+			}
+			defer destFile.Close()
+			// dest is first - which is backwards from cp.
+			_, err = io.Copy(destFile, srcFile)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

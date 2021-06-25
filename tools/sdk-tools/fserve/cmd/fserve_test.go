@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -473,6 +474,201 @@ func TestSetPackageSource(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+}
+
+func TestPrepareFromArchive(t *testing.T) {
+	ctx := testingContext()
+	executable, _ := os.Executable()
+	testRoot := filepath.Join(filepath.Dir(executable), *testrootFlag)
+	testdata := filepath.Join(testRoot, "testdata", "testdata.tgz")
+	if !sdkcommon.FileExists(testdata) {
+		testdata = filepath.Join("..", "testdata", "testdata.tgz")
+	}
+	archiveDir := t.TempDir()
+	data := []byte("This is a test file")
+	for i := 0; i < 3; i++ {
+		if err := ioutil.WriteFile(filepath.Join(archiveDir, fmt.Sprintf("file%d.txt", i)), data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	tests := []struct {
+		archivePath string
+		errString   string
+		expected    []string
+	}{
+		{
+			archivePath: "/path/does/not/exist",
+			errString:   "Invalid archive path: /path/does/not/exist. Needs to be .tgz file or directory",
+		},
+		{
+			archivePath: testdata,
+			expected:    []string{"", "/data", "/data/one.json", "/greeting.txt", "/packages.md5"},
+		},
+		{
+			archivePath: archiveDir,
+			expected:    []string{"", "/file0.txt", "/file1.txt", "/file2.txt"},
+		},
+	}
+
+	for idx, test := range tests {
+		repoPath := filepath.Join(t.TempDir(), fmt.Sprintf("repo/path_%d", idx))
+		err := prepareFromArchive(ctx, repoPath, test.archivePath)
+		if err != nil {
+			if test.errString != "" && test.errString != err.Error() {
+				t.Fatalf("Unexpected error message: %v. Expected %v", err, test.errString)
+			} else if test.errString == "" {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+		} else {
+			actual, err := listDirectory(filepath.Dir(repoPath))
+			if err != nil {
+				t.Fatal(err)
+			}
+			expected := test.expected
+			if len(actual) != len(expected) {
+				t.Fatalf("Mismatch content size. Actual: %v %v. Expected: %v %v", len(actual), actual, len(expected), test.expected)
+			}
+			for i, value := range expected {
+				if strings.TrimPrefix(actual[i], filepath.Dir(repoPath)) != value {
+					t.Fatalf("Mismatch element %d  Actual: %v Expected: %v ", i, strings.TrimPrefix(actual[i], filepath.Dir(repoPath)), value)
+				}
+			}
+		}
+	}
+
+}
+
+func TestCopyDir(t *testing.T) {
+	ctx := testingContext()
+
+	// build a src dir with
+	// empty directory
+	// files, no directoryies
+	// top level just directories
+	// mixture
+	emptyDir := t.TempDir()
+	filesOnly := t.TempDir()
+	dirsOnly := t.TempDir()
+	dirsWithFiles := t.TempDir()
+	mixedDir := t.TempDir()
+
+	// build the files only src
+	data := []byte("This is a test file")
+	for i := 0; i < 3; i++ {
+		if err := ioutil.WriteFile(filepath.Join(filesOnly, fmt.Sprintf("file%d.txt", i)), data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for i := 0; i < 3; i++ {
+		dirName := fmt.Sprintf("dir_%d", i)
+		err := os.Mkdir(filepath.Join(dirsOnly, dirName), 0o755)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for i := 0; i < 3; i++ {
+		dirName := fmt.Sprintf("dir_%d", i)
+		err := os.Mkdir(filepath.Join(dirsWithFiles, dirName), 0o755)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for j := 0; j < 3; j++ {
+			if err := ioutil.WriteFile(filepath.Join(dirsWithFiles, dirName, fmt.Sprintf("file%d.txt", j)), data, 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	for i := 0; i < 3; i++ {
+		dirName := fmt.Sprintf("dir_%d", i)
+		err := os.Mkdir(filepath.Join(mixedDir, dirName), 0o755)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := ioutil.WriteFile(filepath.Join(mixedDir, fmt.Sprintf("file%d.txt", i)), data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		for j := 0; j < 3; j++ {
+			if err := ioutil.WriteFile(filepath.Join(mixedDir, dirName, fmt.Sprintf("file%d.txt", j)), data, 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	tests := []struct {
+		srcDir   string
+		destDir  string
+		expected int
+	}{
+		{
+			srcDir:   emptyDir,
+			destDir:  filepath.Join(t.TempDir(), "empty"),
+			expected: 1,
+		},
+		{
+			srcDir:   filesOnly,
+			destDir:  filepath.Join(t.TempDir(), "filesOnly"),
+			expected: 4,
+		},
+		{
+			srcDir:   dirsOnly,
+			destDir:  filepath.Join(t.TempDir(), "dirsOnly"),
+			expected: 4,
+		},
+		{
+			srcDir:   dirsWithFiles,
+			destDir:  filepath.Join(t.TempDir(), "dirsWithFiles"),
+			expected: 13,
+		},
+		{
+			srcDir:   mixedDir,
+			destDir:  filepath.Join(t.TempDir(), "mixedDir"),
+			expected: 16,
+		},
+	}
+
+	for _, test := range tests {
+		err := copyDir(ctx, test.srcDir, test.destDir)
+		if err != nil {
+			t.Fatalf("Empty dir test failed: %v", err)
+		}
+		actual, err := listDirectory(test.destDir)
+		if err != nil {
+			t.Fatalf("Could not list dest dir for test %v: %v", test, err)
+		}
+		expected, err := listDirectory(test.srcDir)
+		if err != nil {
+			t.Fatalf("Could not list src dir for test %v: %v", test, err)
+		}
+		if len(expected) != test.expected {
+			t.Fatalf("src dir content length wrong. Expected %d actual: %d", len(expected), test.expected)
+		}
+		if len(actual) != len(expected) {
+			t.Fatalf("Mismatch content size. Actual: %v %v. Expected: %v %v", len(actual), actual, len(expected), test.expected)
+		}
+		for i, value := range expected {
+			if strings.TrimPrefix(actual[i], test.destDir) != strings.TrimPrefix(value, test.srcDir) {
+				t.Fatalf("Mismatch element %d  Actual: %v Expected: %v ", i, actual[i], value)
+			}
+		}
+
+	}
+}
+
+func listDirectory(dirname string) ([]string, error) {
+	contents := []string{}
+	err := filepath.Walk(dirname,
+		func(path string, _ os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			contents = append(contents, path)
+			return nil
+		})
+	return contents, err
 }
 
 /*
