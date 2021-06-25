@@ -8,7 +8,7 @@
 
 ## usage: fx build [--log FILENAME] [-SWITCH...] | TARGET ...]
 ##
-## This runs Ninja after performing a few sanity checks for the Fuchsia build.
+## This runs Ninja after performing a few correctness checks for the Fuchsia build.
 ##
 ## optional arguments:
 ##   --log LOGFILE            Print debug information to LOGFILE. Please attach
