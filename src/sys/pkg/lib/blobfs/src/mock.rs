@@ -12,7 +12,7 @@ use {
     },
     fuchsia_hash::Hash,
     fuchsia_zircon::{self as zx, AsHandleRef as _, Status},
-    futures::{StreamExt as _, TryStreamExt as _},
+    futures::{Future, StreamExt as _, TryStreamExt as _},
     std::{cmp::min, collections::HashSet, convert::TryInto as _},
 };
 
@@ -463,36 +463,38 @@ impl Blob {
         self.fail_write_with_status(Status::IO_DATA_INTEGRITY).await
     }
 
-    /// Succeeds the open request, then verifies the blob is truncated, written, and closed with
-    /// the given `expected` payload.
+    /// Succeeds the open request, then returns a future that, when awaited, verifies the blob is
+    /// truncated, written, and closed with the given `expected` payload.
     ///
     /// # Panics
     ///
     /// Panics on error
-    pub async fn expect_payload(mut self, expected: &[u8]) {
+    pub fn expect_payload(mut self, expected: &[u8]) -> impl Future<Output = ()> + '_ {
         self.send_on_open(Status::OK);
 
-        assert_eq!(self.expect_truncate().await, expected.len() as u64);
+        async move {
+            assert_eq!(self.expect_truncate().await, expected.len() as u64);
 
-        let mut rest = expected;
-        while !rest.is_empty() {
-            let expected_chunk = if rest.len() > fidl_fuchsia_io::MAX_BUF as usize {
-                &rest[..fidl_fuchsia_io::MAX_BUF as usize]
-            } else {
-                rest
-            };
-            assert_eq!(self.handle_write(Status::OK).await, expected_chunk);
-            rest = &rest[expected_chunk.len()..];
-        }
-
-        match self.stream.next().await {
-            Some(Ok(FileRequest::Close { responder })) => {
-                responder.send(Status::OK.into_raw()).unwrap();
+            let mut rest = expected;
+            while !rest.is_empty() {
+                let expected_chunk = if rest.len() > fidl_fuchsia_io::MAX_BUF as usize {
+                    &rest[..fidl_fuchsia_io::MAX_BUF as usize]
+                } else {
+                    rest
+                };
+                assert_eq!(self.handle_write(Status::OK).await, expected_chunk);
+                rest = &rest[expected_chunk.len()..];
             }
-            other => panic!("unexpected request: {:?}", other),
-        }
 
-        self.expect_done().await;
+            match self.stream.next().await {
+                Some(Ok(FileRequest::Close { responder })) => {
+                    responder.send(Status::OK.into_raw()).unwrap();
+                }
+                other => panic!("unexpected request: {:?}", other),
+            }
+
+            self.expect_done().await;
+        }
     }
 }
 

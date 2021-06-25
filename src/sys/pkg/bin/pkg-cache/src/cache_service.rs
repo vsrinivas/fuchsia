@@ -512,7 +512,12 @@ async fn handle_open_blobs(
                 running.push(async move { (blob_id, task.await) });
                 continue;
             }
+
             Event::Request(Some(NeededBlobsRequest::Abort { responder })) => {
+                // Finish all currently open blobs before aborting.
+                while !running.is_empty() {
+                    running.next().await;
+                }
                 drop(responder);
                 return Err(ServeNeededBlobsError::Aborted);
             }
@@ -907,9 +912,12 @@ mod serve_needed_blobs_tests {
         super::*,
         fidl_fuchsia_io::FileMarker,
         fidl_fuchsia_pkg::{BlobInfoIteratorMarker, BlobInfoIteratorProxy, NeededBlobsProxy},
+        fuchsia_async::Timer,
         fuchsia_hash::HashRangeFull,
         fuchsia_inspect as finspect,
+        futures::future::Either,
         matches::assert_matches,
+        std::time::Duration,
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1985,6 +1993,75 @@ mod serve_needed_blobs_tests {
             abort_fut.await,
             Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
         );
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+        blobfs.expect_done().await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn abort_waits_for_pending_blob_writes_before_responding() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+        let (task, proxy, pkgfs_install, pkgfs_needs, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+
+        let content_blob = Hash::from([1; 32]);
+
+        write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![content_blob]).await;
+        enumerate_readable_missing_blobs(
+            &proxy,
+            &mut blobfs,
+            std::iter::empty(),
+            vec![content_blob].into_iter(),
+        )
+        .await;
+
+        let payload = b"pending blob write";
+
+        let (pending_blob_mock_fut, blob) = future::join(
+            async { blobfs.expect_create_blob(content_blob).await.expect_payload(payload) },
+            async {
+                let (blob, blob_server_end) =
+                    fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+
+                let open_fut =
+                    proxy.open_blob(&mut BlobId::from(content_blob).into(), blob_server_end);
+
+                async move {
+                    assert_matches!(open_fut.await, Ok(Ok(true)));
+                }
+                .await;
+                blob
+            },
+        )
+        .await;
+
+        // abort the operation, expecting abort to complete only after any in-flight blob write
+        // operations finish.
+        let abort_fut =
+            match future::select(proxy.abort(), Timer::new(Duration::from_millis(50))).await {
+                Either::Left((r, _)) => panic!("abort future finished early ({:?})!", r),
+                Either::Right(((), abort_fut)) => abort_fut,
+            };
+
+        // unblock the abort by finishing the pending blob write.
+        let ((), ()) = future::join(
+            async {
+                pending_blob_mock_fut.await;
+            },
+            async {
+                let _ = blob.truncate(payload.len() as u64).await;
+                let _ = blob.write(payload).await;
+                let _ = blob.close().await;
+            },
+        )
+        .await;
+
+        assert_matches!(
+            abort_fut.await,
+            Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+        );
+
+        assert_matches!(task.await, Err(ServeNeededBlobsError::Aborted));
         pkgfs_install.expect_done().await;
         pkgfs_needs.expect_done().await;
         blobfs.expect_done().await;
