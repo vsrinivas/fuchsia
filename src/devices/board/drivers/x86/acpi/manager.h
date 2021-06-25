@@ -5,24 +5,16 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_MANAGER_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_MANAGER_H_
 
+#include <fuchsia/hardware/spi/llcpp/fidl.h>
 #include <lib/ddk/driver.h>
 #include <lib/zx/status.h>
 
 #include <string>
 #include <unordered_map>
 
-#include <bind/fuchsia/acpi/cpp/fidl.h>
-
 #include "acpi.h"
 #include "device.h"
 namespace acpi {
-
-enum BusType {
-  kUnknown = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_UNKNOWN,
-  kPci = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_PCI,
-  kSpi = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_SPI,
-  kI2c = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_I2C,
-};
 
 // PCI topology in the ACPI format.
 // Lowest 16 bits is function.
@@ -33,8 +25,9 @@ using PciTopo = uint64_t;
 // can't be an SPI and an I2C bus at the same time).
 // Every T in `DeviceChildEntry` should also have a std::vector<T> in DeviceChildData.
 // TODO(fxbug.dev/78198): support more child bus types.
-using DeviceChildData = std::variant<std::monostate, std::vector<PciTopo>>;
-using DeviceChildEntry = std::variant<PciTopo>;
+using DeviceChildData = std::variant<std::monostate, std::vector<PciTopo>,
+                                     std::vector<fuchsia_hardware_spi::wire::SpiChannel>>;
+using DeviceChildEntry = std::variant<PciTopo, fuchsia_hardware_spi::wire::SpiChannel>;
 
 // A helper class that takes ownership of the string value of a |zx_device_str_prop_t|.
 struct OwnedStringProp : zx_device_str_prop_t {
@@ -92,7 +85,7 @@ class DeviceBuilder {
     return builder;
   }
 
-  zx::status<zx_device_t*> Build(zx_device_t* platform_bus);
+  zx::status<zx_device_t*> Build(zx_device_t* platform_bus, fidl::AnyAllocator& allocator);
 
   void SetBusType(BusType t) {
     ZX_ASSERT(bus_type_ == kUnknown || bus_type_ == t);
@@ -130,9 +123,10 @@ class DeviceBuilder {
 
   // Walk this device's resources, checking to see if any are a SerialBus type.
   // If they are, calls |callback| with the handle to the bus, and the type of the bus, and a
-  // "DeviceChildData" entry representing this child.
-  using InferBusTypeCallback = std::function<void(ACPI_HANDLE, BusType, DeviceChildEntry)>;
-  acpi::status<> InferBusTypes(acpi::Acpi* acpi, InferBusTypeCallback callback);
+  // "DeviceChildEntry" representing this child. |callback| returns the bus ID of the bus device.
+  using InferBusTypeCallback = std::function<uint32_t(ACPI_HANDLE, BusType, DeviceChildEntry)>;
+  acpi::status<> InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator& allocator,
+                               InferBusTypeCallback callback);
 
   BusType GetBusType() { return bus_type_; }
   uint32_t GetBusId() { return bus_id_.value_or(UINT32_MAX); }
@@ -143,6 +137,7 @@ class DeviceBuilder {
   std::vector<OwnedStringProp>& GetStrProps() { return str_props_; }
 
  private:
+  zx::status<std::vector<uint8_t>> FidlEncodeMetadata(fidl::AnyAllocator& allocator);
   // Information about the device to be published.
   std::string name_;
   ACPI_HANDLE handle_;
@@ -185,6 +180,7 @@ class Manager {
   std::unordered_map<ACPI_HANDLE, DeviceBuilder> devices_;
   std::vector<ACPI_HANDLE> device_publish_order_;
   std::unordered_map<BusType, uint32_t> next_bus_ids_;
+  fidl::FidlAllocator<> allocator_;
   bool published_pci_bus_ = false;
 };
 

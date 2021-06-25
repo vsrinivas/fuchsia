@@ -4,6 +4,11 @@
 
 #include "src/devices/board/drivers/x86/acpi/resources.h"
 
+#include <fuchsia/hardware/spi/llcpp/fidl.h>
+
+#include "src/devices/board/drivers/x86/acpi/acpi.h"
+#include "src/devices/board/drivers/x86/acpi/status.h"
+
 bool resource_is_memory(ACPI_RESOURCE* res) {
   return res->Type == ACPI_RESOURCE_TYPE_MEMORY24 || res->Type == ACPI_RESOURCE_TYPE_MEMORY32 ||
          res->Type == ACPI_RESOURCE_TYPE_FIXED_MEMORY32;
@@ -21,6 +26,11 @@ bool resource_is_io(ACPI_RESOURCE* res) {
 
 bool resource_is_irq(ACPI_RESOURCE* res) {
   return res->Type == ACPI_RESOURCE_TYPE_IRQ || res->Type == ACPI_RESOURCE_TYPE_EXTENDED_IRQ;
+}
+
+bool resource_is_spi(ACPI_RESOURCE* res) {
+  return res->Type == ACPI_RESOURCE_TYPE_SERIAL_BUS &&
+         res->Data.CommonSerialBus.Type == ACPI_RESOURCE_SERIAL_TYPE_SPI;
 }
 
 zx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out) {
@@ -184,4 +194,29 @@ zx_status_t resource_parse_irq(ACPI_RESOURCE* res, resource_irq_t* out) {
   }
 
   return ZX_OK;
+}
+
+acpi::status<fuchsia_hardware_spi::wire::SpiChannel> resource_parse_spi(
+    acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyAllocator& allocator,
+    ACPI_HANDLE* resource_source) {
+  auto& spi_bus = res->Data.SpiSerialBus;
+  fuchsia_hardware_spi::wire::SpiChannel result(allocator);
+
+  // Figure out which bus the SPI device belongs to.
+  auto found_result = acpi->GetHandle(device, spi_bus.ResourceSource.StringPtr);
+  if (!found_result.is_ok()) {
+    return found_result.take_error();
+  }
+  *resource_source = found_result.value();
+  result.set_cs(allocator, spi_bus.DeviceSelection);
+  result.set_cs_polarity_high(allocator, spi_bus.DevicePolarity == ACPI_SPI_ACTIVE_HIGH);
+  result.set_word_length_bits(allocator, spi_bus.DataBitLength);
+  result.set_is_bus_controller(allocator, spi_bus.SlaveMode == ACPI_CONTROLLER_INITIATED);
+  result.set_clock_polarity_high(allocator, spi_bus.ClockPolarity == ACPI_SPI_START_HIGH);
+  result.set_clock_phase(allocator,
+                         spi_bus.ClockPhase == ACPI_SPI_FIRST_PHASE
+                             ? fuchsia_hardware_spi::wire::SpiClockPhase::kClockPhaseFirst
+                             : fuchsia_hardware_spi::wire::SpiClockPhase::kClockPhaseSecond);
+
+  return zx::ok(result);
 }

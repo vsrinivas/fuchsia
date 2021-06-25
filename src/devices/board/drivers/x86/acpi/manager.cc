@@ -4,6 +4,7 @@
 
 #include "manager.h"
 
+#include <fuchsia/hardware/spi/llcpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -17,8 +18,24 @@
 #include "src/devices/board/drivers/x86/acpi/util.h"
 
 namespace acpi {
-acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, InferBusTypeCallback callback) {
-  if (!handle_) {
+namespace {
+
+template <typename T>
+zx::status<std::vector<uint8_t>> DoFidlEncode(T data) {
+  fidl::OwnedEncodedMessage<T> encoded(&data);
+  if (!encoded.ok()) {
+    return zx::error(encoded.status());
+  }
+  auto message = encoded.GetOutgoingMessage().CopyBytes();
+  std::vector<uint8_t> result(message.size());
+  memcpy(result.data(), message.data(), message.size());
+  return zx::ok(std::move(result));
+}
+
+}  // namespace
+acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator& allocator,
+                                            InferBusTypeCallback callback) {
+  if (!handle_ || !parent_) {
     // Skip the root device.
     return acpi::ok();
   }
@@ -26,7 +43,23 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, InferBusTypeCallba
   bool has_address = false;
   // TODO(fxbug.dev/78565): Handle other resources like serial buses.
   auto result = acpi->WalkResources(
-      handle_, "_CRS", [callback = std::move(callback)](ACPI_RESOURCE* res) { return acpi::ok(); });
+      handle_, "_CRS",
+      [this, acpi, &has_address, &allocator, &callback](ACPI_RESOURCE* res) -> acpi::status<> {
+        if (resource_is_spi(res)) {
+          ACPI_HANDLE bus_parent;
+          auto result = resource_parse_spi(acpi, handle_, res, allocator, &bus_parent);
+          if (result.is_error()) {
+            zxlogf(WARNING, "Failed to parse SPI resource: %d", result.error_value());
+            return result.take_error();
+          }
+          uint32_t bus_id = callback(bus_parent, BusType::kSpi, result.value());
+          dev_props_.emplace_back(zx_device_prop_t{.id = BIND_SPI_BUS_ID, .value = bus_id});
+          dev_props_.emplace_back(
+              zx_device_prop_t{.id = BIND_SPI_CHIP_SELECT, .value = result->cs()});
+          has_address = true;
+        }
+        return acpi::ok();
+      });
   if (result.is_error() && result.zx_status_value() != ZX_ERR_NOT_FOUND) {
     return result.take_error();
   }
@@ -39,7 +72,7 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, InferBusTypeCallba
 
   // PCI is special, and PCI devices don't have an explicit resource. Instead, we need to check
   // _ADR for PCI addressing info.
-  if (parent_ && parent_->bus_type_ == BusType::kPci) {
+  if (parent_->bus_type_ == BusType::kPci) {
     if (info->Valid & ACPI_VALID_ADR) {
       callback(parent_->handle_, BusType::kPci, DeviceChildEntry(info->Address));
       // Set up some bind properties for ourselves. callback() should set HasBusId.
@@ -90,7 +123,7 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, InferBusTypeCallba
 
   // If our parent has a bus type, and we have an address on that bus, then we'll expose it in our
   // bind properties.
-  if (parent_ && parent_->GetBusType() != BusType::kUnknown && has_address) {
+  if (parent_->GetBusType() != BusType::kUnknown && has_address) {
     dev_props_.emplace_back(zx_device_prop_t{
         .id = BIND_ACPI_BUS_TYPE,
         .value = parent_->GetBusType(),
@@ -102,7 +135,8 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, InferBusTypeCallba
   return result;
 }
 
-zx::status<zx_device_t*> DeviceBuilder::Build(zx_device_t* platform_bus) {
+zx::status<zx_device_t*> DeviceBuilder::Build(zx_device_t* platform_bus,
+                                              fidl::AnyAllocator& allocator) {
   if (parent_->zx_device_ == nullptr) {
     zxlogf(ERROR, "Parent has not been added to the tree yet!");
     return zx::error(ZX_ERR_BAD_STATE);
@@ -111,8 +145,18 @@ zx::status<zx_device_t*> DeviceBuilder::Build(zx_device_t* platform_bus) {
     zxlogf(ERROR, "This device (%s) has already been built!", name());
     return zx::error(ZX_ERR_BAD_STATE);
   }
-  std::unique_ptr<Device> device =
-      std::make_unique<Device>(parent_->zx_device_, handle_, platform_bus);
+  std::unique_ptr<Device> device;
+  if (HasBusId() && bus_type_ != BusType::kPci) {
+    zx::status<std::vector<uint8_t>> metadata = FidlEncodeMetadata(allocator);
+    if (metadata.is_error()) {
+      zxlogf(ERROR, "Error while encoding metadata for '%s': %s", name(), metadata.status_string());
+      return metadata.take_error();
+    }
+    device = std::make_unique<Device>(parent_->zx_device_, handle_, platform_bus,
+                                      std::move(*metadata), bus_type_, GetBusId());
+  } else {
+    device = std::make_unique<Device>(parent_->zx_device_, handle_, platform_bus);
+  }
 
   // Narrow our custom type down to zx_device_str_prop_t.
   // Any strings in zx_device_str_prop_t will still point at their equivalents
@@ -140,6 +184,29 @@ zx::status<zx_device_t*> DeviceBuilder::Build(zx_device_t* platform_bus) {
   return zx::ok(zx_device_);
 }
 
+zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata(fidl::AnyAllocator& allocator) {
+  using SpiChannel = fuchsia_hardware_spi::wire::SpiChannel;
+  return std::visit(
+      [this, &allocator](auto&& arg) -> zx::status<std::vector<uint8_t>> {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, std::monostate>) {
+          return zx::ok(std::vector<uint8_t>());
+        } else if constexpr (std::is_same_v<T, std::vector<SpiChannel>>) {
+          ZX_ASSERT(HasBusId());  // Bus ID should get set when a child device is added.
+          fuchsia_hardware_spi::wire::SpiBusMetadata metadata(allocator);
+          for (auto& chan : arg) {
+            chan.set_bus_id(allocator, GetBusId());
+          }
+          auto channels = fidl::VectorView<SpiChannel>::FromExternal(arg);
+          metadata.set_channels(allocator, channels);
+          return DoFidlEncode(metadata);
+        } else {
+          return zx::error(ZX_ERR_NOT_SUPPORTED);
+        }
+      },
+      bus_children_);
+}
+
 acpi::status<> Manager::DiscoverDevices() {
   // Make sure our "ACPI root device" corresponds to the root of the ACPI tree.
   auto root = acpi_->GetHandle(nullptr, "\\");
@@ -163,16 +230,16 @@ acpi::status<> Manager::DiscoverDevices() {
 acpi::status<> Manager::ConfigureDiscoveredDevices() {
   for (auto& kv : devices_) {
     auto result = kv.second.InferBusTypes(
-        acpi_, [this](ACPI_HANDLE bus, BusType type, DeviceChildEntry child) {
+        acpi_, allocator_, [this](ACPI_HANDLE bus, BusType type, DeviceChildEntry child) {
           DeviceBuilder* b = LookupDevice(bus);
           if (b == nullptr) {
             // Silently ignore.
-            return;
+            return UINT32_MAX;
           }
           b->SetBusType(type);
           b->AddBusChild(child);
           if (b->HasBusId()) {
-            return;
+            return b->GetBusId();
           }
 
           // If this device is a bus, figure out its bus id.
@@ -189,12 +256,13 @@ acpi::status<> Manager::ConfigureDiscoveredDevices() {
               bus_id = bbn_result.value();
             } else {
               zxlogf(ERROR, "Failed to get BBN for PCI bus '%s'", b->name());
-              return;
+              return UINT32_MAX;
             }
           } else {
             bus_id = next_bus_ids_.emplace(type, 0).first->second++;
           }
           b->SetBusId(bus_id);
+          return bus_id;
         });
     if (result.is_error()) {
       zxlogf(WARNING, "Failed to InferBusTypes for %s: %d", kv.second.name(), result.error_value());
@@ -211,7 +279,7 @@ acpi::status<> Manager::PublishDevices(zx_device_t* platform_bus) {
       continue;
     }
 
-    auto status = d->Build(platform_bus);
+    auto status = d->Build(platform_bus, allocator_);
     if (status.is_error()) {
       return acpi::error(AE_ERROR);
     }

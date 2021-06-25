@@ -194,3 +194,46 @@ TEST_F(AcpiManagerTest, TestDeviceWithHidCid) {
           zx_device_str_prop_t{.key = "acpi.hid", .property_value = str_prop_str_val("GGGG0000")},
       }));
 }
+
+TEST_F(AcpiManagerTest, TestSpiDevice) {
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::make_unique<Device>("SPI0")));
+  auto device = std::make_unique<Device>("S002");
+  ACPI_RESOURCE spi_resource = {
+      .Type = ACPI_RESOURCE_TYPE_SERIAL_BUS,
+      .Data =
+          {
+              .SpiSerialBus =
+                  {
+                      .Type = ACPI_RESOURCE_SERIAL_TYPE_SPI,
+                      .SlaveMode = ACPI_CONTROLLER_INITIATED,
+                      .ResourceSource =
+                          {
+                              .Index = 0,
+                              .StringLength = sizeof("\\_SB_.SPI0") - 1,
+                              .StringPtr = const_cast<char*>("\\_SB_.SPI0"),
+                          },
+
+                      .DevicePolarity = ACPI_SPI_ACTIVE_LOW,
+                      .DataBitLength = 8,
+                      .ClockPhase = ACPI_SPI_FIRST_PHASE,
+                      .ClockPolarity = ACPI_SPI_START_HIGH,
+                      .DeviceSelection = 2,
+                  },
+          },
+  };
+  device->AddResource(spi_resource);
+  ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_.SPI0", std::move(device)));
+  ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());
+
+  Device* test = acpi_.GetDeviceRoot()->FindByPath("\\_SB_.SPI0.S002");
+  acpi::DeviceBuilder* builder = manager_.LookupDevice(test);
+  ASSERT_NO_FATAL_FAILURES(
+      ExpectProps(builder,
+                  {
+                      zx_device_prop_t{.id = BIND_SPI_BUS_ID, .value = 0},
+                      zx_device_prop_t{.id = BIND_SPI_CHIP_SELECT, .value = 2},
+                      zx_device_prop_t{.id = BIND_ACPI_BUS_TYPE, .value = acpi::BusType::kSpi},
+                  },
+                  {}));
+}

@@ -12,7 +12,10 @@ group("tests") {
   }
 }
 
-shared_public_deps = [ "//src/devices/bind/fuchsia.acpi:bind.fuchsia.acpi" ]
+shared_public_deps = [
+  "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
+  "//src/devices/bind/fuchsia.acpi:bind.fuchsia.acpi",
+]
 shared_deps = [
   "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",

@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <zircon/syscalls/resource.h>
 
 #include <fbl/auto_lock.h>
@@ -129,6 +130,23 @@ zx_status_t Device::ReportCurrentResources() {
   got_resources_ = true;
 
   return ZX_OK;
+}
+
+void Device::DdkInit(ddk::InitTxn txn) {
+  if (metadata_.empty()) {
+    txn.Reply(ZX_OK);
+    return;
+  }
+  zx_status_t result = ZX_OK;
+  switch (bus_type_) {
+    case BusType::kSpi:
+      result = DdkAddMetadata(DEVICE_METADATA_SPI_CHANNELS, metadata_.data(), metadata_.size());
+      break;
+    default:
+      break;
+  }
+
+  txn.Reply(result);
 }
 
 zx_status_t Device::AcpiGetPio(uint32_t index, zx::resource* out_pio) {

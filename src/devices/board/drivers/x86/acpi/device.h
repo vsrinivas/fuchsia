@@ -11,12 +11,19 @@
 #include <utility>
 
 #include <acpica/acpi.h>
+#include <bind/fuchsia/acpi/cpp/fidl.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
 #include "src/devices/board/drivers/x86/acpi/resources.h"
 
 namespace acpi {
+enum BusType {
+  kUnknown = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_UNKNOWN,
+  kPci = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_PCI,
+  kSpi = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_SPI,
+  kI2c = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_I2C,
+};
 
 struct DevicePioResource {
   explicit DevicePioResource(const resource_io& io)
@@ -67,11 +74,20 @@ struct DeviceIrqResource {
 };
 
 class Device;
-using DeviceType = ddk::Device<::acpi::Device>;
+using DeviceType = ddk::Device<::acpi::Device, ddk::Initializable>;
 class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_protocol> {
  public:
   Device(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus)
       : DeviceType{parent}, acpi_handle_{acpi_handle}, platform_bus_{platform_bus} {}
+
+  Device(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus,
+         std::vector<uint8_t> metadata, BusType bus_type, uint32_t bus_id)
+      : DeviceType{parent},
+        acpi_handle_{acpi_handle},
+        platform_bus_{platform_bus},
+        metadata_{std::move(metadata)},
+        bus_type_{bus_type},
+        bus_id_{bus_id} {}
 
   Device(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus,
          std::vector<pci_bdf_t> pci_bdfs)
@@ -110,6 +126,12 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
   std::vector<DevicePioResource> pio_resources_;
   std::vector<DeviceMmioResource> mmio_resources_;
   std::vector<DeviceIrqResource> irqs_;
+
+  // FIDL-encoded child metadata.
+  std::vector<uint8_t> metadata_;
+  BusType bus_type_ = BusType::kUnknown;
+  // TODO(fxbug.dev/79557): expose this information to drivers so they know their own bus ID.
+  __UNUSED uint32_t bus_id_ = UINT32_MAX;
 
   // TODO(fxbug.dev/32978): remove once kernel PCI is no longer used.
   std::vector<pci_bdf_t> pci_bdfs_;
