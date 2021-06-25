@@ -264,9 +264,7 @@ pub(crate) async fn reboot(to_addr: TargetAddr) -> Result<()> {
     to_sock.set_port(ZEDBOOT_CMD_SERVER_PORT);
     log::info!("Sending Zedboot reboot to {}", to_sock);
     let sock = make_sender_socket(to_sock).await?;
-    unsafe {
-        sock.send(zed.as_bytes()).await.map_err(|e| anyhow!("Sending error: {}", e)).map(|_| ())
-    }
+    sock.send(zed.as_bytes()).await.map_err(|e| anyhow!("Sending error: {}", e)).map(|_| ())
 }
 
 pub(crate) async fn reboot_to_bootloader(to_addr: TargetAddr) -> Result<()> {
