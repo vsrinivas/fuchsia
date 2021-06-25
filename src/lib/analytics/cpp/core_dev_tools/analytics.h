@@ -152,6 +152,12 @@ class Analytics {
     }
   }
 
+  static void IfEnabledSendGoogleAnalyticsHit(const google_analytics::Hit& hit) {
+    if (IsEnabled()) {
+      SendGoogleAnalyticsHit(hit);
+    }
+  }
+
   static void CleanUp() {
     delete client_;
     client_ = nullptr;
