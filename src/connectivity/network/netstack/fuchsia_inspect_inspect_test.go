@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
@@ -17,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	ethernetext "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlext/fuchsia/hardware/ethernet"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
@@ -27,6 +29,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"go.uber.org/multierr"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
@@ -43,48 +46,121 @@ const (
 	ipv6Addr = tcpip.Address("\x00\x0a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01")
 )
 
-func TestStatCounterInspectImpl(t *testing.T) {
-	s := tcpip.Stats{}.FillIn()
-	v := statCounterInspectImpl{
-		name:  "doesn't matter",
-		value: reflect.ValueOf(s),
-	}
-	children := v.ListChildren()
+func checkStats(stats *statCounterInspectImpl, expectedNonZeroMetrics []inspect.Metric, expectedChildren []string, expectedChildrenData []inspect.Object) error {
+	var err error
 
-	if diff := cmp.Diff([]string{
-		"NICs",
-		"ICMP",
-		"IGMP",
-		"IP",
-		"ARP",
-		"TCP",
-		"UDP",
-	}, children); diff != "" {
-		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+	containsMetric := func(metrics []inspect.Metric, metricToFind inspect.Metric) bool {
+		for _, metric := range metrics {
+			if metric == metricToFind {
+				return true
+			}
+		}
+
+		return false
 	}
-	for _, childName := range children {
-		if child := v.GetChild(childName); child == nil {
-			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
-		} else if _, ok := child.(*statCounterInspectImpl); !ok {
-			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &statCounterInspectImpl{})
+
+	metrics := stats.ReadData().Metrics
+
+	for _, metric := range metrics {
+		if metric.Value != inspect.MetricValueWithUintValue(0) && !containsMetric(expectedNonZeroMetrics, metric) {
+			err = multierr.Append(err, fmt.Errorf("ReadData() mismatch: found unexpected non-zero metric %#v", metric))
 		}
 	}
 
-	childName := "not a real child"
-	if child := v.GetChild(childName); child != nil {
-		t.Errorf("got GetChild(%s) = %s, want = nil", childName, child)
+	for _, metric := range expectedNonZeroMetrics {
+		if !containsMetric(metrics, metric) {
+			err = multierr.Append(err, fmt.Errorf("ReadData() mismatch: missing expected non-zero metric %#v", metric))
+		}
 	}
 
-	s.NICs.MalformedL4RcvdPackets.IncrementBy(2)
-	s.DroppedPackets.IncrementBy(3)
+	children := stats.ListChildren()
+	if diff := cmp.Diff(expectedChildren, children); diff != "" {
+		err = multierr.Append(err, fmt.Errorf("ListChildren() mismatch (-want +got):\n%s", diff))
+	}
 
-	if diff := cmp.Diff(inspect.Object{
-		Name: v.name,
-		Metrics: []inspect.Metric{
-			{Key: "DroppedPackets", Value: inspect.MetricValueWithUintValue(s.DroppedPackets.Value())},
+	childName := "not a real child"
+	if child := stats.GetChild(childName); child != nil {
+		err = multierr.Append(err, fmt.Errorf("got GetChild(%s) = %s, want = nil", childName, child))
+	}
+
+	for i, childName := range children {
+		if child := stats.GetChild(childName); child == nil {
+			err = multierr.Append(err, fmt.Errorf("got GetChild(%s) = nil, want non-nil", childName))
+		} else if entry, ok := child.(*integralStatCounterMapInspectImpl); ok {
+			err = multierr.Append(err, statCounterMapChecker(entry, expectedChildrenData[i].Metrics))
+		} else if _, ok := child.(*statCounterInspectImpl); !ok {
+			err = multierr.Append(err, fmt.Errorf("got GetChild(%s) = %#v, want %T", childName, child, (*statCounterInspectImpl)(nil)))
+		}
+	}
+
+	return err
+}
+
+func TestStatCounterInspectImpl(t *testing.T) {
+	var invalidPortCounter tcpip.StatCounter
+	const invalidPort = 1
+	const invalidPortCount = 10
+	invalidPortCounter.IncrementBy(invalidPortCount)
+	s := dhcp.Stats{
+		PacketDiscardStats: dhcp.PacketDiscardStats{
+			InvalidPort: map[uint16]*tcpip.StatCounter{
+				invalidPort: &invalidPortCounter,
+			},
 		},
-	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{})); diff != "" {
-		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+	}
+
+	s.InitAcquire.IncrementBy(3)
+
+	v := statCounterInspectImpl{
+		name:  "doesn't matter",
+		value: reflect.ValueOf(&s).Elem(),
+	}
+
+	expectedChildren := []string{
+		"PacketDiscardStats",
+	}
+	expectedChildrenData := []inspect.Object{
+		{
+			Name: "PacketDiscardStats",
+		},
+	}
+
+	expectedMetrics := []inspect.Metric{
+		{Key: "InitAcquire", Value: inspect.MetricValueWithUintValue(3)},
+	}
+
+	if err := checkStats(&v, expectedMetrics, expectedChildren, expectedChildrenData); err != nil {
+		t.Error(err)
+	}
+
+	child := v.GetChild("PacketDiscardStats")
+	discardStats, ok := child.(*statCounterInspectImpl)
+	if !ok {
+		t.Fatalf("got GetChild(PacketDiscardStats) = %#v, want %T", child, (*statCounterInspectImpl)(nil))
+	}
+
+	expectedChildren = []string{
+		"InvalidPort",
+		"InvalidTransProto",
+		"InvalidPacketType",
+	}
+	expectedChildrenData = []inspect.Object{
+		{
+			Name: "InvalidPort",
+			Metrics: []inspect.Metric{
+				{Key: strconv.Itoa(invalidPort), Value: inspect.MetricValueWithUintValue(invalidPortCounter.Value())},
+			},
+		},
+		{
+			Name: "InvalidTransProto",
+		},
+		{
+			Name: "InvalidPacketType",
+		},
+	}
+
+	if err := checkStats(discardStats, nil, expectedChildren, expectedChildrenData); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -112,7 +188,7 @@ func circularLogsChecker(logs *circularLogsInspectImpl, expectedChildren []strin
 		if child := logs.GetChild(childName); child == nil {
 			errors = append(errors, fmt.Errorf("got GetChild(%s) = nil, want non-nil", childName))
 		} else if entry, ok := child.(*logEntryInspectImpl); !ok {
-			errors = append(errors, fmt.Errorf("got GetChild(%s) = %T, want %T", childName, child, &statCounterInspectImpl{}))
+			errors = append(errors, fmt.Errorf("got GetChild(%s) = %#v, want %T", childName, child, (*statCounterInspectImpl)(nil)))
 		} else {
 			if diff := cmp.Diff(expectedChildrenData[i], entry.ReadData(), cmpopts.IgnoreUnexported(
 				inspect.Object{}, inspect.Metric{})); diff != "" {
@@ -157,6 +233,68 @@ func TestCircularLogsInspectImpl(t *testing.T) {
 	errors := circularLogsChecker(&v, expectedChildren, expectedChildrenData)
 	for _, err := range errors {
 		t.Error(err)
+	}
+}
+
+func statCounterMapChecker(counterMap *integralStatCounterMapInspectImpl, expectedMetrics []inspect.Metric) error {
+	var err error
+
+	if diff := cmp.Diff(inspect.Object{
+		Name:    counterMap.name,
+		Metrics: expectedMetrics,
+	}, counterMap.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{})); diff != "" {
+		err = multierr.Append(err, fmt.Errorf("ReadData() mismatch (-want +got):\n%s", diff))
+	}
+
+	if children := counterMap.ListChildren(); children != nil {
+		err = multierr.Append(err, fmt.Errorf("got ListChildren() = %s, want = nil", children))
+	}
+
+	childName := "not a real child"
+	if child := counterMap.GetChild(childName); child != nil {
+		err = multierr.Append(err, fmt.Errorf("got GetChild(%s) = %s, want = nil", childName, child))
+	}
+
+	return err
+}
+
+func TestIntegralStatCounterMapInspectImpl(t *testing.T) {
+	keyTypes := []reflect.Type{
+		reflect.TypeOf((*int)(nil)).Elem(),
+		reflect.TypeOf((*int8)(nil)).Elem(),
+		reflect.TypeOf((*int16)(nil)).Elem(),
+		reflect.TypeOf((*int32)(nil)).Elem(),
+		reflect.TypeOf((*int64)(nil)).Elem(),
+		reflect.TypeOf((*uint)(nil)).Elem(),
+		reflect.TypeOf((*uint8)(nil)).Elem(),
+		reflect.TypeOf((*uint16)(nil)).Elem(),
+		reflect.TypeOf((*uint32)(nil)).Elem(),
+		reflect.TypeOf((*uint64)(nil)).Elem(),
+	}
+
+	for _, keyType := range keyTypes {
+		valueType := reflect.TypeOf((*tcpip.StatCounter)(nil))
+		mapType := reflect.MapOf(keyType, valueType)
+		mapValue := reflect.MakeMapWithSize(mapType, 0)
+
+		const key = 1
+		const value = 10
+		var counter tcpip.StatCounter
+		counter.IncrementBy(value)
+
+		mapValue.SetMapIndex(reflect.ValueOf(key).Convert(keyType), reflect.ValueOf(&counter))
+		v := integralStatCounterMapInspectImpl{
+			name:  "doesn't matter",
+			value: mapValue,
+		}
+
+		expectedMetrics := []inspect.Metric{
+			{Key: strconv.Itoa(key), Value: inspect.MetricValueWithUintValue(counter.Value())},
+		}
+
+		if err := statCounterMapChecker(&v, expectedMetrics); err != nil {
+			t.Error(err)
+		}
 	}
 }
 
@@ -311,7 +449,7 @@ func TestNicInfoMapInspectImpl(t *testing.T) {
 		if child := v.GetChild(childName); child == nil {
 			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
 		} else if _, ok := child.(*nicInfoInspectImpl); !ok {
-			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &nicInfoInspectImpl{})
+			t.Errorf("got GetChild(%s) = %#v, want %T", childName, child, (*nicInfoInspectImpl)(nil))
 		}
 	}
 
@@ -341,7 +479,7 @@ func TestNicInfoInspectImpl(t *testing.T) {
 		if child := v.GetChild(childName); child == nil {
 			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
 		} else if _, ok := child.(*statCounterInspectImpl); !ok {
-			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &statCounterInspectImpl{})
+			t.Errorf("got GetChild(%s) = %#v, want %T", childName, child, (*statCounterInspectImpl)(nil))
 		}
 	}
 
@@ -378,11 +516,38 @@ func TestNicInfoInspectImpl(t *testing.T) {
 }
 
 func TestDHCPInfoInspectImpl(t *testing.T) {
+	var invalidPortCounter, invalidTransProtoCounter, invalidPacketTypeCounter tcpip.StatCounter
+
+	const invalidPort = 1
+	const invalidPortCount = 10
+	invalidPortCounter.IncrementBy(invalidPortCount)
+
+	const invalidTransProto = 2
+	const invalidTransProtoCount = 20
+	invalidTransProtoCounter.IncrementBy(invalidTransProtoCount)
+
+	const invalidPacketType = 3
+	const invalidPacketTypeCount = 30
+	invalidPacketTypeCounter.IncrementBy(invalidPacketTypeCount)
+
 	v := dhcpInfoInspectImpl{
 		name: "doesn't matter",
 		stateRecentHistory: []util.LogEntry{
 			{Timestamp: 1, Content: "1"},
 			{Timestamp: 2, Content: "2"},
+		},
+		stats: &dhcp.Stats{
+			PacketDiscardStats: dhcp.PacketDiscardStats{
+				InvalidPort: map[uint16]*tcpip.StatCounter{
+					invalidPort: &invalidPortCounter,
+				},
+				InvalidTransProto: map[tcpip.TransportProtocolNumber]*tcpip.StatCounter{
+					invalidTransProto: &invalidTransProtoCounter,
+				},
+				InvalidPacketType: map[tcpip.PacketType]*tcpip.StatCounter{
+					invalidPacketType: &invalidPacketTypeCounter,
+				},
+			},
 		},
 	}
 	children := v.ListChildren()
@@ -393,10 +558,61 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 	}
 
 	{
+		// Validate Stats struct.
 		child := v.GetChild("Stats")
-		_, ok := child.(*statCounterInspectImpl)
+		stats, ok := child.(*statCounterInspectImpl)
 		if !ok {
-			t.Errorf("got GetChild(Stats) = %T, want %T", child, &statCounterInspectImpl{})
+			t.Fatalf("got GetChild(Stats) = %#v, want %T", child, (*statCounterInspectImpl)(nil))
+		}
+
+		expectedChildren := []string{
+			"PacketDiscardStats",
+		}
+		expectedChildrenData := []inspect.Object{
+			{
+				Name: "PacketDiscardStats",
+			},
+		}
+
+		if err := checkStats(stats, nil, expectedChildren, expectedChildrenData); err != nil {
+			t.Error(err)
+		}
+
+		// Validate PacketDiscardStats struct.
+		child = stats.GetChild("PacketDiscardStats")
+		discardStats, ok := child.(*statCounterInspectImpl)
+		if !ok {
+			t.Fatalf("got GetChild(PacketDiscardStats) = %#v, want %T", child, (*statCounterInspectImpl)(nil))
+		}
+
+		expectedChildren = []string{
+			"InvalidPort",
+			"InvalidTransProto",
+			"InvalidPacketType",
+		}
+		expectedChildrenData = []inspect.Object{
+			{
+				Name: "InvalidPort",
+				Metrics: []inspect.Metric{
+					{Key: strconv.Itoa(invalidPort), Value: inspect.MetricValueWithUintValue(invalidPortCounter.Value())},
+				},
+			},
+			{
+				Name: "InvalidTransProto",
+				Metrics: []inspect.Metric{
+					{Key: strconv.Itoa(invalidTransProto), Value: inspect.MetricValueWithUintValue(invalidTransProtoCounter.Value())},
+				},
+			},
+			{
+				Name: "InvalidPacketType",
+				Metrics: []inspect.Metric{
+					{Key: strconv.Itoa(invalidPacketType), Value: inspect.MetricValueWithUintValue(invalidPacketTypeCounter.Value())},
+				},
+			},
+		}
+
+		if err := checkStats(discardStats, nil, expectedChildren, expectedChildrenData); err != nil {
+			t.Error(err)
 		}
 	}
 
@@ -435,7 +651,7 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 		child := v.GetChild("DHCP State Recent History")
 		recentHistory, ok := child.(*circularLogsInspectImpl)
 		if !ok {
-			t.Errorf("got GetChild(DHCP State Recent History) = %T, want %T", child, &statCounterInspectImpl{})
+			t.Errorf("got GetChild(DHCP State Recent History) %#v, want %T", child, (*statCounterInspectImpl)(nil))
 		}
 
 		if recentHistory != nil {
@@ -522,7 +738,7 @@ func TestEthInfoInspectImpl(t *testing.T) {
 		if child := v.GetChild(childName); child == nil {
 			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
 		} else if _, ok := child.(*fifoStatsInspectImpl); !ok {
-			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &fifoStatsInspectImpl{})
+			t.Errorf("got GetChild(%s) = %#v, want %T", childName, child, (*fifoStatsInspectImpl)(nil))
 		}
 	}
 
@@ -622,7 +838,7 @@ func TestRoutingTableInspectImpl(t *testing.T) {
 		if child := impl.GetChild(childName); child == nil {
 			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
 		} else if _, ok := child.(*routeInfoInspectImpl); !ok {
-			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &routeInfoInspectImpl{})
+			t.Errorf("got GetChild(%s) = %#v, want %T", childName, child, (*routeInfoInspectImpl)(nil))
 		}
 	}
 
@@ -747,7 +963,7 @@ func TestNetworkEndpointStatsInspectImpl(t *testing.T) {
 		if child := impl.GetChild(childName); child == nil {
 			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
 		} else if _, ok := child.(*statCounterInspectImpl); !ok {
-			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &statCounterInspectImpl{})
+			t.Errorf("got GetChild(%s) = %#v, want %T", childName, child, (*statCounterInspectImpl)(nil))
 		}
 	}
 
@@ -794,7 +1010,7 @@ func TestNeighborTableInspectImpl(t *testing.T) {
 		if child := impl.GetChild(childName); child == nil {
 			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
 		} else if _, ok := child.(*neighborInfoInspectImpl); !ok {
-			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &neighborInfoInspectImpl{})
+			t.Errorf("got GetChild(%s) = %#v, want %T", childName, child, (*neighborInfoInspectImpl)(nil))
 		}
 	}
 

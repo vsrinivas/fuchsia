@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package dhcp
@@ -89,8 +90,15 @@ type Client struct {
 	now            func() time.Time
 }
 
+type PacketDiscardStats struct {
+	InvalidPort       map[uint16]*tcpip.StatCounter
+	InvalidTransProto map[tcpip.TransportProtocolNumber]*tcpip.StatCounter
+	InvalidPacketType map[tcpip.PacketType]*tcpip.StatCounter
+}
+
 // Stats collects DHCP statistics per client.
 type Stats struct {
+	PacketDiscardStats          PacketDiscardStats
 	InitAcquire                 tcpip.StatCounter
 	RenewAcquire                tcpip.StatCounter
 	RebindAcquire               tcpip.StatCounter
@@ -175,6 +183,13 @@ func NewClient(
 		acquire:            acquire,
 		now:                time.Now,
 		stateRecentHistory: util.MakeCircularLogs(stateRecentHistoryLength),
+		stats: Stats{
+			PacketDiscardStats: PacketDiscardStats{
+				InvalidPort:       make(map[uint16]*tcpip.StatCounter),
+				InvalidTransProto: make(map[tcpip.TransportProtocolNumber]*tcpip.StatCounter),
+				InvalidPacketType: make(map[tcpip.PacketType]*tcpip.StatCounter),
+			},
+		},
 	}
 	c.StoreInfo(&Info{
 		NICID:          nicid,
@@ -989,12 +1004,18 @@ func (c *Client) recv(
 		}
 
 		if res.LinkPacketInfo.Protocol != header.IPv4ProtocolNumber {
-			continue
+			panic(fmt.Sprintf("received packet with non-IPv4 network protocol number: %d", header.IPv4ProtocolNumber))
 		}
 
 		switch res.LinkPacketInfo.PktType {
 		case tcpip.PacketHost, tcpip.PacketBroadcast:
 		default:
+			counter, ok := c.stats.PacketDiscardStats.InvalidPacketType[res.LinkPacketInfo.PktType]
+			if !ok {
+				counter = new(tcpip.StatCounter)
+				c.stats.PacketDiscardStats.InvalidPacketType[res.LinkPacketInfo.PktType] = counter
+			}
+			counter.Increment()
 			continue
 		}
 
@@ -1031,33 +1052,47 @@ func (c *Client) recv(
 			continue
 		}
 		if ip.TransportProtocol() != header.UDPProtocolNumber {
+			counter, ok := c.stats.PacketDiscardStats.InvalidTransProto[ip.TransportProtocol()]
+			if !ok {
+				counter = new(tcpip.StatCounter)
+				c.stats.PacketDiscardStats.InvalidTransProto[ip.TransportProtocol()] = counter
+			}
+			counter.Increment()
 			continue
 		}
 		udp := header.UDP(ip.Payload())
 		if len(udp) < header.UDPMinimumSize {
 			_ = syslog.WarnTf(
 				tag,
-				"%s: received malformed UDP frame (%s@%s -> %s); discarding %d bytes",
+				"%s: discarding malformed UDP frame (%s@%s -> %s) with length (%d) < minimum UDP size (%d)",
 				nicName,
 				ip.SourceAddress(),
 				senderAddr,
 				ip.DestinationAddress(),
 				len(udp),
+				header.UDPMinimumSize,
 			)
 			continue
 		}
 		if udp.DestinationPort() != ClientPort {
+			counter, ok := c.stats.PacketDiscardStats.InvalidPort[udp.DestinationPort()]
+			if !ok {
+				counter = new(tcpip.StatCounter)
+				c.stats.PacketDiscardStats.InvalidPort[udp.DestinationPort()] = counter
+			}
+			counter.Increment()
 			continue
 		}
 		if udp.Length() > uint16(len(udp)) {
 			_ = syslog.WarnTf(
 				tag,
-				"%s: received malformed UDP frame (%s@%s -> %s); discarding %d bytes",
+				"%s: discarding malformed UDP frame (%s@%s -> %s) with length (%d) < the header-specified length (%d)",
 				nicName,
 				ip.SourceAddress(),
 				senderAddr,
 				ip.DestinationAddress(),
 				len(udp),
+				udp.Length(),
 			)
 			continue
 		}
@@ -1087,7 +1122,17 @@ func (c *Client) recv(
 		}
 
 		if !bytes.Equal(h.xidbytes(), c.xid[:]) {
-			// This message is for another client, ignore silently.
+			_ = syslog.InfoTf(
+				tag,
+				"%s: received UDP frame (%s@%s -> %s) whose xid (%x) != the client's xid (%x); discarding %d bytes",
+				nicName,
+				ip.SourceAddress(),
+				senderAddr,
+				ip.DestinationAddress(),
+				h.xidbytes(),
+				c.xid[:],
+				len(udp),
+			)
 			continue
 		}
 

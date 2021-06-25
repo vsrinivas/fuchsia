@@ -6,10 +6,21 @@
 
 use anyhow::Context as _;
 use diagnostics_hierarchy::Property;
+use fuchsia_inspect::testing::TreeAssertion;
+use itertools::Itertools as _;
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
+use net_types::ip::{self as net_types_ip, Ip as _};
 use netemul::Endpoint as _;
 use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
-use netstack_testing_common::{get_inspect_data, Result};
+use netstack_testing_common::{constants, get_inspect_data, Result};
+use netstack_testing_macros::variants_test;
+use packet::Serializer as _;
+use packet_formats::ethernet::{EtherType, EthernetFrameBuilder};
+use packet_formats::ipv4::Ipv4PacketBuilder;
+use packet_formats::udp::UdpPacketBuilder;
+use std::collections::HashMap;
+use std::num::NonZeroU16;
+use test_case::test_case;
 
 /// A helper type to provide address verification in inspect NIC data.
 ///
@@ -404,6 +415,143 @@ async fn inspect_routing_table() -> Result {
     }
 
     Ok(())
+}
+
+struct PacketAttributes {
+    ip_proto: packet_formats::ip::Ipv4Proto,
+    port: NonZeroU16,
+}
+
+const INVALID_PORT: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(1234) };
+
+#[variants_test]
+#[test_case(
+    vec![
+        PacketAttributes {
+            ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Tcp),
+            port: unsafe { NonZeroU16::new_unchecked(dhcp::protocol::CLIENT_PORT) }
+        }
+    ]; "invalid trans proto")]
+#[test_case(
+    vec![
+        PacketAttributes {
+            ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
+            port: INVALID_PORT
+        }
+    ]; "invalid port")]
+#[test_case(
+    vec![
+        PacketAttributes {
+            ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
+            port: unsafe { NonZeroU16::new_unchecked(dhcp::protocol::CLIENT_PORT) }
+        }
+    ]; "valid")]
+#[test_case(
+    vec![
+        PacketAttributes {
+            ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
+            port: INVALID_PORT
+        },
+        PacketAttributes {
+            ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
+            port: INVALID_PORT
+        },
+            PacketAttributes {
+            ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Tcp),
+            port: unsafe { NonZeroU16::new_unchecked(dhcp::protocol::CLIENT_PORT) }
+        }
+    ]; "multiple invalid port and single invalid trans proto")]
+async fn inspect_dhcp<E: netemul::Endpoint>(
+    _test_name: &str,
+    inbound_packets: Vec<PacketAttributes>,
+) {
+    // TODO(https://fxbug.dev/79556): Extend this test to cover the stat tracking frames discarded
+    // due to an invalid PacketType.
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("net").await.expect("failed to create network");
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>("inspect_dhcp")
+        .expect("failed to create realm");
+    let eth = realm
+        .join_network::<E, _>(&network, "ep1", &netemul::InterfaceConfig::Dhcp)
+        .await
+        .expect("failed to join network");
+
+    let fake_ep = network.create_fake_endpoint().expect("failed to create fake endpoint");
+
+    const SRC_IP: net_types_ip::Ipv4Addr = net_types_ip::Ipv4::UNSPECIFIED_ADDRESS;
+    const DST_IP: net_types::SpecifiedAddr<net_types_ip::Ipv4Addr> =
+        net_types_ip::Ipv4::GLOBAL_BROADCAST_ADDRESS;
+
+    for PacketAttributes { ip_proto, port } in &inbound_packets {
+        let ser = packet::Buf::new(&mut [], ..)
+            .encapsulate(UdpPacketBuilder::new(SRC_IP, *DST_IP, None, *port))
+            .encapsulate(Ipv4PacketBuilder::new(SRC_IP, DST_IP, /* ttl */ 1, *ip_proto))
+            .encapsulate(EthernetFrameBuilder::new(
+                net_types::ethernet::Mac::BROADCAST,
+                constants::eth::MAC_ADDR,
+                EtherType::Ipv4,
+            ))
+            .serialize_vec_outer()
+            .expect("failed to serialize UDP packet")
+            .unwrap_b();
+        let () = fake_ep.write(ser.as_ref()).await.expect("failed to write to endpoint");
+    }
+
+    const DISCARD_STATS_NAME: &str = "PacketDiscardStats";
+    const INVALID_PORT_STAT_NAME: &str = "InvalidPort";
+    const INVALID_TRANS_PROTO_STAT_NAME: &str = "InvalidTransProto";
+    const INVALID_PACKET_TYPE_STAT_NAME: &str = "InvalidPacketType";
+    let path = ["Stats", "DHCP Info", &eth.id().to_string(), "NICs"];
+
+    let mut invalid_ports = HashMap::<NonZeroU16, u64>::new();
+    let mut invalid_trans_protos = HashMap::<u8, u64>::new();
+
+    for PacketAttributes { port, ip_proto } in inbound_packets {
+        if ip_proto != packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp) {
+            let _: &mut u64 =
+                invalid_trans_protos.entry(ip_proto.into()).and_modify(|v| *v += 1).or_insert(1);
+        } else if port != unsafe { NonZeroU16::new_unchecked(dhcp::protocol::CLIENT_PORT) } {
+            let _: &mut u64 = invalid_ports.entry(port.into()).and_modify(|v| *v += 1).or_insert(1);
+        }
+    }
+
+    let mut invalid_port_assertion = TreeAssertion::new(INVALID_PORT_STAT_NAME, true);
+    let mut invalid_trans_proto_assertion = TreeAssertion::new(INVALID_TRANS_PROTO_STAT_NAME, true);
+    let invalid_packet_type_assertion = TreeAssertion::new(INVALID_PACKET_TYPE_STAT_NAME, true);
+
+    for (port, count) in invalid_ports {
+        let () = invalid_port_assertion.add_property_assertion(&port.to_string(), Box::new(count));
+    }
+
+    for (proto, count) in invalid_trans_protos {
+        let () = invalid_trans_proto_assertion
+            .add_property_assertion(&proto.to_string(), Box::new(count));
+    }
+
+    let mut discard_stats_assertion = TreeAssertion::new(DISCARD_STATS_NAME, true);
+    let () = discard_stats_assertion.add_child_assertion(invalid_port_assertion);
+    let () = discard_stats_assertion.add_child_assertion(invalid_trans_proto_assertion);
+    let () = discard_stats_assertion.add_child_assertion(invalid_packet_type_assertion);
+
+    let tree_assertion = path.iter().fold(discard_stats_assertion, |acc, name| {
+        let mut assertion = TreeAssertion::new(name, true);
+        let () = assertion.add_child_assertion(acc);
+        assertion
+    });
+
+    let data = get_inspect_data(
+        &realm,
+        "netstack",
+        std::iter::once(DISCARD_STATS_NAME).chain(path).into_iter().rev().join("/"),
+        "interfaces",
+    )
+    .await
+    .expect("get_inspect_data failed");
+    // Debug print the tree to make debugging easier in case of failures.
+    println!("Got inspect data: {:#?}", data);
+
+    let () = tree_assertion.run(&data).expect("mismatched inspect data");
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
@@ -126,8 +127,8 @@ type statCounter interface {
 var _ statCounter = (*tcpip.StatCounter)(nil)
 var statCounterType = reflect.TypeOf((*statCounter)(nil)).Elem()
 
-// Recursive reflection-based implementation for structs containing only other
-// structs and stat counters.
+// Recursive reflection-based implementation for structs containing other
+// structs, stat counters, or maps of stat counters.
 
 var _ inspectInner = (*statCounterInspectImpl)(nil)
 
@@ -171,15 +172,20 @@ func (impl *statCounterInspectImpl) ListChildren() []string {
 	var children []string
 	typ := impl.value.Type()
 	for i := 0; i < impl.value.NumField(); i++ {
+		field := typ.Field(i)
 		// PkgPath is empty for exported field names.
-		//
+		if len(field.PkgPath) != 0 {
+			continue
+		}
 		// Avoid inspecting any field that implements statCounter.
-		if field := typ.Field(i); len(field.PkgPath) == 0 && field.Type.Kind() == reflect.Struct && !field.Type.Implements(statCounterType) && !reflect.PtrTo(field.Type).Implements(statCounterType) {
+		if field.Type.Kind() == reflect.Struct && !field.Type.Implements(statCounterType) && !reflect.PtrTo(field.Type).Implements(statCounterType) {
 			if field.Anonymous {
 				children = append(children, (&statCounterInspectImpl{value: impl.value.Field(i)}).ListChildren()...)
 			} else {
 				children = append(children, field.Name)
 			}
+		} else if impl.isIntegralStatCounterMap(impl.value.Field(i)) {
+			children = append(children, field.Name)
 		}
 	}
 	return children
@@ -187,10 +193,20 @@ func (impl *statCounterInspectImpl) ListChildren() []string {
 
 func (impl *statCounterInspectImpl) GetChild(childName string) inspectInner {
 	if typ, ok := impl.value.Type().FieldByName(childName); ok {
-		if len(typ.PkgPath) == 0 && typ.Type.Kind() == reflect.Struct {
-			// PkgPath is empty for exported field names.
-			if child := impl.value.FieldByName(childName); child.IsValid() {
+		// PkgPath is empty for exported field names.
+		if len(typ.PkgPath) != 0 {
+			return nil
+		}
+		if child := impl.value.FieldByName(childName); child.IsValid() {
+			if typ.Type.Kind() == reflect.Struct {
 				return &statCounterInspectImpl{
+					name:  childName,
+					value: child,
+				}
+			}
+
+			if impl.isIntegralStatCounterMap(child) {
+				return &integralStatCounterMapInspectImpl{
 					name:  childName,
 					value: child,
 				}
@@ -198,6 +214,21 @@ func (impl *statCounterInspectImpl) GetChild(childName string) inspectInner {
 		}
 	}
 	return nil
+}
+
+func (*statCounterInspectImpl) isIntegralStatCounterMap(value reflect.Value) bool {
+	if value.Kind() != reflect.Map {
+		return false
+	}
+	if value.Type().Elem() != reflect.TypeOf((*tcpip.StatCounter)(nil)) {
+		return false
+	}
+	switch value.Type().Key().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	default:
+		return false
+	}
+	return true
 }
 
 var _ inspectInner = (*logEntryInspectImpl)(nil)
@@ -267,6 +298,51 @@ func (impl *circularLogsInspectImpl) GetChild(childName string) inspectInner {
 		index: childName,
 		entry: impl.value[index],
 	}
+}
+
+var _ inspectInner = (*integralStatCounterMapInspectImpl)(nil)
+
+type integralStatCounterMapInspectImpl struct {
+	name  string
+	value reflect.Value
+}
+
+func (impl *integralStatCounterMapInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name:    impl.name,
+		Metrics: impl.asMetrics(),
+	}
+}
+
+func (impl *integralStatCounterMapInspectImpl) asMetrics() []inspect.Metric {
+	var metrics []inspect.Metric
+	iter := impl.value.MapRange()
+	for iter.Next() {
+		var fmtKey string
+		switch key := iter.Key(); key.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			fmtKey = strconv.FormatInt(key.Int(), 10)
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			fmtKey = strconv.FormatUint(key.Uint(), 10)
+		default:
+			panic(fmt.Sprintf("stat counter map contained key with non-integral kind: %s", key.Kind()))
+		}
+
+		counter := iter.Value().Interface().(*tcpip.StatCounter)
+		metrics = append(metrics, inspect.Metric{
+			Key:   fmtKey,
+			Value: inspect.MetricValueWithUintValue(counter.Value()),
+		})
+	}
+	return metrics
+}
+
+func (*integralStatCounterMapInspectImpl) ListChildren() []string {
+	return nil
+}
+
+func (*integralStatCounterMapInspectImpl) GetChild(childName string) inspectInner {
+	return nil
 }
 
 var _ inspectInner = (*nicInfoMapInspectImpl)(nil)

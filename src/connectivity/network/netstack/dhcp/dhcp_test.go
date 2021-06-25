@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package dhcp
@@ -142,7 +143,9 @@ func (e *endpoint) WritePacket(r stack.RouteInfo, protocol tcpip.NetworkProtocol
 				panic(fmt.Sprintf("ep: %+v remote endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, remote))
 			}
 			// the "remote" address for `other` is our local address and vice versa.
-			remote.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, pkt.CloneToInbound())
+			newPkt := pkt.CloneToInbound()
+			newPkt.PktType = tcpip.PacketBroadcast
+			remote.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, newPkt)
 		}
 
 		if protocol == ipv4.ProtocolNumber {
@@ -1147,6 +1150,125 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 	}
 	if got := c.stats.RecvAcks.Value(); got != 1 {
 		t.Errorf("acquire(...) got RecvAcks count: %d, want: 1", got)
+	}
+}
+
+func TestClientDropsIrrelevantFrames(t *testing.T) {
+	// TODO(https://fxbug.dev/79556): Extend this test to cover the stat tracking frames discarded
+	// due to an invalid PacketType.
+	for _, tc := range []struct {
+		clientPort     uint16
+		transportProto tcpip.TransportProtocolNumber
+	}{
+		{
+			clientPort:     2,
+			transportProto: header.UDPProtocolNumber,
+		},
+		{
+			clientPort:     ClientPort,
+			transportProto: header.TCPProtocolNumber,
+		},
+	} {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		_, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+
+		timeoutCh := make(chan time.Time)
+		c.retransTimeout = func(time.Duration) <-chan time.Time {
+			return timeoutCh
+		}
+
+		requestSent := make(chan struct{})
+		clientEP.onPacketDelivered = func() {
+			signal(ctx, requestSent)
+		}
+
+		unblockResponse := make(chan struct{})
+		responseSent := make(chan struct{})
+
+		serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
+			waitForSignal(ctx, unblockResponse)
+
+			// Here, we modify fields in the DHCP packet based on the parameters
+			// specified in each test case. Each of these modifications can cause
+			// the client to discard the packet when the given field is set to an
+			// unexpected value.
+			pkt = pkt.Clone()
+
+			// Destination port number.
+			h := header.UDP(pkt.TransportHeader().View())
+			h.SetDestinationPort(tc.clientPort)
+
+			// Transport protocol number.
+			ip := header.IPv4(pkt.NetworkHeader().View())
+			ip.Encode(&header.IPv4Fields{
+				Protocol:    uint8(tc.transportProto),
+				TotalLength: ip.TotalLength(),
+			})
+			ip.SetChecksum(0)
+			ip.SetChecksum(^ip.CalculateChecksum())
+
+			return pkt
+		}
+		serverEP.onPacketDelivered = func() {
+			signal(ctx, responseSent)
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			wg.Done()
+
+			// Send dhcpOFFER.
+			waitForSignal(ctx, requestSent)
+
+			// Receive discardable response from server.
+			signal(ctx, unblockResponse)
+			waitForSignal(ctx, responseSent)
+
+			// Then timeout.
+			signalTimeout(ctx, timeoutCh)
+			cancel()
+		}()
+
+		info := c.Info()
+		if _, err := acquire(ctx, c, t.Name(), &info); err == nil {
+			t.Fatal("acquire(...) expected to fail after context is cancelled")
+		}
+
+		wg.Wait()
+
+		boolToInt := func(val bool) uint64 {
+			if val {
+				return 1
+			}
+			return 0
+		}
+
+		nullableCounterValue := func(counter *tcpip.StatCounter) uint64 {
+			if counter == nil {
+				return 0
+			}
+			return counter.Value()
+		}
+
+		expectInvalidPort := tc.clientPort != ClientPort
+		if got := c.stats.PacketDiscardStats.InvalidPort[tc.clientPort]; nullableCounterValue(got) != boolToInt(expectInvalidPort) {
+			t.Errorf("acquire(...) got discarded packet count (invalid port): %d, want: %d", nullableCounterValue(got), boolToInt(expectInvalidPort))
+		}
+
+		expectInvalidTransProto := tc.transportProto != header.UDPProtocolNumber
+		if got := c.stats.PacketDiscardStats.InvalidTransProto[tc.transportProto]; nullableCounterValue(got) != boolToInt(expectInvalidTransProto) {
+			t.Errorf("acquire(...) got discarded packet count (invalid transport protocol number): %d, want: %d", nullableCounterValue(got), boolToInt(expectInvalidTransProto))
+		}
+
+		if got := c.stats.RecvOffers.Value(); got != 0 {
+			t.Errorf("acquire(...) got RecvOffers count: %d, want: 0", got)
+		}
+		if got := c.stats.RecvOfferTimeout.Value(); got != 1 {
+			t.Errorf("acquire(...) got RecvOfferTimeout count: %d, want: 1", got)
+		}
 	}
 }
 
