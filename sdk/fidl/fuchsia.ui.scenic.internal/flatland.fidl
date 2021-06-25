@@ -16,8 +16,8 @@ enum Error {
     NO_ERROR = 0;
     /// Indicates that the parameters used the function calls are invalid.
     BAD_OPERATION = 1;
-    /// Indicates that `num_presents_returned` field was not properly processed and the client queued more
-    /// [`Present`]s than allowed.
+    /// Indicates that `num_presents_returned` field was not properly processed and the client
+    /// queued more [`Present`]s than allowed.
     NO_PRESENTS_REMAINING = 2;
     /// Indicates that the client has overwritten hanging gets in the protocols returned.
     BAD_HANGING_GET = 3;
@@ -30,13 +30,13 @@ enum Orientation {
     CCW_270_DEGREES = 4;
 };
 
-/// The return type of GraphLink::GetLayout(). This table contains most of the information necessary
+/// The return type of [`GetLayout`]. This table contains most of the information necessary
 /// for a client to decide how to layout their content in a Flatland instance. This data may be
 /// provided to the client before the command that creates the Link is presented, so that the client
-/// may lay out content properly before their first call to Present().
+/// may lay out content properly before their first call to [`Present`].
 table LayoutInfo {
     /// The layout size of a Graph in logical pixels, defined by the parent's call to
-    /// SetLinkProperties(). Clients should re-layout their content when this value changes.
+    /// [`SetLinkProperties`]. Clients should re-layout their content when this value changes.
     1: fuchsia.math.SizeU logical_size;
     /// The ratio from physical display pixels to logical pixels, defined by the sizes and scale
     /// transforms of the parent. Clients should not necessarily re-layout their content when this
@@ -61,7 +61,7 @@ enum GraphLinkStatus {
 protocol GraphLink {
     /// A hanging get for receiving layout information. Clients may receive layout information
     /// before the GraphLink operation has been presented. This allows children to layout their
-    /// content before their first call to Present(). In transition cases where two GraphLink
+    /// content before their first call to [`Present`]. In transition cases where two GraphLink
     /// channels exist at the same time, both protocol instances will be receiving different layout
     /// information.
     ///
@@ -70,7 +70,7 @@ protocol GraphLink {
     /// changed.
     ///
     /// It is invalid to call `GetLayout` while a previous call is still pending. Doing so will
-    /// cause both this channel and the Flatland channel to be closed.
+    /// cause both this channel and the Flatland channel that handed out GraphLink to be closed.
     GetLayout() -> (LayoutInfo info);
 
     /// A hanging get for receiving the status of the Link. This provides global connectivity
@@ -80,13 +80,13 @@ protocol GraphLink {
     /// returned GraphLinkStatus.
     ///
     /// It is invalid to call `GetStatus` while a previous call is still pending. Doing so will
-    /// cause both this channel and the Flatland channel to be closed.
+    /// cause both this channel and the Flatland channel that handed out GraphLink to be closed.
     GetStatus() -> (GraphLinkStatus status);
 };
 
 enum ContentLinkStatus {
-    /// The underlying Graph has connected its Link, called Present(), and the acquisition fences
-    /// of the Present() call have all be reached, indicating that it has some content ready to be
+    /// The underlying Graph has connected its Link, called [`Present`], and the acquisition fences
+    /// of the [`Present`] call have all be reached, indicating that it has some content ready to be
     /// displayed.
     CONTENT_HAS_PRESENTED = 1;
 };
@@ -102,7 +102,7 @@ protocol ContentLink {
     /// returned ContentLinkStatus.
     ///
     /// It is invalid to call `GetStatus` while a previous call is still pending. Doing so will
-    /// cause both this channel and the Flatland channel to be closed.
+    /// cause both this channel and the Flatland channel that handed out ContentLink to be closed.
     GetStatus() -> (ContentLinkStatus status);
 };
 
@@ -127,20 +127,20 @@ table LinkProperties {
 };
 
 /// The properties of an Image as defined by the client. These properties determine how an Image
-/// uses the backing BufferCollection. See CreateImage() for more information.
+/// uses the backing BufferCollection. See [`CreateImage`] for more information.
 table ImageProperties {
     /// The size of the Image in pixels.
     1: fuchsia.math.SizeU size;
 };
 
-/// A user-defined identifier for a particular transform. See CreateTransform() and
-/// ReleaseTransform() for more information.
+/// A user-defined identifier for a particular transform. See [`CreateTransform`] and
+/// [`ReleaseTransform`] for more information.
 struct TransformId {
     uint64 value;
 };
 
 /// A user-defined identifier for a particular piece of Content. See Content creation functions
-/// (e.g. CreateLink(), CreateImage()) for more information.
+/// (e.g. [`CreateLink`], [`CreateImage`]) for more information.
 struct ContentId {
     uint64 value;
 };
@@ -148,7 +148,7 @@ struct ContentId {
 // A maximum of 16 fences is enough for the current usage of these APIs.
 const int32 MAX_ACQUIRE_RELEASE_FENCE_COUNT = 16;
 
-/// Arguments passed into Present(). All arguments are optional, and if an
+/// Arguments passed into [`Present`]. All arguments are optional, and if an
 /// argument is omitted Flatland will use a reasonable default, specified below.
 resource table PresentArgs {
     /// `requested_presentation_time` specifies the time on or after which the client would like the
@@ -165,18 +165,20 @@ resource table PresentArgs {
     ///
     /// Each rendered frame has a target presentation time. This is when Flatland aims to have the
     /// frame presented to the user. Before rendering a frame, Flatland applies all
-    /// enqueued operations associated with all squashable calls to Present() whose
+    /// enqueued operations associated with all squashable calls to [`Present`] whose
     /// `requested_presentation_time` is on or before the frame's target presentation time.
+    ///
     1: zx.time requested_presentation_time;
 
     /// Flatland will wait until all of a session's `acquire_fences` are ready before it will
-    /// execute the presented commands.
+    /// execute the presented commands. Not signaling `acquire_fences` will block the current [`Present`]
+    /// as well as the following ones even if their `acquire_fences` are signaled.
     ///
     /// The default `acquire_fences` value is the empty vector.
     2: vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT acquire_fences;
 
     /// Flatland will signal all `release_fences` when the resources and shared buffers from this
-    /// Present() are no longer in use. Callers should not modify shared resources, such as
+    /// [`Present`] are no longer in use. Callers should not modify shared resources, such as
     /// BufferCollections, until after these fences are signaled.
     ///
     /// If an error occurrs, release fences are not necessarily fired as Flatland can close the
@@ -189,7 +191,7 @@ resource table PresentArgs {
     /// come after it. If `squashable` is false, then the update is guaranteed
     /// to be shown for at least one vsync interval.
     ///
-    /// The default `squashable` value is true.
+    /// If absent, `squashable` is true.
     4: bool squashable;
 };
 
@@ -201,11 +203,11 @@ alias FuturePresentationInfos = vector<fuchsia.scenic.scheduling.PresentationInf
 /// [`OnPresentProcessed`]. For a non-error case, each field is guaranteed to be
 /// set and contain valid information.
 table OnPresentProcessedValues {
-    /// the number of additional [`Present`] calls allowed to
-    /// the client so that they can call [`Present`] further times.
+    /// The number of additional [`Present`] calls allowed to the client so that they
+    /// can call [`Present`] further times.
     1: uint32 num_presents_returned;
-    /// information about future presentation and latch times that a client may
-    /// aim for for precise scheduling behavior.
+    /// Information about future presentation and latch times that a client may aim for
+    /// precise scheduling behavior.
     2: FuturePresentationInfos future_presentation_infos;
 };
 
@@ -219,15 +221,17 @@ table OnPresentProcessedValues {
 /// particular output.
 ///
 /// All functions in this protocol are feed-forward. The operations they represent are not fully
-/// executed until Present() is called.
+/// executed until [`Present`] is called.
 [Discoverable]
 protocol Flatland {
     /// Complete execution of all feed-forward operations.
     ///
     /// If executing an operation produces an error (e.g., CreateTransform(0)),
     /// [`OnPresentProcessed`] emits a non-success Error type. Operations that produce errors
-    /// are ignored and the channel is closed. If the execution is completed successfully,
-    /// [`OnPresentProcessed`] emits NO_ERROR along with other parameters.
+    /// are ignored and the channel is closed.
+    ///
+    /// If the execution is completed successfully, [`OnPresentProcessed`] emits NO_ERROR along
+    /// with other valid fields.
     ///
     /// The client may only call [`Present`] when they have a non-zero number
     /// of `num_presents_returned`, which are tracked by the server. The server may
@@ -235,7 +239,7 @@ protocol Flatland {
     /// informs the client when it receives additional [`Present`] allowance. Each [`Present`]
     /// call uses one of `num_presents_returned` and decrements the server count by one. If
     /// the client calls [`Present`] when no [`Present`] allowance remain, it will return
-    /// `NO_PRESENTS_REMAINING`.
+    /// `NO_PRESENTS_REMAINING` error.
     ///
     /// The client should assume that prior to receiving any [`OnPresentProcessed`]
     /// events, they have one [`Present`] allowance.
@@ -262,8 +266,8 @@ protocol Flatland {
     /// its next frame. See [`OnPresentProcessedValues`] for more information.
     ///
     /// - response `error` the error a client may receive after performing some
-    /// invalid operations. If there is an `error`, then `values` is not
-    /// guaranteed to hold any valid fields.
+    /// invalid operations. If there is an `error` with a positive int value, then
+    /// `values` is not guaranteed to hold any valid fields.
     -> OnPresentProcessed(OnPresentProcessedValues values, Error error);
 
     /// This event is fired whenever a set of one or more [`Present`]s are
@@ -286,21 +290,21 @@ protocol Flatland {
     /// the Graph of another process. The parent process has control over how the linked content is
     /// integrated into their Graph.
     ///
-    /// A link starts with a pair of eventpair objects: a ContentLinkToken and GraphLinkToken.
-    /// Out-of-band protocols pass the ContentLinkToken to the parent, which calls CreateLink(), and
-    /// the GraphLinkToken to the child, which calls LinkToParent().
+    /// A link starts with two endpoints of channel objects: a ContentLinkToken and GraphLinkToken.
+    /// Out-of-band protocols pass the ContentLinkToken to the parent, which calls [`CreateLink`], and
+    /// the GraphLinkToken to the child, which calls [`LinkToParent`].
     ///
     /// Only nodes connected to the Root Transform in this Flatland instance will be rendered as
     /// part of the parent's Graph.
     ///
-    /// Calling LinkToParent() a second time will disconnect the Root Transform from the existing
-    /// parent's Graph, and attach it to a new parent's Graph.
+    /// Calling [`LinkToParent`] a second time will disconnect the Root Transform from the existing
+    /// parent's Graph, and attach it to a new parent's Graph. Each Graph can only have one parent.
     ///
-    /// This function is feed-forward, meaning that the Root Transform will not be attached to the
-    /// parent Graph until Present() is called. However, Clients will receive information through
+    /// This function is queued, meaning that the Root Transform will not be attached to the
+    /// parent Graph until [`Present`] is called. However, clients will receive information through
     /// their GraphLink (e.g., LayoutInfo) immediately after calling this function, even if they
-    /// have not called Present() or SetRoot(). This allows clients to wait for layout information
-    /// from their parent before calling Present().
+    /// have not called [`Present`] or [`SetRootTransform`]. This allows clients to wait for layout
+    /// information from their parent before calling [`Present`].
     ///
     /// Any illegal operations on GraphLink will cause both GraphLink channel and this Flatland
     /// channel to be torn down.
@@ -316,8 +320,8 @@ protocol Flatland {
     /// To clear the existing content from the screen without unlinking the current Graph, use
     /// SetRootTransform(0) instead.
     ///
-    /// Despite having a return type, this function is still feed-forward Like LinkToParent() and
-    /// requires a call to Present() to be executed. The GraphLinkToken will be returned after the
+    /// Despite having a return type, this function is still feed-forward Like [`LinkToParent`] and
+    /// requires a call to [`Present`] to be executed. The GraphLinkToken will be returned after the
     /// presented operations have been executed.
     UnlinkFromParent() -> (GraphLinkToken token);
 
@@ -326,8 +330,6 @@ protocol Flatland {
     ClearGraph();
 
     // ***** Transforms *****
-
-    // Transform constructors.
 
     /// Creates a new Transform node. Transforms are a hierarchical piece of a Flatland graph. They
     /// can have children, and can reference Content. A sub-graph represented by a Transform and its
@@ -344,13 +346,13 @@ protocol Flatland {
     ///
     /// When a sub-graph of Transforms is rendered, Content will be rendered back-to-front, starting
     /// with the Content on the root transform, and continuing recursively through all of its child
-    /// Transforms in the order the children were added. See AddChild() for more information.
+    /// Transforms in the order the children were added. See [`AddChild`] for more information.
     ///
     /// Zero is not a valid transform id. All other values are valid, assuming they are not already
-    /// in use (see ReleaseTransform() for more details).
+    /// in use (see [`ReleaseTransform`] for more details).
     CreateTransform(TransformId transform_id);
 
-    // ***** Attributes *****
+    // ***** Transform Attributes *****
 
     /// All Transform objects support all attributes.
     ///
@@ -363,10 +365,10 @@ protocol Flatland {
     SetTranslation(TransformId transform_id, fuchsia.math.Vec translation);
 
     /// Sets the orientation on a Transform. The order of geometric attribute application is
-    /// addressed in the documentation for SetTranslation().
+    /// addressed in the documentation for [`SetTranslation`].
     SetOrientation(TransformId transform_id, Orientation orientation);
 
-    // Transform management
+    // ***** Transform management *****
 
     /// Adds a child Transform to a parent Transform. The new child Transform, and any Content
     /// attached to it or its children, will be rendered on top of the parent's Content, as well as
@@ -379,13 +381,13 @@ protocol Flatland {
     /// Sets the Root Transform for the graph.
     ///
     /// The sub-graph defined by the Root Transform and its children will be rendered as Content
-    /// in the linked parent Graph (see LinkToParent()). Any parents of the Root Transform in this
+    /// in the linked parent Graph (see [`LinkToParent`]). Any parents of the Root Transform in this
     /// Graph will be ignored.
     ///
     /// The Root Transform, and all children of the Root Transform, are kept alive if they are
-    /// released (see ReleaseTransform() for more details).
+    /// released (see [`ReleaseTransform`] for more details).
     ///
-    /// There is only ever one Root. Since 0 is not a valid transform id (see CreateTransform()),
+    /// There is only ever one Root. Since 0 is not a valid transform id (see [`CreateTransform`]),
     /// calling SetRootTransform(0) clears the current Root, destroying any previously released
     /// objects that are not referenced by the new root.
     SetRootTransform(TransformId transform_id);
@@ -402,16 +404,14 @@ protocol Flatland {
     SetOpacity(TransformId transform_id, float32 val);
 
     // ***** Content *****
-
+    //
     // Content comes in many forms, but most content can be treated conceptually as a bitmap.
     // Content is attached to Transforms. Each Transform can have, at most, one piece of attached
     // Content. Content will inherit all of the attributes from its attached Transform (which
     // inherits the attributes of its parent Transform, and so on).
-
+    //
     // Content is contained within a unit rectangle, with the top-left corner at the origin of the
     // coordinate space defined by the attached Transform.
-
-    // Content constructors
 
     /// A Link is a connection between the objects authored in this Graph, and the objects in
     /// another process. The parent process has control over how the linked Content is integrated
@@ -427,7 +427,7 @@ protocol Flatland {
     /// The logical_size must have positive X and Y components.
     ///
     /// Zero is not a valid Link id. All other values are valid, assuming they are not already
-    /// in use for another piece of Content (see ReleaseLink() for more details).
+    /// in use for another piece of Content (see [`ReleaseLink`] for more details).
     ///
     /// Lifecycle note. The lifetime of the ContentLink channel is bound by the peer GraphLinkToken.
     /// When the GraphLinkToken dies, this ContentLink channel is destroyed.
@@ -445,7 +445,7 @@ protocol Flatland {
     /// valid range, etc.)
     ///
     /// Zero is not a valid Image id. All other values are valid, assuming they are not already in
-    /// use for another piece of Content (see ReleaseImage() for more details).
+    /// use for another piece of Content (see [`ReleaseImage`] for more details).
     CreateImage(ContentId image_id,
                 fuchsia.scenic.allocation.BufferCollectionImportToken import_token,
                 uint32 vmo_index,
@@ -467,7 +467,7 @@ protocol Flatland {
     /// to determines the size and location of where the content is rendered on the display.
     SetImageDestinationSize(ContentId image_id, fuchsia.math.SizeU size);
 
-    // Content management
+    // ***** Content management *****
 
     /// Setting a piece of Content on a Transform makes that Content visible in the render tree as
     /// long as the Transform is visible from the root Transform. The Content will be rendered
@@ -476,11 +476,13 @@ protocol Flatland {
     /// Because each Transform can have, at most, a single piece of Content on it, calling this
     /// function on a Transform that already has Content will replace that Content.
     ///
+    /// A Content may be set on more than one Transform.
+    ///
     /// Calling this function with a Content id of 0 will remove any Content currently on the
     /// Transform.
     SetContent(TransformId transform_id, ContentId content_id);
 
-    // Content mutators
+    // ***** Content mutators *****
 
     /// Transforms are usually sufficient to change how Content is presented. Links, however, have
     /// special properties that are not part of the Transform hierarchy. Those properties can be set
@@ -504,13 +506,13 @@ protocol Flatland {
 
     /// Releasing a Link removes the attached sub-Graph from the scene, even if the Link is still
     /// connected to a Transform. Unlike other resources, Links are garbage collected by the system
-    /// during the next Present() because a released Link is guaranteed to provide no renderable
+    /// during the next [`Present`] because a released Link is guaranteed to provide no renderable
     /// content.
     ///
     /// Use SetContent(transform_id, 0) to clean up references to deleted Links.
     ///
-    /// Despite having a return type, this function is still feed-forward like LinkToParent() and
-    /// requires a call to Present() to be executed. The ContentLinkToken will be returned after the
+    /// Despite having a return type, this function is still feed-forward like [`LinkToParent`] and
+    /// requires a call to [`Present`] to be executed. The ContentLinkToken will be returned after the
     /// presented operations have been executed.
     ReleaseLink(ContentId link_id) -> (ContentLinkToken tokid);
 

@@ -3379,6 +3379,38 @@ TEST_F(FlatlandTest, ClearContentOnTransform) {
   }
 }
 
+TEST_F(FlatlandTest, SetTheSameContentOnMultipleTransforms) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
+
+  // Setup a valid image.
+  const ContentId kImageId = {1};
+  BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
+  ImageProperties properties;
+  properties.set_size({100, 200});
+  auto import_token_dup = ref_pair.DuplicateImportToken();
+  CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
+              std::move(properties));
+
+  // Create a transform, make it the root transform, and add two children.
+  const TransformId kTransformId1 = {1};
+  const TransformId kTransformId2 = {2};
+  const TransformId kTransformId3 = {3};
+
+  flatland->CreateTransform(kTransformId1);
+  flatland->CreateTransform(kTransformId2);
+  flatland->CreateTransform(kTransformId3);
+
+  flatland->SetRootTransform(kTransformId1);
+  flatland->AddChild(kTransformId1, kTransformId2);
+  flatland->AddChild(kTransformId1, kTransformId3);
+
+  // Set the same content on both children
+  flatland->SetContent(kTransformId2, kImageId);
+  flatland->SetContent(kTransformId3, kImageId);
+  PRESENT(flatland, true);
+}
+
 TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
   std::shared_ptr<Flatland> flatland = CreateFlatland();
