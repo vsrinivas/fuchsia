@@ -94,12 +94,6 @@ struct local_connection : public base {
     return ZX_OK;
   }
 
-  uint32_t convert_to_posix_mode(zxio_node_protocols_t protocols,
-                                 zxio_abilities_t abilities) override {
-    return zxio_node_protocols_to_posix_type(protocols) |
-           zxio_abilities_to_posix_permissions_for_directory(abilities);
-  }
-
   zx_status_t dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory) override {
     auto* dir_iterator = new (iterator) local_dir_dirent_iterator;
     size_t capacity_of_one = sizeof(zxio_dirent_t) + fio::wire::kMaxFilename + 1;

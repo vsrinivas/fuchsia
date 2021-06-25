@@ -168,8 +168,6 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
   virtual zx_status_t get_token(zx_handle_t* out);
   virtual zx_status_t get_attr(zxio_node_attributes_t* out);
   virtual zx_status_t set_attr(const zxio_node_attributes_t* attr);
-  virtual uint32_t convert_to_posix_mode(zxio_node_protocols_t protocols,
-                                         zxio_abilities_t abilities);
   virtual zx_status_t dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory);
   virtual zx_status_t dirent_iterator_next(zxio_dirent_iterator_t* iterator,
                                            zxio_dirent_t** out_entry);

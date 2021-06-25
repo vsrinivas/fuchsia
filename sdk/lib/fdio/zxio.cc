@@ -306,11 +306,6 @@ zx::status<fdio_ptr> remote::create(zx::vmo vmo, zx::stream stream) {
   return zx::ok(io);
 }
 
-uint32_t dir::convert_to_posix_mode(zxio_node_protocols_t protocols, zxio_abilities_t abilities) {
-  return zxio_node_protocols_to_posix_type(protocols) |
-         zxio_abilities_to_posix_permissions_for_directory(abilities);
-}
-
 Errno remote::posix_ioctl(int request, va_list va) {
   switch (request) {
     case TIOCGWINSZ: {

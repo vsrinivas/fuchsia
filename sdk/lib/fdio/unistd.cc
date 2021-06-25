@@ -9,6 +9,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/private.h>
 #include <lib/fdio/vfs.h>
+#include <lib/zxio/posix_mode.h>
 #include <poll.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -609,7 +610,7 @@ static zx_status_t fdio_stat(const fdio_ptr& io, struct stat* s) {
   }
 
   memset(s, 0, sizeof(struct stat));
-  s->st_mode = io->convert_to_posix_mode(attr.protocols, attr.abilities);
+  s->st_mode = zxio_get_posix_mode(attr.protocols, attr.abilities);
   s->st_ino = attr.has.id ? attr.id : fio::wire::kInoUnknown;
   s->st_size = attr.content_size;
   s->st_blksize = VNATTR_BLKSIZE;

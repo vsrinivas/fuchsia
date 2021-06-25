@@ -97,6 +97,8 @@ constexpr void HasIo::CheckLayout() {
   static_assert(alignof(HasIo) == alignof(zxio_t));
 }
 
+uint32_t zxio_node_protocols_to_posix_type(zxio_node_protocols_t protocols);
+
 bool zxio_is_valid(const zxio_t* io);
 
 void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension_ops_t* ops);

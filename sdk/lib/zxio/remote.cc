@@ -11,6 +11,7 @@
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
+#include <lib/zxio/posix_mode.h>
 #include <lib/zxio/types.h>
 #include <sys/stat.h>
 #include <zircon/syscalls.h>
@@ -1121,6 +1122,16 @@ uint32_t zxio_abilities_to_posix_permissions_for_file(zxio_abilities_t abilities
 
 uint32_t zxio_abilities_to_posix_permissions_for_directory(zxio_abilities_t abilities) {
   return ToIo1ModePermissionsForDirectory()(abilities);
+}
+
+uint32_t zxio_get_posix_mode(zxio_node_protocols_t protocols, zxio_abilities_t abilities) {
+  uint32_t mode = zxio_node_protocols_to_posix_type(protocols);
+  if (mode & S_IFDIR) {
+    mode |= zxio_abilities_to_posix_permissions_for_directory(abilities);
+  } else {
+    mode |= zxio_abilities_to_posix_permissions_for_file(abilities);
+  }
+  return mode;
 }
 
 zx_status_t zxio_raw_remote_close(zx::unowned_channel control) {

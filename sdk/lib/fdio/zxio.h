@@ -96,20 +96,6 @@ struct remote : public zxio {
   }
 };
 
-struct dir : public remote {
-  // Override |convert_to_posix_mode| for directories, since directories
-  // have different semantics for the "rwx" bits.
-  uint32_t convert_to_posix_mode(zxio_node_protocols_t protocols,
-                                 zxio_abilities_t abilities) override;
-
- protected:
-  friend class fbl::internal::MakeRefCountedHelper<dir>;
-  friend class fbl::RefPtr<dir>;
-
-  dir() = default;
-  ~dir() override = default;
-};
-
 }  // namespace fdio_internal
 
 #endif  // LIB_FDIO_ZXIO_H_

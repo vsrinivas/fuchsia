@@ -37,11 +37,6 @@ zx_status_t fdio::get_attr(zxio_node_attributes_t* out) { return ZX_ERR_NOT_SUPP
 
 zx_status_t fdio::set_attr(const zxio_node_attributes_t* attr) { return ZX_ERR_NOT_SUPPORTED; }
 
-uint32_t fdio::convert_to_posix_mode(zxio_node_protocols_t protocols, zxio_abilities_t abilities) {
-  return zxio_node_protocols_to_posix_type(protocols) |
-         zxio_abilities_to_posix_permissions_for_file(abilities);
-}
-
 zx_status_t fdio::dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* directory) {
   return ZX_ERR_NOT_SUPPORTED;
 }
