@@ -1158,7 +1158,7 @@ decoding can be used to store FIDL values by encoding a value and then writing
 it and by reading a value and then decoding it. In that case, the values can't
 use any handle.
 
-### Test scaffolding {#test-scaffolding}
+## Test scaffolding {#test-scaffolding}
 
 The FIDL toolchain also generates a file suffixed with  `_test_base.h` that
 contains convenience code for testing FIDL server implementations. This file

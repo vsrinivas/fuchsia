@@ -657,6 +657,48 @@ used for fake proxies in client-side unit tests.
 For protocols annotated with the `[Discoverable]` attribute, the Marker type
 additionally implements the `fidl::endpoints::DiscoverableService` trait.
 
+## Explicit encoding and decoding {#encoding-decoding}
+
+FIDL messages are automatically encoded when they are sent and decoded when they
+are received. You can also encode and decode explicitly, for example to persist
+FIDL data to a file. This works for [non-resource][lang-resource] structs,
+tables, and unions.
+
+### Simple method {#encoding-decoding-simple-method}
+
+The easiest way to to explicitly encode and decode is to use
+[`encode_persistent`] and [`decode_persistent`].
+
+For example, you can encode a [`Color` struct](#types-structs):
+
+```rust
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/main.rs" region_tag="simple_method_encode" adjust_indentation="auto" %}
+```
+
+And then decode it later:
+
+```rust
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/main.rs" region_tag="simple_method_decode" adjust_indentation="auto" %}
+```
+
+### Separating the header
+
+The [simple method](#encoding-decoding-simple-method) automatically places a
+small header at the beginning that stores FIDL metadata. For advanced use cases,
+you can manage the header manually. For example, you can encode both a
+[`JsonValue` union](#types-unions) and a [`User` table](#types-tables) using
+only one header instead of two:
+
+```rust
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/main.rs" region_tag="separate_header_encode" adjust_indentation="auto" %}
+```
+
+Then, you must first decode the header and use it to decode the other values:
+
+```rust
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/main.rs" region_tag="separate_header_decode" adjust_indentation="auto" %}
+```
+
 ## Appendix A: Derived traits {#derived-traits}
 
 ```go
@@ -672,7 +714,9 @@ The calculation of traits derivation rules is visible in
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlgen_rust/codegen/ir.go" region_tag="fill_derives" adjust_indentation="auto" %}
 ```
 
-<!-- xrefs -->
+<!-- link labels -->
+[`decode_persistent`]: https://fuchsia-docs.firebaseapp.com/rust/fidl/encoding/fn.decode_persistent.html
+[`encode_persistent`]: https://fuchsia-docs.firebaseapp.com/rust/fidl/encoding/fn.encode_persistent.html
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-enums]: /docs/reference/fidl/language/language.md#enums
