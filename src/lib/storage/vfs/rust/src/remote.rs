@@ -32,7 +32,7 @@ pub type RoutingFn =
 
 /// Create a new [`Remote`] node that forwards requests to the provided [`RoutingFn`]. This routing
 /// function is called once per open request. The dirent type is set to the provided
-/// [`dirent_type`], which should be one of the `DIRENT_TYPE_*` values defined in fuchsia.io.
+/// `dirent_type`, which should be one of the `DIRENT_TYPE_*` values defined in fuchsia.io.
 pub fn remote_boxed_with_type(open: RoutingFn, dirent_type: u8) -> Arc<Remote> {
     Arc::new(Remote { open, dirent_type })
 }

@@ -163,7 +163,7 @@ pub fn read_only_const(
     read_only(init_vmo(content.clone()))
 }
 
-/// Just like [`simple_init_vmo`], but allows one to specify the capacity explicitly, instead of
+/// Just like `simple_init_vmo`, but allows one to specify the capacity explicitly, instead of
 /// setting it to be the max of 100 and the content size.  The VMO is sized to be the
 /// maximum of the `content` length and the specified `capacity`.
 pub fn simple_init_vmo_with_capacity(
@@ -188,7 +188,7 @@ pub fn simple_init_vmo_with_capacity(
     }
 }
 
-/// Similar to the [`simple_init_vmo`], but the produced VMOs are resizable, and the `capacity` is
+/// Similar to the `simple_init_vmo`, but the produced VMOs are resizable, and the `capacity` is
 /// set by the caller.  Note that this capacity is a limitation enforced by the FIDL binding layer,
 /// not something applied to the VMO.  The VMO is initially sized to be the maximum of the
 /// `content` length and the specified `capacity`.
