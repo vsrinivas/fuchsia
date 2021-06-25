@@ -24,7 +24,7 @@ class FakeAllocation : public PciAllocation {
       : PciAllocation(zx::resource(ZX_HANDLE_INVALID)),
         base_((base.has_value()) ? *base : 0),
         size_(size) {
-    zxlogf(INFO, "fake allocation created [%#lx, %#lx)", base_, base_ + size);
+    zxlogf(DEBUG, "fake allocation created [%#lx, %#lx)", base_, base_ + size);
   }
   zx_paddr_t base() const final { return base_; }
   size_t size() const final { return size_; }
