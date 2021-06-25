@@ -17,10 +17,18 @@ zx::status<std::unique_ptr<Driver>> BasePackageResolver::FetchDriver(
     LOGF(ERROR, "Failed to get path from '%s' %s", package_url.c_str(), result.status_string());
     return result.take_error();
   }
+
+  zx::vmo vmo;
+  zx_status_t status = load_vmo(result.value(), &vmo);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to load driver vmo: %s", result.value().c_str());
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+
   Driver* driver = nullptr;
   DriverLoadCallback callback = [&driver](Driver* d, const char* version) mutable { driver = d; };
-  load_driver(boot_args_, result.value().c_str(), std::move(callback));
-  if (driver == nullptr) {
+  status = load_driver_vmo(boot_args_, package_url, std::move(vmo), std::move(callback));
+  if (status != ZX_OK) {
     LOGF(ERROR, "Failed to load driver: %s", result.value().c_str());
     return zx::error(ZX_ERR_INTERNAL);
   }
