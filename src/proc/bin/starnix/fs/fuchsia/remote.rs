@@ -200,11 +200,11 @@ mod test {
     async fn test_tree() -> Result<(), anyhow::Error> {
         let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
         let root = io_util::directory::open_in_namespace("/pkg", rights)?;
-        let root = Namespace::new(new_remote_filesystem(
+        let ns = Namespace::new(new_remote_filesystem(
             DirectorySynchronousProxy::new(root.into_channel().unwrap().into_zx_channel()),
             rights,
-        ))
-        .root();
+        ));
+        let root = ns.root();
         assert_eq!(root.lookup(b"nib").err(), Some(ENOENT));
         root.lookup(b"lib").unwrap();
 
