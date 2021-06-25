@@ -5,9 +5,9 @@
         "url": "fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx"
     },
     {
-        "icon": "images/SpinningSquareView-icon-2x.png",
-        "title": "Spinning Square View",
-        "url": "fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx"
+        "icon": "images/SpinningSquare-icon-2x.png",
+        "title": "Spinning Square",
+        "url": "fuchsia-pkg://fuchsia.com/spinning-square-rs#meta/spinning-square-rs.cmx"
     },
     {
         "icon": "images/Terminal-icon-2x.png",
