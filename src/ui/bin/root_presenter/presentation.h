@@ -118,6 +118,8 @@ class Presentation : fuchsia::ui::policy::Presenter,
   // For tests. Returns true if the display has been initialized and if a client has been
   // successfully attached.
   bool is_initialized() const { return display_model_initialized_ && client_view_holder_attached_; }
+  // For tests. Returns true if everything is ready for input injection.
+  bool ready_for_injection() const { return injector_->scene_ready(); }
 
  private:
   // Creates and attaches a new View using the passed in tokens.

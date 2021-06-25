@@ -66,6 +66,9 @@ class Injector {
   // All events are buffered until this is called to prevent test flakiness.
   virtual void MarkSceneReady();
 
+  // For tests.
+  bool scene_ready() const { return scene_ready_; }
+
  protected:
   // For mocks.
   Injector();

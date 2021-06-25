@@ -103,7 +103,9 @@ class RootPresenterTest : public gtest::RealLoopFixture,
     testing::FakeView fake_view(context_provider_.context(), std::move(scenic));
     presentation()->PresentView(fake_view.view_holder_token(), nullptr);
 
-    RunLoopUntil([this]() { return presentation()->is_initialized(); });
+    RunLoopUntil([this]() {
+      return presentation()->is_initialized() && presentation()->ready_for_injection();
+    });
   }
 
   void SetUpFocusChainListener(

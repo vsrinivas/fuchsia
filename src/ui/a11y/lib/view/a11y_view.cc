@@ -104,6 +104,10 @@ AccessibilityView::AccessibilityView(
                   /* presentation_callback = */ [this](fuchsia::images::PresentationInfo info) {
                     const bool old = is_initialized();
                     proxy_view_holder_attached_ = true;
+                    if (a11y_view_properties_) {
+                      proxy_view_holder_properties_set_ = true;
+                    }
+
                     if (is_initialized() && !old) {
                       // The scene just became ready.
                       InvokeSceneReadyCallbacks(&scene_ready_callbacks_);
