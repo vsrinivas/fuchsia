@@ -36,7 +36,8 @@ TEST(DebugTest, DumpNoCrash) {
   size_t buffer_size = std::max(kMaxHexDumpBytes, kMaxStringDumpBytes) + 1;
   uint8_t buffer[buffer_size];
   for (size_t i = 0; i < buffer_size; i++) {
-    buffer[i] = i;
+    // Put some arbitrary bytes in the buffer, it's OK to cast to smaller type.
+    buffer[i] = static_cast<uint8_t>(i);
   }
   buffer[buffer_size - 1] = 0;
 

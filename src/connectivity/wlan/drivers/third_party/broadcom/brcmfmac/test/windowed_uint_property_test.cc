@@ -29,6 +29,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/device_inspect_test_utils.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "zircon/errors.h"
 
 namespace wlan::brcmfmac {
 
@@ -37,8 +38,12 @@ using ::testing::NotNull;
 class WindowedUintPropertyTest : public gtest::TestLoopFixture {
  public:
   zx_status_t Init(zx::duration time_window, zx::duration refresh_interval) {
+    const size_t window_size = time_window / refresh_interval;
+    if (window_size > std::numeric_limits<uint32_t>::max()) {
+      return ZX_ERR_INVALID_ARGS;
+    }
     zx_status_t status =
-        count_.Init(&inspector_.GetRoot(), time_window / refresh_interval, name_, 0);
+        count_.Init(&inspector_.GetRoot(), static_cast<uint32_t>(window_size), name_, 0);
     if (status != ZX_OK) {
       return status;
     }

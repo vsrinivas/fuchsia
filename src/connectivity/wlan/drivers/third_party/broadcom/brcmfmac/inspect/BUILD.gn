@@ -20,11 +20,10 @@ source_set("inspect") {
     "device_inspect.h",
     "windowed_uint_property.h",
   ]
-  deps = [
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:timer",
-  ]
+  deps =
+      [ "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug" ]
   public_deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:timer",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zx",
