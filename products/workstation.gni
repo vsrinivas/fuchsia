@@ -58,6 +58,7 @@ universe_package_labels += [
 
   "//src/ui/examples/bouncing_ball",
   "//src/ui/examples/spinning_square_view",
+  "//src/lib/ui/carnelian:examples",
   "//src/virtualization/bin",
 ]
 
