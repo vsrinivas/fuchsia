@@ -37,6 +37,18 @@ EVENT_CREATE_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
+CREATE_AUTOMATION_TEST(ZxEventCreateAutomation, "zx_event_create", ZX_OK,
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = rsi\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  clear_stored_values\n",
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = x1\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  clear_stored_values\n");
+
 // zx_eventpair_create tests.
 
 std::unique_ptr<SystemCallTest> ZxEventPairCreate(int64_t result, std::string_view result_name,
@@ -73,5 +85,21 @@ EVENTPAIR_CREATE_DISPLAY_TEST(
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "out0: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m, "
     "out1: \x1B[32mhandle\x1B[0m = \x1B[31mbde90222\x1B[0m)\n");
+
+CREATE_AUTOMATION_TEST(ZxEventPairCreateAutomation, "zx_eventpair_create", ZX_OK,
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = rsi\n"
+                       "  stored_value(1) = rdx\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  load_memory stored_value(1), 4\n"
+                       "  clear_stored_values\n",
+                       "Invoked bp instructions:\n"
+                       "  stored_value(0) = x1\n"
+                       "  stored_value(1) = x2\n"
+                       "Exit bp instructions:\n"
+                       "  load_memory stored_value(0), 4\n"
+                       "  load_memory stored_value(1), 4\n"
+                       "  clear_stored_values\n");
 
 }  // namespace fidlcat
