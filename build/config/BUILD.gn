@@ -780,6 +780,34 @@ config("Wno-conversion-generated") {
   cflags = [ "-Wno-conversion" ]
 }
 
+# Config to suppress Wno-unused-but-set-parameter warning in the third party code
+# that doesn't comply with.
+config("Wno-unused-but-set-parameter") {
+  cflags = [ "-Wno-unused-but-set-parameter" ]
+  visibility = [
+    "//third_party/android/device/generic/goldfish-opengl:libvulkan_goldfish",
+    "//zircon/third_party/uapp/dash",
+  ]
+}
+
+# Config to suppress Wunused-but-set-variable warning in the third party code
+# that doesn't comply with.
+config("Wno-unused-but-set-variable") {
+  cflags = [ "-Wno-unused-but-set-variable" ]
+  visibility = [
+    "//src/connectivity/network/tools/nc/third_party/openbsd-netcat/*",
+    "//src/connectivity/wlan/drivers/third_party/atheros/ath10k/*",
+    "//src/graphics/drivers/msd-intel-gen/src",
+    "//third_party/Vulkan-ValidationLayers/*",
+    "//third_party/android/device/generic/goldfish-opengl/*",
+    "//third_party/icu/*",
+    "//third_party/mesa/src/compiler/nir/*",
+    "//third_party/mesa/src/intel/vulkan/*",
+    "//third_party/zstd/*",
+    "//zircon/third_party/uapp/dash",
+  ]
+}
+
 config("symbol_visibility_hidden") {
   # Disable libc++ visibility annotations to make sure that the compiler option
   # has effect on symbols defined in libc++ headers. Note that we don't want to
