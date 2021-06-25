@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
+#include "src/ui/scenic/lib/input/stream_id.h"
 #include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace scenic_impl::input {
@@ -28,11 +29,6 @@ enum GestureResponse {
 
 using ContenderId = uint32_t;
 constexpr ContenderId kInvalidContenderId = 0;
-
-// TODO(fxbug.dev/fxbug.dev/73600): Rename all instances of "stream" to "interaction".
-using StreamId = uint32_t;
-constexpr StreamId kInvalidStreamId = 0;
-StreamId NewStreamId();
 
 // Interface for a gesture disambiguation contender. All methods are called in response to
 // a GestureArena.

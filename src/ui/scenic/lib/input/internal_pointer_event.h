@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_INPUT_INTERNAL_POINTER_EVENT_H_
 #define SRC_UI_SCENIC_LIB_INPUT_INTERNAL_POINTER_EVENT_H_
 
+#include <fuchsia/input/report/cpp/fidl.h>
 #include <zircon/types.h>
 
 #include <array>
@@ -60,6 +61,7 @@ struct Viewport {
 };
 
 // Pointer event representation to be used internally, uncoupled from FIDL types.
+// TODO(fxbug.dev/79501): Rename to InternalTouchEvent.
 struct InternalPointerEvent {
   zx_time_t timestamp = 0;
   // Id of the injection device.
@@ -80,6 +82,49 @@ struct InternalPointerEvent {
   glm::vec2 position_in_viewport = glm::vec2(0, 0);
   // Integer describing mouse buttons. From gfx SessionListener API.
   uint32_t buttons = 0;
+};
+
+// Struct for tracking mouse scroll information.
+struct ScrollInfo {
+  // Unit of the scroll.
+  fuchsia::input::report::UnitType unit = fuchsia::input::report::UnitType::NONE;
+  // Exponent of the unit.
+  int32_t exponent = 1;
+
+  // Min and max values of the scroll.
+  std::array<int64_t, 2> range = {0, 0};
+  // Value of the scroll for this event.
+  std::optional<int64_t> scroll_value;
+};
+
+// Struct for tracking mouse button information.
+struct ButtonInfo {
+  // All possible buttons for this mouse.
+  std::vector<uint8_t> identifiers;
+  // Currently pressed buttons.
+  std::vector<uint8_t> pressed;
+};
+
+// Pointer event representation to be used internally, uncoupled from FIDL types.
+struct InternalMouseEvent {
+  zx_time_t timestamp = 0;
+  // Id of the injection device.
+  // TODO(fxbug.dev/53352): This is currently only unique per Injector. Make globally unique.
+  uint32_t device_id = 0u;
+  // Reference to the context the event was injected from (a View).
+  zx_koid_t context = ZX_KOID_INVALID;
+  // Reference to the target the event was injected into (a View).
+  zx_koid_t target = ZX_KOID_INVALID;
+  // The Viewport this event was injected with.
+  Viewport viewport;
+  // Coordinates in Viewport space. Pointer events do not necessarily need to stay within the
+  // Viewport's extents, but are counted as a hit test miss when outside.
+  glm::vec2 position_in_viewport = glm::vec2(0, 0);
+  // Description of buttons available to this device, and which buttons are currently pressed.
+  ButtonInfo buttons;
+  // Vertical and horizontal scroll descriptors and values.
+  std::optional<ScrollInfo> scroll_v;
+  std::optional<ScrollInfo> scroll_h;
 };
 
 }  // namespace scenic_impl::input

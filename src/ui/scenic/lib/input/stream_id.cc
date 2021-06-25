@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/input/gesture_contender.h"
+#include "src/ui/scenic/lib/input/stream_id.h"
 
 namespace scenic_impl::input {
 

@@ -11,9 +11,9 @@
 
 #include <unordered_map>
 
-#include "src/ui/scenic/lib/input/gesture_contender.h"
 #include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
+#include "src/ui/scenic/lib/input/stream_id.h"
 
 namespace scenic_impl::input {
 
