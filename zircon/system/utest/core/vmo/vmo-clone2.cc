@@ -1718,4 +1718,43 @@ TEST_F(VmoClone2TestCase, MarkerClearsSplitBits) {
   EXPECT_OK(child.write(&val, zx_system_get_page_size(), sizeof(val)));
 }
 
+// Test that creating a read-only mapping with ZX_VM_MAP_RANGE does not commit pages in the clone.
+TEST_F(VmoClone2TestCase, MapRangeReadOnly) {
+  zx::vmo vmo;
+
+  const uint64_t kNumPages = 5;
+  ASSERT_OK(zx::vmo::create(kNumPages * zx_system_get_page_size(), 0, &vmo));
+
+  // Write non-zero pages so they are not deduped by the zero scanner. We do this so we can get an
+  // accurate committed bytes count.
+  for (uint64_t i = 0; i < kNumPages; i++) {
+    uint64_t data = 77;
+    ASSERT_OK(vmo.write(&data, i * zx_system_get_page_size(), sizeof(data)));
+  }
+
+  // All pages in vmo should now be committed.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
+
+  // Create a clone that sees all parent pages.
+  zx::vmo clone;
+  ASSERT_OK(
+      vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, kNumPages * zx_system_get_page_size(), &clone));
+
+  // Read only map the clone, populating all mappings. This should not commit any pages in the
+  // clone.
+  zx_vaddr_t clone_addr = 0;
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_MAP_RANGE | ZX_VM_PERM_READ, 0, clone, 0,
+                                       kNumPages * zx_system_get_page_size(), &clone_addr));
+
+  // No pages committed in the clone.
+  ASSERT_OK(clone.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(0u, info.committed_bytes);
+
+  // Committed pages in the parent are unchanged.
+  ASSERT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(kNumPages * zx_system_get_page_size(), info.committed_bytes);
+}
+
 }  // namespace vmo_test

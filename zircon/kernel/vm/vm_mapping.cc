@@ -584,9 +584,9 @@ zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // precompute the flags we'll pass GetPageLocked
+  // precompute the flags we'll pass LookupPagesLocked
+  uint pf_flags = (arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_WRITE) ? VMM_PF_FLAG_WRITE : 0;
   // if committing, then tell it to soft fault in a page
-  uint pf_flags = VMM_PF_FLAG_WRITE;
   if (commit) {
     pf_flags |= VMM_PF_FLAG_SW_FAULT;
   }
