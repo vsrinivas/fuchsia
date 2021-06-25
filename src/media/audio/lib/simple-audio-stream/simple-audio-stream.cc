@@ -633,7 +633,8 @@ void SimpleAudioStream::GetProperties(GetPropertiesRequestView request,
   audio_fidl::wire::RingBufferProperties ring_buffer_properties(allocator);
   ring_buffer_properties.set_fifo_depth(allocator, fifo_depth_)
       .set_external_delay(allocator, external_delay_nsec_)
-      .set_needs_cache_flush_or_invalidate(allocator, true);
+      .set_needs_cache_flush_or_invalidate(allocator, true)
+      .set_turn_on_delay(allocator, turn_on_delay_nsec_);
   completer.Reply(std::move(ring_buffer_properties));
 }
 

@@ -277,6 +277,10 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
 
   const Token& domain_token() const __TA_RETURN_CAPABILITY(domain_token_) { return domain_token_; }
 
+  void SetTurnOnDelay(int64_t turn_on_delay) __TA_REQUIRES(domain_token()) {
+    turn_on_delay_nsec_ = turn_on_delay;
+  }
+
   // State and capabilities which need to be established and maintained by the
   // driver implementation.
   fbl::Vector<audio_stream_format_range_t> supported_formats_ __TA_GUARDED(domain_token());
@@ -422,6 +426,8 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
 
   // Plug capabilities default to hardwired, if not changed by a child class.
   zx_time_t plug_time_ __TA_GUARDED(domain_token()) = 0;
+
+  uint64_t turn_on_delay_nsec_ __TA_GUARDED(domain_token()) = 0;
 
   // State used for protocol enforcement.
   bool rb_started_ __TA_GUARDED(domain_token()) = false;

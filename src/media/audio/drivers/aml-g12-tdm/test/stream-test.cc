@@ -72,7 +72,9 @@ struct CodecTest : public DeviceType, public SimpleCodecServer {
   }
   zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
     last_frame_rate_ = format.frame_rate;
-    return zx::ok(CodecFormatInfo{});
+    CodecFormatInfo format_info = {};
+    format_info.set_turn_on_delay(123);
+    return zx::ok(std::move(format_info));
   }
   GainFormat GetGainFormat() override {
     return {
@@ -419,6 +421,50 @@ TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
   ASSERT_TRUE(codec2->started_);
   ASSERT_TRUE(codec1->muted_);
   ASSERT_TRUE(codec2->muted_);
+
+  controller->DdkAsyncRemove();
+  EXPECT_TRUE(tester.Ok());
+  enable_gpio.VerifyAndClear();
+  controller->DdkRelease();
+}
+
+TEST(AmlG12Tdm, I2sOutCodecsTurnOnDelay) {
+  fake_ddk::Bind tester;
+
+  auto codec1 = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
+  auto codec2 = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
+  auto codec1_proto = codec1->GetProto();
+  auto codec2_proto = codec2->GetProto();
+
+  constexpr size_t kRegSize = S905D2_EE_AUDIO_LENGTH / sizeof(uint32_t);  // in 32 bits chunks.
+  fbl::Array<ddk_mock::MockMmioReg> regs =
+      fbl::Array(new ddk_mock::MockMmioReg[kRegSize], kRegSize);
+  ddk_mock::MockMmioRegRegion unused_mock(regs.data(), sizeof(uint32_t), kRegSize);
+  ddk::PDev unused_pdev;
+  ddk::MockGpio enable_gpio;
+  enable_gpio.ExpectWrite(ZX_OK, 0);
+  auto controller = audio::SimpleAudioStream::Create<AmlG12I2sOutTest>(
+      &codec1_proto, &codec2_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
+  ASSERT_NOT_NULL(controller);
+
+  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
+  ASSERT_EQ(channel_wrap.status(), ZX_OK);
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
+
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = *std::move(endpoints);
+
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+  client.CreateRingBuffer(std::move(format), std::move(remote));
+
+  auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+  ASSERT_OK(props.status());
+
+  EXPECT_EQ(123, props->properties.turn_on_delay());
 
   controller->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());

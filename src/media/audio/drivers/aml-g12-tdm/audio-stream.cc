@@ -6,6 +6,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fit/defer.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/zx/clock.h>
 #include <math.h>
@@ -337,7 +338,11 @@ void AmlG12TdmStream::ProcessRingNotification() {
 }
 
 zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
+  auto cleanup = fit::defer([this, old_codecs_turn_on_delay_nsec = codecs_turn_on_delay_nsec_] {
+    codecs_turn_on_delay_nsec_ = old_codecs_turn_on_delay_nsec;
+  });
   fifo_depth_ = aml_audio_->fifo_depth();
+  codecs_turn_on_delay_nsec_ = 0;
   for (size_t i = 0; i < metadata_.codecs.number_of_external_delays; ++i) {
     if (metadata_.codecs.external_delays[i].frequency == req.frames_per_second) {
       external_delay_nsec_ = metadata_.codecs.external_delays[i].nsecs;
@@ -370,7 +375,10 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
         zxlogf(ERROR, "failed to set the DAI format");
         return format_info.status_value();
       }
-
+      if (format_info->has_turn_on_delay()) {
+        int64_t delay = format_info->turn_on_delay();
+        codecs_turn_on_delay_nsec_ = std::max(codecs_turn_on_delay_nsec_, delay);
+      }
       // Restart codec
       status = codecs_[i].Start();
       if (status != ZX_OK) {
@@ -379,6 +387,7 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
       }
     }
   }
+  SetTurnOnDelay(codecs_turn_on_delay_nsec_);
   return ZX_OK;
 }
 
