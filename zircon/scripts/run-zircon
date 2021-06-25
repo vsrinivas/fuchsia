@@ -292,15 +292,15 @@ else
         echo "Active firewall detected: If this emulator is unreachable, run: fx setup-ufw"
       fi
     fi
-    ARGS+=" -nic tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no"
+    ARGS+=" -netdev tap,id=net0,ifname=$IFNAME,script=$UPSCRIPT,downscript=no"
   fi
   HASH=$(echo $IFNAME | shasum)
   SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
-  ARGS+=",mac=52:54:00$SUFFIX"
+  MAC="52:54:00$SUFFIX"
   if [[ "$ARCH" == "x64" ]] && [[ $VIRTIO == 0 ]]; then
-    ARGS+=",model=e1000"
+    ARGS+=" -device e1000,netdev=net0,mac=$MAC"
   else
-    ARGS+=",model=virtio-net-pci"
+    ARGS+=" -device virtio-net-pci,netdev=net0,vectors=8,mac=$MAC"
   fi
 fi
 
