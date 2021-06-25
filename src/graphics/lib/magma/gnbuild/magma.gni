@@ -118,14 +118,12 @@ template("magma_vulkan_icd") {
     verify_imported_symbols_target_name =
         "${target_name}__verify_imported_symbols"
 
-    shared_out_dir = get_label_info(":bogus($shlib_toolchain)", "root_out_dir")
-
     imported_symbols_allowlist_file =
         rebase_path(invoker.imported_symbols_allowlist)
     generated_imported_symbols_file =
         "$target_gen_dir/${invoker.output_name}.imported_symbols.list"
     extract_imported_symbols(extract_imported_symbols_target_name) {
-      library = "$shared_out_dir/$lib_name"
+      library_target = ":${shared_library_target_name}"
       symbols = generated_imported_symbols_file
 
       deps = [ ":$shared_library_target_name" ]
