@@ -65,6 +65,7 @@ pub enum KnownServices {
     DhcpServer,
     Dhcpv6Client,
     LookupAdmin,
+    NameLookup,
 }
 
 impl KnownServices {
@@ -96,7 +97,9 @@ impl KnownServices {
             KnownServices::Dhcpv6Client => (<fidl_fuchsia_net_dhcpv6::ClientProviderMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                             "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dhcpv6-client.cmx"),
             KnownServices::LookupAdmin => (<fidl_fuchsia_net_name::LookupAdminMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                           "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dns-resolver.cmx")
+                                           "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dns-resolver.cmx"),
+            KnownServices::NameLookup => (<fidl_fuchsia_net::NameLookupMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+                                           "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dns-resolver.cmx"),
         }
     }
 

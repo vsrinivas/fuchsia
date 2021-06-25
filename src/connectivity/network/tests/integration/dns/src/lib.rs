@@ -7,6 +7,7 @@
 use std::num::NonZeroU16;
 use std::str::FromStr as _;
 
+use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcp as net_dhcp;
 use fidl_fuchsia_net_dhcpv6 as net_dhcpv6;
 use fidl_fuchsia_net_interfaces as net_interfaces;
@@ -17,10 +18,11 @@ use fuchsia_zircon as zx;
 use anyhow::Context as _;
 use futures::future::{self, FusedFuture, Future, FutureExt as _};
 use futures::stream::{self, StreamExt as _, TryStreamExt as _};
-use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_subnet, std_ip_v6};
+use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_subnet, std_ip_v6, std_socket_addr};
 use net_types::ethernet::Mac;
 use net_types::ip as net_types_ip;
 use net_types::Witness;
+use netemul::EnvironmentUdpSocket as _;
 use netstack_testing_common::constants::{eth as eth_consts, ipv6 as ipv6_consts};
 use netstack_testing_common::environments::{
     KnownServices, Manager, NetCfg, Netstack2, TestSandboxExt as _,
@@ -39,13 +41,14 @@ use packet_formats::ipv6::Ipv6PacketBuilder;
 use packet_formats::testutil::parse_ip_packet_in_ethernet_frame;
 use packet_formats::udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs};
 use packet_formats_dhcp::v6;
+use test_case::test_case;
 
 /// Keep polling the lookup admin's DNS servers until it returns `expect`.
 async fn poll_lookup_admin<
     F: Unpin + FusedFuture + Future<Output = Result<fuchsia_component::client::ExitStatus>>,
 >(
     lookup_admin: &net_name::LookupAdminProxy,
-    expect: Vec<fidl_fuchsia_net::SocketAddress>,
+    expect: Vec<fnet::SocketAddress>,
     mut wait_for_netmgr_fut: &mut F,
     poll_wait: zx::Duration,
     retry_count: u64,
@@ -80,11 +83,11 @@ async fn poll_lookup_admin<
 /// configures the Lookup service.
 #[variants_test]
 async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Result {
-    const SERVER_ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
+    const SERVER_ADDR: fnet::Subnet = fidl_subnet!("192.168.0.1/24");
     /// DNS server served by DHCP.
-    const DHCP_DNS_SERVER: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!("123.12.34.56");
+    const DHCP_DNS_SERVER: fnet::Ipv4Address = fidl_ip_v4!("123.12.34.56");
     /// DNS server served by NDP.
-    const NDP_DNS_SERVER: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!("20a::1234:5678");
+    const NDP_DNS_SERVER: fnet::Ipv6Address = fidl_ip_v6!("20a::1234:5678");
 
     /// Maximum number of times we'll poll `LookupAdmin` to check DNS configuration
     /// succeeded.
@@ -125,7 +128,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
 
     let dhcp_server = server_environment
         .connect_to_service::<net_dhcp::Server_Marker>()
-        .context("failed to connext to DHCP server")?;
+        .context("failed to connect to DHCP server")?;
 
     let dhcp_server_ref = &dhcp_server;
     // TODO(fxbug.dev/62554): derive these from SERVER_ADDR.
@@ -210,12 +213,12 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
 
     // The list of servers we expect to retrieve from `fuchsia.net.name/LookupAdmin`.
     let expect = vec![
-        fidl_fuchsia_net::SocketAddress::Ipv6(fidl_fuchsia_net::Ipv6SocketAddress {
+        fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
             address: NDP_DNS_SERVER,
             port: DEFAULT_DNS_PORT,
             zone_index: 0,
         }),
-        fidl_fuchsia_net::SocketAddress::Ipv4(fidl_fuchsia_net::Ipv4SocketAddress {
+        fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
             address: DHCP_DNS_SERVER,
             port: DEFAULT_DNS_PORT,
         }),
@@ -239,7 +242,7 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
     const DHCPV6_SERVER: net_types_ip::Ipv6Addr =
         net_types_ip::Ipv6Addr::new(std_ip_v6!("fe80::1").octets());
     /// DNS server served by DHCPv6.
-    const DHCPV6_DNS_SERVER: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!("20a::1234:5678");
+    const DHCPV6_DNS_SERVER: fnet::Ipv6Address = fidl_ip_v6!("20a::1234:5678");
 
     /// Maximum number of times we'll poll `LookupAdmin` to check DNS configuration
     /// succeeded.
@@ -394,7 +397,7 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
     let () = fake_ep.write(ser.as_ref()).await.context("failed to write to fake endpoint")?;
 
     // The list of servers we expect to retrieve from `fuchsia.net.name/LookupAdmin`.
-    let expect = vec![fidl_fuchsia_net::SocketAddress::Ipv6(fidl_fuchsia_net::Ipv6SocketAddress {
+    let expect = vec![fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
         address: DHCPV6_DNS_SERVER,
         port: DEFAULT_DNS_PORT,
         zone_index: 0,
@@ -407,4 +410,163 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
     poll_lookup_admin(&lookup_admin, expect, &mut wait_for_netmgr_fut, POLL_WAIT, RETRY_COUNT)
         .await
         .context("poll lookup admin")
+}
+
+const EXAMPLE_HOSTNAME: &str = "www.example.com.";
+const EXAMPLE_IPV4_ADDR: fnet::IpAddress = fidl_ip!("93.184.216.34");
+const EXAMPLE_IPV6_ADDR: fnet::IpAddress = fidl_ip!("2606:2800:220:1:248:1893:25c8:1946");
+
+#[test_case(true, false, EXAMPLE_HOSTNAME, EXAMPLE_IPV4_ADDR; "ipv4 only")]
+#[test_case(false, true, EXAMPLE_HOSTNAME, EXAMPLE_IPV6_ADDR; "ipv6 only")]
+#[test_case(true, true, EXAMPLE_HOSTNAME, EXAMPLE_IPV4_ADDR; "ipv4 and ipv6")]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_fallback_on_query_refused(
+    ipv4_lookup: bool,
+    ipv6_lookup: bool,
+    hostname: &str,
+    resolved_addr: fnet::IpAddress,
+) {
+    use trust_dns_proto::{
+        op::{message::Message, MessageType, OpCode, ResponseCode},
+        rr::{dns_class::DNSClass, Name, RData, Record, RecordType},
+    };
+
+    const MAX_DNS_UDP_MESSAGE_LEN: usize = 512;
+    let refusing_dns_server: std::net::SocketAddr = std_socket_addr!("127.0.0.1:1234");
+    let fallback_dns_server: std::net::SocketAddr = std_socket_addr!("127.0.0.1:5678");
+
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let env = sandbox
+        .create_netstack_environment_with::<Netstack2, _, _>(
+            "env",
+            &[KnownServices::LookupAdmin, KnownServices::NameLookup],
+        )
+        .expect("failed to create environment");
+
+    // Mock name servers in priority order.
+    let mut expect = vec![
+        fidl_fuchsia_net_ext::SocketAddress(refusing_dns_server).into(),
+        fidl_fuchsia_net_ext::SocketAddress(fallback_dns_server).into(),
+    ];
+    let lookup_admin = env
+        .connect_to_service::<net_name::LookupAdminMarker>()
+        .expect("failed to connect to LookupAdmin");
+    let () = lookup_admin
+        .set_dns_servers(&mut expect.iter_mut())
+        .await
+        .expect("FIDL error")
+        .expect("failed to set DNS servers");
+    let servers = lookup_admin.get_dns_servers().await.expect("failed to get DNS servers");
+    assert_eq!(servers, expect);
+
+    let refusing_sock = fuchsia_async::net::UdpSocket::bind_in_env(&env, refusing_dns_server)
+        .await
+        .expect("failed to create socket");
+    let fallback_sock = fuchsia_async::net::UdpSocket::bind_in_env(&env, fallback_dns_server)
+        .await
+        .expect("failed to create socket");
+
+    let name_lookup = env
+        .connect_to_service::<fnet::NameLookupMarker>()
+        .expect("failed to connect to NameLookup");
+    let lookup_fut = async {
+        let ips = name_lookup
+            .lookup_ip2(
+                hostname,
+                fnet::LookupIpOptions2 {
+                    ipv4_lookup: Some(ipv4_lookup),
+                    ipv6_lookup: Some(ipv6_lookup),
+                    sort_addresses: Some(true),
+                    ..fnet::LookupIpOptions2::EMPTY
+                },
+            )
+            .await
+            .expect("FIDL error")
+            .expect("lookup_ip2 error");
+        assert_eq!(
+            ips,
+            fnet::LookupResult {
+                addresses: Some(vec![resolved_addr]),
+                ..fnet::LookupResult::EMPTY
+            }
+        );
+    }
+    .fuse();
+
+    async fn run_mock_server(
+        socket: &fuchsia_async::net::UdpSocket,
+        handle_query: impl Fn(&Message) -> Message,
+    ) {
+        let mut buf = [0; MAX_DNS_UDP_MESSAGE_LEN];
+        loop {
+            let (read, src_addr) =
+                socket.recv_from(&mut buf).await.expect("failed to receive DNS query");
+            let query = Message::from_vec(&buf[..read]).expect("failed to deserialize DNS query");
+            let mut message = handle_query(&query);
+            let _: &mut Message = message.set_id(query.id()).add_queries(query.queries().to_vec());
+            let response = message.to_vec().expect("failed to serialize DNS message");
+            let written =
+                socket.send_to(&response, src_addr).await.expect("failed to send DNS message");
+            assert_eq!(written, response.len());
+        }
+    }
+    // The refusing name server expects initial queries from dns-resolver, and always replies with a
+    // `REFUSED` response.
+    let refuse_fut = run_mock_server(&refusing_sock, |_: &Message| {
+        let mut message = Message::new();
+        let _: &mut Message = message
+            .set_message_type(MessageType::Response)
+            .set_response_code(ResponseCode::Refused)
+            .set_op_code(OpCode::Update);
+        message
+    })
+    .fuse();
+    // The fallback name server expects fallback queries from dns-resolver, and replies with a
+    // non-error response, unless it gets a query for a different record type than it expects.
+    let fallback_fut = {
+        let expected_record_type = if ipv4_lookup { RecordType::A } else { RecordType::AAAA };
+        run_mock_server(&fallback_sock, move |query| {
+            if query.queries().iter().any(|q| q.query_type() != expected_record_type) {
+                // Reply with a `SERVFAIL` response since we want to ignore this query.
+                let mut message = Message::new();
+                let _: &mut Message = message
+                    .set_id(query.id())
+                    .set_message_type(MessageType::Response)
+                    .set_response_code(ResponseCode::ServFail)
+                    .set_op_code(OpCode::Update)
+                    .add_queries(query.queries().to_vec());
+                message
+            } else {
+                let mut answer = Record::new();
+                let _: &mut Record = answer
+                    .set_name(Name::from_str(hostname).expect("failed to parse hostname"))
+                    .set_dns_class(DNSClass::IN);
+                let fidl_fuchsia_net_ext::IpAddress(addr) = resolved_addr.into();
+                match addr {
+                    std::net::IpAddr::V4(addr) => {
+                        let _: &mut Record =
+                            answer.set_rr_type(RecordType::A).set_rdata(RData::A(addr));
+                    }
+                    std::net::IpAddr::V6(addr) => {
+                        let _: &mut Record =
+                            answer.set_rr_type(RecordType::AAAA).set_rdata(RData::AAAA(addr));
+                    }
+                }
+                let mut message = Message::new();
+                let _: &mut Message = message
+                    .set_message_type(MessageType::Response)
+                    .set_op_code(OpCode::Update)
+                    .add_answer(answer);
+                message
+            }
+        })
+    }
+    .fuse();
+
+    pin_utils::pin_mut!(lookup_fut, refuse_fut, fallback_fut);
+    futures::select! {
+        () = lookup_fut => {},
+        () = refuse_fut => panic!("refuse_fut should never complete"),
+        () = fallback_fut => panic!("fallback_fut should never complete"),
+    };
 }
