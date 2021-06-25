@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/sdk/sdk_component_manifests.gni")
+import("//build/sdk/sdk_molecule.gni")
+
+sdk_component_manifests("syslog") {
+  name = "syslog"
+  manifests = [
+    "client.shard.cml",
+    "client.shard.cmx",
+  ]
+  category = "internal"
+}
+
 group("tests") {
   testonly = true
 

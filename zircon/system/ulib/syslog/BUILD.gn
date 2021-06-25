@@ -27,6 +27,7 @@ zx_library("syslog") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/diagnostics/syslog:client_includes",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog",
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",

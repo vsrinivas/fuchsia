@@ -44,8 +44,11 @@ Some language-specific targets are also SDK-ready:
 In order to add documentation to an SDK, use the
 [`sdk_documentation`](sdk_documentation.gni) template.
 
-Static data (e.g. configuration or LICENSE files) being added to the SDK should use the
-[`sdk_data`](sdk_data.gni) template.
+[Component manifest shards][cm-shards] being added to the SDK should use the
+[`sdk_component_manifest`](sdk_component_manifest.gni) template.
+
+Other static data (e.g. configuration or LICENSE files) being added to the SDK
+should use the [`sdk_data`](sdk_data.gni) template.
 
 A target `//foo/bar` declared with one of these templates will yield an
 additional target `//foo/bar:bar_sdk` which is an atom ready to be included in
@@ -116,3 +119,5 @@ For each element in the SDK, a reference file representing its API is checked
 into the source tree. If the API is modified but the reference file is not
 updated, the build will fail. Set this argument to `true` in order to turn the
 errors into mere warnings.
+
+[cm-shards]: /docs/development/components/build.md#component-manifest-shards

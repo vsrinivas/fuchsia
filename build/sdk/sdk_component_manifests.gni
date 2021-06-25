@@ -1,0 +1,71 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_atom.gni")
+
+# Declares a component manifest shard to be added to an SDK.
+#
+# Parameters
+#
+#   category (required)
+#     Publication level of the data set in SDKs.
+#     See //build/sdk/sdk_atom.gni.
+#
+#   name (required)
+#     Name of the component manifest in the SDK.
+#
+#   manifests (required)
+#     List of paths to the component manifest files to add to the SDK.
+#
+#   non_sdk_deps (optional)
+#     List of GN labels which this target needs built.
+
+template("sdk_component_manifests") {
+  assert(defined(invoker.category), "Must define an SDK category")
+  assert(defined(invoker.name), "Must define an SDK name")
+  assert(defined(invoker.manifests), "Must define component manifests")
+  assert(invoker.manifests != [], "Must define component manifests")
+
+  file_base = "pkg/${invoker.name}"
+  meta_dest = "$file_base/$target_name.json"
+  file_records = []
+  file_dests = []
+
+  foreach(manifest, invoker.manifests) {
+    manifest_extension = get_path_info(manifest, "extension")
+    if (manifest_extension != "cml" && manifest_extension != "cmx") {
+      assert(
+          false,
+          "Unknown manifest format for \"${invoker.manifest}\", must be \".cml\" or \".cmx\"")
+    }
+    manifest_file = get_path_info(manifest, "file")
+    file_dest = "$file_base/$manifest_file"
+    file_records += [
+      {
+        source = manifest
+        dest = file_dest
+      },
+    ]
+    file_dests += [ file_dest ]
+  }
+
+  sdk_atom(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "category",
+                             "non_sdk_deps",
+                           ])
+    id = "sdk://component_manifest/${invoker.name}"
+    files = file_records
+    meta = {
+      schema = "data"
+      dest = meta_dest
+      value = {
+        type = "component_manifest"
+        name = invoker.name
+        data = file_dests
+      }
+    }
+  }
+}
