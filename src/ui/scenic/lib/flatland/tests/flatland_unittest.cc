@@ -434,7 +434,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
                   fidl::InterfacePtr<GraphLink>* graph_link) {
     ContentLinkToken parent_token;
     GraphLinkToken child_token;
-    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
     LinkProperties properties;
     properties.set_logical_size({kDefaultSize, kDefaultSize});
@@ -454,7 +454,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
     FX_CHECK(graph_link);
     ContentLinkToken parent_token;
     GraphLinkToken child_token;
-    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
     auto present_id = scheduling::PeekNextPresentId();
     EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(display->session_id(), _));
     // TODO(fxbug.dev/76640): we would like to verify that the returned id matches |present_id|.
@@ -1370,7 +1370,7 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithoutConnection) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<GraphLink> graph_link;
   flatland->LinkToParent(std::move(child_token), graph_link.NewRequest());
@@ -1378,7 +1378,7 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithoutConnection) {
 
   ContentLinkToken parent_token2;
   GraphLinkToken child_token2;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token2.value, &child_token2.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token2.value, &child_token2.value));
 
   fidl::InterfacePtr<GraphLink> graph_link2;
   flatland->LinkToParent(std::move(child_token2), graph_link2.NewRequest());
@@ -1410,7 +1410,7 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithConnection) {
   // Don't use the helper function for the second link to test when the previous links are closed.
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   // Creating the new GraphLink doesn't invalidate either of the old links until Present() is
   // called on the child->
@@ -1436,7 +1436,7 @@ TEST_F(FlatlandTest, GraphLinkUnbindsOnParentDeath) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<GraphLink> graph_link;
   flatland->LinkToParent(std::move(child_token), graph_link.NewRequest());
@@ -1476,7 +1476,7 @@ TEST_F(FlatlandTest, GraphUnlinkReturnsOrphanedTokenOnParentDeath) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<GraphLink> graph_link;
   flatland->LinkToParent(std::move(child_token), graph_link.NewRequest());
@@ -1506,7 +1506,7 @@ TEST_F(FlatlandTest, GraphUnlinkReturnsOriginalToken) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const zx_koid_t expected_koid = fsl::GetKoid(child_token.value.get());
 
@@ -1550,7 +1550,7 @@ TEST_F(FlatlandTest, ContentLinkUnbindsOnChildDeath) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const ContentId kLinkId1 = {1};
 
@@ -1589,7 +1589,7 @@ TEST_F(FlatlandTest, ContentLinkFailsIdIsZero) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
@@ -1604,7 +1604,7 @@ TEST_F(FlatlandTest, ContentLinkFailsNoLogicalSize) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
@@ -1621,7 +1621,7 @@ TEST_F(FlatlandTest, ContentLinkFailsInvalidLogicalSize) {
   // The X value must be positive.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
     LinkProperties properties;
     properties.set_logical_size({0, kDefaultSize});
     flatland->CreateLink({0}, std::move(parent_token), std::move(properties),
@@ -1632,7 +1632,7 @@ TEST_F(FlatlandTest, ContentLinkFailsInvalidLogicalSize) {
   // The Y value must be positive.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
     LinkProperties properties2;
     properties2.set_logical_size({kDefaultSize, 0});
     flatland->CreateLink({0}, std::move(parent_token), std::move(properties2),
@@ -1646,7 +1646,7 @@ TEST_F(FlatlandTest, ContentLinkFailsIdCollision) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const ContentId kId1 = {1};
 
@@ -1659,7 +1659,7 @@ TEST_F(FlatlandTest, ContentLinkFailsIdCollision) {
 
   ContentLinkToken parent_token2;
   GraphLinkToken child_token2;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token2.value, &child_token2.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token2.value, &child_token2.value));
 
   flatland->CreateLink(kId1, std::move(parent_token2), std::move(properties),
                        content_link.NewRequest());
@@ -1747,7 +1747,7 @@ TEST_F(FlatlandTest, ChildGetsLayoutUpdateWithoutPresenting) {
   // Set up a link, but don't call Present() on either instance.
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const ContentId kLinkId = {1};
 
@@ -1780,7 +1780,7 @@ TEST_F(FlatlandTest, OverwrittenHangingGetsReturnError) {
   // Set up a link, but don't call Present() on either instance.
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const ContentId kLinkId = {1};
   fidl::InterfacePtr<ContentLink> content_link;
@@ -1815,7 +1815,7 @@ TEST_F(FlatlandTest, OverwrittenHangingGetsReturnError) {
 TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   // Create the parent Flatland session using another loop.
   async::TestLoop parent_loop;
@@ -1895,7 +1895,7 @@ TEST_F(FlatlandTest, ConnectedToDisplayParentPresentsBeforeChild) {
   // Set up a link and attach it to the parent's root, but don't call Present() on either instance.
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const TransformId kTransformId = {1};
 
@@ -1952,7 +1952,7 @@ TEST_F(FlatlandTest, ConnectedToDisplayChildPresentsBeforeParent) {
   // Set up a link and attach it to the parent's root, but don't call Present() on either instance.
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const TransformId kTransformId = {1};
 
@@ -2009,7 +2009,7 @@ TEST_F(FlatlandTest, ChildReceivesDisconnectedFromDisplay) {
   // Set up a link and attach it to the parent's root, but don't call Present() on either instance.
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const TransformId kTransformId = {1};
 
@@ -2062,7 +2062,7 @@ TEST_F(FlatlandTest, ValidChildToParentFlow) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const ContentId kLinkId = {1};
 
@@ -2515,7 +2515,7 @@ TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
     // creation time.
     ContentLinkToken parent_token;
     GraphLinkToken child_token;
-    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
     LinkProperties empty_properties;
     fidl::InterfacePtr<ContentLink> content_link;
     flatland->CreateLink(kLinkId1, std::move(parent_token), std::move(empty_properties),
@@ -2529,7 +2529,7 @@ TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
     ContentLinkToken parent_token;
     GraphLinkToken child_token;
-    zx::eventpair::create(0, &parent_token.value, &child_token.value);
+    zx::channel::create(0, &parent_token.value, &child_token.value);
     LinkProperties properties;
     properties.set_logical_size({kDefaultSize, kDefaultSize});
     fidl::InterfacePtr<ContentLink> content_link;
@@ -2607,7 +2607,7 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOriginalToken) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const zx_koid_t expected_koid = fsl::GetKoid(parent_token.value.get());
 
@@ -2656,7 +2656,7 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOrphanedTokenOnChildDeath) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const ContentId kLinkId1 = {1};
 
@@ -2695,7 +2695,7 @@ TEST_F(FlatlandTest, CreateLinkPresentedBeforeLinkToParent) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   // Create a transform, add it to the parent, then create a link and assign to the transform.
   const TransformId kId1 = {1};
@@ -2731,7 +2731,7 @@ TEST_F(FlatlandTest, LinkToParentPresentedBeforeCreateLink) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   // Link the child to the parent
   fidl::InterfacePtr<GraphLink> child_graph_link;
@@ -2770,7 +2770,7 @@ TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   // Create a transform, add it to the parent, then create a link and assign to the transform.
   const TransformId kId1 = {1};
@@ -2812,7 +2812,7 @@ TEST_F(FlatlandTest, ClearChildLink) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   // Create and link the two instances.
   const TransformId kId1 = {1};
@@ -3217,7 +3217,7 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
     ContentLinkToken parent_token;
     GraphLinkToken child_token;
-    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
     fidl::InterfacePtr<ContentLink> content_link;
     LinkProperties link_properties;
@@ -3610,7 +3610,7 @@ TEST_F(FlatlandTest, ReleaseImageErrorCases) {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
     ContentLinkToken parent_token;
     GraphLinkToken child_token;
-    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
     const ContentId kLinkId = {2};
 

@@ -72,7 +72,7 @@ TEST_F(LinkSystemTest, UnresolvedGraphLinkDiesOnContentTokenDeath) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   TransformHandle handle;
 
@@ -95,7 +95,7 @@ TEST_F(LinkSystemTest, UnresolvedContentLinkDiesOnGraphTokenDeath) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   TransformHandle handle;
 
@@ -120,7 +120,7 @@ TEST_F(LinkSystemTest, ResolvedLinkCreatesLinkTopology) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<GraphLink> graph_link;
   ParentLink parent_link = link_system->CreateParentLink(
@@ -164,7 +164,7 @@ TEST_F(LinkSystemTest, ChildLinkDeathDestroysTopology) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<GraphLink> graph_link;
   ParentLink parent_link = link_system->CreateParentLink(
@@ -198,7 +198,7 @@ TEST_F(LinkSystemTest, ParentLinkDeathDestroysTopology) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<ContentLink> content_link;
   ChildLink child_link =
@@ -232,7 +232,7 @@ TEST_F(LinkSystemTest, OverwrittenHangingGetsReturnError) {
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<GraphLink> graph_link;
   bool parent_link_returned_error = false;

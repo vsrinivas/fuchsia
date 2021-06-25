@@ -29,7 +29,7 @@ DisplayCompositorTestBase::FakeFlatlandSession::LinkToParent(FakeFlatlandSession
   // Create the tokens.
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
-  EXPECT_EQ(zx::eventpair::create(0, &parent_token.value, &child_token.value), ZX_OK);
+  EXPECT_EQ(zx::channel::create(0, &parent_token.value, &child_token.value), ZX_OK);
 
   // Create the parent link.
   fidl::InterfacePtr<GraphLink> graph_link;

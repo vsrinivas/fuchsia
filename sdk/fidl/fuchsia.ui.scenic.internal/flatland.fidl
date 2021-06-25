@@ -106,18 +106,16 @@ protocol ContentLink {
     GetStatus() -> (ContentLinkStatus status);
 };
 
-/// A typed wrapper for an eventpair, representing the child endpoint of a Link.
-/// The eventpair object must not be cloned; object uniqueness is used as part
-/// of lifecycle management.
+/// A typed wrapper for a channel, representing the child endpoint of a Link. No messages will be
+/// sent over this channel, because it is only used as an unclonable object with peer.
 resource struct GraphLinkToken {
-    zx.handle:EVENTPAIR value;
+    zx.handle:CHANNEL value;
 };
 
-/// A typed wrapper for an eventpair, representing the parent endpoint of a Link.
-/// The eventpair object must not be cloned; object uniqueness is used as part
-/// of lifecycle management.
+/// A typed wrapper for a channel, representing the parent endpoint of a Link. No messages will be
+/// sent over this channel, because it is only used as an unclonable object with peer.
 resource struct ContentLinkToken {
-    zx.handle:EVENTPAIR value;
+    zx.handle:CHANNEL value;
 };
 
 /// The properties of a Link as defined by the parent. This data, along with the set of attached

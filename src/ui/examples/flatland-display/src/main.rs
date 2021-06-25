@@ -24,7 +24,7 @@ struct LinkTokenPair {
 impl LinkTokenPair {
     fn new() -> LinkTokenPair {
         let (raw_graph_token, raw_content_token) =
-            zx::EventPair::create().expect("failed to create eventpair");
+            zx::Channel::create().expect("failed to create channel");
         LinkTokenPair {
             graph_link_token: fland::GraphLinkToken { value: raw_graph_token },
             content_link_token: fland::ContentLinkToken { value: raw_content_token },

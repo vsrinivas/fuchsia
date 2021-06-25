@@ -312,14 +312,14 @@ void Flatland::UnlinkFromParent(
         GraphLinkToken return_token;
 
         // If the link is still valid, return the original token. If not, create an orphaned
-        // zx::eventpair and return it since the ObjectLinker does not retain the orphaned token.
+        // zx::channel and return it since the ObjectLinker does not retain the orphaned token.
         auto link_token = local_link.exporter.ReleaseToken();
         if (link_token.has_value()) {
-          return_token.value = zx::eventpair(std::move(link_token.value()));
+          return_token.value = zx::channel(std::move(link_token.value()));
         } else {
           // |peer_token| immediately falls out of scope, orphaning |return_token|.
-          zx::eventpair peer_token;
-          zx::eventpair::create(0, &return_token.value, &peer_token);
+          zx::channel peer_token;
+          zx::channel::create(0, &return_token.value, &peer_token);
         }
 
         callback(std::move(return_token));
@@ -908,14 +908,14 @@ void Flatland::ReleaseLink(ContentId link_id,
         ContentLinkToken return_token;
 
         // If the link is still valid, return the original token. If not, create an orphaned
-        // zx::eventpair and return it since the ObjectLinker does not retain the orphaned token.
+        // zx::channel and return it since the ObjectLinker does not retain the orphaned token.
         auto link_token = child_link.link.importer.ReleaseToken();
         if (link_token.has_value()) {
-          return_token.value = zx::eventpair(std::move(link_token.value()));
+          return_token.value = zx::channel(std::move(link_token.value()));
         } else {
           // |peer_token| immediately falls out of scope, orphaning |return_token|.
-          zx::eventpair peer_token;
-          zx::eventpair::create(0, &return_token.value, &peer_token);
+          zx::channel peer_token;
+          zx::channel::create(0, &return_token.value, &peer_token);
         }
 
         callback(std::move(return_token));
