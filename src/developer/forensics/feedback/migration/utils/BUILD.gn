@@ -13,13 +13,14 @@ source_set("utils") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.io",
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
     "//src/developer/forensics/utils:errors",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
   ]
 
   deps = [

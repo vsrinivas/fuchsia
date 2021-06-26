@@ -7,14 +7,17 @@
 
 #include <fuchsia/feedback/internal/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 
 #include <utility>
 
 #include <fbl/unique_fd.h>
 
+#include "lib/async/cpp/task.h"
 #include "src/developer/forensics/feedback/migration/utils/file_utils.h"
 #include "src/developer/forensics/utils/errors.h"
 
@@ -29,8 +32,11 @@ class DirectoryMigratorPtr {
   // Return the "/data" and "/cache" directories as file descriptors.
   using Directories = std::pair<fbl::unique_fd, fbl::unique_fd>;
 
-  DirectoryMigratorPtr() {
-    migrator_.set_error_handler([](const zx_status_t status) {
+  explicit DirectoryMigratorPtr(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {
+    migrator_.set_error_handler([this](const zx_status_t status) {
+      if (*completer_) {
+        completer_->complete_error(Error::kConnectionError);
+      }
       FX_PLOGS(ERROR, status) << "Lost connection to " << DirectoryMigratorProtocol::Name_;
     });
   }
@@ -44,19 +50,44 @@ class DirectoryMigratorPtr {
   // Call the underlying GetDirectories and convert the returned values into file descriptors.
   //
   // Returns |Error::kConnectionError| in the event the connection is lost.
-  ::fit::promise<Directories, Error> GetDirectories() {
+  ::fit::promise<Directories, Error> GetDirectories(const zx::duration timeout) {
+    FX_CHECK(!called_) << "GetDirectories() can only be called once";
+    called_ = true;
+
     ::fit::bridge<Directories, Error> bridge;
-    migrator_->GetDirectories([completer = std::move(bridge.completer)](
+    auto completer =
+        std::make_shared<::fit::completer<Directories, Error>>(std::move(bridge.completer));
+
+    if (const zx_status_t status = async::PostDelayedTask(
+            dispatcher_,
+            [completer] {
+              if (*completer) {
+                completer->complete_error(Error::kTimeout);
+              }
+            },
+            timeout);
+        status != ZX_OK) {
+      FX_PLOGS(ERROR, status)
+          << "Failed to post timeout for directory migration, proceeding unsafely";
+    }
+
+    migrator_->GetDirectories([completer](
                                   ::fidl::InterfaceHandle<fuchsia::io::Directory> data,
                                   ::fidl::InterfaceHandle<fuchsia::io::Directory> cache) mutable {
-      completer.complete_ok(std::make_pair(IntoFd(std::move(data)), IntoFd(std::move(cache))));
+      if (*completer) {
+        completer->complete_ok(std::make_pair(IntoFd(std::move(data)), IntoFd(std::move(cache))));
+      }
     });
 
-    return bridge.consumer.promise_or(::fit::error(Error::kConnectionError));
+    completer_ = completer;
+    return bridge.consumer.promise_or(::fit::error(Error::kLogicError));
   }
 
  private:
+  async_dispatcher_t* dispatcher_;
   ::fidl::InterfacePtr<DirectoryMigratorProtocol> migrator_;
+  std::shared_ptr<::fit::completer<Directories, Error>> completer_;
+  bool called_{false};
 };
 
 }  // namespace internal

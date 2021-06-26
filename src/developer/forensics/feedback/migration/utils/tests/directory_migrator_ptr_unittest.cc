@@ -20,18 +20,32 @@ namespace {
 
 class DirectoryMigratorForTest : public fuchsia::feedback::internal::FeedbackDataDirectoryMigrator {
  public:
+  // How the stub should erroneously behave.
+  enum class ErrorResponse { kDropConnection, kHang };
+
   DirectoryMigratorForTest(std::optional<std::string> data_path,
-                           std::optional<std::string> cache_path)
-      : data_path_(std::move(data_path)), cache_path_(std::move(cache_path)) {}
+                           std::optional<std::string> cache_path,
+                           std::optional<ErrorResponse> error_response = std::nullopt)
+      : data_path_(std::move(data_path)),
+        cache_path_(std::move(cache_path)),
+        error_response_(error_response) {}
 
   void GetDirectories(GetDirectoriesCallback callback) override {
-    callback(PathToInterfaceHandle(data_path_), PathToInterfaceHandle(cache_path_));
+    if (!error_response_) {
+      callback(PathToInterfaceHandle(data_path_), PathToInterfaceHandle(cache_path_));
+    }
   }
 
   fidl::InterfaceRequestHandler<fuchsia::feedback::internal::FeedbackDataDirectoryMigrator>
   GetHandler() {
     return [this](fidl::InterfaceRequest<fuchsia::feedback::internal::FeedbackDataDirectoryMigrator>
-                      request) { bindings_.AddBinding(this, std::move(request)); };
+                      request) {
+      if (error_response_ == ErrorResponse::kDropConnection) {
+        return;
+      }
+
+      bindings_.AddBinding(this, std::move(request));
+    };
   }
 
  private:
@@ -47,19 +61,21 @@ class DirectoryMigratorForTest : public fuchsia::feedback::internal::FeedbackDat
 
   std::optional<std::string> data_path_;
   std::optional<std::string> cache_path_;
+  std::optional<ErrorResponse> error_response_;
 
   fidl::BindingSet<fuchsia::feedback::internal::FeedbackDataDirectoryMigrator> bindings_;
 };
 
 class DirectoryMigratorPtrTest : public UnitTestFixture {
  public:
-  DirectoryMigratorPtrTest() : executor_(dispatcher()) {}
+  DirectoryMigratorPtrTest() : executor_(dispatcher()), migrator_(dispatcher()) {}
 
  protected:
-  void SetUpMigratorServer(std::optional<std::string> data_path,
-                           std::optional<std::string> cache_path) {
+  void SetUpMigratorServer(
+      std::optional<std::string> data_path, std::optional<std::string> cache_path,
+      std::optional<DirectoryMigratorForTest::ErrorResponse> error_response = std::nullopt) {
     FX_CHECK(!migrator_server_);
-    migrator_server_.emplace(std::move(data_path), std::move(cache_path));
+    migrator_server_.emplace(std::move(data_path), std::move(cache_path), error_response);
     InjectServiceProvider(&migrator_server_.value());
   }
 
@@ -72,7 +88,7 @@ class DirectoryMigratorPtrTest : public UnitTestFixture {
     fbl::unique_fd data;
     fbl::unique_fd cache;
 
-    executor_.schedule_task(migrator_.GetDirectories()
+    executor_.schedule_task(migrator_.GetDirectories(zx::duration::infinite())
                                 .and_then([&](FeedbackDataDirectoryMigrator::Directories& dirs) {
                                   called = true;
                                   std::tie(data, cache) = std::move(dirs);
@@ -84,7 +100,7 @@ class DirectoryMigratorPtrTest : public UnitTestFixture {
     return std::make_pair(std::move(data), std::move(cache));
   }
 
-  Error GetDirectoriesError() {
+  Error GetDirectoriesError(const zx::duration timeout) {
     if (!migrator_.IsBound()) {
       FX_CHECK(services()->Connect(migrator_.NewRequest()) == ZX_OK);
     }
@@ -93,13 +109,13 @@ class DirectoryMigratorPtrTest : public UnitTestFixture {
     Error error{Error::kDefault};
 
     executor_.schedule_task(
-        migrator_.GetDirectories()
+        migrator_.GetDirectories(timeout)
             .and_then([](FeedbackDataDirectoryMigrator::Directories& dirs) { FX_CHECK(false); })
             .or_else([&](const Error& e) {
               called = true;
               error = e;
             }));
-    RunLoopUntilIdle();
+    RunLoopFor(timeout);
 
     FX_CHECK(called);
     return error;
@@ -142,8 +158,26 @@ TEST_F(DirectoryMigratorPtrTest, BadDirectory) {
   EXPECT_FALSE(cache_fd.is_valid());
 }
 
+TEST_F(DirectoryMigratorPtrTest, ConnctionDropped) {
+  files::ScopedTempDir data_dir;
+  files::ScopedTempDir cache_dir;
+
+  SetUpMigratorServer(data_dir.path(), cache_dir.path(),
+                      DirectoryMigratorForTest::ErrorResponse::kDropConnection);
+  EXPECT_EQ(GetDirectoriesError(zx::min(1)), Error::kConnectionError);
+}
+
 TEST_F(DirectoryMigratorPtrTest, NoServer) {
-  EXPECT_EQ(GetDirectoriesError(), Error::kConnectionError);
+  EXPECT_EQ(GetDirectoriesError(zx::min(1)), Error::kConnectionError);
+}
+
+TEST_F(DirectoryMigratorPtrTest, Timeout) {
+  files::ScopedTempDir data_dir;
+  files::ScopedTempDir cache_dir;
+
+  SetUpMigratorServer(data_dir.path(), cache_dir.path(),
+                      DirectoryMigratorForTest::ErrorResponse::kHang);
+  EXPECT_EQ(GetDirectoriesError(zx::min(1)), Error::kTimeout);
 }
 
 }  // namespace
