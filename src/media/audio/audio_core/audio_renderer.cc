@@ -128,14 +128,15 @@ void AudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type
   cleanup.cancel();
 }
 
-// To eliminate audible pops from discontinuity-on-immediate-start, ramp up from silence.
+// To eliminate audible pops from discontinuity-on-instant-start, ramp up from a very low level.
+// This isn't MUTED_GAIN_DB: the first mix might be erroneously skipped (despite ramping).
 constexpr bool kEnableRampUpOnPlay = true;
-constexpr float kInitialRampUpGainDb = fuchsia::media::audio::MUTED_GAIN_DB;
+constexpr float kInitialRampUpGainDb = -120.0f;
 constexpr zx::duration kRampUpOnPlayDuration = zx::msec(5);
 
-// To eliminate audible pops from discontinuity-on-pause, ramp down to silence, then pause.
+// To eliminate audible pops from discontinuity-on-pause, first ramp down to a very low level.
 constexpr bool kEnableRampDownOnPause = true;
-constexpr float kFinalRampDownGainDb = fuchsia::media::audio::MUTED_GAIN_DB;
+constexpr float kFinalRampDownGainDb = -120.0f;
 constexpr zx::duration kRampDownOnPauseDuration = zx::msec(5);
 constexpr zx::duration kAdditionalDelayBeforePauseDuration = zx::msec(5);
 

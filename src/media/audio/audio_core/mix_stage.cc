@@ -431,6 +431,7 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // a partial underflow when realigning, so just complete the packet and move on to the next.
     consumed_source = true;
   } else {
+    float local_gain_db;
     auto prev_dest_offset = dest_offset;
     auto dest_ref_clock_to_integral_dest_frame =
         ReferenceClockToIntegralFrames(cur_mix_job_.dest_ref_clock_to_frac_dest_frame);
@@ -438,10 +439,13 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // Check whether we are still ramping
     bool ramping = bookkeeping.gain.IsRamping();
     if (ramping) {
-      bookkeeping.gain.GetScaleArray(
+      auto scale_arr_max = bookkeeping.gain.GetScaleArray(
           bookkeeping.scale_arr.get(),
           std::min(dest_frames_left - dest_offset, Mixer::Bookkeeping::kScaleArrLen),
           dest_ref_clock_to_integral_dest_frame.rate());
+      local_gain_db = Gain::ScaleToDb(scale_arr_max);
+    } else {
+      local_gain_db = bookkeeping.gain.GetGainDb();
     }
 
     {
@@ -449,12 +453,11 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
           mixer.Mix(buf, dest_frames_left, &dest_offset, source_buffer.payload(),
                     source_buffer.length().Floor(), &source_offset, cur_mix_job_.accumulate);
       cur_mix_job_.usages_mixed.insert_all(source_buffer.usage_mask());
-      // The gain for the stream will be any previously applied usage gain combined with any
-      // additional gain that will be applied at this stage. In terms of the applied gain of the
-      // mixed stream, we consider that to be the max gain of any single source stream.
-      float usage_gain_db =
-          Gain::CombineGains(source_buffer.gain_db(), bookkeeping.gain.GetDestGainDb());
-      cur_mix_job_.applied_gain_db = std::max(cur_mix_job_.applied_gain_db, usage_gain_db);
+
+      // total stream gain: previously applied gain, plus any gain added at this stage
+      float total_gain_db = Gain::CombineGains(source_buffer.gain_db(), local_gain_db);
+      // For gain of a MIXED stream, we use the max gain of any single source stream.
+      cur_mix_job_.applied_gain_db = std::max(cur_mix_job_.applied_gain_db, total_gain_db);
     }
 
     // If source is ramping, advance that ramp by the amount of dest that was just mixed.

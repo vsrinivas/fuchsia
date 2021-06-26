@@ -89,7 +89,8 @@ class Gain {
       : min_gain_db_(std::max(limits.min_gain_db.value_or(kMinGainDb), kMinGainDb)),
         max_gain_db_(std::min(limits.max_gain_db.value_or(kMaxGainDb), kMaxGainDb)),
         min_gain_scale_(DbToScale(min_gain_db_)),
-        max_gain_scale_(DbToScale(max_gain_db_)) {}
+        max_gain_scale_(DbToScale(max_gain_db_)),
+        combined_gain_scale_(std::clamp(kUnityScale, min_gain_scale_, max_gain_scale_)) {}
 
   // The Gain object specifies the volume scaling to be performed for a given
   // Mix operation, when mixing a single stream into some combined resultant
@@ -104,7 +105,9 @@ class Gain {
   // Retrieve the overall gain-scale, recalculating from respective pieces if needed.
   AScale GetGainScale();
 
-  void GetScaleArray(AScale* scale_arr, int64_t num_frames, const TimelineRate& rate);
+  // Calculate and return an array of gain-scale values for the next `num_frames`. The returned
+  // value is the maximum gain-scale value over that interval.
+  AScale GetScaleArray(AScale* scale_arr, int64_t num_frames, const TimelineRate& rate);
 
   // Calculate the gain-scale, then convert it to decibels-full-scale.
   float GetGainDb() { return ScaleToDb(GetGainScale()); }
@@ -137,7 +140,8 @@ class Gain {
   }
 
   bool IsUnity() {
-    return !IsMute() && !IsRamping() && (target_source_gain_db_ + target_dest_gain_db_ == 0.0f);
+    return !IsMute() && !IsRamping() && (target_source_gain_db_ + target_dest_gain_db_ == 0.0f) &&
+           (min_gain_db_ <= kUnityGainDb) && (max_gain_db_ >= kUnityGainDb);
   }
 
   bool IsRamping() {
