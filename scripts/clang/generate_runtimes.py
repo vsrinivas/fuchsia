@@ -152,22 +152,22 @@ def generate_entry(filename, clang_dir, build_id_dir, dump_syms):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--clang-toolchain", required=True, help="path to Clang")
+        "--clang-prefix", required=True, help="path to Clang toolchain")
     parser.add_argument(
-        "--fuchsia-sdk", required=True, help="path to Fuchsia SDK")
+        "--sdk-dir", required=True, help="path to Fuchsia SDK")
     parser.add_argument("--build-id-dir", help="path .build-id directory")
     parser.add_argument(
         "--dump-syms", help="path to Breakpad dump_syms utility")
     args = parser.parse_args()
 
-    clang_dir = os.path.abspath(args.clang_toolchain)
+    clang_dir = os.path.abspath(args.clang_prefix)
     build_id_dir = os.path.abspath(
         args.build_id_dir) if args.build_id_dir else None
 
     runtimes = []
     for target in TARGETS:
         arch = TRIPLE_TO_TARGET[target]
-        sysroot = os.path.join(args.fuchsia_sdk, "arch", arch, "sysroot")
+        sysroot = os.path.join(args.sdk_dir, "arch", arch, "sysroot")
 
         for cflags in CFLAGS:
             for ldflags in LDFLAGS:
