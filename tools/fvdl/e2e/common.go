@@ -22,20 +22,19 @@ var (
 	aemuDir           = flag.String("aemu_dir", "", "Path to AEMU directory")
 	grpcWebProxyDir   = flag.String("grpcwebproxy_dir", "", "Path to grpcwebproxy directory")
 	deviceLauncherDir = flag.String("device_launcher_dir", "", "Path to device launcher directory")
-)
-
-var (
-	emulatorPath     string
-	fvdl             string
-	deviceLauncher   string
-	grpcwebproxyPath string
-	fuchsiaBuildDir  string
-	hostToolsDir     string
-	fvm              string
-	zbi              string
-	kernel           string
-	runtimeDir       string
-	setupOnce        sync.Once
+	targetCPU         = flag.String("target_cpu", "", "Toolchain used to build Fuchsia image.")
+	emulatorPath      string
+	fvdl              string
+	deviceLauncher    string
+	grpcwebproxyPath  string
+	fuchsiaBuildDir   string
+	hostToolsDir      string
+	fvm               string
+	zbi               string
+	kernel            string
+	runtimeDir        string
+	amberFiles        string
+	setupOnce         sync.Once
 )
 
 func setUp(t *testing.T, intree bool) {
@@ -73,34 +72,42 @@ func setUp(t *testing.T, intree bool) {
 		if _, err := os.Stat(fvdl); os.IsNotExist(err) {
 			t.Fatal(err)
 		}
-		if intree {
-			fuchsiaBuildDir = filepath.Join(runtimeDir, "images")
-			if _, err := os.Stat(fuchsiaBuildDir); os.IsNotExist(err) {
-				t.Fatalf("Invalid fuchsia build dir %q err: %s", fuchsiaBuildDir, err)
-			}
-			zbi = filepath.Join(fuchsiaBuildDir, "fuchsia.zbi")
-			if _, err := os.Stat(zbi); os.IsNotExist(err) {
-				t.Fatal(err)
-			}
-			fvm = filepath.Join(fuchsiaBuildDir, "fvm.blk")
-			if _, err := os.Stat(fvm); os.IsNotExist(err) {
-				t.Fatal(err)
-			}
-			kernel = filepath.Join(fuchsiaBuildDir, "multiboot.bin")
-			if _, err := os.Stat(kernel); os.IsNotExist(err) {
-				t.Fatal(err)
-			}
-			packages := filepath.Join(fuchsiaBuildDir, "packages.tar.gz")
-			if _, err := os.Stat(packages); os.IsNotExist(err) {
-				t.Fatal(err)
-			}
-			if err := os.Mkdir(filepath.Join(runtimeDir, ".jiri_root"), 0o755); err != nil && !os.IsExist(err) {
-				t.Fatal(err)
-			}
-			e2etest.ExtractPackage(t, packages, fuchsiaBuildDir)
-			e2etest.GenerateFakeArgsFile(t, filepath.Join(fuchsiaBuildDir, "args.gn"))
+		fuchsiaBuildDir = filepath.Join(runtimeDir, "images")
+		if _, err := os.Stat(fuchsiaBuildDir); os.IsNotExist(err) {
+			t.Fatalf("Invalid fuchsia build dir %q err: %s", fuchsiaBuildDir, err)
 		}
-		e2etest.CreateSSHKeyPairFiles(t, runtimeDir)
+		zbi = filepath.Join(fuchsiaBuildDir, "fuchsia.zbi")
+		if _, err := os.Stat(zbi); os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		fvm = filepath.Join(fuchsiaBuildDir, "fvm.blk")
+		if _, err := os.Stat(fvm); os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		kernel = filepath.Join(fuchsiaBuildDir, "multiboot.bin")
+		if _, err := os.Stat(kernel); os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		packages := filepath.Join(fuchsiaBuildDir, "packages.tar.gz")
+		if _, err := os.Stat(packages); os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(filepath.Join(runtimeDir, ".jiri_root"), 0o755); err != nil && !os.IsExist(err) {
+			t.Fatal(err)
+		}
+		if err := e2etest.ExtractPackage(packages, fuchsiaBuildDir); err != nil {
+			t.Fatal(err)
+		}
+		amberFiles = filepath.Join(fuchsiaBuildDir, "amber-files")
+		if intree {
+			if err := e2etest.GenerateFakeArgsFile(filepath.Join(fuchsiaBuildDir, "args.gn")); err != nil {
+				t.Fatal(err)
+			}
+			if err := e2etest.GenerateFakeImagesJson(filepath.Join(fuchsiaBuildDir, "images.json")); err != nil {
+				t.Fatal(err)
+			}
+		}
+		e2etest.CreateSSHKeyPairFiles(runtimeDir)
 	})
 }
 
@@ -151,9 +158,6 @@ func runVDLWithArgs(ctx context.Context, t *testing.T, args []string, intree boo
 			"FUCHSIA_BUILD_DIR="+fuchsiaBuildDir,
 			"FUCHSIA_ZBI_COMPRESSION=zstd",
 			"HOST_OUT_DIR="+hostToolsDir,
-			"IMAGE_FVM_RAW="+fvm,
-			"IMAGE_QEMU_KERNEL_RAW="+kernel,
-			"IMAGE_ZIRCONA_ZBI="+zbi,
 			"PREBUILT_AEMU_DIR="+mustAbs(t, emulatorPath),
 			"PREBUILT_GRPCWEBPROXY_DIR="+mustAbs(t, grpcwebproxyPath),
 			"PREBUILT_VDL_DIR="+mustAbs(t, deviceLauncher),
@@ -198,9 +202,6 @@ func killEmu(ctx context.Context, t *testing.T, intree bool, vdlOut string) {
 			"FUCHSIA_BUILD_DIR="+fuchsiaBuildDir,
 			"FUCHSIA_ZBI_COMPRESSION=zstd",
 			"HOST_OUT_DIR="+hostToolsDir,
-			"IMAGE_FVM_RAW="+fvm,
-			"IMAGE_QEMU_KERNEL_RAW="+kernel,
-			"IMAGE_ZIRCONA_ZBI="+zbi,
 			"PREBUILT_AEMU_DIR="+mustAbs(t, emulatorPath),
 			"PREBUILT_GRPCWEBPROXY_DIR="+mustAbs(t, grpcwebproxyPath),
 			"PREBUILT_VDL_DIR="+mustAbs(t, deviceLauncher),

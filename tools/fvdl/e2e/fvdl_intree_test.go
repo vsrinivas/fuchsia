@@ -19,7 +19,12 @@ func TestStartFVDLInTree_GrpcWebProxy(t *testing.T) {
 		[]string{
 			"start", "--nointeractive", "-V",
 			"--nopackageserver", "--grpcwebproxy", "0", "--image-size", "10G",
-		},
+			// Note: for real in-tree use case, we'll default to parsing images.json file to locate
+			// build artifacts. For this test, we'll specify the image files locations via cmd args.
+			"--fvm-image", fvm,
+			"--zbi-image", zbi,
+			"--kernel-image", kernel,
+			"--image-architecture", *targetCPU},
 		true, // intree
 	)
 	pid := e2etest.GetProcessPID("Emulator", vdlOut)
@@ -44,7 +49,10 @@ func TestStartFVDLInTree_Headless_ServePackages_Tuntap(t *testing.T) {
 		[]string{
 			"start", "--nointeractive", "-V",
 			"--headless", "-N", "--image-size", "10G",
-		},
+			"--fvm-image", fvm,
+			"--zbi-image", zbi,
+			"--kernel-image", kernel,
+			"--image-architecture", *targetCPU},
 		true, // intree
 	)
 	pid := e2etest.GetProcessPID("Emulator", vdlOut)

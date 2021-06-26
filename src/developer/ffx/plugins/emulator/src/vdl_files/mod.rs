@@ -71,8 +71,9 @@ impl VDLFiles {
     pub fn new(is_sdk: bool, verbose: bool) -> Result<VDLFiles> {
         let staging_dir = Builder::new().prefix("vdl_staging_").tempdir()?;
         let staging_dir_path = staging_dir.path().to_owned();
+        let vdl_files;
         if is_sdk {
-            let mut vdl_files = VDLFiles {
+            vdl_files = VDLFiles {
                 image_files: ImageFiles::from_sdk_env()?,
                 host_tools: HostTools::from_sdk_env()?,
                 ssh_files: SSHKeys::from_sdk_env()?,
@@ -82,16 +83,9 @@ impl VDLFiles {
                 is_sdk: is_sdk,
                 verbose: verbose,
             };
-            if verbose {
-                vdl_files.ssh_files.print();
-                vdl_files.host_tools.print();
-            }
-            vdl_files.ssh_files.stage_files(&staging_dir_path)?;
-
-            Ok(vdl_files)
         } else {
             let mut in_tree = InTreePaths { root_dir: None, build_dir: None };
-            let mut vdl_files = VDLFiles {
+            vdl_files = VDLFiles {
                 image_files: ImageFiles::from_tree_env(&mut in_tree)?,
                 host_tools: HostTools::from_tree_env(&mut in_tree)?,
                 ssh_files: SSHKeys::from_tree_env(&mut in_tree)?,
@@ -101,16 +95,13 @@ impl VDLFiles {
                 is_sdk: is_sdk,
                 verbose: verbose,
             };
-            if verbose {
-                vdl_files.image_files.print();
-                vdl_files.ssh_files.print();
-                vdl_files.host_tools.print();
-            }
-            vdl_files.image_files.stage_files(&staging_dir_path)?;
-            vdl_files.ssh_files.stage_files(&staging_dir_path)?;
-
-            Ok(vdl_files)
         }
+        if verbose {
+            vdl_files.image_files.print();
+            vdl_files.ssh_files.print();
+            vdl_files.host_tools.print();
+        }
+        Ok(vdl_files)
     }
 
     fn provision_zbi(&self) -> Result<PathBuf> {
@@ -145,9 +136,9 @@ impl VDLFiles {
                 self.ssh_files.authorized_keys.display(),
                 self.provision_zbi()?.display(),
                 self.image_files.kernel.display(),
-                self.image_files.fvm.as_ref().unwrap_or(&PathBuf::new()).display(),
-                self.image_files.build_args.display(),
                 self.image_files.amber_files.as_ref().unwrap_or(&PathBuf::new()).display(),
+                self.image_files.build_args.as_ref().unwrap_or(&PathBuf::new()).display(),
+                self.image_files.fvm.as_ref().unwrap_or(&PathBuf::new()).display(),
             ))
         } else {
             // Not specifying any image files will allow device_launcher to download from GCS.
@@ -300,32 +291,66 @@ impl VDLFiles {
                 example: ./fvdl --sdk start --nointeractive --vdl-output /path/to/saved/output.log\n"
             )
         }
+        // Check that build architecture is specified when overriding image files
+        if (command.amber_files.is_some()
+            || command.fvm_image.is_some()
+            || command.kernel_image.is_some()
+            || command.zbi_image.is_some())
+            && command.image_architecture.is_none()
+        {
+            ffx_bail!(
+                "--image-architecture must be specified in order to override image files.\n\
+            accepted values are 'arm64' and 'x64'.
+            example: fx vdl start --image-architecture x64 --kernel-image /path/to/kernel \n\
+            example: ./fvdl --sdk start --image-architecture x64 --kernel-image /path/to/kernel \n"
+            )
+        }
+        // At a minimum, zbi and kernel images must be both specified in order to boot up the emulator.
+        if (command.kernel_image.is_some() && command.zbi_image.is_none())
+            || (command.kernel_image.is_none() && command.zbi_image.is_some())
+        {
+            ffx_bail!("--kernel-image and --zbi-image must both be specified in order to override fuchsia image used for emulator.\n\
+            You can optionally specify --amber-files and --fvm-image locations. \n
+        ")
+        }
         Ok(())
     }
 
     /// Launches FEMU, opens an SSH session, and waits for the FEMU instance or SSH session to exit.
     pub fn start_emulator(&mut self, start_command: &StartCommand) -> Result<i32> {
         self.check_start_command(&start_command)?;
-        if !self.is_sdk {
-            self.image_files.check()?;
-            self.ssh_files.check()?;
-        }
-
         let vdl_args: VDLArgs = start_command.clone().into();
 
         let mut gcs_image = vdl_args.gcs_image_archive;
         let mut gcs_bucket = vdl_args.gcs_bucket;
         let mut sdk_version = vdl_args.sdk_version;
 
-        // If cached images already exist, skip download by clearing out gcs related flags.
         if vdl_args.cache_root.to_str().unwrap_or("") != "" {
+            println!("[fvdl] using cached image files");
             self.image_files.update_paths_from_cache(&vdl_args.cache_root);
-            if self.image_files.images_exist() {
-                println!("[fvdl] using cached image files");
-                gcs_image = String::from("");
-                gcs_bucket = String::from("");
-                sdk_version = String::from("");
-            }
+        }
+
+        // overriding image files via args will make cache a no-op
+        self.image_files.update_paths_from_args(&start_command);
+
+        // If minimum required image files are specified & exist, skip download by clearing out gcs related flags even
+        // if user has specified --sdk-version etc.
+        if self.image_files.images_exist() {
+            gcs_image = String::from("");
+            gcs_bucket = String::from("");
+            sdk_version = String::from("");
+            self.image_files.stage_files(&self.staging_dir.path().to_owned())?;
+        }
+        self.ssh_files.stage_files(&self.staging_dir.path().to_owned())?;
+
+        if self.verbose {
+            println!("[fvdl] using the following image files to launch emulator:");
+            self.image_files.print();
+        }
+
+        if !self.is_sdk {
+            self.image_files.check()?;
+            self.ssh_files.check()?;
         }
 
         let fvd = match &start_command.device_proto {
@@ -428,7 +453,9 @@ impl VDLFiles {
             .arg(format!("--hidpi_scaling={}", vdl_args.enable_hidpi_scaling))
             .arg(format!("--image_cache_path={}", vdl_args.cache_root.display()))
             .arg(format!("--kernel_args={}", vdl_args.extra_kerel_args))
-            .arg(format!("--accel={}", vdl_args.acceleration));
+            .arg(format!("--accel={}", vdl_args.acceleration))
+            .arg(format!("--image_architecture={}", vdl_args.image_architecture));
+
         for i in 0..start_command.envs.len() {
             cmd.arg("--env").arg(&start_command.envs[i]);
         }
@@ -630,9 +657,6 @@ mod tests {
     pub fn setup() {
         env::set_var("HOST_OUT_DIR", "/host/out");
         env::set_var("FUCHSIA_BUILD_DIR", "/build/out");
-        env::set_var("IMAGE_FVM_RAW", "fvm");
-        env::set_var("IMAGE_QEMU_KERNEL_RAW", "kernel");
-        env::set_var("IMAGE_ZIRCONA_ZBI", "zircona");
     }
 
     pub fn create_start_command() -> StartCommand {
@@ -651,6 +675,9 @@ mod tests {
             image_name: Some("qemu-x64".to_string()),
             vdl_version: Some("git_revision:2".to_string()),
             envs: vec!["A=1".to_string(), "B=2".to_string(), "C=3".to_string()],
+            fvm_image: Some("fvm".to_string()),
+            zbi_image: Some("zircona".to_string()),
+            kernel_image: Some("kernel".to_string()),
             ..Default::default()
         }
     }

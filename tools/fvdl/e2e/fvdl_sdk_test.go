@@ -33,8 +33,8 @@ func readLatestVersion(ctx context.Context, t *testing.T) string {
 	return strings.TrimSuffix(string(version), "\n")
 }
 
-// TestStartFVDLSDK tests starting FEMU using fvdl using images downloaded from GCS.
-func TestStartFVDLSDK(t *testing.T) {
+// TestStartFVDLSDK_downloadFromGCS tests starting FEMU using fvdl using images downloaded from GCS.
+func TestStartFVDLSDK_downloadFromGCS(t *testing.T) {
 	setUp(t, false)
 	ctx := context.Background()
 	vdlOut := runVDLWithArgs(
@@ -50,6 +50,37 @@ func TestStartFVDLSDK(t *testing.T) {
 			"--image-name", "qemu-x64",
 			"--image-size", "10G",
 		},
+		false, // intree
+	)
+	pid := e2etest.GetProcessPID("Emulator", vdlOut)
+	if len(pid) == 0 {
+		t.Errorf("Cannot obtain Emulator info from vdl output: %s", vdlOut)
+	} else if !e2etest.IsEmuRunning(pid) {
+		t.Error("Emulator is not running")
+	}
+	if process := e2etest.GetProcessPID("PackageServer", vdlOut); len(process) == 0 {
+		t.Errorf("Cannot obtain PackageServer process from vdl output: %s", vdlOut)
+	}
+}
+
+func TestStartFVDLSDK_noDownload(t *testing.T) {
+	setUp(t, false)
+	ctx := context.Background()
+	vdlOut := runVDLWithArgs(ctx, t, []string{
+		"--sdk", "start", "--nointeractive", "--headless", "-V",
+		// Specify aemu and device_launcher path to prevent fvdl from downloading them from CIPD
+		"-e", mustAbs(t, filepath.Join(emulatorPath, "emulator")),
+		"-d", mustAbs(t, filepath.Join(deviceLauncher, "device_launcher")),
+		// Giving this a garbage value, to make sure the test didn't actually try to download sdk 'x.x.x' from GCS
+		"--sdk-version", "x.x.x",
+		"--gcs-bucket", "fuchsia",
+		"--image-name", "qemu-x64",
+		"--image-size", "10G",
+		"--fvm-image", fvm,
+		"--zbi-image", zbi,
+		"--kernel-image", kernel,
+		"--amber-files", amberFiles,
+		"--image-architecture", *targetCPU},
 		false, // intree
 	)
 	pid := e2etest.GetProcessPID("Emulator", vdlOut)

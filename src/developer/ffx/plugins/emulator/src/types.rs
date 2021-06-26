@@ -261,14 +261,14 @@ impl HostTools {
 
     #[allow(dead_code)]
     pub fn print(&self) {
-        println!("[fvdl] aemu {:?}", self.aemu);
-        println!("[fvdl] device_finder {:?}", self.device_finder);
-        println!("[fvdl] far {:?}", self.far);
-        println!("[fvdl] fvm {:?}", self.fvm);
-        println!("[fvdl] grpcwebproxy {:?}", self.grpcwebproxy);
-        println!("[fvdl] pm {:?}", self.pm);
-        println!("[fvdl] vdl {:?}", self.vdl);
-        println!("[fvdl] zbiS {:?}", self.zbi);
+        println!("[fvdl] tool aemu {:?}", self.aemu);
+        println!("[fvdl] tool device_finder {:?}", self.device_finder);
+        println!("[fvdl] tool far {:?}", self.far);
+        println!("[fvdl] tool fvm {:?}", self.fvm);
+        println!("[fvdl] tool grpcwebproxy {:?}", self.grpcwebproxy);
+        println!("[fvdl] tool pm {:?}", self.pm);
+        println!("[fvdl] tool vdl {:?}", self.vdl);
+        println!("[fvdl] tool zbi {:?}", self.zbi);
     }
 
     /// Reads the <prebuild>.version file stored in <sdk_root>/bin/<prebuild>.version
@@ -375,7 +375,7 @@ impl HostTools {
 
 pub struct ImageFiles {
     pub amber_files: Option<PathBuf>,
-    pub build_args: PathBuf,
+    pub build_args: Option<PathBuf>,
     pub fvm: Option<PathBuf>,
     pub kernel: PathBuf,
     pub zbi: PathBuf,
@@ -399,21 +399,12 @@ impl ImageFiles {
                     None
                 }
             },
-            build_args: fuchsia_build_dir.join("args.gn"),
-            fvm: match read_env_path("IMAGE_FVM_RAW") {
-                Ok(val) => Some(fuchsia_build_dir.join(val)),
-                _ => f
-                    .get_image_path(vec!["storage-full", "storage-sparse", "fvm.fastboot"], "blk")
-                    .ok(),
-            },
-            kernel: match read_env_path("IMAGE_QEMU_KERNEL_RAW") {
-                Ok(val) => fuchsia_build_dir.join(val),
-                _ => f.get_image_path(vec!["qemu-kernel"], "kernel")?,
-            },
-            zbi: match read_env_path("IMAGE_ZIRCONA_ZBI") {
-                Ok(val) => fuchsia_build_dir.join(val),
-                _ => f.get_image_path(vec!["zircon-a"], "zbi")?,
-            },
+            build_args: f.get_image_path(vec!["buildargs"], "gn").ok(),
+            fvm: f
+                .get_image_path(vec!["storage-full", "storage-sparse", "fvm.fastboot"], "blk")
+                .ok(),
+            kernel: f.get_image_path(vec!["qemu-kernel"], "kernel")?,
+            zbi: f.get_image_path(vec!["zircon-a"], "zbi")?,
         })
     }
 
@@ -423,22 +414,24 @@ impl ImageFiles {
     pub fn from_sdk_env() -> Result<ImageFiles> {
         Ok(ImageFiles {
             amber_files: None,
-            build_args: PathBuf::new(),
+            build_args: None,
             fvm: None,
             kernel: PathBuf::new(),
             zbi: PathBuf::new(),
         })
     }
 
-    /// Checks that all essential files exist. Note: amber-files and fvm are optional.
+    /// Checks that all essential files exist. Note: amber_files, build_args, and fvm are optional.
     pub fn check(&self) -> Result<()> {
         if let Some(a) = &self.amber_files {
             if !a.exists() {
                 ffx_bail!("amber-files at {:?} does not exist", a);
             }
         }
-        if !self.build_args.exists() {
-            ffx_bail!("build_args file at {:?} does not exist", self.build_args);
+        if let Some(b) = &self.build_args {
+            if !b.exists() {
+                ffx_bail!("build_args file at {:?} does not exist", b);
+            }
         }
         if let Some(f) = &self.fvm {
             if !f.exists() {
@@ -456,28 +449,43 @@ impl ImageFiles {
     }
 
     pub fn images_exist(&self) -> bool {
-        return self.build_args.exists()
-            && self.kernel.exists()
+        return self.kernel.exists()
             && self.zbi.exists()
+            && self.build_args.as_ref().map_or(true, |b| b.exists())
             && self.amber_files.as_ref().map_or(true, |a| a.exists())
             && self.fvm.as_ref().map_or(true, |f| f.exists());
     }
 
     #[allow(dead_code)]
     pub fn print(&self) {
-        println!("[fvdl] package {:?}", self.amber_files);
-        println!("[fvdl] build_args {:?}", self.build_args);
-        println!("[fvdl] fvm {:?}", self.fvm);
-        println!("[fvdl] kernel {:?}", self.kernel);
-        println!("[fvdl] zbi {:?}", self.zbi);
+        println!("[fvdl] image package {:?}", self.amber_files);
+        println!("[fvdl] image build_args {:?}", self.build_args);
+        println!("[fvdl] image fvm {:?}", self.fvm);
+        println!("[fvdl] image kernel {:?}", self.kernel);
+        println!("[fvdl] image zbi {:?}", self.zbi);
     }
 
     pub fn update_paths_from_cache(&mut self, cache_root: &PathBuf) {
         self.amber_files = Some(cache_root.join("package_archive"));
+        self.build_args = Some(cache_root.join("images").join("buildargs"));
         self.fvm = Some(cache_root.join("images").join("femu-fvm"));
         self.kernel = cache_root.join("images").join("femu-kernel");
         self.zbi = cache_root.join("images").join("zircon-a.zbi");
-        self.build_args = cache_root.join("images").join("buildargs");
+    }
+
+    pub fn update_paths_from_args(&mut self, start_command: &StartCommand) {
+        if let Some(image) = &start_command.amber_files {
+            self.amber_files = Some(PathBuf::from(image))
+        }
+        if let Some(image) = &start_command.fvm_image {
+            self.fvm = Some(PathBuf::from(image))
+        }
+        if let Some(image) = &start_command.kernel_image {
+            self.kernel = PathBuf::from(image)
+        }
+        if let Some(image) = &start_command.zbi_image {
+            self.zbi = PathBuf::from(image)
+        }
     }
 
     pub fn stage_files(&mut self, dir: &PathBuf) -> Result<()> {
@@ -493,10 +501,12 @@ impl ImageFiles {
             self.fvm = Some(vdl_fvm_dest.to_path_buf());
         }
 
-        let vdl_args_dest = dir.join("femu_buildargs");
-        let vdl_args_src = self.build_args.as_path();
-        unix::fs::symlink(&vdl_args_src, &vdl_args_dest)?;
-        self.build_args = vdl_args_dest.to_path_buf();
+        if let Some(f) = &self.build_args {
+            let vdl_args_dest = dir.join("femu_buildargs");
+            let vdl_args_src = f.as_path();
+            unix::fs::symlink(&vdl_args_src, &vdl_args_dest)?;
+            self.build_args = Some(vdl_args_dest.to_path_buf());
+        }
         Ok(())
     }
 }
@@ -586,6 +596,7 @@ pub struct VDLArgs {
     pub amber_unpack_root: String,
     pub package_server_port: String,
     pub acceleration: bool,
+    pub image_architecture: String,
 }
 
 impl From<&StartCommand> for VDLArgs {
@@ -652,6 +663,11 @@ impl From<&StartCommand> for VDLArgs {
                 .to_string(),
             package_server_port: cmd.package_server_port.as_ref().unwrap_or(&0).to_string(),
             acceleration: !cmd.noacceleration,
+            image_architecture: cmd
+                .image_architecture
+                .as_ref()
+                .unwrap_or(&String::from(""))
+                .to_string(),
         }
     }
 }
@@ -759,11 +775,8 @@ mod tests {
 
     #[test]
     #[serial]
-    fn test_image_files() -> Result<()> {
+    fn test_image_intree_files() -> Result<()> {
         env::remove_var("FUCHSIA_BUILD_DIR");
-        env::set_var("IMAGE_ZIRCONA_ZBI", "zircona");
-        env::set_var("IMAGE_QEMU_KERNEL_RAW", "kernel");
-        env::set_var("IMAGE_FVM_RAW", "fvm");
         let mut mock = MockFuchsiaPaths::new();
         let data = format!(
             "/build/out
@@ -782,18 +795,74 @@ mod tests {
         });
 
         let mut image_files = ImageFiles::from_tree_env(&mut mock)?;
-        assert_eq!(image_files.zbi.to_str().unwrap(), "/build/out/zircona");
-        assert_eq!(image_files.kernel.to_str().unwrap(), "/build/out/kernel");
-        assert_eq!(image_files.fvm.as_ref().unwrap().to_str().unwrap(), "/build/out/fvm");
-        assert_eq!(image_files.build_args.to_str().unwrap(), "/build/out/args.gn");
+        assert_eq!(image_files.zbi.to_str().unwrap(), "/build/out/zircon-a");
+        assert_eq!(image_files.kernel.to_str().unwrap(), "/build/out/qemu-kernel");
+        assert_eq!(image_files.fvm.as_ref().unwrap().to_str().unwrap(), "/build/out/storage-full");
+        assert_eq!(
+            image_files.build_args.as_ref().unwrap().to_str().unwrap(),
+            "/build/out/buildargs"
+        );
         // amber_files are optional and is only specified if the file exists. For unit test
         // the file always does not exit.
         assert_eq!(image_files.amber_files, None);
 
+        image_files.update_paths_from_args(&StartCommand {
+            fvm_image: Some("/path/to/new_fvm".to_string()),
+            zbi_image: Some("/path/to/new_zbi".to_string()),
+            kernel_image: Some("/path/to/new_kernel".to_string()),
+            amber_files: Some("/path/to/amber_files".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(image_files.zbi.to_str().unwrap(), "/path/to/new_zbi");
+        assert_eq!(image_files.kernel.to_str().unwrap(), "/path/to/new_kernel");
+        assert_eq!(image_files.fvm.as_ref().unwrap().to_str().unwrap(), "/path/to/new_fvm");
+        assert_eq!(
+            image_files.amber_files.as_ref().unwrap().to_str().unwrap(),
+            "/path/to/amber_files"
+        );
+        assert_eq!(
+            image_files.build_args.as_ref().unwrap().to_str().unwrap(),
+            "/build/out/buildargs"
+        );
         let tmp_dir = Builder::new().prefix("fvdl_tests_").tempdir()?;
 
         image_files.stage_files(&tmp_dir.path().to_owned())?;
         assert_eq!(image_files.kernel.to_str(), tmp_dir.path().join("femu_kernel").to_str());
+        assert_eq!(
+            image_files.fvm.as_ref().unwrap().to_str(),
+            tmp_dir.path().join("femu_fvm").to_str()
+        );
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_image_sdk_files() -> Result<()> {
+        let mut image_files = ImageFiles::from_sdk_env()?;
+        image_files.update_paths_from_args(&StartCommand {
+            amber_files: Some("/path/to/amber_files".to_string()),
+            fvm_image: Some("/path/to/new_fvm".to_string()),
+            kernel_image: Some("/path/to/new_kernel".to_string()),
+            zbi_image: Some("/path/to/new_zbi".to_string()),
+            ..Default::default()
+        });
+        assert_eq!(
+            image_files.amber_files.as_ref().unwrap().to_str().unwrap(),
+            "/path/to/amber_files"
+        );
+        assert_eq!(image_files.build_args, None);
+        assert_eq!(image_files.fvm.as_ref().unwrap().to_str().unwrap(), "/path/to/new_fvm");
+        assert_eq!(image_files.kernel.to_str().unwrap(), "/path/to/new_kernel");
+        assert_eq!(image_files.zbi.to_str().unwrap(), "/path/to/new_zbi");
+
+        let tmp_dir = Builder::new().prefix("fvdl_tests_").tempdir()?;
+        image_files.stage_files(&tmp_dir.path().to_owned())?;
+        assert_eq!(image_files.kernel.to_str(), tmp_dir.path().join("femu_kernel").to_str());
+        assert_eq!(
+            image_files.fvm.as_ref().unwrap().to_str(),
+            tmp_dir.path().join("femu_fvm").to_str()
+        );
+        assert_eq!(image_files.build_args, None);
         Ok(())
     }
 

@@ -80,7 +80,7 @@ pub struct StartCommand {
     pub image_size: Option<String>,
 
     /// path to fuchsia virtual device configuration, if not specified a generic one will be generated.
-    #[argh(option, short = 'f')]
+    #[argh(option, short = 'F')]
     pub device_proto: Option<String>,
 
     /// path to aemu location.
@@ -163,6 +163,8 @@ pub struct StartCommand {
 
     /// bool, download and re-use image files in the cached location ~/.fuchsia/<image_name>/<sdk_version>/.
     /// If not set (default), image files will be stored in a temp location and removed with `kill` subcommand.
+    /// If image location is specified with --kernel-image, --zbi-image, --fvm-image etc., the cached image will
+    /// be overwritten for the specified image file.
     #[argh(switch, short = 'i')]
     pub cache_image: bool,
 
@@ -213,6 +215,32 @@ pub struct StartCommand {
     /// int, port to an existing package server running on the host.
     #[argh(option)]
     pub package_server_port: Option<usize>,
+
+    /// string, absolute path to amber-files location, path name must end with 'amber-files'.
+    #[argh(option, short = 'a')]
+    pub amber_files: Option<String>,
+
+    /// string, absolute path to fvm image file location.
+    #[argh(option, short = 'f')]
+    pub fvm_image: Option<String>,
+
+    /// string, absolute path to kernel image file location.
+    /// If specified --zbi-image and --image-architecture must also be specified.
+    /// When running with --sdk option, this will skip downloading fuchsia image prebuilts from GCS.
+    #[argh(option, short = 'k')]
+    pub kernel_image: Option<String>,
+
+    /// string, absolute path to zircon image file location.
+    /// If specified --kernel-image and --image-architecture must also be specified.
+    /// When running with --sdk option, this will skip downloading fuchsia image prebuilts from GCS.
+    #[argh(option, short = 'z')]
+    pub zbi_image: Option<String>,
+
+    /// string, specifies image architecture, accepted values are 'arm64' or 'x64'.
+    /// Required if image override flags (i.e --fvm-image, --kernel-image, --zbi-image, or --amber-files)
+    /// are specified.
+    #[argh(option, short = 'A')]
+    pub image_architecture: Option<String>,
 
     /// bool, enables extra logging for debugging
     #[argh(switch, short = 'V')]

@@ -114,6 +114,8 @@ if (is_linux) {
       ":prebuilt_grpcwebproxy",
     ]
     args = [
+      "--target_cpu",
+      "$target_cpu",
       "--aemu_dir",
       rebase_path(_aemu_dir, root_build_dir),
       "--grpcwebproxy_dir",
@@ -129,11 +131,14 @@ if (is_linux) {
     deps = [ ":sdk_lib" ]
     non_go_deps = [
       ":copy_host_tools",
+      ":copy_images",
       ":prebuilt_aemu",
       ":prebuilt_device_launcher",
       ":prebuilt_grpcwebproxy",
     ]
     args = [
+      "--target_cpu",
+      "$target_cpu",
       "--aemu_dir",
       rebase_path(_aemu_dir, root_build_dir),
       "--grpcwebproxy_dir",
