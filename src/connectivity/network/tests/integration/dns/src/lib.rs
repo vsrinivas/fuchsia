@@ -48,7 +48,7 @@ async fn poll_lookup_admin<
     F: Unpin + FusedFuture + Future<Output = Result<fuchsia_component::client::ExitStatus>>,
 >(
     lookup_admin: &net_name::LookupAdminProxy,
-    expect: Vec<fnet::SocketAddress>,
+    expect: &[fnet::SocketAddress],
     mut wait_for_netmgr_fut: &mut F,
     poll_wait: zx::Duration,
     retry_count: u64,
@@ -103,7 +103,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
     let server_environment = sandbox
         .create_netstack_environment_with::<Netstack2, _, _>(
             format!("{}_server", name),
-            vec![
+            [
                 KnownServices::DhcpServer.into_launch_service(),
                 KnownServices::SecureStash.into_launch_service(),
             ],
@@ -212,7 +212,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
             .context("launch the network manager")?;
 
     // The list of servers we expect to retrieve from `fuchsia.net.name/LookupAdmin`.
-    let expect = vec![
+    let expect = [
         fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
             address: NDP_DNS_SERVER,
             port: DEFAULT_DNS_PORT,
@@ -229,7 +229,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
         .connect_to_service::<net_name::LookupAdminMarker>()
         .context("failed to connect to LookupAdmin")?;
     let mut wait_for_netmgr_fut = netmgr.wait().fuse();
-    poll_lookup_admin(&lookup_admin, expect, &mut wait_for_netmgr_fut, POLL_WAIT, RETRY_COUNT)
+    poll_lookup_admin(&lookup_admin, &expect, &mut wait_for_netmgr_fut, POLL_WAIT, RETRY_COUNT)
         .await
         .context("poll lookup admin")
 }
@@ -397,7 +397,7 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
     let () = fake_ep.write(ser.as_ref()).await.context("failed to write to fake endpoint")?;
 
     // The list of servers we expect to retrieve from `fuchsia.net.name/LookupAdmin`.
-    let expect = vec![fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
+    let expect = [fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
         address: DHCPV6_DNS_SERVER,
         port: DEFAULT_DNS_PORT,
         zone_index: 0,
@@ -407,7 +407,7 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
     let lookup_admin = environment
         .connect_to_service::<net_name::LookupAdminMarker>()
         .context("failed to connect to LookupAdmin")?;
-    poll_lookup_admin(&lookup_admin, expect, &mut wait_for_netmgr_fut, POLL_WAIT, RETRY_COUNT)
+    poll_lookup_admin(&lookup_admin, &expect, &mut wait_for_netmgr_fut, POLL_WAIT, RETRY_COUNT)
         .await
         .context("poll lookup admin")
 }
@@ -444,7 +444,7 @@ async fn test_fallback_on_query_refused(
         .expect("failed to create environment");
 
     // Mock name servers in priority order.
-    let mut expect = vec![
+    let mut expect = [
         fidl_fuchsia_net_ext::SocketAddress(refusing_dns_server).into(),
         fidl_fuchsia_net_ext::SocketAddress(fallback_dns_server).into(),
     ];
