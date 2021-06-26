@@ -4,6 +4,7 @@
 
 #include <lib/affine/ratio.h>
 #include <type_traits>
+#include <utility>
 #include <zircon/assert.h>
 
 namespace affine {

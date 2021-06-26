@@ -9,6 +9,7 @@
 #include <lib/zx/eventpair.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <utility>
 #include <zircon/types.h>
 
 #include <fbl/mutex.h>

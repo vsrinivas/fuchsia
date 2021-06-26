@@ -5,6 +5,7 @@
 #ifndef STORAGE_BUFFER_OWNED_VMOID_H_
 #define STORAGE_BUFFER_OWNED_VMOID_H_
 
+#include <utility>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 

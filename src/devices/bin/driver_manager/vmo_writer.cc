@@ -6,6 +6,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 #include <zircon/status.h>
 
 #include "src/devices/lib/log/log.h"

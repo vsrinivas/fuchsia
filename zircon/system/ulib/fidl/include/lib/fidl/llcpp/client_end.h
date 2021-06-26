@@ -8,6 +8,7 @@
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/soft_migration.h>
 #include <lib/zx/channel.h>
+#include <utility>
 #include <zircon/assert.h>
 
 namespace fidl {
