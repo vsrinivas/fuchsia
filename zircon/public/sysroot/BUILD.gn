@@ -302,8 +302,10 @@ template("_create_sysroot") {
 
   # Generate a linker file redirecting to the C library.
   generated_file("${prefix}_libc") {
+    _relative_libc_file =
+        rebase_path("$_libc_file", _sysroot_dir, root_build_dir)
     outputs = [ "$_sysroot_dir/lib/libc.so" ]
-    contents = [ "INPUT($_libc_file)" ]
+    contents = [ "INPUT(=$_relative_libc_file)" ]
     deps = [ _libc_target ]
   }
   _sysroot_deps += [ ":${prefix}_libc" ]
@@ -338,7 +340,9 @@ template("_create_sysroot") {
   generated_file("${prefix}_crt1") {
     outputs = [ "$_sysroot_dir/lib/Scrt1.o" ]
     if (defined(invoker.add_crt1) && invoker.add_crt1) {
-      contents = [ "INPUT($_crt1_file)" ]
+      _relative_crt1_file =
+          rebase_path("$_crt1_file", _sysroot_dir, root_build_dir)
+      contents = [ "INPUT(=$_relative_crt1_file)" ]
       deps = [ sysroot_crt1_target ]
     } else {
       contents = [ "/* EMPTY */" ]
