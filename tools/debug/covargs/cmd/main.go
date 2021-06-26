@@ -58,6 +58,7 @@ var (
 	saveTemps         string
 	basePath          string
 	diffMappingFile   string
+	compilationDir    string
 	pathRemapping     flagmisc.StringsValue
 	srcFiles          flagmisc.StringsValue
 	jobs              int
@@ -85,6 +86,7 @@ func init() {
 	flag.StringVar(&reportDir, "report-dir", "", "the directory to save the report to")
 	flag.StringVar(&basePath, "base", "", "base path for source tree")
 	flag.StringVar(&diffMappingFile, "diff-mapping", "", "path to diff mapping file")
+	flag.StringVar(&compilationDir, "compilation-dir", "", "the directory used as a base for relative coverage mapping paths, passed through to llvm-cov")
 	flag.Var(&pathRemapping, "path-equivalence", "<from>,<to> remapping of source file paths passed through to llvm-cov")
 	flag.Var(&srcFiles, "src-file", "path to a source file to generate coverage for. If provided, only coverage for these files will be generated.\n"+
 		"Multiple files can be specified with multiple instances of this flag.")
@@ -387,6 +389,9 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 			"-format", outputFormat,
 			"-instr-profile", mergedFile,
 			"-output-dir", outputDir,
+		}
+		if compilationDir != "" {
+			args = append(args, "-compilation-dir", compilationDir)
 		}
 		for _, remapping := range pathRemapping {
 			args = append(args, "-path-equivalence", remapping)
