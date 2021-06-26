@@ -34,7 +34,6 @@ group("tests") {
     "qsort:tests",
     "service:tests",
     "stdio:stdio-test-package",
-    "syscall-generation:tests",
     "sysconf:tests",
     "thread-safe-deleter:tests",
     "trace:tests",

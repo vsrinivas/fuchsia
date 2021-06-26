@@ -45,6 +45,7 @@ core_tests = [
   "sync-completion",
   "sync-condition",
   "sync-mutex",
+  "syscall-generation",
   "threads",
   "time",
   "version",
