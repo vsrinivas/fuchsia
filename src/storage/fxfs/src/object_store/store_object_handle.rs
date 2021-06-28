@@ -219,7 +219,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 let mut align_buf = self.store().device.allocate_buffer(block_size as usize);
                 let read = self.read(end - end_align as u64, align_buf.as_mut()).await?;
                 align_buf.as_mut_slice()[read..].fill(0);
-                &align_buf.as_mut_slice()[..tail.len()].copy_from_slice(tail.as_slice());
+                align_buf.as_mut_slice()[..tail.len()].copy_from_slice(tail.as_slice());
                 if trace {
                     log::info!(
                         "{}.{} WT {:?}",
@@ -998,7 +998,7 @@ mod tests {
         assert_eq!(object.read(0, buf.as_mut()).await.expect("read failed"), len);
         let mut expected = vec![0; len];
         let offset = TEST_DATA_OFFSET as usize;
-        &mut expected[offset..offset + TEST_DATA.len()].copy_from_slice(TEST_DATA);
+        expected[offset..offset + TEST_DATA.len()].copy_from_slice(TEST_DATA);
         assert_eq!(buf.as_slice()[..len], expected[..]);
         fs.close().await.expect("Close failed");
     }
@@ -1021,8 +1021,8 @@ mod tests {
 
         let mut expected = vec![0u8; len];
         let offset = TEST_DATA_OFFSET as usize;
-        &mut expected[offset..offset + TEST_DATA.len()].copy_from_slice(TEST_DATA);
-        &mut expected[..TEST_DATA.len()].copy_from_slice(TEST_DATA);
+        expected[offset..offset + TEST_DATA.len()].copy_from_slice(TEST_DATA);
+        expected[..TEST_DATA.len()].copy_from_slice(TEST_DATA);
         assert_eq!(buf.as_slice(), &expected);
         fs.close().await.expect("Close failed");
     }
@@ -1054,8 +1054,8 @@ mod tests {
         buf.as_mut_slice().fill(123u8);
         assert_eq!(object.read(0, buf.as_mut()).await.expect("read failed"), LEN1);
         let mut expected = [0; LEN1];
-        &mut expected[..3].copy_from_slice(&TEST_DATA[..3]);
-        &mut expected[1500..].copy_from_slice(b"foo");
+        expected[..3].copy_from_slice(&TEST_DATA[..3]);
+        expected[1500..].copy_from_slice(b"foo");
         assert_eq!(buf.as_slice(), &expected);
 
         // Also test a read that ends midway through the deleted extent.
