@@ -611,7 +611,7 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
   }
 
   usb_string_desc_t string_desc;
-  zxlogf(INFO, "Fetching string descriptor with lang_id %u", lang_id);
+  zxlogf(DEBUG, "Fetching string descriptor with lang_id %u", lang_id);
   size_t actual;
   auto result = GetDescriptor(USB_DT_STRING, desc_id, le16toh(lang_id), &string_desc,
                               sizeof(string_desc), &actual);
