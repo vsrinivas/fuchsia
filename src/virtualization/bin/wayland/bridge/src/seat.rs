@@ -280,15 +280,18 @@ impl InputDispatcher {
         key: &KeyEvent,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "InputDispatcher::handle_key_event");
-        assert!(Some(surface) == self.keyboard_focus, "Received key event without focus!");
-        match key.type_.unwrap() {
-            KeyEventType::Pressed => {
-                self.send_key_event(key, wl_keyboard::KeyState::Pressed)?;
+        // TODO(fxb/79741): Enable or remove this assert.
+        // assert!(self.has_focus(surface), "Received key event without focus!");
+        if self.has_focus(surface) {
+            match key.type_.unwrap() {
+                KeyEventType::Pressed => {
+                    self.send_key_event(key, wl_keyboard::KeyState::Pressed)?;
+                }
+                KeyEventType::Released => {
+                    self.send_key_event(key, wl_keyboard::KeyState::Released)?;
+                }
+                _ => (),
             }
-            KeyEventType::Released => {
-                self.send_key_event(key, wl_keyboard::KeyState::Released)?;
-            }
-            _ => (),
         }
         Ok(())
     }
