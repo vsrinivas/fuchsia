@@ -120,7 +120,7 @@ capability replaced by a manifest shard `include`:
     ```json5
     {
         // Include capabilities for the syslog library
-        include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
+        include: [ "syslog/client.shard.cml" ],
 
         // Information about the program to run.
         program: {
@@ -144,7 +144,7 @@ capability replaced by a manifest shard `include`:
     ```json
     {
         "include": [
-            "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+            "syslog/client.shard.cmx"
         ],
         "program": {
             "binary": "bin/hello-world",

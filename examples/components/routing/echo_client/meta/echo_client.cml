@@ -1,7 +1,7 @@
 // Component manifest for the `echo_client` example program, which sends a message to the Echo
 // service.
 {
-    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/echo_client",

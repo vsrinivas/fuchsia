@@ -37,7 +37,7 @@ For the OpaqueTest framework to function correctly, the test cmx manifest
 must specify (at minimum) the following features and services:
 
 ```rust
-"include": [ "//sdk/lib/diagnostics/syslog/client.shard.cmx" ],
+"include": [ "syslog/client.shard.cmx" ],
 "sandbox": {
     "features": [
         "hub"

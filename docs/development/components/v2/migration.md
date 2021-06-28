@@ -53,7 +53,7 @@ Take advantage of this when writing your CML file!
     {
         include: [
             // Enable system logging
-            "//sdk/lib/diagnostics/syslog/client.shard.cml",
+            "syslog/client.shard.cml",
         ],
     }
     ```
@@ -103,7 +103,7 @@ be explicitly specified in CML.
 // fonts.cmx
 {
     "include": [
-        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     {{ '<strong>' }}"program": {
         "binary": "bin/font_provider"
@@ -117,7 +117,7 @@ be explicitly specified in CML.
 {
     include: [
         // Enable system logging
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "syslog/client.shard.cml",
     ],
     {{ '<strong>' }}program: {
         runner: "elf",
@@ -135,7 +135,7 @@ approximate equivalent of the [`services`][cmx-services] list in CMX.
 // fonts.cmx
 {
     "include": [
-        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/font_provider"
@@ -158,7 +158,7 @@ corresponding service `protocol`.
 {
     include: [
         // Enable system logging
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
       runner: "elf",
@@ -207,7 +207,7 @@ that apply to every product configuration.
     {
         include: [
             // Enable system logging
-            "//sdk/lib/diagnostics/syslog/client.shard.cml",
+            "syslog/client.shard.cml",
         ],
         program: {
           runner: "elf",
@@ -293,7 +293,7 @@ Consider the following example test component:
 // fonts_test.cmx
 {
     "include": [
-        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/font_test"
@@ -1046,7 +1046,7 @@ manifest shard:
 // my_component.cml
 {
     // Expose the LogSink capability for syslog
-    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "syslog/client.shard.cml" ],
     ...
 }
 ```
@@ -1324,7 +1324,7 @@ lifecycle_allowlist.insert(component::Moniker{
 // my_component.cml
 {
     include: [
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         runner: "elf",

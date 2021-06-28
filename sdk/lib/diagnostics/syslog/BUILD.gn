@@ -11,4 +11,8 @@ expect_includes("client_includes") {
     "client.shard.cml",
     "client.shard.cmx",
   ]
+
+  # TODO(fxbug.dev/78686): enforcement disabled during soft transition.
+  # When done, delete the below.
+  enforce = false
 }

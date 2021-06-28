@@ -45,7 +45,7 @@ and look as follows:
 ```json5
 {
     include: [
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "syslog/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml"
     ]
     program: {

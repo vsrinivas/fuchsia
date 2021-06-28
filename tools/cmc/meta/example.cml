@@ -1,6 +1,6 @@
 // This is a v2 component manifest.
 {
-    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/example",
