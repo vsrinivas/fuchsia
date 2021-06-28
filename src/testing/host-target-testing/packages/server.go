@@ -125,18 +125,21 @@ func (lw *loggingWriter) WriteHeader(status int) {
 
 // writeConfig writes the source config to the repository.
 func genConfig(dir string, localHostname string, repoName string, port int) (configURL string, configHash string, config []byte, err error) {
-	type statusConfig struct {
-		Enabled bool
-	}
-
 	type sourceConfig struct {
-		ID            string           `json:"id"`
-		RepoURL       string           `json:"repoUrl"`
-		BlobRepoURL   string           `json:"blobRepoUrl"`
-		RootKeys      []repo.KeyConfig `json:"rootKeys"`
-		RootVersion   int              `json:"rootVersion"`
-		RootThreshold int              `json:"rootThreshold"`
-		StatusConfig  statusConfig     `json:"statusConfig"`
+		ID            string
+		RepoURL       string
+		BlobRepoURL   string
+		RatePeriod    int
+		RootKeys      []repo.KeyConfig
+		RootVersion   uint32 `json:"rootVersion,omitempty"`
+		RootThreshold uint32 `json:"rootThreshold,omitempty"`
+		StatusConfig  struct {
+			Enabled bool
+		}
+		Auto    bool
+		BlobKey *struct {
+			Data [32]uint8
+		}
 	}
 
 	f, err := os.Open(filepath.Join(dir, "root.json"))
@@ -180,12 +183,16 @@ func genConfig(dir string, localHostname string, repoName string, port int) (con
 		ID:            repoName,
 		RepoURL:       repoURL,
 		BlobRepoURL:   fmt.Sprintf("%s/blobs", repoURL),
+		RatePeriod:    60,
 		RootKeys:      rootKeys,
-		RootVersion:   root.Version,
-		RootThreshold: rootThreshold,
-		StatusConfig: statusConfig{
+		RootVersion:   uint32(root.Version),
+		RootThreshold: uint32(rootThreshold),
+		StatusConfig: struct {
+			Enabled bool
+		}{
 			Enabled: true,
 		},
+		Auto: true,
 	})
 	if err != nil {
 		return "", "", nil, err
