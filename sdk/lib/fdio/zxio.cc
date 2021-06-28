@@ -242,6 +242,24 @@ zx_status_t zxio::sendmsg(const struct msghdr* msg, int flags, size_t* out_actua
   return sendmsg_inner(msg, flags, out_actual);
 }
 
+zx_status_t zxio::shutdown(int how, int16_t* out_code) {
+  *out_code = 0;
+
+  zxio_shutdown_options_t options;
+  switch (how) {
+    case SHUT_RD:
+      options = ZXIO_SHUTDOWN_OPTIONS_READ;
+      break;
+    case SHUT_WR:
+      options = ZXIO_SHUTDOWN_OPTIONS_WRITE;
+      break;
+    case SHUT_RDWR:
+      options = ZXIO_SHUTDOWN_OPTIONS_READ | ZXIO_SHUTDOWN_OPTIONS_WRITE;
+      break;
+  }
+  return zxio_shutdown(&zxio_storage().io, options);
+}
+
 zx::status<fdio_ptr> remote::open(const char* path, uint32_t flags, uint32_t mode) {
   size_t length;
   zx_status_t status = fdio_validate_path(path, &length);
@@ -381,27 +399,6 @@ zx::status<std::pair<fdio_ptr, fdio_ptr>> pipe::create_pair(uint32_t options) {
     return b.take_error();
   }
   return zx::ok(std::make_pair(a.value(), b.value()));
-}
-
-zx_status_t pipe::shutdown(int how, int16_t* out_code) {
-  *out_code = 0;
-  return shutdown_inner(zxio_pipe().socket, how);
-}
-
-zx_status_t pipe::shutdown_inner(const zx::socket& socket, int how) {
-  uint32_t options;
-  switch (how) {
-    case SHUT_RD:
-      options = ZX_SOCKET_SHUTDOWN_READ;
-      break;
-    case SHUT_WR:
-      options = ZX_SOCKET_SHUTDOWN_WRITE;
-      break;
-    case SHUT_RDWR:
-      options = ZX_SOCKET_SHUTDOWN_READ | ZX_SOCKET_SHUTDOWN_WRITE;
-      break;
-  }
-  return socket.shutdown(options);
 }
 
 }  // namespace fdio_internal

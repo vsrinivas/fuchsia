@@ -2051,7 +2051,7 @@ struct stream_socket : public pipe {
         if (observed & ZX_SOCKET_PEER_CLOSED) {
           return ZX_ERR_NOT_CONNECTED;
         }
-        return shutdown_inner(zxio_stream_socket().pipe.socket, how);
+        return pipe::shutdown(how, out_code);
       }
       return status;
     }
@@ -2228,6 +2228,10 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   ops.get_read_buffer_available = [](zxio_t* io, size_t* out_available) {
     return zxio_get_read_buffer_available(&zxio_stream_socket(io).pipe.io, out_available);
   };
+  ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options) {
+    return zxio_shutdown(&zxio_stream_socket(io).pipe.io, options);
+  };
+
   return ops;
 }();
 

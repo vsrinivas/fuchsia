@@ -112,6 +112,16 @@ static constexpr zxio_ops_t zxio_pipe_ops = []() {
     return ZX_OK;
   };
 
+  ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options) {
+    // TODO(https://fxbug.dev/78128): Update to zx_socket_set_disposition().
+    static_assert(ZX_SOCKET_SHUTDOWN_READ == ZXIO_SHUTDOWN_OPTIONS_READ);
+    static_assert(ZX_SOCKET_SHUTDOWN_WRITE == ZXIO_SHUTDOWN_OPTIONS_WRITE);
+    if ((options & ZX_SOCKET_SHUTDOWN_MASK) != options) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    return zxio_get_pipe(io).socket.shutdown(options);
+  };
+
   return ops;
 }();
 

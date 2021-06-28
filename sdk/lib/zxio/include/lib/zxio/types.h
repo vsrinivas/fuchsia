@@ -288,6 +288,11 @@ typedef struct zxio_dirent {
     _tmp_attr->has.field_name = true;            \
   } while (0)
 
+typedef uint32_t zxio_shutdown_options_t;
+
+#define ZXIO_SHUTDOWN_OPTIONS_WRITE ((zxio_shutdown_options_t)1ul << 0)
+#define ZXIO_SHUTDOWN_OPTIONS_READ ((zxio_shutdown_options_t)1ul << 1)
+
 __END_CDECLS
 
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_TYPES_H_

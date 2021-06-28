@@ -39,6 +39,7 @@ struct zxio : public base {
                       int16_t* out_code) override;
   zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
                       int16_t* out_code) override;
+  zx_status_t shutdown(int how, int16_t* out_code) override;
 
  protected:
   friend class fbl::internal::MakeRefCountedHelper<zxio>;
@@ -58,16 +59,12 @@ struct pipe : public zxio {
   static zx::status<fdio_ptr> create(zx::socket socket);
   static zx::status<std::pair<fdio_ptr, fdio_ptr>> create_pair(uint32_t options);
 
-  zx_status_t shutdown(int how, int16_t* out_code) override;
-
  protected:
   friend class fbl::internal::MakeRefCountedHelper<pipe>;
   friend class fbl::RefPtr<pipe>;
 
   pipe() = default;
   ~pipe() override = default;
-
-  static zx_status_t shutdown_inner(const zx::socket& socket, int how);
 
  private:
   const zxio_pipe_t& zxio_pipe() { return *reinterpret_cast<zxio_pipe_t*>(&zxio_storage().io); }

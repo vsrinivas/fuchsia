@@ -470,8 +470,9 @@ zx_process_start
 zx_profile_create
 zx_resource_create
 zx_socket_create
-zx_socket_write
 zx_socket_read
+zx_socket_shutdown
+zx_socket_write
 zx_status_get_string
 zx_stream_create
 zx_stream_readv

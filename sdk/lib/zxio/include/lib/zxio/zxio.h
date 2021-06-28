@@ -273,6 +273,15 @@ zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size
 // blocking.
 zx_status_t zxio_get_read_buffer_available(zxio_t* io, size_t* out_available);
 
+// Shuts a given IO object down for reading, writing, or both.
+//
+// |options| can be any of:
+//   ZXIO_SHUTDOWN_OPTIONS_READ - disables reading from this object
+//   ZXIO_SHUTDOWN_OPTIONS_WRITE - disables writing to this object
+//   ZXIO_SHUTDOWN_OPTIONS_READ | ZXIO_SHUTDOWN_OPTIONS_WRITE  - disables reading and
+//     writing for this object.
+zx_status_t zxio_shutdown(zxio_t* io, zxio_shutdown_options_t options);
+
 // Directory
 
 // Open a new zxio object relative to the given |directory| and initialize it
