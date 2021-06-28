@@ -505,5 +505,26 @@ TEST(BlobfsHostTest, BlobInfoCreateCompressedWithTinyFileDoesNotCompressBlob) {
   EXPECT_FALSE(blob_info->IsCompressed());
 }
 
+TEST(BlobfsHostTest, BlobInfoCreateCompressedWithSlightlyCompressibleFileWillCompressTheBlob) {
+  // Create a 2 block file where 1 and a half blocks are not compressible.
+  auto file = CreateEmptyFile(2 * kBlobfsBlockSize);
+  unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
+  FillFileWithRandomContent(*file, kBlobfsBlockSize + kBlobfsBlockSize / 2, &seed);
+
+  // With the padded format, compressing the half block doesn't save any blocks so the file is not
+  // compressed.
+  auto padded_blob_info =
+      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kPaddedMerkleTreeAtStart);
+  ASSERT_TRUE(padded_blob_info.is_ok());
+  EXPECT_FALSE(padded_blob_info->IsCompressed());
+
+  // With the compact format, compressing the half block saves enough space to fit the Merkle tree
+  // which saves a block so the file is compressed.
+  auto compact_blob_info =
+      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd);
+  ASSERT_TRUE(compact_blob_info.is_ok());
+  EXPECT_TRUE(compact_blob_info->IsCompressed());
+}
+
 }  // namespace
 }  // namespace blobfs

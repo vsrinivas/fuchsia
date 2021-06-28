@@ -286,11 +286,7 @@ zx::status<BlobInfo> BlobInfo::CreateCompressed(int fd, BlobLayoutFormat blob_la
     return compressed_blob_layout.take_error();
   }
 
-  // TODO(fxbug.dev/36663): Use TotalBlockCount instead of DataBlockAlignedSize. With the compact
-  // Merkle tree format even if compressing the blob doesn't save a block it may save enough space
-  // to fit the Merkle tree and lower block requirements for the combined data + merkle tree.
-  if (compressed_blob_layout->DataBlockAlignedSize() >=
-      blob_info->GetBlobLayout().DataBlockAlignedSize()) {
+  if (compressed_blob_layout->TotalBlockCount() >= blob_info->GetBlobLayout().TotalBlockCount()) {
     // Compressing the blob didn't save any blocks, leave the blob uncompressed.
     return blob_info;
   }
