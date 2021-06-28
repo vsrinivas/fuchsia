@@ -32,7 +32,7 @@ if (current_toolchain == default_toolchain) {
       configs = [ "//src/firmware/gigaboot:efi_config" ]
 
       # TODO: harmless, but just to match build.mk
-      remove_common_configs = [ "//build/config/zircon:default_frame_pointers" ]
+      remove_common_configs = [ "//build/config:default_frame_pointers" ]
     }
   }
 

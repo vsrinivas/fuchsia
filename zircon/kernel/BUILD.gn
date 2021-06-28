@@ -107,8 +107,8 @@ if (current_toolchain == default_toolchain) {
       # TODO(mcgrathr): Consider either removing this so there's a
       # no-frame-pointers option, or removing the kernel's support for
       # !WITH_FRAME_POINTERS if it will never be used.
-      remove_common_configs = [ "//build/config/zircon:default_frame_pointers" ]
-      configs += [ "//build/config/zircon:frame_pointers" ]
+      remove_common_configs = [ "//build/config:default_frame_pointers" ]
+      configs += [ "//build/config:frame_pointers" ]
 
       if (cpu == "x64") {
         # TODO(fxbug.dev/27321): x86 kernel can't be built without --gc-sections
@@ -181,7 +181,7 @@ if (is_kernel) {
     # TODO(mcgrathr): Consider either removing this so there's a
     # no-frame-pointers option, or removing the kernel's support for
     # !WITH_FRAME_POINTERS if it will never be used.
-    configs += [ "//build/config/zircon:frame_pointers" ]
+    configs += [ "//build/config:frame_pointers" ]
 
     defines = kernel_defines + kernel_extra_defines
     defines += [

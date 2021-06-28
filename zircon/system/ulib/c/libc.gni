@@ -45,6 +45,11 @@ libc_configs += [
 #     - Type: list(config)
 #     - Default: []
 #
+#   * remove_configs
+#     - Optional: Configs to remove from the defaults.
+#     - Type: list(config)
+#     - Default: []
+#
 #   * non_test_deps
 #     - Optional: Extra deps to append for the main target but
 #     not the testonly target.
@@ -91,6 +96,7 @@ template("libc_source_set") {
                              "configs",
                              "dir",
                              "non_test_deps",
+                             "remove_configs",
                              "sources",
                              "testonly_deps",
                              "public",
@@ -129,6 +135,10 @@ template("libc_source_set") {
   }
 
   source_set(target_name) {
+    if (defined(invoker.remove_configs)) {
+      configs += invoker.remove_configs
+      configs -= invoker.remove_configs
+    }
     configs += libc_configs + set_configs
     deps = []
     forward_variables_from(set_vars, "*")
@@ -139,6 +149,10 @@ template("libc_source_set") {
 
   source_set("$target_name.testonly") {
     testonly = true
+    if (defined(invoker.remove_configs)) {
+      configs += invoker.remove_configs
+      configs -= invoker.remove_configs
+    }
     configs += libc_testonly_configs + set_configs
     deps = []
     forward_variables_from(set_vars, "*")
@@ -165,6 +179,11 @@ template("libc_source_set") {
 #     - Type: list(config)
 #     - Default: []
 #
+#   * remove_configs
+#     - Optional: Configs to remove from the defaults.
+#     - Type: list(config)
+#     - Default: []
+#
 #   * dir
 #     - Optional: Directory prefix for $sources file names.
 #     - Type: dir
@@ -186,6 +205,7 @@ template("libc_test") {
                            [
                              "configs",
                              "dir",
+                             "remove_configs",
                              "sources",
                              "testonly",
                            ])
@@ -199,6 +219,10 @@ template("libc_test") {
       sources = invoker.sources
     }
 
+    if (defined(invoker.remove_configs)) {
+      configs += invoker.remove_configs
+      configs -= invoker.remove_configs
+    }
     configs += libc_testonly_configs
     if (defined(invoker.configs)) {
       configs += invoker.configs

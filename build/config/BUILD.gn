@@ -34,6 +34,11 @@ if (!is_fuchsia) {
   enable_frame_pointers = false
 }
 
+if (zircon_toolchain != false) {
+  import("//build/config/zircon/levels.gni")
+  enable_frame_pointers = zx_assert_level > 0
+}
+
 config("language") {
   cflags_c = [ "-std=c11" ]
   cflags_cc = [ "-std=c++$experimental_cxx_version" ]
@@ -487,6 +492,13 @@ config("frame_pointers") {
   cflags = [ "-fno-omit-frame-pointer" ]
   ldflags = cflags
   rustflags = [ "-Cforce-frame-pointers" ]
+  if (zircon_toolchain != false) {
+    defines = [ "WITH_FRAME_POINTERS=1" ]
+  }
+}
+
+group("frame_pointers_deps") {
+  # Implicit dependencies for frame_pointers config
 }
 
 config("no_frame_pointers") {
@@ -495,6 +507,13 @@ config("no_frame_pointers") {
 
   # rustc automatically does this for release builds, and there's no way to
   # force it for non-release.
+  if (zircon_toolchain != false) {
+    defines = [ "WITH_FRAME_POINTERS=0" ]
+  }
+}
+
+group("no_frame_pointers_deps") {
+  # Implicit dependencies for no_frame_pointers config
 }
 
 config("suppress_iterator_warnings") {

@@ -117,10 +117,10 @@ zx_library("ngunwind") {
 
   # Compile this with frame pointers so that if we crash
   # the simplistic unwinder will work.
-  if (configs + [ "//build/config/zircon:default_frame_pointers" ] -
-      [ "//build/config/zircon:default_frame_pointers" ] != configs) {
-    configs -= [ "//build/config/zircon:default_frame_pointers" ]
-    configs += [ "//build/config/zircon:frame_pointers" ]
+  if (configs + [ "//build/config:default_frame_pointers" ] -
+      [ "//build/config:default_frame_pointers" ] != configs) {
+    configs -= [ "//build/config:default_frame_pointers" ]
+    configs += [ "//build/config:frame_pointers" ]
   }
 
   if (optimize == "none" || optimize == "debug") {

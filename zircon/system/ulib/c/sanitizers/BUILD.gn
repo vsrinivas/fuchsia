@@ -50,11 +50,18 @@ libc_source_set("backtrace") {
 
   # Always compile with frame pointers so that BacktraceByFramePointer reliably
   # has one for its own caller's frame to show up in the backtrace.
-  configs = [ "//build/config:frame_pointers" ]
+  if (defined(configs)) {
+    configs -= [ "//build/config:default_frame_pointers" ]
+  } else {
+    configs = []
+  }
+  remove_configs = [ "//build/config:default_frame_pointers" ]
+  configs += [ "//build/config:frame_pointers" ]
 }
 
 libc_test("unittests") {
   sources = [ "backtrace-tests.cc" ]
+  remove_configs = [ "//build/config:default_frame_pointers" ]
   configs = [ "//build/config:frame_pointers" ]
   deps = [
     ":backtrace.testonly",

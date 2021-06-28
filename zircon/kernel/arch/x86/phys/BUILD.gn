@@ -25,7 +25,7 @@ if (current_toolchain == default_toolchain) {
     # Always enable frame pointers.
     # NOTE: This works because frame_pointers is added in the
     # phys32_config definition below.
-    remove_common_configs = [ "//build/config/zircon:default_frame_pointers" ]
+    remove_common_configs = [ "//build/config:default_frame_pointers" ]
 
     exclude_variant_tags = [
       # There is no possibility of fancy runtimes like ASan for phys.
@@ -76,7 +76,7 @@ if (current_toolchain == default_toolchain) {
 
       # NOTE: This works because default_frame_pointers is listed in
       # remove_common_configs in the zircon_toolchain_suite() call above!
-      configs += [ "//build/config/zircon:frame_pointers" ]
+      configs += [ "//build/config:frame_pointers" ]
     }
 
     group("phys32_config_deps") {

@@ -407,6 +407,7 @@ if (zircon_toolchain == false) {
   #
   default_common_binary_configs += [
     "//build/config:default_debuginfo",
+    "//build/config:default_frame_pointers",
     "//build/config:default_linker_gc",
     "//build/config:default_optimize",
     "//build/config:language",
@@ -419,7 +420,6 @@ if (zircon_toolchain == false) {
     "//build/config/zircon:default_icf",
     "//build/config/zircon:default_warnings",
     "//build/config/zircon:default_include_dirs",
-    "//build/config/zircon:default_frame_pointers",
     "//build/config/zircon:default_template_backtrace_limit",
     "//build/config/zircon:thread_safety_annotations",
     "//build/config/zircon:warn-implicit-fallthrough",
