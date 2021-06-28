@@ -21,12 +21,14 @@ class VkGbm : public testing::Test {
     ASSERT_TRUE(device_);
 
     const char *app_name = "vkgbm";
-    vk::ApplicationInfo app_info;
-    app_info.pApplicationName = app_name;
+    auto app_info =
+        vk::ApplicationInfo().setPApplicationName(app_name).setApiVersion(VK_API_VERSION_1_1);
+
     vk::InstanceCreateInfo instance_info;
     instance_info.pApplicationInfo = &app_info;
 
-    std::array<const char *, 1> device_extensions{VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME};
+    std::array<const char *, 2> device_extensions{VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
+                                                  VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME};
 
     auto builder = VulkanContext::Builder();
     builder.set_instance_info(instance_info).set_validation_layers_enabled(false);
@@ -122,15 +124,22 @@ constexpr uint32_t kPattern = 0xaabbccdd;
 
 using UniqueGbmBo = std::unique_ptr<struct gbm_bo, decltype(&gbm_bo_destroy)>;
 
-TEST_F(VkGbm, ImageCopy) {
-  auto src_bo = UniqueGbmBo(
-      gbm_bo_create(device(), kDefaultWidth, kDefaultHeight, kDefaultGbmFormat, GBM_BO_USE_LINEAR),
-      gbm_bo_destroy);
+using UseLinearDst = bool;
+
+class VkGbmWithParam : public VkGbm, public ::testing::WithParamInterface<UseLinearDst> {};
+
+TEST_P(VkGbmWithParam, ImportImageCopy) {
+  bool useLinearDst = GetParam();
+
+  auto src_bo =
+      UniqueGbmBo(gbm_bo_create(device(), kDefaultWidth, kDefaultHeight, kDefaultGbmFormat,
+                                GBM_BO_USE_RENDERING | GBM_BO_USE_LINEAR),
+                  gbm_bo_destroy);
   ASSERT_TRUE(src_bo);
 
   auto dst_bo =
       UniqueGbmBo(gbm_bo_create(device(), kDefaultWidth, kDefaultHeight, kDefaultGbmFormat,
-                                GBM_BO_USE_LINEAR | GBM_BO_USE_RENDERING),
+                                GBM_BO_USE_RENDERING | (useLinearDst ? GBM_BO_USE_LINEAR : 0)),
                   gbm_bo_destroy);
   ASSERT_TRUE(dst_bo);
 
@@ -139,6 +148,14 @@ TEST_F(VkGbm, ImageCopy) {
   uint64_t src_row_bytes;
 
   {
+    std::array<uint64_t, 1> modifiers{gbm_bo_get_modifier(src_bo.get())};
+    auto format_modifier_create_info =
+        vk::ImageDrmFormatModifierListCreateInfoEXT().setDrmFormatModifiers(modifiers);
+
+    auto external_create_info = vk::ExternalMemoryImageCreateInfo().setHandleTypes(
+        vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd);
+    external_create_info.setPNext(&format_modifier_create_info);
+
     auto create_info = vk::ImageCreateInfo()
                            .setImageType(vk::ImageType::e2D)
                            .setFormat(kDefaultVkFormat)
@@ -146,16 +163,17 @@ TEST_F(VkGbm, ImageCopy) {
                            .setMipLevels(1)
                            .setArrayLayers(1)
                            .setSamples(vk::SampleCountFlagBits::e1)
-                           .setTiling(vk::ImageTiling::eLinear)
+                           .setTiling(vk::ImageTiling::eDrmFormatModifierEXT)
                            .setUsage(vk::ImageUsageFlagBits::eTransferSrc)
                            .setSharingMode(vk::SharingMode::eExclusive)
-                           .setInitialLayout(vk::ImageLayout::ePreinitialized);
+                           .setInitialLayout(vk::ImageLayout::ePreinitialized)
+                           .setPNext(&external_create_info);
 
     auto result = context()->device()->createImageUnique(create_info);
     ASSERT_EQ(vk::Result::eSuccess, result.result);
     src_image = std::move(result.value);
 
-    auto subresource = vk::ImageSubresource().setAspectMask(vk::ImageAspectFlagBits::eColor);
+    auto subresource = vk::ImageSubresource().setAspectMask(vk::ImageAspectFlagBits::ePlane0KHR);
     auto layout = context()->device()->getImageSubresourceLayout(src_image.get(), subresource);
     ASSERT_EQ(layout.offset, 0u);
     src_row_bytes = layout.rowPitch;
@@ -163,8 +181,16 @@ TEST_F(VkGbm, ImageCopy) {
   }
 
   {
-    vk::MemoryRequirements mem_reqs =
-        context()->device()->getImageMemoryRequirements(src_image.get());
+    auto memory_reqs_chain =
+        context()
+            ->device()
+            ->getImageMemoryRequirements2<vk::MemoryRequirements2, vk::MemoryDedicatedRequirements>(
+                src_image.get());
+    // Validate that image creation did not allocate a magma image
+    EXPECT_FALSE(
+        memory_reqs_chain.get<vk::MemoryDedicatedRequirements>().requiresDedicatedAllocation);
+
+    auto &mem_reqs = memory_reqs_chain.get<vk::MemoryRequirements2>().memoryRequirements;
     uint32_t memory_type_index = __builtin_ctz(mem_reqs.memoryTypeBits);
 
     int fd = gbm_bo_get_fd(src_bo.get());
@@ -197,6 +223,14 @@ TEST_F(VkGbm, ImageCopy) {
   uint64_t dst_row_bytes;
 
   {
+    std::array<uint64_t, 1> modifiers{gbm_bo_get_modifier(dst_bo.get())};
+    auto format_modifier_create_info =
+        vk::ImageDrmFormatModifierListCreateInfoEXT().setDrmFormatModifiers(modifiers);
+
+    auto external_create_info = vk::ExternalMemoryImageCreateInfo().setHandleTypes(
+        vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd);
+    external_create_info.setPNext(&format_modifier_create_info);
+
     auto create_info = vk::ImageCreateInfo()
                            .setImageType(vk::ImageType::e2D)
                            .setFormat(kDefaultVkFormat)
@@ -204,16 +238,17 @@ TEST_F(VkGbm, ImageCopy) {
                            .setMipLevels(1)
                            .setArrayLayers(1)
                            .setSamples(vk::SampleCountFlagBits::e1)
-                           .setTiling(vk::ImageTiling::eLinear)
+                           .setTiling(vk::ImageTiling::eDrmFormatModifierEXT)
                            .setUsage(vk::ImageUsageFlagBits::eTransferDst)
                            .setSharingMode(vk::SharingMode::eExclusive)
-                           .setInitialLayout(vk::ImageLayout::eUndefined);
+                           .setInitialLayout(vk::ImageLayout::eUndefined)
+                           .setPNext(&external_create_info);
 
     auto result = context()->device()->createImageUnique(create_info);
     ASSERT_EQ(vk::Result::eSuccess, result.result);
     dst_image = std::move(result.value);
 
-    auto subresource = vk::ImageSubresource().setAspectMask(vk::ImageAspectFlagBits::eColor);
+    auto subresource = vk::ImageSubresource().setAspectMask(vk::ImageAspectFlagBits::ePlane0KHR);
     auto layout = context()->device()->getImageSubresourceLayout(dst_image.get(), subresource);
     ASSERT_EQ(layout.offset, 0u);
     dst_row_bytes = layout.rowPitch;
@@ -221,22 +256,30 @@ TEST_F(VkGbm, ImageCopy) {
   }
 
   {
-    vk::MemoryRequirements mem_reqs =
-        context()->device()->getImageMemoryRequirements(dst_image.get());
+    auto memory_reqs_chain =
+        context()
+            ->device()
+            ->getImageMemoryRequirements2<vk::MemoryRequirements2, vk::MemoryDedicatedRequirements>(
+                dst_image.get());
+    // Validate that image creation did not allocate a magma image
+    EXPECT_FALSE(
+        memory_reqs_chain.get<vk::MemoryDedicatedRequirements>().requiresDedicatedAllocation);
+
+    auto &mem_reqs = memory_reqs_chain.get<vk::MemoryRequirements2>().memoryRequirements;
     uint32_t memory_type_index = __builtin_ctz(mem_reqs.memoryTypeBits);
 
     int fd = gbm_bo_get_fd(dst_bo.get());
     EXPECT_GE(fd, 0);
 
-    vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryFdInfoKHR> alloc_info(
-        vk::MemoryAllocateInfo()
-            .setAllocationSize(mem_reqs.size)
-            .setMemoryTypeIndex(memory_type_index),
-        vk::ImportMemoryFdInfoKHR().setFd(fd).setHandleType(
-            vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd));
+    auto import_info = vk::ImportMemoryFdInfoKHR().setFd(fd).setHandleType(
+        vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd);
 
-    auto result =
-        context()->device()->allocateMemoryUnique(alloc_info.get<vk::MemoryAllocateInfo>());
+    auto alloc_info = vk::MemoryAllocateInfo()
+                          .setAllocationSize(mem_reqs.size)
+                          .setMemoryTypeIndex(memory_type_index)
+                          .setPNext(&import_info);
+
+    auto result = context()->device()->allocateMemoryUnique(alloc_info);
     ASSERT_EQ(result.result, vk::Result::eSuccess);
     dst_memory = std::move(result.value);
 
@@ -245,7 +288,9 @@ TEST_F(VkGbm, ImageCopy) {
 
     IsMemoryTypeCoherent(memory_type_index, &dst_is_coherent);
 
-    WriteLinearImage(dst_memory.get(), dst_is_coherent, dst_row_bytes, kDefaultHeight, 0xffffffff);
+    if (useLinearDst)
+      WriteLinearImage(dst_memory.get(), dst_is_coherent, dst_row_bytes, kDefaultHeight,
+                       0xffffffff);
   }
 
   vk::UniqueCommandPool command_pool;
@@ -355,5 +400,8 @@ TEST_F(VkGbm, ImageCopy) {
 
   context()->queue().waitIdle();
 
-  CheckLinearImage(dst_memory.get(), dst_is_coherent, dst_row_bytes, kDefaultHeight, kPattern);
+  if (useLinearDst)
+    CheckLinearImage(dst_memory.get(), dst_is_coherent, dst_row_bytes, kDefaultHeight, kPattern);
 }
+
+INSTANTIATE_TEST_SUITE_P(, VkGbmWithParam, ::testing::Bool());
