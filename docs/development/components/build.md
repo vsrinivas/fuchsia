@@ -251,7 +251,7 @@ manifest. If you're not sure why you're required to include the shard, you can
 use this GN tool to find a dependency path:
 
 ```posix-terminal
-fx gn path out/default {{ '<var>your component target</var>' }} {{ '<var>expect_includes target</var>' }}
+fx gn path $(fx get-build-dir) {{ '<var>your component target</var>' }} {{ '<var>expect_includes target</var>' }}
 ```
 
 You can find the `expect_includes()` target for instance by searching for
@@ -775,13 +775,13 @@ You may pass `v2 = false` to either `fuchsia_unittest_component` or
 The generated component manifest file can be found with the following command:
 
 ```posix-terminal
-fx gn outputs out/default {{ '<var>unittest target</var>' }}_generated_manifest
+fx gn outputs $(fx get-build-dir) {{ '<var>unittest target</var>' }}_generated_manifest
 ```
 
 To print it directly:
 
 ```posix-terminal
-fx build && cat out/default/$(fx gn outputs out/default {{ '<var>unittest target</var>' }}_generated_manifest)
+fx build && cat $(fx get-build-dir)/$(fx gn outputs $(fx get-build-dir) {{ '<var>unittest target</var>' }}_generated_manifest)
 ```
 
 Note: `fx gn outputs` prints an output path, but the file at the path
