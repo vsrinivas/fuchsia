@@ -136,7 +136,9 @@ def main():
                 src_path = os.path.join(root_build_dir, src_path)
 
             dep_entries += [
-                '%s: %s' % (entry, os.path.relpath(src_path, os.getcwd()))
+                '%s: %s' % (
+                    os.path.relpath(dst_path, root_build_dir),
+                    os.path.relpath(src_path, root_build_dir))
             ]
             if os.path.exists(dst_path) and filecmp.cmp(dst_path, src_path):
                 if args.debug:
