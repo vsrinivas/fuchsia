@@ -40,7 +40,7 @@ class DefaultFlatlandPresenter final
 
   // |FlatlandPresenter|
   void ScheduleUpdateForSession(zx::time requested_presentation_time,
-                                scheduling::SchedulingIdPair id_pair, bool squashable) override;
+                                scheduling::SchedulingIdPair id_pair, bool unsquashable) override;
 
   // |FlatlandPresenter|.
   void GetFuturePresentationInfos(scheduling::FrameScheduler::GetFuturePresentationInfosCallback

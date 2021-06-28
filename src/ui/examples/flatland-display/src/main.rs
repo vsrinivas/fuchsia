@@ -218,7 +218,7 @@ async fn main() {
         requested_presentation_time: Some(0),
         acquire_fences: None,
         release_fences: None,
-        squashable: Some(false),
+        unsquashable: Some(true),
         ..fland::PresentArgs::EMPTY
     };
     flatland.present(args).expect("fidl error");

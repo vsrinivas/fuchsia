@@ -138,14 +138,14 @@ TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameSche
       .present_id = 2,
   });
   const zx::time kPresentationTime = zx::time(123);
-  const bool kSquashable = true;
+  const bool kUnsquashable = false;
 
-  presenter->ScheduleUpdateForSession(kPresentationTime, kIdPair, kSquashable);
+  presenter->ScheduleUpdateForSession(kPresentationTime, kIdPair, kUnsquashable);
   RunLoopUntilIdle();
 
   EXPECT_EQ(last_presentation_time, kPresentationTime);
   EXPECT_EQ(last_id_pair, kIdPair);
-  EXPECT_EQ(last_squashable, kSquashable);
+  EXPECT_EQ(last_squashable, !kUnsquashable);
 }
 
 TEST_F(DefaultFlatlandPresenterTest, RemoveSessionForwardsToFrameScheduler) {

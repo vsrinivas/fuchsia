@@ -79,7 +79,7 @@ struct PresentArgs {
   zx::time requested_presentation_time;
   std::vector<zx::event> acquire_fences;
   std::vector<zx::event> release_fences;
-  bool squashable = true;
+  bool unsquashable = false;
 
   // Arguments to the PRESENT_WITH_ARGS macro.
 
@@ -115,37 +115,37 @@ struct GlobalIdPair {
 // |flatland| is a Flatland object constructed with the MockFlatlandPresenter owned by the
 // FlatlandTest harness. |expect_success| should be false if the call to Present() is expected to
 // trigger an error.
-#define PRESENT_WITH_ARGS(flatland, args, expect_success)                                    \
-  {                                                                                          \
-    bool had_acquire_fences = !args.acquire_fences.empty();                                  \
-    if (expect_success) {                                                                    \
-      EXPECT_CALL(*mock_flatland_presenter_,                                                 \
-                  RegisterPresent(flatland->GetRoot().GetInstanceId(), _));                  \
-    }                                                                                        \
-    bool processed_callback = false;                                                         \
-    fuchsia::ui::scenic::internal::PresentArgs present_args;                                 \
-    present_args.set_requested_presentation_time(args.requested_presentation_time.get());    \
-    present_args.set_acquire_fences(std::move(args.acquire_fences));                         \
-    present_args.set_release_fences(std::move(args.release_fences));                         \
-    present_args.set_squashable(args.squashable);                                            \
-    flatland->Present(std::move(present_args));                                              \
-    if (expect_success) {                                                                    \
-      /* Even with no acquire_fences, UberStruct updates queue on the dispatcher. */         \
-      if (!had_acquire_fences) {                                                             \
-        EXPECT_CALL(                                                                         \
-            *mock_flatland_presenter_,                                                       \
-            ScheduleUpdateForSession(args.requested_presentation_time, _, args.squashable)); \
-      }                                                                                      \
-      RunLoopUntilIdle();                                                                    \
-      if (!args.skip_session_update_and_release_fences) {                                    \
-        ApplySessionUpdatesAndSignalFences();                                                \
-      }                                                                                      \
-      flatland->OnPresentProcessed(args.num_presents_returned,                               \
-                                   std::move(args.presentation_infos));                      \
-    } else {                                                                                 \
-      RunLoopUntilIdle();                                                                    \
-      EXPECT_EQ(GetPresentError(flatland->GetSessionId()), args.expected_error);             \
-    }                                                                                        \
+#define PRESENT_WITH_ARGS(flatland, args, expect_success)                                      \
+  {                                                                                            \
+    bool had_acquire_fences = !args.acquire_fences.empty();                                    \
+    if (expect_success) {                                                                      \
+      EXPECT_CALL(*mock_flatland_presenter_,                                                   \
+                  RegisterPresent(flatland->GetRoot().GetInstanceId(), _));                    \
+    }                                                                                          \
+    bool processed_callback = false;                                                           \
+    fuchsia::ui::scenic::internal::PresentArgs present_args;                                   \
+    present_args.set_requested_presentation_time(args.requested_presentation_time.get());      \
+    present_args.set_acquire_fences(std::move(args.acquire_fences));                           \
+    present_args.set_release_fences(std::move(args.release_fences));                           \
+    present_args.set_unsquashable(args.unsquashable);                                          \
+    flatland->Present(std::move(present_args));                                                \
+    if (expect_success) {                                                                      \
+      /* Even with no acquire_fences, UberStruct updates queue on the dispatcher. */           \
+      if (!had_acquire_fences) {                                                               \
+        EXPECT_CALL(                                                                           \
+            *mock_flatland_presenter_,                                                         \
+            ScheduleUpdateForSession(args.requested_presentation_time, _, args.unsquashable)); \
+      }                                                                                        \
+      RunLoopUntilIdle();                                                                      \
+      if (!args.skip_session_update_and_release_fences) {                                      \
+        ApplySessionUpdatesAndSignalFences();                                                  \
+      }                                                                                        \
+      flatland->OnPresentProcessed(args.num_presents_returned,                                 \
+                                   std::move(args.presentation_infos));                        \
+    } else {                                                                                   \
+      RunLoopUntilIdle();                                                                      \
+      EXPECT_EQ(GetPresentError(flatland->GetSessionId()), args.expected_error);               \
+    }                                                                                          \
   }
 
 // Identical to PRESENT_WITH_ARGS, but supplies an empty PresentArgs to the Present() call.
@@ -234,7 +234,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
     ON_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _))
         .WillByDefault(
             ::testing::Invoke([&](zx::time requested_presentation_time,
-                                  scheduling::SchedulingIdPair id_pair, bool squashable) {
+                                  scheduling::SchedulingIdPair id_pair, bool unsquashable) {
               // The ID must be already registered.
               EXPECT_TRUE(pending_release_fences_.find(id_pair) != pending_release_fences_.end());
 
@@ -591,7 +591,7 @@ TEST_F(FlatlandTest, MultiplePresentTokensAvailable) {
 TEST_F(FlatlandTest, PresentWithNoFieldsSet) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  const bool kDefaultSquashable = true;
+  const bool kDefaultUnsquashable = false;
   const zx::time kDefaultRequestedPresentationTime = zx::time(0);
 
   EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(flatland->GetRoot().GetInstanceId(), _));
@@ -600,7 +600,7 @@ TEST_F(FlatlandTest, PresentWithNoFieldsSet) {
   EXPECT_EQ(GetPresentError(flatland->GetSessionId()), Error::NO_ERROR);
 
   EXPECT_CALL(*mock_flatland_presenter_,
-              ScheduleUpdateForSession(kDefaultRequestedPresentationTime, _, kDefaultSquashable));
+              ScheduleUpdateForSession(kDefaultRequestedPresentationTime, _, kDefaultUnsquashable));
   RunLoopUntilIdle();
 }
 
@@ -4012,21 +4012,21 @@ TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
 TEST_F(FlatlandTest, UnsquashableUpdates_ShouldBeReflectedInScheduleUpdates) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  // We call Present() twice, each time passing a different value as the squashable argument.
+  // We call Present() twice, each time passing a different value as the unsquashable argument.
   // We EXPECT that the ensuing ScheduleUpdateForSession() call to the frame scheduler will
   // reflect the passed in squashable value.
 
-  // Present with the squashable field set to true.
+  // Present with the unsquashable field set to true.
   {
     PresentArgs args;
-    args.squashable = true;
+    args.unsquashable = true;
     PRESENT_WITH_ARGS(flatland, std::move(args), true);
   }
 
-  // Present with the squashable field set to false.
+  // Present with the unsquashable field set to false.
   {
     PresentArgs args;
-    args.squashable = false;
+    args.unsquashable = false;
     PRESENT_WITH_ARGS(flatland, std::move(args), true);
   }
 }

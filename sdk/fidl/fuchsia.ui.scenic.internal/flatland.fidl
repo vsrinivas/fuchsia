@@ -187,12 +187,14 @@ resource table PresentArgs {
     /// The default `release_fences` value is the empty vector.
     3: vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT release_fences;
 
-    /// If `squashable` is true, then an update can be combined with those that
-    /// come after it. If `squashable` is false, then the update is guaranteed
-    /// to be shown for at least one vsync interval.
+    /// If `unsquashable` is true, then the update is guaranteed to be uniquely shown for at
+    /// least one vsync interval.
     ///
-    /// If absent, `squashable` is true.
-    4: bool squashable;
+    /// If `unsquashable` is false, then the update can be combined with those that come after
+    /// it.
+    ///
+    /// If absent, `unsquashable` is false.
+    4: bool unsquashable;
 };
 
 /// A user-defined identifier for future presentation info. A maximum of 8

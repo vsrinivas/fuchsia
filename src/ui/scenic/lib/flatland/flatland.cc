@@ -111,8 +111,8 @@ void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args) {
   if (!args.has_acquire_fences()) {
     args.set_acquire_fences({});
   }
-  if (!args.has_squashable()) {
-    args.set_squashable(true);
+  if (!args.has_unsquashable()) {
+    args.set_unsquashable(false);
   }
 
   auto root_handle = GetRoot();
@@ -214,14 +214,14 @@ void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args) {
   // TODO(fxbug.dev/76640): make the fences be the first arg, and the closure be the second.
   fence_queue_->QueueTask(
       [this, present_id, requested_presentation_time = args.requested_presentation_time(),
-       squashable = args.squashable(), uber_struct = std::move(uber_struct),
+       unsquashable = args.unsquashable(), uber_struct = std::move(uber_struct),
        link_operations = std::move(pending_link_operations_),
        release_fences = std::move(*args.mutable_release_fences())]() mutable {
         // Push the UberStruct, then schedule the associated Present that will eventually publish
         // it to the InstanceMap used for rendering.
         uber_struct_queue_->Push(present_id, std::move(uber_struct));
         flatland_presenter_->ScheduleUpdateForSession(zx::time(requested_presentation_time),
-                                                      {session_id_, present_id}, squashable);
+                                                      {session_id_, present_id}, unsquashable);
 
         // Finalize Link destruction operations after publishing the new UberStruct. This
         // ensures that any local Transforms referenced by the to-be-deleted Links are already

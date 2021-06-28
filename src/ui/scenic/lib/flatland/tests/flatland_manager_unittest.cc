@@ -50,7 +50,7 @@ using fuchsia::ui::scenic::internal::OnPresentProcessedValues;
     present_args.set_requested_presentation_time(0);                                   \
     present_args.set_acquire_fences({});                                               \
     present_args.set_release_fences({});                                               \
-    present_args.set_squashable(true);                                                 \
+    present_args.set_unsquashable(false);                                              \
     flatland->Present(std::move(present_args));                                        \
     /* If expecting success, wait for the worker thread to process the request. */     \
     if (expect_success) {                                                              \
@@ -88,7 +88,7 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
     ON_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _))
         .WillByDefault(
             ::testing::Invoke([&](zx::time requested_presentation_time,
-                                  scheduling::SchedulingIdPair id_pair, bool squashable) {
+                                  scheduling::SchedulingIdPair id_pair, bool unsquashable) {
               // The ID pair must be already registered.
               EXPECT_TRUE(pending_presents_.count(id_pair));
 
