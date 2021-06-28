@@ -402,6 +402,10 @@ void SemanticTree::PerformHitTesting(
   hit_testing_handler_(local_point, std::move(callback));
 }
 
+std::string vec2ToString(const fuchsia::ui::gfx::vec2 vec) {
+  return fxl::StringPrintf("(x: %.1f, y: %.1f)", vec.x, vec.y);
+}
+
 std::string vec3ToString(const fuchsia::ui::gfx::vec3 vec) {
   return fxl::StringPrintf("(x: %.1f, y: %.1f, z: %.1f)", vec.x, vec.y, vec.z);
 }
@@ -483,6 +487,36 @@ std::string actionsToString(const std::vector<fuchsia::accessibility::semantics:
   return retval.append("}");
 }
 
+std::string checkedStateToString(
+    const fuchsia::accessibility::semantics::CheckedState& checked_state) {
+  switch (checked_state) {
+    case fuchsia::accessibility::semantics::CheckedState::NONE:
+      return "NONE";
+    case fuchsia::accessibility::semantics::CheckedState::CHECKED:
+      return "CHECKED";
+    case fuchsia::accessibility::semantics::CheckedState::UNCHECKED:
+      return "UNCHECKED";
+    case fuchsia::accessibility::semantics::CheckedState::MIXED:
+      return "MIXED";
+    default:
+      return "No checked state found";
+  }
+}
+
+std::string toggledStateToString(
+    const fuchsia::accessibility::semantics::ToggledState& toggled_state) {
+  switch (toggled_state) {
+    case fuchsia::accessibility::semantics::ToggledState::ON:
+      return "ON";
+    case fuchsia::accessibility::semantics::ToggledState::OFF:
+      return "OFF";
+    case fuchsia::accessibility::semantics::ToggledState::INDETERMINATE:
+      return "INDETERMINATE";
+    default:
+      return "No toggled state found";
+  }
+}
+
 void SemanticTree::FillInspectTree(inspect::Node inspect_node,
                                    inspect::Inspector* inspector) const {
   std::function<void(const Node*, int, inspect::Node)> fillTree;
@@ -496,7 +530,6 @@ void SemanticTree::FillInspectTree(inspect::Node inspect_node,
     inspect_node.CreateUint("id", node->node_id(), inspector);
     if (node->has_attributes() && node->attributes().has_label()) {
       inspect_node.CreateString("label", node->attributes().label(), inspector);
-      inspect_node.CreateUint("label_length", node->attributes().label().size(), inspector);
     }
     if (node->has_location()) {
       inspect_node.CreateString("location", locationToString(node->location()), inspector);
@@ -512,6 +545,84 @@ void SemanticTree::FillInspectTree(inspect::Node inspect_node,
     }
     if (node->has_actions()) {
       inspect_node.CreateString("action", actionsToString(node->actions()), inspector);
+    }
+    if (node->has_states()) {
+      const auto& node_states = node->states();
+      if (node_states.has_checked_state()) {
+        inspect_node.CreateString("checked_state",
+                                  checkedStateToString(node_states.checked_state()), inspector);
+      }
+
+      if (node_states.has_selected()) {
+        inspect_node.CreateBool("selected", node_states.selected(), inspector);
+      }
+
+      if (node_states.has_hidden()) {
+        inspect_node.CreateBool("hidden", node_states.hidden(), inspector);
+      }
+
+      if (node_states.has_value()) {
+        inspect_node.CreateString("value", node_states.value(), inspector);
+      }
+
+      if (node_states.has_range_value()) {
+        inspect_node.CreateDouble("range_value", node_states.range_value(), inspector);
+      }
+
+      if (node_states.has_viewport_offset()) {
+        inspect_node.CreateString("viewport_offset", vec2ToString(node_states.viewport_offset()),
+                                  inspector);
+      }
+
+      if (node_states.has_toggled_state()) {
+        inspect_node.CreateString("toggled_state",
+                                  toggledStateToString(node_states.toggled_state()), inspector);
+      }
+
+      if (node_states.has_focusable()) {
+        inspect_node.CreateBool("focusable", node_states.focusable(), inspector);
+      }
+
+      if (node_states.has_has_input_focus()) {
+        inspect_node.CreateBool("has_input_focus", node_states.has_input_focus(), inspector);
+      }
+    }
+    if (node->has_attributes()) {
+      const auto& node_attributes = node->attributes();
+
+      if (node_attributes.has_secondary_label()) {
+        inspect_node.CreateString("secondary_label", node_attributes.secondary_label(), inspector);
+      }
+
+      if (node_attributes.has_secondary_action_description()) {
+        inspect_node.CreateString("secondary_action_description",
+                                  node_attributes.secondary_action_description(), inspector);
+      }
+
+      if (node_attributes.has_range()) {
+        const auto& range_attributes = node_attributes.range();
+
+        if (range_attributes.has_min_value()) {
+          inspect_node.CreateDouble("min_value", range_attributes.min_value(), inspector);
+        }
+
+        if (range_attributes.has_max_value()) {
+          inspect_node.CreateDouble("max_vlaue", range_attributes.max_value(), inspector);
+        }
+
+        if (range_attributes.has_step_delta()) {
+          inspect_node.CreateDouble("step_delta", range_attributes.step_delta(), inspector);
+        }
+      }
+
+      if (node_attributes.has_hierarchical_level()) {
+        inspect_node.CreateUint("hierarchical_level", node_attributes.hierarchical_level(),
+                                inspector);
+      }
+
+      if (node_attributes.has_is_keyboard_key()) {
+        inspect_node.CreateBool("is_keyboard_key", node_attributes.is_keyboard_key(), inspector);
+      }
     }
 
     if (!node->has_child_ids()) {

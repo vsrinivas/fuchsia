@@ -507,40 +507,33 @@ TEST_F(SemanticTreeTest, InspectOutput) {
 
   auto node3 = AllOf(
       NodeMatches(AllOf(NameMatches("node_3"), PropertyList(UnorderedElementsAre(
-                                                   UintIs("id", 3), StringIs("label", "Node-3"),
-                                                   UintIs("label_length", 6))))),
+                                                   UintIs("id", 3), StringIs("label", "Node-3"))))),
       ChildrenMatch(UnorderedElementsAre()));
   auto node4 = AllOf(
       NodeMatches(AllOf(NameMatches("node_4"), PropertyList(UnorderedElementsAre(
-                                                   UintIs("id", 4), StringIs("label", "Node-4"),
-                                                   UintIs("label_length", 6))))),
+                                                   UintIs("id", 4), StringIs("label", "Node-4"))))),
       ChildrenMatch(UnorderedElementsAre()));
   auto node5 = AllOf(
       NodeMatches(AllOf(NameMatches("node_5"), PropertyList(UnorderedElementsAre(
-                                                   UintIs("id", 5), StringIs("label", "Node-5"),
-                                                   UintIs("label_length", 6))))),
+                                                   UintIs("id", 5), StringIs("label", "Node-5"))))),
       ChildrenMatch(UnorderedElementsAre()));
   auto node6 = AllOf(
       NodeMatches(AllOf(NameMatches("node_6"), PropertyList(UnorderedElementsAre(
-                                                   UintIs("id", 6), StringIs("label", "Node-6"),
-                                                   UintIs("label_length", 6))))),
+                                                   UintIs("id", 6), StringIs("label", "Node-6"))))),
       ChildrenMatch(UnorderedElementsAre()));
   auto node1 = AllOf(
       NodeMatches(AllOf(NameMatches("node_1"), PropertyList(UnorderedElementsAre(
-                                                   UintIs("id", 1), StringIs("label", "Node-1"),
-                                                   UintIs("label_length", 6))))),
+                                                   UintIs("id", 1), StringIs("label", "Node-1"))))),
       ChildrenMatch(UnorderedElementsAre(node3, node4)));
   auto node2 = AllOf(
       NodeMatches(AllOf(NameMatches("node_2"), PropertyList(UnorderedElementsAre(
-                                                   UintIs("id", 2), StringIs("label", "Node-2"),
-                                                   UintIs("label_length", 6))))),
+                                                   UintIs("id", 2), StringIs("label", "Node-2"))))),
       ChildrenMatch(UnorderedElementsAre(node5, node6)));
 
   auto root_node =
       AllOf(NodeMatches(AllOf(
                 NameMatches("semantic_tree_root"),
-                PropertyList(UnorderedElementsAre(UintIs("id", 0), StringIs("label", "Node-0"),
-                                                  UintIs("label_length", 6))))),
+                PropertyList(UnorderedElementsAre(UintIs("id", 0), StringIs("label", "Node-0"))))),
             ChildrenMatch(UnorderedElementsAre(node1, node2)));
 
   auto tree_inspect_hierarchy = hierarchy.value().GetByPath({kInspectNodeName});
