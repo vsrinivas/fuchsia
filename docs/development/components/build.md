@@ -235,6 +235,30 @@ In the example above it would have been repetitive to name the shard
 named `client.shard.cml`, to indicate that it is to be used by clients of the
 SDK library for fonts.
 
+#### Troubleshooting client library includes
+
+If there is a dependency path between your component's build target and an
+`expect_includes()` target, but your component's manifest does not include the
+expected component manifest shard, you will encounter a build-time error in this
+form:
+
+```none
+Error: "your_manifest.cml" must include "some.shard.cml".
+```
+
+You can fix the problem by adding the missing include to your component's
+manifest. If you're not sure why you're required to include the shard, you can
+use this GN tool to find a dependency path:
+
+```posix-terminal
+fx gn path out/default {{ '<var>your component target</var>' }} {{ '<var>expect_includes target</var>' }}
+```
+
+You can find the `expect_includes()` target for instance by searching for
+`BUILD.gn` files that reference the missing shard by filename. Usually you will
+find the target in the same directory as the shard file itself, or in a parent
+directory.
+
 ## Component package GN templates {#component-package}
 
 [GN][glossary.gn] is the meta-build system used by Fuchsia. Fuchsia extends GN
