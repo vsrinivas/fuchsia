@@ -508,34 +508,27 @@ impl Daemon {
                 log::info!("Received list target request for '{:?}'", value);
                 responder
                     .send(
-                        &mut future::join_all(match value.as_ref() {
+                        &mut match value.as_ref() {
                             "" => self
                                 .target_collection
                                 .targets()
                                 .drain(..)
-                                .map(|t| {
-                                    async move {
-                                        if t.is_connected() {
-                                            Some(t.as_ref().into())
-                                        } else {
-                                            None
-                                        }
+                                .filter_map(|t| {
+                                    if t.is_connected() {
+                                        Some(t.as_ref().into())
+                                    } else {
+                                        None
                                     }
-                                    .boxed_local()
                                 })
                                 .collect(),
                             _ => match self.target_collection.get_connected(value) {
                                 Some(t) => {
-                                    vec![async move { Some(t.as_ref().into()) }.boxed_local()]
+                                    vec![t.as_ref().into()]
                                 }
                                 None => vec![],
                             },
-                        })
-                        .await
-                        .drain(..)
-                        .filter_map(|m| m)
-                        .collect::<Vec<_>>()
-                        .drain(..),
+                        }
+                        .into_iter(),
                     )
                     .context("error sending response")?;
             }
