@@ -176,11 +176,6 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   zx::status<std::unique_ptr<Superblock>> ReadBackupSuperblock();
 
  private:
-  struct BlockCache {
-    uint64_t block_number;
-    uint8_t blk[kBlobfsBlockSize];
-  };
-
   // Stores a pointer to an inode's metadata and the matching block number.
   class InodeBlock {
    public:
@@ -219,9 +214,11 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
 
   zx::status<> LoadNodeMap();
 
-  // Read data from block |block_number| into the block cache.
-  // If the block cache already contains data from the specified block_offset, nothing happens.
-  zx::status<> ReadBlock(uint64_t block_number);
+  // Read |block_count| blocks starting at |start_block| into |data|.
+  zx::status<> ReadBlocks(uint64_t start_block, uint64_t block_count, void* data);
+
+  // Read data from block |block_number| into |data|.
+  zx::status<> ReadBlock(uint64_t block_number, void* data);
 
   // Read for inode |node_index| for |block_count| blocks from local |start_block| into |data|.
   zx::status<> ReadBlocksForInode(uint32_t node_index, uint64_t start_block, uint64_t block_count,
@@ -259,9 +256,6 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
     Superblock info_;
     uint8_t info_block_[kBlobfsBlockSize];
   };
-
-  // Caches the most recent block read from disk.
-  BlockCache cache_;
 };
 
 // Reads block |block_number| into |data| from |fd|.

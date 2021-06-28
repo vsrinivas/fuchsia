@@ -72,16 +72,30 @@ constexpr CompressionSettings kCompressionSettings = {
     .compression_algorithm = CompressionAlgorithm::kChunked,
 };
 
-zx::status<> ReadBlockWithOffset(int fd, uint64_t block_number, off_t file_offset, void* data) {
+zx::status<> ReadBlocksWithOffset(int fd, uint64_t start_block, uint64_t block_count,
+                                  off_t file_offset, void* data) {
   off_t off = safemath::checked_cast<off_t>(
       safemath::CheckAdd(file_offset,
-                         safemath::CheckMul(block_number, kBlobfsBlockSize).ValueOrDie())
+                         safemath::CheckMul(start_block, kBlobfsBlockSize).ValueOrDie())
           .ValueOrDie());
-  if (pread(fd, data, kBlobfsBlockSize, off) != kBlobfsBlockSize) {
-    FX_LOGS(ERROR) << "cannot read block " << block_number;
-    return zx::error(ZX_ERR_IO);
+  size_t size = safemath::CheckMul(block_count, kBlobfsBlockSize).ValueOrDie();
+  auto udata = static_cast<uint8_t*>(data);
+  while (size > 0) {
+    ssize_t ret = pread(fd, udata, size, off);
+    if (ret <= 0) {
+      perror("failed read");
+      FX_LOGS(ERROR) << "cannot read block " << start_block << " size:" << size << " off:" << off;
+      return zx::error(ZX_ERR_IO);
+    }
+    size -= ret;
+    off += ret;
+    udata += ret;
   }
   return zx::ok();
+}
+
+zx::status<> ReadBlockWithOffset(int fd, uint64_t block_number, off_t file_offset, void* data) {
+  return ReadBlocksWithOffset(fd, block_number, /*block_count=*/1, file_offset, data);
 }
 
 zx::status<> WriteBlocksWithOffset(int fd, uint64_t start_block, uint64_t block_count,
@@ -91,10 +105,9 @@ zx::status<> WriteBlocksWithOffset(int fd, uint64_t start_block, uint64_t block_
                          safemath::CheckMul(start_block, kBlobfsBlockSize).ValueOrDie())
           .ValueOrDie());
   size_t size = safemath::CheckMul(block_count, kBlobfsBlockSize).ValueOrDie();
-  ssize_t ret;
   auto udata = static_cast<const uint8_t*>(data);
   while (size > 0) {
-    ret = pwrite(fd, udata, size, off);
+    ssize_t ret = pwrite(fd, udata, size, off);
     if (ret < 0) {
       perror("failed write");
       FX_LOGS(ERROR) << "cannot write block " << start_block << " size:" << size << " off:" << off;
@@ -549,7 +562,6 @@ Blobfs::Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
     : blockfd_(std::move(fd)), offset_(offset) {
   ZX_ASSERT(extent_lengths.size() == kExtentCount);
   memcpy(&info_block_, info_block.block, kBlobfsBlockSize);
-  cache_.block_number = 0;
 
   block_map_start_block_ = extent_lengths[0] / kBlobfsBlockSize;
   block_map_block_count_ = extent_lengths[1] / kBlobfsBlockSize;
@@ -601,70 +613,41 @@ zx::status<> Blobfs::LoadBitmap() {
   if (zx_status_t status = block_map_.Shrink(info_.data_block_count); status != ZX_OK) {
     return zx::error(status);
   }
-  const void* bmstart = block_map_.StorageUnsafe()->GetData();
-
-  for (size_t n = 0; n < block_map_block_count_; n++) {
-    void* bmdata = fs::GetBlock(kBlobfsBlockSize, bmstart, n);
-
-    if (n >= node_map_start_block_) {
-      memset(bmdata, 0, kBlobfsBlockSize);
-    } else if (zx::status<> status = ReadBlock(block_map_start_block_ + n); status.is_error()) {
-      return status;
-    } else {
-      memcpy(bmdata, cache_.blk, kBlobfsBlockSize);
-    }
-  }
-  return zx::ok();
+  return ReadBlocks(block_map_start_block_, block_map_block_count_,
+                    block_map_.StorageUnsafe()->GetData());
 }
 
 zx::status<> Blobfs::LoadNodeMap() {
   const size_t nodes_to_load = fbl::round_up(Info().inode_count, kBlobfsInodesPerBlock);
   nodes_ = std::make_unique<Inode[]>(nodes_to_load);
-  for (size_t i = 0; i < nodes_to_load / kBlobfsInodesPerBlock; i++) {
-    if (zx::status<> status = ReadBlockWithOffset(blockfd_.get(), node_map_start_block_ + i,
-                                                  offset_, &nodes_[i * kBlobfsInodesPerBlock]);
-        status.is_error()) {
-      return status;
-    }
-  }
-  return zx::ok();
+  return ReadBlocks(node_map_start_block_, node_map_block_count_, nodes_.get());
 }
 
 zx::status<std::unique_ptr<Blobfs::InodeBlock>> Blobfs::NewBlob(const Digest& digest) {
-  size_t ino = info_.inode_count;
+  std::optional<size_t> free_inode;
 
   for (size_t i = 0; i < info_.inode_count; ++i) {
-    size_t bno = (i / kBlobfsInodesPerBlock) + node_map_start_block_;
+    const Inode& inode = nodes_[i];
 
-    if ((i % kBlobfsInodesPerBlock) == 0) {
-      if (zx::status<> status = ReadBlock(bno); status.is_error()) {
-        FX_LOGS(ERROR) << "error: Failed to read block " << status.status_value();
-        return status.take_error();
-      }
-    }
-
-    auto iblk = reinterpret_cast<const Inode*>(cache_.blk);
-    auto observed_inode = &iblk[i % kBlobfsInodesPerBlock];
-    if (observed_inode->header.IsAllocated() && !observed_inode->header.IsExtentContainer()) {
-      if (digest == observed_inode->merkle_root_hash) {
+    if (inode.header.IsAllocated() && !inode.header.IsExtentContainer()) {
+      if (digest == inode.merkle_root_hash) {
         FX_LOGS(ERROR) << "Blob already exists " << digest.ToString();
         return zx::error(ZX_ERR_ALREADY_EXISTS);
       }
-    } else if (ino >= info_.inode_count) {
+    } else if (!free_inode.has_value()) {
       // If |ino| has not already been set to a valid value, set it to the first free value we find.
       // We still check all the remaining inodes to avoid adding a duplicate blob.
-      ino = i;
+      free_inode = i;
     }
   }
 
-  if (ino >= info_.inode_count) {
-    FX_LOGS(ERROR) << "No inode resources left. requested inode number: " << ino
-                   << " more than allowed inode count: " << info_.inode_count;
+  if (!free_inode.has_value()) {
+    FX_LOGS(ERROR) << "No inode resources left. All " << info_.inode_count << " inodes are in use.";
     return zx::error(ZX_ERR_NO_RESOURCES);
   }
 
-  size_t bno = (ino / kBlobfsInodesPerBlock) + NodeMapStartBlock(info_);
-  auto ino_block = std::make_unique<InodeBlock>(bno, &nodes_[ino], digest);
+  size_t bno = (*free_inode / kBlobfsInodesPerBlock) + NodeMapStartBlock(info_);
+  auto ino_block = std::make_unique<InodeBlock>(bno, &nodes_[*free_inode], digest);
 
   info_.alloc_inode_count++;
   return zx::ok(std::move(ino_block));
@@ -805,17 +788,12 @@ zx::status<> Blobfs::WriteData(Inode* inode, const BlobInfo& blob_info) {
 
 zx::status<> Blobfs::WriteInfo() { return WriteBlock(0, info_block_); }
 
-zx::status<> Blobfs::ReadBlock(uint64_t block_number) {
-  if (cache_.block_number != block_number) {
-    if (zx::status<> status =
-            ReadBlockWithOffset(blockfd_.get(), block_number, offset_, &cache_.blk);
-        status.is_error()) {
-      FX_LOGS(ERROR) << "Failed to read a blob: " << status.status_value();
-      return status;
-    }
-    cache_.block_number = block_number;
-  }
-  return zx::ok();
+zx::status<> Blobfs::ReadBlocks(uint64_t start_block, uint64_t block_count, void* data) {
+  return ReadBlocksWithOffset(blockfd_.get(), start_block, block_count, offset_, data);
+}
+
+zx::status<> Blobfs::ReadBlock(uint64_t block_number, void* data) {
+  return ReadBlocks(block_number, /*block_count=*/1, data);
 }
 
 zx::status<> Blobfs::WriteBlocks(uint64_t start_block, uint64_t block_count, const void* data) {
@@ -824,14 +802,6 @@ zx::status<> Blobfs::WriteBlocks(uint64_t start_block, uint64_t block_count, con
 
 zx::status<> Blobfs::WriteBlock(uint64_t block_number, const void* data) {
   return WriteBlocks(block_number, /*block_count=*/1, data);
-}
-
-zx::status<> Blobfs::ResetCache() {
-  if (cache_.block_number != 0) {
-    memset(cache_.blk, 0, kBlobfsBlockSize);
-    cache_.block_number = 0;
-  }
-  return zx::ok();
 }
 
 zx::status<InodePtr> Blobfs::GetNode(uint32_t index) {
@@ -873,15 +843,14 @@ zx::status<> Blobfs::ReadBlocksForInode(uint32_t node_index, uint64_t start_bloc
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  size_t offset = 0;
+  size_t block_offset = 0;
   for (auto range : ranges) {
-    for (uint64_t i = 0; i < range.second; i++) {
-      zx::status<> status = ReadBlockWithOffset(blockfd_.get(), data_start_block_ + range.first + i,
-                                                offset_, &data[offset++ * GetBlockSize()]);
-      if (status.is_error()) {
-        return status;
-      }
+    zx::status<> status =
+        ReadBlocks(data_start_block_ + range.first, range.second, &data[block_offset * GetBlockSize()]);
+    if (status.is_error()) {
+      return status;
     }
+    block_offset += range.second;
   }
   return zx::ok();
 }
@@ -982,24 +951,21 @@ fit::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
   for (uint64_t inode_index = 0, allocated_nodes = 0;
        inode_index < info_.inode_count && allocated_nodes < info_.alloc_inode_count;
        ++inode_index) {
-    auto inode_ptr = GetNode(inode_index);
-    if (inode_ptr.is_error()) {
+    auto inode = GetNode(inode_index);
+    if (inode.is_error()) {
       return fit::error("Failed to retrieve inode.");
     }
-    if (!inode_ptr->header.IsAllocated()) {
+    if (!inode->header.IsAllocated()) {
       continue;
     }
 
-    // Required copy to preven additional calls to ReadBlock or GetNode to replace the contents
-    // of |cache_.blk| where inode_ptr comes from.
-    Inode inode = *inode_ptr.value();
     allocated_nodes++;
     auto load_result = LoadDataAndVerifyBlob(inode_index);
     if (load_result.is_error()) {
       return load_result.take_error_result();
     }
     BlobView view = {
-        .merkle_hash = fbl::Span<const uint8_t>(inode.merkle_root_hash),
+        .merkle_hash = fbl::Span<const uint8_t>(inode->merkle_root_hash),
         .blob_contents = load_result.value(),
     };
 
@@ -1041,10 +1007,12 @@ fit::result<void, std::string> ExportBlobs(int output_dir, Blobfs& fs) {
 }
 
 zx::status<std::unique_ptr<Superblock>> Blobfs::ReadBackupSuperblock() {
-  if (zx::status<> status = ReadBlock(kFVMBackupSuperblockOffset); status.is_error()) {
+  auto superblock = std::make_unique<Superblock>();
+  if (zx::status<> status = ReadBlock(kFVMBackupSuperblockOffset, superblock.get());
+      status.is_error()) {
     return status.take_error();
   }
-  return zx::ok(std::make_unique<Superblock>(*reinterpret_cast<Superblock*>(cache_.blk)));
+  return zx::ok(std::move(superblock));
 }
 
 }  // namespace blobfs
