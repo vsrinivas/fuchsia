@@ -854,7 +854,7 @@ impl Mutations for ObjectStore {
         graveyard.remove(&mut transaction, parent_store.store_object_id(), object_id);
 
         transaction
-            .commit_with_callback(|| {
+            .commit_with_callback(|_| {
                 *self.store_info.lock().unwrap() = Some(new_store_info);
                 self.tree.set_layers(layers);
             })

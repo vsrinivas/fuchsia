@@ -55,7 +55,7 @@ use {
     async_utils::event::Event,
     bincode::serialize_into,
     byteorder::{ByteOrder, LittleEndian},
-    futures::{self},
+    futures::{self, future::poll_fn},
     once_cell::sync::OnceCell,
     rand::Rng,
     serde::{Deserialize, Serialize},
@@ -63,6 +63,7 @@ use {
         clone::Clone,
         ops::Bound,
         sync::{Arc, Mutex},
+        task::{Poll, Waker},
         vec::Vec,
     },
 };
@@ -145,11 +146,10 @@ pub(super) fn journal_handle_options() -> HandleOptions {
 /// ability to have mutations that are to be applied atomically together.
 pub struct Journal {
     objects: Arc<ObjectManager>,
-    // TODO(csuter): I think with a bit of refactoring, this lock doesn't need to be async.
-    writer: futures::lock::Mutex<JournalWriter>,
     handle: OnceCell<StoreObjectHandle<ObjectStore>>,
     inner: Mutex<Inner>,
-    extension_mutex: futures::lock::Mutex<()>,
+    commit_mutex: futures::lock::Mutex<()>,
+    writer_mutex: futures::lock::Mutex<()>,
     sync_mutex: futures::lock::Mutex<()>,
 }
 
@@ -163,8 +163,34 @@ struct Inner {
     // The offset that we can zero the journal up to now that it is no longer needed.
     zero_offset: Option<u64>,
 
-    // If the device has been flushed recently, the journal offset when it occurred.
-    device_flushed: Option<u64>,
+    // The journal offset that we most recently flushed to the device.
+    device_flushed_offset: u64,
+
+    // If true, indicates a DidFlushDevice record is pending.
+    needs_did_flush_device: bool,
+
+    // The writer for the journal.
+    writer: JournalWriter,
+
+    // Waker for the flush task.
+    flush_waker: Option<Waker>,
+
+    // Tells the flush task to terminate.
+    terminate: bool,
+
+    // The error we encountered when flushing, if any.
+    flush_error: Option<Error>,
+
+    // Waker for the sync task for when it's waiting for the flush task to finish.
+    sync_waker: Option<Waker>,
+
+    // The last offset we flushed to the journal file.
+    flushed_offset: u64,
+
+    // If, after replaying, we have to discard a number of mutations (because they don't validate),
+    // this offset specifies where we need to discard back to.  This is so that when we next replay,
+    // we ignore those mutations and continue with new good mutations.
+    discard_offset: Option<u64>,
 }
 
 impl Journal {
@@ -172,19 +198,24 @@ impl Journal {
         let starting_checksum = rand::thread_rng().gen();
         Journal {
             objects: objects,
-            writer: futures::lock::Mutex::new(JournalWriter::new(
-                BLOCK_SIZE as usize,
-                starting_checksum,
-            )),
             handle: OnceCell::new(),
             inner: Mutex::new(Inner {
                 super_block: SuperBlock::default(),
                 super_block_to_write: SuperBlockCopy::A,
                 reclaim_event: None,
                 zero_offset: None,
-                device_flushed: None,
+                device_flushed_offset: 0,
+                needs_did_flush_device: false,
+                writer: JournalWriter::new(BLOCK_SIZE as usize, starting_checksum),
+                flush_waker: None,
+                terminate: false,
+                flush_error: None,
+                sync_waker: None,
+                flushed_offset: 0,
+                discard_offset: None,
             }),
-            extension_mutex: futures::lock::Mutex::new(()),
+            commit_mutex: futures::lock::Mutex::new(()),
+            writer_mutex: futures::lock::Mutex::new(()),
             sync_mutex: futures::lock::Mutex::new(()),
         }
     }
@@ -225,7 +256,7 @@ impl Journal {
 
         while let Some(item) = reader.next_item().await? {
             let mutation = Mutation::insert_object(item.key, item.value);
-            root_parent.apply_mutation(mutation, None, 0, AssocObj::None).await;
+            root_parent.apply_mutation(mutation, None, item.sequence, AssocObj::None).await;
         }
 
         // TODO(jfsulliv): Upgrade minor revision as needed.
@@ -301,7 +332,7 @@ impl Journal {
                 .await?;
             handle = Handle::new(super_block.journal_object_id, device.clone());
             while let Some(item) = iter.get() {
-                if !handle.try_push_extent_from_object_item(item)? {
+                if !handle.try_push_extent_from_object_item(item, 0)? {
                     break;
                 }
                 iter.advance().await?;
@@ -309,11 +340,10 @@ impl Journal {
         }
         let mut reader =
             JournalReader::new(handle, self.block_size(), &super_block.journal_checkpoint);
-        let mut checksum_list = ChecksumList::new();
         let mut transactions = Vec::new();
         let mut current_transaction = None;
         let mut end_block = false;
-        let mut flushed_offset = super_block.super_block_journal_file_offset;
+        let mut device_flushed_offset = super_block.super_block_journal_file_offset;
         loop {
             let current_checkpoint = reader.journal_file_checkpoint();
             match reader.deserialize().await? {
@@ -339,19 +369,6 @@ impl Journal {
                                 }
                                 Some(transaction) => transaction,
                             };
-                            if !self
-                                .objects
-                                .validate_mutation(
-                                    current_transaction.0.file_offset,
-                                    object_id,
-                                    &mutation,
-                                    &mut checksum_list,
-                                )
-                                .await?
-                            {
-                                log::debug!("Stopping replay at bad mutation: {:?}", mutation);
-                                break;
-                            }
                             // If this mutation doesn't need to be applied, don't bother adding it
                             // to the transaction.
                             if self.should_apply(object_id, &current_transaction.0) {
@@ -366,9 +383,7 @@ impl Journal {
                                     // Snoop the mutations for any that might apply to the journal
                                     // file so that we can pass them to the reader so that it can
                                     // read the journal file.
-                                    if *object_id == super_block.root_parent_store_object_id
-                                        && self.should_apply(*object_id, &checkpoint)
-                                    {
+                                    if *object_id == super_block.root_parent_store_object_id {
                                         if let Mutation::ObjectStore(ObjectStoreMutation {
                                             item,
                                             ..
@@ -376,6 +391,7 @@ impl Journal {
                                         {
                                             reader.handle().try_push_extent_from_object_item(
                                                 item.as_item_ref(),
+                                                checkpoint.file_offset,
                                             )?;
                                         }
                                     }
@@ -397,10 +413,11 @@ impl Journal {
                                 }
                                 transactions.pop();
                             }
+                            reader.handle().discard_extents(offset);
                         }
                         JournalRecord::DidFlushDevice(offset) => {
-                            if offset > flushed_offset {
-                                flushed_offset = offset;
+                            if offset > device_flushed_offset {
+                                device_flushed_offset = offset;
                             }
                         }
                     }
@@ -415,18 +432,38 @@ impl Journal {
             transactions.pop();
         }
 
+        // Validate all the mutations.
+        let mut checksum_list = ChecksumList::new(device_flushed_offset);
+        let mut valid_to = reader.journal_file_checkpoint().file_offset;
+        for (checkpoint, mutations, _) in &transactions {
+            for (object_id, mutation) in mutations {
+                if !self
+                    .objects
+                    .validate_mutation(
+                        checkpoint.file_offset,
+                        *object_id,
+                        &mutation,
+                        &mut checksum_list,
+                    )
+                    .await?
+                {
+                    log::debug!("Stopping replay at bad mutation: {:?}", mutation);
+                    valid_to = checkpoint.file_offset;
+                    break;
+                }
+            }
+        }
+
         // Validate the checksums.
-        let journal_offset = checksum_list
-            .verify(device.as_ref(), flushed_offset, reader.journal_file_checkpoint().file_offset)
-            .await?;
+        let valid_to = checksum_list.verify(device.as_ref(), valid_to).await?;
 
         // Apply the mutations.
-        let mut last_checkpoint = if transactions.is_empty() {
+        let last_checkpoint = if transactions.is_empty() {
             super_block.journal_checkpoint.clone()
         } else {
             'outer: loop {
                 for (checkpoint, mutations, end_offset) in transactions {
-                    if checkpoint.file_offset >= journal_offset {
+                    if checkpoint.file_offset >= valid_to {
                         break 'outer checkpoint;
                     }
                     self.objects.replay_mutations(mutations, checkpoint, end_offset).await;
@@ -452,17 +489,21 @@ impl Journal {
             )
             .await?;
             let _ = self.handle.set(handle);
-            let mut writer = self.writer.lock().await;
+            let mut inner = self.inner.lock().unwrap();
             // If the last entry wasn't an end_block, then we need to reset the stream.
+            let mut reader_checkpoint = reader.journal_file_checkpoint();
             if !end_block {
-                last_checkpoint.checksum ^= RESET_XOR;
+                reader_checkpoint.checksum ^= RESET_XOR;
             }
-            let offset = last_checkpoint.file_offset;
-            writer.seek_to_checkpoint(last_checkpoint);
-            if offset < reader.journal_file_checkpoint().file_offset {
-                // TODO(csuter): We need to make sure that this is tested.  If a corruption test
-                // does not trigger this, we may have to add a targeted test.
-                serialize_into(&mut *writer, &JournalRecord::Discard(offset))?;
+            inner.flushed_offset = reader_checkpoint.file_offset;
+            // We don't use `device_flushed_offset` here since that informs us after which point we
+            // need to perform checksums.  Going forward, device_flushed_offset needs to be tied to
+            // wherever the journal happens to be, which isn't necessarily the same as
+            // `device_flushed_offset`.
+            inner.device_flushed_offset = reader_checkpoint.file_offset;
+            inner.writer.seek_to_checkpoint(reader_checkpoint);
+            if last_checkpoint.file_offset < inner.flushed_offset {
+                inner.discard_offset = Some(last_checkpoint.file_offset);
             }
         }
 
@@ -495,7 +536,7 @@ impl Journal {
 
         log::info!("Formatting fxfs device-size: {})", filesystem.device().size());
 
-        let checkpoint = self.writer.lock().await.journal_file_checkpoint();
+        let checkpoint = self.inner.lock().unwrap().writer.journal_file_checkpoint();
 
         let root_parent =
             ObjectStore::new_empty(None, INIT_ROOT_PARENT_STORE_OBJECT_ID, filesystem.clone());
@@ -588,78 +629,53 @@ impl Journal {
     }
 
     /// Commits a transaction.
-    pub async fn commit(&self, transaction: &mut Transaction<'_>) -> Result<(), Error> {
+    pub async fn commit(&self, transaction: &mut Transaction<'_>) -> Result<u64, Error> {
         if transaction.is_empty() {
-            return Ok(());
-        }
-        if !transaction.skip_journal_extension {
-            self.maybe_extend_journal_file().await?;
-        }
-        // TODO(csuter): writing to the journal here can be asynchronous.
-        let mut writer = self.writer.lock().await;
-        debug_assert_not_too_long!(self.write_and_apply_mutations(&mut *writer, transaction));
-
-        if let Some(handle) = self.handle.get() {
-            // TODO(jfsulliv): We should separate writing to the journal buffer from flushing the
-            // journal buffer (i.e. consider doing this in a background task). Flushing here is
-            // prone to deadlock, since |flush_buffer| itself creates a transaction which locks the
-            // journal handle.
-            // TODO(csuter): Add a test for the aforementioned deadlock condition.
-            if let Err(e) = writer.flush_buffer(handle).await {
-                // TODO(csuter): if writes to the journal start failing then we should prevent the
-                // creation of new transactions.
-                // It's not safe to return an error here because we have written and applied the
-                // transaction.
-                log::warn!("journal write failed: {}", e);
-            }
+            return Ok(self.inner.lock().unwrap().writer.journal_file_checkpoint().file_offset);
         }
 
-        Ok(())
+        let _guard = debug_assert_not_too_long!(self.commit_mutex.lock());
+        self.pre_commit().await?;
+        Ok(debug_assert_not_too_long!(self.write_and_apply_mutations(transaction)))
     }
 
-    async fn maybe_extend_journal_file(&self) -> Result<(), Error> {
+    // Before we commit, we might need to extend the journal or write pending records to the
+    // journal.
+    async fn pre_commit(&self) -> Result<(), Error> {
         // TODO(csuter): this currently assumes that a transaction can fit in CHUNK_SIZE.
-        let mut extension_guard = None;
-        let handle = match self.handle.get() {
-            None => return Ok(()),
-            Some(x) => x,
-        };
 
-        let (size, zero_offset, device_flushed) = loop {
-            // TODO(csuter): we could maybe use self.objects.last_end_offset() instead here.
-            let file_offset = debug_assert_not_too_long!(self.writer.lock())
-                .journal_file_checkpoint()
-                .file_offset;
+        let handle;
+
+        let (size, zero_offset) = {
+            let mut inner = self.inner.lock().unwrap();
+
+            if let Some(discard_offset) = inner.discard_offset {
+                serialize_into(&mut inner.writer, &JournalRecord::Discard(discard_offset))?;
+                inner.discard_offset = None;
+            }
+
+            if inner.needs_did_flush_device {
+                let offset = inner.device_flushed_offset;
+                serialize_into(&mut inner.writer, &JournalRecord::DidFlushDevice(offset))?;
+                inner.needs_did_flush_device = false;
+            }
+
+            handle = match self.handle.get() {
+                None => return Ok(()),
+                Some(x) => x,
+            };
+
+            let file_offset = inner.writer.journal_file_checkpoint().file_offset;
+
             let size = handle.get_size();
-
             let size = if file_offset + self.chunk_size() > size { Some(size) } else { None };
 
-            {
-                let inner = self.inner.lock().unwrap();
-
-                if size.is_none() && inner.zero_offset.is_none() && inner.device_flushed.is_none() {
-                    return Ok(());
-                }
-                if extension_guard.is_some() {
-                    break (size, inner.zero_offset, inner.device_flushed);
-                }
+            if size.is_none() && inner.zero_offset.is_none() {
+                return Ok(());
             }
 
-            extension_guard = Some(debug_assert_not_too_long!(self.extension_mutex.lock()));
+            (size, inner.zero_offset)
         };
-
-        if let Some(device_flushed) = device_flushed {
-            {
-                let mut writer = self.writer.lock().await;
-                serialize_into(&mut *writer, &JournalRecord::DidFlushDevice(device_flushed))?;
-            }
-            {
-                let mut inner = self.inner.lock().unwrap();
-                if inner.device_flushed == Some(device_flushed) {
-                    inner.device_flushed = None;
-                }
-            }
-        }
 
         let mut transaction = handle
             .new_transaction_with_options(Options {
@@ -669,21 +685,25 @@ impl Journal {
                 ..Default::default()
             })
             .await?;
-        transaction.skip_journal_extension = true;
         if let Some(size) = size {
             handle.preallocate_range(&mut transaction, size..size + self.chunk_size()).await?;
         }
         if let Some(zero_offset) = zero_offset {
             handle.zero(&mut transaction, 0..zero_offset).await?;
         }
-        transaction.commit().await?;
 
-        // TODO(csuter): See if we can add an assertion that checks we managed to fit the
-        // transaction that extends the journal within the old space.  It's tricky at this point
-        // because as soon as we commit the transaction above, something else can slip in and start
-        // using up the journal space.
+        // We can't use regular transaction commit, because that can cause re-entrancy issues, so
+        // instead we just apply the transaction directly here.
+        self.write_and_apply_mutations(&mut transaction).await;
 
         let mut inner = self.inner.lock().unwrap();
+
+        // Make sure the transaction to extend the journal made it to the journal within the old
+        // size, since otherwise, it won't be possible to replay.
+        if let Some(size) = size {
+            assert!(inner.writer.journal_file_checkpoint().file_offset < size);
+        }
+
         if inner.zero_offset == zero_offset {
             inner.zero_offset = None;
         }
@@ -708,14 +728,18 @@ impl Journal {
     pub async fn write_super_block(&self) -> Result<(), Error> {
         let root_parent_store = self.objects.root_parent_store();
 
-        // First we must lock the root parent store so that no new entries are written to it.
-        let mutable_layer = root_parent_store.tree().mutable_layer();
-        let _guard = mutable_layer.lock_writes();
-
         // We need to flush previous writes to the device since the new super-block we are writing
-        // relies on written data being observable.
-        let (checkpoint, borrowed) =
-            self.sync(SyncOptions { flush_device: true, ..Default::default() }).await?.unwrap();
+        // relies on written data being observable, and we also need to lock the root parent store
+        // so that no new entries are written to it whilst we are writing the super-block, and for
+        // that we use the write lock.
+        let _write_guard;
+        let (checkpoint, borrowed) = {
+            let _sync_guard = debug_assert_not_too_long!(self.sync_mutex.lock());
+            _write_guard = debug_assert_not_too_long!(self.writer_mutex.lock());
+            let result = self.pad_to_block()?;
+            self.flush_device(result.0.file_offset).await?;
+            result
+        };
 
         let (mut new_super_block, super_block_to_write) = {
             let inner = self.inner.lock().unwrap();
@@ -768,40 +792,77 @@ impl Journal {
         &self,
         options: SyncOptions<'_>,
     ) -> Result<Option<(JournalCheckpoint, u64)>, Error> {
-        let _guard = self.sync_mutex.lock().await;
+        let _guard = debug_assert_not_too_long!(self.sync_mutex.lock());
 
-        if let Some(precondition) = options.precondition {
-            if !precondition() {
-                return Ok(None);
+        let (checkpoint, borrowed) = {
+            if let Some(precondition) = options.precondition {
+                if !precondition() {
+                    return Ok(None);
+                }
+            }
+
+            // This guard is required so that we don't insert an EndBlock record in the middle of a
+            // transaction.
+            let _guard = debug_assert_not_too_long!(self.writer_mutex.lock());
+
+            self.pad_to_block()?
+        };
+
+        if options.flush_device {
+            self.flush_device(checkpoint.file_offset).await?;
+        }
+
+        Ok(Some((checkpoint, borrowed)))
+    }
+
+    fn pad_to_block(&self) -> Result<(JournalCheckpoint, u64), Error> {
+        let mut inner = self.inner.lock().unwrap();
+        if inner.writer.journal_file_checkpoint().file_offset % BLOCK_SIZE != 0 {
+            serialize_into(&mut inner.writer, &JournalRecord::EndBlock)?;
+            inner.writer.pad_to_block()?;
+            if let Some(waker) = inner.flush_waker.take() {
+                waker.wake();
             }
         }
+        Ok((inner.writer.journal_file_checkpoint(), self.objects.borrowed_metadata_space()))
+    }
 
-        // TODO(csuter): We should optimize for the case where nothing needs to be done.
-        let (checkpoint, borrowed) = {
-            let mut writer = debug_assert_not_too_long!(self.writer.lock());
+    async fn flush_device(&self, checkpoint_offset: u64) -> Result<(), Error> {
+        debug_assert_not_too_long!(poll_fn(|ctx| {
+            let mut inner = self.inner.lock().unwrap();
+            if inner.flushed_offset >= checkpoint_offset {
+                Poll::Ready(Ok(()))
+            } else if inner.flush_error.is_some() || inner.terminate {
+                Poll::Ready(Err(FxfsError::JournalFlushError))
+            } else {
+                inner.sync_waker = Some(ctx.waker().clone());
+                Poll::Pending
+            }
+        }))?;
 
-            serialize_into(&mut *writer, &JournalRecord::EndBlock)?;
-            writer.pad_to_block()?;
-            (
-                writer.flush_buffer(self.handle.get().unwrap()).await?,
-                self.objects.borrowed_metadata_space(),
-            )
-        };
-        if options.flush_device {
+        let needs_flush = self.inner.lock().unwrap().device_flushed_offset < checkpoint_offset;
+        if needs_flush {
             self.handle.get().unwrap().flush_device().await?;
-            // We need to write a DidFlushDevice record at some point, but if we are in the process
-            // of shutting down the filesystem, we want to leave to journal clean to avoid there
-            // being log messages complaining about unwritten journal data, so we queue it up so
-            // that the next transaction will trigger this record to be written.  If we are shutting
-            // down, that will never happen but since the DidFlushDevice message is purely advisory
-            // (it reduces the number of checksums we have to verify during replay), it doesn't
-            // matter if it isn't written.
-            self.inner.lock().unwrap().device_flushed = Some(checkpoint.file_offset);
-            // Tell the allocator that we flushed the device so that it can now start using space
-            // that was deallocated.
-            self.objects.allocator().did_flush_device(checkpoint.file_offset).await;
+
+            // We need to write a DidFlushDevice record at some point, but if we are in the
+            // process of shutting down the filesystem, we want to leave to journal clean to
+            // avoid there being log messages complaining about unwritten journal data, so we
+            // queue it up so that the next transaction will trigger this record to be written.
+            // If we are shutting down, that will never happen but since the DidFlushDevice
+            // message is purely advisory (it reduces the number of checksums we have to verify
+            // during replay), it doesn't matter if it isn't written.
+            {
+                let mut inner = self.inner.lock().unwrap();
+                inner.device_flushed_offset = checkpoint_offset;
+                inner.needs_did_flush_device = true;
+            }
+
+            // Tell the allocator that we flushed the device so that it can now start using
+            // space that was deallocated.
+            self.objects.allocator().did_flush_device(checkpoint_offset).await;
         }
-        Ok(Some((checkpoint, borrowed)))
+
+        Ok(())
     }
 
     /// Returns a copy of the super-block.
@@ -843,22 +904,91 @@ impl Journal {
         CHUNK_SIZE
     }
 
-    async fn write_and_apply_mutations(
-        &self,
-        writer: &mut JournalWriter,
-        transaction: &mut Transaction<'_>,
-    ) {
-        let checkpoint = writer.journal_file_checkpoint();
-        writer.write_mutations(transaction);
-        if let Some(mutation) = self.objects.apply_transaction(transaction, &checkpoint).await {
-            writer.write_record(&JournalRecord::Mutation { object_id: 0, mutation });
+    async fn write_and_apply_mutations(&self, transaction: &mut Transaction<'_>) -> u64 {
+        let checkpoint_before;
+        let checkpoint_after;
+        {
+            let _guard = debug_assert_not_too_long!(self.writer_mutex.lock());
+            checkpoint_before = {
+                let mut inner = self.inner.lock().unwrap();
+                let checkpoint = inner.writer.journal_file_checkpoint();
+                inner.writer.write_mutations(transaction);
+                checkpoint
+            };
+            let maybe_mutation =
+                self.objects.apply_transaction(transaction, &checkpoint_before).await;
+            checkpoint_after = {
+                let mut inner = self.inner.lock().unwrap();
+                if let Some(mutation) = maybe_mutation {
+                    inner.writer.write_record(&JournalRecord::Mutation { object_id: 0, mutation });
+                }
+                inner.writer.write_record(&JournalRecord::Commit);
+
+                if let Some(flush_waker) = inner.flush_waker.take() {
+                    flush_waker.wake();
+                }
+
+                inner.writer.journal_file_checkpoint()
+            };
         }
-        writer.write_record(&JournalRecord::Commit);
         self.objects.did_commit_transaction(
             transaction,
-            &checkpoint,
-            writer.journal_file_checkpoint().file_offset,
+            &checkpoint_before,
+            checkpoint_after.file_offset,
         );
+        checkpoint_before.file_offset
+    }
+
+    /// This task will flush journal data to the device when there is data that needs flushing.
+    /// It will return after the terminate method has been called.
+    pub async fn flush_task(&self) {
+        loop {
+            if let Some((offset, buf)) = poll_fn(|ctx| {
+                let mut inner = self.inner.lock().unwrap();
+                if let Some(handle) = self.handle.get() {
+                    if let Some(offset_and_buf) = inner.writer.take_buffer(handle) {
+                        return Poll::Ready(Some(offset_and_buf));
+                    } else {
+                        if inner.terminate {
+                            return Poll::Ready(None);
+                        }
+                    }
+                }
+                inner.flush_waker = Some(ctx.waker().clone());
+                Poll::Pending
+            })
+            .await
+            {
+                let result = self.handle.get().unwrap().overwrite(offset, buf.as_ref()).await;
+                let mut inner = self.inner.lock().unwrap();
+                if let Err(e) = result {
+                    // TODO(csuter): if writes to the journal start failing then we should prevent
+                    // the creation of new transactions.
+                    log::error!("Failed to flush journal: {:?}", e);
+                    inner.flush_error = Some(e);
+                }
+                if let Some(waker) = inner.sync_waker.take() {
+                    waker.wake();
+                }
+                if inner.flush_error.is_some() {
+                    return;
+                }
+                inner.flushed_offset = offset + buf.len() as u64;
+            } else {
+                if let Some(waker) = self.inner.lock().unwrap().sync_waker.take() {
+                    waker.wake();
+                }
+                return;
+            }
+        }
+    }
+
+    pub fn terminate(&self) {
+        let mut inner = self.inner.lock().unwrap();
+        inner.terminate = true;
+        if let Some(waker) = inner.flush_waker.take() {
+            waker.wake();
+        }
     }
 }
 
@@ -1035,7 +1165,7 @@ mod tests {
                 object_ids.push(handle.object_id());
             }
         }
-        fs.close().await.expect("Close failed");
+        fs.close().await.expect("close failed");
         let device = fs.take_device().await;
         device.reopen();
         let fs = FxFilesystem::open(device).await.expect("open failed");
@@ -1078,7 +1208,7 @@ mod tests {
             object_ids.push(handle.object_id());
         }
 
-        fs.close().await.expect("Close failed");
+        fs.close().await.expect("close failed");
         let device = fs.take_device().await;
         device.reopen();
         let fs = FxFilesystem::open(device).await.expect("open failed");
@@ -1099,6 +1229,6 @@ mod tests {
                 assert_eq!(&buf.as_slice()[..TEST_DATA.len()], TEST_DATA);
             }
         }
-        fs.close().await.expect("Close failed");
+        fs.close().await.expect("close failed");
     }
 }

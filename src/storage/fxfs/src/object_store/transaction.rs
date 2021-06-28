@@ -63,11 +63,12 @@ pub trait TransactionHandler: Send + Sync {
 
     /// Implementations should perform any required journaling and then apply the mutations via
     /// ObjectManager's apply_mutation method.  Any mutations within the transaction should be
-    /// removed so that drop_transaction can tell that the transaction was committed.
+    /// removed so that drop_transaction can tell that the transaction was committed.  If
+    /// successful, returns the journal offset that the transaction was written to.
     async fn commit_transaction(
         self: Arc<Self>,
         transaction: &mut Transaction<'_>,
-    ) -> Result<(), Error>;
+    ) -> Result<u64, Error>;
 
     /// Drops a transaction (rolling back if not committed).  Committing a transaction should have
     /// removed the mutations.  This is called automatically when Transaction is dropped, which is
@@ -390,10 +391,6 @@ pub struct Transaction<'a> {
 
     /// The reservation for the metadata for this transaction.
     pub metadata_reservation: MetadataReservation,
-
-    /// If true, don't check to see if the journal needs extending.  This should only be set if this
-    /// transaction is actually involved in extending the journal.
-    pub skip_journal_extension: bool,
 }
 
 impl<'a> Transaction<'a> {
@@ -419,7 +416,6 @@ impl<'a> Transaction<'a> {
             read_locks,
             allocator_reservation: None,
             metadata_reservation,
-            skip_journal_extension: false,
         }
     }
 
@@ -495,17 +491,17 @@ impl<'a> Transaction<'a> {
         }
     }
 
-    /// Commits a transaction.
-    pub async fn commit(mut self) -> Result<(), Error> {
+    /// Commits a transaction.  If successful, returns the journal offset of the transaction.
+    pub async fn commit(mut self) -> Result<u64, Error> {
         log::debug!("Commit {:?}", &self);
         self.handler.clone().commit_transaction(&mut self).await
     }
 
-    /// Commits and then runs the callback whilst locks are held.
-    pub async fn commit_with_callback<R>(mut self, f: impl FnOnce() -> R) -> Result<R, Error> {
-        self.handler.clone().commit_transaction(&mut self).await?;
-        // The locks are still held here until self is dropped.
-        Ok(f())
+    /// Commits and then runs the callback whilst locks are held.  The callback accepts a single
+    /// parameter which is the journal offset of the transaction.
+    pub async fn commit_with_callback<R>(mut self, f: impl FnOnce(u64) -> R) -> Result<R, Error> {
+        log::debug!("Commit {:?}", &self);
+        Ok(f(self.handler.clone().commit_transaction(&mut self).await?))
     }
 }
 

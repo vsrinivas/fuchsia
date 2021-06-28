@@ -7,11 +7,11 @@ use {
         object_handle::ObjectHandle,
         object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
     },
-    anyhow::Error,
     bincode::serialize_into,
     byteorder::{LittleEndian, WriteBytesExt},
     serde::Serialize,
     std::{cmp::min, io::Write},
+    storage_device::buffer::Buffer,
 };
 
 /// JournalWriter is responsible for writing log records to a journal file.  Each block contains a
@@ -67,23 +67,21 @@ impl JournalWriter {
 
     /// Flushes any outstanding complete blocks to the journal object.  Part blocks can be flushed
     /// by calling pad_to_block first.  Returns the checkpoint of the last flushed bit of data.
-    pub async fn flush_buffer(
-        &mut self,
-        handle: &impl ObjectHandle,
-    ) -> Result<JournalCheckpoint, Error> {
+    pub fn take_buffer<'a>(&mut self, handle: &'a impl ObjectHandle) -> Option<(u64, Buffer<'a>)> {
         let to_do = self.buf.len() - self.buf.len() % self.block_size;
-        if to_do > 0 {
-            // TODO(jfsulliv): This is horribly inefficient. We should reuse the transfer
-            // buffer. Doing so will require picking an appropriate size up front, and forcing
-            // flush as we fill it up.
-            let mut buf = handle.allocate_buffer(to_do);
-            buf.as_mut_slice()[..to_do].copy_from_slice(&self.buf[..to_do]);
-            handle.overwrite(self.checkpoint.file_offset, buf.as_ref()).await?;
-            self.buf.drain(..to_do);
-            self.checkpoint.file_offset += to_do as u64;
-            self.checkpoint.checksum = self.last_checksum;
+        if to_do == 0 {
+            return None;
         }
-        Ok(self.checkpoint.clone())
+        // TODO(jfsulliv): This is horribly inefficient. We should reuse the transfer
+        // buffer. Doing so will require picking an appropriate size up front, and forcing
+        // flush as we fill it up.
+        let mut buf = handle.allocate_buffer(to_do);
+        buf.as_mut_slice()[..to_do].copy_from_slice(&self.buf[..to_do]);
+        let offset = self.checkpoint.file_offset;
+        self.buf.drain(..to_do);
+        self.checkpoint.file_offset += to_do as u64;
+        self.checkpoint.checksum = self.last_checksum;
+        Some((offset, buf))
     }
 
     /// Seeks to the given offset in the journal file, to be used once replay has finished.
@@ -155,7 +153,8 @@ mod tests {
         writer.write_record(&4u32);
         writer.pad_to_block().expect("pad_to_block failed");
         let handle = FakeObjectHandle::new(object.clone());
-        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
+        let (offset, buf) = writer.take_buffer(&handle).unwrap();
+        handle.overwrite(offset, buf.as_ref()).await.expect("overwrite failed");
 
         let handle = FakeObjectHandle::new(object.clone());
         let mut buf = handle.allocate_buffer(object.get_size() as usize);
@@ -183,7 +182,8 @@ mod tests {
         writer.write_record(&17u64);
         writer.pad_to_block().expect("pad_to_block failed");
         let handle = FakeObjectHandle::new(object.clone());
-        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
+        let (offset, buf) = writer.take_buffer(&handle).unwrap();
+        handle.overwrite(offset, buf.as_ref()).await.expect("overwrite failed");
 
         let handle = FakeObjectHandle::new(object.clone());
         let mut buf = handle.allocate_buffer(object.get_size() as usize);

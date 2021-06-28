@@ -499,7 +499,7 @@ impl Allocator for SimpleAllocator {
             }
 
             let mut inner = self.inner.lock().unwrap();
-            // We must take not to use up space that might be reserved.
+            // We must take care not to use up space that might be reserved.
             len = round_down(
                 std::cmp::min(
                     len,
@@ -735,7 +735,7 @@ impl Allocator for SimpleAllocator {
         let deallocs = 'outer: loop {
             let mut inner = self.inner.lock().unwrap();
             for (index, (dealloc_log_offset, _)) in inner.committed_deallocated.iter().enumerate() {
-                if *dealloc_log_offset > flush_log_offset {
+                if *dealloc_log_offset >= flush_log_offset {
                     let mut deallocs = inner.committed_deallocated.split_off(index);
                     // Swap because we want the opposite of what split_off does.
                     std::mem::swap(&mut inner.committed_deallocated, &mut deallocs);
@@ -830,29 +830,27 @@ impl Mutations for SimpleAllocator {
                 // skip_list_layer's commit_and_wait method, rather than just commit.
                 let len = item.key.device_range.length();
                 if item.value.delta < 0 {
-                    {
-                        let mut inner = self.inner.lock().unwrap();
-                        inner.allocated_bytes = inner.allocated_bytes.saturating_sub(len as i64);
-
-                        if transaction.is_some() {
-                            inner
-                                .committed_deallocated
-                                .push_back((log_offset, item.key.device_range.clone()));
-                            inner.committed_deallocated_bytes += item.key.device_range.length();
-                        }
-
-                        if let Some(Transaction {
-                            allocator_reservation: Some(reservation), ..
-                        }) = transaction
-                        {
-                            inner.reserved_bytes += len;
-                            reservation.add(len);
-                        }
-                    }
                     if transaction.is_some() {
                         let mut item = item.clone();
                         item.value.delta = 1;
                         self.reserved_allocations.insert(item).await;
+                    }
+
+                    let mut inner = self.inner.lock().unwrap();
+                    inner.allocated_bytes = inner.allocated_bytes.saturating_sub(len as i64);
+
+                    if transaction.is_some() {
+                        inner
+                            .committed_deallocated
+                            .push_back((log_offset, item.key.device_range.clone()));
+                        inner.committed_deallocated_bytes += item.key.device_range.length();
+                    }
+
+                    if let Some(Transaction { allocator_reservation: Some(reservation), .. }) =
+                        transaction
+                    {
+                        inner.reserved_bytes += len;
+                        reservation.add(len);
                     }
                 }
                 let lower_bound = item.key.lower_bound_for_merge_into();
@@ -1015,7 +1013,7 @@ impl Mutations for SimpleAllocator {
 
         // TODO(csuter): what if this fails.
         let layers = layers_from_handles(Box::new([layer_object_handle])).await?;
-        transaction.commit_with_callback(|| self.tree.set_layers(layers)).await?;
+        transaction.commit_with_callback(|_| self.tree.set_layers(layers)).await?;
 
         // Now close the layers and purge them.
         for layer in layer_set.layers {

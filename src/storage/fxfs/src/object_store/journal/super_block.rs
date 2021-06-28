@@ -231,7 +231,8 @@ impl SuperBlock {
         }
         serialize_into(&mut writer, &SuperBlockRecord::End)?;
         writer.pad_to_block()?;
-        writer.flush_buffer(&handle).await?;
+        let (offset, buf) = writer.take_buffer(&handle).unwrap();
+        handle.overwrite(offset, buf.as_ref()).await?;
         Ok(())
     }
 }
@@ -340,6 +341,7 @@ mod tests {
 
         // Create a large number of objects in the root parent store so that we test handling of
         // extents.
+        let mut journal_offset = 0;
         for _ in 0..8000 {
             let mut transaction = fs
                 .clone()
@@ -353,16 +355,17 @@ mod tests {
             )
             .await
             .expect("create_object failed");
-            transaction.commit().await.expect("commit failed");
+            journal_offset = transaction.commit().await.expect("commit failed");
         }
 
-        let super_block_a = SuperBlock::new(
+        let mut super_block_a = SuperBlock::new(
             fs.object_manager().root_parent_store().store_object_id(),
             fs.root_store().store_object_id(),
             fs.allocator().object_id(),
             JOURNAL_OBJECT_ID,
             JournalCheckpoint { file_offset: 1234, checksum: 5678 },
         );
+        super_block_a.super_block_journal_file_offset = journal_offset + 1;
         let mut super_block_b = super_block_a.clone();
         super_block_b.journal_file_offsets.insert(1, 2);
         super_block_b.generation += 1;

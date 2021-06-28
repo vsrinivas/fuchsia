@@ -235,9 +235,6 @@ pub trait MutableLayer<K, V>: Layer<K, V> {
     /// Inserts or replaces an item.
     async fn replace_or_insert(&self, item: Item<K, V>);
 
-    /// Locks the layer, blocking writes but not reads.
-    async fn lock_writes(&self) -> futures::lock::MutexGuard<'_, ()>;
-
     /// Returns the number of items in the layer.
     fn len(&self) -> usize;
 }

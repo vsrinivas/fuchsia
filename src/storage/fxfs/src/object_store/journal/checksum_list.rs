@@ -21,21 +21,33 @@ struct ChecksumEntry {
 
 #[derive(Default)]
 pub struct ChecksumList {
+    // The offset that is known to have been flushed to the device.  Any entries in the journal that
+    // are prior to this point are ignored since there is no need to verify those checksums.
+    flushed_offset: u64,
+
+    // This is a list of checksums that we might need to verify, in journal order.
     checksum_entries: Vec<ChecksumEntry>,
 
+    // Records a mapping from the starting offset of the device range, to the entry index.
     device_offset_to_checksum_entry: BTreeMap<u64, usize>,
 
+    // The maximum chunk size within checksum_entries which determines the size of the buffer we
+    // need to allocate during verification.
     max_chunk_size: usize,
 }
 
 impl ChecksumList {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(flushed_offset: u64) -> Self {
+        ChecksumList { flushed_offset, ..Default::default() }
     }
 
     /// Adds an extent that might need its checksum verifying.  Extents must be pushed in
     /// journal-offset order.
     pub fn push(&mut self, journal_offset: u64, device_range: Range<u64>, checksums: &Vec<u64>) {
+        if journal_offset < self.flushed_offset {
+            // Ignore anything that was prior to being flushed.
+            return;
+        }
         // This can be changed to try_insert when available.
         // If this is a duplicate, we don't need to verify the checksum twice, and we want to
         // keep the first entry because it comes earlier in the journal.
@@ -61,6 +73,10 @@ impl ChecksumList {
     /// Marks an extent as deallocated.  If this journal-offset ends up being replayed, it means
     /// that we can skip a previously queued checksum.
     pub fn mark_deallocated(&mut self, journal_offset: u64, mut device_range: Range<u64>) {
+        if journal_offset < self.flushed_offset {
+            // Ignore anything that was prior to being flushed.
+            return;
+        }
         let mut r = self.device_offset_to_checksum_entry.range(device_range.start..);
         while let Some((_, index)) = r.next() {
             let entry = &mut self.checksum_entries[*index];
@@ -90,21 +106,13 @@ impl ChecksumList {
     /// offset read and verify will return the journal offset that it is safe to replay up to.
     /// `flushed_offset` indicates the offset that we know to have been flushed and so we don't need
     /// to perform verification.
-    pub async fn verify(
-        &self,
-        device: &dyn Device,
-        flushed_offset: u64,
-        mut journal_offset: u64,
-    ) -> Result<u64, Error> {
+    pub async fn verify(&self, device: &dyn Device, mut journal_offset: u64) -> Result<u64, Error> {
         let mut last_journal_offset = u64::MAX;
         let mut buf = device.allocate_buffer(self.max_chunk_size);
         'try_again: loop {
             for e in &self.checksum_entries {
                 if e.journal_offset >= journal_offset {
                     break;
-                }
-                if e.journal_offset < flushed_offset {
-                    continue;
                 }
                 let chunk_size = (e.device_range.length() / e.checksums.len() as u64) as usize;
                 let mut offset = e.device_range.start;
@@ -143,7 +151,7 @@ mod tests {
     async fn test_verify() {
         let device = FakeDevice::new(2048, 512);
         let mut buffer = device.allocate_buffer(2048);
-        let mut list = ChecksumList::new();
+        let mut list = ChecksumList::new(0);
 
         buffer.as_mut_slice()[0..512].copy_from_slice(&[1; 512]);
         buffer.as_mut_slice()[512..1024].copy_from_slice(&[2; 512]);
@@ -157,35 +165,32 @@ mod tests {
         );
 
         // All entries should pass.
-        assert_eq!(list.verify(&device, 0, 10).await.expect("verify failed"), 10);
+        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 10);
 
         // Corrupt the middle of the three 512 byte blocks.
         buffer.as_mut_slice()[512] = 0;
         device.write(512, buffer.as_ref()).await.expect("write failed");
 
         // Verification should fail now.
-        assert_eq!(list.verify(&device, 0, 10).await.expect("verify failed"), 1);
-
-        // If we verify from #2 (using flushed_offset), everything should pass.
-        assert_eq!(list.verify(&device, 2, 10).await.expect("verify failed"), 10);
+        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 1);
 
         // Mark the middle block as deallocated and then it should pass again.
         list.mark_deallocated(2, 1024..1536);
-        assert_eq!(list.verify(&device, 0, 10).await.expect("verify failed"), 10);
+        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 10);
 
         // Add another entry followed by a deallocation.
         list.push(3, 2048..2560, &vec![fletcher64(&[4; 512], 0)]);
         list.mark_deallocated(4, 1536..2048);
 
         // All entries should validate.
-        assert_eq!(list.verify(&device, 0, 10).await.expect("verify failed"), 10);
+        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 10);
 
         // Now corrupt the block at 2048.
         buffer.as_mut_slice()[1536] = 0;
         device.write(512, buffer.as_ref()).await.expect("write failed");
 
         // This should only validate up to journal offset 3.
-        assert_eq!(list.verify(&device, 0, 10).await.expect("verify failed"), 3);
+        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 3);
 
         // Corrupt the block that was marked as deallocated in #4.
         buffer.as_mut_slice()[1024] = 0;
@@ -193,6 +198,25 @@ mod tests {
 
         // The deallocation in #4 should be ignored and so validation should only succeed up
         // to offset 1.
-        assert_eq!(list.verify(&device, 0, 10).await.expect("verify failed"), 1);
+        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 1);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_verify_entry_prior_to_flushed_offset_is_ignored() {
+        let device = FakeDevice::new(2048, 512);
+        let mut buffer = device.allocate_buffer(2048);
+        let mut list = ChecksumList::new(2);
+
+        buffer.as_mut_slice()[0..512].copy_from_slice(&[1; 512]);
+        buffer.as_mut_slice()[512..1024].copy_from_slice(&[2; 512]);
+        device.write(512, buffer.as_ref()).await.expect("write failed");
+
+        // This entry has the wrong checksum will fail, but it should be ignored anyway because it
+        // is prior to the flushed offset.
+        list.push(1, 512..1024, &vec![fletcher64(&[2; 512], 0)]);
+
+        list.push(2, 1024..1536, &vec![fletcher64(&[2; 512], 0)]);
+
+        assert_eq!(list.verify(&device, 10).await.expect("verify failed"), 10);
     }
 }

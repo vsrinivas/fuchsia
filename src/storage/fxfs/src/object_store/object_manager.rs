@@ -65,7 +65,7 @@ struct Inner {
 
     // Records dependencies on the journal for objects i.e. an entry for object ID 1, would mean it
     // has a dependency on journal records from that offset.
-    journal_file_checkpoints: HashMap<u64, Checkpoints>,
+    journal_checkpoints: HashMap<u64, Checkpoints>,
 
     graveyard: Option<Arc<Graveyard>>,
 
@@ -94,7 +94,7 @@ impl Inner {
 
         // Account for data that has been written to the journal that will need to be written
         // to layer files when flushed.
-            + self.journal_file_checkpoints.values().map(|c| c.earliest().file_offset).min()
+            + self.journal_checkpoints.values().map(|c| c.earliest().file_offset).min()
             .map(|min| reserved_space_from_journal_usage(self.last_end_offset - min))
             .unwrap_or(0)
 
@@ -113,7 +113,7 @@ impl ObjectManager {
                 root_store_object_id: INVALID_OBJECT_ID,
                 allocator_object_id: INVALID_OBJECT_ID,
                 allocator: None,
-                journal_file_checkpoints: HashMap::new(),
+                journal_checkpoints: HashMap::new(),
                 graveyard: None,
                 reservations: HashMap::new(),
                 last_end_offset: 0,
@@ -261,7 +261,7 @@ impl ObjectManager {
             let mut inner = self.inner.write().unwrap();
             match mutation {
                 Mutation::BeginFlush => {
-                    if let Some(entry) = inner.journal_file_checkpoints.get_mut(&object_id) {
+                    if let Some(entry) = inner.journal_checkpoints.get_mut(&object_id) {
                         match entry {
                             Checkpoints::Current(x) | Checkpoints::Both(x, _) => {
                                 *entry = Checkpoints::Old(x.clone());
@@ -271,8 +271,7 @@ impl ObjectManager {
                     }
                 }
                 Mutation::EndFlush => {
-                    if let Entry::Occupied(mut o) = inner.journal_file_checkpoints.entry(object_id)
-                    {
+                    if let Entry::Occupied(mut o) = inner.journal_checkpoints.entry(object_id) {
                         let entry = o.get_mut();
                         match entry {
                             Checkpoints::Old(_) => {
@@ -288,7 +287,7 @@ impl ObjectManager {
                 _ => {
                     if object_id != inner.root_parent_store_object_id {
                         inner
-                            .journal_file_checkpoints
+                            .journal_checkpoints
                             .entry(object_id)
                             .and_modify(|entry| {
                                 if let Checkpoints::Old(x) = entry {
@@ -473,7 +472,7 @@ impl ObjectManager {
         let inner = self.inner.read().unwrap();
         let mut min_checkpoint = None;
         let mut offsets = HashMap::new();
-        for (&object_id, checkpoint) in &inner.journal_file_checkpoints {
+        for (&object_id, checkpoint) in &inner.journal_checkpoints {
             let checkpoint = checkpoint.earliest();
             match &mut min_checkpoint {
                 None => min_checkpoint = Some(checkpoint),
@@ -491,7 +490,7 @@ impl ObjectManager {
     /// Returns true if the object identified by `object_id` is known to have updates recorded in
     /// the journal that the object depends upon.
     pub fn needs_flush(&self, object_id: u64) -> bool {
-        self.inner.read().unwrap().journal_file_checkpoints.contains_key(&object_id)
+        self.inner.read().unwrap().journal_checkpoints.contains_key(&object_id)
     }
 
     pub fn graveyard(&self) -> Option<Arc<Graveyard>> {
@@ -505,7 +504,7 @@ impl ObjectManager {
     /// Flushes all known objects.  This will then allow the journal space to be freed.
     pub async fn flush(&self) -> Result<(), Error> {
         let object_ids: Vec<_> =
-            self.inner.read().unwrap().journal_file_checkpoints.keys().cloned().collect();
+            self.inner.read().unwrap().journal_checkpoints.keys().cloned().collect();
         for object_id in object_ids {
             self.object(object_id).unwrap().flush().await?;
         }
@@ -541,10 +540,6 @@ impl ObjectManager {
 
     pub fn set_last_end_offset(&self, v: u64) {
         self.inner.write().unwrap().last_end_offset = v;
-    }
-
-    pub fn remove_journal_file_checkpoints(&self, object_id: u64) {
-        self.inner.write().unwrap().journal_file_checkpoints.remove(&object_id);
     }
 
     pub fn borrowed_metadata_space(&self) -> u64 {

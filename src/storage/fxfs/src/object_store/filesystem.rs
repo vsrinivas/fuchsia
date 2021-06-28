@@ -125,6 +125,7 @@ pub struct FxFilesystem {
     journal: Journal,
     lock_manager: LockManager,
     compaction_task: Mutex<Option<fasync::Task<()>>>,
+    flush_task: Mutex<Option<fasync::Task<()>>>,
     device_sender: OnceCell<Sender<DeviceHolder>>,
     closed: AtomicBool,
     read_only: bool,
@@ -146,6 +147,7 @@ impl FxFilesystem {
             journal,
             lock_manager: LockManager::new(),
             compaction_task: Mutex::new(None),
+            flush_task: Mutex::new(None),
             device_sender: OnceCell::new(),
             closed: AtomicBool::new(false),
             read_only: false,
@@ -167,6 +169,7 @@ impl FxFilesystem {
             journal,
             lock_manager: LockManager::new(),
             compaction_task: Mutex::new(None),
+            flush_task: Mutex::new(None),
             device_sender: OnceCell::new(),
             closed: AtomicBool::new(false),
             read_only: options.read_only,
@@ -200,17 +203,22 @@ impl FxFilesystem {
 
     pub async fn close(&self) -> Result<(), Error> {
         assert_eq!(self.closed.swap(true, atomic::Ordering::SeqCst), false);
-        let compaction_task = std::mem::take(&mut *self.compaction_task.lock().unwrap());
+        let compaction_task = self.compaction_task.lock().unwrap().take();
         if let Some(task) = compaction_task {
-            task.await;
+            debug_assert_not_too_long!(task);
         }
         if let Some(graveyard) = self.objects.graveyard() {
-            graveyard.wait_for_reap().await;
+            debug_assert_not_too_long!(graveyard.wait_for_reap());
         }
         let sync_status =
             self.journal.sync(SyncOptions { flush_device: true, ..Default::default() }).await;
         if sync_status.is_err() {
             log::error!("Failed to sync filesystem; data may be lost: {:?}", sync_status);
+        }
+        self.journal.terminate();
+        let flush_task = self.flush_task.lock().unwrap().take();
+        if let Some(task) = flush_task {
+            debug_assert_not_too_long!(task);
         }
         // Regardless of whether sync succeeds, we should close the device, since otherwise we will
         // crash instead of exiting gracefully.
@@ -337,10 +345,19 @@ impl TransactionHandler for FxFilesystem {
     async fn commit_transaction(
         self: Arc<Self>,
         transaction: &mut Transaction<'_>,
-    ) -> Result<(), Error> {
+    ) -> Result<u64, Error> {
         trace_duration!("FxFilesystem::commit_transaction");
         debug_assert_not_too_long!(self.lock_manager.commit_prepare(transaction));
-        self.journal.commit(transaction).await?;
+        {
+            let mut flush_task = self.flush_task.lock().unwrap();
+            if flush_task.is_none() {
+                let this = self.clone();
+                *flush_task = Some(fasync::Task::spawn(async move {
+                    this.journal.flush_task().await;
+                }));
+            }
+        }
+        let journal_offset = self.journal.commit(transaction).await?;
         let mut compaction_task = self.compaction_task.lock().unwrap();
         if compaction_task.is_none()
             && !self.closed.load(atomic::Ordering::SeqCst)
@@ -348,7 +365,7 @@ impl TransactionHandler for FxFilesystem {
         {
             *compaction_task = Some(fasync::Task::spawn(self.clone().compact()));
         }
-        Ok(())
+        Ok(journal_offset)
     }
 
     fn drop_transaction(&self, transaction: &mut Transaction<'_>) {

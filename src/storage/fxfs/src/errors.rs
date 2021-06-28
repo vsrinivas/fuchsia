@@ -32,6 +32,8 @@ pub enum FxfsError {
     TooBig,
     #[error("Invalid version")]
     InvalidVersion,
+    #[error("Journal flush error")]
+    JournalFlushError,
 }
 
 impl FxfsError {

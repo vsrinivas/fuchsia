@@ -271,10 +271,6 @@ impl<K: Eq + Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer
         .unwrap();
     }
 
-    async fn lock_writes(&self) -> futures::lock::MutexGuard<'_, ()> {
-        self.writer_lock.lock().await
-    }
-
     fn len(&self) -> usize {
         self.inner.lock().unwrap().item_count
     }

@@ -253,7 +253,8 @@ mod tests {
             writer.write_record(item);
         }
         writer.pad_to_block().expect("pad_to_block failed");
-        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
+        let (offset, buf) = writer.take_buffer(&handle).unwrap();
+        handle.overwrite(offset, buf.as_ref()).await.expect("overwrite failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -317,7 +318,8 @@ mod tests {
         writer.pad_to_block().expect("pad_to_block failed");
         writer.write_record(&7u32);
         writer.pad_to_block().expect("pad_to_block failed");
-        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
+        let (offset, buf) = writer.take_buffer(&handle).unwrap();
+        handle.overwrite(offset, buf.as_ref()).await.expect("overwrite failed");
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
             TEST_BLOCK_SIZE,
@@ -365,7 +367,8 @@ mod tests {
         // Check that writing didn't end up being aligned on a block.
         assert_ne!(writer.journal_file_checkpoint().file_offset, TEST_BLOCK_SIZE);
         writer.pad_to_block().expect("pad_to_block failed");
-        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
+        let (offset, buf) = writer.take_buffer(&handle).unwrap();
+        handle.overwrite(offset, buf.as_ref()).await.expect("overwrite failed");
 
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
@@ -414,7 +417,8 @@ mod tests {
         let checkpoint = writer.journal_file_checkpoint();
         writer.write_record(&78u32);
         writer.pad_to_block().expect("pad_to_block failed");
-        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
+        let (offset, buf) = writer.take_buffer(&handle).unwrap();
+        handle.overwrite(offset, buf.as_ref()).await.expect("overwrite failed");
 
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
@@ -458,7 +462,8 @@ mod tests {
         let mut writer = JournalWriter::new(TEST_BLOCK_SIZE as usize, 0);
         let len = 2 * (TEST_BLOCK_SIZE as usize - std::mem::size_of::<Checksum>());
         assert_eq!(writer.write(&vec![78u8; len]).expect("write failed"), len);
-        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
+        let (offset, buf) = writer.take_buffer(&handle).unwrap();
+        handle.overwrite(offset, buf.as_ref()).await.expect("overwrite failed");
 
         let checkpoint = JournalCheckpoint {
             file_offset: TEST_BLOCK_SIZE - std::mem::size_of::<Checksum>() as u64 - 1,

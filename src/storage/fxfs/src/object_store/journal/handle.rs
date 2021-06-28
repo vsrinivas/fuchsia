@@ -31,7 +31,7 @@ pub struct Handle {
     object_id: u64,
     device: Arc<dyn Device>,
     start_offset: u64,
-    extents: Vec<Range<u64>>,
+    extents: Vec<(Range<u64>, u64)>,
     size: u64,
 }
 
@@ -41,12 +41,13 @@ impl Handle {
     }
 
     pub fn push_extent(&mut self, r: Range<u64>) {
-        self.extents.push(r);
+        self.extents.push((r, 0));
     }
 
     pub fn try_push_extent_from_object_item(
         &mut self,
         item: ItemRef<'_, ObjectKey, ObjectValue>,
+        journal_offset: u64,
     ) -> Result<bool, Error> {
         match item.into() {
             Some((
@@ -63,11 +64,23 @@ impl Handle {
                         range, self.size
                     )));
                 }
-                self.extents.push(*device_offset..*device_offset + range.length());
+                self.extents
+                    .push((*device_offset..*device_offset + range.length(), journal_offset));
                 self.size = range.end;
                 Ok(true)
             }
             _ => Ok(false),
+        }
+    }
+
+    // Discard any extents that succeed offset.
+    pub fn discard_extents(&mut self, discard_offset: u64) {
+        while let Some((range, offset)) = self.extents.last() {
+            if *offset < discard_offset {
+                break;
+            }
+            self.size = range.start;
+            self.extents.pop();
         }
     }
 }
@@ -94,10 +107,10 @@ impl ObjectHandle for Handle {
         let mut buf_offset = 0;
         let mut file_offset = self.start_offset;
         for extent in &self.extents {
-            let extent_len = extent.end - extent.start;
+            let extent_len = extent.0.end - extent.0.start;
             if offset < file_offset + extent_len {
-                let device_offset = extent.start + offset - file_offset;
-                let to_read = min(extent.end - device_offset, (len - buf_offset) as u64) as usize;
+                let device_offset = extent.0.start + offset - file_offset;
+                let to_read = min(extent.0.end - device_offset, (len - buf_offset) as u64) as usize;
                 assert!(buf_offset % self.device.block_size() as usize == 0);
                 self.device
                     .read(

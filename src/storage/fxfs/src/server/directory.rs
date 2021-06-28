@@ -221,7 +221,7 @@ impl FxDirectory {
                             self.volume().cache().get_or_reserve(node.object_id()).await
                         {
                             transaction
-                                .commit_with_callback(|| {
+                                .commit_with_callback(|_| {
                                     p.commit(&node);
                                     current_dir.did_add(name);
                                 })
@@ -349,7 +349,7 @@ impl MutableDirectory for FxDirectory {
             .await
             .map_err(map_to_status)?;
         store.adjust_refs(&mut transaction, entry_info.inode(), 1).await.map_err(map_to_status)?;
-        transaction.commit_with_callback(|| self.did_add(&name)).await.map_err(map_to_status)?;
+        transaction.commit_with_callback(|_| self.did_add(&name)).await.map_err(map_to_status)?;
         Ok(())
     }
 
@@ -368,13 +368,13 @@ impl MutableDirectory for FxDirectory {
             ReplacedChild::None => return Err(Status::NOT_FOUND),
             ReplacedChild::FileWithRemainingLinks(..) => {
                 transaction
-                    .commit_with_callback(|| self.did_remove(name))
+                    .commit_with_callback(|_| self.did_remove(name))
                     .await
                     .map_err(map_to_status)?;
             }
             ReplacedChild::File(id) => {
                 transaction
-                    .commit_with_callback(|| self.did_remove(name))
+                    .commit_with_callback(|_| self.did_remove(name))
                     .await
                     .map_err(map_to_status)?;
                 // TODO(jfsulliv): This might return failure but the unlink has actually succeeded
@@ -383,7 +383,7 @@ impl MutableDirectory for FxDirectory {
             }
             ReplacedChild::Directory(id) => {
                 transaction
-                    .commit_with_callback(|| {
+                    .commit_with_callback(|_| {
                         self.did_remove(name);
                         self.volume().mark_directory_deleted(id, name)
                     })

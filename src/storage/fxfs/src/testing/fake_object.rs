@@ -73,9 +73,9 @@ impl TransactionHandler for FakeObject {
     async fn commit_transaction(
         self: Arc<Self>,
         transaction: &mut Transaction<'_>,
-    ) -> Result<(), Error> {
+    ) -> Result<u64, Error> {
         std::mem::take(&mut transaction.mutations);
-        Ok(())
+        Ok(0)
     }
 
     fn drop_transaction(&self, transaction: &mut Transaction<'_>) {

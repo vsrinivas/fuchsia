@@ -225,7 +225,7 @@ impl FilesystemRename for FxVolume {
         .map_err(map_to_status)?;
 
         transaction
-            .commit_with_callback(|| {
+            .commit_with_callback(|_| {
                 moved_node.set_parent(dst_dir.clone());
                 src_dir.did_remove(src);
 
