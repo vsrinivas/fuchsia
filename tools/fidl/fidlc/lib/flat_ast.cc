@@ -16,6 +16,7 @@
 #include "fidl/diagnostic_types.h"
 #include "fidl/diagnostics.h"
 #include "fidl/experimental_flags.h"
+#include "fidl/flat/name.h"
 #include "fidl/flat/types.h"
 #include "fidl/lexer.h"
 #include "fidl/names.h"
@@ -2780,7 +2781,8 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_decl
   auto alias_name = Name::CreateSourced(this, alias_declaration->alias->span());
   TypeConstructor type_ctor_;
 
-  if (!ConsumeTypeConstructor(std::move(alias_declaration->type_ctor), alias_name, &type_ctor_))
+  if (!ConsumeTypeConstructor(std::move(alias_declaration->type_ctor),
+                              NamingContext::Create(alias_name), &type_ctor_))
     return false;
 
   return RegisterDecl(std::make_unique<TypeAlias>(std::move(attributes), std::move(alias_name),
@@ -2831,8 +2833,8 @@ void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
   }
 
   TypeConstructor type_ctor;
-  // TODO(fxbug.dev/73285): shouldn't need to care about context here
-  if (!ConsumeTypeConstructor(std::move(const_declaration->type_ctor), name, &type_ctor))
+  if (!ConsumeTypeConstructor(std::move(const_declaration->type_ctor), NamingContext::Create(name),
+                              &type_ctor))
     return;
 
   std::unique_ptr<Constant> constant;
@@ -2896,10 +2898,9 @@ bool Library::CreateMethodResult(const std::shared_ptr<NamingContext>& err_varia
                                  SourceSpan response_span, raw::ProtocolMethod* method,
                                  Struct* success_variant, Struct** out_response) {
   // Compile the error type.
-  auto error_name = Name::CreateAnonymous(this, response_span, err_variant_context);
   flat::TypeConstructor error_type_ctor;
-  // TODO(fcz): pipe the naming context through
-  if (!ConsumeTypeConstructor(std::move(method->maybe_error_ctor), error_name, &error_type_ctor))
+  if (!ConsumeTypeConstructor(std::move(method->maybe_error_ctor), err_variant_context,
+                              &error_type_ctor))
     return false;
 
   raw::SourceElement sourceElement = raw::SourceElement(fidl::Token(), fidl::Token());
@@ -3081,9 +3082,8 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<Namin
     }
 
     TypeConstructor type_ctor;
-    // TODO(fcz): pass the context through instead of the name
-    auto param_name = Name::CreateDerived(this, parameter->span(), "TODO");
-    if (!ConsumeTypeConstructor(std::move(parameter->type_ctor), param_name, &type_ctor))
+    if (!ConsumeTypeConstructor(std::move(parameter->type_ctor),
+                                context->EnterMember(parameter->span()), &type_ctor))
       return false;
     ValidateAttributesPlacement(AttributePlacement::kStructMember, attributes.get());
     members.emplace_back(std::move(type_ctor), parameter->identifier->span(),
@@ -3118,7 +3118,7 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<Namin
     return true;
   }
 
-  Name name = Name::CreateAnonymous(this, parameter_layout->span(), std::move(context));
+  Name name = Name::CreateAnonymous(this, parameter_layout->span(), context);
 
   // TODO(fxbug.dev/74955): Once full-fledged anonymous layout attributes are
   //  implemented, this error check can be removed.
@@ -3126,9 +3126,7 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<Namin
     Fail(ErrNotYetSupportedAttributesOnPayloadStructs, name);
   }
 
-  // TODO(fcz): pipe the context through
-  std::unique_ptr<TypeConstructorNew> unused_type_ctor;
-  if (!ConsumeTypeConstructorNew(std::move(parameter_layout->type_ctor), name,
+  if (!ConsumeTypeConstructorNew(std::move(parameter_layout->type_ctor), std::move(context),
                                  /*raw_attribute_list=*/nullptr, is_request_or_response,
                                  /*out_type_=*/nullptr))
     return false;
@@ -3173,10 +3171,7 @@ bool Library::ConsumeResourceDeclaration(
     }
 
     TypeConstructor type_ctor;
-    auto anonymous_resource_name = Name::CreateDerived(
-        this, property->span(),
-        std::string(name.decl_name()) + std::string(property->identifier->span().data()));
-    if (!ConsumeTypeConstructor(std::move(property->type_ctor), anonymous_resource_name,
+    if (!ConsumeTypeConstructor(std::move(property->type_ctor), NamingContext::Create(name),
                                 &type_ctor))
       return false;
     properties.emplace_back(std::move(type_ctor), property->identifier->span(),
@@ -3190,8 +3185,8 @@ bool Library::ConsumeResourceDeclaration(
 
   TypeConstructor type_ctor;
   if (raw::IsTypeConstructorDefined(resource_declaration->maybe_type_ctor)) {
-    // TODO(fxbug.dev/73285): shouldn't need to care about the naming context here.
-    if (!ConsumeTypeConstructor(std::move(resource_declaration->maybe_type_ctor), name, &type_ctor))
+    if (!ConsumeTypeConstructor(std::move(resource_declaration->maybe_type_ctor),
+                                NamingContext::Create(name), &type_ctor))
       return false;
   } else {
     type_ctor = TypeConstructorOld::CreateSizeType();
@@ -3203,7 +3198,7 @@ bool Library::ConsumeResourceDeclaration(
 
 void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
   auto name = Name::CreateSourced(this, service_decl->identifier->span());
-
+  auto context = NamingContext::Create(name);
   std::vector<Service::Member> members;
   for (auto& member : service_decl->members) {
     std::unique_ptr<AttributeList> attributes;
@@ -3212,8 +3207,8 @@ void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
     }
 
     TypeConstructor type_ctor;
-    // TODO(fxbug.dev/73285): shouldn't need to care about naming context here.
-    if (!ConsumeTypeConstructor(std::move(member->type_ctor), name, &type_ctor))
+    if (!ConsumeTypeConstructor(std::move(member->type_ctor), context->EnterMember(member->span()),
+                                &type_ctor))
       return;
     members.emplace_back(std::move(type_ctor), member->identifier->span(), std::move(attributes));
   }
@@ -3350,7 +3345,8 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 // TODO(fxbug.dev/77853): these conversion methods may need to be refactored
 //  once the new flat AST lands, and such coercion  is no longer needed.
 template <typename T, typename M>
-bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout, const Name& context,
+bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
+                                 const std::shared_ptr<NamingContext>& context,
                                  std::unique_ptr<raw::AttributeListNew> raw_attribute_list) {
   std::vector<M> members;
   size_t index = 0;
@@ -3390,13 +3386,14 @@ bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout, const Name
   if (layout->modifiers != nullptr)
     strictness = layout->modifiers->maybe_strictness.value_or(types::Strictness::kFlexible);
 
-  RegisterDecl(std::make_unique<T>(std::move(attributes), context, std::move(subtype_ctor),
-                                   std::move(members), strictness));
+  RegisterDecl(std::make_unique<T>(std::move(attributes), context->ToName(this, layout->span()),
+                                   std::move(subtype_ctor), std::move(members), strictness));
   return true;
 }
 
 template <typename T, typename M>
-bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout, const Name& context,
+bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
+                                     const std::shared_ptr<NamingContext>& context,
                                      std::unique_ptr<raw::AttributeListNew> raw_attribute_list) {
   std::vector<M> members;
   for (auto& mem : layout->members) {
@@ -3411,14 +3408,10 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout, const 
       return false;
     }
 
-    auto name_of_anonymous_layout = Name::CreateDerived(
-        this, member->span(),
-        std::string(context.decl_name()) +
-            utils::to_upper_camel_case(std::string(member->identifier->span().data())));
     std::unique_ptr<TypeConstructorNew> type_ctor;
-    if (!ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout,
-                                   /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false,
-                                   &type_ctor))
+    if (!ConsumeTypeConstructorNew(
+            std::move(member->type_ctor), context->EnterMember(member->identifier->span()),
+            /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false, &type_ctor))
       return false;
 
     members.emplace_back(std::move(member->ordinal), std::move(type_ctor),
@@ -3438,21 +3431,18 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout, const 
   if (layout->modifiers != nullptr && layout->modifiers->maybe_resourceness != std::nullopt)
     resourceness = layout->modifiers->maybe_resourceness.value_or(types::Resourceness::kValue);
 
-  RegisterDecl(std::make_unique<T>(std::move(attributes), context, std::move(members), strictness,
-                                   resourceness));
+  RegisterDecl(std::make_unique<T>(std::move(attributes), context->ToName(this, layout->span()),
+                                   std::move(members), strictness, resourceness));
   return true;
 }
 
-bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Name& context,
+bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
+                                  const std::shared_ptr<NamingContext>& context,
                                   std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
                                   bool is_request_or_response) {
   std::vector<Struct::Member> members;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::StructLayoutMember*>(mem.get());
-    auto name_of_anonymous_layout = Name::CreateDerived(
-        this, member->span(),
-        std::string(context.decl_name()) +
-            utils::to_upper_camel_case(std::string(member->identifier->span().data())));
 
     std::unique_ptr<AttributeList> attributes;
     if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
@@ -3460,9 +3450,9 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Nam
     }
 
     std::unique_ptr<TypeConstructorNew> type_ctor;
-    if (!ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout,
-                                   /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false,
-                                   &type_ctor))
+    if (!ConsumeTypeConstructorNew(
+            std::move(member->type_ctor), context->EnterMember(member->identifier->span()),
+            /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false, &type_ctor))
       return false;
 
     std::unique_ptr<Constant> default_value;
@@ -3483,12 +3473,14 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Nam
   if (layout->modifiers != nullptr && layout->modifiers->maybe_resourceness != std::nullopt)
     resourceness = layout->modifiers->maybe_resourceness.value_or(types::Resourceness::kValue);
 
-  RegisterDecl(std::make_unique<Struct>(std::move(attributes), context, std::move(members),
+  RegisterDecl(std::make_unique<Struct>(std::move(attributes),
+                                        context->ToName(this, layout->span()), std::move(members),
                                         resourceness, is_request_or_response));
   return true;
 }
 
-bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& context,
+bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout,
+                            const std::shared_ptr<NamingContext>& context,
                             std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
                             bool is_request_or_response) {
   switch (layout->kind) {
@@ -3518,48 +3510,10 @@ bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& con
 }
 
 bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor,
-                                        const Name& context,
+                                        const std::shared_ptr<NamingContext>& context,
                                         std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
                                         bool is_request_or_response,
                                         std::unique_ptr<TypeConstructorNew>* out_type_ctor) {
-  if (raw_type_ctor->layout_ref->kind == raw::LayoutReference::Kind::kInline) {
-    // TODO(fxbug.dev/74683): If we don't want users to be able to refer to anonymous
-    // layouts by figuring out their generated name, we'll need to update this section
-    const auto& params = raw_type_ctor->parameters;
-    const auto& constraints = raw_type_ctor->constraints;
-    if (params && !params->items.empty()) {
-      return Fail(ErrLayoutCannotBeParameterized, params->span(), context);
-    }
-    if (constraints && !constraints->items.empty()) {
-      return Fail(ErrCannotConstrainInLayoutDecl, constraints->span());
-    }
-    auto inline_ref = static_cast<raw::InlineLayoutReference*>(raw_type_ctor->layout_ref.get());
-    if (!ConsumeLayout(std::move(inline_ref->layout), context, std::move(raw_attribute_list),
-                       is_request_or_response))
-      return false;
-
-    std::vector<std::unique_ptr<LayoutParameter>> no_params;
-    std::vector<std::unique_ptr<Constant>> no_constraints;
-    if (out_type_ctor)
-      *out_type_ctor = std::make_unique<TypeConstructorNew>(
-          context, std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt),
-          std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt));
-    return true;
-  }
-
-  // TODO(fxbug.dev/76349): named parameter lists are not yet allowed, so we
-  //  need to ensure that is_request_or_response is false at this point.  Once
-  //  that feature is enabled, this check can be removed.
-  if (is_request_or_response) {
-    return Fail(ErrNamedParameterListTypesNotYetSupported, raw_type_ctor->span());
-  }
-
-  auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->layout_ref.get());
-  SourceSpan name_span = named_ref->identifier->span();
-  auto name = CompileCompoundIdentifier(named_ref->identifier.get());
-  if (!name)
-    return false;
-
   std::vector<std::unique_ptr<LayoutParameter>> params;
   std::optional<SourceSpan> params_span;
   if (raw_type_ctor->parameters) {
@@ -3580,9 +3534,8 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
         }
         case raw::LayoutParameter::Kind::kType: {
           auto type_param = static_cast<raw::TypeLayoutParameter*>(param.get());
-          auto nested_name = Name::CreateDerived(this, name_span, context.full_name());
           std::unique_ptr<TypeConstructorNew> type_ctor;
-          if (!ConsumeTypeConstructorNew(std::move(type_param->type_ctor), nested_name,
+          if (!ConsumeTypeConstructorNew(std::move(type_param->type_ctor), context,
                                          /*raw_attribute_list=*/nullptr, is_request_or_response,
                                          &type_ctor))
             return false;
@@ -3619,6 +3572,32 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
     }
   }
 
+  if (raw_type_ctor->layout_ref->kind == raw::LayoutReference::Kind::kInline) {
+    auto inline_ref = static_cast<raw::InlineLayoutReference*>(raw_type_ctor->layout_ref.get());
+    if (!ConsumeLayout(std::move(inline_ref->layout), context, std::move(raw_attribute_list),
+                       is_request_or_response))
+      return false;
+
+    if (out_type_ctor)
+      *out_type_ctor = std::make_unique<TypeConstructorNew>(
+          context->ToName(this, raw_type_ctor->layout_ref->span()),
+          std::make_unique<LayoutParameterList>(std::move(params), params_span),
+          std::make_unique<TypeConstraints>(std::move(constraints), constraints_span));
+    return true;
+  }
+
+  // TODO(fxbug.dev/76349): named parameter lists are not yet allowed, so we
+  //  need to ensure that is_request_or_response is false at this point.  Once
+  //  that feature is enabled, this check can be removed.
+  if (is_request_or_response) {
+    return Fail(ErrNamedParameterListTypesNotYetSupported, raw_type_ctor->span());
+  }
+
+  auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->layout_ref.get());
+  auto name = CompileCompoundIdentifier(named_ref->identifier.get());
+  if (!name)
+    return false;
+
   assert(out_type_ctor && "out type ctors should always be provided for a named type ctor");
   *out_type_ctor = std::make_unique<TypeConstructorNew>(
       std::move(name.value()),
@@ -3627,7 +3606,8 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
   return true;
 }
 
-bool Library::ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor, const Name& context,
+bool Library::ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor,
+                                     const std::shared_ptr<NamingContext>& context,
                                      TypeConstructor* out_type) {
   return std::visit(fidl::utils::matchers{
                         [&, this](std::unique_ptr<raw::TypeConstructorOld> e) -> bool {
@@ -3658,7 +3638,8 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
     return;
   }
 
-  ConsumeTypeConstructorNew(std::move(type_decl->type_ctor), name, std::move(type_decl->attributes),
+  ConsumeTypeConstructorNew(std::move(type_decl->type_ctor), NamingContext::Create(name),
+                            std::move(type_decl->attributes),
                             /*is_request_or_response=*/false,
                             /*out_type=*/nullptr);
 }

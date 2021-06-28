@@ -18,6 +18,9 @@
 namespace fidl {
 namespace flat {
 
+class Name;
+class Library;
+
 // A NamingContext is a list of names, from least specific to most specific, which
 // identifies the use of a layout. For example, for the FIDL:
 //
@@ -46,6 +49,7 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
   static std::shared_ptr<NamingContext> Create(SourceSpan decl_name) {
     return Create(decl_name, ElementKind::kDecl);
   }
+  static std::shared_ptr<NamingContext> Create(const Name& decl_name);
 
   std::shared_ptr<NamingContext> EnterRequest(SourceSpan method_name) {
     assert(kind_ == ElementKind::kDecl && "request must follow protocol");
@@ -81,8 +85,6 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
   }
 
   std::shared_ptr<NamingContext> EnterMember(SourceSpan member_name) {
-    assert((kind_ == ElementKind::kDecl || kind_ == ElementKind::kLayoutMember) &&
-           "member must follow layout");
     return Push(member_name, ElementKind::kLayoutMember);
   }
 
@@ -144,6 +146,13 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
     return names;
   }
 
+  // ToName() exists to handle the case where the caller does not necessarily know what
+  // kind of name (sourced or anonymous) this NamingContext corresponds to.
+  // For example, this happens for layouts where the Consume* functions all take a
+  // NamingContext and so the given layout may be at the top level of the library
+  // (with a user-specified name) or may be nested/anonymous.
+  Name ToName(Library* library, SourceSpan declaration_span);
+
  private:
   // Each new naming context is represented by a SourceSpan pointing to the name in
   // question (e.g. protocol/layout/member name), and an ElementKind. The contexts
@@ -202,8 +211,6 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
   ElementKind kind_;
   std::shared_ptr<NamingContext> parent_ = nullptr;
 };
-
-class Library;
 
 // Name represents a named entry in a particular scope.
 

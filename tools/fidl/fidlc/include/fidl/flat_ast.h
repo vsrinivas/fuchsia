@@ -1330,31 +1330,34 @@ class Library {
   bool ConsumeAttributeList(raw::AttributeList raw_attribute_list,
                             std::unique_ptr<AttributeList>* out_attribute_list);
   void ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl);
-  // TODO(fxbug.dev/74683): The context parameter is currently unused, but exists
-  // to help generate a name when implementing anonymous layouts
   bool ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor,
-                                 const Name& context,
+                                 const std::shared_ptr<NamingContext>& context,
                                  std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
                                  bool is_request_or_response,
                                  std::unique_ptr<TypeConstructorNew>* out_type);
-  bool ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor, const Name& context,
+  bool ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor,
+                              const std::shared_ptr<NamingContext>& context,
                               TypeConstructor* out_type);
 
   // Here, T is expected to be an ordinal-carrying flat AST class (ie, Table or
   // Union), while M is its "Member" sub-class.
   template <typename T, typename M>
-  bool ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout>, const Name&,
+  bool ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
+                              const std::shared_ptr<NamingContext>& context,
                               std::unique_ptr<raw::AttributeListNew> raw_attribute_list);
-  bool ConsumeStructLayout(std::unique_ptr<raw::Layout>, const Name&,
+  bool ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
+                           const std::shared_ptr<NamingContext>& context,
                            std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
                            bool is_request_or_response);
 
   // Here, T is expected to be an value-carrying flat AST class (ie, Bits or
   // Enum), while M is its "Member" sub-class.
   template <typename T, typename M>
-  bool ConsumeValueLayout(std::unique_ptr<raw::Layout>, const Name&,
+  bool ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
+                          const std::shared_ptr<NamingContext>& context,
                           std::unique_ptr<raw::AttributeListNew> raw_attribute_list);
-  bool ConsumeLayout(std::unique_ptr<raw::Layout>, const Name&,
+  bool ConsumeLayout(std::unique_ptr<raw::Layout> layout,
+                     const std::shared_ptr<NamingContext>& context,
                      std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
                      bool is_request_or_response);
   // end new syntax

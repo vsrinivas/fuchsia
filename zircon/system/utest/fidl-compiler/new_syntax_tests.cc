@@ -595,19 +595,19 @@ type TypeDecl = struct {
   auto type_decl = library.LookupStruct("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
   EXPECT_EQ(type_decl->members.size(), 5);
-  auto type_decl_f0 = library.LookupBits("TypeDeclF0");
+  auto type_decl_f0 = library.LookupBits("F0");
   ASSERT_NOT_NULL(type_decl_f0);
   EXPECT_EQ(type_decl_f0->members.size(), 1);
-  auto type_decl_f1 = library.LookupEnum("TypeDeclF1");
+  auto type_decl_f1 = library.LookupEnum("F1");
   ASSERT_NOT_NULL(type_decl_f1);
   EXPECT_EQ(type_decl_f1->members.size(), 1);
-  auto type_decl_f2 = library.LookupStruct("TypeDeclF2");
+  auto type_decl_f2 = library.LookupStruct("F2");
   ASSERT_NOT_NULL(type_decl_f2);
   EXPECT_EQ(type_decl_f2->members.size(), 2);
-  auto type_decl_f3 = library.LookupTable("TypeDeclF3");
+  auto type_decl_f3 = library.LookupTable("F3");
   ASSERT_NOT_NULL(type_decl_f3);
   EXPECT_EQ(type_decl_f3->members.size(), 1);
-  auto type_decl_f4 = library.LookupUnion("TypeDeclF4");
+  auto type_decl_f4 = library.LookupUnion("F4");
   ASSERT_NOT_NULL(type_decl_f4);
   EXPECT_EQ(type_decl_f4->members.size(), 1);
 }
@@ -673,8 +673,8 @@ type TypeDecl = struct {
   a2 array<Alias,5>;
   // array of anonymous layout
   a3 array<struct{
-       i0 struct{};
-       i1 array<struct{},5>;
+       i2 struct{};
+       i3 array<struct{},5>;
      },5>;
 };
 )FIDL",
@@ -684,16 +684,16 @@ type TypeDecl = struct {
   auto type_decl = library.LookupStruct("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
   EXPECT_EQ(type_decl->members.size(), 8);
-  auto type_decl_vector_anon = library.LookupStruct("TypeDeclV3");
+  auto type_decl_vector_anon = library.LookupStruct("V3");
   ASSERT_NOT_NULL(type_decl_vector_anon);
   EXPECT_EQ(type_decl_vector_anon->members.size(), 2);
-  ASSERT_NOT_NULL(library.LookupStruct("TypeDeclV3I0"));
-  ASSERT_NOT_NULL(library.LookupStruct("TypeDeclV3I1"));
-  auto type_decl_array_anon = library.LookupStruct("TypeDeclA3");
+  ASSERT_NOT_NULL(library.LookupStruct("I0"));
+  ASSERT_NOT_NULL(library.LookupStruct("I1"));
+  auto type_decl_array_anon = library.LookupStruct("A3");
   ASSERT_NOT_NULL(type_decl_array_anon);
   EXPECT_EQ(type_decl_array_anon->members.size(), 2);
-  ASSERT_NOT_NULL(library.LookupStruct("TypeDeclA3I0"));
-  ASSERT_NOT_NULL(library.LookupStruct("TypeDeclA3I1"));
+  ASSERT_NOT_NULL(library.LookupStruct("I2"));
+  ASSERT_NOT_NULL(library.LookupStruct("I3"));
 }
 
 TEST(NewSyntaxTests, GoodLayoutMemberConstraints) {
@@ -708,9 +708,8 @@ library example;
 
 alias TypeAlias = vector<uint8>;
 type t1 = resource struct {
-  u7 union { 1: b bool; };
-  // TODO(fxbug.dev/74683):
-  // u8 union { 1: b bool; }:optional;
+  u0 union { 1: b bool; };
+  u1 union { 1: b bool; }:optional;
 };
 )FIDL",
                       experimental_flags);
@@ -718,15 +717,21 @@ type t1 = resource struct {
 
   auto type_decl = library.LookupStruct("t1");
   ASSERT_NOT_NULL(type_decl);
-  EXPECT_EQ(type_decl->members.size(), 1);
+  EXPECT_EQ(type_decl->members.size(), 2);
 
   size_t i = 0;
 
-  auto u7_type_base = GetType(type_decl->members[i++].type_ctor);
-  ASSERT_EQ(u7_type_base->kind, fidl::flat::Type::Kind::kIdentifier);
-  auto u7_type = static_cast<const fidl::flat::IdentifierType*>(u7_type_base);
-  EXPECT_EQ(u7_type->nullability, fidl::types::Nullability::kNonnullable);
-  EXPECT_EQ(u7_type->type_decl->kind, fidl::flat::Decl::Kind::kUnion);
+  auto u0_type_base = GetType(type_decl->members[i++].type_ctor);
+  ASSERT_EQ(u0_type_base->kind, fidl::flat::Type::Kind::kIdentifier);
+  auto u0_type = static_cast<const fidl::flat::IdentifierType*>(u0_type_base);
+  EXPECT_EQ(u0_type->nullability, fidl::types::Nullability::kNonnullable);
+  EXPECT_EQ(u0_type->type_decl->kind, fidl::flat::Decl::Kind::kUnion);
+
+  auto u1_type_base = GetType(type_decl->members[i++].type_ctor);
+  ASSERT_EQ(u1_type_base->kind, fidl::flat::Type::Kind::kIdentifier);
+  auto u1_type = static_cast<const fidl::flat::IdentifierType*>(u1_type_base);
+  EXPECT_EQ(u1_type->nullability, fidl::types::Nullability::kNullable);
+  EXPECT_EQ(u1_type->type_decl->kind, fidl::flat::Decl::Kind::kUnion);
 }
 
 // This test ensures that recoverable parsing works as intended for constraints,
@@ -988,8 +993,7 @@ type UnionDecl = union{1: foo bool;};
 alias UnionAlias = UnionDecl;
 type TypeDecl= struct {
   u0 union{1: bar bool;};
-  // TODO(fxbug.dev/74683)
-  // u1 union{1: baz bool;}:optional;
+  u1 union{1: baz bool;}:optional;
   u2 UnionDecl;
   u3 UnionDecl:optional;
   u4 UnionAlias;
@@ -1001,12 +1005,16 @@ type TypeDecl= struct {
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupStruct("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
-  ASSERT_EQ(type_decl->members.size(), 5);
+  ASSERT_EQ(type_decl->members.size(), 6);
   size_t i = 0;
 
   auto& u0 = type_decl->members[i++];
   auto u0_type = static_cast<const fidl::flat::IdentifierType*>(GetType(u0.type_ctor));
   EXPECT_EQ(u0_type->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& u1 = type_decl->members[i++];
+  auto u1_type = static_cast<const fidl::flat::IdentifierType*>(GetType(u1.type_ctor));
+  EXPECT_EQ(u1_type->nullability, fidl::types::Nullability::kNullable);
 
   auto& u2 = type_decl->members[i++];
   auto u2_type = static_cast<const fidl::flat::IdentifierType*>(GetType(u2.type_ctor));
@@ -1262,28 +1270,12 @@ TEST(NewSyntaxTests, BadParameterizedAnonymousLayout) {
 library example;
 
 type Foo = struct {
-  foo struct {}<1>;
+  bar struct {}<1>;
 };
 )FIDL",
                       experimental_flags);
 
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLayoutCannotBeParameterized);
-}
-
-TEST(NewSyntaxTests, BadUnsupportedAnonymousLayoutConstraint) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-
-  TestLibrary library(R"FIDL(
-library example;
-
-type Foo = struct {
-  foo struct {}:optional;
-};
-)FIDL",
-                      experimental_flags);
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotConstrainInLayoutDecl);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
 TEST(NewSyntaxTests, BadConstrainTwice) {

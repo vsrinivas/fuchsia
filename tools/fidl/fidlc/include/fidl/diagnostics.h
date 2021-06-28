@@ -320,16 +320,6 @@ constexpr ErrorDef<const flat::TypeTemplate *> ErrMustHaveSize("{} must have siz
 constexpr ErrorDef<const flat::TypeTemplate *> ErrMustHaveNonZeroSize("{} must have non-zero size");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeParameterized(
     "{} cannot be parametrized");
-// TODO(fxbug.dev/74683): This is a copy of ErrCannotBeParameterized that is thrown earlier in the
-// compilation process (if we see an anonymous layout that has arguments `foo { ... }<T>`, we know
-// that this is invalid without needing to compile `foo` because no user-defined layouts support
-// arguments). Once we fully implement anonymous layouts, we should probably have the layout go
-// through the same compilation process as any other type, thereby removing the need to have this
-// separate error.
-constexpr ErrorDef<flat::Name> ErrLayoutCannotBeParameterized("{} cannot be parametrized");
-// TODO(fxbug.dev/74683): Support for anonymous layouts should include support for this as well.
-constexpr ErrorDef<> ErrCannotConstrainInLayoutDecl(
-    "cannot add constraints in this position; constraints must be added at the use-site");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotHaveSize("{} cannot have size");
 
 // new style
