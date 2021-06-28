@@ -1,0 +1,743 @@
+{
+    "customer_id": 100000,
+    "metrics": [
+        {
+            "event_codes": [
+                1
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:e5ef2bbe9dd2b7cee87beac5e06cece13fe6f9c154b1f00abec155e6c6c9fa62"
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:f1a52f7b4d7081060a3295fd36df7b68fb0518f80aae0eae8a3fc1d55231375f"
+        },
+        {
+            "event_codes": [
+                3
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:2e3e35640b0f45265e268204779f7314cf5acae5883ac0d028232859672a7152"
+        },
+        {
+            "event_codes": [
+                4
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:e534c6322665ea3b4e7bf7bdce64d17bea86100be0eba25ed220a5e9b355c4ef"
+        },
+        {
+            "event_codes": [
+                5
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:20b2c7aba6793929c252d4e933b8a1537f7bfe8e208ad228c50a896a18b2c4b5"
+        },
+        {
+            "event_codes": [
+                6
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:b63d06982a705d04fcfc5f401db2b2f9faa640fa973ff99adb4f62a39f23d24f"
+        },
+        {
+            "event_codes": [
+                7
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:18f6b0d52208bab5e5dd65ef6021b7e47d7a6b3d09f6668dcea18f93161e9b1d"
+        },
+        {
+            "event_codes": [
+                8
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:fd81549e77f2f3b199d4dca16131c3525428140828f0843a0fd30e7c0d2e2631"
+        },
+        {
+            "event_codes": [
+                9
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:796fc46a1898539f901c909c1ccf61c98660692fa45dabe474afaec84be6d720"
+        },
+        {
+            "event_codes": [
+                10
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:de3e6f95d17b22bcc6b8bb5389301dc9fa60a16e2c5a4d35eb4a35dd9ac571c3"
+        },
+        {
+            "event_codes": [
+                11
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:bf29aeef2be5779e9181fcd68a3f6de53db15d8cc952407030063086671f2904"
+        },
+        {
+            "event_codes": [
+                12
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:72967e62c92be6e9c6d1609eec1989be814f0daf0e9324a4d18f3d0b02a3bf94"
+        },
+        {
+            "event_codes": [
+                13
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:e9c49c28c1a0543cbd3ad4233467838c5d808285fd020ea17c8f3a9aeb6161fd"
+        },
+        {
+            "event_codes": [
+                14
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:ab7a3ec7a062f943c00f3f62eb1a0f4a2ad50356600efffab46c1969ce49f3d8"
+        },
+        {
+            "event_codes": [
+                15
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:d577f733dfbe1787d272e43f7e4423a01108a71d7e3a89b4e97081ad39372e4e"
+        },
+        {
+            "event_codes": [
+                16
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:ea59eb01e52454f12fab0b571008d2ba8518ae12508f46a3f3f0350b7bbea40f"
+        },
+        {
+            "event_codes": [
+                17
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:946b2f9dbe2ee352b033a635b1c79fc680ef62f9c1b36a39e46404f95b58e6d5"
+        },
+        {
+            "event_codes": [
+                18
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:c1a6d0aebbf7c092c53e8e696636af8ec0629ff39b7f2e548430b0034d809da4"
+        },
+        {
+            "event_codes": [
+                19
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:8285f9d54645ea6baa7fd7b7905c7ae89a9daf8d5172be43b2587b166fd021af"
+        },
+        {
+            "event_codes": [
+                20
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:f4597d9b92f6c3e4847a5bdb53ea095aee59ad07f69745ebcdb43c9f96125d73"
+        },
+        {
+            "event_codes": [
+                21
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:5bd5150caf1ff36c0c48bd26ef276c7ebe01b17b7919dba84abed3ab7d7bd48b"
+        },
+        {
+            "event_codes": [
+                22
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:426871d8856f43fc8433ad9049bf188454d038dc6295e0c59fd3401d72f25a48"
+        },
+        {
+            "event_codes": [
+                23
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:eac51c2ea624ca423dbdd1110a2aa870e4f977e59be215e7f814bbcfcfd20334"
+        },
+        {
+            "event_codes": [
+                24
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:76777fb21aa060c86680f0fbd7cbd4734ef6b239b429ac4d9cb2a9d08792033d"
+        },
+        {
+            "event_codes": [
+                25
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:1325984af473b7d90c8160b881d28d57e0c15a4805548092349cd262efab2677"
+        },
+        {
+            "event_codes": [
+                26
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:9b2aac8bc3465533c6d6e8261478b0ab5a5db2b32cabd3b894ed40f8a695ac0f"
+        },
+        {
+            "event_codes": [
+                27
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:21cfa3a89262d5a856acab7166b36af59fcdaa2227256638cf0a6202e265a199"
+        },
+        {
+            "event_codes": [
+                28
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520"
+        },
+        {
+            "event_codes": [
+                29
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:322a2d9401cfd0aafbb06cfcc27faf8bbd269f49703bfb51eb350886469e38ca"
+        },
+        {
+            "event_codes": [
+                30
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:ea5c99f9081a0ceed83cab585b74ddcad7044528411b30dcb036ca31ef341c15"
+        },
+        {
+            "event_codes": [
+                31
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:263fffc1bb36f0b3c6ef6b68aad87ee42d0ea55806966e41d4c7d24548a48979"
+        },
+        {
+            "event_codes": [
+                32
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:2cfbc0293f8f961669a69af562f130fb962cd883908614eb4cd6c1c10c6a5493"
+        },
+        {
+            "event_codes": [
+                33
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:ae22bb74ac2e0b951579a3c5c49e1c331f8717802d3241c524ed6e98a4850193"
+        },
+        {
+            "event_codes": [
+                34
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:61f12641d14270f20a42f36c86850a0faf6465ceefdd8f4bf46c82bdb51799fd"
+        },
+        {
+            "event_codes": [
+                35
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:cfdcf715cfd0c652a7a4db826a1d439437c2b060e994a1c34e0a43c08b78f62e"
+        },
+        {
+            "event_codes": [
+                36
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:253a01f8ffb9be3d543731594c39c80b3548cb953319cdbc719fb7ffc7f32ed2"
+        },
+        {
+            "event_codes": [
+                37
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:7b93ec79db4fd3bb11e1758e8a23983e91d097cb2abe5ac0f2b1268d1c59b852"
+        },
+        {
+            "event_codes": [
+                38
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:fbac25d2d4e1faed578ac7f771fa4ac41a913a47a163b2ed857e25e60ea6d1bc"
+        },
+        {
+            "event_codes": [
+                39
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:96cad5248544c61752f5edcf2088dc9a54bb92c6f0b5a19f3c7e6aadc384c01a"
+        },
+        {
+            "event_codes": [
+                40
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:d7286a2ec185872bd419e4da1648013d073c34f82ce728cc2c3581ce9e7f6371"
+        },
+        {
+            "event_codes": [
+                41
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:4c6fc32f770e890305eeea790c632ac7748bdb66b3d73ad7f24aacb03866eee7"
+        },
+        {
+            "event_codes": [
+                42
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:4747c87945b9facae43b014d5701a89d9d3026ec0cce4652a4f31b5420b28a44"
+        },
+        {
+            "event_codes": [
+                43
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:d3c7727e0a93e8fe6f01dea374455a8c3fd49776f92d97fb9474f73b67428f2f"
+        },
+        {
+            "event_codes": [
+                44
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:fa16f52f27374df7cd9e40917904b0ce0e19e9a924d75a6a539d6648c4451e03"
+        },
+        {
+            "event_codes": [
+                45
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:f48a511c73538e9255d10516b9014e0e064742e138e5461e297dfef4d752d627"
+        },
+        {
+            "event_codes": [
+                46
+            ],
+            "metric_id": 1,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/bytes/\\/data\\/persistent:6d7e761c185dcac0a0696aef13429fee536eb534a2e25dd8cc423f7fa1264b1b"
+        },
+        {
+            "event_codes": [
+                1
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:e5ef2bbe9dd2b7cee87beac5e06cece13fe6f9c154b1f00abec155e6c6c9fa62"
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:f1a52f7b4d7081060a3295fd36df7b68fb0518f80aae0eae8a3fc1d55231375f"
+        },
+        {
+            "event_codes": [
+                3
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:2e3e35640b0f45265e268204779f7314cf5acae5883ac0d028232859672a7152"
+        },
+        {
+            "event_codes": [
+                4
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:e534c6322665ea3b4e7bf7bdce64d17bea86100be0eba25ed220a5e9b355c4ef"
+        },
+        {
+            "event_codes": [
+                5
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:20b2c7aba6793929c252d4e933b8a1537f7bfe8e208ad228c50a896a18b2c4b5"
+        },
+        {
+            "event_codes": [
+                6
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:b63d06982a705d04fcfc5f401db2b2f9faa640fa973ff99adb4f62a39f23d24f"
+        },
+        {
+            "event_codes": [
+                7
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:18f6b0d52208bab5e5dd65ef6021b7e47d7a6b3d09f6668dcea18f93161e9b1d"
+        },
+        {
+            "event_codes": [
+                8
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:fd81549e77f2f3b199d4dca16131c3525428140828f0843a0fd30e7c0d2e2631"
+        },
+        {
+            "event_codes": [
+                9
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:796fc46a1898539f901c909c1ccf61c98660692fa45dabe474afaec84be6d720"
+        },
+        {
+            "event_codes": [
+                10
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:de3e6f95d17b22bcc6b8bb5389301dc9fa60a16e2c5a4d35eb4a35dd9ac571c3"
+        },
+        {
+            "event_codes": [
+                11
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:bf29aeef2be5779e9181fcd68a3f6de53db15d8cc952407030063086671f2904"
+        },
+        {
+            "event_codes": [
+                12
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:72967e62c92be6e9c6d1609eec1989be814f0daf0e9324a4d18f3d0b02a3bf94"
+        },
+        {
+            "event_codes": [
+                13
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:e9c49c28c1a0543cbd3ad4233467838c5d808285fd020ea17c8f3a9aeb6161fd"
+        },
+        {
+            "event_codes": [
+                14
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:ab7a3ec7a062f943c00f3f62eb1a0f4a2ad50356600efffab46c1969ce49f3d8"
+        },
+        {
+            "event_codes": [
+                15
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:d577f733dfbe1787d272e43f7e4423a01108a71d7e3a89b4e97081ad39372e4e"
+        },
+        {
+            "event_codes": [
+                16
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:ea59eb01e52454f12fab0b571008d2ba8518ae12508f46a3f3f0350b7bbea40f"
+        },
+        {
+            "event_codes": [
+                17
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:946b2f9dbe2ee352b033a635b1c79fc680ef62f9c1b36a39e46404f95b58e6d5"
+        },
+        {
+            "event_codes": [
+                18
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:c1a6d0aebbf7c092c53e8e696636af8ec0629ff39b7f2e548430b0034d809da4"
+        },
+        {
+            "event_codes": [
+                19
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:8285f9d54645ea6baa7fd7b7905c7ae89a9daf8d5172be43b2587b166fd021af"
+        },
+        {
+            "event_codes": [
+                20
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:f4597d9b92f6c3e4847a5bdb53ea095aee59ad07f69745ebcdb43c9f96125d73"
+        },
+        {
+            "event_codes": [
+                21
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:5bd5150caf1ff36c0c48bd26ef276c7ebe01b17b7919dba84abed3ab7d7bd48b"
+        },
+        {
+            "event_codes": [
+                22
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:426871d8856f43fc8433ad9049bf188454d038dc6295e0c59fd3401d72f25a48"
+        },
+        {
+            "event_codes": [
+                23
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:eac51c2ea624ca423dbdd1110a2aa870e4f977e59be215e7f814bbcfcfd20334"
+        },
+        {
+            "event_codes": [
+                24
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:76777fb21aa060c86680f0fbd7cbd4734ef6b239b429ac4d9cb2a9d08792033d"
+        },
+        {
+            "event_codes": [
+                25
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:1325984af473b7d90c8160b881d28d57e0c15a4805548092349cd262efab2677"
+        },
+        {
+            "event_codes": [
+                26
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:9b2aac8bc3465533c6d6e8261478b0ab5a5db2b32cabd3b894ed40f8a695ac0f"
+        },
+        {
+            "event_codes": [
+                27
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:21cfa3a89262d5a856acab7166b36af59fcdaa2227256638cf0a6202e265a199"
+        },
+        {
+            "event_codes": [
+                28
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520"
+        },
+        {
+            "event_codes": [
+                29
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:322a2d9401cfd0aafbb06cfcc27faf8bbd269f49703bfb51eb350886469e38ca"
+        },
+        {
+            "event_codes": [
+                30
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:ea5c99f9081a0ceed83cab585b74ddcad7044528411b30dcb036ca31ef341c15"
+        },
+        {
+            "event_codes": [
+                31
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:263fffc1bb36f0b3c6ef6b68aad87ee42d0ea55806966e41d4c7d24548a48979"
+        },
+        {
+            "event_codes": [
+                32
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:2cfbc0293f8f961669a69af562f130fb962cd883908614eb4cd6c1c10c6a5493"
+        },
+        {
+            "event_codes": [
+                33
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:ae22bb74ac2e0b951579a3c5c49e1c331f8717802d3241c524ed6e98a4850193"
+        },
+        {
+            "event_codes": [
+                34
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:61f12641d14270f20a42f36c86850a0faf6465ceefdd8f4bf46c82bdb51799fd"
+        },
+        {
+            "event_codes": [
+                35
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:cfdcf715cfd0c652a7a4db826a1d439437c2b060e994a1c34e0a43c08b78f62e"
+        },
+        {
+            "event_codes": [
+                36
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:253a01f8ffb9be3d543731594c39c80b3548cb953319cdbc719fb7ffc7f32ed2"
+        },
+        {
+            "event_codes": [
+                37
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:7b93ec79db4fd3bb11e1758e8a23983e91d097cb2abe5ac0f2b1268d1c59b852"
+        },
+        {
+            "event_codes": [
+                38
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:fbac25d2d4e1faed578ac7f771fa4ac41a913a47a163b2ed857e25e60ea6d1bc"
+        },
+        {
+            "event_codes": [
+                39
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:96cad5248544c61752f5edcf2088dc9a54bb92c6f0b5a19f3c7e6aadc384c01a"
+        },
+        {
+            "event_codes": [
+                40
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:d7286a2ec185872bd419e4da1648013d073c34f82ce728cc2c3581ce9e7f6371"
+        },
+        {
+            "event_codes": [
+                41
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:4c6fc32f770e890305eeea790c632ac7748bdb66b3d73ad7f24aacb03866eee7"
+        },
+        {
+            "event_codes": [
+                42
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:4747c87945b9facae43b014d5701a89d9d3026ec0cce4652a4f31b5420b28a44"
+        },
+        {
+            "event_codes": [
+                43
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:d3c7727e0a93e8fe6f01dea374455a8c3fd49776f92d97fb9474f73b67428f2f"
+        },
+        {
+            "event_codes": [
+                44
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:fa16f52f27374df7cd9e40917904b0ce0e19e9a924d75a6a539d6648c4451e03"
+        },
+        {
+            "event_codes": [
+                45
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:f48a511c73538e9255d10516b9014e0e064742e138e5461e297dfef4d752d627"
+        },
+        {
+            "event_codes": [
+                46
+            ],
+            "metric_id": 2,
+            "metric_type": "Integer",
+            "selector": "core/appmgr:root/storage_usage/inodes/\\/data\\/persistent:6d7e761c185dcac0a0696aef13429fee536eb534a2e25dd8cc423f7fa1264b1b"
+        }
+    ],
+    "poll_rate_sec": 3600,
+    "project_id": 3
+}
