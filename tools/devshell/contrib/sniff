@@ -52,7 +52,6 @@ import sys
 import termios
 import time
 
-
 LINUX_BIN_WIRESHARK = u"wireshark"
 LINUX_BIN_TSHARK = u"tshark"
 TARGET_TMP_DIR = u"/tmp/"
@@ -73,13 +72,13 @@ def has_wireshark_env():
     """
     platform = os.uname()
     print(platform)
-    if len(platform) is 0:
+    if not platform:
         return False, u"Failed to get uname"
     if platform[0].lower() != u"linux":
         return False, u"Supported only on Linux"
 
     if not has_cmd(LINUX_BIN_WIRESHARK):
-        return False, u"can\'t find %s" % (LINUX_BIN_WIRESHARK)
+        return False, u"can\'t find %s" % LINUX_BIN_WIRESHARK
 
     # All look good.
     return True, u""
@@ -106,15 +105,15 @@ def can_run_cmd(cmd):
       cmd: a command line string.
 
     Returns:
-      True if the command can run without error catched as an Exception.
+      True if the command can run without error.
       False otherwise.
     """
     try:
-        child = subprocess.check_call(cmd.split(), stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
-    except Exception:
+        subprocess.check_call(
+            cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        return True
+    except subprocess.CalledProcessError:
         return False
-    return True
 
 
 def invoke_shell(cmd):
@@ -138,11 +137,11 @@ def get_interface_names():
     result = run_cmd(u"fx shell net if list")
 
     names = []
-    for l in result.split(u"\n"):
-        if u"name" not in l:
+    for line in result.split(u"\n"):
+        if u"name" not in line:
             # Look for name field only.
             continue
-        parsed = l.split()
+        parsed = line.split()
         if len(parsed) != 2:
             continue
 
@@ -167,10 +166,10 @@ def get_interface_filepath(interface_name):
     result = run_cmd(u"fx shell net if list %s" % interface_name)
 
     filepaths = []
-    for l in result.split(u"\n"):
-        if u"filepath" not in l:
+    for line in result.split(u"\n"):
+        if u"filepath" not in line:
             continue
-        parsed = l.split()
+        parsed = line.split()
         if len(parsed) != 2:
             continue
 
@@ -211,7 +210,7 @@ def build_cmd(args):
     # This command goes through the host shell, and ssh shell.
     cmd_prefix = u"fx shell sh -c '\"netdump -t %s -f \\\"%s\\\" " % (
         args.timeout, fx_workflow_filter)
-    cmd_suffix = u" %s\"'" % (args.interface_filepath)
+    cmd_suffix = u" %s\"'" % args.interface_filepath
     cmd_options = u""
 
     # Build more options
@@ -255,14 +254,10 @@ def get_keystroke_unblocking():
     try:
         termios.tcsetattr(fd, termios.TCSANOW, attr_new)
         fcntl.fcntl(fd, fcntl.F_SETFL, flags_new)
-        key = sys.stdin.read(1)
-    except:
-        pass
+        return sys.stdin.read(1)
     finally:
         termios.tcsetattr(fd, termios.TCSAFLUSH, attr_org)
         fcntl.fcntl(fd, fcntl.F_SETFL, flags_org)
-
-    return key
 
 
 def do_sniff(cmd):
@@ -308,9 +303,10 @@ def is_target_ready():
         print("failed to run: the target device unreachable by 'fx shell'")
         return False
     if not can_run_cmd("fx shell which netdump"):
-        msg = ("failed to run: the target does not have 'netdump'. "
-               "Build with '--with-base //src/connectivity/network/netdump' "
-               "and reload the tarnet")
+        msg = (
+            "failed to run: the target does not have 'netdump'. "
+            "Build with '--with-base //src/connectivity/network/netdump' "
+            "and reload the target")
         print(msg)
         return False
     return True
@@ -344,8 +340,8 @@ def main():
         u"--file",
         type=str,
         default=u"",
-        help=
-        u"Store PCAPNG file in //out directory. May use with --view option")
+        help=u"Store PCAPNG file in //out directory. May use with --view option"
+    )
     parser.add_argument(
         u"--iface_filepath",
         dest=u"iface_filepath",
