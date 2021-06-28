@@ -1849,9 +1849,11 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
       uber_struct_system_->AllocateQueueForSession(session_id), importers);
   RegisterPresentError(child_ptr, session_id);
 
-  // Create child link.
+  // Create child link. Use another loop for GraphLink channel.
+  async::TestLoop graph_link_loop;
   fidl::InterfacePtr<GraphLink> graph_link;
-  child_ptr->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  child_ptr->LinkToParent(std::move(child_token),
+                          graph_link.NewRequest(graph_link_loop.dispatcher()));
   EXPECT_TRUE(child_loop.RunUntilIdle());
 
   // Complete linking sessions.
@@ -1861,22 +1863,19 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
   bool layout_updated = false;
   graph_link->GetLayout([&](auto) { layout_updated = true; });
 
-  // Process the request on child's loop.
-  EXPECT_TRUE(child_loop.RunUntilIdle());
-
-  // Process the response on parent's loop. Response should not run yet because it is posted on
-  // child's loop.
+  // Process the callback on parent's loop.
   EXPECT_TRUE(parent_loop.RunUntilIdle());
   EXPECT_FALSE(layout_updated);
 
-  // Run the response on child's loop.
-  EXPECT_TRUE(child_loop.RunUntilIdle());
+  // Read the response on graph link's loop.
+  EXPECT_TRUE(graph_link_loop.RunUntilIdle());
   EXPECT_TRUE(layout_updated);
 
   // Send overwriting hanging gets that will cause an error.
   layout_updated = false;
   graph_link->GetLayout([&](auto) { layout_updated = true; });
   graph_link->GetLayout([&](auto) { layout_updated = true; });
+  EXPECT_TRUE(parent_loop.RunUntilIdle());
   EXPECT_TRUE(child_loop.RunUntilIdle());
 
   // Overwriting hanging gets should cause an error on child's loop as we process the request.
@@ -1884,6 +1883,12 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
   child->Present(std::move(present_args));
   EXPECT_TRUE(child_loop.RunUntilIdle());
   EXPECT_EQ(GetPresentError(child->GetSessionId()), Error::BAD_HANGING_GET);
+
+  // Cleanup. We need to run link_invalidated tasks on these loopers to clear the topology.
+  parent.reset();
+  child.reset();
+  EXPECT_TRUE(parent_loop.RunUntilIdle());
+  EXPECT_TRUE(child_loop.RunUntilIdle());
 }
 
 // This test doesn't use the helper function to create a link, because it tests intermediate steps

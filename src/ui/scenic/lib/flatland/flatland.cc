@@ -258,10 +258,10 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
       dispatcher_holder_, std::move(token), std::move(graph_link), link_origin,
       [ref = weak_from_this(),
        dispatcher_holder = dispatcher_holder_](const std::string& error_log) {
-        FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
-            << "Link protocol error reported on the wrong dispatcher.";
-        if (auto impl = ref.lock())
-          impl->ReportLinkProtocolError(error_log);
+        auto status = async::PostTask(dispatcher_holder->dispatcher(), [ref, error_log]() mutable {
+          if (auto impl = ref.lock())
+            impl->ReportLinkProtocolError(error_log);
+        });
       });
 
   // This portion of the method is feed-forward. The parent-child relationship between
@@ -546,10 +546,11 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
       graph_handle,
       [ref = weak_from_this(),
        dispatcher_holder = dispatcher_holder_](const std::string& error_log) {
-        FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
-            << "Link protocol error reported on the wrong dispatcher.";
-        if (auto impl = ref.lock())
-          impl->ReportLinkProtocolError(error_log);
+        auto status = async::PostTask(dispatcher_holder->dispatcher(), [ref, error_log]() mutable {
+          if (auto impl = ref.lock())
+            impl->ReportLinkProtocolError(error_log);
+        });
+        FX_DCHECK(status == ZX_OK);
       });
 
   // TODO(fxbug.dev/76640): probably move this up before creating the child-link.

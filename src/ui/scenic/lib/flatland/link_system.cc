@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/lib/flatland/link_system.h"
 
+#include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <glm/gtc/matrix_access.hpp>
@@ -15,6 +16,7 @@ using fuchsia::ui::scenic::internal::GraphLink;
 using fuchsia::ui::scenic::internal::GraphLinkStatus;
 using fuchsia::ui::scenic::internal::GraphLinkToken;
 using fuchsia::ui::scenic::internal::LayoutInfo;
+using fuchsia::ui::scenic::internal::LinkProperties;
 
 namespace flatland {
 
@@ -26,6 +28,19 @@ glm::vec2 ComputeScale(const glm::mat3& matrix) {
   return {std::fabs(glm::length(x_row)), std::fabs(glm::length(y_row))};
 }
 
+// Helper method used for posting tasks on a certain dispatcher, unless the method is already called
+// on that dispatcher. Mainly used for ObjectLinker cases as there is no guarantee on which thread
+// linking is completed.
+void ExecuteOrPostTaskOnDispatcher(async_dispatcher_t* dispatcher, fit::closure handler) {
+  if (async_get_default_dispatcher() != dispatcher) {
+    auto status = async::PostTask(dispatcher, std::move(handler));
+    FX_DCHECK(status == ZX_OK);
+    return;
+  }
+  FX_DCHECK(async_get_default_dispatcher() == dispatcher);
+  handler();
+}
+
 }  // namespace
 
 LinkSystem::LinkSystem(TransformHandle::InstanceId instance_id)
@@ -33,12 +48,11 @@ LinkSystem::LinkSystem(TransformHandle::InstanceId instance_id)
 
 LinkSystem::ChildLink LinkSystem::CreateChildLink(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder, ContentLinkToken token,
-    fuchsia::ui::scenic::internal::LinkProperties initial_properties,
-    fidl::InterfaceRequest<ContentLink> content_link, TransformHandle graph_handle,
-    LinkProtocolErrorCallback error_callback) {
+    LinkProperties initial_properties, fidl::InterfaceRequest<ContentLink> content_link,
+    TransformHandle graph_handle, LinkProtocolErrorCallback error_callback) {
   FX_DCHECK(token.value.is_valid());
 
-  auto impl = std::make_shared<GraphLinkImpl>(std::move(dispatcher_holder));
+  auto impl = std::make_shared<GraphLinkImpl>(dispatcher_holder);
   const TransformHandle link_handle = link_graph_.CreateTransform();
 
   // Pass |error_callback| to the other endpoint of ObjectLinker. |error_callback| handles
@@ -51,45 +65,53 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
 
   importer.Initialize(
       /* link_resolved = */
-      [ref = shared_from_this(), impl, graph_handle, link_handle,
-       initial_properties = std::move(initial_properties)](GraphLinkRequest request) {
-        // TODO(fxbug.dev/76712): Remove this check after relinking is fixed.
-        if (request.error_callback)
-          impl->SetErrorCallback(request.error_callback);
+      [ref = shared_from_this(), dispatcher_holder, impl, graph_handle, link_handle,
+       initial_properties = std::move(initial_properties)](GraphLinkRequest request) mutable {
+        ExecuteOrPostTaskOnDispatcher(
+            dispatcher_holder->dispatcher(), [ref, impl, graph_handle, link_handle,
+                                              initial_properties = std::move(initial_properties),
+                                              request = std::move(request)]() mutable {
+              // TODO(fxbug.dev/76712): Remove this check after relinking is fixed.
+              if (request.error_callback)
+                impl->SetErrorCallback(request.error_callback);
 
-        // Immediately send out the initial properties over the channel. This callback is fired from
-        // one of the Flatland instance threads, but since we haven't stored the Link impl anywhere
-        // yet, we still have exclusive access and can safely call functions without
-        // synchronization.
-        if (initial_properties.has_logical_size()) {
-          LayoutInfo info;
-          info.set_logical_size(initial_properties.logical_size());
-          impl->UpdateLayoutInfo(std::move(info));
-        }
+              // Immediately send out the initial properties over the channel. This callback is
+              // fired from one of the Flatland instance threads, but since we haven't stored the
+              // Link impl anywhere yet, we still have exclusive access and can safely call
+              // functions without synchronization.
+              if (initial_properties.has_logical_size()) {
+                LayoutInfo info;
+                info.set_logical_size(initial_properties.logical_size());
+                impl->UpdateLayoutInfo(std::move(info));
+              }
 
-        {
-          // Mutate shared state while holding our mutex.
-          std::scoped_lock lock(ref->map_mutex_);
-          ref->graph_link_bindings_.AddBinding(impl, std::move(request.interface));
-          ref->graph_link_map_[graph_handle] =
-              GraphLinkData({.impl = impl, .child_link_origin = request.child_handle});
+              {
+                // Mutate shared state while holding our mutex.
+                std::scoped_lock lock(ref->map_mutex_);
+                ref->graph_link_bindings_.AddBinding(impl, std::move(request.interface));
+                ref->graph_link_map_[graph_handle] =
+                    GraphLinkData({.impl = impl, .child_link_origin = request.child_handle});
 
-          // The topology is constructed here, instead of in the link_resolved closure of the
-          // ParentLink object, so that its destruction (which depends on the link_handle) can occur
-          // on the same endpoint.
-          ref->link_topologies_[link_handle] = request.child_handle;
-        }
+                // The topology is constructed here, instead of in the link_resolved closure of the
+                // ParentLink object, so that its destruction (which depends on the link_handle) can
+                // occur on the same endpoint.
+                ref->link_topologies_[link_handle] = request.child_handle;
+              }
+            });
       },
       /* link_invalidated = */
-      [ref = shared_from_this(), impl = impl, graph_handle = graph_handle,
-       link_handle = link_handle](bool on_link_destruction) {
+      [ref = shared_from_this(), dispatcher_holder, impl, graph_handle,
+       link_handle](bool on_link_destruction) {
         {
-          std::scoped_lock lock(ref->map_mutex_);
-          ref->graph_link_map_.erase(graph_handle);
-          ref->graph_link_bindings_.RemoveBinding(impl);
+          ExecuteOrPostTaskOnDispatcher(dispatcher_holder->dispatcher(),
+                                        [ref, impl, graph_handle, link_handle]() {
+                                          std::scoped_lock lock(ref->map_mutex_);
+                                          ref->graph_link_map_.erase(graph_handle);
+                                          ref->graph_link_bindings_.RemoveBinding(impl);
 
-          ref->link_topologies_.erase(link_handle);
-          ref->link_graph_.ReleaseTransform(link_handle);
+                                          ref->link_topologies_.erase(link_handle);
+                                          ref->link_graph_.ReleaseTransform(link_handle);
+                                        });
         }
       });
 
@@ -106,7 +128,7 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
     LinkProtocolErrorCallback error_callback) {
   FX_DCHECK(token.value.is_valid());
 
-  auto impl = std::make_shared<ContentLinkImpl>(std::move(dispatcher_holder));
+  auto impl = std::make_shared<ContentLinkImpl>(dispatcher_holder);
 
   // Pass |error_callback| to the other endpoint of ObjectLinker. |error_callback| handles
   // errors in the caller's Flatland session, which is the child Flatland in this case. GraphLink
@@ -119,20 +141,28 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
 
   exporter.Initialize(
       /* link_resolved = */
-      [ref = shared_from_this(), impl, link_origin](ContentLinkRequest request) {
-        // TODO(fxbug.dev/76712): Remove this check after relinking is fixed.
-        if (request.error_callback)
-          impl->SetErrorCallback(request.error_callback);
+      [ref = shared_from_this(), dispatcher_holder, impl, link_origin](ContentLinkRequest request) {
+        ExecuteOrPostTaskOnDispatcher(
+            dispatcher_holder->dispatcher(),
+            [ref, impl, link_origin, request = std::move(request)]() mutable {
+              // TODO(fxbug.dev/76712): Remove this check after relinking
+              // is fixed.
+              if (request.error_callback)
+                impl->SetErrorCallback(request.error_callback);
 
-        std::scoped_lock lock(ref->map_mutex_);
-        ref->content_link_bindings_.AddBinding(impl, std::move(request.interface));
-        ref->content_link_map_[link_origin] = impl;
+              std::scoped_lock lock(ref->map_mutex_);
+              ref->content_link_bindings_.AddBinding(impl, std::move(request.interface));
+              ref->content_link_map_[link_origin] = impl;
+            });
       },
       /* link_invalidated = */
-      [ref = shared_from_this(), impl = impl, link_origin = link_origin](bool on_link_destruction) {
-        std::scoped_lock lock(ref->map_mutex_);
-        ref->content_link_map_.erase(link_origin);
-        ref->content_link_bindings_.RemoveBinding(impl);
+      [ref = shared_from_this(), dispatcher_holder, impl, link_origin](bool on_link_destruction) {
+        ExecuteOrPostTaskOnDispatcher(dispatcher_holder->dispatcher(),
+                                      [ref, impl, link_origin]() mutable {
+                                        std::scoped_lock lock(ref->map_mutex_);
+                                        ref->content_link_map_.erase(link_origin);
+                                        ref->content_link_bindings_.RemoveBinding(impl);
+                                      });
       });
 
   return ParentLink({
