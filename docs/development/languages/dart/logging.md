@@ -49,33 +49,6 @@ following in your component manifest:
    }
    ```
 
-Note: The above is only available for in-tree development.
-This is tracked in [fxbug.dev/64207](http://fxbug.dev/64207).
-Out of tree developers should copy the snippets shown below instead.
-
-   * {.cmx}
-
-   ```json
-   {
-     "sandbox": {
-       "services": [
-         "fuchsia.logger.LogSink"
-       ]
-     },
-     ...
-   }
-   ```
-
-   * {.cml}
-
-   ```json5
-   {
-     use: [
-       { protocol: "fuchsia.logger.LogSink" },
-     ],
-   }
-   ```
-
 The syslog library will fallback to `stderr` if the `LogSink` connection fails.
 
 ## Initialization
