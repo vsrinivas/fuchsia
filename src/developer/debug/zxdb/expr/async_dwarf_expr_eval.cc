@@ -65,7 +65,7 @@ void AsyncDwarfExprEval::OnEvalComplete(const Err& err, const fxl::RefPtr<EvalCo
     // later when it's interpreted.
     //
     // TODO(bug 39630) we have no source locations for this case.
-    callback_(ExprValue(type_, dwarf_eval_.result_data(),
+    callback_(ExprValue(type_, dwarf_eval_.TakeResultData(),
                         ExprValueSource(ExprValueSource::Type::kComposite)));
   } else {
     // The DWARF result is a pointer to the value.

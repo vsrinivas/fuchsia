@@ -38,6 +38,8 @@ static_library("common") {
     "ref_ptr_to.h",
     "scoped_temp_file.h",
     "string_util.h",
+    "tagged_data.h",
+    "tagged_data_builder.h",
   ]
 
   sources = [
@@ -50,6 +52,8 @@ static_library("common") {
     "inet_util.cc",
     "scoped_temp_file.cc",
     "string_util.cc",
+    "tagged_data.cc",
+    "tagged_data_builder.cc",
   ]
 
   public_deps = [
@@ -83,6 +87,7 @@ source_set("tests") {
     "file_util_unittest.cc",
     "inet_util_unittest.cc",
     "string_util_unittest.cc",
+    "tagged_data_unittest.cc",
   ]
 
   deps = [

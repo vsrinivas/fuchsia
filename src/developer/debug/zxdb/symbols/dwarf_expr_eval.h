@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/common/data_extractor.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
+#include "src/developer/debug/zxdb/common/tagged_data_builder.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
@@ -107,8 +108,8 @@ class DwarfExprEval {
   // Most results will be smaller than this in which case they will use only the low bits.
   StackEntry GetResult() const;
 
-  // Valid when is_success() and type() == kData.
-  const std::vector<uint8_t>& result_data() const { return result_data_; }
+  // Destructively returns the generated data buffer. Valid when is_success() and type() == kData.
+  TaggedData TakeResultData();
 
   // When the result is computed, this will indicate if the result is directly from a register,
   // and if it is, which one. If the current result was the result of some computation and has no
@@ -301,7 +302,7 @@ class DwarfExprEval {
   //
   // TODO(bug 39630) we will need to track source information (memory address or register ID) for
   // each subrange in this block to support writing to the generated object.
-  std::vector<uint8_t> result_data_;
+  TaggedDataBuilder result_data_;
 
   // Set when a register value is pushed on the stack and cleared when anything else happens. This
   // allows the user of the expression to determine if the result of the expression is directly from

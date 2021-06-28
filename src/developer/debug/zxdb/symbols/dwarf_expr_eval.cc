@@ -71,6 +71,12 @@ DwarfExprEval::StackEntry DwarfExprEval::GetResult() const {
   return stack_.back();
 }
 
+TaggedData DwarfExprEval::TakeResultData() {
+  FX_DCHECK(is_complete_);
+  FX_DCHECK(GetResultType() == ResultType::kData);
+  return result_data_.TakeData();
+}
+
 DwarfExprEval::Completion DwarfExprEval::Eval(fxl::RefPtr<SymbolDataProvider> data_provider,
                                               const SymbolContext& symbol_context, DwarfExpr expr,
                                               CompletionCallback cb) {
@@ -84,7 +90,7 @@ std::string DwarfExprEval::ToString(fxl::RefPtr<SymbolDataProvider> data_provide
                                     const SymbolContext& symbol_context, DwarfExpr expr,
                                     bool pretty) {
   SetUp(std::move(data_provider), symbol_context, expr, nullptr);
-  result_data_.clear();
+  result_data_ = TaggedDataBuilder();
 
   string_output_mode_ = pretty ? StringOutput::kPretty : StringOutput::kLiteral;
   string_output_.clear();
@@ -1048,8 +1054,7 @@ DwarfExprEval::Completion DwarfExprEval::OpPiece() {
   if (stack_.empty()) {
     // Defining a piece with no previous data on the stack means to write that many bytes that
     // have no known value.
-    // TODO(fxbug.dev/79547) mark the undefined bytes rather than use 0's.
-    result_data_.resize(result_data_.size() + byte_size);
+    result_data_.AppendUnknown(byte_size);
     return Completion::kSync;
   }
 
@@ -1067,8 +1072,7 @@ DwarfExprEval::Completion DwarfExprEval::OpPiece() {
     // We want the low bytes, this assumes little-endian.
     uint8_t source_as_bytes[sizeof(StackEntry)];
     memcpy(&source_as_bytes, &source, sizeof(StackEntry));
-    result_data_.insert(result_data_.end(), std::begin(source_as_bytes),
-                        &source_as_bytes[byte_size]);
+    result_data_.Append(std::begin(source_as_bytes), &source_as_bytes[byte_size]);
 
     // Reset the expression state to start a new one.
     result_type_ = ResultType::kPointer;
@@ -1079,7 +1083,7 @@ DwarfExprEval::Completion DwarfExprEval::OpPiece() {
   // We read that many bytes from memory and add it to the result data.
   ReadMemory(source, byte_size, [](DwarfExprEval* eval, std::vector<uint8_t> data) {
     // Success. Copy to the result.
-    eval->result_data_.insert(eval->result_data_.end(), data.begin(), data.end());
+    eval->result_data_.Append(data);
 
     // Reset the expression state to start a new one.
     eval->result_type_ = ResultType::kPointer;

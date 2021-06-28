@@ -12,6 +12,7 @@
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err_or.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
+#include "src/developer/debug/zxdb/common/tagged_data.h"
 #include "src/developer/debug/zxdb/expr/expr_value_source.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -60,6 +61,8 @@ class ExprValue {
   // version when possible unless you're sure the type is not a declaration.
   ExprValue(fxl::RefPtr<Type> symbol_type, std::vector<uint8_t> data,
             const ExprValueSource& source = ExprValueSource());
+  ExprValue(fxl::RefPtr<Type> symbol_type, TaggedData data,
+            const ExprValueSource& source = ExprValueSource());
 
   ~ExprValue();
 
@@ -74,13 +77,17 @@ class ExprValue {
   // Indicates the location where this value came from.
   const ExprValueSource& source() const { return source_; }
 
-  const std::vector<uint8_t>& data() const { return data_; }
+  const TaggedData& tagged_data() const { return tagged_data_; }
+  const std::vector<uint8_t>& data() const { return tagged_data_.bytes(); }
 
   // Determines which base type the Value's Type is.
   //
   // TODO(brettw) this should be removed, it does not support forward definitions. Callers should
   // interrogate GetConcreteType() instead.
   int GetBaseType() const;
+
+  // Returns an "optimized out" error if not all bytes of the tagged buffer are marked valid.
+  Err EnsureAllValid() const;
 
   // Returns an error if the size of the data doesn't match the parameter.
   Err EnsureSizeIs(size_t size) const;
@@ -113,7 +120,11 @@ class ExprValue {
 
   ExprValueSource source_;
 
-  std::vector<uint8_t> data_;
+  // The raw bytes of the value. This is a tagged data buffer to allow us to express that certain
+  // bytes may be valid while others might be unknown. This can happen for optimized code where,
+  // for example, some portions of a struct are kept in registers so can be known, but other
+  // portions of the struct are optimized out.
+  TaggedData tagged_data_;
 };
 
 template <>

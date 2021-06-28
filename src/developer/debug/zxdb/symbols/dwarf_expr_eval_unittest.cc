@@ -888,8 +888,7 @@ TEST_F(DwarfExprEvalTest, Piece_Value) {
              "DW_OP_reg4, DW_OP_piece(4)");
 
   // Result should be {x = 2, y = 17}.
-  std::vector<uint8_t> expected{0x02, 0, 0, 0, 0x11, 0, 0, 0};
-  EXPECT_EQ(expected, eval().result_data());
+  EXPECT_EQ("02 00 00 00 11 00 00 00\n", eval().TakeResultData().ToString());
 }
 
 TEST_F(DwarfExprEvalTest, Piece_ValueUnknown) {
@@ -921,11 +920,10 @@ TEST_F(DwarfExprEvalTest, Piece_ValueUnknown) {
              DwarfExprEval::ResultType::kData,
              "DW_OP_piece(16), DW_OP_const1u(32), DW_OP_stack_value, DW_OP_piece(8)");
 
-  // TODO(fxbug.dev/79547) mark the undefined bytes so we don't try to use them.
-  std::vector<uint8_t> mostly_undefined_expected_data{
-      0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // 16 bytes undefined.
-      0x20, 0, 0, 0, 0, 0, 0, 0};                         // uint64_t = 32.
-  EXPECT_EQ(mostly_undefined_expected_data, eval().result_data());
+  EXPECT_EQ(
+      "?? ?? ?? ?? ?? ?? ?? ??   ?? ?? ?? ?? ?? ?? ?? ??\n"  // 16 bytes undefined.
+      "20 00 00 00 00 00 00 00\n",                           // uint64_t = 32.
+      eval().TakeResultData().ToString());
 
   // This program defines a different implementation of the same struct where the float is defined.
   // clang-format off
@@ -946,14 +944,15 @@ TEST_F(DwarfExprEvalTest, Piece_ValueUnknown) {
              DwarfExprEval::ResultType::kData,
              "DW_OP_implicit_value(4, 0x429c0000), DW_OP_piece(4), DW_OP_reg3, DW_OP_piece(1), "
              "DW_OP_piece(11), DW_OP_const1u(32), DW_OP_stack_value, DW_OP_piece(8)");
+  EXPECT_EQ(
+      //           Low byte of rbx
+      //           |
+      // Float---- |  Pad-----   Double-----------------
+      "00 00 9c 42 11 ?? ?? ??   ?? ?? ?? ?? ?? ?? ?? ??\n"
 
-  // TODO(fxbug.dev/79547) mark the undefined bytes so we don't try to use them.
-  std::vector<uint8_t> partially_defined_expected_data{
-      0,    0, 0x9c, 0x42,               // Float.
-      0x11, 0, 0,    0,                  // Low byte of rbx with 3 bytes padding undefined.
-      0,    0, 0,    0,    0, 0, 0, 0,   // 8 bytes undefined "double d".
-      0x20, 0, 0,    0,    0, 0, 0, 0};  // uint64_t = 32.
-  EXPECT_EQ(partially_defined_expected_data, eval().result_data());
+      // uint64---------------
+      "20 00 00 00 00 00 00 00\n",
+      eval().TakeResultData().ToString());
 
   // This program doesn't yet work since we don't support *_entry_value.
   // TODO(fxbug.dev/6322) enable this test when *_entry_value is supported since this expression
@@ -1002,8 +1001,7 @@ TEST_F(DwarfExprEvalTest, Piece_Memory) {
              "DW_OP_breg4(0), DW_OP_piece(4)");
 
   // Result should be {x = 2, y = 17}.
-  std::vector<uint8_t> expected{0x02, 0, 0, 0, 0x11, 0, 0, 0};
-  EXPECT_EQ(expected, eval().result_data());
+  EXPECT_EQ("02 00 00 00 11 00 00 00\n", eval().TakeResultData().ToString());
 }
 
 TEST_F(DwarfExprEvalTest, GetTLSAddr) {
