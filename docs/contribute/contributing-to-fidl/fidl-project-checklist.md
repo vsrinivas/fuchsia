@@ -19,6 +19,8 @@ semantics changes.
   * When appropriate, update the [lexicon].
 * Update associated tools.
   * The FIDL formatter/linter and their associated TreeVisitors.
+  * The [fidldoc] tool, for language changes that should be reflected in the
+    generated documentation, e.g. a new data type or modifier.
   * [Editors] and syntax highlighting.
 * Update FIDL files. For syntax changes, update existing FIDL source including:
   * Actual FIDL source files in tree (and out of tree, if required).
