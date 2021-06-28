@@ -31,7 +31,7 @@ without it.
 ```
 {
     include: [
-        "src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
     ],
     ...
 }
