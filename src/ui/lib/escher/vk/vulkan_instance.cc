@@ -84,7 +84,13 @@ vk::Result VulkanInstance::Initialize() {
   info.ppEnabledLayerNames = layer_names.data();
   info.enabledExtensionCount = static_cast<uint32_t>(extension_names.size());
   info.ppEnabledExtensionNames = extension_names.data();
-  if (HasDebugReportExt()) {
+  bool supports_initial_debug_report = true;
+#if defined(__x86_64__)
+  // Chaining VkDebugReportCallbackCreateInfoEXT onto VkInstanceCreateInfo can crash AEMU.
+  // TODO(fxbug.dev/78625): Fix.
+  supports_initial_debug_report = false;
+#endif
+  if (HasDebugReportExt() && supports_initial_debug_report) {
     info.setPNext(&create_info);
   }
 
