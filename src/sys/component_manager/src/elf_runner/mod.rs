@@ -1381,7 +1381,7 @@ mod tests {
 
         fcrunner::ComponentStartInfo {
             resolved_url: Some(
-                "fuchsia-pkg://fuchsia.com/hello-world-rust#meta/hello-world-rust.cm".to_string(),
+                "fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm".to_string(),
             ),
             program: Some(fdata::Dictionary {
                 entries: Some(vec![

@@ -5,10 +5,6 @@
 import("//build/components.gni")
 import("//build/test.gni")
 
-group("cpp") {
-  deps = [ ":hello-world-cpp" ]
-}
-
 group("tests") {
   testonly = true
 
@@ -21,14 +17,10 @@ executable("bin") {
   sources = [ "hello_world.cc" ]
 }
 
-fuchsia_component("component") {
+fuchsia_component("hello-world-cpp-component") {
   component_name = "hello-world-cpp"
-  manifest = "meta/hello_world_cpp.cmx"
+  manifest = "meta/hello_world_cpp.cml"
   deps = [ ":bin" ]
-}
-
-fuchsia_package("hello-world-cpp") {
-  deps = [ ":component" ]
 }
 
 executable("unittests") {
@@ -39,6 +31,5 @@ executable("unittests") {
 }
 
 fuchsia_unittest_package("hello-world-cpp-unittests") {
-  manifest = "meta/hello_world_cpp_unittests.cmx"
   deps = [ ":unittests" ]
 }

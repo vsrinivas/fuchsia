@@ -379,7 +379,7 @@ fuchsia_test_package("component-manager-tests") {
     "src/elf_runner/tests/lifecycle:run-indefinitely",
     "//examples/components/basic:hello-world",
     "//examples/components/basic:lifecycle-full",
-    "//examples/hello_world/rust:hello-world-rust-component-v2",
+    "//examples/hello_world/rust:hello-world-rust-component",
     "//garnet/examples/fidl/echo_server_rust:echo-server-rust-cmp",
   ]
 }

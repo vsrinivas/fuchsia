@@ -2,21 +2,34 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+
 group("hello_world") {
   testonly = true
   deps = [
+    ":hello-world",
     ":tests",
-    "cpp",
-    "dart",
-    "rust",
   ]
 }
 
 group("tests") {
   testonly = true
-  data_deps = [
+  deps = [
     "cpp:tests",
     "dart:tests",
     "rust:tests",
+  ]
+}
+
+fuchsia_package("hello-world") {
+  deps = [
+    # component-url: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-cpp.cm
+    "cpp:hello-world-cpp-component",
+
+    # component-url: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-dart.cmx
+    "dart:hello-world-dart-component",
+
+    # component-url: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
+    "rust:hello-world-rust-component",
   ]
 }

@@ -1,0 +1,9 @@
+{
+    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/hello_world_cpp",
+        forward_stderr_to: "log",
+        forward_stdout_to: "log",
+    },
+}
