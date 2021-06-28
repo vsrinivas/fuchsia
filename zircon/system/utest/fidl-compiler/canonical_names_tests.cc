@@ -585,8 +585,6 @@ protocol Example {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
 }
 
-// TODO(fxbug.dev/71536): Convert test after implementing client/server end in
-//  the new syntax
 TEST(CanonicalNamesTests, BadServiceMembers) {
   TestLibrary library(R"FIDL(
 library example;

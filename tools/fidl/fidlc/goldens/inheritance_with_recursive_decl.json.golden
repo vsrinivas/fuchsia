@@ -47,7 +47,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -112,7 +112,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -155,7 +155,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix1",
+          "maybe_request_payload": "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -174,7 +174,11 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
+      "maybe_naming_context": [
+        "Parent",
+        "First"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
         "line": 5,
@@ -214,7 +218,11 @@
       }
     },
     {
-      "name": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest",
+      "maybe_naming_context": [
+        "Child",
+        "Second"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
         "line": 10,
@@ -254,7 +262,11 @@
       }
     },
     {
-      "name": "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
+      "maybe_naming_context": [
+        "Parent",
+        "First"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
         "line": 5,
@@ -304,7 +316,7 @@
   "declarations": {
     "fidl.test.inheritancewithrecursivedecl/Parent": "interface",
     "fidl.test.inheritancewithrecursivedecl/Child": "interface",
-    "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix0": "struct",
-    "fidl.test.inheritancewithrecursivedecl/SomeLongAnonymousPrefix1": "struct"
+    "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest": "struct",
+    "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest": "struct"
   }
 }

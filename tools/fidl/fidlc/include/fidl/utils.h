@@ -195,6 +195,8 @@ std::string to_upper_camel_case(const std::string& str);
 // because canonicalize returns "foo_bar" for both.
 std::string canonicalize(std::string_view identifier);
 
+std::string StringJoin(const std::vector<std::string_view>& strings, std::string_view separator);
+
 // Used by fidl-lint FormatFindings, and for testing,
 // this generates the linter error message string in the format
 // required for the fidl::Reporter.

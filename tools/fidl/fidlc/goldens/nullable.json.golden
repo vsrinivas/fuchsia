@@ -144,7 +144,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.nullable/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.nullable/SimpleProtocolAddRequest",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -174,7 +174,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.nullable/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "fidl.test.nullable/SimpleProtocolAddTopResponse",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -192,7 +192,11 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.nullable/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.nullable/SimpleProtocolAddRequest",
+      "maybe_naming_context": [
+        "SimpleProtocol",
+        "Add"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 19,
@@ -248,7 +252,11 @@
       }
     },
     {
-      "name": "fidl.test.nullable/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.nullable/SimpleProtocolAddTopResponse",
+      "maybe_naming_context": [
+        "SimpleProtocol",
+        "Add"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 19,
@@ -674,14 +682,14 @@
     "fidl.test.nullable/StructWithNullableRequest",
     "fidl.test.nullable/StructWithNullableProtocol",
     "fidl.test.nullable/StructWithNullableHandle",
-    "fidl.test.nullable/SimpleProtocol",
     "fidl.test.nullable/SimpleUnion",
+    "fidl.test.nullable/SimpleProtocol",
     "fidl.test.nullable/Int32Wrapper"
   ],
   "declarations": {
     "fidl.test.nullable/SimpleProtocol": "interface",
-    "fidl.test.nullable/SomeLongAnonymousPrefix0": "struct",
-    "fidl.test.nullable/SomeLongAnonymousPrefix1": "struct",
+    "fidl.test.nullable/SimpleProtocolAddRequest": "struct",
+    "fidl.test.nullable/SimpleProtocolAddTopResponse": "struct",
     "fidl.test.nullable/StructWithNullableString": "struct",
     "fidl.test.nullable/StructWithNullableVector": "struct",
     "fidl.test.nullable/StructWithNullableHandle": "struct",

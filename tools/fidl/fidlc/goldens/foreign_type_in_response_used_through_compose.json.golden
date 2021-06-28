@@ -17,7 +17,7 @@
         "middle/Middle": {
           "kind": "interface"
         },
-        "middle/SomeLongAnonymousPrefix0": {
+        "middle/MiddleGetFooTopResponse": {
           "kind": "struct",
           "resource": false
         }
@@ -90,7 +90,7 @@
               }
             }
           ],
-          "maybe_response_payload": "middle/SomeLongAnonymousPrefix0",
+          "maybe_response_payload": "middle/MiddleGetFooTopResponse",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -108,7 +108,11 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "middle/SomeLongAnonymousPrefix0",
+      "name": "middle/MiddleGetFooTopResponse",
+      "maybe_naming_context": [
+        "Middle",
+        "GetFoo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
         "line": 7,

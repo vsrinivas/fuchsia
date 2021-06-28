@@ -38,6 +38,64 @@
 //
 // :: Proxies ::
 //
+// ddk::SynchronousHandleProtocolClient is a simple wrapper around
+// synchronous_handle_protocol_t. It does not own the pointers passed to it.
+//
+// :: Mixins ::
+//
+// ddk::SynchronousHandleProtocol is a mixin class that simplifies writing DDK drivers
+// that implement the synchronous-handle protocol. It doesn't set the base protocol.
+//
+// :: Examples ::
+//
+// // A driver that implements a ZX_PROTOCOL_SYNCHRONOUS_HANDLE device.
+// class SynchronousHandleDevice;
+// using SynchronousHandleDeviceType = ddk::Device<SynchronousHandleDevice, /* ddk mixins */>;
+//
+// class SynchronousHandleDevice : public SynchronousHandleDeviceType,
+//                      public ddk::SynchronousHandleProtocol<SynchronousHandleDevice> {
+//   public:
+//     SynchronousHandleDevice(zx_device_t* parent)
+//         : SynchronousHandleDeviceType(parent) {}
+//
+//     void SynchronousHandleHandle(zx::handle h, zx::handle* out_h, zx::handle* out_h2);
+//
+//     void SynchronousHandleProcess(zx::process h, zx::process* out_h, zx::process* out_h2);
+//
+//     void SynchronousHandleThread(zx::thread h, zx::thread* out_h, zx::thread* out_h2);
+//
+//     void SynchronousHandleVmo(zx::vmo h, zx::vmo* out_h, zx::vmo* out_h2);
+//
+//     void SynchronousHandleChannel(zx::channel h, zx::channel* out_h, zx::channel* out_h2);
+//
+//     void SynchronousHandleEvent(zx::event h, zx::event* out_h, zx::event* out_h2);
+//
+//     void SynchronousHandlePort(zx::port h, zx::port* out_h, zx::port* out_h2);
+//
+//     void SynchronousHandleInterrupt(zx::interrupt h, zx::interrupt* out_h, zx::interrupt* out_h2);
+//
+//     void SynchronousHandleSocket(zx::socket h, zx::socket* out_h, zx::socket* out_h2);
+//
+//     void SynchronousHandleResource(zx::resource h, zx::resource* out_h, zx::resource* out_h2);
+//
+//     void SynchronousHandleEventPair(zx::eventpair h, zx::eventpair* out_h, zx::eventpair* out_h2);
+//
+//     void SynchronousHandleJob(zx::job h, zx::job* out_h, zx::job* out_h2);
+//
+//     void SynchronousHandleVmar(zx::vmar h, zx::vmar* out_h, zx::vmar* out_h2);
+//
+//     void SynchronousHandleFifo(zx::fifo h, zx::fifo* out_h, zx::fifo* out_h2);
+//
+//     void SynchronousHandleGuest(zx::guest h, zx::guest* out_h, zx::guest* out_h2);
+//
+//     void SynchronousHandleTimer(zx::timer h, zx::timer* out_h, zx::timer* out_h2);
+//
+//     void SynchronousHandleProfile(zx::profile h, zx::profile* out_h, zx::profile* out_h2);
+//
+//     ...
+// };
+// :: Proxies ::
+//
 // ddk::AsyncHandleProtocolClient is a simple wrapper around
 // async_handle_protocol_t. It does not own the pointers passed to it.
 //
@@ -120,66 +178,309 @@
 //
 //     ...
 // };
-// :: Proxies ::
-//
-// ddk::SynchronousHandleProtocolClient is a simple wrapper around
-// synchronous_handle_protocol_t. It does not own the pointers passed to it.
-//
-// :: Mixins ::
-//
-// ddk::SynchronousHandleProtocol is a mixin class that simplifies writing DDK drivers
-// that implement the synchronous-handle protocol. It doesn't set the base protocol.
-//
-// :: Examples ::
-//
-// // A driver that implements a ZX_PROTOCOL_SYNCHRONOUS_HANDLE device.
-// class SynchronousHandleDevice;
-// using SynchronousHandleDeviceType = ddk::Device<SynchronousHandleDevice, /* ddk mixins */>;
-//
-// class SynchronousHandleDevice : public SynchronousHandleDeviceType,
-//                      public ddk::SynchronousHandleProtocol<SynchronousHandleDevice> {
-//   public:
-//     SynchronousHandleDevice(zx_device_t* parent)
-//         : SynchronousHandleDeviceType(parent) {}
-//
-//     void SynchronousHandleHandle(zx::handle h, zx::handle* out_h, zx::handle* out_h2);
-//
-//     void SynchronousHandleProcess(zx::process h, zx::process* out_h, zx::process* out_h2);
-//
-//     void SynchronousHandleThread(zx::thread h, zx::thread* out_h, zx::thread* out_h2);
-//
-//     void SynchronousHandleVmo(zx::vmo h, zx::vmo* out_h, zx::vmo* out_h2);
-//
-//     void SynchronousHandleChannel(zx::channel h, zx::channel* out_h, zx::channel* out_h2);
-//
-//     void SynchronousHandleEvent(zx::event h, zx::event* out_h, zx::event* out_h2);
-//
-//     void SynchronousHandlePort(zx::port h, zx::port* out_h, zx::port* out_h2);
-//
-//     void SynchronousHandleInterrupt(zx::interrupt h, zx::interrupt* out_h, zx::interrupt* out_h2);
-//
-//     void SynchronousHandleSocket(zx::socket h, zx::socket* out_h, zx::socket* out_h2);
-//
-//     void SynchronousHandleResource(zx::resource h, zx::resource* out_h, zx::resource* out_h2);
-//
-//     void SynchronousHandleEventPair(zx::eventpair h, zx::eventpair* out_h, zx::eventpair* out_h2);
-//
-//     void SynchronousHandleJob(zx::job h, zx::job* out_h, zx::job* out_h2);
-//
-//     void SynchronousHandleVmar(zx::vmar h, zx::vmar* out_h, zx::vmar* out_h2);
-//
-//     void SynchronousHandleFifo(zx::fifo h, zx::fifo* out_h, zx::fifo* out_h2);
-//
-//     void SynchronousHandleGuest(zx::guest h, zx::guest* out_h, zx::guest* out_h2);
-//
-//     void SynchronousHandleTimer(zx::timer h, zx::timer* out_h, zx::timer* out_h2);
-//
-//     void SynchronousHandleProfile(zx::profile h, zx::profile* out_h, zx::profile* out_h2);
-//
-//     ...
-// };
 
 namespace ddk {
+
+template <typename D, typename Base = internal::base_mixin>
+class SynchronousHandleProtocol : public Base {
+public:
+    SynchronousHandleProtocol() {
+        internal::CheckSynchronousHandleProtocolSubclass<D>();
+        synchronous_handle_protocol_ops_.handle = SynchronousHandleHandle;
+        synchronous_handle_protocol_ops_.process = SynchronousHandleProcess;
+        synchronous_handle_protocol_ops_.thread = SynchronousHandleThread;
+        synchronous_handle_protocol_ops_.vmo = SynchronousHandleVmo;
+        synchronous_handle_protocol_ops_.channel = SynchronousHandleChannel;
+        synchronous_handle_protocol_ops_.event = SynchronousHandleEvent;
+        synchronous_handle_protocol_ops_.port = SynchronousHandlePort;
+        synchronous_handle_protocol_ops_.interrupt = SynchronousHandleInterrupt;
+        synchronous_handle_protocol_ops_.socket = SynchronousHandleSocket;
+        synchronous_handle_protocol_ops_.resource = SynchronousHandleResource;
+        synchronous_handle_protocol_ops_.event_pair = SynchronousHandleEventPair;
+        synchronous_handle_protocol_ops_.job = SynchronousHandleJob;
+        synchronous_handle_protocol_ops_.vmar = SynchronousHandleVmar;
+        synchronous_handle_protocol_ops_.fifo = SynchronousHandleFifo;
+        synchronous_handle_protocol_ops_.guest = SynchronousHandleGuest;
+        synchronous_handle_protocol_ops_.timer = SynchronousHandleTimer;
+        synchronous_handle_protocol_ops_.profile = SynchronousHandleProfile;
+
+        if constexpr (internal::is_base_proto<Base>::value) {
+            auto dev = static_cast<D*>(this);
+            // Can only inherit from one base_protocol implementation.
+            ZX_ASSERT(dev->ddk_proto_id_ == 0);
+            dev->ddk_proto_id_ = ZX_PROTOCOL_SYNCHRONOUS_HANDLE;
+            dev->ddk_proto_ops_ = &synchronous_handle_protocol_ops_;
+        }
+    }
+
+protected:
+    synchronous_handle_protocol_ops_t synchronous_handle_protocol_ops_ = {};
+
+private:
+    static void SynchronousHandleHandle(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::handle out_h2;
+        zx::handle out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleHandle(zx::handle(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleProcess(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::process out_h2;
+        zx::process out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleProcess(zx::process(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleThread(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::thread out_h2;
+        zx::thread out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleThread(zx::thread(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleVmo(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::vmo out_h2;
+        zx::vmo out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleVmo(zx::vmo(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleChannel(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::channel out_h2;
+        zx::channel out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleChannel(zx::channel(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleEvent(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::event out_h2;
+        zx::event out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleEvent(zx::event(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandlePort(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::port out_h2;
+        zx::port out_h22;
+        static_cast<D*>(ctx)->SynchronousHandlePort(zx::port(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleInterrupt(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::interrupt out_h2;
+        zx::interrupt out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleInterrupt(zx::interrupt(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleSocket(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::socket out_h2;
+        zx::socket out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleSocket(zx::socket(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleResource(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::resource out_h2;
+        zx::resource out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleResource(zx::resource(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleEventPair(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::eventpair out_h2;
+        zx::eventpair out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleEventPair(zx::eventpair(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleJob(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::job out_h2;
+        zx::job out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleJob(zx::job(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleVmar(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::vmar out_h2;
+        zx::vmar out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleVmar(zx::vmar(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleFifo(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::fifo out_h2;
+        zx::fifo out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleFifo(zx::fifo(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleGuest(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::guest out_h2;
+        zx::guest out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleGuest(zx::guest(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleTimer(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::timer out_h2;
+        zx::timer out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleTimer(zx::timer(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+    static void SynchronousHandleProfile(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
+        zx::profile out_h2;
+        zx::profile out_h22;
+        static_cast<D*>(ctx)->SynchronousHandleProfile(zx::profile(h), &out_h2, &out_h22);
+        *out_h = out_h2.release();
+        *out_h2 = out_h22.release();
+    }
+};
+
+class SynchronousHandleProtocolClient {
+public:
+    SynchronousHandleProtocolClient()
+        : ops_(nullptr), ctx_(nullptr) {}
+    SynchronousHandleProtocolClient(const synchronous_handle_protocol_t* proto)
+        : ops_(proto->ops), ctx_(proto->ctx) {}
+
+    SynchronousHandleProtocolClient(zx_device_t* parent) {
+        synchronous_handle_protocol_t proto;
+        if (device_get_protocol(parent, ZX_PROTOCOL_SYNCHRONOUS_HANDLE, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    SynchronousHandleProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        synchronous_handle_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_SYNCHRONOUS_HANDLE, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a SynchronousHandleProtocolClient from the given parent device + "fragment".
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        SynchronousHandleProtocolClient* result) {
+        synchronous_handle_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_SYNCHRONOUS_HANDLE, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = SynchronousHandleProtocolClient(&proto);
+        return ZX_OK;
+    }
+
+    // Create a SynchronousHandleProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        SynchronousHandleProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
+    }
+
+    void GetProto(synchronous_handle_protocol_t* proto) const {
+        proto->ctx = ctx_;
+        proto->ops = ops_;
+    }
+    bool is_valid() const {
+        return ops_ != nullptr;
+    }
+    void clear() {
+        ctx_ = nullptr;
+        ops_ = nullptr;
+    }
+
+    void Handle(zx::handle h, zx::handle* out_h, zx::handle* out_h2) const {
+        ops_->handle(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Process(zx::process h, zx::process* out_h, zx::process* out_h2) const {
+        ops_->process(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Thread(zx::thread h, zx::thread* out_h, zx::thread* out_h2) const {
+        ops_->thread(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Vmo(zx::vmo h, zx::vmo* out_h, zx::vmo* out_h2) const {
+        ops_->vmo(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Channel(zx::channel h, zx::channel* out_h, zx::channel* out_h2) const {
+        ops_->channel(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Event(zx::event h, zx::event* out_h, zx::event* out_h2) const {
+        ops_->event(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Port(zx::port h, zx::port* out_h, zx::port* out_h2) const {
+        ops_->port(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Interrupt(zx::interrupt h, zx::interrupt* out_h, zx::interrupt* out_h2) const {
+        ops_->interrupt(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Socket(zx::socket h, zx::socket* out_h, zx::socket* out_h2) const {
+        ops_->socket(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Resource(zx::resource h, zx::resource* out_h, zx::resource* out_h2) const {
+        ops_->resource(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void EventPair(zx::eventpair h, zx::eventpair* out_h, zx::eventpair* out_h2) const {
+        ops_->event_pair(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Job(zx::job h, zx::job* out_h, zx::job* out_h2) const {
+        ops_->job(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Vmar(zx::vmar h, zx::vmar* out_h, zx::vmar* out_h2) const {
+        ops_->vmar(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Fifo(zx::fifo h, zx::fifo* out_h, zx::fifo* out_h2) const {
+        ops_->fifo(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Guest(zx::guest h, zx::guest* out_h, zx::guest* out_h2) const {
+        ops_->guest(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Timer(zx::timer h, zx::timer* out_h, zx::timer* out_h2) const {
+        ops_->timer(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+    void Profile(zx::profile h, zx::profile* out_h, zx::profile* out_h2) const {
+        ops_->profile(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
+    }
+
+private:
+    synchronous_handle_protocol_ops_t* ops_;
+    void* ctx_;
+};
 
 template <typename D, typename Base = internal::base_mixin>
 class AsyncHandleProtocol : public Base {
@@ -520,307 +821,6 @@ public:
 
 private:
     another_synchronous_handle_protocol_ops_t* ops_;
-    void* ctx_;
-};
-
-template <typename D, typename Base = internal::base_mixin>
-class SynchronousHandleProtocol : public Base {
-public:
-    SynchronousHandleProtocol() {
-        internal::CheckSynchronousHandleProtocolSubclass<D>();
-        synchronous_handle_protocol_ops_.handle = SynchronousHandleHandle;
-        synchronous_handle_protocol_ops_.process = SynchronousHandleProcess;
-        synchronous_handle_protocol_ops_.thread = SynchronousHandleThread;
-        synchronous_handle_protocol_ops_.vmo = SynchronousHandleVmo;
-        synchronous_handle_protocol_ops_.channel = SynchronousHandleChannel;
-        synchronous_handle_protocol_ops_.event = SynchronousHandleEvent;
-        synchronous_handle_protocol_ops_.port = SynchronousHandlePort;
-        synchronous_handle_protocol_ops_.interrupt = SynchronousHandleInterrupt;
-        synchronous_handle_protocol_ops_.socket = SynchronousHandleSocket;
-        synchronous_handle_protocol_ops_.resource = SynchronousHandleResource;
-        synchronous_handle_protocol_ops_.event_pair = SynchronousHandleEventPair;
-        synchronous_handle_protocol_ops_.job = SynchronousHandleJob;
-        synchronous_handle_protocol_ops_.vmar = SynchronousHandleVmar;
-        synchronous_handle_protocol_ops_.fifo = SynchronousHandleFifo;
-        synchronous_handle_protocol_ops_.guest = SynchronousHandleGuest;
-        synchronous_handle_protocol_ops_.timer = SynchronousHandleTimer;
-        synchronous_handle_protocol_ops_.profile = SynchronousHandleProfile;
-
-        if constexpr (internal::is_base_proto<Base>::value) {
-            auto dev = static_cast<D*>(this);
-            // Can only inherit from one base_protocol implementation.
-            ZX_ASSERT(dev->ddk_proto_id_ == 0);
-            dev->ddk_proto_id_ = ZX_PROTOCOL_SYNCHRONOUS_HANDLE;
-            dev->ddk_proto_ops_ = &synchronous_handle_protocol_ops_;
-        }
-    }
-
-protected:
-    synchronous_handle_protocol_ops_t synchronous_handle_protocol_ops_ = {};
-
-private:
-    static void SynchronousHandleHandle(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::handle out_h2;
-        zx::handle out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleHandle(zx::handle(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleProcess(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::process out_h2;
-        zx::process out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleProcess(zx::process(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleThread(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::thread out_h2;
-        zx::thread out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleThread(zx::thread(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleVmo(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::vmo out_h2;
-        zx::vmo out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleVmo(zx::vmo(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleChannel(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::channel out_h2;
-        zx::channel out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleChannel(zx::channel(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleEvent(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::event out_h2;
-        zx::event out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleEvent(zx::event(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandlePort(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::port out_h2;
-        zx::port out_h22;
-        static_cast<D*>(ctx)->SynchronousHandlePort(zx::port(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleInterrupt(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::interrupt out_h2;
-        zx::interrupt out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleInterrupt(zx::interrupt(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleSocket(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::socket out_h2;
-        zx::socket out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleSocket(zx::socket(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleResource(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::resource out_h2;
-        zx::resource out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleResource(zx::resource(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleEventPair(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::eventpair out_h2;
-        zx::eventpair out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleEventPair(zx::eventpair(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleJob(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::job out_h2;
-        zx::job out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleJob(zx::job(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleVmar(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::vmar out_h2;
-        zx::vmar out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleVmar(zx::vmar(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleFifo(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::fifo out_h2;
-        zx::fifo out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleFifo(zx::fifo(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleGuest(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::guest out_h2;
-        zx::guest out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleGuest(zx::guest(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleTimer(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::timer out_h2;
-        zx::timer out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleTimer(zx::timer(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-    static void SynchronousHandleProfile(void* ctx, zx_handle_t h, zx_handle_t* out_h, zx_handle_t* out_h2) {
-        zx::profile out_h2;
-        zx::profile out_h22;
-        static_cast<D*>(ctx)->SynchronousHandleProfile(zx::profile(h), &out_h2, &out_h22);
-        *out_h = out_h2.release();
-        *out_h2 = out_h22.release();
-    }
-};
-
-class SynchronousHandleProtocolClient {
-public:
-    SynchronousHandleProtocolClient()
-        : ops_(nullptr), ctx_(nullptr) {}
-    SynchronousHandleProtocolClient(const synchronous_handle_protocol_t* proto)
-        : ops_(proto->ops), ctx_(proto->ctx) {}
-
-    SynchronousHandleProtocolClient(zx_device_t* parent) {
-        synchronous_handle_protocol_t proto;
-        if (device_get_protocol(parent, ZX_PROTOCOL_SYNCHRONOUS_HANDLE, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
-    SynchronousHandleProtocolClient(zx_device_t* parent, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        synchronous_handle_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_SYNCHRONOUS_HANDLE, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
-    // Create a SynchronousHandleProtocolClient from the given parent device + "fragment".
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromDevice(zx_device_t* parent,
-                                        SynchronousHandleProtocolClient* result) {
-        synchronous_handle_protocol_t proto;
-        zx_status_t status = device_get_protocol(
-                parent, ZX_PROTOCOL_SYNCHRONOUS_HANDLE, &proto);
-        if (status != ZX_OK) {
-            return status;
-        }
-        *result = SynchronousHandleProtocolClient(&proto);
-        return ZX_OK;
-    }
-
-    // Create a SynchronousHandleProtocolClient from the given parent device.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
-                                        SynchronousHandleProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
-    }
-
-    void GetProto(synchronous_handle_protocol_t* proto) const {
-        proto->ctx = ctx_;
-        proto->ops = ops_;
-    }
-    bool is_valid() const {
-        return ops_ != nullptr;
-    }
-    void clear() {
-        ctx_ = nullptr;
-        ops_ = nullptr;
-    }
-
-    void Handle(zx::handle h, zx::handle* out_h, zx::handle* out_h2) const {
-        ops_->handle(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Process(zx::process h, zx::process* out_h, zx::process* out_h2) const {
-        ops_->process(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Thread(zx::thread h, zx::thread* out_h, zx::thread* out_h2) const {
-        ops_->thread(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Vmo(zx::vmo h, zx::vmo* out_h, zx::vmo* out_h2) const {
-        ops_->vmo(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Channel(zx::channel h, zx::channel* out_h, zx::channel* out_h2) const {
-        ops_->channel(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Event(zx::event h, zx::event* out_h, zx::event* out_h2) const {
-        ops_->event(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Port(zx::port h, zx::port* out_h, zx::port* out_h2) const {
-        ops_->port(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Interrupt(zx::interrupt h, zx::interrupt* out_h, zx::interrupt* out_h2) const {
-        ops_->interrupt(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Socket(zx::socket h, zx::socket* out_h, zx::socket* out_h2) const {
-        ops_->socket(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Resource(zx::resource h, zx::resource* out_h, zx::resource* out_h2) const {
-        ops_->resource(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void EventPair(zx::eventpair h, zx::eventpair* out_h, zx::eventpair* out_h2) const {
-        ops_->event_pair(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Job(zx::job h, zx::job* out_h, zx::job* out_h2) const {
-        ops_->job(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Vmar(zx::vmar h, zx::vmar* out_h, zx::vmar* out_h2) const {
-        ops_->vmar(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Fifo(zx::fifo h, zx::fifo* out_h, zx::fifo* out_h2) const {
-        ops_->fifo(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Guest(zx::guest h, zx::guest* out_h, zx::guest* out_h2) const {
-        ops_->guest(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Timer(zx::timer h, zx::timer* out_h, zx::timer* out_h2) const {
-        ops_->timer(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-    void Profile(zx::profile h, zx::profile* out_h, zx::profile* out_h2) const {
-        ops_->profile(ctx_, h.release(), out_h->reset_and_get_address(), out_h2->reset_and_get_address());
-    }
-
-private:
-    synchronous_handle_protocol_ops_t* ops_;
     void* ctx_;
 };
 

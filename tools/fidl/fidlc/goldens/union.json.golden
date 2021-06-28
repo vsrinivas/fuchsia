@@ -58,7 +58,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.union/SomeLongAnonymousPrefix0",
+          "maybe_response_payload": "fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -111,7 +111,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.union/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -129,7 +129,11 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.union/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
+      "maybe_naming_context": [
+        "TestProtocol",
+        "StrictXUnionHenceResponseMayBeStackAllocated"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 129,
@@ -169,7 +173,11 @@
       }
     },
     {
-      "name": "fidl.test.union/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
+      "maybe_naming_context": [
+        "TestProtocol",
+        "FlexibleXUnionHenceResponseMustBeHeapAllocated"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 130,
@@ -1598,8 +1606,8 @@
   ],
   "declarations": {
     "fidl.test.union/TestProtocol": "interface",
-    "fidl.test.union/SomeLongAnonymousPrefix0": "struct",
-    "fidl.test.union/SomeLongAnonymousPrefix1": "struct",
+    "fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse": "struct",
+    "fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse": "struct",
     "fidl.test.union/Pizza": "struct",
     "fidl.test.union/Pasta": "struct",
     "fidl.test.union/NullableUnionStruct": "struct",

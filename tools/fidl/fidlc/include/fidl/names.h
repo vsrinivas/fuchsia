@@ -12,10 +12,9 @@
 #include "flat_ast.h"
 #include "raw_ast.h"
 #include "types.h"
+#include "utils.h"
 
 namespace fidl {
-
-std::string StringJoin(const std::vector<std::string_view>& strings, std::string_view separator);
 
 std::string NameIdentifier(SourceSpan name);
 

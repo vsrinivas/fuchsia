@@ -46,7 +46,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.error/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.error/ExampleFooRequest",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -67,7 +67,7 @@
               "name": "result",
               "location": {
                 "filename": "generated",
-                "line": 3,
+                "line": 1,
                 "column": 1,
                 "length": 6
               },
@@ -77,7 +77,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.error/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "fidl.test.error/ExampleFooTopResponse",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -95,7 +95,11 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.error/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.error/ExampleFooRequest",
+      "maybe_naming_context": [
+        "Example",
+        "foo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
         "line": 5,
@@ -135,6 +139,12 @@
     },
     {
       "name": "fidl.test.error/Example_foo_Response",
+      "maybe_naming_context": [
+        "Example",
+        "foo",
+        "result",
+        "response"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
         "line": 5,
@@ -173,7 +183,11 @@
       }
     },
     {
-      "name": "fidl.test.error/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.error/ExampleFooTopResponse",
+      "maybe_naming_context": [
+        "Example",
+        "foo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
         "line": 5,
@@ -191,7 +205,7 @@
           "name": "result",
           "location": {
             "filename": "generated",
-            "line": 3,
+            "line": 1,
             "column": 1,
             "length": 6
           },
@@ -217,6 +231,11 @@
   "union_declarations": [
     {
       "name": "fidl.test.error/Example_foo_Result",
+      "maybe_naming_context": [
+        "Example",
+        "foo",
+        "result"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
         "line": 5,
@@ -242,7 +261,7 @@
           },
           "location": {
             "filename": "generated",
-            "line": 1,
+            "line": 2,
             "column": 1,
             "length": 8
           }
@@ -257,7 +276,7 @@
           },
           "location": {
             "filename": "generated",
-            "line": 2,
+            "line": 3,
             "column": 1,
             "length": 3
           }
@@ -284,9 +303,9 @@
   ],
   "declarations": {
     "fidl.test.error/Example": "interface",
-    "fidl.test.error/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.error/ExampleFooRequest": "struct",
     "fidl.test.error/Example_foo_Response": "struct",
-    "fidl.test.error/SomeLongAnonymousPrefix1": "struct",
+    "fidl.test.error/ExampleFooTopResponse": "struct",
     "fidl.test.error/Example_foo_Result": "union"
   }
 }

@@ -45,19 +45,6 @@ std::string LengthPrefixedString(std::string_view str) {
 
 }  // namespace
 
-std::string StringJoin(const std::vector<std::string_view>& strings, std::string_view separator) {
-  std::string result;
-  bool first = true;
-  for (const auto& part : strings) {
-    if (!first) {
-      result += separator;
-    }
-    first = false;
-    result += part;
-  }
-  return result;
-}
-
 std::string NamePrimitiveCType(types::PrimitiveSubtype subtype) {
   switch (subtype) {
     case types::PrimitiveSubtype::kInt8:
@@ -497,11 +484,11 @@ std::string NameLibrary(const std::vector<std::unique_ptr<raw::Identifier>>& com
 }
 
 std::string NameLibrary(const std::vector<std::string_view>& library_name) {
-  return StringJoin(library_name, ".");
+  return utils::StringJoin(library_name, ".");
 }
 
 std::string NameLibraryCHeader(const std::vector<std::string_view>& library_name) {
-  return StringJoin(library_name, "/") + "/c/fidl.h";
+  return utils::StringJoin(library_name, "/") + "/c/fidl.h";
 }
 
 std::string NameDiscoverable(const flat::Protocol& protocol) {

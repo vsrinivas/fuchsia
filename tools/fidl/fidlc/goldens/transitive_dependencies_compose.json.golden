@@ -8,7 +8,7 @@
         "bottom/Bottom": {
           "kind": "interface"
         },
-        "bottom/SomeLongAnonymousPrefix0": {
+        "bottom/BottomGetFooTopResponse": {
           "kind": "struct",
           "resource": false
         },
@@ -93,7 +93,7 @@
               }
             }
           ],
-          "maybe_response_payload": "bottom/SomeLongAnonymousPrefix0",
+          "maybe_response_payload": "bottom/BottomGetFooTopResponse",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -111,7 +111,11 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "bottom/SomeLongAnonymousPrefix0",
+      "name": "bottom/BottomGetFooTopResponse",
+      "maybe_naming_context": [
+        "Bottom",
+        "GetFoo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
         "line": 9,

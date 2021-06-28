@@ -5,6 +5,7 @@
 #include "fidl/json_generator.h"
 
 #include "fidl/diagnostic_types.h"
+#include "fidl/flat/name.h"
 #include "fidl/flat/types.h"
 #include "fidl/flat_ast.h"
 #include "fidl/names.h"
@@ -284,6 +285,13 @@ void JSONGenerator::Generate(const flat::AttributeList& value) { Generate(value.
 
 void JSONGenerator::Generate(const raw::Ordinal64& value) { EmitNumeric(value.value); }
 
+void JSONGenerator::GenerateDeclName(const flat::Name& name) {
+  GenerateObjectMember("name", name, Position::kFirst);
+  if (auto n = name.as_anonymous()) {
+    GenerateObjectMember("maybe_naming_context", n->context->Context());
+  }
+}
+
 void JSONGenerator::Generate(const flat::Name& value) {
   // These look like (when there is a library)
   //     { "LIB.LIB.LIB", "ID" }
@@ -294,7 +302,7 @@ void JSONGenerator::Generate(const flat::Name& value) {
 
 void JSONGenerator::Generate(const flat::Bits& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateDeclName(value.name);
     GenerateObjectMember("location", NameSpan(value.name));
     // TODO(fxbug.dev/79094): refactor this to only have a single null state.
     if (value.attributes && !value.attributes->attributes.empty())
@@ -333,7 +341,7 @@ void JSONGenerator::Generate(const flat::Const& value) {
 
 void JSONGenerator::Generate(const flat::Enum& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateDeclName(value.name);
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes && !value.attributes->attributes.empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
@@ -599,7 +607,7 @@ void JSONGenerator::Generate(const flat::Service::Member& value) {
 
 void JSONGenerator::Generate(const flat::Struct& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateDeclName(value.name);
     GenerateObjectMember("location", NameSpan(value.name));
     GenerateObjectMember("anonymous", value.is_request_or_response);
     if (value.attributes && !value.attributes->attributes.empty())
@@ -627,7 +635,7 @@ void JSONGenerator::Generate(const flat::Struct::Member& value, bool is_request_
 
 void JSONGenerator::Generate(const flat::Table& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateDeclName(value.name);
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes && !value.attributes->attributes.empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
@@ -679,7 +687,7 @@ void JSONGenerator::Generate(const FieldShape& field_shape) {
 
 void JSONGenerator::Generate(const flat::Union& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateDeclName(value.name);
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes && !value.attributes->attributes.empty())
       GenerateObjectMember("maybe_attributes", value.attributes);

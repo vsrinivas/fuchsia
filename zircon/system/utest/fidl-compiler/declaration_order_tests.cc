@@ -22,6 +22,8 @@
 
 #define ASSERT_DECL_NAME(D, N) ASSERT_STR_EQ(N, DECL_NAME(D));
 
+#define ASSERT_MANGLED_DECL_NAME(D, N) ASSERT_SUBSTR(DECL_NAME(D), N);
+
 #define ASSERT_DECL_FQ_NAME(D, N) ASSERT_STR_EQ(N, fidl::NameFlatName(D->name).c_str());
 
 namespace {
@@ -100,32 +102,6 @@ protocol #Protocol# {
   }
 }
 
-// This test ensures that there are no "holes" in the anonymous number range.
-TEST(DeclarationOrderTest, GoodAnonymousNamesDenseNumbering) {
-  for (int i = 0; i < kRepeatTestCount; i++) {
-    Namer namer;
-    auto source = namer.mangle(R"FIDL(
-library example;
-
-protocol #Protocol# {
-    Method1(string arg) -> (); // SomeLongAnonymousPrefix0
-    Method2() -> (string ret); // SomeLongAnonymousPrefix1
-    -> Event1();
-    -> Event2(string ret);     // SomeLongAnonymousPrefix2
-};
-
-)FIDL");
-    TestLibrary library(source);
-    ASSERT_COMPILED_AND_CONVERT(library);
-    auto decl_order = library.declaration_order();
-    ASSERT_EQ(4, decl_order.size());
-    ASSERT_DECL_NAME(decl_order[0], "SomeLongAnonymousPrefix2");
-    ASSERT_DECL_NAME(decl_order[1], "SomeLongAnonymousPrefix1");
-    ASSERT_DECL_NAME(decl_order[2], "SomeLongAnonymousPrefix0");
-    ASSERT_DECL_NAME(decl_order[3], namer.of("Protocol"));
-  }
-}
-
 TEST(DeclarationOrderTest, GoodNonnullableRef) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
@@ -149,7 +125,7 @@ protocol #Protocol# {
     ASSERT_EQ(4, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Element"));
     ASSERT_DECL_NAME(decl_order[1], namer.of("Request"));
-    ASSERT_DECL_NAME(decl_order[2], "SomeLongAnonymousPrefix0");
+    ASSERT_MANGLED_DECL_NAME(decl_order[2], "ProtocolSomeMethodRequest");
     ASSERT_DECL_NAME(decl_order[3], namer.of("Protocol"));
   }
 }
@@ -182,7 +158,7 @@ protocol #Protocol# {
     // have any dependencies, and we therefore have two independent
     // declaration sub-graphs:
     //   a. Element
-    //   b. Request <- SomeLongAnonymousPrefix0 <- Protocol
+    //   b. Request <- ProtocolSomeMethodRequest <- Protocol
     // Because of random prefixes, either (a) or (b) will be selected to
     // be first in the declaration order.
     bool element_is_first = strcmp(DECL_NAME(decl_order[0]), namer.of("Element")) == 0;
@@ -190,11 +166,11 @@ protocol #Protocol# {
     if (element_is_first) {
       ASSERT_DECL_NAME(decl_order[0], namer.of("Element"));
       ASSERT_DECL_NAME(decl_order[1], namer.of("Request"));
-      ASSERT_DECL_NAME(decl_order[2], "SomeLongAnonymousPrefix0");
+      ASSERT_MANGLED_DECL_NAME(decl_order[2], "ProtocolSomeMethodRequest");
       ASSERT_DECL_NAME(decl_order[3], namer.of("Protocol"));
     } else {
       ASSERT_DECL_NAME(decl_order[0], namer.of("Request"));
-      ASSERT_DECL_NAME(decl_order[1], "SomeLongAnonymousPrefix0");
+      ASSERT_MANGLED_DECL_NAME(decl_order[1], "ProtocolSomeMethodRequest");
       ASSERT_DECL_NAME(decl_order[2], namer.of("Protocol"));
       ASSERT_DECL_NAME(decl_order[3], namer.of("Element"));
     }
@@ -221,7 +197,7 @@ protocol #Protocol# {
     auto decl_order = library.declaration_order();
     ASSERT_EQ(3, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Request"));
-    ASSERT_DECL_NAME(decl_order[1], "SomeLongAnonymousPrefix0");
+    ASSERT_MANGLED_DECL_NAME(decl_order[1], "ProtocolSomeMethodRequest");
     ASSERT_DECL_NAME(decl_order[2], namer.of("Protocol"));
   }
 }
@@ -252,7 +228,7 @@ struct #Payload# {
     ASSERT_EQ(4, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
     ASSERT_DECL_NAME(decl_order[1], namer.of("Xunion"));
-    ASSERT_DECL_NAME(decl_order[2], "SomeLongAnonymousPrefix0");
+    ASSERT_MANGLED_DECL_NAME(decl_order[2], "ProtocolSomeMethodRequest");
     ASSERT_DECL_NAME(decl_order[3], namer.of("Protocol"));
   }
 }
@@ -286,17 +262,17 @@ struct #Payload# {
     // dependencies, and we therefore have two independent declaration
     // sub-graphs:
     //   a. Payload <- Xunion
-    //   b. SomeLongAnonymousPrefix0 <- Protocol
+    //   b. ProtocolSomeMethodRequest <- Protocol
     // Because of random prefixes, either (a) or (b) will be selected to
     // be first in the declaration order.
     bool payload_is_first = strcmp(DECL_NAME(decl_order[0]), namer.of("Payload")) == 0;
     if (payload_is_first) {
       ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
       ASSERT_DECL_NAME(decl_order[1], namer.of("Xunion"));
-      ASSERT_DECL_NAME(decl_order[2], "SomeLongAnonymousPrefix0");
+      ASSERT_MANGLED_DECL_NAME(decl_order[2], "ProtocolSomeMethodRequest");
       ASSERT_DECL_NAME(decl_order[3], namer.of("Protocol"));
     } else {
-      ASSERT_DECL_NAME(decl_order[0], "SomeLongAnonymousPrefix0");
+      ASSERT_MANGLED_DECL_NAME(decl_order[0], "ProtocolSomeMethodRequest");
       ASSERT_DECL_NAME(decl_order[1], namer.of("Protocol"));
       ASSERT_DECL_NAME(decl_order[2], namer.of("Payload"));
       ASSERT_DECL_NAME(decl_order[3], namer.of("Xunion"));
@@ -334,7 +310,7 @@ union #Xunion# {
     ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
     ASSERT_DECL_NAME(decl_order[1], namer.of("Xunion"));
     ASSERT_DECL_NAME(decl_order[2], namer.of("Request"));
-    ASSERT_DECL_NAME(decl_order[3], "SomeLongAnonymousPrefix0");
+    ASSERT_MANGLED_DECL_NAME(decl_order[3], "ProtocolSomeMethodRequest");
     ASSERT_DECL_NAME(decl_order[4], namer.of("Protocol"));
   }
 }
@@ -371,7 +347,7 @@ union #Xunion# {
     // dependencies, and we therefore have two independent declaration
     // sub-graphs:
     //   a. Payload <- Xunion
-    //   b. Request <- SomeLongAnonymousPrefix0 <- Protocol
+    //   b. Request <- ProtocolSomeMethodRequest <- Protocol
     // Because of random prefixes, either (a) or (b) will be selected to
     // be first in the declaration order.
     bool payload_is_first = strcmp(DECL_NAME(decl_order[0]), namer.of("Payload")) == 0;
@@ -379,11 +355,11 @@ union #Xunion# {
       ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
       ASSERT_DECL_NAME(decl_order[1], namer.of("Xunion"));
       ASSERT_DECL_NAME(decl_order[2], namer.of("Request"));
-      ASSERT_DECL_NAME(decl_order[3], "SomeLongAnonymousPrefix0");
+      ASSERT_MANGLED_DECL_NAME(decl_order[3], "ProtocolSomeMethodRequest");
       ASSERT_DECL_NAME(decl_order[4], namer.of("Protocol"));
     } else {
       ASSERT_DECL_NAME(decl_order[0], namer.of("Request"));
-      ASSERT_DECL_NAME(decl_order[1], "SomeLongAnonymousPrefix0");
+      ASSERT_MANGLED_DECL_NAME(decl_order[1], "ProtocolSomeMethodRequest");
       ASSERT_DECL_NAME(decl_order[2], namer.of("Protocol"));
       ASSERT_DECL_NAME(decl_order[3], namer.of("Payload"));
       ASSERT_DECL_NAME(decl_order[4], namer.of("Xunion"));
@@ -426,7 +402,7 @@ protocol ExampleDecl1 {
     ASSERT_DECL_FQ_NAME(decl_order[0], "example/ExampleDecl2");
     ASSERT_DECL_FQ_NAME(decl_order[1], "example/ExampleDecl0");
     ASSERT_DECL_FQ_NAME(decl_order[2], "dependency/ExampleDecl1");
-    ASSERT_DECL_FQ_NAME(decl_order[3], "example/SomeLongAnonymousPrefix0");
+    ASSERT_DECL_FQ_NAME(decl_order[3], "example/ExampleDecl1MethodRequest");
     ASSERT_DECL_FQ_NAME(decl_order[4], "example/ExampleDecl1");
   }
 }
@@ -466,7 +442,7 @@ protocol ExampleDecl1 {
     ASSERT_DECL_FQ_NAME(decl_order[0], "example/ExampleDecl2");
     ASSERT_DECL_FQ_NAME(decl_order[1], "example/ExampleDecl0");
     ASSERT_DECL_FQ_NAME(decl_order[2], "dependency/ExampleDecl1");
-    ASSERT_DECL_FQ_NAME(decl_order[3], "example/SomeLongAnonymousPrefix0");
+    ASSERT_DECL_FQ_NAME(decl_order[3], "example/ExampleDecl1MethodRequest");
     ASSERT_DECL_FQ_NAME(decl_order[4], "example/ExampleDecl1");
   }
 }

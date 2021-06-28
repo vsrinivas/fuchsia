@@ -1389,702 +1389,6 @@ zx_status_t HandleRightsProtocol_SyncProxy::ResponseMethod(
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalRequestRequestTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalRequestResponseTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalOneWayRequestTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalEventEventTable;
-
-}  // namespace _internal
-Transitional::~Transitional() = default;
-
-const fidl_type_t* ::fidl::test::protocols::Transitional_RequestDecoder::
-    GetType(uint64_t ordinal, bool* out_needs_response) {
-  switch (ordinal) {
-    case ::fidl::test::protocols::internal::kTransitional_Request_Ordinal:
-      *out_needs_response = true;
-      return &::fidl::test::protocols::_internal::
-          fidl_test_protocols_TransitionalRequestRequestTable;
-    case ::fidl::test::protocols::internal::kTransitional_OneWay_Ordinal:
-      *out_needs_response = false;
-      return &::fidl::test::protocols::_internal::
-          fidl_test_protocols_TransitionalOneWayRequestTable;
-    default:
-      *out_needs_response = false;
-      return nullptr;
-  }
-}
-
-const fidl_type_t* Transitional_ResponseDecoder::GetType(uint64_t ordinal) {
-  switch (ordinal) {
-    case ::fidl::test::protocols::internal::kTransitional_Request_Ordinal:
-      return &::fidl::test::protocols::_internal::
-          fidl_test_protocols_TransitionalRequestResponseTable;
-    case ::fidl::test::protocols::internal::kTransitional_Event_Ordinal:
-      return &::fidl::test::protocols::_internal::
-          fidl_test_protocols_TransitionalEventEventTable;
-    default:
-      return nullptr;
-  }
-}
-
-Transitional_EventSender::~Transitional_EventSender() = default;
-
-Transitional_Sync::~Transitional_Sync() = default;
-
-Transitional_Proxy::Transitional_Proxy(
-    ::fidl::internal::ProxyController* controller)
-    : controller_(controller) {
-  (void)controller_;
-}
-
-Transitional_Proxy::~Transitional_Proxy() = default;
-
-zx_status_t Transitional_Proxy::Dispatch_(
-    ::fidl::HLCPPIncomingMessage message) {
-  zx_status_t status = ZX_OK;
-  switch (message.ordinal()) {
-    case ::fidl::test::protocols::internal::kTransitional_Event_Ordinal: {
-      if (!Event) {
-        status = ZX_OK;
-        break;
-      }
-      const char* error_msg = nullptr;
-      status =
-          message.Decode(&::fidl::test::protocols::_internal::
-                             fidl_test_protocols_TransitionalEventEventTable,
-                         &error_msg);
-      if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(
-            message,
-            &::fidl::test::protocols::_internal::
-                fidl_test_protocols_TransitionalEventEventTable,
-            error_msg);
-        break;
-      }
-      ::fidl::Decoder decoder(std::move(message));
-      Event(::fidl::DecodeAs<int64_t>(&decoder, 16));
-      break;
-    }
-    default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
-    }
-  }
-  return status;
-}
-
-namespace {
-
-::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
-Transitional_Request_ResponseHandler(Transitional::RequestCallback&& callback) {
-  ZX_DEBUG_ASSERT_MSG(callback,
-                      "Callback must not be empty for Transitional::Request\n");
-  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ =
-           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
-        ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
-        return ZX_OK;
-      },
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_TransitionalRequestResponseTable);
-}
-
-}  // namespace
-void Transitional_Proxy::Request(int64_t x, RequestCallback callback) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kTransitional_Request_Ordinal);
-  controller_->Send(
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_TransitionalRequestRequestTable,
-      ::fidl::test::protocols::Transitional_RequestEncoder::Request(&_encoder,
-                                                                    &x),
-      Transitional_Request_ResponseHandler(std::move(callback)));
-}
-void Transitional_Proxy::OneWay(int64_t x) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kTransitional_OneWay_Ordinal);
-  controller_->Send(
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_TransitionalOneWayRequestTable,
-      ::fidl::test::protocols::Transitional_RequestEncoder::OneWay(&_encoder,
-                                                                   &x),
-      nullptr);
-}
-
-Transitional_Stub::Transitional_Stub(
-    ::fidl::test::protocols::Transitional_Stub::Transitional_clazz* impl)
-    : impl_(impl) {
-  (void)impl_;
-}
-
-Transitional_Stub::~Transitional_Stub() = default;
-
-namespace {
-
-class Transitional_Request_Responder final {
- public:
-  Transitional_Request_Responder(::fidl::internal::PendingResponse response)
-      : response_(std::move(response)) {}
-
-  void operator()(int64_t y) {
-    ::fidl::Encoder _encoder(
-        ::fidl::test::protocols::internal::kTransitional_Request_Ordinal);
-    response_.Send(
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_TransitionalRequestResponseTable,
-        ::fidl::test::protocols::Transitional_ResponseEncoder::Request(
-            &_encoder, &y));
-  }
-
- private:
-  ::fidl::internal::PendingResponse response_;
-};
-
-}  // namespace
-
-zx_status_t Transitional_Stub::Dispatch_(
-    ::fidl::HLCPPIncomingMessage message,
-    ::fidl::internal::PendingResponse response) {
-  bool needs_response;
-  const fidl_type_t* request_type =
-      ::fidl::test::protocols::Transitional_RequestDecoder::GetType(
-          message.ordinal(), &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (response.needs_response() != needs_response) {
-    if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message needing a response with no txid");
-    } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message not needing a response with a txid");
-    }
-    return ZX_ERR_INVALID_ARGS;
-  }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
-  uint64_t ordinal = message.ordinal();
-  switch (ordinal) {
-    case ::fidl::test::protocols::internal::kTransitional_Request_Ordinal: {
-      ::fidl::Decoder decoder(std::move(message));
-      impl_->Request(::fidl::DecodeAs<int64_t>(&decoder, 16),
-                     Transitional_Request_Responder(std::move(response)));
-      break;
-    }
-    case ::fidl::test::protocols::internal::kTransitional_OneWay_Ordinal: {
-      ::fidl::Decoder decoder(std::move(message));
-      impl_->OneWay(::fidl::DecodeAs<int64_t>(&decoder, 16));
-      break;
-    }
-    default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
-    }
-  }
-  return status;
-}
-void Transitional_Stub::Event(int64_t x) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kTransitional_Event_Ordinal);
-  sender_()->Send(&::fidl::test::protocols::_internal::
-                      fidl_test_protocols_TransitionalEventEventTable,
-                  ::fidl::test::protocols::Transitional_ResponseEncoder::Event(
-                      &_encoder, &x));
-}
-
-Transitional_SyncProxy::Transitional_SyncProxy(::zx::channel channel)
-    : proxy_(::std::move(channel)) {}
-
-Transitional_SyncProxy::~Transitional_SyncProxy() = default;
-
-zx_status_t Transitional_SyncProxy::Request(int64_t x, int64_t* out_y) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kTransitional_Request_Ordinal);
-  ::fidl::IncomingMessageBuffer buffer_;
-  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  zx_status_t status_ =
-      proxy_.Call(&::fidl::test::protocols::_internal::
-                      fidl_test_protocols_TransitionalRequestRequestTable,
-                  &::fidl::test::protocols::_internal::
-                      fidl_test_protocols_TransitionalRequestResponseTable,
-                  ::fidl::test::protocols::Transitional_RequestEncoder::Request(
-                      &_encoder, &x),
-                  &response_);
-  if (status_ != ZX_OK) return status_;
-  ::fidl::Decoder decoder_(std::move(response_));
-  *out_y = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
-  return ZX_OK;
-}
-
-zx_status_t Transitional_SyncProxy::OneWay(int64_t x) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kTransitional_OneWay_Ordinal);
-  return proxy_.Send(
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_TransitionalOneWayRequestTable,
-      ::fidl::test::protocols::Transitional_RequestEncoder::OneWay(&_encoder,
-                                                                   &x));
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodARequestTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolEventAEventTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodBRequestTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodBResponseTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
-
-}  // namespace _internal
-ChannelProtocol::~ChannelProtocol() = default;
-
-const fidl_type_t* ::fidl::test::protocols::ChannelProtocol_RequestDecoder::
-    GetType(uint64_t ordinal, bool* out_needs_response) {
-  switch (ordinal) {
-    case ::fidl::test::protocols::internal::kChannelProtocol_MethodA_Ordinal:
-      *out_needs_response = false;
-      return &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMethodARequestTable;
-    case ::fidl::test::protocols::internal::kChannelProtocol_MethodB_Ordinal:
-      *out_needs_response = true;
-      return &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMethodBRequestTable;
-    case ::fidl::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal:
-      *out_needs_response = true;
-      return &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
-    case ::fidl::test::protocols::internal::
-        kChannelProtocol_MutateSocket_Ordinal:
-      *out_needs_response = true;
-      return &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
-    default:
-      *out_needs_response = false;
-      return nullptr;
-  }
-}
-
-const fidl_type_t* ChannelProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
-  switch (ordinal) {
-    case ::fidl::test::protocols::internal::kChannelProtocol_EventA_Ordinal:
-      return &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolEventAEventTable;
-    case ::fidl::test::protocols::internal::kChannelProtocol_MethodB_Ordinal:
-      return &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMethodBResponseTable;
-    case ::fidl::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal:
-      return &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
-    case ::fidl::test::protocols::internal::
-        kChannelProtocol_MutateSocket_Ordinal:
-      return &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
-    default:
-      return nullptr;
-  }
-}
-
-ChannelProtocol_EventSender::~ChannelProtocol_EventSender() = default;
-
-ChannelProtocol_Sync::~ChannelProtocol_Sync() = default;
-
-ChannelProtocol_Proxy::ChannelProtocol_Proxy(
-    ::fidl::internal::ProxyController* controller)
-    : controller_(controller) {
-  (void)controller_;
-}
-
-ChannelProtocol_Proxy::~ChannelProtocol_Proxy() = default;
-
-zx_status_t ChannelProtocol_Proxy::Dispatch_(
-    ::fidl::HLCPPIncomingMessage message) {
-  zx_status_t status = ZX_OK;
-  switch (message.ordinal()) {
-    case ::fidl::test::protocols::internal::kChannelProtocol_EventA_Ordinal: {
-      if (!EventA) {
-        status = ZX_OK;
-        break;
-      }
-      const char* error_msg = nullptr;
-      status = message.Decode(
-          &::fidl::test::protocols::_internal::
-              fidl_test_protocols_ChannelProtocolEventAEventTable,
-          &error_msg);
-      if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(
-            message,
-            &::fidl::test::protocols::_internal::
-                fidl_test_protocols_ChannelProtocolEventAEventTable,
-            error_msg);
-        break;
-      }
-      ::fidl::Decoder decoder(std::move(message));
-      EventA(::fidl::DecodeAs<int64_t>(&decoder, 16),
-             ::fidl::DecodeAs<int64_t>(&decoder, 24));
-      break;
-    }
-    default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
-    }
-  }
-  return status;
-}
-
-void ChannelProtocol_Proxy::MethodA(int64_t a, int64_t b) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kChannelProtocol_MethodA_Ordinal);
-  controller_->Send(
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMethodARequestTable,
-      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::MethodA(
-          &_encoder, &a, &b),
-      nullptr);
-}
-namespace {
-
-::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
-ChannelProtocol_MethodB_ResponseHandler(
-    ChannelProtocol::MethodBCallback&& callback) {
-  ZX_DEBUG_ASSERT_MSG(
-      callback, "Callback must not be empty for ChannelProtocol::MethodB\n");
-  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ =
-           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
-        ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
-        return ZX_OK;
-      },
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMethodBResponseTable);
-}
-
-}  // namespace
-void ChannelProtocol_Proxy::MethodB(int64_t a, int64_t b,
-                                    MethodBCallback callback) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kChannelProtocol_MethodB_Ordinal);
-  controller_->Send(
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMethodBRequestTable,
-      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::MethodB(
-          &_encoder, &a, &b),
-      ChannelProtocol_MethodB_ResponseHandler(std::move(callback)));
-}
-namespace {
-
-::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
-ChannelProtocol_TakeHandle_ResponseHandler(
-    ChannelProtocol::TakeHandleCallback&& callback) {
-  ZX_DEBUG_ASSERT_MSG(
-      callback, "Callback must not be empty for ChannelProtocol::TakeHandle\n");
-  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ =
-           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
-        callback_();
-        return ZX_OK;
-      },
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolTakeHandleResponseTable);
-}
-
-}  // namespace
-void ChannelProtocol_Proxy::TakeHandle(::zx::handle h,
-                                       TakeHandleCallback callback) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal);
-  controller_->Send(
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolTakeHandleRequestTable,
-      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::TakeHandle(
-          &_encoder, &h),
-      ChannelProtocol_TakeHandle_ResponseHandler(std::move(callback)));
-}
-namespace {
-
-::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
-ChannelProtocol_MutateSocket_ResponseHandler(
-    ChannelProtocol::MutateSocketCallback&& callback) {
-  ZX_DEBUG_ASSERT_MSG(
-      callback,
-      "Callback must not be empty for ChannelProtocol::MutateSocket\n");
-  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ =
-           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
-        ::fidl::Decoder decoder(std::move(message));
-        callback_(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
-        return ZX_OK;
-      },
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMutateSocketResponseTable);
-}
-
-}  // namespace
-void ChannelProtocol_Proxy::MutateSocket(::zx::socket a,
-                                         MutateSocketCallback callback) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kChannelProtocol_MutateSocket_Ordinal);
-  controller_->Send(
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMutateSocketRequestTable,
-      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::MutateSocket(
-          &_encoder, &a),
-      ChannelProtocol_MutateSocket_ResponseHandler(std::move(callback)));
-}
-
-ChannelProtocol_Stub::ChannelProtocol_Stub(
-    ::fidl::test::protocols::ChannelProtocol_Stub::ChannelProtocol_clazz* impl)
-    : impl_(impl) {
-  (void)impl_;
-}
-
-ChannelProtocol_Stub::~ChannelProtocol_Stub() = default;
-
-namespace {
-
-class ChannelProtocol_MethodB_Responder final {
- public:
-  ChannelProtocol_MethodB_Responder(::fidl::internal::PendingResponse response)
-      : response_(std::move(response)) {}
-
-  void operator()(int64_t result) {
-    ::fidl::Encoder _encoder(
-        ::fidl::test::protocols::internal::kChannelProtocol_MethodB_Ordinal);
-    response_.Send(
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_ChannelProtocolMethodBResponseTable,
-        ::fidl::test::protocols::ChannelProtocol_ResponseEncoder::MethodB(
-            &_encoder, &result));
-  }
-
- private:
-  ::fidl::internal::PendingResponse response_;
-};
-
-class ChannelProtocol_TakeHandle_Responder final {
- public:
-  ChannelProtocol_TakeHandle_Responder(
-      ::fidl::internal::PendingResponse response)
-      : response_(std::move(response)) {}
-
-  void operator()() {
-    ::fidl::Encoder _encoder(
-        ::fidl::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal);
-    response_.Send(
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_ChannelProtocolTakeHandleResponseTable,
-        ::fidl::test::protocols::ChannelProtocol_ResponseEncoder::TakeHandle(
-            &_encoder));
-  }
-
- private:
-  ::fidl::internal::PendingResponse response_;
-};
-
-class ChannelProtocol_MutateSocket_Responder final {
- public:
-  ChannelProtocol_MutateSocket_Responder(
-      ::fidl::internal::PendingResponse response)
-      : response_(std::move(response)) {}
-
-  void operator()(::zx::socket b) {
-    ::fidl::Encoder _encoder(::fidl::test::protocols::internal::
-                                 kChannelProtocol_MutateSocket_Ordinal);
-    response_.Send(
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_ChannelProtocolMutateSocketResponseTable,
-        ::fidl::test::protocols::ChannelProtocol_ResponseEncoder::MutateSocket(
-            &_encoder, &b));
-  }
-
- private:
-  ::fidl::internal::PendingResponse response_;
-};
-
-}  // namespace
-
-zx_status_t ChannelProtocol_Stub::Dispatch_(
-    ::fidl::HLCPPIncomingMessage message,
-    ::fidl::internal::PendingResponse response) {
-  bool needs_response;
-  const fidl_type_t* request_type =
-      ::fidl::test::protocols::ChannelProtocol_RequestDecoder::GetType(
-          message.ordinal(), &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (response.needs_response() != needs_response) {
-    if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message needing a response with no txid");
-    } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message not needing a response with a txid");
-    }
-    return ZX_ERR_INVALID_ARGS;
-  }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
-  uint64_t ordinal = message.ordinal();
-  switch (ordinal) {
-    case ::fidl::test::protocols::internal::kChannelProtocol_MethodA_Ordinal: {
-      ::fidl::Decoder decoder(std::move(message));
-      impl_->MethodA(::fidl::DecodeAs<int64_t>(&decoder, 16),
-                     ::fidl::DecodeAs<int64_t>(&decoder, 24));
-      break;
-    }
-    case ::fidl::test::protocols::internal::kChannelProtocol_MethodB_Ordinal: {
-      ::fidl::Decoder decoder(std::move(message));
-      impl_->MethodB(::fidl::DecodeAs<int64_t>(&decoder, 16),
-                     ::fidl::DecodeAs<int64_t>(&decoder, 24),
-                     ChannelProtocol_MethodB_Responder(std::move(response)));
-      break;
-    }
-    case ::fidl::test::protocols::internal::
-        kChannelProtocol_TakeHandle_Ordinal: {
-      ::fidl::Decoder decoder(std::move(message));
-      impl_->TakeHandle(
-          ::fidl::DecodeAs<::zx::handle>(&decoder, 16),
-          ChannelProtocol_TakeHandle_Responder(std::move(response)));
-      break;
-    }
-    case ::fidl::test::protocols::internal::
-        kChannelProtocol_MutateSocket_Ordinal: {
-      ::fidl::Decoder decoder(std::move(message));
-      impl_->MutateSocket(
-          ::fidl::DecodeAs<::zx::socket>(&decoder, 16),
-          ChannelProtocol_MutateSocket_Responder(std::move(response)));
-      break;
-    }
-    default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
-    }
-  }
-  return status;
-}
-void ChannelProtocol_Stub::EventA(int64_t a, int64_t b) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kChannelProtocol_EventA_Ordinal);
-  sender_()->Send(
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolEventAEventTable,
-      ::fidl::test::protocols::ChannelProtocol_ResponseEncoder::EventA(
-          &_encoder, &a, &b));
-}
-
-ChannelProtocol_SyncProxy::ChannelProtocol_SyncProxy(::zx::channel channel)
-    : proxy_(::std::move(channel)) {}
-
-ChannelProtocol_SyncProxy::~ChannelProtocol_SyncProxy() = default;
-
-zx_status_t ChannelProtocol_SyncProxy::MethodA(int64_t a, int64_t b) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kChannelProtocol_MethodA_Ordinal);
-  return proxy_.Send(
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMethodARequestTable,
-      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::MethodA(
-          &_encoder, &a, &b));
-}
-
-zx_status_t ChannelProtocol_SyncProxy::MethodB(int64_t a, int64_t b,
-                                               int64_t* out_result) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kChannelProtocol_MethodB_Ordinal);
-  ::fidl::IncomingMessageBuffer buffer_;
-  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  zx_status_t status_ = proxy_.Call(
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMethodBRequestTable,
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMethodBResponseTable,
-      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::MethodB(
-          &_encoder, &a, &b),
-      &response_);
-  if (status_ != ZX_OK) return status_;
-  ::fidl::Decoder decoder_(std::move(response_));
-  *out_result = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
-  return ZX_OK;
-}
-
-zx_status_t ChannelProtocol_SyncProxy::TakeHandle(::zx::handle h) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal);
-  ::fidl::IncomingMessageBuffer buffer_;
-  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  zx_status_t status_ = proxy_.Call(
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolTakeHandleRequestTable,
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolTakeHandleResponseTable,
-      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::TakeHandle(
-          &_encoder, &h),
-      &response_);
-  if (status_ != ZX_OK) return status_;
-  return ZX_OK;
-}
-
-zx_status_t ChannelProtocol_SyncProxy::MutateSocket(::zx::socket a,
-                                                    ::zx::socket* out_b) {
-  ::fidl::Encoder _encoder(
-      ::fidl::test::protocols::internal::kChannelProtocol_MutateSocket_Ordinal);
-  ::fidl::IncomingMessageBuffer buffer_;
-  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  zx_status_t status_ = proxy_.Call(
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMutateSocketRequestTable,
-      &::fidl::test::protocols::_internal::
-          fidl_test_protocols_ChannelProtocolMutateSocketResponseTable,
-      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::MutateSocket(
-          &_encoder, &a),
-      &response_);
-  if (status_ != ZX_OK) return status_;
-  ::fidl::Decoder decoder_(std::move(response_));
-  *out_b = ::fidl::DecodeAs<::zx::socket>(&decoder_, 16);
-  return ZX_OK;
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
@@ -2737,6 +2041,260 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestWithResponse(
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestResponseTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalOneWayRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalEventEventTable;
+
+}  // namespace _internal
+Transitional::~Transitional() = default;
+
+const fidl_type_t* ::fidl::test::protocols::Transitional_RequestDecoder::
+    GetType(uint64_t ordinal, bool* out_needs_response) {
+  switch (ordinal) {
+    case ::fidl::test::protocols::internal::kTransitional_Request_Ordinal:
+      *out_needs_response = true;
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_TransitionalRequestRequestTable;
+    case ::fidl::test::protocols::internal::kTransitional_OneWay_Ordinal:
+      *out_needs_response = false;
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_TransitionalOneWayRequestTable;
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* Transitional_ResponseDecoder::GetType(uint64_t ordinal) {
+  switch (ordinal) {
+    case ::fidl::test::protocols::internal::kTransitional_Request_Ordinal:
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_TransitionalRequestResponseTable;
+    case ::fidl::test::protocols::internal::kTransitional_Event_Ordinal:
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_TransitionalEventEventTable;
+    default:
+      return nullptr;
+  }
+}
+
+Transitional_EventSender::~Transitional_EventSender() = default;
+
+Transitional_Sync::~Transitional_Sync() = default;
+
+Transitional_Proxy::Transitional_Proxy(
+    ::fidl::internal::ProxyController* controller)
+    : controller_(controller) {
+  (void)controller_;
+}
+
+Transitional_Proxy::~Transitional_Proxy() = default;
+
+zx_status_t Transitional_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    case ::fidl::test::protocols::internal::kTransitional_Event_Ordinal: {
+      if (!Event) {
+        status = ZX_OK;
+        break;
+      }
+      const char* error_msg = nullptr;
+      status =
+          message.Decode(&::fidl::test::protocols::_internal::
+                             fidl_test_protocols_TransitionalEventEventTable,
+                         &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(
+            message,
+            &::fidl::test::protocols::_internal::
+                fidl_test_protocols_TransitionalEventEventTable,
+            error_msg);
+        break;
+      }
+      ::fidl::Decoder decoder(std::move(message));
+      Event(::fidl::DecodeAs<int64_t>(&decoder, 16));
+      break;
+    }
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+namespace {
+
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+Transitional_Request_ResponseHandler(Transitional::RequestCallback&& callback) {
+  ZX_DEBUG_ASSERT_MSG(callback,
+                      "Callback must not be empty for Transitional::Request\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
+        return ZX_OK;
+      },
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_TransitionalRequestResponseTable);
+}
+
+}  // namespace
+void Transitional_Proxy::Request(int64_t x, RequestCallback callback) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kTransitional_Request_Ordinal);
+  controller_->Send(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_TransitionalRequestRequestTable,
+      ::fidl::test::protocols::Transitional_RequestEncoder::Request(&_encoder,
+                                                                    &x),
+      Transitional_Request_ResponseHandler(std::move(callback)));
+}
+void Transitional_Proxy::OneWay(int64_t x) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kTransitional_OneWay_Ordinal);
+  controller_->Send(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_TransitionalOneWayRequestTable,
+      ::fidl::test::protocols::Transitional_RequestEncoder::OneWay(&_encoder,
+                                                                   &x),
+      nullptr);
+}
+
+Transitional_Stub::Transitional_Stub(
+    ::fidl::test::protocols::Transitional_Stub::Transitional_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
+
+Transitional_Stub::~Transitional_Stub() = default;
+
+namespace {
+
+class Transitional_Request_Responder final {
+ public:
+  Transitional_Request_Responder(::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
+
+  void operator()(int64_t y) {
+    ::fidl::Encoder _encoder(
+        ::fidl::test::protocols::internal::kTransitional_Request_Ordinal);
+    response_.Send(
+        &::fidl::test::protocols::_internal::
+            fidl_test_protocols_TransitionalRequestResponseTable,
+        ::fidl::test::protocols::Transitional_ResponseEncoder::Request(
+            &_encoder, &y));
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+};
+
+}  // namespace
+
+zx_status_t Transitional_Stub::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
+  bool needs_response;
+  const fidl_type_t* request_type =
+      ::fidl::test::protocols::Transitional_RequestDecoder::GetType(
+          message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
+  uint64_t ordinal = message.ordinal();
+  switch (ordinal) {
+    case ::fidl::test::protocols::internal::kTransitional_Request_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->Request(::fidl::DecodeAs<int64_t>(&decoder, 16),
+                     Transitional_Request_Responder(std::move(response)));
+      break;
+    }
+    case ::fidl::test::protocols::internal::kTransitional_OneWay_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->OneWay(::fidl::DecodeAs<int64_t>(&decoder, 16));
+      break;
+    }
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+void Transitional_Stub::Event(int64_t x) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kTransitional_Event_Ordinal);
+  sender_()->Send(&::fidl::test::protocols::_internal::
+                      fidl_test_protocols_TransitionalEventEventTable,
+                  ::fidl::test::protocols::Transitional_ResponseEncoder::Event(
+                      &_encoder, &x));
+}
+
+Transitional_SyncProxy::Transitional_SyncProxy(::zx::channel channel)
+    : proxy_(::std::move(channel)) {}
+
+Transitional_SyncProxy::~Transitional_SyncProxy() = default;
+
+zx_status_t Transitional_SyncProxy::Request(int64_t x, int64_t* out_y) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kTransitional_Request_Ordinal);
+  ::fidl::IncomingMessageBuffer buffer_;
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  zx_status_t status_ =
+      proxy_.Call(&::fidl::test::protocols::_internal::
+                      fidl_test_protocols_TransitionalRequestRequestTable,
+                  &::fidl::test::protocols::_internal::
+                      fidl_test_protocols_TransitionalRequestResponseTable,
+                  ::fidl::test::protocols::Transitional_RequestEncoder::Request(
+                      &_encoder, &x),
+                  &response_);
+  if (status_ != ZX_OK) return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_y = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
+  return ZX_OK;
+}
+
+zx_status_t Transitional_SyncProxy::OneWay(int64_t x) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kTransitional_OneWay_Ordinal);
+  return proxy_.Send(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_TransitionalOneWayRequestTable,
+      ::fidl::test::protocols::Transitional_RequestEncoder::OneWay(&_encoder,
+                                                                   &x));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
@@ -3359,6 +2917,448 @@ zx_status_t DiscoverableProtocol_SyncProxy::Method() {
           fidl_test_protocols_DiscoverableProtocolMethodRequestTable,
       ::fidl::test::protocols::DiscoverableProtocol_RequestEncoder::Method(
           &_encoder));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodARequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolEventAEventTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBResponseTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
+
+}  // namespace _internal
+ChannelProtocol::~ChannelProtocol() = default;
+
+const fidl_type_t* ::fidl::test::protocols::ChannelProtocol_RequestDecoder::
+    GetType(uint64_t ordinal, bool* out_needs_response) {
+  switch (ordinal) {
+    case ::fidl::test::protocols::internal::kChannelProtocol_MethodA_Ordinal:
+      *out_needs_response = false;
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMethodARequestTable;
+    case ::fidl::test::protocols::internal::kChannelProtocol_MethodB_Ordinal:
+      *out_needs_response = true;
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+    case ::fidl::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal:
+      *out_needs_response = true;
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+    case ::fidl::test::protocols::internal::
+        kChannelProtocol_MutateSocket_Ordinal:
+      *out_needs_response = true;
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* ChannelProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
+  switch (ordinal) {
+    case ::fidl::test::protocols::internal::kChannelProtocol_EventA_Ordinal:
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolEventAEventTable;
+    case ::fidl::test::protocols::internal::kChannelProtocol_MethodB_Ordinal:
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMethodBResponseTable;
+    case ::fidl::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal:
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
+    case ::fidl::test::protocols::internal::
+        kChannelProtocol_MutateSocket_Ordinal:
+      return &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
+    default:
+      return nullptr;
+  }
+}
+
+ChannelProtocol_EventSender::~ChannelProtocol_EventSender() = default;
+
+ChannelProtocol_Sync::~ChannelProtocol_Sync() = default;
+
+ChannelProtocol_Proxy::ChannelProtocol_Proxy(
+    ::fidl::internal::ProxyController* controller)
+    : controller_(controller) {
+  (void)controller_;
+}
+
+ChannelProtocol_Proxy::~ChannelProtocol_Proxy() = default;
+
+zx_status_t ChannelProtocol_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    case ::fidl::test::protocols::internal::kChannelProtocol_EventA_Ordinal: {
+      if (!EventA) {
+        status = ZX_OK;
+        break;
+      }
+      const char* error_msg = nullptr;
+      status = message.Decode(
+          &::fidl::test::protocols::_internal::
+              fidl_test_protocols_ChannelProtocolEventAEventTable,
+          &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(
+            message,
+            &::fidl::test::protocols::_internal::
+                fidl_test_protocols_ChannelProtocolEventAEventTable,
+            error_msg);
+        break;
+      }
+      ::fidl::Decoder decoder(std::move(message));
+      EventA(::fidl::DecodeAs<int64_t>(&decoder, 16),
+             ::fidl::DecodeAs<int64_t>(&decoder, 24));
+      break;
+    }
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+void ChannelProtocol_Proxy::MethodA(int64_t a, int64_t b) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kChannelProtocol_MethodA_Ordinal);
+  controller_->Send(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMethodARequestTable,
+      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::MethodA(
+          &_encoder, &a, &b),
+      nullptr);
+}
+namespace {
+
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+ChannelProtocol_MethodB_ResponseHandler(
+    ChannelProtocol::MethodBCallback&& callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback, "Callback must not be empty for ChannelProtocol::MethodB\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
+        return ZX_OK;
+      },
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMethodBResponseTable);
+}
+
+}  // namespace
+void ChannelProtocol_Proxy::MethodB(int64_t a, int64_t b,
+                                    MethodBCallback callback) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kChannelProtocol_MethodB_Ordinal);
+  controller_->Send(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMethodBRequestTable,
+      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::MethodB(
+          &_encoder, &a, &b),
+      ChannelProtocol_MethodB_ResponseHandler(std::move(callback)));
+}
+namespace {
+
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+ChannelProtocol_TakeHandle_ResponseHandler(
+    ChannelProtocol::TakeHandleCallback&& callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback, "Callback must not be empty for ChannelProtocol::TakeHandle\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+        callback_();
+        return ZX_OK;
+      },
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolTakeHandleResponseTable);
+}
+
+}  // namespace
+void ChannelProtocol_Proxy::TakeHandle(::zx::handle h,
+                                       TakeHandleCallback callback) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal);
+  controller_->Send(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolTakeHandleRequestTable,
+      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::TakeHandle(
+          &_encoder, &h),
+      ChannelProtocol_TakeHandle_ResponseHandler(std::move(callback)));
+}
+namespace {
+
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+ChannelProtocol_MutateSocket_ResponseHandler(
+    ChannelProtocol::MutateSocketCallback&& callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback,
+      "Callback must not be empty for ChannelProtocol::MutateSocket\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
+        return ZX_OK;
+      },
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMutateSocketResponseTable);
+}
+
+}  // namespace
+void ChannelProtocol_Proxy::MutateSocket(::zx::socket a,
+                                         MutateSocketCallback callback) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kChannelProtocol_MutateSocket_Ordinal);
+  controller_->Send(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMutateSocketRequestTable,
+      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::MutateSocket(
+          &_encoder, &a),
+      ChannelProtocol_MutateSocket_ResponseHandler(std::move(callback)));
+}
+
+ChannelProtocol_Stub::ChannelProtocol_Stub(
+    ::fidl::test::protocols::ChannelProtocol_Stub::ChannelProtocol_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
+
+ChannelProtocol_Stub::~ChannelProtocol_Stub() = default;
+
+namespace {
+
+class ChannelProtocol_MethodB_Responder final {
+ public:
+  ChannelProtocol_MethodB_Responder(::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
+
+  void operator()(int64_t result) {
+    ::fidl::Encoder _encoder(
+        ::fidl::test::protocols::internal::kChannelProtocol_MethodB_Ordinal);
+    response_.Send(
+        &::fidl::test::protocols::_internal::
+            fidl_test_protocols_ChannelProtocolMethodBResponseTable,
+        ::fidl::test::protocols::ChannelProtocol_ResponseEncoder::MethodB(
+            &_encoder, &result));
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+};
+
+class ChannelProtocol_TakeHandle_Responder final {
+ public:
+  ChannelProtocol_TakeHandle_Responder(
+      ::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
+
+  void operator()() {
+    ::fidl::Encoder _encoder(
+        ::fidl::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal);
+    response_.Send(
+        &::fidl::test::protocols::_internal::
+            fidl_test_protocols_ChannelProtocolTakeHandleResponseTable,
+        ::fidl::test::protocols::ChannelProtocol_ResponseEncoder::TakeHandle(
+            &_encoder));
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+};
+
+class ChannelProtocol_MutateSocket_Responder final {
+ public:
+  ChannelProtocol_MutateSocket_Responder(
+      ::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
+
+  void operator()(::zx::socket b) {
+    ::fidl::Encoder _encoder(::fidl::test::protocols::internal::
+                                 kChannelProtocol_MutateSocket_Ordinal);
+    response_.Send(
+        &::fidl::test::protocols::_internal::
+            fidl_test_protocols_ChannelProtocolMutateSocketResponseTable,
+        ::fidl::test::protocols::ChannelProtocol_ResponseEncoder::MutateSocket(
+            &_encoder, &b));
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+};
+
+}  // namespace
+
+zx_status_t ChannelProtocol_Stub::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
+  bool needs_response;
+  const fidl_type_t* request_type =
+      ::fidl::test::protocols::ChannelProtocol_RequestDecoder::GetType(
+          message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
+  uint64_t ordinal = message.ordinal();
+  switch (ordinal) {
+    case ::fidl::test::protocols::internal::kChannelProtocol_MethodA_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->MethodA(::fidl::DecodeAs<int64_t>(&decoder, 16),
+                     ::fidl::DecodeAs<int64_t>(&decoder, 24));
+      break;
+    }
+    case ::fidl::test::protocols::internal::kChannelProtocol_MethodB_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->MethodB(::fidl::DecodeAs<int64_t>(&decoder, 16),
+                     ::fidl::DecodeAs<int64_t>(&decoder, 24),
+                     ChannelProtocol_MethodB_Responder(std::move(response)));
+      break;
+    }
+    case ::fidl::test::protocols::internal::
+        kChannelProtocol_TakeHandle_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->TakeHandle(
+          ::fidl::DecodeAs<::zx::handle>(&decoder, 16),
+          ChannelProtocol_TakeHandle_Responder(std::move(response)));
+      break;
+    }
+    case ::fidl::test::protocols::internal::
+        kChannelProtocol_MutateSocket_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->MutateSocket(
+          ::fidl::DecodeAs<::zx::socket>(&decoder, 16),
+          ChannelProtocol_MutateSocket_Responder(std::move(response)));
+      break;
+    }
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+void ChannelProtocol_Stub::EventA(int64_t a, int64_t b) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kChannelProtocol_EventA_Ordinal);
+  sender_()->Send(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolEventAEventTable,
+      ::fidl::test::protocols::ChannelProtocol_ResponseEncoder::EventA(
+          &_encoder, &a, &b));
+}
+
+ChannelProtocol_SyncProxy::ChannelProtocol_SyncProxy(::zx::channel channel)
+    : proxy_(::std::move(channel)) {}
+
+ChannelProtocol_SyncProxy::~ChannelProtocol_SyncProxy() = default;
+
+zx_status_t ChannelProtocol_SyncProxy::MethodA(int64_t a, int64_t b) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kChannelProtocol_MethodA_Ordinal);
+  return proxy_.Send(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMethodARequestTable,
+      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::MethodA(
+          &_encoder, &a, &b));
+}
+
+zx_status_t ChannelProtocol_SyncProxy::MethodB(int64_t a, int64_t b,
+                                               int64_t* out_result) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kChannelProtocol_MethodB_Ordinal);
+  ::fidl::IncomingMessageBuffer buffer_;
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  zx_status_t status_ = proxy_.Call(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMethodBRequestTable,
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMethodBResponseTable,
+      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::MethodB(
+          &_encoder, &a, &b),
+      &response_);
+  if (status_ != ZX_OK) return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_result = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
+  return ZX_OK;
+}
+
+zx_status_t ChannelProtocol_SyncProxy::TakeHandle(::zx::handle h) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal);
+  ::fidl::IncomingMessageBuffer buffer_;
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  zx_status_t status_ = proxy_.Call(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolTakeHandleRequestTable,
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolTakeHandleResponseTable,
+      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::TakeHandle(
+          &_encoder, &h),
+      &response_);
+  if (status_ != ZX_OK) return status_;
+  return ZX_OK;
+}
+
+zx_status_t ChannelProtocol_SyncProxy::MutateSocket(::zx::socket a,
+                                                    ::zx::socket* out_b) {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::protocols::internal::kChannelProtocol_MutateSocket_Ordinal);
+  ::fidl::IncomingMessageBuffer buffer_;
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  zx_status_t status_ = proxy_.Call(
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMutateSocketRequestTable,
+      &::fidl::test::protocols::_internal::
+          fidl_test_protocols_ChannelProtocolMutateSocketResponseTable,
+      ::fidl::test::protocols::ChannelProtocol_RequestEncoder::MutateSocket(
+          &_encoder, &a),
+      &response_);
+  if (status_ != ZX_OK) return status_;
+  ::fidl::Decoder decoder_(std::move(response_));
+  *out_b = ::fidl::DecodeAs<::zx::socket>(&decoder_, 16);
+  return ZX_OK;
 }
 #endif  // __Fuchsia__
 

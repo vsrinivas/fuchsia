@@ -55,7 +55,7 @@ protocol ChannelProtocol {
 
 [Transport = "Syscall"]
 protocol SyscallProtocol {
-    MethodA(int64 a, int64 b);
+    MethodC(int64 a, int64 b);
 };
 
 protocol Transitional {

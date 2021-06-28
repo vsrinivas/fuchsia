@@ -94,7 +94,6 @@ resource struct MyStruct {
       fidl::flat::kHandleSameRights);
 }
 
-// TODO(fxbug.dev/71536): implement client/server end in the new syntax
 TEST(HandleTests, BadInvalidHandleRightsTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);

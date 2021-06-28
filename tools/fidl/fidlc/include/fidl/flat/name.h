@@ -5,15 +5,203 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_NAME_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_NAME_H_
 
+#include <algorithm>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <variant>
 
 #include "fidl/source_span.h"
+#include "fidl/utils.h"
 
 namespace fidl {
 namespace flat {
+
+// A NamingContext is a list of names, from least specific to most specific, which
+// identifies the use of a layout. For example, for the FIDL:
+//
+// ```
+// library fuchsia.bluetooth.le;
+//
+// protocol Peripheral {
+//   StartAdvertising(table { 1: data struct {}; });
+// };
+// ```
+//
+// The context for the innermost empty struct can be built up by the calls:
+//
+//   auto ctx = NamingContext("Peripheral").FromRequest("StartAdvertising").EnterMember("data")
+//
+// `ctx` will produce a `FlattenedName` of "data", and a `Context` of
+// ["Peripheral", "StartAdvertising", "data"].
+class NamingContext : public std::enable_shared_from_this<NamingContext> {
+ public:
+  // Usage should only be through shared pointers, so that shared_from_this is always
+  // valid. We use shared pointers to manage the lifetime of NamingContexts since the
+  // parent pointers need to always be valid. Managing ownership with unique_ptr is tricky
+  // (Push() would need to have access to a unique_ptr of this, and there would need to
+  // be a place to own all the root nodes, which are not owned by an anonymous name), and
+  // doing it manually is even worse.
+  static std::shared_ptr<NamingContext> Create(SourceSpan decl_name) {
+    return Create(decl_name, ElementKind::kDecl);
+  }
+
+  std::shared_ptr<NamingContext> EnterRequest(SourceSpan method_name) {
+    assert(kind_ == ElementKind::kDecl && "request must follow protocol");
+    return Push(method_name, ElementKind::kMethodRequest);
+  }
+
+  std::shared_ptr<NamingContext> EnterEvent(SourceSpan method_name) {
+    assert(kind_ == ElementKind::kDecl && "event must follow protocol");
+    // an event is actually a request from the server's perspective, so we use request in the
+    // naming context
+    return Push(method_name, ElementKind::kMethodRequest);
+  }
+
+  std::shared_ptr<NamingContext> EnterResponse(SourceSpan method_name) {
+    assert(kind_ == ElementKind::kDecl && "response must follow protocol");
+    return Push(method_name, ElementKind::kMethodResponse);
+  }
+
+  std::shared_ptr<NamingContext> EnterResult(SourceSpan span) {
+    assert((kind_ == ElementKind::kMethodRequest || kind_ == ElementKind::kMethodResponse) &&
+           "result must follow method");
+    return Push(span, ElementKind::kMethodResult);
+  }
+
+  std::shared_ptr<NamingContext> EnterSuccessVariant(SourceSpan span) {
+    assert(kind_ == ElementKind::kMethodResult && "success must follow result");
+    return Push(span, ElementKind::kMethodSuccessVariant);
+  }
+
+  std::shared_ptr<NamingContext> EnterErrorVariant(SourceSpan span) {
+    assert(kind_ == ElementKind::kMethodResult && "error must follow result");
+    return Push(span, ElementKind::kMethodErrorVariant);
+  }
+
+  std::shared_ptr<NamingContext> EnterMember(SourceSpan member_name) {
+    assert((kind_ == ElementKind::kDecl || kind_ == ElementKind::kLayoutMember) &&
+           "member must follow layout");
+    return Push(member_name, ElementKind::kLayoutMember);
+  }
+
+  SourceSpan name() const { return name_; }
+
+  std::shared_ptr<NamingContext> parent() const {
+    assert(parent_ != nullptr && "compiler bug: traversing above root");
+    return parent_;
+  }
+
+  std::string FlattenedName() const {
+    switch (kind_) {
+      case ElementKind::kDecl:
+        return std::string(name_.data());
+      case ElementKind::kLayoutMember:
+        return utils::to_upper_camel_case(std::string(name_.data()));
+      case ElementKind::kMethodRequest: {
+        std::string result = utils::to_upper_camel_case(std::string(parent()->name_.data()));
+        result.append(utils::to_upper_camel_case(std::string(name_.data())));
+        result.append("Request");
+        return result;
+      }
+      case ElementKind::kMethodResponse: {
+        std::string result = utils::to_upper_camel_case(std::string(parent()->name_.data()));
+        result.append(utils::to_upper_camel_case(std::string(name_.data())));
+        // We can't use [protocol][method]Response, because that may be occupied by
+        // the success variant of the result type, if this method has an error.
+        result.append("TopResponse");
+        return result;
+      }
+      // The naming contexts associated with method results are handled specially
+      // (see ElementKind)
+      case ElementKind::kMethodResult: {
+        auto method_name = parent()->name_.data();
+        auto protocol_name = parent()->parent()->name_.data();
+        return utils::StringJoin({protocol_name, method_name, "Result"}, "_");
+      }
+      case ElementKind::kMethodSuccessVariant: {
+        auto method_name = parent()->parent()->name_.data();
+        auto protocol_name = parent()->parent()->parent()->name_.data();
+        return utils::StringJoin({protocol_name, method_name, "Response"}, "_");
+      }
+      case ElementKind::kMethodErrorVariant: {
+        auto method_name = parent()->parent()->name_.data();
+        auto protocol_name = parent()->parent()->parent()->name_.data();
+        return utils::StringJoin({protocol_name, method_name, "Error"}, "_");
+      }
+    }
+  }
+
+  std::vector<std::string_view> Context() const {
+    std::vector<std::string_view> names;
+    const auto* current = this;
+    while (current) {
+      names.push_back(current->name_.data());
+      current = current->parent_.get();
+    }
+    std::reverse(names.begin(), names.end());
+    return names;
+  }
+
+ private:
+  // Each new naming context is represented by a SourceSpan pointing to the name in
+  // question (e.g. protocol/layout/member name), and an ElementKind. The contexts
+  // are represented as linked lists with pointers back up to the parent to avoid
+  // storing extraneous copies, thus the naming context for
+  //
+  //   type Foo = { member_a struct { ... }; member_b struct {...}; };
+  //
+  // Would look like
+  //
+  //   member_a --\
+  //               ---> Foo
+  //   member_b --/
+  //
+  // Note that there are additional constraints not captured in the type system:
+  // for example, a kMethodRequest can only follow a kDecl, and a kDecl can only
+  // appear as the "root" of a naming context. These are enforced somewhat loosely
+  // using asserts in the class' public methods.
+
+  enum class ElementKind {
+    kDecl,
+    kLayoutMember,
+    kMethodRequest,
+    kMethodResponse,
+    // The naming scheme for the result type and the success variant in a response
+    // with an error type predates the design of the anonymous name flattening
+    // algorithm, and we therefore need to handle these names specially to ensure
+    // backwards compatibility with the existing names (errors are handled specially
+    // to be consistent with the rest). This requires distinguishing them as separate
+    // cases in ElementKind, rather than just as ordinary kLayoutMembers
+    kMethodResult,
+    kMethodSuccessVariant,
+    kMethodErrorVariant,
+  };
+  struct Element {
+    SourceSpan name;
+    ElementKind kind;
+  };
+
+  NamingContext(SourceSpan name, ElementKind kind) : name_(name), kind_(kind) {}
+
+  static std::shared_ptr<NamingContext> Create(SourceSpan decl_name, ElementKind kind) {
+    // We need to create a shared pointer but there are only private constructors. Since
+    // we don't care about an extra allocation here, we use `new` to get around this
+    // (see https://abseil.io/tips/134)
+    return std::shared_ptr<NamingContext>(new NamingContext(decl_name, kind));
+  }
+
+  std::shared_ptr<NamingContext> Push(SourceSpan name, ElementKind kind) {
+    auto ctx = Create(name, kind);
+    ctx->parent_ = shared_from_this();
+    return ctx;
+  }
+
+  SourceSpan name_;
+  ElementKind kind_;
+  std::shared_ptr<NamingContext> parent_ = nullptr;
+};
 
 class Library;
 
@@ -77,6 +265,11 @@ class Name final {
     return Name(library, DerivedNameContext(std::move(name), span), std::nullopt);
   }
 
+  static Name CreateAnonymous(const Library* library, SourceSpan span,
+                              std::shared_ptr<NamingContext> context) {
+    return Name(library, AnonymousNameContext(std::move(context), span), std::nullopt);
+  }
+
   static Name CreateIntrinsic(std::string name) {
     return Name(nullptr, IntrinsicNameContext(std::move(name)), std::nullopt);
   }
@@ -128,6 +321,8 @@ class Name final {
             return std::optional(name_context.span);
           } else if constexpr (std::is_same_v<T, DerivedNameContext>) {
             return std::optional(name_context.span);
+          } else if constexpr (std::is_same_v<T, AnonymousNameContext>) {
+            return std::optional(name_context.span);
           } else if constexpr (std::is_same_v<T, IntrinsicNameContext>) {
             return std::nullopt;
           } else {
@@ -145,6 +340,11 @@ class Name final {
             return name_context.span.data();
           } else if constexpr (std::is_same_v<T, DerivedNameContext>) {
             return std::string_view(name_context.name);
+          } else if constexpr (std::is_same_v<T, AnonymousNameContext>) {
+            // since decl_name() is used in Name::Key, using the flattened name
+            // here ensures that the flattened name will cause conflicts if not
+            // unique
+            return std::string_view(name_context.flattened_name);
           } else if constexpr (std::is_same_v<T, IntrinsicNameContext>) {
             return std::string_view(name_context.name);
           } else {
@@ -197,6 +397,17 @@ class Name final {
     SourceSpan span;
   };
 
+  struct AnonymousNameContext {
+    explicit AnonymousNameContext(std::shared_ptr<NamingContext> context, SourceSpan span)
+        : flattened_name(context->FlattenedName()), context(std::move(context)), span(span) {}
+
+    std::string flattened_name;
+    std::shared_ptr<NamingContext> context;
+    // The span of the object to which this anonymous name refers to (anonymous names
+    // by definition do not appear in source, so the name itself has no span).
+    SourceSpan span;
+  };
+
   struct IntrinsicNameContext {
     explicit IntrinsicNameContext(std::string name) : name(std::move(name)) {}
 
@@ -216,6 +427,12 @@ class Name final {
         name_context_(std::move(name_context)),
         member_name_(std::move(member_name)) {}
 
+  Name(const Library* library, AnonymousNameContext name_context,
+       std::optional<std::string> member_name)
+      : library_(library),
+        name_context_(std::move(name_context)),
+        member_name_(std::move(member_name)) {}
+
   Name(const Library* library, IntrinsicNameContext name_context,
        std::optional<std::string> member_name)
       : library_(library),
@@ -223,12 +440,16 @@ class Name final {
         member_name_(std::move(member_name)) {}
 
   const Library* library_;
-  std::variant<std::monostate, SourcedNameContext, DerivedNameContext, IntrinsicNameContext>
+  std::variant<std::monostate, SourcedNameContext, DerivedNameContext, AnonymousNameContext,
+               IntrinsicNameContext>
       name_context_;
   std::optional<std::string> member_name_;
 
  public:
   bool is_sourced() const { return std::get_if<SourcedNameContext>(&name_context_); }
+  const AnonymousNameContext* as_anonymous() const {
+    return std::get_if<AnonymousNameContext>(&name_context_);
+  }
 };
 
 }  // namespace flat

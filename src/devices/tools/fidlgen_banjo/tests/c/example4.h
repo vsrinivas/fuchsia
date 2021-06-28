@@ -14,13 +14,17 @@
 __BEGIN_CDECLS
 
 // Forward declarations
+typedef struct point point_t;
 typedef struct interface_protocol interface_protocol_t;
 typedef struct interface_protocol_ops interface_protocol_ops_t;
-typedef struct point point_t;
 typedef uint32_t enum_t;
 #define ENUM_X UINT32_C(23)
 
 // Declarations
+struct point {
+    uint64_t x;
+};
+
 struct interface_protocol_ops {
     void (*func)(void* ctx, bool x);
 };
@@ -29,10 +33,6 @@ struct interface_protocol_ops {
 struct interface_protocol {
     interface_protocol_ops_t* ops;
     void* ctx;
-};
-
-struct point {
-    uint64_t x;
 };
 
 

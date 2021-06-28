@@ -21,33 +21,6 @@ class HandleRightsProtocol_TestBase
   }
 };
 
-class Transitional_TestBase : public ::fidl::test::protocols::Transitional {
- public:
-  virtual ~Transitional_TestBase() {}
-  virtual void NotImplemented_(const std::string& name) = 0;
-  void Request(int64_t x, RequestCallback callback) override {
-    NotImplemented_("Request");
-  }
-  void OneWay(int64_t x) override { NotImplemented_("OneWay"); }
-};
-
-class ChannelProtocol_TestBase
-    : public ::fidl::test::protocols::ChannelProtocol {
- public:
-  virtual ~ChannelProtocol_TestBase() {}
-  virtual void NotImplemented_(const std::string& name) = 0;
-  void MethodA(int64_t a, int64_t b) override { NotImplemented_("MethodA"); }
-  void MethodB(int64_t a, int64_t b, MethodBCallback callback) override {
-    NotImplemented_("MethodB");
-  }
-  void TakeHandle(::zx::handle h, TakeHandleCallback callback) override {
-    NotImplemented_("TakeHandle");
-  }
-  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override {
-    NotImplemented_("MutateSocket");
-  }
-};
-
 class WithAndWithoutRequestResponse_TestBase
     : public ::fidl::test::protocols::WithAndWithoutRequestResponse {
  public:
@@ -76,6 +49,16 @@ class WithAndWithoutRequestResponse_TestBase
   }
 };
 
+class Transitional_TestBase : public ::fidl::test::protocols::Transitional {
+ public:
+  virtual ~Transitional_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void Request(int64_t x, RequestCallback callback) override {
+    NotImplemented_("Request");
+  }
+  void OneWay(int64_t x) override { NotImplemented_("OneWay"); }
+};
+
 class WithErrorSyntax_TestBase
     : public ::fidl::test::protocols::WithErrorSyntax {
  public:
@@ -101,6 +84,23 @@ class DiscoverableProtocol_TestBase
   virtual ~DiscoverableProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
   void Method() override { NotImplemented_("Method"); }
+};
+
+class ChannelProtocol_TestBase
+    : public ::fidl::test::protocols::ChannelProtocol {
+ public:
+  virtual ~ChannelProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void MethodA(int64_t a, int64_t b) override { NotImplemented_("MethodA"); }
+  void MethodB(int64_t a, int64_t b, MethodBCallback callback) override {
+    NotImplemented_("MethodB");
+  }
+  void TakeHandle(::zx::handle h, TakeHandleCallback callback) override {
+    NotImplemented_("TakeHandle");
+  }
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override {
+    NotImplemented_("MutateSocket");
+  }
 };
 }  // namespace testing
 }  // namespace protocols

@@ -47,7 +47,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.emptystruct/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.emptystruct/EmptyProtocolSendRequest",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -91,7 +91,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.emptystruct/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "fidl.test.emptystruct/EmptyProtocolReceiveRequest",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -133,7 +133,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.emptystruct/SomeLongAnonymousPrefix2",
+          "maybe_request_payload": "fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequest",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -164,7 +164,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.emptystruct/SomeLongAnonymousPrefix3",
+          "maybe_response_payload": "fidl.test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -182,7 +182,11 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.emptystruct/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.emptystruct/EmptyProtocolSendRequest",
+      "maybe_naming_context": [
+        "EmptyProtocol",
+        "Send"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
         "line": 8,
@@ -222,7 +226,11 @@
       }
     },
     {
-      "name": "fidl.test.emptystruct/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.emptystruct/EmptyProtocolReceiveRequest",
+      "maybe_naming_context": [
+        "EmptyProtocol",
+        "Receive"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
         "line": 9,
@@ -262,7 +270,11 @@
       }
     },
     {
-      "name": "fidl.test.emptystruct/SomeLongAnonymousPrefix2",
+      "name": "fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequest",
+      "maybe_naming_context": [
+        "EmptyProtocol",
+        "SendAndReceive"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
         "line": 10,
@@ -302,7 +314,11 @@
       }
     },
     {
-      "name": "fidl.test.emptystruct/SomeLongAnonymousPrefix3",
+      "name": "fidl.test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
+      "maybe_naming_context": [
+        "EmptyProtocol",
+        "SendAndReceive"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
         "line": 10,
@@ -372,10 +388,10 @@
   ],
   "declarations": {
     "fidl.test.emptystruct/EmptyProtocol": "interface",
-    "fidl.test.emptystruct/SomeLongAnonymousPrefix0": "struct",
-    "fidl.test.emptystruct/SomeLongAnonymousPrefix1": "struct",
-    "fidl.test.emptystruct/SomeLongAnonymousPrefix2": "struct",
-    "fidl.test.emptystruct/SomeLongAnonymousPrefix3": "struct",
+    "fidl.test.emptystruct/EmptyProtocolSendRequest": "struct",
+    "fidl.test.emptystruct/EmptyProtocolReceiveRequest": "struct",
+    "fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequest": "struct",
+    "fidl.test.emptystruct/EmptyProtocolSendAndReceiveTopResponse": "struct",
     "fidl.test.emptystruct/Empty": "struct"
   }
 }

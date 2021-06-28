@@ -110,21 +110,15 @@ class WithErrorSyntax_ErrorAsEnum_Response;
 
 #ifdef __Fuchsia__
 
-class Transitional;
-using TransitionalHandle = ::fidl::InterfaceHandle<Transitional>;
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-class ChannelProtocol;
-using ChannelProtocolHandle = ::fidl::InterfaceHandle<ChannelProtocol>;
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 class WithAndWithoutRequestResponse;
 using WithAndWithoutRequestResponseHandle =
     ::fidl::InterfaceHandle<WithAndWithoutRequestResponse>;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+class Transitional;
+using TransitionalHandle = ::fidl::InterfaceHandle<Transitional>;
 #endif  // __Fuchsia__
 
 enum class ErrorEnum : uint32_t {
@@ -153,6 +147,12 @@ using WithErrorSyntaxHandle = ::fidl::InterfaceHandle<WithErrorSyntax>;
 class DiscoverableProtocol;
 using DiscoverableProtocolHandle =
     ::fidl::InterfaceHandle<DiscoverableProtocol>;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+class ChannelProtocol;
+using ChannelProtocolHandle = ::fidl::InterfaceHandle<ChannelProtocol>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -830,248 +830,6 @@ using WithErrorSyntax_ErrorAsEnum_ResponsePtr =
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalRequestRequestTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalOneWayRequestTable;
-
-}  // namespace _internal
-class Transitional_RequestEncoder {
- public:
-  static ::fidl::HLCPPOutgoingMessage Request(::fidl::Encoder* _encoder,
-                                              int64_t* x) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, x, 16);
-
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_TransitionalRequestRequestTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-  static ::fidl::HLCPPOutgoingMessage OneWay(::fidl::Encoder* _encoder,
-                                             int64_t* x) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, x, 16);
-
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_TransitionalOneWayRequestTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-};
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalRequestResponseTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalEventEventTable;
-
-}  // namespace _internal
-class Transitional_ResponseEncoder {
- public:
-  static ::fidl::HLCPPOutgoingMessage Request(::fidl::Encoder* _encoder,
-                                              int64_t* y) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, y, 16);
-
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_TransitionalRequestResponseTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-    return _encoder->GetMessage();
-  }
-  static ::fidl::HLCPPOutgoingMessage Event(::fidl::Encoder* _encoder,
-                                            int64_t* x) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, x, 16);
-
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_TransitionalEventEventTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-    return _encoder->GetMessage();
-  }
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodARequestTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodBRequestTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
-
-}  // namespace _internal
-class ChannelProtocol_RequestEncoder {
- public:
-  static ::fidl::HLCPPOutgoingMessage MethodA(::fidl::Encoder* _encoder,
-                                              int64_t* a, int64_t* b) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, a, 16);
-
-    ::fidl::Encode(_encoder, b, 24);
-
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_ChannelProtocolMethodARequestTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-  static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::Encoder* _encoder,
-                                              int64_t* a, int64_t* b) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, a, 16);
-
-    ::fidl::Encode(_encoder, b, 24);
-
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_ChannelProtocolMethodBRequestTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-  static ::fidl::HLCPPOutgoingMessage TakeHandle(::fidl::Encoder* _encoder,
-                                                 ::zx::handle* h) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, h, 16,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_NONE,
-                       .rights = 0x80000000,
-                   });
-
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_ChannelProtocolTakeHandleRequestTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-  static ::fidl::HLCPPOutgoingMessage MutateSocket(::fidl::Encoder* _encoder,
-                                                   ::zx::socket* a) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, a, 16,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_SOCKET,
-                       .rights = 0x80000000,
-                   });
-
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_ChannelProtocolMutateSocketRequestTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-};
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolEventAEventTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodBResponseTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
-
-}  // namespace _internal
-class ChannelProtocol_ResponseEncoder {
- public:
-  static ::fidl::HLCPPOutgoingMessage EventA(::fidl::Encoder* _encoder,
-                                             int64_t* a, int64_t* b) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, a, 16);
-
-    ::fidl::Encode(_encoder, b, 24);
-
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_ChannelProtocolEventAEventTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-    return _encoder->GetMessage();
-  }
-  static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::Encoder* _encoder,
-                                              int64_t* result) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, result, 16);
-
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_ChannelProtocolMethodBResponseTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-    return _encoder->GetMessage();
-  }
-  static ::fidl::HLCPPOutgoingMessage TakeHandle(::fidl::Encoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_ChannelProtocolTakeHandleResponseTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-    return _encoder->GetMessage();
-  }
-  static ::fidl::HLCPPOutgoingMessage MutateSocket(::fidl::Encoder* _encoder,
-                                                   ::zx::socket* b) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, b, 16,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_SOCKET,
-                       .rights = 0x80000000,
-                   });
-
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_ChannelProtocolMutateSocketResponseTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-    return _encoder->GetMessage();
-  }
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-namespace _internal {
-__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
@@ -1281,6 +1039,86 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
             fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalOneWayRequestTable;
+
+}  // namespace _internal
+class Transitional_RequestEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage Request(::fidl::Encoder* _encoder,
+                                              int64_t* x) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, x, 16);
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_TransitionalRequestRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage OneWay(::fidl::Encoder* _encoder,
+                                             int64_t* x) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, x, 16);
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_TransitionalOneWayRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestResponseTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalEventEventTable;
+
+}  // namespace _internal
+class Transitional_ResponseEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage Request(::fidl::Encoder* _encoder,
+                                              int64_t* y) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, y, 16);
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_TransitionalRequestResponseTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage Event(::fidl::Encoder* _encoder,
+                                            int64_t* x) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, x, 16);
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_TransitionalEventEventTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
@@ -1598,6 +1436,168 @@ class DiscoverableProtocol_RequestEncoder {
 
 class DiscoverableProtocol_ResponseEncoder {
  public:
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodARequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
+
+}  // namespace _internal
+class ChannelProtocol_RequestEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage MethodA(::fidl::Encoder* _encoder,
+                                              int64_t* a, int64_t* b) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, a, 16);
+
+    ::fidl::Encode(_encoder, b, 24);
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_ChannelProtocolMethodARequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::Encoder* _encoder,
+                                              int64_t* a, int64_t* b) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, a, 16);
+
+    ::fidl::Encode(_encoder, b, 24);
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_ChannelProtocolMethodBRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage TakeHandle(::fidl::Encoder* _encoder,
+                                                 ::zx::handle* h) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, h, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_NONE,
+                       .rights = 0x80000000,
+                   });
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_ChannelProtocolTakeHandleRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage MutateSocket(::fidl::Encoder* _encoder,
+                                                   ::zx::socket* a) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, a, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x80000000,
+                   });
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_ChannelProtocolMutateSocketRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolEventAEventTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBResponseTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
+
+}  // namespace _internal
+class ChannelProtocol_ResponseEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage EventA(::fidl::Encoder* _encoder,
+                                             int64_t* a, int64_t* b) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, a, 16);
+
+    ::fidl::Encode(_encoder, b, 24);
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_ChannelProtocolEventAEventTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::Encoder* _encoder,
+                                              int64_t* result) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, result, 16);
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_ChannelProtocolMethodBResponseTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage TakeHandle(::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_ChannelProtocolTakeHandleResponseTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage MutateSocket(::fidl::Encoder* _encoder,
+                                                   ::zx::socket* b) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, b, 16,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x80000000,
+                   });
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_ChannelProtocolMutateSocketResponseTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
 };
 #endif  // __Fuchsia__
 

@@ -22,6 +22,14 @@ void ::fidl_test_nullable::wire::StructWithNullableHandle::_CloseHandles() {
 }
 #endif  // __Fuchsia__
 
+void ::fidl_test_nullable::wire::SimpleUnion::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(SimpleUnion) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(SimpleUnion, ordinal_) ==
+                offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(SimpleUnion, envelope_) ==
+                offsetof(fidl_xunion_t, envelope));
+}
+
 namespace fidl_test_nullable {
 [[maybe_unused]] constexpr uint64_t kSimpleProtocol_Add_Ordinal =
     1238508415331800925lu;
@@ -285,11 +293,3 @@ void ::fidl::WireResponse<
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__
-
-void ::fidl_test_nullable::wire::SimpleUnion::SizeAndOffsetAssertionHelper() {
-  static_assert(sizeof(SimpleUnion) == sizeof(fidl_xunion_t));
-  static_assert(offsetof(SimpleUnion, ordinal_) ==
-                offsetof(fidl_xunion_t, tag));
-  static_assert(offsetof(SimpleUnion, envelope_) ==
-                offsetof(fidl_xunion_t, envelope));
-}

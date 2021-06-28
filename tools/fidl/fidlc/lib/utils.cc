@@ -243,6 +243,19 @@ std::string canonicalize(std::string_view identifier) {
   return canonical;
 }
 
+std::string StringJoin(const std::vector<std::string_view>& strings, std::string_view separator) {
+  std::string result;
+  bool first = true;
+  for (const auto& part : strings) {
+    if (!first) {
+      result += separator;
+    }
+    first = false;
+    result += part;
+  }
+  return result;
+}
+
 void PrintFinding(std::ostream& os, const Finding& finding) {
   os << finding.message() << " [";
   os << finding.subcategory();

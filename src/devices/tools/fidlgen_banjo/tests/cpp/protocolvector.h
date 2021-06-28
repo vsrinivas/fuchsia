@@ -69,54 +69,6 @@
 // };
 // :: Proxies ::
 //
-// ddk::Vector2ProtocolClient is a simple wrapper around
-// vector2_protocol_t. It does not own the pointers passed to it.
-//
-// :: Mixins ::
-//
-// ddk::Vector2Protocol is a mixin class that simplifies writing DDK drivers
-// that implement the vector2 protocol. It doesn't set the base protocol.
-//
-// :: Examples ::
-//
-// // A driver that implements a ZX_PROTOCOL_VECTOR2 device.
-// class Vector2Device;
-// using Vector2DeviceType = ddk::Device<Vector2Device, /* ddk mixins */>;
-//
-// class Vector2Device : public Vector2DeviceType,
-//                      public ddk::Vector2Protocol<Vector2Device> {
-//   public:
-//     Vector2Device(zx_device_t* parent)
-//         : Vector2DeviceType(parent) {}
-//
-//     void Vector2Bool(const bool* b_list, size_t b_count, bool* out_b_list, size_t b_count, size_t* out_b_actual);
-//
-//     void Vector2Int8(const int8_t* i8_list, size_t i8_count, int8_t* out_i8_list, size_t i8_count, size_t* out_i8_actual);
-//
-//     void Vector2Int16(const int16_t* i16_list, size_t i16_count, int16_t* out_i16_list, size_t i16_count, size_t* out_i16_actual);
-//
-//     void Vector2Int32(const int32_t* i32_list, size_t i32_count, int32_t* out_i32_list, size_t i32_count, size_t* out_i32_actual);
-//
-//     void Vector2Int64(const int64_t* i64_list, size_t i64_count, int64_t* out_i64_list, size_t i64_count, size_t* out_i64_actual);
-//
-//     void Vector2Uint8(const uint8_t* u8_list, size_t u8_count, uint8_t* out_u8_list, size_t u8_count, size_t* out_u8_actual);
-//
-//     void Vector2Uint16(const uint16_t* u16_list, size_t u16_count, uint16_t* out_u16_list, size_t u16_count, size_t* out_u16_actual);
-//
-//     void Vector2Uint32(const uint32_t* u32_list, size_t u32_count, uint32_t* out_u32_list, size_t u32_count, size_t* out_u32_actual);
-//
-//     void Vector2Uint64(const uint64_t* u64_list, size_t u64_count, uint64_t* out_u64_list, size_t u64_count, size_t* out_u64_actual);
-//
-//     void Vector2Float32(const float* f32_list, size_t f32_count, float* out_f32_list, size_t f32_count, size_t* out_f32_actual);
-//
-//     void Vector2Float64(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual);
-//
-//     void Vector2Handle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual);
-//
-//     ...
-// };
-// :: Proxies ::
-//
 // ddk::VectorProtocolClient is a simple wrapper around
 // vector_protocol_t. It does not own the pointers passed to it.
 //
@@ -160,6 +112,54 @@
 //     void VectorFloat64(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual);
 //
 //     void VectorHandle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual);
+//
+//     ...
+// };
+// :: Proxies ::
+//
+// ddk::Vector2ProtocolClient is a simple wrapper around
+// vector2_protocol_t. It does not own the pointers passed to it.
+//
+// :: Mixins ::
+//
+// ddk::Vector2Protocol is a mixin class that simplifies writing DDK drivers
+// that implement the vector2 protocol. It doesn't set the base protocol.
+//
+// :: Examples ::
+//
+// // A driver that implements a ZX_PROTOCOL_VECTOR2 device.
+// class Vector2Device;
+// using Vector2DeviceType = ddk::Device<Vector2Device, /* ddk mixins */>;
+//
+// class Vector2Device : public Vector2DeviceType,
+//                      public ddk::Vector2Protocol<Vector2Device> {
+//   public:
+//     Vector2Device(zx_device_t* parent)
+//         : Vector2DeviceType(parent) {}
+//
+//     void Vector2Bool(const bool* b_list, size_t b_count, bool* out_b_list, size_t b_count, size_t* out_b_actual);
+//
+//     void Vector2Int8(const int8_t* i8_list, size_t i8_count, int8_t* out_i8_list, size_t i8_count, size_t* out_i8_actual);
+//
+//     void Vector2Int16(const int16_t* i16_list, size_t i16_count, int16_t* out_i16_list, size_t i16_count, size_t* out_i16_actual);
+//
+//     void Vector2Int32(const int32_t* i32_list, size_t i32_count, int32_t* out_i32_list, size_t i32_count, size_t* out_i32_actual);
+//
+//     void Vector2Int64(const int64_t* i64_list, size_t i64_count, int64_t* out_i64_list, size_t i64_count, size_t* out_i64_actual);
+//
+//     void Vector2Uint8(const uint8_t* u8_list, size_t u8_count, uint8_t* out_u8_list, size_t u8_count, size_t* out_u8_actual);
+//
+//     void Vector2Uint16(const uint16_t* u16_list, size_t u16_count, uint16_t* out_u16_list, size_t u16_count, size_t* out_u16_actual);
+//
+//     void Vector2Uint32(const uint32_t* u32_list, size_t u32_count, uint32_t* out_u32_list, size_t u32_count, size_t* out_u32_actual);
+//
+//     void Vector2Uint64(const uint64_t* u64_list, size_t u64_count, uint64_t* out_u64_list, size_t u64_count, size_t* out_u64_actual);
+//
+//     void Vector2Float32(const float* f32_list, size_t f32_count, float* out_f32_list, size_t f32_count, size_t* out_f32_actual);
+//
+//     void Vector2Float64(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual);
+//
+//     void Vector2Handle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual);
 //
 //     ...
 // };
@@ -360,199 +360,6 @@ private:
 };
 
 template <typename D, typename Base = internal::base_mixin>
-class Vector2Protocol : public Base {
-public:
-    Vector2Protocol() {
-        internal::CheckVector2ProtocolSubclass<D>();
-        vector2_protocol_ops_.bool = Vector2Bool;
-        vector2_protocol_ops_.int8 = Vector2Int8;
-        vector2_protocol_ops_.int16 = Vector2Int16;
-        vector2_protocol_ops_.int32 = Vector2Int32;
-        vector2_protocol_ops_.int64 = Vector2Int64;
-        vector2_protocol_ops_.uint8 = Vector2Uint8;
-        vector2_protocol_ops_.uint16 = Vector2Uint16;
-        vector2_protocol_ops_.uint32 = Vector2Uint32;
-        vector2_protocol_ops_.uint64 = Vector2Uint64;
-        vector2_protocol_ops_.float32 = Vector2Float32;
-        vector2_protocol_ops_.float64 = Vector2Float64;
-        vector2_protocol_ops_.handle = Vector2Handle;
-
-        if constexpr (internal::is_base_proto<Base>::value) {
-            auto dev = static_cast<D*>(this);
-            // Can only inherit from one base_protocol implementation.
-            ZX_ASSERT(dev->ddk_proto_id_ == 0);
-            dev->ddk_proto_id_ = ZX_PROTOCOL_VECTOR2;
-            dev->ddk_proto_ops_ = &vector2_protocol_ops_;
-        }
-    }
-
-protected:
-    vector2_protocol_ops_t vector2_protocol_ops_ = {};
-
-private:
-    static void Vector2Bool(void* ctx, const bool* b_list, size_t b_count, bool* out_b_list, size_t b_count, size_t* out_b_actual) {
-        static_cast<D*>(ctx)->Vector2Bool(b_list, b_count, out_b_list, b_count, out_b_actual);
-    }
-    static void Vector2Int8(void* ctx, const int8_t* i8_list, size_t i8_count, int8_t* out_i8_list, size_t i8_count, size_t* out_i8_actual) {
-        static_cast<D*>(ctx)->Vector2Int8(i8_list, i8_count, out_i8_list, i8_count, out_i8_actual);
-    }
-    static void Vector2Int16(void* ctx, const int16_t* i16_list, size_t i16_count, int16_t* out_i16_list, size_t i16_count, size_t* out_i16_actual) {
-        static_cast<D*>(ctx)->Vector2Int16(i16_list, i16_count, out_i16_list, i16_count, out_i16_actual);
-    }
-    static void Vector2Int32(void* ctx, const int32_t* i32_list, size_t i32_count, int32_t* out_i32_list, size_t i32_count, size_t* out_i32_actual) {
-        static_cast<D*>(ctx)->Vector2Int32(i32_list, i32_count, out_i32_list, i32_count, out_i32_actual);
-    }
-    static void Vector2Int64(void* ctx, const int64_t* i64_list, size_t i64_count, int64_t* out_i64_list, size_t i64_count, size_t* out_i64_actual) {
-        static_cast<D*>(ctx)->Vector2Int64(i64_list, i64_count, out_i64_list, i64_count, out_i64_actual);
-    }
-    static void Vector2Uint8(void* ctx, const uint8_t* u8_list, size_t u8_count, uint8_t* out_u8_list, size_t u8_count, size_t* out_u8_actual) {
-        static_cast<D*>(ctx)->Vector2Uint8(u8_list, u8_count, out_u8_list, u8_count, out_u8_actual);
-    }
-    static void Vector2Uint16(void* ctx, const uint16_t* u16_list, size_t u16_count, uint16_t* out_u16_list, size_t u16_count, size_t* out_u16_actual) {
-        static_cast<D*>(ctx)->Vector2Uint16(u16_list, u16_count, out_u16_list, u16_count, out_u16_actual);
-    }
-    static void Vector2Uint32(void* ctx, const uint32_t* u32_list, size_t u32_count, uint32_t* out_u32_list, size_t u32_count, size_t* out_u32_actual) {
-        static_cast<D*>(ctx)->Vector2Uint32(u32_list, u32_count, out_u32_list, u32_count, out_u32_actual);
-    }
-    static void Vector2Uint64(void* ctx, const uint64_t* u64_list, size_t u64_count, uint64_t* out_u64_list, size_t u64_count, size_t* out_u64_actual) {
-        static_cast<D*>(ctx)->Vector2Uint64(u64_list, u64_count, out_u64_list, u64_count, out_u64_actual);
-    }
-    static void Vector2Float32(void* ctx, const float* f32_list, size_t f32_count, float* out_f32_list, size_t f32_count, size_t* out_f32_actual) {
-        static_cast<D*>(ctx)->Vector2Float32(f32_list, f32_count, out_f32_list, f32_count, out_f32_actual);
-    }
-    static void Vector2Float64(void* ctx, const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual) {
-        static_cast<D*>(ctx)->Vector2Float64(u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
-    }
-    static void Vector2Handle(void* ctx, const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual) {
-        static_cast<D*>(ctx)->Vector2Handle(u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
-    }
-};
-
-class Vector2ProtocolClient {
-public:
-    Vector2ProtocolClient()
-        : ops_(nullptr), ctx_(nullptr) {}
-    Vector2ProtocolClient(const vector2_protocol_t* proto)
-        : ops_(proto->ops), ctx_(proto->ctx) {}
-
-    Vector2ProtocolClient(zx_device_t* parent) {
-        vector2_protocol_t proto;
-        if (device_get_protocol(parent, ZX_PROTOCOL_VECTOR2, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
-    Vector2ProtocolClient(zx_device_t* parent, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        vector2_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_VECTOR2, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
-    // Create a Vector2ProtocolClient from the given parent device + "fragment".
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromDevice(zx_device_t* parent,
-                                        Vector2ProtocolClient* result) {
-        vector2_protocol_t proto;
-        zx_status_t status = device_get_protocol(
-                parent, ZX_PROTOCOL_VECTOR2, &proto);
-        if (status != ZX_OK) {
-            return status;
-        }
-        *result = Vector2ProtocolClient(&proto);
-        return ZX_OK;
-    }
-
-    // Create a Vector2ProtocolClient from the given parent device.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
-                                        Vector2ProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
-    }
-
-    void GetProto(vector2_protocol_t* proto) const {
-        proto->ctx = ctx_;
-        proto->ops = ops_;
-    }
-    bool is_valid() const {
-        return ops_ != nullptr;
-    }
-    void clear() {
-        ctx_ = nullptr;
-        ops_ = nullptr;
-    }
-
-    void Bool(const bool* b_list, size_t b_count, bool* out_b_list, size_t b_count, size_t* out_b_actual) const {
-        ops_->bool(ctx_, b_list, b_count, out_b_list, b_count, out_b_actual);
-    }
-
-    void Int8(const int8_t* i8_list, size_t i8_count, int8_t* out_i8_list, size_t i8_count, size_t* out_i8_actual) const {
-        ops_->int8(ctx_, i8_list, i8_count, out_i8_list, i8_count, out_i8_actual);
-    }
-
-    void Int16(const int16_t* i16_list, size_t i16_count, int16_t* out_i16_list, size_t i16_count, size_t* out_i16_actual) const {
-        ops_->int16(ctx_, i16_list, i16_count, out_i16_list, i16_count, out_i16_actual);
-    }
-
-    void Int32(const int32_t* i32_list, size_t i32_count, int32_t* out_i32_list, size_t i32_count, size_t* out_i32_actual) const {
-        ops_->int32(ctx_, i32_list, i32_count, out_i32_list, i32_count, out_i32_actual);
-    }
-
-    void Int64(const int64_t* i64_list, size_t i64_count, int64_t* out_i64_list, size_t i64_count, size_t* out_i64_actual) const {
-        ops_->int64(ctx_, i64_list, i64_count, out_i64_list, i64_count, out_i64_actual);
-    }
-
-    void Uint8(const uint8_t* u8_list, size_t u8_count, uint8_t* out_u8_list, size_t u8_count, size_t* out_u8_actual) const {
-        ops_->uint8(ctx_, u8_list, u8_count, out_u8_list, u8_count, out_u8_actual);
-    }
-
-    void Uint16(const uint16_t* u16_list, size_t u16_count, uint16_t* out_u16_list, size_t u16_count, size_t* out_u16_actual) const {
-        ops_->uint16(ctx_, u16_list, u16_count, out_u16_list, u16_count, out_u16_actual);
-    }
-
-    void Uint32(const uint32_t* u32_list, size_t u32_count, uint32_t* out_u32_list, size_t u32_count, size_t* out_u32_actual) const {
-        ops_->uint32(ctx_, u32_list, u32_count, out_u32_list, u32_count, out_u32_actual);
-    }
-
-    void Uint64(const uint64_t* u64_list, size_t u64_count, uint64_t* out_u64_list, size_t u64_count, size_t* out_u64_actual) const {
-        ops_->uint64(ctx_, u64_list, u64_count, out_u64_list, u64_count, out_u64_actual);
-    }
-
-    void Float32(const float* f32_list, size_t f32_count, float* out_f32_list, size_t f32_count, size_t* out_f32_actual) const {
-        ops_->float32(ctx_, f32_list, f32_count, out_f32_list, f32_count, out_f32_actual);
-    }
-
-    void Float64(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual) const {
-        ops_->float64(ctx_, u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
-    }
-
-    void Handle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual) const {
-        ops_->handle(ctx_, u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
-    }
-
-private:
-    vector2_protocol_ops_t* ops_;
-    void* ctx_;
-};
-
-template <typename D, typename Base = internal::base_mixin>
 class VectorProtocol : public Base {
 public:
     VectorProtocol() {
@@ -742,6 +549,199 @@ public:
 
 private:
     vector_protocol_ops_t* ops_;
+    void* ctx_;
+};
+
+template <typename D, typename Base = internal::base_mixin>
+class Vector2Protocol : public Base {
+public:
+    Vector2Protocol() {
+        internal::CheckVector2ProtocolSubclass<D>();
+        vector2_protocol_ops_.bool = Vector2Bool;
+        vector2_protocol_ops_.int8 = Vector2Int8;
+        vector2_protocol_ops_.int16 = Vector2Int16;
+        vector2_protocol_ops_.int32 = Vector2Int32;
+        vector2_protocol_ops_.int64 = Vector2Int64;
+        vector2_protocol_ops_.uint8 = Vector2Uint8;
+        vector2_protocol_ops_.uint16 = Vector2Uint16;
+        vector2_protocol_ops_.uint32 = Vector2Uint32;
+        vector2_protocol_ops_.uint64 = Vector2Uint64;
+        vector2_protocol_ops_.float32 = Vector2Float32;
+        vector2_protocol_ops_.float64 = Vector2Float64;
+        vector2_protocol_ops_.handle = Vector2Handle;
+
+        if constexpr (internal::is_base_proto<Base>::value) {
+            auto dev = static_cast<D*>(this);
+            // Can only inherit from one base_protocol implementation.
+            ZX_ASSERT(dev->ddk_proto_id_ == 0);
+            dev->ddk_proto_id_ = ZX_PROTOCOL_VECTOR2;
+            dev->ddk_proto_ops_ = &vector2_protocol_ops_;
+        }
+    }
+
+protected:
+    vector2_protocol_ops_t vector2_protocol_ops_ = {};
+
+private:
+    static void Vector2Bool(void* ctx, const bool* b_list, size_t b_count, bool* out_b_list, size_t b_count, size_t* out_b_actual) {
+        static_cast<D*>(ctx)->Vector2Bool(b_list, b_count, out_b_list, b_count, out_b_actual);
+    }
+    static void Vector2Int8(void* ctx, const int8_t* i8_list, size_t i8_count, int8_t* out_i8_list, size_t i8_count, size_t* out_i8_actual) {
+        static_cast<D*>(ctx)->Vector2Int8(i8_list, i8_count, out_i8_list, i8_count, out_i8_actual);
+    }
+    static void Vector2Int16(void* ctx, const int16_t* i16_list, size_t i16_count, int16_t* out_i16_list, size_t i16_count, size_t* out_i16_actual) {
+        static_cast<D*>(ctx)->Vector2Int16(i16_list, i16_count, out_i16_list, i16_count, out_i16_actual);
+    }
+    static void Vector2Int32(void* ctx, const int32_t* i32_list, size_t i32_count, int32_t* out_i32_list, size_t i32_count, size_t* out_i32_actual) {
+        static_cast<D*>(ctx)->Vector2Int32(i32_list, i32_count, out_i32_list, i32_count, out_i32_actual);
+    }
+    static void Vector2Int64(void* ctx, const int64_t* i64_list, size_t i64_count, int64_t* out_i64_list, size_t i64_count, size_t* out_i64_actual) {
+        static_cast<D*>(ctx)->Vector2Int64(i64_list, i64_count, out_i64_list, i64_count, out_i64_actual);
+    }
+    static void Vector2Uint8(void* ctx, const uint8_t* u8_list, size_t u8_count, uint8_t* out_u8_list, size_t u8_count, size_t* out_u8_actual) {
+        static_cast<D*>(ctx)->Vector2Uint8(u8_list, u8_count, out_u8_list, u8_count, out_u8_actual);
+    }
+    static void Vector2Uint16(void* ctx, const uint16_t* u16_list, size_t u16_count, uint16_t* out_u16_list, size_t u16_count, size_t* out_u16_actual) {
+        static_cast<D*>(ctx)->Vector2Uint16(u16_list, u16_count, out_u16_list, u16_count, out_u16_actual);
+    }
+    static void Vector2Uint32(void* ctx, const uint32_t* u32_list, size_t u32_count, uint32_t* out_u32_list, size_t u32_count, size_t* out_u32_actual) {
+        static_cast<D*>(ctx)->Vector2Uint32(u32_list, u32_count, out_u32_list, u32_count, out_u32_actual);
+    }
+    static void Vector2Uint64(void* ctx, const uint64_t* u64_list, size_t u64_count, uint64_t* out_u64_list, size_t u64_count, size_t* out_u64_actual) {
+        static_cast<D*>(ctx)->Vector2Uint64(u64_list, u64_count, out_u64_list, u64_count, out_u64_actual);
+    }
+    static void Vector2Float32(void* ctx, const float* f32_list, size_t f32_count, float* out_f32_list, size_t f32_count, size_t* out_f32_actual) {
+        static_cast<D*>(ctx)->Vector2Float32(f32_list, f32_count, out_f32_list, f32_count, out_f32_actual);
+    }
+    static void Vector2Float64(void* ctx, const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual) {
+        static_cast<D*>(ctx)->Vector2Float64(u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
+    }
+    static void Vector2Handle(void* ctx, const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual) {
+        static_cast<D*>(ctx)->Vector2Handle(u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
+    }
+};
+
+class Vector2ProtocolClient {
+public:
+    Vector2ProtocolClient()
+        : ops_(nullptr), ctx_(nullptr) {}
+    Vector2ProtocolClient(const vector2_protocol_t* proto)
+        : ops_(proto->ops), ctx_(proto->ctx) {}
+
+    Vector2ProtocolClient(zx_device_t* parent) {
+        vector2_protocol_t proto;
+        if (device_get_protocol(parent, ZX_PROTOCOL_VECTOR2, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    Vector2ProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        vector2_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_VECTOR2, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a Vector2ProtocolClient from the given parent device + "fragment".
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        Vector2ProtocolClient* result) {
+        vector2_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_VECTOR2, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = Vector2ProtocolClient(&proto);
+        return ZX_OK;
+    }
+
+    // Create a Vector2ProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        Vector2ProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
+    }
+
+    void GetProto(vector2_protocol_t* proto) const {
+        proto->ctx = ctx_;
+        proto->ops = ops_;
+    }
+    bool is_valid() const {
+        return ops_ != nullptr;
+    }
+    void clear() {
+        ctx_ = nullptr;
+        ops_ = nullptr;
+    }
+
+    void Bool(const bool* b_list, size_t b_count, bool* out_b_list, size_t b_count, size_t* out_b_actual) const {
+        ops_->bool(ctx_, b_list, b_count, out_b_list, b_count, out_b_actual);
+    }
+
+    void Int8(const int8_t* i8_list, size_t i8_count, int8_t* out_i8_list, size_t i8_count, size_t* out_i8_actual) const {
+        ops_->int8(ctx_, i8_list, i8_count, out_i8_list, i8_count, out_i8_actual);
+    }
+
+    void Int16(const int16_t* i16_list, size_t i16_count, int16_t* out_i16_list, size_t i16_count, size_t* out_i16_actual) const {
+        ops_->int16(ctx_, i16_list, i16_count, out_i16_list, i16_count, out_i16_actual);
+    }
+
+    void Int32(const int32_t* i32_list, size_t i32_count, int32_t* out_i32_list, size_t i32_count, size_t* out_i32_actual) const {
+        ops_->int32(ctx_, i32_list, i32_count, out_i32_list, i32_count, out_i32_actual);
+    }
+
+    void Int64(const int64_t* i64_list, size_t i64_count, int64_t* out_i64_list, size_t i64_count, size_t* out_i64_actual) const {
+        ops_->int64(ctx_, i64_list, i64_count, out_i64_list, i64_count, out_i64_actual);
+    }
+
+    void Uint8(const uint8_t* u8_list, size_t u8_count, uint8_t* out_u8_list, size_t u8_count, size_t* out_u8_actual) const {
+        ops_->uint8(ctx_, u8_list, u8_count, out_u8_list, u8_count, out_u8_actual);
+    }
+
+    void Uint16(const uint16_t* u16_list, size_t u16_count, uint16_t* out_u16_list, size_t u16_count, size_t* out_u16_actual) const {
+        ops_->uint16(ctx_, u16_list, u16_count, out_u16_list, u16_count, out_u16_actual);
+    }
+
+    void Uint32(const uint32_t* u32_list, size_t u32_count, uint32_t* out_u32_list, size_t u32_count, size_t* out_u32_actual) const {
+        ops_->uint32(ctx_, u32_list, u32_count, out_u32_list, u32_count, out_u32_actual);
+    }
+
+    void Uint64(const uint64_t* u64_list, size_t u64_count, uint64_t* out_u64_list, size_t u64_count, size_t* out_u64_actual) const {
+        ops_->uint64(ctx_, u64_list, u64_count, out_u64_list, u64_count, out_u64_actual);
+    }
+
+    void Float32(const float* f32_list, size_t f32_count, float* out_f32_list, size_t f32_count, size_t* out_f32_actual) const {
+        ops_->float32(ctx_, f32_list, f32_count, out_f32_list, f32_count, out_f32_actual);
+    }
+
+    void Float64(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual) const {
+        ops_->float64(ctx_, u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
+    }
+
+    void Handle(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual) const {
+        ops_->handle(ctx_, u64_list, u64_count, out_f64_list, f64_count, out_f64_actual);
+    }
+
+private:
+    vector2_protocol_ops_t* ops_;
     void* ctx_;
 };
 

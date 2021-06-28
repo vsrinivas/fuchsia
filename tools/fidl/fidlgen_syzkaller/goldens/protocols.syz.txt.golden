@@ -326,12 +326,12 @@ zx_channel_call$fidl_test_protocols_ChannelProtocolTakeHandle(handle zx_chan_fid
 zx_channel_call$fidl_test_protocols_ChannelProtocolMutateSocket(handle zx_chan_fidl_test_protocols_ChannelProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[fidl_test_protocols_ChannelProtocolMutateSocketRequest, fidl_test_protocols_ChannelProtocolMutateSocketRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], fidl_test_protocols_ChannelProtocolMutateSocketResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 
 
-fidl_test_protocols_SyscallProtocolMethodARequest {
-       hdr fidl_message_header[4027882972639496112]
+fidl_test_protocols_SyscallProtocolMethodCRequest {
+       hdr fidl_message_header[1454353253880264687]
        a int64
        b int64
 } [packed]
-fidl_test_protocols_SyscallProtocolMethodARequestHandles {
+fidl_test_protocols_SyscallProtocolMethodCRequestHandles {
        void void
 } [packed]
 
@@ -340,7 +340,7 @@ resource zx_chan_fidl_test_protocols_SyscallProtocol_server[zx_chan]
 
 zx_channel_create$fidl_test_protocols_SyscallProtocol(options const[0], out0 ptr[out, zx_chan_fidl_test_protocols_SyscallProtocol_client], out1 ptr[out, zx_chan_fidl_test_protocols_SyscallProtocol_server])
 fdio_service_connect$fidl_test_protocols_SyscallProtocol(path ptr[in, string["/svc/"]], handle zx_chan_fidl_test_protocols_SyscallProtocol_server)
-zx_channel_write$fidl_test_protocols_SyscallProtocolMethodA(handle zx_chan_fidl_test_protocols_SyscallProtocol_client, options const[0], bytes ptr[in, fidl_test_protocols_SyscallProtocolMethodARequest], num_bytes bytesize[bytes], handles ptr[in, fidl_test_protocols_SyscallProtocolMethodARequestHandles], num_handles bytesize[handles])
+zx_channel_write$fidl_test_protocols_SyscallProtocolMethodC(handle zx_chan_fidl_test_protocols_SyscallProtocol_client, options const[0], bytes ptr[in, fidl_test_protocols_SyscallProtocolMethodCRequest], num_bytes bytesize[bytes], handles ptr[in, fidl_test_protocols_SyscallProtocolMethodCRequestHandles], num_handles bytesize[handles])
 
 
 fidl_test_protocols_TransitionalRequestRequest {

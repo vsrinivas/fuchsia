@@ -105,6 +105,7 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const TypeShape& type_shape);
   void Generate(const FieldShape& type_shape);
 
+  void GenerateDeclName(const flat::Name& name);
   void Generate(const flat::Name& value);
   void Generate(const flat::Type* value);
   void Generate(const flat::Constant& value);

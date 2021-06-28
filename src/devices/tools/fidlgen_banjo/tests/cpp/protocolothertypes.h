@@ -21,67 +21,37 @@
 //
 // :: Proxies ::
 //
-// ddk::InterfaceProtocolClient is a simple wrapper around
-// interface_protocol_t. It does not own the pointers passed to it.
+// ddk::OtherTypesProtocolClient is a simple wrapper around
+// other_types_protocol_t. It does not own the pointers passed to it.
 //
 // :: Mixins ::
 //
-// ddk::InterfaceProtocol is a mixin class that simplifies writing DDK drivers
-// that implement the interface protocol. It doesn't set the base protocol.
+// ddk::OtherTypesProtocol is a mixin class that simplifies writing DDK drivers
+// that implement the other-types protocol. It doesn't set the base protocol.
 //
 // :: Examples ::
 //
-// // A driver that implements a ZX_PROTOCOL_INTERFACE device.
-// class InterfaceDevice;
-// using InterfaceDeviceType = ddk::Device<InterfaceDevice, /* ddk mixins */>;
+// // A driver that implements a ZX_PROTOCOL_OTHER_TYPES device.
+// class OtherTypesDevice;
+// using OtherTypesDeviceType = ddk::Device<OtherTypesDevice, /* ddk mixins */>;
 //
-// class InterfaceDevice : public InterfaceDeviceType,
-//                      public ddk::InterfaceProtocol<InterfaceDevice> {
+// class OtherTypesDevice : public OtherTypesDeviceType,
+//                      public ddk::OtherTypesProtocol<OtherTypesDevice> {
 //   public:
-//     InterfaceDevice(zx_device_t* parent)
-//         : InterfaceDeviceType(parent) {}
+//     OtherTypesDevice(zx_device_t* parent)
+//         : OtherTypesDeviceType(parent) {}
 //
-//     void InterfaceValue(const other_types_protocol_t* intf, other_types_protocol_t* out_intf);
+//     void OtherTypesStruct(const this_is_astruct_t* s, this_is_astruct_t* out_s);
 //
-//     void InterfaceReference(const other_types_protocol_t* intf, other_types_protocol_t** out_intf);
+//     void OtherTypesUnion(const this_is_aunion_t* u, this_is_aunion_t* out_u);
 //
-//     void InterfaceAsync(const other_types_protocol_t* intf, interface_async_callback callback, void* cookie);
+//     this_is_an_enum_t OtherTypesEnum(this_is_an_enum_t e);
 //
-//     void InterfaceAsyncRefernce(const other_types_protocol_t* intf, interface_async_refernce_callback callback, void* cookie);
+//     void OtherTypesString(const char* s, char* out_s, size_t s_capacity);
 //
-//     ...
-// };
-// :: Proxies ::
+//     void OtherTypesStringSized(const char* s, char* out_s, size_t s_capacity);
 //
-// ddk::OtherTypesAsyncReferenceProtocolClient is a simple wrapper around
-// other_types_async_reference_protocol_t. It does not own the pointers passed to it.
-//
-// :: Mixins ::
-//
-// ddk::OtherTypesAsyncReferenceProtocol is a mixin class that simplifies writing DDK drivers
-// that implement the other-types-async-reference protocol. It doesn't set the base protocol.
-//
-// :: Examples ::
-//
-// // A driver that implements a ZX_PROTOCOL_OTHER_TYPES_ASYNC_REFERENCE device.
-// class OtherTypesAsyncReferenceDevice;
-// using OtherTypesAsyncReferenceDeviceType = ddk::Device<OtherTypesAsyncReferenceDevice, /* ddk mixins */>;
-//
-// class OtherTypesAsyncReferenceDevice : public OtherTypesAsyncReferenceDeviceType,
-//                      public ddk::OtherTypesAsyncReferenceProtocol<OtherTypesAsyncReferenceDevice> {
-//   public:
-//     OtherTypesAsyncReferenceDevice(zx_device_t* parent)
-//         : OtherTypesAsyncReferenceDeviceType(parent) {}
-//
-//     void OtherTypesAsyncReferenceStruct(const this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie);
-//
-//     void OtherTypesAsyncReferenceUnion(const this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie);
-//
-//     void OtherTypesAsyncReferenceString(const char* s, other_types_async_reference_string_callback callback, void* cookie);
-//
-//     void OtherTypesAsyncReferenceStringSized(const char* s, other_types_async_reference_string_sized_callback callback, void* cookie);
-//
-//     void OtherTypesAsyncReferenceStringSized2(const char* s, other_types_async_reference_string_sized2_callback callback, void* cookie);
+//     void OtherTypesStringSized2(const char* s, char* out_s, size_t s_capacity);
 //
 //     ...
 // };
@@ -157,37 +127,67 @@
 // };
 // :: Proxies ::
 //
-// ddk::OtherTypesProtocolClient is a simple wrapper around
-// other_types_protocol_t. It does not own the pointers passed to it.
+// ddk::OtherTypesAsyncReferenceProtocolClient is a simple wrapper around
+// other_types_async_reference_protocol_t. It does not own the pointers passed to it.
 //
 // :: Mixins ::
 //
-// ddk::OtherTypesProtocol is a mixin class that simplifies writing DDK drivers
-// that implement the other-types protocol. It doesn't set the base protocol.
+// ddk::OtherTypesAsyncReferenceProtocol is a mixin class that simplifies writing DDK drivers
+// that implement the other-types-async-reference protocol. It doesn't set the base protocol.
 //
 // :: Examples ::
 //
-// // A driver that implements a ZX_PROTOCOL_OTHER_TYPES device.
-// class OtherTypesDevice;
-// using OtherTypesDeviceType = ddk::Device<OtherTypesDevice, /* ddk mixins */>;
+// // A driver that implements a ZX_PROTOCOL_OTHER_TYPES_ASYNC_REFERENCE device.
+// class OtherTypesAsyncReferenceDevice;
+// using OtherTypesAsyncReferenceDeviceType = ddk::Device<OtherTypesAsyncReferenceDevice, /* ddk mixins */>;
 //
-// class OtherTypesDevice : public OtherTypesDeviceType,
-//                      public ddk::OtherTypesProtocol<OtherTypesDevice> {
+// class OtherTypesAsyncReferenceDevice : public OtherTypesAsyncReferenceDeviceType,
+//                      public ddk::OtherTypesAsyncReferenceProtocol<OtherTypesAsyncReferenceDevice> {
 //   public:
-//     OtherTypesDevice(zx_device_t* parent)
-//         : OtherTypesDeviceType(parent) {}
+//     OtherTypesAsyncReferenceDevice(zx_device_t* parent)
+//         : OtherTypesAsyncReferenceDeviceType(parent) {}
 //
-//     void OtherTypesStruct(const this_is_astruct_t* s, this_is_astruct_t* out_s);
+//     void OtherTypesAsyncReferenceStruct(const this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie);
 //
-//     void OtherTypesUnion(const this_is_aunion_t* u, this_is_aunion_t* out_u);
+//     void OtherTypesAsyncReferenceUnion(const this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie);
 //
-//     this_is_an_enum_t OtherTypesEnum(this_is_an_enum_t e);
+//     void OtherTypesAsyncReferenceString(const char* s, other_types_async_reference_string_callback callback, void* cookie);
 //
-//     void OtherTypesString(const char* s, char* out_s, size_t s_capacity);
+//     void OtherTypesAsyncReferenceStringSized(const char* s, other_types_async_reference_string_sized_callback callback, void* cookie);
 //
-//     void OtherTypesStringSized(const char* s, char* out_s, size_t s_capacity);
+//     void OtherTypesAsyncReferenceStringSized2(const char* s, other_types_async_reference_string_sized2_callback callback, void* cookie);
 //
-//     void OtherTypesStringSized2(const char* s, char* out_s, size_t s_capacity);
+//     ...
+// };
+// :: Proxies ::
+//
+// ddk::InterfaceProtocolClient is a simple wrapper around
+// interface_protocol_t. It does not own the pointers passed to it.
+//
+// :: Mixins ::
+//
+// ddk::InterfaceProtocol is a mixin class that simplifies writing DDK drivers
+// that implement the interface protocol. It doesn't set the base protocol.
+//
+// :: Examples ::
+//
+// // A driver that implements a ZX_PROTOCOL_INTERFACE device.
+// class InterfaceDevice;
+// using InterfaceDeviceType = ddk::Device<InterfaceDevice, /* ddk mixins */>;
+//
+// class InterfaceDevice : public InterfaceDeviceType,
+//                      public ddk::InterfaceProtocol<InterfaceDevice> {
+//   public:
+//     InterfaceDevice(zx_device_t* parent)
+//         : InterfaceDeviceType(parent) {}
+//
+//     void InterfaceValue(const other_types_protocol_t* intf, other_types_protocol_t* out_intf);
+//
+//     void InterfaceReference(const other_types_protocol_t* intf, other_types_protocol_t** out_intf);
+//
+//     void InterfaceAsync(const other_types_protocol_t* intf, interface_async_callback callback, void* cookie);
+//
+//     void InterfaceAsyncRefernce(const other_types_protocol_t* intf, interface_async_refernce_callback callback, void* cookie);
 //
 //     ...
 // };
@@ -195,52 +195,61 @@
 namespace ddk {
 
 template <typename D, typename Base = internal::base_mixin>
-class InterfaceProtocol : public Base {
+class OtherTypesProtocol : public Base {
 public:
-    InterfaceProtocol() {
-        internal::CheckInterfaceProtocolSubclass<D>();
-        interface_protocol_ops_.value = InterfaceValue;
-        interface_protocol_ops_.reference = InterfaceReference;
-        interface_protocol_ops_.async = InterfaceAsync;
-        interface_protocol_ops_.async_refernce = InterfaceAsyncRefernce;
+    OtherTypesProtocol() {
+        internal::CheckOtherTypesProtocolSubclass<D>();
+        other_types_protocol_ops_.struct = OtherTypesStruct;
+        other_types_protocol_ops_.union = OtherTypesUnion;
+        other_types_protocol_ops_.enum = OtherTypesEnum;
+        other_types_protocol_ops_.string = OtherTypesString;
+        other_types_protocol_ops_.string_sized = OtherTypesStringSized;
+        other_types_protocol_ops_.string_sized2 = OtherTypesStringSized2;
 
         if constexpr (internal::is_base_proto<Base>::value) {
             auto dev = static_cast<D*>(this);
             // Can only inherit from one base_protocol implementation.
             ZX_ASSERT(dev->ddk_proto_id_ == 0);
-            dev->ddk_proto_id_ = ZX_PROTOCOL_INTERFACE;
-            dev->ddk_proto_ops_ = &interface_protocol_ops_;
+            dev->ddk_proto_id_ = ZX_PROTOCOL_OTHER_TYPES;
+            dev->ddk_proto_ops_ = &other_types_protocol_ops_;
         }
     }
 
 protected:
-    interface_protocol_ops_t interface_protocol_ops_ = {};
+    other_types_protocol_ops_t other_types_protocol_ops_ = {};
 
 private:
-    static void InterfaceValue(void* ctx, const other_types_protocol_t* intf, other_types_protocol_t* out_intf) {
-        static_cast<D*>(ctx)->InterfaceValue(intf, out_intf);
+    static void OtherTypesStruct(void* ctx, const this_is_astruct_t* s, this_is_astruct_t* out_s) {
+        static_cast<D*>(ctx)->OtherTypesStruct(s, out_s);
     }
-    static void InterfaceReference(void* ctx, const other_types_protocol_t* intf, other_types_protocol_t** out_intf) {
-        static_cast<D*>(ctx)->InterfaceReference(intf, out_intf);
+    static void OtherTypesUnion(void* ctx, const this_is_aunion_t* u, this_is_aunion_t* out_u) {
+        static_cast<D*>(ctx)->OtherTypesUnion(u, out_u);
     }
-    static void InterfaceAsync(void* ctx, const other_types_protocol_t* intf, interface_async_callback callback, void* cookie) {
-        static_cast<D*>(ctx)->InterfaceAsync(intf, callback, cookie);
+    static this_is_an_enum_t OtherTypesEnum(void* ctx, this_is_an_enum_t e) {
+        auto ret = static_cast<D*>(ctx)->OtherTypesEnum(e);
+        return ret;
     }
-    static void InterfaceAsyncRefernce(void* ctx, const other_types_protocol_t* intf, interface_async_refernce_callback callback, void* cookie) {
-        static_cast<D*>(ctx)->InterfaceAsyncRefernce(intf, callback, cookie);
+    static void OtherTypesString(void* ctx, const char* s, char* out_s, size_t s_capacity) {
+        static_cast<D*>(ctx)->OtherTypesString(s, out_s, s_capacity);
+    }
+    static void OtherTypesStringSized(void* ctx, const char* s, char* out_s, size_t s_capacity) {
+        static_cast<D*>(ctx)->OtherTypesStringSized(s, out_s, s_capacity);
+    }
+    static void OtherTypesStringSized2(void* ctx, const char* s, char* out_s, size_t s_capacity) {
+        static_cast<D*>(ctx)->OtherTypesStringSized2(s, out_s, s_capacity);
     }
 };
 
-class InterfaceProtocolClient {
+class OtherTypesProtocolClient {
 public:
-    InterfaceProtocolClient()
+    OtherTypesProtocolClient()
         : ops_(nullptr), ctx_(nullptr) {}
-    InterfaceProtocolClient(const interface_protocol_t* proto)
+    OtherTypesProtocolClient(const other_types_protocol_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    InterfaceProtocolClient(zx_device_t* parent) {
-        interface_protocol_t proto;
-        if (device_get_protocol(parent, ZX_PROTOCOL_INTERFACE, &proto) == ZX_OK) {
+    OtherTypesProtocolClient(zx_device_t* parent) {
+        other_types_protocol_t proto;
+        if (device_get_protocol(parent, ZX_PROTOCOL_OTHER_TYPES, &proto) == ZX_OK) {
             ops_ = proto.ops;
             ctx_ = proto.ctx;
         } else {
@@ -249,11 +258,11 @@ public:
         }
     }
 
-    InterfaceProtocolClient(zx_device_t* parent, const char* fragment_name) {
+    OtherTypesProtocolClient(zx_device_t* parent, const char* fragment_name) {
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
-        interface_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_INTERFACE, &proto) == ZX_OK) {
+        other_types_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_OTHER_TYPES, &proto) == ZX_OK) {
             ops_ = proto.ops;
             ctx_ = proto.ctx;
         } else {
@@ -262,26 +271,26 @@ public:
         }
     }
 
-    // Create a InterfaceProtocolClient from the given parent device + "fragment".
+    // Create a OtherTypesProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
-                                        InterfaceProtocolClient* result) {
-        interface_protocol_t proto;
+                                        OtherTypesProtocolClient* result) {
+        other_types_protocol_t proto;
         zx_status_t status = device_get_protocol(
-                parent, ZX_PROTOCOL_INTERFACE, &proto);
+                parent, ZX_PROTOCOL_OTHER_TYPES, &proto);
         if (status != ZX_OK) {
             return status;
         }
-        *result = InterfaceProtocolClient(&proto);
+        *result = OtherTypesProtocolClient(&proto);
         return ZX_OK;
     }
 
-    // Create a InterfaceProtocolClient from the given parent device.
+    // Create a OtherTypesProtocolClient from the given parent device.
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
-                                        InterfaceProtocolClient* result) {
+                                        OtherTypesProtocolClient* result) {
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
         if (!found) {
@@ -290,7 +299,7 @@ public:
         return CreateFromDevice(fragment, result);
     }
 
-    void GetProto(interface_protocol_t* proto) const {
+    void GetProto(other_types_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
     }
@@ -302,181 +311,32 @@ public:
         ops_ = nullptr;
     }
 
-    void Value(void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t* out_intf) const {
-        const other_types_protocol_t intf2 = {
-            .ops = intf_ops,
-            .ctx = intf_ctx,
-        };
-        const other_types_protocol_t* intf = &intf2;
-        ops_->value(ctx_, intf, out_intf);
+    void Struct(const this_is_astruct_t* s, this_is_astruct_t* out_s) const {
+        ops_->struct(ctx_, s, out_s);
     }
 
-    void Reference(void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t** out_intf) const {
-        const other_types_protocol_t intf2 = {
-            .ops = intf_ops,
-            .ctx = intf_ctx,
-        };
-        const other_types_protocol_t* intf = &intf2;
-        ops_->reference(ctx_, intf, out_intf);
+    void Union(const this_is_aunion_t* u, this_is_aunion_t* out_u) const {
+        ops_->union(ctx_, u, out_u);
     }
 
-    void Async(void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_callback callback, void* cookie) const {
-        const other_types_protocol_t intf2 = {
-            .ops = intf_ops,
-            .ctx = intf_ctx,
-        };
-        const other_types_protocol_t* intf = &intf2;
-        ops_->async(ctx_, intf, callback, cookie);
+    this_is_an_enum_t Enum(this_is_an_enum_t e) const {
+        return ops_->enum(ctx_, e);
     }
 
-    void AsyncRefernce(void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_refernce_callback callback, void* cookie) const {
-        const other_types_protocol_t intf2 = {
-            .ops = intf_ops,
-            .ctx = intf_ctx,
-        };
-        const other_types_protocol_t* intf = &intf2;
-        ops_->async_refernce(ctx_, intf, callback, cookie);
+    void String(const char* s, char* out_s, size_t s_capacity) const {
+        ops_->string(ctx_, s, out_s, s_capacity);
+    }
+
+    void StringSized(const char* s, char* out_s, size_t s_capacity) const {
+        ops_->string_sized(ctx_, s, out_s, s_capacity);
+    }
+
+    void StringSized2(const char* s, char* out_s, size_t s_capacity) const {
+        ops_->string_sized2(ctx_, s, out_s, s_capacity);
     }
 
 private:
-    interface_protocol_ops_t* ops_;
-    void* ctx_;
-};
-
-template <typename D, typename Base = internal::base_mixin>
-class OtherTypesAsyncReferenceProtocol : public Base {
-public:
-    OtherTypesAsyncReferenceProtocol() {
-        internal::CheckOtherTypesAsyncReferenceProtocolSubclass<D>();
-        other_types_async_reference_protocol_ops_.struct = OtherTypesAsyncReferenceStruct;
-        other_types_async_reference_protocol_ops_.union = OtherTypesAsyncReferenceUnion;
-        other_types_async_reference_protocol_ops_.string = OtherTypesAsyncReferenceString;
-        other_types_async_reference_protocol_ops_.string_sized = OtherTypesAsyncReferenceStringSized;
-        other_types_async_reference_protocol_ops_.string_sized2 = OtherTypesAsyncReferenceStringSized2;
-
-        if constexpr (internal::is_base_proto<Base>::value) {
-            auto dev = static_cast<D*>(this);
-            // Can only inherit from one base_protocol implementation.
-            ZX_ASSERT(dev->ddk_proto_id_ == 0);
-            dev->ddk_proto_id_ = ZX_PROTOCOL_OTHER_TYPES_ASYNC_REFERENCE;
-            dev->ddk_proto_ops_ = &other_types_async_reference_protocol_ops_;
-        }
-    }
-
-protected:
-    other_types_async_reference_protocol_ops_t other_types_async_reference_protocol_ops_ = {};
-
-private:
-    static void OtherTypesAsyncReferenceStruct(void* ctx, const this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) {
-        static_cast<D*>(ctx)->OtherTypesAsyncReferenceStruct(s, callback, cookie);
-    }
-    static void OtherTypesAsyncReferenceUnion(void* ctx, const this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie) {
-        static_cast<D*>(ctx)->OtherTypesAsyncReferenceUnion(u, callback, cookie);
-    }
-    static void OtherTypesAsyncReferenceString(void* ctx, const char* s, other_types_async_reference_string_callback callback, void* cookie) {
-        static_cast<D*>(ctx)->OtherTypesAsyncReferenceString(s, callback, cookie);
-    }
-    static void OtherTypesAsyncReferenceStringSized(void* ctx, const char* s, other_types_async_reference_string_sized_callback callback, void* cookie) {
-        static_cast<D*>(ctx)->OtherTypesAsyncReferenceStringSized(s, callback, cookie);
-    }
-    static void OtherTypesAsyncReferenceStringSized2(void* ctx, const char* s, other_types_async_reference_string_sized2_callback callback, void* cookie) {
-        static_cast<D*>(ctx)->OtherTypesAsyncReferenceStringSized2(s, callback, cookie);
-    }
-};
-
-class OtherTypesAsyncReferenceProtocolClient {
-public:
-    OtherTypesAsyncReferenceProtocolClient()
-        : ops_(nullptr), ctx_(nullptr) {}
-    OtherTypesAsyncReferenceProtocolClient(const other_types_async_reference_protocol_t* proto)
-        : ops_(proto->ops), ctx_(proto->ctx) {}
-
-    OtherTypesAsyncReferenceProtocolClient(zx_device_t* parent) {
-        other_types_async_reference_protocol_t proto;
-        if (device_get_protocol(parent, ZX_PROTOCOL_OTHER_TYPES_ASYNC_REFERENCE, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
-    OtherTypesAsyncReferenceProtocolClient(zx_device_t* parent, const char* fragment_name) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        other_types_async_reference_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_OTHER_TYPES_ASYNC_REFERENCE, &proto) == ZX_OK) {
-            ops_ = proto.ops;
-            ctx_ = proto.ctx;
-        } else {
-            ops_ = nullptr;
-            ctx_ = nullptr;
-        }
-    }
-
-    // Create a OtherTypesAsyncReferenceProtocolClient from the given parent device + "fragment".
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromDevice(zx_device_t* parent,
-                                        OtherTypesAsyncReferenceProtocolClient* result) {
-        other_types_async_reference_protocol_t proto;
-        zx_status_t status = device_get_protocol(
-                parent, ZX_PROTOCOL_OTHER_TYPES_ASYNC_REFERENCE, &proto);
-        if (status != ZX_OK) {
-            return status;
-        }
-        *result = OtherTypesAsyncReferenceProtocolClient(&proto);
-        return ZX_OK;
-    }
-
-    // Create a OtherTypesAsyncReferenceProtocolClient from the given parent device.
-    //
-    // If ZX_OK is returned, the created object will be initialized in |result|.
-    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
-                                        OtherTypesAsyncReferenceProtocolClient* result) {
-        zx_device_t* fragment;
-        bool found = device_get_fragment(parent, fragment_name, &fragment);
-        if (!found) {
-          return ZX_ERR_NOT_FOUND;
-        }
-        return CreateFromDevice(fragment, result);
-    }
-
-    void GetProto(other_types_async_reference_protocol_t* proto) const {
-        proto->ctx = ctx_;
-        proto->ops = ops_;
-    }
-    bool is_valid() const {
-        return ops_ != nullptr;
-    }
-    void clear() {
-        ctx_ = nullptr;
-        ops_ = nullptr;
-    }
-
-    void Struct(const this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) const {
-        ops_->struct(ctx_, s, callback, cookie);
-    }
-
-    void Union(const this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie) const {
-        ops_->union(ctx_, u, callback, cookie);
-    }
-
-    void String(const char* s, other_types_async_reference_string_callback callback, void* cookie) const {
-        ops_->string(ctx_, s, callback, cookie);
-    }
-
-    void StringSized(const char* s, other_types_async_reference_string_sized_callback callback, void* cookie) const {
-        ops_->string_sized(ctx_, s, callback, cookie);
-    }
-
-    void StringSized2(const char* s, other_types_async_reference_string_sized2_callback callback, void* cookie) const {
-        ops_->string_sized2(ctx_, s, callback, cookie);
-    }
-
-private:
-    other_types_async_reference_protocol_ops_t* ops_;
+    other_types_protocol_ops_t* ops_;
     void* ctx_;
 };
 
@@ -763,61 +623,56 @@ private:
 };
 
 template <typename D, typename Base = internal::base_mixin>
-class OtherTypesProtocol : public Base {
+class OtherTypesAsyncReferenceProtocol : public Base {
 public:
-    OtherTypesProtocol() {
-        internal::CheckOtherTypesProtocolSubclass<D>();
-        other_types_protocol_ops_.struct = OtherTypesStruct;
-        other_types_protocol_ops_.union = OtherTypesUnion;
-        other_types_protocol_ops_.enum = OtherTypesEnum;
-        other_types_protocol_ops_.string = OtherTypesString;
-        other_types_protocol_ops_.string_sized = OtherTypesStringSized;
-        other_types_protocol_ops_.string_sized2 = OtherTypesStringSized2;
+    OtherTypesAsyncReferenceProtocol() {
+        internal::CheckOtherTypesAsyncReferenceProtocolSubclass<D>();
+        other_types_async_reference_protocol_ops_.struct = OtherTypesAsyncReferenceStruct;
+        other_types_async_reference_protocol_ops_.union = OtherTypesAsyncReferenceUnion;
+        other_types_async_reference_protocol_ops_.string = OtherTypesAsyncReferenceString;
+        other_types_async_reference_protocol_ops_.string_sized = OtherTypesAsyncReferenceStringSized;
+        other_types_async_reference_protocol_ops_.string_sized2 = OtherTypesAsyncReferenceStringSized2;
 
         if constexpr (internal::is_base_proto<Base>::value) {
             auto dev = static_cast<D*>(this);
             // Can only inherit from one base_protocol implementation.
             ZX_ASSERT(dev->ddk_proto_id_ == 0);
-            dev->ddk_proto_id_ = ZX_PROTOCOL_OTHER_TYPES;
-            dev->ddk_proto_ops_ = &other_types_protocol_ops_;
+            dev->ddk_proto_id_ = ZX_PROTOCOL_OTHER_TYPES_ASYNC_REFERENCE;
+            dev->ddk_proto_ops_ = &other_types_async_reference_protocol_ops_;
         }
     }
 
 protected:
-    other_types_protocol_ops_t other_types_protocol_ops_ = {};
+    other_types_async_reference_protocol_ops_t other_types_async_reference_protocol_ops_ = {};
 
 private:
-    static void OtherTypesStruct(void* ctx, const this_is_astruct_t* s, this_is_astruct_t* out_s) {
-        static_cast<D*>(ctx)->OtherTypesStruct(s, out_s);
+    static void OtherTypesAsyncReferenceStruct(void* ctx, const this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) {
+        static_cast<D*>(ctx)->OtherTypesAsyncReferenceStruct(s, callback, cookie);
     }
-    static void OtherTypesUnion(void* ctx, const this_is_aunion_t* u, this_is_aunion_t* out_u) {
-        static_cast<D*>(ctx)->OtherTypesUnion(u, out_u);
+    static void OtherTypesAsyncReferenceUnion(void* ctx, const this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie) {
+        static_cast<D*>(ctx)->OtherTypesAsyncReferenceUnion(u, callback, cookie);
     }
-    static this_is_an_enum_t OtherTypesEnum(void* ctx, this_is_an_enum_t e) {
-        auto ret = static_cast<D*>(ctx)->OtherTypesEnum(e);
-        return ret;
+    static void OtherTypesAsyncReferenceString(void* ctx, const char* s, other_types_async_reference_string_callback callback, void* cookie) {
+        static_cast<D*>(ctx)->OtherTypesAsyncReferenceString(s, callback, cookie);
     }
-    static void OtherTypesString(void* ctx, const char* s, char* out_s, size_t s_capacity) {
-        static_cast<D*>(ctx)->OtherTypesString(s, out_s, s_capacity);
+    static void OtherTypesAsyncReferenceStringSized(void* ctx, const char* s, other_types_async_reference_string_sized_callback callback, void* cookie) {
+        static_cast<D*>(ctx)->OtherTypesAsyncReferenceStringSized(s, callback, cookie);
     }
-    static void OtherTypesStringSized(void* ctx, const char* s, char* out_s, size_t s_capacity) {
-        static_cast<D*>(ctx)->OtherTypesStringSized(s, out_s, s_capacity);
-    }
-    static void OtherTypesStringSized2(void* ctx, const char* s, char* out_s, size_t s_capacity) {
-        static_cast<D*>(ctx)->OtherTypesStringSized2(s, out_s, s_capacity);
+    static void OtherTypesAsyncReferenceStringSized2(void* ctx, const char* s, other_types_async_reference_string_sized2_callback callback, void* cookie) {
+        static_cast<D*>(ctx)->OtherTypesAsyncReferenceStringSized2(s, callback, cookie);
     }
 };
 
-class OtherTypesProtocolClient {
+class OtherTypesAsyncReferenceProtocolClient {
 public:
-    OtherTypesProtocolClient()
+    OtherTypesAsyncReferenceProtocolClient()
         : ops_(nullptr), ctx_(nullptr) {}
-    OtherTypesProtocolClient(const other_types_protocol_t* proto)
+    OtherTypesAsyncReferenceProtocolClient(const other_types_async_reference_protocol_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    OtherTypesProtocolClient(zx_device_t* parent) {
-        other_types_protocol_t proto;
-        if (device_get_protocol(parent, ZX_PROTOCOL_OTHER_TYPES, &proto) == ZX_OK) {
+    OtherTypesAsyncReferenceProtocolClient(zx_device_t* parent) {
+        other_types_async_reference_protocol_t proto;
+        if (device_get_protocol(parent, ZX_PROTOCOL_OTHER_TYPES_ASYNC_REFERENCE, &proto) == ZX_OK) {
             ops_ = proto.ops;
             ctx_ = proto.ctx;
         } else {
@@ -826,11 +681,11 @@ public:
         }
     }
 
-    OtherTypesProtocolClient(zx_device_t* parent, const char* fragment_name) {
+    OtherTypesAsyncReferenceProtocolClient(zx_device_t* parent, const char* fragment_name) {
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
-        other_types_protocol_t proto;
-        if (found && device_get_protocol(fragment, ZX_PROTOCOL_OTHER_TYPES, &proto) == ZX_OK) {
+        other_types_async_reference_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_OTHER_TYPES_ASYNC_REFERENCE, &proto) == ZX_OK) {
             ops_ = proto.ops;
             ctx_ = proto.ctx;
         } else {
@@ -839,26 +694,26 @@ public:
         }
     }
 
-    // Create a OtherTypesProtocolClient from the given parent device + "fragment".
+    // Create a OtherTypesAsyncReferenceProtocolClient from the given parent device + "fragment".
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent,
-                                        OtherTypesProtocolClient* result) {
-        other_types_protocol_t proto;
+                                        OtherTypesAsyncReferenceProtocolClient* result) {
+        other_types_async_reference_protocol_t proto;
         zx_status_t status = device_get_protocol(
-                parent, ZX_PROTOCOL_OTHER_TYPES, &proto);
+                parent, ZX_PROTOCOL_OTHER_TYPES_ASYNC_REFERENCE, &proto);
         if (status != ZX_OK) {
             return status;
         }
-        *result = OtherTypesProtocolClient(&proto);
+        *result = OtherTypesAsyncReferenceProtocolClient(&proto);
         return ZX_OK;
     }
 
-    // Create a OtherTypesProtocolClient from the given parent device.
+    // Create a OtherTypesAsyncReferenceProtocolClient from the given parent device.
     //
     // If ZX_OK is returned, the created object will be initialized in |result|.
     static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
-                                        OtherTypesProtocolClient* result) {
+                                        OtherTypesAsyncReferenceProtocolClient* result) {
         zx_device_t* fragment;
         bool found = device_get_fragment(parent, fragment_name, &fragment);
         if (!found) {
@@ -867,7 +722,7 @@ public:
         return CreateFromDevice(fragment, result);
     }
 
-    void GetProto(other_types_protocol_t* proto) const {
+    void GetProto(other_types_async_reference_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
     }
@@ -879,32 +734,177 @@ public:
         ops_ = nullptr;
     }
 
-    void Struct(const this_is_astruct_t* s, this_is_astruct_t* out_s) const {
-        ops_->struct(ctx_, s, out_s);
+    void Struct(const this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie) const {
+        ops_->struct(ctx_, s, callback, cookie);
     }
 
-    void Union(const this_is_aunion_t* u, this_is_aunion_t* out_u) const {
-        ops_->union(ctx_, u, out_u);
+    void Union(const this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie) const {
+        ops_->union(ctx_, u, callback, cookie);
     }
 
-    this_is_an_enum_t Enum(this_is_an_enum_t e) const {
-        return ops_->enum(ctx_, e);
+    void String(const char* s, other_types_async_reference_string_callback callback, void* cookie) const {
+        ops_->string(ctx_, s, callback, cookie);
     }
 
-    void String(const char* s, char* out_s, size_t s_capacity) const {
-        ops_->string(ctx_, s, out_s, s_capacity);
+    void StringSized(const char* s, other_types_async_reference_string_sized_callback callback, void* cookie) const {
+        ops_->string_sized(ctx_, s, callback, cookie);
     }
 
-    void StringSized(const char* s, char* out_s, size_t s_capacity) const {
-        ops_->string_sized(ctx_, s, out_s, s_capacity);
-    }
-
-    void StringSized2(const char* s, char* out_s, size_t s_capacity) const {
-        ops_->string_sized2(ctx_, s, out_s, s_capacity);
+    void StringSized2(const char* s, other_types_async_reference_string_sized2_callback callback, void* cookie) const {
+        ops_->string_sized2(ctx_, s, callback, cookie);
     }
 
 private:
-    other_types_protocol_ops_t* ops_;
+    other_types_async_reference_protocol_ops_t* ops_;
+    void* ctx_;
+};
+
+template <typename D, typename Base = internal::base_mixin>
+class InterfaceProtocol : public Base {
+public:
+    InterfaceProtocol() {
+        internal::CheckInterfaceProtocolSubclass<D>();
+        interface_protocol_ops_.value = InterfaceValue;
+        interface_protocol_ops_.reference = InterfaceReference;
+        interface_protocol_ops_.async = InterfaceAsync;
+        interface_protocol_ops_.async_refernce = InterfaceAsyncRefernce;
+
+        if constexpr (internal::is_base_proto<Base>::value) {
+            auto dev = static_cast<D*>(this);
+            // Can only inherit from one base_protocol implementation.
+            ZX_ASSERT(dev->ddk_proto_id_ == 0);
+            dev->ddk_proto_id_ = ZX_PROTOCOL_INTERFACE;
+            dev->ddk_proto_ops_ = &interface_protocol_ops_;
+        }
+    }
+
+protected:
+    interface_protocol_ops_t interface_protocol_ops_ = {};
+
+private:
+    static void InterfaceValue(void* ctx, const other_types_protocol_t* intf, other_types_protocol_t* out_intf) {
+        static_cast<D*>(ctx)->InterfaceValue(intf, out_intf);
+    }
+    static void InterfaceReference(void* ctx, const other_types_protocol_t* intf, other_types_protocol_t** out_intf) {
+        static_cast<D*>(ctx)->InterfaceReference(intf, out_intf);
+    }
+    static void InterfaceAsync(void* ctx, const other_types_protocol_t* intf, interface_async_callback callback, void* cookie) {
+        static_cast<D*>(ctx)->InterfaceAsync(intf, callback, cookie);
+    }
+    static void InterfaceAsyncRefernce(void* ctx, const other_types_protocol_t* intf, interface_async_refernce_callback callback, void* cookie) {
+        static_cast<D*>(ctx)->InterfaceAsyncRefernce(intf, callback, cookie);
+    }
+};
+
+class InterfaceProtocolClient {
+public:
+    InterfaceProtocolClient()
+        : ops_(nullptr), ctx_(nullptr) {}
+    InterfaceProtocolClient(const interface_protocol_t* proto)
+        : ops_(proto->ops), ctx_(proto->ctx) {}
+
+    InterfaceProtocolClient(zx_device_t* parent) {
+        interface_protocol_t proto;
+        if (device_get_protocol(parent, ZX_PROTOCOL_INTERFACE, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    InterfaceProtocolClient(zx_device_t* parent, const char* fragment_name) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        interface_protocol_t proto;
+        if (found && device_get_protocol(fragment, ZX_PROTOCOL_INTERFACE, &proto) == ZX_OK) {
+            ops_ = proto.ops;
+            ctx_ = proto.ctx;
+        } else {
+            ops_ = nullptr;
+            ctx_ = nullptr;
+        }
+    }
+
+    // Create a InterfaceProtocolClient from the given parent device + "fragment".
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent,
+                                        InterfaceProtocolClient* result) {
+        interface_protocol_t proto;
+        zx_status_t status = device_get_protocol(
+                parent, ZX_PROTOCOL_INTERFACE, &proto);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *result = InterfaceProtocolClient(&proto);
+        return ZX_OK;
+    }
+
+    // Create a InterfaceProtocolClient from the given parent device.
+    //
+    // If ZX_OK is returned, the created object will be initialized in |result|.
+    static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
+                                        InterfaceProtocolClient* result) {
+        zx_device_t* fragment;
+        bool found = device_get_fragment(parent, fragment_name, &fragment);
+        if (!found) {
+          return ZX_ERR_NOT_FOUND;
+        }
+        return CreateFromDevice(fragment, result);
+    }
+
+    void GetProto(interface_protocol_t* proto) const {
+        proto->ctx = ctx_;
+        proto->ops = ops_;
+    }
+    bool is_valid() const {
+        return ops_ != nullptr;
+    }
+    void clear() {
+        ctx_ = nullptr;
+        ops_ = nullptr;
+    }
+
+    void Value(void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t* out_intf) const {
+        const other_types_protocol_t intf2 = {
+            .ops = intf_ops,
+            .ctx = intf_ctx,
+        };
+        const other_types_protocol_t* intf = &intf2;
+        ops_->value(ctx_, intf, out_intf);
+    }
+
+    void Reference(void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t** out_intf) const {
+        const other_types_protocol_t intf2 = {
+            .ops = intf_ops,
+            .ctx = intf_ctx,
+        };
+        const other_types_protocol_t* intf = &intf2;
+        ops_->reference(ctx_, intf, out_intf);
+    }
+
+    void Async(void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_callback callback, void* cookie) const {
+        const other_types_protocol_t intf2 = {
+            .ops = intf_ops,
+            .ctx = intf_ctx,
+        };
+        const other_types_protocol_t* intf = &intf2;
+        ops_->async(ctx_, intf, callback, cookie);
+    }
+
+    void AsyncRefernce(void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_refernce_callback callback, void* cookie) const {
+        const other_types_protocol_t intf2 = {
+            .ops = intf_ops,
+            .ctx = intf_ctx,
+        };
+        const other_types_protocol_t* intf = &intf2;
+        ops_->async_refernce(ctx_, intf, callback, cookie);
+    }
+
+private:
+    interface_protocol_ops_t* ops_;
     void* ctx_;
 };
 

@@ -242,7 +242,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.placementofattributes/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.placementofattributes/ExampleProtocolMethodRequest",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -261,7 +261,11 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.placementofattributes/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.placementofattributes/ExampleProtocolMethodRequest",
+      "maybe_naming_context": [
+        "ExampleProtocol",
+        "Method"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 25,
@@ -604,7 +608,7 @@
     "fidl.test.placementofattributes/EXAMPLE_CONST": "const",
     "fidl.test.placementofattributes/ExampleEnum": "enum",
     "fidl.test.placementofattributes/ExampleProtocol": "interface",
-    "fidl.test.placementofattributes/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.placementofattributes/ExampleProtocolMethodRequest": "struct",
     "fidl.test.placementofattributes/ExampleStruct": "struct",
     "fidl.test.placementofattributes/ExampleTable": "table",
     "fidl.test.placementofattributes/ExampleUnion": "union",

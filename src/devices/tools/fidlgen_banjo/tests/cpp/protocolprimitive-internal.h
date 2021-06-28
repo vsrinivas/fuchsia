@@ -12,88 +12,6 @@
 namespace ddk {
 namespace internal {
 
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_bool, AsyncPrimitiveBool,
-        void (C::*)(bool b, async_primitive_bool_callback callback, void* cookie));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int8, AsyncPrimitiveInt8,
-        void (C::*)(int8_t i8, async_primitive_int8_callback callback, void* cookie));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int16, AsyncPrimitiveInt16,
-        void (C::*)(int16_t i16, async_primitive_int16_callback callback, void* cookie));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int32, AsyncPrimitiveInt32,
-        void (C::*)(int32_t i32, async_primitive_int32_callback callback, void* cookie));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int64, AsyncPrimitiveInt64,
-        void (C::*)(int64_t i64, async_primitive_int64_callback callback, void* cookie));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint8, AsyncPrimitiveUint8,
-        void (C::*)(uint8_t u8, async_primitive_uint8_callback callback, void* cookie));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint16, AsyncPrimitiveUint16,
-        void (C::*)(uint16_t u16, async_primitive_uint16_callback callback, void* cookie));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint32, AsyncPrimitiveUint32,
-        void (C::*)(uint32_t u32, async_primitive_uint32_callback callback, void* cookie));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint64, AsyncPrimitiveUint64,
-        void (C::*)(uint64_t u64, async_primitive_uint64_callback callback, void* cookie));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_float32, AsyncPrimitiveFloat32,
-        void (C::*)(float f32, async_primitive_float32_callback callback, void* cookie));
-
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_float64, AsyncPrimitiveFloat64,
-        void (C::*)(double u64, async_primitive_float64_callback callback, void* cookie));
-
-
-template <typename D>
-constexpr void CheckAsyncPrimitiveProtocolSubclass() {
-    static_assert(internal::has_async_primitive_protocol_bool<D>::value,
-        "AsyncPrimitiveProtocol subclasses must implement "
-        "void AsyncPrimitiveBool(bool b, async_primitive_bool_callback callback, void* cookie);");
-
-    static_assert(internal::has_async_primitive_protocol_int8<D>::value,
-        "AsyncPrimitiveProtocol subclasses must implement "
-        "void AsyncPrimitiveInt8(int8_t i8, async_primitive_int8_callback callback, void* cookie);");
-
-    static_assert(internal::has_async_primitive_protocol_int16<D>::value,
-        "AsyncPrimitiveProtocol subclasses must implement "
-        "void AsyncPrimitiveInt16(int16_t i16, async_primitive_int16_callback callback, void* cookie);");
-
-    static_assert(internal::has_async_primitive_protocol_int32<D>::value,
-        "AsyncPrimitiveProtocol subclasses must implement "
-        "void AsyncPrimitiveInt32(int32_t i32, async_primitive_int32_callback callback, void* cookie);");
-
-    static_assert(internal::has_async_primitive_protocol_int64<D>::value,
-        "AsyncPrimitiveProtocol subclasses must implement "
-        "void AsyncPrimitiveInt64(int64_t i64, async_primitive_int64_callback callback, void* cookie);");
-
-    static_assert(internal::has_async_primitive_protocol_uint8<D>::value,
-        "AsyncPrimitiveProtocol subclasses must implement "
-        "void AsyncPrimitiveUint8(uint8_t u8, async_primitive_uint8_callback callback, void* cookie);");
-
-    static_assert(internal::has_async_primitive_protocol_uint16<D>::value,
-        "AsyncPrimitiveProtocol subclasses must implement "
-        "void AsyncPrimitiveUint16(uint16_t u16, async_primitive_uint16_callback callback, void* cookie);");
-
-    static_assert(internal::has_async_primitive_protocol_uint32<D>::value,
-        "AsyncPrimitiveProtocol subclasses must implement "
-        "void AsyncPrimitiveUint32(uint32_t u32, async_primitive_uint32_callback callback, void* cookie);");
-
-    static_assert(internal::has_async_primitive_protocol_uint64<D>::value,
-        "AsyncPrimitiveProtocol subclasses must implement "
-        "void AsyncPrimitiveUint64(uint64_t u64, async_primitive_uint64_callback callback, void* cookie);");
-
-    static_assert(internal::has_async_primitive_protocol_float32<D>::value,
-        "AsyncPrimitiveProtocol subclasses must implement "
-        "void AsyncPrimitiveFloat32(float f32, async_primitive_float32_callback callback, void* cookie);");
-
-    static_assert(internal::has_async_primitive_protocol_float64<D>::value,
-        "AsyncPrimitiveProtocol subclasses must implement "
-        "void AsyncPrimitiveFloat64(double u64, async_primitive_float64_callback callback, void* cookie);");
-
-}
-
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_bool, SynchronousPrimitiveBool,
         bool (C::*)(bool b, bool* out_b_2));
 
@@ -173,6 +91,88 @@ constexpr void CheckSynchronousPrimitiveProtocolSubclass() {
     static_assert(internal::has_synchronous_primitive_protocol_float64<D>::value,
         "SynchronousPrimitiveProtocol subclasses must implement "
         "double SynchronousPrimitiveFloat64(double u64, double* out_f64_2);");
+
+}
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_bool, AsyncPrimitiveBool,
+        void (C::*)(bool b, async_primitive_bool_callback callback, void* cookie));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int8, AsyncPrimitiveInt8,
+        void (C::*)(int8_t i8, async_primitive_int8_callback callback, void* cookie));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int16, AsyncPrimitiveInt16,
+        void (C::*)(int16_t i16, async_primitive_int16_callback callback, void* cookie));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int32, AsyncPrimitiveInt32,
+        void (C::*)(int32_t i32, async_primitive_int32_callback callback, void* cookie));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int64, AsyncPrimitiveInt64,
+        void (C::*)(int64_t i64, async_primitive_int64_callback callback, void* cookie));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint8, AsyncPrimitiveUint8,
+        void (C::*)(uint8_t u8, async_primitive_uint8_callback callback, void* cookie));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint16, AsyncPrimitiveUint16,
+        void (C::*)(uint16_t u16, async_primitive_uint16_callback callback, void* cookie));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint32, AsyncPrimitiveUint32,
+        void (C::*)(uint32_t u32, async_primitive_uint32_callback callback, void* cookie));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint64, AsyncPrimitiveUint64,
+        void (C::*)(uint64_t u64, async_primitive_uint64_callback callback, void* cookie));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_float32, AsyncPrimitiveFloat32,
+        void (C::*)(float f32, async_primitive_float32_callback callback, void* cookie));
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_float64, AsyncPrimitiveFloat64,
+        void (C::*)(double u64, async_primitive_float64_callback callback, void* cookie));
+
+
+template <typename D>
+constexpr void CheckAsyncPrimitiveProtocolSubclass() {
+    static_assert(internal::has_async_primitive_protocol_bool<D>::value,
+        "AsyncPrimitiveProtocol subclasses must implement "
+        "void AsyncPrimitiveBool(bool b, async_primitive_bool_callback callback, void* cookie);");
+
+    static_assert(internal::has_async_primitive_protocol_int8<D>::value,
+        "AsyncPrimitiveProtocol subclasses must implement "
+        "void AsyncPrimitiveInt8(int8_t i8, async_primitive_int8_callback callback, void* cookie);");
+
+    static_assert(internal::has_async_primitive_protocol_int16<D>::value,
+        "AsyncPrimitiveProtocol subclasses must implement "
+        "void AsyncPrimitiveInt16(int16_t i16, async_primitive_int16_callback callback, void* cookie);");
+
+    static_assert(internal::has_async_primitive_protocol_int32<D>::value,
+        "AsyncPrimitiveProtocol subclasses must implement "
+        "void AsyncPrimitiveInt32(int32_t i32, async_primitive_int32_callback callback, void* cookie);");
+
+    static_assert(internal::has_async_primitive_protocol_int64<D>::value,
+        "AsyncPrimitiveProtocol subclasses must implement "
+        "void AsyncPrimitiveInt64(int64_t i64, async_primitive_int64_callback callback, void* cookie);");
+
+    static_assert(internal::has_async_primitive_protocol_uint8<D>::value,
+        "AsyncPrimitiveProtocol subclasses must implement "
+        "void AsyncPrimitiveUint8(uint8_t u8, async_primitive_uint8_callback callback, void* cookie);");
+
+    static_assert(internal::has_async_primitive_protocol_uint16<D>::value,
+        "AsyncPrimitiveProtocol subclasses must implement "
+        "void AsyncPrimitiveUint16(uint16_t u16, async_primitive_uint16_callback callback, void* cookie);");
+
+    static_assert(internal::has_async_primitive_protocol_uint32<D>::value,
+        "AsyncPrimitiveProtocol subclasses must implement "
+        "void AsyncPrimitiveUint32(uint32_t u32, async_primitive_uint32_callback callback, void* cookie);");
+
+    static_assert(internal::has_async_primitive_protocol_uint64<D>::value,
+        "AsyncPrimitiveProtocol subclasses must implement "
+        "void AsyncPrimitiveUint64(uint64_t u64, async_primitive_uint64_callback callback, void* cookie);");
+
+    static_assert(internal::has_async_primitive_protocol_float32<D>::value,
+        "AsyncPrimitiveProtocol subclasses must implement "
+        "void AsyncPrimitiveFloat32(float f32, async_primitive_float32_callback callback, void* cookie);");
+
+    static_assert(internal::has_async_primitive_protocol_float64<D>::value,
+        "AsyncPrimitiveProtocol subclasses must implement "
+        "void AsyncPrimitiveFloat64(double u64, async_primitive_float64_callback callback, void* cookie);");
 
 }
 

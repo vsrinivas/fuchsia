@@ -46,7 +46,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.inheritance/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.inheritance/SuperFooRequest",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -76,7 +76,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.inheritance/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "fidl.test.inheritance/SuperFooTopResponse",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -172,7 +172,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.inheritance/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.inheritance/SuperFooRequest",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -202,7 +202,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.inheritance/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "fidl.test.inheritance/SuperFooTopResponse",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -220,7 +220,11 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.inheritance/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.inheritance/SuperFooRequest",
+      "maybe_naming_context": [
+        "super",
+        "foo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
         "line": 5,
@@ -259,7 +263,11 @@
       }
     },
     {
-      "name": "fidl.test.inheritance/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.inheritance/SuperFooTopResponse",
+      "maybe_naming_context": [
+        "super",
+        "foo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
         "line": 5,
@@ -298,7 +306,11 @@
       }
     },
     {
-      "name": "fidl.test.inheritance/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.inheritance/SuperFooRequest",
+      "maybe_naming_context": [
+        "super",
+        "foo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
         "line": 5,
@@ -337,7 +349,11 @@
       }
     },
     {
-      "name": "fidl.test.inheritance/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.inheritance/SuperFooTopResponse",
+      "maybe_naming_context": [
+        "super",
+        "foo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
         "line": 5,
@@ -386,7 +402,7 @@
   "declarations": {
     "fidl.test.inheritance/super": "interface",
     "fidl.test.inheritance/sub": "interface",
-    "fidl.test.inheritance/SomeLongAnonymousPrefix0": "struct",
-    "fidl.test.inheritance/SomeLongAnonymousPrefix1": "struct"
+    "fidl.test.inheritance/SuperFooRequest": "struct",
+    "fidl.test.inheritance/SuperFooTopResponse": "struct"
   }
 }

@@ -645,7 +645,6 @@ alias AliasOfDecl = TypeDecl;
   ASSERT_NOT_NULL(library.LookupTypeAlias("AliasOfDecl"));
 }
 
-// TODO(fxbug.dev/71536): add box when its node is added to the flat AST
 TEST(NewSyntaxTests, GoodTypeParameters) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);

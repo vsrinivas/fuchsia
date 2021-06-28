@@ -431,6 +431,10 @@ bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& nam
     reporter_->Report(ErrUnknownType, name.span(), name);
     return false;
   }
+  if (type_template->HasGeneratedName() && (name.as_anonymous() == nullptr)) {
+    reporter_->Report(ErrAnonymousNameReference, name.span(), name);
+    return false;
+  }
   return type_template->Create(lib,
                                {.name = name,
                                 .maybe_arg_type_ctor = maybe_arg_type_ctor,
@@ -452,6 +456,10 @@ bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& nam
   auto type_template = LookupTemplate(name, fidl::utils::Syntax::kNew);
   if (type_template == nullptr) {
     reporter_->Report(ErrUnknownType, name.span(), name);
+    return false;
+  }
+  if (type_template->HasGeneratedName() && (name.as_anonymous() == nullptr)) {
+    reporter_->Report(ErrAnonymousNameReference, name.span(), name);
     return false;
   }
   return type_template->Create(lib,
@@ -567,6 +575,8 @@ bool TypeTemplate::GetResource(const LibraryMediator& lib, const Name& name,
          "parser");
   __builtin_unreachable();
 }
+
+bool TypeTemplate::HasGeneratedName() const { return name_.as_anonymous() != nullptr; }
 
 class PrimitiveTypeTemplate : public TypeTemplate {
  public:
@@ -2344,7 +2354,7 @@ bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library, Rep
 
 std::string LibraryName(const Library* library, std::string_view separator) {
   if (library != nullptr) {
-    return StringJoin(library->name(), separator);
+    return utils::StringJoin(library->name(), separator);
   }
   return std::string();
 }
@@ -2869,40 +2879,48 @@ void Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
       std::move(type_ctor), std::move(members), enum_declaration->strictness));
 }
 
-bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_span,
-                                 raw::ProtocolMethod* method, Struct* in_response,
-                                 Struct** out_response) {
-  SourceSpan method_name_span = method->identifier->span();
-  auto error_name = Name::CreateDerived(
-      this, response_span,
-      StringJoin({protocol_name.decl_name(), method_name_span.data(), "Error"}, "_"));
+namespace {
 
+// Create a type constructor pointing to an anonymous layout.
+std::unique_ptr<TypeConstructorNew> IdentifierTypeForDecl(const Decl* decl) {
+  std::vector<std::unique_ptr<LayoutParameter>> no_params;
+  std::vector<std::unique_ptr<Constant>> no_constraints;
+  return std::make_unique<TypeConstructorNew>(
+      decl->name, std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt),
+      std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt));
+}
+
+}  // namespace
+
+bool Library::CreateMethodResult(const std::shared_ptr<NamingContext>& err_variant_context,
+                                 SourceSpan response_span, raw::ProtocolMethod* method,
+                                 Struct* success_variant, Struct** out_response) {
   // Compile the error type.
+  auto error_name = Name::CreateAnonymous(this, response_span, err_variant_context);
   flat::TypeConstructor error_type_ctor;
+  // TODO(fcz): pipe the naming context through
   if (!ConsumeTypeConstructor(std::move(method->maybe_error_ctor), error_name, &error_type_ctor))
     return false;
 
-  // Make the Result union containing the response struct and the
-  // error type.
-  // TODO(fxbug.dev/8027): Join spans of response and error constructor for `result_name`.
-  auto result_name = Name::CreateDerived(
-      this, response_span,
-      StringJoin({protocol_name.decl_name(), method_name_span.data(), "Result"}, "_"));
-
   raw::SourceElement sourceElement = raw::SourceElement(fidl::Token(), fidl::Token());
-  Union::Member response_member{
+  assert(success_variant->name.as_anonymous() != nullptr);
+  auto success_variant_context = success_variant->name.as_anonymous()->context;
+  Union::Member success_member{
       std::make_unique<raw::Ordinal64>(sourceElement,
                                        1),  // success case explicitly has ordinal 1
-      IdentifierTypeForDecl(in_response, types::Nullability::kNonnullable),
-      GeneratedSimpleName("response"), nullptr};
+      IdentifierTypeForDecl(success_variant), success_variant_context->name(), nullptr};
   Union::Member error_member{
       std::make_unique<raw::Ordinal64>(sourceElement, 2),  // error case explicitly has ordinal 2
-      std::move(error_type_ctor), GeneratedSimpleName("err"), nullptr};
+      std::move(error_type_ctor), err_variant_context->name(), nullptr};
   std::vector<Union::Member> result_members;
-  result_members.push_back(std::move(response_member));
+  result_members.push_back(std::move(success_member));
   result_members.push_back(std::move(error_member));
   std::vector<std::unique_ptr<Attribute>> result_attributes;
   result_attributes.emplace_back(std::make_unique<Attribute>("result", fidl::utils::Syntax::kNew));
+
+  // TODO(fxbug.dev/8027): Join spans of response and error constructor for `result_name`.
+  auto result_context = err_variant_context->parent();
+  auto result_name = Name::CreateAnonymous(this, response_span, result_context);
   auto union_decl = std::make_unique<Union>(
       std::make_unique<AttributeList>(std::move(result_attributes)), std::move(result_name),
       std::move(result_members), types::Strictness::kStrict, std::nullopt /* resourceness */);
@@ -2914,11 +2932,11 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
   // result union.
   std::vector<Struct::Member> response_members;
   response_members.push_back(
-      Struct::Member(IdentifierTypeForDecl(result_decl, types::Nullability::kNonnullable),
-                     GeneratedSimpleName("result"), nullptr, nullptr));
+      Struct::Member(IdentifierTypeForDecl(result_decl), result_context->name(), nullptr, nullptr));
 
+  const auto& response_context = result_context->parent();
   auto struct_decl = std::make_unique<Struct>(
-      nullptr /* attributes */, Name::CreateDerived(this, response_span, NextAnonymousName()),
+      nullptr /* attributes */, Name::CreateAnonymous(this, response_span, response_context),
       std::move(response_members), std::nullopt /* resourceness */,
       true /* is_request_or_response */);
   auto struct_decl_ptr = struct_decl.get();
@@ -2931,6 +2949,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
 void Library::ConsumeProtocolDeclaration(
     std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
   auto protocol_name = Name::CreateSourced(this, protocol_declaration->identifier->span());
+  auto protocol_context = NamingContext::Create(protocol_name.span().value());
 
   std::vector<Protocol::ComposedProtocol> composed_protocols;
   std::set<Name> seen_composed_protocols;
@@ -2965,9 +2984,9 @@ void Library::ConsumeProtocolDeclaration(
     Struct* maybe_request = nullptr;
     if (has_request) {
       bool result = std::visit(
-          [this, method_name, &maybe_request](auto params) -> bool {
-            return ConsumeParameterList(method_name, std::nullopt, std::move(params), true,
-                                        &maybe_request);
+          [this, method_name, &maybe_request, &protocol_context](auto params) -> bool {
+            return ConsumeParameterList(method_name, protocol_context->EnterRequest(method_name),
+                                        std::move(params), true, &maybe_request);
           },
           std::move(method->maybe_request));
       if (!result)
@@ -2980,17 +2999,37 @@ void Library::ConsumeProtocolDeclaration(
       const bool has_error = raw::IsTypeConstructorDefined(method->maybe_error_ctor);
 
       SourceSpan response_span = raw::GetSpan(method->maybe_response);
-      auto method_response_name =
-          StringJoin({protocol_name.decl_name(), method_name.data(), "Response"}, "_");
-      std::optional<Name> response_name = !has_error
-                                              ? std::nullopt
-                                              : std::make_optional<Name>(Name::CreateDerived(
-                                                    this, response_span, method_response_name));
+      auto response_context = has_request ? protocol_context->EnterResponse(method_name)
+                                          : protocol_context->EnterEvent(method_name);
 
+      std::shared_ptr<NamingContext> result_context, success_variant_context, err_variant_context;
+      if (has_error) {
+        // The error syntax desugars to the following type:
+        //
+        // struct { // the "response"
+        //   result union { // the "result"
+        //     response [user specified response type]; // the "success variant"
+        //     err [user specified error type]; // the "error variant"
+        //   };
+        // };
+        //
+        // Note that this can lead to ambiguity with the success variant, since its member
+        // name within the union is "response". The naming convention within fidlc
+        // is to refer to each type using the name provided in inline comments
+        // above (i.e. "response" refers to the top level struct, not the success variant).
+        result_context = response_context->EnterResult(GeneratedSimpleName("result"));
+        success_variant_context =
+            result_context->EnterSuccessVariant(GeneratedSimpleName("response"));
+        err_variant_context = result_context->EnterErrorVariant(GeneratedSimpleName("err"));
+      }
+
+      // The context for the user specified type within the response part of the method
+      // (i.e. `Foo() -> («this source») ...`) is either the top level response context
+      // or that of the success variant of the result type
+      auto ctx = has_error ? success_variant_context : response_context;
       bool result = std::visit(
-          [this, method_name, response_name(std::move(response_name)), has_error,
-           &maybe_response](auto params) -> bool {
-            return ConsumeParameterList(method_name, response_name, std::move(params), !has_error,
+          [this, method_name, has_error, ctx, &maybe_response](auto params) -> bool {
+            return ConsumeParameterList(method_name, ctx, std::move(params), !has_error,
                                         &maybe_response);
           },
           std::move(method->maybe_response));
@@ -2998,7 +3037,10 @@ void Library::ConsumeProtocolDeclaration(
         return;
 
       if (has_error) {
-        if (!CreateMethodResult(protocol_name, response_span, method.get(), maybe_response,
+        assert(err_variant_context != nullptr &&
+               "compiler bug: error type contexts should have been computed");
+        // we move out of `response_context` only if !has_error, so it's safe to use here
+        if (!CreateMethodResult(err_variant_context, response_span, method.get(), maybe_response,
                                 &maybe_response))
           return;
       }
@@ -3018,8 +3060,8 @@ void Library::ConsumeProtocolDeclaration(
                                           std::move(composed_protocols), std::move(methods)));
 }
 
-bool Library::ConsumeParameterList(SourceSpan method_name, std::optional<Name> assigned_name,
-                                   std::unique_ptr<raw::ParameterListOld> parameters,
+bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
+                                   std::unique_ptr<raw::ParameterListOld> parameter_list,
                                    bool is_request_or_response, Struct** out_struct_decl) {
   // If is_request_or_response is false, this parameter list is being generated
   // as one of two members in the "Foo_Result" union.  In this case, we proceed
@@ -3027,29 +3069,20 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::optional<Name> a
   // "Foo_Response," may be filled.  In the other case, an empty parameter list
   // means that the body payload is expected to be empty, so the out_struct_decl
   // should be left as null to indicate as much.
-  if (is_request_or_response && parameters->parameter_list.empty()) {
+  if (is_request_or_response && parameter_list->parameter_list.empty()) {
     return true;
   }
 
-  // If the name is unset, we need to generate an anonymous name for the struct
-  // representing this parameter list.
-  Name name = assigned_name.has_value()
-                  ? assigned_name.value()
-                  : Name::CreateDerived(this, parameters->span(), NextAnonymousName());
-
   std::vector<Struct::Member> members;
-  for (auto& parameter : parameters->parameter_list) {
+  for (auto& parameter : parameter_list->parameter_list) {
     std::unique_ptr<AttributeList> attributes;
     if (!ConsumeAttributeList(std::move(parameter->attributes), &attributes)) {
       return false;
     }
 
     TypeConstructor type_ctor;
-    // TODO(fxbug.dev/73285): finalize layout naming
-    auto param_name = Name::CreateDerived(
-        this, parameter->span(),
-        std::string(name.decl_name()) +
-            utils::to_upper_camel_case(std::string(parameter->identifier->span().data())));
+    // TODO(fcz): pass the context through instead of the name
+    auto param_name = Name::CreateDerived(this, parameter->span(), "TODO");
     if (!ConsumeTypeConstructor(std::move(parameter->type_ctor), param_name, &type_ctor))
       return false;
     ValidateAttributesPlacement(AttributePlacement::kStructMember, attributes.get());
@@ -3057,18 +3090,19 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::optional<Name> a
                          /* maybe_default_value=*/nullptr, std::move(attributes));
   }
 
-  if (!RegisterDecl(std::make_unique<Struct>(nullptr /* attributes */, std::move(name),
-                                             std::move(members), std::nullopt /* resourceness */,
-                                             is_request_or_response)))
+  if (!RegisterDecl(std::make_unique<Struct>(
+          nullptr /* attributes */,
+          Name::CreateAnonymous(this, parameter_list->span(), std::move(context)),
+          std::move(members), std::nullopt /* resourceness */, is_request_or_response)))
     return false;
 
   *out_struct_decl = struct_declarations_.back().get();
-  struct_declarations_.back()->from_parameter_list_span = parameters->span();
+  struct_declarations_.back()->from_parameter_list_span = parameter_list->span();
   return true;
 }
 
-bool Library::ConsumeParameterList(SourceSpan method_name, std::optional<Name> assigned_name,
-                                   std::unique_ptr<raw::ParameterListNew> parameters,
+bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
+                                   std::unique_ptr<raw::ParameterListNew> parameter_layout,
                                    bool is_request_or_response, Struct** out_struct_decl) {
   // If is_request_or_response is false, this parameter list is being generated
   // as one of two members in the "Foo_Result" union.  In this case, we proceed
@@ -3076,28 +3110,25 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::optional<Name> a
   // "Foo_Response," may be filled.  In the other case, an empty parameter list
   // means that the body payload is expected to be empty, so the out_struct_decl
   // should be left as null to indicate as much.
-  if (!parameters->type_ctor) {
+  if (!parameter_layout->type_ctor) {
     if (!is_request_or_response) {
-      Fail(ErrResponsesWithErrorsMustNotBeEmpty, parameters->span(), method_name);
+      Fail(ErrResponsesWithErrorsMustNotBeEmpty, parameter_layout->span(), method_name);
       return false;
     }
     return true;
   }
 
-  // If the name is unset, we need to generate an anonymous name for the struct
-  // representing this parameter list.
-  Name name = assigned_name.has_value()
-                  ? assigned_name.value()
-                  : Name::CreateDerived(this, parameters->span(), NextAnonymousName());
+  Name name = Name::CreateAnonymous(this, parameter_layout->span(), std::move(context));
 
   // TODO(fxbug.dev/74955): Once full-fledged anonymous layout attributes are
   //  implemented, this error check can be removed.
-  if (parameters->attributes) {
+  if (parameter_layout->attributes) {
     Fail(ErrNotYetSupportedAttributesOnPayloadStructs, name);
   }
 
+  // TODO(fcz): pipe the context through
   std::unique_ptr<TypeConstructorNew> unused_type_ctor;
-  if (!ConsumeTypeConstructorNew(std::move(parameters->type_ctor), name,
+  if (!ConsumeTypeConstructorNew(std::move(parameter_layout->type_ctor), name,
                                  /*raw_attribute_list=*/nullptr, is_request_or_response,
                                  /*out_type_=*/nullptr))
     return false;
@@ -3168,14 +3199,6 @@ bool Library::ConsumeResourceDeclaration(
 
   return RegisterDecl(std::make_unique<Resource>(std::move(attributes), std::move(name),
                                                  std::move(type_ctor), std::move(properties)));
-}
-
-std::unique_ptr<TypeConstructorOld> Library::IdentifierTypeForDecl(const Decl* decl,
-                                                                   types::Nullability nullability) {
-  return std::make_unique<TypeConstructorOld>(decl->name, nullptr /* maybe_arg_type */,
-                                              std::optional<Name>() /* handle_subtype_identifier */,
-                                              nullptr /* handle_rights */, nullptr /* maybe_size */,
-                                              nullability);
 }
 
 void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
@@ -3528,8 +3551,7 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
   //  need to ensure that is_request_or_response is false at this point.  Once
   //  that feature is enabled, this check can be removed.
   if (is_request_or_response) {
-    Fail(ErrNamedParameterListTypesNotYetSupported, raw_type_ctor->span());
-    return false;
+    return Fail(ErrNamedParameterListTypesNotYetSupported, raw_type_ctor->span());
   }
 
   auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->layout_ref.get());

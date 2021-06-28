@@ -348,6 +348,16 @@ struct TypeConstructorOld final {
 struct LayoutParameterList;
 struct TypeConstraints;
 
+// Unlike raw::TypeConstructorNew which will either store a name referencing
+// a layout or an anonymous layout directly, in the flat AST all type
+// constructors store a Name. In the case where the type constructor represents
+// an anonymous layout, the data of the anonymous layout is consumed and stored
+// in the Typespace and the corresponding type constructor contains a Name with
+// is_anonymous=true and with a span covering the anonymous layout.
+//
+// This allows all type compilation to share the code paths through the
+// consume step (i.e. RegisterDecl) and the compilation step (i.e. Typespace::Create),
+// while ensuring that users cannot refer to anonymous layouts by name.
 struct TypeConstructorNew final {
   TypeConstructorNew(Name name, std::unique_ptr<LayoutParameterList> parameters,
                      std::unique_ptr<TypeConstraints> constraints)
@@ -359,9 +369,6 @@ struct TypeConstructorNew final {
   static std::unique_ptr<TypeConstructorNew> CreateSizeType();
 
   // Set during construction.
-  // TODO(fxbug.dev/74683): Until we settle on an approach, avoid premature
-  // optimization and do the simple thing of assuming all type constructors at
-  // this point have a named reference to an existing Decl.
   const Name name;
   std::unique_ptr<LayoutParameterList> parameters;
   std::unique_ptr<TypeConstraints> constraints;
@@ -1020,6 +1027,8 @@ class TypeTemplate {
   virtual bool GetResource(const LibraryMediator& lib, const Name& name,
                            Resource** out_resource) const;
 
+  bool HasGeneratedName() const;
+
  protected:
   template <typename... Args>
   bool Fail(const ErrorDef<const TypeTemplate*, Args...>& err,
@@ -1301,14 +1310,15 @@ class Library {
   void ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
   void ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
   bool ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration);
-  bool ConsumeParameterList(SourceSpan method_name, std::optional<Name> assigned_name,
+  bool ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
                             std::unique_ptr<raw::ParameterListOld> parameter_list,
                             bool is_request_or_response, Struct** out_struct_decl);
-  bool ConsumeParameterList(SourceSpan method_name, std::optional<Name> assigned_name,
+  bool ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
                             std::unique_ptr<raw::ParameterListNew> parameter_layout,
                             bool is_request_or_response, Struct** out_struct_decl);
-  bool CreateMethodResult(const Name& protocol_name, SourceSpan response_span,
-                          raw::ProtocolMethod* method, Struct* in_response, Struct** out_response);
+  bool CreateMethodResult(const std::shared_ptr<NamingContext>& err_variant_context,
+                          SourceSpan response_span, raw::ProtocolMethod* method,
+                          Struct* success_variant, Struct** out_response);
   void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
   void ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
   void ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
@@ -1355,8 +1365,6 @@ class Library {
   // false otherwise.
   bool ResolveAsOptional(Constant* constant) const;
   bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
-  std::unique_ptr<TypeConstructorOld> IdentifierTypeForDecl(const Decl* decl,
-                                                            types::Nullability nullability);
 
   bool AddConstantDependencies(const Constant* constant, std::set<const Decl*>* out_edges);
   bool DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges);

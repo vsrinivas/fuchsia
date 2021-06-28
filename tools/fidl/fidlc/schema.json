@@ -161,6 +161,10 @@
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of attributes of the bits declaration"
                 },
+                "maybe_naming_context": {
+                    "$ref": "#/definitions/naming-context",
+                    "description": "Naming context of the bits; present iff the bits is anonymous"
+                },
                 "members": {
                     "description": "List of bits members",
                     "items": {
@@ -348,6 +352,10 @@
                 "maybe_attributes": {
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of attributes of the enum declaration"
+                },
+                "maybe_naming_context": {
+                    "$ref": "#/definitions/naming-context",
+                    "description": "Naming context of the table; present iff the table is anonymous"
                 },
                 "maybe_unknown_value": {
                     "description": "Unknown member value (present for flexible enums only)",
@@ -934,6 +942,13 @@
             ],
             "type": "object"
         },
+        "naming-context": {
+            "description": "List of names identifying the use of an anonymous object",
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
         "ordinal": {
             "description": "Definition of ordinal",
             "maximum": 9223372036854775807,
@@ -1195,6 +1210,10 @@
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of attributes of the struct declaration"
                 },
+                "maybe_naming_context": {
+                    "$ref": "#/definitions/naming-context",
+                    "description": "Naming context of the struct; present iff the struct is anonymous"
+                },
                 "members": {
                     "description": "List of struct members",
                     "items": {
@@ -1282,6 +1301,10 @@
                 "maybe_attributes": {
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of table attributes"
+                },
+                "maybe_naming_context": {
+                    "$ref": "#/definitions/naming-context",
+                    "description": "Naming context of the table; present iff the table is anonymous"
                 },
                 "members": {
                     "description": "List of table members",
@@ -1547,6 +1570,10 @@
                 "maybe_attributes": {
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of extensible union attributes"
+                },
+                "maybe_naming_context": {
+                    "$ref": "#/definitions/naming-context",
+                    "description": "Naming context of the union; present iff the union is anonymous"
                 },
                 "members": {
                     "description": "List of extensible union members",

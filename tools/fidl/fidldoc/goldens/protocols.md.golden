@@ -197,7 +197,7 @@
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=57)*
 
 
-### MethodA {#SyscallProtocol.MethodA}
+### MethodC {#SyscallProtocol.MethodC}
 
 
 #### Request

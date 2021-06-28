@@ -8,8 +8,12 @@
 
 #include <regex>
 
+#include <fidl/diagnostics.h>
 #include <fidl/flat_ast.h>
 #include <zxtest/zxtest.h>
+
+#include "error_test.h"
+#include "test_library.h"
 
 namespace {
 
@@ -58,6 +62,79 @@ TEST(FlatAstTests, GoodCompareHandles) {
   EXPECT_TRUE(nonnullable_channel_rights1 < nonnullable_event_rights1);
   EXPECT_TRUE(nullable_channel_rights1 < nullable_event_rights1);
   EXPECT_TRUE(nullable_event_rights1 < nullable_event_rights2);
+}
+
+TEST(FlatAstTests, BadCannotReferenceAnonymousNameOld) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Foo {
+  SomeMethod(uint8 some_param);
+};
+
+struct Bar {
+  FooSomeMethodRequest bad_member_type;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAnonymousNameReference);
+}
+
+TEST(FlatAstTests, BadCannotReferenceAnonymousName) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Foo {
+  SomeMethod(struct { some_param uint8; });
+};
+
+type Bar = struct {
+  bad_member_type FooSomeMethodRequest;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAnonymousNameReference);
+}
+
+TEST(FlatAstTests, BadAnonymousNameConflictOld) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Foo {
+  SomeMethod(uint8 some_param);
+};
+
+struct FooSomeMethodRequest {};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
+}
+
+TEST(FlatAstTests, BadAnonymousNameConflict) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Foo {
+  SomeMethod(struct { some_param uint8; });
+};
+
+type FooSomeMethodRequest = struct {};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
+}
+
+TEST(FlatAstTests, GoodSingleAnonymousNameUse) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Foo {
+  SomeMethod() -> (uint8 some_param) error uint32;
+};
+)FIDL");
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 }  // namespace
