@@ -45,7 +45,7 @@ class ComponentTest : public gtest::TestLoopFixture {
 class ComponentForTest : public Component {
  public:
   ComponentForTest(async_dispatcher_t* dispatcher, std::unique_ptr<sys::ComponentContext> context)
-      : Component(dispatcher, std::move(context)) {}
+      : Component(dispatcher, std::move(context), /*serving_outgoing=*/true) {}
 };
 
 TEST_F(ComponentTest, LogPreviousStarts) {

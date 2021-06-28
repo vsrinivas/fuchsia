@@ -34,25 +34,33 @@ class Lifecycle : public fuchsia::process::lifecycle::Lifecycle {
 
 }  // namespace
 
-Component::Component()
+Component::Component(const bool lazy_outgoing_dir)
     : loop_(&kAsyncLoopConfigAttachToCurrentThread),
       dispatcher_(loop_.dispatcher()),
-      context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
+      context_((lazy_outgoing_dir) ? sys::ComponentContext::Create()
+                                   : sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       inspector_(context_.get()),
       clock_(),
       instance_index_(InitialInstanceIndex()),
+      serving_outgoing_(!lazy_outgoing_dir),
       lifecycle_(nullptr),
       lifecycle_connection_(nullptr) {
   WriteInstanceIndex();
+
+  if (!serving_outgoing_) {
+    FX_LOGS(INFO) << "Serving outgoing directory is delayed";
+  }
 }
 
-Component::Component(async_dispatcher_t* dispatcher, std::unique_ptr<sys::ComponentContext> context)
+Component::Component(async_dispatcher_t* dispatcher, std::unique_ptr<sys::ComponentContext> context,
+                     const bool serving_outgoing)
     : loop_(&kAsyncLoopConfigNeverAttachToThread),
       dispatcher_(dispatcher),
       context_(std::move(context)),
       inspector_(context_.get()),
       clock_(),
       instance_index_(InitialInstanceIndex()),
+      serving_outgoing_(serving_outgoing),
       lifecycle_(nullptr),
       lifecycle_connection_(nullptr) {
   WriteInstanceIndex();
