@@ -93,7 +93,81 @@ class _ListSettings extends StatelessWidget {
 
           Expanded(
             child: ListView(
+              // TODO(fxb/79721): Re-order tiles everytime a disabled feature is
+              // implemented.
               children: [
+                // Switch Theme
+                SwitchListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  secondary: Icon(Icons.dark_mode),
+                  title: Text(Strings.darkMode),
+                  value: appState.hasDarkTheme.value,
+                  onChanged: (value) => appState.setTheme([value]),
+                ),
+                // Keyboard shortcuts
+                ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  leading: Icon(Icons.shortcut_outlined),
+                  title: Text(Strings.shortcuts),
+                  onTap: appState.settingsState.showShortcutSettings,
+                ),
+                // Timezone
+                ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  leading: Icon(Icons.schedule),
+                  title: Text(Strings.timezone),
+                  trailing: Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    children: [
+                      Text(appState.settingsState.selectedTimezone.value
+                          // Remove '_' from city names.
+                          .replaceAll('_', ' ')
+                          .replaceAll('/', ' / ')),
+                      Icon(Icons.arrow_right),
+                    ],
+                  ),
+                  onTap: appState.settingsState.showTimezoneSettings,
+                ),
+                // Feedback
+                ListTile(
+                  enabled: true,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  leading: Icon(Icons.feedback_outlined),
+                  title: Text(Strings.feedback),
+                  trailing: OutlinedButton(
+                    onPressed: appState.launchFeedback,
+                    child: Text(Strings.open.toUpperCase()),
+                  ),
+                ),
+                // Open Source
+                ListTile(
+                  enabled: true,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  leading: Icon(Icons.info_outline),
+                  title: Text(Strings.openSource),
+                  trailing: OutlinedButton(
+                    onPressed: appState.launchLicense,
+                    child: Text(Strings.open.toUpperCase()),
+                  ),
+                ),
+
+                // Features not implemented yet.
+                // Brightness
+                ListTile(
+                  enabled: false,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  leading: Icon(Icons.brightness_auto),
+                  title: Text(Strings.brightness),
+                ),
+                // Volume
+                ListTile(
+                  enabled: false,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  leading: Icon(Icons.volume_up),
+                  title: Text(Strings.volume),
+                ),
                 // Wi-Fi
                 ListTile(
                   enabled: false,
@@ -124,75 +198,19 @@ class _ListSettings extends StatelessWidget {
                   leading: Icon(Icons.cloud_download),
                   title: Text(Strings.channel),
                 ),
-                // Timezone
-                ListTile(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.schedule),
-                  title: Text(Strings.timezone),
-                  trailing: Wrap(
-                    alignment: WrapAlignment.end,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    children: [
-                      Text(appState.settingsState.selectedTimezone.value
-                          // Remove '_' from city names.
-                          .replaceAll('_', ' ')
-                          .replaceAll('/', ' / ')),
-                      Icon(Icons.arrow_right),
-                    ],
-                  ),
-                  onTap: appState.settingsState.showTimezoneSettings,
-                ),
-                // Switch Theme
-                SwitchListTile(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  secondary: Icon(Icons.dark_mode),
-                  title: Text(Strings.darkMode),
-                  value: appState.hasDarkTheme.value,
-                  onChanged: (value) => appState.setTheme([value]),
-                ),
-                // Keyboard shortcuts
-                ListTile(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.shortcut_outlined),
-                  title: Text(Strings.shortcuts),
-                  onTap: appState.settingsState.showShortcutSettings,
-                ),
-                // Brightness
+                // Keyboard Input
                 ListTile(
                   enabled: false,
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.brightness_auto),
-                  title: Text(Strings.brightness),
+                  leading: Icon(Icons.keyboard_outlined),
+                  title: Text(Strings.keyboard),
                 ),
-                // Volume
+                // Language
                 ListTile(
                   enabled: false,
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.volume_up),
-                  title: Text(Strings.volume),
-                ),
-                // Feedback
-                ListTile(
-                  enabled: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.feedback_outlined),
-                  title: Text(Strings.feedback),
-                  trailing: OutlinedButton(
-                    onPressed: appState.launchFeedback,
-                    child: Text(Strings.open.toUpperCase()),
-                  ),
-                ),
-                // Open Source
-                ListTile(
-                  enabled: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.info_outline),
-                  title: Text(Strings.openSource),
-                  trailing: OutlinedButton(
-                    onPressed: appState.launchLicense,
-                    child: Text(Strings.open.toUpperCase()),
-                  ),
+                  leading: Icon(Icons.language),
+                  title: Text(Strings.language),
                 ),
               ],
             ),

@@ -706,4 +706,14 @@ class Strings {
         name: 'open',
         desc: 'The button label for the "open" text field.',
       );
+  static String get keyboard => Intl.message(
+        'Keyboard',
+        name: 'keyboard',
+        desc: 'The button label for "Keyboard" text field.',
+      );
+  static String get language => Intl.message(
+        'Language',
+        name: 'language',
+        desc: 'The button label for "Language" text field.',
+      );
 }
