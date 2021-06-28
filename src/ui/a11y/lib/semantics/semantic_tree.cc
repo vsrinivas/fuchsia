@@ -86,14 +86,15 @@ Node MergeNodes(const Node& old_node, Node new_node) {
 // child node referenced by a parent exist. |visited_nodes| is filled with the
 // node ids of this traversal.
 bool ValidateSubTreeForUpdate(
-    const uint32_t node_id, const SemanticTreeData& nodes,
+    const uint32_t node_id, const uint32_t parent_id, const SemanticTreeData& nodes,
     const std::unordered_map<uint32_t, std::optional<Node>>& nodes_to_be_updated,
     std::unordered_set<uint32_t>* visited_nodes) {
   const Node* node = GetUpdatedOrDefaultNode(node_id, nodes_to_be_updated, nodes);
   if (!node) {
     // A parent node is trying to access a node that is neither in the original tree nor in the
     // updates.
-    FX_LOGS(ERROR) << "Tried to visit Node [" << node_id << "] which does not exist or was deleted";
+    FX_LOGS(ERROR) << "Tried to visit Node [" << node_id << "] from parent [" << parent_id
+                   << "], but node [" << node_id << "] does not exist or was deleted";
     return false;
   }
   if (auto it = visited_nodes->insert(node_id); !it.second) {
@@ -103,7 +104,7 @@ bool ValidateSubTreeForUpdate(
   }
   if (node->has_child_ids()) {
     for (const auto& child_id : node->child_ids()) {
-      if (!ValidateSubTreeForUpdate(child_id, nodes, nodes_to_be_updated, visited_nodes)) {
+      if (!ValidateSubTreeForUpdate(child_id, node_id, nodes, nodes_to_be_updated, visited_nodes)) {
         return false;
       }
     }
@@ -339,7 +340,8 @@ bool SemanticTree::ValidateUpdate(std::unordered_set<uint32_t>* visited_nodes) {
       return false;
     }
   }
-  if (!ValidateSubTreeForUpdate(kRootNodeId, nodes_, nodes_to_be_updated_, visited_nodes)) {
+  if (!ValidateSubTreeForUpdate(kRootNodeId, 0 /* parent id, only used to print error message */,
+                                nodes_, nodes_to_be_updated_, visited_nodes)) {
     return false;
   }
   return true;
