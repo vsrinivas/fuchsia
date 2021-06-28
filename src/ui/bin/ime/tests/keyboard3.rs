@@ -417,24 +417,24 @@ fn inject_key_and_receive_keyboard_protocol_message(
              => (Some(input::Key::A), Some(ui_input3::KeyMeaning::Codepoint(0x61)));
             "key_and_meaning")]
 #[test_case(None, 'a'
-            => (Some(input::Key::A), Some(ui_input3::KeyMeaning::Codepoint(0x61)));
+            => (None, Some(ui_input3::KeyMeaning::Codepoint(0x61)));
             "only_key_meaning_lower_alpha")]
 #[test_case(None, 'A'
-            => (Some(input::Key::A), Some(ui_input3::KeyMeaning::Codepoint(0x41)));
+            => (None, Some(ui_input3::KeyMeaning::Codepoint(0x41)));
             "only_key_meaning_upper_alpha")]
 #[test_case(None, '1'
-            => (Some(input::Key::Key1), Some(ui_input3::KeyMeaning::Codepoint(0x31)));
+            => (None, Some(ui_input3::KeyMeaning::Codepoint(0x31)));
             "only_key_meaning_numeric")]
 #[test_case(None, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Enter)
-            => (Some(input::Key::Enter),
+            => (None,
                 Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Enter)));
             "only_key_meaning_enter")]
 #[test_case(None, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Tab)
-            => (Some(input::Key::Tab),
+            => (None,
                 Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Tab)));
             "only_key_meaning_tab")]
 #[test_case(None, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Backspace)
-            => (Some(input::Key::Backspace),
+            => (None,
                 Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Backspace)));
             "only_key_meaning_backspace")]
 fn test_inject_key_yields_expected_key_and_key_meaning(
