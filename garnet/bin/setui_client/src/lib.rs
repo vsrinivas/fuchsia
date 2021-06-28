@@ -11,7 +11,6 @@ use {
 
 pub mod accessibility;
 pub mod audio;
-pub mod device;
 pub mod display;
 pub mod do_not_disturb;
 pub mod factory_reset;
@@ -42,10 +41,6 @@ pub enum SettingClient {
         #[structopt(flatten)]
         input: AudioInput,
     },
-
-    // Operations that use the Device interface.
-    #[structopt(name = "device")]
-    Device { build_tag: Option<String> },
 
     #[structopt(name = "display")]
     Display {
@@ -370,14 +365,6 @@ impl Into<Vec<LightState>> for LightGroup {
 
 pub async fn run_command(command: SettingClient) -> Result<(), Error> {
     match command {
-        SettingClient::Device { build_tag } => {
-            if let Some(_build_tag_val) = build_tag {
-                panic!("Cannot set device settings");
-            }
-            let device_service = connect_to_protocol::<fidl_fuchsia_settings::DeviceMarker>()
-                .context("Failed to connect to device service")?;
-            utils::print_results("Device", device::command(device_service)).await?;
-        }
         SettingClient::Display {
             brightness,
             auto_brightness_level,
@@ -451,8 +438,9 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             .await?;
         }
         SettingClient::NightMode { night_mode_enabled } => {
-            let night_mode_service = connect_to_protocol::<fidl_fuchsia_settings::NightModeMarker>()
-                .context("Failed to connect to night mode service")?;
+            let night_mode_service =
+                connect_to_protocol::<fidl_fuchsia_settings::NightModeMarker>()
+                    .context("Failed to connect to night mode service")?;
             utils::handle_mixed_result(
                 "NightMode",
                 night_mode::command(night_mode_service, night_mode_enabled).await,

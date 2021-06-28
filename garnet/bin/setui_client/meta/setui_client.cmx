@@ -12,7 +12,6 @@
             "fuchsia.netstack.Netstack",
             "fuchsia.settings.Accessibility",
             "fuchsia.settings.Audio",
-            "fuchsia.settings.Device",
             "fuchsia.settings.Display",
             "fuchsia.settings.DoNotDisturb",
             "fuchsia.settings.FactoryReset",

@@ -18,7 +18,6 @@ use {
     parking_lot::RwLock,
     setui_client_lib::accessibility,
     setui_client_lib::audio,
-    setui_client_lib::device,
     setui_client_lib::display,
     setui_client_lib::do_not_disturb,
     setui_client_lib::factory_reset,
@@ -100,7 +99,6 @@ macro_rules! assert_get {
 enum Services {
     Accessibility(AccessibilityRequestStream),
     Audio(AudioRequestStream),
-    Device(DeviceRequestStream),
     Display(DisplayRequestStream),
     DoNotDisturb(DoNotDisturbRequestStream),
     FactoryReset(FactoryResetRequestStream),
@@ -122,7 +120,6 @@ struct ExpectedStreamSettingsStruct {
 }
 
 const ENV_NAME: &str = "setui_client_test_environment";
-const TEST_BUILD_TAG: &str = "0.20190909.1.0";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
@@ -203,10 +200,6 @@ async fn main() -> Result<(), Error> {
         input_muted: Some(true),
     })
     .await?;
-
-    println!("device service tests");
-    println!("  client calls device watch");
-    validate_device().await?;
 
     println!("display service tests");
     println!("  client calls display watch");
@@ -466,23 +459,6 @@ async fn validate_intl_watch() -> Result<(), Error> {
             }
         )
     );
-    Ok(())
-}
-
-async fn validate_device() -> Result<(), Error> {
-    let env = create_service!(Services::Device,
-        DeviceRequest::Watch { responder } => {
-            responder.send(DeviceSettings {
-                build_tag: Some(TEST_BUILD_TAG.to_string()),
-                ..DeviceSettings::EMPTY
-            })?;
-        }
-    );
-
-    let device_service =
-        env.connect_to_protocol::<DeviceMarker>().context("Failed to connect to device service")?;
-
-    device::command(device_service).try_next().await?;
     Ok(())
 }
 

@@ -50,7 +50,6 @@ rustc_library("lib") {
   sources = [
     "src/accessibility.rs",
     "src/audio.rs",
-    "src/device.rs",
     "src/display.rs",
     "src/do_not_disturb.rs",
     "src/factory_reset.rs",
