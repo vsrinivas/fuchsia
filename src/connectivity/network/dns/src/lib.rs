@@ -12,7 +12,7 @@ use {
 };
 
 pub mod async_resolver;
-pub mod policy;
+pub mod config;
 pub mod tcp;
 pub mod test_util;
 pub mod udp;

@@ -28,8 +28,8 @@ rustc_library("lib") {
 
   sources = [
     "src/async_resolver.rs",
+    "src/config.rs",
     "src/lib.rs",
-    "src/policy.rs",
     "src/tcp.rs",
     "src/test_util.rs",
     "src/udp.rs",

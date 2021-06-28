@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     dns::{
         async_resolver::{Resolver, Spawner},
-        policy::{ServerList, UpdateServersResult},
+        config::{ServerList, UpdateServersResult},
     },
     fidl_fuchsia_net::{self as fnet, NameLookupRequest, NameLookupRequestStream},
     fidl_fuchsia_net_ext as net_ext,
@@ -803,7 +803,7 @@ fn create_ip_lookup_fut<T: ResolverLookup>(
 /// Serves `stream` and forwards received configurations to `sink`.
 async fn run_lookup_admin<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
-    state: &dns::policy::ServerConfigState,
+    state: &dns::config::ServerConfigState,
     stream: LookupAdminRequestStream,
 ) -> Result<(), fidl::Error> {
     stream
@@ -835,7 +835,7 @@ async fn run_lookup_admin<T: ResolverLookup>(
 /// `parent`.
 fn add_config_state_inspect(
     parent: &fuchsia_inspect::Node,
-    config_state: Arc<dns::policy::ServerConfigState>,
+    config_state: Arc<dns::config::ServerConfigState>,
 ) -> fuchsia_inspect::LazyNode {
     parent.create_lazy_child("servers", move || {
         let config_state = config_state.clone();
@@ -945,7 +945,7 @@ async fn main() -> Result<(), Error> {
             .expect("failed to create resolver"),
     );
 
-    let config_state = Arc::new(dns::policy::ServerConfigState::new());
+    let config_state = Arc::new(dns::config::ServerConfigState::new());
     let stats = Arc::new(QueryStats::new());
 
     let mut fs = ServiceFs::new_local();
@@ -1262,7 +1262,7 @@ mod tests {
 
     struct TestEnvironment {
         shared_resolver: SharedResolver<MockResolver>,
-        config_state: Arc<dns::policy::ServerConfigState>,
+        config_state: Arc<dns::config::ServerConfigState>,
         stats: Arc<QueryStats>,
     }
 
@@ -1278,7 +1278,7 @@ mod tests {
                         NameServerConfigGroup::with_capacity(0),
                     ),
                 }),
-                config_state: Arc::new(dns::policy::ServerConfigState::new()),
+                config_state: Arc::new(dns::config::ServerConfigState::new()),
                 stats: Arc::new(QueryStats::new()),
             }
         }
