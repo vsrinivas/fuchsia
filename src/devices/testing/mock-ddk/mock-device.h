@@ -143,6 +143,7 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   zx_off_t GetSizeOp();
   zx_status_t MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void ChildPreReleaseOp(void* child_ctx);
+  bool HasUnbindOp() { return ops_->unbind != nullptr; }
 
   // Metadata is often set for the parent of a device, to be available when the device
   // calls device_get_metadata

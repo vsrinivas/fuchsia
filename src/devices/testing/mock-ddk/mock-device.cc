@@ -243,9 +243,11 @@ zx_status_t ProcessDeviceRemoval(MockDevice* device) {
       return status;
     }
   }
-  zx_status_t status = device->WaitUntilUnbindReplyCalled();
-  if (status != ZX_OK) {
-    return status;
+  if (device->HasUnbindOp()) {
+    zx_status_t status = device->WaitUntilUnbindReplyCalled();
+    if (status != ZX_OK) {
+      return status;
+    }
   }
   device->ReleaseOp();
   return ZX_OK;
