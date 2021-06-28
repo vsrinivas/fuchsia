@@ -90,7 +90,7 @@ if (current_toolchain == default_toolchain) {
     configs = [
       "//build/config/zircon:user",
       "//build/config/zircon:shared_library_config",
-      "//build/config/zircon:no_undefined_symbols",
+      "//build/config:symbol_no_undefined",
     ]
   }
 

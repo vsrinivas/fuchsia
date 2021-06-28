@@ -58,7 +58,7 @@ if (toolchain.environment == "userboot") {
       "//build/config/zircon:user",
       "//build/config/zircon:static-libc++",
       "//build/config/zircon:no_sanitizers",
-      "//build/config/zircon:no_undefined_symbols",
+      "//build/config:symbol_no_undefined",
     ]
 
     cflags = [

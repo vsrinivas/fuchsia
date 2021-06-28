@@ -431,21 +431,9 @@ if (zircon_toolchain == false) {
   default_shared_library_configs = default_common_binary_configs
   if (!toolchain_variant.is_pic_default) {
     default_shared_library_configs += [
+      "//build/config:no_undefined_symbols",
       "//build/config/zircon:shared_library_config",
-      "//build/config/zircon:no_undefined_symbols",
     ]
-  }
-
-  # To the same for remove_shared_configs
-  # TODO(fxbug.dev/60410): Remove this after build unification.
-  _remove_shared_configs = toolchain_variant.remove_shared_configs
-  foreach(_config, [ "symbol_no_undefined" ]) {
-    _config_label = "//build/config:" + _config
-    if (_remove_shared_configs + [ _config_label ] - [ _config_label ] !=
-        _remove_shared_configs) {
-      _remove_shared_configs -= [ _config_label ]
-      _remove_shared_configs += [ "//build/config/zircon:" + _config ]
-    }
   }
 
   # NOTE: Contrary to the Fuchsia build, we start by removing common configs
@@ -456,7 +444,7 @@ if (zircon_toolchain == false) {
   default_common_binary_configs -= toolchain_variant.remove_common_configs
   default_common_binary_configs += toolchain_variant.configs
 
-  default_shared_library_configs -= _remove_shared_configs
+  default_shared_library_configs -= toolchain_variant.remove_shared_configs
   default_shared_library_configs += toolchain_variant.configs
 
   default_executable_configs = default_common_binary_configs

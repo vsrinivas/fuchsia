@@ -529,16 +529,6 @@ config("shared_library_config") {
   }
 }
 
-# Don't allow dangling undefined references in shared libraries.
-# All references should be satisfied by link-time library dependencies.
-config("no_undefined_symbols") {
-  if (current_os == "mac") {
-    ldflags = [ "-Wl,-undefined,error" ]
-  } else {
-    ldflags = [ "-Wl,-z,defs" ]
-  }
-}
-
 config("machine") {
   ldflags = []
   if (current_cpu == "arm64" && current_os != "win") {
