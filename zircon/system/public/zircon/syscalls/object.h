@@ -578,12 +578,12 @@ typedef struct zx_x86_64_info_guest_stats {
     uint64_t xsetbv_instructions;
     uint64_t pause_instructions;
     uint64_t vmcall_instructions;
-} zx_x86_64_info_guest_stats;
+} zx_x86_64_info_guest_stats_t;
 
 #if defined(__aarch64__)
 typedef zx_arm64_info_guest_stats_t zx_info_guest_stats_t;
 #elif defined(__x86_64__)
-typedef zx_x86_64_info_guest_stats zx_info_guest_stats_t;
+typedef zx_x86_64_info_guest_stats_t zx_info_guest_stats_t;
 #endif
 
 // Info on the runtime of a task.
