@@ -313,6 +313,18 @@
                 ],
             },
             {
+                // We restrict access to RetainedPackages because it gives callers the ability
+                // to override certain package garbage collection behavior intended to only be
+                // used by the system updater.
+                source_moniker: "/core/pkg-cache",
+                source: "component",
+                source_name: "fuchsia.pkg.RetainedPackages",
+                capability: "protocol",
+                target_monikers: [
+                    "/core/system-updater",
+                ],
+            },
+            {
                 // We restrict access to base-resolver's ComponentResolver protocol because we
                 // expect only parts of component framework to be able to access it.
                 source_moniker: "/bootstrap/base-resolver",
