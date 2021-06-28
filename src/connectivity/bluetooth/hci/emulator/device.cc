@@ -358,7 +358,7 @@ void Device::OnLegacyAdvertisingStateChanged() {
 
   // We have requests to resolve. Construct the FIDL table for the current state.
   ftest::LegacyAdvertisingState fidl_state;
-  FakeController::LEAdvertisingState adv_state = fake_device_->le_advertising_state();
+  const FakeController::LEAdvertisingState& adv_state = fake_device_->legacy_advertising_state();
   fidl_state.set_enabled(adv_state.enabled);
 
   // Populate the rest only if advertising is enabled.
