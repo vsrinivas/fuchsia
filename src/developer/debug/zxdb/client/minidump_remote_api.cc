@@ -4,25 +4,19 @@
 
 #include "src/developer/debug/zxdb/client/minidump_remote_api.h"
 
-// clang-format off
-// This has to go up here due to some strange header conflicts.
-#include "src/lib/elflib/elflib.h"
-// clang-format on
-
 #include <algorithm>
 #include <cstring>
+#include <memory>
+#include <utility>
 
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/decode_exception.h"
+#include "src/developer/debug/ipc/unwinder_support.h"
 #include "src/developer/debug/shared/message_loop.h"
-#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/UcontextArm64.h"
-#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/UcontextX86_64.h"
-#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/Unwinder.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/crashpad/snapshot/memory_map_region_snapshot.h"
-#include "third_party/crashpad/util/misc/uuid.h"
 
 using debug_ipc::Register;
 using debug_ipc::RegisterCategory;
@@ -34,7 +28,7 @@ namespace {
 
 class X64ExceptionInfo : public debug_ipc::X64ExceptionInfo {
  public:
-  X64ExceptionInfo(const crashpad::ExceptionSnapshot* snapshot) : snapshot_(snapshot) {}
+  explicit X64ExceptionInfo(const crashpad::ExceptionSnapshot* snapshot) : snapshot_(snapshot) {}
 
   std::optional<debug_ipc::X64ExceptionInfo::DebugRegs> FetchDebugRegs() const override {
     debug_ipc::X64ExceptionInfo::DebugRegs ret;
@@ -56,7 +50,7 @@ class X64ExceptionInfo : public debug_ipc::X64ExceptionInfo {
 
 class Arm64ExceptionInfo : public debug_ipc::Arm64ExceptionInfo {
  public:
-  Arm64ExceptionInfo(const crashpad::ExceptionSnapshot* snapshot) : snapshot_(snapshot) {}
+  explicit Arm64ExceptionInfo(const crashpad::ExceptionSnapshot* snapshot) : snapshot_(snapshot) {}
 
   std::optional<uint32_t> FetchESR() const override { return snapshot_->ExceptionInfo(); }
 
@@ -275,164 +269,6 @@ void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
   }
 }
 
-class MinidumpReadDelegate : public crashpad::MemorySnapshot::Delegate {
- public:
-  // Construct a delegate object for reading minidump memory regions.
-  //
-  // Minidump will always give us a pointer to the whole region and its size. We give an offset and
-  // size of a portion of that region to read. Then when the MemorySnapshotDelegateRead function is
-  // called, just that section will be copied out into the ptr we give here.
-  explicit MinidumpReadDelegate(uint64_t offset, size_t size, uint8_t* ptr)
-      : offset_(offset), size_(size), ptr_(ptr) {}
-
-  bool MemorySnapshotDelegateRead(void* data, size_t size) override {
-    if (offset_ + size_ > size) {
-      return false;
-    }
-
-    auto data_u8 = reinterpret_cast<uint8_t*>(data);
-    data_u8 += offset_;
-
-    std::copy(data_u8, data_u8 + size_, ptr_);
-    return true;
-  }
-
- private:
-  uint64_t offset_;
-  size_t size_;
-  uint8_t* ptr_;
-};
-
-class SnapshotMemoryRegion : public MinidumpRemoteAPI::MemoryRegion {
- public:
-  // Construct a memory region from a crashpad MemorySnapshot. The pointer should always be derived
-  // from the minidump_ object, and will thus always share its lifetime.
-  explicit SnapshotMemoryRegion(const crashpad::MemorySnapshot* snapshot)
-      : MinidumpRemoteAPI::MemoryRegion(snapshot->Address(), snapshot->Size()),
-        snapshot_(snapshot) {}
-  virtual ~SnapshotMemoryRegion() = default;
-
-  std::optional<std::vector<uint8_t>> Read(uint64_t offset, size_t size) const override;
-
- private:
-  const crashpad::MemorySnapshot* snapshot_;
-};
-
-std::optional<std::vector<uint8_t>> SnapshotMemoryRegion::Read(uint64_t offset, size_t size) const {
-  std::vector<uint8_t> data;
-  data.resize(size);
-
-  MinidumpReadDelegate d(offset, size, data.data());
-
-  if (!snapshot_->Read(&d)) {
-    return std::nullopt;
-  }
-
-  return std::move(data);
-}
-
-class ElfMemoryRegion : public MinidumpRemoteAPI::MemoryRegion {
- public:
-  // Construct a memory region from a crashpad MemorySnapshot. The pointer should always be derived
-  // from the minidump_ object, and will thus always share its lifetime.
-  explicit ElfMemoryRegion(std::shared_ptr<elflib::ElfLib>& elf, uint64_t start_in, size_t size_in,
-                           size_t idx)
-      : MinidumpRemoteAPI::MemoryRegion(start_in, size_in), idx_(idx), elf_(elf) {}
-  virtual ~ElfMemoryRegion() = default;
-
-  std::optional<std::vector<uint8_t>> Read(uint64_t offset, size_t size) const override;
-
- private:
-  size_t idx_;
-  std::shared_ptr<elflib::ElfLib> elf_;
-};
-
-std::optional<std::vector<uint8_t>> ElfMemoryRegion::Read(uint64_t offset, size_t size) const {
-  if (offset + size > this->size) {
-    return std::nullopt;
-  }
-
-  auto got = elf_->GetSegmentData(idx_);
-  if (!got.ptr) {
-    return std::nullopt;
-  }
-
-  size_t read_end = std::min(got.size, static_cast<size_t>(offset + size));
-
-  std::vector<uint8_t> data;
-  std::copy(got.ptr + offset, got.ptr + read_end, std::back_inserter(data));
-
-  // If the mapped size is larger than the file data, we pad with zeros per spec.
-  data.resize(size, 0);
-  return std::move(data);
-}
-
-std::string MinidumpGetUUID(const crashpad::ModuleSnapshot& mod) {
-  auto build_id = mod.BuildID();
-
-  if (build_id.empty()) {
-    return std::string();
-  }
-
-  // 2 hex characters per 1 byte, so the string size is twice the data size. Hopefully we'll be
-  // overwriting the zeros we're filling with.
-  std::string ret(build_id.size() * 2, '\0');
-  char* pos = ret.data();
-
-  for (const auto& byte : build_id) {
-    sprintf(pos, "%02hhx", byte);
-    pos += 2;
-  }
-
-  return ret;
-}
-
-class MinidumpUnwindMemory : public unwindstack::Memory {
- public:
-  MinidumpUnwindMemory(const std::vector<std::unique_ptr<MinidumpRemoteAPI::MemoryRegion>>& regions)
-      : regions_(regions) {}
-
-  size_t Read(uint64_t addr, void* dst, size_t size) override {
-    uint8_t* dst8 = reinterpret_cast<uint8_t*>(dst);
-    size_t read = 0;
-
-    for (const auto& region : regions_) {
-      if (region->start > addr) {
-        return read;
-      }
-
-      if ((region->start + region->size) <= addr) {
-        continue;
-      }
-
-      size_t offset = addr - region->start;
-      size_t to_read = std::min(region->size - offset, size);
-
-      auto data = region->Read(offset, to_read);
-
-      if (!data) {
-        return read;
-      }
-
-      std::copy(data->begin(), data->end(), dst8);
-
-      dst8 += data->size();
-      addr += data->size();
-      size -= data->size();
-      read += data->size();
-
-      if (!size) {
-        break;
-      }
-    }
-
-    return read;
-  }
-
- private:
-  const std::vector<std::unique_ptr<MinidumpRemoteAPI::MemoryRegion>>& regions_;
-};
-
 }  // namespace
 
 MinidumpRemoteAPI::MinidumpRemoteAPI(Session* session) : session_(session) {
@@ -448,7 +284,7 @@ std::string MinidumpRemoteAPI::ProcessName() {
 
   auto mods = minidump_->Modules();
 
-  if (mods.size() == 0) {
+  if (mods.empty()) {
     return "<core dump>";
   }
 
@@ -467,7 +303,7 @@ std::vector<debug_ipc::Module> MinidumpRemoteAPI::GetModules() {
     mod.name = minidump_mod->Name();
     mod.base = minidump_mod->Address();
 
-    mod.build_id = MinidumpGetUUID(*minidump_mod);
+    mod.build_id = MinidumpGetBuildId(*minidump_mod);
   }
 
   return ret;
@@ -483,101 +319,9 @@ const crashpad::ThreadSnapshot* MinidumpRemoteAPI::GetThreadById(uint64_t id) {
   return nullptr;
 }
 
-std::unique_ptr<unwindstack::Regs> MinidumpRemoteAPI::GetUnwindRegsARM64(
-    const crashpad::CPUContextARM64& ctx, size_t stack_size) {
-  unwindstack::arm64_ucontext_t ucontext;
-
-  ucontext.uc_stack.ss_sp = ctx.sp;
-  ucontext.uc_stack.ss_size = stack_size;
-  ucontext.uc_mcontext.pstate = ctx.spsr;
-
-  for (size_t i = 0; i <= 31; i++) {
-    ucontext.uc_mcontext.regs[i] = ctx.regs[i];
-  }
-
-  ucontext.uc_mcontext.regs[unwindstack::Arm64Reg::ARM64_REG_PC] = ctx.pc;
-
-  return std::unique_ptr<unwindstack::Regs>(
-      unwindstack::Regs::CreateFromUcontext(unwindstack::ArchEnum::ARCH_ARM64, &ucontext));
-}
-
-std::unique_ptr<unwindstack::Regs> MinidumpRemoteAPI::GetUnwindRegsX86_64(
-    const crashpad::CPUContextX86_64& ctx, size_t stack_size) {
-  unwindstack::x86_64_ucontext_t ucontext;
-
-  ucontext.uc_stack.ss_sp = ctx.rsp;
-  ucontext.uc_stack.ss_size = stack_size;
-  ucontext.uc_mcontext.rax = ctx.rax;
-  ucontext.uc_mcontext.rbx = ctx.rbx;
-  ucontext.uc_mcontext.rcx = ctx.rcx;
-  ucontext.uc_mcontext.rdx = ctx.rdx;
-  ucontext.uc_mcontext.rsi = ctx.rsi;
-  ucontext.uc_mcontext.rdi = ctx.rdi;
-  ucontext.uc_mcontext.rbp = ctx.rbp;
-  ucontext.uc_mcontext.rsp = ctx.rsp;
-  ucontext.uc_mcontext.r8 = ctx.r8;
-  ucontext.uc_mcontext.r9 = ctx.r9;
-  ucontext.uc_mcontext.r10 = ctx.r10;
-  ucontext.uc_mcontext.r11 = ctx.r11;
-  ucontext.uc_mcontext.r12 = ctx.r12;
-  ucontext.uc_mcontext.r13 = ctx.r13;
-  ucontext.uc_mcontext.r14 = ctx.r14;
-  ucontext.uc_mcontext.r15 = ctx.r15;
-  ucontext.uc_mcontext.rip = ctx.rip;
-
-  return std::unique_ptr<unwindstack::Regs>(
-      unwindstack::Regs::CreateFromUcontext(unwindstack::ArchEnum::ARCH_X86_64, &ucontext));
-}
-
 void MinidumpRemoteAPI::CollectMemory() {
-  memory_.clear();
-
-  for (const auto& thread : minidump_->Threads()) {
-    const auto& stack = thread->Stack();
-
-    if (!stack) {
-      continue;
-    }
-
-    memory_.push_back(std::make_unique<SnapshotMemoryRegion>(stack));
-  }
-
-  auto& build_id_index = session_->system().GetSymbols()->build_id_index();
-
-  for (const auto& minidump_mod : minidump_->Modules()) {
-    uint64_t base = minidump_mod->Address();
-    auto path = build_id_index.EntryForBuildID(MinidumpGetUUID(*minidump_mod)).binary;
-    std::shared_ptr<elflib::ElfLib> elf = elflib::ElfLib::Create(path);
-
-    if (!elf) {
-      continue;
-    }
-
-    const auto& segments = elf->GetSegmentHeaders();
-    for (size_t i = 0; i < segments.size(); i++) {
-      const auto& segment = segments[i];
-
-      // Only PT_LOAD segments are actually mapped. The rest are informational.
-      if (segment.p_type != PT_LOAD) {
-        continue;
-      }
-
-      if (segment.p_flags & PF_W) {
-        // Writable segment. Data in the ELF file might not match what was present at the time of
-        // the crash.
-        continue;
-      }
-
-      memory_.push_back(
-          std::make_unique<ElfMemoryRegion>(elf, segment.p_vaddr + base, segment.p_memsz, i));
-    }
-  }
-
-  std::sort(memory_.begin(), memory_.end(),
-            [](const std::unique_ptr<MinidumpRemoteAPI::MemoryRegion>& a,
-               const std::unique_ptr<MinidumpRemoteAPI::MemoryRegion>& b) {
-              return a->start < b->start;
-            });
+  memory_ = std::make_unique<MinidumpMemory>(*minidump_,
+                                             session_->system().GetSymbols()->build_id_index());
 }
 
 void MinidumpRemoteAPI::OnDownloadsStopped(size_t num_succeeded, size_t num_failed) {
@@ -603,7 +347,7 @@ Err MinidumpRemoteAPI::Open(const std::string& path) {
   reader.Close();
 
   if (!success) {
-    minidump_.release();
+    minidump_.reset();
     return Err(fxl::StringPrintf("Minidump %s not valid", path.c_str()));
   }
 
@@ -617,6 +361,7 @@ Err MinidumpRemoteAPI::Close() {
     return Err("No open dump to close");
   }
 
+  memory_.reset();
   minidump_.reset();
   return Err();
 }
@@ -726,7 +471,7 @@ void MinidumpRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
   fit::callback<void(const Err&, debug_ipc::AttachReply)> new_cb =
       [cb = std::move(cb), notifications, mod_notification, exception_notification, session](
           const Err& e, debug_ipc::AttachReply a) mutable {
-        cb(e, a);
+        cb(e, std::move(a));
 
         for (const auto& notification : notifications) {
           session->DispatchNotifyThreadStarting(notification);
@@ -841,51 +586,14 @@ void MinidumpRemoteAPI::ReadMemory(const debug_ipc::ReadMemoryRequest& request,
   }
 
   debug_ipc::ReadMemoryReply reply;
-  uint64_t loc = request.address;
-  uint64_t end = request.address + request.size;
 
   if (static_cast<pid_t>(request.process_koid) == minidump_->ProcessID()) {
-    for (const auto& reg : memory_) {
-      if (loc == end) {
-        break;
-      }
-
-      if (reg->start + reg->size <= loc) {
-        continue;
-      }
-
-      if (reg->start > loc) {
-        uint64_t stop = std::min(reg->start, end);
-        reply.blocks.emplace_back();
-
-        reply.blocks.back().address = loc;
-        reply.blocks.back().valid = false;
-        reply.blocks.back().size = static_cast<uint32_t>(stop - loc);
-
-        loc = stop;
-
-        if (loc == end) {
-          break;
-        }
-      }
-
-      uint64_t stop = std::min(reg->start + reg->size, end);
-      auto data = reg->Read(loc - reg->start, stop - loc);
-      reply.blocks.emplace_back();
-      reply.blocks.back().address = loc;
-      reply.blocks.back().valid = !!data;
-      reply.blocks.back().size = static_cast<uint32_t>(stop - loc);
-      reply.blocks.back().data = std::move(*data);
-
-      loc += reply.blocks.back().size;
-    }
-  }
-
-  if (loc != end) {
+    reply.blocks = memory_->ReadMemoryBlocks(request.address, request.size);
+  } else {
     auto block = reply.blocks.emplace_back();
-    reply.blocks.back().address = loc;
+    reply.blocks.back().address = request.address;
     reply.blocks.back().valid = false;
-    reply.blocks.back().size = static_cast<uint32_t>(end - loc);
+    reply.blocks.back().size = request.size;
   }
 
   Succeed(std::move(cb), reply);
@@ -985,71 +693,45 @@ void MinidumpRemoteAPI::ThreadStatus(
   reply.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
 
   size_t stack_size = 0;
+  unwinder::Memory* stack_memory = nullptr;
   if (auto stack = thread->Stack()) {
     stack_size = stack->Size();
+    stack_memory = memory_->GetMemoryRegion(stack->Address());
   }
 
   const auto& context = *thread->Context();
-  std::unique_ptr<unwindstack::Regs> regs;
-  uint64_t bp;
+  unwinder::Registers regs(unwinder::Registers::Arch::kArm64);
 
   switch (context.architecture) {
     case crashpad::CPUArchitecture::kCPUArchitectureARM64:
-      regs = GetUnwindRegsARM64(*context.arm64, stack_size);
-      bp = context.arm64->regs[29];
+      for (int i = 0; i < static_cast<int>(unwinder::RegisterID::kArm64_last); i++) {
+        regs.Set(static_cast<unwinder::RegisterID>(i),
+                 reinterpret_cast<uint64_t*>(context.arm64)[i]);
+      }
       break;
     case crashpad::CPUArchitecture::kCPUArchitectureX86_64:
-      regs = GetUnwindRegsX86_64(*context.x86_64, stack_size);
-      bp = context.x86_64->rbp;
+      regs = unwinder::Registers(unwinder::Registers::Arch::kX64);
+      // The first 6 registers are out of order.
+      regs.Set(unwinder::RegisterID::kX64_rax, context.x86_64->rax);
+      regs.Set(unwinder::RegisterID::kX64_rbx, context.x86_64->rbx);
+      regs.Set(unwinder::RegisterID::kX64_rcx, context.x86_64->rcx);
+      regs.Set(unwinder::RegisterID::kX64_rdx, context.x86_64->rdx);
+      regs.Set(unwinder::RegisterID::kX64_rdi, context.x86_64->rdi);
+      regs.Set(unwinder::RegisterID::kX64_rsi, context.x86_64->rsi);
+      for (int i = 6; i < static_cast<int>(unwinder::RegisterID::kX64_last); i++) {
+        regs.Set(static_cast<unwinder::RegisterID>(i),
+                 reinterpret_cast<uint64_t*>(context.x86_64)[i]);
+      }
       break;
     default:
       ErrNoArch(std::move(cb));
       return;
   }
 
-  auto modules = minidump_->Modules();
-
-  std::sort(modules.begin(), modules.end(),
-            [](const crashpad::ModuleSnapshot* a, const crashpad::ModuleSnapshot* b) {
-              return a->Address() < b->Address();
-            });
-
-  unwindstack::Maps maps;
-  for (const auto& mod : modules) {
-    maps.Add(mod->Address(), mod->Address() + mod->Size(), 0, 0, mod->Name(), 0);
-  }
-
-  unwindstack::Unwinder unwinder(40, &maps, regs.get(),
-                                 std::make_shared<MinidumpUnwindMemory>(memory_), true);
-
-  unwinder.Unwind();
-
-  reply.record.frames.resize(unwinder.NumFrames());
-  for (size_t i = 0; i < unwinder.NumFrames(); i++) {
-    const auto& src = unwinder.frames()[i];
-    debug_ipc::StackFrame& dest = reply.record.frames[i];
-    // unwindstack will adjust the pc for all frames except the bottom-most one. The logic lives in
-    // RegsFuchsia::GetPcAdjustment and is required in order to get the correct cfa_offset. However,
-    // it's not ideal for us because we want return addresses rather than call sites for previous
-    // frames. So we restore the pc here.
-    if (i == 0) {
-      dest.ip = src.pc;
-    } else {
-      dest.ip = src.pc + regs->GetPcAdjustment(src.pc, nullptr);
-    }
-    dest.sp = src.sp;
-    if (src.regs) {
-      src.regs->IterateRegisters([&dest](const char* name, uint64_t val) {
-        // TODO(sadmac): It'd be nice to be using some sort of ID constant
-        // instead of a converted string here.
-        auto id = debug_ipc::StringToRegisterID(name);
-        if (id != debug_ipc::RegisterID::kUnknown) {
-          dest.regs.emplace_back(id, val);
-        }
-      });
-    }
-  }
-
+  // TODO(dangyi): consider having a new unwinder interface so that the index of .debug_frame could
+  // be cached.
+  auto frames = unwinder::Unwind(stack_memory, memory_->GetDebugModuleMap(), regs);
+  reply.record.frames = debug_ipc::ConvertFrames(frames);
   Succeed(std::move(cb), reply);
 }
 

@@ -91,6 +91,8 @@ static_library("client") {
     "job.cc",
     "map_setting_store.cc",
     "memory_dump.cc",
+    "minidump_memory.cc",
+    "minidump_memory.h",
     "minidump_remote_api.cc",
     "minidump_remote_api.h",
     "pretty_frame_glob.cc",
@@ -135,7 +137,6 @@ static_library("client") {
     "//sdk/lib/fit",
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",
-    "//src/developer/debug/third_party/libunwindstack",
     "//src/developer/debug/zxdb/common",
     "//src/developer/debug/zxdb/expr",
     "//src/developer/debug/zxdb/symbols",
@@ -148,6 +149,7 @@ static_library("client") {
   ]
 
   deps = [
+    "//src/developer/debug/unwinder",
     "//src/lib/elflib",
     "//src/lib/llvm:LLVMMC",
     "//src/lib/llvm:LLVMObject",
@@ -249,6 +251,7 @@ source_set("tests") {
     "job_unittest.cc",
     "map_setting_store_unittest.cc",
     "memory_dump_unittest.cc",
+    "minidump_memory_unittest.cc",
     "minidump_unittest.cc",
     "pretty_frame_glob_unittest.cc",
     "pretty_stack_manager_unittest.cc",
@@ -287,6 +290,13 @@ source_set("tests") {
     "//src/developer/debug/zxdb/common:test_support",
     "//src/developer/debug/zxdb/symbols:test_support",
     "//third_party/googletest:gtest",
+
+    # Duplicate the crashpad dependency below to avoid making it into public_deps of :client.
+    "//third_party/crashpad/client",
+    "//third_party/crashpad/compat",
+    "//third_party/crashpad/snapshot",
+    "//third_party/crashpad/third_party/mini_chromium:base",
+    "//third_party/crashpad/util",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

@@ -102,6 +102,10 @@ const constexpr uint64_t kDwarf64CieId = std::numeric_limits<uint64_t>::max();
 // https://github.com/llvm/llvm-project/blob/main/libunwind/src/DwarfParser.hpp
 // https://github.com/llvm/llvm-project/blob/main/libunwind/src/EHHeaderParser.hpp
 Error DwarfCfi::Load() {
+  if (!elf_) {
+    return Error("no elf memory");
+  }
+
   Elf64_Ehdr ehdr;
   // Do not modify elf_ptr_.
   if (auto err = elf_->Read(+elf_ptr_, ehdr); err.has_err()) {
@@ -219,7 +223,7 @@ Error DwarfCfi::Step(Memory* stack, const Registers& current, Registers& next) {
   // Search for .eh_frame first.
   if (auto err = SearchEhFrame(pc, cie, fde); err.has_err()) {
     // Cannot find the correct FDE in .eh_frame, try to find in .debug_frame.
-    if (err = SearchDebugFrame(pc, cie, fde); err.has_err()) {
+    if (SearchDebugFrame(pc, cie, fde).has_err()) {
       return err;  // return the error from .eh_frame.
     }
   }

@@ -47,6 +47,8 @@ std::vector<Frame> Unwind(Memory* memory, const std::vector<uint64_t>& modules,
 
 // Unwind with given memory, modules and registers. Unlike the function above, the stack and the
 // modules could be from separate memory spaces.
+//
+// stack could be nullptr and will be handled correctly.
 std::vector<Frame> Unwind(Memory* stack, const std::map<uint64_t, Memory*>& module_map,
                           const Registers& registers, size_t max_depth = 50);
 

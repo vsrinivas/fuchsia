@@ -253,7 +253,7 @@ Error DwarfCfiParser::Step(Memory* stack, RegisterID return_address_register,
         break;
       case RegisterLocation::Type::kOffset:
         // Allow failure here.
-        if (uint64_t val; stack->Read(cfa + location.offset, val).ok()) {
+        if (uint64_t val; stack && stack->Read(cfa + location.offset, val).ok()) {
           next.Set(reg, val);
         }
         break;

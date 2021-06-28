@@ -16,6 +16,7 @@ namespace unwinder {
 // Abstract representation of a readable memory space.
 class Memory {
  public:
+  virtual ~Memory() = default;
   virtual Error ReadBytes(uint64_t addr, uint64_t size, void* dst) = 0;
 
   template <class Type>
@@ -52,7 +53,7 @@ class LocalMemory : public Memory {
 // Bounded local memory to avoid segmentation fault.
 class BoundedLocalMemory : public LocalMemory {
  public:
-  virtual ~BoundedLocalMemory() = default;
+  ~BoundedLocalMemory() override = default;
   void AddRegion(uint64_t base, uint64_t size);
   Error ReadBytes(uint64_t addr, uint64_t size, void* dst) override;
 

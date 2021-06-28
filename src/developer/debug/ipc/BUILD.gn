@@ -35,6 +35,8 @@ static_library("shared") {
     "register_desc.h",
     "register_test_support.cc",
     "register_test_support.h",
+    "unwinder_support.cc",
+    "unwinder_support.h",
   ]
 
   deps = [
@@ -42,7 +44,10 @@ static_library("shared") {
     "//zircon/system/public",
   ]
 
-  public_deps = [ "//src/lib/fxl" ]
+  public_deps = [
+    "//src/developer/debug/unwinder",
+    "//src/lib/fxl",
+  ]
 }
 
 static_library("agent") {

@@ -6,12 +6,13 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MINIDUMP_REMOTE_API_H_
 
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
-#include "src/developer/debug/third_party/libunwindstack/include/unwindstack/Regs.h"
 #include "src/developer/debug/zxdb/client/download_observer.h"
+#include "src/developer/debug/zxdb/client/minidump_memory.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "third_party/crashpad/snapshot/cpu_context.h"
@@ -80,19 +81,9 @@ class MinidumpRemoteAPI : public RemoteAPI, public DownloadObserver {
   // DownloadObserver implementation.
   void OnDownloadsStopped(size_t num_succeeded, size_t num_failed) override;
 
-  class MemoryRegion {
-   public:
-    MemoryRegion(uint64_t start_in, size_t size_in) : start(start_in), size(size_in) {}
-    virtual ~MemoryRegion() = default;
-
-    virtual std::optional<std::vector<uint8_t>> Read(uint64_t offset, size_t size) const = 0;
-
-    const uint64_t start;
-    const size_t size;
-  };
-
  private:
   // Initialization routine. Iterates minidump structures and finds all the readable memory.
+  // memory_ becomes valid after calling this.
   void CollectMemory();
 
   // Get all the modules out of the dump in debug ipc form.
@@ -102,16 +93,15 @@ class MinidumpRemoteAPI : public RemoteAPI, public DownloadObserver {
 
   const crashpad::ThreadSnapshot* GetThreadById(uint64_t koid);
 
-  std::unique_ptr<unwindstack::Regs> GetUnwindRegsARM64(const crashpad::CPUContextARM64& ctx,
-                                                        size_t stack_size);
-  std::unique_ptr<unwindstack::Regs> GetUnwindRegsX86_64(const crashpad::CPUContextX86_64& ctx,
-                                                         size_t stack_size);
-
   bool attached_ = false;
   Session* session_;
 
-  std::vector<std::unique_ptr<MemoryRegion>> memory_;
   std::unique_ptr<crashpad::ProcessSnapshotMinidump> minidump_;
+
+  // MinidumpMemory holds the pointer to objects in minidump_. It's important to destruct or reset
+  // memory_ before minidump_.
+  std::unique_ptr<MinidumpMemory> memory_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(MinidumpRemoteAPI);
 };
 

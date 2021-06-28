@@ -115,12 +115,14 @@ std::vector<Frame> Unwind(Memory* stack, const std::map<uint64_t, Memory*>& modu
       // TODO(74320): add more unwinders
       break;
     }
-    res.emplace_back(std::move(next), Frame::Trust::kCFI, Success());
 
     // An undefined PC (e.g. on Linux) or 0 PC (e.g. on Fuchsia) marks the end of the unwinding.
-    if (uint64_t pc; res.back().regs.GetPC(pc).has_err() || pc == 0) {
+    // Don't include this in the output because it's not a real frame and provides no information.
+    if (uint64_t pc; next.GetPC(pc).has_err() || pc == 0) {
       break;
     }
+
+    res.emplace_back(std::move(next), Frame::Trust::kCFI, Success());
   }
 
   return res;
