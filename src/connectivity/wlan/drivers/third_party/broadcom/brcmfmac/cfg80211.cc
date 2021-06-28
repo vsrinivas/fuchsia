@@ -2034,6 +2034,10 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
          ndev->stats.tx_confirmed, ndev->stats.tx_dropped, ndev->stats.tx_errors);
 
   brcmf_bus_log_stats(cfg->pub->bus_if);
+  // If the client is connected to a 2.4 GHz channel, log some BT Coex related info
+  if (ctl_chan <= CH_MAX_2G_CHANNEL) {
+    brcmf_btcoex_log_active_bt_tasks(ifp);
+  }
   ndev->client_stats_log_count++;
 }
 

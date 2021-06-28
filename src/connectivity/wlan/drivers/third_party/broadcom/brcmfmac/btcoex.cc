@@ -464,8 +464,27 @@ zx_status_t brcmf_btcoex_set_mode(struct brcmf_cfg80211_vif* vif, enum brcmf_btc
         brcmf_btcoex_dhcp_end(btci);
       }
       break;
+
     default:
       BRCMF_DBG(INFO, "Unknown mode, ignored");
   }
   return ZX_OK;
+}
+
+void brcmf_btcoex_log_active_bt_tasks(brcmf_if* ifp) {
+  uint32_t bt_tasks_low, bt_tasks_high, wlan_preempt_count;
+
+  // btc_params 116 and 117 indicate BT tasks that are active (it is cumulative)
+  brcmf_btcoex_params_read(ifp, 116, &bt_tasks_low);
+  brcmf_btcoex_params_read(ifp, 117, &bt_tasks_high);
+  // btc_param 39 indicates the # of times wlan was preempted for BT
+  brcmf_btcoex_params_read(ifp, 39, &wlan_preempt_count);
+  BRCMF_INFO("BTCoex Params #116: 0x%x #117: 0x%x #39: 0x%x", bt_tasks_low, bt_tasks_high,
+         wlan_preempt_count);
+
+  // Reset the values as this is called periodically (so we get an indication of the
+  // interim activity).
+  brcmf_btcoex_params_write(ifp, 116, 0);
+  brcmf_btcoex_params_write(ifp, 117, 0);
+  brcmf_btcoex_params_write(ifp, 39, 0);
 }
