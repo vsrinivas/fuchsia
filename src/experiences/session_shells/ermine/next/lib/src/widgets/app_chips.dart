@@ -47,7 +47,10 @@ class AppChips extends StatelessWidget {
   }
 
   String _getIconPath(String title) {
-    final entry = _app.appLaunchEntries.firstWhere((e) => e['title'] == title);
+    final entry = _app.appLaunchEntries.firstWhere(
+      (e) => e['title'] == title,
+      orElse: () => {},
+    );
     return entry['icon'] ?? 'images/Default-icon-2x.png';
   }
 }
