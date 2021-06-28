@@ -158,7 +158,7 @@ pub async fn cache_package<'a>(
             url,
             DebugIter(missing_blobs.iter().map(|need| need.blob_id))
         );
-        let () = blob_fetcher
+        let fetches = blob_fetcher
             .push_all(missing_blobs.into_iter().map(|need| {
                 (
                     need.blob_id,
@@ -171,11 +171,16 @@ pub async fn cache_package<'a>(
                 )
             }))
             .collect::<FuturesUnordered<_>>()
-            .map(|res| res.expect("processor exists"))
-            .try_collect::<()>()
-            .map_err(|e| CacheError::FetchContentBlob(e, merkle))
-            .await?;
-        Ok(())
+            .map(|res| res.expect("processor exists"));
+
+        // When a blob write fails and tears down the entire Get() operation, the other pending blob
+        // writes will fail with an unexpected close of the NeededBlobs/blob write channel.
+        //
+        // Wait for:
+        // * any blob fetch to fail with a non-cancelled error
+        // * every blob fetch to either succeed/fail with a cancelled error
+        // returning the more interesting error encountered, if any.
+        try_collect_useful_error(fetches).await.map_err(|e| CacheError::FetchContentBlob(e, merkle))
     }
     .await;
 
@@ -185,6 +190,27 @@ pub async fn cache_package<'a>(
             get.abort().await;
             Err(e)
         }
+    }
+}
+
+async fn try_collect_useful_error(
+    mut fetches: impl Stream<Item = Result<(), Arc<FetchError>>> + Unpin,
+) -> Result<(), Arc<FetchError>> {
+    let mut first_closed_error: Option<Arc<FetchError>> = None;
+
+    while let Some(res) = fetches.next().await {
+        match res {
+            Ok(()) => {}
+            Err(e) if e.is_unexpected_pkg_cache_closed() => {
+                first_closed_error.get_or_insert(e);
+            }
+            Err(e) => return Err(e),
+        }
+    }
+
+    match first_closed_error {
+        Some(e) => Err(e),
+        None => Ok(()),
     }
 }
 
@@ -1038,6 +1064,47 @@ impl FetchError {
             | LocalMirror { .. }
             | NoBlobSource { .. }
             | ConflictingBlobSources => FetchErrorKind::Other,
+        }
+    }
+
+    fn to_pkg_cache_fidl_error(&self) -> Option<&fidl::Error> {
+        use FetchError::*;
+        match self {
+            CreateBlob(pkg::cache::OpenBlobError::Fidl(e))
+            | Truncate(pkg::cache::TruncateBlobError::Fidl(e))
+            | Write(pkg::cache::WriteBlobError::Fidl(e)) => Some(e),
+            CreateBlob(_)
+            | Truncate(_)
+            | Write(_)
+            | FidlError { .. }
+            | Hyper { .. }
+            | Http { .. }
+            | BadHttpStatus { .. }
+            | BlobHeaderTimeout { .. }
+            | BlobBodyTimeout { .. }
+            | ExpectedHttpStatus206 { .. }
+            | MissingContentRangeHeader { .. }
+            | MalformedContentRangeHeader { .. }
+            | InvalidContentRangeHeader { .. }
+            | ExceededResumptionAttemptLimit { .. }
+            | ContentLengthContentRangeMismatch { .. }
+            | NoMirrors
+            | ContentLengthMismatch { .. }
+            | UnknownLength { .. }
+            | BlobTooSmall { .. }
+            | BlobTooLarge { .. }
+            | BlobUrl { .. }
+            | IoError { .. }
+            | LocalMirror { .. }
+            | NoBlobSource { .. }
+            | ConflictingBlobSources => None,
+        }
+    }
+
+    fn is_unexpected_pkg_cache_closed(&self) -> bool {
+        match self.to_pkg_cache_fidl_error() {
+            Some(fidl::Error::ClientChannelClosed { .. }) => true,
+            _ => false,
         }
     }
 }
