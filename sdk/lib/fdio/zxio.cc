@@ -91,6 +91,49 @@ void zxio::wait_end_inner(zx_signals_t signals, uint32_t* out_events, zx_signals
   *out_events = events;
 }
 
+Errno zxio::posix_ioctl(int request, va_list va) {
+  switch (request) {
+    case TIOCGWINSZ: {
+      uint32_t width, height;
+      zx_status_t status = zxio_get_window_size(&zxio_storage().io, &width, &height);
+      if (status != ZX_OK) {
+        return Errno(ENOTTY);
+      }
+      struct winsize size = {
+          .ws_row = static_cast<uint16_t>(height),
+          .ws_col = static_cast<uint16_t>(width),
+      };
+      struct winsize* out_size = va_arg(va, struct winsize*);
+      *out_size = size;
+      return Errno(Errno::Ok);
+    }
+    case TIOCSWINSZ: {
+      const struct winsize* in_size = va_arg(va, const struct winsize*);
+      zx_status_t status =
+          zxio_set_window_size(&zxio_storage().io, in_size->ws_col, in_size->ws_row);
+      if (status != ZX_OK) {
+        return Errno(ENOTTY);
+      }
+      return Errno(Errno::Ok);
+    }
+    case FIONREAD: {
+      size_t available = 0u;
+      zx_status_t status = zxio_get_read_buffer_available(&zxio_storage().io, &available);
+      if (status != ZX_OK) {
+        return Errno(ENOTTY);
+      }
+      if (available > INT_MAX) {
+        available = INT_MAX;
+      }
+      int* actual = va_arg(va, int*);
+      *actual = static_cast<int>(available);
+      return Errno(Errno::Ok);
+    }
+    default:
+      return Errno(ENOTTY);
+  }
+}
+
 zx_status_t zxio::get_token(zx_handle_t* out) { return zxio_token_get(&zxio_storage().io, out); }
 
 zx_status_t zxio::get_attr(zxio_node_attributes_t* out) {
@@ -306,36 +349,6 @@ zx::status<fdio_ptr> remote::create(zx::vmo vmo, zx::stream stream) {
   return zx::ok(io);
 }
 
-Errno remote::posix_ioctl(int request, va_list va) {
-  switch (request) {
-    case TIOCGWINSZ: {
-      uint32_t width, height;
-      zx_status_t status = zxio_get_window_size(&zxio_storage().io, &width, &height);
-      if (status != ZX_OK) {
-        return Errno(ENOTTY);
-      }
-      struct winsize size = {
-          .ws_row = static_cast<uint16_t>(height),
-          .ws_col = static_cast<uint16_t>(width),
-      };
-      struct winsize* out_size = va_arg(va, struct winsize*);
-      *out_size = size;
-      return Errno(Errno::Ok);
-    }
-    case TIOCSWINSZ: {
-      const struct winsize* in_size = va_arg(va, const struct winsize*);
-      zx_status_t status =
-          zxio_set_window_size(&zxio_storage().io, in_size->ws_col, in_size->ws_row);
-      if (status != ZX_OK) {
-        return Errno(ENOTTY);
-      }
-      return Errno(Errno::Ok);
-    }
-    default:
-      return Errno(ENOTTY);
-  }
-}
-
 zx::status<fdio_ptr> pipe::create(zx::socket socket) {
   fdio_ptr io = fbl::MakeRefCounted<pipe>();
   if (io == nullptr) {
@@ -368,26 +381,6 @@ zx::status<std::pair<fdio_ptr, fdio_ptr>> pipe::create_pair(uint32_t options) {
     return b.take_error();
   }
   return zx::ok(std::make_pair(a.value(), b.value()));
-}
-
-Errno pipe::posix_ioctl(int request, va_list va) {
-  switch (request) {
-    case FIONREAD: {
-      size_t available = 0u;
-      zx_status_t status = zxio_get_read_buffer_available(&zxio_storage().io, &available);
-      if (status != ZX_OK) {
-        return Errno(ENOTTY);
-      }
-      if (available > INT_MAX) {
-        available = INT_MAX;
-      }
-      int* actual = va_arg(va, int*);
-      *actual = static_cast<int>(available);
-      return Errno(Errno::Ok);
-    }
-    default:
-      return Errno(ENOTTY);
-  }
 }
 
 zx_status_t pipe::shutdown(int how, int16_t* out_code) {

@@ -1513,9 +1513,9 @@ struct datagram_socket : public zxio {
     *out_events = events;
   }
 
-  Errno posix_ioctl(int req, va_list va) override {
+  Errno posix_ioctl(int req, va_list va) final {
     return zxsio_posix_ioctl(req, va,
-                             [this](int req, va_list va) { return base::posix_ioctl(req, va); });
+                             [this](int req, va_list va) { return zxio::posix_ioctl(req, va); });
   }
 
   zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
@@ -1876,9 +1876,9 @@ struct stream_socket : public pipe {
     *out_events = events;
   }
 
-  Errno posix_ioctl(int req, va_list va) override {
+  Errno posix_ioctl(int req, va_list va) final {
     return zxsio_posix_ioctl(req, va,
-                             [this](int req, va_list va) { return pipe::posix_ioctl(req, va); });
+                             [this](int req, va_list va) { return zxio::posix_ioctl(req, va); });
   }
 
   zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {

@@ -19,6 +19,7 @@ struct zxio : public base {
   zx_status_t unwrap(zx_handle_t* out_handle) override;
   void wait_begin(uint32_t events, zx_handle_t* out_handle, zx_signals_t* out_signals) override;
   void wait_end(zx_signals_t signals, uint32_t* out_events) override;
+  Errno posix_ioctl(int request, va_list va) override;
   zx_status_t get_token(zx_handle_t* out) override;
   zx_status_t get_attr(zxio_node_attributes_t* out) override;
   zx_status_t set_attr(const zxio_node_attributes_t* attr) override;
@@ -57,7 +58,6 @@ struct pipe : public zxio {
   static zx::status<fdio_ptr> create(zx::socket socket);
   static zx::status<std::pair<fdio_ptr, fdio_ptr>> create_pair(uint32_t options);
 
-  Errno posix_ioctl(int request, va_list va) override;
   zx_status_t shutdown(int how, int16_t* out_code) override;
 
  protected:
@@ -76,8 +76,6 @@ struct pipe : public zxio {
 struct remote : public zxio {
   static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node, zx::eventpair event);
   static zx::status<fdio_ptr> create(zx::vmo vmo, zx::stream stream);
-
-  Errno posix_ioctl(int request, va_list va) override;
 
   zx::status<fdio_ptr> open(const char* path, uint32_t flags, uint32_t mode) override;
   zx_status_t borrow_channel(zx_handle_t* out_borrowed) override;
