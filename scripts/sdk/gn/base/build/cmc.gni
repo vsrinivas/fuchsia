@@ -130,9 +130,8 @@ template("cmc_compile") {
       rebase_path(output_file, root_build_dir),
       "--includeroot",
       rebase_path("//", root_build_dir),
-
-      # TODO(fxbug.dev/78686): set --includepath to meaningful values.
-      #"--includepath",
+      "--includepath",
+      rebase_path("$fuchsia_sdk/pkg/", root_build_dir),
       "--depfile",
       rebase_path(depfile, root_build_dir),
     ]

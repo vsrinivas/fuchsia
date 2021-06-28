@@ -11,7 +11,7 @@ sdk_component_manifests("syslog") {
     "client.shard.cml",
     "client.shard.cmx",
   ]
-  category = "internal"
+  category = "partner"
 }
 
 group("tests") {

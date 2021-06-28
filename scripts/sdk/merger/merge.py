@@ -134,7 +134,7 @@ def _get_files(element_meta):
             arch_files[arch] = contents
     elif type == 'documentation':
         common_files.update(element_meta['docs'])
-    elif type == 'config' or type == 'license':
+    elif type == 'config' or type == 'license' or type == 'component_manifest':
         common_files.update(element_meta['data'])
     elif type == 'device_profile':
         # This type is pure metadata.
@@ -221,7 +221,8 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
             meta['target_files'].update(meta_two['target_files'])
     elif (type == 'cc_source_library' or type == 'dart_library' or
           type == 'fidl_library' or type == 'documentation' or
-          type == 'device_profile' or type == 'config' or type == 'license'):
+          type == 'device_profile' or type == 'config' or type == 'license' or
+          type == 'component_manifest'):
         # These elements are arch-independent, the metadata does not need any
         # update.
         meta = meta_one
@@ -373,7 +374,9 @@ def main():
                     if not _copy_identical_files(first_arch[arch], first_dir,
                                                  second_arch[arch], second_dir,
                                                  out_dir):
-                        print('Error: different %s files for %s' % (arch, element))
+                        print(
+                            'Error: different %s files for %s' %
+                            (arch, element))
                         has_errors = True
                         continue
                 elif arch in first_arch:
