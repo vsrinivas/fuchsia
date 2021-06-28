@@ -199,3 +199,197 @@ pub async fn handle_accessibility_view_registry_request_stream(
         };
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use fidl_fuchsia_ui_accessibility_view::RegistryMarker;
+    use fidl_fuchsia_ui_scenic as ui_scenic;
+    use fidl_fuchsia_ui_views as ui_views;
+    use fuchsia_async as fasync;
+    use fuchsia_component_test::{builder::*, RealmInstance};
+    use fuchsia_scenic as scenic;
+
+    const SCENIC_URL: &str = "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx";
+
+    const MOCK_COBALT_URL: &str = "#meta/mock_cobalt.cm";
+
+    const SCENE_MANAGER_URL: &str = "#meta/scene_manager.cm";
+
+    const FAKE_HDCP_URL: &str = "#meta/hdcp.cm";
+
+    async fn setup_realm() -> Result<RealmInstance, anyhow::Error> {
+        let mut builder = RealmBuilder::new().await?;
+
+        builder.add_eager_component("mock_cobalt", ComponentSource::url(MOCK_COBALT_URL)).await?;
+
+        builder
+            .add_eager_component("hdcp", ComponentSource::url(FAKE_HDCP_URL))
+            .await?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.sysmem.Allocator"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component("hdcp")],
+            })?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.tracing.provider.Registry"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component("hdcp")],
+            })?;
+
+        builder
+            .add_eager_component("scenic", ComponentSource::legacy_url(SCENIC_URL))
+            .await
+            .expect("Failed to start scenic")
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.hardware.display.Provider"),
+                source: RouteEndpoint::component("hdcp"),
+                targets: vec![RouteEndpoint::component("scenic")],
+            })?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.scheduler.ProfileProvider"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component("scenic")],
+            })?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.sysmem.Allocator"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component("scenic")],
+            })?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.tracing.provider.Registry"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component("scenic")],
+            })?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.ui.input.ImeService"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component("scenic")],
+            })?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.sysmem.Allocator"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component("scenic")],
+            })?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.vulkan.loader.Loader"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component("scenic")],
+            })?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.cobalt.LoggerFactory"),
+                source: RouteEndpoint::component("mock_cobalt"),
+                targets: vec![RouteEndpoint::component("scenic")],
+            })?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.ui.views.ViewRefInstalled"),
+                source: RouteEndpoint::component("scenic"),
+                targets: vec![RouteEndpoint::AboveRoot],
+            })?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.ui.scenic.Scenic"),
+                source: RouteEndpoint::component("scenic"),
+                targets: vec![RouteEndpoint::AboveRoot, RouteEndpoint::component("scene_manager")],
+            })?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.ui.scenic.Session"),
+                source: RouteEndpoint::component("scenic"),
+                targets: vec![RouteEndpoint::AboveRoot, RouteEndpoint::component("scene_manager")],
+            })?;
+
+        builder
+            .add_eager_component("scene_manager", ComponentSource::url(SCENE_MANAGER_URL))
+            .await?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.ui.accessibility.view.Registry"),
+                source: RouteEndpoint::component("scene_manager"),
+                targets: vec![RouteEndpoint::above_root()],
+            })?;
+
+        builder.add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![
+                RouteEndpoint::component("hdcp"),
+                RouteEndpoint::component("mock_cobalt"),
+                RouteEndpoint::component("scene_manager"),
+                RouteEndpoint::component("scenic"),
+            ],
+        })?;
+
+        let instance = builder.build().create().await.expect("Failed to build instance");
+        Ok(instance)
+    }
+
+    #[allow(unused_variables)]
+    #[fasync::run_singlethreaded(test)]
+    async fn attach_a11y_view() -> Result<(), anyhow::Error> {
+        // Setup realm instance.
+        let realm_instance = setup_realm().await.expect("Failed to setup realm");
+
+        // Connect to services.
+        let accessibility_view_registry_proxy =
+            realm_instance.root.connect_to_protocol_at_exposed_dir::<RegistryMarker>()?;
+
+        let view_ref_installed_proxy = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<ui_views::ViewRefInstalledMarker>()?;
+
+        let scenic_proxy =
+            realm_instance.root.connect_to_protocol_at_exposed_dir::<ui_scenic::ScenicMarker>()?;
+
+        // Instantiate scenic session in which to create a11y view.
+        let (session_proxy, session_request_stream) = fidl::endpoints::create_proxy()?;
+        scenic_proxy.create_session2(session_request_stream, None, None)?;
+        let session = scenic::Session::new(session_proxy);
+
+        // Create a11y ViewRef and ViewToken pairs.
+        let mut a11y_view_token_pair = scenic::ViewTokenPair::new()?;
+        let a11y_viewref_pair = scenic::ViewRefPair::new()?;
+        let mut viewref_dup_for_registry =
+            fuchsia_scenic::duplicate_view_ref(&a11y_viewref_pair.view_ref)?;
+        let mut viewref_dup_for_watcher =
+            fuchsia_scenic::duplicate_view_ref(&a11y_viewref_pair.view_ref)?;
+
+        // Create a11y view and try inserting into scene.
+        let a11y_view = scenic::View::new3(
+            session.clone(),
+            a11y_view_token_pair.view_token,
+            a11y_viewref_pair.control_ref,
+            a11y_viewref_pair.view_ref,
+            Some(String::from("a11y view")),
+        );
+
+        let _ = session
+            .lock()
+            // Passing 0 for requested_presentation_time tells scenic that that it should process
+            // enqueued operation as soon as possible.
+            // Passing 0 for requested_prediction_span guarantees that scenic will provide at least
+            // one future time.
+            .present2(0, 0)
+            .await
+            .expect("Failed to present a11y view");
+
+        accessibility_view_registry_proxy
+            .create_accessibility_view_holder(
+                &mut viewref_dup_for_registry,
+                &mut a11y_view_token_pair.view_holder_token,
+            )
+            .await
+            .expect("Failed to create a11y view holder");
+
+        // Listen for a11y view ref installed event.
+        let watch_result = view_ref_installed_proxy.watch(&mut viewref_dup_for_watcher).await;
+
+        match watch_result {
+            // Handle fidl::Errors.
+            Err(err) => {
+                panic!("ViewRefInstalled fidl error: {:?}", err);
+            }
+            // Handle ui_views::ViewRefInstalledError.
+            Ok(Err(err)) => {
+                panic!("ViewRefInstalledError: {:?}", err);
+            }
+            Ok(_) => Ok(()),
+        }
+    }
+}

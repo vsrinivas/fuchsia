@@ -1,22 +1,23 @@
 {
-    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+    ],
     program: {
-        runner: "rust_test_runner",
         binary: "bin/scene_manager_bin_test",
     },
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
-    use: [
+    offer: [
         {
-            protocol: "fuchsia.sys2.Realm",
-            from: "framework",
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#fuchsia_component_test_collection",
         },
     ],
 }
