@@ -26,6 +26,7 @@ use {
     futures::{channel::oneshot, future::join_all, select, stream::FuturesUnordered},
     itertools::Itertools,
     log::{error, info, warn},
+    selectors,
     std::{
         collections::HashMap,
         convert::{TryFrom, TryInto},
@@ -498,27 +499,45 @@ impl ProjectSampler {
             let moniker = data_packet.moniker;
             match data_packet.payload {
                 None => process_schema_errors(&data_packet.metadata.errors, &moniker),
-                Some(payload) => {
-                    for (hierarchy_path, property) in payload.property_iter() {
-                        // The property iterator will visit empty nodes once,
-                        // with a None property type. Skip those.
-                        if let Some(new_sample) = property {
-                            let selector = format!(
-                                "{}:{}:{}",
-                                moniker,
-                                hierarchy_path.iter().join("/"),
-                                new_sample.key()
-                            );
+                Some(payload) => match self.process_payload(&payload, &moniker).await {
+                    Ok(true) => (),
+                    r => return r,
+                },
+            }
+        }
 
-                            self.process_newly_sampled_property(&selector, new_sample).await?;
+        Ok(true)
+    }
 
-                            // The map is empty, break early, even if there were another
-                            // property there would be nothing to transform.
-                            if self.metric_transformation_map.is_empty() {
-                                return Ok(false);
-                            }
-                        }
-                    }
+    // Ok(true) implies that the payload was processed and we should sample again.
+    // Ok(false) implies that the payload was processed and the project sampler can now stop.
+    // Err implies an error was reached while processing the payload.
+    async fn process_payload(
+        &mut self,
+        payload: &DiagnosticsHierarchy,
+        moniker: &String,
+    ) -> Result<bool, Error> {
+        for (hierarchy_path, property) in payload.property_iter() {
+            // The property iterator will visit empty nodes once,
+            // with a None property type. Skip those.
+            if let Some(new_sample) = property {
+                let selector = format!(
+                    "{}:{}:{}",
+                    moniker,
+                    hierarchy_path
+                        .iter()
+                        .map(|s| selectors::sanitize_string_for_selectors(s))
+                        .collect::<Vec<String>>()
+                        .join("/"),
+                    new_sample.key()
+                );
+
+                self.process_newly_sampled_property(&selector, new_sample).await?;
+
+                // The map is empty, break early, even if there were another
+                // property there would be nothing to transform.
+                if self.metric_transformation_map.is_empty() {
+                    return Ok(false);
                 }
             }
         }
@@ -995,7 +1014,70 @@ fn process_schema_errors(errors: &Option<Vec<diagnostics_data::Error>>, moniker:
 #[cfg(test)]
 mod tests {
     use super::*;
-    use diagnostics_hierarchy::Bucket;
+    use diagnostics_hierarchy::{hierarchy, Bucket};
+    use futures::executor;
+
+    #[test]
+    fn test_process_payload_with_escapes() {
+        // Inserting a string into the hierarchy that requires escaping.
+        let unescaped: String = "path/to".to_string();
+        let hierarchy = hierarchy! {
+            root: {
+                var unescaped: {
+                    value: 0
+                }
+            }
+        };
+
+        let mut sampler = ProjectSampler {
+            archive_reader: ArchiveReader::new(),
+            metric_transformation_map: HashMap::new(),
+            metric_cache: HashMap::new(),
+            cobalt_logger: None,
+            metrics_logger: None,
+            poll_rate_sec: 3600,
+            project_sampler_stats: Arc::new(ProjectSamplerStats::new()),
+        };
+        let selector: String = "my/component:root/path\\/to:value".to_string();
+        sampler.metric_transformation_map.insert(
+            selector.clone(),
+            MetricConfig {
+                selector: selector.clone(),
+                metric_id: 1,
+                // Occurrence type with a value of zero will not attempt to use any loggers.
+                metric_type: DataType::Occurrence,
+                event_codes: Vec::new(),
+                // upload_once means that the method will return false if it is found in the map.
+                upload_once: Some(true),
+                use_legacy_cobalt: Some(false),
+            },
+        );
+        match executor::block_on(sampler.process_payload(&hierarchy, &"my/component".to_string())) {
+            // This selector will be found and removed from the map. Resulting in a false response.
+            Ok(b) => assert_eq!(b, false),
+            Err(_) => panic!("Expecting false from process_payload."),
+        }
+
+        let selector_unfound: String = "my/component:root/path/to:value".to_string();
+        sampler.metric_transformation_map.insert(
+            selector_unfound.clone(),
+            MetricConfig {
+                selector: selector_unfound.clone(),
+                metric_id: 1,
+                // Occurrence type with a value of zero will not attempt to use any loggers.
+                metric_type: DataType::Occurrence,
+                event_codes: Vec::new(),
+                // upload_once means that the method will return false if it is found in the map.
+                upload_once: Some(true),
+                use_legacy_cobalt: Some(false),
+            },
+        );
+        match executor::block_on(sampler.process_payload(&hierarchy, &"my/component".to_string())) {
+            // This selector will not be found and removed from the map. Resulting in a true response.
+            Ok(b) => assert_eq!(b, true),
+            Err(_) => panic!("Expecting false from process_payload."),
+        }
+    }
 
     struct EventCountTesterParams {
         new_val: Property,
