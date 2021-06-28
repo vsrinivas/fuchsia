@@ -437,7 +437,8 @@ TEST_P(SwapchainTest, CreateTwice) {
 
 TEST_P(SwapchainTest, CreateForStorage) {
   // TODO(60853): STORAGE usage is currently not supported by FEMU Vulkan ICD.
-  if (GetVkPhysicalDeviceType(test_->vk_physical_device_) == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU) {
+  if (GetVkPhysicalDeviceType(test_->vk_physical_device_) == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU ||
+      GetVkPhysicalDeviceType(test_->vk_physical_device_) == VK_PHYSICAL_DEVICE_TYPE_CPU) {
     GTEST_SKIP();
   }
 
@@ -446,7 +447,8 @@ TEST_P(SwapchainTest, CreateForStorage) {
 
 TEST_P(SwapchainTest, CreateForRgbaStorage) {
   // TODO(60853): STORAGE usage is currently not supported by FEMU Vulkan ICD.
-  if (GetVkPhysicalDeviceType(test_->vk_physical_device_) == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU) {
+  if (GetVkPhysicalDeviceType(test_->vk_physical_device_) == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU ||
+      GetVkPhysicalDeviceType(test_->vk_physical_device_) == VK_PHYSICAL_DEVICE_TYPE_CPU) {
     GTEST_SKIP();
   }
   test_->CreateSwapchain(1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_STORAGE_BIT);
@@ -655,7 +657,8 @@ TEST_P(SwapchainFidlTest, ForceQuit) {
 TEST_P(SwapchainFidlTest, DeviceLostAvoidSemaphoreHang) {
   // TODO(58325): The emulator will block of a command queue with a pending fence is submitted. So
   // this test, which depends on a delayed GPU execution, will deadlock.
-  if (GetVkPhysicalDeviceType(test_->vk_physical_device_) == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU) {
+  if (GetVkPhysicalDeviceType(test_->vk_physical_device_) == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU ||
+      GetVkPhysicalDeviceType(test_->vk_physical_device_) == VK_PHYSICAL_DEVICE_TYPE_CPU) {
     GTEST_SKIP();
   }
   // Surface lost isn't seen by the copy swapchain

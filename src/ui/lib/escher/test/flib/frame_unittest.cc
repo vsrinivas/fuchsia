@@ -23,6 +23,7 @@ VK_TEST_F(FrameTest, SubmitFrameWithUnsignalledWaitSemaphore) {
   // TODO(fxbug.dev/58325): The emulator will block if a command queue with a pending fence is
   // submitted. So this test, which depends on a delayed GPU execution, would deadlock.
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(SwiftShader);
 
   async::TestLoop loop;
   auto escher = test::GetEscher()->GetWeakPtr();

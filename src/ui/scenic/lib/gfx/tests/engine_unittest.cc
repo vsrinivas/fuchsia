@@ -249,6 +249,7 @@ VK_TEST_F(EngineTest, ImmediateRender) {
   // TODO(58324): On emulation, WaitIdle is not catching the pending GPU work, but returning
   // immediately, before the work is done and nullifying the test.
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(SwiftShader);
 
   async::TestLoop loop;
 
@@ -280,6 +281,7 @@ VK_TEST_F(EngineTest, RenderWithDelay) {
   // TODO(58325): The emulator will block of a command queue with a pending fence is submitted. So
   // this test, which depends on a delayed GPU execution, will deadlock.
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(SwiftShader);
 
   async::TestLoop loop;
 
@@ -341,6 +343,7 @@ VK_TEST_F(EngineTest, RenderWithDelayOutOfOrder) {
   // TODO(58325): The emulator will block of a command queue with a pending fence is submitted. So
   // this test, which depends on a delayed GPU execution, will deadlock.
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(SwiftShader);
 
   async::TestLoop loop;
 
