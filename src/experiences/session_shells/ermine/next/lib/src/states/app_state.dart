@@ -16,6 +16,7 @@ import 'package:next/src/services/presenter_service.dart';
 import 'package:next/src/services/shortcuts_service.dart';
 import 'package:next/src/services/startup_service.dart';
 import 'package:next/src/states/app_state_impl.dart';
+import 'package:next/src/states/oobe_state.dart';
 import 'package:next/src/states/settings_state.dart';
 import 'package:next/src/states/view_state.dart';
 import 'package:next/src/widgets/app_bar.dart';
@@ -34,6 +35,7 @@ abstract class AppState with Store {
   ObservableValue<bool> get appBarVisible;
   ObservableValue<bool> get sideBarVisible;
   ObservableValue<bool> get overlaysVisible;
+  ObservableValue<bool> get oobeVisible;
   ObservableValue<ViewState> get topView;
   ObservableList<ViewState> get views;
   ObservableStream<Locale> get localeStream;
@@ -41,6 +43,7 @@ abstract class AppState with Store {
   List<Map<String, String>> get appLaunchEntries;
 
   SettingsState get settingsState;
+  OobeState get oobeState;
 
   Action get showOverlay;
   Action get hideOverlay;
@@ -57,6 +60,7 @@ abstract class AppState with Store {
   Action get shutdown;
   Action get launchFeedback;
   Action get launchLicense;
+  Action get oobeFinished;
 
   factory AppState.fromEnv() {
     return AppStateImpl(

@@ -13,19 +13,31 @@ import 'package:next/src/utils/mobx_extensions.dart';
 /// Defines a service that allows reading and storing application data.
 class PreferencesService with Disposable {
   static const kPreferencesJson = '/data/preferences.json';
+  static const kStartupConfigJson = '/config/data/startup_config.json';
 
   // Use dark mode: true | false.
   final darkMode = true.asObservable();
+
+  // Launch oobe: true | false.
+  final launchOobe = false.asObservable();
 
   final Map<String, dynamic> _data;
 
   PreferencesService() : _data = _readPreferences() {
     darkMode.value = _data['dark_mode'] ?? true;
-    reactions.add(reaction<bool>((_) => darkMode.value, _setDarkMode));
+    launchOobe.value = _data['launch_oobe'] ?? _launchOobeFromConfig();
+    reactions
+      ..add(reaction<bool>((_) => darkMode.value, _setDarkMode))
+      ..add(reaction<bool>((_) => launchOobe.value, _setLaunchOobe));
   }
 
   void _setDarkMode(bool value) {
     _data['dark_mode'] = value;
+    _writePreferences(_data);
+  }
+
+  void _setLaunchOobe(bool value) {
+    _data['launch_oobe'] = value;
     _writePreferences(_data);
   }
 
@@ -46,5 +58,14 @@ class PreferencesService with Disposable {
 
   static void _writePreferences(Map<String, dynamic> data) {
     File(kPreferencesJson).writeAsStringSync(json.encode(data));
+  }
+
+  static bool _launchOobeFromConfig() {
+    final file = File(kStartupConfigJson);
+    if (file.existsSync()) {
+      final data = json.decode(file.readAsStringSync());
+      return data['launch_oobe'] ?? false;
+    }
+    return false;
   }
 }

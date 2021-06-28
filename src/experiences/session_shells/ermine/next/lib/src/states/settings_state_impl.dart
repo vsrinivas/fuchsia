@@ -158,6 +158,9 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     super.dispose();
     dateTimeService.dispose();
     timezoneService.dispose();
+    networkService.dispose();
+    memoryWatcherService.dispose();
+    batteryWatcherService.dispose();
   }
 
   @override

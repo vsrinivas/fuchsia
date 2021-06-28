@@ -6,7 +6,7 @@ import 'package:flutter/material.dart' hide AppBar;
 
 import 'package:next/src/states/app_state.dart';
 
-/// Defines a widget to listent to tap gesture used to dismiss overlays.
+/// Defines a widget to listen to tap gesture used to dismiss overlays.
 class Scrim extends StatelessWidget {
   final AppState state;
 

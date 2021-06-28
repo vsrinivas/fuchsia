@@ -16,6 +16,7 @@ import 'package:next/src/services/presenter_service.dart';
 import 'package:next/src/services/shortcuts_service.dart';
 import 'package:next/src/services/startup_service.dart';
 import 'package:next/src/states/app_state.dart';
+import 'package:next/src/states/oobe_state.dart';
 import 'package:next/src/states/settings_state.dart';
 import 'package:next/src/states/view_state.dart';
 import 'package:next/src/states/view_state_impl.dart';
@@ -79,6 +80,9 @@ class AppStateImpl with Disposable implements AppState {
   void dispose() {
     super.dispose();
 
+    settingsState.dispose();
+    oobeState.dispose();
+
     startupService.dispose();
     focusService.dispose();
     presenterService.dispose();
@@ -90,6 +94,9 @@ class AppStateImpl with Disposable implements AppState {
 
   @override
   late final SettingsState settingsState;
+
+  @override
+  OobeState get oobeState => OobeState.fromEnv();
 
   @override
   late final theme = (() {
@@ -114,8 +121,15 @@ class AppStateImpl with Disposable implements AppState {
   /// Returns true if shell has focus and any side bars are visible.
   @override
   late final overlaysVisible = (() {
-    return shellHasFocus.value && (appBarVisible.value || sideBarVisible.value);
+    return !oobeVisible.value &&
+        shellHasFocus.value &&
+        (appBarVisible.value || sideBarVisible.value);
   }).asComputed();
+
+  @override
+  late final oobeVisible = () {
+    return preferencesService.launchOobe.value;
+  }.asComputed();
 
   @override
   late final appBarVisible = (() {
@@ -246,6 +260,11 @@ class AppStateImpl with Disposable implements AppState {
 
   @override
   late final shutdown = startupService.shutdownDevice.asAction();
+
+  @override
+  late final oobeFinished = () {
+    preferencesService.launchOobe.value = false;
+  }.asAction();
 
   // Map key shortcuts to corresponding actions.
   Map<String, VoidCallback> get _actions => {

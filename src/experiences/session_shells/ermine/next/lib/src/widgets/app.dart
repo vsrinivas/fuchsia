@@ -17,25 +17,26 @@ import 'package:next/src/states/app_state.dart';
 import 'package:next/src/utils/fuchsia_keyboard.dart';
 import 'package:next/src/utils/widget_factory.dart';
 import 'package:next/src/widgets/app_view.dart';
+import 'package:next/src/widgets/oobe.dart';
 import 'package:next/src/widgets/overlays.dart';
 
 /// Builds the top level application widget that reacts to locale changes.
 class App extends StatelessWidget {
-  final AppState state;
+  final AppState app;
 
-  const App(this.state);
+  const App(this.app);
 
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (_) {
-      final locale = state.localeStream.value;
+      final locale = app.localeStream.value;
       if (locale == null) {
         return Offstage();
       }
       Intl.defaultLocale = locale.toString();
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: state.theme.value,
+        theme: app.theme.value,
         locale: locale,
         localizationsDelegates: [
           localizations.delegate(),
@@ -57,12 +58,19 @@ class App extends StatelessWidget {
                 fit: StackFit.expand,
                 children: <Widget>[
                   // Show fullscreen top view.
-                  if (state.views.isNotEmpty)
-                    WidgetFactory.create(() => AppView(state)),
+                  if (app.views.isNotEmpty)
+                    WidgetFactory.create(() => AppView(app)),
 
                   // Show scrim and overlay layers if an overlay is visible.
-                  if (state.overlaysVisible.value)
-                    WidgetFactory.create(() => Overlays(state)),
+                  if (app.overlaysVisible.value)
+                    WidgetFactory.create(() => Overlays(app)),
+
+                  // Show OOBE view for first-time configuration.
+                  if (app.oobeVisible.value)
+                    WidgetFactory.create(() => Oobe(
+                          app.oobeState,
+                          onFinish: app.oobeFinished,
+                        )),
                 ],
               );
             }),
