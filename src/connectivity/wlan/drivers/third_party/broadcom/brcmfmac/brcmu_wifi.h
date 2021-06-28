@@ -29,6 +29,7 @@
 /* channel defines */
 #define CH_30MHZ_APART 6
 #define CH_MIN_2G_CHANNEL 1
+#define CH_MAX_2G_CHANNEL 14
 #define CH_MIN_5G_CHANNEL 34
 
 /* bandstate array indices */
