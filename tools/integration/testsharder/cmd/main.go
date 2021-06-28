@@ -5,16 +5,20 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"os"
+	"syscall"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 var (
@@ -66,13 +70,18 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if err := execute(); err != nil {
-		log.Fatal(err)
+	ctx := command.CancelOnSignals(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	l := logger.NewLogger(logger.ErrorLevel, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "")
+	// testsharder is expected to complete quite quickly, so it's generally not
+	// useful to include timestamps in logs. File names can be helpful though.
+	l.SetFlags(logger.Lshortfile)
+	ctx = logger.WithLogger(ctx, l)
+	if err := execute(ctx); err != nil {
+		logger.Fatalf(ctx, err.Error())
 	}
 }
 
-func execute() error {
-
+func execute(ctx context.Context) error {
 	if buildDir == "" {
 		return fmt.Errorf("must specify a Fuchsia build output directory")
 	}
@@ -120,7 +129,7 @@ func execute() error {
 		return err
 	}
 
-	shards, err = testsharder.MultiplyShards(shards, modifiers, testDurations, targetDuration, targetTestCount)
+	shards, err = testsharder.MultiplyShards(ctx, shards, modifiers, testDurations, targetDuration, targetTestCount)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ package testsharder
 
 import (
 	"container/heap"
+	"context"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -16,6 +17,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 const (
@@ -111,6 +114,7 @@ func dedupe(l []string) []string {
 // repeated multiple times according to the specifications in multipliers.
 // It also removes all multiplied tests from the input shards.
 func MultiplyShards(
+	ctx context.Context,
 	shards []*Shard,
 	multipliers []TestModifier,
 	testDurations TestDurationsMap,
@@ -119,6 +123,7 @@ func MultiplyShards(
 	targetDuration time.Duration,
 	targetTestCount int,
 ) ([]*Shard, error) {
+	var tooManyMatchesMultipliers []string
 	for _, multiplier := range multipliers {
 		if multiplier.TotalRuns < 0 {
 			continue
@@ -188,10 +193,16 @@ func MultiplyShards(
 		}
 
 		if len(matches) > maxMatchesPerMultiplier {
-			return nil, fmt.Errorf(
-				"multiplier %q matches too many tests (%d): %w",
-				multiplier.Name, len(matches), errTooManyMultiplierMatches,
-			)
+			tooManyMatchesMultipliers = append(tooManyMatchesMultipliers, multiplier.Name)
+			logger.Errorf(ctx, "Multiplier %q matches too many tests (%d), maximum is %d",
+				multiplier.Name, len(matches), maxMatchesPerMultiplier)
+			continue
+		} else if len(tooManyMatchesMultipliers) > 0 {
+			// If we've already failed validation of a previous multiplier,
+			// then we're bound to fail so there's no use constructing the
+			// shard. Just make sure that we proceed to emit logs for other
+			// multipliers that match too many tests.
+			continue
 		}
 
 		shardIdxToTestIdx := make([][]int, len(shards))
@@ -235,6 +246,12 @@ func MultiplyShards(
 				shrunk++
 			}
 		}
+	}
+	if len(tooManyMatchesMultipliers) > 0 {
+		return nil, fmt.Errorf(
+			"%d multiplier(s) match too many tests: %w",
+			len(tooManyMatchesMultipliers), errTooManyMultiplierMatches,
+		)
 	}
 
 	return shards, nil

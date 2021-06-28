@@ -5,6 +5,7 @@
 package testsharder
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -271,6 +272,7 @@ func TestMultiplyShards(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			actual, err := MultiplyShards(
+				context.Background(),
 				tc.shards,
 				tc.multipliers,
 				tc.testDurations,

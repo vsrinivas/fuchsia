@@ -22,7 +22,12 @@ go_library("testsharder_lib") {
     "test_modifier_test.go",
   ]
 
-  deps = [ "//tools/build" ]
+  deps = [
+    "//tools/build",
+    "//tools/lib/color",
+    "//tools/lib/command",
+    "//tools/lib/logger",
+  ]
 }
 
 go_library("main") {
