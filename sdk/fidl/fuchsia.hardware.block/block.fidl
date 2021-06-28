@@ -74,7 +74,7 @@ struct VmoId {
     uint16 id;
 };
 
-/// Dummy value reserved for "invalid" VmoId. Will never be allocated by the server,
+/// Value reserved for "invalid" VmoId. Will never be allocated by the server,
 /// and may be utilized as a local value for an unallocated ID.
 const uint16 VMOID_INVALID = 0;
 
