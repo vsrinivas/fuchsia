@@ -319,7 +319,7 @@ bool FloatValuesEqual(ExprLanguage lang, const char* input, const char* expected
   // Say the float converter makes the same floating-point value as the current compiler. This
   // should be the case for all sane compilers.
   FloatType result_float;
-  memcpy(&result_float, &result.value().data()[0], sizeof(FloatType));
+  memcpy(&result_float, &result.value().data().bytes()[0], sizeof(FloatType));
   EXPECT_EQ(expected_value, result_float);
   return expected_value == result_float;
 }

@@ -78,8 +78,10 @@ ErrOrValue ResolveBitfieldMember(const fxl::RefPtr<EvalContext>& context, const 
   // about that reading off the end of byte_size() and can just do the masking math.
   //
   // This computation assumes little-endian.
-  memcpy(&bits, &base.data()[*opt_byte_offset],
-         std::min(sizeof(bits), base.data().size() - *opt_byte_offset));
+  size_t bytes_to_use = std::min<size_t>(sizeof(bits), base.data().size() - *opt_byte_offset);
+  if (!base.data().RangeIsValid(*opt_byte_offset, bytes_to_use))
+    return Err::OptimizedOut();
+  memcpy(&bits, &base.data().bytes()[*opt_byte_offset], bytes_to_use);
 
   // Bits count from the high bit within byte_size(). Current compilers seem to always write
   // byte_size == sizeof(declared type) and count the high bit of the result from the high bit of

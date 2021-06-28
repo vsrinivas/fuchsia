@@ -165,15 +165,13 @@ ErrOrValue ExtractSubType(const fxl::RefPtr<EvalContext>& context, const ExprVal
   auto concrete = context->GetConcreteType(sub_type.get());
   uint32_t size = concrete->byte_size();
 
-  if (offset + size > base.data().size()) {
+  std::optional<TaggedData> extracted = base.data().Extract(offset, size);
+  if (!extracted) {
     return Err("Invalid data offset %" PRIu32 " in object of size %zu.", offset,
                base.data().size());
   }
-  std::vector<uint8_t> member_data(base.data().begin() + offset,
-                                   base.data().begin() + (offset + size));
 
-  return ExprValue(std::move(sub_type), std::move(member_data),
-                   base.source().GetOffsetInto(offset));
+  return ExprValue(std::move(sub_type), std::move(*extracted), base.source().GetOffsetInto(offset));
 }
 
 // This variant takes a precomputed offset of the data member in the base class. This is to support

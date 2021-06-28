@@ -151,7 +151,7 @@ TEST_F(ResolvePtrRefTest, ConstRef) {
 
   // The resolved type should be "const int32_t" and have the input value.
   EXPECT_EQ(const_int32_type.get(), out_value.type());
-  EXPECT_EQ(int_value, out_value.data());
+  EXPECT_EQ(int_value, out_value.data().bytes());
 
   // Check the location of the result.
   EXPECT_EQ(ExprValueSource::Type::kMemory, out_value.source().type());

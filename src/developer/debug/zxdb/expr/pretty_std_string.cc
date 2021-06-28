@@ -94,9 +94,11 @@ fxl::RefPtr<BaseType> GetSizeTType() {
 
 // Returns true if this std::string uses the inline representation. It's assumed the data has
 // al;ready been validated as being the correct length.
-bool IsInlineString(const std::vector<uint8_t>& mem) {
+ErrOr<bool> IsInlineString(const TaggedData& mem) {
   FX_DCHECK(mem.size() == kStdStringSize);
-  return !(mem[kShortSizeOffset] & kShortMask);
+  if (!mem.RangeIsValid(kShortSizeOffset, 1))
+    return Err::OptimizedOut();
+  return !(mem.bytes()[kShortSizeOffset] & kShortMask);
 }
 
 // Fills in the data pointer for the given std::string.
@@ -104,36 +106,63 @@ Err GetStringPtr(const ExprValue& value, uint64_t* ptr) {
   if (value.data().size() != kStdStringSize)
     return Err("Invalid std::string data.");
 
-  if (IsInlineString(value.data())) {
+  ErrOr<bool> inline_or = IsInlineString(value.data());
+  if (inline_or.has_error())
+    return inline_or.err();
+
+  if (inline_or.value()) {
     // The address is just the beginning of the string.
     if (value.source().type() != ExprValueSource::Type::kMemory || value.source().address() == 0)
       return Err("Can't get string pointer to a temporary.");
     *ptr = value.source().address();
   } else {
-    memcpy(ptr, &value.data()[kLongPtrOffset], sizeof(uint64_t));
+    if (!value.data().RangeIsValid(kLongPtrOffset, sizeof(uint64_t)))
+      return Err::OptimizedOut();
+    memcpy(ptr, &value.data().bytes()[kLongPtrOffset], sizeof(uint64_t));
   }
   return Err();
 }
 
-Err GetStringSize(const std::vector<uint8_t>& mem, uint64_t* size) {
+// Guarantees that any inline size is inside the buffer.
+Err GetStringSize(const TaggedData& mem, uint64_t* size) {
   if (mem.size() != kStdStringSize)
     return Err("Invalid std::string data.");
 
-  if (IsInlineString(mem))
-    *size = mem[kShortSizeOffset];
-  else
-    memcpy(size, &mem[kLongSizeOffset], sizeof(uint64_t));
+  ErrOr<bool> inline_or = IsInlineString(mem);
+  if (inline_or.has_error())
+    return inline_or.err();
+
+  if (inline_or.value()) {
+    if (!mem.RangeIsValid(kShortSizeOffset, 1))
+      return Err::OptimizedOut();
+    *size = mem.bytes()[kShortSizeOffset];
+
+    // Sanity check. The string could be corrupted and we don't want to report an inline size
+    // greater than the inline buffer (including null).
+    if (*size >= kStdStringSize - 1)
+      return Err("std::string has invalid size for inline data (" + std::to_string(*size) + ")");
+  } else {
+    if (!mem.RangeIsValid(kLongSizeOffset, sizeof(uint64_t)))
+      return Err::OptimizedOut();
+    memcpy(size, &mem.bytes()[kLongSizeOffset], sizeof(uint64_t));
+  }
   return Err();
 }
 
-Err GetStringCapacity(const std::vector<uint8_t>& mem, uint64_t* capacity) {
+Err GetStringCapacity(const TaggedData& mem, uint64_t* capacity) {
   if (mem.size() != kStdStringSize)
     return Err("Invalid std::string data.");
 
-  if (IsInlineString(mem)) {
+  ErrOr<bool> inline_or = IsInlineString(mem);
+  if (inline_or.has_error())
+    return inline_or.err();
+
+  if (inline_or.value()) {
     *capacity = kShortSizeOffset - 1;  // Inline size is stuff before the short size minus null.
   } else {
-    memcpy(capacity, &mem[kLongCapacityOffset], sizeof(uint64_t));
+    if (!mem.RangeIsValid(kLongCapacityOffset, sizeof(uint64_t)))
+      return Err::OptimizedOut();
+    memcpy(capacity, &mem.bytes()[kLongCapacityOffset], sizeof(uint64_t));
 
     // Mask off the high bit which is the "large" flag.
     *capacity &= 0x7fffffffffffffff;
@@ -141,9 +170,8 @@ Err GetStringCapacity(const std::vector<uint8_t>& mem, uint64_t* capacity) {
   return Err();
 }
 
-void FormatStdStringMemory(const std::vector<uint8_t>& mem, FormatNode* node,
-                           const FormatOptions& options, const fxl::RefPtr<EvalContext>& context,
-                           fit::deferred_callback cb) {
+void FormatStdStringMemory(const TaggedData& mem, FormatNode* node, const FormatOptions& options,
+                           const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
   node->set_type("std::string");
   if (mem.size() != kStdStringSize)
     return node->SetDescribedError(Err("Invalid."));
@@ -154,12 +182,21 @@ void FormatStdStringMemory(const std::vector<uint8_t>& mem, FormatNode* node,
   if (Err err = GetStringSize(mem, &string_size); err.has_error())
     return node->SetDescribedError(err);
 
-  if (IsInlineString(mem)) {
-    FormatCharArrayNode(node, char_type, mem.data(), string_size, true, false);
+  ErrOr<bool> inline_or = IsInlineString(mem);
+  if (inline_or.has_error())
+    return node->SetDescribedError(inline_or.err());
+
+  if (inline_or.value()) {
+    if (!mem.RangeIsValid(0, string_size))
+      return node->SetDescribedError(Err::OptimizedOut());
+    FormatCharArrayNode(node, char_type, mem.bytes().data(), string_size, true, false);
   } else {
     // Long representation (with pointer).
+    if (!mem.RangeIsValid(kLongPtrOffset, sizeof(uint64_t)))
+      return node->SetDescribedError(Err::OptimizedOut());
+
     uint64_t data_ptr;
-    memcpy(&data_ptr, &mem[kLongPtrOffset], sizeof(uint64_t));
+    memcpy(&data_ptr, &mem.bytes()[kLongPtrOffset], sizeof(uint64_t));
     FormatCharPointerNode(node, data_ptr, char_type.get(), string_size, options, context,
                           std::move(cb));
   }
@@ -244,7 +281,7 @@ PrettyStdString::EvalFunction PrettyStdString::GetGetter(const std::string& gett
     return MakeGetter([](ExprValue value, EvalCallback cb) {
       uint64_t string_size = 0;
       if (Err err = GetStringSize(value.data(), &string_size); err.has_error())
-        cb(err);
+        return cb(err);
       cb(ExprValue(string_size, GetSizeTType()));
     });
   }
@@ -275,14 +312,19 @@ PrettyStdString::EvalArrayFunction PrettyStdString::GetArrayAccess() const {
         context, object_value, [context, cb = std::move(cb), index](ErrOrValue value) mutable {
           if (value.has_error())
             return cb(value.err());
-          if (IsInlineString(value.value().data())) {
+
+          const TaggedData& string_data = value.value().data();
+          if (IsInlineString(string_data)) {
             // Use the inline data. Need to range check since we're indexing into our local
             // address space.
             if (index >= static_cast<int64_t>(kShortSizeOffset) || index < 0)
               return cb(Err("String index out of range."));
 
+            if (!string_data.RangeIsValid(index, 1))
+              return cb(Err::OptimizedOut());
+
             // Inline array starts from the beginning of the string.
-            return cb(ExprValue(GetStdStringCharType(), {value.value().data()[index]},
+            return cb(ExprValue(GetStdStringCharType(), {string_data.bytes()[index]},
                                 value.value().source().GetOffsetInto(index)));
           } else {
             uint64_t ptr = 0;

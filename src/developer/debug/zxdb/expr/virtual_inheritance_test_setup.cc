@@ -85,7 +85,7 @@ VirtualInheritanceTestSetup::VirtualInheritanceTestSetup() {
 }
 
 void VirtualInheritanceTestSetup::SaveMockData(MockSymbolDataProvider* mock) const {
-  mock->AddMemory(kDerivedAddress, derived_value.data());
+  mock->AddMemory(kDerivedAddress, derived_value.data().bytes());
   mock->AddMemory(kVirtualDataAddress, virtual_data);
 }
 

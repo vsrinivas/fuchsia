@@ -96,7 +96,7 @@ void FormatUnsignedInt(FormatNode* node, const FormatOptions& options) {
   if (node->value().data().size() > sizeof(uint64_t)) {
     // This assumes little-endian.
     std::string desc = "0x";
-    for (uint8_t b : Reversed(node->value().data()))
+    for (uint8_t b : Reversed(node->value().data().bytes()))
       desc.append(fxl::StringPrintf("%02x", b));
     node->set_description(std::move(desc));
     return;
@@ -148,7 +148,7 @@ void FormatChar(FormatNode* node) {
   }
   std::string str;
   str.push_back('\'');
-  AppendCEscapedChar(node->value().data()[0], &str);
+  AppendCEscapedChar(node->value().data().bytes()[0], &str);
   str.push_back('\'');
   node->set_description(std::move(str));
 }
@@ -484,7 +484,8 @@ bool TryFormatArrayOrString(FormatNode* node, const Type* type, const FormatOpti
         length = options.max_array_size;
         truncated = true;
       }
-      FormatCharArrayNode(node, value_type, node->value().data().data(), length, true, truncated);
+      FormatCharArrayNode(node, value_type, node->value().data().bytes().data(), length, true,
+                          truncated);
     } else {
       FormatArrayNode(node, node->value(), *array->num_elts(), options, eval_context,
                       std::move(cb));
@@ -538,6 +539,13 @@ void FillFormatNodeDescriptionFromValue(FormatNode* node, const FormatOptions& o
   //
   // Always use this variable below instead of value.type().
   fxl::RefPtr<Type> type = context->GetConcreteType(node->value().type());
+
+  // Anything that's not a collection must be completely known for formatting. Collection resolution
+  // can handle some members that are optimized out but some not.
+  if (const Collection* coll = type->As<Collection>(); !coll && !node->value().data().all_valid()) {
+    node->set_err(Err::OptimizedOut());
+    return;
+  }
 
   // Check for pretty-printers again now that we've resolved concrete types. Either the source or
   // the destination of a typedef could have a pretty-printer.
@@ -651,9 +659,10 @@ void FillFormatNodeDescription(FormatNode* node, const FormatOptions& options,
     FillFormatNodeValue(node, context,
                         fit::defer_callback([weak_node = node->GetWeakPtr(), options, context,
                                              cb = std::move(cb)]() mutable {
-                          if (weak_node)
+                          if (weak_node) {
                             FillFormatNodeDescriptionFromValue(weak_node.get(), options, context,
                                                                std::move(cb));
+                          }
                         }));
   } else {
     // Value already available, can format now.
@@ -662,6 +671,11 @@ void FillFormatNodeDescription(FormatNode* node, const FormatOptions& options,
 }
 
 void FormatNumericNode(FormatNode* node, const FormatOptions& options) {
+  if (!node->value().data().all_valid()) {
+    node->set_err(Err::OptimizedOut());
+    return;
+  }
+
   node->set_description_kind(FormatNode::kBaseType);
 
   if (node->value().data().size() > sizeof(uint64_t)) {

@@ -134,7 +134,7 @@ TEST_F(Bitfield, Bitfield) {
   // Test that resolving bitfields by pointer is hooked up.
   auto test_class_ptr_type =
       fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, test_class_type);
-  eval_context->data_provider()->AddMemory(kAddress, saturated_k.data());
+  eval_context->data_provider()->AddMemory(kAddress, saturated_k.data().bytes());
   ExprValue ptr_value(kAddress, test_class_ptr_type);
 
   bool called = false;

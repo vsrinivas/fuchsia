@@ -525,7 +525,7 @@ TEST_F(ResolveCollectionTest, VirtualInheritance) {
   EXPECT_EQ(base_type.get(), base.type());
   std::vector<uint8_t> expected_base_data(derived_data.begin() + kBaseOffset,
                                           derived_data.begin() + kBaseOffset + kBaseSize);
-  EXPECT_EQ(expected_base_data, base.data());
+  EXPECT_EQ(expected_base_data, base.data().bytes());
 
   // Add a level of non-virtual inheritance. This will put the base class ("MyDerived") at a 4-byte
   // offset inside of the "MySuperDerived" class.
@@ -565,7 +565,7 @@ TEST_F(ResolveCollectionTest, VirtualInheritance) {
   EXPECT_EQ(ExprValueSource::Type::kMemory, base.source().type());
   EXPECT_EQ(kBaseAddress, base.source().address());
   EXPECT_EQ(base_type.get(), base.type());
-  EXPECT_EQ(expected_base_data, base.data());
+  EXPECT_EQ(expected_base_data, base.data().bytes());
 }
 
 // Tests resolving data members with "const values" given in the symbols.

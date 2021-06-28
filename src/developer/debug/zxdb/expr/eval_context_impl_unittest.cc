@@ -551,14 +551,14 @@ TEST_F(EvalContextImplTest, FloatRegisterByName) {
   loop().RunUntilNoTasks();
   ASSERT_FALSE(reg.value.has_error()) << reg.value.err().msg();
   EXPECT_EQ("double", reg.value.value().type()->GetFullName());
-  EXPECT_EQ(double_data, reg.value.value().data());
+  EXPECT_EQ(double_data, reg.value.value().data().bytes());
 
   GetNamedValue(c_context, "s1", &reg);
 
   loop().RunUntilNoTasks();
   ASSERT_FALSE(reg.value.has_error()) << reg.value.err().msg();
   EXPECT_EQ("float", reg.value.value().type()->GetFullName());
-  EXPECT_EQ(float_data, reg.value.value().data());
+  EXPECT_EQ(float_data, reg.value.value().data().bytes());
 }
 
 TEST_F(EvalContextImplTest, VectorRegister) {
@@ -583,7 +583,7 @@ TEST_F(EvalContextImplTest, VectorRegister) {
   EXPECT_EQ("double[2]", reg.value.value().type()->GetFullName());
 
   // The data should be passed through unchanged, the array code will handle unpacking it.
-  EXPECT_EQ(data, reg.value.value().data());
+  EXPECT_EQ(data, reg.value.value().data().bytes());
 
   // Check source mapping.
   const ExprValueSource& source = reg.value.value().source();
@@ -614,7 +614,7 @@ TEST_F(EvalContextImplTest, DataResult) {
 
   ASSERT_FALSE(val.value.has_error()) << val.value.err().msg();
   std::vector<uint8_t> expected{1, 0, 0, 0, 2, 0, 0, 0};
-  EXPECT_EQ(expected, val.value.value().data());
+  EXPECT_EQ(expected, val.value.value().data().bytes());
   EXPECT_EQ(ExprValueSource::Type::kComposite, val.value.value().source().type());
 }
 

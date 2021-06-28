@@ -508,7 +508,7 @@ TEST_F(ExprNodeTest, Cast) {
                                                      std::move(derived_ref_node));
 
   // Provide the memory for the derived type for when we dereference the ref.
-  context->data_provider()->AddMemory(d.kDerivedAddr, d.derived_value.data());
+  context->data_provider()->AddMemory(d.kDerivedAddr, d.derived_value.data().bytes());
 
   called = false;
   out_value = ExprValue();

@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/common/tagged_data_builder.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
@@ -65,6 +66,32 @@ class PrettyStringTest : public TestWithLoop {
     EXPECT_TRUE(called);
   }
 
+  // Calls the given getter and expects an error is returned.
+  void ExpectGetterErr(const ExprValue& input, const std::string& getter_name,
+                       const std::string& expected_err_msg) {
+    PrettyStdString pretty;
+
+    auto getter = pretty.GetGetter(getter_name);
+    ASSERT_TRUE(getter);
+
+    bool should_quit = false;
+    bool called = false;
+    getter(context(), input, [&called, &should_quit, expected_err_msg](ErrOrValue v) {
+      called = true;
+
+      ASSERT_FALSE(v.ok());
+      EXPECT_EQ(v.err().msg(), expected_err_msg);
+
+      if (should_quit)
+        debug_ipc::MessageLoop::Current()->QuitNow();
+    });
+    if (!called) {
+      should_quit = true;
+      debug_ipc::MessageLoop::Current()->Run();
+    }
+    EXPECT_TRUE(called);
+  }
+
   fxl::RefPtr<MockEvalContext> context() { return context_; }
 
  private:
@@ -99,6 +126,59 @@ TEST_F(PrettyStringTest, StdStringShort) {
   ExpectGetterReturns(short_value, "length", 13);
   ExpectGetterReturns(short_value, "capacity", 22);  // 24 bytes - size - null.
   ExpectGetterReturns(short_value, "empty", 0);
+}
+
+// Test that a std::string buffer that's mostly optimized out can still be foprmatted.
+TEST_F(PrettyStringTest, StdStringShortMaximallyOptimized) {
+  // Minimal std::string has only a 0 byte as the last byte, indicating no size.
+  TaggedDataBuilder builder;
+  builder.AppendUnknown(23);
+  builder.Append({0});
+
+  ExprValue short_value(fxl::RefPtr<Type>(), builder.TakeData());
+  FormatNode node("value", short_value);
+
+  PrettyStdString pretty;
+
+  // Expect synchronous completion for the inline value case.
+  bool completed = false;
+  pretty.Format(&node, FormatOptions(), context(),
+                fit::defer_callback([&completed]() { completed = true; }));
+  EXPECT_TRUE(completed);
+
+  EXPECT_EQ("\"\"", node.description());
+
+  ExpectGetterReturns(short_value, "size", 0);
+  ExpectGetterReturns(short_value, "length", 0);
+  ExpectGetterReturns(short_value, "capacity", 22);  // 24 bytes - size - null.
+  ExpectGetterReturns(short_value, "empty", 1);
+}
+
+// Tests values missing in optimized data.
+TEST_F(PrettyStringTest, StdStringShortTooOptimized) {
+  // Entirely optimized-out buffer.
+  TaggedDataBuilder builder;
+  builder.AppendUnknown(24);
+
+  ExprValue opt_out_value(fxl::RefPtr<Type>(), builder.TakeData());
+  FormatNode node("value", opt_out_value);
+
+  PrettyStdString pretty;
+
+  // Expect synchronous completion for the inline value case.
+  bool completed = false;
+  pretty.Format(&node, FormatOptions(), context(),
+                fit::defer_callback([&completed]() { completed = true; }));
+  EXPECT_TRUE(completed);
+
+  EXPECT_EQ("", node.description());
+  EXPECT_TRUE(node.err().has_error());
+  EXPECT_EQ(ErrType::kOptimizedOut, node.err().type());
+
+  ExpectGetterErr(opt_out_value, "size", "optimized out");
+  ExpectGetterErr(opt_out_value, "length", "optimized out");
+  ExpectGetterErr(opt_out_value, "capacity", "optimized out");
+  ExpectGetterErr(opt_out_value, "empty", "optimized out");
 }
 
 // Tests a string with no bytes but a source location. This string data encodes the "long" format

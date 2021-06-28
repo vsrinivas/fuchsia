@@ -11,12 +11,6 @@
 
 namespace zxdb {
 
-namespace {
-
-Err GetOptimizedOutErr() { return Err(ErrType::kOptimizedOut, "Optimized out"); }
-
-}  // namespace
-
 ExprValue::ExprValue() = default;
 
 ExprValue::ExprValue(bool value, fxl::RefPtr<Type> type, const ExprValueSource& source)
@@ -66,22 +60,22 @@ ExprValue::ExprValue(fxl::RefPtr<Type> optional_type, int base_type, const char*
   TaggedData::DataBuffer bytes;
   bytes.resize(data_size);
   memcpy(bytes.data(), data, data_size);
-  tagged_data_ = TaggedData(std::move(bytes));
+  data_ = TaggedData(std::move(bytes));
 }
 
 ExprValue::ExprValue(fxl::RefPtr<Type> type, std::vector<uint8_t> data,
                      const ExprValueSource& source)
-    : type_(std::move(type)), source_(source), tagged_data_(std::move(data)) {}
+    : type_(std::move(type)), source_(source), data_(std::move(data)) {}
 
 ExprValue::ExprValue(fxl::RefPtr<Type> type, TaggedData buffer, const ExprValueSource& source)
-    : type_(std::move(type)), source_(source), tagged_data_(std::move(buffer)) {}
+    : type_(std::move(type)), source_(source), data_(std::move(buffer)) {}
 
 ExprValue::~ExprValue() = default;
 
 bool ExprValue::operator==(const ExprValue& other) const {
   // Currently this does a comparison of the raw bytes of the value. This will be fine for most
   // primitive values but will be incorrect for some composite structs.
-  return tagged_data_ == other.tagged_data_;
+  return data_ == other.data_;
 }
 
 int ExprValue::GetBaseType() const {
@@ -96,124 +90,124 @@ int ExprValue::GetBaseType() const {
 }
 
 Err ExprValue::EnsureAllValid() const {
-  if (!tagged_data_.all_valid())
-    return GetOptimizedOutErr();
+  if (!data_.all_valid())
+    return Err::OptimizedOut();
   return Err();
 }
 
 Err ExprValue::EnsureSizeIs(size_t size) const {
-  if (tagged_data_.size() != size) {
-    return Err(fxl::StringPrintf(
-        "The value of type '%s' is the incorrect size "
-        "(expecting %zu, got %zu). Please file a bug.",
-        type_ ? type_->GetFullName().c_str() : "<unknown>", size, tagged_data_.size()));
+  if (data_.size() != size) {
+    return Err(
+        fxl::StringPrintf("The value of type '%s' is the incorrect size "
+                          "(expecting %zu, got %zu). Please file a bug.",
+                          type_ ? type_->GetFullName().c_str() : "<unknown>", size, data_.size()));
   }
   return Err();
 }
 
 template <>
 int8_t ExprValue::GetAs<int8_t>() const {
-  FX_DCHECK(tagged_data_.size() == sizeof(int8_t)) << "Got size of " << tagged_data_.size();
+  FX_DCHECK(data_.size() == sizeof(int8_t)) << "Got size of " << data_.size();
   int8_t result;
-  memcpy(&result, tagged_data_.bytes().data(), sizeof(int8_t));
+  memcpy(&result, data_.bytes().data(), sizeof(int8_t));
   return result;
 }
 
 template <>
 uint8_t ExprValue::GetAs<uint8_t>() const {
-  FX_DCHECK(tagged_data_.size() == sizeof(uint8_t)) << "Got size of " << tagged_data_.size();
+  FX_DCHECK(data_.size() == sizeof(uint8_t)) << "Got size of " << data_.size();
   uint8_t result;
-  memcpy(&result, tagged_data_.bytes().data(), sizeof(uint8_t));
+  memcpy(&result, data_.bytes().data(), sizeof(uint8_t));
   return result;
 }
 
 template <>
 int16_t ExprValue::GetAs<int16_t>() const {
-  FX_DCHECK(tagged_data_.size() == sizeof(int16_t)) << "Got size of " << tagged_data_.size();
+  FX_DCHECK(data_.size() == sizeof(int16_t)) << "Got size of " << data_.size();
   int16_t result;
-  memcpy(&result, tagged_data_.bytes().data(), sizeof(int16_t));
+  memcpy(&result, data_.bytes().data(), sizeof(int16_t));
   return result;
 }
 
 template <>
 uint16_t ExprValue::GetAs<uint16_t>() const {
-  FX_DCHECK(tagged_data_.size() == sizeof(uint16_t)) << "Got size of " << tagged_data_.size();
+  FX_DCHECK(data_.size() == sizeof(uint16_t)) << "Got size of " << data_.size();
   uint16_t result;
-  memcpy(&result, tagged_data_.bytes().data(), sizeof(uint16_t));
+  memcpy(&result, data_.bytes().data(), sizeof(uint16_t));
   return result;
 }
 
 template <>
 int32_t ExprValue::GetAs<int32_t>() const {
-  FX_DCHECK(tagged_data_.size() == sizeof(int32_t)) << "Got size of " << tagged_data_.size();
+  FX_DCHECK(data_.size() == sizeof(int32_t)) << "Got size of " << data_.size();
   int32_t result;
-  memcpy(&result, tagged_data_.bytes().data(), sizeof(int32_t));
+  memcpy(&result, data_.bytes().data(), sizeof(int32_t));
   return result;
 }
 
 template <>
 uint32_t ExprValue::GetAs<uint32_t>() const {
-  FX_DCHECK(tagged_data_.size() == sizeof(uint32_t)) << "Got size of " << tagged_data_.size();
+  FX_DCHECK(data_.size() == sizeof(uint32_t)) << "Got size of " << data_.size();
   uint32_t result;
-  memcpy(&result, tagged_data_.bytes().data(), sizeof(uint32_t));
+  memcpy(&result, data_.bytes().data(), sizeof(uint32_t));
   return result;
 }
 
 template <>
 int64_t ExprValue::GetAs<int64_t>() const {
-  FX_DCHECK(tagged_data_.size() == sizeof(int64_t)) << "Got size of " << tagged_data_.size();
+  FX_DCHECK(data_.size() == sizeof(int64_t)) << "Got size of " << data_.size();
   int64_t result;
-  memcpy(&result, tagged_data_.bytes().data(), sizeof(int64_t));
+  memcpy(&result, data_.bytes().data(), sizeof(int64_t));
   return result;
 }
 
 template <>
 uint64_t ExprValue::GetAs<uint64_t>() const {
-  FX_DCHECK(tagged_data_.size() == sizeof(uint64_t)) << "Got size of " << tagged_data_.size();
+  FX_DCHECK(data_.size() == sizeof(uint64_t)) << "Got size of " << data_.size();
   uint64_t result;
-  memcpy(&result, tagged_data_.bytes().data(), sizeof(uint64_t));
+  memcpy(&result, data_.bytes().data(), sizeof(uint64_t));
   return result;
 }
 
 template <>
 int128_t ExprValue::GetAs<int128_t>() const {
-  FX_DCHECK(tagged_data_.size() == sizeof(int128_t)) << "Got size of " << tagged_data_.size();
+  FX_DCHECK(data_.size() == sizeof(int128_t)) << "Got size of " << data_.size();
   int128_t result;
-  memcpy(&result, tagged_data_.bytes().data(), sizeof(int128_t));
+  memcpy(&result, data_.bytes().data(), sizeof(int128_t));
   return result;
 }
 
 template <>
 uint128_t ExprValue::GetAs<uint128_t>() const {
-  FX_DCHECK(tagged_data_.size() == sizeof(uint128_t)) << "Got size of " << tagged_data_.size();
+  FX_DCHECK(data_.size() == sizeof(uint128_t)) << "Got size of " << data_.size();
   uint128_t result;
-  memcpy(&result, tagged_data_.bytes().data(), sizeof(uint128_t));
+  memcpy(&result, data_.bytes().data(), sizeof(uint128_t));
   return result;
 }
 
 template <>
 float ExprValue::GetAs<float>() const {
-  FX_DCHECK(tagged_data_.size() == sizeof(float)) << "Got size of " << tagged_data_.size();
+  FX_DCHECK(data_.size() == sizeof(float)) << "Got size of " << data_.size();
   float result;
-  memcpy(&result, tagged_data_.bytes().data(), sizeof(float));
+  memcpy(&result, data_.bytes().data(), sizeof(float));
   return result;
 }
 
 template <>
 double ExprValue::GetAs<double>() const {
-  FX_DCHECK(tagged_data_.size() == sizeof(double)) << "Got size of " << tagged_data_.size();
+  FX_DCHECK(data_.size() == sizeof(double)) << "Got size of " << data_.size();
   double result;
-  memcpy(&result, tagged_data_.bytes().data(), sizeof(double));
+  memcpy(&result, data_.bytes().data(), sizeof(double));
   return result;
 }
 
 Err ExprValue::PromoteTo64(int64_t* output) const {
-  if (tagged_data_.empty())
+  if (data_.empty())
     return Err("Value has no data.");
-  if (!tagged_data_.all_valid())
-    return GetOptimizedOutErr();
+  if (!data_.all_valid())
+    return Err::OptimizedOut();
 
-  switch (tagged_data_.size()) {
+  switch (data_.size()) {
     case sizeof(int8_t):
       *output = GetAs<int8_t>();
       break;
@@ -227,19 +221,19 @@ Err ExprValue::PromoteTo64(int64_t* output) const {
       *output = GetAs<int64_t>();
       break;
     default:
-      return Err(fxl::StringPrintf("Unexpected value size (%zu), please file a bug.",
-                                   tagged_data_.size()));
+      return Err(
+          fxl::StringPrintf("Unexpected value size (%zu), please file a bug.", data_.size()));
   }
   return Err();
 }
 
 Err ExprValue::PromoteTo64(uint64_t* output) const {
-  if (tagged_data_.empty())
+  if (data_.empty())
     return Err("Value has no data.");
-  if (!tagged_data_.all_valid())
-    return GetOptimizedOutErr();
+  if (!data_.all_valid())
+    return Err::OptimizedOut();
 
-  switch (tagged_data_.size()) {
+  switch (data_.size()) {
     case sizeof(uint8_t):
       *output = GetAs<uint8_t>();
       break;
@@ -253,17 +247,17 @@ Err ExprValue::PromoteTo64(uint64_t* output) const {
       *output = GetAs<uint64_t>();
       break;
     default:
-      return Err(fxl::StringPrintf("Unexpected value size (%zu), please file a bug.",
-                                   tagged_data_.size()));
+      return Err(
+          fxl::StringPrintf("Unexpected value size (%zu), please file a bug.", data_.size()));
   }
   return Err();
 }
 
 Err ExprValue::PromoteTo128(int128_t* output) const {
-  if (!tagged_data_.all_valid())
-    return GetOptimizedOutErr();
+  if (!data_.all_valid())
+    return Err::OptimizedOut();
 
-  if (tagged_data_.size() == sizeof(int128_t)) {
+  if (data_.size() == sizeof(int128_t)) {
     *output = GetAs<int128_t>();
     return Err();
   }
@@ -278,10 +272,10 @@ Err ExprValue::PromoteTo128(int128_t* output) const {
 }
 
 Err ExprValue::PromoteTo128(uint128_t* output) const {
-  if (!tagged_data_.all_valid())
-    return GetOptimizedOutErr();
+  if (!data_.all_valid())
+    return Err::OptimizedOut();
 
-  if (tagged_data_.size() == sizeof(uint128_t)) {
+  if (data_.size() == sizeof(uint128_t)) {
     *output = GetAs<uint128_t>();
     return Err();
   }
@@ -296,12 +290,12 @@ Err ExprValue::PromoteTo128(uint128_t* output) const {
 }
 
 Err ExprValue::PromoteToDouble(double* output) const {
-  if (tagged_data_.empty())
+  if (data_.empty())
     return Err("Value has no data.");
-  if (!tagged_data_.all_valid())
-    return GetOptimizedOutErr();
+  if (!data_.all_valid())
+    return Err::OptimizedOut();
 
-  switch (tagged_data_.size()) {
+  switch (data_.size()) {
     case sizeof(float):
       *output = GetAs<float>();
       break;
@@ -309,8 +303,8 @@ Err ExprValue::PromoteToDouble(double* output) const {
       *output = GetAs<double>();
       break;
     default:
-      return Err(fxl::StringPrintf("Unexpected value size (%zu), please file a bug.",
-                                   tagged_data_.size()));
+      return Err(
+          fxl::StringPrintf("Unexpected value size (%zu), please file a bug.", data_.size()));
   }
   return Err();
 }

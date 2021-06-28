@@ -81,7 +81,7 @@ void AssignRegisterWithExistingValue(const fxl::RefPtr<EvalContext>& context,
                                                         byte_shift - byte_length));
 
     if (byte_length > 0) {
-      memcpy(&existing_data[byte_shift], &source.data()[0], byte_length);
+      memcpy(&existing_data[byte_shift], &source.data().bytes()[0], byte_length);
       context->GetDataProvider()->WriteRegister(info.canonical_id, std::move(existing_data),
                                                 std::move(cb));
     } else {
@@ -95,7 +95,7 @@ void AssignRegisterWithExistingValue(const fxl::RefPtr<EvalContext>& context,
     memcpy(&existing_value, existing_data.data(), existing_data.size());
 
     uint128_t write_value = 0;
-    memcpy(&write_value, &source.data()[0], source.data().size());
+    memcpy(&write_value, &source.data().bytes()[0], source.data().size());
 
     // This ExprValueSource takes into account any non-canonical register shifts on top of what
     // may already be there.
@@ -131,7 +131,7 @@ void DoRegisterAssignment(const fxl::RefPtr<EvalContext>& context, const ExprVal
 
   if (info->canonical_id == dest.register_id() && !dest.is_bitfield()) {
     // Normal register write with no masking or shifting.
-    context->GetDataProvider()->WriteRegister(dest.register_id(), source.data(),
+    context->GetDataProvider()->WriteRegister(dest.register_id(), source.data().bytes(),
                                               std::move(write_cb));
   } else {
     // This write requires some masking and shifting, and therefore needs the current register
@@ -159,10 +159,10 @@ void DoMemoryAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValue
       cb(source);
   };
   if (dest.is_bitfield()) {
-    WriteBitfieldToMemory(context, dest, source.data(), std::move(write_callback));
+    WriteBitfieldToMemory(context, dest, source.data().bytes(), std::move(write_callback));
   } else {
     // Normal case for non-bitfields.
-    context->GetDataProvider()->WriteMemory(dest.address(), source.data(),
+    context->GetDataProvider()->WriteMemory(dest.address(), source.data().bytes(),
                                             std::move(write_callback));
   }
 }
@@ -588,6 +588,8 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprValue
                         const ExprToken& op, const ExprValue& right_value, EvalCallback cb) {
   if (!left_value.type() || !right_value.type())
     return cb(Err("No type information."));
+  if (!left_value.data().all_valid() || !right_value.data().all_valid())
+    return cb(Err::OptimizedOut());
 
   // Handle assignement specially.
   if (op.type() == ExprTokenType::kEquals)
@@ -814,6 +816,8 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const fxl::RefP
     EvalCallback cb) {
   if (!value.type())
     return cb(Err("No type information."));
+  if (!value.data().all_valid())
+    return cb(Err::OptimizedOut());
 
   OpValue op_value;
   if (Err err = FillOpValue(context.get(), value, &op_value); err.has_error())

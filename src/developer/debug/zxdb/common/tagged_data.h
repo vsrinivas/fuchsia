@@ -37,8 +37,11 @@ class TaggedData {
   // exposing the TagBuffer externally.
 
   // Returns true if the given range (which is asserted to be valid) satisfies the condition.
-  bool RangeIsEntirely(size_t begin, size_t length, Tag tag);
-  bool RangeContains(size_t begin, size_t length, Tag tag);
+  bool RangeIsEntirely(size_t begin, size_t length, Tag tag) const;
+  bool RangeContains(size_t begin, size_t length, Tag tag) const;
+  bool RangeIsValid(size_t begin, size_t length) const {
+    return RangeIsEntirely(begin, length, kValid);
+  }
 
   size_t size() const { return bytes_.size(); }
   bool empty() const { return bytes_.empty(); }

@@ -56,7 +56,7 @@ class ReturnValue : public TestWithLoop {
       return;
 
     EXPECT_EQ(name, result.value().type()->GetFullName()) << " for " << name;
-    EXPECT_EQ(expected_contents, result.value().data()) << " for " << name;
+    EXPECT_EQ(expected_contents, result.value().data().bytes()) << " for " << name;
   }
 
   // Ensures that we can't compute the given structure's return-by-value value.
@@ -274,7 +274,7 @@ TEST_F(ReturnValue, CollectionByRefX64) {
 
   auto result = GetReturnValueSync(context, fn.get());
   ASSERT_TRUE(result.ok()) << result.err().msg();
-  EXPECT_EQ(data, result.value().data());
+  EXPECT_EQ(data, result.value().data().bytes());
   EXPECT_EQ(kAddress, result.value().source().address());
 }
 

@@ -38,7 +38,7 @@ TEST(VectorRegisterFormat, VectorRegisterToValue) {
   ExprValue v =
       VectorRegisterToValue(RegisterID::kX64_xmm4, VectorRegisterFormat::kUnsigned16, bytes);
   EXPECT_TRUE(IsTypeArrayOf(v, "uint16_t", 2u, 4u));
-  EXPECT_EQ(bytes, v.data());
+  EXPECT_EQ(bytes, v.data().bytes());
   EXPECT_EQ(ExprValueSource::Type::kRegister, v.source().type());
   EXPECT_EQ(RegisterID::kX64_xmm4, v.source().register_id());
 

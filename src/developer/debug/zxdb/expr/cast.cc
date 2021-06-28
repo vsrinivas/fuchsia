@@ -89,10 +89,10 @@ std::vector<uint8_t> CastToIntegerOfSize(const std::vector<uint8_t>& source, boo
 
 ExprValue CastIntToInt(const ExprValue& source, const Type* source_type,
                        const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source) {
-  return ExprValue(
-      dest_type,
-      CastToIntegerOfSize(source.data(), IsSignedBaseType(source_type), dest_type->byte_size()),
-      dest_source);
+  return ExprValue(dest_type,
+                   CastToIntegerOfSize(source.data().bytes(), IsSignedBaseType(source_type),
+                                       dest_type->byte_size()),
+                   dest_source);
 }
 
 // The "Int64" parameter is either "uint64_t" or "int64_t" depending on the signedness of the
@@ -180,11 +180,14 @@ ErrOrValue CastFloatToFloat(const ExprValue& source, const fxl::RefPtr<Type>& de
 ErrOrValue CastNumberToBool(const ExprValue& source, const Type* concrete_from,
                             const fxl::RefPtr<Type>& dest_type,
                             const ExprValueSource& dest_source) {
+  if (!source.data().all_valid())
+    return Err::OptimizedOut();
+
   bool value = false;
 
   if (IsIntegerLike(concrete_from)) {
     // All integer-like sources just look for non-zero bytes.
-    for (uint8_t cur : source.data()) {
+    for (uint8_t cur : source.data().bytes()) {
       if (cur) {
         value = true;
         break;
@@ -309,6 +312,8 @@ void StaticCastPointerOrRef(const fxl::RefPtr<EvalContext>& eval_context, const 
             concrete_from->GetFullName().c_str(), concrete_from->byte_size(),
             concrete_to->GetFullName().c_str(), concrete_to->byte_size()));
   }
+  if (!source.data().all_valid())
+    return cb(Err::OptimizedOut());
 
   // Get the pointed-to or referenced types.
   const Type* refed_from_abstract = modified_from->modified().Get()->As<Type>();
@@ -441,6 +446,8 @@ void ImplicitCast(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue&
   // Prevent crashes if we get bad types with no size.
   if (source.data().size() == 0 || dest_type->byte_size() == 0)
     return cb(Err("Type has 0 size."));
+  if (!source.data().all_valid())
+    return cb(Err::OptimizedOut());
 
   // Get the types without "const", etc. modifiers.
   fxl::RefPtr<Type> concrete_from = eval_context->GetConcreteType(source.type());
@@ -497,11 +504,14 @@ ErrOrValue ReinterpretCast(const fxl::RefPtr<EvalContext>& eval_context, const E
   if (!IsIntegerLike(concrete_dest.get()))
     return Err("Can't cast to a '%s'.", dest_type->GetFullName().c_str());
 
+  if (!source.data().all_valid())
+    return Err::OptimizedOut();
+
   // Our implementation of reinterpret_cast is just a bit cast with truncation or 0-fill (not sign
   // extend). C++ would require the type sizes match and would prohibit most number-to-number
   // conversions, but those restrictions aren't useful or even desirable in the case of a debugger
   // handling user input.
-  auto new_data = source.data();
+  auto new_data = source.data().bytes();
   new_data.resize(dest_type->byte_size());
   return ExprValue(dest_type, std::move(new_data), dest_source);
 }

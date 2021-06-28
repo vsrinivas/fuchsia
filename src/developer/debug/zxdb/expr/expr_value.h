@@ -77,8 +77,7 @@ class ExprValue {
   // Indicates the location where this value came from.
   const ExprValueSource& source() const { return source_; }
 
-  const TaggedData& tagged_data() const { return tagged_data_; }
-  const std::vector<uint8_t>& data() const { return tagged_data_.bytes(); }
+  const TaggedData& data() const { return data_; }
 
   // Determines which base type the Value's Type is.
   //
@@ -124,7 +123,7 @@ class ExprValue {
   // bytes may be valid while others might be unknown. This can happen for optimized code where,
   // for example, some portions of a struct are kept in registers so can be known, but other
   // portions of the struct are optimized out.
-  TaggedData tagged_data_;
+  TaggedData data_;
 };
 
 template <>

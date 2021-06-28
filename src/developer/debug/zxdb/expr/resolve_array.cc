@@ -22,12 +22,11 @@ namespace {
 // Handles the "Foo[4]" case.
 ErrOrValueVector ResolveStaticArray(const ExprValue& array, const ArrayType* array_type,
                                     size_t begin_index, size_t end_index) {
-  const std::vector<uint8_t>& data = array.data();
-  if (data.size() < array_type->byte_size()) {
+  if (array.data().size() < array_type->byte_size()) {
     return Err(
         "Array data (%zu bytes) is too small for the expected size "
         "(%u bytes).",
-        data.size(), array_type->byte_size());
+        array.data().size(), array_type->byte_size());
   }
 
   const Type* value_type = array_type->value_type();
@@ -37,9 +36,10 @@ ErrOrValueVector ResolveStaticArray(const ExprValue& array, const ArrayType* arr
   result.reserve(end_index - begin_index);
   for (size_t i = begin_index; i < end_index; i++) {
     size_t begin_offset = i * type_size;
-    if (begin_offset + type_size > data.size())
+    if (begin_offset + type_size > array.data().size())
       break;
 
+    // Describe the source of this data.
     ExprValueSource source = array.source();
     if (source.type() == ExprValueSource::Type::kMemory) {
       source = source.GetOffsetInto(begin_offset);
@@ -51,8 +51,11 @@ ErrOrValueVector ResolveStaticArray(const ExprValue& array, const ArrayType* arr
     }
     // else keep as original temporary/constant source.
 
-    std::vector<uint8_t> item_data(&data[begin_offset], &data[begin_offset] + type_size);
-    result.emplace_back(RefPtrTo(value_type), std::move(item_data), source);
+    // Extract the array element data.
+    std::optional<TaggedData> data = array.data().Extract(begin_offset, type_size);
+    if (!data)
+      return Err("Array data out of range.");
+    result.emplace_back(RefPtrTo(value_type), std::move(*data), source);
   }
   return result;
 }

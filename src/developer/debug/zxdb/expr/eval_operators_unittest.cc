@@ -145,7 +145,7 @@ TEST_F(EvalOperators, AssignmentFullRegister) {
   auto reg_writes = eval_context()->data_provider()->GetRegisterWrites();
   ASSERT_EQ(1u, reg_writes.size());
   EXPECT_EQ(RegisterID::kX64_rax, reg_writes[0].first);
-  EXPECT_EQ(source.data(), reg_writes[0].second);
+  EXPECT_EQ(source.data().bytes(), reg_writes[0].second);
 }
 
 TEST_F(EvalOperators, AssignmentBitfieldRegister) {

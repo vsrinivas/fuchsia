@@ -25,7 +25,7 @@ TaggedData::TaggedData(DataBuffer buf, TagBuffer states)
   }
 }
 
-bool TaggedData::RangeIsEntirely(size_t begin, size_t length, Tag tag) {
+bool TaggedData::RangeIsEntirely(size_t begin, size_t length, Tag tag) const {
   FX_DCHECK(begin + length <= bytes_.size());
 
   if (tags_.empty())
@@ -39,7 +39,7 @@ bool TaggedData::RangeIsEntirely(size_t begin, size_t length, Tag tag) {
   return true;
 }
 
-bool TaggedData::RangeContains(size_t begin, size_t length, Tag tag) {
+bool TaggedData::RangeContains(size_t begin, size_t length, Tag tag) const {
   FX_DCHECK(begin + length <= bytes_.size());
 
   if (tags_.empty())

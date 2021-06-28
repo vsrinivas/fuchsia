@@ -38,6 +38,9 @@ class Err {
 
   ~Err();
 
+  // Returns a standard "optimized out" error.
+  static Err OptimizedOut() { return Err(ErrType::kOptimizedOut, "optimized out"); }
+
   bool has_error() const { return type_ != ErrType::kNone; }
   bool ok() const { return type_ == ErrType::kNone; }
 

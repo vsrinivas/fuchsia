@@ -409,9 +409,9 @@ TEST_F(Cast, StaticCastVirtualInheritance) {
   EXPECT_EQ(setup.kBaseAddress, result.value().source().address());
 
   // The data of the base is the last 4 bytes of the full derived data.
-  std::vector<uint8_t> expected_base_data(setup.derived_value.data().end() - 4,
-                                          setup.derived_value.data().end());
-  EXPECT_EQ(expected_base_data, result.value().data());
+  std::vector<uint8_t> expected_base_data(setup.derived_value.data().bytes().end() - 4,
+                                          setup.derived_value.data().bytes().end());
+  EXPECT_EQ(expected_base_data, result.value().data().bytes());
 
   // Now do a cast of pointers with the same thing.
   auto base_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, setup.base);
