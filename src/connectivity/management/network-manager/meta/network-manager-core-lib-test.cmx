@@ -1,6 +1,6 @@
 {
     "include": [
-        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/network_manager_core_lib_test"

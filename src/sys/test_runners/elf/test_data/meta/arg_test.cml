@@ -1,6 +1,6 @@
 {
     include: [
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "syslog/client.shard.cml",
         "//src/sys/test_runners/elf/default.shard.cml",
     ],
     program: {

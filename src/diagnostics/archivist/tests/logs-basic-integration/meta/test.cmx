@@ -12,7 +12,7 @@
         }
     },
     "include": [
-        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/test_logs_basic_integration"

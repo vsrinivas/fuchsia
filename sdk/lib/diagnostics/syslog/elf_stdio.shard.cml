@@ -1,6 +1,6 @@
 // This shard instructs the ELF runner to forward stdout and stderr streams to LogSink.
 {
-    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         forward_stderr_to: "log",

@@ -11,7 +11,7 @@
 // see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
 {
     include: [
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "syslog/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {

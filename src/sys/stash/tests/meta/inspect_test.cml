@@ -5,7 +5,7 @@
     include: [
         // FIXME(fxbug.dev/60072): build complains that I need to include this shard, but not
         // sure why since this component doesn't have a program.
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "syslog/client.shard.cml",
     ],
     children: [
         {

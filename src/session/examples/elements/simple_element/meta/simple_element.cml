@@ -1,5 +1,5 @@
 {
-    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/simple_element",

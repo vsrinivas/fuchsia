@@ -2,7 +2,7 @@
 // The test cases should run in parallel to succeed.
 {
     include: [
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "syslog/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {

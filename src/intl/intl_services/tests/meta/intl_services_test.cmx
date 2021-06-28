@@ -18,7 +18,7 @@
         }
     },
     "include": [
-        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "test/intl_services_test"

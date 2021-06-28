@@ -7,7 +7,7 @@
         }
     },
     "include": [
-        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/sysmem-memory-pressure-test"

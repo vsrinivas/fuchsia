@@ -15,7 +15,7 @@
         }
     },
     "include": [
-        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/crash_reports_integration_test_exe"

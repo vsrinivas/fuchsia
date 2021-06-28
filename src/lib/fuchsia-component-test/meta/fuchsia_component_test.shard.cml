@@ -1,7 +1,7 @@
 // This is a CML shard, to be included by users of the fuchsia_component_test
 // library
 {
-    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "syslog/client.shard.cml" ],
     children: [
         {
             name: "fuchsia_component_test_framework_intermediary",

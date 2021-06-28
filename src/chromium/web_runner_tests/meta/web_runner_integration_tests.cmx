@@ -18,10 +18,10 @@
         }
     },
     "include": [
-        "//sdk/lib/diagnostics/syslog/client.shard.cmx",
         "//src/chromium/web_engine/meta/shards/web_engine_base.shard.cmx",
         "//src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx",
-        "//src/lib/vulkan/test-application-container.shard.cmx"
+        "//src/lib/vulkan/test-application-container.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/web_runner_integration_tests_bin"

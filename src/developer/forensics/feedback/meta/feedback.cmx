@@ -1,6 +1,6 @@
 {
     "include": [
-        "//sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "syslog/client.shard.cmx",
         "//src/connectivity/network/lib/net_interfaces/client.shard.cmx"
     ],
     "program": {

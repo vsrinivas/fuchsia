@@ -1,6 +1,6 @@
 // Integration test realm that hosts two trigger components.
 {
-    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/destruction_trigger",

@@ -77,7 +77,7 @@
         }
     },
     "include": [
-        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "TODO(https://fxbug.dev/66956): properly support manifest-only tests"

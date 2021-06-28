@@ -8,7 +8,7 @@
 {
     include: [
         "//sdk/lib/diagnostics/inspect/client.shard.cml",
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "syslog/client.shard.cml",
     ],
 
     // Information about the program to run.

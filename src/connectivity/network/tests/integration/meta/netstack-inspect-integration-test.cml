@@ -7,7 +7,7 @@
         // dependency on the inspect runtime is gone, remove the inspect client
         // shard.
         "//sdk/lib/diagnostics/inspect/client.shard.cml",
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "syslog/client.shard.cml",
         "//src/connectivity/network/testing/netemul-v2/service/meta/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
     ],

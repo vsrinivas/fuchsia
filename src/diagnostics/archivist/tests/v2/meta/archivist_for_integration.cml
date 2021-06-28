@@ -1,6 +1,6 @@
 {
     include: [
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "syslog/client.shard.cml",
         "//src/diagnostics/archivist/meta/common.shard.cml",
         "//src/diagnostics/archivist/tests/v2/meta/test.shard.cml",
     ],

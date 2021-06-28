@@ -1,7 +1,4 @@
 {
-    "include": [
-        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
-    ],
     "facets": {
         "fuchsia.test": {
             "injected-services": {
@@ -11,6 +8,9 @@
             }
         }
     },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/hwinfo-test"
     },

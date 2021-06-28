@@ -1,6 +1,6 @@
 {
     "include": [
-        "//sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/graceful_reboot_reason_unittest_exe"

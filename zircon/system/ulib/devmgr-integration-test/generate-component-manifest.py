@@ -33,7 +33,7 @@ def main(argv):
     output = open(args.output, 'w')
 
     content = {
-        'include': ['//sdk/lib/diagnostics/syslog/client.shard.cmx'],
+        'include': ['syslog/client.shard.cmx'],
         'facets':
             {
                 'fuchsia.test': {

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 {
     include: [
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
         "//src/lib/fuchsia-hyper/hyper.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         runner: "elf",

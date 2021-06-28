@@ -2,7 +2,7 @@
 // It connects to echo server and passes back test results.
 {
     include: [
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "syslog/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
     ],
     program: {

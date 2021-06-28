@@ -1,5 +1,5 @@
 {
-    include: [ "//sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [ "syslog/client.shard.cml" ],
     children: [
         {
             name: "test_driver",

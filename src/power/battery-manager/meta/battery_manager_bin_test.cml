@@ -1,7 +1,7 @@
 {
     include: [
         // Enable system logging
-        "//sdk/lib/diagnostics/syslog/client.shard.cml",
+        "syslog/client.shard.cml",
 
         // Use Rust test runner and expose fuchsia.test.Suite capability
         "//src/sys/test_runners/rust/default.shard.cml",
