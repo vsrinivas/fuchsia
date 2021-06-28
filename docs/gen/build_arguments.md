@@ -765,19 +765,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/cdee8004c66869917b5a4d9ba00c95476a4bc770/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/3b0ebc29cdba974c0f0cad0101a8b07a596e7a37/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/cdee8004c66869917b5a4d9ba00c95476a4bc770/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/3b0ebc29cdba974c0f0cad0101a8b07a596e7a37/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/cdee8004c66869917b5a4d9ba00c95476a4bc770/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/3b0ebc29cdba974c0f0cad0101a8b07a596e7a37/util/net/tls.gni#30)
 
 ### current_cpu
 
@@ -1898,6 +1898,13 @@ product image.
 
 From //src/modular/build/modular_config/modular_config.gni:12
 
+### launch_oobe
+Whether or not to launch OOBE workflow on startup.
+
+**Current value (from the default):** `false`
+
+From //src/experiences/session_shells/ermine/next/BUILD.gn:27
+
 ### linux_runner_extras_tests
 If `true`, adds additional testonly content to extras.img, which will be
 built and mounted inside the container at /mnt/chromeos.
@@ -2200,13 +2207,13 @@ From //build/images/fvm.gni:79
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/cdee8004c66869917b5a4d9ba00c95476a4bc770/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/3b0ebc29cdba974c0f0cad0101a8b07a596e7a37/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/cdee8004c66869917b5a4d9ba00c95476a4bc770/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/3b0ebc29cdba974c0f0cad0101a8b07a596e7a37/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
