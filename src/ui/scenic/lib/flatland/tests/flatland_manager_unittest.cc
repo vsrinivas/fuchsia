@@ -307,7 +307,7 @@ TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
   uint32_t returned_tokens = 0;
   flatland.events().OnPresentProcessed = [&returned_tokens](OnPresentProcessedValues values,
                                                             Error error) {
-    returned_tokens = values.num_presents_returned();
+    returned_tokens = values.additional_present_credits();
   };
 
   // Run until the instance receives the initial allotment of tokens.
@@ -324,7 +324,7 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
   uint32_t returned_tokens1 = 0;
   flatland1.events().OnPresentProcessed = [&returned_tokens1](OnPresentProcessedValues values,
                                                               Error error) {
-    returned_tokens1 = values.num_presents_returned();
+    returned_tokens1 = values.additional_present_credits();
     EXPECT_FALSE(values.future_presentation_infos().empty());
   };
 
@@ -334,7 +334,7 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
   uint32_t returned_tokens2 = 0;
   flatland2.events().OnPresentProcessed = [&returned_tokens2](OnPresentProcessedValues values,
                                                               Error) {
-    returned_tokens2 = values.num_presents_returned();
+    returned_tokens2 = values.additional_present_credits();
     EXPECT_FALSE(values.future_presentation_infos().empty());
   };
 
@@ -415,7 +415,7 @@ TEST_F(FlatlandManagerTest, ConsecutiveUpdateSessions_ReturnsCorrectPresentToken
   uint32_t returned_tokens = 0;
   flatland.events().OnPresentProcessed = [&returned_tokens](OnPresentProcessedValues values,
                                                             Error error) {
-    returned_tokens = values.num_presents_returned();
+    returned_tokens = values.additional_present_credits();
     EXPECT_FALSE(values.future_presentation_infos().empty());
   };
 
@@ -466,7 +466,7 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   flatland.events().OnPresentProcessed = [&error_returned, &tokens_remaining](
                                              OnPresentProcessedValues values, Error error) {
     error_returned = error;
-    tokens_remaining += (error == Error::NO_ERROR) ? values.num_presents_returned() : 0;
+    tokens_remaining += (error == Error::NO_ERROR) ? values.additional_present_credits() : 0;
   };
 
   // Run until the instance receives the initial allotment of tokens.
@@ -501,7 +501,7 @@ TEST_F(FlatlandManagerTest, ErrorClosesSession) {
   flatland.events().OnPresentProcessed = [&error_returned, &tokens_remaining](
                                              OnPresentProcessedValues values, Error error) {
     error_returned = error;
-    tokens_remaining += (error == Error::NO_ERROR) ? values.num_presents_returned() : 0;
+    tokens_remaining += (error == Error::NO_ERROR) ? values.additional_present_credits() : 0;
   };
 
   // Run until the instance receives the initial allotment of tokens.
@@ -528,7 +528,7 @@ TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
   uint32_t tokens_remaining = 1;
   flatland.events().OnPresentProcessed = [&tokens_remaining](OnPresentProcessedValues values,
                                                              Error error) {
-    tokens_remaining += values.num_presents_returned();
+    tokens_remaining += values.additional_present_credits();
   };
 
   // Run until the instance receives the initial allotment of tokens.

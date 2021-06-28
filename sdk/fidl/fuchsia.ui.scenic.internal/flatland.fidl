@@ -16,7 +16,7 @@ enum Error {
     NO_ERROR = 0;
     /// Indicates that the parameters used the function calls are invalid.
     BAD_OPERATION = 1;
-    /// Indicates that `num_presents_returned` field was not properly processed and the client
+    /// Indicates that `additional_present_credits` field was not properly processed and the client
     /// queued more [`Present`]s than allowed.
     NO_PRESENTS_REMAINING = 2;
     /// Indicates that the client has overwritten hanging gets in the protocols returned.
@@ -205,9 +205,10 @@ alias FuturePresentationInfos = vector<fuchsia.scenic.scheduling.PresentationInf
 /// [`OnPresentProcessed`]. For a non-error case, each field is guaranteed to be
 /// set and contain valid information.
 table OnPresentProcessedValues {
-    /// The number of additional [`Present`] calls allowed to the client so that they
-    /// can call [`Present`] further times.
-    1: uint32 num_presents_returned;
+    /// The number of *additional* [`Present`] calls allowed to the client so that they
+    /// can call [`Present`] further times. This is a delta in the present
+    /// credit budget, not the absolute number of present credits.
+    1: uint32 additional_present_credits;
     /// Information about future presentation and latch times that a client may aim for
     /// precise scheduling behavior.
     2: FuturePresentationInfos future_presentation_infos;
@@ -236,15 +237,15 @@ protocol Flatland {
     /// with other valid fields.
     ///
     /// The client may only call [`Present`] when they have a non-zero number
-    /// of `num_presents_returned`, which are tracked by the server. The server may
-    /// increment the counter when it fires the [`OnPresentProcessed`] event, which
-    /// informs the client when it receives additional [`Present`] allowance. Each [`Present`]
-    /// call uses one of `num_presents_returned` and decrements the server count by one. If
-    /// the client calls [`Present`] when no [`Present`] allowance remain, it will return
+    /// of present credits, which are tracked by the server. The server may
+    /// increment the number of credits when it fires the [`OnPresentProcessed`] event, which
+    /// informs the client when it receives additional present credits. Each [`Present`]
+    /// call uses one present credit and decrements the server count by one. If
+    /// the client calls [`Present`] with no present credits, the server will return a
     /// `NO_PRESENTS_REMAINING` error.
     ///
     /// The client should assume that prior to receiving any [`OnPresentProcessed`]
-    /// events, they have one [`Present`] allowance.
+    /// events, they have one present credit.
     ///
     /// Every [`Present`] call results in one [`OnPresentProcessed`] event, and one
     /// [`OnFramePresented`] event, typically in that order.

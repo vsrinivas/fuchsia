@@ -95,11 +95,11 @@ void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args) {
   }
 
   // Close any clients that call Present() without any present tokens.
-  if (num_presents_remaining_ == 0) {
+  if (present_credits_budget_ == 0) {
     CloseConnection(Error::NO_PRESENTS_REMAINING);
     return;
   }
-  num_presents_remaining_--;
+  present_credits_budget_--;
 
   // If any fields are missing, replace them with the default values.
   if (!args.has_requested_presentation_time()) {
@@ -962,12 +962,12 @@ void Flatland::SetDebugName(std::string name) {
   error_reporter_->SetPrefix(stream.str());
 }
 
-void Flatland::OnPresentProcessed(uint32_t num_presents_returned,
+void Flatland::OnPresentProcessed(uint32_t additional_present_credits,
                                   FuturePresentationInfos presentation_infos) {
-  num_presents_remaining_ += num_presents_returned;
+  present_credits_budget_ += additional_present_credits;
   if (binding_.is_bound()) {
     OnPresentProcessedValues values;
-    values.set_num_presents_returned(num_presents_returned);
+    values.set_additional_present_credits(additional_present_credits);
     values.set_future_presentation_infos(std::move(presentation_infos));
 
     binding_.events().OnPresentProcessed(std::move(values), Error::NO_ERROR);
