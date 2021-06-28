@@ -13,10 +13,6 @@
             "url": "fuchsia-pkg://fuchsia.com/bind-fail-test#meta/bind-fail-test.cmx"
         },
         {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/cobalt_tests_do_not_run_manually#meta/cobalt_testapp_for_prober_do_not_run_manually.cmx"
-        },
-        {
             "max_severity": "FATAL",
             "url": "fuchsia-pkg://fuchsia.com/escher_tests#meta/escher_unittests.cmx"
         },

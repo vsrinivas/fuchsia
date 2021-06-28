@@ -132,6 +132,9 @@ fuchsia_test_package("cobalt_tests_do_not_run_manually") {
         tags = [ "cobalt-prober" ]
       },
     ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 
