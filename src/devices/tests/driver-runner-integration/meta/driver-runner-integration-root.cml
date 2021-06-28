@@ -55,6 +55,16 @@
             to: "#driver_manager",
         },
         {
+            directory: "pkgfs-delayed",
+            from: "#driver-manager-support",
+            to: [ "#driver_manager" ],
+        },
+        {
+            directory: "system-delayed",
+            from: "#driver-manager-support",
+            to: [ "#driver_manager" ],
+        },
+        {
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",

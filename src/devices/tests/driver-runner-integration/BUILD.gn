@@ -36,7 +36,11 @@ fuchsia_component("driver-runner-integration-root") {
 
 fuchsia_component("driver-manager-component") {
   manifest = "meta/driver-runner-integration-driver-manager.cml"
-  deps = [ "//src/devices/bin/driver_manager:driver_manager" ]
+  deps = [
+    "//src/devices/bin/driver_host:driver_host",
+    "//src/devices/bin/driver_manager:driver_manager",
+    "//src/devices/bus/drivers/platform",
+  ]
 }
 
 bind_index_metadata("driver_bind_manifest") {
@@ -46,12 +50,6 @@ bind_index_metadata("driver_bind_manifest") {
 }
 
 fuchsia_test_package("driver-runner-integration-test") {
-  # TODO(fxb/72501): Ideally this test shouldn't produce error logs.
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
   test_components = [ ":driver-runner-integration-test-component" ]
   deps = [
     ":driver-manager-component",
