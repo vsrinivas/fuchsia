@@ -13,7 +13,7 @@
             "--path-prefix",
             "/pkg/",
             "--driver-runner-root-driver-url",
-            "fuchsia-boot:///#meta/packaged_driver.cm",
+            "fuchsia-pkg://fuchsia.com/driver-runner-integration-test#meta/packaged_driver.cm",
         ],
     },
 }

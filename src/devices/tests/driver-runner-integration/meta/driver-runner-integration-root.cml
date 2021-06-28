@@ -5,13 +5,17 @@
     children: [
         {
             name: "driver_manager",
-            url: "fuchsia-pkg://fuchsia.com/driver-runner-integration-test#meta/driver-manager-component.cm",
+            url: "#meta/driver-manager-component.cm",
             startup: "eager",
             environment: "#driver_manager-env",
         },
         {
             name: "driver_index",
-            url: "fuchsia-pkg://fuchsia.com/driver-runner-integration-test#meta/driver-index.cm",
+            url: "#meta/driver-index.cm",
+        },
+        {
+            name: "driver-manager-support",
+            url: "#meta/driver-manager-support.cm",
         },
     ],
     collections: [
@@ -34,13 +38,7 @@
     offer: [
         {
             protocol: [
-                "fuchsia.boot.Arguments",
-                "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.fshost.Loader",
-                "fuchsia.kernel.RootJob",
-                "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.process.Resolver",
                 "fuchsia.sys.Launcher",
             ],
             from: "parent",
@@ -57,19 +55,26 @@
             to: "#driver_manager",
         },
         {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.power.manager.DriverManagerRegistration",
+            ],
+            from: "#driver-manager-support",
+            to: "#driver_manager",
+        },
+        {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [
                 "#boot-drivers",
+                "#driver-manager-support",
                 "#driver_hosts",
                 "#driver_index",
+                "#driver_manager",
                 "#pkg-drivers",
             ],
-        },
-        {
-            directory: "boot",
-            from: "parent",
-            to: "#driver_manager",
         },
     ],
     environments: [

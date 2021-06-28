@@ -252,7 +252,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
         [coll, name](fsys::CollectionRef collection, fsys::ChildDecl decl) {
           EXPECT_EQ(coll, collection.name);
           EXPECT_EQ(name, decl.name());
-          EXPECT_EQ("fuchsia-boot:///#meta/driver_host2.cm", decl.url());
+          EXPECT_EQ("#meta/driver_host2.cm", decl.url());
         });
     realm().SetBindChildHandler([this, coll, name](fsys::ChildRef child, auto exposed_dir) {
       EXPECT_EQ(coll, child.collection.value_or(""));

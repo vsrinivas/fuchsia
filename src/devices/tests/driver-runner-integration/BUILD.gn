@@ -9,10 +9,7 @@ import("//build/test.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":driver-runner-integration-test",
-    "//src/sys/component_manager:component-manager",
-  ]
+  deps = [ ":driver-runner-integration-test" ]
 }
 
 rustc_test("driver_runner_integration_test") {
@@ -20,21 +17,16 @@ rustc_test("driver_runner_integration_test") {
   source_root = "driver_runner_integration_test.rs"
   sources = [ "driver_runner_integration_test.rs" ]
   deps = [
-    "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/lib/component-events",
-    "//third_party/rust_crates:futures",
+    "//src/sys/lib/fuchsia-component-test",
+    "//third_party/rust_crates:anyhow",
   ]
 }
 
 fuchsia_component("driver-runner-integration-test-component") {
   testonly = true
-  manifest = "meta/driver-runner-integration-test.cmx"
+  manifest = "meta/driver-runner-integration-test.cml"
   deps = [ ":driver_runner_integration_test" ]
 }
 
@@ -68,5 +60,6 @@ fuchsia_test_package("driver-runner-integration-test") {
     "//src/devices/bin/driver-index:component",
     "//src/devices/bin/driver_host2",
     "//src/devices/misc/drivers/packaged:component",
+    "//src/lib/isolated_devmgr/v2_component:driver-manager-support",
   ]
 }

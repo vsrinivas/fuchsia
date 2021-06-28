@@ -756,7 +756,7 @@ zx::status<DriverRunner::CompositeArgsIterator> DriverRunner::AddToCompositeArgs
 
 zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost() {
   auto name = "driver_host-" + std::to_string(next_driver_host_id_++);
-  auto create = CreateComponent(name, "fuchsia-boot:///#meta/driver_host2.cm", "driver_hosts");
+  auto create = CreateComponent(name, "#meta/driver_host2.cm", "driver_hosts");
   if (create.is_error()) {
     return create.take_error();
   }
@@ -780,9 +780,10 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  auto bind_callback = [name](fidl::WireResponse<fsys::Realm::BindChild>* response) {
+  auto bind_callback = [name, url](fidl::WireResponse<fsys::Realm::BindChild>* response) {
     if (response->result.is_err()) {
-      LOGF(ERROR, "Failed to bind component '%s': %u", name.data(), response->result.err());
+      LOGF(ERROR, "Failed to bind component '%s': '%s' %u", name.data(), url.data(),
+           response->result.err());
     }
   };
   auto create_callback = [this, name, collection, server_end = std::move(endpoints->server),
