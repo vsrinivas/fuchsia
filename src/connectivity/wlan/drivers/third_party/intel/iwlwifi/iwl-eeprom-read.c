@@ -32,6 +32,8 @@
  *****************************************************************************/
 #include "iwl-eeprom-read.h"
 
+#include <zircon/time.h>
+
 #include <linux/export.h>
 #include <linux/slab.h>
 #include <linux/types.h>
@@ -50,9 +52,9 @@
  * When polling, wait 10 uSec between polling loops, up to a maximum 5000 uSec.
  * Driver reads 16-bit value from bits 31-16 of CSR_EEPROM_REG.
  */
-#define IWL_EEPROM_ACCESS_TIMEOUT 5000 /* uSec */
+#define IWL_EEPROM_ACCESS_TIMEOUT ZX_MSEC(5)
 
-#define IWL_EEPROM_SEM_TIMEOUT 10       /* microseconds */
+#define IWL_EEPROM_SEM_TIMEOUT ZX_USEC(10)
 #define IWL_EEPROM_SEM_RETRY_LIMIT 1000 /* number of attempts (not time) */
 
 /*
@@ -62,7 +64,7 @@
  * weren't arbitrated by the semaphore.
  */
 
-#define EEPROM_SEM_TIMEOUT 10       /* milliseconds */
+#define EEPROM_SEM_TIMEOUT ZX_MSEC(10)
 #define EEPROM_SEM_RETRY_LIMIT 1000 /* number of attempts (not time) */
 
 static int iwl_eeprom_acquire_semaphore(struct iwl_trans* trans) {
@@ -75,7 +77,7 @@ static int iwl_eeprom_acquire_semaphore(struct iwl_trans* trans) {
 
     /* See if we got it */
     ret = iwl_poll_bit(trans, CSR_HW_IF_CONFIG_REG, CSR_HW_IF_CONFIG_REG_BIT_EEPROM_OWN_SEM,
-                       CSR_HW_IF_CONFIG_REG_BIT_EEPROM_OWN_SEM, EEPROM_SEM_TIMEOUT);
+                       CSR_HW_IF_CONFIG_REG_BIT_EEPROM_OWN_SEM, EEPROM_SEM_TIMEOUT, NULL);
     if (ret >= 0) {
       IWL_DEBUG_EEPROM(trans->dev, "Acquired semaphore after %d tries.\n", count + 1);
       return ret;
@@ -159,7 +161,7 @@ static int iwl_init_otp_access(struct iwl_trans* trans) {
 
   /* wait for clock to be ready */
   ret = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
-                     BIT(trans->cfg->csr->flag_mac_clock_ready), 25000);
+                     BIT(trans->cfg->csr->flag_mac_clock_ready), ZX_MSEC(25), NULL);
   if (ret < 0) {
     IWL_ERR(trans, "Time out access OTP\n");
   } else {
@@ -185,7 +187,7 @@ static int iwl_read_otp_word(struct iwl_trans* trans, uint16_t addr, __le16* eep
 
   iwl_write32(trans, CSR_EEPROM_REG, CSR_EEPROM_REG_MSK_ADDR & (addr << 1));
   ret = iwl_poll_bit(trans, CSR_EEPROM_REG, CSR_EEPROM_REG_READ_VALID_MSK,
-                     CSR_EEPROM_REG_READ_VALID_MSK, IWL_EEPROM_ACCESS_TIMEOUT);
+                     CSR_EEPROM_REG_READ_VALID_MSK, IWL_EEPROM_ACCESS_TIMEOUT, NULL);
   if (ret < 0) {
     IWL_ERR(trans, "Time out reading OTP[%d]\n", addr);
     return ret;
@@ -374,7 +376,7 @@ int iwl_read_eeprom(struct iwl_trans* trans, uint8_t** eeprom, size_t* eeprom_si
       iwl_write32(trans, CSR_EEPROM_REG, CSR_EEPROM_REG_MSK_ADDR & (addr << 1));
 
       ret = iwl_poll_bit(trans, CSR_EEPROM_REG, CSR_EEPROM_REG_READ_VALID_MSK,
-                         CSR_EEPROM_REG_READ_VALID_MSK, IWL_EEPROM_ACCESS_TIMEOUT);
+                         CSR_EEPROM_REG_READ_VALID_MSK, IWL_EEPROM_ACCESS_TIMEOUT, NULL);
       if (ret < 0) {
         IWL_ERR(trans, "Time out reading EEPROM[%d]\n", addr);
         goto err_unlock;

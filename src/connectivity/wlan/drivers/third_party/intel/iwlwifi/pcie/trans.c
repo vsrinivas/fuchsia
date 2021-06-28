@@ -338,7 +338,7 @@ static zx_status_t iwl_pcie_apm_init(struct iwl_trans* trans) {
    * and accesses to uCode SRAM.
    */
   ret = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
-                     BIT(trans->cfg->csr->flag_mac_clock_ready), 25000, NULL);
+                     BIT(trans->cfg->csr->flag_mac_clock_ready), ZX_MSEC(25), NULL);
   if (ret != ZX_OK) {
     IWL_ERR(trans, "Failed to init the card\n");
     return ret;
@@ -418,7 +418,7 @@ static void iwl_pcie_apm_lp_xtal_enable(struct iwl_trans* trans) {
    * device-internal resources is possible.
    */
   ret = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
-                     BIT(trans->cfg->csr->flag_mac_clock_ready), 25000, NULL);
+                     BIT(trans->cfg->csr->flag_mac_clock_ready), ZX_MSEC(25), NULL);
   if (WARN_ON(ret != ZX_OK)) {
     IWL_ERR(trans, "Access time out - failed to enable LP XTAL\n");
     /* Release XTAL ON request */
@@ -484,7 +484,7 @@ void iwl_pcie_apm_stop_master(struct iwl_trans* trans) {
   iwl_set_bit(trans, trans->cfg->csr->addr_sw_reset, BIT(trans->cfg->csr->flag_stop_master));
 
   ret = iwl_poll_bit(trans, trans->cfg->csr->addr_sw_reset, BIT(trans->cfg->csr->flag_master_dis),
-                     BIT(trans->cfg->csr->flag_master_dis), 100, NULL);
+                     BIT(trans->cfg->csr->flag_master_dis), ZX_USEC(100), NULL);
   if (ret != ZX_OK) {
     IWL_WARN(trans, "Master Disable Timed Out, 100 usec\n");
   }
@@ -568,7 +568,7 @@ static zx_status_t iwl_pcie_nic_init(struct iwl_trans* trans) {
   return ZX_OK;
 }
 
-#define HW_READY_TIMEOUT (50)
+#define HW_READY_TIMEOUT ZX_USEC(50)
 
 static zx_status_t iwl_pcie_set_hw_ready(struct iwl_trans* trans) {
   zx_status_t ret;
@@ -1510,7 +1510,7 @@ static int iwl_trans_pcie_d3_resume(struct iwl_trans* trans, enum iwl_d3_status*
     }
 
     ret = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
-                       BIT(trans->cfg->csr->flag_mac_clock_ready), 25000);
+                       BIT(trans->cfg->csr->flag_mac_clock_ready), ZX_MSEC(25));
     if (ret < 0) {
         IWL_ERR(trans, "Failed to resume the device (mac ready)\n");
         return ret;
@@ -1929,8 +1929,8 @@ static bool iwl_trans_pcie_grab_nic_access(struct iwl_trans* trans, unsigned lon
    */
   ret = iwl_poll_bit(
       trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_val_mac_access_en),
-      (BIT(trans->cfg->csr->flag_mac_clock_ready) | CSR_GP_CNTRL_REG_FLAG_GOING_TO_SLEEP), 15000,
-      NULL);
+      (BIT(trans->cfg->csr->flag_mac_clock_ready) | CSR_GP_CNTRL_REG_FLAG_GOING_TO_SLEEP),
+      ZX_MSEC(15), NULL);
   if (unlikely(ret != ZX_OK)) {
     uint32_t cntrl = iwl_read32(trans, CSR_GP_CNTRL);
 
@@ -3274,7 +3274,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(struct iwl_pci_dev* pdev,
 
     zx_duration_t elapsed;
     status = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
-                          BIT(trans->cfg->csr->flag_mac_clock_ready), 25000, &elapsed);
+                          BIT(trans->cfg->csr->flag_mac_clock_ready), ZX_MSEC(25), &elapsed);
     if (status != ZX_OK) {
       IWL_DEBUG_INFO(trans, "Failed to wake up the nic\n");
       goto out_no_pci;

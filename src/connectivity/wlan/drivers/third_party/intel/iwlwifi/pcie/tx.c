@@ -819,7 +819,7 @@ static void iwl_pcie_tx_stop_fh(struct iwl_trans* trans) {
   }
 
   /* Wait for DMA channels to be idle */
-  ret = iwl_poll_bit(trans, FH_TSSR_TX_STATUS_REG, mask, mask, 5000, NULL);
+  ret = iwl_poll_bit(trans, FH_TSSR_TX_STATUS_REG, mask, mask, ZX_MSEC(5), NULL);
   if (ret != ZX_OK) {
     IWL_ERR(trans, "Failing on timeout while stopping DMA channel %d [0x%08x]\n", ch,
             iwl_read32(trans, FH_TSSR_TX_STATUS_REG));
@@ -1177,9 +1177,10 @@ static zx_status_t iwl_pcie_set_cmd_in_flight(struct iwl_trans* trans,
   if (cfg->base_params->apmg_wake_up_wa && !trans_pcie->cmd_hold_nic_awake) {
     __iwl_trans_pcie_set_bit(trans, CSR_GP_CNTRL, BIT(cfg->csr->flag_mac_access_req));
 
-    zx_status_t status = iwl_poll_bit(
-        trans, CSR_GP_CNTRL, BIT(cfg->csr->flag_val_mac_access_en),
-        (BIT(cfg->csr->flag_mac_clock_ready) | CSR_GP_CNTRL_REG_FLAG_GOING_TO_SLEEP), 15000, NULL);
+    zx_status_t status =
+        iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(cfg->csr->flag_val_mac_access_en),
+                     (BIT(cfg->csr->flag_mac_clock_ready) | CSR_GP_CNTRL_REG_FLAG_GOING_TO_SLEEP),
+                     ZX_MSEC(15), NULL);
     if (status != ZX_OK) {
       __iwl_trans_pcie_clear_bit(trans, CSR_GP_CNTRL, BIT(cfg->csr->flag_mac_access_req));
       IWL_ERR(trans, "Failed to wake NIC for hcmd\n");

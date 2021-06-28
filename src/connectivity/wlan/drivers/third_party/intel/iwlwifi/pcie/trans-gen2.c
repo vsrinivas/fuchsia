@@ -31,6 +31,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+
+#include <zircon/time.h>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-constants.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-context-info-gen3.h"
@@ -84,7 +87,7 @@ int iwl_pcie_gen2_apm_init(struct iwl_trans* trans) {
      * and accesses to uCode SRAM.
      */
     ret = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
-                       BIT(trans->cfg->csr->flag_mac_clock_ready), 25000);
+                       BIT(trans->cfg->csr->flag_mac_clock_ready), ZX_MSEC(25), NULL);
     if (ret < 0) {
         IWL_DEBUG_INFO(trans, "Failed to init the card\n");
         return ret;
