@@ -9,6 +9,8 @@ ffx_plugin("ffx_repository") {
   edition = "2018"
   with_unit_tests = true
 
+  config_data = [ "data/config.json" ]
+
   plugin_deps = [
     "add-from-pm:ffx_repository_add_from_pm",
     "list:ffx_repository_list",

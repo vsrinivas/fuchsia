@@ -301,8 +301,12 @@ async fn handle_auto(
 }
 
 #[derive(Serialize, Deserialize)]
+struct SignedTimestamp {
+    signed: TimestampFile,
+}
+#[derive(Serialize, Deserialize)]
 struct TimestampFile {
-    version: i32,
+    version: u32,
 }
 
 async fn timestamp_watcher<S>(repo: Weak<Repository>, sender: EventSender, mut watcher: S)
@@ -343,16 +347,19 @@ where
 
 // Try to read the timestamp.json's version from the repository, or return `None` if we experience
 // any errors.
-async fn read_timestamp_version(repo: Arc<Repository>) -> Option<i32> {
+async fn read_timestamp_version(repo: Arc<Repository>) -> Option<u32> {
     for _ in 0..MAX_PARSE_RETRIES {
         // Read the timestamp file.
+        //
+        // FIXME: We should be using the TUF client to get the latest
+        // timestamp in order to make sure the metadata is valid.
         match repo.fetch_bytes("timestamp.json").await {
-            Ok(file) => match serde_json::from_slice::<TimestampFile>(&file) {
+            Ok(file) => match serde_json::from_slice::<SignedTimestamp>(&file) {
                 Ok(timestamp_file) => {
-                    return Some(timestamp_file.version);
+                    return Some(timestamp_file.signed.version);
                 }
                 Err(err) => {
-                    warn!("failed to parse timestamp.json: {}", err);
+                    warn!("failed to parse timestamp.json: {:#?}", err);
                 }
             },
             Err(err) => {
@@ -562,7 +569,9 @@ mod tests {
         let timestamp_file = d.join("timestamp.json");
         write_file(
             &timestamp_file,
-            serde_json::to_string(&TimestampFile { version: 1 }).unwrap().as_bytes(),
+            serde_json::to_string(&SignedTimestamp { signed: TimestampFile { version: 1 } })
+                .unwrap()
+                .as_bytes(),
         );
 
         let keys = vec![RepositoryKeyConfig::Ed25519Key(vec![1, 2, 3, 4])];
@@ -581,20 +590,35 @@ mod tests {
                     SseClient::connect(fuchsia_hyper::new_https_client(), url).await.unwrap();
 
                 assert_eq!(client.next().await.unwrap().unwrap().data(), "1");
+
                 write_file(
                     &timestamp_file,
-                    serde_json::to_string(&TimestampFile { version: 2 }).unwrap().as_bytes(),
+                    serde_json::to_string(&SignedTimestamp {
+                        signed: TimestampFile { version: 2 },
+                    })
+                    .unwrap()
+                    .as_bytes(),
                 );
                 assert_eq!(client.next().await.unwrap().unwrap().data(), "2");
+
                 write_file(
                     &timestamp_file,
-                    serde_json::to_string(&TimestampFile { version: 3 }).unwrap().as_bytes(),
+                    serde_json::to_string(&SignedTimestamp {
+                        signed: TimestampFile { version: 3 },
+                    })
+                    .unwrap()
+                    .as_bytes(),
                 );
                 assert_eq!(client.next().await.unwrap().unwrap().data(), "3");
+
                 remove_file(&timestamp_file).unwrap();
                 write_file(
                     &timestamp_file,
-                    serde_json::to_string(&TimestampFile { version: 4 }).unwrap().as_bytes(),
+                    serde_json::to_string(&SignedTimestamp {
+                        signed: TimestampFile { version: 4 },
+                    })
+                    .unwrap()
+                    .as_bytes(),
                 );
                 assert_eq!(client.next().await.unwrap().unwrap().data(), "4");
             }

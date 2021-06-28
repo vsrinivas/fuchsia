@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    anyhow::Result,
+    anyhow::{anyhow, Context as _, Result},
     async_lock::RwLock,
     async_trait::async_trait,
     ffx_config::{self, ConfigLevel},
@@ -11,15 +11,17 @@ use {
     fidl_fuchsia_developer_bridge_ext::RepositorySpec,
     fidl_fuchsia_pkg::RepositoryManagerMarker,
     fidl_fuchsia_pkg_rewrite::{EngineMarker, LiteralRule, Rule},
-    fuchsia_async::{self as fasync, futures::StreamExt as _},
+    fuchsia_async as fasync,
+    futures::{FutureExt as _, StreamExt as _},
     pkg::repository::{Repository, RepositoryManager, RepositoryServer, LISTEN_PORT},
     serde_json,
     services::prelude::*,
-    std::{convert::TryInto, net, sync::Arc},
+    std::{convert::TryInto, net, sync::Arc, time::Duration},
 };
 
 const REPOSITORY_MANAGER_SELECTOR: &str = "core/appmgr:out:fuchsia.pkg.RepositoryManager";
 const REWRITE_SERVICE_SELECTOR: &str = "core/appmgr:out:fuchsia.pkg.rewrite.Engine";
+const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 
 struct ServerInfo {
     server: RepositoryServer,
@@ -34,37 +36,41 @@ pub struct Repo {
 }
 
 impl Repo {
-    async fn start_server(&self, addr: net::SocketAddr) -> bool {
+    async fn start_server(&self, addr: net::SocketAddr) -> Result<()> {
+        log::info!("Starting repository server on {}", addr);
+
+        // FIXME(http://fxbug.dev/77146) We currently can only run on 127.0.0.1:8085 and [::1]:8085.
+        let required_addr = (net::Ipv6Addr::LOCALHOST, LISTEN_PORT).into();
+        if addr != required_addr {
+            return Err(anyhow!(
+                "repository currently only supports {}, not {}",
+                required_addr,
+                addr
+            ));
+        }
+
         let mut server_locked = self.server.write().await;
-        match &*server_locked {
-            Some(x) if x.addr == addr => true,
-            _ => {
-                *server_locked = None;
 
-                log::info!("Trying to serve on {}", addr);
-                if let Err(x) = ffx_config::set(
-                    ("repository_server.listen", ConfigLevel::User),
-                    format!("{}", addr).into(),
-                )
-                .await
-                {
-                    log::warn!("Could not save address to config: {}", x);
-                }
-
-                match RepositoryServer::builder(addr, Arc::clone(&self.manager)).start().await {
-                    Ok((task, server)) => {
-                        let task = fasync::Task::local(task);
-                        log::info!("Started server on {}", server.local_addr());
-                        *server_locked = Some(ServerInfo { server, addr, task });
-                        true
-                    }
-                    Err(x) => {
-                        log::warn!("Could not start server: {}", x);
-                        false
-                    }
-                }
+        // Exit early if we're already running on this address.
+        if let Some(server) = &*server_locked {
+            if server.addr == addr {
+                return Ok(());
             }
         }
+
+        let (server_fut, server) = RepositoryServer::builder(addr, Arc::clone(&self.manager))
+            .start()
+            .await
+            .context("starting repository server")?;
+
+        log::info!("Started repository server on {}", server.local_addr());
+
+        // Spawn the server future in the background to process requests from clients.
+        let task = fasync::Task::local(server_fut);
+
+        *server_locked = Some(ServerInfo { server, addr, task });
+
+        Ok(())
     }
 
     async fn add_repository(
@@ -77,24 +83,24 @@ impl Repo {
         let repo_spec: RepositorySpec = repo_spec.try_into()?;
 
         let json_repo_spec = serde_json::to_value(repo_spec.clone()).map_err(|err| {
-            log::error!("unable to serialize repository spec {:?}: {}", repo_spec, err);
+            log::error!("Unable to serialize repository spec {:?}: {:#?}", repo_spec, err);
             bridge::RepositoryError::InternalError
         })?;
 
         // Create the repository.
         let repo = Repository::from_repository_spec(&name, repo_spec).await.map_err(|err| {
-            log::error!("unable to create repository: {}", err);
+            log::error!("Unable to create repository: {:#?}", err);
             bridge::RepositoryError::IoError
         })?;
 
         // Save the filesystem configuration.
         ffx_config::set(
-            (format!("repository_server.repositories.{}", name).as_str(), ConfigLevel::User),
+            (format!("repository.server.repositories.{}", name).as_str(), ConfigLevel::User),
             json_repo_spec,
         )
         .await
         .map_err(|err| {
-            log::error!("failed to save repository: {}", err);
+            log::error!("Failed to save repository: {:#?}", err);
             bridge::RepositoryError::IoError
         })?;
 
@@ -133,7 +139,7 @@ impl Repo {
             .await
             .map_err(|err| {
                 log::warn!(
-                    "failed to open target proxy with target name {:?}: {}",
+                    "Failed to open target proxy with target name {:?}: {:#?}",
                     target_info.target_identifier,
                     err
                 );
@@ -146,11 +152,11 @@ impl Repo {
         match proxy.add(config.into()).await {
             Ok(Ok(())) => {}
             Ok(Err(err)) => {
-                log::warn!("failed to add config: {}", err);
+                log::warn!("Failed to add config: {:#?}", err);
                 return Err(bridge::RepositoryError::RepositoryManagerError);
             }
             Err(err) => {
-                log::warn!("failed to add config: {}", err);
+                log::warn!("Failed to add config: {:#?}", err);
                 return Err(bridge::RepositoryError::TargetCommunicationFailure);
             }
         }
@@ -168,22 +174,23 @@ impl Repo {
             .await
         {
             Ok(p) => p,
-            Err(e) => {
+            Err(err) => {
                 log::warn!(
-                    "failed to open Rewrite Engine target proxy with target name {:?}: {}",
+                    "Failed to open Rewrite Engine target proxy with target name {:?}: {:#?}",
                     target_info.target_identifier,
-                    e
+                    err
                 );
                 return Err(bridge::RepositoryError::TargetCommunicationFailure);
             }
         };
 
         let (transaction_proxy, server_end) = create_proxy().map_err(|err| {
-            log::warn!("failed to create Rewrite transaction: {}", err);
+            log::warn!("Failed to create Rewrite transaction: {:#?}", err);
             bridge::RepositoryError::RewriteEngineError
         })?;
+
         rewrite_proxy.start_edit_transaction(server_end).map_err(|err| {
-            log::warn!("failed to start edit transaction: {}", err);
+            log::warn!("Failed to start edit transaction: {:#?}", err);
             bridge::RepositoryError::RewriteEngineError
         })?;
 
@@ -195,12 +202,12 @@ impl Repo {
                 path_prefix_replacement: "/".to_string(),
             };
             match transaction_proxy.add(&mut Rule::Literal(rule)).await {
-                Err(e) => {
-                    log::warn!("failed to add rewrite rule. Error was: {}", e);
+                Err(err) => {
+                    log::warn!("Failed to add rewrite rule. Error was: {:#?}", err);
                     return Err(bridge::RepositoryError::RewriteEngineError);
                 }
-                Ok(Err(e)) => {
-                    log::warn!("Adding rewrite rule returned failure. Error was: {}", e);
+                Ok(Err(err)) => {
+                    log::warn!("Adding rewrite rule returned failure. Error was: {:#?}", err);
                     return Err(bridge::RepositoryError::RewriteEngineError);
                 }
                 Ok(_) => {}
@@ -209,12 +216,12 @@ impl Repo {
 
         match transaction_proxy.commit().await {
             Ok(Ok(())) => Ok(()),
-            Ok(Err(e)) => {
-                log::warn!("Committing rewrite rule returned failure. Error was: {}", e);
+            Ok(Err(err)) => {
+                log::warn!("Committing rewrite rule returned failure. Error was: {:#?}", err);
                 Err(bridge::RepositoryError::RewriteEngineError)
             }
-            Err(e) => {
-                log::warn!("failed to commit rewrite rule. Error was: {}", e);
+            Err(err) => {
+                log::warn!("Failed to commit rewrite rule. Error was: {:#?}", err);
                 Err(bridge::RepositoryError::RewriteEngineError)
             }
         }
@@ -271,15 +278,15 @@ impl FidlService for Repo {
                                 pos += bridge::MAX_REPOS as usize;
                                 pos = std::cmp::min(pos, len);
 
-                                if let Err(e) = responder.send(chunk) {
+                                if let Err(err) = responder.send(chunk) {
                                     log::warn!(
-                                        "Error responding to RepositoryIterator request: {}",
-                                        e
+                                        "Error responding to RepositoryIterator request: {:#?}",
+                                        err
                                     );
                                 }
                             }
-                            Err(e) => {
-                                log::warn!("Error in RepositoryIterator request stream: {}", e)
+                            Err(err) => {
+                                log::warn!("Error in RepositoryIterator request stream: {:#?}", err)
                             }
                         }
                     }
@@ -291,39 +298,49 @@ impl FidlService for Repo {
     }
 
     async fn start(&mut self, _cx: &Context) -> Result<()> {
-        log::info!("started repository service");
+        log::info!("Starting repository service");
 
-        if let Ok(address) = ffx_config::get::<String, _>("repository_server.listen").await {
-            if let Ok(address) = address.parse::<net::SocketAddr>() {
-                self.start_server(address).await;
-            } else {
-                log::warn!("Invalid value for repository_server.listen")
+        match ffx_config::get::<serde_json::Value, _>("repository.server.repositories").await {
+            Ok(serde_json::Value::Object(repos)) => {
+                for (name, entry) in repos.into_iter() {
+                    log::info!("Registering repository {:?}", name);
+
+                    let repo_spec = match serde_json::from_value(entry) {
+                        Ok(repo_spec) => repo_spec,
+                        Err(err) => {
+                            log::warn!("Failed to parse repository {:?}: {:#?}", name, err);
+                            continue;
+                        }
+                    };
+
+                    let repo = match Repository::from_repository_spec(&name, repo_spec).await {
+                        Ok(repo) => repo,
+                        Err(err) => {
+                            log::warn!("Failed to create repository {:?}: {:#?}", name, err);
+                            continue;
+                        }
+                    };
+
+                    self.manager.add(Arc::new(repo));
+                }
+            }
+            res @ _ => {
+                log::warn!("failed to read repositories from config: {:#?}", res);
             }
         }
 
-        if let Ok(repos) = ffx_config::get::<serde_json::Map<String, serde_json::Value>, _>(
-            "repository_server.repositories",
-        )
-        .await
-        {
-            for (name, entry) in repos.into_iter() {
-                let repo_spec = match serde_json::from_value(entry) {
-                    Ok(repo_spec) => repo_spec,
-                    Err(err) => {
-                        log::warn!("failed to parse repository {:?}: {}", name, err);
-                        continue;
+        match ffx_config::get::<String, _>("repository.server.listen").await {
+            Ok(address) => {
+                if let Ok(address) = address.parse::<net::SocketAddr>() {
+                    if let Err(err) = self.start_server(address).await {
+                        log::warn!("Failed to start repository server: {:#?}", err);
                     }
-                };
-
-                let repo = match Repository::from_repository_spec(&name, repo_spec).await {
-                    Ok(repo) => repo,
-                    Err(err) => {
-                        log::warn!("failed to create repository {:?}: {}", name, err);
-                        continue;
-                    }
-                };
-
-                self.manager.add(Arc::new(repo));
+                } else {
+                    log::warn!("Invalid value for repository.server.listen")
+                }
+            }
+            Err(err) => {
+                log::warn!("Failed to read server address from config: {:#?}", err);
             }
         }
 
@@ -331,13 +348,22 @@ impl FidlService for Repo {
     }
 
     async fn stop(&mut self, _cx: &Context) -> Result<()> {
+        log::info!("Stopping repository service");
+
         let server_info = self.server.write().await.take();
         if let Some(server_info) = server_info {
             server_info.server.stop();
 
-            // TODO(sadmac): Timeout.
-            server_info.task.await;
+            futures::select! {
+                () = server_info.task.fuse() => {},
+                () = fasync::Timer::new(SHUTDOWN_TIMEOUT).fuse() => {
+                    log::error!("Timed out waiting for the repository server to shut down");
+                },
+            }
         }
+
+        log::info!("Repository service has been stopped");
+
         Ok(())
     }
 }

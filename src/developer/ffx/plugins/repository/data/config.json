@@ -1,0 +1,7 @@
+{
+    "repository": {
+        "server": {
+            "listen": "[::1]:8085"
+        }
+    }
+}
