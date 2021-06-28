@@ -42,6 +42,7 @@ const BRIGHTNESS_USER_MULTIPLIER_MAX: f32 = 8.0;
 const BRIGHTNESS_USER_MULTIPLIER_MIN: f32 = 0.25;
 const BRIGHTNESS_TABLE_FILE_PATH: &str = "/data/brightness_table";
 const BRIGHTNESS_MINIMUM_CHANGE: f32 = 0.00001;
+const MANUAL_BRIGHTNESS_DEFAULT: Duration = Duration::from_millis(250);
 
 // Minimum time between brightness steps. 50 ms is the configured ramp time of the backlight.
 // It'll do its smoothing within this, so there is no need to send events more frequently.
@@ -222,10 +223,10 @@ impl Control {
             }
             BrightnessControlRequest::SetManualBrightnessSmooth {
                 value,
-                duration,
+                duration: duration_ns,
                 control_handle: _,
             } => {
-                self.set_manual_brightness_smooth(value, duration).await;
+                self.set_manual_brightness_smooth(value, Duration::from_nanos(duration_ns)).await;
             }
             BrightnessControlRequest::WatchCurrentBrightness { responder } => {
                 let watch_current_result =
@@ -378,12 +379,19 @@ impl Control {
     }
 
     async fn set_manual_brightness(&mut self, value: f32) {
+        self.set_manual_brightness_smooth(value, MANUAL_BRIGHTNESS_DEFAULT).await;
+    }
+
+    async fn set_manual_brightness_smooth(&mut self, value: f32, duration: Duration) {
         if let Some(handle) = self.auto_brightness_abort_handle.take() {
             fx_log_info!("Auto-brightness off, brightness set to {}", value);
             handle.abort();
         }
+
+        let value = num_traits::clamp(value, 0.0, 1.0);
         {
-            // Hold the lock for as little time as possible
+            // Hold the locks for as little time as possible
+            *BRIGHTNESS_CHANGE_DURATION.lock().await = duration;
             self.auto_sender_channel.lock().await.send_value(false);
         }
         let current_sender_channel = self.current_sender_channel.clone();
@@ -394,13 +402,6 @@ impl Control {
             current_sender_channel,
         )
         .await;
-    }
-
-    async fn set_manual_brightness_smooth(&mut self, value: f32, duration_ns: i64) {
-        let duration = Duration::from_nanos(duration_ns);
-        *BRIGHTNESS_CHANGE_DURATION.lock().await = duration;
-        let value = num_traits::clamp(value, 0.0, 1.0);
-        self.set_manual_brightness(value).await;
     }
 
     async fn watch_current_brightness(
@@ -1244,9 +1245,17 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_set_manual_brightness_smooth_with_duration_got_set() {
         let mut control = generate_control_struct(400, 0.5).await;
-        control.set_manual_brightness_smooth(0.6, 4000000000).await;
+        control.set_manual_brightness_smooth(0.6, Duration::from_nanos(4000000000)).await;
         let duration = *BRIGHTNESS_CHANGE_DURATION.lock().await;
         assert_eq!(4000, duration.into_millis());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_manual_brightness_set_duration() {
+        let mut control = generate_control_struct(400, 0.5).await;
+        control.set_manual_brightness(0.6).await;
+        let duration = *BRIGHTNESS_CHANGE_DURATION.lock().await;
+        assert_eq!(250, duration.into_millis());
     }
 
     #[test]
@@ -1257,7 +1266,7 @@ mod tests {
         futures::pin_mut!(func_fut1);
         let mut control = exec.run_singlethreaded(&mut func_fut1);
         {
-            let func_fut2 = control.set_manual_brightness_smooth(0.6, 4000);
+            let func_fut2 = control.set_manual_brightness_smooth(0.6, Duration::from_nanos(4000));
             futures::pin_mut!(func_fut2);
             exec.run_singlethreaded(&mut func_fut2);
         }
@@ -1282,7 +1291,8 @@ mod tests {
         futures::pin_mut!(func_fut1);
         let mut control = exec.run_singlethreaded(&mut func_fut1);
         {
-            let func_fut2 = control.set_manual_brightness_smooth(0.0006, 4000);
+            let func_fut2 =
+                control.set_manual_brightness_smooth(0.0006, Duration::from_nanos(4000));
             futures::pin_mut!(func_fut2);
             exec.run_singlethreaded(&mut func_fut2);
         }
