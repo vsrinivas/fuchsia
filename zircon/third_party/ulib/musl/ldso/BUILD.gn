@@ -28,7 +28,7 @@ source_set("ldso") {
     defines = [ "DYNLINK_LDSVC_CONFIG=\"$ldsvc_config\"" ]
   }
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 
   # TODO(fxb/58161): delete the below and fix compiler warnings
   configs += [ "//build/config/zircon:Wno-unused-function" ]

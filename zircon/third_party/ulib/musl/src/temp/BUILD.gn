@@ -14,5 +14,5 @@ source_set("temp") {
     "mktemp.c",
   ]
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }

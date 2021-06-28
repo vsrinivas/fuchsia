@@ -11,5 +11,5 @@ source_set("tre") {
     "tre-mem.c",
   ]
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }

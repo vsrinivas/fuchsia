@@ -36,5 +36,5 @@ source_set("signal") {
     "sigwaitinfo.c",
   ]
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }

@@ -6,5 +6,5 @@ source_set("smoothsort") {
   deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [ "qsort.c" ]
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }

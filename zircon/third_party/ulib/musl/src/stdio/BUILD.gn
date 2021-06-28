@@ -120,7 +120,7 @@ source_set("stdio") {
     "wscanf.c",
   ]
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 
   # TODO(42500): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.

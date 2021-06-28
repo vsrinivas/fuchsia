@@ -17,12 +17,12 @@ source_set("exit") {
     "//zircon/third_party/ulib/musl:musl_internal",
   ]
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
 
 source_set("abort") {
   sources = [ "abort.c" ]
   deps = [ "//src/zircon/lib/zircon" ]
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }

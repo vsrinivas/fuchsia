@@ -38,7 +38,7 @@ source_set("compiler") {
     ]
   }
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
 
 source_set("stdmem") {
@@ -67,7 +67,7 @@ source_set("stdmem") {
     }
   }
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
 
 source_set("extmem") {
@@ -83,7 +83,7 @@ source_set("extmem") {
     sources += [ "mempcpy.c" ]
   }
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
 
 source_set("minimal_str") {
@@ -102,7 +102,7 @@ source_set("minimal_str") {
     ]
   }
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
 
 source_set("stdstr") {
@@ -140,7 +140,7 @@ source_set("stdstr") {
     ]
   }
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
 
 source_set("extstr") {
@@ -172,7 +172,7 @@ source_set("extstr") {
     ]
   }
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
 
 source_set("bsd") {
@@ -186,7 +186,7 @@ source_set("bsd") {
     "swab.c",
   ]
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
 
 source_set("wcs") {
@@ -215,7 +215,7 @@ source_set("wcs") {
     "wcswcs.c",
   ]
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
 
 source_set("wmem") {
@@ -228,5 +228,5 @@ source_set("wmem") {
     "wmemset.c",
   ]
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }

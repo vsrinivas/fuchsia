@@ -11,6 +11,6 @@ source_set("dirent") {
   ]
 
   if (zircon_toolchain != false) {
-    configs -= [ "//build/config/zircon:visibility_hidden" ]
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
   }
 }

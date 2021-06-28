@@ -42,7 +42,7 @@ source_set("time") {
     "wcsftime.c",
   ]
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 
   # TODO(fxb/58161): delete the below and fix compiler warnings
   configs += [ "//build/config/zircon:Wno-unused-function" ]

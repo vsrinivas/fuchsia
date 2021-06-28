@@ -13,5 +13,5 @@ source_set("linux") {
     "utimes.c",
   ]
 
-  configs -= [ "//build/config/zircon:visibility_hidden" ]
+  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
