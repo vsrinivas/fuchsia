@@ -70,6 +70,14 @@ reproxy_cfg="$config"
 bootstrap="$reclient_bindir"/bootstrap
 reproxy="$reclient_bindir"/reproxy
 
+# Establish a single log dir per reproxy instance so that statistics are
+# accumulated per build invocation.
+date="$(date +%Y%m%d-%H%M%S)"
+reproxy_tmpdir="$(mktemp -d -t reproxy."$date".XXXX)"
+# These environment variables take precedence over those found in --cfg.
+export RBE_log_dir="$reproxy_tmpdir"
+export RBE_proxy_log_dir="$reproxy_tmpdir"
+
 # Use the same config for bootstrap as for reproxy
 "$bootstrap" --re_proxy="$reproxy" --cfg="$reproxy_cfg" "${bootstrap_options[@]}"
 # b/188923283 -- added --cfg to shut down properly
