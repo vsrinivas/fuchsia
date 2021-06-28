@@ -127,30 +127,7 @@ zx_status_t Dispatcher::HandleAnyMlmeMessage(fbl::Span<uint8_t> span) {
   uint64_t ordinal = hdr->ordinal;
   debughdr("service packet txid=%u ordinal=%lu\n", hdr->txid, ordinal);
 
-  switch (ordinal) {
-    // TODO(fxbug.dev/44485): Rust MLME does not support Mesh.
-    case fuchsia::wlan::mlme::internal::kMLME_SendMpOpenAction_Ordinal:
-      return HandleMlmeMessage<wlan_mlme::MeshPeeringOpenAction>(span, ordinal);
-    case fuchsia::wlan::mlme::internal::kMLME_SendMpConfirmAction_Ordinal:
-      return HandleMlmeMessage<wlan_mlme::MeshPeeringConfirmAction>(span, ordinal);
-    case fuchsia::wlan::mlme::internal::kMLME_MeshPeeringEstablished_Ordinal:
-      return HandleMlmeMessage<wlan_mlme::MeshPeeringParams>(span, ordinal);
-    case fuchsia::wlan::mlme::internal::kMLME_GetMeshPathTableReq_Ordinal:
-      return HandleMlmeMessage<wlan_mlme::GetMeshPathTableRequest>(span, ordinal);
-    default:
-      return mlme_->HandleEncodedMlmeMsg(span);
-  }
-}
-
-template <typename Message>
-zx_status_t Dispatcher::HandleMlmeMessage(fbl::Span<uint8_t> span, uint64_t ordinal) {
-  // If the encoded message was not handled, manually decode and dispatch message.
-  auto msg = MlmeMsg<Message>::Decode(span, ordinal);
-  if (!msg.has_value()) {
-    errorf("could not deserialize MLME primitive %lu: \n", ordinal);
-    return ZX_ERR_INVALID_ARGS;
-  }
-  return mlme_->HandleMlmeMsg(*msg);
+  return mlme_->HandleEncodedMlmeMsg(span);
 }
 
 void Dispatcher::HwIndication(uint32_t ind) {
