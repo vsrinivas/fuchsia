@@ -227,11 +227,6 @@ config("language") {
   configs = [ "//build/config:language" ]
 }
 
-# NOTE: Do not remove this until unification completes (see explanation above).
-config("relative_paths") {
-  configs = [ "//build/config:relative_paths" ]
-}
-
 config("nolibc") {
   ldflags = [ "-nostartfiles" ]
 
