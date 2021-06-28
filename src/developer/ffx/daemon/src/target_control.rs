@@ -17,9 +17,11 @@ use {
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_hardware_power_statecontrol::{AdminMarker, AdminProxy, RebootReason},
+    fuchsia_async::TimeoutExt,
     futures::prelude::*,
     futures::try_join,
     std::rc::Rc,
+    std::time::Duration,
 };
 
 const ADMIN_SELECTOR: &str = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin";
@@ -130,31 +132,47 @@ impl TargetControl {
                         responder.send(&mut response)?;
                     }
                     // Everything else use AdminProxy
-                    _ => match state {
-                        TargetRebootState::Product => {
-                            match self
-                                .get_admin_proxy()
-                                .await?
-                                .reboot(RebootReason::UserRequest)
-                                .await
-                            {
-                                Ok(_) => responder.send(&mut Ok(()))?,
-                                Err(e) => handle_target_err(e, responder)?,
+                    _ => {
+                        const ADMIN_PROXY_TIMEOUT: Duration = Duration::from_secs(5);
+                        let admin_proxy = match self
+                            .get_admin_proxy()
+                            .map_err(|e| {
+                                log::warn!("error getting admin proxy: {}", e);
+                                TargetRebootError::TargetCommunication
+                            })
+                            .on_timeout(ADMIN_PROXY_TIMEOUT, || {
+                                log::warn!("timeout while getting admin proxy");
+                                Err(TargetRebootError::TargetCommunication)
+                            })
+                            .await
+                        {
+                            Ok(a) => a,
+                            Err(e) => {
+                                responder.send(&mut Err(e))?;
+                                return Err(anyhow!("failed to get admin proxy"));
+                            }
+                        };
+                        match state {
+                            TargetRebootState::Product => {
+                                match admin_proxy.reboot(RebootReason::UserRequest).await {
+                                    Ok(_) => responder.send(&mut Ok(()))?,
+                                    Err(e) => handle_target_err(e, responder)?,
+                                }
+                            }
+                            TargetRebootState::Bootloader => {
+                                match admin_proxy.reboot_to_bootloader().await {
+                                    Ok(_) => responder.send(&mut Ok(()))?,
+                                    Err(e) => handle_target_err(e, responder)?,
+                                }
+                            }
+                            TargetRebootState::Recovery => {
+                                match admin_proxy.reboot_to_recovery().await {
+                                    Ok(_) => responder.send(&mut Ok(()))?,
+                                    Err(e) => handle_target_err(e, responder)?,
+                                }
                             }
                         }
-                        TargetRebootState::Bootloader => {
-                            match self.get_admin_proxy().await?.reboot_to_bootloader().await {
-                                Ok(_) => responder.send(&mut Ok(()))?,
-                                Err(e) => handle_target_err(e, responder)?,
-                            }
-                        }
-                        TargetRebootState::Recovery => {
-                            match self.get_admin_proxy().await?.reboot_to_recovery().await {
-                                Ok(_) => responder.send(&mut Ok(()))?,
-                                Err(e) => handle_target_err(e, responder)?,
-                            }
-                        }
-                    },
+                    }
                 }
             }
         }
