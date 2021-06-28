@@ -52,6 +52,23 @@ TEST(Tas58xxTest, GoodSetDai) {
     ASSERT_OK(client.SetDaiFormat(std::move(format)));
   }
 
+  // One channel is ok.
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 2;
+    format.channels_to_use_bitmask = 2;  // only one channel is ok.
+    format.sample_format = SampleFormat::PCM_SIGNED;
+    format.frame_format = FrameFormat::I2S;
+    format.frame_rate = 48000;
+    format.bits_per_slot = 32;
+    mock_i2c.ExpectWriteStop({0x33, 0x00});  // 16 bits.
+    mock_i2c.ExpectWriteStop({0x34, 0x00});  // Keep data start sclk.
+    format.bits_per_sample = 16;
+    auto formats = client.GetDaiFormats();
+    ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+    ASSERT_OK(client.SetDaiFormat(std::move(format)));
+  }
+
   {
     audio::DaiFormat format = {};
     format.number_of_channels = 2;
@@ -126,7 +143,7 @@ TEST(Tas58xxTest, BadSetDai) {
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 
-  //   Almost good format (wrong channels).
+  // Almost good format (wrong channels).
   {
     audio::DaiFormat format = {};
     format.number_of_channels = 1;
@@ -138,6 +155,22 @@ TEST(Tas58xxTest, BadSetDai) {
     format.bits_per_sample = 32;
     auto formats = client.GetDaiFormats();
     EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
+    zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
+  }
+
+  // Almost good format (wrong mask).
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 2;
+    format.channels_to_use_bitmask = 4;  // TAS58xx requires use only the first 2 bits.
+    format.sample_format = SampleFormat::PCM_SIGNED;
+    format.frame_format = FrameFormat::I2S;
+    format.frame_rate = 48000;
+    format.bits_per_slot = 32;
+    format.bits_per_sample = 32;
+    auto formats = client.GetDaiFormats();
+    EXPECT_TRUE(IsDaiFormatSupported(format, formats.value()));  // bitmask not checked here.
     zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }

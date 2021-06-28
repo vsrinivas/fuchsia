@@ -231,7 +231,9 @@ zx::status<CodecFormatInfo> Tas58xx::SetDaiFormat(const DaiFormat& format) {
            format.number_of_channels, format.channels_to_use_bitmask);
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
-  if (format.number_of_channels == 2 && format.channels_to_use_bitmask != 3) {
+
+  // Only the first 2 bits are ok.
+  if (format.number_of_channels == 2 && (format.channels_to_use_bitmask & ~3)) {
     zxlogf(ERROR, "DAI format channels to use not supported %u 0x%lX", format.number_of_channels,
            format.channels_to_use_bitmask);
     return zx::error(ZX_ERR_NOT_SUPPORTED);
