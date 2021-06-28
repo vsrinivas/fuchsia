@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     dns::{
         async_resolver::{Resolver, Spawner},
-        policy::{ServerConfigSink, ServerConfigSinkError, ServerList},
+        policy::{ServerList, UpdateServersResult},
     },
     fidl_fuchsia_net::{self as fnet, NameLookupRequest, NameLookupRequestStream},
     fidl_fuchsia_net_ext as net_ext,
@@ -16,10 +16,7 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_inspect, fuchsia_zircon as zx,
     futures::{
-        channel::mpsc,
-        lock::Mutex,
-        task::{Context, Poll},
-        FutureExt as _, Sink, SinkExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _,
+        channel::mpsc, lock::Mutex, FutureExt as _, SinkExt as _, StreamExt as _, TryStreamExt as _,
     },
     log::{debug, error, info, warn},
     net_declare::fidl_ip_v6,
@@ -28,7 +25,6 @@ use {
     std::collections::VecDeque,
     std::convert::TryFrom,
     std::net::IpAddr,
-    std::pin::Pin,
     std::rc::Rc,
     std::sync::Arc,
     trust_dns_proto::rr::{domain::IntoName, TryParseIp},
@@ -200,93 +196,33 @@ impl QueryWindow {
     }
 }
 
-/// `SharedResolverConfigSink` acts as a `Sink` that takes resolver
-/// configurations in the form of [`ServerList`]s and applies them to a
-/// [`SharedResolver`].
-struct SharedResolverConfigSink<'a, T> {
-    shared_resolver: &'a SharedResolver<T>,
-    staged_change: Option<ServerList>,
-    flush_state: Option<futures::future::LocalBoxFuture<'a, ()>>,
-}
+async fn update_resolver<T: ResolverLookup>(resolver: &SharedResolver<T>, servers: ServerList) {
+    let mut resolver_opts = ResolverOpts::default();
+    resolver_opts.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
 
-impl<'a, T: ResolverLookup> SharedResolverConfigSink<'a, T> {
-    fn new(shared_resolver: &'a SharedResolver<T>) -> Self {
-        Self { shared_resolver, staged_change: None, flush_state: None }
-    }
+    // We're going to add each server twice, once with protocol UDP and
+    // then with protocol TCP.
+    let mut name_servers = NameServerConfigGroup::with_capacity(servers.len() * 2);
 
-    fn update_resolver(&self, servers: ServerList) -> impl 'a + futures::Future<Output = ()> {
-        let mut resolver_opts = ResolverOpts::default();
-        resolver_opts.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
+    name_servers.extend(servers.into_iter().flat_map(|server| {
+        let net_ext::SocketAddress(socket_addr) = server.into();
+        // Every server config gets UDP and TCP versions with
+        // preference for UDP.
+        std::iter::once(NameServerConfig {
+            socket_addr,
+            protocol: Protocol::Udp,
+            tls_dns_name: None,
+        })
+        .chain(std::iter::once(NameServerConfig {
+            socket_addr,
+            protocol: Protocol::Tcp,
+            tls_dns_name: None,
+        }))
+    }));
 
-        // We're going to add each server twice, once with protocol UDP and
-        // then with protocol TCP.
-        let mut name_servers = NameServerConfigGroup::with_capacity(servers.len() * 2);
-
-        name_servers.extend(servers.into_iter().flat_map(|server| {
-            let net_ext::SocketAddress(socket_addr) = server.into();
-            // Every server config gets UDP and TCP versions with
-            // preference for UDP.
-            std::iter::once(NameServerConfig {
-                socket_addr,
-                protocol: Protocol::Udp,
-                tls_dns_name: None,
-            })
-            .chain(std::iter::once(NameServerConfig {
-                socket_addr,
-                protocol: Protocol::Tcp,
-                tls_dns_name: None,
-            }))
-        }));
-
-        let resolver_ref = self.shared_resolver;
-
-        T::new(ResolverConfig::from_parts(None, Vec::new(), name_servers), resolver_opts)
-            .map(move |r| resolver_ref.write(Rc::new(r)))
-    }
-
-    fn poll(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), never::Never>> {
-        // Finish the last update first.
-        if let Some(fut) = self.flush_state.as_mut() {
-            match fut.poll_unpin(cx) {
-                Poll::Ready(()) => {
-                    self.flush_state = None;
-                }
-                Poll::Pending => return Poll::Pending,
-            }
-        }
-
-        // Update to the latest state if any.
-        if let Some(pending) = self.staged_change.take() {
-            self.flush_state = Some(self.update_resolver(pending).boxed_local());
-            return self.poll(cx);
-        }
-        Poll::Ready(Ok(()))
-    }
-}
-
-impl<'a, T: ResolverLookup> Sink<ServerList> for SharedResolverConfigSink<'a, T> {
-    type Error = never::Never;
-
-    fn poll_ready(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        // We always allow overwriting the staged_change, configuration will
-        // always only be applied on flush. This allows a series of
-        // configuration events to be received but consolidation only happens
-        // on flush.
-        Poll::Ready(Ok(()))
-    }
-
-    fn start_send(self: Pin<&mut Self>, item: ServerList) -> Result<(), Self::Error> {
-        self.get_mut().staged_change = Some(item);
-        Ok(())
-    }
-
-    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.get_mut().poll(cx)
-    }
-
-    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Self::poll_flush(self, cx)
-    }
+    let new_resolver =
+        T::new(ResolverConfig::from_parts(None, Vec::new(), name_servers), resolver_opts).await;
+    let () = resolver.write(Rc::new(new_resolver));
 }
 
 enum IncomingRequest {
@@ -864,78 +800,35 @@ fn create_ip_lookup_fut<T: ResolverLookup>(
     })
 }
 
-/// The error variants returned by [`run_lookup_admin`].
-#[derive(Debug, thiserror::Error)]
-enum LookupAdminError {
-    #[error("FIDL error: {}.", _0)]
-    Fidl(#[from] fidl::Error),
-    #[error("Sink send error: {}.", _0)]
-    Sink(#[from] futures::channel::mpsc::SendError),
-}
-
 /// Serves `stream` and forwards received configurations to `sink`.
-async fn run_lookup_admin(
-    sink: mpsc::Sender<dns::policy::ServerList>,
-    policy_state: Arc<dns::policy::ServerConfigState>,
+async fn run_lookup_admin<T: ResolverLookup>(
+    resolver: &SharedResolver<T>,
+    state: &dns::policy::ServerConfigState,
     stream: LookupAdminRequestStream,
-) -> Result<(), LookupAdminError> {
+) -> Result<(), fidl::Error> {
     stream
-        .try_filter_map(|req| async {
+        .try_for_each(|req| async {
             match req {
                 LookupAdminRequest::SetDnsServers { servers, responder } => {
-                    let (mut response, ret) = if servers.iter().any(|s| {
-                        // Addresses must not be an unspecified or multicast address.
-                        let net_ext::SocketAddress(sockaddr) = From::from(*s);
-                        let ip = sockaddr.ip();
-                        ip.is_multicast() || ip.is_unspecified()
-                    }) {
-                        (Err(zx::Status::INVALID_ARGS.into_raw()), None)
-                    } else {
-                        (Ok(()), Some(servers))
+                    let mut response = match state.update_servers(servers) {
+                        UpdateServersResult::Updated(servers) => {
+                            let () = update_resolver(resolver, servers).await;
+                            Ok(())
+                        }
+                        UpdateServersResult::NoChange => Ok(()),
+                        UpdateServersResult::InvalidsServers => {
+                            Err(zx::Status::INVALID_ARGS.into_raw())
+                        }
                     };
                     let () = responder.send(&mut response)?;
-                    Ok(ret)
                 }
                 LookupAdminRequest::GetDnsServers { responder } => {
-                    let () = responder.send(&mut policy_state.servers().iter_mut())?;
-                    Ok(None)
+                    let () = responder.send(&mut state.servers().iter_mut())?;
                 }
             }
+            Ok(())
         })
-        .map_err(LookupAdminError::Fidl)
-        .forward(sink.sink_map_err(LookupAdminError::Sink))
         .await
-}
-
-/// Creates a tuple of [`mpsc::Sender`] and [`Future`] handled by
-/// [`dns::policy::ServerConfiguration`].
-///
-/// The returned `sender` is used to publish configuration changes to a `Sink`
-/// composed of [`dns::policy::ServerConfigSink`] and
-/// [`SharedResolverConfigSink`], which will set the consolidated configuration
-/// on `resolver`.
-///
-/// Configuration changes are only when the returned `Future` is polled.
-fn create_policy_fut<T: ResolverLookup>(
-    resolver: &SharedResolver<T>,
-    config_state: Arc<dns::policy::ServerConfigState>,
-) -> (
-    mpsc::Sender<dns::policy::ServerList>,
-    impl futures::Future<Output = Result<(), anyhow::Error>> + '_,
-) {
-    // Create configuration channel pair. A small buffer in the channel allows
-    // for multiple configurations coming in rapidly to be flushed together.
-    let (servers_config_sink, servers_config_source) = mpsc::channel(10);
-    let policy = ServerConfigSink::new_with_state(
-        SharedResolverConfigSink::new(&resolver)
-            .sink_map_err(never::Never::into_any::<anyhow::Error>),
-        config_state,
-    );
-    let policy_fut = servers_config_source.map(Ok).forward(policy).map_err(|e| match e {
-        ServerConfigSinkError::InvalidArg => anyhow::anyhow!("Sink error {:?}", e),
-        ServerConfigSinkError::SinkError(e) => e.context("Sink error"),
-    });
-    (servers_config_sink, policy_fut)
 }
 
 /// Adds a [`dns::policy::ServerConfigState`] inspection child node to
@@ -1053,8 +946,6 @@ async fn main() -> Result<(), Error> {
     );
 
     let config_state = Arc::new(dns::policy::ServerConfigState::new());
-    let (servers_config_sink, policy_fut) = create_policy_fut(&resolver, config_state.clone());
-
     let stats = Arc::new(QueryStats::new());
 
     let mut fs = ServiceFs::new_local();
@@ -1078,32 +969,27 @@ async fn main() -> Result<(), Error> {
     // Create a channel with buffer size `MAX_PARALLEL_REQUESTS`, which allows
     // request processing to always be fully saturated.
     let (sender, recv) = mpsc::channel(MAX_PARALLEL_REQUESTS);
-    let serve_fut = fs
-        .for_each_concurrent(None, |incoming_service| async {
-            match incoming_service {
-                IncomingRequest::LookupAdmin(stream) => {
-                    run_lookup_admin(servers_config_sink.clone(), config_state.clone(), stream)
-                        .await
-                        .unwrap_or_else(|e| match e {
-                            LookupAdminError::Fidl(e) => {
-                                warn!("run_lookup_admin finished with FIDL error: {}", e)
-                            }
-                            LookupAdminError::Sink(e) => {
-                                error!("run_lookup_admin finished with Sink error: {}", e)
-                            }
-                        })
-                }
-                IncomingRequest::NameLookup(stream) => {
-                    run_name_lookup(&resolver, stream, sender.clone())
-                        .await
-                        .unwrap_or_else(|e| warn!("run_name_lookup finished with error: {}", e))
-                }
+    let serve_fut = fs.for_each_concurrent(None, |incoming_service| async {
+        match incoming_service {
+            IncomingRequest::LookupAdmin(stream) => {
+                run_lookup_admin(&resolver, &config_state, stream).await.unwrap_or_else(|e| {
+                    if e.is_closed() {
+                        warn!("run_lookup_admin finished with error: {}", e)
+                    } else {
+                        error!("run_lookup_admin finished with error: {}", e)
+                    }
+                })
             }
-        })
-        .map(Ok);
-    let ip_lookup_fut = create_ip_lookup_fut(&resolver, stats.clone(), routes, recv).map(Ok);
+            IncomingRequest::NameLookup(stream) => {
+                run_name_lookup(&resolver, stream, sender.clone())
+                    .await
+                    .unwrap_or_else(|e| warn!("run_name_lookup finished with error: {}", e))
+            }
+        }
+    });
+    let ip_lookup_fut = create_ip_lookup_fut(&resolver, stats.clone(), routes, recv);
 
-    let ((), (), ()) = futures::future::try_join3(policy_fut, serve_fut, ip_lookup_fut).await?;
+    let ((), ()) = futures::future::join(serve_fut, ip_lookup_fut).await;
     Ok(())
 }
 
@@ -1121,6 +1007,7 @@ mod tests {
     use dns::DEFAULT_PORT;
     use fidl_fuchsia_net_ext::IntoExt as _;
     use fuchsia_inspect::{assert_data_tree, testing::NonZeroUintProperty, tree_assertion};
+    use futures::future::TryFutureExt as _;
     use matches::assert_matches;
     use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, std_ip, std_ip_v4, std_ip_v6};
     use net_types::ip::Ip as _;
@@ -1441,31 +1328,13 @@ mod tests {
             let (lookup_admin_proxy, lookup_admin_stream) =
                 fidl::endpoints::create_proxy_and_stream::<fname::LookupAdminMarker>()
                     .expect("failed to create AdminResolverProxy");
-
-            let (sink, policy_fut) =
-                create_policy_fut(&self.shared_resolver, self.config_state.clone());
-
-            let ((), (), ()) = futures::future::try_join3(
-                run_lookup_admin(sink, self.config_state.clone(), lookup_admin_stream)
+            let ((), ()) = futures::future::try_join(
+                run_lookup_admin(&self.shared_resolver, &self.config_state, lookup_admin_stream)
                     .map_err(anyhow::Error::from),
-                policy_fut,
                 f(lookup_admin_proxy).map(Ok),
             )
             .await
             .expect("Error running admin future");
-        }
-
-        async fn run_config_sink<F, Fut>(&self, f: F)
-        where
-            Fut: futures::Future<Output = ()>,
-            F: FnOnce(mpsc::Sender<dns::policy::ServerList>) -> Fut,
-        {
-            let (sink, policy_fut) =
-                create_policy_fut(&self.shared_resolver, self.config_state.clone());
-
-            let ((), ()) = futures::future::try_join(policy_fut, f(sink).map(Ok))
-                .await
-                .expect("Error running admin future");
         }
     }
 
@@ -1674,17 +1543,14 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_get_servers() {
         let env = TestEnvironment::new();
-        env.run_config_sink(|mut sink| async move {
-            let () = sink
-                .send(vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER])
-                .await
-                .unwrap();
-        })
-        .await;
-
         env.run_admin(|proxy| async move {
-            let servers = proxy.get_dns_servers().await.expect("Failed to get DNS servers");
-            assert_eq!(servers, vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER])
+            let expect = vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER];
+            let () = proxy
+                .set_dns_servers(&mut expect.clone().iter_mut())
+                .await
+                .expect("FIDL error")
+                .expect("set_servers failed");
+            assert_eq!(proxy.get_dns_servers().await.expect("Failed to get DNS servers"), expect);
         })
         .await;
     }
@@ -1698,11 +1564,13 @@ mod tests {
         assert_data_tree!(inspector, root:{
             servers: {}
         });
-        env.run_config_sink(|mut sink| async move {
-            let () = sink
-                .send(vec![NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER])
+        env.run_admin(|proxy| async move {
+            let mut servers = [NDP_SERVER, DHCP_SERVER, DHCPV6_SERVER, STATIC_SERVER];
+            let () = proxy
+                .set_dns_servers(&mut servers.iter_mut())
                 .await
-                .unwrap();
+                .expect("FIDL error")
+                .expect("set_servers failed");
         })
         .await;
         assert_data_tree!(inspector, root:{
