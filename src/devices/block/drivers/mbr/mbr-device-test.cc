@@ -9,7 +9,6 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
@@ -22,6 +21,7 @@
 
 #include "mbr-test-data.h"
 #include "mbr.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
 
@@ -31,9 +31,9 @@ const block_info_t kInfo = {kBlockCnt, kBlockSz, BLOCK_MAX_TRANSFER_UNBOUNDED, 0
 
 class FakeBlockDevice : public ddk::BlockProtocol<FakeBlockDevice> {
  public:
-  FakeBlockDevice() : proto_({&block_protocol_ops_, this}), mbr_{kFuchsiaMbr} {}
+  FakeBlockDevice() : mbr_{kFuchsiaMbr} {}
 
-  block_protocol_t* proto() { return &proto_; }
+  block_protocol_ops_t* proto_ops() { return &block_protocol_ops_; }
 
   void BlockQuery(block_info_t* info_out, size_t* block_op_size_out) {
     *info_out = kInfo;
@@ -59,7 +59,6 @@ class FakeBlockDevice : public ddk::BlockProtocol<FakeBlockDevice> {
   void SetMbr(const uint8_t* new_mbr) { mbr_ = new_mbr; }
 
  private:
-  block_protocol_t proto_;
   const uint8_t* mbr_;
 };
 
@@ -71,11 +70,14 @@ class MbrDeviceTest : public zxtest::Test {
  public:
   MbrDeviceTest() {}
 
-  void Init() { ddk_.SetProtocol(ZX_PROTOCOL_BLOCK, fake_block_device_.proto()); }
+  void Init() {
+    fake_parent_->AddProtocol(ZX_PROTOCOL_BLOCK, fake_block_device_.proto_ops(),
+                              &fake_block_device_);
+  }
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(MbrDeviceTest);
 
-  fake_ddk::Bind ddk_;
+  std::shared_ptr<MockDevice> fake_parent_ = MockDevice::FakeRootParent();
 
  protected:
   FakeBlockDevice fake_block_device_;
@@ -85,7 +87,7 @@ TEST_F(MbrDeviceTest, DeviceCreation) {
   Init();
 
   fbl::Vector<std::unique_ptr<MbrDevice>> devices;
-  ASSERT_OK(MbrDevice::Create(fake_ddk::kFakeParent, &devices));
+  ASSERT_OK(MbrDevice::Create(fake_parent_.get(), &devices));
   ASSERT_EQ(devices.size(), 2);
 
   ASSERT_NOT_NULL(devices[0].get());
@@ -111,14 +113,14 @@ TEST_F(MbrDeviceTest, DeviceCreationProtectiveMbr) {
   Init();
 
   fbl::Vector<std::unique_ptr<MbrDevice>> devices;
-  ASSERT_EQ(MbrDevice::Create(fake_ddk::kFakeParent, &devices), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(MbrDevice::Create(fake_parent_.get(), &devices), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(MbrDeviceTest, DdkLifecycle) {
   Init();
 
   fbl::Vector<std::unique_ptr<MbrDevice>> devices;
-  ASSERT_OK(MbrDevice::Create(fake_ddk::kFakeParent, &devices));
+  ASSERT_OK(MbrDevice::Create(fake_parent_.get(), &devices));
   ASSERT_EQ(devices.size(), 2);
 
   auto* device0 = devices[0].get();
@@ -129,20 +131,15 @@ TEST_F(MbrDeviceTest, DdkLifecycle) {
   ASSERT_NOT_NULL(device1);
   EXPECT_OK(MbrDevice::Bind(std::move(devices[1])));
 
-  device0->DdkAsyncRemove();
-  device1->DdkAsyncRemove();
-
-  EXPECT_TRUE(ddk_.Ok());
-
-  // Delete the object, which means this test should not leak.
-  device0->DdkRelease();
-  device1->DdkRelease();
+  // TODO(fxbug.dev/79639): Removed the fake_ddk.Ok() check, which did
+  // not actually test lifecycle. Implement any checks necessary to test
+  // that this driver implements Unbind and Release properly, if needed.
 }
 
 TEST(Bind, UnsupportedProtocol) {
-  fake_ddk::Bind ddk;
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
 
-  auto bind_result = MbrDriverOps.bind(nullptr, fake_ddk::kFakeParent);
+  auto bind_result = MbrDriverOps.bind(nullptr, fake_parent.get());
   ASSERT_EQ(bind_result, ZX_ERR_NOT_SUPPORTED);
 }
 
