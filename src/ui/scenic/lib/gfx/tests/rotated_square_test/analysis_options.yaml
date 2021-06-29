@@ -3,4 +3,4 @@
 # found in the LICENSE file.
 
 # TODO(rosswang): switch to //src version
-include: ../../../../../../../topaz/tools/analysis_options.yaml
+include: ../../../../../../../build/dart/analysis_options.yaml

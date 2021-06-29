@@ -89,7 +89,7 @@ template("fidl_dart") {
   }
 
   copy(copy_options_target_name) {
-    sources = [ "//topaz/tools/analysis_options.yaml" ]
+    sources = [ "//build/dart/analysis_options.yaml" ]
 
     outputs = [ "$root_dir/analysis_options.yaml" ]
   }
