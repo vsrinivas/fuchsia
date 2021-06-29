@@ -69,7 +69,7 @@ void MouseDevice::SendReport(const MouseReport& report) {
 void MouseDevice::GetInputReportsReader(GetInputReportsReaderRequestView request,
                                         GetInputReportsReaderCompleter::Sync& completer) {
   zx_status_t status =
-      input_report_readers_.CreateReader(loop_.dispatcher(), request->reader.TakeChannel());
+      input_report_readers_.CreateReader(loop_.dispatcher(), std::move(request->reader));
   if (status == ZX_OK) {
     // Signal to a test framework (if it exists) that we are connected to a reader.
     sync_completion_signal(&next_reader_wait_);
@@ -101,8 +101,9 @@ void MouseDevice::SetFeatureReport(SetFeatureReportRequestView request,
 class InputReportReaderTests : public zxtest::Test {
   void SetUp() override {
     ASSERT_EQ(mouse_.Start(), ZX_OK);
-    zx::channel server, client;
-    ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputDevice>();
+    ASSERT_TRUE(endpoints.is_ok());
+    auto [client, server] = std::move(endpoints.value());
     auto result = fidl::BindServer(loop_.dispatcher(), std::move(server), &mouse_);
     input_device_ = fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(client));
     ASSERT_EQ(loop_.StartThread("MouseDeviceThread"), ZX_OK);
@@ -120,8 +121,9 @@ TEST_F(InputReportReaderTests, LifeTimeTest) {
   // Get an InputReportsReader.
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
   {
-    zx::channel server, client;
-    ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_TRUE(endpoints.is_ok());
+    auto [client, server] = std::move(endpoints.value());
     input_device_.GetInputReportsReader(std::move(server));
     reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(client));
     mouse_.WaitForNextReader(zx::duration::infinite());
@@ -132,8 +134,9 @@ TEST_F(InputReportReaderTests, ReadInputReportsTest) {
   // Get an InputReportsReader.
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
   {
-    zx::channel server, client;
-    ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_TRUE(endpoints.is_ok());
+    auto [client, server] = std::move(endpoints.value());
     input_device_.GetInputReportsReader(std::move(server));
     reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(client));
     mouse_.WaitForNextReader(zx::duration::infinite());
@@ -170,8 +173,9 @@ TEST_F(InputReportReaderTests, ReaderAddsRequiredFields) {
   // Get an InputReportsReader.
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
   {
-    zx::channel server, client;
-    ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_TRUE(endpoints.is_ok());
+    auto [client, server] = std::move(endpoints.value());
     input_device_.GetInputReportsReader(std::move(server));
     reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(client));
     mouse_.WaitForNextReader(zx::duration::infinite());
@@ -199,8 +203,9 @@ TEST_F(InputReportReaderTests, TwoReaders) {
   // Get the first reader.
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader_one;
   {
-    zx::channel server, client;
-    ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_TRUE(endpoints.is_ok());
+    auto [client, server] = std::move(endpoints.value());
     input_device_.GetInputReportsReader(std::move(server));
     reader_one = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(client));
     mouse_.WaitForNextReader(zx::duration::infinite());
@@ -209,8 +214,9 @@ TEST_F(InputReportReaderTests, TwoReaders) {
   // Get the second reader.
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader_two;
   {
-    zx::channel server, client;
-    ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_TRUE(endpoints.is_ok());
+    auto [client, server] = std::move(endpoints.value());
     input_device_.GetInputReportsReader(std::move(server));
     reader_two = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(client));
     mouse_.WaitForNextReader(zx::duration::infinite());
@@ -273,8 +279,9 @@ TEST_F(InputReportReaderTests, ReadInputReportsHangingGetTest) {
   // Get an async InputReportsReader.
   fidl::Client<fuchsia_input_report::InputReportsReader> reader;
   {
-    zx::channel server, client;
-    ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_TRUE(endpoints.is_ok());
+    auto [client, server] = std::move(endpoints.value());
     input_device_.GetInputReportsReader(std::move(server));
     reader.Bind(std::move(client), loop.dispatcher());
     mouse_.WaitForNextReader(zx::duration::infinite());
@@ -318,8 +325,9 @@ TEST_F(InputReportReaderTests, CloseReaderWithOutstandingRead) {
   // Get an async InputReportsReader.
   fidl::Client<fuchsia_input_report::InputReportsReader> reader;
   {
-    zx::channel server, client;
-    ASSERT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_TRUE(endpoints.is_ok());
+    auto [client, server] = std::move(endpoints.value());
     input_device_.GetInputReportsReader(std::move(server));
     reader.Bind(std::move(client), loop.dispatcher());
     mouse_.WaitForNextReader(zx::duration::infinite());

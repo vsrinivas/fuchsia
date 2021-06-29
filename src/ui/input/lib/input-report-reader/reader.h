@@ -66,7 +66,8 @@ class InputReportReaderManager {
   InputReportReaderManager() = default;
 
   // Create a new InputReportReader that is managed by this InputReportReaderManager.
-  zx_status_t CreateReader(async_dispatcher_t* dispatcher, zx::channel server) {
+  zx_status_t CreateReader(async_dispatcher_t* dispatcher,
+                           fidl::ServerEnd<fuchsia_input_report::InputReportsReader> server) {
     fbl::AutoLock lock(&readers_lock_);
     auto reader =
         InputReportReader<Report>::Create(this, next_reader_id_, dispatcher, std::move(server));
@@ -115,7 +116,7 @@ class InputReportReader : public fidl::WireServer<fuchsia_input_report::InputRep
   // Create the InputReportReader. `manager` and `dispatcher` must outlive this InputReportReader.
   static std::unique_ptr<InputReportReader<Report>> Create(
       InputReportReaderManager<Report>* manager, size_t reader_id, async_dispatcher_t* dispatcher,
-      zx::channel server);
+      fidl::ServerEnd<fuchsia_input_report::InputReportsReader> server);
 
   // This is only public to make std::unique_ptr work.
   explicit InputReportReader(InputReportReaderManager<Report>* manager, size_t reader_id)
@@ -145,7 +146,7 @@ class InputReportReader : public fidl::WireServer<fuchsia_input_report::InputRep
 template <class Report>
 std::unique_ptr<InputReportReader<Report>> InputReportReader<Report>::Create(
     InputReportReaderManager<Report>* manager, size_t reader_id, async_dispatcher_t* dispatcher,
-    zx::channel server) {
+    fidl::ServerEnd<fuchsia_input_report::InputReportsReader> server) {
   fidl::OnUnboundFn<InputReportReader> unbound_fn(
       [](InputReportReader* reader, fidl::UnbindInfo info,
          fidl::ServerEnd<fuchsia_input_report::InputReportsReader> channel) {

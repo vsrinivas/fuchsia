@@ -356,7 +356,8 @@ class Gt6853Test : public zxtest::Test {
 TEST_F(Gt6853Test, GetDescriptor) {
   ASSERT_OK(Init());
 
-  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(std::move(ddk_.FidlClient()));
+  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(
+      ddk_.FidlClient<fuchsia_input_report::InputDevice>());
 
   auto response = client.GetDescriptor();
 
@@ -399,10 +400,12 @@ TEST_F(Gt6853Test, GetDescriptor) {
 TEST_F(Gt6853Test, ReadReport) {
   ASSERT_OK(Init());
 
-  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(std::move(ddk_.FidlClient()));
+  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(
+      ddk_.FidlClient<fuchsia_input_report::InputDevice>());
 
-  zx::channel reader_client, reader_server;
-  ASSERT_OK(zx::channel::create(0, &reader_client, &reader_server));
+  auto reader_endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+  ASSERT_TRUE(reader_endpoints.is_ok());
+  auto [reader_client, reader_server] = std::move(reader_endpoints.value());
   client.GetInputReportsReader(std::move(reader_server));
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader(std::move(reader_client));
   device_->WaitForNextReader();

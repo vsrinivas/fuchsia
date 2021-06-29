@@ -122,7 +122,7 @@ void Gt6853Device::DdkUnbind(ddk::UnbindTxn txn) {
 void Gt6853Device::GetInputReportsReader(GetInputReportsReaderRequestView request,
                                          GetInputReportsReaderCompleter::Sync& completer) {
   zx_status_t status =
-      input_report_readers_.CreateReader(loop_.dispatcher(), request->reader.TakeChannel());
+      input_report_readers_.CreateReader(loop_.dispatcher(), std::move(request->reader));
   if (status == ZX_OK) {
     sync_completion_signal(&next_reader_wait_);  // Only for tests.
   }

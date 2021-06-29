@@ -86,11 +86,6 @@ driver_module("ft8201-module") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 executable("ft8201-test-bin") {
@@ -117,11 +112,6 @@ executable("ft8201-test-bin") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_package("ft8201-test") {

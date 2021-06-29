@@ -85,11 +85,6 @@ driver_module("gt6853-module") {
     "GT6853_CONFIG_9365_PATH=\"$config_9365_path\"",
     "GT6853_FIRMWARE_PATH=\"$firmware_path\"",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 test("gt6853-test") {
@@ -112,11 +107,6 @@ test("gt6853-test") {
     "GT6853_CONFIG_9365_PATH=\"$config_9365_path\"",
     "GT6853_FIRMWARE_PATH=\"$firmware_path\"",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_package("gt6853-test-package") {
