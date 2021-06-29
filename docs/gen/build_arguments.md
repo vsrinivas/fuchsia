@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1333
+From //build/config/BUILDCONFIG.gn:1321
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -56,19 +56,19 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 From //build/images/args.gni:114
 
-### anv_enable_external_fd
-TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
+### anv_enable_external_sync_fd
+TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/70223bec16782d61261c05676475dfad2289ca0f/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/bf78a2e5319319fc84583f305d0ce7136e163a39/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/70223bec16782d61261c05676475dfad2289ca0f/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/bf78a2e5319319fc84583f305d0ce7136e163a39/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -554,7 +554,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:574
+From //build/config/BUILDCONFIG.gn:562
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -628,7 +628,7 @@ and compare the outputs' contents for reproducibility.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:578
+From //build/config/BUILDCONFIG.gn:566
 
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
@@ -765,19 +765,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/3b0ebc29cdba974c0f0cad0101a8b07a596e7a37/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/c4081b8e6ddf08b94dd61d8f1a5df421ab42a1cf/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/3b0ebc29cdba974c0f0cad0101a8b07a596e7a37/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/c4081b8e6ddf08b94dd61d8f1a5df421ab42a1cf/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/3b0ebc29cdba974c0f0cad0101a8b07a596e7a37/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/c4081b8e6ddf08b94dd61d8f1a5df421ab42a1cf/util/net/tls.gni#30)
 
 ### current_cpu
 
@@ -1084,7 +1084,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1090
+From //build/config/BUILDCONFIG.gn:1078
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1888,7 +1888,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:941
+From //build/config/BUILDCONFIG.gn:929
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2207,13 +2207,13 @@ From //build/images/fvm.gni:79
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/3b0ebc29cdba974c0f0cad0101a8b07a596e7a37/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/c4081b8e6ddf08b94dd61d8f1a5df421ab42a1cf/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/3b0ebc29cdba974c0f0cad0101a8b07a596e7a37/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/c4081b8e6ddf08b94dd61d8f1a5df421ab42a1cf/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -3217,7 +3217,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1323
+From //build/config/BUILDCONFIG.gn:1311
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3226,7 +3226,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1328
+From //build/config/BUILDCONFIG.gn:1316
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3270,7 +3270,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1136
+From //build/config/BUILDCONFIG.gn:1124
 
 ### size_checker_input
 The input to the size checker.
@@ -3556,7 +3556,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1120
+From //build/config/BUILDCONFIG.gn:1108
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
