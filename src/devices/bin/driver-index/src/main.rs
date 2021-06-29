@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{self, Context};
+use bind::match_bind::{match_bind, DeviceProperties, MatchBindData, PropertyKey};
 use fidl_fuchsia_driver_framework as fdf;
 use fidl_fuchsia_driver_framework::{DriverIndexRequest, DriverIndexRequestStream};
 use fuchsia_async as fasync;
@@ -43,9 +44,15 @@ struct Driver {
 impl Driver {
     fn matches(
         &self,
-        properties: &bind::match_bind::DeviceProperties,
+        properties: &DeviceProperties,
     ) -> Result<bool, bind::bytecode_common::BytecodeError> {
-        bind::match_bind::match_bind(&self.bind_rules, properties)
+        match_bind(
+            MatchBindData {
+                symbol_table: &self.bind_rules.symbol_table,
+                instructions: &self.bind_rules.instructions,
+            },
+            properties,
+        )
     }
 
     fn create(
@@ -109,15 +116,15 @@ impl Indexer {
 
 fn node_to_device_property(
     node_properties: &Vec<fdf::NodeProperty>,
-) -> Result<bind::match_bind::DeviceProperties, zx_status_t> {
-    let mut device_properties = bind::match_bind::DeviceProperties::new();
+) -> Result<DeviceProperties, zx_status_t> {
+    let mut device_properties = DeviceProperties::new();
 
     for property in node_properties {
         if property.key.is_none() || property.value.is_none() {
             return Err(Status::INVALID_ARGS.into_raw());
         }
         device_properties.insert(
-            bind::match_bind::PropertyKey::NumberKey(property.key.unwrap().into()),
+            PropertyKey::NumberKey(property.key.unwrap().into()),
             bind::compiler::Symbol::NumberValue(property.value.unwrap().into()),
         );
     }

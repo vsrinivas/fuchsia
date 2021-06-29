@@ -29,7 +29,12 @@ pub enum PropertyKey {
 
 pub type DeviceProperties = HashMap<PropertyKey, Symbol>;
 
-pub struct DeviceMatcher<'a> {
+pub struct MatchBindData<'a> {
+    pub symbol_table: &'a HashMap<u32, String>,
+    pub instructions: &'a Vec<u8>,
+}
+
+struct DeviceMatcher<'a> {
     properties: &'a DeviceProperties,
     symbol_table: &'a HashMap<u32, String>,
     iter: BytecodeIter<'a>,
@@ -161,23 +166,30 @@ fn compare_symbols(
     })
 }
 
-// Return true if the bytecode matches the device properties.
+// Return true if the bytecode matches the device properties. The bytecode
+// is for a non-composite driver.
 pub fn match_bytecode(
     bytecode: Vec<u8>,
     properties: &DeviceProperties,
 ) -> Result<bool, BytecodeError> {
-    match_bind(&DecodedBindRules::new(bytecode)?, &properties)
+    let decoded_bind_rules = DecodedBindRules::new(bytecode)?;
+    let matcher = DeviceMatcher {
+        properties: &properties,
+        symbol_table: &decoded_bind_rules.symbol_table,
+        iter: decoded_bind_rules.instructions.iter(),
+    };
+    matcher.match_bind()
 }
 
 // Return true if the bind rules matches the device properties.
 pub fn match_bind(
-    bind_rules: &DecodedBindRules,
+    bind_data: MatchBindData,
     properties: &DeviceProperties,
 ) -> Result<bool, BytecodeError> {
     let matcher = DeviceMatcher {
         properties: &properties,
-        symbol_table: &bind_rules.symbol_table,
-        iter: bind_rules.instructions.iter(),
+        symbol_table: &bind_data.symbol_table,
+        iter: bind_data.instructions.iter(),
     };
     matcher.match_bind()
 }
