@@ -56,6 +56,7 @@ zx_status_t I2cDevice::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t I2cDevice::Init(ddk::I2cImplProtocolClient i2c) {
+  first_bus_id_ = i2c.GetBusBase();
   uint32_t bus_count = i2c.GetBusCount();
   if (!bus_count) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -67,7 +68,7 @@ zx_status_t I2cDevice::Init(ddk::I2cImplProtocolClient i2c) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  for (uint32_t i = 0; i < bus_count; i++) {
+  for (uint32_t i = first_bus_id_; i < first_bus_id_ + bus_count; i++) {
     auto i2c_bus = fbl::MakeRefCountedChecked<I2cBus>(&ac, this->zxdev_, i2c, i);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
@@ -125,13 +126,15 @@ void I2cDevice::AddChildren() {
     const uint32_t pid = channel.has_pid() ? channel.pid() : 0;
     const uint32_t did = channel.has_did() ? channel.did() : 0;
 
-    if (bus_id >= i2c_buses_.size()) {
+    if (bus_id < first_bus_id_ || (bus_id - first_bus_id_) >= i2c_buses_.size()) {
       zxlogf(ERROR, "%s: bus_id %u out of range", __func__, bus_id);
       return;
     }
 
+    const uint32_t bus_index = bus_id - first_bus_id_;
+
     fbl::AllocChecker ac;
-    std::unique_ptr<I2cChild> dev(new (&ac) I2cChild(zxdev(), i2c_buses_[bus_id], address));
+    std::unique_ptr<I2cChild> dev(new (&ac) I2cChild(zxdev(), i2c_buses_[bus_index], address));
     if (!ac.check()) {
       zxlogf(ERROR, "%s: out of memory", __func__);
       return;

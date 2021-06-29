@@ -288,6 +288,7 @@ zx_status_t IntelI2cController::I2cImplTransact(const uint32_t bus_id, const i2c
   return status;
 }
 
+uint32_t IntelI2cController::I2cImplGetBusBase() { return 0; }
 uint32_t IntelI2cController::I2cImplGetBusCount() { return 1; }
 
 zx_status_t IntelI2cController::I2cImplGetMaxTransferSize(const uint32_t bus_id, size_t* out_size) {

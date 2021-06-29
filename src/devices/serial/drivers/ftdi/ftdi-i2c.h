@@ -51,6 +51,7 @@ class FtdiI2c : public DeviceType, public ddk::I2cImplProtocol<FtdiI2c, ddk::bas
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
 
+  uint32_t I2cImplGetBusBase() { return 0; }
   uint32_t I2cImplGetBusCount() { return 1; }
 
   zx_status_t I2cImplGetMaxTransferSize(uint32_t bus_id, size_t* out_size) {

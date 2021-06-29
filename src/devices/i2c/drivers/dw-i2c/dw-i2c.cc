@@ -574,6 +574,7 @@ zx_status_t DwI2c::I2cImplSetBitrate(uint32_t bus_id, uint32_t bitrate) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+uint32_t DwI2c::I2cImplGetBusBase() { return static_cast<uint32_t>(0); }
 uint32_t DwI2c::I2cImplGetBusCount() { return static_cast<uint32_t>(bus_count_); }
 
 zx_status_t DwI2c::I2cImplGetMaxTransferSize(uint32_t bus_id, size_t* out_size) {

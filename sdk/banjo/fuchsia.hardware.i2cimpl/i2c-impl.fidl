@@ -18,6 +18,9 @@ struct I2cImplOp {
 /// Low-level protocol for i2c drivers.
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol I2cImpl {
+    /// First bus ID that this I2cImpl controls, zero-indexed.
+    GetBusBase() -> (uint32 base);
+    /// Number of buses that this I2cImpl supports.
     GetBusCount() -> (uint32 count);
     GetMaxTransferSize(uint32 bus_id) -> (zx.status s, uint64 size);
     /// Sets the bitrate for the i2c bus in KHz units.

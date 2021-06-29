@@ -112,6 +112,7 @@ class AmlogicDisplay
   zx_status_t DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb);
 
   // Required functions for I2cImpl
+  uint32_t I2cImplGetBusBase() { return 0; }
   uint32_t I2cImplGetBusCount() { return 1; }
   zx_status_t I2cImplGetMaxTransferSize(uint32_t bus_id, size_t* out_size) {
     *out_size = UINT32_MAX;

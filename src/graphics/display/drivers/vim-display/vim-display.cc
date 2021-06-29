@@ -456,6 +456,7 @@ static display_controller_impl_protocol_ops_t display_controller_ops = {
     .get_single_buffer_framebuffer = get_single_buffer_framebuffer,
 };
 
+static uint32_t get_bus_base(void* ctx) { return 0; }
 static uint32_t get_bus_count(void* ctx) { return 1; }
 
 static zx_status_t get_max_transfer_size(void* ctx, uint32_t bus_id, size_t* out_size) {
@@ -533,6 +534,7 @@ static zx_status_t transact(void* ctx, uint32_t bus_id, const i2c_impl_op_t* ops
 }
 
 static i2c_impl_protocol_ops_t i2c_impl_ops = {
+    .get_bus_base = get_bus_base,
     .get_bus_count = get_bus_count,
     .get_max_transfer_size = get_max_transfer_size,
     .set_bitrate = set_bitrate,

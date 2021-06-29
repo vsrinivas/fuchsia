@@ -42,6 +42,7 @@ class DwI2c : public DeviceType, public ddk::I2cImplProtocol<DwI2c, ddk::base_pr
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
+  uint32_t I2cImplGetBusBase();
   uint32_t I2cImplGetBusCount();
   zx_status_t I2cImplGetMaxTransferSize(uint32_t bus_id, size_t* out_size);
   zx_status_t I2cImplSetBitrate(uint32_t bus_id, uint32_t bitrate);

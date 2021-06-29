@@ -135,7 +135,8 @@ using IntelI2cControllerType = ddk::Device<IntelI2cController, ddk::Initializabl
 class IntelI2cController : public IntelI2cControllerType,
                            public ddk::I2cImplProtocol<IntelI2cController, ddk::base_protocol> {
  public:
-  explicit IntelI2cController(zx_device_t* parent) : IntelI2cControllerType(parent), pci_(parent, "pci") {}
+  explicit IntelI2cController(zx_device_t* parent)
+      : IntelI2cControllerType(parent), pci_(parent, "pci") {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -166,6 +167,7 @@ class IntelI2cController : public IntelI2cControllerType,
   void SetAddressingMode(const uint32_t addr_mode_bit);
   void SetTargetAddress(const uint32_t addr_mode_bit, const uint32_t address);
 
+  uint32_t I2cImplGetBusBase();
   uint32_t I2cImplGetBusCount();
   zx_status_t I2cImplGetMaxTransferSize(const uint32_t bus_id, size_t* out_size);
   zx_status_t I2cImplSetBitrate(const uint32_t bus_id, const uint32_t bitrate);

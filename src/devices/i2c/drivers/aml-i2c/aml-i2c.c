@@ -6,10 +6,11 @@
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/hw/reg.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/device-protocol/platform-device.h>
-#include <lib/ddk/hw/reg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +24,6 @@
 #include <zircon/types.h>
 
 #include <bits/limits.h>
-#include <lib/ddk/metadata.h>
 
 #include "src/devices/i2c/drivers/aml-i2c/aml_i2c_bind.h"
 
@@ -339,6 +339,8 @@ static uint32_t aml_i2c_get_bus_count(void* ctx) {
   return i2c->dev_count;
 }
 
+static uint32_t aml_i2c_get_bus_base(void* ctx) { return 0; }
+
 static zx_status_t aml_i2c_get_max_transfer_size(void* ctx, uint32_t bus_id, size_t* out_size) {
   *out_size = AML_I2C_MAX_TRANSFER;
   return ZX_OK;
@@ -384,6 +386,7 @@ static zx_status_t aml_i2c_transact(void* ctx, uint32_t bus_id, const i2c_impl_o
 }
 
 static i2c_impl_protocol_ops_t i2c_ops = {
+    .get_bus_base = aml_i2c_get_bus_base,
     .get_bus_count = aml_i2c_get_bus_count,
     .get_max_transfer_size = aml_i2c_get_max_transfer_size,
     .set_bitrate = aml_i2c_set_bitrate,

@@ -29,6 +29,7 @@ class TestI2cDevice : public DeviceType,
 
   zx_status_t Create(std::unique_ptr<TestI2cDevice>* out);
 
+  uint32_t I2cImplGetBusBase() { return 0; }
   uint32_t I2cImplGetBusCount();
   zx_status_t I2cImplGetMaxTransferSize(uint32_t bus_id, size_t* out_size);
   zx_status_t I2cImplSetBitrate(uint32_t bus_id, uint32_t bitrate);

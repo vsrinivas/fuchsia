@@ -33,6 +33,7 @@ class I2cDevice : public I2cDeviceType {
   void AddChildren();
 
   const ddk::I2cImplProtocolClient i2c_;
+  uint32_t first_bus_id_;
   // List of I2C buses.
   fbl::Vector<fbl::RefPtr<I2cBus>> i2c_buses_;
 };

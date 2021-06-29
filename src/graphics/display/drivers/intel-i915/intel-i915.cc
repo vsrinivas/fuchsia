@@ -74,6 +74,8 @@ static void gpu_release(void* ctx) { static_cast<i915::Controller*>(ctx)->GpuRel
 
 static zx_protocol_device_t i915_gpu_core_device_proto = {};
 
+static uint32_t get_bus_base(void* ctx) { return 0; }
+
 static uint32_t get_bus_count(void* ctx) {
   return static_cast<i915::Controller*>(ctx)->GetBusCount();
 }
@@ -91,6 +93,7 @@ static zx_status_t transact(void* ctx, uint32_t bus_id, const i2c_impl_op_t* ops
 }
 
 static i2c_impl_protocol_ops_t i2c_ops = {
+    .get_bus_base = get_bus_base,
     .get_bus_count = get_bus_count,
     .get_max_transfer_size = get_max_transfer_size,
     .set_bitrate = set_bitrate,
