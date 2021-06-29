@@ -261,8 +261,10 @@ realm provides the following capabilities:
 * `fuchsia.process.Launcher` protocol
 * `tmp` storage
 * `data` storage
-* `dev` directory: devfs filesystem containing connected devices
-* `boot` directory: bootfs filesystem containing basic userspace components
+* [`dev` directory](/docs/concepts/process/namespaces.md#typical_directory_structure): the root
+device tree of the system
+* [`boot` directory](/docs/concepts/process/namespaces.md#typical_directory_structure): the full
+bootfs filesystem used by the system during bootup
 
 CMX components are run with the `ffx component run` subcommand. These components are automatically
 destroyed when they stop.
