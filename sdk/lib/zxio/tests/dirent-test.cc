@@ -17,6 +17,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "sdk/lib/zxio/private.h"
 #include "sdk/lib/zxio/tests/test_directory_server_base.h"
 
 namespace {

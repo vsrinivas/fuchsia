@@ -37,36 +37,6 @@ static_assert(sizeof(zxio_remote_t) <= sizeof(zxio_storage_t),
 
 zx_status_t zxio_remote_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t event);
 
-// TODO(https://fxbug.dev/43267): Move to private.h once caller here is updated:
-// https://fuchsia.googlesource.com/third_party/mesa/+/refs/heads/main/src/util/os_dirent_fuchsia.cpp#60
-zx_status_t zxio_dir_init(zxio_storage_t* remote, zx_handle_t control);
-
-// remote v2 -------------------------------------------------------------------
-
-// A |zxio_t| backend that uses the |fuchsia.io2/Node| protocol.
-//
-// The |control| handle is a channel that implements the |fuchsia.io2/Node|. The
-// |observer| handle is an optional object used with some |fuchsia.io2/Node|
-// servers. The |stream| handle is an optional stream object associated with the
-// file. See fuchsia.io2/FileInfo for additional documentation.
-//
-// Will eventually be an implementation detail of zxio once fdio completes its
-// transition to the zxio backend.
-using zxio_remote_v2_t = struct zxio_remote_v2 {
-  zxio_t io;
-  zx_handle_t control;
-  zx_handle_t observer;
-  zx_handle_t stream;
-};
-
-static_assert(sizeof(zxio_remote_v2_t) <= sizeof(zxio_storage_t),
-              "zxio_remote_v2_t must fit inside zxio_storage_t.");
-
-zx_status_t zxio_remote_v2_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t observer);
-zx_status_t zxio_dir_v2_init(zxio_storage_t* remote, zx_handle_t control);
-zx_status_t zxio_file_v2_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t observer,
-                              zx_handle_t stream);
-
 // vmo -------------------------------------------------------------------------
 
 // Initialize |file| with from a VMO.
@@ -95,13 +65,6 @@ static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
               "zxio_pipe_t must fit inside zxio_storage_t.");
 
 zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket, zx_info_socket_t info);
-
-// debuglog --------------------------------------------------------------------
-
-// Initializes a |zxio_storage_t| to use the given |handle| for output.
-//
-// The |handle| should be a Zircon debuglog object.
-zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx::debuglog handle);
 
 // generic  --------------------------------------------------------------------
 

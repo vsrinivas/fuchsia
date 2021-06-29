@@ -15,6 +15,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "sdk/lib/zxio/private.h"
+
 namespace {
 
 namespace fio2 = fuchsia_io2;

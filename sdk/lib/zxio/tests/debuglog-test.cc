@@ -8,6 +8,8 @@
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/zxio.h>
 
+#include "sdk/lib/zxio/private.h"
+
 #include <array>
 #include <thread>
 #include <utility>

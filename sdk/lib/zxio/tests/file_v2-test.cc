@@ -17,7 +17,8 @@
 
 #include <zxtest/zxtest.h>
 
-#include "file_test_suite.h"
+#include "sdk/lib/zxio/private.h"
+#include "sdk/lib/zxio/tests/file_test_suite.h"
 
 namespace {
 

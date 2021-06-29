@@ -10,6 +10,8 @@
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/ops.h>
 
+#include "sdk/lib/zxio/private.h"
+
 // C++ wrapper around zxio_remote_v2_t.
 class RemoteV2 {
  public:
