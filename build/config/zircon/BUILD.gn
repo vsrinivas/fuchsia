@@ -467,14 +467,6 @@ config("default_include_dirs") {
   include_dirs = [ "//zircon/system/public" ]
 }
 
-# NOTE: //build/config:thread_safety_annotations is slightly different
-config("thread_safety_annotations") {
-  if (!is_gcc) {
-    cflags = [ "-Wthread-safety" ]
-    defines = [ "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS=1" ]
-  }
-}
-
 config("no_stack_protector") {
   cflags = [ "-fno-stack-protector" ]
 }
