@@ -572,6 +572,8 @@ TEST_F(SyncDeviceTest, TimelineDestroyedAfterFenceClosed) {
   tl->CreateFence(std::move(event_server));
   tl.reset();
 
+  ASSERT_EQ(ZX_OK, dut_->loop()->RunUntilIdle());
+
   event_client.reset();
   ASSERT_EQ(ZX_OK, dut_->loop()->RunUntilIdle());
 }

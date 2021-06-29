@@ -382,9 +382,17 @@ void SyncTimeline::CreateFence(zx::eventpair event, std::optional<uint64_t> seqn
             if (status != ZX_OK && status != ZX_ERR_CANCELED) {
               zxlogf(ERROR, "CreateFence: Unexpected Wait status: %d", status);
             }
-            fbl::AutoLock lock(&timeline->lock_);
-            ZX_DEBUG_ASSERT(fence->InContainer());
-            fence->RemoveFromContainer();
+            // Since |fence| holds the async Wait (and its lambda captures),
+            // when |fence| is deleted, there will be no references to
+            // |timeline| and the mutex below will be deleted. We need to hold
+            // |fence_to_delete| to make sure that it's deleted later than
+            // |timeline|.
+            std::unique_ptr<Fence> fence_to_delete;
+            {
+              fbl::AutoLock lock(&timeline->lock_);
+              ZX_DEBUG_ASSERT(fence->InContainer());
+              fence_to_delete = fence->RemoveFromContainer();
+            }
           }
         });
 
