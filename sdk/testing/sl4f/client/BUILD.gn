@@ -37,6 +37,7 @@ dart_library("client") {
     "src/storage.dart",
     "src/tiles.dart",
     "src/time.dart",
+    "src/trace_processing/metrics/camera_metrics.dart",
     "src/trace_processing/metrics/common.dart",
     "src/trace_processing/metrics/cpu_metrics.dart",
     "src/trace_processing/metrics/drm_fps.dart",
@@ -121,6 +122,7 @@ if (is_host) {
   host_test_data("runtime_deps") {
     sources = [
       "${root_out_dir}/fake_zedmon",
+      "test/trace_processing_test_data/camera.json",
       "test/trace_processing_test_data/chrome_metadata.json",
       "test/trace_processing_test_data/cpu_metric.json",
       "test/trace_processing_test_data/cpu_metric_system_metrics_logger.json",

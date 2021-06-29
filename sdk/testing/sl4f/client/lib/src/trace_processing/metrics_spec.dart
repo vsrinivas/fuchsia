@@ -4,6 +4,7 @@
 
 import 'package:meta/meta.dart';
 
+import 'metrics/camera_metrics.dart';
 import 'metrics/cpu_metrics.dart';
 import 'metrics/drm_fps.dart';
 import 'metrics/flutter_frame_stats.dart';
@@ -57,6 +58,7 @@ typedef MetricsProcessor = List<TestCaseResults> Function(
     Model, Map<String, dynamic> extraArgs);
 
 const defaultMetricsRegistry = {
+  'camera': cameraMetricsProcessor,
   'cpu': cpuMetricsProcessor,
   'drm_fps': drmFpsMetricsProcessor,
   'system_drm_fps': systemDrmFpsMetricsProcessor,

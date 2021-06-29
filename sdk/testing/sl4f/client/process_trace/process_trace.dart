@@ -11,6 +11,7 @@ const _metricsBundles = {
 
 // A list of metrics that we support, along with their implementations.
 const _metricsReporters = {
+  'camera': cameraMetricsReport,
   'drm_fps': drmFpsMetricsReport,
   'system_drm_fps': systemDrmFpsMetricsReport,
   'flutter_frame_stats': flutterFrameStatsReport,

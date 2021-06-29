@@ -802,4 +802,11 @@ void main(List<String> args) {
 
     expect(getAllEvents(model).length, 4);
   });
+
+  test('Camera metrics', () async {
+    final model = await _modelFromPath('runtime_deps/camera.json');
+    final results = cameraMetricsProcessor(model, {});
+
+    expect(results[0].values[0], _closeTo(50.55131708739538));
+  });
 }
