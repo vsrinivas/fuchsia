@@ -6,10 +6,10 @@ the DHCP client.
 Run qemu with Fuchsia. We'll give Fuchsia two NICs so that we can test the
 interaction between them and DHCP. Make all the tunnels:
 
-    sudo tunctl -u $USER -t qemu
-    sudo tunctl -u $USER -t qemu-extra
-    sudo ifconfig qemu up
-    sudo ifconfig qemu-extra up
+    sudo ip tuntap add dev qemu       mode tap user $(whoami)
+    sudo ip tuntap add dev qemu-extra mode tap user $(whoami)
+    sudo ip link set qemu up
+    sudo ip link set qemu-extra up
 
 Now build and run Fuchsia with those two ports:
 
@@ -47,8 +47,8 @@ Make a file called /tmp/dhcpd.conf with these contents:
 dhcpd knows which addresses to serve on which nics based on matching the
 existing IP address on the NIC so you need to set those:
 
-    sudo ifconfig qemu 172.18.0.1
-    sudo ifconfig qemu-extra 172.19.0.1
+    sudo ip addr add dev qemu       172.18.0.1
+    sudo ip addr add dev qemu-extra 172.19.0.1
 
 Now we'll run dhcpd.  You can use the filenames below or modify them.
 

@@ -55,7 +55,6 @@ group("all") {
     "//src/connectivity/network/dhcp:dhcpd",
     "//src/connectivity/network/mdns/bundles:services",
     "//src/connectivity/network/mdns/bundles:utils",
-    "//src/connectivity/network/netstack:tools",
     "//src/connectivity/telephony/drivers",
     "//src/connectivity/wlan:packages",
     "//src/connectivity/wlan:tools",

@@ -82,8 +82,7 @@ If you get an error "Cannot create child process: ... failed to resolve ..." it 
 agent can't be loaded. You may need to run `fx serve` or its equivalent in your environment to make
 it available.
 
-You will want to note the target's IP address. Run `ifconfig` _on the target_ to see this, or run
-`fx get-device-addr` on the host.
+You will want to note the target's IP address. Run `fx get-device-addr` on the host.
 
 ### 2. Run the client and connect
 

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
@@ -32,12 +33,11 @@ func AssertNoError(t *testing.T, err error) {
 	}
 }
 
-// TODO(tamird): this exact function exists in ifconfig.
 func toIpAddress(addr net.IP) netfidl.IpAddress {
 	return fidlconv.ToNetIpAddress(tcpip.Address(addr))
 }
 
-// ifconfig route add 1.2.3.4/14 gateway 9.8.7.6 iface lo
+// net route add --destination 1.2.3.4 --netmask 255.252.0.0 --gateway 9.8.7.6 --nicid 0 --metric 100
 
 func TestRouteTableTransactions(t *testing.T) {
 	t.Run("no contentions", func(t *testing.T) {

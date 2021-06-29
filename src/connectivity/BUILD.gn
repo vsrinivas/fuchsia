@@ -37,7 +37,6 @@ group("tools") {
     "network/mdns/bundles:utils",
     "network/net-cli",
     "network/netdump",
-    "network/netstack:tools",
     "network/tools",
     "overnet/overnetstack",
     "overnet/tools",

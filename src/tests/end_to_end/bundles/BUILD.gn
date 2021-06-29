@@ -23,9 +23,6 @@ group("end_to_end_deps") {
     # Needed to inject and capture audio.
     "//src/media/audio/bundles:virtual_audio_service_with_config",
 
-    # Needed for ifconfig.
-    "//src/connectivity/network/netstack:tools",
-
     # SL4F to translate JSON-RPC to calls.
     "//garnet/packages/tools:sl4f",
 

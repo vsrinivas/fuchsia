@@ -38,4 +38,4 @@ E1000 local networking bridge:
   to create a persistent tun/tap device ahead of time (which does require you be root):
 
   sudo ip tuntap add dev qemu mode tap user $USER
-  sudo ifconfig qemu up
+  sudo ip link set qemu up

@@ -60,10 +60,6 @@ fuchsia_package("netstack-conformance-testing") {
   visibility = [ "//src/connectivity/network:config" ]
 }
 
-fuchsia_shell_package("tools") {
-  deps = [ "ifconfig" ]
-}
-
 generated_go("gen/netstack") {
   definitions = [
     {
@@ -179,7 +175,6 @@ group("tests") {
     "dns:tests",
     "fidlconv:tests",
     "filter:tests",
-    "ifconfig:netstack-ifconfig-gotests",
     "inspect:tests",
     "link/bridge:tests",
     "link/eth:tests",

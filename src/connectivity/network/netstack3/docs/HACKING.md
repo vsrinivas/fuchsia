@@ -18,15 +18,15 @@ boot of host machine):
 ```
 sudo ip tuntap add dev qemu mode tap user $USER
 sudo ip tuntap add dev qemu-extra mode tap user $USER
-sudo ifconfig qemu up
-sudo ifconfig qemu-extra up
+sudo ip link set qemu up
+sudo ip link set qemu-extra up
 ```
 
 Assign an IPv4 address for the `qemu-extra` interface so that you can ping from
 it later:
 
 ```
-sudo ifconfig qemu-extra 192.168.4.1 netmask 255.255.255.0 up
+sudo ip addr add dev qemu-extra 192.168.4.1/24
 ```
 
 Start Qemu with networking support:

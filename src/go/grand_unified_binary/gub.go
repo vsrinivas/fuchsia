@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 // The Fuchsia Go Grand Unified Binary is a binary that contains several other
@@ -17,7 +18,6 @@ import (
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/ifconfig"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/amber/amberctl"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/pkgsvr"
 )
@@ -46,8 +46,6 @@ func main() {
 		amberctl.Main()
 	case "netstack":
 		netstack.Main()
-	case "ifconfig":
-		ifconfig.Main()
 	default:
 		log.Printf("software delivery grand unified binary: unknown inner binary name: %s (%s)", name, os.Args[0])
 		os.Exit(1)

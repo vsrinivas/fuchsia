@@ -30,6 +30,6 @@ if [[ -z "${iface_name}" ]]; then
 fi
 
 # Set the IP address and bring the interface up.
-ifconfig "${iface_name}" "${IPV4_ADDR}/${IPV4_SUBNET_LENGTH}" up
-route add default gw "${DEFAULT_GATEWAY}"
+ip addr add dev "${iface_name}" "${IPV4_ADDR}/${IPV4_SUBNET_LENGTH}"
+ip route add default gw "${DEFAULT_GATEWAY}"
 

@@ -16,7 +16,7 @@ Starting dockyard host
 Server listening on 0.0.0.0:50051
 ```
 
-Determine the ip address of your host computer (e.g. `ifconfig`) and use it in
+Determine the ip address of your host computer (e.g. `ip addr`) and use it in
 place of the "192.168.3.53" example used below.
 In a second terminal window run
 ```
@@ -32,6 +32,6 @@ $ fx shell run \
 ```
 
 If the harvester is not able to connect to the dockyard_host, try using your
-host's local IP instead of 192.168.3.53 (see `ifconfig` for your IP addresses).
+host's local IP instead of 192.168.3.53 (see `ip addr` for your IP addresses).
 
 See also: /docs/development/system_monitor/README.md

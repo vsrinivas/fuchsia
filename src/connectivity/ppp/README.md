@@ -66,8 +66,8 @@ commands begin with `(qemu)`.
 - On success, `pppd` provides a network interface (`ppp0`) and the negotiated IP
   addresses.
 - The client will also have a network interface `ppp#`. To bring it up for use
-  with the netstack, run `ifconfig ppp# add IP_ADDRESS/MASK` followed by
-  `ifconfig ppp# up`.
+  with the netstack, run `ip addr add dev ppp# IP_ADDRESS/MASK` followed by
+  `ip link set ppp# up`.
 - The host and device network interfaces are ready for use. You can verify this
   by pinging the client's IP from the host.
 

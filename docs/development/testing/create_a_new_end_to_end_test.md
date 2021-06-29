@@ -210,7 +210,7 @@ currently running FEMU or the `fx serve` command.
 1.  Configure an IPv6 network for the emulator (you only need to do this once):
 
     ```posix-terminal
-    sudo ip tuntap add dev qemu mode tap user $USER && sudo ifconfig qemu up
+    sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up
     ```
 
 1.  In a new terminal, start the emulator:

@@ -20,10 +20,10 @@ fuchsia_iface_set=false
 for iface in $(ls -1 /sys/class/net); do
   iface_mac=$(cat "/sys/class/net/${iface}/address")
   if [[ "${iface_mac}" == "${LINUX_LINK_MAC}" ]]; then
-    ifconfig "${iface}" "${LINUX_LINK_IPV4_ADDR}/${IPV4_SUBNET_LENGTH}" up
+    ip addr add dev "${iface}" "${LINUX_LINK_IPV4_ADDR}/${IPV4_SUBNET_LENGTH}"
     linux_iface_set=true
   elif [[ "${iface_mac}" == "${FUCHSIA_LINK_MAC}" ]]; then
-    ifconfig "${iface}" "${FUCHSIA_LINK_IPV4_ADDR}/${IPV4_SUBNET_LENGTH}" up
+    ip addr add dev "${iface}" "${FUCHSIA_LINK_IPV4_ADDR}/${IPV4_SUBNET_LENGTH}"
     fuchsia_iface_set=true
   fi
 done

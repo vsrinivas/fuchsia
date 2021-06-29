@@ -76,7 +76,6 @@ _METRICS_TRACK_COMMAND_OPS=(
     "shell grep"
     "shell head"
     "shell hostname"
-    "shell ifconfig"
     "shell input"
     "shell iperf3"
     "shell iquery"
