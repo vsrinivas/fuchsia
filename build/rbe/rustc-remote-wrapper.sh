@@ -422,7 +422,8 @@ EOF
     dump_vars
 
     echo
-    reproxy_errors=/tmp/reproxy.ERROR
+    tmpdir="${RBE_proxy_log_dir:-/tmp}"
+    reproxy_errors="$tmpdir"/reproxy.ERROR
     echo "The last lines of $reproxy_errors might explain a remote failure:"
     if test -r "$reproxy_errors" ; then tail "$reproxy_errors" ; fi
   }
