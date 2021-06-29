@@ -10,6 +10,7 @@ use fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType};
 use fuchsia_trace as ftrace;
 use fuchsia_wayland_core as wl;
 use fuchsia_zircon::{self as zx, HandleBased};
+use std::collections::HashSet;
 use wayland::{
     wl_keyboard, wl_pointer, wl_seat, wl_touch, WlKeyboard, WlKeyboardEvent, WlKeyboardRequest,
     WlPointer, WlPointerRequest, WlSeat, WlSeatEvent, WlSeatRequest, WlTouch, WlTouchRequest,
@@ -51,6 +52,8 @@ impl Seat {
 
 pub struct InputDispatcher {
     event_queue: EventQueue,
+    pressed_keys: HashSet<fidl_fuchsia_input::Key>,
+    modifiers: u32,
     /// The set of bound wl_pointer objects for this client.
     ///
     /// Note we're assuming a single wl_seat for now, so these all are pointers
@@ -74,6 +77,32 @@ pub struct InputDispatcher {
     pub keyboard_focus: Option<ObjectRef<Surface>>,
 }
 
+fn modifiers_from_pressed_keys(pressed_keys: &HashSet<fidl_fuchsia_input::Key>) -> u32 {
+    // XKB mod masks for the default keymap.
+    const SHIFT_MASK: u32 = 1 << 0;
+    const CONTROL_MASK: u32 = 1 << 2;
+    const ALT_MASK: u32 = 1 << 3;
+
+    let mut modifiers = 0;
+    if pressed_keys.contains(&fidl_fuchsia_input::Key::LeftShift)
+        || pressed_keys.contains(&fidl_fuchsia_input::Key::RightShift)
+    {
+        modifiers |= SHIFT_MASK;
+    }
+    if pressed_keys.contains(&fidl_fuchsia_input::Key::LeftAlt)
+        || pressed_keys.contains(&fidl_fuchsia_input::Key::RightAlt)
+    {
+        modifiers |= ALT_MASK;
+    }
+    if pressed_keys.contains(&fidl_fuchsia_input::Key::LeftCtrl)
+        || pressed_keys.contains(&fidl_fuchsia_input::Key::RightCtrl)
+    {
+        modifiers |= CONTROL_MASK;
+    }
+
+    modifiers
+}
+
 fn pointer_trace_hack(fa: f32, fb: f32) -> u64 {
     let ia: u64 = fa.to_bits().into();
     let ib: u64 = fb.to_bits().into();
@@ -84,6 +113,8 @@ impl InputDispatcher {
     pub fn new(event_queue: EventQueue) -> Self {
         Self {
             event_queue,
+            pressed_keys: HashSet::new(),
+            modifiers: 0,
             pointers: ObjectRefSet::new(),
             keyboards: ObjectRefSet::new(),
             touches: ObjectRefSet::new(),
@@ -125,6 +156,23 @@ impl InputDispatcher {
         })
     }
 
+    fn send_keyboard_modifiers(&self, modifiers: u32) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::send_keyboard_modifiers");
+        let serial = self.event_queue.next_serial();
+        self.keyboards.iter().try_for_each(|k| {
+            self.event_queue.post(
+                k.id(),
+                wl_keyboard::Event::Modifiers {
+                    serial,
+                    mods_depressed: modifiers,
+                    mods_latched: 0,
+                    mods_locked: 0,
+                    group: 0,
+                },
+            )
+        })
+    }
+
     fn send_keyboard_leave(&self, surface: ObjectRef<Surface>) -> Result<(), Error> {
         ftrace::duration!("wayland", "InputDispatcher::send_keyboard_leave");
         let serial = self.event_queue.next_serial();
@@ -145,7 +193,10 @@ impl InputDispatcher {
                 self.send_keyboard_leave(current_focus)?;
             }
             self.send_keyboard_enter(surface)?;
+            self.send_keyboard_modifiers(0)?;
             self.keyboard_focus = Some(surface);
+            self.pressed_keys.clear();
+            self.modifiers = 0;
         } else if self.keyboard_focus == Some(surface) {
             // Send key leave on
             self.send_keyboard_leave(surface)?;
@@ -263,11 +314,15 @@ impl InputDispatcher {
         Ok(())
     }
 
-    fn send_key_event(&self, key: &KeyEvent, state: wl_keyboard::KeyState) -> Result<(), Error> {
-        let hid_usage = (key.key.unwrap() as u32) & 0xffff;
+    fn send_key_event(
+        &self,
+        key: fidl_fuchsia_input::Key,
+        time: u32,
+        state: wl_keyboard::KeyState,
+    ) -> Result<(), Error> {
+        let hid_usage = (key as u32) & 0xffff;
         ftrace::duration!("wayland", "InputDispatcher::send_key_event", "hid_usage" => hid_usage);
         let serial = self.event_queue.next_serial();
-        let time = (key.timestamp.unwrap() / 1_000_000) as u32;
         self.keyboards.iter().try_for_each(|k| {
             self.event_queue
                 .post(k.id(), wl_keyboard::Event::Key { serial, time, key: hid_usage, state })
@@ -275,22 +330,34 @@ impl InputDispatcher {
     }
 
     pub fn handle_key_event(
-        &self,
+        &mut self,
         surface: ObjectRef<Surface>,
-        key: &KeyEvent,
+        event: &KeyEvent,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "InputDispatcher::handle_key_event");
         // TODO(fxb/79741): Enable or remove this assert.
         // assert!(self.has_focus(surface), "Received key event without focus!");
         if self.has_focus(surface) {
-            match key.type_.unwrap() {
+            let key = event.key.unwrap();
+            let time = (event.timestamp.unwrap() / 1_000_000) as u32;
+            match event.type_.unwrap() {
                 KeyEventType::Pressed => {
-                    self.send_key_event(key, wl_keyboard::KeyState::Pressed)?;
+                    self.pressed_keys.insert(key);
+                    self.send_key_event(key, time, wl_keyboard::KeyState::Pressed)?;
                 }
                 KeyEventType::Released => {
-                    self.send_key_event(key, wl_keyboard::KeyState::Released)?;
+                    self.pressed_keys.remove(&key);
+                    self.send_key_event(key, time, wl_keyboard::KeyState::Released)?;
+                }
+                KeyEventType::Cancel => {
+                    self.pressed_keys.remove(&key);
                 }
                 _ => (),
+            }
+            let modifiers = modifiers_from_pressed_keys(&self.pressed_keys);
+            if modifiers != self.modifiers {
+                self.send_keyboard_modifiers(modifiers)?;
+                self.modifiers = modifiers;
             }
         }
         Ok(())
