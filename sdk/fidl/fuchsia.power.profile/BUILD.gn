@@ -5,5 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.power.profile") {
+  sdk_category = "partner"
   sources = [ "profile.fidl" ]
 }
