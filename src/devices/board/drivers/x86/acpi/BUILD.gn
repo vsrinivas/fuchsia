@@ -32,6 +32,7 @@ source_set("acpi") {
   sources = [
     "acpi-impl.cc",
     "acpi.cc",
+    "device-builder.cc",
     "device.cc",
     "manager.cc",
     "resources.cc",
@@ -46,6 +47,7 @@ source_set("acpi") {
 test("acpi-test") {
   sources = [
     "acpi.cc",
+    "device-builder.cc",
     "device.cc",
     "manager-test.cc",
     "manager.cc",
