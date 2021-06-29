@@ -159,8 +159,6 @@ config("compiler") {
 
       # TODO(mcgrathr): This should be default in the compiler driver.
       ldflags += [ "-Wl,--pack-dyn-relocs=relr" ]
-
-      configs += [ "//build/config/fuchsia:compiler_relative_vtables" ]
     }
 
     if (current_cpu == "arm64") {

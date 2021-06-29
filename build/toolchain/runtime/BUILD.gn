@@ -6,17 +6,6 @@ import("toolchain_runtime_deps.gni")
 
 _toolchain_runtime_deps_cflags = []
 
-# Note that we must add this first because runtime.json adds this flag first
-# in the cflags lists. If we add this afterwards, then the comparison between
-# config_flags and match_flags in toolchain_runtime_deps.gni will fail because
-# this list will be out of order. We could technically just break down the
-# comparison to do a set comparison of individual list variables in the scope,
-# but this is much simpler.
-if (use_cxx_relative_vtables) {
-  _toolchain_runtime_deps_cflags +=
-      [ "-fexperimental-relative-c++-abi-vtables" ]
-}
-
 if (toolchain_variant.tags + [ "asan" ] - [ "asan" ] !=
     toolchain_variant.tags) {
   _toolchain_runtime_deps_cflags += [ "-fsanitize=address" ]

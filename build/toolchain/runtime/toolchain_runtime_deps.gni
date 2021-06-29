@@ -72,9 +72,6 @@ _clang_runtime = read_file(_clang_runtime_file, "json")
 # work-around this by patching _clang_runtime for Asan.
 
 _cflags = []
-if (use_cxx_relative_vtables) {
-  _cflags += [ "-fexperimental-relative-c++-abi-vtables" ]
-}
 
 # First, record a map of runtimes for Fuchsia for Asan without -static-libstdc++
 _asan_runtimes_map = []

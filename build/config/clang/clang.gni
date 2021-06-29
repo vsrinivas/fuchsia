@@ -16,7 +16,6 @@ declare_args() {
   clang_embed_bitcode = false
 
   # Controls if we enable relative-vtables for C++ targets.
-  # TODO(fxbug.dev/45314): Set this to true in a followup one-line CL.
   use_cxx_relative_vtables = true
 }
 
