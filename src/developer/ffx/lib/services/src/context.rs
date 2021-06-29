@@ -6,7 +6,7 @@ use {
     anyhow::{Context as _, Result},
     async_trait::async_trait,
     fidl::endpoints::Proxy,
-    fidl_fuchsia_diagnostics as diagnostics, selectors,
+    fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_diagnostics as diagnostics, selectors,
     std::rc::Rc,
 };
 
@@ -19,6 +19,13 @@ pub trait DaemonServiceProvider {
         target_identifier: Option<String>,
         service_selector: diagnostics::Selector,
     ) -> Result<fidl::Channel>;
+
+    /// Identical to open_target_proxy, but also returns a target info struct.
+    async fn open_target_proxy_with_info(
+        &self,
+        target_identifier: Option<String>,
+        service_selector: diagnostics::Selector,
+    ) -> Result<(bridge::Target, fidl::Channel)>;
 }
 
 /// A struct containing the current service's active context when invoking the
@@ -41,13 +48,25 @@ impl Context {
     where
         S: fidl::endpoints::DiscoverableService,
     {
-        let channel = self
+        let (_, proxy) = self.open_target_proxy_with_info::<S>(target_identifier, selector).await?;
+        Ok(proxy)
+    }
+
+    pub async fn open_target_proxy_with_info<S>(
+        &self,
+        target_identifier: Option<String>,
+        selector: &'static str,
+    ) -> Result<(bridge::Target, S::Proxy)>
+    where
+        S: fidl::endpoints::DiscoverableService,
+    {
+        let (info, channel) = self
             .inner
-            .open_target_proxy(target_identifier, selectors::parse_selector(selector)?)
+            .open_target_proxy_with_info(target_identifier, selectors::parse_selector(selector)?)
             .await?;
         let proxy = S::Proxy::from_channel(
             fidl::AsyncChannel::from_channel(channel).context("making async channel")?,
         );
-        Ok(proxy)
+        Ok((info, proxy))
     }
 }

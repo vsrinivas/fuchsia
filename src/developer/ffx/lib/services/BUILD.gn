@@ -13,6 +13,7 @@ rustc_library("lib") {
 
   deps = [
     "macros:lib",
+    "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/developer/ffx/core:lib",
     "//src/developer/ffx/lib/async-once:lib",

@@ -11,7 +11,7 @@ use {
     async_trait::async_trait,
     fidl::endpoints::{DiscoverableService, Proxy, Request, RequestStream, ServiceMarker},
     fidl::server::ServeInner,
-    fidl_fuchsia_diagnostics as diagnostics,
+    fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_diagnostics as diagnostics,
     futures::future::LocalBoxFuture,
     futures::prelude::*,
     std::rc::Rc,
@@ -96,9 +96,19 @@ impl DaemonServiceProvider for FakeDaemon {
 
     async fn open_target_proxy(
         &self,
-        _target_identifier: Option<String>,
+        target_identifier: Option<String>,
         service_selector: diagnostics::Selector,
     ) -> Result<fidl::Channel> {
+        let (_, res) =
+            self.open_target_proxy_with_info(target_identifier, service_selector).await?;
+        Ok(res)
+    }
+
+    async fn open_target_proxy_with_info(
+        &self,
+        _target_identifier: Option<String>,
+        service_selector: diagnostics::Selector,
+    ) -> Result<(bridge::Target, fidl::Channel)> {
         // TODO(awdavies): This is likely very fragile. Explore more edge cases
         // to make sure tests don't panic unnecessarily.
         let service_name: String =
@@ -110,7 +120,7 @@ impl DaemonServiceProvider for FakeDaemon {
                 },
                 _ => bail!("invalid selector"),
             };
-        self.open_service_proxy(service_name).await
+        Ok((bridge::Target::EMPTY, self.open_service_proxy(service_name).await?))
     }
 }
 

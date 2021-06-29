@@ -220,6 +220,7 @@ mod test {
     use crate::{DaemonServiceProvider, FidlService, FidlStreamHandler};
     use async_trait::async_trait;
     use fidl::endpoints::DiscoverableService;
+    use fidl_fuchsia_developer_bridge as bridge;
     use fidl_fuchsia_diagnostics as diagnostics;
     use fidl_fuchsia_ffx_test as ffx_test;
 
@@ -237,6 +238,14 @@ mod test {
             _target_identifier: Option<String>,
             _service_selector: diagnostics::Selector,
         ) -> Result<fidl::Channel> {
+            unimplemented!()
+        }
+
+        async fn open_target_proxy_with_info(
+            &self,
+            _target_identifier: Option<String>,
+            _service_selector: diagnostics::Selector,
+        ) -> Result<(bridge::Target, fidl::Channel)> {
             unimplemented!()
         }
     }

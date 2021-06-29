@@ -193,6 +193,16 @@ impl DaemonServiceProvider for Daemon {
         target_identifier: Option<String>,
         service_selector: fidl_fuchsia_diagnostics::Selector,
     ) -> Result<fidl::Channel> {
+        let (_, channel) =
+            self.open_target_proxy_with_info(target_identifier, service_selector).await?;
+        Ok(channel)
+    }
+
+    async fn open_target_proxy_with_info(
+        &self,
+        target_identifier: Option<String>,
+        service_selector: fidl_fuchsia_diagnostics::Selector,
+    ) -> Result<(bridge::Target, fidl::Channel)> {
         let target = self
             .get_target(target_identifier)
             .await
@@ -218,7 +228,7 @@ impl DaemonServiceProvider for Daemon {
             .context("FIDL connection")?
             .map_err(|e| anyhow!("{:#?}", e))
             .context("proxy connect")?;
-        Ok(client)
+        Ok((target.as_ref().into(), client))
     }
 }
 
