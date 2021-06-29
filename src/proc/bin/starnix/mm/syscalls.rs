@@ -86,7 +86,7 @@ pub fn sys_mmap(
         let zx_prot = mmap_prot_to_vm_opt(prot);
         if flags & MAP_PRIVATE != 0 {
             // TODO(tbodt): Use VMO_FLAG_PRIVATE to have the filesystem server do the clone for us.
-            let vmo = file.ops().get_vmo(&file, &ctx.task, zx_prot - zx::VmarFlags::PERM_WRITE)?;
+            let vmo = file.get_vmo(&ctx.task, zx_prot - zx::VmarFlags::PERM_WRITE)?;
             let mut clone_flags = zx::VmoChildOptions::COPY_ON_WRITE;
             if !zx_prot.contains(zx::VmarFlags::PERM_WRITE) {
                 clone_flags |= zx::VmoChildOptions::NO_WRITE;
@@ -94,7 +94,7 @@ pub fn sys_mmap(
             vmo.create_child(clone_flags, 0, vmo.get_size().map_err(impossible_error)?)
                 .map_err(impossible_error)?
         } else {
-            file.ops().get_vmo(&file, &ctx.task, zx_prot)?
+            file.get_vmo(&ctx.task, zx_prot)?
         }
     };
     let vmo_offset = if flags & MAP_ANONYMOUS != 0 { 0 } else { offset };

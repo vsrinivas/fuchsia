@@ -229,13 +229,76 @@ impl FileObject {
         })
     }
 
-    pub fn ops(&self) -> &dyn FileOps {
+    fn ops(&self) -> &dyn FileOps {
         &*self.ops
+    }
+
+    fn blocking_op<T, Op>(&self, task: &Task, op: Op, events: FdEvents) -> Result<T, Errno>
+    where
+        Op: Fn() -> Result<T, Errno>,
+    {
+        loop {
+            match op() {
+                Err(EAGAIN) if !self.has_file_flag(O_NONBLOCK) => {
+                    self.node.observers.wait_once(&task.waiter, events)?;
+                }
+                result => return result,
+            }
+        }
+    }
+
+    pub fn read(&self, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+        self.blocking_op(task, || self.ops().read(self, task, data), FdEvents::POLLIN)
+    }
+
+    pub fn read_at(&self, task: &Task, offset: usize, data: &[UserBuffer]) -> Result<usize, Errno> {
+        self.blocking_op(task, || self.ops().read_at(self, task, offset, data), FdEvents::POLLIN)
+    }
+
+    pub fn write(&self, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+        self.blocking_op(task, || self.ops().write(self, task, data), FdEvents::POLLOUT)
+    }
+
+    #[allow(dead_code)]
+    pub fn write_at(
+        &self,
+        task: &Task,
+        offset: usize,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        self.blocking_op(task, || self.ops().write_at(self, task, offset, data), FdEvents::POLLOUT)
+    }
+
+    pub fn seek(&self, task: &Task, offset: off_t, whence: SeekOrigin) -> Result<off_t, Errno> {
+        self.ops().seek(self, task, offset, whence)
+    }
+
+    pub fn get_vmo(&self, task: &Task, prot: zx::VmarFlags) -> Result<zx::Vmo, Errno> {
+        self.ops().get_vmo(self, task, prot)
+    }
+
+    pub fn ioctl(
+        &self,
+        task: &Task,
+        request: u32,
+        in_addr: UserAddress,
+        out_addr: UserAddress,
+    ) -> Result<SyscallResult, Errno> {
+        self.ops().ioctl(self, task, request, in_addr, out_addr)
+    }
+
+    pub fn fcntl(&self, task: &Task, cmd: u32, arg: u64) -> Result<SyscallResult, Errno> {
+        self.ops().fcntl(self, task, cmd, arg)
     }
 
     pub fn set_file_flags(&self, value: u32) {
         let mut flags = self.flags.lock();
         *flags = value;
+    }
+
+    pub fn has_file_flag(&self, flag: u32) -> bool {
+        let flags = self.flags.lock();
+        return *flags & flag != 0;
     }
 
     /// Get the async owner of this file.

@@ -23,6 +23,8 @@ fn round_up(value: usize, increment: usize) -> usize {
 }
 
 struct Pipe {
+    node: FsNodeHandle,
+
     /// The maximum number of bytes that can be stored inside this pipe.
     size: usize,
 
@@ -43,11 +45,12 @@ struct Pipe {
 }
 
 impl Pipe {
-    fn new() -> Arc<Mutex<Pipe>> {
+    fn new(node: FsNodeHandle) -> Arc<Mutex<Pipe>> {
         // Pipes default to a size of 16 pages.
         let default_pipe_size = (*PAGE_SIZE * 16) as usize;
 
         Arc::new(Mutex::new(Pipe {
+            node,
             size: default_pipe_size,
             used: 0,
             buffers: VecDeque::new(),
@@ -143,9 +146,9 @@ pub struct PipeWriteEndpoint {
 }
 
 pub fn new_pipe(kern: &Kernel) -> (FileHandle, FileHandle) {
-    let pipe = Pipe::new();
     let node = Anon::new_node(kern, AnonNodeType::Pipe);
     node.stat_mut().st_blksize = ATOMIC_IO_BYTES as i64;
+    let pipe = Pipe::new(node.clone());
     let read = FileObject::new(PipeReadEndpoint { pipe: pipe.clone() }, node.clone());
     let write = FileObject::new(PipeWriteEndpoint { pipe }, node);
     (read, write)
@@ -170,7 +173,7 @@ impl FileOps for PipeReadEndpoint {
         Err(EBADF)
     }
 
-    fn read(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut pipe = self.pipe.lock();
         if pipe.used == 0 {
             if pipe.has_writer {
@@ -220,6 +223,7 @@ impl FileOps for PipeReadEndpoint {
             dst_offset += chunk_size;
             src_offset += chunk_size;
         }
+        file.node.observers.notify(FdEvents::POLLOUT);
         Ok(actual)
     }
 
@@ -249,13 +253,14 @@ impl Drop for PipeWriteEndpoint {
     fn drop(&mut self) {
         let mut pipe = self.pipe.lock();
         pipe.has_writer = false;
+        pipe.node.observers.notify(FdEvents::POLLIN);
     }
 }
 
 impl FileOps for PipeWriteEndpoint {
     fd_impl_nonseekable!();
 
-    fn write(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut pipe = self.pipe.lock();
         if !pipe.has_reader {
             send_signal(&task, &UncheckedSignal::from(SIGPIPE))?;
@@ -272,6 +277,8 @@ impl FileOps for PipeWriteEndpoint {
         let mut bytes = vec![0u8; actual];
         task.mm.read_all(data, &mut bytes)?;
         pipe.push_back(bytes);
+
+        file.node.observers.notify(FdEvents::POLLIN);
         Ok(actual)
     }
 

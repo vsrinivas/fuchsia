@@ -6,7 +6,7 @@ use parking_lot::{RwLock, RwLockUpgradableReadGuard, RwLockWriteGuard};
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 
-use super::{FileHandle, FileObject, FileOps};
+use super::{FileHandle, FileObject, FileOps, ObserverList};
 use crate::devices::DeviceHandle;
 use crate::types::*;
 
@@ -15,6 +15,7 @@ pub type FsStr = [u8];
 
 pub struct FsNode {
     ops: OnceCell<Box<dyn FsNodeOps>>,
+    pub observers: ObserverList,
     // TODO: replace with superblock handle
     device: DeviceHandle,
     parent: Option<FsNodeHandle>,
@@ -59,8 +60,9 @@ impl FsNode {
         let ops: Box<dyn FsNodeOps> = Box::new(ops);
         let inode_number = device.allocate_inode_number();
         let device_id = device.get_device_id();
-        Arc::new(FsNode {
+        Arc::new(Self {
             ops: OnceCell::from(ops),
+            observers: ObserverList::default(),
             device,
             parent: None,
             name: FsString::new(),
@@ -126,6 +128,7 @@ impl FsNode {
         let mut state = RwLockUpgradableReadGuard::upgrade(state);
         let child = Arc::new(Self {
             ops: OnceCell::new(),
+            observers: ObserverList::default(),
             device: Arc::clone(&self.device),
             parent: Some(Arc::clone(self)),
             name: name.clone(),

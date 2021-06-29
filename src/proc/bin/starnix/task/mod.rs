@@ -583,11 +583,8 @@ impl Task {
         environ: &Vec<CString>,
     ) -> Result<ThreadStartInfo, Errno> {
         let executable_fd = self.fs.lookup_node(path.to_bytes())?.open()?;
-        let executable = executable_fd.ops().get_vmo(
-            &executable_fd,
-            self,
-            zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE,
-        )?;
+        let executable =
+            executable_fd.get_vmo(self, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
 
         // TODO: Implement #!interpreter [optional-arg]
 

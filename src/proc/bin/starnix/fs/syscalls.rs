@@ -21,7 +21,7 @@ pub fn sys_read(
     length: usize,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    Ok(file.ops().read(&file, &ctx.task, &[UserBuffer { address, length }])?.into())
+    Ok(file.read(&ctx.task, &[UserBuffer { address, length }])?.into())
 }
 
 pub fn sys_write(
@@ -31,7 +31,7 @@ pub fn sys_write(
     length: usize,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    Ok(file.ops().write(&file, &ctx.task, &[UserBuffer { address, length }])?.into())
+    Ok(file.write(&ctx.task, &[UserBuffer { address, length }])?.into())
 }
 
 pub fn sys_close(ctx: &SyscallContext<'_>, fd: FdNumber) -> Result<SyscallResult, Errno> {
@@ -46,7 +46,7 @@ pub fn sys_lseek(
     whence: u32,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    Ok(file.ops().seek(&file, &ctx.task, offset, SeekOrigin::from_raw(whence)?)?.into())
+    Ok(file.seek(&ctx.task, offset, SeekOrigin::from_raw(whence)?)?.into())
 }
 
 pub fn sys_fcntl(
@@ -92,7 +92,7 @@ pub fn sys_fcntl(
         }
         F_GETPIPE_SZ | F_SETPIPE_SZ => {
             let file = ctx.task.files.get(fd)?;
-            file.ops().fcntl(&file, &ctx.task, cmd, arg)
+            file.fcntl(&ctx.task, cmd, arg)
         }
         _ => {
             not_implemented!("fcntl command {} not implemented", cmd);
@@ -109,7 +109,7 @@ pub fn sys_pread64(
     offset: usize,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    let bytes = file.ops().read_at(&file, &ctx.task, offset, &[UserBuffer { address, length }])?;
+    let bytes = file.read_at(&ctx.task, offset, &[UserBuffer { address, length }])?;
     Ok(bytes.into())
 }
 
@@ -121,7 +121,7 @@ pub fn sys_readv(
 ) -> Result<SyscallResult, Errno> {
     let iovec = ctx.task.mm.read_iovec(iovec_addr, iovec_count)?;
     let file = ctx.task.files.get(fd)?;
-    Ok(file.ops().read(&file, &ctx.task, &iovec)?.into())
+    Ok(file.read(&ctx.task, &iovec)?.into())
 }
 
 pub fn sys_writev(
@@ -132,7 +132,7 @@ pub fn sys_writev(
 ) -> Result<SyscallResult, Errno> {
     let iovec = ctx.task.mm.read_iovec(iovec_addr, iovec_count)?;
     let file = ctx.task.files.get(fd)?;
-    Ok(file.ops().write(&file, &ctx.task, &iovec)?.into())
+    Ok(file.write(&ctx.task, &iovec)?.into())
 }
 
 pub fn sys_fstatfs(
@@ -353,5 +353,5 @@ pub fn sys_ioctl(
     out_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    file.ops().ioctl(&file, &ctx.task, request, in_addr, out_addr)
+    file.ioctl(&ctx.task, request, in_addr, out_addr)
 }

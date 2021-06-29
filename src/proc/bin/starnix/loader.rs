@@ -145,11 +145,8 @@ pub fn load_executable(
             interp = &interp[1..];
         }
         let interp_file = task.fs.lookup_node(interp.as_bytes())?.open()?;
-        let interp_vmo = interp_file.ops().get_vmo(
-            &interp_file,
-            task,
-            zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE,
-        )?;
+        let interp_vmo =
+            interp_file.get_vmo(task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
         Some(load_elf(&interp_vmo, &task.mm)?)
     } else {
         None

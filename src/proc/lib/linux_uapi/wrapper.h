@@ -24,6 +24,7 @@
 #include <linux/futex.h>
 #include <linux/limits.h>
 #include <linux/mman.h>
+#include <linux/poll.h>
 #include <linux/prctl.h>
 #include <linux/resource.h>
 #include <linux/sched.h>

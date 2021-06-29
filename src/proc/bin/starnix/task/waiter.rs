@@ -21,6 +21,14 @@ impl Waiter {
         Arc::new(Waiter { port: zx::Port::create().map_err(impossible_error).unwrap() })
     }
 
+    /// Wait until the waiter is woken up.
+    ///
+    /// If the wait is interrupted (seee interrupt), this function returns
+    /// EINTR.
+    pub fn wait(&self) -> Result<(), Errno> {
+        self.wait_util(zx::Time::INFINITE)
+    }
+
     /// Wait until the given deadline has passed or the waiter is woken up.
     ///
     /// If the wait is interrupted (seee interrupt), this function returns
@@ -41,7 +49,7 @@ impl Waiter {
         self.queue_user_packet(zx::sys::ZX_OK);
     }
 
-    /// Interrup the waiter.
+    /// Interrupt the waiter.
     ///
     /// Used to break the waiter out of its sleep, for example to deliver an
     /// async signal. The wait operation will return EINTR, and unwind until
