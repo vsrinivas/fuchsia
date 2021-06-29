@@ -565,9 +565,6 @@ impl Task {
 
         if flags & (CLONE_CHILD_CLEARTID as u64) != 0 {
             *child.task.clear_child_tid.lock() = user_child_tid;
-            let zero: pid_t = 0;
-            child.task.mm.write_object(user_child_tid, &zero)?;
-            // TODO: Issue a FUTEX_WAKE at this address.
         }
 
         if flags & (CLONE_CHILD_SETTID as u64) != 0 {
@@ -615,8 +612,28 @@ impl Task {
         Ok(load_executable(self, executable, argv, environ)?)
     }
 
+    /// If needed, clear the child tid for this task.
+    ///
+    /// Userspace can ask us to clear the child tid and issue a futex wake at
+    /// the child tid address when we tear down a task. For example, bionic
+    /// uses this mechanism to implement pthread_join. The thread that calls
+    /// pthread_join sleeps using FUTEX_WAIT on the child tid address. We wake
+    /// them up here to let them know the thread is done.
+    fn clear_child_tid_if_needed(&self) -> Result<(), Errno> {
+        let mut clear_child_tid = self.clear_child_tid.lock();
+        let user_tid = *clear_child_tid;
+        if !user_tid.is_null() {
+            let zero: pid_t = 0;
+            self.mm.write_object(user_tid, &zero)?;
+            self.mm.futex.wake(user_tid.addr(), usize::MAX);
+            *clear_child_tid = UserRef::default();
+        }
+        Ok(())
+    }
+
     /// Called by the Drop trait on TaskOwner.
     fn destroy(&self) {
+        let _ignored = self.clear_child_tid_if_needed();
         self.thread_group.remove(self);
         if let Some(parent) = self.get_task(self.parent) {
             parent.remove_child(self.id);
