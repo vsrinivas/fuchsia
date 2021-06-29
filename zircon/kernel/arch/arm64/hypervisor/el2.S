@@ -268,9 +268,10 @@ reg_xa  .req x11
 .macro entry_invalid_exception
 .align 7
     // If we got to here, the exception came from the host or EL2.
-    // We reset, as something unexpected happened.
-    mov x0, xzr
-    b psci_system_reset
+    //
+    // Hang, relying on the lockup detector or watchdog to kick in.
+    1:
+    b 1b
 .endm
 
 // We have two vector tables that we switch between, init and exec. The reason
