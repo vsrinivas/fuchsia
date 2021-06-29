@@ -528,55 +528,66 @@ pub fn handle_tx_event<F>(
     match mac::MacFrame::parse(&args.packet.data[..], false) {
         Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
             match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
-                Some(mac::MgmtBody::Authentication { auth_hdr, elements }) => match auth_hdr
-                    .auth_alg_num
-                {
-                    mac::AuthAlgorithmNumber::OPEN => match authenticator {
-                        Some(wlan_rsn::Authenticator {
-                            auth_cfg: wlan_rsn::auth::Config::ComputedPsk(_),
-                            ..
-                        })
-                        | None => {
-                            send_open_authentication_success(&CHANNEL, bssid, &phy)
-                                .expect("Error sending fake OPEN authentication frame.");
-                        }
-                        _ => panic!("Unexpected OPEN authentication frame for {:?}", authenticator),
-                    },
-                    mac::AuthAlgorithmNumber::SAE => {
-                        let mut authenticator = authenticator.as_mut().unwrap_or_else(|| {
-                            panic!("Unexpected SAE authentication frame with no Authenticator")
-                        });
-                        let mut update_sink = update_sink.as_mut().unwrap_or_else(|| {
-                            panic!("No UpdateSink provided with Authenticator.")
-                        });
-                        authenticator
-                            .on_sae_frame_rx(
+                Some(mac::MgmtBody::Authentication { auth_hdr, elements }) => {
+                    // Reset authenticator state just in case this is not the 1st connection attempt
+                    // SAE handshake uses multiple frames, so only reset on the first auth frame.
+                    // Note: If we want to test retransmission of auth frame 1, we should find
+                    //       a different way to do this.
+                    if auth_hdr.auth_txn_seq_num == 1 {
+                        authenticator.as_mut().map(|authenticator| authenticator.reset());
+                    }
+
+                    match auth_hdr.auth_alg_num {
+                        mac::AuthAlgorithmNumber::OPEN => match authenticator {
+                            Some(wlan_rsn::Authenticator {
+                                auth_cfg: wlan_rsn::auth::Config::ComputedPsk(_),
+                                ..
+                            })
+                            | None => {
+                                send_open_authentication_success(&CHANNEL, bssid, &phy)
+                                    .expect("Error sending fake OPEN authentication frame.");
+                            }
+                            _ => panic!(
+                                "Unexpected OPEN authentication frame for {:?}",
+                                authenticator
+                            ),
+                        },
+                        mac::AuthAlgorithmNumber::SAE => {
+                            let mut authenticator = authenticator.as_mut().unwrap_or_else(|| {
+                                panic!("Unexpected SAE authentication frame with no Authenticator")
+                            });
+                            let mut update_sink = update_sink.as_mut().unwrap_or_else(|| {
+                                panic!("No UpdateSink provided with Authenticator.")
+                            });
+                            authenticator
+                                .on_sae_frame_rx(
+                                    &mut update_sink,
+                                    fidl_mlme::SaeFrame {
+                                        peer_sta_address: bssid.0,
+                                        status_code: convert_to_ieee80211_status_code(
+                                            auth_hdr.status_code,
+                                        ),
+                                        seq_num: auth_hdr.auth_txn_seq_num,
+                                        sae_fields: elements.to_vec(),
+                                    },
+                                )
+                                .expect("processing SAE frame");
+                            process_auth_update(
+                                &mut authenticator,
                                 &mut update_sink,
-                                fidl_mlme::SaeFrame {
-                                    peer_sta_address: bssid.0,
-                                    status_code: convert_to_ieee80211_status_code(
-                                        auth_hdr.status_code,
-                                    ),
-                                    seq_num: auth_hdr.auth_txn_seq_num,
-                                    sae_fields: elements.to_vec(),
-                                },
+                                &CHANNEL,
+                                bssid,
+                                &phy,
+                                true,
+                                false,
                             )
-                            .expect("processing SAE frame");
-                        process_auth_update(
-                            &mut authenticator,
-                            &mut update_sink,
-                            &CHANNEL,
-                            bssid,
-                            &phy,
-                            true,
-                            false,
-                        )
-                        .expect("processing authenticator updates during authentication");
+                            .expect("processing authenticator updates during authentication");
+                        }
+                        auth_alg_num => {
+                            panic!("Unexpected authentication algorithm number: {:?}", auth_alg_num)
+                        }
                     }
-                    auth_alg_num => {
-                        panic!("Unexpected authentication algorithm number: {:?}", auth_alg_num)
-                    }
-                },
+                }
                 Some(mac::MgmtBody::AssociationReq { .. }) => {
                     send_association_response(&CHANNEL, bssid, mac::StatusCode::SUCCESS, &phy)
                         .expect("Error sending fake association response frame.");

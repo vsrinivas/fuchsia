@@ -33,6 +33,7 @@ use {
     },
     eapol,
     fidl_fuchsia_wlan_mlme::{EapolResultCode, SaeFrame},
+    log::warn,
     std::sync::{Arc, Mutex},
     wlan_common::ie::{
         rsn::{
@@ -291,6 +292,12 @@ impl Authenticator {
     pub fn reset(&mut self) {
         self.esssa.reset_replay_counter();
         self.esssa.reset_security_associations();
+
+        // Recreate auth_method to reset its state
+        match auth::Method::from_config(self.auth_cfg.clone()) {
+            Ok(auth_method) => self.auth_method = auth_method,
+            Err(e) => warn!("Unable to recreate auth::Method: {}", e),
+        }
     }
 
     /// `initiate(...)` must be called when the Authenticator should start establishing a
