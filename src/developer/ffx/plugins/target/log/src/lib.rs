@@ -579,7 +579,7 @@ mod test {
         setup_fake_daemon_proxy(move |req| match req {
             DaemonRequest::StreamDiagnostics { target: _, parameters, iterator, responder } => {
                 assert_eq!(parameters, expected_parameters);
-                setup_fake_archive_iterator(iterator, expected_responses.clone()).unwrap();
+                setup_fake_archive_iterator(iterator, expected_responses.clone(), false).unwrap();
                 responder.send(&mut Ok(())).context("error sending response").expect("should send")
             }
             _ => assert!(false),

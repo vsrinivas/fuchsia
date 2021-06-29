@@ -303,7 +303,8 @@ mod test {
                         responder,
                     } => {
                         assert_eq!(parameters, expected_parameters);
-                        setup_fake_archive_iterator(iterator, expected_responses.clone()).unwrap();
+                        setup_fake_archive_iterator(iterator, expected_responses.clone(), false)
+                            .unwrap();
                         responder
                             .send(&mut Ok(()))
                             .context("error sending response")

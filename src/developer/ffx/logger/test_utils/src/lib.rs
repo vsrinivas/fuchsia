@@ -37,6 +37,7 @@ impl FakeArchiveIteratorResponse {
 pub fn setup_fake_archive_iterator(
     server_end: ServerEnd<ArchiveIteratorMarker>,
     responses: Arc<Vec<FakeArchiveIteratorResponse>>,
+    legacy_format: bool,
 ) -> Result<()> {
     let mut stream = server_end.into_stream()?;
     fuchsia_async::Task::local(async move {
@@ -59,11 +60,24 @@ pub fn setup_fake_archive_iterator(
                                 responder
                                     .send(&mut Ok(values
                                         .into_iter()
-                                        .map(|s| ArchiveIteratorEntry {
-                                            diagnostics_data: Some(DiagnosticsData::Inline(
-                                                InlineData { data: s.clone(), truncated_chars: 0 },
-                                            )),
-                                            ..ArchiveIteratorEntry::EMPTY
+                                        .map(|s| {
+                                            if legacy_format {
+                                                ArchiveIteratorEntry {
+                                                    data: Some(s.clone()),
+                                                    truncated_chars: Some(0),
+                                                    ..ArchiveIteratorEntry::EMPTY
+                                                }
+                                            } else {
+                                                ArchiveIteratorEntry {
+                                                    diagnostics_data: Some(
+                                                        DiagnosticsData::Inline(InlineData {
+                                                            data: s.clone(),
+                                                            truncated_chars: 0,
+                                                        }),
+                                                    ),
+                                                    ..ArchiveIteratorEntry::EMPTY
+                                                }
+                                            }
                                         })
                                         .collect()))
                                     .unwrap()

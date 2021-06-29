@@ -16,7 +16,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::{
-        ArchiveIteratorMarker, BridgeStreamParameters, DiagnosticsData,
+        ArchiveIteratorMarker, BridgeStreamParameters, DiagnosticsData, InlineData,
         RemoteDiagnosticsBridgeMarker,
     },
     fidl_fuchsia_diagnostics::ClientSelectorConfiguration,
@@ -149,7 +149,19 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
                     r.ok()
                 })
                 .flatten()
-                .filter_map(|l| l.diagnostics_data)
+                .filter_map(|l| match l.diagnostics_data {
+                    Some(d) => Some(d),
+                    None => {
+                        if let Some(data) = l.data {
+                            Some(DiagnosticsData::Inline(InlineData {
+                                data: data,
+                                truncated_chars: l.truncated_chars.unwrap_or(0),
+                            }))
+                        } else {
+                            None
+                        }
+                    }
+                })
                 .filter_map(|diagnostics_data| match diagnostics_data {
                     DiagnosticsData::Inline(inline) => Some(inline),
                     _ => None,
@@ -558,6 +570,7 @@ mod test {
     fn setup_fake_archive_accessor(
         chan: fidl::Channel,
         responses: Arc<Vec<FakeArchiveIteratorResponse>>,
+        legacy_format: bool,
     ) -> Result<()> {
         let mut stream = RemoteDiagnosticsBridgeRequestStream::from_channel(
             fidl::AsyncChannel::from_channel(chan)?,
@@ -575,7 +588,8 @@ mod test {
                             parameters.stream_mode.unwrap(),
                             fidl_fuchsia_diagnostics::StreamMode::SnapshotThenSubscribe
                         );
-                        setup_fake_archive_iterator(iterator, responses.clone()).unwrap();
+                        setup_fake_archive_iterator(iterator, responses.clone(), legacy_format)
+                            .unwrap();
                         responder.send(&mut Ok(())).unwrap();
                     }
                     _ => panic!("called unexpected diagnostic bridge method"),
@@ -588,6 +602,7 @@ mod test {
 
     fn setup_fake_remote_control_service(
         responses: Arc<Vec<FakeArchiveIteratorResponse>>,
+        legacy_format: bool,
     ) -> RemoteControlProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
@@ -596,7 +611,8 @@ mod test {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     RemoteControlRequest::Connect { selector: _, service_chan, responder } => {
-                        setup_fake_archive_accessor(service_chan, responses.clone()).unwrap();
+                        setup_fake_archive_accessor(service_chan, responses.clone(), legacy_format)
+                            .unwrap();
                         responder
                             .send(&mut Ok(ServiceMatch {
                                 moniker: vec![],
@@ -673,12 +689,18 @@ mod test {
         .build()
     }
 
-    async fn make_default_target(expected_logs: Vec<FakeArchiveIteratorResponse>) -> Rc<Target> {
+    async fn make_default_target_with_format(
+        expected_logs: Vec<FakeArchiveIteratorResponse>,
+        legacy_format: bool,
+    ) -> Rc<Target> {
         let conn = RcsConnection::new_with_proxy(
-            setup_fake_remote_control_service(Arc::new(expected_logs)),
+            setup_fake_remote_control_service(Arc::new(expected_logs), legacy_format),
             &NodeId { id: 1234 },
         );
         Target::from_rcs_connection(conn).await.unwrap()
+    }
+    async fn make_default_target(expected_logs: Vec<FakeArchiveIteratorResponse>) -> Rc<Target> {
+        make_default_target_with_format(expected_logs, false).await
     }
 
     async fn run_logger_to_completion(logger: Logger) {
@@ -747,22 +769,24 @@ mod test {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_multiple_valid_logs_in_series() -> Result<()> {
+    async fn test_multiple_valid_logs_in_series_base_test(legacy_format: bool) -> Result<()> {
         let log1 = target_log(1, "log1");
         let log2 = target_log(2, "log2");
         let log3 = target_log(3, "log3");
         let log4 = target_log(4, "log4");
-        let target = make_default_target(vec![
-            FakeArchiveIteratorResponse::new_with_values(vec![
-                serde_json::to_string(&log1)?,
-                serde_json::to_string(&log2)?,
-            ]),
-            FakeArchiveIteratorResponse::new_with_values(vec![
-                serde_json::to_string(&log3)?,
-                serde_json::to_string(&log4)?,
-            ]),
-        ])
+        let target = make_default_target_with_format(
+            vec![
+                FakeArchiveIteratorResponse::new_with_values(vec![
+                    serde_json::to_string(&log1)?,
+                    serde_json::to_string(&log2)?,
+                ]),
+                FakeArchiveIteratorResponse::new_with_values(vec![
+                    serde_json::to_string(&log3)?,
+                    serde_json::to_string(&log4)?,
+                ]),
+            ],
+            legacy_format,
+        )
         .await;
         let t = Rc::downgrade(&target);
         ();
@@ -789,6 +813,16 @@ mod test {
         .await;
 
         Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_multiple_valid_logs_in_series() -> Result<()> {
+        test_multiple_valid_logs_in_series_base_test(false).await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_multiple_valid_logs_in_series_legacy_format() -> Result<()> {
+        test_multiple_valid_logs_in_series_base_test(true).await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

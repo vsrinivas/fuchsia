@@ -30,7 +30,9 @@ table BridgeStreamParameters {
 };
 
 resource table ArchiveIteratorEntry {
-    1: DiagnosticsData diagnostics_data;
+    1: string:logger.MAX_DATAGRAM_LEN_BYTES data;
+    2: uint32 truncated_chars;
+    3: DiagnosticsData diagnostics_data;
 };
 
 struct InlineData {
