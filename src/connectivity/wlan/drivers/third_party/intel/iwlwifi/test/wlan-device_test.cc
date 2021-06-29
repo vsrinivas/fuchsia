@@ -482,6 +482,12 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
     return wlanmac_ops.configure_assoc(&mvmvif_sta_, option, config);
   }
 
+  zx_status_t ClearAssoc() {
+    uint32_t option = 0;
+    uint8_t peer_addr[ETH_ALEN];  // Not used since all info were saved in mvmvif_sta_ already.
+    return wlanmac_ops.clear_assoc(&mvmvif_sta_, option, peer_addr, sizeof(peer_addr));
+  }
+
   // The following functions are for mocking up the firmware commands.
   //
   // The mock function will return the special error ZX_ERR_INTERNAL when the expectation
@@ -691,6 +697,8 @@ TEST_F(MacInterfaceTest, AssociateToOpenNetwork) {
   ASSERT_EQ(IWL_STA_AUTHORIZED, mvm_sta->sta_state);
   ASSERT_EQ(true, mvmvif_sta_.bss_conf.assoc);
   ASSERT_EQ(kListenInterval, mvmvif_sta_.bss_conf.listen_interval);
+
+  ASSERT_EQ(ZX_OK, ClearAssoc());
 }
 
 TEST_F(MacInterfaceTest, AssociateToOpenNetworkNullStation) {
@@ -702,6 +710,9 @@ TEST_F(MacInterfaceTest, AssociateToOpenNetworkNullStation) {
   mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id] = nullptr;
 
   ASSERT_EQ(ZX_ERR_BAD_STATE, ConfigureAssoc(&kAssocCtx));
+
+  // Expect error while disassociating a non-existing association.
+  ASSERT_EQ(ZX_ERR_BAD_STATE, ClearAssoc());
 
   // We have to recover the pointer so that the MAC stop function can recycle the memory.
   mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id] = org;

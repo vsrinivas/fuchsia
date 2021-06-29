@@ -918,13 +918,9 @@ static inline void iwl_trans_reclaim(struct iwl_trans* trans, int queue, int ssn
   trans->ops->reclaim(trans, queue, ssn);
 }
 
-#if 0   // NEEDS_PORTING
-// TODO(49531): supports txq disable.
-static inline void iwl_trans_txq_disable(struct iwl_trans* trans, int queue,
-        bool configure_scd) {
-    trans->ops->txq_disable(trans, queue, configure_scd);
+static inline void iwl_trans_txq_disable(struct iwl_trans* trans, int queue, bool configure_scd) {
+  trans->ops->txq_disable(trans, queue, configure_scd);
 }
-#endif  // NEEDS_PORTING
 
 static inline bool iwl_trans_txq_enable_cfg(struct iwl_trans* trans, int queue, uint16_t ssn,
                                             const struct iwl_trans_txq_scd_cfg* cfg,
@@ -947,16 +943,17 @@ iwl_trans_get_rxq_dma_data(struct iwl_trans* trans, int queue,
 
     return trans->ops->rxq_dma_data(trans, queue, data);
 }
+#endif  // NEEDS_PORTING
 
-static inline void
-iwl_trans_txq_free(struct iwl_trans* trans, int queue) {
-    if (WARN_ON_ONCE(!trans->ops->txq_free)) {
-        return;
-    }
+static inline void iwl_trans_txq_free(struct iwl_trans* trans, int queue) {
+  if (WARN_ON_ONCE(!trans->ops->txq_free)) {
+    return;
+  }
 
-    trans->ops->txq_free(trans, queue);
+  trans->ops->txq_free(trans, queue);
 }
 
+#if 0   // NEEDS_PORTING
 static inline int
 iwl_trans_txq_alloc(struct iwl_trans* trans,
                     __le16 flags, uint8_t sta_id, uint8_t tid,

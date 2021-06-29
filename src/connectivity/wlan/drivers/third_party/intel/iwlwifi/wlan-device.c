@@ -233,12 +233,20 @@ void mac_stop(void* ctx) {
   struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
   if (!mvm_sta) {
     IWL_ERR(mvmvif, "sta info is not set before stop.\n");
-
   } else {
     ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_NOTEXIST);
     if (ret != ZX_OK) {
       IWL_ERR(mvmvif, "Cannot set station state to NOT EXIST: %s\n", zx_status_get_string(ret));
     }
+  }
+
+  if (mvmvif->phy_ctxt) {
+    ret = iwl_mvm_remove_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id);
+    if (ret != ZX_OK) {
+      IWL_WARN(mvmvif, "Cannot remove chanctx: %s\n", zx_status_get_string(ret));
+    }
+  } else {
+    IWL_WARN(mvmvif, "PHY context is NULL in %s()\n", __func__);
   }
 
   // Clean up other sta info.
@@ -338,7 +346,8 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss_config
     return ZX_ERR_NO_RESOURCES;
   }
 
-  // mvm_sta ownership is transfered to mvm->fw_id_to_mac_id[] in iwl_mvm_add_sta().
+  // mvm_sta ownership will be transfered to mvm->fw_id_to_mac_id[] in iwl_mvm_add_sta(). It will be
+  // freed at mac_clear_assoc().
   ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NOTEXIST, IWL_STA_NONE);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot set MVM STA state: %s\n", zx_status_get_string(ret));
@@ -379,6 +388,7 @@ exit:
   if (ret != ZX_OK) {
     free_ap_mvm_sta(mvm_sta);
     mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id] = NULL;
+    mvmvif->ap_sta_id = IWL_MVM_INVALID_STA;
   }
   return ret;
 }
@@ -407,6 +417,8 @@ zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* ke
 zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ctx_t* assoc_ctx) {
   struct iwl_mvm_vif* mvmvif = ctx;
   zx_status_t ret = ZX_OK;
+
+  IWL_INFO(ctx, "Associating ...\n");
 
   struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
   if (!mvm_sta) {
@@ -446,6 +458,10 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
     goto unlock;
   }
 
+  // TODO(43218): support multiple interfaces. Need to port iwl_mvm_update_quotas() in mvm/quota.c.
+  // TODO(56093): support low latency in struct iwl_time_quota_data.
+  ZX_DEBUG_ASSERT(!iwl_mvm_has_quota_low_latency(mvmvif->mvm));
+
 unlock:
   mtx_unlock(&mvmvif->mvm->mutex);
 out:
@@ -454,8 +470,79 @@ out:
 
 zx_status_t mac_clear_assoc(void* ctx, uint32_t options, const uint8_t* peer_addr,
                             size_t peer_addr_size) {
-  IWL_ERR(ctx, "%s() needs porting ... see TODO(fxbug.dev/36742)\n", __func__);
-  return ZX_ERR_NOT_SUPPORTED;
+  IWL_INFO(ctx, "Disassociating ...\n");
+
+  struct iwl_mvm_vif* mvmvif = ctx;
+  zx_status_t ret = ZX_OK;
+
+  // iwl_mvm_rm_sta() will reset the ap_sta_id value so that we have to keep it.
+  uint8_t ap_sta_id = mvmvif->ap_sta_id;
+
+  struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[ap_sta_id];
+  if (!mvm_sta) {
+    IWL_ERR(mvmvif, "sta info is not set before disassociation.\n");
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Mark the station is no longer associated. This must be set before iwl_mvm_mac_sta_state().
+  mvmvif->bss_conf.assoc = false;
+
+  // Below are to simulate the behavior of iwl_mvm_bss_info_changed_station().
+  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_AUTHORIZED, IWL_STA_ASSOC);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot set state from AUTHORIZED to ASSOC: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
+  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_ASSOC, IWL_STA_AUTH);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot set state from ASSOC to AUTH: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
+  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_AUTH, IWL_STA_NONE);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot set state from AUTH to NONE: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
+
+  // Tell firmware to flush all packets in the Tx queue. This must be done before we remove the STA
+  // (in the NONE->NOTEXIST transition).
+  // TODO(79799): understand why we need this.
+  mtx_lock(&mvmvif->mvm->mutex);
+  iwl_mvm_flush_sta(mvmvif->mvm, mvm_sta, false, 0);
+
+  // Update the MAC context in the firmware.
+  mvmvif->bss_conf.assoc = false;
+  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
+  mtx_unlock(&mvmvif->mvm->mutex);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot update MAC context in the firmware: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
+
+  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_NOTEXIST);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot set state from NONE to NOTEXIST: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
+
+  // Remove the PHY context.
+  ret = iwl_mvm_remove_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Cannot remove channel context: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
+
+  ret = iwl_mvm_unassign_vif_chanctx(mvmvif);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot unassign VIF channel context: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
+
+out:
+  free_ap_mvm_sta(mvm_sta);
+  mvmvif->mvm->fw_id_to_mac_id[ap_sta_id] = NULL;
+
+  return ret;
 }
 
 zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config) {

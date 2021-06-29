@@ -1388,37 +1388,39 @@ void iwl_trans_pcie_txq_set_shared_mode(struct iwl_trans* trans, uint32_t txq_id
 }
 
 void iwl_trans_pcie_txq_disable(struct iwl_trans* trans, int txq_id, bool configure_scd) {
-#if 0   // NEEDS_PORTING
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    uint32_t stts_addr = trans_pcie->scd_base_addr + SCD_TX_STTS_QUEUE_OFFSET(txq_id);
-    static const uint32_t zero_val[4] = {};
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  uint32_t stts_addr = trans_pcie->scd_base_addr + SCD_TX_STTS_QUEUE_OFFSET(txq_id);
+  static const uint32_t zero_val[4] = {};
 
-    trans_pcie->txq[txq_id]->frozen_expiry_remainder = 0;
-    trans_pcie->txq[txq_id]->frozen = false;
+  trans_pcie->txq[txq_id]->frozen_expiry_remainder = 0;
+  trans_pcie->txq[txq_id]->frozen = false;
 
-    /*
-     * Upon HW Rfkill - we stop the device, and then stop the queues
-     * in the op_mode. Just for the sake of the simplicity of the op_mode,
-     * allow the op_mode to call txq_disable after it already called
-     * stop_device.
-     */
-    if (!test_and_clear_bit(txq_id, trans_pcie->queue_used)) {
-        WARN_ONCE(test_bit(STATUS_DEVICE_ENABLED, &trans->status), "queue %d not used", txq_id);
-        return;
+  /*
+   * Upon HW Rfkill - we stop the device, and then stop the queues
+   * in the op_mode. Just for the sake of the simplicity of the op_mode,
+   * allow the op_mode to call txq_disable after it already called
+   * stop_device.
+   */
+  if (!test_and_clear_bit(txq_id, trans_pcie->queue_used)) {
+    if (test_bit(STATUS_DEVICE_ENABLED, &trans->status)) {
+      IWL_ERR(trans, "queue %d not used", txq_id);
     }
+    return;
+  }
 
-    if (configure_scd) {
-        iwl_scd_txq_set_inactive(trans, txq_id);
+  if (configure_scd) {
+    iwl_scd_txq_set_inactive(trans, txq_id);
 
-        iwl_trans_write_mem(trans, stts_addr, (void*)zero_val, ARRAY_SIZE(zero_val));
+    zx_status_t ret = iwl_trans_write_mem(trans, stts_addr, (void*)zero_val, ARRAY_SIZE(zero_val));
+    if (ret != ZX_OK) {
+      IWL_ERR(trans, "cannot write memory while disable TxQ: %s\n", zx_status_get_string(ret));
     }
+  }
 
-    iwl_pcie_txq_unmap(trans, txq_id);
-    trans_pcie->txq[txq_id]->ampdu = false;
+  iwl_pcie_txq_unmap(trans, txq_id);
+  trans_pcie->txq[txq_id]->ampdu = false;
 
-    IWL_DEBUG_TX_QUEUES(trans, "Deactivate queue %d\n", txq_id);
-#endif  // NEEDS_PORTING
-  IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+  IWL_DEBUG_TX_QUEUES(trans, "Deactivate queue %d\n", txq_id);
 }
 
 /*************** HOST COMMAND QUEUE FUNCTIONS   *****/

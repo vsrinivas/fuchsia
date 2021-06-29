@@ -340,22 +340,19 @@ static int iwl_mvm_invalidate_sta_queue(struct iwl_mvm* mvm, int queue,
 
 static zx_status_t iwl_mvm_disable_txq(struct iwl_mvm* mvm, struct iwl_mvm_sta* sta, int queue,
                                        uint8_t tid, uint8_t flags) {
-  return ZX_ERR_NOT_SUPPORTED;
-#if 0   // NEEDS_PORTING
   struct iwl_scd_txq_cfg_cmd cmd = {
       .scd_queue = queue,
       .action = SCD_CFG_DISABLE_QUEUE,
   };
-  int ret;
 
   if (iwl_mvm_has_new_tx_api(mvm)) {
     iwl_trans_txq_free(mvm->trans, queue);
 
-    return 0;
+    return ZX_OK;
   }
 
   if (WARN_ON(mvm->queue_info[queue].tid_bitmap == 0)) {
-    return 0;
+    return ZX_OK;
   }
 
   mvm->queue_info[queue].tid_bitmap &= ~BIT(tid);
@@ -370,7 +367,7 @@ static zx_status_t iwl_mvm_disable_txq(struct iwl_mvm* mvm, struct iwl_mvm_sta* 
 
   /* If the queue is still enabled - nothing left to do in this func */
   if (cmd.action == SCD_CFG_ENABLE_QUEUE) {
-    return 0;
+    return ZX_OK;
   }
 
   cmd.sta_id = mvm->queue_info[queue].ra_sta_id;
@@ -384,7 +381,7 @@ static zx_status_t iwl_mvm_disable_txq(struct iwl_mvm* mvm, struct iwl_mvm_sta* 
   mvm->queue_info[queue].tid_bitmap = 0;
 
   if (sta) {
-    struct iwl_mvm_txq* mvmtxq = iwl_mvm_txq_from_tid(sta, tid);
+    struct iwl_mvm_txq* mvmtxq = sta->txq[tid];
 
     mvmtxq->txq_id = IWL_MVM_INVALID_QUEUE;
   }
@@ -393,13 +390,13 @@ static zx_status_t iwl_mvm_disable_txq(struct iwl_mvm* mvm, struct iwl_mvm_sta* 
   mvm->queue_info[queue].reserved = false;
 
   iwl_trans_txq_disable(mvm->trans, queue, false);
-  ret = iwl_mvm_send_cmd_pdu(mvm, SCD_QUEUE_CFG, flags, sizeof(struct iwl_scd_txq_cfg_cmd), &cmd);
+  zx_status_t ret =
+      iwl_mvm_send_cmd_pdu(mvm, SCD_QUEUE_CFG, flags, sizeof(struct iwl_scd_txq_cfg_cmd), &cmd);
 
-  if (ret) {
-    IWL_ERR(mvm, "Failed to disable queue %d (ret=%d)\n", queue, ret);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvm, "Failed to disable queue %d (ret=%s)\n", queue, zx_status_get_string(ret));
   }
   return ret;
-#endif  // NEEDS_PORTING
 }
 
 #if 0   // NEEDS_PORTING
@@ -1352,10 +1349,9 @@ zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm
   return ZX_OK;
 
 out_err:
-#if 0   // NEEDS_PORTING
-  // TODO(49531): implement iwl_mvm_disable_txq()
-  iwl_mvm_disable_txq(mvm, sta, queue, tid, 0);
-#endif  // NEEDS_PORTING
+  if (ZX_OK == iwl_mvm_disable_txq(mvm, mvmsta, queue, tid, 0)) {
+    IWL_ERR(mvmsta, "cannot disable txq\n");
+  }
 
   return ret;
 }
@@ -1700,7 +1696,7 @@ err:
 
 zx_status_t iwl_mvm_drain_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool drain) {
   struct iwl_mvm_add_sta_cmd cmd = {};
-  int ret;
+  zx_status_t ret;
   uint32_t status;
 
   iwl_assert_lock_held(&mvm->mutex);
@@ -1713,7 +1709,7 @@ zx_status_t iwl_mvm_drain_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, b
 
   status = ADD_STA_SUCCESS;
   ret = iwl_mvm_send_cmd_pdu_status(mvm, ADD_STA, iwl_mvm_add_sta_cmd_size(mvm), &cmd, &status);
-  if (ret) {
+  if (ret != ZX_OK) {
     return ret;
   }
 

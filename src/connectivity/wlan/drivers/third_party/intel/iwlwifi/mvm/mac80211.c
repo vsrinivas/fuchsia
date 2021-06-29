@@ -3704,18 +3704,38 @@ zx_status_t iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif, const wlan_ch
   return ret;
 }
 
-#if 0  // NEEDS_PORTING
-static void __iwl_mvm_unassign_vif_chanctx(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                           struct ieee80211_chanctx_conf* ctx,
-                                           bool switching_chanctx) {
-    struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
+static zx_status_t iwl_mvm_update_quotas_single_iface(struct iwl_mvm_vif* mvmvif) {
+  struct iwl_time_quota_cmd cmd = {};
+  struct iwl_time_quota_data_v1* quotas = (struct iwl_time_quota_data_v1*)cmd.quotas;
+  quotas[0].id_and_color = quotas[1].id_and_color = quotas[2].id_and_color =
+      quotas[3].id_and_color = FW_CTXT_INVALID;
+  zx_status_t ret = iwl_mvm_send_cmd_pdu(mvmvif->mvm, TIME_QUOTA_CMD, 0,
+                                         iwl_mvm_quota_cmd_size(mvmvif->mvm), &cmd);
+  if (ret == ZX_OK) {
+    mvmvif->mvm->last_quota_cmd = cmd;
+  } else {
+    IWL_ERR(mvmvif, "cannot set time quota: %s\n", zx_status_get_string(ret));
+  }
+
+  return ret;
+}
+
+static zx_status_t __iwl_mvm_unassign_vif_chanctx(struct iwl_mvm_vif* mvmvif,
+                                                  bool switching_chanctx) {
+#if 0   // NEEDS_PORTING
     struct ieee80211_vif* disabled_vif = NULL;
+#endif  // NEEDS_PORTING
 
-    iwl_assert_lock_held(&mvm->mutex);
+  iwl_assert_lock_held(&mvmvif->mvm->mutex);
 
-    iwl_mvm_remove_time_event(mvm, mvmvif, &mvmvif->time_event_data);
+  zx_status_t ret = iwl_mvm_remove_time_event(mvmvif, &mvmvif->time_event_data);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot remove time event: %s\n", zx_status_get_string(ret));
+    return ret;
+  }
 
-    switch (vif->type) {
+  switch (mvmvif->mac_role) {
+#if 0   // NEEDS_PORTING
     case NL80211_IFTYPE_ADHOC:
         goto out;
     case NL80211_IFTYPE_MONITOR:
@@ -3737,34 +3757,64 @@ static void __iwl_mvm_unassign_vif_chanctx(struct iwl_mvm* mvm, struct ieee80211
 
         mvmvif->ap_ibss_active = false;
         break;
-    case NL80211_IFTYPE_STATION:
-        if (!switching_chanctx) { break; }
+#endif  // NEEDS_PORTING
+    case WLAN_INFO_MAC_ROLE_CLIENT:
+      if (!switching_chanctx) {
+        break;
+      }
 
+#if 0   // NEEDS_PORTING
         disabled_vif = vif;
+#endif  // NEEDS_PORTING
 
-        iwl_mvm_mac_ctxt_changed(mvm, vif, true, NULL);
-        break;
+      ret = iwl_mvm_mac_ctxt_changed(mvmvif, true, NULL);
+      if (ret != ZX_OK) {
+        IWL_ERR(mvmvif, "Cannot update MAC context while unassigning: %s\n",
+                zx_status_get_string(ret));
+      }
+      break;
     default:
-        break;
-    }
+      break;
+  }
 
-    iwl_mvm_update_quotas(mvm, false, disabled_vif);
-    iwl_mvm_binding_remove_vif(mvm, vif);
+#if 1  // The current code only supports single interface. See TODO below for more details.
+  ret = iwl_mvm_update_quotas_single_iface(mvmvif);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot update the quotas of the interface: %s\n", zx_status_get_string(ret));
+    return ret;
+  }
+#else   // NEEDS_PORTING
+  // TODO(43218): support multiple interfaces. Port iwl_mvm_update_quotas() in mvm/quota.c.
+  iwl_mvm_update_quotas(mvm, false, disabled_vif);
+#endif  // NEEDS_PORTING
 
+  ret = iwl_mvm_binding_remove_vif(mvmvif);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot remove VIF binding: %s\n", zx_status_get_string(ret));
+  }
+
+#if 0   // NEEDS_PORTING
 out:
-    mvmvif->phy_ctxt = NULL;
-    iwl_mvm_power_update_mac(mvm);
+#endif  // NEEDS_PORTING
+
+  mvmvif->phy_ctxt = NULL;
+  ret = iwl_mvm_power_update_mac(mvmvif->mvm);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot update the power setting of MAC: %s\n", zx_status_get_string(ret));
+  }
+
+  return ZX_OK;
 }
 
-static void iwl_mvm_unassign_vif_chanctx(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
-                                         struct ieee80211_chanctx_conf* ctx) {
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
+zx_status_t iwl_mvm_unassign_vif_chanctx(struct iwl_mvm_vif* mvmvif) {
+  mtx_lock(&mvmvif->mvm->mutex);
+  zx_status_t ret = __iwl_mvm_unassign_vif_chanctx(mvmvif, false);
+  mtx_unlock(&mvmvif->mvm->mutex);
 
-    mutex_lock(&mvm->mutex);
-    __iwl_mvm_unassign_vif_chanctx(mvm, vif, ctx, false);
-    mutex_unlock(&mvm->mutex);
+  return ret;
 }
 
+#if 0  // NEEDS_PORTING
 static int iwl_mvm_switch_vif_chanctx_swap(struct iwl_mvm* mvm,
                                            struct ieee80211_vif_chanctx_switch* vifs) {
     int ret;

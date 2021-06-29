@@ -2173,6 +2173,7 @@ zx_status_t iwl_mvm_remove_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id);
 zx_status_t iwl_mvm_change_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id,
                                    const wlan_channel_t* chandef);
 zx_status_t iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif, const wlan_channel_t* chandef);
+zx_status_t iwl_mvm_unassign_vif_chanctx(struct iwl_mvm_vif* mvmvif);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //

@@ -33,6 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+#include <fuchsia/hardware/pci/c/banjo.h>
+#include <lib/async/time.h>
 #include <lib/device-protocol/pci.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -2178,65 +2180,73 @@ static int iwl_trans_pcie_rxq_dma_data(struct iwl_trans* trans, int queue,
 
     return 0;
 }
+#endif  // NEEDS_PORTING
 
-static int iwl_trans_pcie_wait_txq_empty(struct iwl_trans* trans, int txq_idx) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    struct iwl_txq* txq;
-    unsigned long now = jiffies;
-    uint8_t wr_ptr;
+static zx_status_t iwl_trans_pcie_wait_txq_empty(struct iwl_trans* trans, int txq_idx) {
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_txq* txq;
+  zx_time_t now = NOW_TIME(trans->dispatcher);
+  uint8_t wr_ptr;
 
-    /* Make sure the NIC is still alive in the bus */
-    if (test_bit(STATUS_TRANS_DEAD, &trans->status)) { return -ENODEV; }
+  /* Make sure the NIC is still alive in the bus */
+  if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
+    return ZX_ERR_NO_RESOURCES;
+  }
 
-    if (!test_bit(txq_idx, trans_pcie->queue_used)) { return -EINVAL; }
+  if (!test_bit(txq_idx, trans_pcie->queue_used)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    IWL_DEBUG_TX_QUEUES(trans, "Emptying queue %d...\n", txq_idx);
-    txq = trans_pcie->txq[txq_idx];
-    wr_ptr = READ_ONCE(txq->write_ptr);
+  IWL_DEBUG_TX_QUEUES(trans, "Emptying queue %d...\n", txq_idx);
+  txq = trans_pcie->txq[txq_idx];
+  wr_ptr = READ_ONCE(txq->write_ptr);
 
-    while (txq->read_ptr != READ_ONCE(txq->write_ptr) &&
-           !time_after(jiffies, now + msecs_to_jiffies(IWL_FLUSH_WAIT_MS))) {
-        uint8_t write_ptr = READ_ONCE(txq->write_ptr);
+  while (txq->read_ptr != READ_ONCE(txq->write_ptr) &&
+         zx_time_sub_time(NOW_TIME(trans->dispatcher), now) < ZX_MSEC(IWL_FLUSH_WAIT_MS)) {
+    uint8_t write_ptr = READ_ONCE(txq->write_ptr);
 
-        if (WARN_ONCE(wr_ptr != write_ptr, "WR pointer moved while flushing %d -> %d\n", wr_ptr,
-                      write_ptr)) {
-            return -ETIMEDOUT;
-        }
-        usleep_range(1000, 2000);
+    if (wr_ptr != write_ptr) {
+      IWL_WARN(trans, "WR pointer moved while flushing %d -> %d\n", wr_ptr, write_ptr);
+      return ZX_ERR_TIMED_OUT;
     }
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+  }
 
-    if (txq->read_ptr != txq->write_ptr) {
-        IWL_ERR(trans, "fail to flush all tx fifo queues Q %d\n", txq_idx);
-        iwl_trans_pcie_log_scd_error(trans, txq);
-        return -ETIMEDOUT;
-    }
+  if (txq->read_ptr != txq->write_ptr) {
+    IWL_ERR(trans, "fail to flush all tx fifo queues Q %d\n", txq_idx);
+    iwl_trans_pcie_log_scd_error(trans, txq);
+    return ZX_ERR_TIMED_OUT;
+  }
 
-    IWL_DEBUG_TX_QUEUES(trans, "Queue %d is now empty.\n", txq_idx);
+  IWL_DEBUG_TX_QUEUES(trans, "Queue %d is now empty.\n", txq_idx);
 
-    return 0;
+  return ZX_OK;
 }
-#endif  // NEEDS_PORTING
 
-static int iwl_trans_pcie_wait_txqs_empty(struct iwl_trans* trans, uint32_t txq_bm) {
-#if 0   // NEEDS_PORTING
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    int cnt;
-    int ret = 0;
+static zx_status_t iwl_trans_pcie_wait_txqs_empty(struct iwl_trans* trans, uint32_t txq_bm) {
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  int cnt;
+  zx_status_t ret = ZX_OK;
 
-    /* waiting for all the tx frames complete might take a while */
-    for (cnt = 0; cnt < trans->cfg->base_params->num_of_queues; cnt++) {
-        if (cnt == trans_pcie->cmd_queue) { continue; }
-        if (!test_bit(cnt, trans_pcie->queue_used)) { continue; }
-        if (!(BIT(cnt) & txq_bm)) { continue; }
-
-        ret = iwl_trans_pcie_wait_txq_empty(trans, cnt);
-        if (ret) { break; }
+  /* waiting for all the tx frames complete might take a while */
+  for (cnt = 0; cnt < trans->cfg->base_params->num_of_queues; cnt++) {
+    if (cnt == trans_pcie->cmd_queue) {
+      continue;
+    }
+    if (!test_bit(cnt, trans_pcie->queue_used)) {
+      continue;
+    }
+    if (!(BIT(cnt) & txq_bm)) {
+      continue;
     }
 
-    return ret;
-#endif  // NEEDS_PORTING
-  IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
-  return -1;
+    ret = iwl_trans_pcie_wait_txq_empty(trans, cnt);
+    if (ret != ZX_OK) {
+      break;
+    }
+  }
+
+  return ret;
 }
 
 static void iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask,
