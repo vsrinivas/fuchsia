@@ -18,7 +18,7 @@ rustc_library("rust") {
   deps = [
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//sdk/lib/diagnostics/syslog:client_includes",
+    "//sdk/lib/syslog:client_includes",
     "//src/lib/diagnostics/log/encoding/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",

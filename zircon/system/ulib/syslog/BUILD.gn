@@ -25,8 +25,8 @@ zx_library("syslog") {
   deps = [
     ":helpers",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
-    "//sdk/lib/diagnostics/syslog:client_includes",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog:client_includes",
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -55,8 +55,8 @@ zx_library("syslog-compat") {
   deps = [
     ":helpers",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
-    "//sdk/lib/diagnostics/syslog:client_includes",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog:client_includes",
     "//sdk/lib/syslog/cpp:backend_fuchsia_compat",
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//zircon/public/lib/fbl",
@@ -86,7 +86,7 @@ zx_library("syslog-static") {
   ]
   deps = [
     ":helpers",
-    "//sdk/lib/diagnostics/syslog:client_includes",
+    "//sdk/lib/syslog:client_includes",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]

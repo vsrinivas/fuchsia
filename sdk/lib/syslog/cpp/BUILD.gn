@@ -150,7 +150,7 @@ sdk_static_library("backend_fuchsia_lib_rust") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 
-  data_deps = [ "//sdk/lib/diagnostics/syslog:client_includes" ]
+  data_deps = [ "//sdk/lib/syslog:client_includes" ]
 
   public_configs = [ "//sdk/config" ]
 
@@ -187,7 +187,7 @@ sdk_source_set("backend_fuchsia_lib") {
     "//zircon/system/ulib/syslog",
   ]
 
-  data_deps = [ "//sdk/lib/diagnostics/syslog:client_includes" ]
+  data_deps = [ "//sdk/lib/syslog:client_includes" ]
 
   public_configs = [ "//sdk/config" ]
 }
@@ -222,7 +222,7 @@ sdk_source_set("backend_fuchsia_compat") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 
-  data_deps = [ "//sdk/lib/diagnostics/syslog:client_includes" ]
+  data_deps = [ "//sdk/lib/syslog:client_includes" ]
 
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 

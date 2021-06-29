@@ -20,12 +20,6 @@ import("//tools/cmc/build/cmc.gni")
 #     component manifests with a matching cmx/cml extension.
 #     Type: list of strings
 #
-#   enforce (optional)
-#     If true and dependent components don't have the includes in their
-#     manifest, fail to build.
-#     Type: boolean
-#     Default: true
-#
 #   deps
 #   testonly
 #   visibility
@@ -52,10 +46,8 @@ template("expect_includes") {
       }
     }
     metadata = {
-      if (!defined(invoker.enforce) || invoker.enforce) {
-        cmc_expected_includes_cmx = includes_cmx
-        cmc_expected_includes_cml = includes_cml
-      }
+      cmc_expected_includes_cmx = includes_cmx
+      cmc_expected_includes_cml = includes_cml
 
       # Used by the fuchsia_test_component_manifest() template.
       test_component_manifest_cmx = [

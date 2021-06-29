@@ -4,6 +4,7 @@
 
 import("//build/sdk/sdk_component_manifests.gni")
 import("//build/sdk/sdk_molecule.gni")
+import("//tools/cmc/build/expect_includes.gni")
 
 sdk_component_manifests("syslog") {
   name = "syslog"
@@ -12,6 +13,15 @@ sdk_component_manifests("syslog") {
     "client.shard.cmx",
   ]
   category = "partner"
+}
+
+# Require dependent components to include logsink capabilities in their
+# component manifests.
+expect_includes("client_includes") {
+  includes = [
+    "client.shard.cml",
+    "client.shard.cmx",
+  ]
 }
 
 group("tests") {

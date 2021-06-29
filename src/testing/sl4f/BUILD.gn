@@ -88,7 +88,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
     "//sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration:fuchsia.wlan.product.deprecatedconfiguration-rustc",
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
-    "//sdk/lib/diagnostics/syslog:client_includes",
+    "//sdk/lib/syslog:client_includes",
     "//src/chromium/web_engine/meta/shards:web_engine_base",
     "//src/chromium/web_engine/meta/shards:web_engine_feature_network",
     "//src/connectivity/bluetooth/lib/bt-avdtp",
