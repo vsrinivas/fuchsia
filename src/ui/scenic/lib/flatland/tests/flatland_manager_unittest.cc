@@ -204,10 +204,9 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
       pending_session_updates_;
   std::unordered_set<scheduling::SessionId> removed_sessions_;
 
-  const std::shared_ptr<LinkSystem> link_system_;
-
  private:
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
+  const std::shared_ptr<LinkSystem> link_system_;
 };
 
 }  // namespace
@@ -225,35 +224,6 @@ TEST_F(FlatlandManagerTest, CreateFlatlands) {
   EXPECT_TRUE(flatland1.is_bound());
   EXPECT_TRUE(flatland2.is_bound());
   EXPECT_EQ(manager_->GetSessionCount(), 2ul);
-}
-
-TEST_F(FlatlandManagerTest, CreateLinkedFlatlands) {
-  fuchsia::ui::scenic::internal::ContentLinkToken parent_token;
-  fuchsia::ui::scenic::internal::GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
-
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> parent = CreateFlatland();
-  const fuchsia::ui::scenic::internal::ContentId kLinkId = {1};
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::ContentLink> content_link;
-  fuchsia::ui::scenic::internal::LinkProperties properties;
-  properties.set_logical_size({1, 2});
-  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                     content_link.NewRequest());
-  {
-    fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> child = CreateFlatland();
-    fidl::InterfacePtr<fuchsia::ui::scenic::internal::GraphLink> graph_link;
-    child->LinkToParent(std::move(child_token), graph_link.NewRequest());
-
-    RunLoopUntilIdle();
-    EXPECT_EQ(manager_->GetSessionCount(), 2ul);
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-        [this]() { return !link_system_->GetResolvedTopologyLinks().empty(); }));
-
-    EXPECT_CALL(*mock_flatland_presenter_, RemoveSession(_));
-  }
-
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this]() { return link_system_->GetResolvedTopologyLinks().empty(); }));
 }
 
 TEST_F(FlatlandManagerTest, ClientDiesBeforeManager) {
