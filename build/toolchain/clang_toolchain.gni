@@ -400,7 +400,7 @@ template("clang_toolchain") {
         unstripped_outfile = "{{output_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
 
         # TODO: see the comment below
-        command += "mkdir -p {{output_dir}}/exe.unstripped && "
+        command += "mkdir -p {{output_dir}}/lib.unstripped && "
       } else {
         unstripped_outfile = outfile
       }
