@@ -484,13 +484,13 @@ mod tests {
         crate::{
             access_point::state_machine as ap_fsm,
             config_management::{
-                Credential, NetworkConfig, SavedNetworksManager, SecurityType, WPA_PSK_BYTE_LEN,
+                Credential, NetworkConfig, ScanResultType, SecurityType, WPA_PSK_BYTE_LEN,
             },
             util::testing::{create_mock_cobalt_sender, set_logger_for_test},
         },
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},
-        fidl_fuchsia_stash as fidl_stash, fuchsia_async as fasync,
+        fuchsia_async as fasync,
         fuchsia_inspect::{self as inspect},
         futures::{
             channel::{mpsc, oneshot},
@@ -498,8 +498,7 @@ mod tests {
             task::Poll,
         },
         pin_utils::pin_mut,
-        rand::{distributions::Alphanumeric, thread_rng, Rng},
-        tempfile::TempDir,
+        std::collections::HashMap,
         wlan_common::assert_variant,
     };
 
@@ -670,43 +669,137 @@ mod tests {
         }
     }
 
-    /// Creates an ESS Store holding entries for protected and unprotected networks.
-    async fn create_network_store(stash_id: impl AsRef<str>) -> SavedNetworksPtr {
-        let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = Arc::new(
-            SavedNetworksManager::new_with_stash_or_paths(
-                stash_id,
-                path,
-                tmp_path,
-                create_mock_cobalt_sender(),
-            )
-            .await
-            .expect("Failed to create a KnownEssStore"),
-        );
-        let network_id_none = NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None);
-        let network_id_password =
-            NetworkIdentifier::new(b"foobar-protected".to_vec(), SecurityType::Wpa2);
-        let network_id_psk = NetworkIdentifier::new(b"foobar-psk".to_vec(), SecurityType::Wpa2);
+    struct FakeSavedNetworksManager {
+        saved_networks: Mutex<HashMap<NetworkIdentifier, Vec<NetworkConfig>>>,
+        pub fail_all_stores: bool,
+    }
 
-        assert!(saved_networks
-            .store(network_id_none, Credential::None)
-            .await
-            .expect("error saving network")
-            .is_none());
-        assert!(saved_networks
-            .store(network_id_password, Credential::Password(b"supersecure".to_vec()))
-            .await
-            .expect("error saving network")
-            .is_none());
-        assert!(saved_networks
-            .store(network_id_psk, Credential::Psk(vec![64; WPA_PSK_BYTE_LEN].to_vec()))
-            .await
-            .expect("error saving network foobar-psk")
-            .is_none());
+    impl FakeSavedNetworksManager {
+        pub fn new() -> Self {
+            Self { saved_networks: Mutex::new(HashMap::new()), fail_all_stores: false }
+        }
+        /// Create FakeSavedNetworksManager, saving some network configs at init.
+        pub fn new_with_saved_configs(
+            network_configs: Vec<(NetworkIdentifier, Credential)>,
+        ) -> Self {
+            let saved_networks = network_configs
+                .into_iter()
+                .filter_map(|(id, cred)| {
+                    NetworkConfig::new(id.clone(), cred, false)
+                        .ok()
+                        .map(|config| (id, vec![config]))
+                })
+                .collect::<HashMap<NetworkIdentifier, Vec<NetworkConfig>>>();
+            Self { saved_networks: Mutex::new(saved_networks), fail_all_stores: false }
+        }
+    }
 
-        saved_networks
+    #[async_trait]
+    impl SavedNetworksManagerApi for FakeSavedNetworksManager {
+        async fn remove(
+            &self,
+            network_id: NetworkIdentifier,
+            credential: Credential,
+        ) -> Result<bool, NetworkConfigError> {
+            let mut saved_networks = self.saved_networks.lock().await;
+            if let Some(network_configs) = saved_networks.get_mut(&network_id) {
+                let original_len = network_configs.len();
+                network_configs.retain(|cfg| cfg.credential != credential);
+                if original_len != network_configs.len() {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        }
+
+        async fn known_network_count(&self) -> usize {
+            unimplemented!()
+        }
+
+        async fn lookup(&self, id: NetworkIdentifier) -> Vec<NetworkConfig> {
+            self.saved_networks
+                .lock()
+                .await
+                .entry(id)
+                .or_default()
+                .iter()
+                .map(Clone::clone)
+                .collect()
+        }
+
+        async fn lookup_compatible(
+            &self,
+            _ssid: &types::Ssid,
+            _scan_security: types::SecurityTypeDetailed,
+        ) -> Vec<NetworkConfig> {
+            unimplemented!()
+        }
+
+        /// Note that the configs-per-NetworkIdentifier limit is set to 1 in
+        /// this mock struct. If a NetworkIdentifier is already stored, writing
+        /// a config to it will evict the previously store one.
+        async fn store(
+            &self,
+            network_id: NetworkIdentifier,
+            credential: Credential,
+        ) -> Result<Option<NetworkConfig>, NetworkConfigError> {
+            if self.fail_all_stores {
+                return Err(NetworkConfigError::StashWriteError);
+            }
+            let config = NetworkConfig::new(network_id.clone(), credential, false)?;
+            return Ok(self
+                .saved_networks
+                .lock()
+                .await
+                .insert(network_id, vec![config])
+                .map(|mut v| v.pop())
+                .flatten());
+        }
+
+        async fn record_connect_result(
+            &self,
+            _id: NetworkIdentifier,
+            _credential: &Credential,
+            _bssid: types::Bssid,
+            _connect_result: fidl_sme::ConnectResultCode,
+            _discovered_in_scan: Option<fidl_common::ScanType>,
+        ) {
+            unimplemented!()
+        }
+
+        async fn record_disconnect(
+            &self,
+            _id: &NetworkIdentifier,
+            _credential: &Credential,
+            _bssid: types::Bssid,
+            _uptime: zx::Duration,
+            _curr_time: zx::Time,
+        ) {
+            unimplemented!()
+        }
+
+        async fn record_periodic_metrics(&self) {
+            unimplemented!()
+        }
+
+        async fn record_scan_result(
+            &self,
+            _scan_type: ScanResultType,
+            _results: Vec<types::NetworkIdentifierDetailed>,
+        ) {
+            unimplemented!()
+        }
+
+        async fn get_networks(&self) -> Vec<NetworkConfig> {
+            self.saved_networks
+                .lock()
+                .await
+                .values()
+                .into_iter()
+                .map(|cfgs| cfgs.clone())
+                .flatten()
+                .collect()
+        }
     }
 
     /// Requests a new ClientController from the given ClientProvider.
@@ -737,12 +830,20 @@ mod tests {
     // setup channels and proxies needed for the tests to use use the Client Provider and
     // Client Controller APIs in tests. The stash id should be the test name so that each
     // test will have a unique persistent store behind it.
-    fn test_setup(
-        stash_id: impl AsRef<str>,
-        exec: &mut fasync::TestExecutor,
-        connect_succeeds: bool,
-    ) -> TestValues {
-        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
+    fn test_setup(connect_succeeds: bool) -> TestValues {
+        let presaved_default_configs = vec![
+            (NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None), Credential::None),
+            (
+                NetworkIdentifier::new(b"foobar-protected".to_vec(), SecurityType::Wpa2),
+                Credential::Password(b"supersecure".to_vec()),
+            ),
+            (
+                NetworkIdentifier::new(b"foobar-psk".to_vec(), SecurityType::Wpa2),
+                Credential::Psk(vec![64; WPA_PSK_BYTE_LEN].to_vec()),
+            ),
+        ];
+        let saved_networks =
+            Arc::new(FakeSavedNetworksManager::new_with_saved_configs(presaved_default_configs));
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
@@ -776,51 +877,11 @@ mod tests {
         }
     }
 
-    /// Move stash requests forward so that a save request can progress.
-    fn process_stash_write(
-        mut exec: &mut fasync::TestExecutor,
-        mut stash_server: &mut fidl_stash::StoreAccessorRequestStream,
-    ) {
-        assert_variant!(
-            exec.run_until_stalled(&mut stash_server.try_next()),
-            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::SetValue { .. })))
-        );
-        process_stash_flush(&mut exec, &mut stash_server);
-    }
-
-    /// Move stash requests forward so that a remove request can progress.
-    fn process_stash_remove(
-        mut exec: &mut fasync::TestExecutor,
-        mut stash_server: &mut fidl_stash::StoreAccessorRequestStream,
-    ) {
-        assert_variant!(
-            exec.run_until_stalled(&mut stash_server.try_next()),
-            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::DeletePrefix { .. })))
-        );
-        process_stash_flush(&mut exec, &mut stash_server);
-    }
-
-    fn process_stash_flush(
-        exec: &mut fasync::TestExecutor,
-        stash_server: &mut fidl_stash::StoreAccessorRequestStream,
-    ) {
-        assert_variant!(
-            exec.run_until_stalled(&mut stash_server.try_next()),
-            Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::Flush{responder}))) => {
-                responder.send(&mut Ok(())).expect("failed to send stash response");
-            }
-        );
-    }
-
-    fn rand_string() -> String {
-        thread_rng().sample_iter(&Alphanumeric).take(20).collect()
-    }
-
     #[test]
     fn connect_request_unknown_network() {
         let ssid = b"foobar-unknown".to_vec();
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup("connect_request_unknown_network", &mut exec, true);
+        let test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -864,7 +925,7 @@ mod tests {
     fn connect_request_open_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
-        let mut test_values = test_setup("connect_request_open_network", &mut exec, true);
+        let mut test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -913,7 +974,7 @@ mod tests {
     fn connect_request_protected_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
-        let mut test_values = test_setup("connect_request_open_network", &mut exec, true);
+        let mut test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -963,7 +1024,7 @@ mod tests {
     fn connect_request_protected_psk_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
-        let mut test_values = test_setup("connect_request_open_network", &mut exec, true);
+        let mut test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -1012,7 +1073,7 @@ mod tests {
     #[test]
     fn connect_request_success() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("connect_request_success", &mut exec, true);
+        let mut test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -1052,7 +1113,7 @@ mod tests {
     #[test]
     fn connect_request_failure() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("connect_request_failure", &mut exec, false);
+        let mut test_values = test_setup(false);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -1092,7 +1153,7 @@ mod tests {
     #[test]
     fn connect_request_bad_password() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("connect_request_bad_password", &mut exec, false);
+        let mut test_values = test_setup(false);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -1132,7 +1193,7 @@ mod tests {
     #[test]
     fn test_connect_wpa3_not_supported() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("test_connect_wpa3_not_supported", &mut exec, false);
+        let mut test_values = test_setup(false);
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1184,7 +1245,7 @@ mod tests {
     #[test]
     fn test_connect_wpa3_is_supported() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup("test_connect_wpa3_is_supported", &mut exec, true);
+        let test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
             Arc::clone(&test_values.iface_manager),
             test_values.update_sender,
@@ -1225,7 +1286,7 @@ mod tests {
     #[test]
     fn start_and_stop_client_connections() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup("start_and_stop_client_connections", &mut exec, true);
+        let test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -1294,7 +1355,7 @@ mod tests {
     #[test]
     fn scan_end_to_end() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("scan_request_sent_to_sme", &mut exec, true);
+        let mut test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -1333,12 +1394,7 @@ mod tests {
     #[test]
     fn save_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
-        let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
-        let saved_networks = Arc::new(saved_networks);
+        let saved_networks = Arc::new(FakeSavedNetworksManager::new());
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
@@ -1349,7 +1405,7 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let test_values = test_setup("save_network_test", &mut exec, true);
+        let test_values = test_setup(true);
         let (update_sender, mut listener_updates) = mpsc::unbounded();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -1385,13 +1441,6 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        // Progress forward the save and process request to stash, and also verify that the save
-        // network request is not completed until stash responds.
-        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
-        process_stash_write(&mut exec, &mut stash_server);
-        // Allow save network to complete running after calls to stash
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
         // Check that the the response says we succeeded.
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(Ok(()))));
 
@@ -1405,12 +1454,7 @@ mod tests {
     #[test]
     fn save_network_with_disconnected_iface() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
-        let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
-        let saved_networks = Arc::new(saved_networks);
+        let saved_networks = Arc::new(FakeSavedNetworksManager::new());
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
@@ -1421,7 +1465,7 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let test_values = test_setup("save_network_test", &mut exec, true);
+        let test_values = test_setup(true);
         let (update_sender, mut listener_updates) = mpsc::unbounded();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager.clone(),
@@ -1468,9 +1512,6 @@ mod tests {
         let mut save_fut = controller.save_network(network_config);
 
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
-        // Process save network request and requests to stash
-        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        process_stash_write(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Check that the the response says we succeeded.
@@ -1489,14 +1530,7 @@ mod tests {
     #[test]
     fn save_network_overwrite_disconnects() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
-
-        // Need to create this here so that the temp files will be in scope here.
-        let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
-        let saved_networks = Arc::new(saved_networks);
+        let saved_networks = Arc::new(FakeSavedNetworksManager::new());
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
@@ -1539,8 +1573,6 @@ mod tests {
         let credential = Credential::Password(b"password".to_vec());
         let save_fut = saved_networks.store(network_id.clone(), credential.clone());
         pin_mut!(save_fut);
-        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
-        process_stash_write(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
 
         // Save a network with the same identifier but a different password
@@ -1553,7 +1585,6 @@ mod tests {
 
         // Process the remove request on the server side and handle requests to stash on the way.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        process_stash_write(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Check that the iface manager was asked to disconnect from some network
@@ -1568,23 +1599,9 @@ mod tests {
     #[test]
     fn save_bad_network_should_fail() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let stash_id = "save_bad_network_should_fail";
-        let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-
-        // Need to create this here so that the temp files will be in scope here.
-        let saved_networks_fut = SavedNetworksManager::new_with_stash_or_paths(
-            stash_id,
-            path,
-            tmp_path,
-            create_mock_cobalt_sender(),
-        );
-        pin_mut!(saved_networks_fut);
-        let _saved_networks = Arc::new(
-            exec.run_singlethreaded(saved_networks_fut).expect("Failed to create a KnownEssStore"),
-        );
-        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
+        let mut saved_networks = FakeSavedNetworksManager::new();
+        saved_networks.fail_all_stores = true;
+        let saved_networks = Arc::new(saved_networks);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
@@ -1595,7 +1612,7 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let test_values = test_setup("save_bad_network_test", &mut exec, true);
+        let test_values = test_setup(true);
         let (update_sender, mut listener_updates) = mpsc::unbounded();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -1647,14 +1664,7 @@ mod tests {
     #[test]
     fn test_remove_a_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
-
-        // Need to create this here so that the temp files will be in scope here.
-        let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
-        let saved_networks = Arc::new(saved_networks);
+        let saved_networks = Arc::new(FakeSavedNetworksManager::new());
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
@@ -1697,8 +1707,6 @@ mod tests {
         let credential = Credential::None;
         let save_fut = saved_networks.store(network_id.clone(), credential.clone());
         pin_mut!(save_fut);
-        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
-        process_stash_write(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
 
         // Request to remove some network
@@ -1711,7 +1719,6 @@ mod tests {
 
         // Process the remove request on the server side and handle requests to stash on the way.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        process_stash_remove(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Successfully removing a network should always request a disconnect from IfaceManager,
@@ -1749,12 +1756,7 @@ mod tests {
         }];
 
         let expected_num_sends = 1;
-        test_get_saved_networks(
-            "get_saved_network",
-            saved_networks,
-            expected_configs,
-            expected_num_sends,
-        );
+        test_get_saved_networks(saved_networks, expected_configs, expected_num_sends);
     }
 
     #[test]
@@ -1785,12 +1787,7 @@ mod tests {
         }
 
         let expected_num_sends = 2;
-        test_get_saved_networks(
-            "get_saved_networks_multiple_chunks",
-            saved_networks,
-            expected_configs,
-            expected_num_sends,
-        );
+        test_get_saved_networks(saved_networks, expected_configs, expected_num_sends);
     }
 
     /// Test that get saved networks with the given saved networks
@@ -1801,24 +1798,13 @@ mod tests {
     /// expected_num_sends: number of chunks of results we expect to get from get_saved_networks.
     ///     This is not counting the empty vector that signifies no more results.
     fn test_get_saved_networks(
-        test_id: impl AsRef<str> + Copy,
         saved_configs: Vec<(NetworkIdentifier, Credential)>,
         expected_configs: Vec<fidl_policy::NetworkConfig>,
         expected_num_sends: usize,
     ) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let temp_dir = TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = Arc::new(
-            exec.run_singlethreaded(SavedNetworksManager::new_with_stash_or_paths(
-                test_id,
-                path,
-                tmp_path,
-                create_mock_cobalt_sender(),
-            ))
-            .expect("Failed to create a KnownEssStore"),
-        );
+        let saved_networks =
+            Arc::new(FakeSavedNetworksManager::new_with_saved_configs(saved_configs));
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
@@ -1828,8 +1814,7 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let unused_stash = (*test_id.as_ref()).chars().rev().collect::<String>();
-        let test_values = test_setup(&unused_stash, &mut exec, true);
+        let test_values = test_setup(true);
         let (update_sender, _listener_updates) = mpsc::unbounded();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -1843,14 +1828,6 @@ mod tests {
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-
-        // Save the networks specified for this test.
-        for (net_id, credential) in saved_configs {
-            assert!(exec
-                .run_singlethreaded(saved_networks.store(net_id, credential))
-                .expect("failed to store network")
-                .is_none());
-        }
 
         // Request a new controller.
         let (controller, _update_stream) = request_controller(&provider);
@@ -1897,7 +1874,7 @@ mod tests {
     #[test]
     fn register_update_listener() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("register_update_listener", &mut exec, true);
+        let mut test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -1950,7 +1927,7 @@ mod tests {
     #[test]
     fn multiple_controllers_write_attempt() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup("multiple_controllers_write_attempt", &mut exec, true);
+        let test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -2031,7 +2008,7 @@ mod tests {
     #[test]
     fn multiple_controllers_epitaph() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup("multiple_controllers_epitaph", &mut exec, true);
+        let test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
@@ -2159,8 +2136,7 @@ mod tests {
     #[test]
     fn no_client_interface() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let stash_id = "no_client_interface";
-        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
+        let saved_networks = Arc::new(FakeSavedNetworksManager::new());
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
@@ -2225,20 +2201,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn get_correct_config() {
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let stash_id = "get_correct_config";
-        let saved_networks = Arc::new(
-            SavedNetworksManager::new_with_stash_or_paths(
-                stash_id,
-                path,
-                tmp_path,
-                create_mock_cobalt_sender(),
-            )
-            .await
-            .expect("Failed to create SavedNetworksManager"),
-        );
+        let saved_networks = Arc::new(FakeSavedNetworksManager::new());
         let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
         let cfg = NetworkConfig::new(
             network_id.clone(),
@@ -2276,7 +2239,7 @@ mod tests {
     #[test]
     fn multiple_api_clients() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup("multiple_client_provider_requests", &mut exec, true);
+        let test_values = test_setup(true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager.clone(),
             test_values.update_sender.clone(),
