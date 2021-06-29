@@ -9,6 +9,7 @@ toc:
 - title: "Fuchsia DevTools"
   section:
   - include: /docs/development/monitoring/devtools/_toc.yaml
+  status: deprecated
 - title: "fidlcat"
   section:
   - include: /docs/development/monitoring/fidlcat/_toc.yaml

@@ -8,3 +8,4 @@
 toc:
 - title: "Fuchsia DevTools"
   path: /docs/concepts/monitoring/fuchsia-devtools.md
+  status: deprecated

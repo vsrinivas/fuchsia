@@ -8,13 +8,19 @@
 toc:
 - title: "Launch Fuchsia DevTools"
   path: /docs/development/monitoring/devtools/launch-devtools.md
+  status: deprecated
 - title: "Examine CPU usage"
   path: /docs/development/monitoring/devtools/devtools-cpu.md
+  status: deprecated
 - title: "Examine memory usage"
   path: /docs/development/monitoring/devtools/devtools-memory.md
+  status: deprecated
 - title: "Search and filter log messages from a device"
   path: /docs/development/monitoring/devtools/devtools-logging.md
+  status: deprecated
 - title: "Inspect component properties for debugging"
   path: /docs/development/monitoring/devtools/devtools-inspect.md
+  status: deprecated
 - title: "Check if an updated package exists on your device"
   path: /docs/development/monitoring/devtools/devtools-check-package.md
+  status: deprecated
