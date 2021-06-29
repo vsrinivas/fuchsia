@@ -291,13 +291,9 @@ zx_status_t SdmmcDevice::SdioIoRwDirect(bool write, uint32_t fn_idx, uint32_t re
   }
   req.use_dma = UseDma();
   zx_status_t st = host_.Request(&req);
-  if (st != ZX_OK && reg_addr == SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR) {
-    // Do not log error if ABORT fails during reset, as it proved to be harmless.
-    // TODO(ravoorir): Is it expected for the command to fail intermittently during reset?
+  if (st != ZX_OK) {
+    // Let the platform driver handle logging of this error.
     zxlogf(DEBUG, "sdio: SDIO_IO_RW_DIRECT failed, retcode = %d", st);
-    return st;
-  } else if (st != ZX_OK) {
-    zxlogf(ERROR, "sdio: SDIO_IO_RW_DIRECT failed, retcode = %d", st);
     return st;
   }
   if (read_byte) {
@@ -357,7 +353,7 @@ zx_status_t SdmmcDevice::SdioIoRwExtended(uint32_t caps, bool write, uint32_t fn
 
   zx_status_t st = host_.Request(&req);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "sdio: SDIO_IO_RW_DIRECT_EXTENDED failed, retcode = %d", st);
+    zxlogf(DEBUG, "sdio: SDIO_IO_RW_DIRECT_EXTENDED failed, retcode = %d", st);
     return st;
   }
   return ZX_OK;

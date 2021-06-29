@@ -511,8 +511,6 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
     st = sdmmc_.SdioIoRwExtended(hw_info_.caps, txn->write, fn_idx, addr, txn->incr, num_blocks,
                                  func_blk_size, use_dma, buf, dma_vmo, buf_offset + data_processed);
     if (st != ZX_OK) {
-      zxlogf(ERROR, "sdio_rw_data: Error %sing data.func: %d status: %d",
-             txn->write ? "writ" : "read", fn_idx, st);
       return st;
     }
     rem_blocks -= num_blocks;
