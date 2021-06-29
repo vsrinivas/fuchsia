@@ -1550,7 +1550,7 @@ mod tests {
                 .await
                 .expect("FIDL error")
                 .expect("set_servers failed");
-            assert_eq!(proxy.get_dns_servers().await.expect("Failed to get DNS servers"), expect);
+            assert_matches!(proxy.get_dns_servers().await, Ok(got) if got == expect);
         })
         .await;
     }
