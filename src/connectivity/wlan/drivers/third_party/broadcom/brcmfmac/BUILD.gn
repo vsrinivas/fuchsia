@@ -361,6 +361,7 @@ group("brcmfmac_tests") {
     "msgbuf/test:brcmfmac_msgbuf_test",
     "sdio/test:brcmfmac_sdio_test",
     "sim/test:brcmfmac_sim_test",
+    "test:brcmfmac_test",
   ]
   testonly = true
   visibility += [ "*" ]
